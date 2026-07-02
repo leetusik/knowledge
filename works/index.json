@@ -16,13 +16,13 @@
       "id": "P2",
       "name": "Track 2 — DB-backed document API",
       "objective": "Build the DB track of the two-track knowledge store: SQLite (FTS5) document store + FastAPI service with read/list/search/reindex endpoints and an API-owned write path (docs/-convention file + Recent-marker update + DB upsert + scoped git commit), containerized as compose service 'api' on port 8766 beside the mkdocs viewer, so the /explain skill can POST documents instead of writing files. docs/ stays canonical; reindex rebuilds the DB from files.",
-      "status": "in_progress",
+      "status": "done",
       "order": 2,
       "path": "works/phases/active/P2",
-      "review_status": "changes_requested",
-      "current_slice": "P2.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7
     },
     {
       "id": "P3",
@@ -40,5 +40,5 @@
   "deferred_open_count": 1,
   "deferred_promoted_count": 0,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-02T16:00:14+09:00"
+  "last_rebuilt_at": "2026-07-02T16:11:13+09:00"
 }
