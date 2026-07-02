@@ -56,6 +56,14 @@ _Distilled from `~/.claude/plans/make-up-phases-for-precious-fairy.md` — read 
   - `GET /api/search?q=&project=&tag=&limit=` (+`raw=true`) → `{query, mode:"bm25", results:[{..., score, snippet, signals:{bm25}}]}`.
   - `POST /api/reindex` — walk `docs/*/**/*.md`, parse frontmatter, upsert by rel_path, delete rows for vanished files, **never commits** → `{indexed, removed, skipped:[{rel_path, reason}], duration_ms}`.
 
+### S1 landed — interfaces & gotchas for S2/S3
+
+- **DB API surface** (`server/db.py`): `connect(path=None)` (WAL + `sqlite3.Row` factory + idempotent DDL, creates parent dirs), `upsert_document(conn, *, project, slug, date, title, tags:list, source_repo, rel_path, markdown, now=None) -> id` (ON CONFLICT(rel_path); preserves `created_at`, refreshes `updated_at`), `get_document(conn, id)`, `get_document_by_path(conn, rel_path)`, `list_documents(conn, project=None, tag=None, limit=50, offset=0)` (newest-first; tag via `json_each`), `count_documents(conn, project=None, tag=None)`, `delete_document_by_path(conn, rel_path)`. Reads return dicts with `tags` already JSON-decoded to a list.
+- **Conventions** (`server/documents.py`): `slugify`, `validate_project/tags/slug/date` (raise `ConventionError`; `FrontmatterError` is a subclass — map both to 422 in S3), `rel_path(project, date, slug)`, `serialize_frontmatter(*, title, date, tags, project, source_repo) -> str` (ends with `---\n`; compose a file as `serialize_frontmatter(...) + "\n" + body`), `parse_frontmatter(text) -> (meta, body)`, `insert_recent_bullet(index_text, *, date, title, rel_path, project) -> (new_text, mechanism)` (pure, no I/O — S3 reads/writes `docs/index.md` around it). `format_recent_bullet` uses ` · ` (U+00B7) and ` — ` (U+2014) separators — byte-exact to the ground-truth bullet.
+- **Search prep for S2**: FTS columns are ordered `(title, tags_text, markdown)`, so `bm25(documents_fts, 8.0, 4.0, 1.0)` weights map title/tags/body respectively. External-content means `snippet()/highlight()` over `markdown` work.
+- **Config reads env at call time** (no import-time caching) — S2/S3 tests override `KB_ROOT`/`KB_DB_PATH` via `monkeypatch.setenv` (see `tests/test_reindex.py`). No FastAPI/uvicorn wiring exists yet — S2 adds `server/main.py`.
+- **Tooling gotchas**: virtual project (`[tool.uv] package=false`, no `[build-system]`); `[tool.pytest.ini_options] pythonpath=["."]` puts the repo root on `sys.path` so `import server` resolves without installing the package — keep this when adding test files. Reindex stores `markdown` as the body with leading newlines stripped (starts at H1). `date:` parses back from YAML as a `datetime.date`; reindex normalizes via `.isoformat()`.
+
 ## Discovered consideration — non-explainer files now inside `docs/`
 
 The approved plan predates the agentic-workspace install and assumed `docs/` held only explainers. It now **also** holds workspace internals inside the MkDocs content root:
@@ -63,6 +71,8 @@ The approved plan predates the agentic-workspace install and assumed `docs/` hel
 - `docs/current/*.md` (11 generated fullstack docs), `docs/versions/**/*.md` (versioned durable docs), `docs/README.md`, `docs/index.json` — none of these carry explainer frontmatter (title/date/tags/source).
 
 **Reindex must handle them deliberately** so its output stays clean. The plan's reindex already skips top-level `index.md`/`tags.md`; **S1 decides** the mechanism for the rest — either explicitly skip the `current/` and `versions/` directories (and top-level non-explainer files like `README.md`, `index.json`), or let frontmatter validation route them into the `skipped[]` list with a reason. Either is acceptable; the requirement is that `indexed` counts only real explainers and `skipped[]` is not noisy garbage. Record the chosen mechanism in this notebook when S1 lands.
+
+**S1 decision (landed):** chose the **hybrid** — (a) the walk only descends into `docs/<subdir>/` directories, so all top-level files (`index.md`, `tags.md`, `README.md`, `index.json`) never enter it; (b) a module constant `RESERVED_DIRS = {"current", "versions"}` in `server/reindex.py` silently excludes those two subtrees entirely (never walked, never skipped); (c) files that ARE walked but malformed land in `skipped: [{rel_path, reason}]` (reasons `filename not <YYYY-MM-DD>-<slug>.md` / `missing/invalid frontmatter: …` / `bad date`). Real-repo reindex confirms `indexed: 1, removed: 0, skipped: 0` — clean. Removal is keyed on **file presence on disk** (a DB row whose rel_path no longer exists under a non-reserved subdir is removed), so deleting a doc → `removed: 1`.
 
 **Separately** — whether these workspace-internal files appear in the *published GitHub Pages site nav* is a **P3-scope** question (P3 owns Track 1 / publishing), not P2's. Filed as deferred **D1** (`Decide whether works/docs internals appear on the public site`, trigger: P3 planning, source P2.DECOMP). Do not expand P2 to solve it.
 
@@ -79,7 +89,9 @@ The approved plan predates the agentic-workspace install and assumed `docs/` hel
 
 _Running list of durable-truth changes; the P2.REVIEW slice consolidates these into doc versions. Implementation slices append one-liners here — do not version docs per slice._
 
--
+- `data` (S1) — `documents` table (id, project, slug, date [GLOB `YYYY-MM-DD`], title, tags JSON, `tags_text`, source_repo, `rel_path` UNIQUE, markdown, created_at/updated_at, `UNIQUE(project,date,slug)`) + external-content FTS5 `documents_fts(title, tags_text, markdown, tokenize='porter unicode61')` synced by the AFTER INSERT/DELETE/UPDATE trigger trio; WAL mode; disposable `data/kb.sqlite3` (gitignored, rebuilt from docs/); clean `sqlite-vec` extension point noted in the schema.
+- `backend` (S1) — `server/` package landed: `config` (env-at-call-time settings: KB_ROOT/KB_DB_PATH/KB_PUBLIC_BASE_URL/KB_API_TOKEN/KB_GIT_COMMIT), `db` (WAL connect + idempotent DDL + upsert/get/get-by-path/list/count/delete), `documents` (slugify, validators, `rel_path`, hand-rolled byte-exact frontmatter serialize via `json.dumps` title + `yaml.safe_load` parse, Recent-marker insertion with the marker→heading→append fallback ladder), `reindex` (library fn). uv-managed `pyproject.toml` (`kb-api`, py>=3.12, fastapi/uvicorn/pyyaml + dev pytest/httpx), virtual project (`[tool.uv] package=false`, no build-system).
+- `operations` (S1) — reindex CLI `python -m server.reindex` is the drift-repair tool (manual edits / API-down fallback writes / `git reset` all cured by a full rebuild from docs/); prints `indexed:/removed:/skipped:/duration_ms:` per line; never runs git.
 
 ## Open Questions
 
