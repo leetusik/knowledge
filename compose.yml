@@ -9,3 +9,19 @@ services:
     volumes:
       - .:/docs
     restart: unless-stopped
+
+  api:
+    # kb-api: DB-backed document API (Track 2). Shares the bind-mounted repo with
+    # kb, so a doc POSTed here live-reloads on the 8765 site. Single worker only
+    # (in-process write lock) — never scale with --workers.
+    build: .
+    ports:
+      - "8766:8000"
+    volumes:
+      - .:/repo
+    environment:
+      KB_ROOT: /repo
+      TZ: Asia/Seoul
+      # KB_API_TOKEN: set to require `Authorization: Bearer <token>` on the two
+      # mutating endpoints (POST /api/documents, POST /api/reindex); GETs stay open.
+    restart: unless-stopped

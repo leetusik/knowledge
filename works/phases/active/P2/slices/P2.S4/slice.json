@@ -3,14 +3,14 @@
   "phase_id": "P2",
   "name": "Dockerize: Dockerfile, compose api service, README API section",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 4,
   "depends_on": [
     "P2.S3"
   ],
   "created_at": "2026-07-02T14:52:23+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-02T15:36:42+09:00",
+  "completed_at": "2026-07-02T15:42:31+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
