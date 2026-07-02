@@ -8,10 +8,10 @@
   "started_at": "2026-07-02T14:50:33+09:00",
   "completed_at": null,
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "changes_requested",
+    "reviewed_at": "2026-07-02T15:56:53+09:00",
+    "reviewer": "slice-executor",
+    "note": "All validation green, but consolidation blocked: unanchored .gitignore data/ rule also ignores docs/versions/data/, silently dropping new data doc versions from commits. Fix as P2.F1, then re-review."
   },
   "paths": {
     "phase_md": "phase.md",
