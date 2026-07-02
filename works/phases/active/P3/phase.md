@@ -41,6 +41,11 @@ Cross-slice notes from `P3.S1` (executor):
 - The workflow used plain `mkdocs build` + `path: site` (not `--site-dir _site`) — same command the local check runs, and `site/` is already gitignored. Intent-compliant (no site-dir).
 - **CI remains unproven until S2's push.** The deploy job can only truly run on a real push to `main`, and the one-time repo Settings → Pages → Source = "GitHub Actions" is operator-only. S2 is the pending gate that enables Pages, does the first push, and verifies the live site.
 
+Cross-slice notes from `P3.S2` (executor):
+
+- **Site verified live at https://leetusik.github.io/knowledge/ — pipeline proven end-to-end.** Root `200`; homepage `<title>Knowledge Base</title>` + Recent list present; project page `docs/hi2vi_web/2026-07-02-shared-nginx-explained.md` serves at the mkdocs directory URL `/hi2vi_web/2026-07-02-shared-nginx-explained/` (`200`); `/tags/` renders (`200`). Verified 2026-07-02 16:57 KST. No new Doc impact line — S1's operations line already covers the pipeline truth.
+- **First-publish order matters:** enable Pages (Settings → Pages → Source = "GitHub Actions") BEFORE the first push. The initial push (run 1) built green but its deploy job failed at `actions/deploy-pages@v4` because Pages wasn't enabled yet; a later `workflow_dispatch` re-run (run 3, id `28574368474`) published cleanly. Harmless because the workflow re-runs idempotently — but worth remembering for future repos.
+
 ## Constraints
 
 - Agents never push — deploys happen only on a manual `git push` by the operator (the `/explain` skill and the P2 API commit locally but never push).
