@@ -1,0 +1,11 @@
+{
+  "id": "D1",
+  "title": "Decide whether works/docs internals appear on the public site",
+  "status": "deferred",
+  "source": "P2.DECOMP",
+  "reason": "agentic-workspace files now live inside the MkDocs content root (docs/current, docs/versions, docs/README.md, docs/index.json)",
+  "trigger": "P3 planning",
+  "created_at": "2026-07-02T14:52:39+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

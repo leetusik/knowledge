@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Open: `0`
+- Open: `1`
 - Promoted: `0`
 - Dropped: `0`
-- Rebuilt at: `2026-07-02T14:44:46+09:00`
+- Rebuilt at: `2026-07-02T14:55:10+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
-| - | - | - | - | - | - |
+| `D1` | `deferred` | Decide whether works/docs internals appear on the public site | P2.DECOMP | P3 planning | `works/deferred/open/D1` |
 
 ## Promoted
 
