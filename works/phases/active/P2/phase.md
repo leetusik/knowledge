@@ -56,6 +56,8 @@ _Distilled from `~/.claude/plans/make-up-phases-for-precious-fairy.md` — read 
   - `GET /api/search?q=&project=&tag=&limit=` (+`raw=true`) → `{query, mode:"bm25", results:[{..., score, snippet, signals:{bm25}}]}`.
   - `POST /api/reindex` — walk `docs/*/**/*.md`, parse frontmatter, upsert by rel_path, delete rows for vanished files, **never commits** → `{indexed, removed, skipped:[{rel_path, reason}], duration_ms}`.
 
+- **F1:** .gitignore data rule anchored to /data/ — docs/versions/data/ is trackable; root data/ (SQLite) still ignored.
+
 ### S1 landed — interfaces & gotchas for S2/S3
 
 - **DB API surface** (`server/db.py`): `connect(path=None)` (WAL + `sqlite3.Row` factory + idempotent DDL, creates parent dirs), `upsert_document(conn, *, project, slug, date, title, tags:list, source_repo, rel_path, markdown, now=None) -> id` (ON CONFLICT(rel_path); preserves `created_at`, refreshes `updated_at`), `get_document(conn, id)`, `get_document_by_path(conn, rel_path)`, `list_documents(conn, project=None, tag=None, limit=50, offset=0)` (newest-first; tag via `json_each`), `count_documents(conn, project=None, tag=None)`, `delete_document_by_path(conn, rel_path)`. Reads return dicts with `tags` already JSON-decoded to a list.
