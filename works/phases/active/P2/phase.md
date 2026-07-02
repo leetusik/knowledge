@@ -132,3 +132,15 @@ _Running list of durable-truth changes; the P2.REVIEW slice consolidates these i
 ## Open Questions
 
 - None. The implementation plan is operator-approved and fully specified. (The `docs/` internals reindex mechanism is an S1 decision, and the published-nav question is deferred as D1 — neither is an open blocker.)
+
+## Review (P2.REVIEW) — changes_requested
+
+First review pass: **behavioral objective fully met and validated** — 25/25 pytest, both containers Up (kb 8765, api 8766), all read endpoints + TZ sanity green, and a `commit:false` write smoke proved validate→lock→file→bullet→DB with `docs/` ending byte-identical (surgical cleanup, `reindex removed:1`); `workflow validate` green. Every objective/intent element checks out (see `slices/P2.REVIEW/result.md`).
+
+**Blocker found during doc consolidation (not a behavioral defect):** S1's `.gitignore` line 4 `data/` is **unanchored**, so it also matches the `docs/versions/data/` doc-version subtree — `git check-ignore -v docs/versions/data/<x>.md` → `.gitignore:4:data/`. The bootstrap `v0001_bootstrap.md` was committed before the rule so it stayed tracked, masking the bug; but the review's **new `data` v0002** would be git-ignored and silently dropped from the commit, leaving `docs/index.json` + `docs/current/data.md` referencing a version file absent from git (doc-index integrity break). Only the `data` category collides (its name matches an ignored dir); api/backend/operations/architecture are unaffected.
+
+Because a review slice may not edit config and must not consolidate docs on a non-pass, the five draft v0002 versions were created, the blocker was found, and all five were **rolled back** — `docs/` is back to the clean pre-consolidation baseline (index.json + current/* restored, `validate` green).
+
+**Proposed fix slice — P2.F1** (`fix`, low risk): anchor `.gitignore` `data/` → `/data/` (repo-root disposable DB dir only). Verify `git check-ignore docs/versions/data/<file>` returns nothing while `data/kb.sqlite3` stays ignored; pytest 25 + validate green. Then **re-run P2.REVIEW** to consolidate the ten Doc impact notes into the five v0002 docs (`api`, `backend`, `data`, `operations`, `architecture`) and pass.
+
+_Doc consolidation is deferred to the re-review; the Doc impact list above is unchanged and still authoritative for it._
