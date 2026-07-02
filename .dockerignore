@@ -1,0 +1,10 @@
+# The build context needs only pyproject.toml + uv.lock; the application code,
+# docs/, DB, and workspace state all arrive at runtime via the bind mount.
+.git
+data/
+docs/
+site/
+.cache/
+.venv/
+works/
+__pycache__/

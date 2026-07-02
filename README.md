@@ -49,6 +49,48 @@ Material in Docker. You direct and approve; the agent runs the commands.
 - **Upgrade:** the image tag is pinned in `compose.yml`. Bump the tag, run
   `docker compose pull && docker compose up -d`, and re-check the site.
 
+## API
+
+Beside the viewer, a second compose service (`api`) runs a DB-backed document
+API. `docker compose up -d` starts both: the site on **8765** and the API on
+**8766**.
+
+- **Endpoints** (base `http://localhost:8766`):
+  - `GET /healthz` — liveness + document count.
+  - `GET /api/documents[?project=&tag=&limit=&offset=]` — list, newest-first.
+  - `GET /api/documents/{id}` / `GET /api/documents/by-path/<project>/<file>.md` —
+    a single document, including its markdown body.
+  - `GET /api/search?q=<terms>[&project=&tag=&raw=]` — full-text BM25 search
+    with `<mark>`-highlighted snippets.
+  - `POST /api/reindex` — rebuild the DB from the `docs/` tree.
+  - `POST /api/documents` — create a document (used by the `explain` skill).
+
+- **The API owns writes.** A `POST /api/documents` does the whole write in one
+  locked step: it writes the `docs/<project>/<date>-<slug>.md` convention file,
+  inserts the Recent bullet in `docs/index.md`, upserts the SQLite row, and makes
+  a scoped git commit (`docs(<project>): add <slug>`, staging only the two files
+  it touched — never `-A`, and it **never pushes**). `docs/` stays canonical; the
+  DB (`data/kb.sqlite3`) is disposable.
+
+- **`docs/` is canonical; reindex reconciles drift.** After manual edits to the
+  tree, an API-down fallback write, or a `git reset`, run
+  `POST /api/reindex` to rebuild the DB to match the files.
+
+- **Publishing stays manual.** The API and agents never push. You publish by
+  running `git push` yourself.
+
+- **Single worker — never scale.** The write path serializes on an in-process
+  lock, so the API runs exactly one uvicorn worker. Never add `--workers`
+  (WAL still gives concurrent reads).
+
+- **Optional auth.** Set `KB_API_TOKEN` (env / the commented line in
+  `compose.yml`) to require `Authorization: Bearer <token>` on the two mutating
+  endpoints (`POST /api/documents`, `POST /api/reindex`); GETs stay open.
+
+- **Linux hosts.** The image runs as root and relies on system-level git config
+  surviving the bind mount. If this ever moves off macOS to a Linux host, add a
+  compose `user:` mapping so written files aren't owned by root.
+
 ## Recreating from scratch
 
 This repo is local-only (no remote) unless you add one. If it is ever lost,
