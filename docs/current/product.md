@@ -1,42 +1,41 @@
 ---
 doc_id: product
-version: v0001
-created_at: 2026-07-02T13:19:35+09:00
-source: bootstrap
-summary: Initial product doc
-previous: null
+version: v0002
+created_at: 2026-07-02T14:42:49+09:00
+source: P1.REVIEW
+summary: Personal knowledge base with two consumption tracks
+previous: v0001_bootstrap
 ---
 
 # Product
 
 ## Status
 
-New Project is newly bootstrapped. Treat product scope, terminology, and public promises as draft until validated through the workflow.
+Scope confirmed by the operator through P2/P3 intents. Treat delivery details as durable but evolving as those phases execute.
 
 ## Summary
 
-Fresh agentic workspace. Replace this summary during the first real task.
+A personal knowledge base. Its content is a `docs/` tree of educational explainer documents written by the `/explain` skill (from the `bootstrap_agentic_workspace` repo) and browsed locally through a MkDocs Material viewer run via Docker. The same content is served through two consumption tracks: a public static site and a database-backed read/write/search API.
 
 ## Target Users
 
-- <primary user or customer>
-- <secondary user or operator>
+- The operator (owner and primary reader of the knowledge base).
+- Coding agents writing knowledge via the `/explain` skill.
 
 ## Problem
 
-- <problem this project solves>
-- <current pain or workflow gap>
+- Knowledge is scattered across conversations and repos, with no durable, browsable, searchable home.
 
 ## Goals
 
-- <goal>
-- <goal>
-- <goal>
+- Publish the `docs/` tree publicly via GitHub Pages (Track 1).
+- Provide a DB-backed read/write/search API to power a future personal web UI with hybrid search (Track 2).
 
 ## Non-Goals for Now
 
-- <explicitly out-of-scope item>
-- <explicitly out-of-scope item>
+- The personal web UI itself.
+- An embeddings pipeline (Track 2 leaves a `sqlite-vec` extension point, but no embeddings this cycle).
+- Editing the `bootstrap_agentic_workspace` repo (the `/explain` update is handled there separately).
 
 ## Product Direction
 

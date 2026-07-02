@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_personal_knowledge_base_with_two_consumption_tracks",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -11,6 +11,14 @@
           "source": "bootstrap",
           "summary": "Initial product doc",
           "previous": null
+        },
+        {
+          "id": "v0002_personal_knowledge_base_with_two_consumption_tracks",
+          "path": "docs/versions/product/v0002_personal_knowledge_base_with_two_consumption_tracks.md",
+          "created_at": "2026-07-02T14:42:49+09:00",
+          "source": "P1.REVIEW",
+          "summary": "Personal knowledge base with two consumption tracks",
+          "previous": "v0001_bootstrap"
         }
       ]
     },
@@ -141,7 +149,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_two-track_knowledge_store_plan",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -151,9 +159,17 @@
           "source": "bootstrap",
           "summary": "Initial decisions doc",
           "previous": null
+        },
+        {
+          "id": "v0002_two-track_knowledge_store_plan",
+          "path": "docs/versions/decisions/v0002_two-track_knowledge_store_plan.md",
+          "created_at": "2026-07-02T14:42:44+09:00",
+          "source": "P1.REVIEW",
+          "summary": "Two-track knowledge store plan",
+          "previous": "v0001_bootstrap"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-02T13:19:35+09:00"
+  "last_rebuilt_at": "2026-07-02T14:43:27+09:00"
 }

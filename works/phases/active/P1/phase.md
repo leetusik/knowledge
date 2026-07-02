@@ -35,6 +35,7 @@ Both phases explicitly record the operator decision *"Placeholder P1? — Leave 
   - **The `/explain` skill (in the bootstrap_agentic_workspace repo) becomes the API's client** — it will POST documents instead of writing files. Updating that skill happens in the *other* repo via a prepared handover prompt; **this repo's phases must never edit the bootstrap repo.**
   - **Real work starts at P2**; P1 is left untouched as intake-only.
 - **Pointer — operator-approved detailed plan:** a fully detailed implementation plan exists at `~/.claude/plans/make-up-phases-for-precious-fairy.md` (SQLite DDL sketch, exact API contract with JSON examples, Dockerfile/compose details, edge-case handling, verification steps, and the self-contained `/explain` handover prompt). **P2.DECOMP should mine it**; P3's CI details are in its "Phase 5 — GitHub Pages CI" section.
+- **[P1.REVIEW close-out]** Review **passed**: `validate` clean, notebook consistent with P2/P3 intents, objective met. Consolidated the two Doc impact notes into `decisions/v0002_two-track_knowledge_store_plan` and `product/v0002_personal_knowledge_base_with_two_consumption_tracks`; `rebuild-docs` refreshed `docs/current`.
 
 ## Doc impact
 
