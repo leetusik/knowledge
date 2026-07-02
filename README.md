@@ -1,8 +1,9 @@
 # Knowledge Base
 
 A personal library of educational explainer documents, written by coding agents
-(Claude Code, Codex) via the `explain` skill and served locally with MkDocs
-Material in Docker. You direct and approve; the agent runs the commands.
+(Claude Code, Codex) via the `explain` skill, served locally with MkDocs
+Material in Docker, and published to GitHub Pages. You direct and approve; the
+agent runs the commands.
 
 ## The loop
 
@@ -49,6 +50,21 @@ Material in Docker. You direct and approve; the agent runs the commands.
 - **Upgrade:** the image tag is pinned in `compose.yml`. Bump the tag, run
   `docker compose pull && docker compose up -d`, and re-check the site.
 
+## Publishing (GitHub Pages)
+
+The `docs/` tree is published as a static site at
+<https://leetusik.github.io/knowledge/>.
+
+- **Deploys on push to `main`.** The `.github/workflows/pages.yml` workflow
+  builds with MkDocs Material (pinned to the same `9.7.6` as the local image)
+  and deploys via the official GitHub Pages actions.
+- **Only the operator pushes.** The `explain` skill and the API commit locally
+  but never push — nothing publishes until you run `git push` yourself.
+- **Check before you push:** `docker compose run --rm kb build` runs the same
+  build as CI (same 9.7.6), so a clean local build means a clean deploy.
+- **One-time setup:** in the GitHub repo, set Settings → Pages → Source =
+  "GitHub Actions". This can't be automated from the repo.
+
 ## API
 
 Beside the viewer, a second compose service (`api`) runs a DB-backed document
@@ -93,9 +109,10 @@ API. `docker compose up -d` starts both: the site on **8765** and the API on
 
 ## Recreating from scratch
 
-This repo is local-only (no remote) unless you add one. If it is ever lost,
-ask an agent to re-scaffold it: `mkdocs.yml`, `compose.yml`, `docs/index.md`
-(with the `<!-- explain:recent -->` marker), `docs/tags.md` (with the
-`<!-- material/tags -->` marker), `.gitignore`, and this README — then
-`git init` and commit. The `explain` skill refuses to write anywhere else and
-will point here if the repo is missing.
+This repo has a remote (`https://github.com/leetusik/knowledge.git`) and
+publishes to GitHub Pages on push to `main` (see Publishing above). If it is
+ever lost, ask an agent to re-scaffold it: `mkdocs.yml`, `compose.yml`,
+`docs/index.md` (with the `<!-- explain:recent -->` marker), `docs/tags.md`
+(with the `<!-- material/tags -->` marker), `.gitignore`, and this README —
+then `git init` and commit. The `explain` skill refuses to write anywhere else
+and will point here if the repo is missing.

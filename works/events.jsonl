@@ -49,3 +49,5 @@
 {"ts": "2026-07-02T16:31:31+09:00", "type": "slice_created", "phase": "P3", "slice": "P3.S2"}
 {"ts": "2026-07-02T16:33:00+09:00", "type": "deferred_created", "deferred": "D2", "source": "P3.DECOMP"}
 {"ts": "2026-07-02T16:33:00+09:00", "type": "slice_status_changed", "slice": "P3.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-02T16:35:38+09:00", "type": "slice_status_changed", "slice": "P3.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-02T16:39:48+09:00", "type": "slice_status_changed", "slice": "P3.S1", "old_status": "in_progress", "new_status": "done"}
