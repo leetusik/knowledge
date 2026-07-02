@@ -1,0 +1,24 @@
+# Project-scoped Codex notes for this agentic workspace.
+#
+# Codex reads instructions from AGENTS.md and discovers repo skills under
+# .agents/skills/ automatically. The primary Codex config lives in your user
+# home (~/.codex/config.toml); keep machine/account settings there.
+#
+# Subagents ship under .codex/agents/ (https://developers.openai.com/codex/subagents):
+#   - slice-executor.toml       — gpt-5.5 / xhigh, implements one already-planned slice (and runs the phase review)
+#   - slice-executor-high.toml  — gpt-5.5 / high, the same worker at lower effort for low-risk implementation/fix slices
+# The orchestrator (main Codex thread) spawns the matching slice-executor to do each slice — picking
+# slice-executor-high for a low-risk slice — including
+# the phase review, where it also consolidates the phase's doc versions; it never implements a slice inline.
+#
+# Recommended user-level settings to pair with this workspace:
+#
+#   # Treat this repo root as the project root.
+#   project_root_markers = [".git"]
+#
+#   # Subagent concurrency/depth defaults live in your user config:
+#   [agents]
+#   max_threads = 6
+#   max_depth = 1
+
+project_root_markers = [".git"]
