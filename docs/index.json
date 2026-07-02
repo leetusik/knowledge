@@ -139,7 +139,7 @@
       ]
     },
     "operations": {
-      "latest": "v0002_two-service_compose_viewer_api_reindex_drift_repair_bearer_auth",
+      "latest": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -157,6 +157,14 @@
           "source": "P2.REVIEW",
           "summary": "Two-service compose (viewer + API), reindex drift repair, bearer auth",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys",
+          "path": "docs/versions/operations/v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys.md",
+          "created_at": "2026-07-02T17:04:53+09:00",
+          "source": "P3.REVIEW",
+          "summary": "GitHub Pages publishing pipeline live (pinned mkdocs-material CI, manual-push deploys)",
+          "previous": "v0002_two-service_compose_viewer_api_reindex_drift_repair_bearer_auth"
         }
       ]
     },
@@ -189,7 +197,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0002_two-track_knowledge_store_plan",
+      "latest": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -207,9 +215,17 @@
           "source": "P1.REVIEW",
           "summary": "Two-track knowledge store plan",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo",
+          "path": "docs/versions/decisions/v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo.md",
+          "created_at": "2026-07-02T17:04:53+09:00",
+          "source": "P3.REVIEW",
+          "summary": "GitHub Pages generator: mkdocs-material 9.7.6 re-confirmed over Hugo",
+          "previous": "v0002_two-track_knowledge_store_plan"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-02T16:09:04+09:00"
+  "last_rebuilt_at": "2026-07-02T17:05:47+09:00"
 }

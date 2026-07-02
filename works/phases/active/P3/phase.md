@@ -64,3 +64,22 @@ _Running list of durable-truth changes for `P3.REVIEW` to consolidate into doc v
 ## Open Questions
 
 - None — the generator question ("maybe Hugo") is resolved: mkdocs-material 9.7.6 re-confirmed this session.
+
+## Review (P3.REVIEW)
+
+Verdict: **pass** (2026-07-02, reviewer slice-executor).
+
+Validated all four slices together:
+
+- **S1** — YAML sanity `uv run --with pyyaml ...` → YAML OK; faithful build `docker compose run --rm kb build` → exit 0 (only the expected Material/MkDocs-2.0 notice + `Excluding 'README.md'` warnings); guards → no real `nav:`/`strict:` key, load-bearing comment intact; pin parity → `pages.yml` `mkdocs-material==9.7.6` == `compose.yml` `9.7.6`; `site_url` == `https://leetusik.github.io/knowledge/`.
+- **S2** — live root `curl` → `200` + `<title>Knowledge Base</title>`; `tags/` → `200` + `<title>Tags - Knowledge Base</title>`.
+- **State** — `workflow.py validate` → passed; all four slices have `result.md`; deferred job D2 exists under `works/deferred/open/D2/`.
+
+Intent walk (`intent.md` Confirmed Intent) — every clause satisfied: triggers (`push` main + `workflow_dispatch`), permissions (`contents: read / pages: write / id-token: write`), concurrency group `pages`, setup-python 3.12, pinned `mkdocs-material==9.7.6`, `mkdocs build` without `--strict`, official `upload-pages-artifact@v3` + `deploy-pages@v4`, `github-pages` environment, live `site_url`, auto-nav preserved, manual-push-only publishing documented in README (§ Publishing), one-time Pages setting done (confirmed by S2 run 3 `28574368474` + live 200s).
+
+Doc versions consolidated on pass:
+
+- `decisions/v0003` — added "GitHub Pages generator: mkdocs-material 9.7.6" decision (Hugo rejected; design polish deferred as D2); Status now two accepted decisions.
+- `operations/v0003` — Status = both tracks operational + live URL; replaced the `## Publishing` placeholder with the real GitHub Pages pipeline (pages.yml shape, pin-parity rule, pre-push check, manual-push-only, one-time setting, first-publish lesson).
+
+`rebuild-docs` regenerated `docs/current/{decisions,operations}.md` to v0003; `validate` passed after.

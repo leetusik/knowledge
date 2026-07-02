@@ -1,17 +1,17 @@
 ---
 doc_id: operations
-version: v0002
-created_at: 2026-07-02T16:05:54+09:00
-source: P2.REVIEW
-summary: Two-service compose (viewer + API), reindex drift repair, bearer auth
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-02T17:04:53+09:00
+source: P3.REVIEW
+summary: GitHub Pages publishing pipeline live (pinned mkdocs-material CI, manual-push deploys)
+previous: v0002_two-service_compose_viewer_api_reindex_drift_repair_bearer_auth
 ---
 
 # Operations
 
 ## Status
 
-Track 2 operational. `docker compose up -d` runs two services over the shared bind-mounted repo: the mkdocs viewer and the FastAPI document API.
+Both tracks operational. `docker compose up -d` runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI.
 
 ## Local Development
 
@@ -48,9 +48,16 @@ Two services over one bind-mounted repo:
 
 - Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the two mutating endpoints (`POST /api/documents`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`.
 
-## Publishing
+## Publishing (GitHub Pages)
 
-- Site deploys happen only on the operator's **manual `git push`** — agents and the API never push. (Track 1 GitHub Pages CI is P3.)
+Track 1 — the `docs/` tree — is published as a static site at <https://leetusik.github.io/knowledge/>.
+
+- **Pipeline**: `.github/workflows/pages.yml` runs on `push` to `main` (+ `workflow_dispatch`), concurrency group `pages` (`cancel-in-progress: false`). The build job pip-installs `mkdocs-material==9.7.6` → `mkdocs build` (never `--strict`) → `actions/upload-pages-artifact`; the deploy job runs `actions/deploy-pages` in the `github-pages` environment.
+- **Pin parity**: the CI pip pin and the `compose.yml` viewer image tag are the same `9.7.6` on purpose — bump them together so the local build stays a faithful CI pre-check.
+- **Pre-push check**: `docker compose run --rm kb build` runs the same `mkdocs build` as CI (same 9.7.6); a clean local build predicts a clean deploy.
+- **Manual-push-only**: deploys happen only on the operator's manual `git push` — agents, the `/explain` skill, and the API commit locally but never push.
+- **One-time setting**: Settings → Pages → Source = "GitHub Actions" (done 2026-07-02; cannot be automated from this repo).
+- **First-publish lesson**: enable Pages *before* the first push, or the `deploy-pages` step fails (the initial push built green but its deploy failed because Pages wasn't enabled yet). Recover without a new push via Actions → "Run workflow" — the workflow re-runs idempotently.
 
 ## Invariant
 

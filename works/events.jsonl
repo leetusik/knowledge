@@ -55,3 +55,7 @@
 {"ts": "2026-07-02T16:43:42+09:00", "type": "slice_status_changed", "slice": "P3.S2", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-07-02T16:56:48+09:00", "type": "slice_status_changed", "slice": "P3.S2", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-07-02T16:59:06+09:00", "type": "slice_status_changed", "slice": "P3.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-02T17:03:23+09:00", "type": "slice_status_changed", "slice": "P3.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-02T17:04:53+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo", "source": "P3.REVIEW"}
+{"ts": "2026-07-02T17:04:53+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys", "source": "P3.REVIEW"}
+{"ts": "2026-07-02T17:07:39+09:00", "type": "phase_reviewed", "phase": "P3", "verdict": "pass", "reviewer": "slice-executor"}

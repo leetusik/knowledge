@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0002
-created_at: 2026-07-02T14:42:44+09:00
-source: P1.REVIEW
-summary: Two-track knowledge store plan
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-02T17:04:53+09:00
+source: P3.REVIEW
+summary: GitHub Pages generator: mkdocs-material 9.7.6 re-confirmed over Hugo
+previous: v0002_two-track_knowledge_store_plan
 ---
 
 # Decisions
 
 ## Status
 
-One accepted architecture decision is recorded: the two-track knowledge store.
+Two accepted decisions are recorded: the two-track knowledge store, and the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo).
 
 ## Purpose
 
@@ -35,6 +35,18 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   - The `/explain` skill (in the `bootstrap_agentic_workspace` repo) becomes the API's client, POSTing documents instead of writing files directly.
   - This repo never edits the `bootstrap_agentic_workspace` repo; the `/explain` update is handled there via a prepared handover prompt.
 - Source: P1.REVIEW — intake evidence in P1 `phase.md`; confirmed intents in P2 and P3 `intent.md`.
+
+### GitHub Pages generator: mkdocs-material 9.7.6
+
+- Date: 2026-07-02
+- Status: accepted
+- Context: At P3 execution the operator reopened the generator choice ("maybe Hugo") for the Track 1 GitHub Pages site.
+- Decision: Keep mkdocs-material, pinned exactly to `9.7.6` to match the local viewer image (`squidfunk/mkdocs-material:9.7.6`), so the local `docker compose run --rm kb build` stays a faithful CI pre-check.
+- Alternatives considered: Hugo — rejected (`docs/` is plain markdown without front matter; the local viewer + tags page are material-specific; migration cost with no benefit at this scale).
+- Consequences:
+  - Version bumps happen in two places together: the `compose.yml` image tag and the `pages.yml` pip pin move as a pair.
+  - Design polish is deferred post-launch — publish first with the stock indigo / dark-mode look; tracked as deferred job D2.
+- Source: P3.REVIEW — evidence in P3 `intent.md` and `phase.md`.
 
 ## Superseded Decisions
 
