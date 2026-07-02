@@ -8,6 +8,7 @@ it appears.
 ## Recent
 
 <!-- explain:recent -->
+- 2026-07-02 · [How /explain Saves Documents Now — the P6 API Rewire Explained](bootstrap_agentic_workspace.sh/2026-07-02-how-explain-saves-documents-now-the-p6-api-rewire-explained.md) — bootstrap_agentic_workspace.sh
 - 2026-07-02 · [The Shared nginx Problem — Explained for Beginners](hi2vi_web/2026-07-02-shared-nginx-explained.md) — hi2vi_web
 
 ## Browse
