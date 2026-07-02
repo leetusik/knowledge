@@ -1,7 +1,9 @@
 services:
   kb:
     image: squidfunk/mkdocs-material:9.7.6  # exact pin — upgrades are deliberate and diff-visible
-    command: serve --dev-addr=0.0.0.0:8000 --watch docs --watch mkdocs.yml
+    # --livereload must be explicit: the flag's default never arms in this image,
+    # and without it new pages don't appear until the container restarts
+    command: serve --dev-addr=0.0.0.0:8000 --livereload
     ports:
       - "8765:8000"
     volumes:
