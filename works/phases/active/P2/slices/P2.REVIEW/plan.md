@@ -42,3 +42,14 @@ For each doc below: `python3 scripts/workflow.py doc-new-version --doc <X> --sum
 - Never commit; never run `review-phase`/`start-slice`/`finish-slice`/status transitions — the orchestrator records your verdict.
 - Write only: the five new `docs/versions/<doc>/v0002_*.md` files (+ regenerated `docs/current/` + `docs/index.json` via the engine), `result.md`, and the `phase.md` close-out line.
 - If validation or the objective check fails: create NO doc versions; return `changes_requested` with proposed fix slices (id/name/reason) or `blocked` with the impediment.
+
+---
+
+## Round 2 addendum (after P2.F1)
+
+Round 1 (see this slice's `result.md`) validated everything green but withheld the pass on one finding: the unanchored `.gitignore` `data/` rule would have silently dropped new `data` doc versions from commits. **P2.F1 fixed it** (`data/` → `/data/`, committed — read `../P2.F1/result.md`). Round 1's five draft doc versions were rolled back cleanly, so `doc-new-version` mints fresh `v0002` files. This is a re-review, not a fresh discovery pass:
+
+1. **Add one validation step**: `git check-ignore docs/versions/data/v0002_probe.md` → NO match (exit 1); `git check-ignore data/kb.sqlite3` → still ignored (by `/data/`).
+2. Re-run the round-1 validation matrix (§1) — same git-safety rules. End-state expectation changes: `docs/` is byte-identical **except** the five new version files + regenerated `docs/current/` + `docs/index.json`, which are the deliverable.
+3. On pass, consolidate the five docs per §3. Confirm the new `docs/versions/data/v0002_*.md` is **visible to git** (`git status` shows it untracked — not ignored).
+4. Wrap up per §4; in `result.md` record the round-2 pass and that F1 unblocked consolidation. Overwrite/extend `result.md` so it tells the full two-round story.

@@ -5,19 +5,19 @@
 
 ## Pointer
 
-- Current phase: `P2`
-- Current slice: `P2.REVIEW`
-- Next slice: `none`
+- Current phase: `P3`
+- Current slice: `P3.DECOMP`
+- Next slice: `P3.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `1`
-- Rebuilt at: `2026-07-02T16:00:14+09:00`
+- Rebuilt at: `2026-07-02T16:11:13+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P1` | `done` | `pass` | Bootstrap Intake | `none` | `works/phases/active/P1` |
-| [ ] `P2` | `in_progress` | `changes_requested` | Track 2 — DB-backed document API | `P2.REVIEW` | `works/phases/active/P2` |
+| [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [ ] `P3` | `planned` | `pending` | Track 1 — GitHub Pages publishing | `P3.DECOMP` | `works/phases/active/P3` |
 
 ## Phase P1: Bootstrap Intake
@@ -37,7 +37,7 @@
 | [x] `P2.S3` | `done` | Write path: POST /api/documents + Recent marker + scoped git commit | `implementation` | `works/phases/active/P2/slices/P2.S3` |
 | [x] `P2.S4` | `done` | Dockerize: Dockerfile, compose api service, README API section | `implementation` | `works/phases/active/P2/slices/P2.S4` |
 | [x] `P2.F1` | `done` | Anchor .gitignore data/ rule to /data/ | `fix` | `works/phases/active/P2/slices/P2.F1` |
-| [ ] `P2.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P2/slices/P2.REVIEW` |
+| [x] `P2.REVIEW` | `done` | phase review | `review` | `works/phases/active/P2/slices/P2.REVIEW` |
 
 ## Phase P3: Track 1 — GitHub Pages publishing
 

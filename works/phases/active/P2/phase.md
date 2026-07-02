@@ -146,3 +146,7 @@ Because a review slice may not edit config and must not consolidate docs on a no
 **Proposed fix slice — P2.F1** (`fix`, low risk): anchor `.gitignore` `data/` → `/data/` (repo-root disposable DB dir only). Verify `git check-ignore docs/versions/data/<file>` returns nothing while `data/kb.sqlite3` stays ignored; pytest 25 + validate green. Then **re-run P2.REVIEW** to consolidate the ten Doc impact notes into the five v0002 docs (`api`, `backend`, `data`, `operations`, `architecture`) and pass.
 
 _Doc consolidation is deferred to the re-review; the Doc impact list above is unchanged and still authoritative for it._
+
+### Review (P2.REVIEW) round 2 — pass
+
+Re-review after **P2.F1** (`.gitignore` `data/` → `/data/`, committed `6bcf898`). F1 confirmed both ways (`check-ignore docs/versions/data/…` → no match; `data/kb.sqlite3` still ignored). Full validation matrix re-run green: 25/25 pytest, both containers Up, all read endpoints + TZ, `commit:false` write smoke (`test-project/review-smoke`) with `docs/` byte-identical after surgical cleanup + reindex `removed:1`, `workflow validate` passed. With the blocker gone, the ten Doc impact notes were **consolidated into five v0002 doc versions** (`api`, `backend`, `data`, `operations`, `architecture`) via `doc-new-version --source P2.REVIEW` + one `rebuild-docs`; the new `data` version is git-visible (untracked, not ignored). **Verdict: pass.** Operator follow-ups (unchanged): `/explain` handover prompt, P3/Track 1 + D1, manual archiving. See `slices/P2.REVIEW/result.md` for the full two-round story.
