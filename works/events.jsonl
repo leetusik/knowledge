@@ -1,0 +1,6 @@
+{"ts": "2026-07-02T13:19:35+09:00", "type": "bootstrap", "project": "New Project", "phase": "P1"}
+{"ts": "2026-07-02T13:26:48+09:00", "type": "phase_created", "phase": "P2"}
+{"ts": "2026-07-02T13:27:01+09:00", "type": "phase_created", "phase": "P3"}
+{"ts": "2026-07-02T13:56:22+09:00", "type": "phase_status_changed", "phase": "P1", "old_status": "planned", "new_status": "in_progress"}
+{"ts": "2026-07-02T13:56:22+09:00", "type": "slice_status_changed", "slice": "P1.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-02T13:59:22+09:00", "type": "slice_status_changed", "slice": "P1.DECOMP", "old_status": "in_progress", "new_status": "done"}
