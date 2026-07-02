@@ -11,7 +11,8 @@ from __future__ import annotations
 import datetime
 import json
 import re
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import yaml
 
@@ -181,3 +182,79 @@ def insert_recent_bullet(
     appended = index_text.rstrip("\n")
     appended += f"\n\n{_RECENT_HEADING}\n\n{RECENT_MARKER}\n{bullet}\n"
     return appended, "appended"
+
+
+# --- write-file + update-index composition (S3 write path) ----------------
+
+_LEADING_BLANKS_RE = re.compile(r"\A(?:[ \t]*\n)+")
+
+
+def _normalize_body(body: str) -> str:
+    """Body starting at the H1: leading blank lines stripped, single trailing newline.
+
+    Mirrors what reindex sees — reindex stores the parsed body ``lstrip("\\n")``,
+    so a doc written here round-trips to the same DB ``markdown``.
+    """
+    stripped = _LEADING_BLANKS_RE.sub("", body or "")
+    return stripped.rstrip("\n") + "\n"
+
+
+def write_document_file(
+    *,
+    docs_root: Union[str, Path],
+    rel_path: str,
+    title: str,
+    date: str,
+    tags: list[str],
+    project: str,
+    source_repo: Optional[str],
+    body: str,
+) -> str:
+    """Write ``docs/<rel_path>`` as ``serialize_frontmatter(...) + "\\n" + body``.
+
+    Creates parent dirs. Returns the body **as the DB stores it** (identical to
+    what reindex derives from the same file: starts at the H1, no trailing
+    newline) so the on-disk file and the DB row can't drift on a later reindex.
+    """
+    content = (
+        serialize_frontmatter(
+            title=title,
+            date=date,
+            tags=tags,
+            project=project,
+            source_repo=source_repo or "",
+        )
+        + "\n"
+        + _normalize_body(body)
+    )
+    target = Path(docs_root) / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    # Reuse the reindex parse so the stored markdown is byte-identical to a rebuild.
+    _meta, parsed_body = parse_frontmatter(content)
+    return parsed_body.lstrip("\n")
+
+
+def update_recent_index(
+    docs_root: Union[str, Path],
+    *,
+    date: str,
+    title: str,
+    rel_path: str,
+    project: str,
+) -> bool:
+    """Insert the Recent bullet into ``docs/index.md``; suppress duplicates.
+
+    Returns ``recent_updated``: ``False`` (index left untouched) when ``rel_path``
+    already appears in the index text — the overwrite case — else ``True`` after
+    writing the bullet back via the marker→heading→append ladder.
+    """
+    index_path = Path(docs_root) / "index.md"
+    text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    if rel_path in text:
+        return False
+    new_text, _mechanism = insert_recent_bullet(
+        text, date=date, title=title, rel_path=rel_path, project=project
+    )
+    index_path.write_text(new_text, encoding="utf-8")
+    return True
