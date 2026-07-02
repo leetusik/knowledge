@@ -1,0 +1,9 @@
+services:
+  kb:
+    image: squidfunk/mkdocs-material:9.7.6  # exact pin — upgrades are deliberate and diff-visible
+    command: serve --dev-addr=0.0.0.0:8000 --watch docs --watch mkdocs.yml
+    ports:
+      - "8765:8000"
+    volumes:
+      - .:/docs
+    restart: unless-stopped
