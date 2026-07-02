@@ -34,6 +34,13 @@ This session's operator decisions:
 - **Generator re-confirmed: mkdocs-material 9.7.6.** The invocation note reopened the generator choice ("maybe Hugo"); Hugo was rejected — `docs/` is plain markdown with no front matter, and the local viewer + tags page are material-specific. Pinned exactly to `9.7.6` to match the local `squidfunk/mkdocs-material:9.7.6` compose viewer, so `docker compose run --rm kb build` stays a faithful pre-push check.
 - **Design polish deferred.** Publish first with the stock indigo / dark-mode look; restyle after the real site is visible. (The orchestrator handles the design-polish `defer-job`.)
 
+Cross-slice notes from `P3.S1` (executor):
+
+- All three file changes shipped together and validated as a unit: `.github/workflows/pages.yml` (new CI), `mkdocs.yml` `site_url` → `https://leetusik.github.io/knowledge/` (one line; no-nav/no-strict comment byte-identical), and the README "Publishing (GitHub Pages)" section + stale "local-only" line fix + intro touch.
+- Faithful pre-push check `docker compose run --rm kb build` passed clean (exit 0). Expected non-fatal warnings only: the MkDocs-2.0 team notice and `Excluding 'README.md' ... conflicts with 'index.md'` (no `--strict`, so warnings don't fail the build). CI runs the identical `mkdocs build`, so a clean local build predicts a clean CI build.
+- The workflow used plain `mkdocs build` + `path: site` (not `--site-dir _site`) — same command the local check runs, and `site/` is already gitignored. Intent-compliant (no site-dir).
+- **CI remains unproven until S2's push.** The deploy job can only truly run on a real push to `main`, and the one-time repo Settings → Pages → Source = "GitHub Actions" is operator-only. S2 is the pending gate that enables Pages, does the first push, and verifies the live site.
+
 ## Constraints
 
 - Agents never push — deploys happen only on a manual `git push` by the operator (the `/explain` skill and the P2 API commit locally but never push).
@@ -47,6 +54,7 @@ This session's operator decisions:
 _Running list of durable-truth changes for `P3.REVIEW` to consolidate into doc versions._
 
 - decisions doc — P3 re-confirmed mkdocs-material 9.7.6 as the Pages generator (Hugo considered, rejected); design polish deferred post-launch.
+- operations doc — GitHub Pages publishing pipeline added (pages.yml, site_url → live URL, manual-push publishing model, one-time Pages source setting).
 
 ## Open Questions
 

@@ -1,5 +1,5 @@
 site_name: Knowledge Base
-site_url: http://localhost:8765/
+site_url: https://leetusik.github.io/knowledge/
 
 theme:
   name: material
