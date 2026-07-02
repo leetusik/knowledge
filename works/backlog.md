@@ -5,18 +5,18 @@
 
 ## Pointer
 
-- Current phase: `P1`
-- Current slice: `P1.REVIEW`
-- Next slice: `none`
+- Current phase: `P2`
+- Current slice: `P2.DECOMP`
+- Next slice: `P2.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-02T13:59:22+09:00`
+- Rebuilt at: `2026-07-02T14:44:46+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
-| [ ] `P1` | `in_progress` | `pending` | Bootstrap Intake | `P1.REVIEW` | `works/phases/active/P1` |
+| [x] `P1` | `done` | `pass` | Bootstrap Intake | `none` | `works/phases/active/P1` |
 | [ ] `P2` | `planned` | `pending` | Track 2 — DB-backed document API | `P2.DECOMP` | `works/phases/active/P2` |
 | [ ] `P3` | `planned` | `pending` | Track 1 — GitHub Pages publishing | `P3.DECOMP` | `works/phases/active/P3` |
 
@@ -25,7 +25,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P1.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P1/slices/P1.DECOMP` |
-| [ ] `P1.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P1/slices/P1.REVIEW` |
+| [x] `P1.REVIEW` | `done` | phase review | `review` | `works/phases/active/P1/slices/P1.REVIEW` |
 
 ## Phase P2: Track 2 — DB-backed document API
 

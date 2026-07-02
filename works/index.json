@@ -4,13 +4,13 @@
       "id": "P1",
       "name": "Bootstrap Intake",
       "objective": "Capture the first real task, create versioned durable docs, and replace this placeholder phase with concrete work.",
-      "status": "in_progress",
+      "status": "done",
       "order": 1,
       "path": "works/phases/active/P1",
-      "review_status": "pending",
-      "current_slice": "P1.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 2,
-      "done_slice_count": 1
+      "done_slice_count": 2
     },
     {
       "id": "P2",
@@ -40,5 +40,5 @@
   "deferred_open_count": 0,
   "deferred_promoted_count": 0,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-02T13:59:22+09:00"
+  "last_rebuilt_at": "2026-07-02T14:44:46+09:00"
 }

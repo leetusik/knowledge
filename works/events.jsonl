@@ -4,3 +4,8 @@
 {"ts": "2026-07-02T13:56:22+09:00", "type": "phase_status_changed", "phase": "P1", "old_status": "planned", "new_status": "in_progress"}
 {"ts": "2026-07-02T13:56:22+09:00", "type": "slice_status_changed", "slice": "P1.DECOMP", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-02T13:59:22+09:00", "type": "slice_status_changed", "slice": "P1.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-02T14:41:14+09:00", "type": "slice_status_changed", "slice": "P1.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-02T14:42:44+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0002_two-track_knowledge_store_plan", "source": "P1.REVIEW"}
+{"ts": "2026-07-02T14:42:49+09:00", "type": "doc_version_created", "doc": "product", "version": "v0002_personal_knowledge_base_with_two_consumption_tracks", "source": "P1.REVIEW"}
+{"ts": "2026-07-02T14:44:46+09:00", "type": "slice_status_changed", "slice": "P1.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-02T14:44:46+09:00", "type": "phase_reviewed", "phase": "P1", "verdict": "pass", "reviewer": "slice-executor"}
