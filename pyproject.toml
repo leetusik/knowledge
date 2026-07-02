@@ -1,0 +1,29 @@
+[project]
+name = "kb-api"
+version = "0.1.0"
+description = "DB-backed document API for the knowledge base (Track 2)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pyyaml",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+# No [build-system]: server/ runs from the repo root (bind-mounted in Docker),
+# so the project itself is never built or installed. `package = false` makes uv
+# treat this as a virtual project — it installs the dependencies only, which is
+# what Docker later reproduces with `uv export ... --no-emit-project`.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+# server/ is a top-level package at the repo root; put the root on sys.path so
+# `import server` resolves without installing the (non-package) project.
+pythonpath = ["."]
+testpaths = ["tests"]
