@@ -1,0 +1,11 @@
+{
+  "id": "D2",
+  "title": "Design polish for the Pages site (palette/fonts/logo, optional extra_css)",
+  "status": "deferred",
+  "source": "P3.DECOMP",
+  "reason": "Operator chose publish-first; stock material look ships",
+  "trigger": "First successful Pages deploy visible at https://leetusik.github.io/knowledge/",
+  "created_at": "2026-07-02T16:33:00+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

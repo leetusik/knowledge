@@ -44,3 +44,8 @@
 {"ts": "2026-07-02T16:05:54+09:00", "type": "doc_version_created", "doc": "architecture", "version": "v0002_track_2_two-container_shape_over_shared_bind-mounted_repo", "source": "P2.REVIEW"}
 {"ts": "2026-07-02T16:11:13+09:00", "type": "slice_status_changed", "slice": "P2.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-02T16:11:13+09:00", "type": "phase_reviewed", "phase": "P2", "verdict": "pass", "reviewer": "slice-executor"}
+{"ts": "2026-07-02T16:31:00+09:00", "type": "slice_status_changed", "slice": "P3.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-02T16:31:30+09:00", "type": "slice_created", "phase": "P3", "slice": "P3.S1"}
+{"ts": "2026-07-02T16:31:31+09:00", "type": "slice_created", "phase": "P3", "slice": "P3.S2"}
+{"ts": "2026-07-02T16:33:00+09:00", "type": "deferred_created", "deferred": "D2", "source": "P3.DECOMP"}
+{"ts": "2026-07-02T16:33:00+09:00", "type": "slice_status_changed", "slice": "P3.DECOMP", "old_status": "in_progress", "new_status": "done"}
