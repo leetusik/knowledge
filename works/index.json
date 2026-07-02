@@ -1,0 +1,44 @@
+{
+  "active_phases": [
+    {
+      "id": "P1",
+      "name": "Bootstrap Intake",
+      "objective": "Capture the first real task, create versioned durable docs, and replace this placeholder phase with concrete work.",
+      "status": "in_progress",
+      "order": 1,
+      "path": "works/phases/active/P1",
+      "review_status": "pending",
+      "current_slice": "P1.REVIEW",
+      "slice_count": 2,
+      "done_slice_count": 1
+    },
+    {
+      "id": "P2",
+      "name": "Track 2 — DB-backed document API",
+      "objective": "Build the DB track of the two-track knowledge store: SQLite (FTS5) document store + FastAPI service with read/list/search/reindex endpoints and an API-owned write path (docs/-convention file + Recent-marker update + DB upsert + scoped git commit), containerized as compose service 'api' on port 8766 beside the mkdocs viewer, so the /explain skill can POST documents instead of writing files. docs/ stays canonical; reindex rebuilds the DB from files.",
+      "status": "planned",
+      "order": 2,
+      "path": "works/phases/active/P2",
+      "review_status": "pending",
+      "current_slice": "P2.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P3",
+      "name": "Track 1 — GitHub Pages publishing",
+      "objective": "Publish the docs/ track as a GitHub Pages static site: GitHub Actions workflow building with mkdocs-material pinned to 9.7.6 (matching the local Docker image) and deploying via the official Pages actions, site_url updated to https://leetusik.github.io/knowledge/, auto-nav (no nav:, no strict:) preserved, publishing stays manual git push only — agents never push.",
+      "status": "planned",
+      "order": 3,
+      "path": "works/phases/active/P3",
+      "review_status": "pending",
+      "current_slice": "P3.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    }
+  ],
+  "deferred_open_count": 0,
+  "deferred_promoted_count": 0,
+  "deferred_dropped_count": 0,
+  "last_rebuilt_at": "2026-07-02T13:59:22+09:00"
+}
