@@ -8,6 +8,7 @@ it appears.
 ## Recent
 
 <!-- explain:recent -->
+- 2026-07-07 · [The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners](changple5/2026-07-07-the-daily-ingestion-job-that-kept-getting-stuck-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The P35 Agent Refactor — Explained for Beginners](changple5/2026-07-07-the-p35-agent-refactor-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Prompt-Injection Defense (P26) — Explained for Beginners](changple5/2026-07-07-the-prompt-injection-defense-p26-explained-for-beginners.md) — changple5
 - 2026-07-02 · [How /explain Saves Documents Now — the P6 API Rewire Explained](bootstrap_agentic_workspace.sh/2026-07-02-how-explain-saves-documents-now-the-p6-api-rewire-explained.md) — bootstrap_agentic_workspace.sh
