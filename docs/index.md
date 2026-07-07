@@ -8,6 +8,7 @@ it appears.
 ## Recent
 
 <!-- explain:recent -->
+- 2026-07-07 · [Measure First, Then Cache — The P39 Performance Phase Explained for Beginners](changple5/2026-07-07-measure-first-then-cache-the-p39-performance-phase-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners](changple5/2026-07-07-the-daily-ingestion-job-that-kept-getting-stuck-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The P35 Agent Refactor — Explained for Beginners](changple5/2026-07-07-the-p35-agent-refactor-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Prompt-Injection Defense (P26) — Explained for Beginners](changple5/2026-07-07-the-prompt-injection-defense-p26-explained-for-beginners.md) — changple5
