@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0002
-created_at: 2026-07-02T16:05:54+09:00
-source: P2.REVIEW
-summary: Track 2 two-container shape over shared bind-mounted repo
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-08T21:52:17+09:00
+source: P4.REVIEW
+summary: P4: sqlite-vec/RRF seam consumed as hybrid semantic search
+previous: v0002_track_2_two-container_shape_over_shared_bind-mounted_repo
 ---
 
 # Architecture
 
 ## Status
 
-Track 2 (the DB-backed document API) is implemented. This doc records its stable system shape. Track 1 (public GitHub Pages publishing) is pending as P3.
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched.
 
 ## System Shape
 
@@ -44,8 +44,9 @@ A failed commit **never rolls back** the file/DB (`committed:false`); `docs/` st
 
 ## Extension Points
 
-- Hybrid search: `sqlite-vec` embeddings + RRF fusion in `server/search.py` (clean seam, no embeddings this phase).
-- A future personal web UI built on the read API.
+- **Hybrid semantic search (delivered P4):** the `sqlite-vec`/RRF seam in `server/search.py` is now consumed. Embeddings come from Gemini (`server/embeddings.py`, reusing changple5's `google-genai` convention), are cached by content hash in a plain `document_embeddings` BLOB table (the local venv Python can't load SQLite extensions), and a Python cosine ordering is fused with keyword ranking via RRF. The seam stays **upgrade-ready** — vectors are keyed by `doc_id`, so adopting `sqlite-vec` later touches only `db.py` + `search.py`'s cosine loop; the fusion, signals, and `mode` logic are unaffected. Embeds happen in-request (best-effort, outside the write lock) or at reindex — no background workers, so the single-worker invariant holds. With no key, search degrades gracefully to BM25-only.
+- A future personal web UI built on the read API (the P4 aggregations `GET /api/tags`/`GET /api/projects` and `related` cross-links are groundwork for it and the P6 knowledge graph).
+- **SaaS-someday** is noted and the architecture is kept from precluding it (out of scope for now).
 
 ## Roadmap
 

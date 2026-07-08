@@ -1,10 +1,10 @@
 ---
 doc_id: operations
-version: v0003
-created_at: 2026-07-02T17:04:53+09:00
-source: P3.REVIEW
-summary: GitHub Pages publishing pipeline live (pinned mkdocs-material CI, manual-push deploys)
-previous: v0002_two-service_compose_viewer_api_reindex_drift_repair_bearer_auth
+version: v0004
+created_at: 2026-07-08T21:52:17+09:00
+source: P4.REVIEW
+summary: P4: Gemini embedding env, startup reindex self-heal, mkdocs exclude_docs
+previous: v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys
 ---
 
 # Operations
@@ -19,7 +19,7 @@ Both tracks operational. `docker compose up -d` runs two services over the share
 - Install: `uv sync`.
 - Test: `uv run pytest -q`.
 - Run API (host): `uv run uvicorn server.main:app --port 8766`.
-- Reindex (drift repair CLI): `uv run python -m server.reindex` (prints `indexed:/removed:/skipped:/duration_ms:`; never runs git).
+- Reindex (drift repair CLI): `uv run python -m server.reindex` (prints `indexed:/removed:/skipped:/embeddings:/duration_ms:`; never runs git). P4: `uv run python -m server.reindex <rel_path>` reindexes a single path incrementally (reports per-path). The `embeddings:` line reports the content-hash-cached embedding sync (`embedded=… cached=… removed=… skipped_reason=…`).
 
 ## Deployment (Docker Compose)
 
@@ -38,11 +38,18 @@ Two services over one bind-mounted repo:
 | `KB_PUBLIC_BASE_URL` | no | viewer origin for response `url`s | default `http://localhost:8765` |
 | `KB_API_TOKEN` | no | bearer token for mutating endpoints | unset = localhost open |
 | `KB_GIT_COMMIT` | no | enable/skip the write-path commit | default true |
+| `KB_STARTUP_REINDEX` | no | run a full reindex on app boot (drift self-heal) | default true; `0/false/no/off` disables (disabled in tests) |
+| `GOOGLE_API_KEY` | no | Gemini credential (preferred) for semantic search | empty = feature off → BM25-only |
+| `GEMINI_API_KEY` | no | Gemini credential (fallback) | used when `GOOGLE_API_KEY` unset |
+| `GEMINI_EMBEDDING_MODEL` | no | Gemini embedding model | default `gemini-embedding-2-preview` |
 | `TZ` | no | container timezone | `Asia/Seoul` (needs `tzdata`) |
 
 ## Reindex as Drift-Repair Tool
 
 - `python -m server.reindex` (CLI) and `POST /api/reindex` rebuild the DB from `docs/`. Use them to reconcile manual edits, API-down fallback writes (the `/explain` skill writing/committing directly), and git resets. Reindex never commits.
+- **Incremental single-path (P4):** `python -m server.reindex <rel_path>` or `POST /api/reindex {"rel_path": "…"}` reindexes just one file (index if present, delete its row if vanished) — cheap for hot-reload / watch-mode workflows.
+- **Startup drift self-heal (P4):** with `KB_STARTUP_REINDEX` true (the default), the app runs a full `reindex()` in its FastAPI lifespan **before** it accepts requests, printing `[kb-api] startup reindex: indexed=… removed=… skipped=… embedded=…`. Single-worker + a tiny corpus + the content-hash embedding cache make boot reindex safe and cheap. Set `KB_STARTUP_REINDEX=0` in a production deployment whose state is already validated to skip it.
+- **Embedding sync:** every reindex path (full, single-path, startup) runs a best-effort, content-hash-cached embedding sync — it only re-embeds changed docs, clears orphans, and never fails the reindex (no key → skipped; API/429 → per-doc skip, retried next run). `gemini-embedding-2-preview` has a low per-minute quota (~4–5 req/min); reindex embeds per-doc with bounded 429 backoff and persists each success, so a rate-limited run resumes from the cache on the next reindex.
 
 ## Auth
 
@@ -53,6 +60,7 @@ Two services over one bind-mounted repo:
 Track 1 — the `docs/` tree — is published as a static site at <https://leetusik.github.io/knowledge/>.
 
 - **Pipeline**: `.github/workflows/pages.yml` runs on `push` to `main` (+ `workflow_dispatch`), concurrency group `pages` (`cancel-in-progress: false`). The build job pip-installs `mkdocs-material==9.7.6` → `mkdocs build` (never `--strict`) → `actions/upload-pages-artifact`; the deploy job runs `actions/deploy-pages` in the `github-pages` environment.
+- **Site exclusion (P4 / D1):** `mkdocs.yml` sets `exclude_docs: /versions/` so the workspace-internal `docs/versions/` durable-doc history is kept out of the built site (pages, nav, and search) while `docs/current/` (the latest durable docs) stays published. Use `exclude_docs` **only** — never `nav:`/`strict:` (auto-nav from the `docs/` tree is load-bearing). The versioned-doc history stays in git, just not on the public site.
 - **Pin parity**: the CI pip pin and the `compose.yml` viewer image tag are the same `9.7.6` on purpose — bump them together so the local build stays a faithful CI pre-check.
 - **Pre-push check**: `docker compose run --rm kb build` runs the same `mkdocs build` as CI (same 9.7.6); a clean local build predicts a clean deploy.
 - **Manual-push-only**: deploys happen only on the operator's manual `git push` — agents, the `/explain` skill, and the API commit locally but never push.

@@ -37,7 +37,7 @@
       ]
     },
     "architecture": {
-      "latest": "v0002_track_2_two-container_shape_over_shared_bind-mounted_repo",
+      "latest": "v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -55,6 +55,14 @@
           "source": "P2.REVIEW",
           "summary": "Track 2 two-container shape over shared bind-mounted repo",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search",
+          "path": "docs/versions/architecture/v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: sqlite-vec/RRF seam consumed as hybrid semantic search",
+          "previous": "v0002_track_2_two-container_shape_over_shared_bind-mounted_repo"
         }
       ]
     },
@@ -73,7 +81,7 @@
       ]
     },
     "backend": {
-      "latest": "v0002_server_fastapi_package_config_db_documents_search_gitops_main",
+      "latest": "v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -91,11 +99,19 @@
           "source": "P2.REVIEW",
           "summary": "server/ FastAPI package: config, db, documents, search, gitops, main",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer",
+          "path": "docs/versions/backend/v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: recency+RRF hybrid search, embeddings module, delete path, incremental reindex, cross-links, sanitizer",
+          "previous": "v0002_server_fastapi_package_config_db_documents_search_gitops_main"
         }
       ]
     },
     "data": {
-      "latest": "v0002_sqlite_fts5_document_store_documents_table_external-content_fts_index",
+      "latest": "v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -113,11 +129,19 @@
           "source": "P2.REVIEW",
           "summary": "SQLite FTS5 document store: documents table + external-content FTS index",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source",
+          "path": "docs/versions/data/v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: document_embeddings cache, related column, CJK query-layer search, publish-safe source",
+          "previous": "v0002_sqlite_fts5_document_store_documents_table_external-content_fts_index"
         }
       ]
     },
     "api": {
-      "latest": "v0002_db-backed_document_api_read_list_search_reindex_api-owned_write_path",
+      "latest": "v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -135,11 +159,19 @@
           "source": "P2.REVIEW",
           "summary": "DB-backed document API: read/list/search/reindex + API-owned write path",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links",
+          "path": "docs/versions/api/v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: search pagination + hybrid signals, DELETE + tags/projects, incremental reindex, related links",
+          "previous": "v0002_db-backed_document_api_read_list_search_reindex_api-owned_write_path"
         }
       ]
     },
     "operations": {
-      "latest": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys",
+      "latest": "v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -165,11 +197,19 @@
           "source": "P3.REVIEW",
           "summary": "GitHub Pages publishing pipeline live (pinned mkdocs-material CI, manual-push deploys)",
           "previous": "v0002_two-service_compose_viewer_api_reindex_drift_repair_bearer_auth"
+        },
+        {
+          "id": "v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs",
+          "path": "docs/versions/operations/v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: Gemini embedding env, startup reindex self-heal, mkdocs exclude_docs",
+          "previous": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys"
         }
       ]
     },
     "security": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -179,6 +219,14 @@
           "source": "bootstrap",
           "summary": "Initial security doc",
           "previous": null
+        },
+        {
+          "id": "v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface",
+          "path": "docs/versions/security/v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface.md",
+          "created_at": "2026-07-08T21:52:17+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: publish-safe source metadata sanitizer, no local paths on public surface",
+          "previous": "v0001_bootstrap"
         }
       ]
     },
@@ -197,7 +245,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo",
+      "latest": "v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -223,9 +271,17 @@
           "source": "P3.REVIEW",
           "summary": "GitHub Pages generator: mkdocs-material 9.7.6 re-confirmed over Hugo",
           "previous": "v0002_two-track_knowledge_store_plan"
+        },
+        {
+          "id": "v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs",
+          "path": "docs/versions/decisions/v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs.md",
+          "created_at": "2026-07-08T21:52:18+09:00",
+          "source": "P4.REVIEW",
+          "summary": "P4: CJK query-side search, hybrid RRF, cross-link convention, publish hygiene ADRs",
+          "previous": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-02T17:05:47+09:00"
+  "last_rebuilt_at": "2026-07-08T21:58:55+09:00"
 }

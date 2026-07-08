@@ -40,13 +40,13 @@
       "id": "P4",
       "name": "Knowledge feature core improvements",
       "objective": "Audit and improve the current /explain + KB pipeline — skill contract, document API, indexing, config/portability. Scope deliberately broad: the DECOMP slice investigates and proposes the concrete improvement slices. Groundwork for the web UI and plugin phases.",
-      "status": "planned",
+      "status": "done",
       "order": 4,
       "path": "works/phases/active/P4",
-      "review_status": "pending",
-      "current_slice": "P4.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 8,
-      "done_slice_count": 7
+      "done_slice_count": 8
     },
     {
       "id": "P5",
@@ -88,5 +88,5 @@
   "deferred_open_count": 1,
   "deferred_promoted_count": 1,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-08T21:44:07+09:00"
+  "last_rebuilt_at": "2026-07-08T22:01:50+09:00"
 }

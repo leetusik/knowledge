@@ -1,21 +1,21 @@
 ---
 doc_id: api
-version: v0002
-created_at: 2026-07-02T16:05:54+09:00
-source: P2.REVIEW
-summary: DB-backed document API: read/list/search/reindex + API-owned write path
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-08T21:52:17+09:00
+source: P4.REVIEW
+summary: P4: search pagination + hybrid signals, DELETE + tags/projects, incremental reindex, related links
+previous: v0002_db-backed_document_api_read_list_search_reindex_api-owned_write_path
 ---
 
 # API
 
 ## Status
 
-Stable and validated. The Track 2 FastAPI service (compose service `api`, base `http://localhost:8766`) implements the read, search, reindex, and API-owned write contracts below. `docs/` is the canonical store; the SQLite DB is a disposable projection.
+Stable and validated. The Track 2 FastAPI service (compose service `api`, base `http://localhost:8766`) implements the read, search, reindex, and API-owned write contracts below. `docs/` is the canonical store; the SQLite DB is a disposable projection. P4 hardened the surface: search is paginated and hybrid (keyword + optional Gemini vector signal), documents can be deleted, `GET /api/tags` and `GET /api/projects` expose aggregations, reindex accepts a single-path form, and documents carry `related` cross-links — all additive and backward-compatible (the existing `/explain` write payload is unchanged; every new write-contract field is optional).
 
 ## Auth
 
-`Authorization: Bearer <KB_API_TOKEN>` is required on the **two mutating endpoints only** (`POST /api/documents`, `POST /api/reindex`) and only when `KB_API_TOKEN` is set (else 401). All `GET` endpoints are always open. Token unset (default) = localhost open.
+`Authorization: Bearer <KB_API_TOKEN>` is required on the **mutating endpoints only** (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`) and only when `KB_API_TOKEN` is set (else 401). All `GET` endpoints — including the new `/api/tags` and `/api/projects` aggregations — are always open. Token unset (default) = localhost open.
 
 ## Contracts
 
@@ -27,34 +27,56 @@ Stable and validated. The Track 2 FastAPI service (compose service `api`, base `
 ### GET /api/documents
 
 - Query: `project`, `tag`, `limit` (1–200, default 50), `offset` (≥0).
-- Output: `{total, items:[...]}`, newest-first. Items omit `markdown` and the internal `tags_text` mirror.
+- Output: `{total, items:[...]}`, newest-first. Items omit `markdown` and the internal `tags_text` mirror, and each item now carries `related` (the cross-link array, same DB-row pass-through as `tags`).
 
 ### GET /api/documents/{id} and GET /api/documents/by-path/{rel_path:path}
 
-- Output: the single document including `markdown` and `source_repo` (still no `tags_text`); 404 when missing.
+- Output: the single document including `markdown`, `source_repo` (publish-safe basename — see write path), and `related` (still no `tags_text`); 404 when missing.
 - The `by-path` route is declared before the `{id:int}` route so a path never binds to the id route.
+
+### GET /api/tags
+
+- Purpose: tag aggregation for a tag cloud / browser (added P4 for the P5 web UI). Open read.
+- Query: optional `project` — scopes the counts to one project.
+- Output: `{tags:[{tag, count}, ...]}`, ordered **count DESC, then tag ASC** for direct display.
+
+### GET /api/projects
+
+- Purpose: project aggregation for a project browser (added P4). Open read.
+- Output: `{projects:[{project, count, latest_date}, ...]}`, ordered **project ASC**.
 
 ### GET /api/search
 
-- Query: `q` (required), `project`, `tag`, `limit` (1–50, default 10), `raw` (default false).
-- Output: `{query, mode:"bm25", results:[{doc fields, score, snippet, signals:{bm25}}]}`.
-- Ranking: `bm25(documents_fts, 8.0, 4.0, 1.0)` (title 8×, tags 4×, body 1×); `score = -bm25` (higher-is-better, rounded to 4, ready for hybrid fusion); `snippet()` wraps hits in `<mark>…</mark>`; a `signals:{bm25}` block is exposed.
-- Safety: each whitespace token is individually double-quoted before `MATCH`, so raw FTS5 operator syntax (`NEAR/AND(`, unbalanced parens, `*`) can never 500 — it collapses to harmless quoted phrases. `raw=true` opts into raw FTS5 syntax deliberately; a syntax error then returns **400**. Blank `q` → empty results.
-- Note: BM25 IDF collapses toward 0 on a 1–2 doc corpus (a term present in every doc), so `score` can round to `0.0` on the single-doc real repo — correct, not a regression; the snippet and result still return.
+- Query: `q` (required), `project`, `tag`, `limit` (1–50, default 10), `offset` (≥0, added P4), `raw` (default false).
+- Output: `{query, mode, total, limit, offset, results:[{doc fields, score, snippet, signals}]}`. `total` is the full match/fusion count; `limit`/`offset` echo the page. `mode` is `"bm25"` or `"hybrid"` (see below).
+- **Keyword ranking (always present):** `bm25(documents_fts, 8.0, 4.0, 1.0)` (title 8×, tags 4×, body 1×) fused in Python with an exponential-decay recency signal from the doc's `date` — `score = bm25 + RECENCY_WEIGHT·recency` (module constants `HALF_LIFE_DAYS=90`, `RECENCY_WEIGHT=0.5`); ordered score DESC with date DESC then id DESC as tiebreaks. The full match set is re-ranked in Python *before* `offset`/`limit` slice it, so pagination applies to the final composed ordering, not raw bm25 rank. `snippet()` wraps keyword hits in `<mark>…</mark>`.
+- **CJK / Hangul / Kana search:** achieved at the query layer, not the index — `build_match_query` prefix-expands any token containing CJK/Hangul/Kana into a `"tok"*` prefix query (`검색` → `검색"*`), so a 2-char proper noun or a stem matches its inflected forms. Pure-ASCII tokens keep exact porter-stemmed matching. (The FTS tokenizer is unchanged — `porter unicode61`.)
+- **Hybrid semantic mode:** when a Gemini API key is configured and the query embeds, a vector ordering (cosine similarity over cached embeddings) is fused with the keyword ordering via **Reciprocal Rank Fusion** (`RRF_K=60`). `mode` is then `"hybrid"`, `total` is the fused-union size, and `score` is the (small, e.g. ~0.03) RRF value. `signals` becomes `{bm25?, recency, vector?}`: `bm25` is present only for keyword hits, `vector` (cosine) only when the vector signal participated; a **pure-semantic (vector-only) hit** carries `{recency, vector}` with a leading-text `snippet` (no `<mark>`). With no key, `raw=true`, or an embed failure the search degrades gracefully to `mode:"bm25"` with byte-identical keyword behavior.
+- Safety: each whitespace token is individually double-quoted before `MATCH`, so raw FTS5 operator syntax (`NEAR/AND(`, unbalanced parens, `*`) can never 500 — it collapses to harmless quoted phrases. `raw=true` opts into raw FTS5 syntax deliberately (and stays BM25-only); a syntax error then returns **400**. Blank `q` → empty results.
+- Note: BM25 IDF collapses toward 0 on a tiny corpus (a term present in every doc), so keyword `bm25` can round toward 0 there — recency is then the effective tiebreak; the snippet and result still return.
 
 ### POST /api/reindex
 
 - Rebuild the DB from `docs/`: walk `docs/<subdir>/**/*.md`, upsert by `rel_path`, delete rows for vanished files. **Never commits.**
-- Output: `{indexed, removed, skipped:[{rel_path, reason}], duration_ms}`.
+- Optional body `{"rel_path": "<project>/<file>.md"}` (pydantic `ReindexIn`; null/absent → full reindex unchanged) triggers an **incremental single-path** reindex — index the one file if present, delete its row if vanished — validated against absolute/`..`/reserved/non-`.md` shapes (a `ValueError` → **422**).
+- Output (full): `{indexed, removed, skipped:[{rel_path, reason}], embeddings:{embedded, cached, removed, skipped_reason?}, duration_ms}`; single-path: `{rel_path, action, reason?, embeddings:{...}, duration_ms}`. The `embeddings` block reports the content-hash-cached embedding sync (see Data/Backend).
+
+### DELETE /api/documents/{doc_id} and DELETE /api/documents/by-path/{rel_path:path}
+
+- The `POST /api/documents` write path in reverse (added P4), bearer-guarded, run entirely under `WRITE_LOCK`: remove the `docs/` file (`missing_ok` — a DB row without a file is drift, cleaned without erroring), drop the doc's Recent bullet from `docs/index.md`, delete the DB row (the FTS `AFTER DELETE` trigger and the `document_embeddings` FK `ON DELETE CASCADE` clean up automatically), then a scoped git commit.
+- Resolves the target row first → **404** when absent. The `by-path` route is declared before the `{doc_id}` route (same collision-avoidance as the GET pair).
+- Query: `commit` (default `true`), optional `co_authored_by`. Commit semantics mirror POST exactly — a failed commit surfaces `committed:false` + `commit_error`, never a rollback.
+- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, committed, commit_sha, commit_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone.
 
 ### POST /api/documents
 
 The API-owned write path — one call creates the convention file, the Recent bullet, the DB row, and the scoped git commit.
 
 - Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
-- Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `overwrite` (default false), `commit` (default true), `co_authored_by`.
-- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, recent_updated, committed, commit_sha}`, where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
+- Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`.
+- **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, committed, commit_sha}`, where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
 - **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`.
-- **422** on any convention validation error (project/tags/slug/date/frontmatter).
+- **422** on any convention validation error (project/tags/slug/date/frontmatter/`related` shape).
 - Commit semantics: a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases; git never pushes.
 - An `overwrite` re-write suppresses the duplicate Recent bullet (`recent_updated:false`).
