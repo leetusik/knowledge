@@ -91,6 +91,16 @@ def list_documents(
     return {"total": total, "items": [_public_doc(d, include_markdown=False) for d in items]}
 
 
+@app.get("/api/tags")
+def list_tags(project: Optional[str] = None, conn=Depends(get_conn)):
+    return {"tags": db.list_tags(conn, project=project)}
+
+
+@app.get("/api/projects")
+def list_projects(conn=Depends(get_conn)):
+    return {"projects": db.list_projects(conn)}
+
+
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path
 # route never collides with the id route.
 @app.get("/api/documents/by-path/{rel_path:path}")
@@ -288,3 +298,84 @@ def create_document(
     if commit_error is not None:
         resp["commit_error"] = commit_error
     return resp
+
+
+def _delete_document(
+    conn,
+    doc: dict,
+    *,
+    commit: bool,
+    co_authored_by: Optional[str],
+) -> dict:
+    """Own the whole delete path: the POST write path in reverse (file -> Recent
+    bullet -> DB -> scoped git commit), all under WRITE_LOCK. docs/ row deletion
+    is missing_ok — a DB row without a file is drift, still cleaned up. A failed
+    commit never rolls back the removal (responds with committed:false)."""
+    rel = doc["rel_path"]
+    with WRITE_LOCK:
+        (config.docs_root() / rel).unlink(missing_ok=True)
+        recent_removed = documents_mod.remove_from_recent_index(config.docs_root(), rel)
+        # FTS row cleaned by the AFTER DELETE trigger; any embedding cascades
+        # via ON DELETE CASCADE (document_embeddings.doc_id -> documents.id).
+        db.delete_document_by_path(conn, rel)
+
+        committed = False
+        commit_sha = None
+        commit_error = None
+        if commit and config.git_commit_enabled():
+            try:
+                gitops.add(
+                    [f"docs/{rel}", "docs/index.md"], root=config.kb_root()
+                )
+                commit_sha = gitops.commit(
+                    f"docs({doc['project']}): remove {doc['slug']}",
+                    root=config.kb_root(),
+                    co_authored_by=co_authored_by,
+                )
+                committed = True
+            except gitops.GitError as exc:
+                commit_error = exc.stderr or str(exc)
+
+    resp = {
+        "deleted": True,
+        "id": doc["id"],
+        "rel_path": rel,
+        "title": doc["title"],
+        "project": doc["project"],
+        "slug": doc["slug"],
+        "recent_removed": recent_removed,
+        "committed": committed,
+        "commit_sha": commit_sha,
+    }
+    if commit_error is not None:
+        resp["commit_error"] = commit_error
+    return resp
+
+
+# Declared before /api/documents/{doc_id} (same collision rule as the GETs).
+@app.delete("/api/documents/by-path/{rel_path:path}")
+def delete_document_by_path(
+    rel_path: str,
+    commit: bool = True,
+    co_authored_by: Optional[str] = None,
+    _: None = Depends(require_bearer),
+    conn=Depends(get_conn),
+):
+    doc = db.get_document_by_path(conn, rel_path)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
+    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)
+
+
+@app.delete("/api/documents/{doc_id}")
+def delete_document(
+    doc_id: int,
+    commit: bool = True,
+    co_authored_by: Optional[str] = None,
+    _: None = Depends(require_bearer),
+    conn=Depends(get_conn),
+):
+    doc = db.get_document(conn, doc_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
+    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)

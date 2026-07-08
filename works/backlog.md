@@ -1,16 +1,16 @@
 # Backlog
 
 > Generated dashboard. Do not put detailed task context here; edit phase/slice/deferred folders instead.
-> Status box: `[x]` done · `[~]` pending — waiting on operator · `[ ]` open/in progress.
+> Status box: `[x]` done · `[~]` pending — waiting on operator · `[r]` ready — plan approved, awaiting execution · `[ ]` open/in progress.
 
 ## Pointer
 
 - Current phase: `P4`
-- Current slice: `P4.S2`
-- Next slice: `P4.S3`
+- Current slice: `P4.S3`
+- Next slice: `P4.S4`
 - Waiting on operator: `none`
 - Open deferred jobs: `1`
-- Rebuilt at: `2026-07-08T19:13:40+09:00`
+- Rebuilt at: `2026-07-08T19:59:33+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P1` | `done` | `pass` | Bootstrap Intake | `none` | `works/phases/active/P1` |
 | [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
-| [ ] `P4` | `planned` | `pending` | Knowledge feature core improvements | `P4.S2` | `works/phases/active/P4` |
+| [ ] `P4` | `planned` | `pending` | Knowledge feature core improvements | `P4.S3` | `works/phases/active/P4` |
 | [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.DECOMP` | `works/phases/active/P5` |
 | [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
@@ -59,7 +59,7 @@
 | [x] `P4.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P4/slices/P4.DECOMP` |
 | [x] `P4.S1` | `done` | Search quality — CJK-capable FTS tokenization, recency ranking, pagination | `implementation` | `works/phases/active/P4/slices/P4.S1` |
 | [x] `P4.S6` | `done` | Hybrid semantic search — Gemini embeddings + sqlite-vec + RRF fusion | `implementation` | `works/phases/active/P4/slices/P4.S6` |
-| [ ] `P4.S2` | `todo` | API completeness — DELETE document, GET /api/tags, GET /api/projects | `implementation` | `works/phases/active/P4/slices/P4.S2` |
+| [x] `P4.S2` | `done` | API completeness — DELETE document, GET /api/tags, GET /api/projects | `implementation` | `works/phases/active/P4/slices/P4.S2` |
 | [ ] `P4.S3` | `todo` | Reindex robustness — incremental single-path reindex + startup drift self-heal | `implementation` | `works/phases/active/P4/slices/P4.S3` |
 | [ ] `P4.S4` | `todo` | Cross-link convention — related-docs metadata, API exposure, backfill | `implementation` | `works/phases/active/P4/slices/P4.S4` |
 | [ ] `P4.S5` | `todo` | Publish hygiene — publish-safe source metadata + hide docs/versions from the built site | `implementation` | `works/phases/active/P4/slices/P4.S5` |
