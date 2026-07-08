@@ -69,3 +69,12 @@ def embedding_model() -> str:
 def embeddings_enabled() -> bool:
     """True when a Gemini key is configured (semantic search participates)."""
     return gemini_api_key() is not None
+
+
+def startup_reindex_enabled() -> bool:
+    """Whether to run a full reindex on app startup for drift self-heal.
+
+    KB_STARTUP_REINDEX defaults to true; falsy parsing like git_commit_enabled.
+    """
+    val = _env("KB_STARTUP_REINDEX", "true")
+    return str(val).strip().lower() not in {"0", "false", "no", "off"}

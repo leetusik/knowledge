@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import threading
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -24,7 +25,25 @@ from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
 
-app = FastAPI(title="kb-api", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup drift self-heal: docs/ is canonical, the DB is disposable — a full
+    # reindex on boot cures manual edits, fallback writes, and git resets. The
+    # embedding sync inside is content-hash cached, so a clean boot is ~free.
+    if config.startup_reindex_enabled():
+        report = reindex_mod.reindex()
+        emb = report.get("embeddings", {})
+        print(
+            f"[kb-api] startup reindex: indexed={report['indexed']} "
+            f"removed={report['removed']} skipped={len(report['skipped'])} "
+            f"embedded={emb.get('embedded', 0)}",
+            flush=True,
+        )
+    yield
+
+
+app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
@@ -147,11 +166,24 @@ def search(
     }
 
 
+class ReindexIn(BaseModel):
+    """Optional POST /api/reindex body for single-path reindex."""
+    rel_path: Optional[str] = None
+
+
 @app.post("/api/reindex")
-def reindex(_: None = Depends(require_bearer)):
-    # reindex() opens its own connection and walks config.docs_root(); it never
-    # runs git. Return its report dict as-is.
-    return reindex_mod.reindex()
+def reindex(
+    body: Optional[ReindexIn] = None,
+    _: None = Depends(require_bearer),
+):
+    # No body or rel_path null -> full reindex (unchanged, backward compatible).
+    # With rel_path -> single-path reindex. ValueError -> 422.
+    if body is None or body.rel_path is None:
+        return reindex_mod.reindex()
+    try:
+        return reindex_mod.reindex_path(body.rel_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 class DocumentIn(BaseModel):
