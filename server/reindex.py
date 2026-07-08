@@ -68,7 +68,7 @@ def _index_file(
     source = meta.get("source")
     source_repo = None
     if isinstance(source, dict) and source.get("repo") is not None:
-        source_repo = str(source.get("repo"))
+        source_repo = documents.sanitize_source_repo(str(source.get("repo"))) or None
 
     try:
         db.upsert_document(

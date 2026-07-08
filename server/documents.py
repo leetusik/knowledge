@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime
 import json
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
 import yaml
@@ -118,6 +118,23 @@ def validate_related(related) -> list[str]:
             seen.add(r)
             out.append(r)
     return out
+
+
+def sanitize_source_repo(value: Optional[str]) -> str:
+    """Publish-safe source.repo: local paths collapse to their basename; URLs pass through.
+
+    Known accepted quirk: a bare ``org/repo`` shorthand collapses to ``repo`` —
+    the directory name only, not the full path. This is intentional to avoid
+    leaking the filesystem hierarchy on the public site.
+    """
+    v = (value or "").strip()
+    if not v:
+        return ""
+    if v.startswith(("http://", "https://", "git@", "ssh://")):
+        return v
+    if "/" in v or v.startswith("~"):
+        return PurePosixPath(v.rstrip("/")).name
+    return v
 
 
 # --- frontmatter ----------------------------------------------------------

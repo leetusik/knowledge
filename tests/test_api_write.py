@@ -17,12 +17,13 @@ _PAYLOAD = {
     "slug": "api-smoke-test",
 }
 # Byte-exact frontmatter the serializer must emit (title via json.dumps).
+# Note: source_repo is sanitized at write time (absolute paths -> basename).
 _EXPECTED_FM = (
     '---\n'
     'title: "API Smoke Test: Colons & Quotes"\n'
     'date: 2026-07-02\n'
     'tags:\n  - testing\n  - api\n'
-    'source:\n  project: test-project\n  repo: /tmp/test-project\n'
+    'source:\n  project: test-project\n  repo: test-project\n'
     '---\n'
 )
 
@@ -147,6 +148,29 @@ def test_post_without_related_unchanged(client):
     assert r.json()["related"] == []
     content = (root / "docs" / _REL).read_text(encoding="utf-8")
     assert content.startswith(_EXPECTED_FM)  # byte-exact, no related: block
+
+
+def test_post_absolute_source_repo_sanitized(client):
+    """POST with absolute source_repo -> sanitized (basename) in both file and DB."""
+    tc, root = client
+    # POST with an absolute path in source_repo.
+    payload = {**_PAYLOAD, "source_repo": "/Users/sugang/projects/personal/test-project"}
+    r = tc.post("/api/documents", json=payload)
+    assert r.status_code == 201, r.text
+    doc_id = r.json()["id"]
+
+    # File frontmatter must have sanitized basename (publish-safe).
+    content = (root / "docs" / _REL).read_text(encoding="utf-8")
+    assert "repo: test-project\n" in content
+    assert "/Users/" not in content
+
+    # GET by id returns sanitized source_repo.
+    got = tc.get(f"/api/documents/{doc_id}").json()
+    assert got["source_repo"] == "test-project"
+
+    # GET by path also returns sanitized source_repo.
+    got_by_path = tc.get(f"/api/documents/by-path/{_REL}").json()
+    assert got_by_path["source_repo"] == "test-project"
 
 
 def test_invalid_tags_422(client):

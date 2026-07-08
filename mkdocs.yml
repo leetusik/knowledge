@@ -30,6 +30,12 @@ plugins:
   - search
   - tags
 
+# D1: workspace internals under docs/versions/ are history, not site content —
+# excluded from the built site (pages, nav, search). docs/current/ stays published.
+# Use exclude_docs only; never nav:/strict: (see the load-bearing comment above).
+exclude_docs: |
+  /versions/
+
 markdown_extensions:
   - admonition
   - attr_list

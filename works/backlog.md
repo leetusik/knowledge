@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P4`
-- Current slice: `P4.S5`
-- Next slice: `P4.REVIEW`
+- Current slice: `P4.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `1`
-- Rebuilt at: `2026-07-08T21:31:22+09:00`
+- Rebuilt at: `2026-07-08T21:44:07+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P1` | `done` | `pass` | Bootstrap Intake | `none` | `works/phases/active/P1` |
 | [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
-| [ ] `P4` | `planned` | `pending` | Knowledge feature core improvements | `P4.S5` | `works/phases/active/P4` |
+| [ ] `P4` | `planned` | `pending` | Knowledge feature core improvements | `P4.REVIEW` | `works/phases/active/P4` |
 | [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.DECOMP` | `works/phases/active/P5` |
 | [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
@@ -62,7 +62,7 @@
 | [x] `P4.S2` | `done` | API completeness — DELETE document, GET /api/tags, GET /api/projects | `implementation` | `works/phases/active/P4/slices/P4.S2` |
 | [x] `P4.S3` | `done` | Reindex robustness — incremental single-path reindex + startup drift self-heal | `implementation` | `works/phases/active/P4/slices/P4.S3` |
 | [x] `P4.S4` | `done` | Cross-link convention — related-docs metadata, API exposure, backfill | `implementation` | `works/phases/active/P4/slices/P4.S4` |
-| [ ] `P4.S5` | `todo` | Publish hygiene — publish-safe source metadata + hide docs/versions from the built site | `implementation` | `works/phases/active/P4/slices/P4.S5` |
+| [x] `P4.S5` | `done` | Publish hygiene — publish-safe source metadata + hide docs/versions from the built site | `implementation` | `works/phases/active/P4/slices/P4.S5` |
 | [ ] `P4.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P4/slices/P4.REVIEW` |
 
 ## Phase P5: Web UI redesign & search

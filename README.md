@@ -13,10 +13,15 @@ invented claims. The library grows as I work.
   full-text search) document API that writes the page, updates the index, and
   makes a scoped git commit. Nothing publishes until I push.
 - **Publish path** — MkDocs Material builds in CI and deploys to GitHub Pages
-  on every push to `main`.
+  on every push to `main`. Workspace internals (versioned docs history and build
+  artifacts) are excluded from the published site.
 - **Versioned project docs** — the repo's own design docs are kept as durable,
   versioned truth in 11 tracks (architecture, API, operations, …): latest
-  under `docs/current/`, full history under `docs/versions/`.
+  under `docs/current/`, full history under `docs/versions/` (excluded from the
+  built site, available in git).
+- **Publish-safe metadata** — document frontmatter (`source.repo`) is sanitized
+  at write time (local paths become repo basenames; URLs pass through), so no
+  filesystem details leak to the public site.
 
 ## Agentic workflow
 
