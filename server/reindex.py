@@ -137,6 +137,71 @@ def _sync_embeddings(conn: sqlite3.Connection) -> dict:
     return report
 
 
+def reindex_path(
+    rel_path: str,
+    conn: Optional[sqlite3.Connection] = None,
+    docs_root: Optional[Path] = None,
+) -> dict:
+    """Index a single path or delete a vanished row — incremental single-path reindex.
+
+    Validate rel_path (raise ValueError on absolute, .., <2 parts, reserved top dir,
+    non-.md). If file exists, index via _index_file. If missing, delete from DB.
+    Then run _sync_embeddings (best-effort). Returns {rel_path, action, reason?,
+    embeddings:{...}, duration_ms}. Action is "indexed"/"skipped" (file exists) or
+    "removed"/"skipped" (file missing).
+    """
+    start = time.monotonic()
+    own_conn = conn is None
+    if conn is None:
+        conn = db.connect()
+    root = Path(docs_root) if docs_root is not None else config.docs_root()
+
+    # Validate rel_path.
+    if Path(rel_path).is_absolute():
+        raise ValueError("rel_path must be relative")
+    if ".." in Path(rel_path).parts:
+        raise ValueError("rel_path must not contain '..'")
+    parts = Path(rel_path).parts
+    if len(parts) < 2:
+        raise ValueError("rel_path must have at least 2 parts (project/file)")
+    if parts[0] in RESERVED_DIRS:
+        raise ValueError(f"rel_path top dir cannot be a reserved dir: {parts[0]}")
+    if not rel_path.endswith(".md"):
+        raise ValueError("rel_path must end with .md")
+
+    # Index or delete.
+    action: str
+    reason: Optional[str] = None
+    full_path = root / rel_path
+
+    if full_path.is_file():
+        ok, reason = _index_file(conn, root, full_path, rel_path)
+        action = "indexed" if ok else "skipped"
+    else:
+        # File missing — delete from DB if present.
+        rowcount = db.delete_document_by_path(conn, rel_path)
+        action = "removed" if rowcount >= 1 else "skipped"
+        if action == "skipped":
+            reason = "no such document"
+
+    # Sync embeddings (content-hash-cached, best-effort).
+    embeddings_report = _sync_embeddings(conn)
+
+    duration_ms = int((time.monotonic() - start) * 1000)
+    if own_conn:
+        conn.close()
+
+    result = {
+        "rel_path": rel_path,
+        "action": action,
+        "embeddings": embeddings_report,
+        "duration_ms": duration_ms,
+    }
+    if reason is not None:
+        result["reason"] = reason
+    return result
+
+
 def reindex(
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
@@ -197,21 +262,45 @@ def reindex(
 
 
 def _main() -> int:
-    result = reindex()
-    print(f"indexed: {result['indexed']}")
-    print(f"removed: {result['removed']}")
-    print(f"skipped: {len(result['skipped'])}")
-    for item in result["skipped"]:
-        print(f"  - {item['rel_path']}: {item['reason']}")
-    emb = result.get("embeddings", {})
-    print(
-        "embeddings: "
-        f"embedded={emb.get('embedded', 0)} cached={emb.get('cached', 0)} "
-        f"removed={emb.get('removed', 0)}"
-        + (f" skipped_reason={emb['skipped_reason']}" if emb.get("skipped_reason") else "")
-    )
-    print(f"duration_ms: {result['duration_ms']}")
-    return 0
+    import sys
+    if len(sys.argv) > 1:
+        # Single-path reindex with optional rel_path argument.
+        rel_path = sys.argv[1]
+        try:
+            result = reindex_path(rel_path)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"rel_path: {result['rel_path']}")
+        print(f"action: {result['action']}")
+        if "reason" in result:
+            print(f"reason: {result['reason']}")
+        emb = result.get("embeddings", {})
+        print(
+            "embeddings: "
+            f"embedded={emb.get('embedded', 0)} cached={emb.get('cached', 0)} "
+            f"removed={emb.get('removed', 0)}"
+            + (f" skipped_reason={emb['skipped_reason']}" if emb.get("skipped_reason") else "")
+        )
+        print(f"duration_ms: {result['duration_ms']}")
+        return 0
+    else:
+        # Full reindex (unchanged).
+        result = reindex()
+        print(f"indexed: {result['indexed']}")
+        print(f"removed: {result['removed']}")
+        print(f"skipped: {len(result['skipped'])}")
+        for item in result["skipped"]:
+            print(f"  - {item['rel_path']}: {item['reason']}")
+        emb = result.get("embeddings", {})
+        print(
+            "embeddings: "
+            f"embedded={emb.get('embedded', 0)} cached={emb.get('cached', 0)} "
+            f"removed={emb.get('removed', 0)}"
+            + (f" skipped_reason={emb['skipped_reason']}" if emb.get("skipped_reason") else "")
+        )
+        print(f"duration_ms: {result['duration_ms']}")
+        return 0
 
 
 if __name__ == "__main__":

@@ -13,3 +13,5 @@ import pytest
 def _no_ambient_gemini_key(monkeypatch):
     for var in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "GEMINI_EMBEDDING_MODEL"):
         monkeypatch.delenv(var, raising=False)
+    # Tests never trigger the boot reindex implicitly.
+    monkeypatch.setenv("KB_STARTUP_REINDEX", "0")
