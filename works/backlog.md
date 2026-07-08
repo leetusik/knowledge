@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P4`
+- Current slice: `P4.DECOMP`
+- Next slice: `P4.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `2`
-- Rebuilt at: `2026-07-02T17:07:39+09:00`
+- Rebuilt at: `2026-07-08T16:35:37+09:00`
 
 ## Active Phases
 
@@ -19,6 +19,10 @@
 | [x] `P1` | `done` | `pass` | Bootstrap Intake | `none` | `works/phases/active/P1` |
 | [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `P3.REVIEW` | `works/phases/active/P3` |
+| [ ] `P4` | `planned` | `pending` | Knowledge feature core improvements | `P4.DECOMP` | `works/phases/active/P4` |
+| [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.DECOMP` | `works/phases/active/P5` |
+| [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
+| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -47,3 +51,31 @@
 | [x] `P3.S1` | `done` | Pages workflow + site_url + README publishing model | `implementation` | `works/phases/active/P3/slices/P3.S1` |
 | [x] `P3.S2` | `done` | Publish gate: operator enables Pages + first push; verify live site | `implementation` | `works/phases/active/P3/slices/P3.S2` |
 | [ ] `P3.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P3/slices/P3.REVIEW` |
+
+## Phase P4: Knowledge feature core improvements
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P4.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P4/slices/P4.DECOMP` |
+| [ ] `P4.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P4/slices/P4.REVIEW` |
+
+## Phase P5: Web UI redesign & search
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P5.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P5/slices/P5.DECOMP` |
+| [ ] `P5.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P5/slices/P5.REVIEW` |
+
+## Phase P6: Obsidian-like knowledge graph
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P6.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P6/slices/P6.DECOMP` |
+| [ ] `P6.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
+
+## Phase P7: Claude Code plugin
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P7.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P7/slices/P7.DECOMP` |
+| [ ] `P7.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P7/slices/P7.REVIEW` |
