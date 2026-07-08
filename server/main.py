@@ -114,16 +114,24 @@ def search(
     project: Optional[str] = None,
     tag: Optional[str] = None,
     limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     raw: bool = False,
     conn=Depends(get_conn),
 ):
     try:
-        results = search_mod.search(
-            conn, q, project=project, tag=tag, limit=limit, raw=raw
+        out = search_mod.search(
+            conn, q, project=project, tag=tag, limit=limit, offset=offset, raw=raw
         )
     except search_mod.SearchQueryError as exc:
         raise HTTPException(status_code=400, detail=f"invalid FTS query: {exc}")
-    return {"query": q, "mode": "bm25", "results": results}
+    return {
+        "query": q,
+        "mode": "bm25",
+        "total": out["total"],
+        "limit": limit,
+        "offset": offset,
+        "results": out["results"],
+    }
 
 
 @app.post("/api/reindex")
