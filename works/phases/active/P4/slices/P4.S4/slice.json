@@ -1,18 +1,18 @@
 {
-  "id": "P3.REVIEW",
-  "phase_id": "P3",
-  "name": "phase review",
-  "kind": "review",
-  "status": "done",
-  "order": 9999,
+  "id": "P4.S4",
+  "phase_id": "P4",
+  "name": "Cross-link convention — related-docs metadata, API exposure, backfill",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 4,
   "depends_on": [],
-  "created_at": "2026-07-02T13:27:01+09:00",
-  "started_at": "2026-07-02T17:03:23+09:00",
-  "completed_at": "2026-07-08T17:49:00+09:00",
+  "created_at": "2026-07-08T17:45:59+09:00",
+  "started_at": null,
+  "completed_at": null,
   "risk": "medium",
   "source": {
-    "type": "new_phase",
-    "id": "P3"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",
