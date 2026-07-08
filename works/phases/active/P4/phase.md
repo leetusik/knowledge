@@ -14,6 +14,7 @@ First phase of the knowledge-feature roadmap (P4 → P5 web UI → P6 knowledge 
 - **Skill-side changes are deferred to P7.** P4 touches only this repo (server / API / content / site). The current `/explain` `POST /api/documents` payload must keep working unchanged — anything new in the write contract is optional / backward-compatible. Never edit `~/.claude/skills/explain` or the bootstrap repo.
 - **D1 resolved:** keep `docs/current/` on the public site; hide `docs/versions/` from the built site (nav + search) while preserving auto-nav.
 - SaaS-someday is noted (keep the architecture from precluding it) but out of scope this phase.
+- **Scope addition (operator, 2026-07-08, at the S1 boundary): semantic search.** New slice `P4.S6` (order 1.5, after S1). Operator decisions: vector store = **sqlite-vec** (the P2 extension seam; pgvector declined — the P2 ADR stands, SaaS can revisit); embeddings = **Gemini, reusing changple5's setup** (`google-genai` lib, model `gemini-embedding-2-preview` via `GEMINI_EMBEDDING_MODEL`, credential `GOOGLE_API_KEY` preferred / `GEMINI_API_KEY` fallback); shape = hybrid BM25 + vector via **RRF** at the Python fusion seam in `server/search.py`; embeddings **cached by content hash** so reindex doesn't re-call the API for unchanged docs; **graceful degradation** to BM25-only when no API key is set.
 
 ## Decomposition
 
@@ -22,6 +23,7 @@ The DECOMP audit spot-verified the pre-gathered findings against the code (all c
 | Slice | Area | Kind | Risk | Order | Depends |
 |---|---|---|---|---|---|
 | `P4.S1` | Search quality — CJK-capable FTS tokenization, recency ranking, pagination | implementation | medium | 1 | — |
+| `P4.S6` *(added at S1 boundary — operator scope addition)* | Hybrid semantic search — Gemini embeddings + sqlite-vec + RRF fusion | implementation | medium | 1.5 | P4.S1 |
 | `P4.S2` | API completeness — DELETE document, `GET /api/tags`, `GET /api/projects` | implementation | medium | 2 | — |
 | `P4.S3` | Reindex robustness — incremental single-path reindex + startup drift self-heal | implementation | low | 3 | P4.S1 |
 | `P4.S4` | Cross-link convention — related-docs metadata, API exposure, backfill | implementation | medium | 4 | — |
@@ -86,6 +88,20 @@ _Each implementation/fix slice appends a one-line note here naming the durable d
 - S5 publish → `operations.md` (mkdocs exclude, publish), `security.md` (no local paths public), `data.md`/`api.md` (source metadata), `decisions.md`
 
 _Actual notes (appended by slices below):_
+
+- **S1 → `api.md`**: `GET /api/search` gains an `offset` query param (≥0, default 0); response gains `total`, `limit`, `offset` fields beside `query`/`mode`/`results` (additive, backward compatible; `mode` stays `"bm25"`). Each result's `signals` block is now `{bm25, recency}` (was `{bm25}`).
+- **S1 → `backend.md`**: search layer is now recency-aware and paginated. `server/search.py:search()` fuses two higher-is-better signals in Python — `bm25` (= `-bm25()` distance) + exp-decay `recency = exp(-age_days·ln2/HALF_LIFE_DAYS)` — as `score = bm25 + RECENCY_WEIGHT·recency` (module constants `HALF_LIFE_DAYS=90`, `RECENCY_WEIGHT=0.5`), ordered score DESC with date DESC (then id DESC) tiebreak. Re-rank runs over the full match set so `offset`/`limit` slice the final ordering; a separate `COUNT(*)` provides `total`. `search()` now returns `{"results", "total"}` (was a bare list). `build_match_query` prefix-expands CJK/Hangul/Kana tokens (`"검색"` → `"검색"*`).
+- **S1 → `decisions.md`**: ADR — kept `tokenize='porter unicode61'` (NO schema change, NO FTS drop/rebuild) and added query-side CJK prefix expansion instead of switching to `trigram`. Empirical probe (in-memory, representative corpus): `trigram` cannot match anything <3 chars, hard-failing the corpus's real 2-char proper noun 창플 and all 2-char prefix queries, at ~3× index size + a rebuild; `porter unicode61` + `"tok"*` prefix matches 검색을/미라클/창플. Accepted limitations: mid-word substrings (라클) don't match; a pure-ASCII query won't match inside a mixed token (`changple5` vs `changple5의`). Also records the recency-weighted ranking choice (exp decay, half-life 90d, weight 0.5) and that recency is the effective tiebreak when BM25 IDF collapses to 0 on tiny corpora.
+- **S1 → `data.md`**: FTS tokenizer is unchanged — `documents_fts` stays `tokenize='porter unicode61'`, no schema change and no migration. CJK searchability is achieved entirely at the query layer (prefix expansion in `build_match_query`), not in the index.
+
+## Cross-slice notes
+
+**From S1 (search quality) — 2026-07-08**
+
+- **Tokenizer stayed `porter unicode61` — DECOMP's "FTS drop/rebuild migration" concern is MOOT for S1.** S1 changed only the query layer (prefix expansion), never the FTS schema, so no `documents_fts` drop/rebuild was needed. If a generic FTS drop/rebuild path is still wanted later, it can ride along with **S3**'s reindex work (S3 depends_on S1) — but it is no longer required by any S1 semantics.
+- **`signals` fusion seam is intact and now populated for S6.** Results carry `signals: {bm25, recency}` and a composed higher-is-better `score`; the two-signal fusion happens in Python inside `search()` (not SQL). That Python fusion point is exactly where **S6** (Gemini + sqlite-vec + RRF) adds a third vector signal. Pagination re-ranks the full match set in Python *before* slicing, so a vector signal fuses at the same seam without changing the pagination contract. Chose Python-side re-ranking over SQL `ORDER BY` (SQLite math funcs are available here but not guaranteed portable, and RRF fusion is inherently Python-side).
+- **`search()` return shape changed** from `list[dict]` to `{"results": [...], "total": int}`. Only `server/main.py` calls it today (updated). Any future internal caller must adapt.
+- **Recency uses `d.date` (the doc's `YYYY-MM-DD` frontmatter date), not `updated_at`.** Deliberate: `date` is the authored/publish date (stable, canonical), whereas `updated_at` churns on every reindex. If a future slice wants "freshness by last edit," that's a separate signal.
 
 ## Open Questions
 
