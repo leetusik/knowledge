@@ -12,17 +12,31 @@ exact porter-stemmed behavior. Accepted limitations: mid-word substrings (라클
 match, and a pure-ASCII query will not match inside a mixed token (changple5 vs
 changple5의).
 
-FUTURE EXTENSION POINT (not this phase): fuse the bm25 + recency signals here with a
-sqlite-vec vector signal via RRF — the higher-is-better ``score`` and the ``signals``
-block are already shaped for fusion, so a second signal slots in cleanly.
+HYBRID FUSION (P4.S6): when embeddings are enabled and ``raw=False``, a third signal
+— Gemini query/document cosine similarity — joins the keyword ordering via Reciprocal
+Rank Fusion (``score = Σ_lists 1/(RRF_K + rank)``). The candidate set is the union of the
+keyword matches and the top vector neighbors, so a semantically-relevant doc with no
+keyword overlap still surfaces (with a leading-text snippet, ``signals.bm25`` absent).
+No key, an embed failure, or ``raw=True`` degrades to the exact BM25 + recency path.
 """
 from __future__ import annotations
 
 import datetime
 import json
 import math
+import re
 import sqlite3
 from typing import Any, Optional
+
+from server import config, db, embeddings
+
+# Reciprocal Rank Fusion constant: the standard dampener (Cormack et al. 2009). A
+# larger K flattens the contribution of top ranks; 60 is the widely-used default.
+RRF_K = 60
+
+# Vector-only hits have no FTS snippet; fall back to a leading-text excerpt.
+_EXCERPT_CHARS = 240
+_WS_RE = re.compile(r"\s+")
 
 
 class SearchQueryError(ValueError):
@@ -86,6 +100,96 @@ def build_match_query(q: str) -> str:
     return " ".join(parts)
 
 
+def _parse_tags(raw_tags: Any) -> list[str]:
+    try:
+        val = json.loads(raw_tags or "[]")
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return val if isinstance(val, list) else []
+
+
+def _excerpt(markdown: Optional[str]) -> str:
+    """Leading-text snippet for a vector-only hit (no FTS <mark> highlighting)."""
+    text = _WS_RE.sub(" ", (markdown or "").strip())
+    return text[:_EXCERPT_CHARS] + ("…" if len(text) > _EXCERPT_CHARS else "")
+
+
+def _finalize(rec: dict[str, Any]) -> dict[str, Any]:
+    """Project an internal record to the public result shape.
+
+    ``signals`` is ``{bm25?, recency, vector?}``: ``bm25`` only for keyword hits,
+    ``vector`` only when a cosine similarity participated.
+    """
+    signals: dict[str, Any] = {}
+    if rec["_bm25"] is not None:
+        signals["bm25"] = rec["_bm25"]
+    signals["recency"] = rec["_recency"]
+    if rec["_vector"] is not None:
+        signals["vector"] = rec["_vector"]
+    return {
+        "id": rec["id"],
+        "project": rec["project"],
+        "slug": rec["slug"],
+        "date": rec["date"],
+        "title": rec["title"],
+        "tags": rec["tags"],
+        "rel_path": rec["rel_path"],
+        "source_repo": rec["source_repo"],
+        "created_at": rec["created_at"],
+        "updated_at": rec["updated_at"],
+        "score": rec["_score"],
+        "snippet": rec["snippet"],
+        "signals": signals,
+    }
+
+
+def _vector_ordering(
+    conn: sqlite3.Connection,
+    q: str,
+    *,
+    project: Optional[str],
+    tag: Optional[str],
+    today: datetime.date,
+) -> list[dict[str, Any]]:
+    """Embed the query and rank all candidate embeddings by cosine similarity.
+
+    Returns records (with ``_vector`` = rounded cosine) in descending similarity, or
+    ``[]`` on any failure / empty candidate set — every caller degrades to BM25-only.
+    """
+    if not config.embeddings_enabled():
+        return []
+    model = config.embedding_model()
+    try:
+        qvec = embeddings.embed_texts([q], kind="query")[0]
+    except embeddings.EmbeddingError:
+        return []  # no key / API failure / timeout -> graceful degradation
+
+    cands = db.get_all_embeddings(conn, model, project=project, tag=tag)
+    scored: list[dict[str, Any]] = []
+    for c in cands:
+        sim = embeddings.cosine(qvec, embeddings.unpack_vector(c["_vector"]))
+        scored.append(
+            {
+                "id": c["id"],
+                "project": c["project"],
+                "slug": c["slug"],
+                "date": c["date"],
+                "title": c["title"],
+                "tags": _parse_tags(c.get("tags")),
+                "rel_path": c["rel_path"],
+                "source_repo": c["source_repo"],
+                "created_at": c["created_at"],
+                "updated_at": c["updated_at"],
+                "snippet": _excerpt(c.get("markdown")),
+                "_bm25": None,
+                "_recency": round(_recency(c["date"], today), 4),
+                "_vector": round(sim, 6),
+            }
+        )
+    scored.sort(key=lambda r: (r["_vector"], r["date"], r["id"]), reverse=True)
+    return scored
+
+
 def search(
     conn: sqlite3.Connection,
     q: str,
@@ -96,25 +200,25 @@ def search(
     offset: int = 0,
     raw: bool = False,
 ) -> dict[str, Any]:
-    """Weighted, recency-aware BM25 search over documents_fts, best-and-newest first.
+    """Hybrid (BM25 + recency + vector) search over documents, best-and-newest first.
 
-    Returns ``{"results": [...], "total": N}`` where ``total`` is the full match count
-    for the MATCH + project/tag filters (so callers can paginate) and ``results`` is the
-    ``offset``..``offset+limit`` window of the final ranking.
+    Returns ``{"results": [...], "total": N, "mode": "bm25"|"hybrid"}``. ``results`` is
+    the ``offset``..``offset+limit`` window of the final ranking; ``total`` is the size of
+    the ranked set (the MATCH+filter match count in BM25 mode, the fused-union size in
+    hybrid mode). ``mode`` is ``"hybrid"`` only when the vector signal participated.
 
-    Blank ``q`` -> ``{"results": [], "total": 0}``. ``raw=True`` passes ``q`` verbatim as
-    the MATCH expression (raising SearchQueryError on FTS5 syntax errors); otherwise
-    tokens are quoted (and CJK tokens prefix-expanded). Each result carries the document
-    fields (minus ``markdown``) plus ``score`` (bm25 + recency, higher-is-better), a
-    ``<mark>``-wrapped ``snippet``, and a ``signals`` block ``{bm25, recency}``.
+    Blank ``q`` -> empty. ``raw=True`` passes ``q`` verbatim as the MATCH expression
+    (SearchQueryError on FTS5 syntax errors) and stays keyword-only. Otherwise tokens are
+    quoted (CJK prefix-expanded) and, when embeddings are enabled, the query is embedded
+    and its cosine ordering is fused with the keyword ordering via RRF (``RRF_K``).
 
-    Ranking fuses two higher-is-better signals — ``bm25`` (= ``-bm25()`` distance) and an
-    exponential-decay ``recency`` — as ``score = bm25 + RECENCY_WEIGHT * recency``, ordered
-    score DESC with a date DESC (then id DESC) tiebreak. The re-rank happens in Python over
-    the full match set so ``offset`` applies to the final composed ordering, not raw bm25
-    rank; this is also the RRF fusion seam a future vector signal slots into.
+    Each result carries the document fields (minus ``markdown``) plus ``score``, a
+    ``snippet``, and ``signals`` ``{bm25?, recency, vector?}``. In BM25 mode ``score`` is
+    ``bm25 + RECENCY_WEIGHT * recency`` (higher-is-better); in hybrid mode ``score`` is the
+    RRF fusion of the keyword and vector orderings. A vector-only hit (semantic match, no
+    keyword overlap) has no ``bm25`` signal and a leading-text ``snippet``.
     """
-    empty = {"results": [], "total": 0}
+    empty = {"results": [], "total": 0, "mode": "bm25"}
     if not q or not q.strip():
         return empty
     match = q if raw else build_match_query(q)
@@ -137,8 +241,8 @@ def search(
 
     # total = full match count for MATCH + filters, independent of the paged window.
     count_sql = "SELECT COUNT(*) AS n " + base + filters
-    # Fetch every matching row (no SQL LIMIT): recency re-ranking is a Python-side signal
-    # fusion, so the correct page can only be sliced after the full set is re-ordered.
+    # Fetch every matching row (no SQL LIMIT): re-ranking is a Python-side signal fusion,
+    # so the correct page can only be sliced after the full set is re-ordered.
     rows_sql = (
         f"SELECT d.id, d.project, d.slug, d.date, d.title, d.tags, d.rel_path, "
         f"d.source_repo, d.created_at, d.updated_at, {_RANK} AS rank, {_SNIPPET} AS snippet "
@@ -155,37 +259,71 @@ def search(
         raise SearchQueryError(str(exc)) from exc
 
     today = datetime.date.today()
-    results: list[dict[str, Any]] = []
+    # Keyword records, keyed by doc id. bm25() is a negative distance (more negative =
+    # better); flip to a higher-is-better score so it fuses cleanly with recency/vector.
+    kw: dict[int, dict[str, Any]] = {}
     for row in rows:
         d = dict(row)
-        try:
-            tags = json.loads(d.get("tags") or "[]")
-        except (TypeError, json.JSONDecodeError):
-            tags = []
-        # bm25() returns a negative distance (more negative = better); flip to a
-        # higher-is-better score so it fuses cleanly with recency (and a future vector).
         bm25 = round(-float(d["rank"]), 4)
         recency = round(_recency(d["date"], today), 4)
-        score = round(bm25 + RECENCY_WEIGHT * recency, 4)
-        results.append(
-            {
-                "id": d["id"],
-                "project": d["project"],
-                "slug": d["slug"],
-                "date": d["date"],
-                "title": d["title"],
-                "tags": tags,
-                "rel_path": d["rel_path"],
-                "source_repo": d["source_repo"],
-                "created_at": d["created_at"],
-                "updated_at": d["updated_at"],
-                "score": score,
-                "snippet": d["snippet"],
-                # FUTURE: add vector/RRF signals alongside bm25 + recency here.
-                "signals": {"bm25": bm25, "recency": recency},
-            }
-        )
+        kw[int(d["id"])] = {
+            "id": d["id"],
+            "project": d["project"],
+            "slug": d["slug"],
+            "date": d["date"],
+            "title": d["title"],
+            "tags": _parse_tags(d.get("tags")),
+            "rel_path": d["rel_path"],
+            "source_repo": d["source_repo"],
+            "created_at": d["created_at"],
+            "updated_at": d["updated_at"],
+            "snippet": d["snippet"],
+            "_bm25": bm25,
+            "_recency": recency,
+            "_vector": None,
+            "_kwscore": round(bm25 + RECENCY_WEIGHT * recency, 4),
+        }
 
-    # Final ordering: composed score DESC, date DESC, id DESC (deterministic tiebreak).
-    results.sort(key=lambda r: (r["score"], r["date"], r["id"]), reverse=True)
-    return {"results": results[offset : offset + limit], "total": total}
+    # Keyword ordering: composed score DESC, date DESC, id DESC (deterministic tiebreak).
+    kw_order = sorted(
+        kw.values(), key=lambda r: (r["_kwscore"], r["date"], r["id"]), reverse=True
+    )
+
+    vector_ranked = [] if raw else _vector_ordering(
+        conn, q, project=project, tag=tag, today=today
+    )
+
+    # No vector signal -> exact BM25 + recency behavior (graceful degradation).
+    if not vector_ranked:
+        for rec in kw_order:
+            rec["_score"] = rec["_kwscore"]
+        results = [_finalize(r) for r in kw_order]
+        return {"results": results[offset : offset + limit], "total": total, "mode": "bm25"}
+
+    # --- RRF fusion of the keyword ordering and the vector ordering ---
+    kw_rank = {r["id"]: i + 1 for i, r in enumerate(kw_order)}
+    vec_rank = {r["id"]: i + 1 for i, r in enumerate(vector_ranked)}
+
+    # Materialize a record per union doc: reuse the keyword record when present (it owns
+    # bm25 + snippet), else the vector-only record. Attach the cosine to keyword hits.
+    records: dict[int, dict[str, Any]] = dict(kw)
+    for r in vector_ranked:
+        did = r["id"]
+        if did in records:
+            records[did]["_vector"] = r["_vector"]
+        else:
+            records[did] = r
+
+    fused: list[dict[str, Any]] = []
+    for did, rec in records.items():
+        rrf = 0.0
+        if did in kw_rank:
+            rrf += 1.0 / (RRF_K + kw_rank[did])
+        if did in vec_rank:
+            rrf += 1.0 / (RRF_K + vec_rank[did])
+        rec["_score"] = round(rrf, 6)
+        fused.append(rec)
+
+    fused.sort(key=lambda r: (r["_score"], r["date"], r["id"]), reverse=True)
+    results = [_finalize(r) for r in fused]
+    return {"results": results[offset : offset + limit], "total": len(records), "mode": "hybrid"}

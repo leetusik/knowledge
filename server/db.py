@@ -56,12 +56,24 @@ CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE ON documents BEGIN
   INSERT INTO documents_fts(rowid, title, tags_text, markdown)
   VALUES (new.id, new.title, new.tags_text, new.markdown);
 END;
-"""
 
-# FUTURE EXTENSION POINT (not this phase): add a sqlite-vec virtual table
-# document_chunks_vec(embedding float[N], document_id, chunk_ix, ...) beside this
-# schema; server/search.py then fuses bm25 + vector signals (RRF). No embeddings
-# are computed now — this seam is intentionally left clean.
+-- Semantic-search cache. A plain table of L2-normalized float32 vectors keyed by
+-- doc id: the local venv Python (python.org macOS build) cannot load SQLite
+-- extensions, so sqlite-vec is out; plain BLOBs + Python cosine behave identically
+-- at this scale and run everywhere. Disposable like the rest of the DB — a wiped
+-- table just re-embeds. ON DELETE CASCADE (+ PRAGMA foreign_keys=ON) drops a
+-- document's vector with it. SQLITE-VEC UPGRADE PATH: swap this table for a
+-- vec0 virtual table keyed on the same doc_id; search.py's cosine ranking is the
+-- only other touch point.
+CREATE TABLE IF NOT EXISTS document_embeddings (
+  doc_id       INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+  model        TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  dims         INTEGER NOT NULL,
+  vector       BLOB NOT NULL,
+  updated_at   TEXT NOT NULL
+);
+"""
 
 
 def _now() -> str:
@@ -207,5 +219,99 @@ def count_documents(
 def delete_document_by_path(conn: sqlite3.Connection, rel_path: str) -> int:
     """Delete by rel_path (FTS row cleaned by the AFTER DELETE trigger). Returns rowcount."""
     cur = conn.execute("DELETE FROM documents WHERE rel_path = ?", (rel_path,))
+    conn.commit()
+    return cur.rowcount
+
+
+# --- Semantic-search embedding cache (document_embeddings) ---------------------
+
+
+def upsert_embedding(
+    conn: sqlite3.Connection,
+    *,
+    doc_id: int,
+    model: str,
+    content_hash: str,
+    dims: int,
+    vector: bytes,
+    now: Optional[str] = None,
+) -> None:
+    """Insert or replace one document's embedding (packed float32 BLOB)."""
+    ts = now or _now()
+    conn.execute(
+        """
+        INSERT INTO document_embeddings (doc_id, model, content_hash, dims, vector, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(doc_id) DO UPDATE SET
+          model        = excluded.model,
+          content_hash = excluded.content_hash,
+          dims         = excluded.dims,
+          vector       = excluded.vector,
+          updated_at   = excluded.updated_at
+        """,
+        (doc_id, model, content_hash, dims, sqlite3.Binary(vector), ts),
+    )
+    conn.commit()
+
+
+def get_embedding(
+    conn: sqlite3.Connection, doc_id: int, model: str
+) -> Optional[dict[str, Any]]:
+    """One embedding row (dict) for (doc_id, model), or None."""
+    row = conn.execute(
+        "SELECT * FROM document_embeddings WHERE doc_id = ? AND model = ?",
+        (doc_id, model),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def get_embedding_hashes(conn: sqlite3.Connection, model: str) -> dict[int, str]:
+    """{doc_id: content_hash} for a model — the reindex cache-hit lookup."""
+    rows = conn.execute(
+        "SELECT doc_id, content_hash FROM document_embeddings WHERE model = ?",
+        (model,),
+    ).fetchall()
+    return {int(r["doc_id"]): r["content_hash"] for r in rows}
+
+
+def get_all_embeddings(
+    conn: sqlite3.Connection,
+    model: str,
+    project: Optional[str] = None,
+    tag: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    """Candidate embeddings joined to their documents, honoring project/tag filters.
+
+    Each dict is the full ``documents`` row (incl. ``markdown`` for snippet fallback)
+    plus ``_vector`` (the packed BLOB). Used by search.py to build the vector ordering
+    and to materialize vector-only hits.
+    """
+    sql = (
+        "SELECT d.*, de.vector AS _vector "
+        "FROM document_embeddings de JOIN documents d ON d.id = de.doc_id"
+    )
+    params: list[Any] = []
+    if tag is not None:
+        sql += " JOIN json_each(d.tags) AS je ON je.value = ?"
+        params.append(tag)
+    sql += " WHERE de.model = ?"
+    params.append(model)
+    if project is not None:
+        sql += " AND d.project = ?"
+        params.append(project)
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def delete_orphan_embeddings(conn: sqlite3.Connection, model: str) -> int:
+    """Delete embeddings for vanished docs or a different model. Returns rowcount.
+
+    FK cascade already removes a deleted document's vector; this also clears rows
+    left behind by a model switch, so ``document_embeddings`` never holds stale dims.
+    """
+    cur = conn.execute(
+        "DELETE FROM document_embeddings "
+        "WHERE doc_id NOT IN (SELECT id FROM documents) OR model != ?",
+        (model,),
+    )
     conn.commit()
     return cur.rowcount
