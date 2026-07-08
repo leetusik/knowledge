@@ -217,10 +217,44 @@ def count_documents(
 
 
 def delete_document_by_path(conn: sqlite3.Connection, rel_path: str) -> int:
-    """Delete by rel_path (FTS row cleaned by the AFTER DELETE trigger). Returns rowcount."""
+    """Delete by rel_path. FTS row cleaned by the AFTER DELETE trigger; any
+    document_embeddings row cascades via ON DELETE CASCADE. Returns rowcount."""
     cur = conn.execute("DELETE FROM documents WHERE rel_path = ?", (rel_path,))
     conn.commit()
     return cur.rowcount
+
+
+# --- Aggregations (P5 web UI: tag cloud / project browser) ----------------
+
+
+def list_tags(
+    conn: sqlite3.Connection, project: Optional[str] = None
+) -> list[dict[str, Any]]:
+    """Tag usage counts, optionally scoped to one project. Highest count first,
+    tag ASC as the tiebreak."""
+    sql = (
+        "SELECT je.value AS tag, COUNT(*) AS count "
+        "FROM documents JOIN json_each(documents.tags) AS je"
+    )
+    params: list[Any] = []
+    if project is not None:
+        sql += " WHERE documents.project = ?"
+        params.append(project)
+    sql += " GROUP BY je.value ORDER BY count DESC, tag ASC"
+    rows = conn.execute(sql, params).fetchall()
+    return [{"tag": r["tag"], "count": int(r["count"])} for r in rows]
+
+
+def list_projects(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Per-project document counts + latest doc date, project ASC."""
+    rows = conn.execute(
+        "SELECT project, COUNT(*) AS count, MAX(date) AS latest_date "
+        "FROM documents GROUP BY project ORDER BY project ASC"
+    ).fetchall()
+    return [
+        {"project": r["project"], "count": int(r["count"]), "latest_date": r["latest_date"]}
+        for r in rows
+    ]
 
 
 # --- Semantic-search embedding cache (document_embeddings) ---------------------

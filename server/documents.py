@@ -258,3 +258,40 @@ def update_recent_index(
     )
     index_path.write_text(new_text, encoding="utf-8")
     return True
+
+
+# --- Recent-marker removal (S2 delete path, symmetric to insertion) ------
+
+
+def remove_recent_bullet(index_text: str, rel_path: str) -> tuple[str, bool]:
+    """Drop the Recent bullet line(s) referencing ``rel_path``. Pure function (no I/O).
+
+    Matches any line containing the markdown-link suffix ``](<rel_path>)`` — the
+    exact shape `format_recent_bullet` emits — so it also cleans up a bullet left
+    by any insertion mechanism (marker/heading/appended). Returns
+    ``(new_text, removed)``: ``removed`` is ``False`` (text unchanged) when no
+    line references ``rel_path``.
+    """
+    needle = f"]({rel_path})"
+    lines = index_text.split("\n")
+    kept = [line for line in lines if needle not in line]
+    if len(kept) == len(lines):
+        return index_text, False
+    return "\n".join(kept), True
+
+
+def remove_from_recent_index(docs_root: Union[str, Path], rel_path: str) -> bool:
+    """Remove the doc's Recent bullet from ``docs/index.md``; returns ``recent_removed``.
+
+    ``False`` (index left untouched, nothing written) when the index file is
+    missing or no bullet references ``rel_path`` — symmetric to
+    ``update_recent_index``'s no-op case.
+    """
+    index_path = Path(docs_root) / "index.md"
+    if not index_path.exists():
+        return False
+    text = index_path.read_text(encoding="utf-8")
+    new_text, removed = remove_recent_bullet(text, rel_path)
+    if removed:
+        index_path.write_text(new_text, encoding="utf-8")
+    return removed

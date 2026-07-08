@@ -142,6 +142,25 @@ def test_search_cjk_recency_and_pagination(client):
     assert [r["date"] for r in ranked] == ["2026-07-05", "2026-07-03"]
 
 
+def test_list_tags_and_projects(client):
+    tags = client.get("/api/tags").json()["tags"]
+    assert len(tags) == 8
+    # count DESC, tag ASC tiebreak: p26/search (2 docs each) sort before the six
+    # count=1 tags, which land in plain alphabetical order.
+    assert tags[:2] == [{"tag": "p26", "count": 2}, {"tag": "search", "count": 2}]
+    assert {"tag": "docker", "count": 1} in tags
+
+    scoped = client.get("/api/tags", params={"project": "changple5"}).json()["tags"]
+    assert scoped == [{"tag": "p26", "count": 2}, {"tag": "search", "count": 2}]
+
+    projects = client.get("/api/projects").json()["projects"]
+    assert projects == [
+        {"project": "changple5", "count": 2, "latest_date": "2026-07-05"},
+        {"project": "hi2vi_web", "count": 1, "latest_date": "2026-07-02"},
+        {"project": "other", "count": 2, "latest_date": "2026-07-01"},
+    ]
+
+
 def test_bearer_auth_on_mutating(client, monkeypatch):
     monkeypatch.setenv("KB_API_TOKEN", "secret")
     assert client.post("/api/reindex").status_code == 401

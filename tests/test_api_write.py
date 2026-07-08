@@ -121,3 +121,46 @@ def test_invalid_tags_422(client):
     tc, _ = client
     assert tc.post("/api/documents", json={**_PAYLOAD, "tags": ["only-one"]}).status_code == 422
     assert tc.post("/api/documents", json={**_PAYLOAD, "tags": ["UPPER", "case"]}).status_code == 422
+
+
+def test_delete_happy_path(client):
+    tc, root = client
+    doc_id = tc.post("/api/documents", json=_PAYLOAD).json()["id"]
+
+    r = tc.delete(f"/api/documents/{doc_id}")
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["deleted"] is True and b["id"] == doc_id and b["rel_path"] == _REL
+    assert b["recent_removed"] is True
+    assert b["committed"] is True and b["commit_sha"]
+
+    assert not (root / "docs" / _REL).exists()  # file gone
+    assert _REL not in (root / "docs" / "index.md").read_text(encoding="utf-8")  # bullet gone
+
+    assert tc.get(f"/api/documents/{doc_id}").status_code == 404
+    assert tc.get(f"/api/documents/by-path/{_REL}").status_code == 404
+
+    names = set(
+        _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+        .stdout.split()
+    )
+    assert names == {f"docs/{_REL}", "docs/index.md"}  # scoped delete commit
+    assert _git(root, "log", "-1", "--pretty=%s").stdout.strip() == (
+        "docs(test-project): remove api-smoke-test"
+    )
+
+
+def test_delete_404(client):
+    tc, _ = client
+    assert tc.delete("/api/documents/9999").status_code == 404
+    assert tc.delete("/api/documents/by-path/no/such/path.md").status_code == 404
+
+
+def test_delete_requires_bearer(client, monkeypatch):
+    tc, _ = client
+    doc_id = tc.post("/api/documents", json=_PAYLOAD).json()["id"]
+    monkeypatch.setenv("KB_API_TOKEN", "secret")
+    assert tc.delete(f"/api/documents/{doc_id}").status_code == 401
+    assert tc.delete(
+        f"/api/documents/{doc_id}", headers={"Authorization": "Bearer secret"}
+    ).status_code == 200
