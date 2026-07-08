@@ -88,6 +88,38 @@ def rel_path(project: str, date: str, slug: str) -> str:
     return f"{project}/{date}-{slug}.md"
 
 
+def validate_related(related) -> list[str]:
+    """Optional list of related-doc rel_paths (the cross-link convention, S4).
+
+    Shape-validated like S3's ``reindex_path`` rel_path checks: relative, no
+    '..' parts, at least 2 path parts, ends with '.md'. Existence is NOT
+    required — dead links are tolerated (a related doc may be written later;
+    P6 can surface broken edges). Duplicates are removed, order preserved.
+    """
+    if not isinstance(related, (list, tuple)):
+        raise ConventionError("related must be a list")
+    seen: set[str] = set()
+    out: list[str] = []
+    for r in related:
+        if not isinstance(r, str) or not r:
+            raise ConventionError(f"invalid related entry: {r!r}")
+        p = Path(r)
+        if p.is_absolute():
+            raise ConventionError(f"related entry must be relative: {r!r}")
+        if ".." in p.parts:
+            raise ConventionError(f"related entry must not contain '..': {r!r}")
+        if len(p.parts) < 2:
+            raise ConventionError(
+                f"related entry must have at least 2 path parts: {r!r}"
+            )
+        if not r.endswith(".md"):
+            raise ConventionError(f"related entry must end with .md: {r!r}")
+        if r not in seen:
+            seen.add(r)
+            out.append(r)
+    return out
+
+
 # --- frontmatter ----------------------------------------------------------
 
 
@@ -98,8 +130,13 @@ def serialize_frontmatter(
     tags: list[str],
     project: str,
     source_repo: str,
+    related: Optional[list[str]] = None,
 ) -> str:
     """Hand-rolled frontmatter block, byte-exact to the docs/ convention.
+
+    ``related`` (optional list of rel_paths) is emitted between ``tags`` and
+    ``source`` only when non-empty — ``None``/``[]`` emits nothing, so output
+    without it stays byte-identical to before S4.
 
     Ends with the closing '---\\n'; compose a full document as
     serialize_frontmatter(...) + "\\n" + body.
@@ -110,6 +147,10 @@ def serialize_frontmatter(
     lines.append("tags:")
     for t in tags:
         lines.append(f"  - {t}")
+    if related:
+        lines.append("related:")
+        for r in related:
+            lines.append(f"  - {r}")
     lines.append("source:")
     lines.append(f"  project: {project}")
     lines.append(f"  repo: {source_repo}")
@@ -209,6 +250,7 @@ def write_document_file(
     project: str,
     source_repo: Optional[str],
     body: str,
+    related: Optional[list[str]] = None,
 ) -> str:
     """Write ``docs/<rel_path>`` as ``serialize_frontmatter(...) + "\\n" + body``.
 
@@ -223,6 +265,7 @@ def write_document_file(
             tags=tags,
             project=project,
             source_repo=source_repo or "",
+            related=related,
         )
         + "\n"
         + _normalize_body(body)

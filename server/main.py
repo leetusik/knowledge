@@ -197,6 +197,7 @@ class DocumentIn(BaseModel):
     source_repo: str
     date: Optional[str] = None
     slug: Optional[str] = None
+    related: list[str] = []
     overwrite: bool = False
     commit: bool = True
     co_authored_by: Optional[str] = None
@@ -224,10 +225,13 @@ def create_document(
         slug = documents_mod.validate_slug(
             body.slug if body.slug else documents_mod.slugify(body.title)
         )
+        related = documents_mod.validate_related(body.related)
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
     rel = documents_mod.rel_path(project, date, slug)
+    # Self-reference dropped silently (a doc can't be related to itself).
+    related = [r for r in related if r != rel]
 
     # 2. 409 if the target exists on disk OR in the DB and not overwrite.
     if not body.overwrite:
@@ -250,6 +254,7 @@ def create_document(
             project=project,
             source_repo=body.source_repo,
             body=body.markdown,
+            related=related,
         )
         recent_updated = documents_mod.update_recent_index(
             config.docs_root(),
@@ -268,6 +273,7 @@ def create_document(
             source_repo=body.source_repo,
             rel_path=rel,
             markdown=stored_markdown,
+            related=related,
         )
 
         # 4. Git only when requested AND enabled. A failed commit is NOT rolled
@@ -323,6 +329,7 @@ def create_document(
         "slug": slug,
         "date": date,
         "tags": tags,
+        "related": related,
         "recent_updated": recent_updated,
         "committed": committed,
         "commit_sha": commit_sha,

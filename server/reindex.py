@@ -62,6 +62,9 @@ def _index_file(
     raw_tags = meta.get("tags")
     tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
 
+    raw_related = meta.get("related")
+    related = [str(x) for x in raw_related] if isinstance(raw_related, list) else []
+
     source = meta.get("source")
     source_repo = None
     if isinstance(source, dict) and source.get("repo") is not None:
@@ -78,6 +81,7 @@ def _index_file(
             source_repo=source_repo,
             rel_path=rel,
             markdown=body.lstrip("\n"),
+            related=related,
         )
     except sqlite3.Error as exc:
         return False, f"db error: {exc}"
