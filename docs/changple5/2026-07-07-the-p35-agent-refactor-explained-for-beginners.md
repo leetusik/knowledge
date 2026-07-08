@@ -7,6 +7,9 @@ tags:
   - fastapi
   - sse
   - performance
+related:
+  - changple5/2026-07-07-measure-first-then-cache-the-p39-performance-phase-explained-for-beginners.md
+  - changple5/2026-07-07-the-prompt-injection-defense-p26-explained-for-beginners.md
 source:
   project: changple5
   repo: /Users/sugang/projects/personal/changple5

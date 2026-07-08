@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS documents (
   source_repo TEXT,
   rel_path    TEXT NOT NULL UNIQUE,         -- '<project>/<date>-<slug>.md' relative to docs/
   markdown    TEXT NOT NULL,                -- body WITHOUT frontmatter
+  related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (project, date, slug)
@@ -81,8 +82,18 @@ def _now() -> str:
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Create tables/triggers if absent (idempotent)."""
+    """Create tables/triggers if absent (idempotent).
+
+    Also migrates a pre-S4 DB (created before the ``related`` column existed):
+    ``PRAGMA table_info`` is a plain read, so checking-then-``ALTER TABLE`` is
+    safe to run on every call. Not added to ``documents_fts`` — rel_paths are
+    not search terms, and the FTS trigger trio names its columns explicitly, so
+    it is unaffected by an extra base-table column.
+    """
     conn.executescript(_SCHEMA)
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
+    if "related" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN related TEXT NOT NULL DEFAULT '[]'")
     conn.commit()
 
 
@@ -106,6 +117,10 @@ def _row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
         d["tags"] = json.loads(d.get("tags") or "[]")
     except (TypeError, json.JSONDecodeError):
         d["tags"] = []
+    try:
+        d["related"] = json.loads(d.get("related") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        d["related"] = []
     return d
 
 
@@ -120,22 +135,25 @@ def upsert_document(
     source_repo: Optional[str],
     rel_path: str,
     markdown: str,
+    related: Optional[list[str]] = None,
     now: Optional[str] = None,
 ) -> int:
     """Insert or update by rel_path. Preserves created_at, refreshes updated_at.
 
-    Returns the row id.
+    ``related`` (optional list of rel_paths, forward links only) is stored as
+    JSON; ``None`` -> ``[]``. Returns the row id.
     """
     ts = now or _now()
     tags = list(tags)
     tags_json = json.dumps(tags, ensure_ascii=False)
     tags_text = " ".join(tags)
+    related_json = json.dumps(list(related) if related is not None else [], ensure_ascii=False)
     conn.execute(
         """
         INSERT INTO documents
           (project, slug, date, title, tags, tags_text, source_repo, rel_path,
-           markdown, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, related, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -145,10 +163,11 @@ def upsert_document(
           tags_text   = excluded.tags_text,
           source_repo = excluded.source_repo,
           markdown    = excluded.markdown,
+          related     = excluded.related,
           updated_at  = excluded.updated_at
         """,
         (project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
-         markdown, ts, ts),
+         markdown, related_json, ts, ts),
     )
     conn.commit()
     row = conn.execute(

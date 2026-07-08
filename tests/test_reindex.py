@@ -186,6 +186,39 @@ def test_reindex_path_api_invalid(tmp_path, monkeypatch):
     assert response.status_code == 422
 
 
+_EXPLAINER_WITH_RELATED = (
+    '---\n'
+    'title: "Related nginx"\n'
+    'date: 2026-07-08\n'
+    'tags:\n'
+    '  - docker\n'
+    '  - nginx\n'
+    'related:\n'
+    '  - proj/2026-07-02-hello-nginx.md\n'
+    'source:\n'
+    '  project: proj\n'
+    '  repo: /tmp/proj\n'
+    '---\n\n'
+    '# Related nginx\n\nSee also the other doc.\n'
+)
+
+
+def test_reindex_reads_related_frontmatter(tmp_path, monkeypatch):
+    """A file with `related:` frontmatter indexes with its related list intact."""
+    monkeypatch.setenv("KB_ROOT", str(tmp_path))
+    monkeypatch.setenv("KB_DB_PATH", str(tmp_path / "data" / "kb.sqlite3"))
+    docs = tmp_path / "docs"
+    _write(docs / "proj" / "2026-07-08-related-nginx.md", _EXPLAINER_WITH_RELATED)
+
+    result = reindex.reindex()
+    assert result["indexed"] == 1
+
+    conn = db.connect()
+    row = db.get_document_by_path(conn, "proj/2026-07-08-related-nginx.md")
+    conn.close()
+    assert row["related"] == ["proj/2026-07-02-hello-nginx.md"]
+
+
 def test_startup_reindex_self_heal(tmp_path, monkeypatch):
     """With KB_STARTUP_REINDEX=1, TestClient app runs startup reindex + heals drift."""
     from fastapi.testclient import TestClient

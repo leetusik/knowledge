@@ -117,6 +117,38 @@ def test_commit_false_skips_git(client):
     assert (root / "docs" / _REL).exists()  # file still written (docs/ canonical)
 
 
+def test_post_with_related(client):
+    tc, root = client
+    other_rel = "other-project/2026-06-01-other-doc.md"  # dead link, tolerated
+    r = tc.post("/api/documents", json={**_PAYLOAD, "related": [other_rel, other_rel]})
+    assert r.status_code == 201, r.text
+    b = r.json()
+    assert b["related"] == [other_rel]  # deduped, echoed in the 201 response
+
+    content = (root / "docs" / _REL).read_text(encoding="utf-8")
+    assert f"related:\n  - {other_rel}\n" in content
+    assert content.index("related:") < content.index("source:")
+
+    got = tc.get(f"/api/documents/by-path/{_REL}").json()
+    assert got["related"] == [other_rel]  # GET echoes it too
+
+
+def test_post_with_self_reference_related_dropped(client):
+    tc, _ = client
+    r = tc.post("/api/documents", json={**_PAYLOAD, "related": [_REL]})
+    assert r.status_code == 201, r.text
+    assert r.json()["related"] == []  # self-reference dropped silently
+
+
+def test_post_without_related_unchanged(client):
+    tc, root = client
+    r = tc.post("/api/documents", json=_PAYLOAD)
+    assert r.status_code == 201
+    assert r.json()["related"] == []
+    content = (root / "docs" / _REL).read_text(encoding="utf-8")
+    assert content.startswith(_EXPECTED_FM)  # byte-exact, no related: block
+
+
 def test_invalid_tags_422(client):
     tc, _ = client
     assert tc.post("/api/documents", json={**_PAYLOAD, "tags": ["only-one"]}).status_code == 422

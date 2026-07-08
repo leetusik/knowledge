@@ -69,6 +69,50 @@ def test_validators_reject(call):
         call()
 
 
+def test_serialize_frontmatter_related_roundtrip_and_omission():
+    # related non-empty -> emitted between tags and source, round-trips.
+    block = d.serialize_frontmatter(
+        title="T", date="2026-07-08", tags=["a", "b"],
+        project="proj", source_repo="/tmp/proj",
+        related=["proj/2026-07-01-other.md", "proj2/2026-07-02-third.md"],
+    )
+    meta, _ = d.parse_frontmatter(block)
+    assert meta["related"] == ["proj/2026-07-01-other.md", "proj2/2026-07-02-third.md"]
+    assert block.index("related:") < block.index("source:")
+    assert block.index("tags:") < block.index("related:")
+
+    # related None/empty -> byte-identical to today's output (no related: block).
+    without = d.serialize_frontmatter(
+        title="T", date="2026-07-08", tags=["a", "b"],
+        project="proj", source_repo="/tmp/proj",
+    )
+    empty = d.serialize_frontmatter(
+        title="T", date="2026-07-08", tags=["a", "b"],
+        project="proj", source_repo="/tmp/proj", related=[],
+    )
+    assert "related:" not in without
+    assert without == empty
+
+
+def test_validate_related_accept():
+    assert d.validate_related([]) == []
+    assert d.validate_related(
+        ["proj/2026-07-01-a.md", "proj/2026-07-01-a.md", "proj/2026-07-02-b.md"]
+    ) == ["proj/2026-07-01-a.md", "proj/2026-07-02-b.md"]  # dedup, order-preserving
+
+
+@pytest.mark.parametrize("call", [
+    lambda: d.validate_related("not-a-list"),
+    lambda: d.validate_related(["/abs/path.md"]),
+    lambda: d.validate_related(["proj/../evil.md"]),
+    lambda: d.validate_related(["onlyfile.md"]),
+    lambda: d.validate_related(["proj/no-extension"]),
+])
+def test_validate_related_reject(call):
+    with pytest.raises(d.ConventionError):
+        call()
+
+
 def test_recent_marker_ladder():
     fields = dict(date="2026-07-02", title="T", rel_path="p/2026-07-02-t.md", project="p")
     expected_bullet = "- 2026-07-02 · [T](p/2026-07-02-t.md) — p"
