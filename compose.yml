@@ -24,4 +24,9 @@ services:
       TZ: Asia/Seoul
       # KB_API_TOKEN: set to require `Authorization: Bearer <token>` on the two
       # mutating endpoints (POST /api/documents, POST /api/reindex); GETs stay open.
+      # Semantic search (Gemini). Empty = feature off -> BM25-only search. Set
+      # GOOGLE_API_KEY (or GEMINI_API_KEY) in the host env to enable hybrid search.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2-preview}
     restart: unless-stopped

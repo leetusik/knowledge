@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from server import config, db, documents
+from server import config, db, documents, embeddings
 
 # Generated agentic-workspace internals that live inside the MkDocs content root
 # (docs/current/*.md, docs/versions/**/*.md). They carry no explainer frontmatter,
@@ -84,14 +84,69 @@ def _index_file(
     return True, None
 
 
+# Per-request 429-backoff retries for the batch embed sync (documents only).
+_EMBED_RETRIES = 6
+
+
+def _sync_embeddings(conn: sqlite3.Connection) -> dict:
+    """Content-hash-cached embedding sync over the current documents.
+
+    Embeds only missing/stale rows and persists each one as it succeeds, so a
+    mid-run rate-limit never discards progress — the content-hash cache lets a later
+    reindex pick up exactly the docs that still lack a current vector. Cache hits are
+    untouched; orphaned/model-mismatched vectors are cleared. Every failure is
+    non-fatal and reported: no key -> skipped; per-doc API failures are counted and
+    surfaced in ``skipped_reason``. Report: {embedded, cached, removed, skipped_reason?}.
+    """
+    if not config.embeddings_enabled():
+        return {"embedded": 0, "cached": 0, "removed": 0, "skipped_reason": "no api key"}
+
+    model = config.embedding_model()
+    hashes = db.get_embedding_hashes(conn, model)
+    docs = conn.execute("SELECT id, title, markdown FROM documents").fetchall()
+
+    stale: list[tuple[int, str, str]] = []  # (doc_id, content_hash, embed_text)
+    cached = 0
+    for d in docs:
+        h = embeddings.content_hash(model, d["title"], d["markdown"])
+        if hashes.get(int(d["id"])) == h:
+            cached += 1
+        else:
+            stale.append(
+                (int(d["id"]), h, embeddings.document_input(d["title"], d["markdown"]))
+            )
+
+    embedded = 0
+    failed = 0
+    for doc_id, h, text in stale:
+        try:
+            vec = embeddings.embed_texts([text], kind="document", retries=_EMBED_RETRIES)[0]
+        except embeddings.EmbeddingError:
+            failed += 1
+            continue  # persisted progress stands; a later reindex retries this doc
+        db.upsert_embedding(
+            conn, doc_id=doc_id, model=model, content_hash=h,
+            dims=len(vec), vector=embeddings.pack_vector(vec),
+        )
+        embedded += 1
+
+    removed = db.delete_orphan_embeddings(conn, model)
+    report = {"embedded": embedded, "cached": cached, "removed": removed}
+    if failed:
+        report["skipped_reason"] = f"{failed} of {len(stale)} embeds failed (rate limit / API)"
+    return report
+
+
 def reindex(
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
 ) -> dict:
     """Walk docs/<subdir>/**/*.md, upsert valid explainers, delete vanished rows.
 
-    Returns {indexed, removed, skipped:[{rel_path, reason}], duration_ms}. Reserved
-    top-level dirs and top-level files never enter the walk.
+    Returns {indexed, removed, skipped:[{rel_path, reason}], embeddings:{...},
+    duration_ms}. Reserved top-level dirs and top-level files never enter the walk.
+    The embedding-sync step (content-hash cached) runs after the docs walk; keep it
+    in any future reindex refactor (see phase.md cross-slice note for S3).
     """
     start = time.monotonic()
     own_conn = conn is None
@@ -127,6 +182,8 @@ def reindex(
             db.delete_document_by_path(conn, row["rel_path"])
             removed += 1
 
+    embeddings_report = _sync_embeddings(conn)
+
     duration_ms = int((time.monotonic() - start) * 1000)
     if own_conn:
         conn.close()
@@ -134,6 +191,7 @@ def reindex(
         "indexed": indexed,
         "removed": removed,
         "skipped": skipped,
+        "embeddings": embeddings_report,
         "duration_ms": duration_ms,
     }
 
@@ -145,6 +203,13 @@ def _main() -> int:
     print(f"skipped: {len(result['skipped'])}")
     for item in result["skipped"]:
         print(f"  - {item['rel_path']}: {item['reason']}")
+    emb = result.get("embeddings", {})
+    print(
+        "embeddings: "
+        f"embedded={emb.get('embedded', 0)} cached={emb.get('cached', 0)} "
+        f"removed={emb.get('removed', 0)}"
+        + (f" skipped_reason={emb['skipped_reason']}" if emb.get("skipped_reason") else "")
+    )
     print(f"duration_ms: {result['duration_ms']}")
     return 0
 

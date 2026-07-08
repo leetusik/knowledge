@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from server import config, db
 from server import documents as documents_mod
+from server import embeddings as embeddings_mod
 from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
@@ -126,7 +127,9 @@ def search(
         raise HTTPException(status_code=400, detail=f"invalid FTS query: {exc}")
     return {
         "query": q,
-        "mode": "bm25",
+        # "hybrid" when the Gemini vector signal fused in, else "bm25" (no key / raw /
+        # embed failure -> graceful BM25 + recency degradation).
+        "mode": out.get("mode", "bm25"),
         "total": out["total"],
         "limit": limit,
         "offset": offset,
@@ -243,6 +246,27 @@ def create_document(
                 committed = True
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
+
+    # 4b. Best-effort embed of the new doc, OUTSIDE the WRITE_LOCK critical section.
+    #     Semantic search is a disposable cache: any failure (no key, API error) is
+    #     swallowed — the 201 never depends on it, and the next reindex catches up.
+    if config.embeddings_enabled():
+        try:
+            model = config.embedding_model()
+            vec = embeddings_mod.embed_texts(
+                [embeddings_mod.document_input(body.title, stored_markdown)],
+                kind="document",
+            )[0]
+            db.upsert_embedding(
+                conn,
+                doc_id=doc_id,
+                model=model,
+                content_hash=embeddings_mod.content_hash(model, body.title, stored_markdown),
+                dims=len(vec),
+                vector=embeddings_mod.pack_vector(vec),
+            )
+        except Exception:  # noqa: BLE001 — best-effort; never affects the 201
+            pass
 
     # 5. Response.
     url = (

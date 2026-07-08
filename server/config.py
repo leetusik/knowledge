@@ -50,3 +50,22 @@ def git_commit_enabled() -> bool:
     """Whether the write path makes a git commit. KB_GIT_COMMIT defaults to true."""
     val = _env("KB_GIT_COMMIT", "true")
     return str(val).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def gemini_api_key() -> str | None:
+    """Gemini credential: GOOGLE_API_KEY preferred, GEMINI_API_KEY fallback.
+
+    None == no key == semantic search disabled (graceful BM25-only degradation).
+    Mirrors changple5's AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY").
+    """
+    return _env("GOOGLE_API_KEY") or _env("GEMINI_API_KEY")
+
+
+def embedding_model() -> str:
+    """Gemini embedding model. GEMINI_EMBEDDING_MODEL, default gemini-embedding-2-preview."""
+    return _env("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2-preview")
+
+
+def embeddings_enabled() -> bool:
+    """True when a Gemini key is configured (semantic search participates)."""
+    return gemini_api_key() is not None
