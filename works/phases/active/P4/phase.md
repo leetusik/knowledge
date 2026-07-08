@@ -163,3 +163,10 @@ _Actual notes (appended by slices below):_
 ## Open Questions
 
 - None blocking. Two design decisions are deliberately delegated to their slices: the CJK tokenizer choice (`trigram` vs alternatives) → S1; the publish-safe `source`-metadata representation (relative path? repo name only? project only?) → S5. All four areas are operator-approved and D1 is resolved.
+
+## Review closeout (P4.REVIEW, 2026-07-08) — PASS
+
+- All six middle slices + DECOMP validate together: `uv run pytest -q` → **54 passed**; `workflow.py validate` → passed; real-repo `python -m server.reindex` → indexed 6 / removed 0 / skipped 0; `grep -rn "/Users/" docs/` empty; external mkdocs build → `site/versions/` excluded, `site/current/` present, no `/Users/` in the site; read-only TestClient smoke (CJK search hits in BM25 mode, `/api/tags` + `/api/projects` populated + ordered, backfilled doc shows `related` + sanitized `source_repo`).
+- All binding constraints held: backward-compatible write contract (`related` optional, `source_repo` only sanitized), no skill/bootstrap edits, no `nav:`/`strict:` (uses `exclude_docs`), `docs/` canonical, single-worker `WRITE_LOCK` intact, `docs/current`/`docs/versions` untouched by slices.
+- Doc-impact consolidated into **7 new durable versions** (one per affected doc): api v0003, backend v0003, data v0003, architecture v0003, operations v0004, security v0002, decisions v0004. `product.md` was a genuine no-op (S4's actual notes never named it) and correctly skipped.
+- Next: orchestrator records the pass (`review-phase P4 --verdict pass`) and commits; phase stays in `active/` until archived. Downstream P5/P6/P7 inherit a hardened, publish-safe pipeline.
