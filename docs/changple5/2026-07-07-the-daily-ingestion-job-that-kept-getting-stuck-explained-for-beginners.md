@@ -9,7 +9,7 @@ tags:
   - incident-fix
 source:
   project: changple5
-  repo: /Users/sugang/projects/personal/changple5
+  repo: changple5
 ---
 
 # The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners

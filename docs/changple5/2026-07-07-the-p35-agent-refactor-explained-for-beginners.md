@@ -12,7 +12,7 @@ related:
   - changple5/2026-07-07-the-prompt-injection-defense-p26-explained-for-beginners.md
 source:
   project: changple5
-  repo: /Users/sugang/projects/personal/changple5
+  repo: changple5
 ---
 
 # The P35 Agent Refactor — Explained for Beginners

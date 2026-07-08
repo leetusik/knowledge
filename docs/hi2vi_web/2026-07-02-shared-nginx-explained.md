@@ -8,7 +8,7 @@ tags:
   - deployment
 source:
   project: hi2vi_web
-  repo: /Users/sugang/projects/personal/hi2vi_web
+  repo: hi2vi_web
 ---
 
 # The Shared nginx Problem — Explained for Beginners

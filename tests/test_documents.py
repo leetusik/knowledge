@@ -113,6 +113,28 @@ def test_validate_related_reject(call):
         call()
 
 
+def test_sanitize_source_repo():
+    # Absolute paths → basename (publish-safe, no filesystem leakage).
+    assert d.sanitize_source_repo("/Users/sugang/projects/personal/changple5") == "changple5"
+    assert d.sanitize_source_repo("/home/user/repo-name") == "repo-name"
+    # Trailing slash stripped before basename extraction.
+    assert d.sanitize_source_repo("/Users/sugang/projects/personal/changple5/") == "changple5"
+    # Home-directory expansion → basename.
+    assert d.sanitize_source_repo("~/projects/myrepo") == "myrepo"
+    # URLs pass through unchanged (forward-compat for P7 plugin).
+    assert d.sanitize_source_repo("https://github.com/org/repo") == "https://github.com/org/repo"
+    assert d.sanitize_source_repo("git@github.com:org/repo") == "git@github.com:org/repo"
+    assert d.sanitize_source_repo("ssh://git.example.com/repo") == "ssh://git.example.com/repo"
+    # Plain names (no path, no URL) pass through.
+    assert d.sanitize_source_repo("myrepo") == "myrepo"
+    # Empty/None → empty string.
+    assert d.sanitize_source_repo(None) == ""
+    assert d.sanitize_source_repo("") == ""
+    assert d.sanitize_source_repo("   ") == ""
+    # Known quirk: bare org/repo shorthand → basename only.
+    assert d.sanitize_source_repo("org/repo") == "repo"
+
+
 def test_recent_marker_ladder():
     fields = dict(date="2026-07-02", title="T", rel_path="p/2026-07-02-t.md", project="p")
     expected_bullet = "- 2026-07-02 · [T](p/2026-07-02-t.md) — p"

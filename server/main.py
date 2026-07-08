@@ -232,6 +232,8 @@ def create_document(
     rel = documents_mod.rel_path(project, date, slug)
     # Self-reference dropped silently (a doc can't be related to itself).
     related = [r for r in related if r != rel]
+    # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
+    source_repo = documents_mod.sanitize_source_repo(body.source_repo)
 
     # 2. 409 if the target exists on disk OR in the DB and not overwrite.
     if not body.overwrite:
@@ -252,7 +254,7 @@ def create_document(
             date=date,
             tags=tags,
             project=project,
-            source_repo=body.source_repo,
+            source_repo=source_repo,
             body=body.markdown,
             related=related,
         )
@@ -270,7 +272,7 @@ def create_document(
             date=date,
             title=body.title,
             tags=tags,
-            source_repo=body.source_repo,
+            source_repo=source_repo,
             rel_path=rel,
             markdown=stored_markdown,
             related=related,

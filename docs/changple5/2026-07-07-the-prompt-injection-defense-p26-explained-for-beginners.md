@@ -8,7 +8,7 @@ tags:
   - chat-pipeline
 source:
   project: changple5
-  repo: /Users/sugang/projects/personal/changple5
+  repo: changple5
 ---
 
 # The Prompt-Injection Defense (P26) — Explained for Beginners

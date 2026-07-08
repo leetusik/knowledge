@@ -8,7 +8,7 @@ tags:
   - workflow-phases
 source:
   project: bootstrap_agentic_workspace.sh
-  repo: /Users/sugang/projects/personal/bootstrap_agentic_workspace.sh
+  repo: bootstrap_agentic_workspace.sh
 ---
 
 # How /explain Saves Documents Now — the P6 API Rewire Explained

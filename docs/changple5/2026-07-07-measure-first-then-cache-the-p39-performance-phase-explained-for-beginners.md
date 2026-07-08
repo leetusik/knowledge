@@ -11,7 +11,7 @@ related:
   - changple5/2026-07-07-the-p35-agent-refactor-explained-for-beginners.md
 source:
   project: changple5
-  repo: /Users/sugang/projects/personal/changple5
+  repo: changple5
 ---
 
 # Measure First, Then Cache — The P39 Performance Phase Explained for Beginners
