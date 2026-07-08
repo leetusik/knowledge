@@ -4,23 +4,22 @@
 
 ## Summary
 
-- Open: `2`
-- Promoted: `0`
+- Open: `1`
+- Promoted: `1`
 - Dropped: `0`
-- Rebuilt at: `2026-07-08T16:35:37+09:00`
+- Rebuilt at: `2026-07-08T17:49:01+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
-| `D1` | `deferred` | Decide whether works/docs internals appear on the public site | P2.DECOMP | P3 planning | `works/deferred/open/D1` |
 | `D2` | `deferred` | Design polish for the Pages site (palette/fonts/logo, optional extra_css) | P3.DECOMP | First successful Pages deploy visible at https://leetusik.github.io/knowledge/ | `works/deferred/open/D2` |
 
 ## Promoted
 
 | ID | Status | Title | Promoted To | Path |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| `D1` | `promoted` | Decide whether works/docs internals appear on the public site | `P4.S5` | `works/deferred/promoted/D1` |
 
 ## Dropped
 
