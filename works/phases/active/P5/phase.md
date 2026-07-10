@@ -107,6 +107,35 @@ _Each implementation/fix slice appends a one-line note here naming the durable d
 
 _Actual notes (appended by slices below):_
 
+- **S1 →** `frontend.md`: FIRST real truth — mkdocs-material 9.7.6 theme config gains custom `primary`/`accent` palette, `theme.font` (Source Sans 3 / JetBrains Mono), `logo`/`favicon`, and `extra_css: stylesheets/extra.css`; the design system lives in `docs/stylesheets/extra.css` (token architecture over Material CSS custom properties, both schemes) with branding assets under `docs/assets/`. No `overrides/`, no social plugin.
+- **S1 →** `experience.md`: FIRST real truth — visual language is "calm editorial library": warm-ivory light / warm-charcoal dark paper, serif display headings (Fraunces) over clean sans body (Source Sans 3), single deep-teal accent, paper-colored header with hairline rule (not a colored bar), soft borders, no heavy shadows; dark/light via `prefers-color-scheme` + manual toggle; Hangul fallback stacks for mixed EN/KR.
+- **S1 →** `decisions.md`: ADR — palette (custom warm-neutral + deep-teal, `--md-hue:34` for warm slate), typography (Fraunces/Source Sans 3/JetBrains Mono, Hangul fallbacks), and branding (original book+spark mark) choices; rejected alternatives: teal header bar, serif body, `overrides/` inline-logo, social cards, hue-only dark scheme (see result.md "Rejected alternatives").
+- **S1 →** `operations.md` (minor): the build now emits `docs/stylesheets/extra.css` + `docs/assets/{logo,favicon}.svg` into `site/`; runtime pulls Google Fonts (Source Sans 3, JetBrains Mono, Fraunces). No new build step or CI dep (social cards deliberately skipped).
+
+## Cross-slice notes — design system contract (for S2/S3/S4)
+
+S1 settled the design tokens and theme config every later P5 slice composes on. Reuse these; do not redefine colors/fonts ad hoc.
+
+**Theme config now in `mkdocs.yml` (do not regress):** `logo: assets/logo.svg`, `favicon: assets/favicon.svg`, `font.text: Source Sans 3`, `font.code: JetBrains Mono`, both palette schemes `primary: custom`/`accent: custom`, `extra_css: [stylesheets/extra.css]`. Still NO `nav:`/`strict:`; pin 9.7.6 untouched; `features`/`plugins`/`exclude_docs`/`markdown_extensions` unchanged. S2's nav-feature tuning adds to `features:` only.
+
+**CSS custom-property tokens (defined per scheme in `extra.css` §2–3):**
+- Surfaces: `--kb-paper` (page bg), `--kb-surface` (raised: cards/search/admonitions), `--kb-border` (soft hairline).
+- Accent: `--kb-accent` (deep teal light `#0f6f68` / lighter teal dark `#63bdb3`), `--kb-accent-strong` (hover/emphasis), `--kb-accent-soft` (low-alpha teal for selections/rules/soft fills), `--kb-tag-bg`/`--kb-tag-fg`.
+- Also overridden: Material's `--md-default-*`, `--md-primary-*` (header = paper), `--md-typeset-a-color` (teal links), `--md-code-bg-color`, `--md-footer-*`.
+- Shape/type: `--kb-radius` (0.55rem), `--kb-radius-sm`, `--kb-radius-pill`, `--kb-font-display` (Fraunces stack w/ Hangul serif fallback), `--kb-ease` (0.15s).
+- **Accent-usage rule:** teal is the ONLY accent — links, hover, focus rings, active nav/TOC, permalinks, tag hover, card hover, `::selection`. Neutrals carry everything else. Don't introduce a second hue.
+
+**Fonts:** headings/site-title/`.md-nav__title` use `--kb-font-display` (Fraunces, optical sizing); body uses `--md-text-font-family` (Source Sans 3 + Hangul fallback); code uses `--md-code-font-family` (JetBrains Mono + Hangul fallback). Budget is spent (2 text families + 1 code) — S2/S3 should NOT add webfonts.
+
+**Card/grid utility (for S2 landing, `extra.css` §7):** `.kb-grid` = responsive `auto-fit minmax(14rem,1fr)` grid; `.kb-card` = soft-bordered card, accent border + lift on hover, both schemes. Two consumption paths (md_in_html is NOT enabled): **(A)** raw-HTML `<div class="kb-grid"><a class="kb-card"><span class="kb-card__title">…</span><span class="kb-card__desc">…</span></a></div>` — link text goes directly in the HTML; **(B)** a markdown list + `{ .kb-grid }` (attr_list) whose `<li>` render as cards. S2 must keep the `<!-- explain:recent -->` marker + exact bullet format byte-intact regardless of which layout it adopts around it.
+
+**For S3 (search UI):** any search-result/highlight styling should ride the existing `.md-search__*` polish and the accent tokens; the search form is already rounded with an accent focus ring. `--md-typeset-mark-color` is set to `--kb-accent-soft`. Search-index/separator work is a separate concern from styling.
+
+**Forward notes:**
+- **Social cards deliberately skipped** (needs the `social` plugin + cairosvg/Pillow — CI dep weight, no design payoff now). If ever wanted, it's a separate deps + `plugins:` change, not a token change.
+- **`overrides/` custom_dir intentionally NOT created.** The bi-scheme logo is solved by a mid-lightness teal (clears ~3:1 on both headers) so no inline-`currentColor` partial was needed. If a later slice truly needs a partial (e.g. font `<link rel=preload>`), that's the first justification to add `custom_dir`.
+- Dev server may be left running (`docker compose up -d kb`, port 8765) for eyeballing; deploys stay manual-push-only.
+
 ## Open Questions
 
 - None blocking. Two design decisions are deliberately delegated to their slices: the CJK client-side search approach (Material `separator` tuning vs. prebuilt index + client JS) → P5.S3; the overall visual language (palette/typography/branding, and whether to use `overrides/` custom_dir) → P5.S1. Social cards (needs the `social` plugin + cairosvg/Pillow deps) is optional within S1 — include only if cheap. P5.S4 (build smoke guard) is optional/droppable at the orchestrator's discretion.

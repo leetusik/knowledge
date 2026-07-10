@@ -3,16 +3,27 @@ site_url: https://leetusik.github.io/knowledge/
 
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  # "Calm editorial library" fonts. Body sans + code mono load via Material;
+  # the serif display heading face (Fraunces) is @imported in extra.css.
+  font:
+    text: Source Sans 3
+    code: JetBrains Mono
   palette:
+    # primary/accent = custom -> colors defined in docs/stylesheets/extra.css.
+    # Two-scheme toggle (prefers-color-scheme + manual) preserved.
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -21,6 +32,12 @@ theme:
     - search.suggest
     - search.highlight
     - toc.follow
+
+# Design system: "calm editorial library" tokens (custom palette, typography,
+# spacing, component polish, .kb-grid/.kb-card utility). Loaded after Material's
+# own CSS so its :root/scheme overrides win. See docs/stylesheets/extra.css.
+extra_css:
+  - stylesheets/extra.css
 
 # No `nav:` key and no `strict: true` — ever. Auto-nav from the docs/ tree is
 # what lets the /explain skill add pages with zero config; a nav: key would
