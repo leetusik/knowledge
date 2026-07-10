@@ -5,11 +5,13 @@
 # home (~/.codex/config.toml); keep machine/account settings there.
 #
 # Subagents ship under .codex/agents/ (https://developers.openai.com/codex/subagents):
-#   - slice-executor.toml       — gpt-5.5 / xhigh, implements one already-planned slice (and runs the phase review)
-#   - slice-executor-high.toml  — gpt-5.5 / high, the same worker at lower effort for low-risk implementation/fix slices
-# The orchestrator (main Codex thread) spawns the matching slice-executor to do each slice — picking
-# slice-executor-high for a low-risk slice — including
-# the phase review, where it also consolidates the phase's doc versions; it never implements a slice inline.
+#   - slice-executor-low.toml   — gpt-5.5 / medium, literal plan execution for low-risk implementation/fix slices
+#   - slice-executor-mid.toml   — gpt-5.5 / high,   medium-risk slices (the default risk)
+#   - slice-executor-high.toml  — gpt-5.5 / xhigh,  decomposition, the phase review, and high/unknown-risk slices
+# The orchestrator (main Codex thread) picks the tier from the slice's kind + risk and never implements
+# a slice inline; a low/mid executor that returns `escalate` is re-dispatched one tier up with a revised
+# plan. Tier models/efforts are configurable via the repo-root executors.toml (seeded
+# with commented defaults), applied with `python3 scripts/workflow.py sync-agents`.
 #
 # Recommended user-level settings to pair with this workspace:
 #

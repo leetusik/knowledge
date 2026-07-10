@@ -13,7 +13,7 @@ Preflight (read-only):
 
 1. Confirm a git repo: `git rev-parse --is-inside-work-tree`. If the working tree is dirty (`git status --porcelain` is non-empty), tell the operator and recommend committing or stashing first, so the update lands as a clean, reviewable diff.
 2. Confirm this repo already has the workspace: `works/state.json` (or any `works/phases/active/*/phase.json`) AND `scripts/workflow.py` must exist. If not, STOP — this repo has not adopted the workspace; use `/retrofit` instead.
-3. If `works/.workspace-version.json` exists, read it and report the last-synced commit and time so the operator knows the starting point.
+3. If `works/.workspace-version.json` exists, read it and report the last-synced commit and time so the operator knows the starting point. Also read its `workspace_version` — the integer version this repo is on (call it **N**). If that key is absent, this repo is **pre-versioning** (adopted before workspace versions existed); note that and treat N as "pre-versioning" in the preview below.
 
 Fetch upstream:
 
@@ -25,9 +25,18 @@ Fetch upstream:
    ref="$(git -C "$tmp" rev-parse HEAD)"
    ```
 
+   The clone is a full checkout, so read the upstream version straight from it: the top `## v<M>` heading in `$tmp/CHANGELOG.md` is the **upstream version M**, and the entries under each `## v` describe what that version brings.
+
 Preview the diff (this is the "check what is different" step):
 
-5. Run the freshly-cloned installer in dry-run update mode from the repo root — it writes nothing and prints the change-list:
+5. First report the version gap, then show the file change-list.
+
+   **Version gap** — compare your local version **N** (from step 3) with the upstream version **M** (the top `## v<M>` in `$tmp/CHANGELOG.md`):
+   - N < M: report "workspace vN → upstream vM" and print every `## v` entry in `$tmp/CHANGELOG.md` newer than N (vN+1 … vM) — that is exactly what this sync brings, including any **Migration notes**.
+   - Pre-versioning (no local `workspace_version`): say the repo is pre-versioning, then show the upstream `## v` entries and point the operator to `$tmp/CHANGELOG.md` for the full file.
+   - N == M: say "already on vM; any file diff below is unreleased upstream drift".
+
+   **File change-list** — run the freshly-cloned installer in dry-run update mode from the repo root; it writes nothing and prints the change-list:
 
    ```sh
    sh "$tmp/bootstrap_agentic_workspace.sh" . --update --dry-run
@@ -39,7 +48,7 @@ Preview the diff (this is the "check what is different" step):
 
 Apply (after the operator approves):
 
-7. Run the same installer in update mode, recording the upstream commit so provenance is tracked:
+7. Run the same installer in update mode, recording the upstream commit so provenance is tracked (this also stamps the upstream `workspace_version` M into `works/.workspace-version.json`):
 
    ```sh
    SYNCED_COMMIT="$ref" sh "$tmp/bootstrap_agentic_workspace.sh" . --update
@@ -47,8 +56,8 @@ Apply (after the operator approves):
 
 Verify:
 
-8. The installer's update already ran `validate` / `rebuild` (or `next` for a repo without the docs subsystem) and printed the result. Run `python3 scripts/workflow.py next` to confirm the current state under the refreshed engine.
+8. The installer's update already ran `validate` / `rebuild` (or `next` for a repo without the docs subsystem) and printed the result. Run `python3 scripts/workflow.py next` to confirm the current state under the refreshed engine. If this repo tunes the executor tiers via a repo-root `executors.toml`, re-run `python3 scripts/workflow.py sync-agents` — the update resets the `slice-executor-*` agent files to upstream defaults (`validate` warns while they drift).
 
 Report and clean up:
 
-9. Summarize what was updated / added / merged / preserved and any flagged stale skills (from the installer's printed summary), and show `git status`. Do NOT commit automatically — the operator reviews the diff and tells you when to commit. Remove the temp clone: `rm -rf "$tmp"`.
+9. Summarize what was updated / added / merged / preserved and any flagged stale skills or machinery (from the installer's printed summary — e.g. agent files upstream has retired, which you remove manually), and show `git status`. Do NOT commit automatically — the operator reviews the diff and tells you when to commit. Remove the temp clone: `rm -rf "$tmp"`.

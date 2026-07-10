@@ -1,5 +1,6 @@
 {
   "upstream_url": "https://github.com/leetusik/bootstrap_agentic_workspace.sh",
-  "synced_commit": "bootstrap",
-  "synced_at": "2026-07-02T13:19:35+09:00"
+  "workspace_version": 10,
+  "synced_commit": "51ea980a528f35451841530e0d1759664f1a2960",
+  "synced_at": "2026-07-08T19:26:32+09:00"
 }
