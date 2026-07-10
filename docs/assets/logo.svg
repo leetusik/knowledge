@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Knowledge Base">
+  <title>Knowledge Base</title>
+  <!-- Editorial mark: an open book (line art) with a spark of insight above.
+       Single deep-teal at mid lightness so it reads on both the light ivory
+       header and the warm-dark header (>=3:1 on both). -->
+  <g fill="none" stroke="#178a80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 8.4C9.3 6.7 5.8 6.6 4 7.3V17.2C5.8 16.5 9.3 16.6 12 18.3" />
+    <path d="M12 8.4C14.7 6.7 18.2 6.6 20 7.3V17.2C18.2 16.5 14.7 16.6 12 18.3" />
+    <path d="M12 8.4V18.3" />
+  </g>
+  <path fill="#178a80" d="M12 2l1.8 2.1L12 6.2l-1.8-2.1z" />
+</svg>
