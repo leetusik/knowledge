@@ -5,11 +5,13 @@ theme:
   name: material
   logo: assets/logo.svg
   favicon: assets/favicon.svg
-  # "Calm editorial library" fonts. Body sans + code mono load via Material;
-  # the serif display heading face (Fraunces) is @imported in extra.css.
-  font:
-    text: Source Sans 3
-    code: JetBrains Mono
+  # "Calm editorial library" fonts. `font: false` disables Material's own
+  # Google Fonts request (no Roboto); all three families — Fraunces (display),
+  # Source Sans 3 (body), JetBrains Mono (code), each at the exact weights the
+  # design uses incl. 500/600 — load from the single @import at the top of
+  # docs/stylesheets/extra.css, and the --md-text/-code-font-family tokens there
+  # (with Hangul fallbacks) point Material at them.
+  font: false
   palette:
     # primary/accent = custom -> colors defined in docs/stylesheets/extra.css.
     # Two-scheme toggle (prefers-color-scheme + manual) preserved.
