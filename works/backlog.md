@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P5`
-- Current slice: `P5.S2`
-- Next slice: `P5.S3`
-- Waiting on operator: `none`
+- Current slice: `P5.S5`
+- Next slice: `P5.S2`
+- Waiting on operator: `P5.S5`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-10T16:55:32+09:00`
+- Rebuilt at: `2026-07-11T11:42:59+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
-| [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.S2` | `works/phases/active/P5` |
+| [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.S5` | `works/phases/active/P5` |
 | [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
@@ -71,6 +71,7 @@
 |---|---|---|---|---|
 | [x] `P5.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P5/slices/P5.DECOMP` |
 | [x] `P5.S1` | `done` | Design system — Claude-designed palette/typography/branding via theme config + extra_css tokens, logo/favicon | `implementation` | `works/phases/active/P5/slices/P5.S1` |
+| [~] `P5.S5` | `pending` | Design co-work — operator designs targets in Claude Design; sync & integrate as delivered | `implementation` | `works/phases/active/P5/slices/P5.S5` |
 | [ ] `P5.S2` | `todo` | Landing page & UX structure — index.md redesign (preserve explain:recent), nav/browse experience, tags page | `implementation` | `works/phases/active/P5/slices/P5.S2` |
 | [ ] `P5.S3` | `todo` | CJK-capable client-side search — Korean/CJK-aware search on the static Pages site | `implementation` | `works/phases/active/P5/slices/P5.S3` |
 | [ ] `P5.S4` | `todo` | Site-build CI smoke guard & hygiene — mkdocs build parity check + invariant assertions | `implementation` | `works/phases/active/P5/slices/P5.S4` |
