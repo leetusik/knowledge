@@ -1,416 +1,526 @@
 /* ==========================================================================
    Knowledge Base — "Calm editorial library" design system
    --------------------------------------------------------------------------
-   Built on mkdocs-material 9.7.6 (pinned). This file is the site's design
-   foundation: warm paper-like neutrals, a serif display face over a clean
-   sans body, generous whitespace, a single deep-teal accent, soft borders,
-   no heavy shadows. It should read like a well-typeset book, not a stock
-   Material demo.
+   Built on mkdocs-material 9.7.6 (pinned). Integrated from the operator's
+   Claude Design project "Knowledge Base Design System" (all 10 targets
+   delivered) — replacing the P5.S1 interim baseline. Provenance is the
+   design-system mirror shipped for P5.S5; this file concatenates that system's
+   load order (fonts -> tokens -> component hooks -> page treatments) into the
+   one stylesheet mkdocs-material loads after its own CSS, so these :root /
+   scheme overrides win.
 
-   Wiring (see mkdocs.yml):
-     - theme.font.text  = Source Sans 3   (body sans, loaded by Material)
-     - theme.font.code  = JetBrains Mono   (code, loaded by Material)
-     - Fraunces (serif display for headings) is @imported below
-     - palette primary/accent = custom  -> the tokens below drive both schemes
+   Direction: warm ivory / charcoal paper, one deep-teal accent (LOCKED palette
+   1a Teal, Target 1), serif display (Fraunces) over a clean sans (Source Sans
+   3), JetBrains Mono for code, generous whitespace, soft warm hairlines, no
+   heavy shadows. Reads like a well-set library, not a stock Material demo.
 
-   Reuse map for later P5 slices (also recorded in phase.md):
-     - Neutral/accent surfaces:  --kb-paper --kb-surface --kb-border
-                                 --kb-accent --kb-accent-strong --kb-accent-soft
-     - Fonts:  --kb-font-display  (headings) and Material's --md-text/-code-font-family
-     - Card/grid utility:  .kb-grid (container) + .kb-card (item); also works on
-                           <ul class="kb-grid"> whose <li> become cards.
+   Fonts: all three families load from Google Fonts via the single @import
+   below (exact weights the system needs: Source Sans 3 500/600, JetBrains Mono
+   500). mkdocs.yml sets `theme.font: false` so Material does not also request
+   Roboto; the --md-*-font-family tokens in §2 point Material at these families
+   (each with a Hangul fallback for mixed EN/KR content). Korean is not a
+   webfont (budget: 2 text + 1 code) — it renders on readers' system fonts.
+
+   Section map:
+     §1  Color tokens        (Target 1, LOCKED — verbatim)
+     §2  Typography tokens   (Target 2 — verbatim :root)
+     §3  Shape/motion tokens (Target 2 companion — verbatim :root)
+     §4  Site chrome hooks    (Target 4)
+     §5  Content typography hooks (Target 5) + S1-retained permalinks/selection
+     §6  Cards & grid utility (Target 6) — .kb-grid / .kb-card
+     §7  Tag pills hooks      (Target 7)
+     §8  Search UI hooks      (Target 10)
+     §9  Page treatments      (Targets 8 & 9) — landing + article, for P5.S2/S3
    ========================================================================== */
 
-/* Serif display face for headings (Latin). Korean falls back to a Hangul face.
-   Body sans + mono are loaded by Material via theme.font, so this is the only
-   extra webfont request (2 text families + 1 code font total). */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap");
+/* --- Webfonts: Fraunces (display) + Source Sans 3 (body) + JetBrains Mono
+       (code). One request, exact weights. @import must precede all rules. --- */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
-/* --------------------------------------------------------------------------
-   1. Global tokens (scheme-independent)
-   -------------------------------------------------------------------------- */
-:root {
-  /* Type + shape scale */
-  --kb-font-display: "Fraunces", "Iowan Old Style", Georgia, "Nanum Myeongjo",
-    "Apple SD Gothic Neo", serif;
-  --kb-radius: 0.55rem;
-  --kb-radius-sm: 0.35rem;
-  --kb-radius-pill: 2rem;
+/* ==========================================================================
+   §1 · Color tokens  (Target 1 · LOCKED, palette 1a Teal)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/colors.css.
+     --kb-*  = source of truth.   --md-*  = mappings onto mkdocs-material's
+   surface + ink tiers, pointed at the --kb-* tokens so both stay in lockstep.
+   Both schemes always: "default" = light (warm ivory), "slate" = dark (warm
+   charcoal). Teal is the ONLY accent hue; warm neutrals carry everything else.
+   ========================================================================== */
 
-  /* Font families with an explicit Hangul fallback for mixed EN/KR content.
-     These fully replace Material's family so the Korean fallback always applies. */
-  --md-text-font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont,
-    "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Helvetica, Arial,
-    sans-serif;
-  --md-code-font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular",
-    "Menlo", "Consolas", "Apple SD Gothic Neo", monospace;
-
-  /* Gentle default transition + type rhythm knobs */
-  --kb-ease: 0.15s ease;
-}
-
-/* --------------------------------------------------------------------------
-   2. Palette — light scheme (default): warm ivory paper, ink text
-   -------------------------------------------------------------------------- */
+/* -------- Light scheme (default) — warm ivory paper, ink text ------------- */
 [data-md-color-scheme="default"] {
-  --kb-paper: #f7f3ea; /* page background */
-  --kb-surface: #fffdf7; /* raised surfaces: cards, header search */
-  --kb-border: #e6ddcb; /* soft warm hairline */
-  --kb-accent: #0f6f68; /* deep teal */
-  --kb-accent-strong: #0a544e; /* hover / emphasis */
-  --kb-accent-soft: rgba(15, 111, 104, 0.16); /* selections, soft rules */
-  --kb-tag-bg: #eef1ea;
-  --kb-tag-fg: #2f5b52;
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #f6f2e8;                        /* page background */
+  --kb-surface: #fffefa;                      /* raised surfaces: cards, search */
+  --kb-surface-sunken: #efe9db;               /* recessed: code blocks, header band */
+  --kb-border: #e5dcc8;                        /* soft warm hairline */
+  --kb-border-strong: #d8ccb3;                 /* firmer divider / emphasis edge */
+  --kb-accent: #0f6f66;                        /* deep teal — the one accent */
+  --kb-accent-strong: #0a544e;                 /* hover / pressed / emphasis */
+  --kb-accent-soft: rgba(15, 111, 102, 0.15);  /* selections, soft accent rules */
+  --kb-tag-bg: #eaf0ec;                        /* tag pill fill (cool-tinted neutral) */
+  --kb-tag-fg: #2c5b52;                        /* tag pill text */
 
-  /* Map onto Material surfaces + ink tiers */
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #26211c;                           /* primary text — warm near-black */
+  --kb-secondary: #5c5347;                     /* secondary text */
+  --kb-hint: #8f8676;                          /* hints, icons, captions */
+
+  /* ---- mkdocs-material surface tiers (page → deepest) ---- */
   --md-default-bg-color: var(--kb-paper);
-  --md-default-bg-color--light: #f2ecdf;
-  --md-default-bg-color--lighter: #ece5d5;
-  --md-default-bg-color--lightest: #e6ddcb;
-  --md-default-fg-color: #2c2722; /* ink */
-  --md-default-fg-color--light: #5f574c; /* secondary text */
-  --md-default-fg-color--lighter: #938a7c; /* hints, icons */
-  --md-default-fg-color--lightest: #e6ddcb; /* dividers, borders */
+  --md-default-bg-color--light: var(--kb-surface-sunken);
+  --md-default-bg-color--lighter: var(--kb-border);
+  --md-default-bg-color--lightest: var(--kb-border-strong);
 
-  --md-typeset-color: #2c2722;
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
   --md-typeset-a-color: var(--kb-accent);
   --md-typeset-mark-color: var(--kb-accent-soft);
 
-  --md-code-bg-color: #f1ebdd;
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface-sunken);
   --md-code-fg-color: #4a4136;
 
-  /* Header wears the paper, ink text (see .md-header polish below) */
-  --md-primary-fg-color: #f2ecdf;
-  --md-primary-fg-color--light: #f7f3ea;
-  --md-primary-fg-color--dark: #e6ddcb;
-  --md-primary-bg-color: #2c2722;
-  --md-primary-bg-color--light: #5f574c;
+  /* ---- Header / nav-tabs: wears the paper, ink text ---- */
+  --md-primary-fg-color: var(--kb-surface-sunken); /* header background */
+  --md-primary-fg-color--light: var(--kb-paper);
+  --md-primary-fg-color--dark: var(--kb-border);
+  --md-primary-bg-color: var(--kb-ink);            /* header text */
+  --md-primary-bg-color--light: var(--kb-secondary);
 
+  /* ---- Accent (interactive) ---- */
   --md-accent-fg-color: var(--kb-accent-strong);
   --md-accent-fg-color--transparent: var(--kb-accent-soft);
-  --md-accent-bg-color: #fffdf7;
-  --md-accent-bg-color--light: #fffdf7;
+  --md-accent-bg-color: var(--kb-surface);
+  --md-accent-bg-color--light: var(--kb-surface);
 
-  /* Warm near-black footer anchors the page, editorial-style */
-  --md-footer-bg-color: #2c2722;
-  --md-footer-bg-color--dark: #241f1b;
+  /* ---- Footer: warm near-black, editorial anchor ---- */
+  --md-footer-bg-color: var(--kb-ink);
+  --md-footer-bg-color--dark: #1f1a15;
   --md-footer-fg-color: #f4efe4;
-  --md-footer-fg-color--light: #cfc6b7;
-  --md-footer-fg-color--lighter: #9a9184;
+  --md-footer-fg-color--light: #cbc2b2;
+  --md-footer-fg-color--lighter: #93897a;
 }
 
-/* --------------------------------------------------------------------------
-   3. Palette — dark scheme (slate): warm charcoal paper, warm off-white text
-   -------------------------------------------------------------------------- */
+/* -------- Dark scheme (slate) — warm charcoal paper, warm off-white text --- */
 [data-md-color-scheme="slate"] {
   --md-hue: 34; /* warm-tint any Material-derived slate values */
 
-  --kb-paper: #1b1916;
-  --kb-surface: #23201b;
-  --kb-border: #39342b;
-  --kb-accent: #63bdb3; /* lighter teal for dark bg */
-  --kb-accent-strong: #86d3ca;
-  --kb-accent-soft: rgba(99, 189, 179, 0.18);
-  --kb-tag-bg: #262d2a;
-  --kb-tag-fg: #9bd3c9;
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #1a1815;
+  --kb-surface: #232019;
+  --kb-surface-sunken: #2a261e;
+  --kb-border: #38332a;
+  --kb-border-strong: #453f34;
+  --kb-accent: #62bdb2;                          /* lighter teal for dark bg */
+  --kb-accent-strong: #86d4ca;
+  --kb-accent-soft: rgba(98, 189, 178, 0.20);
+  --kb-tag-bg: #24302b;
+  --kb-tag-fg: #97d2c7;
 
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #ece4d7;                             /* primary text — warm off-white */
+  --kb-secondary: #b6ad9d;
+  --kb-hint: #7e7566;
+
+  /* ---- mkdocs-material surface tiers (page → raised) ---- */
   --md-default-bg-color: var(--kb-paper);
-  --md-default-bg-color--light: #23201b;
-  --md-default-bg-color--lighter: #2a261f;
-  --md-default-bg-color--lightest: #322d25;
-  --md-default-fg-color: #ece5da;
-  --md-default-fg-color--light: #b9b0a1;
-  --md-default-fg-color--lighter: #837a6c;
-  --md-default-fg-color--lightest: #423d34;
+  --md-default-bg-color--light: var(--kb-surface);
+  --md-default-bg-color--lighter: var(--kb-surface-sunken);
+  --md-default-bg-color--lightest: var(--kb-border);
 
-  --md-typeset-color: #ece5da;
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
   --md-typeset-a-color: var(--kb-accent);
   --md-typeset-mark-color: var(--kb-accent-soft);
 
-  --md-code-bg-color: #23201a;
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface);
   --md-code-fg-color: #ded6c7;
 
-  --md-primary-fg-color: #211d17;
-  --md-primary-fg-color--light: #2a261f;
-  --md-primary-fg-color--dark: #17140f;
-  --md-primary-bg-color: #ece5da;
-  --md-primary-bg-color--light: #b9b0a1;
+  /* ---- Header / nav-tabs ---- */
+  --md-primary-fg-color: var(--kb-surface);
+  --md-primary-fg-color--light: var(--kb-surface-sunken);
+  --md-primary-fg-color--dark: var(--kb-paper);
+  --md-primary-bg-color: var(--kb-ink);
+  --md-primary-bg-color--light: var(--kb-secondary);
 
+  /* ---- Accent (interactive) ---- */
   --md-accent-fg-color: var(--kb-accent-strong);
   --md-accent-fg-color--transparent: var(--kb-accent-soft);
   --md-accent-bg-color: #16130f;
   --md-accent-bg-color--light: #16130f;
 
-  --md-footer-bg-color: #17140f;
-  --md-footer-bg-color--dark: #120f0b;
-  --md-footer-fg-color: #ece5da;
-  --md-footer-fg-color--light: #b9b0a1;
-  --md-footer-fg-color--lighter: #837a6c;
+  /* ---- Footer ---- */
+  --md-footer-bg-color: #141210;
+  --md-footer-bg-color--dark: #100e0c;
+  --md-footer-fg-color: var(--kb-ink);
+  --md-footer-fg-color--light: var(--kb-secondary);
+  --md-footer-fg-color--lighter: var(--kb-hint);
 }
 
-/* --------------------------------------------------------------------------
-   4. Typography — serif display headings, comfortable measure & rhythm
-   -------------------------------------------------------------------------- */
-.md-typeset {
-  line-height: 1.72;
-  font-size: 0.82rem;
+/* ==========================================================================
+   §2 · Typography tokens  (Target 2)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/type.css. Families feed Material's
+   --md-text-font-family / --md-code-font-family (fully replacing them so the
+   Hangul fallback always applies); headings use --kb-font-display directly in
+   §5. Scale mirrors the live site's ~20px root. Names are stable.
+   ========================================================================== */
+:root {
+  /* ---- Families (source of truth) — each ends in a Hangul fallback ---- */
+  --kb-font-display: "Fraunces", "Iowan Old Style", Georgia, "Nanum Myeongjo",
+    "Apple SD Gothic Neo", serif;
+  --kb-font-body: "Source Sans 3", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --kb-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", "Apple SD Gothic Neo", monospace;
+
+  /* Map onto mkdocs-material's family variables (fully replace them so the
+     Korean fallback always applies) */
+  --md-text-font-family: var(--kb-font-body);
+  --md-code-font-family: var(--kb-font-mono);
+
+  /* ---- Type scale (rem, on a ~20px root — matches the live site) ---- */
+  --kb-text-h1: 2rem;        /* ~40px — page / article title */
+  --kb-text-h2: 1.45rem;     /* ~29px — section heading (gets a hairline rule) */
+  --kb-text-h3: 1.15rem;     /* ~23px — sub-section */
+  --kb-text-h4: 1rem;        /* ~20px — minor heading */
+  --kb-text-h5: 0.82rem;     /* ~16px — inline heading */
+  --kb-text-h6: 0.72rem;     /* ~14px — small-caps label (uppercase, tracked) */
+  --kb-text-body: 0.82rem;   /* ~16px — long-form body */
+  --kb-text-small: 0.78rem;  /* ~16px — captions, card descriptions */
+  --kb-text-caption: 0.72rem;/* ~14px — metadata, tag text, hints */
+
+  /* ---- Line-heights ---- */
+  --kb-leading-display: 1.15; /* h1 */
+  --kb-leading-heading: 1.25; /* h2–h4 */
+  --kb-leading-snug: 1.4;     /* UI text, cards */
+  --kb-leading-body: 1.72;    /* long-form reading */
+
+  /* ---- Weights (Fraunces + Source Sans 3 share these) ---- */
+  --kb-weight-regular: 400;
+  --kb-weight-medium: 500;
+  --kb-weight-semibold: 600; /* all display headings */
+  --kb-weight-bold: 700;
+
+  /* ---- Letter-spacing ---- */
+  --kb-tracking-display: -0.01em; /* tighten large serif headings */
+  --kb-tracking-body: 0.002em;    /* a hair of air in body text */
+  --kb-tracking-label: 0.08em;    /* uppercase h6 / eyebrow labels */
+
+  /* ---- Measure (reading column width) ---- */
+  --kb-measure: 42rem; /* long-form; keeps lines ~70–80 chars */
 }
 
-.md-typeset h1,
-.md-typeset h2,
-.md-typeset h3,
-.md-typeset h4,
-.md-typeset h5,
-.md-header__title,
-.md-nav__title {
-  font-family: var(--kb-font-display);
-  font-optical-sizing: auto;
-  letter-spacing: -0.01em;
+/* ==========================================================================
+   §3 · Shape, spacing & motion tokens  (Target 2 companion)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/shape.css. Scheme-independent
+   structure: soft radii, a spacing rhythm, one gentle motion token, and the
+   ONE permitted shadow (a whisper of teal on card hover). Names are stable.
+   ========================================================================== */
+:root {
+  /* ---- Corner radii ---- */
+  --kb-radius: 0.55rem;      /* cards, code blocks, admonitions, search */
+  --kb-radius-sm: 0.35rem;   /* inline code, small chips */
+  --kb-radius-pill: 2rem;    /* tag pills */
+
+  /* ---- Spacing rhythm ---- */
+  --kb-space-xs: 0.35rem;
+  --kb-space-sm: 0.6rem;
+  --kb-space-md: 1rem;       /* default gap (grid, stack) */
+  --kb-space-lg: 1.5rem;     /* block separation */
+  --kb-space-xl: 2.4rem;     /* section separation (matches h2 margin-top) */
+  --kb-space-2xl: 4rem;      /* page-level rhythm */
+
+  /* ---- Motion ---- */
+  --kb-ease: 0.15s ease; /* the house transition — quiet, quick */
+
+  /* ---- Elevation ---- */
+  /* The only shadow in the system: a soft teal-tinted lift on card hover.
+     Everything else uses tone tiers + hairline borders. */
+  --kb-shadow-hover: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.10);
 }
 
-.md-typeset h1 {
-  font-weight: 600;
-  font-size: 2rem;
-  line-height: 1.15;
-  color: var(--md-default-fg-color);
-  margin: 0 0 0.9rem;
-}
-
-.md-typeset h2 {
-  font-weight: 600;
-  font-size: 1.45rem;
-  line-height: 1.25;
-  margin-top: 2.4rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--md-default-fg-color--lightest);
-}
-
-.md-typeset h3 {
-  font-weight: 600;
-  font-size: 1.15rem;
-  margin-top: 1.9rem;
-}
-
-.md-typeset h4 {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.md-typeset p,
-.md-typeset li {
-  letter-spacing: 0.002em;
-}
-
-/* Links: teal, quiet underline that firms up on hover */
-.md-typeset a {
-  color: var(--md-typeset-a-color);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-decoration-color: var(--kb-accent-soft);
-  text-underline-offset: 0.15em;
-  transition: color var(--kb-ease), text-decoration-color var(--kb-ease);
-}
-.md-typeset a:hover,
-.md-typeset a:focus {
-  color: var(--kb-accent-strong);
-  text-decoration-color: currentColor;
-}
-
-/* Permalinks ride the accent on hover/target */
-.md-typeset .headerlink {
-  color: var(--md-default-fg-color--lighter);
-  transition: color var(--kb-ease);
-}
-.md-typeset :hover > .headerlink,
-.md-typeset :target > .headerlink,
-.md-typeset .headerlink:focus {
-  color: var(--kb-accent);
-}
-
-/* Blockquote as an editorial pull-quote */
-.md-typeset blockquote {
-  border-left: 3px solid var(--kb-accent-soft);
-  color: var(--md-default-fg-color--light);
-}
-
-::selection {
-  background: var(--kb-accent-soft);
-}
-
-/* --------------------------------------------------------------------------
-   5. Chrome — header & footer polish (paper header, hairline, no heavy shadow)
-   -------------------------------------------------------------------------- */
-.md-header {
-  box-shadow: none;
-  border-bottom: 1px solid var(--kb-border);
-}
-.md-header--shadow {
-  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.06);
-}
-.md-header__title {
-  font-size: 1.02rem;
-  font-weight: 600;
-}
-.md-tabs {
-  border-bottom: 1px solid var(--kb-border);
-}
-
-/* --------------------------------------------------------------------------
-   6. Components — code, admonitions, tables, tags, search
-   -------------------------------------------------------------------------- */
-
-/* Code: soft warm block, hairline border, rounded; quiet inline pill */
-.md-typeset pre > code {
-  border-radius: var(--kb-radius);
-}
-.md-typeset .highlight,
-.md-typeset pre {
-  border-radius: var(--kb-radius);
-}
-.md-typeset .highlighttable,
-.md-typeset .highlight > pre {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: var(--kb-radius);
-}
-.md-typeset code {
-  border-radius: var(--kb-radius-sm);
-  padding: 0.1em 0.4em;
-}
-
-/* Admonitions + collapsibles: soft, rounded, thin accent rule, no drop shadow */
-.md-typeset .admonition,
-.md-typeset details {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-left-width: 3px;
-  border-radius: var(--kb-radius);
-  box-shadow: none;
-  background: var(--kb-surface);
-}
-
-/* Tables: hairline frame, rounded, quiet header band */
-.md-typeset table:not([class]) {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: var(--kb-radius);
-  overflow: hidden;
-}
-.md-typeset table:not([class]) th {
-  background: var(--md-default-bg-color--light);
-  font-family: var(--kb-font-display);
-  font-weight: 600;
-}
-.md-typeset table:not([class]) tr:hover {
-  background: var(--md-default-bg-color--light);
-}
-
-/* Tag pills (tags plugin output) */
-.md-typeset .md-tag {
-  background: var(--kb-tag-bg);
-  color: var(--kb-tag-fg);
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: var(--kb-radius-pill);
-  padding: 0.15em 0.7em;
-  font-size: 0.72rem;
-  transition: border-color var(--kb-ease), color var(--kb-ease);
-}
-.md-typeset a.md-tag:hover {
-  color: var(--kb-accent-strong);
-  border-color: var(--kb-accent);
-}
-
-/* Search input: rounded, soft, accent focus ring */
-.md-search__form {
-  border-radius: var(--kb-radius);
-  background: var(--kb-surface);
-  box-shadow: none;
-  border: 1px solid var(--kb-border);
-  transition: border-color var(--kb-ease);
-}
-.md-search__form:hover,
-[data-md-toggle="search"]:checked ~ .md-header .md-search__form {
-  border-color: var(--kb-accent);
-  background: var(--kb-surface);
-}
-.md-search__input::placeholder {
-  color: var(--md-default-fg-color--lighter);
-}
-.md-search-result__meta {
-  color: var(--md-default-fg-color--light);
-}
-
-/* Nav: quiet active markers in accent */
+/* ==========================================================================
+   §4 · Site chrome  (Target 4) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   Header wears the paper (a warm sunken band, ink text — no colored bar);
+   depth is a single hairline border-bottom, never a drop shadow. Sidebar nav
+   reads like a table of contents; footer is a warm near-black anchor (colored
+   by the --md-footer-* tokens in §1). These are the delivered chrome.css
+   "mkdocs-material hooks" — pure re-skins riding on Material's base layout.
+   ========================================================================== */
+.md-header { box-shadow: none; border-bottom: 1px solid var(--kb-border); }
+.md-header--shadow { box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.06); } /* subtle lift only when scrolled */
+.md-header__title { font-family: var(--kb-font-display); font-size: 1.02rem; font-weight: var(--kb-weight-semibold); }
+.md-tabs { border-bottom: 1px solid var(--kb-border); }
+.md-nav__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
 .md-nav__link--active,
 .md-nav__link:active,
-.md-typeset .md-nav__link:hover {
-  color: var(--kb-accent);
+.md-typeset .md-nav__link:hover { color: var(--kb-accent); }
+.md-search__form {
+  border-radius: var(--kb-radius); background: var(--kb-surface);
+  box-shadow: none; border: 1px solid var(--kb-border); transition: border-color var(--kb-ease);
 }
+.md-search__form:hover,
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form { border-color: var(--kb-accent); }
+.md-search__input::placeholder { color: var(--md-default-fg-color--lighter); }
 
-/* --------------------------------------------------------------------------
-   7. Card / grid utility  (documented for the P5.S2 landing redesign)
+/* ==========================================================================
+   §5 · Content typography  (Target 5) — mkdocs-material hooks
    --------------------------------------------------------------------------
-   Usage A — raw HTML block (works today; md_in_html is NOT enabled, so put
-   the link text directly in the markup):
+   The article reading experience on .md-typeset. Delivered content.css hooks,
+   plus the type ladder + body rhythm bridged onto .md-typeset from delivered
+   tokens (the hooks block set family/spacing but left the sizes/margins to the
+   portable .kb-prose; the ladder is a design signature, so it is wired here so
+   real articles get it). ADMONITION COLOR POLICY (teal-only): note = teal rail
+   + teal title; warning/others = firm warm-neutral rail. Differentiation is by
+   icon + label + weight, never a second hue.
+   ========================================================================== */
+.md-typeset { line-height: var(--kb-leading-body); font-size: var(--kb-text-body); }
+.md-typeset p, .md-typeset li { letter-spacing: var(--kb-tracking-body); }
 
-     <div class="kb-grid">
-       <a class="kb-card" href="changple5/">
-         <span class="kb-card__title">changple5</span>
-         <span class="kb-card__desc">Korean-topic explainers</span>
-       </a>
-     </div>
+/* Headings — serif display on the restrained editorial ladder */
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4, .md-typeset h5 {
+  font-family: var(--kb-font-display); font-optical-sizing: auto; letter-spacing: var(--kb-tracking-display);
+}
+.md-typeset h1 {
+  font-size: var(--kb-text-h1); line-height: var(--kb-leading-display);
+  font-weight: var(--kb-weight-semibold); color: var(--md-default-fg-color); margin: 0 0 0.9rem;
+}
+.md-typeset h2 {
+  font-size: var(--kb-text-h2); line-height: var(--kb-leading-heading);
+  font-weight: var(--kb-weight-semibold); margin: 2.4rem 0 0.9rem;
+  padding-bottom: 0.35rem; border-bottom: 1px solid var(--md-default-fg-color--lightest); /* editorial section rule */
+}
+.md-typeset h3 { font-size: var(--kb-text-h3); line-height: var(--kb-leading-heading); font-weight: var(--kb-weight-semibold); margin: 1.9rem 0 0.6rem; }
+.md-typeset h4 { font-size: var(--kb-text-h4); font-weight: var(--kb-weight-semibold); margin: 1.4rem 0 0.5rem; }
 
-   Usage B — a markdown list turned into cards via attr_list:
+/* Links — teal, quiet underline that firms on hover */
+.md-typeset a {
+  text-decoration: underline; text-decoration-thickness: 1px;
+  text-decoration-color: var(--kb-accent-soft); text-underline-offset: 0.15em;
+  transition: color var(--kb-ease), text-decoration-color var(--kb-ease);
+}
+.md-typeset a:hover, .md-typeset a:focus { color: var(--kb-accent-strong); text-decoration-color: currentColor; }
 
-     - [changple5](changple5/) — Korean-topic explainers
-     - [hi2vi_web](hi2vi_web/) — web infra notes
-     { .kb-grid }
+/* Permalinks + selection — realize the design's accent-usage rule (permalinks,
+   ::selection). No explicit delivery CSS ships for these, so they are retained
+   from the P5.S1 baseline, retargeted to the locked tokens. */
+.md-typeset .headerlink { color: var(--md-default-fg-color--lighter); transition: color var(--kb-ease); }
+.md-typeset :hover > .headerlink,
+.md-typeset :target > .headerlink,
+.md-typeset .headerlink:focus { color: var(--kb-accent); }
+::selection { background: var(--kb-accent-soft); }
 
-   Both render each item as a soft-bordered card in either scheme.
-   -------------------------------------------------------------------------- */
-.md-typeset .kb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
-  padding: 0;
-  list-style: none;
+/* Blockquote — editorial lede / pull-quote */
+.md-typeset blockquote { border-left: 3px solid var(--kb-accent-soft); color: var(--md-default-fg-color--light); }
+
+/* Code — warm sunken block, hairline border, soft radius */
+.md-typeset code { border-radius: var(--kb-radius-sm); padding: 0.1em 0.4em; }
+.md-typeset .highlight > pre, .md-typeset pre > code { border-radius: var(--kb-radius); }
+.md-typeset .highlighttable, .md-typeset .highlight > pre {
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
 }
 
+/* Admonitions + collapsibles — teal-only policy (see header) */
+.md-typeset .admonition, .md-typeset details {
+  border: 1px solid var(--md-default-fg-color--lightest); border-left-width: 3px;
+  border-radius: var(--kb-radius); box-shadow: none; background: var(--kb-surface);
+}
+.md-typeset .admonition { border-left-color: var(--kb-border-strong); }
+.md-typeset .admonition.note { border-left-color: var(--kb-accent); }
+.md-typeset .admonition.note > .admonition-title { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+
+/* Tables — hairline frame, rounded, quiet header band */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius); overflow: hidden;
+}
+.md-typeset table:not([class]) th { background: var(--md-default-bg-color--light); font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
+.md-typeset table:not([class]) tr:hover { background: var(--md-default-bg-color--light); }
+
+/* ==========================================================================
+   §6 · Cards & grid utility  (Target 6) — .kb-grid / .kb-card
+   --------------------------------------------------------------------------
+   The landing / browse card and its responsive grid (the ONLY resting-to-hover
+   shadow in the system, --kb-shadow-hover). Delivered cards.css hooks, scoped
+   under .md-typeset so BOTH usages render identically on-site (md_in_html is
+   NOT enabled — put link text directly in the markup):
+     A) raw HTML:  <div class="kb-grid"><a class="kb-card">…</a></div>
+     B) markdown list turned into cards via attr_list:  - [x](y) — desc { .kb-grid }
+   Consumed by P5.S2's landing / browse redesign.
+   ========================================================================== */
+.md-typeset .kb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--kb-space-md); margin: var(--kb-space-lg) 0; padding: 0; list-style: none; }
 .md-typeset .kb-card,
 .md-typeset .kb-grid > li {
-  display: block;
-  margin: 0;
-  padding: 1.1rem 1.2rem;
-  background: var(--kb-surface);
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: var(--kb-radius);
-  transition: border-color var(--kb-ease), box-shadow var(--kb-ease),
-    transform var(--kb-ease);
+  display: block; margin: 0; padding: 1.1rem 1.2rem; background: var(--kb-surface);
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
+  transition: border-color var(--kb-ease), box-shadow var(--kb-ease), transform var(--kb-ease);
 }
-
 .md-typeset a.kb-card,
-.md-typeset .kb-grid > li > a:first-child {
-  text-decoration: none;
-  color: inherit;
-}
-
+.md-typeset .kb-grid > li > a:first-child { text-decoration: none; color: inherit; }
 .md-typeset .kb-card:hover,
-.md-typeset .kb-grid > li:hover {
-  border-color: var(--kb-accent);
-  box-shadow: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.1);
-  transform: translateY(-1px);
-}
-
+.md-typeset .kb-grid > li:hover { border-color: var(--kb-accent); box-shadow: var(--kb-shadow-hover); transform: translateY(-1px); }
 .md-typeset .kb-card__title,
 .md-typeset .kb-grid > li > a:first-child {
-  display: block;
-  font-family: var(--kb-font-display);
-  font-weight: 600;
-  font-size: 1.02rem;
-  color: var(--md-default-fg-color);
+  display: block; font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: 1.02rem; color: var(--md-default-fg-color);
+}
+.md-typeset .kb-card__desc { display: block; margin-top: 0.35rem; color: var(--md-default-fg-color--light); font-size: var(--kb-text-small); }
+/* Optional footer meta row (count / tags / date) */
+.md-typeset .kb-card__meta {
+  display: flex; align-items: center; gap: 0.5rem; margin-top: 0.7rem;
+  font-family: var(--kb-font-mono); font-size: var(--kb-text-caption); color: var(--kb-hint);
 }
 
-.md-typeset .kb-card__desc {
-  display: block;
-  margin-top: 0.35rem;
-  color: var(--md-default-fg-color--light);
-  font-size: 0.78rem;
+/* ==========================================================================
+   §7 · Tag pills & tags page  (Target 7) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   The tags plugin emits a.md-tag pills and a [TAGS] index. Faint green-tinted
+   fill (--kb-tag-bg/--kb-tag-fg) ties them to the accent without a second hue;
+   pill shape = --kb-radius-pill. Delivered tags.css hooks.
+   ========================================================================== */
+.md-typeset .md-tag {
+  background: var(--kb-tag-bg); color: var(--kb-tag-fg);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: var(--kb-radius-pill); padding: 0.15em 0.7em; font-size: 0.72rem;
+  transition: border-color var(--kb-ease), color var(--kb-ease);
 }
+.md-typeset a.md-tag:hover { color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+
+/* ==========================================================================
+   §8 · Search UI  (Target 10) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   Surface only — matching/behavior stays the search plugin's (search.suggest +
+   search.highlight enabled). The field is skinned in §4; this skins the
+   results (meta band, hover, title face, teal-soft match highlight). Delivered
+   search.css hooks. P5.S3 (CJK search engineering) rides this styling.
+   ========================================================================== */
+.md-search__output { border-radius: var(--kb-radius); }
+.md-search-result__meta { color: var(--md-default-fg-color--light); background: var(--kb-surface-sunken); }
+.md-search-result__link:hover, .md-search-result__link[data-md-state="active"] { background: var(--md-default-bg-color--light); }
+.md-search-result__article .md-search-result__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
+.md-search-result mark { background: var(--kb-accent-soft); color: var(--md-default-fg-color); border-radius: 0.15em; }
+
+/* ==========================================================================
+   §9 · Page treatments  (Targets 8 & 9) — landing + article
+   --------------------------------------------------------------------------
+   Portable .kb-* page classes translated from the delivered
+   pages/landing.card.html + pages/article.card.html inline styles onto the
+   markup the site generates. Scoped under .md-typeset (page content lives
+   there) so they win specificity. These are STAGED for later slices to wire
+   into markup — they do NOT auto-apply and require no change to any generated
+   class:
+     · P5.S2 (landing/UX) drops the hero + section heads + browse grid into
+       docs/index.md and adds { .kb-recent } to the Recent list. The Recent
+       list stays a plain markdown list under <!-- explain:recent --> — only
+       the <li>/<a> are styled; the date/project stay bare text nodes, so the
+       machinery's bullet inserts/removes still slot in unchanged.
+     · The article metadata line / related block / TOC classes are available
+       for a future per-page-HTML or template treatment (the site ships no
+       overrides/ today). The live right-hand "On this page" TOC is Material's
+       secondary nav, already accent-skinned by §4.
+   ========================================================================== */
+
+/* -------- Landing: hero -------------------------------------------------- */
+.md-typeset .kb-hero { margin-bottom: 2.8rem; }
+.md-typeset .kb-hero__eyebrow {
+  font-size: var(--kb-text-h6); text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-hint); font-weight: var(--kb-weight-semibold);
+}
+.md-typeset .kb-hero__title {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: 2.6rem; line-height: 1.08; letter-spacing: -0.015em; margin: 0.5rem 0 0.2rem;
+}
+.md-typeset .kb-hero__title span { color: var(--kb-secondary); }
+.md-typeset .kb-hero__lede {
+  font-size: 1.02rem; line-height: 1.55; color: var(--kb-secondary); max-width: 34rem; margin: 0.6rem 0 1.3rem;
+}
+
+/* -------- Landing: section heading (title + "all →" link) ---------------- */
+.md-typeset .kb-sec {
+  margin: 0 0 0.9rem; display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest); padding-bottom: 0.35rem;
+}
+.md-typeset .kb-sec h2 {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: var(--kb-text-h3); margin: 0; padding: 0; border: 0;
+}
+.md-typeset .kb-sec a { font-size: var(--kb-text-caption); color: var(--kb-accent); text-decoration: none; }
+.md-typeset .kb-sec a:hover { color: var(--kb-accent-strong); }
+
+/* -------- Landing: Recent — a STYLED PLAIN LIST -------------------------- */
+/* Site machinery inserts/removes bare <li> of the form "date · [title](path)
+   — project" between the <!-- explain:recent --> markers, so only <li>/<a> are
+   styled; the date/project stay unwrapped text nodes. */
+.md-typeset .kb-recent { list-style: none; margin: 0; padding: 0; }
+.md-typeset .kb-recent li {
+  padding: 0.5rem 0; margin: 0; font-size: var(--kb-text-body); line-height: 1.5;
+  color: var(--kb-secondary); border-bottom: 1px solid var(--kb-border);
+  font-variant-numeric: tabular-nums; letter-spacing: normal;
+}
+.md-typeset .kb-recent li:last-child { border-bottom: 0; }
+.md-typeset .kb-recent a {
+  color: var(--kb-ink); font-weight: var(--kb-weight-medium);
+  text-decoration: none; text-underline-offset: 0.15em; transition: color var(--kb-ease);
+}
+.md-typeset .kb-recent a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-color: var(--kb-accent-soft); }
+
+/* -------- Article: metadata line (date · project · tags) ----------------- */
+.md-typeset .kb-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem;
+  font-size: var(--kb-text-caption); color: var(--kb-hint);
+  margin: 0 0 1.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+.md-typeset .kb-meta__sep { opacity: 0.5; }
+.md-typeset .kb-meta a:not(.md-tag) { color: var(--kb-accent); text-decoration: none; }
+.md-typeset .kb-meta a:not(.md-tag):hover { color: var(--kb-accent-strong); }
+
+/* -------- Article: related-links block ----------------------------------- */
+.md-typeset .kb-related {
+  margin: 2rem 0 0; padding: 1rem 1.2rem;
+  background: var(--kb-surface); border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
+}
+.md-typeset .kb-related__title {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: var(--kb-text-small); margin: 0 0 0.5rem;
+}
+.md-typeset .kb-related ul { list-style: none; margin: 0; padding: 0; }
+.md-typeset .kb-related li { padding: 0.25rem 0; margin: 0; font-size: var(--kb-text-small); }
+.md-typeset .kb-related a { color: var(--md-typeset-a-color); text-decoration: none; }
+.md-typeset .kb-related a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.15em; }
+
+/* -------- Article: "On this page" TOC (portable) ------------------------- */
+/* For a future custom article layout; the live secondary-nav TOC is skinned
+   in §4. Left-rail treatment with an accent active marker. */
+.kb-toc { position: sticky; top: 1.2rem; font-family: var(--kb-font-body); }
+.kb-toc__title {
+  font-size: var(--kb-text-h6); text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  font-weight: var(--kb-weight-semibold); color: var(--kb-hint); margin: 0 0 0.5rem;
+}
+.kb-toc ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--kb-border); }
+.kb-toc a {
+  display: block; padding: 0.25rem 0 0.25rem 0.7rem; margin-left: -1px;
+  font-size: var(--kb-text-caption); line-height: 1.4; color: var(--kb-secondary);
+  text-decoration: none; border-left: 2px solid transparent;
+  transition: color var(--kb-ease), border-color var(--kb-ease);
+}
+.kb-toc a:hover { color: var(--kb-accent); }
+.kb-toc a.is-active { color: var(--kb-accent); border-left-color: var(--kb-accent); font-weight: var(--kb-weight-semibold); }
+.kb-toc a.nested { padding-left: 1.4rem; color: var(--kb-hint); }

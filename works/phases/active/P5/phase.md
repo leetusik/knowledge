@@ -114,6 +114,10 @@ _Actual notes (appended by slices below):_
 - **S1 →** `experience.md`: FIRST real truth — visual language is "calm editorial library": warm-ivory light / warm-charcoal dark paper, serif display headings (Fraunces) over clean sans body (Source Sans 3), single deep-teal accent, paper-colored header with hairline rule (not a colored bar), soft borders, no heavy shadows; dark/light via `prefers-color-scheme` + manual toggle; Hangul fallback stacks for mixed EN/KR.
 - **S1 →** `decisions.md`: ADR — palette (custom warm-neutral + deep-teal, `--md-hue:34` for warm slate), typography (Fraunces/Source Sans 3/JetBrains Mono, Hangul fallbacks), and branding (original book+spark mark) choices; rejected alternatives: teal header bar, serif body, `overrides/` inline-logo, social cards, hue-only dark scheme (see result.md "Rejected alternatives").
 - **S1 →** `operations.md` (minor): the build now emits `docs/stylesheets/extra.css` + `docs/assets/{logo,favicon}.svg` into `site/`; runtime pulls Google Fonts (Source Sans 3, JetBrains Mono, Fraunces). No new build step or CI dep (social cards deliberately skipped).
+- **S5 →** `frontend.md`: full design system integrated from the operator's Claude Design project ("Knowledge Base Design System", all 10 targets), replacing the S1 interim baseline. `docs/stylesheets/extra.css` is now organized as §1 color tokens (LOCKED Target 1, verbatim) → §2 type tokens → §3 shape/motion tokens → §4–§8 per-component mkdocs-material hooks (chrome, content, cards, tags, search) → §9 staged landing/article page treatments. Fonts wiring changed: `theme.font: false` in `mkdocs.yml`; all three families (Fraunces/Source Sans 3/JetBrains Mono, exact weights incl. 500/600) load from a single `@import` at the top of `extra.css`, with `--md-*-font-family` tokens (Hangul fallbacks) pointing Material at them (no Roboto request). Brand marks swapped to the delivered `logo.svg`/`favicon.svg`.
+- **S5 →** `experience.md`: the "calm editorial library" visual language is now the operator-designed system (not agent taste) — warm ivory/charcoal paper, single deep-teal accent (teal-only invariant across links/nav/TOC/focus/tags/cards/`::selection`/match highlights), Fraunces serif display on a restrained h1–h6 ladder over Source Sans body at lh 1.72, teal-only admonition policy (note = teal rail, warning/others = warm-neutral rail — differentiated by icon+label+weight, no second hue), soft hairlines and one card-hover shadow. Both schemes ship (`default`/`slate`, `--md-hue: 34`). Mixed EN/KR via Hangul fallback stacks.
+- **S5 →** `decisions.md`: ADR — (a) operator-locked palette **1a Teal** (Target 1, LOCKED) as the color foundation; (b) design **provenance is the operator's Claude Design project**, integrated via DesignSync (agent no longer authors the visual language — it checks up + integrates); (c) fonts loaded via a single CSS `@import` with `theme.font: false` (rejected: `theme.font` split, which omits the 500/600 weights the design uses); (d) permalink + `::selection` accent rules retained from S1 (design intends them; delivery ships no explicit CSS).
+- **S5 →** `operations.md` (minor): `theme.font: false` — Material no longer requests its own webfonts; the single `extra.css` `@import` is now the only Google Fonts request (all three families). Build asset set unchanged otherwise (`extra.css` + `assets/{logo,favicon}.svg` into `site/`).
 
 ## Cross-slice notes — design system contract (for S2/S3/S4)
 
@@ -133,6 +137,44 @@ S1 settled the design tokens and theme config every later P5 slice composes on. 
 **Card/grid utility (for S2 landing, `extra.css` §7):** `.kb-grid` = responsive `auto-fit minmax(14rem,1fr)` grid; `.kb-card` = soft-bordered card, accent border + lift on hover, both schemes. Two consumption paths (md_in_html is NOT enabled): **(A)** raw-HTML `<div class="kb-grid"><a class="kb-card"><span class="kb-card__title">…</span><span class="kb-card__desc">…</span></a></div>` — link text goes directly in the HTML; **(B)** a markdown list + `{ .kb-grid }` (attr_list) whose `<li>` render as cards. S2 must keep the `<!-- explain:recent -->` marker + exact bullet format byte-intact regardless of which layout it adopts around it.
 
 **For S3 (search UI):** any search-result/highlight styling should ride the existing `.md-search__*` polish and the accent tokens; the search form is already rounded with an accent focus ring. `--md-typeset-mark-color` is set to `--kb-accent-soft`. Search-index/separator work is a separate concern from styling.
+
+### P5.S5 update — the S1 baseline is REPLACED by the delivered design system
+
+The interim S1 `extra.css` is fully superseded. S2/S3 now compose on the
+operator's delivered system (integrated 2026-07-11). What changed for consumers:
+
+- **`extra.css` structure** (do not regress): §1 color tokens (LOCKED Target 1,
+  verbatim) · §2 type tokens · §3 shape/motion tokens · §4–§8 per-component
+  mkdocs-material hook blocks (chrome / content / cards / tags / search) · §9
+  staged landing+article page treatments. Tokens keep the same `--kb-*` /
+  `--md-*` names as S1 (stable), but **color VALUES changed to palette 1a Teal**
+  (paper `#f6f2e8`, surface `#fffefa`, accent light `#0f6f66` / dark `#62bdb2`),
+  and new tiers exist: `--kb-surface-sunken`, `--kb-border-strong`,
+  `--kb-ink/-secondary/-hint`, `--kb-space-*`, `--kb-shadow-hover`,
+  `--kb-text-*` scale, `--kb-leading-*`, `--kb-weight-*`, `--kb-tracking-*`,
+  `--kb-measure`, `--kb-font-body/-mono`. Reuse these; never hard-code colors.
+- **Fonts wiring changed** (regression risk): `mkdocs.yml` is now
+  `theme.font: false` (NOT `font.text`/`font.code`). All three families load from
+  the single `@import` at the top of `extra.css`. **S2/S3 must not re-add
+  `theme.font` and must not add webfonts** — the budget (2 text + 1 code) is
+  spent and the weights (incl. 500/600) are already requested.
+- **Targets 8 & 10 are LIVE as CSS.** §6 `.kb-grid`/`.kb-card` + §9 `.kb-hero`,
+  `.kb-sec`, `.kb-recent`, `.kb-meta`, `.kb-related`, `.kb-toc` are portable
+  classes scoped under `.md-typeset`, **staged for S2/S3 to wire into markup**
+  (they don't auto-apply). **S2 (landing):** drop the hero/section/browse markup
+  into `docs/index.md` and add `{ .kb-recent }` (attr_list) to the Recent list —
+  keeping `<!-- explain:recent -->` + the exact bullet format byte-intact (only
+  `<li>/<a>` styled; date/project stay bare text nodes). **S3 (search):** the
+  result dropdown styling (§8) is done — engineering the CJK matching
+  (separator vs. prebuilt index) is the remaining work.
+- The article metadata line / related block (§9 `.kb-meta`/`.kb-related`) need
+  per-page HTML or a template; the site still ships **no `overrides/`**. The
+  live right-hand "On this page" TOC is Material's secondary nav, accent-skinned
+  by §4 (the portable `.kb-toc` is for a future custom article layout only).
+- Brand marks are the delivered `logo.svg` (mid-teal `#178a80`, dual-header
+  safe) / `favicon.svg` (`#127f76` plate). **Do not** swap the logo for the
+  per-scheme accents — the mid-teal is the one value that clears ~3:1 on both
+  headers.
 
 **Forward notes:**
 - **Social cards deliberately skipped** (needs the `social` plugin + cairosvg/Pillow — CI dep weight, no design payoff now). If ever wanted, it's a separate deps + `plugins:` change, not a token change.
