@@ -11,9 +11,17 @@ Follow-up (same session):
 
 > And I think knowledge will be eventually SaaS like feature later. just note that and proceed. it's not today's job.
 
+Follow-up (2026-07-11, mid-phase, after P5.S1 shipped):
+
+> no wait, i want to build knowledge design with acutal claude design. not by you. let me do that. revise phase, make operator co work slice. you make a list of to design target, I'll make one by one with claude design
+
 ## Confirmed Intent (refined + clarified)
 
 Second phase of the knowledge-feature roadmap (after P4 core improvements): a Claude-designed visual overhaul of the MkDocs GitHub Pages site plus an upgraded search experience. Hosting stays GitHub Pages ("github page as is") — this is a redesign of the static site, not a hosting change. The operator wants Claude to do the design work ("gonna use claude design for designing the webui"), not an external designer or off-the-shelf theme. The Obsidian-like knowledge map is deliberately NOT in this phase — it is its own phase (P6). Open deferred job D2 (design polish for the Pages site) is absorbed here: promote it into this phase at decomposition.
+
+### Amendment (2026-07-11) — design ownership corrected
+
+"Gonna use claude design" meant the **Claude Design tool** (claude.ai/design), not Claude-the-agent doing the design. The **operator designs each target themselves** in a Claude Design design-system project, one at a time, working from an agent-produced design-target list; the agent syncs each delivery via the DesignSync tool and integrates it into the site. Operator decisions at the amendment: keep the P5.S1 Claude-written design system as the **interim baseline** (no revert; replaced target-by-target), and structure the co-work as **one slice that integrates each target as it is delivered** (P5.S5, order 1.5, held `pending` while the operator designs). The engineering scope (CJK search mechanics, marker-contract safety, build guard) stays with the agent.
 
 ## Clarifications Resolved
 
