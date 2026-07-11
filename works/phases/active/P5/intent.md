@@ -23,6 +23,8 @@ Second phase of the knowledge-feature roadmap (after P4 core improvements): a Cl
 
 "Gonna use claude design" meant the **Claude Design tool** (claude.ai/design), not Claude-the-agent doing the design. The **operator designs each target themselves** in a Claude Design design-system project, one at a time, working from an agent-produced design-target list; the agent syncs each delivery via the DesignSync tool and integrates it into the site. Operator decisions at the amendment: keep the P5.S1 Claude-written design system as the **interim baseline** (no revert; replaced target-by-target), and structure the co-work as **one slice that integrates each target as it is delivered** (P5.S5, order 1.5, held `pending` while the operator designs). The engineering scope (CJK search mechanics, marker-contract safety, build guard) stays with the agent.
 
+Follow-up (2026-07-11, same day): not one-by-one after all — the operator finishes the **entire design system** in Claude Design (project "Knowledge Base Design System"), and the agent checks up + integrates **once at the end**. `slices/P5.S5/plan.md` was rewritten as a design brief the operator hands to Claude Design to follow.
+
 ## Clarifications Resolved
 
 - Q: What does "plugin style" mean for how other users install the feature? — A: A real Claude Code plugin (`.claude-plugin/` + marketplace manifest), installable via `/plugin`.

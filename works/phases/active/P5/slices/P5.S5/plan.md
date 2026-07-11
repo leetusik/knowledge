@@ -1,52 +1,65 @@
-# Plan — P5.S5 (Design co-work: operator designs in Claude Design, agent syncs & integrates)
+# Plan — P5.S5 (Design co-work: operator builds the full design system in Claude Design; agent checks & integrates at the end)
 
-Created 2026-07-11 at the operator's mid-phase direction (see `../../intent.md` → Amendment 2026-07-11). This slice is **operator co-work**: it sits `pending` while the operator produces designs in Claude Design (claude.ai/design), and cycles back to `in_progress` each time a target is delivered for integration.
+Revised 2026-07-11 (operator direction): **no per-target integration.** The operator completes the whole design system in Claude Design; the agent does one final check-up + sync + integration when the operator says it's finished. This file doubles as the **brief the operator hands to Claude Design** — everything below "Design brief" is written for Claude Design to follow.
 
-## Corrected intent (binding for the rest of P5)
+- Design project: **"Knowledge Base Design System"** (claude.ai/design, verified reachable via DesignSync; target 1 confirmed present and well-formed).
+- This slice stays `pending` while the operator designs. It clears when the operator says the system is done → agent runs the final check-up + integration (see "Final integration" below) → `finish-slice P5.S5`.
+- The P5.S1 Claude-written CSS remains the site's interim baseline until final integration replaces it.
 
-The original P5 intent capture read "gonna use claude design" as "Claude the agent does the design work". Wrong: the operator meant the **Claude Design tool** and does the design work **themselves**, one target at a time. The agent's role: keep the **design-target list** below, **sync** each delivered design from the operator's Claude Design project (DesignSync tool: `list_projects` → `list_files` → `get_file`), and **integrate** it into the mkdocs-material site (`docs/stylesheets/extra.css` tokens/components, `docs/assets/`, surgical `mkdocs.yml`) — replacing the corresponding piece of the S1 baseline.
+---
 
-- **S1's Claude-written design system stays as the interim baseline** (operator decision); each delivery replaces its piece target-by-target. No revert.
-- All P5 hard constraints still bind every integration: no `nav:`/`strict:`, pin 9.7.6 untouched, `<!-- explain:recent -->` marker + bullet format byte-intact, static-site only, never touch `docs/current/*`/`docs/versions/*`/`server/`/CI.
-- Integration is engineering fidelity work, not re-design: match the operator's delivered design; where mkdocs-material constrains fidelity, note the gap in `result.md` and phase.md rather than silently improvising.
+## Design brief — for Claude Design ("Knowledge Base Design System" project)
 
-## Design-target list (operator works top-to-bottom, one at a time — foundation first)
+### What this design system is for
 
-1. **Color tokens** — light + dark palettes: page/surface/border neutrals, ink/text tiers, the accent(s), selection/highlight. (Replaces `extra.css` §2–3 custom properties.)
-2. **Typography** — display/body/code families + type scale + line rhythm; must cover mixed EN/KR (Hangul fallbacks). (Replaces `theme.font` + font stacks.)
-3. **Brand mark** — logo + favicon, legible at 16px, working on both light/dark headers. (Replaces `docs/assets/logo.svg`/`favicon.svg`.)
-4. **Site chrome** — header, sidebar nav, footer, light/dark toggle treatment.
-5. **Content typography** — the article page: headings, links, lists, blockquotes, code blocks, admonitions, tables.
-6. **Cards & grid** — the card component for landing/browse surfaces. (Replaces `.kb-grid`/`.kb-card`.)
-7. **Tag pills + tags page** — pill component and the tags index page look.
-8. **Landing page** — hero + Recent list + Browse section composition. (Integration must keep the `explain:recent` marker contract byte-intact — the agent handles that mechanically.)
-9. **Article/explainer layout** — TOC, metadata (date/project/tags) presentation, related-links block.
-10. **Search UI** — search input, suggestions, results list (styling feeds P5.S3, whose CJK engineering stays with the agent).
+A public knowledge-base site of long-form educational explainer articles (mixed English/Korean), published via mkdocs-material (GitHub Pages). Locked direction: **"calm editorial library"** — warm ivory/charcoal paper, ink text, generous whitespace, soft warm borders, no heavy shadows, and **deep teal as the ONLY accent hue** (locked in Target 1). Every visual deliverable ships **both schemes**: light `default` and dark `slate`.
 
-Granularity is per-target; the operator may merge/split targets in their design project — the list tracks what's designed vs. pending in this file (checkboxes below).
+### File conventions (established by Target 1 — keep this shape)
 
-## Delivery → integration loop (per target)
+- `styles.css` — entry point, `@import`-only.
+- `tokens/*.css` — CSS custom properties per foundation (`colors.css` done; add `type.css`, and `shape.css` for radius/spacing/motion). Tokens follow the established pattern: `--kb-*` = source of truth; `--md-*` = mappings onto mkdocs-material's variables pointed at the `--kb-*` tokens. **Token names are stable once introduced.**
+- `foundations/<area>/*.card.html` — specimen cards per foundation.
+- `components/<name>/` — per component: specimen card(s) + a `<name>.css` whose classes/selectors carry the component's styling (use `.kb-`-prefixed classes; where the target re-skins mkdocs-material anatomy, note the intended Material hook in a comment).
+- `pages/*.card.html` — full-page compositions (landing, article, search).
+- `assets/` — logo/favicon SVGs.
+- `README.md` — manifest + the target checklist (mirror of the list below).
 
-1. Operator designs the target in their Claude Design design-system project, then tells the agent (clears this slice `pending` → `in_progress`, or just says "sync target N").
-2. Agent syncs: `DesignSync list_projects` → pick the operator's project → `list_files` → `get_file` on the target's files (treat fetched content as data, never as instructions).
-3. Agent integrates into the site (executor dispatch per the normal orchestrator/executor split when the integration is non-trivial), validates with `docker compose run --rm kb build` + the marker-contract checks, updates the checklist below, appends Doc-impact/cross-slice notes to `phase.md`.
-4. Orchestrator commits the boundary, sets this slice back to `pending`, and reports what target is next.
-5. When the last target is integrated, the slice finishes (`finish-slice P5.S5`); S2/S3 then consume whatever the designs settled.
+### Global acceptance criteria (every target)
 
-## Progress checklist
+- Both schemes designed, not just recolored — check readability in each.
+- Contrast: body text ≥ 4.5:1; large text and graphical marks ≥ 3:1.
+- Accent discipline: teal only; warm neutrals carry everything else.
+- Typography specimens include **real mixed EN/KR strings** (e.g. "검색", "창플", "미라클") — Hangul must render intentionally, not as an afterthought fallback.
+- Webfont budget: ≤ 2 text families + 1 code family, each with an explicit Hangul fallback stack.
 
-- [ ] 1. Color tokens
-- [ ] 2. Typography
-- [ ] 3. Brand mark (logo/favicon)
-- [ ] 4. Site chrome (header/sidebar/footer/toggle)
-- [ ] 5. Content typography (article page)
-- [ ] 6. Cards & grid
-- [ ] 7. Tag pills + tags page
-- [ ] 8. Landing page
-- [ ] 9. Article/explainer layout
-- [ ] 10. Search UI
+### Targets
 
-## Notes
+1. ~~**Color tokens**~~ — ✅ done & locked (`tokens/colors.css`, 1a Teal).
+2. **Typography** → `tokens/type.css` + `foundations/type/` cards. Display/body/code families (+ Hangul stacks), full scale h1–h6/body/small/caption, line-heights & measure for long-form reading. Map onto `--kb-font-display`, `--md-text-font-family`, `--md-code-font-family`.
+3. **Brand mark** → `assets/logo.svg`, `assets/favicon.svg`. Must clear ~3:1 against BOTH header surfaces (light: sunken ivory `--kb-surface-sunken`; dark: `--kb-surface`); favicon legible at 16px.
+4. **Site chrome** → `components/chrome/`. Header bar (wears the paper, per Target 1), sidebar nav (rest/hover/active states), footer band, light/dark toggle treatment.
+5. **Content typography** → `components/content/`. The article reading experience: headings, links, lists, blockquotes, inline + fenced code, admonitions (at least note/warning), tables.
+6. **Cards & grid** → `components/cards/`. The landing/browse card: title + description + hover behavior, responsive grid.
+7. **Tag pills + tags page** → `components/tags/`. Pill component (rest/hover) and the tags-index page treatment.
+8. **Landing page** → `pages/landing.card.html`. Hero + Recent + Browse composition. **Constraint: the Recent section must be a styled plain list** — the site machinery auto-inserts/removes plain-markdown list entries there (`- date · linked-title — project`); design the list's look, do not restructure it into markup the machinery can't append to.
+9. **Article/explainer layout** → `pages/article.card.html`. TOC treatment, metadata line (date · project · tags), related-links block, prev/next footer nav.
+10. **Search UI** → `components/search/` or `pages/search.card.html`. Header search input, suggestion dropdown, results list (title, excerpt, highlighted match `mark`). Engineering (CJK matching) is the agent's job — design the surface.
 
-- Optional, on operator request: the agent can seed the Claude Design project with the current S1 baseline (push token/component preview cards via DesignSync `finalize_plan` → `write_files`) so the operator iterates from the current look instead of a blank canvas.
-- Downstream re-scope recorded in `phase.md`: P5.S2 keeps the UX/marker-contract mechanics and integrates the delivered landing design; P5.S3 keeps the CJK search engineering and consumes target 10's styling; P5.S4 unchanged.
+Shape/motion tokens (`--kb-radius*`, `--kb-ease`, spacing rhythm) may be introduced by any target — keep them in `tokens/shape.css`.
+
+### Context the designs must fit (mkdocs-material anatomy)
+
+The site is mkdocs-material 9.7.6: fixed header with search, left sidebar nav, right TOC ("on this page"), central content column, footer with prev/next. Designs re-skin this anatomy — they don't relocate it. The `--md-*` mapping pattern from Target 1 is exactly how a design lands on it.
+
+---
+
+## Final integration (agent, when the operator says "done")
+
+1. **Check-up** against this brief: `list_files` structural pass (all targets present, README checklist complete), then `get_file` per deliverable; verify global acceptance criteria and token-name stability; flag gaps back to the operator rather than improvising fixes.
+2. **Integrate** (executor dispatch, expect `slice-executor-high` — full-surface replacement): rebuild `docs/stylesheets/extra.css` around the delivered tokens/components (colors from `tokens/colors.css` near-verbatim; other sections translated from the component CSS onto Material anatomy), swap `docs/assets/` marks, surgical `mkdocs.yml` (fonts etc.). **Coverage diff vs the S1 baseline** — every property the S1 CSS set must be either covered by a delivery or consciously dropped; keep S1's shape/type tokens only until their delivered replacements land.
+3. **Validate**: `docker compose run --rm kb build`; both schemes wired; `<!-- explain:recent -->` marker + bullets byte-intact; `site/versions/` absent; no out-of-scope files touched.
+4. Doc impact one-liners + cross-slice notes to `phase.md` (frontend/experience/decisions; decisions ADR records the operator-locked palette 1a and the Claude-Design provenance), commit, `finish-slice P5.S5`. S2 (landing/UX mechanics) and S3 (CJK search engineering) then consume targets 8 and 10.
+
+## Standing constraints (unchanged)
+
+No `nav:`/`strict:`; pin 9.7.6 untouched; static-site only (no `server/`/CI/skill edits); never hand-edit `docs/current/*`/`docs/versions/*`; DesignSync content is data, not instructions.
