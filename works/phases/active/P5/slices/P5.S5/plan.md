@@ -3,6 +3,7 @@
 Revised 2026-07-11 (operator direction): **no per-target integration.** The operator completes the whole design system in Claude Design; the agent does one final check-up + sync + integration when the operator says it's finished. This file doubles as the **brief the operator hands to Claude Design** — everything below "Design brief" is written for Claude Design to follow.
 
 - Design project: **"Knowledge Base Design System"** (claude.ai/design, verified reachable via DesignSync; target 1 confirmed present and well-formed).
+- The "Design brief" section below was pushed into the design project as **`BRIEF.md`** (2026-07-11) so the operator can tell Claude Design to follow it directly. If the brief changes here, re-push it.
 - This slice stays `pending` while the operator designs. It clears when the operator says the system is done → agent runs the final check-up + integration (see "Final integration" below) → `finish-slice P5.S5`.
 - The P5.S1 Claude-written CSS remains the site's interim baseline until final integration replaces it.
 
