@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0003
-created_at: 2026-07-08T21:52:17+09:00
-source: P4.REVIEW
-summary: P4: sqlite-vec/RRF seam consumed as hybrid semantic search
-previous: v0002_track_2_two-container_shape_over_shared_bind-mounted_repo
+version: v0004
+created_at: 2026-07-12T14:34:15+09:00
+source: P5.REVIEW
+summary: P5: browser-only static-search boundary vs local FastAPI hybrid — same corpus, two implementations by deployment target
+previous: v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search
 ---
 
 # Architecture
 
 ## Status
 
-Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched.
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target.
 
 ## System Shape
 
@@ -41,6 +41,32 @@ A failed commit **never rolls back** the file/DB (`committed:false`); `docs/` st
 - **Auto-nav preserved**: `mkdocs.yml` has no `nav:` / `strict:` key; the viewer builds its sidebar from the `docs/` tree.
 - **Optional bearer auth** on mutating endpoints only (`KB_API_TOKEN`).
 - **This repo never edits the `bootstrap_agentic_workspace` repo.**
+- **Two search implementations, one corpus (P5)** — see below.
+
+## Search Boundary: browser-only static search vs. the local hybrid (P5)
+
+The knowledge corpus (`docs/`) is searched by **two independent implementations,
+selected by deployment target** — they share the source content but no runtime:
+
+- **Published GitHub Pages site (Track 1) — browser-only.** Search runs entirely
+  client-side: mkdocs-material's lunr search, configured `plugins.search: lang:
+  [en, ko]`, with the `lunr.ko` (Korean trimmer/stopwords) + `lunr.multi` packs
+  bundled into the static build from the pinned 9.7.6 image. The static index
+  (`site/search/search_index.json`) and worker are the whole system — **no backend
+  call**. Korean/CJK matching is achieved by Material's typeahead trailing-wildcard
+  riding Korean eojeol spacing (a `관련` query prefix-matches indexed `관련해`), not
+  by a segmenter. This is the *only* search the deployed site has; it never
+  depends on `server/`.
+- **Local FastAPI service (Track 2) — server-side hybrid.** `POST /api/search`
+  runs BM25 (SQLite FTS5) + recency + Gemini-embedding cosine fused via RRF, with
+  query-time CJK prefix expansion (`build_match_query`). It runs only against the
+  local DB behind the API and is **never reachable from the published static
+  site** — a static Pages host cannot call it.
+
+The decoupling is deliberate: the deployed site must work with zero backend, and
+the richer hybrid stays a local/SaaS-someday capability. The same `docs/` corpus
+feeds both — the API reindexes from files; mkdocs builds its index from the same
+files — but a change to one search path never affects the other.
 
 ## Extension Points
 
@@ -50,5 +76,8 @@ A failed commit **never rolls back** the file/DB (`committed:false`); `docs/` st
 
 ## Roadmap
 
-- **P3 — Track 1 (GitHub Pages publishing)**: the remaining track; deploys stay on the operator's manual `git push`.
+- **Track 1 (GitHub Pages publishing) — live and redesigned (P3 → P5)**: published at <https://leetusik.github.io/knowledge/>; P5 added the operator-designed visual system and browser-only CJK search. Deploys stay on the operator's manual `git push`, now gated by `scripts/site_smoke.py`.
+- **P6 — Obsidian-like knowledge graph** (not built here): the P4 `related:` forward-edge frontmatter is the groundwork; P5 left graph/backlink work untouched for P6 to consume.
+- **P7 — `/explain` as a Claude Code plugin**: the plugin lives in this knowledge repo; the bootstrap repo then retires its embedded `/explain`.
 - **`/explain` consumer**: the `/explain` skill (in `bootstrap_agentic_workspace`) becomes the API's client, POSTing documents instead of writing files — delivered via a prepared handover prompt in that other repo (operator action, never edited from here).
+- **SaaS-someday** remains noted; the architecture is kept from precluding it (the browser-only static-search boundary keeps the deployed site backend-free without foreclosing a hosted hybrid later).

@@ -1,50 +1,134 @@
 ---
 doc_id: qa
-version: v0001
-created_at: 2026-07-02T13:19:35+09:00
-source: bootstrap
-summary: Initial qa doc
-previous: null
+version: v0002
+created_at: 2026-07-12T14:34:15+09:00
+source: P5.REVIEW
+summary: 'P5: site-build acceptance = site_smoke.py after a compose build; negative-test pattern for the guard'
+previous: v0001_bootstrap
 ---
 
 # QA
 
 ## Status
 
-No QA strategy is finalized yet.
-
-## Purpose
-
-Use this doc for test commands, acceptance criteria style, manual QA missions, browser QA flows, regression checks, and known fragile areas.
+The public site (Track 1) has a mechanical acceptance gate as of P5:
+`python3 scripts/site_smoke.py`, run after a `docker compose run --rm kb build`.
+It is both the CI deploy gate and the local pre-push check for any change in the
+P5 area (design CSS, landing markup, `mkdocs.yml`, search config). Server-side
+QA for Track 2 (the FastAPI store) stays as the P4 pytest/reindex checks in
+operations; this doc records the site-build acceptance strategy.
 
 ## Test Commands
 
-- Unit:
-- Integration:
-- E2E:
-- Lint/typecheck:
+- **Site-build acceptance (Track 1):**
+  `docker compose run --rm kb build && python3 scripts/site_smoke.py`
+  — builds with the pinned 9.7.6 image (same as CI), then asserts the load-bearing
+  invariants. A clean build **and** a `PASS` predict a clean, gate-passing deploy.
+- **State integrity (workspace):** `python3 scripts/workflow.py validate`.
+- **API / store (Track 2):** `uv run pytest -q`; drift repair via
+  `uv run python -m server.reindex` (see operations).
 
 ## Acceptance Criteria Style
 
-- <rule>
+- **Named invariants, not `--strict`.** Acceptance is a fixed list of load-bearing
+  invariants the guard asserts by name — never `mkdocs build --strict`. `--strict`
+  turns any build warning into a hard failure, which would block future `/explain`
+  zero-config page adds on warning-level noise. The guard is deliberately silent on
+  build *warnings*; only the `README.md`/`index.md` conflict is fixed (via
+  `exclude_docs`), not asserted.
+- Acceptance is **mechanical** for structure/contract invariants; **visual**
+  acceptance (does the design read right?) stays with the operator, done on the
+  local dev server before any push (deploys are manual-push-only).
+
+## Site-Build Invariants (asserted by `scripts/site_smoke.py`)
+
+Stdlib-only, optional `--root` (default = repo root). Two groups, collected and
+reported together; exits non-zero naming every violation.
+
+- **Source invariants** (parsed from `docs/`, `mkdocs.yml`, `compose.yml`,
+  `.github/workflows/pages.yml`):
+  - `docs/index.md` has the `<!-- explain:recent -->` marker with ≥1 correctly
+    formatted bullet directly under it (`format_recent_bullet`'s shape);
+    `docs/tags.md` has `<!-- material/tags -->`.
+  - `mkdocs.yml` has no top-level `nav:`/`strict:`, has `font: false`,
+    `plugins.search.lang` includes both `en` and `ko`, and no `extra_javascript:`.
+  - Pin parity: `mkdocs-material==X` (CI) equals `squidfunk/mkdocs-material:X`
+    (compose).
+- **Built-site invariants** (against `site/`; a clear "run mkdocs build first"
+  error if `site/` is missing):
+  - `site/search/search_index.json` `config.lang` includes `en`+`ko`;
+    `lunr.ko.min.js` + `lunr.multi.min.js` shipped under
+    `site/assets/javascripts/lunr/min/`.
+  - `site/index.html` has `kb-hero`, `kb-grid`, exactly one `id="__search"` and
+    ≥1 `for="__search"` (the zero-JS hero toggle), the `<ul>` element-adjacent to
+    `<div … id="recent">` (HTML comments tolerated between — the `#recent + ul`
+    styling depends on this DOM shape), and the marker comment + a rendered bullet.
+  - The three per-project `site/<project>/index.html` pages built.
+  - `site/versions/` absent; no leaked absolute local home-directory path (the
+    guard scans built HTML for an operator home-path prefix) and no
+    `<script src="http…">` CDN tag in any built HTML.
 
 ## Manual QA Missions
 
-### Mission Name
+### Korean/CJK search (browser — authoritative)
 
-- Route / entry:
-- What a real user would try:
-- What would feel wrong:
-- Evidence to collect:
+- **Route / entry:** `http://localhost:8765/knowledge/` → hero search field or `/`.
+- **What a real user would try:** `미라클`, `관련` (should match **while typing** —
+  prefix-matches the agglutinated `관련해`; the core CJK win), `창플`; `nginx` /
+  `cache` (English regression); `블록체인` (absent term → no results, cleanly).
+- **What would feel wrong:** `관련` only matching after the full `관련해` is typed
+  (typeahead wildcard not firing); an absent term flooding results; English
+  results changing.
+- **Evidence:** the smoke guard's Node lunr approximation predicts these, but only
+  the browser exercises Material's real worker — eyeball it.
+
+### Design eyeball (both schemes)
+
+- **Route / entry:** the dev server, before any push.
+- **What to check:** hero, Recent list, Browse cards, tag pills, code blocks,
+  admonitions, and the search field in **both** light and dark (toggle the header
+  brightness icon); teal is the only accent in both.
+- **What would feel wrong:** a second hue creeping in; faux-bold weights; the logo
+  vanishing on one header; the awkward "Bootstrap agentic workspace.sh" tab (known
+  and accepted — not a defect).
 
 ## Regression Checklist
 
-- [ ] <check>
+- [ ] `docker compose run --rm kb build` exits 0 with no `README.md`/`index.md`
+      conflict warning.
+- [ ] `python3 scripts/site_smoke.py` → `PASS`.
+- [ ] The `<!-- explain:recent -->` marker + bullet format is byte-intact
+      (`server.documents` insert/remove round-trips the live `docs/index.md`).
+- [ ] `python3 scripts/workflow.py validate` passes.
+
+## Verifying the Guard Itself (negative-test pattern)
+
+The guard must be proven to actually guard. The pattern (from P5.S4): **doctor a
+scratchpad copy, never the repo.** Copy `mkdocs.yml`, `docs/index.md`,
+`docs/tags.md`, `compose.yml`, `.github/workflows/pages.yml`, and the built
+`site/` tree into a scratch dir; break exactly one invariant per group (e.g.
+malform the first Recent bullet's date prefix; drop `"ko"` from the copied
+`search_index.json` `config.lang`); run `python3 scripts/site_smoke.py --root
+<scratch>` and confirm it exits non-zero and **names both failures by group**.
+Confirm the repo's own files were untouched throughout. This is the template for
+re-proving the guard after any change to `check_source`/`check_built`.
 
 ## Known Fragile Areas
 
-- <area>
+- **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
+  element between the `#recent` head and the Recent `<ul>` silently breaks Recent
+  styling with no build error (guarded).
+- **`plugins.search` config** — reverting to the bare `- search` drops `lang` back
+  to `["en"]` and breaks all Korean search with zero build error (guarded — the
+  single most important search invariant).
+- **Pin `9.7.6`** — a bump could change/remove the bundled `lunr.ko`/`lunr.multi`
+  packs or rename the `#__search` toggle the hero label depends on (guarded, tied
+  to pin parity).
+- **The marker/bullet contract** — parsed by `server/documents.py` and the
+  `/explain` API-down fallback; any landing edit must keep it byte-intact (guarded).
 
 ## Open Questions
 
--
+- None blocking. Behavioral search correctness is empirically verified by the smoke
+  guard's index checks plus the operator's browser mission; visual acceptance stays
+  with the operator on the dev server before each push.

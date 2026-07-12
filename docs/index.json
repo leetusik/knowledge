@@ -23,7 +23,7 @@
       ]
     },
     "experience": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -33,11 +33,19 @@
           "source": "bootstrap",
           "summary": "Initial experience doc",
           "previous": null
+        },
+        {
+          "id": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance",
+          "path": "docs/versions/experience/v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance.md",
+          "created_at": "2026-07-12T14:34:14+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: calm-editorial operator-designed visual language, landing/browse journeys, per-project pages, CJK search UX + hero affordance",
+          "previous": "v0001_bootstrap"
         }
       ]
     },
     "architecture": {
-      "latest": "v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search",
+      "latest": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -63,11 +71,19 @@
           "source": "P4.REVIEW",
           "summary": "P4: sqlite-vec/RRF seam consumed as hybrid semantic search",
           "previous": "v0002_track_2_two-container_shape_over_shared_bind-mounted_repo"
+        },
+        {
+          "id": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target",
+          "path": "docs/versions/architecture/v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target.md",
+          "created_at": "2026-07-12T14:34:15+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: browser-only static-search boundary vs local FastAPI hybrid — same corpus, two implementations by deployment target",
+          "previous": "v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search"
         }
       ]
     },
     "frontend": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -77,6 +93,14 @@
           "source": "bootstrap",
           "summary": "Initial frontend doc",
           "previous": null
+        },
+        {
+          "id": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero",
+          "path": "docs/versions/frontend/v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero.md",
+          "created_at": "2026-07-12T14:34:14+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: MkDocs Material design system (extra.css token/hook architecture, theme.font false), landing wiring, CJK client-side search, zero-JS hero",
+          "previous": "v0001_bootstrap"
         }
       ]
     },
@@ -171,7 +195,7 @@
       ]
     },
     "operations": {
-      "latest": "v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs",
+      "latest": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -205,6 +229,14 @@
           "source": "P4.REVIEW",
           "summary": "P4: Gemini embedding env, startup reindex self-heal, mkdocs exclude_docs",
           "previous": "v0003_github_pages_publishing_pipeline_live_pinned_mkdocs-material_ci_manual-push_deploys"
+        },
+        {
+          "id": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow",
+          "path": "docs/versions/operations/v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow.md",
+          "created_at": "2026-07-12T14:34:15+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: site design build asset set, single Google-Fonts @import, deploy-gating site_smoke.py guard, local build/eyeball workflow",
+          "previous": "v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs"
         }
       ]
     },
@@ -231,7 +263,7 @@
       ]
     },
     "qa": {
-      "latest": "v0001_bootstrap",
+      "latest": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -241,11 +273,19 @@
           "source": "bootstrap",
           "summary": "Initial qa doc",
           "previous": null
+        },
+        {
+          "id": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard",
+          "path": "docs/versions/qa/v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard.md",
+          "created_at": "2026-07-12T14:34:15+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: site-build acceptance = site_smoke.py after a compose build; negative-test pattern for the guard",
+          "previous": "v0001_bootstrap"
         }
       ]
     },
     "decisions": {
-      "latest": "v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs",
+      "latest": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -279,9 +319,17 @@
           "source": "P4.REVIEW",
           "summary": "P4: CJK query-side search, hybrid RRF, cross-link convention, publish hygiene ADRs",
           "previous": "v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo"
+        },
+        {
+          "id": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict",
+          "path": "docs/versions/decisions/v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict.md",
+          "created_at": "2026-07-12T14:34:14+09:00",
+          "source": "P5.REVIEW",
+          "summary": "P5: palette 1a Teal + Claude-Design provenance, fonts via @import, nav-feature choices, CJK plugin-lang approach, smoke guard over --strict",
+          "previous": "v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-08T21:58:55+09:00"
+  "last_rebuilt_at": "2026-07-12T14:42:23+09:00"
 }

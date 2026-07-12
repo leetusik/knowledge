@@ -52,13 +52,13 @@
       "id": "P5",
       "name": "Web UI redesign & search",
       "objective": "Claude-designed visual overhaul of the MkDocs GitHub Pages site plus an upgraded search experience; hosting stays GitHub Pages. Absorbs deferred D2 (design polish) — promote it into this phase at decomposition.",
-      "status": "planned",
+      "status": "done",
       "order": 5,
       "path": "works/phases/active/P5",
-      "review_status": "pending",
-      "current_slice": "P5.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7
     },
     {
       "id": "P6",
@@ -88,5 +88,5 @@
   "deferred_open_count": 0,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-12T14:14:57+09:00"
+  "last_rebuilt_at": "2026-07-12T14:45:43+09:00"
 }

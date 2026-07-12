@@ -114,3 +114,12 @@
 {"ts": "2026-07-12T14:05:45+09:00", "type": "slice_status_changed", "slice": "P5.S3", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-12T14:08:18+09:00", "type": "slice_status_changed", "slice": "P5.S4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-12T14:14:57+09:00", "type": "slice_status_changed", "slice": "P5.S4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-12T14:30:27+09:00", "type": "slice_status_changed", "slice": "P5.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-12T14:34:14+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:34:14+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:34:14+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:34:15+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:34:15+09:00", "type": "doc_version_created", "doc": "architecture", "version": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:34:15+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard", "source": "P5.REVIEW"}
+{"ts": "2026-07-12T14:45:43+09:00", "type": "slice_status_changed", "slice": "P5.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-12T14:45:43+09:00", "type": "phase_reviewed", "phase": "P5", "verdict": "pass", "reviewer": "slice-executor-high"}

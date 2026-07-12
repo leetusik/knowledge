@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0004
-created_at: 2026-07-08T21:52:18+09:00
-source: P4.REVIEW
-summary: P4: CJK query-side search, hybrid RRF, cross-link convention, publish hygiene ADRs
-previous: v0003_github_pages_generator_mkdocs-material_9.7.6_re-confirmed_over_hugo
+version: v0005
+created_at: 2026-07-12T14:34:14+09:00
+source: P5.REVIEW
+summary: P5: palette 1a Teal + Claude-Design provenance, fonts via @import, nav-feature choices, CJK plugin-lang approach, smoke guard over --strict
+previous: v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); and the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`).
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice).
 
 ## Purpose
 
@@ -91,6 +91,142 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - Consequences: no filesystem leakage on the public surface; versioned-doc history stays in git but out of CI builds; the server sanitizes regardless of skill input (P7-ready).
 - Source: P4.S5 `result.md`; P4 `phase.md`.
 
+### Design ownership & provenance: operator-designed system integrated by the agent
+
+- Date: 2026-07-11
+- Status: accepted (P5.S5 — intent amendment)
+- Context: "Gonna use claude design" was clarified mid-phase to mean the **Claude
+  Design tool** (claude.ai/design), not Claude-the-agent designing. The P5.S1
+  Claude-written "calm editorial library" design system had already shipped as the
+  interim baseline.
+- Decision: The **operator** builds the complete design system in a Claude Design
+  project ("Knowledge Base Design System", 10 targets); the **agent integrates it
+  once, at the end**, via DesignSync — replacing the S1 interim baseline (no
+  revert; S1 stays the fallback until the delivery lands). The agent no longer
+  authors the visual language; it checks up and integrates. Engineering scope (CJK
+  search mechanics, marker-contract safety, build guard) stays with the agent.
+- Alternatives considered: keep the agent-authored S1 system (rejected — operator
+  wants to own the design); per-target incremental integration (initially chosen,
+  then rejected same day for a single end integration — simpler, avoids
+  half-integrated states).
+- Consequences: the site's visual language is operator-owned; the integration is a
+  full-surface `extra.css` rebuild; downstream slices consume the delivered tokens
+  and staged classes rather than inventing layout/styling.
+- Source: P5.S5 `result.md`; P5 `intent.md` Amendment; P5 `phase.md`.
+
+### Palette 1a Teal (Target 1), LOCKED
+
+- Date: 2026-07-11
+- Status: accepted (P5.S5 — operator-locked)
+- Context: The design's first delivered, verified target was the color system.
+- Decision: Adopt the operator-locked **palette 1a Teal** (Target 1) verbatim as
+  `extra.css` §1 — warm ivory paper `#f6f2e8`, raised surface `#fffefa`, deep-teal
+  accent `#0f6f66` (light) / `#62bdb2` (dark), `--md-hue: 34` warming the derived
+  slate tiers. `--kb-*` are the source of truth, mapped onto Material's `--md-*`.
+- Decision: **Teal is the only accent** — links, hover, focus, active nav/TOC,
+  permalinks, tags, cards, `::selection`, match highlights. Neutrals carry
+  everything else; no second hue. Admonitions follow a teal-only policy (note =
+  teal rail; warning/others = warm-neutral rail, differentiated by icon/label/
+  weight).
+- Consequences: §1 is treated as immutable — never hand-tuned. The dark-safe
+  branding logo uses a mid-lightness teal (`#178a80`) that clears ~3:1 on both the
+  ivory and the warm-dark header (a single dark teal fails on dark) — so the logo
+  is **not** swapped per scheme.
+- Rejected (from the S1 interim baseline it replaced): teal header bar, serif
+  body, `overrides/` inline-`currentColor` logo, hue-only dark scheme.
+- Source: P5.S1/P5.S5 `result.md`; P5 `phase.md`.
+
+### Fonts via a single CSS `@import` (`theme.font: false`)
+
+- Date: 2026-07-11
+- Status: accepted (P5.S5)
+- Context: The design uses Source Sans 3 at weights **500/600** and JetBrains Mono
+  at **500** — weights Material's `theme.font` Google-Fonts request does not
+  include (it would synthesize faux-bold).
+- Decision: Set `theme.font: false` (no Material webfont request — no Roboto) and
+  load all three families (Fraunces / Source Sans 3 / JetBrains Mono, exact
+  weights) from a **single `@import`** at the top of `extra.css`; the
+  `--md-*-font-family` tokens (with Hangul fallbacks) point Material at them.
+- Alternatives considered: `theme.font.text/code` for the sans/mono + `@import` for
+  the serif only (the S1 split) — rejected because it omits the 500/600 weights the
+  design uses.
+- Consequences: one webfont request; the font budget (2 text + 1 code) is spent —
+  later slices add no webfonts and keep `theme.font: false`.
+- Source: P5.S5 `result.md`; P5 `phase.md`.
+
+### Landing & nav-feature choices
+
+- Date: 2026-07-12
+- Status: accepted (P5.S2)
+- Context: The landing redesign wired the delivered hero/section/browse design onto
+  `docs/index.md` and tuned Material navigation.
+- Decisions: (a) enable `navigation.tabs` / `navigation.indexes` / `navigation.top`
+  / `navigation.footer`; **defer** `toc.integrate` (the design skins the separate
+  right-hand TOC) and `navigation.instant` (custom-JS/search interplay — S3's call,
+  ultimately left off since search is zero-JS). (b) **Omit `.kb-card__meta`
+  explainer counts** from all Browse cards — the machinery never updates counts, so
+  a rendered count would silently go stale. (c) Wire Recent styling via a
+  `#recent + ul` selector alias rather than any markup restructuring — attr_list
+  cannot class a `<ul>`, so `{ .kb-recent }` on the machinery list is impossible;
+  the section head gets `id="recent"` and the list styles as its adjacent sibling.
+- Consequence / accepted limitation: under load-bearing auto-nav a section tab
+  label comes from the **folder name**, not the index page's `title:`/`<h1>` — so
+  `bootstrap_agentic_workspace.sh` reads awkwardly; unfixable without a forbidden
+  `nav:` override or a URL-breaking directory rename. Accepted.
+- Source: P5.S2 `result.md`; P5 `phase.md`.
+
+### Browser-only CJK search: Material search plugin `lang: [en, ko]`
+
+- Date: 2026-07-12
+- Status: accepted (P5.S3)
+- Context: The published static Pages site cannot call the P4 local FastAPI hybrid
+  search (BM25 + recency + Gemini + RRF, query-time CJK prefix expansion) — search
+  must run entirely in the browser. The old `lang: ["en"]` config had no CJK
+  support.
+- Decision (from a three-step ladder — chose step 1): set `plugins.search` to
+  `lang: [en, ko]`. The pinned 9.7.6 image bundles `lunr.ko` + `lunr.multi`, loaded
+  by the search worker automatically. The CJK gap closes because Korean is
+  space-separated into eojeol **and** Material's typeahead (`search.suggest`)
+  appends a trailing wildcard — so index token `관련해` ← query `관련` + `*`
+  prefix-matches. `lunr.ko` alone is only a trimmer/stopword filter (no segmenter),
+  so it does not solve agglutination by itself. Zero custom JS; `separator` left at
+  the default `[\s\-]+`; `theme.language` stays `en` (mixed-language site);
+  `navigation.instant` left off.
+- Alternatives considered: step 2 — separator-based Hangul/Latin CJK segmentation
+  (rejected: adds documented regex surface for no measured acceptance win); step 3 —
+  a prebuilt static JSON index + vendored client-side search JS (rejected: not
+  needed; more surface and an external-dep risk).
+- Accepted tradeoffs: no mid-compound substring match (prefix-only wildcard, no
+  segmenter); Korean particles/conjunctions stopword-filtered.
+- Contrast: the P4 server-side hybrid stays local-only and is never a dependency of
+  the deployed site — same corpus, two independent search implementations by
+  deployment target (see architecture).
+- Source: P5.S3 `result.md`; P5 `phase.md`.
+
+### Site-build smoke guard over `mkdocs build --strict`; explicit README exclusion
+
+- Date: 2026-07-12
+- Status: accepted (P5.S4)
+- Context: P5 introduced the first client-side assets (design CSS, landing markup,
+  CJK search config) — all of which can silently break the build or degrade search
+  with no error. No automated site-build tests existed.
+- Decision: Add a lean, stdlib-only invariant-assertion smoke guard
+  (`scripts/site_smoke.py`), wired as a deploy-gating CI step, over
+  `mkdocs build --strict`. `--strict` turns *any* build warning into a hard
+  failure — future `/explain` zero-config page adds must never be blocked by
+  warning-level noise — so the guard instead targets named, load-bearing invariants
+  only. Also make mkdocs' pre-existing `README.md` auto-exclusion **explicit** in
+  `exclude_docs` (silences the standing build warning; changes nothing published).
+- Consequence: warning-level noise never blocks a deploy, but the load-bearing
+  invariants (marker/bullet contract, `nav:`/`strict:` absence, `theme.font: false`,
+  CJK `search.lang`, no `extra_javascript`, pin parity, shipped lunr packs, hero
+  toggle, `#recent + ul` adjacency, per-project pages, `versions/` exclusion, no
+  path/CDN leaks) are asserted every deploy. `--strict` remains rejected; new
+  invariants extend the guard, not `--strict`.
+- Source: P5.S4 `result.md`; P5 `phase.md`.
+
 ## Superseded Decisions
 
 - The P2 "clean `sqlite-vec`/RRF seam, no embeddings this phase" framing is **consumed, not superseded**, by P4.S6: hybrid search is live via SQLite BLOB vectors + Python cosine, with the seam kept `sqlite-vec`-upgradable.
+- The **P3 "design polish deferred post-launch (D2)"** consequence is **resolved**, not superseded: D2 was promoted into P5's design-system slice and delivered as the operator-designed "calm editorial library" system (palette 1a Teal). The stock indigo / dark-mode look is retired.
+- The **P5.S1 agent-authored "calm editorial library" design system** is **superseded** by the P5.S5 operator-designed system of the same name: same visual direction, but the tokens/values and provenance are now the operator's Claude Design delivery (palette 1a Teal, fonts via `@import`), not agent taste. S1 served as the interim baseline until the delivery landed.
