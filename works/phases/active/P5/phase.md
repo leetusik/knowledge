@@ -121,11 +121,43 @@ _Actual notes (appended by slices below):_
 - **S2 →** `experience.md`: landing/browse journeys now real — the home page is an editorial hero (bilingual title, grounded lede) → Recent (styled plain list, byte-identical machinery contract) → Browse (a project + Tags card grid with real destinations). Per-project landing pages (`docs/<project>/index.md`) exist for the first time. Nav gained top tabs (`Home` / per-project folders / `Tags`), section-index click-through (`navigation.indexes`), a back-to-top affordance (`navigation.top`), and prev/next reading links in the footer (`navigation.footer`). Tags page now carries a one-line lede. **Finding for UX truth:** under plain auto-nav (no `nav:` key, load-bearing), a section's tab/nav title is derived from its folder name (auto-prettified), NOT from the section index page's frontmatter `title:` or `<h1>` — verified experimentally. So `bootstrap_agentic_workspace.sh`'s tab reads literally as "Bootstrap agentic workspace.sh"; this is not fixable without renaming the directory (breaks doc URLs + the /explain skill's per-project path convention) or a `nav:` override (forbidden). Left for the operator to eyeball/accept.
 - **S2 →** `frontend.md`: `mkdocs.yml` `features:` gained `navigation.tabs`/`navigation.indexes`/`navigation.top`/`navigation.footer` (NOT `toc.integrate`, NOT `navigation.instant` — left for S3); `copyright:` site key added (renders in Material's footer, no plugin needed). `docs/index.md` markup is now raw-HTML hero/section/browse blocks interleaved with the still-byte-identical Recent markdown list. `extra.css` §9 gained a small additive `#recent + ul` alias (5 selectors extended, no property/rule changed) so the machinery-managed `<ul>` (which can never carry an attr_list class) picks up `.kb-recent` styling via the Recent section head's new `id="recent"`.
 - **S2 →** `decisions.md`: ADR-worthy choices — (a) nav features `navigation.tabs`/`indexes`/`top`/`footer` adopted, `toc.integrate`/`navigation.instant` deliberately deferred to S3; (b) `.kb-card__meta` (explainer counts) omitted from all Browse cards — machinery never updates them, so a count would silently go stale; (c) hero search input deferred to S3 (needs JS/overrides, out of this slice's static-markup scope); (d) `#recent + ul` selector-alias chosen over any markup restructuring, kept the marker/bullet contract mechanically simplest to reason about (attr_list cannot class a `<ul>`, ruling out the phase's original `{ .kb-recent }` idea).
+- **S3 →** `experience.md`: search is now Korean/CJK-capable in the browser — a query like `관련` prefix-matches the agglutinated eojeol `관련해` **while typing** (Material typeahead), `미라클`/`창플` match, English (`nginx`/`cache`) is unchanged, and an absent Hangul term returns cleanly (no false floods). The hero gains its deferred search affordance: a bordered, rounded field (bilingual "Search the knowledge base · 검색" + inline magnifier + `/` key hint) that opens Material's search overlay. Known limits: no mid-compound substring match; Korean particles/conjunctions are stopword-filtered.
+- **S3 →** `frontend.md`: `mkdocs.yml` `plugins.search` moved to the object form with `lang: [en, ko]` — the pinned 9.7.6 image bundles `lunr.ko.min.js` + `lunr.multi.min.js` and the worker loads them automatically; `separator` stays the default `[\s\-]+` (no custom regex — prefix-matching alone passes acceptance). Zero custom search JS. Hero search is a zero-JS `<label for="__search">` in `docs/index.md` (toggles Material's `#__search` checkbox; its own JS focuses the input) — no `extra_javascript`/script asset added. `extra.css` §9 gains one additive "hero search affordance" block (inline SVG magnifier + `/` `<kbd>`, all §1–§3 tokens, no delivered rule touched).
+- **S3 →** `decisions.md`: ADR — chose the Material search plugin `lang: [en, ko]` (zero-JS, upgrade-proof) over the fallback (separator-based CJK segmentation) and last resort (prebuilt index + vendored client JS); the CJK gap is closed by Material's typeahead trailing-wildcard riding Korean eojeol spacing, not by `lunr.ko` (which is only a trimmer/stopword filter). Contrast with P4's server-side hybrid (BM25 + recency + Gemini + RRF, query-time prefix expansion) — that stays local-only; the static Pages site cannot call it. Recorded tradeoffs: no mid-compound match, Korean stopword filtering, `separator` left default, `navigation.instant` left OFF (a zero-JS approach has no instant-nav ↔ search-worker interplay), `theme.language` stays `en` (mixed-language site).
+- **S3 →** `architecture.md`: the search boundary is now explicit — the published GitHub Pages site runs search **entirely in the browser** (lunr + language packs bundled into the static build, no backend call), fully decoupled from the P4 local FastAPI hybrid search in `server/` (which stays local-only and is never a dependency of the deployed site). Same corpus, two independent search implementations by deployment target.
 
 ## Cross-slice notes — for S3 (search UX) and S4 (build smoke guard), from S2
 
 - **For S3:** the hero deliberately ships with **no search input** — wiring Material's inline search into the `.kb-hero` markup needs JS/overrides, which is squarely S3's territory (S3 owns the search engineering + UI). Also **`navigation.instant` was deliberately not added** in S2 — it changes page-load/JS lifecycle and interacts with whatever client-side CJK search mechanism S3 builds (prebuilt index fetch timing, event rebinding on instant nav, etc.); S3 should decide whether to add it, informed by its chosen search approach. The `.md-search__*` styling S3 rides on (§4/§8) is unchanged by S2.
 - **For S4 (site-build CI smoke guard, if it proceeds):** new invariants worth asserting, beyond the ones already in `phase.md`'s Findings (marker preserved, `docs/versions/` excluded, no `/Users/` leak, pin parity): (1) the `<!-- explain:recent -->` marker line and its 6 (or however many exist at S4's time) bullet lines stay present verbatim in `docs/index.md`; (2) the three per-project `docs/<project>/index.md` pages exist and build to `site/<project>/index.html`; (3) the `#recent + ul` CSS selector still has a matching DOM shape in the built `site/index.html` (the `<ul>` immediately follows `<div id="recent">`) — a future markup change that inserts something between them would silently break the Recent styling with no build error. S2's own validation script (in `result.md`) is a ready-made template for all three.
+
+## Cross-slice notes — for S4 (build smoke guard), from S3
+
+New client-side-search invariants S4's smoke guard should assert (all verified
+green in S3's build; a regression here silently degrades search with no build
+error — see S3's `result.md` for ready-made assertion snippets):
+
+- **`site/search/search_index.json` `config.lang` contains `"ko"`** (and `"en"`).
+  If a future edit reverts `plugins.search` to the bare `- search`, `lang` drops
+  back to `["en"]` and all Korean search breaks — with zero build error. This is
+  the single most important search invariant.
+- **`site/assets/javascripts/lunr/min/lunr.ko.min.js` (and `lunr.multi.min.js`)
+  are present** in the built site — they ship from the pinned 9.7.6 image; a pin
+  bump could change/remove them. Ties into the existing pin-parity check.
+- **The hero search affordance survives:** `site/index.html` contains exactly one
+  `id="__search"` toggle **and** a `for="__search"` label — the zero-JS hero
+  field depends on that target id existing (a Material internal). If a theme
+  upgrade renames the toggle, the hero label goes inert with no build error.
+- **`docs/index.md` marker + bullet lines stay byte-verbatim** (unchanged from
+  S2's invariant — S3 only added a hero `<label>` above the marker, keeping the
+  marker/bullets byte-identical; re-assert it).
+- **No new JS/webfont/CDN crept in:** S3 added **no** `extra_javascript`, no
+  script asset, no webfont, no CDN — search is zero-custom-JS. S4 could assert
+  `extra_javascript` is absent from `mkdocs.yml` and no `<script src="http…cdn">`
+  appears in built HTML, to keep the "browser-only, no external deps" guarantee.
+- Reminder for S4's own build: the local dev/preview server serves under the
+  `site_url` subpath — `http://localhost:8765/knowledge/`, not `/` (a bare `/`
+  302-redirects). The built `site/` artifact itself is path-agnostic.
 
 
 ## Cross-slice notes — design system contract (for S2/S3/S4)

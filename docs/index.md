@@ -14,6 +14,11 @@ hide:
     agent refactor, a prompt-injection defense that shipped. Written by
     coding agents, for a beginner. Read like a book, not a manual.
   </p>
+  <label class="kb-hero__search" for="__search" title="Search — English or 한국어">
+    <svg class="kb-hero__search-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2A4.5 4.5 0 0 0 5 9.5 4.5 4.5 0 0 0 9.5 14 4.5 4.5 0 0 0 14 9.5 4.5 4.5 0 0 0 9.5 5Z"/></svg>
+    <span class="kb-hero__search-text">Search the knowledge base <span lang="ko">· 검색</span></span>
+    <kbd class="kb-hero__search-key">/</kbd>
+  </label>
 </div>
 
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
