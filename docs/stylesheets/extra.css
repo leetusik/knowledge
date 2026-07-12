@@ -426,10 +426,12 @@
    there) so they win specificity. These are STAGED for later slices to wire
    into markup — they do NOT auto-apply and require no change to any generated
    class:
-     · P5.S2 (landing/UX) drops the hero + section heads + browse grid into
-       docs/index.md and adds { .kb-recent } to the Recent list. The Recent
-       list stays a plain markdown list under <!-- explain:recent --> — only
-       the <li>/<a> are styled; the date/project stay bare text nodes, so the
+     · P5.S2 (landing/UX, done) dropped the hero + section heads + browse
+       grid into docs/index.md. attr_list cannot put a class on a <ul>, so
+       the Recent list is NOT `{ .kb-recent }` — it stays the bare machinery
+       list under <!-- explain:recent -->, reached instead via the `#recent +
+       ul` alias below (Recent section head gets `id="recent"`). Only the
+       <li>/<a> are styled; the date/project stay bare text nodes, so the
        machinery's bullet inserts/removes still slot in unchanged.
      · The article metadata line / related block / TOC classes are available
        for a future per-page-HTML or template treatment (the site ships no
@@ -468,18 +470,32 @@
 /* Site machinery inserts/removes bare <li> of the form "date · [title](path)
    — project" between the <!-- explain:recent --> markers, so only <li>/<a> are
    styled; the date/project stay unwrapped text nodes. */
-.md-typeset .kb-recent { list-style: none; margin: 0; padding: 0; }
-.md-typeset .kb-recent li {
+/* P5.S2 alias: attr_list cannot put a class on a <ul> (Python-Markdown
+   limitation), and the machinery only ever writes a bare markdown list right
+   after the marker — never a hand-authored `{ .kb-recent }` one. docs/index.md
+   gives the Recent section head `id="recent"` (§ P5.S2 landing markup); the
+   marker + bullets render as the very next sibling <ul>, so `#recent + ul`
+   reaches that machinery-managed list. Purely additive: every selector below
+   keeps its original `.kb-recent` form, with `#recent + ul` added alongside —
+   no property changed. HTML comments between the div and the list don't
+   render as nodes, so `+` adjacency still holds. */
+.md-typeset .kb-recent,
+.md-typeset #recent + ul { list-style: none; margin: 0; padding: 0; }
+.md-typeset .kb-recent li,
+.md-typeset #recent + ul li {
   padding: 0.5rem 0; margin: 0; font-size: var(--kb-text-body); line-height: 1.5;
   color: var(--kb-secondary); border-bottom: 1px solid var(--kb-border);
   font-variant-numeric: tabular-nums; letter-spacing: normal;
 }
-.md-typeset .kb-recent li:last-child { border-bottom: 0; }
-.md-typeset .kb-recent a {
+.md-typeset .kb-recent li:last-child,
+.md-typeset #recent + ul li:last-child { border-bottom: 0; }
+.md-typeset .kb-recent a,
+.md-typeset #recent + ul a {
   color: var(--kb-ink); font-weight: var(--kb-weight-medium);
   text-decoration: none; text-underline-offset: 0.15em; transition: color var(--kb-ease);
 }
-.md-typeset .kb-recent a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-color: var(--kb-accent-soft); }
+.md-typeset .kb-recent a:hover,
+.md-typeset #recent + ul a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-color: var(--kb-accent-soft); }
 
 /* -------- Article: metadata line (date · project · tags) ----------------- */
 .md-typeset .kb-meta {

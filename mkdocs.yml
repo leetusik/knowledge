@@ -1,5 +1,6 @@
 site_name: Knowledge Base
 site_url: https://leetusik.github.io/knowledge/
+copyright: Knowledge Base · built with mkdocs-material · 창플 / 미라클
 
 theme:
   name: material
@@ -34,6 +35,15 @@ theme:
     - search.suggest
     - search.highlight
     - toc.follow
+    # P5.S2 landing/UX: top tabs (Home / project dirs / Tags, per the design's
+    # tab row) + section-title index pages (docs/<project>/index.md) + a
+    # back-to-top affordance for long explainers. NOT toc.integrate (the
+    # design skins the separate right-hand TOC, §4/§5) and NOT
+    # navigation.instant (custom-JS interplay is P5.S3's call to make).
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
 
 # Design system: "calm editorial library" tokens (custom palette, typography,
 # spacing, component polish, .kb-grid/.kb-card utility). Loaded after Material's
