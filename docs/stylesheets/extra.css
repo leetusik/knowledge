@@ -454,6 +454,33 @@
   font-size: 1.02rem; line-height: 1.55; color: var(--kb-secondary); max-width: 34rem; margin: 0.6rem 0 1.3rem;
 }
 
+/* -------- Landing: hero search affordance (P5.S3) ------------------------ */
+/* Zero-JS search entry point: a <label for="__search"> toggles Material's own
+   search checkbox (id="__search"), whose JS then focuses the search input. The
+   mock's bordered, rounded field with an inline magnifier + a `/` key hint —
+   purely additive, reusing §1–§3 tokens (no new color/font/webfont). The `/`
+   glyph mirrors Material's built-in "press / to search" keyboard shortcut. */
+.md-typeset .kb-hero__search {
+  display: flex; align-items: center; gap: 0.6rem;
+  max-width: 34rem; margin: 0.2rem 0 0; padding: 0.6rem 0.9rem;
+  background: var(--kb-surface); border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius); color: var(--kb-hint); cursor: text;
+  transition: border-color var(--kb-ease), color var(--kb-ease), box-shadow var(--kb-ease);
+}
+.md-typeset .kb-hero__search:hover {
+  border-color: var(--kb-accent); color: var(--kb-secondary); box-shadow: var(--kb-shadow-hover);
+}
+.md-typeset .kb-hero__search-icon { flex: none; color: var(--kb-hint); transition: color var(--kb-ease); }
+.md-typeset .kb-hero__search:hover .kb-hero__search-icon { color: var(--kb-accent); }
+.md-typeset .kb-hero__search-text { flex: 1 1 auto; font-size: var(--kb-text-body); }
+.md-typeset .kb-hero__search-text span[lang="ko"] { color: var(--kb-hint); }
+.md-typeset .kb-hero__search-key {
+  flex: none; font-family: var(--kb-font-mono); font-size: var(--kb-text-caption);
+  color: var(--kb-hint); background: var(--kb-surface-sunken);
+  border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm);
+  padding: 0.05rem 0.45rem; box-shadow: none; line-height: 1.4;
+}
+
 /* -------- Landing: section heading (title + "all →" link) ---------------- */
 .md-typeset .kb-sec {
   margin: 0 0 0.9rem; display: flex; align-items: baseline; justify-content: space-between;

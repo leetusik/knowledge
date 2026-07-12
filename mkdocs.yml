@@ -56,7 +56,19 @@ extra_css:
 # orphan every new page, and strict would turn that into a serve failure.
 
 plugins:
-  - search
+  # P5.S3 — CJK-capable client-side search. `lang: [en, ko]` loads lunr's
+  # English + Korean packs (lunr.ko trimmer/stopwords + lunr.multi), both bundled
+  # in the pinned 9.7.6 image (site/assets/javascripts/lunr/min/). Korean is
+  # agglutinative, so Material's typeahead trailing-wildcard makes a query like
+  # `검색` prefix-match the indexed eojeol `검색을` / `관련` match `관련해`. The
+  # `separator` is left at the default `[\s\-]+`: the acceptance queries pass on
+  # prefix-matching alone, so no Hangul/Latin split is added (kept minimal).
+  # theme.language stays `en` — deliberately mixed-language site. See P5.S3 result
+  # + docs/current/decisions.md for the approach vs. the P4 server-side hybrid.
+  - search:
+      lang:
+        - en
+        - ko
   - tags
 
 # D1: workspace internals under docs/versions/ are history, not site content —
