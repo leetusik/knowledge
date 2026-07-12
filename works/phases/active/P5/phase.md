@@ -246,3 +246,39 @@ operator's delivered system (integrated 2026-07-11). What changed for consumers:
 ## Open Questions
 
 - None blocking. Two design decisions are deliberately delegated to their slices: the CJK client-side search approach (Material `separator` tuning vs. prebuilt index + client JS) → P5.S3; the overall visual language (palette/typography/branding, and whether to use `overrides/` custom_dir) → P5.S1. Social cards (needs the `social` plugin + cairosvg/Pillow deps) is optional within S1 — include only if cheap. P5.S4 (build smoke guard) is optional/droppable at the orchestrator's discretion.
+
+## P5.REVIEW — verdict & doc consolidation (2026-07-12)
+
+**Verdict: pass.** All five middle slices (S1→S5→S2→S3→S4) validated together and
+meet the objective + `intent.md` with no scope creep. Whole-phase validation:
+`workflow.py validate` passed; `docker compose run --rm kb build` exit 0 (README
+warning gone — S4 hygiene held); `python3 scripts/site_smoke.py` PASS; the
+`server.documents` marker round-trip on the live `docs/index.md` clean
+(insert→"marker", remove→byte-for-byte restore, 6 bullets each unique). Spot-check:
+`extra.css` §1–§9 present, §1 LOCKED palette 1a Teal byte-untouched since the S5
+commit (30fb703 — S2/S3 edits are additive §9 only), `mkdocs.yml` matches the
+design-system contract. Deviations reviewed and accepted (S2 `navigation.footer`,
+S4's 187-line script, S5's `theme.font: false` fonts wiring). No source-level
+defects → no fix slices.
+
+**Doc impact — consolidated (the running "Actual notes" above are now versioned):**
+- `frontend` → **v0002** (first real truth: theme config, §1–§9 architecture,
+  `@import` fonts, nav features, `#recent + ul` alias, CJK `lang:[en,ko]`, zero-JS hero)
+- `experience` → **v0002** (first real truth: calm-editorial operator-designed
+  language, landing/browse journeys, per-project pages, tab-label finding, CJK UX)
+- `decisions` → **v0005** (5 P5 ADRs: design ownership/provenance, palette 1a Teal
+  LOCKED, fonts `@import`, nav/landing choices, CJK plugin-`lang` ladder, smoke
+  guard over `--strict`; D2 resolved, S1 interim superseded by S5)
+- `operations` → **v0005** (site design build-asset set, single `@import`,
+  deploy-gating `site_smoke.py`, local build/eyeball workflow, explicit README exclusion)
+- `architecture` → **v0004** (browser-only static-search boundary vs. local FastAPI
+  hybrid — same corpus, two implementations by deployment target; roadmap refreshed)
+- `qa` → **v0002** (site-build acceptance = `site_smoke.py` after a compose build;
+  full invariant list; guard negative-test pattern; known fragile areas)
+
+Consolidation gotcha (recorded for future reviews): draft doc prose that reproduces
+the guard's `/Users/`-style leak sentinel literally will itself publish into built
+HTML and trip `site_smoke.py`. Describe such invariants without reproducing the
+sentinel string. Phase stays in `active/` after the passing review (archiving is a
+separate manual step). Final visual acceptance stays with the operator on the dev
+server before any manual-push deploy.

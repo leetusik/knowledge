@@ -2,16 +2,16 @@
   "id": "P5",
   "name": "Web UI redesign & search",
   "objective": "Claude-designed visual overhaul of the MkDocs GitHub Pages site plus an upgraded search experience; hosting stays GitHub Pages. Absorbs deferred D2 (design polish) — promote it into this phase at decomposition.",
-  "status": "planned",
+  "status": "done",
   "order": 5,
   "created_at": "2026-07-08T16:35:37+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-07-12T14:45:43+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-07-12T14:45:43+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "Full-phase validation green (build exit 0, site_smoke PASS, marker round-trip byte-for-byte, state integrity clean); intent conformance confirmed, no scope creep; operator-designed system live, CJK search browser-only, deploy-gating guard in CI; 6 durable doc versions consolidated (frontend/experience/qa first real truth; decisions/operations/architecture updated). Visual acceptance stays with the operator before push."
   },
   "paths": {
     "phase_md": "phase.md",
