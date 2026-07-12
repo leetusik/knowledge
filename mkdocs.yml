@@ -73,9 +73,13 @@ plugins:
 
 # D1: workspace internals under docs/versions/ are history, not site content —
 # excluded from the built site (pages, nav, search). docs/current/ stays published.
+# P5.S4: /README.md added — mkdocs already auto-excludes it (it collides with
+# index.md, the pre-existing build warning); this makes that exclusion explicit
+# and silences the warning without changing what's published.
 # Use exclude_docs only; never nav:/strict: (see the load-bearing comment above).
 exclude_docs: |
   /versions/
+  /README.md
 
 markdown_extensions:
   - admonition
