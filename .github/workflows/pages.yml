@@ -24,6 +24,7 @@ jobs:
           python-version: '3.12'
       - run: pip install mkdocs-material==9.7.6   # exact pin — matches compose.yml image
       - run: mkdocs build   # never --strict; see the load-bearing comment in mkdocs.yml
+      - run: python3 scripts/site_smoke.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

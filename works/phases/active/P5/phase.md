@@ -125,6 +125,9 @@ _Actual notes (appended by slices below):_
 - **S3 →** `frontend.md`: `mkdocs.yml` `plugins.search` moved to the object form with `lang: [en, ko]` — the pinned 9.7.6 image bundles `lunr.ko.min.js` + `lunr.multi.min.js` and the worker loads them automatically; `separator` stays the default `[\s\-]+` (no custom regex — prefix-matching alone passes acceptance). Zero custom search JS. Hero search is a zero-JS `<label for="__search">` in `docs/index.md` (toggles Material's `#__search` checkbox; its own JS focuses the input) — no `extra_javascript`/script asset added. `extra.css` §9 gains one additive "hero search affordance" block (inline SVG magnifier + `/` `<kbd>`, all §1–§3 tokens, no delivered rule touched).
 - **S3 →** `decisions.md`: ADR — chose the Material search plugin `lang: [en, ko]` (zero-JS, upgrade-proof) over the fallback (separator-based CJK segmentation) and last resort (prebuilt index + vendored client JS); the CJK gap is closed by Material's typeahead trailing-wildcard riding Korean eojeol spacing, not by `lunr.ko` (which is only a trimmer/stopword filter). Contrast with P4's server-side hybrid (BM25 + recency + Gemini + RRF, query-time prefix expansion) — that stays local-only; the static Pages site cannot call it. Recorded tradeoffs: no mid-compound match, Korean stopword filtering, `separator` left default, `navigation.instant` left OFF (a zero-JS approach has no instant-nav ↔ search-worker interplay), `theme.language` stays `en` (mixed-language site).
 - **S3 →** `architecture.md`: the search boundary is now explicit — the published GitHub Pages site runs search **entirely in the browser** (lunr + language packs bundled into the static build, no backend call), fully decoupled from the P4 local FastAPI hybrid search in `server/` (which stays local-only and is never a dependency of the deployed site). Same corpus, two independent search implementations by deployment target.
+- **S4 →** `operations.md`: new CI-parity site-build smoke guard, `scripts/site_smoke.py` (stdlib-only, optional `--root`), wired as a deploy-gating step in `.github/workflows/pages.yml` between `mkdocs build` and `upload-pages-artifact`; asserts source invariants (marker/bullet contract, `nav:`/`strict:` absence, `font: false`, CJK `plugins.search.lang`, no `extra_javascript:`, pin parity) and built-site invariants (CJK lunr packs shipped, hero `#__search` toggle, `#recent + ul` DOM adjacency, per-project pages built, `site/versions/` absent, no `/Users/`/CDN leaks); run it locally after any `docker compose run --rm kb build` via `python3 scripts/site_smoke.py`.
+- **S4 →** `qa.md`: site-build acceptance is now `python3 scripts/site_smoke.py` (PASS/FAIL with named invariants) run after a `docker compose run --rm kb build` — this is the mechanical gate for any future P5-area change; the negative-test pattern (doctor a scratchpad copy, run with `--root`) is the template for verifying the guard itself still guards.
+- **S4 →** `decisions.md`: ADR — chose a lean invariant-assertion smoke guard over `mkdocs build --strict` (rejected: `--strict` turns *any* build warning into a hard failure, and future `/explain` zero-config page adds must never be blocked by warning-level noise — the guard instead targets named, load-bearing invariants only); also made the pre-existing `README.md`/`index.md` exclusion explicit in `mkdocs.yml`'s `exclude_docs` (mkdocs already auto-excluded it; this just silences the warning and documents the mechanism, changes nothing published).
 
 ## Cross-slice notes — for S3 (search UX) and S4 (build smoke guard), from S2
 
@@ -221,6 +224,24 @@ operator's delivered system (integrated 2026-07-11). What changed for consumers:
 - **Social cards deliberately skipped** (needs the `social` plugin + cairosvg/Pillow — CI dep weight, no design payoff now). If ever wanted, it's a separate deps + `plugins:` change, not a token change.
 - **`overrides/` custom_dir intentionally NOT created.** The bi-scheme logo is solved by a mid-lightness teal (clears ~3:1 on both headers) so no inline-`currentColor` partial was needed. If a later slice truly needs a partial (e.g. font `<link rel=preload>`), that's the first justification to add `custom_dir`.
 - Dev server may be left running (`docker compose up -d kb`, port 8765) for eyeballing; deploys stay manual-push-only.
+
+## Cross-slice notes — for P5.REVIEW, from S4
+
+- **`python3 scripts/site_smoke.py` can be run once against the final built
+  `site/` to validate all of S1–S4's invariants together** (design tokens'
+  build artifacts, the marker/bullet contract, CJK search config +
+  shipped lunr packs, the hero search toggle, per-project pages,
+  `exclude_docs`/pin hygiene, no leaked paths/CDN scripts) — a fast
+  single-command supplement to re-running each slice's individual
+  validation. Run `docker compose run --rm kb build` first if `site/`
+  isn't already fresh, then `python3 scripts/site_smoke.py` (default root
+  = repo root, no `--root` needed for the real tree).
+- The guard is deliberately silent on build *warnings* (only the
+  `README.md` one is fixed via `exclude_docs`, not asserted) — `--strict`
+  was rejected precisely so future `/explain` zero-config page adds are
+  never blocked by warning-level noise. If REVIEW wants to add new
+  invariants later, extend `check_source`/`check_built` in
+  `scripts/site_smoke.py`, not `--strict`.
 
 ## Open Questions
 

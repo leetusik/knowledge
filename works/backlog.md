@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P5`
-- Current slice: `P5.S4`
-- Next slice: `P5.REVIEW`
+- Current slice: `P5.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-12T14:05:45+09:00`
+- Rebuilt at: `2026-07-12T14:14:57+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P2` | `done` | `pass` | Track 2 — DB-backed document API | `none` | `works/phases/active/P2` |
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
-| [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.S4` | `works/phases/active/P5` |
+| [ ] `P5` | `planned` | `pending` | Web UI redesign & search | `P5.REVIEW` | `works/phases/active/P5` |
 | [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
@@ -74,7 +74,7 @@
 | [x] `P5.S5` | `done` | Design co-work — operator designs targets in Claude Design; sync & integrate as delivered | `implementation` | `works/phases/active/P5/slices/P5.S5` |
 | [x] `P5.S2` | `done` | Landing page & UX structure — index.md redesign (preserve explain:recent), nav/browse experience, tags page | `implementation` | `works/phases/active/P5/slices/P5.S2` |
 | [x] `P5.S3` | `done` | CJK-capable client-side search — Korean/CJK-aware search on the static Pages site | `implementation` | `works/phases/active/P5/slices/P5.S3` |
-| [ ] `P5.S4` | `todo` | Site-build CI smoke guard & hygiene — mkdocs build parity check + invariant assertions | `implementation` | `works/phases/active/P5/slices/P5.S4` |
+| [x] `P5.S4` | `done` | Site-build CI smoke guard & hygiene — mkdocs build parity check + invariant assertions | `implementation` | `works/phases/active/P5/slices/P5.S4` |
 | [ ] `P5.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P5/slices/P5.REVIEW` |
 
 ## Phase P6: Obsidian-like knowledge graph
