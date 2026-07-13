@@ -14,6 +14,11 @@ Third phase of the knowledge-feature roadmap (after P5's web-UI redesign). The m
 
 Three middle slices (S1 → S2 → S3), then REVIEW consolidates docs. Whole `--order` values, fractional room left between. This follows the DECOMP plan's S1/S2/S3 hypothesis with **one deliberate refinement**: the site-guard changes are split across the slices that cause them rather than pooled into one "guard" slice, because `site_smoke.py` fails the build the moment `extra_javascript:` appears in `mkdocs.yml` — so the JS guard-flip must ship in the same slice that adds `extra_javascript` (S2), and the cleanest seam puts the `graph.json` shape guard with its producer (S1). That leaves S3 as pure integration/entry-point/serve-parity. Every slice is designed to leave the tree green (site_smoke passing).
 
+- **P6.S0 — Design co-work — knowledge-graph design via Claude Design** (risk `medium`, order 0.5)
+  - Inserted mid-phase by operator direction (2026-07-14) so the graph is **designed and consented BEFORE implementation** — S1/S2/S3 build to a locked guide instead of inventing the visual language inline.
+  - Flow was brief-push (`GRAPH_BRIEF.md` pushed to the "Knowledge Base Design System" project) → operator co-design in Claude Design → check-up **PASS** (structural + token-stability + contrast, no gaps) → mirror the deliverables locally as the integration source of truth.
+  - Lands no repo code; the delivered guide reaches code at S1 (data-contract needs) and S2/S3 (renderer, page, integration). S1–S3 implement to the delivered guide (see "Design guide (P6.S0, locked)" below).
+
 - **P6.S1 — Graph data pipeline + data-contract guard** (risk `medium`, order 1)
   - Build-time `graph.json` emitter via the chosen mechanism (lean: mkdocs `hooks:` module — see Findings). Parses explainer-doc frontmatter, produces nodes + edges, writes a static asset copied verbatim into `site/`.
   - Nodes: the 6 explainer docs + tag nodes (see node/edge model below). Node metadata: `title`, `url` (repo-relative site URL), `date`, `tags`, `project`, `degree`.
@@ -63,6 +68,49 @@ _Verified against the repo during DECOMP (spot-checks, not re-derivation)._
 - Full-canvas page pattern exists: `docs/index.md` uses `hide: [navigation, toc]`; a `docs/graph.md` with the same gets a top tab from auto-nav for free.
 - Landing `docs/index.md` structure (verified): guarded `<div class="kb-hero">` (contains the single `for="__search"` label), then `<div class="kb-sec" id="recent">` immediately followed by `<!-- explain:recent -->` + Recent bullets, then a `<div class="kb-grid">` with **4** `.kb-card` links (changple5, hi2vi_web, bootstrap, Tags). S3's graph card slots into that grid.
 
+### Design guide (P6.S0, locked)
+
+_The design S1–S3 plan against. Delivered by operator co-design in Claude Design, check-up PASS 2026-07-14._
+
+**Where the guide lives:**
+- Design project **"Knowledge Base Design System"** — README **"P6 · Graph — the knowledge map"** section + the `**P6.S0 closed (2026-07-14)**` close block (locks project inks, label strategy A, all token names).
+- Local mirror (integration source of truth for S1–S3): `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/62648e14-5642-42c8-af17-eea4e69b27da/scratchpad/kb-graph-design/` — `README.md`, `tokens/graph.css`, `components/graph/{graph.css, graph-render.js, graph-nodes/edges/labels/panel.card.html}`, `pages/graph.card.html`.
+- `tokens/graph.css` is the **single token source** — `--kb-graph-*` only, **additive** (no existing token touched), names **frozen at S0 close**.
+
+**Locked decisions:**
+- **Project inks** = small muted categorical set scoped to **data-viz surfaces only** (node fills, legend chips): teal `#0f6f66`/`#62bdb2` (anchor) · bronze `#8a6a2a`/`#c8a15e` · plum `#764f6c`/`#c99bc0` (light/dark). Interactive accents (hover, selection ring, halo, active edges, links) stay **teal-only** — the one-accent rule is unchanged where it is UI.
+- **Label Strategy A** (B/C explored, rejected): doc titles **always on**; neighborhood **tag labels** fade in on hover/selection/zoom-in; 12.5px doc / 11px tag at 1×. Plus the **zoom ladder**: `<60%` → hub doc labels only (degree ≥6), tooltip carries the rest · `60–110%` → all doc labels · `>110%`/hover/selected → neighborhood tag labels fade in ~80ms · reduced motion → no fades, paint at rest.
+- **Motion** = settle-then-still ~600ms (`--kb-graph-settle`), then stop — no idle drift.
+
+**Mark grammar:**
+- **docs** = filled circles in project ink, r **6→14px** linear by degree, + plate-colored **cutout rim (1.5px)** to separate overlaps.
+- **tags** = hollow rings **4.5px** (secondary tone).
+- **ghost/unresolved** = dashed hollow ring **5.5px** (dash `4,4`).
+- **related edges** = 1.75px + 5px arrowhead, tip **3px off the target rim** (direction reads "reads on to"); **tag edges** = 1px hairline; edges **into ghosts** dashed in the lighter edge ink.
+- **hover/selected** = neighborhood keeps its ink + incident edges turn **teal** + soft radial **halo**; selection adds an **offset teal ring** (2px, 2px gap) + the **top-right info panel**. Everything else dims to alpha **.16 light / .22 dark** with labels hidden.
+
+**Page anatomy (from `components/graph/graph.css` header):**
+- full-bleed `.kb-graph` below header/tabs — **the map IS the page** (no content column).
+- this page's template **suppresses both sidebars** (`.md-sidebar--primary/--secondary` → `display:none`).
+- mount `.kb-graph` in `.md-main`; **zero `.md-content__inner`** margin/padding.
+- overlays = quiet surface cards (hairline, `--kb-radius`, **no resting shadow**).
+- placement: **legend + tag-switch bottom-left · zoom stack bottom-right · info panel top-right · pointer tooltip at low zoom**.
+- canvas plate = `--kb-surface-sunken` (light) / `#16130f` (dark, deeper than paper so it recedes).
+
+**Check-up verification (2026-07-14):**
+- **19/19** LOCKED Target-1 values **unedited** (byte-match vs `docs/stylesheets/extra.css`).
+- **18/18** contrast claims computed **PASS** (marks ≥3:1, labels ≥4.5:1 on both plates).
+
+**Implementation cautions (S1–S3):**
+- Specimen cards use the **Iconify CDN** for icons — **design-project-only**; the live site must **NOT** (no-CDN guard). Zoom/close icons become **inline SVG or text glyphs** on the real page.
+- `graph-render.js` is the **DRAWING SPEC**, not the production engine: token access pattern + draw order (**dimmed edges → live edges → halo → dimmed nodes → live nodes → selection ring → labels with a 3px plate-colored halo stroke**). Engineering **replaces its hand-placed layout with the real force sim** but **keeps the drawing grammar**.
+- The legend needs **per-project doc counts** + a **deterministic project→ink assignment** → **S1's `graph.json` should carry a top-level `projects` list**.
+
+**Data-contract confirmation for S1:**
+- Node fields **`title` / `url` / `date` / `project` / `tags` / `degree`** cover the info panel + legend + degree-sizing needs (confirmed against the panel + legend specimens).
+- **Ghost nodes** carry the raw unresolved path as `title` (panel shows it + "linked from …" + a "no document yet" badge, no read-through).
+- **Tag nodes need no `url`** — they are not navigation targets.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -74,12 +122,20 @@ Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` afte
 - **No mkdocs `hooks:` exist yet** — the graph-JSON mechanism is a new addition (see Open Questions; lean = hooks module).
 - Graph data must be a **build-time static asset** (browser-only site can't call the local API). Deterministic + publish-safe.
 
+## Doc impact
+
+Running list of durable-truth changes for the REVIEW slice to consolidate into doc versions (one per affected doc, once per phase).
+
+- `frontend`: graph design tokens/components delivered via Claude Design (P6.S0) — additive `--kb-graph-*` token set, mark grammar (docs/tags/ghost, related vs tag edges), page anatomy (full-bleed map, both sidebars suppressed, overlay cards).
+- `experience`: knowledge-map journey designed (P6.S0) — library-map direction, label Strategy A, zoom ladder, project-ink legend + tag-visibility switch, hover/selection info panel.
+- `decisions`: ADR candidate (P6.S0) — project-ink categorical set as a **documented data-viz-only accent extension** (teal-only rule preserved for interactive UI), Claude-Design provenance.
+
 ## Open Questions
 
 Direction-setting decisions recorded below; the named slice's own `plan.md` finalizes each.
 
 - **Node/edge model (leaning):** nodes = 6 explainer docs **+ tag nodes** (tags as first-class nodes, ~26). Project = node **color/group**, not a node (colors the doc nodes). Edges = `related:` directed (3) + doc–tag (undirected). Backlinks = inverse of `related:` computed at build time. Dead `related:` → flagged as data. **`docs/current/*.md` EXCLUDED from the v1 graph** (different content class, no tags/related → would be isolated islands); could ship behind a toggle later. → **S1** finalizes.
 - **Graph-JSON mechanism (leaning: mkdocs `hooks:` module):** runs in both `mkdocs serve` and CI (live local dev + deploy), PyYAML available via mkdocs. Alternative: standalone `scripts/build_graph.py` CI step (mirrors `site_smoke.py` but dead during local serve). Sub-question: where the hook writes `graph.json` so mkdocs copies it into `site/` (a `docs/` path vs emitting in `on_post_build`). → **S1** finalizes.
-- **Renderer direction (leaning: `d3-force` ~25 KB + custom canvas):** alternatives = full vendored graph lib, or fully hand-rolled canvas force sim. Corpus is tiny (≲ 6 docs + ~26 tag nodes) so all are viable; Obsidian feel = springy force layout + pan/zoom + drag + hover-neighborhood highlight + click-through. Must be vendored (no CDN). → **S2** finalizes.
-- **Tag-node visual treatment** (distinct color/shape/size from doc nodes; whether tag-node display is toggleable) — **S2** design detail.
+- **Renderer direction (STILL OPEN — S2 finalizes; leaning: `d3-force` ~25 KB + custom canvas):** alternatives = full vendored graph lib, or fully hand-rolled canvas force sim. Corpus is tiny (≲ 6 docs + ~26 tag nodes) so all are viable; Obsidian feel = springy force layout + pan/zoom + drag + hover-neighborhood highlight + click-through. Must be vendored (no CDN). **The P6.S0 design's drawing spec (`graph-render.js`) is renderer-agnostic** — it specifies the mark grammar and draw order, not the layout engine — so this choice remains S2's, unconstrained by the design (engineering swaps the hand-placed layout for the real sim, keeps the drawing grammar). → **S2** finalizes.
+- **Tag-node visual treatment — RESOLVED by the P6.S0 design.** Tags = hollow rings 4.5px in the secondary tone (distinct from doc filled circles); the tags-as-nodes display is **toggleable** via the legend's tag-visibility switch (bottom-left). No longer an open S2 decision; S2 implements the locked treatment.
 - **`docs/current` inclusion behind a toggle** — deferred beyond v1 unless the operator asks.

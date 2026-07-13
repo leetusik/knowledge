@@ -70,3 +70,21 @@ Idle · hover (neighborhood highlighted, rest dimmed) · selected (click a node 
 ## Orchestrator follow-through
 
 After `finish-slice P6.S0` + commit: plan **P6.S1 (data pipeline)** at the next gate, folding in any data-contract needs the design introduced (e.g. info-panel fields); then S2 implements the renderer **to the design guide** (mirror + `tokens/graph.css`), S3 integrates entry points, REVIEW consolidates docs.
+
+---
+
+## Check-up result (2026-07-14, orchestrator) — PASS, no gaps
+
+Operator declared the graph design done ("Strategy A locked, README carries the P6.S0 close block"); check-up ran against the brief above.
+
+- **Structural:** all deliverables present in "Knowledge Base Design System" — `tokens/graph.css`, `components/graph/` (graph.css + graph-render.js + 4 specimen cards: nodes / edges / labels / panel), `pages/graph.card.html`, README "P6 · Graph" target group (G1–G3 all checked) + close block. `GRAPH_BRIEF.md` intact.
+- **Token stability:** fetched `tokens/colors.css` — all 19 LOCKED Target-1 values byte-match the repo's `docs/stylesheets/extra.css` (light+dark paper/surface/sunken/borders/accents/inks + the `#16130f` accent-bg the dark plate reuses). Graph additions are `--kb-graph-*` only. No existing token renamed or revalued.
+- **Contrast (computed, WCAG):** 18/18 claims pass — marks ≥3:1 and labels ≥4.5:1 against both plates (light `#efe9db`, dark `#16130f`). Tightest: bronze 4.15:1 light (≥3 ✓), ghost 3.12:1 dark (≥3 ✓). Two doc-label annotations drift ≤1.2 ratio points from computed (13.18 vs 12.4; 14.68 vs 15.8) — rounding in comments, both far above 4.5:1; not gaps. Script: scratchpad `check_graph_design.py`.
+- **Acceptance criteria:** both schemes designed per deliverable (separate ink sets, not recolors); canvas-achievable only (fills/strokes/dashes/alpha/one radial halo — graph-render.js draws with exactly those); no new webfonts (labels ride `--kb-graph-font: var(--kb-font-body)` incl. Hangul fallbacks; real EN/KR strings throughout specimens); motion = settle-then-still ~600ms + reduced-motion spec; accent discipline resolved consciously (project-ink categorical set scoped to data-viz surfaces, interactive accents teal-only — documented in tokens/graph.css header AND README).
+- **Locked decisions:** project inks teal/bronze/plum (light `#0f6f66/#8a6a2a/#764f6c`, dark `#62bdb2/#c8a15e/#c99bc0`) · label Strategy A + zoom ladder (<60% hubs only [deg ≥6] + tooltip · 60–110% all doc labels · >110%/hover/selected neighborhood tag labels fade ~80ms · reduced motion: no fades, paint at rest) · all `--kb-graph-*` names frozen.
+- **Notes for implementation (S1–S3):** specimen cards use the Iconify CDN for icons — design-project-only; the live site must NOT (no-CDN guard): zoom/close icons become inline SVG or text glyphs. `graph.css` documents the page anatomy hooks (suppress both sidebars, mount `.kb-graph` in `.md-main`, zero `.md-content__inner`). The legend wants per-project doc counts and a deterministic project→ink assignment → S1's `graph.json` gains a top-level `projects` list.
+- **Local mirror (integration source of truth for S1–S3):**
+  `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/62648e14-5642-42c8-af17-eea4e69b27da/scratchpad/kb-graph-design/`
+  (README.md, tokens/graph.css, components/graph/{graph.css, graph-render.js, graph-nodes/edges/labels/panel.card.html}, pages/graph.card.html)
+
+Proceed: dispatch `slice-executor-mid` to record the design guide in `phase.md` + write `result.md`, then finish + commit. Loop continues in auto mode (operator directive 2026-07-14).
