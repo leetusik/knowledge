@@ -128,3 +128,6 @@
 {"ts": "2026-07-14T02:46:48+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.S2"}
 {"ts": "2026-07-14T02:46:48+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.S3"}
 {"ts": "2026-07-14T02:49:44+09:00", "type": "slice_status_changed", "slice": "P6.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T03:01:07+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.S0"}
+{"ts": "2026-07-14T03:01:07+09:00", "type": "slice_status_changed", "slice": "P6.S0", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T03:02:19+09:00", "type": "slice_status_changed", "slice": "P6.S0", "old_status": "in_progress", "new_status": "pending"}
