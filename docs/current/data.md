@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0003
-created_at: 2026-07-08T21:52:17+09:00
-source: P4.REVIEW
-summary: P4: document_embeddings cache, related column, CJK query-layer search, publish-safe source
-previous: v0002_sqlite_fts5_document_store_documents_table_external-content_fts_index
+version: v0004
+created_at: 2026-07-14T05:08:17+09:00
+source: P6.REVIEW
+summary: P6: build-time knowledge-graph data contract node/edge model tags-as-nodes ghost/broken edges deterministic publish-safe graph.json
+previous: v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source
 ---
 
 # Data
@@ -12,6 +12,8 @@ previous: v0002_sqlite_fts5_document_store_documents_table_external-content_fts_
 ## Status
 
 Implemented and validated (Track 2). SQLite + FTS5 backs the document store, with a P4 disposable embedding cache (`document_embeddings`) for hybrid semantic search. `docs/` markdown is the canonical, durable store; the DB — including the embedding cache — is a disposable projection rebuilt from files.
+
+P6 adds a **second, independent data surface for Track 1**: a build-time `graph.json` static asset for the knowledge map. It is not part of the SQLite store and shares no runtime with it — it is derived directly from `docs/` frontmatter at `mkdocs build`/`serve` time and drawn client-side. Its data contract is documented at the end of this doc.
 
 ## Storage
 
@@ -65,3 +67,59 @@ Implemented and validated (Track 2). SQLite + FTS5 backs the document store, wit
 ## Retention
 
 - The DB is a disposable projection; `docs/` is the durable store. Reindex reconciles drift (manual edits, API-down fallback writes, git resets).
+
+## Build-time Knowledge-Graph Data Contract (P6, Track 1)
+
+A **build-time static asset** — not a DB table. `scripts/graph_hook.py` (a mkdocs
+`hooks:` module, PyYAML-only, no `server/*` import) walks `docs/`, parses explainer
+frontmatter itself, and writes `graph.json` into `site/` (fetched client-side like
+`site/search/search_index.json`). It is regenerated from `docs/` on every build/serve;
+nothing persists it. The renderer that consumes it is in **frontend**; the hook
+mechanism + guard in **operations**/**qa**; the modelling ADRs in **decisions**.
+
+### Node-selection rule
+
+- A **doc node** is any `docs/**/*.md` whose frontmatter carries `source` as a
+  **mapping containing `project`** (the /explain contract). This discriminator — not
+  a hard-coded project list — is what naturally **excludes `docs/current/*` and
+  `docs/versions/*`** (their `source` is a plain string, a different content class
+  with no tags/related), plus belt-and-braces skips of reserved dirs
+  (`current, versions, stylesheets, assets, javascripts`) and file names
+  (`index.md, tags.md, README.md`). Self-adapts to new docs/projects. Today → the 6
+  explainers. `docs/current` inclusion behind a toggle is deferred beyond v1.
+
+### Schema — `{version, projects, nodes, edges}`
+
+Serialized `json.dumps(..., ensure_ascii=False, indent=2, sort_keys=True)` + trailing
+newline (keys sort alphabetically inside every object); **two builds are byte-identical**.
+
+- **`version`**: `1`.
+- **`projects`**: `[{name, docs}]`, ordered **(doc-count desc, name asc)** — today
+  `[changple5:4, bootstrap_agentic_workspace.sh:1, hi2vi_web:1]`. This order **is** the
+  renderer's project→ink assignment (`i % 3`); the legend reads `docs` counts from it.
+- **doc node**: `{id, type:"doc", title, url, date, project, tags, degree}`. `id` =
+  repo-relative path under `docs/` exactly as `related:` entries author it (e.g.
+  `changple5/…-p35-….md`); `url` = mkdocs `File.url` (directory-style, **no leading
+  slash** → resolves under both CI's `/knowledge/` base and local serve); `date` = ISO
+  string.
+- **tag node**: `{id:"tag:<t>", type:"tag", title:<t>, degree}` — **no `url`** (hubs,
+  not navigation targets). Tags are **first-class nodes** (the `related:` graph alone is
+  too sparse — one 3-doc cluster + isolated docs — so tag spokes are the map's connective
+  tissue).
+- **ghost/missing node**: `{id:<raw path>, type:"missing", title:<raw path>, degree}` —
+  no `url`; emitted **only** for an unresolved `related:` target.
+- **edge**: `{source, target, kind}` (+ `"broken": true` on an unresolved `related`).
+  `related` is directed **as authored** (P4 forward-only convention, consumed unchanged);
+  `tag` connects doc ↔ `tag:<t>`. Self-refs and duplicate `related:` entries are dropped.
+  `degree` = incident-edge count over the emitted edge list.
+
+### Guarantees
+
+- **Deterministic** — stable node/edge ordering, byte-identical across builds (no
+  timestamps in the payload).
+- **Publish-safe** — repo-relative ids/urls only; **no `/Users/` / absolute local path**
+  ever leaks (guard-asserted; see qa).
+- **Dead links are data, not errors** — a `related:` to a nonexistent doc yields a
+  `broken` edge + a `missing` ghost node, never a build failure.
+- **Today's numbers (validated):** 6 doc + 26 tag = 32 nodes; 3 `related` + 27 `tag` =
+  30 edges; 0 broken, 0 ghost.

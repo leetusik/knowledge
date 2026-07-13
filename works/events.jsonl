@@ -139,3 +139,13 @@
 {"ts": "2026-07-14T04:50:21+09:00", "type": "slice_status_changed", "slice": "P6.S2", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-14T04:51:07+09:00", "type": "slice_status_changed", "slice": "P6.S3", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-14T05:01:00+09:00", "type": "slice_status_changed", "slice": "P6.S3", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T05:01:46+09:00", "type": "slice_status_changed", "slice": "P6.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "architecture", "version": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "data", "version": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T05:19:12+09:00", "type": "slice_status_changed", "slice": "P6.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T05:19:12+09:00", "type": "phase_reviewed", "phase": "P6", "verdict": "pass", "reviewer": "slice-executor-high"}

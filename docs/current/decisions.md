@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0005
-created_at: 2026-07-12T14:34:14+09:00
-source: P5.REVIEW
-summary: P5: palette 1a Teal + Claude-Design provenance, fonts via @import, nav-feature choices, CJK plugin-lang approach, smoke guard over --strict
-previous: v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs
+version: v0006
+created_at: 2026-07-14T05:08:17+09:00
+source: P6.REVIEW
+summary: P6: hooks-module graph mechanism node/edge model tags-as-nodes docs-current excluded ghost edges data-viz project inks hand-rolled vendored renderer
+previous: v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice).
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds four accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, and a hand-rolled vendored canvas renderer.
 
 ## Purpose
 
@@ -224,6 +224,101 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   path/CDN leaks) are asserted every deploy. `--strict` remains rejected; new
   invariants extend the guard, not `--strict`.
 - Source: P5.S4 `result.md`; P5 `phase.md`.
+
+### Knowledge-graph data generation: a mkdocs `hooks:` module (build-time static asset)
+
+- Date: 2026-07-14
+- Status: accepted (P6.S1)
+- Context: The published static Pages site is browser-only and CI installs only
+  `mkdocs-material==9.7.6` — no server, no DB — so the map's graph data **cannot**
+  come from the P4 API. It must be a build-time static asset the browser fetches.
+- Decision: Generate `graph.json` from a **mkdocs `hooks:` module**
+  (`scripts/graph_hook.py`) that writes into `site_dir` at `on_post_build` — fetched
+  client-side like Material's own `site/search/search_index.json`. It parses
+  frontmatter itself with PyYAML and **does not import `server/*`** (importing the
+  reusable `parse_frontmatter` would drag the whole server package into the build).
+- Alternatives considered: a standalone `scripts/build_graph.py` CI step — rejected
+  because it would run only in CI `mkdocs build`, leaving the local `mkdocs serve`
+  dev server without a `graph.json` (the hook runs in **both**, so local dev stays a
+  faithful preview with zero `pages.yml` wiring). A `docs/`-path emit — rejected in
+  favor of `site_dir`, so serve never triggers a watch-rebuild loop.
+- Consequences: the repo's first mkdocs hook; deterministic + publish-safe output
+  (repo-relative ids/urls, no timestamps, byte-identical across builds); serve parity
+  confirmed at P6.S3. The mechanism is self-contained in `scripts/`, keeping P7
+  plugin packaging clean.
+- Source: P6.S1 `result.md`; P6 `phase.md`.
+
+### Knowledge-graph node/edge model: docs + tag nodes, project as color, dead links as ghosts
+
+- Date: 2026-07-14
+- Status: accepted (P6.S1)
+- Context: The `related:` graph alone is sparse (3 directed edges — one 3-doc
+  changple5 cluster — plus isolated docs), so an Obsidian-like map built on it would
+  be nearly empty. Node metadata must also feed a legend + info panel.
+- Decision:
+  - **Nodes = the 6 explainer docs + tag nodes** (~26 today). **Tags are
+    first-class nodes** — the doc↔tag spokes are the map's connective tissue.
+  - **Project is a node *color/group*, not a node** — doc nodes are inked by project
+    (a `projects` list drives a deterministic project→ink assignment + legend counts).
+  - **Edges = `related:` directed (as authored, P4 forward-only convention) +
+    doc–tag.** Backlinks are derived by **inverting `related:` at build time**
+    (P4.S4 deferred inversion to P6).
+  - **Dead `related:` targets are data, not errors** — a `broken` edge + a `missing`
+    ghost node (raw path as title, "no document yet"), never a build failure.
+  - **`docs/current/*` and `docs/versions/*` are EXCLUDED** from the v1 graph — a
+    different content class (no tags/related), which would be isolated islands. The
+    node-selection discriminator is "frontmatter `source` is a mapping containing
+    `project`", so the exclusion falls out naturally. `docs/current` inclusion behind
+    a toggle is deferred beyond v1.
+- Consequences: today 32 nodes / 30 edges; a hub-and-spoke look (tag spokes), not a
+  dense mesh — the tag-visibility switch matters for legibility. The data contract is
+  documented in **data**.
+- Source: P6.S1 `result.md`; P6 `phase.md`.
+
+### Project inks: a documented data-viz-only accent extension (teal-only UI preserved)
+
+- Date: 2026-07-14
+- Status: accepted (P6.S0 — operator co-designed in Claude Design)
+- Context: The site's design language is strictly one-accent (teal). A graph needs to
+  distinguish projects, which a single hue cannot do legibly for categorical data.
+- Decision: Introduce a **small muted categorical set** (teal / bronze / plum,
+  per-scheme) **scoped to data-viz surfaces only** — node fills and legend chips.
+  **Every interactive accent stays teal** (hover, selection ring, halo, active edges,
+  links, focus) — the one-accent rule is preserved *where it is UI*. Delivered as
+  additive `--kb-graph-*` tokens (no existing token touched; 19/19 locked values
+  byte-matched at the S0 check-up; 18/18 contrast claims pass on both schemes).
+- Alternatives considered: a teal-only strength ladder for the categories — posed to
+  the operator and consciously rejected in favor of the categorical set (teal-only
+  cannot separate 3+ projects at the small mark sizes).
+- Consequences: the design language now documents a **deliberate, bounded exception**
+  to one-accent — categorical inks for data viz, teal everywhere it is chrome/UI.
+  Provenance is the operator's Claude Design project ("Knowledge Base Design System",
+  P6.S0 close block).
+- Source: P6.S0 `result.md`; P6 `phase.md` → "Design guide (P6.S0, locked)".
+
+### Knowledge-graph renderer: hand-rolled vendored canvas force sim (over d3-force)
+
+- Date: 2026-07-14
+- Status: accepted (P6.S2)
+- Context: The map needs a force layout + pan/zoom/drag/hover/click, vendored (the
+  no-CDN guard forbids a CDN). The P6.S0 design's `graph-render.js` is a
+  *drawing spec* (mark grammar + draw order), renderer-agnostic — the layout engine
+  was left as engineering's call.
+- Decision: Ship the renderer as **one vendored file** (`docs/javascripts/graph.js`)
+  with a **hand-rolled force sim + canvas drawing — zero third-party code, zero CDN**.
+  The design's drawing grammar ports 1:1; only the layout was swapped from the design's
+  hand-placed composition to a real (deterministic, hash-seeded) force sim that
+  settles then stops.
+- Alternatives considered: **`d3-force`** (the earlier lean, ~25 KB) — rejected
+  because it needs ≥3 micro-packages vendored, whereas the corpus is tiny (O(n²) sim
+  is trivial at ≤150 nodes) and the design's drawing spec is already hand-rolled
+  canvas. Zero third-party files keeps the no-CDN guard surface minimal and the P7
+  plugin-packaging path clean. A full vendored graph lib — rejected (overkill).
+- Consequences: the repo's first custom JS; `extra_javascript` allowlisted to exactly
+  this one entry; the sim's force constants are engineering's (validated on a headless
+  numeric harness — related edges tighter than tag edges); scheme changes repaint via
+  a `data-md-color-scheme` MutationObserver. Browser visual QA is owed to the operator.
+- Source: P6.S2 `result.md`; P6 `phase.md`.
 
 ## Superseded Decisions
 

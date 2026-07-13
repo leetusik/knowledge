@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0002
-created_at: 2026-07-12T14:34:15+09:00
-source: P5.REVIEW
-summary: 'P5: site-build acceptance = site_smoke.py after a compose build; negative-test pattern for the guard'
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-14T05:08:17+09:00
+source: P6.REVIEW
+summary: P6: site_smoke graph.json data-contract custom-JS allowlist built-graph-page landing graph-card invariants root negatives
+previous: v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard
 ---
 
 # QA
@@ -14,9 +14,13 @@ previous: v0001_bootstrap
 The public site (Track 1) has a mechanical acceptance gate as of P5:
 `python3 scripts/site_smoke.py`, run after a `docker compose run --rm kb build`.
 It is both the CI deploy gate and the local pre-push check for any change in the
-P5 area (design CSS, landing markup, `mkdocs.yml`, search config). Server-side
-QA for Track 2 (the FastAPI store) stays as the P4 pytest/reindex checks in
-operations; this doc records the site-build acceptance strategy.
+P5 area (design CSS, landing markup, `mkdocs.yml`, search config). As of P6 the
+same guard also covers the **knowledge-graph** feature: the `graph.json` data
+contract, the first vendored custom JS (an `extra_javascript` allowlist replacing
+the old "must be absent" assertion), the built `/graph/` page, and the landing
+graph card. Server-side QA for Track 2 (the FastAPI store) stays as the P4
+pytest/reindex checks in operations; this doc records the site-build acceptance
+strategy.
 
 ## Test Commands
 
@@ -51,7 +55,12 @@ reported together; exits non-zero naming every violation.
     formatted bullet directly under it (`format_recent_bullet`'s shape);
     `docs/tags.md` has `<!-- material/tags -->`.
   - `mkdocs.yml` has no top-level `nav:`/`strict:`, has `font: false`,
-    `plugins.search.lang` includes both `en` and `ko`, and no `extra_javascript:`.
+    `plugins.search.lang` includes both `en` and `ko`.
+  - **(P6)** `mkdocs.yml` `extra_javascript` is present and its entries are
+    **exactly** `["javascripts/graph.js"]` (the flipped custom-JS allowlist,
+    replacing the old "must be absent" assertion); `hooks:` references
+    `scripts/graph_hook.py` and the file exists; `docs/javascripts/graph.js` exists;
+    `docs/graph.md` exists with `hide:` frontmatter.
   - Pin parity: `mkdocs-material==X` (CI) equals `squidfunk/mkdocs-material:X`
     (compose).
 - **Built-site invariants** (against `site/`; a clear "run mkdocs build first"
@@ -67,6 +76,22 @@ reported together; exits non-zero naming every violation.
   - `site/versions/` absent; no leaked absolute local home-directory path (the
     guard scans built HTML for an operator home-path prefix) and no
     `<script src="http…">` CDN tag in any built HTML.
+  - **(P6)** `site/javascripts/graph.js` shipped; `site/graph/index.html` exists,
+    mounts `.kb-graph` with `data-graph-src`, and references `javascripts/graph.js`;
+    the built `site/index.html` carries the landing `.kb-card` link to `graph/`
+    (keyed on the card *class*, distinct from the auto-nav tab / footer / `rel=next`
+    links to `graph/` that exist regardless of the card).
+
+- **Graph data-contract invariants (P6, `check_graph` over `site/graph.json`):**
+  the file exists and has **no `/Users/`** in the raw text; it is valid JSON with
+  `version == 1`; `projects`/`nodes`/`edges` are lists; node ids are unique; every
+  node has `id`/`type`/`title` with `type` ∈ `{doc, tag, missing}`; every doc node
+  has `url`/`date`/`project`/`tags`/`degree`; every edge has `kind` ∈ `{related,
+  tag}` and **both endpoints resolve** to node ids; the `projects` doc counts **sum
+  to** the doc-node count; and the **doc-node count equals the filesystem count** of
+  `docs/*/*.md` at depth 2 (excluding `index.md` + reserved dirs — self-adapts to new
+  docs/projects). A dead `related:` is tolerated as data (a `broken` edge + a `missing`
+  ghost node), never a failure.
 
 ## Manual QA Missions
 
@@ -92,6 +117,23 @@ reported together; exits non-zero naming every violation.
   vanishing on one header; the awkward "Bootstrap agentic workspace.sh" tab (known
   and accepted — not a defect).
 
+### Knowledge map (browser — authoritative, P6)
+
+- **Route / entry:** `http://localhost:8765/knowledge/graph/` (Graph top tab or the
+  landing Graph card). This is **owed operator QA** — no browser ran in the build
+  harness, so the map was validated at build/structure level only.
+- **What to check:** the settle-then-still layout (~600ms, then no idle drift); both
+  color schemes (toggle the header brightness — the map should repaint); hover /
+  selection dimming + the top-right info panel; the zoom-ladder label transitions
+  (hub-only <60% → all doc labels 60–110% → neighborhood tag labels >110%); the
+  legend project-filter and the tag-visibility switch; the reduced-motion path
+  (paints at rest, no fades); and the landing Graph card in context.
+- **What would feel wrong:** a second hue appearing in an interactive accent (hover/
+  selection must be teal — project inks are node fills only); the map drifting after
+  settle; labels not following the zoom ladder; a CDN request in the network panel.
+- **Flagged, not a defect:** with `navigation.footer` on, the footer sits just below
+  the viewport-height map (a small scroll reveals it).
+
 ## Regression Checklist
 
 - [ ] `docker compose run --rm kb build` exits 0 with no `README.md`/`index.md`
@@ -113,6 +155,18 @@ malform the first Recent bullet's date prefix; drop `"ko"` from the copied
 Confirm the repo's own files were untouched throughout. This is the template for
 re-proving the guard after any change to `check_source`/`check_built`.
 
+**P6 graph negatives (also add `docs/graph.md`, `docs/javascripts/graph.js`,
+`scripts/graph_hook.py`, and `site/graph.json`/`site/graph/` to the copied tree):**
+drop the `extra_javascript:` block from the copied `mkdocs.yml` → the allowlist
+assertion FAILs with exactly one violation; delete `site/graph.json` → the graph
+guard FAILs; inject a CDN `<script src="http…">` into the copied
+`site/graph/index.html` → the all-pages CDN scan FAILs; remove the graph `.kb-card`
+from the copied `site/index.html` → the landing-link assertion FAILs (the remaining
+nav/footer/`rel=next` `href="graph/"` links do **not** satisfy it); doctor a
+`related:` target to a nonexistent path and rebuild → a `broken` edge + a `missing`
+ghost node appear and the guard still **PASSes** (a dead link is data, not an error).
+All of these were exercised during P6 and re-confirmed at review.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -126,6 +180,13 @@ re-proving the guard after any change to `check_source`/`check_built`.
   to pin parity).
 - **The marker/bullet contract** — parsed by `server/documents.py` and the
   `/explain` API-down fallback; any landing edit must keep it byte-intact (guarded).
+- **The `graph.json` data contract (P6)** — a schema/id/endpoint/publish-safety
+  change (or a `graph_hook.py` regression that stops emitting, leaks `/Users/`, or
+  breaks the projects-sum / doc-count identities) silently breaks the map with no
+  build error (guarded by `check_graph`).
+- **The `extra_javascript` allowlist (P6)** — it must stay exactly
+  `["javascripts/graph.js"]`; adding a second entry or a CDN script is a guard
+  failure, protecting the no-CDN invariant now that the site ships custom JS.
 
 ## Open Questions
 

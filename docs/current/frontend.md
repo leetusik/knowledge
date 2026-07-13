@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0002
-created_at: 2026-07-12T14:34:14+09:00
-source: P5.REVIEW
-summary: 'P5: MkDocs Material design system (extra.css token/hook architecture, theme.font false), landing wiring, CJK client-side search, zero-JS hero'
-previous: v0001_bootstrap
+version: v0003
+created_at: 2026-07-14T05:08:17+09:00
+source: P6.REVIEW
+summary: P6: interactive knowledge-map renderer vendored hand-rolled force sim first custom JS full-bleed graph page extra.css section 10 extra_javascript allowlisted
+previous: v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero
 ---
 
 # Frontend
@@ -17,8 +17,12 @@ delivered as a single stylesheet + branding assets, a redesigned landing page,
 per-project section pages, tuned Material navigation, and Korean/CJK-capable
 browser-only search. There is no SPA framework and no custom build step — the
 front end is mkdocs-material's theme plus one `extra_css` file, one `@import`,
-two SVG assets, and hand-authored markup in `docs/`. No `overrides/` `custom_dir`,
-no `extra_javascript`, no CDN scripts.
+two SVG assets, and hand-authored markup in `docs/`. **P6 added the repo's first
+custom JS** — a single vendored file (`docs/javascripts/graph.js`) that renders the
+interactive knowledge map — so `extra_javascript` is now wired (allowlisted to
+exactly that one entry) and a build-time `hooks:` module emits the map's `graph.json`.
+Still no `overrides/` `custom_dir`, still **no CDN scripts** and no third-party JS —
+the renderer is entirely self-contained.
 
 ## Stack
 
@@ -34,8 +38,13 @@ no `extra_javascript`, no CDN scripts.
   `theme.logo`/`theme.favicon`).
 - **Search:** Material's bundled lunr search plugin, configured
   `lang: [en, ko]` — zero custom search JS.
+- **Custom JS (P6):** one vendored file, `docs/javascripts/graph.js` (the knowledge
+  map's force sim + canvas renderer) — wired via `extra_javascript`, no build step, no
+  third-party code, no CDN. A build-time `hooks:` module (`scripts/graph_hook.py`) emits
+  the `graph.json` it consumes. See "The knowledge map" below.
 - **State / data / auth:** none. The published site is fully static; it never
-  calls the local FastAPI API (that boundary is in architecture).
+  calls the local FastAPI API (that boundary is in architecture). The knowledge map is
+  no exception — it fetches a build-time static `graph.json`, not the API.
 
 ## Theme configuration (`mkdocs.yml`)
 
@@ -62,6 +71,12 @@ The theme block is the only Material-side surface P5 touched. Load-bearing keys:
   (it lets `/explain` add pages with zero config). `exclude_docs` (`/versions/`,
   `/README.md`) is the only exclusion mechanism.
 - `plugins:` — `search` (object form, `lang: [en, ko]`) + `tags`.
+- **`hooks:` (P6)** — `- scripts/graph_hook.py`: the build-time knowledge-graph data
+  emitter (writes `site/graph.json`; runs under both build and serve). See operations.
+- **`extra_javascript:` (P6)** — `- javascripts/graph.js`, and **exactly** that one
+  entry: this is the repo's first custom JS, and the smoke guard allowlists precisely
+  this vendored file while still failing on any external `<script src="http…">` (the
+  no-CDN invariant is preserved). See qa.
 - Pin `9.7.6` is held in `mkdocs.yml`'s image (via `compose.yml`) and the CI pip
   pin together (pin parity — see operations).
 
@@ -191,10 +206,64 @@ the search input. No custom JS — no `extra_javascript`, no script asset. Style
 additively in §9 (bordered rounded field, inline SVG magnifier, bilingual
 "Search the knowledge base · 검색", `/` `<kbd>` hint) reusing only §1–§3 tokens.
 
+## The knowledge map: page, renderer, `extra.css` §10 (P6)
+
+The interactive knowledge map is the front end's first custom-JS feature. Three
+pieces, all consuming `--kb-*` design tokens for automatic light/dark parity; the
+visual language is the operator's locked P6.S0 Claude Design guide (mark grammar,
+draw order, page anatomy). The user journey lives in **experience**; the design
+provenance ADR in **decisions**.
+
+- **`docs/graph.md` (the page).** `title: Graph`, `hide: [navigation, toc]` → the
+  page gets an auto-nav top tab for free (no `nav:`). The body is a `.kb-graph`
+  mount carrying `data-graph-src="../graph.json"`, a `<canvas>`, the JS-populated
+  legend/zoom/tooltip/panel containers, an empty/loading state, and a `<noscript>`
+  fallback. Material auto-injects an `<h1>Graph</h1>` above the mount — §10b
+  visually-hides it (kept in the a11y tree) so the map truly *is* the page.
+- **`docs/javascripts/graph.js` (the renderer).** ~810 lines, strict IIFE, **zero
+  third-party code / zero CDN** — the force sim and the canvas drawing are all
+  hand-rolled in this one vendored file. A no-op guard returns unless a `.kb-graph`
+  mount exists, so every page but `/graph/` pays nothing. It `fetch()`es the mount's
+  `data-graph-src` (relative → resolves under CI's `/knowledge/` base *and* local
+  serve), builds the model from `graph.json`'s `{version,projects,nodes,edges}`,
+  runs a deterministic hash-seeded force sim that **settles in ~600ms then stops**
+  (no idle drift), and draws with the design's grammar (draw order dimmed edges →
+  live edges → halo → dimmed nodes → live nodes → selection ring → labels; doc =
+  filled project-ink circle r 6→14px by degree + plate cutout rim; tag = hollow
+  ring; ghost = dashed ring; 3px plate-colored label halo). Scheme changes repaint
+  via a `data-md-color-scheme` `MutationObserver`; icons are inline SVG / text
+  glyphs (no Iconify). Interactions: pan, wheel-zoom, zoom stack, drag,
+  hover-neighborhood highlight, click-to-navigate, legend project-filter, and a
+  tag-visibility switch.
+- **`extra.css` §10 (the styling).** Appended as a new section (§1–§9 untouched).
+  §10a = the design mirror's `tokens/graph.css` **verbatim** (additive `--kb-graph-*`
+  only, both schemes). §10b = the full-bleed page — scoped **entirely via
+  `:has(.kb-graph)`** so nothing else on the site is affected: zeroes the content
+  margins, hides the injected `<h1>`, and breaks `.kb-graph` out to `width:100vw`,
+  `height:calc(100dvh − var(--kb-graph-chrome))` (chrome `4.8rem` = header 2.4 +
+  tabs 2.4, the one knob to retune if chrome height moves). §10c = the overlay layer
+  (legend / switch / zoom / tooltip / info panel / empty), scoped under `.kb-graph`
+  so `.md-typeset` element styles don't bleed in, plus a `.kb-tag` panel pill
+  mirroring §7. §10d = reduced-motion (paint at rest, no fades).
+
+**Project inks are a documented data-viz-only accent extension:** the map's node
+fills + legend chips use a small muted categorical set (teal / bronze / plum), but
+every *interactive* accent (hover, selection ring, halo, active edges, links) stays
+**teal** — the one-accent rule holds where it is UI (ADR in decisions).
+
+**Landing + nav entry:** `docs/index.md`'s `.kb-grid` gained a fifth `.kb-card`
+(`Graph · 지식 지도` → `graph/`), matching the sibling cards; the page is also on the
+auto-nav top tab. The hero/`#recent`/single-`#__search` landing invariants were kept
+byte-intact.
+
 ## Conventions & constraints
 
 - One stylesheet; consume `--kb-*`/`--md-*` tokens, never hard-code colors/fonts.
 - Font budget (2 text + 1 code) is spent — add no webfonts; keep `theme.font: false`.
+- **Custom JS stays vendored + CDN-free (P6):** `extra_javascript` is allowlisted to
+  exactly `javascripts/graph.js`; keep the renderer self-contained (no third-party
+  code, no CDN `<script src>`), and extend `extra.css` §10 additively without touching
+  §1–§9. `graph.json` must stay repo-relative (no `/Users/` leak).
 - Never add `nav:`/`strict:`; keep `exclude_docs` as the only exclusion mechanism.
 - Keep the `<!-- explain:recent -->` marker + bullet format byte-intact, and
   `<!-- material/tags -->` in `docs/tags.md`.

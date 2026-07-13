@@ -23,7 +23,7 @@
       ]
     },
     "experience": {
-      "latest": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance",
+      "latest": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -41,11 +41,19 @@
           "source": "P5.REVIEW",
           "summary": "P5: calm-editorial operator-designed visual language, landing/browse journeys, per-project pages, CJK search UX + hero affordance",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry",
+          "path": "docs/versions/experience/v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: interactive knowledge-map journey settle-then-still label strategy A zoom ladder info panel legend filters landing and nav entry",
+          "previous": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance"
         }
       ]
     },
     "architecture": {
-      "latest": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target",
+      "latest": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -79,11 +87,19 @@
           "source": "P5.REVIEW",
           "summary": "P5: browser-only static-search boundary vs local FastAPI hybrid — same corpus, two implementations by deployment target",
           "previous": "v0003_p4_sqlite-vec_rrf_seam_consumed_as_hybrid_semantic_search"
+        },
+        {
+          "id": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam",
+          "path": "docs/versions/architecture/v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: build-time knowledge-graph data pipeline (mkdocs hook to graph.json static asset) plus browser-only client-side rendering seam",
+          "previous": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target"
         }
       ]
     },
     "frontend": {
-      "latest": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero",
+      "latest": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -101,6 +117,14 @@
           "source": "P5.REVIEW",
           "summary": "P5: MkDocs Material design system (extra.css token/hook architecture, theme.font false), landing wiring, CJK client-side search, zero-JS hero",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted",
+          "path": "docs/versions/frontend/v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: interactive knowledge-map renderer vendored hand-rolled force sim first custom JS full-bleed graph page extra.css section 10 extra_javascript allowlisted",
+          "previous": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero"
         }
       ]
     },
@@ -135,7 +159,7 @@
       ]
     },
     "data": {
-      "latest": "v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source",
+      "latest": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -161,6 +185,14 @@
           "source": "P4.REVIEW",
           "summary": "P4: document_embeddings cache, related column, CJK query-layer search, publish-safe source",
           "previous": "v0002_sqlite_fts5_document_store_documents_table_external-content_fts_index"
+        },
+        {
+          "id": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json",
+          "path": "docs/versions/data/v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: build-time knowledge-graph data contract node/edge model tags-as-nodes ghost/broken edges deterministic publish-safe graph.json",
+          "previous": "v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source"
         }
       ]
     },
@@ -195,7 +227,7 @@
       ]
     },
     "operations": {
-      "latest": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow",
+      "latest": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -237,6 +269,14 @@
           "source": "P5.REVIEW",
           "summary": "P5: site design build asset set, single Google-Fonts @import, deploy-gating site_smoke.py guard, local build/eyeball workflow",
           "previous": "v0004_p4_gemini_embedding_env_startup_reindex_self-heal_mkdocs_exclude_docs"
+        },
+        {
+          "id": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention",
+          "path": "docs/versions/operations/v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: mkdocs hooks graph.json emitter build and serve extended smoke guard serve-parity confirmed README knowledge-map mention",
+          "previous": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow"
         }
       ]
     },
@@ -263,7 +303,7 @@
       ]
     },
     "qa": {
-      "latest": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard",
+      "latest": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -281,11 +321,19 @@
           "source": "P5.REVIEW",
           "summary": "P5: site-build acceptance = site_smoke.py after a compose build; negative-test pattern for the guard",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives",
+          "path": "docs/versions/qa/v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: site_smoke graph.json data-contract custom-JS allowlist built-graph-page landing graph-card invariants root negatives",
+          "previous": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard"
         }
       ]
     },
     "decisions": {
-      "latest": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict",
+      "latest": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -327,9 +375,17 @@
           "source": "P5.REVIEW",
           "summary": "P5: palette 1a Teal + Claude-Design provenance, fonts via @import, nav-feature choices, CJK plugin-lang approach, smoke guard over --strict",
           "previous": "v0004_p4_cjk_query-side_search_hybrid_rrf_cross-link_convention_publish_hygiene_adrs"
+        },
+        {
+          "id": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer",
+          "path": "docs/versions/decisions/v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer.md",
+          "created_at": "2026-07-14T05:08:17+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6: hooks-module graph mechanism node/edge model tags-as-nodes docs-current excluded ghost edges data-viz project inks hand-rolled vendored renderer",
+          "previous": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-14T02:40:01+09:00"
+  "last_rebuilt_at": "2026-07-14T05:16:01+09:00"
 }
