@@ -28,14 +28,24 @@ REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
 CLAUDE_AGENTS = ROOT / ".claude" / "agents"
 CODEX_AGENTS = ROOT / ".codex" / "agents"
 EXECUTOR_TIERS = ("low", "mid", "high")
-# Shipped defaults for the slice-executor tiers. A repo-root executors.toml overrides
-# them via [claude.<tier>] / [codex.<tier>] tables with model/effort keys; apply with
-# `sync-agents`. An empty effort means "write no effort line" — the escape hatch for
-# models that reject the effort parameter (e.g. haiku). Models may not be empty.
-EXECUTOR_DEFAULTS = {
-    "low": {"model": "haiku", "effort": "", "codex_model": "gpt-5.5", "codex_effort": "medium"},
-    "mid": {"model": "sonnet", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "high"},
-    "high": {"model": "opus", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "xhigh"},
+# Shipped presets for the slice-executor tiers. A top-level mode = "<preset>" key in
+# the repo-root executors.toml picks one (absent file or key -> flex); per-tier
+# [claude.<tier>] / [codex.<tier>] tables with model/effort keys override the active
+# preset field by field; apply with `sync-agents`. An empty effort means "write no
+# effort line" — the escape hatch for models that reject the effort parameter
+# (e.g. haiku). Models may not be empty. Codex tiers are identical in both presets.
+DEFAULT_EXECUTOR_MODE = "flex"
+EXECUTOR_PRESETS = {
+    "flex": {
+        "low": {"model": "sonnet", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "medium"},
+        "mid": {"model": "opus", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "high"},
+        "high": {"model": "opus", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "xhigh"},
+    },
+    "economy": {
+        "low": {"model": "haiku", "effort": "", "codex_model": "gpt-5.5", "codex_effort": "medium"},
+        "mid": {"model": "sonnet", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "high"},
+        "high": {"model": "opus", "effort": "xhigh", "codex_model": "gpt-5.5", "codex_effort": "xhigh"},
+    },
 }
 
 
@@ -92,21 +102,33 @@ def strip_frontmatter(text: str) -> str:
     return text
 
 
-def read_executors_toml() -> dict:
-    """{(harness, tier, key): value} from the repo-root executors.toml.
+def read_executors_toml() -> tuple:
+    """(mode, {(harness, tier, key): value}) from the repo-root executors.toml.
 
-    Strict subset of TOML — [claude.<tier>] / [codex.<tier>] tables holding
+    Strict subset of TOML — an optional top-level mode = "<preset>" line (before
+    any section) plus [claude.<tier>] / [codex.<tier>] tables holding
     model/effort keys with double-quoted string values; '#' comments and blanks
     ignored. Anything else is an error, so typos surface instead of silently
     keeping a default."""
     path = ROOT / "executors.toml"
+    mode = None
     values: dict = {}
     if not path.exists():
-        return values
+        return mode, values
     section = None
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw.strip()
         if not line or line.startswith("#"):
+            continue
+        m = re.match(r'^mode\s*=\s*"([^"]*)"\s*(?:#.*)?$', line)
+        if m:
+            if section is not None:
+                raise SystemExit(f"executors.toml line {n}: mode must be set at the top level, before any [claude.*]/[codex.*] section")
+            if mode is not None:
+                raise SystemExit(f"executors.toml line {n}: duplicate mode")
+            if m.group(1) not in EXECUTOR_PRESETS:
+                raise SystemExit(f"executors.toml line {n}: unknown mode {m.group(1)!r} (valid: {', '.join(sorted(EXECUTOR_PRESETS))})")
+            mode = m.group(1)
             continue
         m = re.match(r"^\[\s*(claude|codex)\s*\.\s*(low|mid|high)\s*\]\s*(?:#.*)?$", line)
         if m:
@@ -121,16 +143,17 @@ def read_executors_toml() -> dict:
                 raise SystemExit(f"executors.toml line {n}: duplicate {m.group(1)} for [{section[0]}.{section[1]}]")
             values[key] = m.group(2)
             continue
-        if re.match(r"^(model|effort)\s*=", line):
+        if re.match(r"^(model|effort|mode)\s*=", line):
             raise SystemExit(f'executors.toml line {n}: values must be double-quoted TOML strings, e.g. model = "haiku"')
-        raise SystemExit(f"executors.toml line {n}: cannot parse {line!r} (expected [claude.<low|mid|high>], [codex.<low|mid|high>], or model/effort = \"...\")")
-    return values
+        raise SystemExit(f"executors.toml line {n}: cannot parse {line!r} (expected mode = \"...\", [claude.<low|mid|high>], [codex.<low|mid|high>], or model/effort = \"...\")")
+    return mode, values
 
 
 def executor_config() -> dict:
-    """EXECUTOR_DEFAULTS overlaid with any executors.toml overrides; values pass through verbatim."""
-    config = {tier: dict(EXECUTOR_DEFAULTS[tier]) for tier in EXECUTOR_TIERS}
-    overrides = read_executors_toml()
+    """The active preset (top-level mode in executors.toml; default flex) overlaid with any per-tier overrides; values pass through verbatim."""
+    mode, overrides = read_executors_toml()
+    preset = EXECUTOR_PRESETS[mode or DEFAULT_EXECUTOR_MODE]
+    config = {tier: dict(preset[tier]) for tier in EXECUTOR_TIERS}
     for (harness, tier, key), value in overrides.items():
         field = key if harness == "claude" else f"codex_{key}"
         config[tier][field] = value
@@ -183,7 +206,8 @@ def executor_agent_files(config: dict) -> list:
 def sync_agents(args: argparse.Namespace) -> None:
     config = executor_config()
     config_present = (ROOT / "executors.toml").exists()
-    override_count = len(read_executors_toml())
+    mode, overrides = read_executors_toml()
+    override_count = len(overrides)
     legacy_env = ROOT / ".env"
     if legacy_env.exists() and "SLICE_EXECUTOR" in legacy_env.read_text(encoding="utf-8"):
         print("warning: .env holds SLICE_EXECUTOR_* keys, but tier config moved to executors.toml in v8 — .env is no longer read")
@@ -201,7 +225,8 @@ def sync_agents(args: argparse.Namespace) -> None:
     for tier in EXECUTOR_TIERS:
         cfg = config[tier]
         print(f"{tier:<5} claude={cfg['model']} @ {cfg['effort'] or '(no effort line)'}  codex={cfg['codex_model']} @ {cfg['codex_effort']}")
-    print(f"config source: {f'executors.toml ({override_count} override(s)) + defaults' if config_present else 'defaults (no executors.toml)'}")
+    mode_str = f"mode {mode}" if mode else f"mode {DEFAULT_EXECUTOR_MODE} (default)"
+    print(f"config source: {f'executors.toml ({mode_str}, {override_count} override(s))' if config_present else f'{DEFAULT_EXECUTOR_MODE} defaults (no executors.toml)'}")
     for m in missing:
         print(f"missing agent file: {m}")
     if args.check:
