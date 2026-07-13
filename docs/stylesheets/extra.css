@@ -31,6 +31,8 @@
      §7  Tag pills hooks      (Target 7)
      §8  Search UI hooks      (Target 10)
      §9  Page treatments      (Targets 8 & 9) — landing + article, for P5.S2/S3
+     §10 Graph                (P6 · knowledge map) — additive --kb-graph-* tokens
+                              + full-bleed page + overlays, for P6.S2
    ========================================================================== */
 
 /* --- Webfonts: Fraunces (display) + Source Sans 3 (body) + JetBrains Mono
@@ -567,3 +569,352 @@
 .kb-toc a:hover { color: var(--kb-accent); }
 .kb-toc a.is-active { color: var(--kb-accent); border-left-color: var(--kb-accent); font-weight: var(--kb-weight-semibold); }
 .kb-toc a.nested { padding-left: 1.4rem; color: var(--kb-hint); }
+
+/* ==========================================================================
+   §10 · Graph  (P6 · knowledge map) — additive, for P6.S2
+   --------------------------------------------------------------------------
+   §10a = tokens/graph.css VERBATIM from the locked P6.S0 design mirror (the
+   frozen --kb-graph-* set: :root geometry/labels/motion + both scheme blocks;
+   19/19 LOCKED values byte-matched at S0 check-up). §10b–§10d = the component
+   layer adapted onto the real page: full-bleed map (no content column, no
+   sidebars), overlay cards, reduced-motion. §1–§9 are untouched. All accents
+   stay teal; project inks are data-viz-only (node fills + legend chips). The
+   canvas draws every mark from these tokens (docs/javascripts/graph.js reads
+   them live via getComputedStyle, so the Material scheme toggle just works).
+   ========================================================================== */
+
+/* ==========================================================================
+   Knowledge Base — Graph tokens  (P6 · Knowledge map)
+   --------------------------------------------------------------------------
+   Additive tokens for the Obsidian-style knowledge map. --kb-graph-* ONLY —
+   no existing token is touched (Target-1 colors stay LOCKED). Everything
+   here is canvas-achievable: solid fills, strokes, dash patterns, opacity,
+   one soft radial halo. No CSS-filter-dependent effects.
+
+   ── DECISION · project identity (the open call in GRAPH_BRIEF) ────────────
+   Projects get a SMALL MUTED CATEGORICAL SET — "map inks" — instead of a
+   teal-only strength ladder. Why: three strengths of one hue read as *rank*,
+   not category, and the ladder compresses illegibly on the dark plate; the
+   warm-neutral range is already spent on tag rings, ghost nodes and edges.
+   The set is three low-chroma inks at matched tone — Teal (the system accent
+   hue, the anchor) · Bronze · Plum — scoped to DATA-VIZ SURFACES ONLY
+   (graph node fills, legend chips). All interactive accents — links, focus,
+   hover, selection rings, the halo — remain teal-only, so the system's
+   one-accent discipline is unchanged where it was ever visible.
+   Recorded again in README → "P6 Graph".
+   ──────────────────────────────────────────────────────────────────────────
+
+   Canvas plate: light = --kb-surface-sunken (the recessed "map plate", same
+   tier as code blocks); dark = a plate DEEPER than the paper (#16130f, from
+   the Target-1 accent-bg family) — dark's sunken tier is *lighter* than its
+   paper, so it cannot recede.
+
+   Contrast, measured against the plate: node + edge inks ≥ 3:1 (marks),
+   labels ≥ 4.5:1. Ratios noted per token.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Structure (scheme-independent) — geometry, labels, motion
+   px values are at zoom = 1 and scale linearly with zoom.
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Node geometry ---- */
+  --kb-graph-node-r-min: 6px;        /* doc node, least connected */
+  --kb-graph-node-r-max: 14px;       /* doc node, best connected (linear by degree) */
+  --kb-graph-node-r-tag: 4.5px;      /* tag hub — hollow ring */
+  --kb-graph-node-r-ghost: 5.5px;    /* unresolved doc — hollow, dashed */
+  --kb-graph-node-stroke: 1.5px;     /* ring width of hollow nodes (tag / ghost) */
+  --kb-graph-node-cutout: 1.5px;     /* plate-colored rim on filled nodes — separates overlaps */
+
+  /* ---- Edge geometry ---- */
+  --kb-graph-edge-w: 1px;            /* tag edge (doc–tag) */
+  --kb-graph-edge-w-related: 1.75px; /* related edge (doc→doc) */
+  --kb-graph-arrow: 5px;             /* arrowhead length on related edges; tip sits 3px off the target rim */
+  --kb-graph-ghost-dash: 4, 4; /* @kind other */ /* setLineDash — ghost rings & edges into ghosts */
+
+  /* ---- Emphasis ---- */
+  --kb-graph-halo-blur: 8px;         /* soft radial glow beyond the rim (hover / selected) */
+  --kb-graph-focus-w: 2px;           /* selection ring */
+  --kb-graph-focus-gap: 2px;         /* plate-colored gap between rim and ring */
+
+  /* ---- Labels — existing families only; Hangul fallback rides along ---- */
+  --kb-graph-font: var(--kb-font-body);
+  --kb-graph-label-size: 12.5px;     /* doc labels · weight 500 */
+  --kb-graph-label-size-tag: 11px;   /* tag / ghost labels · weight 400 */
+  --kb-graph-label-gap: 6px;         /* node rim → label cap height */
+
+  /* ---- Motion — settle-then-still ----
+     The force sim eases to rest over ~--kb-graph-settle and STOPS; no idle
+     drift, ever (house rule: no loops). Overlay UI transitions use the
+     existing --kb-ease. Reduced motion: skip the animated settle — paint the
+     settled layout on the first frame; pan/zoom snaps instead of gliding. */
+  --kb-graph-settle: 600ms; /* @kind other */
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — inks on the ivory map plate  #efe9db
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --kb-graph-canvas: var(--kb-surface-sunken);   /* #efe9db · recessed map plate */
+
+  /* ---- Project inks (map inks — data-viz only, see header) ---- */
+  --kb-graph-project-1: #0f6f66;     /* Teal (anchor = accent hue) · 5.0:1 */
+  --kb-graph-project-2: #8a6a2a;     /* Bronze · 4.2:1 */
+  --kb-graph-project-3: #764f6c;     /* Plum · 5.6:1 */
+  --kb-graph-node-doc: var(--kb-graph-project-1); /* fallback for unassigned docs */
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas); /* cutout rim = plate */
+  --kb-graph-node-tag: #5c5347;      /* hollow tag ring (= --kb-secondary) · 6.2:1 */
+  --kb-graph-node-ghost: #7f7666;    /* unresolved dashed ring · 3.7:1 */
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #7c7362;          /* tag edge · 3.9:1 */
+  --kb-graph-edge-related: #5c5347;  /* related edge + arrowhead · 6.2:1 */
+  --kb-graph-edge-active: #0f6f66;   /* neighborhood edges under hover/selection */
+
+  /* ---- Emphasis (teal-only, as everywhere) ---- */
+  --kb-graph-focus: #0a544e;         /* ring (= --kb-accent-strong) */
+  --kb-graph-halo: rgba(15, 111, 102, 0.22);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: #26211c;         /* doc labels (= --kb-ink) · 12.4:1 */
+  --kb-graph-label-muted: #5c5347;   /* tag / ghost labels · 6.2:1 */
+  --kb-graph-label-halo: var(--kb-graph-canvas); /* text stroked behind glyphs */
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.16; /* @kind other */ /* alpha for everything outside the neighborhood */
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — inks on the deep charcoal plate  #16130f
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --kb-graph-canvas: #16130f;        /* deeper than paper — the plate recedes */
+
+  /* ---- Project inks ---- */
+  --kb-graph-project-1: #62bdb2;     /* Teal (= --kb-accent) · 8.3:1 */
+  --kb-graph-project-2: #c8a15e;     /* Bronze · 7.7:1 */
+  --kb-graph-project-3: #c99bc0;     /* Plum · 7.9:1 */
+  --kb-graph-node-doc: var(--kb-graph-project-1);
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas);
+  --kb-graph-node-tag: #b6ad9d;      /* (= --kb-secondary) · 8.3:1 */
+  --kb-graph-node-ghost: #6b6355;    /* · 3.1:1 */
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #6f6759;          /* · 3.3:1 */
+  --kb-graph-edge-related: #9a9081;  /* · 5.9:1 */
+  --kb-graph-edge-active: #62bdb2;
+
+  /* ---- Emphasis ---- */
+  --kb-graph-focus: #86d4ca;         /* (= --kb-accent-strong dark) */
+  --kb-graph-halo: rgba(98, 189, 178, 0.25);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: #ece4d7;         /* (= --kb-ink) · 15.8:1 */
+  --kb-graph-label-muted: #b6ad9d;   /* · 8.3:1 */
+  --kb-graph-label-halo: var(--kb-graph-canvas);
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.22; /* @kind other */ /* dark dims less — faint ink vanishes sooner on charcoal */
+}
+
+/* ==========================================================================
+   §10b · Graph page — full-bleed integration (adapted for the real site)
+   --------------------------------------------------------------------------
+   The map IS the page (design: "no content column"). docs/graph.md carries
+   `hide: [navigation, toc]`, which already drops the two Material sidebars;
+   these rules (scoped with :has(.kb-graph) so they touch ONLY the graph page,
+   never the rest of the site) neutralize the centered content column and let
+   .kb-graph break out to the full viewport below the header + tabs. No
+   overrides/ template is used — pure CSS. --kb-graph-chrome ≈ header (2.4rem)
+   + tabs (2.4rem) + the hairlines; tune here if Material's chrome height moves.
+   -------------------------------------------------------------------------- */
+:root { --kb-graph-chrome: 4.8rem; }
+
+.md-main:has(.kb-graph) .md-sidebar { display: none; }
+.md-main:has(.kb-graph) .md-main__inner { margin-top: 0; }
+.md-content:has(.kb-graph) { max-width: none; }
+.md-content:has(.kb-graph) .md-content__inner { margin: 0; padding: 0; }
+.md-content:has(.kb-graph) .md-content__inner::before { display: none; content: none; }
+.md-typeset > .kb-graph { margin: 0; }
+/* Auto-nav injects an <h1>Graph</h1> from the page title; the map IS the page,
+   so keep it for a11y/SEO but take it visually out of flow (no title bar). */
+.md-content:has(.kb-graph) .md-content__inner > h1 {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* ---- Map frame (from the mirror's graph.css, + the full-bleed breakout) - */
+.kb-graph {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: calc(100vh - var(--kb-graph-chrome));
+  height: calc(100dvh - var(--kb-graph-chrome));
+  background: var(--kb-graph-canvas);
+  border-top: 1px solid var(--kb-border);
+  overflow: hidden;
+  font-family: var(--kb-font-body);
+}
+.kb-graph__canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.kb-graph__canvas:active { cursor: grabbing; }
+
+/* ==========================================================================
+   §10c · Graph overlays — legend / switch / zoom / tooltip / panel / empty
+   --------------------------------------------------------------------------
+   Delivered from the mirror's components/graph/graph.css, scoped under
+   .kb-graph so the page's .md-typeset element styles (list bullets, link
+   underlines, heading margins) can't bleed into the overlay cards. Overlays
+   are quiet surface cards — hairline, --kb-radius, NO resting shadow.
+   ========================================================================== */
+.kb-graph .kb-graph__ui {
+  position: absolute;
+  background: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  color: var(--kb-ink);
+  z-index: 2;
+}
+.kb-graph [hidden] { display: none; }
+
+/* ---- Legend + filters (bottom-left) ------------------------------------ */
+.kb-graph .kb-graph-legend { left: 0.9rem; bottom: 0.9rem; padding: 0.55rem 0.7rem 0.6rem; width: 11rem; }
+.kb-graph .kb-graph-legend__head {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-hint); font-weight: var(--kb-weight-semibold); margin: 0 0.3rem 0.25rem;
+}
+.kb-graph .kb-graph-legend__item {
+  display: flex; align-items: center; gap: 0.45rem; width: 100%;
+  padding: 0.26rem 0.3rem; border: 0; border-radius: var(--kb-radius-sm);
+  background: transparent; font: inherit; text-align: left; cursor: pointer;
+  font-size: 0.72rem; color: var(--kb-secondary);
+  transition: color var(--kb-ease), background var(--kb-ease);
+}
+.kb-graph .kb-graph-legend__item:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.kb-graph .kb-graph-legend__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-graph .kb-graph-legend__count { margin-left: auto; color: var(--kb-hint); font-size: 0.66rem; font-variant-numeric: tabular-nums; }
+/* project chip — ink set per instance: style="--chip: var(--kb-graph-project-1)" */
+.kb-graph .kb-graph-legend__chip { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-legend__chip--ring { background: transparent; border: 1.5px solid var(--kb-graph-node-tag); }   /* tag key */
+.kb-graph .kb-graph-legend__chip--ghost { background: transparent; border: 1.5px dashed var(--kb-graph-node-ghost); } /* unresolved key */
+/* filtered-off project: hollow chip, receded text */
+.kb-graph .kb-graph-legend__item.is-off { color: var(--kb-hint); }
+.kb-graph .kb-graph-legend__item.is-off .kb-graph-legend__chip { background: transparent; box-shadow: inset 0 0 0 1.5px var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-legend__rule { border: 0; border-top: 1px solid var(--kb-border); margin: 0.4rem -0.7rem 0.35rem; }
+.kb-graph .kb-graph-legend__row { display: flex; align-items: center; gap: 0.45rem; padding: 0.1rem 0.3rem 0.05rem; font-size: 0.72rem; color: var(--kb-secondary); }
+.kb-graph .kb-graph-legend__row .kb-graph-legend__count { margin-left: 0; }
+.kb-graph .kb-graph-legend__note { margin: 0.4rem 0.3rem 0; font-size: 0.6rem; line-height: 1.45; color: var(--kb-hint); }
+
+/* ---- Tag-visibility switch --------------------------------------------- */
+.kb-graph .kb-graph-switch {
+  flex: none; margin-left: auto; width: 1.5rem; height: 0.85rem;
+  border: 0; border-radius: var(--kb-radius-pill); cursor: pointer; position: relative;
+  background: var(--kb-border-strong); transition: background var(--kb-ease);
+}
+.kb-graph .kb-graph-switch::after {
+  content: ""; position: absolute; top: 50%; left: 2px; transform: translateY(-50%);
+  width: 0.58rem; height: 0.58rem; border-radius: 50%;
+  background: var(--kb-surface); transition: left var(--kb-ease);
+}
+.kb-graph .kb-graph-switch.is-on { background: var(--kb-accent); }
+.kb-graph .kb-graph-switch.is-on::after { left: calc(100% - 0.58rem - 2px); }
+
+/* ---- Zoom stack (bottom-right) ------------------------------------------ */
+.kb-graph .kb-graph-zoom { right: 0.9rem; bottom: 0.9rem; display: flex; flex-direction: column; overflow: hidden; }
+.kb-graph .kb-graph-zoom__btn {
+  width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
+  background: transparent; border: 0; border-bottom: 1px solid var(--kb-border);
+  color: var(--kb-secondary); font-size: 0.9rem; line-height: 1; cursor: pointer;
+  transition: color var(--kb-ease), background var(--kb-ease);
+}
+.kb-graph .kb-graph-zoom__btn:last-child { border-bottom: 0; }
+.kb-graph .kb-graph-zoom__btn:hover { color: var(--kb-accent-strong); background: var(--kb-surface-sunken); }
+
+/* ---- Hover tooltip (low zoom, labels hidden) ---------------------------- */
+.kb-graph .kb-graph-tooltip {
+  position: absolute; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.28rem 0.55rem; pointer-events: none; z-index: 3;
+  background: var(--kb-surface); border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  font-size: 0.72rem; font-weight: var(--kb-weight-medium); color: var(--kb-ink);
+  white-space: nowrap;
+}
+.kb-graph .kb-graph-tooltip__chip { flex: none; width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ring,
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ghost { background: transparent; }
+.kb-graph .kb-graph-tooltip__kind { color: var(--kb-hint); font-weight: var(--kb-weight-regular); }
+
+/* ---- Info panel (top-right, on node click) ------------------------------ */
+.kb-graph .kb-graph-panel { top: 0.9rem; right: 0.9rem; width: 17rem; padding: 0.7rem 0.85rem 0.75rem; }
+.kb-graph .kb-graph-panel__eyebrow {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-secondary); font-weight: var(--kb-weight-semibold);
+}
+.kb-graph .kb-graph-panel__eyebrow .kb-graph-legend__chip { width: 0.42rem; height: 0.42rem; }
+.kb-graph .kb-graph-panel__close {
+  margin-left: auto; border: 0; background: transparent; padding: 0.1rem;
+  color: var(--kb-hint); font-size: 0.8rem; line-height: 1; cursor: pointer;
+  transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__close:hover { color: var(--kb-ink); }
+.kb-graph .kb-graph-panel__title {
+  margin: 0.35rem 0 0.25rem; font-family: var(--kb-font-display);
+  font-size: 1.02rem; line-height: 1.28; font-weight: var(--kb-weight-semibold); color: var(--kb-ink);
+}
+.kb-graph .kb-graph-panel__meta { font-size: 0.66rem; color: var(--kb-hint); font-variant-numeric: tabular-nums; }
+.kb-graph .kb-graph-panel__tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.55rem 0 0.6rem; padding: 0; list-style: none; }
+.kb-graph .kb-graph-panel__tags li { margin: 0; padding: 0; }
+.kb-graph .kb-graph-panel__read {
+  font-size: 0.72rem; font-weight: var(--kb-weight-medium);
+  color: var(--kb-accent); text-decoration: none; transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__read:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+/* unresolved (ghost) variant — no read-through, a quiet badge instead */
+.kb-graph .kb-graph-panel__badge {
+  display: inline-block; margin-top: 0.1rem; padding: 0.08rem 0.5rem;
+  border: 1px dashed var(--kb-border-strong); border-radius: var(--kb-radius-pill);
+  font-size: 0.6rem; color: var(--kb-hint);
+}
+.kb-graph .kb-graph-panel--ghost .kb-graph-panel__title { color: var(--kb-secondary); }
+
+/* ---- Tag pill (panel) — the .kb-tag design-system pill (matches §7 md-tag) */
+.kb-graph .kb-tag {
+  display: inline-block; background: var(--kb-tag-bg); color: var(--kb-tag-fg);
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius-pill);
+  padding: 0.1em 0.6em; font-size: 0.66rem; text-decoration: none;
+  transition: border-color var(--kb-ease), color var(--kb-ease);
+}
+.kb-graph a.kb-tag:hover { color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+
+/* ---- Empty / loading states --------------------------------------------- */
+.kb-graph .kb-graph-empty {
+  position: absolute; inset: 0; display: grid; place-content: center;
+  justify-items: center; row-gap: 0.15rem; text-align: center; padding: 1rem; z-index: 1;
+}
+.kb-graph .kb-graph-empty__icon { color: var(--kb-hint); margin-bottom: 0.35rem; }
+.kb-graph .kb-graph-empty__title { font-family: var(--kb-font-display); font-size: 0.95rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-graph .kb-graph-empty__sub { font-size: 0.72rem; line-height: 1.55; color: var(--kb-secondary); max-width: 21rem; }
+.kb-graph .kb-graph-empty__sub code { font-family: var(--kb-font-mono); font-size: 0.92em; color: var(--kb-secondary); background: none; padding: 0; }
+.kb-graph .kb-graph-empty__sub a { color: var(--kb-accent); }
+
+/* ---- Focus & links ------------------------------------------------------- */
+.kb-graph a { color: var(--kb-accent); }
+.kb-graph a:hover { color: var(--kb-accent-strong); }
+.kb-graph button:focus-visible,
+.kb-graph a:focus-visible,
+.kb-graph .kb-graph__canvas:focus-visible { outline: 2px solid var(--kb-accent); outline-offset: 1px; }
+
+/* ==========================================================================
+   §10d · Reduced motion
+   --------------------------------------------------------------------------
+   Overlay transitions off; the ENGINE also skips the animated settle (paints
+   the settled layout on frame one) and snaps pan/zoom — see graph.js and the
+   motion note in the §10a tokens.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .kb-graph, .kb-graph * { transition: none !important; }
+}

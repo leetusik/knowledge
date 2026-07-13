@@ -9,6 +9,19 @@ CJK lunr packs, the hero search toggle, the Recent-list DOM adjacency, no
 leaked local paths or CDN scripts). All failures are collected and reported
 together; exits non-zero if any invariant is violated, else prints PASS.
 
+Custom-JS invariant (P6.S2): the site ships EXACTLY one vendored, no-CDN
+script. ``mkdocs.yml`` must declare ``extra_javascript`` with its entries ==
+``["javascripts/graph.js"]`` and nothing else (this flipped the pre-P6.S2
+"extra_javascript must be absent" guard, in the same slice that added the
+entry); ``docs/javascripts/graph.js`` + ``docs/graph.md`` (with ``hide:``
+frontmatter) must exist; and the built ``site/`` must ship
+``site/javascripts/graph.js`` and a ``site/graph/index.html`` that mounts
+``.kb-graph`` with a ``data-graph-src`` and references ``javascripts/graph.js``.
+The pre-existing all-pages CDN scan still fails on any external
+``<script src="http…">`` (so the graph page cannot reintroduce Iconify), and
+``site/graph.json`` still cannot leak a local path — the no-CDN /
+no-``/Users/`` invariants are preserved.
+
 Usage:
     python3 scripts/site_smoke.py                  # check the repo root
     python3 scripts/site_smoke.py --root /some/dir  # check a doctored copy
@@ -67,8 +80,26 @@ def check_source(root: Path, failures: list[str]) -> None:
         failures.append("mkdocs.yml: forbidden top-level 'strict:' key present")
     if not re.search(r"(?m)^\s*font:\s*false\s*$", text):
         failures.append("mkdocs.yml: theme.font: false is missing")
-    if re.search(r"(?m)^extra_javascript:", text):
-        failures.append("mkdocs.yml: extra_javascript: present (must stay absent)")
+
+    # P6.S2: extra_javascript must be present and list EXACTLY the vendored,
+    # no-CDN renderer — nothing else. (Flipped the pre-P6.S2 "must be absent"
+    # guard, in the same slice that adds the entry.)
+    ejs_match = re.search(r"(?ms)^extra_javascript:\n((?:\s*-\s*\S+\s*\n?)+)", text)
+    if not ejs_match:
+        failures.append("mkdocs.yml: extra_javascript: missing (must list exactly javascripts/graph.js)")
+    else:
+        ejs_entries = re.findall(r"-\s*(\S+)", ejs_match.group(1))
+        if ejs_entries != ["javascripts/graph.js"]:
+            failures.append(
+                f"mkdocs.yml: extra_javascript entries must be exactly ['javascripts/graph.js'], found {ejs_entries}"
+            )
+    if not (root / "docs" / "javascripts" / "graph.js").is_file():
+        failures.append("docs/javascripts/graph.js missing (referenced by mkdocs.yml extra_javascript:)")
+    graph_md = root / "docs" / "graph.md"
+    if not graph_md.is_file():
+        failures.append("docs/graph.md missing")
+    elif not re.search(r"(?m)^hide:", graph_md.read_text(encoding="utf-8")):
+        failures.append("docs/graph.md: missing 'hide:' frontmatter (full-bleed map needs hide: [navigation, toc])")
 
     # P6.S1: the graph-data hooks module must be wired in and present on disk.
     if not re.search(r"(?m)^hooks:", text):
@@ -153,6 +184,21 @@ def check_built(root: Path, failures: list[str]) -> None:
     for project in PROJECTS:
         if not (site_dir / project / "index.html").is_file():
             failures.append(f"site/{project}/index.html missing")
+
+    # P6.S2: the vendored renderer must ship, and the graph page must mount it.
+    if not (site_dir / "javascripts" / "graph.js").is_file():
+        failures.append("site/javascripts/graph.js missing (extra_javascript entry not shipped)")
+    graph_page = site_dir / "graph" / "index.html"
+    if not graph_page.is_file():
+        failures.append("site/graph/index.html missing (docs/graph.md not built)")
+    else:
+        gh = graph_page.read_text(encoding="utf-8")
+        if "kb-graph" not in gh:
+            failures.append("site/graph/index.html: missing '.kb-graph' mount")
+        if "data-graph-src" not in gh:
+            failures.append("site/graph/index.html: missing 'data-graph-src' mount attribute")
+        if "javascripts/graph.js" not in gh:
+            failures.append("site/graph/index.html: does not reference 'javascripts/graph.js'")
 
     if (site_dir / "versions").exists():
         failures.append("site/versions/ present (exclude_docs regression)")
