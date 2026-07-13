@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P6`
-- Current slice: `P6.DECOMP`
-- Next slice: `P6.REVIEW`
+- Current slice: `P6.S1`
+- Next slice: `P6.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T02:40:02+09:00`
+- Rebuilt at: `2026-07-14T02:49:44+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
-| [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.DECOMP` | `works/phases/active/P6` |
+| [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.S1` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
 ## Phase P1: Bootstrap Intake
@@ -81,7 +81,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P6.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P6/slices/P6.DECOMP` |
+| [x] `P6.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P6/slices/P6.DECOMP` |
+| [ ] `P6.S1` | `todo` | Graph data pipeline + data-contract guard | `implementation` | `works/phases/active/P6/slices/P6.S1` |
+| [ ] `P6.S2` | `todo` | Interactive graph renderer, full-canvas page + JS guard flip | `implementation` | `works/phases/active/P6/slices/P6.S2` |
+| [ ] `P6.S3` | `todo` | Landing entry point + serve parity + ops hygiene | `implementation` | `works/phases/active/P6/slices/P6.S3` |
 | [ ] `P6.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
 
 ## Phase P7: Claude Code plugin
