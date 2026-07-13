@@ -62,6 +62,17 @@ extra_css:
 hooks:
   - scripts/graph_hook.py
 
+# P6.S2 — the repo's FIRST custom JS: the interactive knowledge-map renderer.
+# Vendored + hand-rolled (zero third-party code, zero CDN — no Iconify, no
+# d3): the map's force sim + canvas drawing all live in this one file, fetched
+# client-side alongside the graph.json the hooks module above emits. It no-ops
+# on every page except /graph/ (guarded on a .kb-graph mount). This is the ONLY
+# permitted extra_javascript entry: scripts/site_smoke.py allowlists exactly
+# `javascripts/graph.js` and still fails the build on any external
+# `<script src="http…">`, so the no-CDN invariant is preserved.
+extra_javascript:
+  - javascripts/graph.js
+
 # No `nav:` key and no `strict: true` — ever. Auto-nav from the docs/ tree is
 # what lets the /explain skill add pages with zero config; a nav: key would
 # orphan every new page, and strict would turn that into a serve failure.

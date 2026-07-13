@@ -155,6 +155,62 @@ S2 to flip in the same slice it adds `extra_javascript`). Negative-tested both w
 (missing `graph.json` → FAIL; doctored dead `related:` → ghost + `broken` edge, guard still
 PASS).
 
+### P6.S2 — Interactive graph renderer (implemented 2026-07-14)
+
+**Renderer landed:** `docs/javascripts/graph.js` (~640 lines, strict IIFE, zero third-party /
+zero CDN — the sim + canvas drawing all hand-rolled in one vendored file). No-op guard returns
+unless a `.kb-graph` mount exists. Fetches `data-graph-src` (`../graph.json`), builds the model
+from S1's `{version,projects,nodes,edges}` shape, then a hand-rolled force sim (hash-seeded
+deterministic placement → repulsion + link springs + centering + collision) settles in ~38
+ticks ≈ 600ms (`--kb-graph-settle`) and STOPS. Drawing grammar ported 1:1 from the mirror's
+`graph-render.js` (draw order, mark recipes, 3px label halo, α-dim). Full write-up:
+`slices/P6.S2/result.md`.
+
+**Locked-design mapping decisions worth carrying forward:**
+- **Sim force constants are engineering's** (the design's `graph-render.js` is a *drawing* spec,
+  not a layout engine — the guide says so). Final tuning (validated on a headless numeric
+  harness, not a browser): `REST_RELATED 110 / K 0.9`, `REST_TAG 160 / K 0.2`, `REPULSION 9000`
+  (cutoff 600²), `CENTER_K 0.016`, `LAYOUT_RADIUS 340`. Result: **related edges shorter/stronger
+  than tag edges** (avg 105 vs 182 world px) → a tight doc backbone with tags nestling
+  hub-and-spoke, honoring the plan literally; no overlaps (min pairwise 45); all positions finite.
+- **Zoom ladder is expressed in zoom RELATIVE to fit** (`displayZoom = z / fitZoom`), so the
+  idle/fit view = 100% → all doc labels (matches the design's idle page card). Fit zoom clamped
+  `[0.5, 1.5]`. This was the one ladder detail the design left in relative terms.
+- **Ink assignment** = S1's `projects[i]` order → `--kb-graph-project-{(i%3)+1}`; legend counts
+  read from the same list. Project inks stay data-viz-only; all interactive accents are teal.
+
+**Page + CSS integration (no `overrides/` template — pure CSS):**
+- `docs/graph.md`: `hide:[navigation,toc]` → auto-nav top tab for free; the mount carries the
+  canvas + JS-populated legend/zoom/tooltip/panel containers + empty/loading state + `<noscript>`.
+- Material renders the page inside `<article class="md-content__inner md-typeset">` and
+  **auto-injects an `<h1>Graph</h1>`** above the mount (no `#` heading in the body). §10b
+  visually-hides that h1 (sr-only), zeroes `.md-main__inner`/`.md-content__inner` margins + the
+  `::before` spacer, and breaks `.kb-graph` out full-bleed
+  (`width:100vw; margin-left:calc(50% − 50vw); height:calc(100dvh − 4.8rem)`), **all scoped via
+  `:has(.kb-graph)` so nothing else on the site is affected**. Chrome offset `--kb-graph-chrome:
+  4.8rem` = header 2.4rem + tabs 2.4rem (measured from the pinned Material CSS; the one knob to
+  retune if chrome height moves). `hide:[navigation,toc]` already drops both sidebars.
+- §10c overlay rules are scoped under `.kb-graph` so `.md-typeset` element styles don't bleed
+  into the cards; added a `.kb-tag` panel pill mirroring §7's `.md-tag`. §1–§9 untouched.
+
+**Guard flipped (same slice that adds `extra_javascript`):** `site_smoke.py` `check_source`
+replaced the `extra_javascript:`-forbidden assertion with an **exact allowlist**
+(`== ["javascripts/graph.js"]`) + `docs/javascripts/graph.js` and `docs/graph.md` (with `hide:`)
+presence; `check_built` now requires `site/javascripts/graph.js` + a `site/graph/index.html`
+that mounts `.kb-graph`/`data-graph-src` and references the script. The pre-existing all-pages
+CDN scan (unchanged) keeps Iconify/any external `<script src>` out; no-`/Users/` unchanged.
+Negative-tested both ways (`--root` copies): strip `extra_javascript` → allowlist FAIL; inject a
+CDN `<script>` into a built page → CDN-scan FAIL.
+
+**For S3:** (1) landing card into `docs/index.md`'s `.kb-grid` linking `graph/` — I did NOT
+touch `index.md`; preserve the hero/`#recent`/single-`#__search` guard invariants. (2) **Serve
+parity is S3's explicit check** — S1 verified the hook emits under `mkdocs build` only; S3 must
+confirm `graph.json` emits under live `mkdocs serve` (compose `kb`) and the map fetches +
+renders it. (3) Fetch + read-through links (`../` + node.url) + tag pills (`../tags/`) are all
+relative, so they resolve under both CI's `/knowledge/` base and local serve. (4) Visual QA
+(both schemes, settle, hover/selection, ladder, legend filters, reduced motion) is still owed —
+no browser was available this slice.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -177,6 +233,10 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `qa` (P6.S1): `site_smoke.py` gains `check_graph` (graph.json shape/id-uniqueness/endpoint-resolution/projects-sum/no-`/Users/`/doc-count==filesystem) + a `check_source` hooks-wiring assertion; `--root` supported for doctored-copy negatives.
 - `data`/`architecture` (P6.S1): build-time knowledge-graph **data contract** — node-selection rule (frontmatter `source` mapping w/ `project`; `docs/current` + `docs/versions` excluded), `{version, projects, nodes, edges}` schema, tags-as-nodes, ghost nodes + `broken` edges for dead `related:`, deterministic + publish-safe (repo-relative ids/urls, no timestamps).
 - `decisions` (P6.S1): ADR — data-generation **mechanism** (mkdocs hooks module over a standalone CI script, so it also runs under serve) + the node/edge **model** (docs + tag nodes, project as color not node, `related` directed with dead-link ghosts, `docs/current` exclusion).
+- `frontend` (P6.S2): the knowledge-map renderer + page + §10 CSS shipped — `docs/graph.md` (`hide:[navigation,toc]`, auto-nav tab), `docs/javascripts/graph.js` (the repo's first custom JS: vendored hand-rolled force sim + canvas drawing, no third-party/no CDN), and `extra.css` §10 (tokens/graph.css verbatim + full-bleed page via `:has(.kb-graph)` — no `overrides/` template — + overlay/legend/switch/zoom/tooltip/panel/empty layer, both schemes, reduced-motion). Marks/labels read `--kb-graph-*` live per paint so the Material scheme toggle repaints via a `data-md-color-scheme` MutationObserver.
+- `experience` (P6.S2): the live knowledge-map journey — settle-then-still ~600ms then no idle drift; pan / wheel-zoom / zoom-stack (+/−/fit) / node-drag / hover-neighborhood highlight; label Strategy A + zoom ladder (relative to fit: <60% hubs+tooltip, 60–110% all doc labels, >110%/hover/selected neighborhood tag labels fade ~80ms); click doc → info panel (project chip, title, `date · N tags · N links`, `.kb-tag` pills, read-through), ghost → "no document yet · 문서 없음" panel variant, tag → highlight-only; legend project click-to-filter + tag-visibility switch; empty/loading states; reduced-motion paints at rest.
+- `qa` (P6.S2): the JS guard was **flipped** — `site_smoke.py` replaced the `extra_javascript:`-forbidden assertion with an exact allowlist (`== ["javascripts/graph.js"]`) + `docs/javascripts/graph.js`/`docs/graph.md`(`hide:`) presence, and now asserts the built `site/javascripts/graph.js` + a `site/graph/index.html` that mounts `.kb-graph`/`data-graph-src`/the script; the pre-existing all-pages no-CDN scan and no-`/Users/` invariants are preserved (both negative-tested via `--root`).
+- `decisions` (P6.S2): ADR — the **renderer** is a hand-rolled force sim + canvas drawing vendored in ONE file (`docs/javascripts/graph.js`), zero third-party code and zero CDN, chosen over d3-force (which needs ≥3 micro-packages vendored) because the corpus is tiny (O(n²) sim trivial), the design's drawing spec is already renderer-agnostic hand-rolled canvas (ports 1:1), and zero third-party files keeps the no-CDN guard surface and P7 plugin packaging clean.
 
 ## Open Questions
 
