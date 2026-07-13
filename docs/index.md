@@ -50,4 +50,8 @@ hide:
     <span class="kb-card__title">Tags · 태그</span>
     <span class="kb-card__desc">Every explainer, grouped by topic — caching, security, deployment, and more.</span>
   </a>
+  <a class="kb-card" href="graph/">
+    <span class="kb-card__title">Graph · 지식 지도</span>
+    <span class="kb-card__desc">The whole library as an interactive map — every explainer a node, linked by shared topics and references.</span>
+  </a>
 </div>

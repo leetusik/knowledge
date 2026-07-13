@@ -22,6 +22,11 @@ invented claims. The library grows as I work.
 - **Publish-safe metadata** — document frontmatter (`source.repo`) is sanitized
   at write time (local paths become repo basenames; URLs pass through), so no
   filesystem details leak to the public site.
+- **Knowledge map** — an interactive
+  [graph](https://leetusik.github.io/knowledge/graph/) of the library (every
+  explainer a node, shared topics and references the edges): its `graph.json`
+  is emitted at build time by a MkDocs hook (`scripts/graph_hook.py`) and drawn
+  client-side with vendored, no-CDN JavaScript.
 
 ## Agentic workflow
 

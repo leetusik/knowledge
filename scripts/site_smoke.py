@@ -22,6 +22,11 @@ The pre-existing all-pages CDN scan still fails on any external
 ``site/graph.json`` still cannot leak a local path — the no-CDN /
 no-``/Users/`` invariants are preserved.
 
+Landing entry-point invariant (P6.S3): the built ``site/index.html`` must
+carry the ``.kb-card`` link to ``graph/`` (the landing grid's map entry) —
+keyed on the card class so it stays distinct from the auto-nav tab / footer
+/ ``rel=next`` links to ``graph/`` that exist regardless of the card.
+
 Usage:
     python3 scripts/site_smoke.py                  # check the repo root
     python3 scripts/site_smoke.py --root /some/dir  # check a doctored copy
@@ -180,6 +185,11 @@ def check_built(root: Path, failures: list[str]) -> None:
             failures.append(f"site/index.html: missing marker comment {MARKER!r}")
         if not BUILT_BULLET_RE.search(html):
             failures.append("site/index.html: no rendered Recent <li> bullet found")
+        # P6.S3: the landing grid links to the interactive graph page. Keyed on
+        # the .kb-card anchor so it stays distinct from the auto-nav tab / footer
+        # / rel=next links to graph/ that exist regardless of the landing card.
+        if not re.search(r'<a[^>]*class="kb-card"[^>]*href="graph/"', html):
+            failures.append("site/index.html: landing kb-card link to graph/ missing (P6.S3 graph entry card)")
 
     for project in PROJECTS:
         if not (site_dir / project / "index.html").is_file():
