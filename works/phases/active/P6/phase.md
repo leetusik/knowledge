@@ -305,3 +305,29 @@ Direction-setting decisions recorded below; the named slice's own `plan.md` fina
 - **Renderer direction (STILL OPEN — S2 finalizes; leaning: `d3-force` ~25 KB + custom canvas):** alternatives = full vendored graph lib, or fully hand-rolled canvas force sim. Corpus is tiny (≲ 6 docs + ~26 tag nodes) so all are viable; Obsidian feel = springy force layout + pan/zoom + drag + hover-neighborhood highlight + click-through. Must be vendored (no CDN). **The P6.S0 design's drawing spec (`graph-render.js`) is renderer-agnostic** — it specifies the mark grammar and draw order, not the layout engine — so this choice remains S2's, unconstrained by the design (engineering swaps the hand-placed layout for the real sim, keeps the drawing grammar). → **S2** finalizes.
 - **Tag-node visual treatment — RESOLVED by the P6.S0 design.** Tags = hollow rings 4.5px in the secondary tone (distinct from doc filled circles); the tags-as-nodes display is **toggleable** via the legend's tag-visibility switch (bottom-left). No longer an open S2 decision; S2 implements the locked treatment.
 - **`docs/current` inclusion behind a toggle** — deferred beyond v1 unless the operator asks.
+
+## Review summary (P6.REVIEW, 2026-07-14)
+
+**Verdict: PASS.** Full re-validation from a clean pinned-venv build (mkdocs-material
+9.7.6) was green on all eight checks: `mkdocs build` (artifacts present) → `site_smoke`
+PASS → determinism byte-identical → `node --check` OK → `--root` negative FAILs with
+exactly the allowlist violation → serve-parity curls 200 against the already-running
+`kb` server (graph.json v1, 6 doc + 26 tag nodes, no `/Users/`) → graph.json sanity-read
+matches the corpus exactly → `workflow.py validate` passed. Cross-cutting checks all
+hold: `mkdocs.yml` gained exactly `hooks:`+`extra_javascript:` (no `nav:`/`strict:`,
+`font:false`, pins intact); `extra.css` §10 append-only (351 add / 0 remove); no CDN /
+no new webfonts / no `/Users/` in shipped artifacts (the lone `/Users/` is a documenting
+docstring in the build-time `graph_hook.py`, never published; the Google-Fonts `@import`
+is the pre-existing P5 line); `docs/current`+`docs/versions` untouched by S0–S3; P4
+`related:` consumed read-only; P7/SaaS not precluded (self-contained machinery). The four
+deliberately-open items are non-defects.
+
+**Docs consolidated (7 new versions, source P6.REVIEW):** architecture v0005, data
+v0004, frontend v0003, experience v0003, operations v0006, qa v0003, decisions v0006.
+
+**Owed operator follow-up:** browser **visual QA** of the map (both schemes, settle
+animation, hover/selection + info panel, zoom-ladder labels, legend filter + tag switch,
+reduced motion, landing card) — no browser in the build harness. Also opine on the
+graph-page footer sitting just below the viewport-height map (flagged, not a defect).
+The orchestrator records the verdict via `review-phase` (the executor does not transition
+status).
