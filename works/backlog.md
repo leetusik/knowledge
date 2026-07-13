@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P6`
-- Current slice: `P6.S3`
-- Next slice: `P6.REVIEW`
+- Current slice: `P6.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T04:50:21+09:00`
+- Rebuilt at: `2026-07-14T05:01:00+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
-| [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.S3` | `works/phases/active/P6` |
+| [ ] `P6` | `planned` | `pending` | Obsidian-like knowledge graph | `P6.REVIEW` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
 ## Phase P1: Bootstrap Intake
@@ -85,7 +85,7 @@
 | [x] `P6.S0` | `done` | Design co-work — knowledge-graph design via Claude Design | `implementation` | `works/phases/active/P6/slices/P6.S0` |
 | [x] `P6.S1` | `done` | Graph data pipeline + data-contract guard | `implementation` | `works/phases/active/P6/slices/P6.S1` |
 | [x] `P6.S2` | `done` | Interactive graph renderer, full-canvas page + JS guard flip | `implementation` | `works/phases/active/P6/slices/P6.S2` |
-| [ ] `P6.S3` | `todo` | Landing entry point + serve parity + ops hygiene | `implementation` | `works/phases/active/P6/slices/P6.S3` |
+| [x] `P6.S3` | `done` | Landing entry point + serve parity + ops hygiene | `implementation` | `works/phases/active/P6/slices/P6.S3` |
 | [ ] `P6.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
 
 ## Phase P7: Claude Code plugin

@@ -211,6 +211,61 @@ relative, so they resolve under both CI's `/knowledge/` base and local serve. (4
 (both schemes, settle, hover/selection, ladder, legend filters, reduced motion) is still owed —
 no browser was available this slice.
 
+### P6.S3 — Landing entry point + serve parity + ops hygiene (implemented 2026-07-14)
+
+**Landing card shape (`docs/index.md`):** one graph `.kb-card` appended as the last item of
+the existing `.kb-grid` (now **5** cards: changple5 · hi2vi_web · bootstrap · Tags · Graph),
+matching the sibling cards byte-for-byte in markup + voice — `<a class="kb-card" href="graph/">`
+(directory URL, no leading slash → resolves under both CI `/knowledge/` and local serve) with
+`<span class="kb-card__title">Graph · 지식 지도</span>` (Korean rides along, mirroring the Tags
+card's `Tags · 태그`) + a one-line `.kb-card__desc`. The hero, the single `for="__search"`
+label, `<div id="recent">`, the `<!-- explain:recent -->` marker, and the Recent bullets are
+**byte-identical** (verified: `git diff` is a single +4-line hunk; the marker region lines
+24–33 hash-match HEAD). Card is raw HTML → mkdocs passes it through verbatim (no href
+rewrite), so the built `site/index.html` carries `<a class="kb-card" href="graph/">` exactly.
+
+**Serve parity CONFIRMED (compose `kb`, `mkdocs serve --livereload`, base
+`http://localhost:8765/knowledge/`):** the S1 hook's `on_post_build` **does fire under live
+serve**, not just `mkdocs build`. Evidence (curl, all green):
+- `GET /knowledge/graph.json` → **200**, valid JSON, `version==1`, **6 doc** + 26 tag nodes,
+  30 edges, projects `[changple5:4, bootstrap…:1, hi2vi_web:1]`, no `/Users/` leak.
+- `GET /knowledge/graph/` → **200**, contains `kb-graph`, `data-graph-src="../graph.json"`,
+  `<script src="../javascripts/graph.js">`.
+- `GET /knowledge/javascripts/graph.js` → **200** (35,268 bytes, the vendored renderer).
+- `GET /knowledge/` → **200**, carries the new `<a class="kb-card" href="graph/">` +
+  `Graph · 지식 지도`.
+So the novel hooks mechanism needs zero serve-specific fixes — the design (writes to a temp
+`site_dir`, reassigns the URL map per rebuild, never writes into `docs/`) holds under serve;
+no watch-rebuild loop observed across many live-reloads. **No in-scope defect fixes were
+needed** (S2's `graph.md`/`graph.js`/`extra.css §10` untouched; `mkdocs.yml` untouched).
+
+**Guard (`scripts/site_smoke.py`, additive):** `check_built` now asserts the built
+`site/index.html` carries `<a…class="kb-card"…href="graph/">` — keyed on the card class so it
+is distinct from the auto-nav tab / footer / `rel=next` links to `graph/` that exist
+regardless of the landing card. Negative-tested (`--root` copy): remove the graph `.kb-card`
+block from a copied built `index.html` → guard **FAILs with exactly 1 violation** (the
+graph-card assertion), while the 4 remaining nav/footer/rel `href="graph/"` links do **not**
+satisfy it. All prior invariants still PASS.
+
+**Ops hygiene:** `README.md` "How it's built" gains a one-bullet **Knowledge map** mention
+(interactive `/graph/`, `graph.json` emitted at build time by `scripts/graph_hook.py`, drawn
+client-side with vendored no-CDN JS) — matches the existing bold-lead-in bullet style.
+`.gitignore` still covers `site/` (line 2) — verified, unchanged.
+
+**Container teardown note:** the compose `kb` service was **already running** before this
+slice (`docker compose up -d kb` reported "Running", not "Started"; `restart: unless-stopped`;
+serving since 06:55). I did not start it, so per "tear down what you start" I **left it
+running as found** rather than kill the operator's persistent live-reload dev server. If a
+clean stop is wanted: `docker compose down kb` (or `stop kb`).
+
+**Still owed for REVIEW / operator (unchanged from S2, restated):** browser **visual QA** —
+no browser in this harness, so the settle animation, both color schemes, hover/selection
+dimming + info panel, the zoom-ladder label transitions, legend project-filter + tag-visibility
+switch, and the reduced-motion path are all still un-eyeballed. Also S2's flagged **graph-page
+footer behavior**: with `navigation.footer` on, the footer sits just below the viewport-height
+map (a small scroll reveals it) — a known, deliberately-unchanged behavior; flag only if the
+operator finds it undesirable.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -237,6 +292,9 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `experience` (P6.S2): the live knowledge-map journey — settle-then-still ~600ms then no idle drift; pan / wheel-zoom / zoom-stack (+/−/fit) / node-drag / hover-neighborhood highlight; label Strategy A + zoom ladder (relative to fit: <60% hubs+tooltip, 60–110% all doc labels, >110%/hover/selected neighborhood tag labels fade ~80ms); click doc → info panel (project chip, title, `date · N tags · N links`, `.kb-tag` pills, read-through), ghost → "no document yet · 문서 없음" panel variant, tag → highlight-only; legend project click-to-filter + tag-visibility switch; empty/loading states; reduced-motion paints at rest.
 - `qa` (P6.S2): the JS guard was **flipped** — `site_smoke.py` replaced the `extra_javascript:`-forbidden assertion with an exact allowlist (`== ["javascripts/graph.js"]`) + `docs/javascripts/graph.js`/`docs/graph.md`(`hide:`) presence, and now asserts the built `site/javascripts/graph.js` + a `site/graph/index.html` that mounts `.kb-graph`/`data-graph-src`/the script; the pre-existing all-pages no-CDN scan and no-`/Users/` invariants are preserved (both negative-tested via `--root`).
 - `decisions` (P6.S2): ADR — the **renderer** is a hand-rolled force sim + canvas drawing vendored in ONE file (`docs/javascripts/graph.js`), zero third-party code and zero CDN, chosen over d3-force (which needs ≥3 micro-packages vendored) because the corpus is tiny (O(n²) sim trivial), the design's drawing spec is already renderer-agnostic hand-rolled canvas (ports 1:1), and zero third-party files keeps the no-CDN guard surface and P7 plugin packaging clean.
+- `experience`/`frontend` (P6.S3): the knowledge map is now **reachable from the landing page** — a graph `.kb-card` in `docs/index.md`'s `.kb-grid` (now 5 cards: the 3 projects + Tags + Graph), `Graph · 지식 지도`, linking `graph/` (relative, resolves under CI `/knowledge/` and local serve); it is also on the auto-nav top tab (from S2). The map's landing entry closes the journey: hero/search → Recent → Browse (projects · Tags · Graph).
+- `operations` (P6.S3): **serve parity confirmed** — the S1 `graph_hook.py` `on_post_build` fires under live `mkdocs serve` (compose `kb`, base `/knowledge/`), not just `mkdocs build`; curl-verified `graph.json` (200, version 1, 6 doc nodes) + `/graph/` + `/javascripts/graph.js` + landing all serve correctly, no watch-rebuild loop. Local dev workflow (`docker compose up -d kb` at `http://localhost:8765/knowledge/`) unchanged; `.gitignore` still excludes `site/`; README "How it's built" now documents the knowledge map.
+- `qa` (P6.S3): `site_smoke.py` `check_built` gains a **landing graph-link assertion** — the built `site/index.html` must carry the `.kb-card` link to `graph/` (keyed on the card class, distinct from the auto-nav tab / footer / `rel=next` links to `graph/`); negative-tested via a `--root` doctored copy (card removed → exactly 1 violation).
 
 ## Open Questions
 
