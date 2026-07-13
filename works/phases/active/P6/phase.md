@@ -111,6 +111,50 @@ _The design S1–S3 plan against. Delivered by operator co-design in Claude Desi
 - **Ghost nodes** carry the raw unresolved path as `title` (panel shows it + "linked from …" + a "no document yet" badge, no read-through).
 - **Tag nodes need no `url`** — they are not navigation targets.
 
+### P6.S1 — Graph data pipeline (implemented 2026-07-14)
+
+**Mechanism landed:** mkdocs `hooks:` module at `scripts/graph_hook.py` (block-list in
+`mkdocs.yml`, PyYAML-only, no `server/*` import). `on_files` reassigns a module-level
+`{src_uri: File.url}` map; `on_post_build` walks `config["docs_dir"]`, parses frontmatter
+itself, and writes `graph.json` to `config["site_dir"]`. Verified end-to-end via a
+CI-parity venv build (mkdocs-material 9.7.6). Full write-up: `slices/P6.S1/result.md`.
+
+**Final emitted schema (locked for S2 — this is the real shape):**
+`{version:1, projects, nodes, edges}`, serialized `ensure_ascii=False, indent=2,
+sort_keys=True` + trailing newline; two builds byte-identical.
+- `projects`: `[{name, docs}]` ordered **(doc-count desc, name asc)** — today
+  `[changple5:4, bootstrap_agentic_workspace.sh:1, hi2vi_web:1]`. This order **is** the S2
+  ink-assignment order (`i % 3`); the legend reads `docs` counts from it.
+- doc node: `{id, type:"doc", title, url, date, project, tags, degree}` — `id` = repo-
+  relative path under `docs/` (matches `related:` authoring, e.g. `changple5/…-p35-….md`);
+  `url` = directory-style `File.url`, no leading slash (e.g. `changple5/…-p35-…/`); `date`
+  = ISO string.
+- tag node: `{id:"tag:<t>", type:"tag", title:<t>, degree}` — no `url`.
+- missing/ghost node: `{id:<raw path>, type:"missing", title:<raw path>, degree}` — no
+  `url`; emitted only for an unresolved `related:` target.
+- edge: `{source, target, kind}` (+ `"broken": true` on unresolved `related`); `related`
+  directed as authored, `tag` connects doc ↔ `tag:<t>`; self-refs + dup `related:` dropped.
+- `degree` = incident edge count over the emitted edge list (drives the r 6→14px ramp).
+
+**Today's numbers (verified):** 6 doc + 26 tag = 32 nodes; 3 `related` + 27 `tag` = 30
+edges; 0 broken, 0 ghost. Sparse `related` (one 3-doc changple5 cluster; `performance` the
+only shared tag) → the map's connective tissue is tag spokes; hub-and-spoke, not a mesh.
+
+**Hook serve behavior (design intent; live serve NOT yet exercised — that's S3):** writes
+to `site_dir` (a temp dir under serve, **never** `docs/` → no watch-rebuild loop) and
+**reassigns** the URL map every `on_files` (never appends → no stale URLs across serve
+rebuilds). Verified under `mkdocs build` ×2 (byte-identical). S3 owns confirming
+`graph.json` actually emits under live `mkdocs serve`.
+
+**Guard (data contract) added to `site_smoke.py`, additive + stdlib-only:** `check_source`
+now asserts the `hooks:` wiring + file presence; new `check_graph` locks shape / id
+uniqueness / endpoint-resolution / `projects`-sum / no-`/Users/` / doc-count == filesystem
+count (`docs/*/*.md` depth-2, excl. `index.md` + reserved dirs — self-adapts to new
+docs/projects). The `extra_javascript:`-forbidden assertion is **untouched** (still red for
+S2 to flip in the same slice it adds `extra_javascript`). Negative-tested both ways
+(missing `graph.json` → FAIL; doctored dead `related:` → ghost + `broken` edge, guard still
+PASS).
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -129,6 +173,10 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `frontend`: graph design tokens/components delivered via Claude Design (P6.S0) — additive `--kb-graph-*` token set, mark grammar (docs/tags/ghost, related vs tag edges), page anatomy (full-bleed map, both sidebars suppressed, overlay cards).
 - `experience`: knowledge-map journey designed (P6.S0) — library-map direction, label Strategy A, zoom ladder, project-ink legend + tag-visibility switch, hover/selection info panel.
 - `decisions`: ADR candidate (P6.S0) — project-ink categorical set as a **documented data-viz-only accent extension** (teal-only rule preserved for interactive UI), Claude-Design provenance.
+- `operations` (P6.S1): the repo's first mkdocs `hooks:` module — `scripts/graph_hook.py` emits `graph.json` into `site/` at build time, running in both `mkdocs build` (CI/deploy) and `mkdocs serve` (local), zero `pages.yml` changes; browser-only site → graph data must be a static build artifact.
+- `qa` (P6.S1): `site_smoke.py` gains `check_graph` (graph.json shape/id-uniqueness/endpoint-resolution/projects-sum/no-`/Users/`/doc-count==filesystem) + a `check_source` hooks-wiring assertion; `--root` supported for doctored-copy negatives.
+- `data`/`architecture` (P6.S1): build-time knowledge-graph **data contract** — node-selection rule (frontmatter `source` mapping w/ `project`; `docs/current` + `docs/versions` excluded), `{version, projects, nodes, edges}` schema, tags-as-nodes, ghost nodes + `broken` edges for dead `related:`, deterministic + publish-safe (repo-relative ids/urls, no timestamps).
+- `decisions` (P6.S1): ADR — data-generation **mechanism** (mkdocs hooks module over a standalone CI script, so it also runs under serve) + the node/edge **model** (docs + tag nodes, project as color not node, `related` directed with dead-link ghosts, `docs/current` exclusion).
 
 ## Open Questions
 

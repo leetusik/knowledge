@@ -70,6 +70,14 @@ def check_source(root: Path, failures: list[str]) -> None:
     if re.search(r"(?m)^extra_javascript:", text):
         failures.append("mkdocs.yml: extra_javascript: present (must stay absent)")
 
+    # P6.S1: the graph-data hooks module must be wired in and present on disk.
+    if not re.search(r"(?m)^hooks:", text):
+        failures.append("mkdocs.yml: missing top-level 'hooks:' key (must list scripts/graph_hook.py)")
+    elif "scripts/graph_hook.py" not in text:
+        failures.append("mkdocs.yml: hooks: must reference scripts/graph_hook.py")
+    if not (root / "scripts" / "graph_hook.py").is_file():
+        failures.append("scripts/graph_hook.py missing (referenced by mkdocs.yml hooks:)")
+
     plugins_match = re.search(r"(?ms)^plugins:\n(.*?)(?=^\S|\Z)", text)
     plugins_block = plugins_match.group(1) if plugins_match else ""
     lang_match = re.search(r"lang:\s*\n((?:\s*-\s*\w+\s*\n?)+)", plugins_block)
@@ -163,6 +171,81 @@ def check_built(root: Path, failures: list[str]) -> None:
         failures.append(f'CDN <script src="http…"> found in {len(cdn_scripts)} built page(s): {", ".join(cdn_scripts[:5])}')
 
 
+def check_graph(root: Path, failures: list[str]) -> None:
+    """Assert the P6.S1 graph.json data contract in the built site/ output."""
+    graph_path = root / "site" / "graph.json"
+    if not graph_path.is_file():
+        failures.append("site/graph.json missing (graph_hook.py did not emit it)")
+        return
+
+    raw = graph_path.read_text(encoding="utf-8")
+    if "/Users/" in raw:
+        failures.append("site/graph.json: local path leak ('/Users/') — must be repo-relative")
+    try:
+        graph = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        failures.append(f"site/graph.json: invalid JSON ({exc})")
+        return
+
+    if graph.get("version") != 1:
+        failures.append(f"site/graph.json: version must be 1, found {graph.get('version')!r}")
+
+    projects, nodes, edges = graph.get("projects"), graph.get("nodes"), graph.get("edges")
+    for name, value in (("projects", projects), ("nodes", nodes), ("edges", edges)):
+        if not isinstance(value, list):
+            failures.append(f"site/graph.json: '{name}' must be a list")
+    projects = projects if isinstance(projects, list) else []
+    nodes = nodes if isinstance(nodes, list) else []
+    edges = edges if isinstance(edges, list) else []
+
+    node_ids: set = set()
+    doc_count = 0
+    for n in nodes:
+        nid = n.get("id")
+        if nid in node_ids:
+            failures.append(f"site/graph.json: duplicate node id {nid!r}")
+        node_ids.add(nid)
+        if not all(k in n for k in ("id", "type", "title")):
+            failures.append(f"site/graph.json: node {nid!r} missing one of id/type/title")
+        ntype = n.get("type")
+        if ntype not in ("doc", "tag", "missing"):
+            failures.append(f"site/graph.json: node {nid!r} has invalid type {ntype!r}")
+        if ntype == "doc":
+            doc_count += 1
+            for key in ("url", "date", "project", "tags", "degree"):
+                if key not in n:
+                    failures.append(f"site/graph.json: doc node {nid!r} missing '{key}'")
+
+    for e in edges:
+        if e.get("kind") not in ("related", "tag"):
+            failures.append(f"site/graph.json: edge {e!r} has invalid kind {e.get('kind')!r}")
+        for endpoint in ("source", "target"):
+            if e.get(endpoint) not in node_ids:
+                failures.append(
+                    f"site/graph.json: edge endpoint {e.get(endpoint)!r} does not resolve to a node id"
+                )
+
+    proj_sum = sum(p.get("docs", 0) for p in projects if isinstance(p, dict))
+    if proj_sum != doc_count:
+        failures.append(
+            f"site/graph.json: projects doc counts sum ({proj_sum}) != doc-node count ({doc_count})"
+        )
+
+    # Doc-node count must equal the filesystem count of docs/*/*.md at depth 2,
+    # excluding index.md and reserved dirs — self-adapts to new docs/projects.
+    reserved = {"current", "versions", "stylesheets", "assets", "javascripts"}
+    docs_dir = root / "docs"
+    fs_count = 0
+    if docs_dir.is_dir():
+        for sub in docs_dir.iterdir():
+            if sub.is_dir() and sub.name not in reserved:
+                fs_count += sum(1 for f in sub.glob("*.md") if f.name != "index.md")
+    if doc_count != fs_count:
+        failures.append(
+            f"site/graph.json: doc-node count ({doc_count}) != filesystem docs count ({fs_count})"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=None, help="repo/tree root to check (default: this script's repo root)")
@@ -172,6 +255,7 @@ def main() -> int:
     failures: list[str] = []
     check_source(root, failures)
     check_built(root, failures)
+    check_graph(root, failures)
 
     if failures:
         print(f"FAIL — {len(failures)} site invariant(s) violated (root: {root}):")
