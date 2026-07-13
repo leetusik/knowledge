@@ -51,6 +51,17 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+# P6.S1 — build-time knowledge-graph data. This hooks module walks the docs/ tree,
+# parses the explainer-doc frontmatter, and emits a deterministic, publish-safe
+# graph.json into site/ (fetched client-side, like site/search/search_index.json).
+# It runs in both `mkdocs build` (CI + deploy) and `mkdocs serve` (local dev), so it
+# needs zero pages.yml wiring; the path is relative to this file, so it resolves in
+# CI, a local venv, and the compose image at /docs. No `extra_javascript:` here — the
+# renderer and its guard-flip are P6.S2. scripts/site_smoke.py asserts the graph.json
+# data contract this emits.
+hooks:
+  - scripts/graph_hook.py
+
 # No `nav:` key and no `strict: true` — ever. Auto-nav from the docs/ tree is
 # what lets the /explain skill add pages with zero config; a nav: key would
 # orphan every new page, and strict would turn that into a serve failure.
