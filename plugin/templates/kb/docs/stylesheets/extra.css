@@ -1,0 +1,946 @@
+/* ==========================================================================
+   Knowledge Base — "Calm editorial library" design system
+   --------------------------------------------------------------------------
+   Built on mkdocs-material 9.7.6 (pinned). Integrated from the operator's
+   Claude Design project "Knowledge Base Design System" (all 10 targets
+   delivered) — replacing the P5.S1 interim baseline. Provenance is the
+   design-system mirror shipped for P5.S5; this file concatenates that system's
+   load order (fonts -> tokens -> component hooks -> page treatments) into the
+   one stylesheet mkdocs-material loads after its own CSS, so these :root /
+   scheme overrides win.
+
+   Direction: warm ivory / charcoal paper, one deep-teal accent (LOCKED palette
+   1a Teal, Target 1), serif display (Fraunces) over a clean sans (Source Sans
+   3), JetBrains Mono for code, generous whitespace, soft warm hairlines, no
+   heavy shadows. Reads like a well-set library, not a stock Material demo.
+
+   Fonts: all three families load from Google Fonts via the single @import
+   below (exact weights the system needs: Source Sans 3 500/600, JetBrains Mono
+   500). mkdocs.yml sets `theme.font: false` so Material does not also request
+   Roboto; the --md-*-font-family tokens in §2 point Material at these families
+   (each with a Hangul fallback for mixed EN/KR content). Korean is not a
+   webfont (budget: 2 text + 1 code) — it renders on readers' system fonts.
+
+   Section map:
+     §1  Color tokens        (Target 1, LOCKED — verbatim)
+     §2  Typography tokens   (Target 2 — verbatim :root)
+     §3  Shape/motion tokens (Target 2 companion — verbatim :root)
+     §4  Site chrome hooks    (Target 4)
+     §5  Content typography hooks (Target 5) + S1-retained permalinks/selection
+     §6  Cards & grid utility (Target 6) — .kb-grid / .kb-card
+     §7  Tag pills hooks      (Target 7)
+     §8  Search UI hooks      (Target 10)
+     §9  Page treatments      (Targets 8 & 9) — landing + article, for P5.S2/S3
+     §10 Graph                (P6 · knowledge map) — additive --kb-graph-* tokens
+                              + full-bleed page + overlays, for P6.S2
+   ========================================================================== */
+
+/* --- Webfonts: Fraunces (display) + Source Sans 3 (body) + JetBrains Mono
+       (code). One request, exact weights. @import must precede all rules. --- */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+/* ==========================================================================
+   §1 · Color tokens  (Target 1 · LOCKED, palette 1a Teal)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/colors.css.
+     --kb-*  = source of truth.   --md-*  = mappings onto mkdocs-material's
+   surface + ink tiers, pointed at the --kb-* tokens so both stay in lockstep.
+   Both schemes always: "default" = light (warm ivory), "slate" = dark (warm
+   charcoal). Teal is the ONLY accent hue; warm neutrals carry everything else.
+   ========================================================================== */
+
+/* -------- Light scheme (default) — warm ivory paper, ink text ------------- */
+[data-md-color-scheme="default"] {
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #f6f2e8;                        /* page background */
+  --kb-surface: #fffefa;                      /* raised surfaces: cards, search */
+  --kb-surface-sunken: #efe9db;               /* recessed: code blocks, header band */
+  --kb-border: #e5dcc8;                        /* soft warm hairline */
+  --kb-border-strong: #d8ccb3;                 /* firmer divider / emphasis edge */
+  --kb-accent: #0f6f66;                        /* deep teal — the one accent */
+  --kb-accent-strong: #0a544e;                 /* hover / pressed / emphasis */
+  --kb-accent-soft: rgba(15, 111, 102, 0.15);  /* selections, soft accent rules */
+  --kb-tag-bg: #eaf0ec;                        /* tag pill fill (cool-tinted neutral) */
+  --kb-tag-fg: #2c5b52;                        /* tag pill text */
+
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #26211c;                           /* primary text — warm near-black */
+  --kb-secondary: #5c5347;                     /* secondary text */
+  --kb-hint: #8f8676;                          /* hints, icons, captions */
+
+  /* ---- mkdocs-material surface tiers (page → deepest) ---- */
+  --md-default-bg-color: var(--kb-paper);
+  --md-default-bg-color--light: var(--kb-surface-sunken);
+  --md-default-bg-color--lighter: var(--kb-border);
+  --md-default-bg-color--lightest: var(--kb-border-strong);
+
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
+  --md-typeset-a-color: var(--kb-accent);
+  --md-typeset-mark-color: var(--kb-accent-soft);
+
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface-sunken);
+  --md-code-fg-color: #4a4136;
+
+  /* ---- Header / nav-tabs: wears the paper, ink text ---- */
+  --md-primary-fg-color: var(--kb-surface-sunken); /* header background */
+  --md-primary-fg-color--light: var(--kb-paper);
+  --md-primary-fg-color--dark: var(--kb-border);
+  --md-primary-bg-color: var(--kb-ink);            /* header text */
+  --md-primary-bg-color--light: var(--kb-secondary);
+
+  /* ---- Accent (interactive) ---- */
+  --md-accent-fg-color: var(--kb-accent-strong);
+  --md-accent-fg-color--transparent: var(--kb-accent-soft);
+  --md-accent-bg-color: var(--kb-surface);
+  --md-accent-bg-color--light: var(--kb-surface);
+
+  /* ---- Footer: warm near-black, editorial anchor ---- */
+  --md-footer-bg-color: var(--kb-ink);
+  --md-footer-bg-color--dark: #1f1a15;
+  --md-footer-fg-color: #f4efe4;
+  --md-footer-fg-color--light: #cbc2b2;
+  --md-footer-fg-color--lighter: #93897a;
+}
+
+/* -------- Dark scheme (slate) — warm charcoal paper, warm off-white text --- */
+[data-md-color-scheme="slate"] {
+  --md-hue: 34; /* warm-tint any Material-derived slate values */
+
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #1a1815;
+  --kb-surface: #232019;
+  --kb-surface-sunken: #2a261e;
+  --kb-border: #38332a;
+  --kb-border-strong: #453f34;
+  --kb-accent: #62bdb2;                          /* lighter teal for dark bg */
+  --kb-accent-strong: #86d4ca;
+  --kb-accent-soft: rgba(98, 189, 178, 0.20);
+  --kb-tag-bg: #24302b;
+  --kb-tag-fg: #97d2c7;
+
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #ece4d7;                             /* primary text — warm off-white */
+  --kb-secondary: #b6ad9d;
+  --kb-hint: #7e7566;
+
+  /* ---- mkdocs-material surface tiers (page → raised) ---- */
+  --md-default-bg-color: var(--kb-paper);
+  --md-default-bg-color--light: var(--kb-surface);
+  --md-default-bg-color--lighter: var(--kb-surface-sunken);
+  --md-default-bg-color--lightest: var(--kb-border);
+
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
+  --md-typeset-a-color: var(--kb-accent);
+  --md-typeset-mark-color: var(--kb-accent-soft);
+
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface);
+  --md-code-fg-color: #ded6c7;
+
+  /* ---- Header / nav-tabs ---- */
+  --md-primary-fg-color: var(--kb-surface);
+  --md-primary-fg-color--light: var(--kb-surface-sunken);
+  --md-primary-fg-color--dark: var(--kb-paper);
+  --md-primary-bg-color: var(--kb-ink);
+  --md-primary-bg-color--light: var(--kb-secondary);
+
+  /* ---- Accent (interactive) ---- */
+  --md-accent-fg-color: var(--kb-accent-strong);
+  --md-accent-fg-color--transparent: var(--kb-accent-soft);
+  --md-accent-bg-color: #16130f;
+  --md-accent-bg-color--light: #16130f;
+
+  /* ---- Footer ---- */
+  --md-footer-bg-color: #141210;
+  --md-footer-bg-color--dark: #100e0c;
+  --md-footer-fg-color: var(--kb-ink);
+  --md-footer-fg-color--light: var(--kb-secondary);
+  --md-footer-fg-color--lighter: var(--kb-hint);
+}
+
+/* ==========================================================================
+   §2 · Typography tokens  (Target 2)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/type.css. Families feed Material's
+   --md-text-font-family / --md-code-font-family (fully replacing them so the
+   Hangul fallback always applies); headings use --kb-font-display directly in
+   §5. Scale mirrors the live site's ~20px root. Names are stable.
+   ========================================================================== */
+:root {
+  /* ---- Families (source of truth) — each ends in a Hangul fallback ---- */
+  --kb-font-display: "Fraunces", "Iowan Old Style", Georgia, "Nanum Myeongjo",
+    "Apple SD Gothic Neo", serif;
+  --kb-font-body: "Source Sans 3", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --kb-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", "Apple SD Gothic Neo", monospace;
+
+  /* Map onto mkdocs-material's family variables (fully replace them so the
+     Korean fallback always applies) */
+  --md-text-font-family: var(--kb-font-body);
+  --md-code-font-family: var(--kb-font-mono);
+
+  /* ---- Type scale (rem, on a ~20px root — matches the live site) ---- */
+  --kb-text-h1: 2rem;        /* ~40px — page / article title */
+  --kb-text-h2: 1.45rem;     /* ~29px — section heading (gets a hairline rule) */
+  --kb-text-h3: 1.15rem;     /* ~23px — sub-section */
+  --kb-text-h4: 1rem;        /* ~20px — minor heading */
+  --kb-text-h5: 0.82rem;     /* ~16px — inline heading */
+  --kb-text-h6: 0.72rem;     /* ~14px — small-caps label (uppercase, tracked) */
+  --kb-text-body: 0.82rem;   /* ~16px — long-form body */
+  --kb-text-small: 0.78rem;  /* ~16px — captions, card descriptions */
+  --kb-text-caption: 0.72rem;/* ~14px — metadata, tag text, hints */
+
+  /* ---- Line-heights ---- */
+  --kb-leading-display: 1.15; /* h1 */
+  --kb-leading-heading: 1.25; /* h2–h4 */
+  --kb-leading-snug: 1.4;     /* UI text, cards */
+  --kb-leading-body: 1.72;    /* long-form reading */
+
+  /* ---- Weights (Fraunces + Source Sans 3 share these) ---- */
+  --kb-weight-regular: 400;
+  --kb-weight-medium: 500;
+  --kb-weight-semibold: 600; /* all display headings */
+  --kb-weight-bold: 700;
+
+  /* ---- Letter-spacing ---- */
+  --kb-tracking-display: -0.01em; /* tighten large serif headings */
+  --kb-tracking-body: 0.002em;    /* a hair of air in body text */
+  --kb-tracking-label: 0.08em;    /* uppercase h6 / eyebrow labels */
+
+  /* ---- Measure (reading column width) ---- */
+  --kb-measure: 42rem; /* long-form; keeps lines ~70–80 chars */
+}
+
+/* ==========================================================================
+   §3 · Shape, spacing & motion tokens  (Target 2 companion)
+   --------------------------------------------------------------------------
+   Landed verbatim from the delivered tokens/shape.css. Scheme-independent
+   structure: soft radii, a spacing rhythm, one gentle motion token, and the
+   ONE permitted shadow (a whisper of teal on card hover). Names are stable.
+   ========================================================================== */
+:root {
+  /* ---- Corner radii ---- */
+  --kb-radius: 0.55rem;      /* cards, code blocks, admonitions, search */
+  --kb-radius-sm: 0.35rem;   /* inline code, small chips */
+  --kb-radius-pill: 2rem;    /* tag pills */
+
+  /* ---- Spacing rhythm ---- */
+  --kb-space-xs: 0.35rem;
+  --kb-space-sm: 0.6rem;
+  --kb-space-md: 1rem;       /* default gap (grid, stack) */
+  --kb-space-lg: 1.5rem;     /* block separation */
+  --kb-space-xl: 2.4rem;     /* section separation (matches h2 margin-top) */
+  --kb-space-2xl: 4rem;      /* page-level rhythm */
+
+  /* ---- Motion ---- */
+  --kb-ease: 0.15s ease; /* the house transition — quiet, quick */
+
+  /* ---- Elevation ---- */
+  /* The only shadow in the system: a soft teal-tinted lift on card hover.
+     Everything else uses tone tiers + hairline borders. */
+  --kb-shadow-hover: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.10);
+}
+
+/* ==========================================================================
+   §4 · Site chrome  (Target 4) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   Header wears the paper (a warm sunken band, ink text — no colored bar);
+   depth is a single hairline border-bottom, never a drop shadow. Sidebar nav
+   reads like a table of contents; footer is a warm near-black anchor (colored
+   by the --md-footer-* tokens in §1). These are the delivered chrome.css
+   "mkdocs-material hooks" — pure re-skins riding on Material's base layout.
+   ========================================================================== */
+.md-header { box-shadow: none; border-bottom: 1px solid var(--kb-border); }
+.md-header--shadow { box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.06); } /* subtle lift only when scrolled */
+.md-header__title { font-family: var(--kb-font-display); font-size: 1.02rem; font-weight: var(--kb-weight-semibold); }
+.md-tabs { border-bottom: 1px solid var(--kb-border); }
+.md-nav__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
+.md-nav__link--active,
+.md-nav__link:active,
+.md-typeset .md-nav__link:hover { color: var(--kb-accent); }
+.md-search__form {
+  border-radius: var(--kb-radius); background: var(--kb-surface);
+  box-shadow: none; border: 1px solid var(--kb-border); transition: border-color var(--kb-ease);
+}
+.md-search__form:hover,
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form { border-color: var(--kb-accent); }
+.md-search__input::placeholder { color: var(--md-default-fg-color--lighter); }
+
+/* ==========================================================================
+   §5 · Content typography  (Target 5) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   The article reading experience on .md-typeset. Delivered content.css hooks,
+   plus the type ladder + body rhythm bridged onto .md-typeset from delivered
+   tokens (the hooks block set family/spacing but left the sizes/margins to the
+   portable .kb-prose; the ladder is a design signature, so it is wired here so
+   real articles get it). ADMONITION COLOR POLICY (teal-only): note = teal rail
+   + teal title; warning/others = firm warm-neutral rail. Differentiation is by
+   icon + label + weight, never a second hue.
+   ========================================================================== */
+.md-typeset { line-height: var(--kb-leading-body); font-size: var(--kb-text-body); }
+.md-typeset p, .md-typeset li { letter-spacing: var(--kb-tracking-body); }
+
+/* Headings — serif display on the restrained editorial ladder */
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4, .md-typeset h5 {
+  font-family: var(--kb-font-display); font-optical-sizing: auto; letter-spacing: var(--kb-tracking-display);
+}
+.md-typeset h1 {
+  font-size: var(--kb-text-h1); line-height: var(--kb-leading-display);
+  font-weight: var(--kb-weight-semibold); color: var(--md-default-fg-color); margin: 0 0 0.9rem;
+}
+.md-typeset h2 {
+  font-size: var(--kb-text-h2); line-height: var(--kb-leading-heading);
+  font-weight: var(--kb-weight-semibold); margin: 2.4rem 0 0.9rem;
+  padding-bottom: 0.35rem; border-bottom: 1px solid var(--md-default-fg-color--lightest); /* editorial section rule */
+}
+.md-typeset h3 { font-size: var(--kb-text-h3); line-height: var(--kb-leading-heading); font-weight: var(--kb-weight-semibold); margin: 1.9rem 0 0.6rem; }
+.md-typeset h4 { font-size: var(--kb-text-h4); font-weight: var(--kb-weight-semibold); margin: 1.4rem 0 0.5rem; }
+
+/* Links — teal, quiet underline that firms on hover */
+.md-typeset a {
+  text-decoration: underline; text-decoration-thickness: 1px;
+  text-decoration-color: var(--kb-accent-soft); text-underline-offset: 0.15em;
+  transition: color var(--kb-ease), text-decoration-color var(--kb-ease);
+}
+.md-typeset a:hover, .md-typeset a:focus { color: var(--kb-accent-strong); text-decoration-color: currentColor; }
+
+/* Permalinks + selection — realize the design's accent-usage rule (permalinks,
+   ::selection). No explicit delivery CSS ships for these, so they are retained
+   from the P5.S1 baseline, retargeted to the locked tokens. */
+.md-typeset .headerlink { color: var(--md-default-fg-color--lighter); transition: color var(--kb-ease); }
+.md-typeset :hover > .headerlink,
+.md-typeset :target > .headerlink,
+.md-typeset .headerlink:focus { color: var(--kb-accent); }
+::selection { background: var(--kb-accent-soft); }
+
+/* Blockquote — editorial lede / pull-quote */
+.md-typeset blockquote { border-left: 3px solid var(--kb-accent-soft); color: var(--md-default-fg-color--light); }
+
+/* Code — warm sunken block, hairline border, soft radius */
+.md-typeset code { border-radius: var(--kb-radius-sm); padding: 0.1em 0.4em; }
+.md-typeset .highlight > pre, .md-typeset pre > code { border-radius: var(--kb-radius); }
+.md-typeset .highlighttable, .md-typeset .highlight > pre {
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
+}
+
+/* Admonitions + collapsibles — teal-only policy (see header) */
+.md-typeset .admonition, .md-typeset details {
+  border: 1px solid var(--md-default-fg-color--lightest); border-left-width: 3px;
+  border-radius: var(--kb-radius); box-shadow: none; background: var(--kb-surface);
+}
+.md-typeset .admonition { border-left-color: var(--kb-border-strong); }
+.md-typeset .admonition.note { border-left-color: var(--kb-accent); }
+.md-typeset .admonition.note > .admonition-title { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+
+/* Tables — hairline frame, rounded, quiet header band */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius); overflow: hidden;
+}
+.md-typeset table:not([class]) th { background: var(--md-default-bg-color--light); font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
+.md-typeset table:not([class]) tr:hover { background: var(--md-default-bg-color--light); }
+
+/* ==========================================================================
+   §6 · Cards & grid utility  (Target 6) — .kb-grid / .kb-card
+   --------------------------------------------------------------------------
+   The landing / browse card and its responsive grid (the ONLY resting-to-hover
+   shadow in the system, --kb-shadow-hover). Delivered cards.css hooks, scoped
+   under .md-typeset so BOTH usages render identically on-site (md_in_html is
+   NOT enabled — put link text directly in the markup):
+     A) raw HTML:  <div class="kb-grid"><a class="kb-card">…</a></div>
+     B) markdown list turned into cards via attr_list:  - [x](y) — desc { .kb-grid }
+   Consumed by P5.S2's landing / browse redesign.
+   ========================================================================== */
+.md-typeset .kb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--kb-space-md); margin: var(--kb-space-lg) 0; padding: 0; list-style: none; }
+.md-typeset .kb-card,
+.md-typeset .kb-grid > li {
+  display: block; margin: 0; padding: 1.1rem 1.2rem; background: var(--kb-surface);
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
+  transition: border-color var(--kb-ease), box-shadow var(--kb-ease), transform var(--kb-ease);
+}
+.md-typeset a.kb-card,
+.md-typeset .kb-grid > li > a:first-child { text-decoration: none; color: inherit; }
+.md-typeset .kb-card:hover,
+.md-typeset .kb-grid > li:hover { border-color: var(--kb-accent); box-shadow: var(--kb-shadow-hover); transform: translateY(-1px); }
+.md-typeset .kb-card__title,
+.md-typeset .kb-grid > li > a:first-child {
+  display: block; font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: 1.02rem; color: var(--md-default-fg-color);
+}
+.md-typeset .kb-card__desc { display: block; margin-top: 0.35rem; color: var(--md-default-fg-color--light); font-size: var(--kb-text-small); }
+/* Optional footer meta row (count / tags / date) */
+.md-typeset .kb-card__meta {
+  display: flex; align-items: center; gap: 0.5rem; margin-top: 0.7rem;
+  font-family: var(--kb-font-mono); font-size: var(--kb-text-caption); color: var(--kb-hint);
+}
+
+/* ==========================================================================
+   §7 · Tag pills & tags page  (Target 7) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   The tags plugin emits a.md-tag pills and a [TAGS] index. Faint green-tinted
+   fill (--kb-tag-bg/--kb-tag-fg) ties them to the accent without a second hue;
+   pill shape = --kb-radius-pill. Delivered tags.css hooks.
+   ========================================================================== */
+.md-typeset .md-tag {
+  background: var(--kb-tag-bg); color: var(--kb-tag-fg);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: var(--kb-radius-pill); padding: 0.15em 0.7em; font-size: 0.72rem;
+  transition: border-color var(--kb-ease), color var(--kb-ease);
+}
+.md-typeset a.md-tag:hover { color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+
+/* ==========================================================================
+   §8 · Search UI  (Target 10) — mkdocs-material hooks
+   --------------------------------------------------------------------------
+   Surface only — matching/behavior stays the search plugin's (search.suggest +
+   search.highlight enabled). The field is skinned in §4; this skins the
+   results (meta band, hover, title face, teal-soft match highlight). Delivered
+   search.css hooks. P5.S3 (CJK search engineering) rides this styling.
+   ========================================================================== */
+.md-search__output { border-radius: var(--kb-radius); }
+.md-search-result__meta { color: var(--md-default-fg-color--light); background: var(--kb-surface-sunken); }
+.md-search-result__link:hover, .md-search-result__link[data-md-state="active"] { background: var(--md-default-bg-color--light); }
+.md-search-result__article .md-search-result__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); }
+.md-search-result mark { background: var(--kb-accent-soft); color: var(--md-default-fg-color); border-radius: 0.15em; }
+
+/* ==========================================================================
+   §9 · Page treatments  (Targets 8 & 9) — landing + article
+   --------------------------------------------------------------------------
+   Portable .kb-* page classes translated from the delivered
+   pages/landing.card.html + pages/article.card.html inline styles onto the
+   markup the site generates. Scoped under .md-typeset (page content lives
+   there) so they win specificity. These are STAGED for later slices to wire
+   into markup — they do NOT auto-apply and require no change to any generated
+   class:
+     · P5.S2 (landing/UX, done) dropped the hero + section heads + browse
+       grid into docs/index.md. attr_list cannot put a class on a <ul>, so
+       the Recent list is NOT `{ .kb-recent }` — it stays the bare machinery
+       list under <!-- explain:recent -->, reached instead via the `#recent +
+       ul` alias below (Recent section head gets `id="recent"`). Only the
+       <li>/<a> are styled; the date/project stay bare text nodes, so the
+       machinery's bullet inserts/removes still slot in unchanged.
+     · The article metadata line / related block / TOC classes are available
+       for a future per-page-HTML or template treatment (the site ships no
+       overrides/ today). The live right-hand "On this page" TOC is Material's
+       secondary nav, already accent-skinned by §4.
+   ========================================================================== */
+
+/* -------- Landing: hero -------------------------------------------------- */
+.md-typeset .kb-hero { margin-bottom: 2.8rem; }
+.md-typeset .kb-hero__eyebrow {
+  font-size: var(--kb-text-h6); text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-hint); font-weight: var(--kb-weight-semibold);
+}
+.md-typeset .kb-hero__title {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: 2.6rem; line-height: 1.08; letter-spacing: -0.015em; margin: 0.5rem 0 0.2rem;
+}
+.md-typeset .kb-hero__title span { color: var(--kb-secondary); }
+.md-typeset .kb-hero__lede {
+  font-size: 1.02rem; line-height: 1.55; color: var(--kb-secondary); max-width: 34rem; margin: 0.6rem 0 1.3rem;
+}
+
+/* -------- Landing: hero search affordance (P5.S3) ------------------------ */
+/* Zero-JS search entry point: a <label for="__search"> toggles Material's own
+   search checkbox (id="__search"), whose JS then focuses the search input. The
+   mock's bordered, rounded field with an inline magnifier + a `/` key hint —
+   purely additive, reusing §1–§3 tokens (no new color/font/webfont). The `/`
+   glyph mirrors Material's built-in "press / to search" keyboard shortcut. */
+.md-typeset .kb-hero__search {
+  display: flex; align-items: center; gap: 0.6rem;
+  max-width: 34rem; margin: 0.2rem 0 0; padding: 0.6rem 0.9rem;
+  background: var(--kb-surface); border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius); color: var(--kb-hint); cursor: text;
+  transition: border-color var(--kb-ease), color var(--kb-ease), box-shadow var(--kb-ease);
+}
+.md-typeset .kb-hero__search:hover {
+  border-color: var(--kb-accent); color: var(--kb-secondary); box-shadow: var(--kb-shadow-hover);
+}
+.md-typeset .kb-hero__search-icon { flex: none; color: var(--kb-hint); transition: color var(--kb-ease); }
+.md-typeset .kb-hero__search:hover .kb-hero__search-icon { color: var(--kb-accent); }
+.md-typeset .kb-hero__search-text { flex: 1 1 auto; font-size: var(--kb-text-body); }
+.md-typeset .kb-hero__search-text span[lang="ko"] { color: var(--kb-hint); }
+.md-typeset .kb-hero__search-key {
+  flex: none; font-family: var(--kb-font-mono); font-size: var(--kb-text-caption);
+  color: var(--kb-hint); background: var(--kb-surface-sunken);
+  border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm);
+  padding: 0.05rem 0.45rem; box-shadow: none; line-height: 1.4;
+}
+
+/* -------- Landing: section heading (title + "all →" link) ---------------- */
+.md-typeset .kb-sec {
+  margin: 0 0 0.9rem; display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest); padding-bottom: 0.35rem;
+}
+.md-typeset .kb-sec h2 {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: var(--kb-text-h3); margin: 0; padding: 0; border: 0;
+}
+.md-typeset .kb-sec a { font-size: var(--kb-text-caption); color: var(--kb-accent); text-decoration: none; }
+.md-typeset .kb-sec a:hover { color: var(--kb-accent-strong); }
+
+/* -------- Landing: Recent — a STYLED PLAIN LIST -------------------------- */
+/* Site machinery inserts/removes bare <li> of the form "date · [title](path)
+   — project" between the <!-- explain:recent --> markers, so only <li>/<a> are
+   styled; the date/project stay unwrapped text nodes. */
+/* P5.S2 alias: attr_list cannot put a class on a <ul> (Python-Markdown
+   limitation), and the machinery only ever writes a bare markdown list right
+   after the marker — never a hand-authored `{ .kb-recent }` one. docs/index.md
+   gives the Recent section head `id="recent"` (§ P5.S2 landing markup); the
+   marker + bullets render as the very next sibling <ul>, so `#recent + ul`
+   reaches that machinery-managed list. Purely additive: every selector below
+   keeps its original `.kb-recent` form, with `#recent + ul` added alongside —
+   no property changed. HTML comments between the div and the list don't
+   render as nodes, so `+` adjacency still holds. */
+.md-typeset .kb-recent,
+.md-typeset #recent + ul { list-style: none; margin: 0; padding: 0; }
+.md-typeset .kb-recent li,
+.md-typeset #recent + ul li {
+  padding: 0.5rem 0; margin: 0; font-size: var(--kb-text-body); line-height: 1.5;
+  color: var(--kb-secondary); border-bottom: 1px solid var(--kb-border);
+  font-variant-numeric: tabular-nums; letter-spacing: normal;
+}
+.md-typeset .kb-recent li:last-child,
+.md-typeset #recent + ul li:last-child { border-bottom: 0; }
+.md-typeset .kb-recent a,
+.md-typeset #recent + ul a {
+  color: var(--kb-ink); font-weight: var(--kb-weight-medium);
+  text-decoration: none; text-underline-offset: 0.15em; transition: color var(--kb-ease);
+}
+.md-typeset .kb-recent a:hover,
+.md-typeset #recent + ul a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-color: var(--kb-accent-soft); }
+
+/* -------- Article: metadata line (date · project · tags) ----------------- */
+.md-typeset .kb-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem;
+  font-size: var(--kb-text-caption); color: var(--kb-hint);
+  margin: 0 0 1.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+.md-typeset .kb-meta__sep { opacity: 0.5; }
+.md-typeset .kb-meta a:not(.md-tag) { color: var(--kb-accent); text-decoration: none; }
+.md-typeset .kb-meta a:not(.md-tag):hover { color: var(--kb-accent-strong); }
+
+/* -------- Article: related-links block ----------------------------------- */
+.md-typeset .kb-related {
+  margin: 2rem 0 0; padding: 1rem 1.2rem;
+  background: var(--kb-surface); border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius);
+}
+.md-typeset .kb-related__title {
+  font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold);
+  font-size: var(--kb-text-small); margin: 0 0 0.5rem;
+}
+.md-typeset .kb-related ul { list-style: none; margin: 0; padding: 0; }
+.md-typeset .kb-related li { padding: 0.25rem 0; margin: 0; font-size: var(--kb-text-small); }
+.md-typeset .kb-related a { color: var(--md-typeset-a-color); text-decoration: none; }
+.md-typeset .kb-related a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.15em; }
+
+/* -------- Article: "On this page" TOC (portable) ------------------------- */
+/* For a future custom article layout; the live secondary-nav TOC is skinned
+   in §4. Left-rail treatment with an accent active marker. */
+.kb-toc { position: sticky; top: 1.2rem; font-family: var(--kb-font-body); }
+.kb-toc__title {
+  font-size: var(--kb-text-h6); text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  font-weight: var(--kb-weight-semibold); color: var(--kb-hint); margin: 0 0 0.5rem;
+}
+.kb-toc ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--kb-border); }
+.kb-toc a {
+  display: block; padding: 0.25rem 0 0.25rem 0.7rem; margin-left: -1px;
+  font-size: var(--kb-text-caption); line-height: 1.4; color: var(--kb-secondary);
+  text-decoration: none; border-left: 2px solid transparent;
+  transition: color var(--kb-ease), border-color var(--kb-ease);
+}
+.kb-toc a:hover { color: var(--kb-accent); }
+.kb-toc a.is-active { color: var(--kb-accent); border-left-color: var(--kb-accent); font-weight: var(--kb-weight-semibold); }
+.kb-toc a.nested { padding-left: 1.4rem; color: var(--kb-hint); }
+
+/* ==========================================================================
+   §10 · Graph  (P6 · knowledge map) — additive, for P6.S2
+   --------------------------------------------------------------------------
+   §10a = tokens/graph.css VERBATIM from the locked P6.S0 design mirror (the
+   frozen --kb-graph-* set: :root geometry/labels/motion + both scheme blocks;
+   19/19 LOCKED values byte-matched at S0 check-up). §10b–§10d = the component
+   layer adapted onto the real page: full-bleed map (no content column, no
+   sidebars), overlay cards, reduced-motion. §1–§9 are untouched. All accents
+   stay teal; project inks are data-viz-only (node fills + legend chips). The
+   canvas draws every mark from these tokens (docs/javascripts/graph.js reads
+   them live via getComputedStyle, so the Material scheme toggle just works).
+   P6.S1 revision (2026-07-14): §10a +4 tokens (drift, drift-period, zoom-min/max
+   — none changed), §10c a legend-lens `.is-on` row, §10d a mingle note.
+   ========================================================================== */
+
+/* ==========================================================================
+   Knowledge Base — Graph tokens  (P6 · Knowledge map)
+   --------------------------------------------------------------------------
+   Additive tokens for the Obsidian-style knowledge map. --kb-graph-* ONLY —
+   no existing token is touched (Target-1 colors stay LOCKED). Everything
+   here is canvas-achievable: solid fills, strokes, dash patterns, opacity,
+   one soft radial halo. No CSS-filter-dependent effects.
+
+   ── DECISION · project identity (the open call in GRAPH_BRIEF) ────────────
+   Projects get a SMALL MUTED CATEGORICAL SET — "map inks" — instead of a
+   teal-only strength ladder. Why: three strengths of one hue read as *rank*,
+   not category, and the ladder compresses illegibly on the dark plate; the
+   warm-neutral range is already spent on tag rings, ghost nodes and edges.
+   The set is three low-chroma inks at matched tone — Teal (the system accent
+   hue, the anchor) · Bronze · Plum — scoped to DATA-VIZ SURFACES ONLY
+   (graph node fills, legend chips). All interactive accents — links, focus,
+   hover, selection rings, the halo — remain teal-only, so the system's
+   one-accent discipline is unchanged where it was ever visible.
+   Recorded again in README → "P6 Graph".
+   ──────────────────────────────────────────────────────────────────────────
+
+   Canvas plate: light = --kb-surface-sunken (the recessed "map plate", same
+   tier as code blocks); dark = a plate DEEPER than the paper (#16130f, from
+   the Target-1 accent-bg family) — dark's sunken tier is *lighter* than its
+   paper, so it cannot recede.
+
+   Contrast, measured against the plate: node + edge inks ≥ 3:1 (marks),
+   labels ≥ 4.5:1. Ratios noted per token.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Structure (scheme-independent) — geometry, labels, motion
+   px values are at zoom = 1 and scale linearly with zoom.
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Node geometry ---- */
+  --kb-graph-node-r-min: 6px;        /* doc node, least connected */
+  --kb-graph-node-r-max: 14px;       /* doc node, best connected (linear by degree) */
+  --kb-graph-node-r-tag: 4.5px;      /* tag hub — hollow ring */
+  --kb-graph-node-r-ghost: 5.5px;    /* unresolved doc — hollow, dashed */
+  --kb-graph-node-stroke: 1.5px;     /* ring width of hollow nodes (tag / ghost) */
+  --kb-graph-node-cutout: 1.5px;     /* plate-colored rim on filled nodes — separates overlaps */
+
+  /* ---- Edge geometry ---- */
+  --kb-graph-edge-w: 1px;            /* tag edge (doc–tag) */
+  --kb-graph-edge-w-related: 1.75px; /* related edge (doc→doc) */
+  --kb-graph-arrow: 5px;             /* arrowhead length on related edges; tip sits 3px off the target rim */
+  --kb-graph-ghost-dash: 4, 4; /* @kind other */ /* setLineDash — ghost rings & edges into ghosts */
+
+  /* ---- Emphasis ---- */
+  --kb-graph-halo-blur: 8px;         /* soft radial glow beyond the rim (hover / selected) */
+  --kb-graph-focus-w: 2px;           /* selection ring */
+  --kb-graph-focus-gap: 2px;         /* plate-colored gap between rim and ring */
+
+  /* ---- Labels — existing families only; Hangul fallback rides along ---- */
+  --kb-graph-font: var(--kb-font-body);
+  --kb-graph-label-size: 12.5px;     /* doc labels · weight 500 */
+  --kb-graph-label-size-tag: 11px;   /* tag / ghost labels · weight 400 */
+  --kb-graph-label-gap: 6px;         /* node rim → label cap height */
+
+  /* ---- Motion — settle, then mingle  (P6.S1 revision) ----
+     The force sim eases to rest over ~--kb-graph-settle, then keeps a
+     barely-there idle wander — the map "mingles" while it waits for you.
+     (Supersedes P6.S0's settle-then-still; operator-directed.) Wander is a
+     slow sum-of-sines: a node strays ≤ --kb-graph-drift from rest over
+     ~--kb-graph-drift-period; tags ×1.5, ghosts ×1.2. Never fast enough to
+     fight the pointer — hover, drag and labels stay rock-steady to hit.
+     Overlay UI transitions use the existing --kb-ease.
+     Reduced motion: NO mingle — paint the settled layout on the first
+     frame and hold still; states switch instantly; pan/zoom snaps. */
+  --kb-graph-settle: 600ms; /* @kind other */
+  --kb-graph-drift: 3px;             /* max idle wander from rest, at zoom 1 */
+  --kb-graph-drift-period: 9s; /* @kind other */ /* one wander cycle, per-node ±40% */
+
+  /* ---- Pointer zoom — wheel / trackpad-pinch, toward the pointer ---- */
+  --kb-graph-zoom-min: 0.5; /* @kind other */
+  --kb-graph-zoom-max: 2.5; /* @kind other */
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — inks on the ivory map plate  #efe9db
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --kb-graph-canvas: var(--kb-surface-sunken);   /* #efe9db · recessed map plate */
+
+  /* ---- Project inks (map inks — data-viz only, see header) ---- */
+  --kb-graph-project-1: #0f6f66;     /* Teal (anchor = accent hue) · 5.0:1 */
+  --kb-graph-project-2: #8a6a2a;     /* Bronze · 4.2:1 */
+  --kb-graph-project-3: #764f6c;     /* Plum · 5.6:1 */
+  --kb-graph-node-doc: var(--kb-graph-project-1); /* fallback for unassigned docs */
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas); /* cutout rim = plate */
+  --kb-graph-node-tag: #5c5347;      /* hollow tag ring (= --kb-secondary) · 6.2:1 */
+  --kb-graph-node-ghost: #7f7666;    /* unresolved dashed ring · 3.7:1 */
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #7c7362;          /* tag edge · 3.9:1 */
+  --kb-graph-edge-related: #5c5347;  /* related edge + arrowhead · 6.2:1 */
+  --kb-graph-edge-active: #0f6f66;   /* neighborhood edges under hover/selection */
+
+  /* ---- Emphasis (teal-only, as everywhere) ---- */
+  --kb-graph-focus: #0a544e;         /* ring (= --kb-accent-strong) */
+  --kb-graph-halo: rgba(15, 111, 102, 0.22);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: #26211c;         /* doc labels (= --kb-ink) · 12.4:1 */
+  --kb-graph-label-muted: #5c5347;   /* tag / ghost labels · 6.2:1 */
+  --kb-graph-label-halo: var(--kb-graph-canvas); /* text stroked behind glyphs */
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.16; /* @kind other */ /* alpha for everything outside the neighborhood */
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — inks on the deep charcoal plate  #16130f
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --kb-graph-canvas: #16130f;        /* deeper than paper — the plate recedes */
+
+  /* ---- Project inks ---- */
+  --kb-graph-project-1: #62bdb2;     /* Teal (= --kb-accent) · 8.3:1 */
+  --kb-graph-project-2: #c8a15e;     /* Bronze · 7.7:1 */
+  --kb-graph-project-3: #c99bc0;     /* Plum · 7.9:1 */
+  --kb-graph-node-doc: var(--kb-graph-project-1);
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas);
+  --kb-graph-node-tag: #b6ad9d;      /* (= --kb-secondary) · 8.3:1 */
+  --kb-graph-node-ghost: #6b6355;    /* · 3.1:1 */
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #6f6759;          /* · 3.3:1 */
+  --kb-graph-edge-related: #9a9081;  /* · 5.9:1 */
+  --kb-graph-edge-active: #62bdb2;
+
+  /* ---- Emphasis ---- */
+  --kb-graph-focus: #86d4ca;         /* (= --kb-accent-strong dark) */
+  --kb-graph-halo: rgba(98, 189, 178, 0.25);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: #ece4d7;         /* (= --kb-ink) · 15.8:1 */
+  --kb-graph-label-muted: #b6ad9d;   /* · 8.3:1 */
+  --kb-graph-label-halo: var(--kb-graph-canvas);
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.22; /* @kind other */ /* dark dims less — faint ink vanishes sooner on charcoal */
+}
+
+/* ==========================================================================
+   §10b · Graph page — full-bleed integration (adapted for the real site)
+   --------------------------------------------------------------------------
+   The map IS the page (design: "no content column"). docs/graph.md carries
+   `hide: [navigation, toc]`, which already drops the two Material sidebars;
+   these rules (scoped with :has(.kb-graph) so they touch ONLY the graph page,
+   never the rest of the site) neutralize the centered content column and let
+   .kb-graph break out to the full viewport below the header + tabs. No
+   overrides/ template is used — pure CSS. --kb-graph-chrome ≈ header (2.4rem)
+   + tabs (2.4rem) + the hairlines; tune here if Material's chrome height moves.
+   -------------------------------------------------------------------------- */
+:root { --kb-graph-chrome: 4.8rem; }
+
+.md-main:has(.kb-graph) .md-sidebar { display: none; }
+.md-main:has(.kb-graph) .md-main__inner { margin-top: 0; }
+.md-content:has(.kb-graph) { max-width: none; }
+.md-content:has(.kb-graph) .md-content__inner { margin: 0; padding: 0; }
+.md-content:has(.kb-graph) .md-content__inner::before { display: none; content: none; }
+/* carries the full-bleed margin at (0,2,0) — a bare .kb-graph margin loses to this
+   very selector; keep the breakout and the zeroed top/bottom margins together. */
+.md-typeset > .kb-graph { margin: 0 0 0 calc(50% - 50vw); }
+/* Auto-nav injects an <h1>Graph</h1> from the page title; the map IS the page,
+   so keep it for a11y/SEO but take it visually out of flow (no title bar). */
+.md-content:has(.kb-graph) .md-content__inner > h1 {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* ---- Map frame (from the mirror's graph.css, + the full-bleed breakout) - */
+.kb-graph {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: calc(100vh - var(--kb-graph-chrome));
+  height: calc(100dvh - var(--kb-graph-chrome));
+  background: var(--kb-graph-canvas);
+  border-top: 1px solid var(--kb-border);
+  overflow: hidden;
+  font-family: var(--kb-font-body);
+}
+.kb-graph__canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.kb-graph__canvas:active { cursor: grabbing; }
+
+/* ==========================================================================
+   §10c · Graph overlays — legend / switch / zoom / tooltip / panel / empty
+   --------------------------------------------------------------------------
+   Delivered from the mirror's components/graph/graph.css, scoped under
+   .kb-graph so the page's .md-typeset element styles (list bullets, link
+   underlines, heading margins) can't bleed into the overlay cards. Overlays
+   are quiet surface cards — hairline, --kb-radius, NO resting shadow.
+   ========================================================================== */
+.kb-graph .kb-graph__ui {
+  position: absolute;
+  background: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  color: var(--kb-ink);
+  z-index: 2;
+}
+/* [hidden] must outrank the overlays' own display rules (.kb-graph .kb-graph-empty
+   is (0,2,0) grid, zoom flex, tooltip inline-flex — all beat .kb-graph [hidden] at
+   (0,1,1)), or JS can never hide them. */
+.kb-graph [hidden],
+.kb-graph .kb-graph-empty[hidden],
+.kb-graph .kb-graph-zoom[hidden],
+.kb-graph .kb-graph-tooltip[hidden],
+.kb-graph .kb-graph-legend[hidden],
+.kb-graph .kb-graph-panel[hidden] { display: none; }
+
+/* ---- Legend + filters (bottom-left) ------------------------------------ */
+.kb-graph .kb-graph-legend { left: 0.9rem; bottom: 0.9rem; padding: 0.55rem 0.7rem 0.6rem; width: 11rem; }
+.kb-graph .kb-graph-legend__head {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-hint); font-weight: var(--kb-weight-semibold); margin: 0 0.3rem 0.25rem;
+}
+.kb-graph .kb-graph-legend__item {
+  display: flex; align-items: center; gap: 0.45rem; width: 100%;
+  padding: 0.26rem 0.3rem; border: 0; border-radius: var(--kb-radius-sm);
+  background: transparent; font: inherit; text-align: left; cursor: pointer;
+  font-size: 0.72rem; color: var(--kb-secondary);
+  transition: color var(--kb-ease), background var(--kb-ease);
+}
+.kb-graph .kb-graph-legend__item:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.kb-graph .kb-graph-legend__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-graph .kb-graph-legend__count { margin-left: auto; color: var(--kb-hint); font-size: 0.66rem; font-variant-numeric: tabular-nums; }
+/* project chip — ink set per instance: style="--chip: var(--kb-graph-project-1)" */
+.kb-graph .kb-graph-legend__chip { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-legend__chip--ring { background: transparent; border: 1.5px solid var(--kb-graph-node-tag); }   /* tag key */
+.kb-graph .kb-graph-legend__chip--ghost { background: transparent; border: 1.5px dashed var(--kb-graph-node-ghost); } /* unresolved key */
+/* highlighted project (legend click — a lens, never a filter): row keeps full ink */
+.kb-graph .kb-graph-legend__item.is-on { color: var(--kb-ink); background: var(--kb-surface-sunken); font-weight: var(--kb-weight-medium); }
+.kb-graph .kb-graph-legend__item.is-on .kb-graph-legend__count { color: var(--kb-secondary); }
+/* filtered-off project: hollow chip, receded text */
+.kb-graph .kb-graph-legend__item.is-off { color: var(--kb-hint); }
+.kb-graph .kb-graph-legend__item.is-off .kb-graph-legend__chip { background: transparent; box-shadow: inset 0 0 0 1.5px var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-legend__rule { border: 0; border-top: 1px solid var(--kb-border); margin: 0.4rem -0.7rem 0.35rem; }
+.kb-graph .kb-graph-legend__row { display: flex; align-items: center; gap: 0.45rem; padding: 0.1rem 0.3rem 0.05rem; font-size: 0.72rem; color: var(--kb-secondary); }
+.kb-graph .kb-graph-legend__row .kb-graph-legend__count { margin-left: 0; }
+.kb-graph .kb-graph-legend__note { margin: 0.4rem 0.3rem 0; font-size: 0.6rem; line-height: 1.45; color: var(--kb-hint); }
+
+/* ---- Tag-visibility switch --------------------------------------------- */
+.kb-graph .kb-graph-switch {
+  flex: none; margin-left: auto; width: 1.5rem; height: 0.85rem;
+  border: 0; border-radius: var(--kb-radius-pill); cursor: pointer; position: relative;
+  background: var(--kb-border-strong); transition: background var(--kb-ease);
+}
+.kb-graph .kb-graph-switch::after {
+  content: ""; position: absolute; top: 50%; left: 2px; transform: translateY(-50%);
+  width: 0.58rem; height: 0.58rem; border-radius: 50%;
+  background: var(--kb-surface); transition: left var(--kb-ease);
+}
+.kb-graph .kb-graph-switch.is-on { background: var(--kb-accent); }
+.kb-graph .kb-graph-switch.is-on::after { left: calc(100% - 0.58rem - 2px); }
+
+/* ---- Zoom stack (bottom-right) ------------------------------------------ */
+.kb-graph .kb-graph-zoom { right: 0.9rem; bottom: 0.9rem; display: flex; flex-direction: column; overflow: hidden; }
+.kb-graph .kb-graph-zoom__btn {
+  width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
+  background: transparent; border: 0; border-bottom: 1px solid var(--kb-border);
+  color: var(--kb-secondary); font-size: 0.9rem; line-height: 1; cursor: pointer;
+  transition: color var(--kb-ease), background var(--kb-ease);
+}
+.kb-graph .kb-graph-zoom__btn:last-child { border-bottom: 0; }
+.kb-graph .kb-graph-zoom__btn:hover { color: var(--kb-accent-strong); background: var(--kb-surface-sunken); }
+
+/* ---- Hover tooltip (low zoom, labels hidden) ---------------------------- */
+.kb-graph .kb-graph-tooltip {
+  position: absolute; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.28rem 0.55rem; pointer-events: none; z-index: 3;
+  background: var(--kb-surface); border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  font-size: 0.72rem; font-weight: var(--kb-weight-medium); color: var(--kb-ink);
+  white-space: nowrap;
+}
+.kb-graph .kb-graph-tooltip__chip { flex: none; width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ring,
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ghost { background: transparent; }
+.kb-graph .kb-graph-tooltip__kind { color: var(--kb-hint); font-weight: var(--kb-weight-regular); }
+
+/* ---- Info panel (top-right, on node click) ------------------------------ */
+.kb-graph .kb-graph-panel { top: 0.9rem; right: 0.9rem; width: 17rem; padding: 0.7rem 0.85rem 0.75rem; }
+.kb-graph .kb-graph-panel__eyebrow {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-secondary); font-weight: var(--kb-weight-semibold);
+}
+.kb-graph .kb-graph-panel__eyebrow .kb-graph-legend__chip { width: 0.42rem; height: 0.42rem; }
+.kb-graph .kb-graph-panel__close {
+  margin-left: auto; border: 0; background: transparent; padding: 0.1rem;
+  color: var(--kb-hint); font-size: 0.8rem; line-height: 1; cursor: pointer;
+  transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__close:hover { color: var(--kb-ink); }
+.kb-graph .kb-graph-panel__title {
+  margin: 0.35rem 0 0.25rem; font-family: var(--kb-font-display);
+  font-size: 1.02rem; line-height: 1.28; font-weight: var(--kb-weight-semibold); color: var(--kb-ink);
+}
+.kb-graph .kb-graph-panel__meta { font-size: 0.66rem; color: var(--kb-hint); font-variant-numeric: tabular-nums; }
+.kb-graph .kb-graph-panel__tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.55rem 0 0.6rem; padding: 0; list-style: none; }
+.kb-graph .kb-graph-panel__tags li { margin: 0; padding: 0; }
+.kb-graph .kb-graph-panel__read {
+  font-size: 0.72rem; font-weight: var(--kb-weight-medium);
+  color: var(--kb-accent); text-decoration: none; transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__read:hover { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+/* unresolved (ghost) variant — no read-through, a quiet badge instead */
+.kb-graph .kb-graph-panel__badge {
+  display: inline-block; margin-top: 0.1rem; padding: 0.08rem 0.5rem;
+  border: 1px dashed var(--kb-border-strong); border-radius: var(--kb-radius-pill);
+  font-size: 0.6rem; color: var(--kb-hint);
+}
+.kb-graph .kb-graph-panel--ghost .kb-graph-panel__title { color: var(--kb-secondary); }
+
+/* ---- Tag pill (panel) — the .kb-tag design-system pill (matches §7 md-tag) */
+.kb-graph .kb-tag {
+  display: inline-block; background: var(--kb-tag-bg); color: var(--kb-tag-fg);
+  border: 1px solid var(--md-default-fg-color--lightest); border-radius: var(--kb-radius-pill);
+  padding: 0.1em 0.6em; font-size: 0.66rem; text-decoration: none;
+  transition: border-color var(--kb-ease), color var(--kb-ease);
+}
+.kb-graph a.kb-tag:hover { color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+
+/* ---- Empty / loading states --------------------------------------------- */
+.kb-graph .kb-graph-empty {
+  position: absolute; inset: 0; display: grid; place-content: center;
+  justify-items: center; row-gap: 0.15rem; text-align: center; padding: 1rem; z-index: 1;
+}
+.kb-graph .kb-graph-empty__icon { color: var(--kb-hint); margin-bottom: 0.35rem; }
+.kb-graph .kb-graph-empty__title { font-family: var(--kb-font-display); font-size: 0.95rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-graph .kb-graph-empty__sub { font-size: 0.72rem; line-height: 1.55; color: var(--kb-secondary); max-width: 21rem; }
+.kb-graph .kb-graph-empty__sub code { font-family: var(--kb-font-mono); font-size: 0.92em; color: var(--kb-secondary); background: none; padding: 0; }
+.kb-graph .kb-graph-empty__sub a { color: var(--kb-accent); }
+
+/* ---- Focus & links ------------------------------------------------------- */
+.kb-graph a { color: var(--kb-accent); }
+.kb-graph a:hover { color: var(--kb-accent-strong); }
+.kb-graph button:focus-visible,
+.kb-graph a:focus-visible,
+.kb-graph .kb-graph__canvas:focus-visible { outline: 2px solid var(--kb-accent); outline-offset: 1px; }
+
+/* ==========================================================================
+   §10d · Reduced motion
+   --------------------------------------------------------------------------
+   Overlay transitions off; the ENGINE also skips the animated settle AND the
+   idle mingle (paints the settled layout on frame one, holds still) and snaps
+   pan/zoom — see graph.js and the motion note in the §10a tokens.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .kb-graph, .kb-graph * { transition: none !important; }
+}

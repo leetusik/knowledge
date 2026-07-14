@@ -1,0 +1,9 @@
+{
+  "KB_SITE_NAME": "Knowledge Base",
+  "KB_SITE_URL": "https://leetusik.github.io/knowledge/",
+  "KB_COPYRIGHT": "Knowledge Base · built with mkdocs-material · 창플 / 미라클",
+  "KB_TZ": "Asia/Seoul",
+  "KB_VIEWER_PORT": "8765",
+  "KB_API_PORT": "8766",
+  "KB_DATE": "2026-07-14"
+}
