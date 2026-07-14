@@ -791,7 +791,15 @@
   color: var(--kb-ink);
   z-index: 2;
 }
-.kb-graph [hidden] { display: none; }
+/* [hidden] must outrank the overlays' own display rules (.kb-graph .kb-graph-empty
+   is (0,2,0) grid, zoom flex, tooltip inline-flex — all beat .kb-graph [hidden] at
+   (0,1,1)), or JS can never hide them. */
+.kb-graph [hidden],
+.kb-graph .kb-graph-empty[hidden],
+.kb-graph .kb-graph-zoom[hidden],
+.kb-graph .kb-graph-tooltip[hidden],
+.kb-graph .kb-graph-legend[hidden],
+.kb-graph .kb-graph-panel[hidden] { display: none; }
 
 /* ---- Legend + filters (bottom-left) ------------------------------------ */
 .kb-graph .kb-graph-legend { left: 0.9rem; bottom: 0.9rem; padding: 0.55rem 0.7rem 0.6rem; width: 11rem; }

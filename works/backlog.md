@@ -10,7 +10,7 @@
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T10:49:28+09:00`
+- Rebuilt at: `2026-07-14T11:01:57+09:00`
 
 ## Active Phases
 
@@ -87,7 +87,8 @@
 | [x] `P6.S2` | `done` | Interactive graph renderer, full-canvas page + JS guard flip | `implementation` | `works/phases/active/P6/slices/P6.S2` |
 | [x] `P6.S3` | `done` | Landing entry point + serve parity + ops hygiene | `implementation` | `works/phases/active/P6/slices/P6.S3` |
 | [x] `P6.F1` | `done` | Graph renderer revision — quiet labels, idle mingle, pointer zoom, sticky re-place, legend lens (design P6.S1) | `fix` | `works/phases/active/P6/slices/P6.F1` |
-| [ ] `P6.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
+| [x] `P6.F2` | `done` | Graph overlays cannot be hidden — [hidden] loses to overlay display rules (operator browser QA) | `fix` | `works/phases/active/P6/slices/P6.F2` |
+| [ ] `P6.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
 
 ## Phase P7: Claude Code plugin
 

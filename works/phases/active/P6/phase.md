@@ -328,6 +328,41 @@ trackpad-pinch/wheel zoom toward pointer + 1:1 pan, sticky re-place with spring-
 spokes, legend lens (`.is-on`, dim-not-remove), and the reduced-motion path (paint at rest,
 hold still, snap). S2/S3's graph-page footer note is unchanged.
 
+### P6.F2 — Graph overlays cannot be hidden — `[hidden]` loses to overlay display rules (implemented 2026-07-14)
+
+**Trap (operator-reported, browser QA):** `docs/javascripts/graph.js` hides overlays via
+the `hidden` attribute (`elEmpty.hidden = true`, `elTooltip.hidden = true`), but the only
+CSS honoring it — `.kb-graph [hidden] { display: none; }` at specificity **(0,1,1)** — was
+OUTRANKED by three overlays' own author `display` rules at **(0,2,0)**:
+`.kb-graph .kb-graph-empty` (`display: grid`), `.kb-graph .kb-graph-zoom` (`display:
+flex`), `.kb-graph .kb-graph-tooltip` (`display: inline-flex`). Result: the loading/empty
+overlay (absolute, `inset: 0`, `z-index: 1`) never disappeared and swallowed all canvas
+pointer events; the tooltip, once shown at low zoom, could never re-hide. This was a
+LATENT bug present since S2, surfaced only now by real browser QA (no prior slice's
+harness had a browser).
+
+**Fix (one hunk, `docs/stylesheets/extra.css` line 794, no JS change):** added
+class+attribute selectors at **(0,2,1)** — `.kb-graph .kb-graph-empty[hidden]`,
+`.kb-graph .kb-graph-zoom[hidden]`, `.kb-graph .kb-graph-tooltip[hidden]`, plus
+`.kb-graph-legend[hidden]` / `.kb-graph-panel[hidden]` pre-emptively (no own `display`
+rule today, included so a future display addition can't reopen the trap) — each now beats
+its overlay's (0,2,0) display rule.
+
+**Lesson for future slices:** whenever visibility is toggled via the `hidden` attribute
+(or any attribute selector) against an element that also carries its own `display` rule,
+check the CSS specificity race explicitly — a plain `[hidden] { display: none }` at
+(0,1,1) loses to any co-scoped class selector with its own `display` at (0,2,0)+.
+
+**Verification:** pinned-venv `mkdocs build` (mkdocs-material 9.7.6) → built
+`site/stylesheets/extra.css` carries exactly 1 `kb-graph-empty[hidden]` match;
+`site_smoke.py` → exactly 1 violation, the KNOWN pre-existing `/Users/` prose leak in
+`docs/current/{data,frontend,operations,qa}.md` (out of scope, owned by re-review — see
+P6.F1 section above); all graph-related assertions PASSED; live curl against the
+already-running compose `kb` server confirmed the fix served under live-reload. Full
+write-up: `slices/P6.F2/result.md`. Final visual confirmation (overlay actually
+disappearing, canvas interactivity restored) is still owed to the operator's browser
+refresh — no browser in this harness.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -360,6 +395,10 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `experience` (P6.F1): journey revision — quiet labels A′ (on-demand reveal + >110% fade-up), idle mingle after settle, pointer/pinch zoom with token clamps + 1:1 pan, sticky node re-placement with spring-following tag spokes, legend lens (highlight-not-filter, `.is-on`).
 - `frontend` (P6.F1): §10a +4 tokens (none changed), `.is-on` legend row, renderer live-model port from the design's `kbGraph.mount()` (persistent rAF w/ document.hidden guard; reduced motion stays event-driven).
 - `decisions` (P6.F1): operator-directed P6.S1 design revision consciously supersedes two locked S0 decisions (label Strategy A → A′; settle-then-still/"no idle drift" → settle-then-mingle); Claude Design provenance.
+- `qa` (P6.F2): operator browser QA found the graph overlays could never hide —
+  `.kb-graph [hidden]` (0,1,1) lost to overlay display rules (0,2,0); fixed with
+  class+attribute selectors (0,2,1) in §10c; JS untouched. Lesson: attribute-toggle
+  visibility needs a specificity check against every rule that sets display.
 
 ## Open Questions
 
