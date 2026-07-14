@@ -4,16 +4,17 @@
 
 ## Summary
 
-- Open: `1`
+- Open: `2`
 - Promoted: `2`
 - Dropped: `0`
-- Rebuilt at: `2026-07-14T22:48:04+09:00`
+- Rebuilt at: `2026-07-14T23:53:58+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
 | `D3` | `deferred` | Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree | P8.F2 | operator runs: gh repo deploy-key delete 157264706 -R leetusik/knowledge && rm -f knowledge_deploy_key knowledge_deploy_key.pub | `works/deferred/open/D3` |
+| `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 
 ## Promoted
 

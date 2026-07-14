@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P8`
-- Current slice: `P8.S5`
-- Next slice: `P8.REVIEW`
-- Waiting on operator: `P8.S5`
-- Open deferred jobs: `1`
-- Rebuilt at: `2026-07-14T22:48:04+09:00`
+- Current slice: `P8.REVIEW`
+- Next slice: `none`
+- Waiting on operator: `none`
+- Open deferred jobs: `2`
+- Rebuilt at: `2026-07-14T23:53:58+09:00`
 
 ## Active Phases
 
@@ -23,7 +23,7 @@
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [x] `P7` | `done` | `pass` | Claude Code plugin | `none` | `works/phases/active/P7` |
-| [ ] `P8` | `in_progress` | `pending` | Knowledge API for hi2vi content agent | `P8.S5` | `works/phases/active/P8` |
+| [ ] `P8` | `in_progress` | `pending` | Knowledge API for hi2vi content agent | `P8.REVIEW` | `works/phases/active/P8` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -118,5 +118,5 @@
 | [x] `P8.F1` | `done` | plugin template sync — mirror S1/S2 server+test changes, manifest entry, version bump (parity red at HEAD) | `fix` | `works/phases/active/P8/slices/P8.F1` |
 | [x] `P8.S4` | `done` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
 | [x] `P8.F2` | `done` | reality-fix: openssh-client in image (push was impossible), deploy artifacts retargeted to the live dedicated edge | `fix` | `works/phases/active/P8/slices/P8.F2` |
-| [~] `P8.S5` | `pending` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
+| [x] `P8.S5` | `done` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |
