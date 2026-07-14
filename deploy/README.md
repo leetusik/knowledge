@@ -11,9 +11,12 @@ Artifacts this runbook applies:
 - **`compose.prod.yml`** (repo root) — the api-only box compose project.
 - **`deploy/knowledge.hi2vi.com.conf`** — the nginx vhost for the shared edge.
 
-Secret *values* live only on the box (never in this repo). The actual secret /
-DNS provisioning is **P8.S4's** runbook — here we reference secrets by name and
-placement path only.
+Secret *values* live only on the box (never in this repo). Generating and
+registering those secrets + DNS — the token, the SSH deploy key (and its GitHub
+registration), the Cloudflare record + cert-coverage check, and the optional
+Gemini key — is the **[`SECRETS.md`](SECRETS.md)** provisioning runbook. Do that
+first; this runbook then *places and brings up* what it produced, referencing
+secrets by name and placement path only.
 
 ---
 
@@ -21,9 +24,10 @@ placement path only.
 
 - The box already runs the shared edge `changple5-nginx-1` + the external Docker
   network **`changple_shared_network`** (both exist for hi2vi.com today).
-- You have the secrets provisioned per **P8.S4**: a strong `KB_API_TOKEN`, an SSH
-  **deploy key** registered on `leetusik/knowledge` (allow write), and (optional)
-  a `GOOGLE_API_KEY`. Cloudflare DNS + cert coverage: see steps 4–5.
+- You have the secrets provisioned per **[`SECRETS.md`](SECRETS.md)**: a strong
+  `KB_API_TOKEN`, an SSH **deploy key** registered on `leetusik/knowledge` (allow
+  write), and (optional) a `GOOGLE_API_KEY`. Cloudflare DNS + cert coverage: see
+  steps 4–5 here and `SECRETS.md` §3.
 
 ---
 
@@ -54,7 +58,7 @@ ssh-keyscan -t ed25519,rsa github.com | sudo tee /opt/knowledge-secrets/known_ho
 #     Values (names + generation pointers only here — provision per P8.S4):
 sudo tee /opt/knowledge/.env >/dev/null <<'EOF'
 # Bearer token for writes + (with KB_REQUIRE_READ_AUTH) reads. Generate a strong
-# random token (e.g. `openssl rand -hex 32`) — see P8.S4.
+# random token (e.g. `openssl rand -hex 32`) — see SECRETS.md §1.
 KB_API_TOKEN=
 # Optional Gemini key for hybrid semantic search. Empty/absent = BM25-only.
 GOOGLE_API_KEY=
@@ -143,7 +147,9 @@ as a fourth conf drop-in.
 
 Add a **proxied** `knowledge` record for `hi2vi.com` (orange cloud on) pointing
 at the box, and confirm the `*.hi2vi.com` origin cert covers it. This is an
-operator action — the actual provisioning handoff is **P8.S4's** runbook.
+operator action — the record + cert-coverage provisioning is
+**[`SECRETS.md`](SECRETS.md) §3** (do it there; step 3a above copies the
+confirmed cert paths into the vhost).
 
 ---
 

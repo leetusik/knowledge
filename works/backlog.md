@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P8`
-- Current slice: `P8.S4`
-- Next slice: `P8.S5`
-- Waiting on operator: `none`
+- Current slice: `P8.S5`
+- Next slice: `P8.REVIEW`
+- Waiting on operator: `P8.S5`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T17:32:33+09:00`
+- Rebuilt at: `2026-07-14T17:42:27+09:00`
 
 ## Active Phases
 
@@ -23,7 +23,7 @@
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [x] `P7` | `done` | `pass` | Claude Code plugin | `none` | `works/phases/active/P7` |
-| [ ] `P8` | `in_progress` | `pending` | Knowledge API for hi2vi content agent | `P8.S4` | `works/phases/active/P8` |
+| [ ] `P8` | `in_progress` | `pending` | Knowledge API for hi2vi content agent | `P8.S5` | `works/phases/active/P8` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -116,6 +116,6 @@
 | [x] `P8.S2` | `done` | hosted read auth: gate reads/search behind bearer (local stays open) | `implementation` | `works/phases/active/P8/slices/P8.S2` |
 | [x] `P8.S3` | `done` | prod deploy artifacts for knowledge.hi2vi.com (compose.prod + vhost + runbook) | `implementation` | `works/phases/active/P8/slices/P8.S3` |
 | [x] `P8.F1` | `done` | plugin template sync — mirror S1/S2 server+test changes, manifest entry, version bump (parity red at HEAD) | `fix` | `works/phases/active/P8/slices/P8.F1` |
-| [ ] `P8.S4` | `todo` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
-| [ ] `P8.S5` | `todo` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
+| [x] `P8.S4` | `done` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
+| [~] `P8.S5` | `pending` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |
