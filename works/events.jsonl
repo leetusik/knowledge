@@ -254,3 +254,5 @@
 {"ts": "2026-07-15T01:01:46+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert", "source": "P8.REVIEW"}
 {"ts": "2026-07-15T01:07:16+09:00", "type": "slice_status_changed", "slice": "P8.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-15T01:07:16+09:00", "type": "phase_reviewed", "phase": "P8", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-15T08:29:46+09:00", "type": "deferred_dropped", "deferred": "D3", "reason": "Completed by the operator (2026-07-15): ran 'gh repo deploy-key delete 157264706' (orphan knowledge-api@oci revoked) and removed ./knowledge_deploy_key* from the working tree. The box authenticates with the separate on-box key knowledge-api@oci-box (157267945). No key material remains in the repo. Closed as done, not abandoned."}
+{"ts": "2026-07-15T08:34:05+09:00", "type": "phase_created", "phase": "P9"}

@@ -95,10 +95,22 @@
       "current_slice": null,
       "slice_count": 9,
       "done_slice_count": 9
+    },
+    {
+      "id": "P9",
+      "name": "Production deploy GitHub Action for the knowledge API",
+      "objective": "Add a manual (workflow_dispatch) production-deploy GitHub Action mirroring hi2vi_web's deploy-production.yml: SSH into the shared OCI box, redeploy the knowledge-api container from main with an on-box ARM build + health gate + rollback, and re-apply the edge vhost (deploy/knowledge.conf -> /home/opc/edge/conf.d/ + the edge's own deploy.sh reload). Must handle the publish-on-write wrinkle unique to this repo (the box clone at /opt/knowledge also makes and pushes agent commits) so a deploy never discards an unpushed doc or force-moves the checkout. Replaces today's hand-run SSH redeploy with a repeatable, auditable flow. DECOMP proposes the detailed deploy-script shape + GitHub secret provisioning for operator sign-off.",
+      "status": "planned",
+      "order": 9,
+      "path": "works/phases/active/P9",
+      "review_status": "pending",
+      "current_slice": "P9.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 3,
+  "deferred_open_count": 2,
   "deferred_promoted_count": 2,
-  "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-15T01:07:16+09:00"
+  "deferred_dropped_count": 1,
+  "last_rebuilt_at": "2026-07-15T08:34:05+09:00"
 }
