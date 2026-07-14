@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0003
-created_at: 2026-07-14T05:08:17+09:00
+version: v0004
+created_at: 2026-07-14T12:51:53+09:00
 source: P6.REVIEW
-summary: P6: interactive knowledge-map journey settle-then-still label strategy A zoom ladder info panel legend filters landing and nav entry
-previous: v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance
+summary: P6.S1 revision: quiet labels A-prime, idle mingle, pointer/pinch zoom, sticky re-placement, legend lens, roomier layout that survives in-tab reloads
+previous: v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry
 ---
 
 # Experience
@@ -21,9 +21,13 @@ System") — the agent integrated it; the visual language is no longer agent tas
 **P6 adds a fourth journey: an interactive, Obsidian-like knowledge map** at
 `/graph/` — the whole library as a force-directed graph (every explainer a node,
 linked by shared tags and `related:` references), drawn client-side. Its visual
-language follows the same operator-locked Claude Design guide (P6.S0). Browser
-visual QA of the map is still owed to the operator (no browser in the build harness —
-see Open Questions).
+language follows the same operator-locked Claude Design guide (P6.S0). Its
+**interaction was revised at P6.S1** (operator-directed, via Claude Design): quiet
+on-demand labels, a barely-there idle mingle, pointer/pinch zoom toward the cursor,
+sticky node re-placement, and a legend that highlights rather than filters — plus a
+roomier default layout that survives an in-tab reload (see the map journey below).
+Browser *feel* QA is still owed to the operator (no browser in the build harness; a
+CDP geometry/behavior probe covered the structural parts — see Open Questions).
 
 ## Visual language — "calm editorial library"
 
@@ -109,32 +113,50 @@ see Open Questions).
   base · 검색", an inline magnifier, and a `/` key hint. It is a zero-JS
   `<label>` that toggles Material's own search — no bespoke search UI.
 
-### Explore the knowledge map (P6)
+### Explore the knowledge map (P6, interaction revised at P6.S1)
 
 - **Entry:** the Graph top tab or the landing Graph card → `/graph/`.
-- **Arrival (settle-then-still):** the map lays itself out with a brief
-  force-directed settle (~600ms) and then **stops** — no idle drift, calm at rest.
-  Under `prefers-reduced-motion` it paints at rest immediately (no animated settle,
-  no label fades).
-- **Read the map:** doc titles are always on; the mark grammar reads at a glance —
-  doc nodes are filled circles sized 6→14px by degree in a project ink (teal /
-  bronze / plum), tag nodes are small hollow rings, and a dead `related:` reference
-  shows as a dashed "ghost" ring. `related:` edges carry an arrowhead ("reads on
-  to"); tag edges are hairlines.
-- **Zoom ladder (Label Strategy A):** zoomed out (<60% of fit) only hub doc labels
-  show, with the rest in a pointer tooltip; at the idle/fit view (60–110%) all doc
-  labels show; zooming in past 110% — or hovering/selecting — fades in the
-  neighborhood's tag labels.
+- **Arrival (settle-then-mingle):** the map lays itself out with a brief
+  force-directed settle (~600ms) and then keeps a **barely-there idle mingle** —
+  each node strays ≤ 3px from rest over ~9s (tags wander a touch more) — so the map
+  feels alive while it waits, never fast enough to fight the pointer. Under
+  `prefers-reduced-motion` it paints at rest and **holds still**: no animated settle,
+  no mingle, no label fades; pan/zoom snap. (This supersedes P6.S0's
+  "settle-then-still / no idle drift".)
+- **Read the map (quiet labels, Strategy A′):** the idle map is **quiet — marks
+  only, no labels**. The mark grammar reads at a glance: doc nodes are filled circles
+  sized 6→14px by degree in a project ink (teal / bronze / plum), tag nodes are small
+  hollow rings, and a dead `related:` reference shows as a dashed "ghost" ring.
+  `related:` edges carry an arrowhead ("reads on to"); tag edges are hairlines.
+  **Hover or selection reveals** the node's title plus its neighborhood's; **doc
+  titles also fade up past ~110% zoom** (fully on by ~135%); tag labels stay
+  on-demand. At very low zoom a pointer tooltip carries the hovered title. (This
+  supersedes P6.S0's "doc titles always on".)
 - **Focus a neighborhood:** hover or click a doc → its neighborhood keeps its ink,
   incident edges turn teal with a soft halo, and everything else dims. A click also
   opens a **top-right info panel** (project chip, title, `date · N tags · N links`,
-  tag pills, and a "read the explainer →" link). A ghost node's panel says "no
-  document yet · 문서 없음" with no read-through. Clicking a tag highlights only.
-- **Interact:** pan by dragging the canvas, wheel-zoom toward the cursor, a
-  bottom-right zoom stack (+ / − / fit), and drag a node to reposition it. The
-  **bottom-left legend** lists projects with ink chips + doc counts (click a project
-  to filter it out) and a **tag-visibility switch** (collapse the tag spokes when
-  the map feels busy — today's corpus is tag-heavy, so this matters for legibility).
+  tag pills, and a "read the explainer →" link) plus an offset teal selection ring. A
+  ghost node's panel says "no document yet · 문서 없음" with no read-through. Clicking
+  a tag highlights only.
+- **Interact — the pointer does the real work:** **wheel / trackpad-pinch zooms
+  toward the pointer** (0.5–2.5× of the fit view), dragging the empty plate pans 1:1,
+  and a bottom-right zoom stack (+ / − / fit) remains. **Any node can be grabbed and
+  re-placed — it stays where dropped** (sticky); a doc's tag spokes follow it on a
+  soft spring, and a dropped tag keeps its new offset.
+- **Legend is a lens, not a filter (revised):** the **bottom-left legend** lists
+  projects with ink chips + doc counts; clicking a project **highlights** it — its
+  docs + spokes keep full ink and titles while everything else dims (`.is-on` marks
+  the active row), click again to clear. Nothing is removed from the map. A separate
+  **tag-visibility switch** collapses the tag spokes when the map feels busy (today's
+  corpus is tag-heavy, so this matters for legibility).
+- **Roomier layout that survives reloads (P6.S1 / F3):** the default layout is
+  deliberately spacious — docs seed degree-aware (hubs pulled in, leaves pushed out)
+  and tags seed on even angular slots around their owner doc, for a cleaner first
+  read. Placement, camera, and the legend lens **survive a page reload within the
+  same tab** (persisted per-corpus to `sessionStorage`; the settle is skipped on
+  restore), so leaving to read an explainer and coming back — or the dev server's
+  live-reload firing — returns the map exactly as left. A fresh tab, or a changed
+  corpus, gets the default layout.
 - **Accent discipline:** project inks color only the data-viz surfaces (nodes,
   legend chips); every interactive accent (hover, selection ring, halo, active
   edges, links) is **teal**, matching the site's one-accent rule. Both color schemes
@@ -152,7 +174,9 @@ see Open Questions).
 - **Knowledge map (P6):** a loading state while `graph.json` is fetched; an empty
   state (bilingual EN/KR copy) if the fetch fails or there are zero doc nodes; a
   `<noscript>` fallback pointing Home for JS-disabled visitors. Both schemes skinned;
-  reduced-motion paints at rest.
+  reduced-motion paints at rest and holds still (no idle mingle). On a same-tab
+  reload the previously-explored placement/camera/lens are restored instead of a
+  fresh settle.
 
 ## Copy and tone
 
@@ -170,11 +194,14 @@ see Open Questions).
   auto-nav constraint. Article-page metadata/related treatments (the §9
   `.kb-meta`/`.kb-related` design classes) await a per-page template before they
   enrich individual explainer pages.
-- **Owed graph visual QA (P6):** the knowledge map was built and validated
-  structurally/at build-level, but no browser ran in the harness — the operator
-  should eyeball both color schemes, the settle-then-still animation,
-  hover/selection dimming + info panel, the zoom-ladder label transitions, the
-  legend project-filter + tag-visibility switch, and the reduced-motion path.
+- **Owed graph visual QA (P6):** a headless-Chrome CDP probe at the re-review
+  confirmed the *geometry/behavior* (full-bleed layout at multiple widths, the
+  loading overlay actually hiding, and the reload-restore round-trip), but the
+  *feel* still needs the operator's eye in **both** color schemes: the idle mingle,
+  the quiet → hover/selection label reveal + the >110% doc-title fade-up,
+  trackpad-pinch / wheel zoom toward the pointer + 1:1 pan, sticky node re-placement
+  with spring-following tag spokes, the legend lens (highlight, not filter), and the
+  reduced-motion path (paint at rest, hold still, snap).
 - **Graph-page footer (P6, flagged, not a defect):** with `navigation.footer` on,
   the footer sits just below the viewport-height map (a small scroll reveals it) —
   expected for a full-bleed map; the operator to opine whether to change it.

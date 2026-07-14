@@ -23,7 +23,7 @@
       ]
     },
     "experience": {
-      "latest": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry",
+      "latest": "v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -49,6 +49,14 @@
           "source": "P6.REVIEW",
           "summary": "P6: interactive knowledge-map journey settle-then-still label strategy A zoom ladder info panel legend filters landing and nav entry",
           "previous": "v0002_p5_calm-editorial_operator-designed_visual_language_landing_browse_journeys_per-project_pages_cjk_search_ux_hero_affordance"
+        },
+        {
+          "id": "v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads",
+          "path": "docs/versions/experience/v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads.md",
+          "created_at": "2026-07-14T12:51:53+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6.S1 revision: quiet labels A-prime, idle mingle, pointer/pinch zoom, sticky re-placement, legend lens, roomier layout that survives in-tab reloads",
+          "previous": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry"
         }
       ]
     },
@@ -99,7 +107,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted",
+      "latest": "v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -125,6 +133,14 @@
           "source": "P6.REVIEW",
           "summary": "P6: interactive knowledge-map renderer vendored hand-rolled force sim first custom JS full-bleed graph page extra.css section 10 extra_javascript allowlisted",
           "previous": "v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero"
+        },
+        {
+          "id": "v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token",
+          "path": "docs/versions/frontend/v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token.md",
+          "created_at": "2026-07-14T12:53:49+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6.S1 renderer revision: live-model port (persistent rAF, +4 tokens, is-on lens), retuned sim + smarter seeding, sessionStorage restore; docs describe publish-safety without the literal path token",
+          "previous": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted"
         }
       ]
     },
@@ -159,7 +175,7 @@
       ]
     },
     "data": {
-      "latest": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json",
+      "latest": "v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -193,6 +209,14 @@
           "source": "P6.REVIEW",
           "summary": "P6: build-time knowledge-graph data contract node/edge model tags-as-nodes ghost/broken edges deterministic publish-safe graph.json",
           "previous": "v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source"
+        },
+        {
+          "id": "v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only",
+          "path": "docs/versions/data/v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only.md",
+          "created_at": "2026-07-14T12:58:08+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6 re-review: reword the graph.json publish-safety guarantee without the literal user-home path token (data contract unchanged; F1-F4 were renderer/CSS-only)",
+          "previous": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json"
         }
       ]
     },
@@ -227,7 +251,7 @@
       ]
     },
     "operations": {
-      "latest": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention",
+      "latest": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -277,6 +301,14 @@
           "source": "P6.REVIEW",
           "summary": "P6: mkdocs hooks graph.json emitter build and serve extended smoke guard serve-parity confirmed README knowledge-map mention",
           "previous": "v0005_p5_site_design_build_asset_set_single_google-fonts_import_deploy-gating_site_smoke.py_guard_local_build_eyeball_workflow"
+        },
+        {
+          "id": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only",
+          "path": "docs/versions/operations/v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only.md",
+          "created_at": "2026-07-14T12:58:20+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6 re-review: reword the smoke-guard and serve-parity publish-safety notes without the literal user-home path token (build/serve pipeline unchanged; F1-F4 were renderer/CSS-only)",
+          "previous": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention"
         }
       ]
     },
@@ -303,7 +335,7 @@
       ]
     },
     "qa": {
-      "latest": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives",
+      "latest": "v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -329,11 +361,19 @@
           "source": "P6.REVIEW",
           "summary": "P6: site_smoke graph.json data-contract custom-JS allowlist built-graph-page landing graph-card invariants root negatives",
           "previous": "v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard"
+        },
+        {
+          "id": "v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded",
+          "path": "docs/versions/qa/v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded.md",
+          "created_at": "2026-07-14T12:56:35+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6.S1 QA: two extra.css section-10 specificity defeats found by browser QA, CDP geometry probe added as a repeatable overlay/layout tool, publish-safety invariant reworded",
+          "previous": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives"
         }
       ]
     },
     "decisions": {
-      "latest": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer",
+      "latest": "v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -383,9 +423,17 @@
           "source": "P6.REVIEW",
           "summary": "P6: hooks-module graph mechanism node/edge model tags-as-nodes docs-current excluded ghost edges data-viz project inks hand-rolled vendored renderer",
           "previous": "v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict"
+        },
+        {
+          "id": "v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance",
+          "path": "docs/versions/decisions/v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance.md",
+          "created_at": "2026-07-14T12:55:19+09:00",
+          "source": "P6.REVIEW",
+          "summary": "P6.S1 renderer revision ADR: quiet labels A-prime and idle mingle consciously supersede two locked S0 decisions (operator-directed, Claude Design provenance)",
+          "previous": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-14T05:16:01+09:00"
+  "last_rebuilt_at": "2026-07-14T12:58:44+09:00"
 }

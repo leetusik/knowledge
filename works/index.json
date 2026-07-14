@@ -64,13 +64,13 @@
       "id": "P6",
       "name": "Obsidian-like knowledge graph",
       "objective": "Interactive Obsidian-like knowledge map of the KB — documents as nodes, links/tags as edges — rendered client-side on the static GitHub Pages site.",
-      "status": "in_progress",
+      "status": "done",
       "order": 6,
       "path": "works/phases/active/P6",
-      "review_status": "changes_requested",
-      "current_slice": "P6.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 10,
-      "done_slice_count": 9
+      "done_slice_count": 10
     },
     {
       "id": "P7",
@@ -88,5 +88,5 @@
   "deferred_open_count": 0,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-14T12:15:15+09:00"
+  "last_rebuilt_at": "2026-07-14T13:04:00+09:00"
 }

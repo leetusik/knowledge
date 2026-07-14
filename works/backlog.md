@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P6`
-- Current slice: `P6.REVIEW`
-- Next slice: `none`
+- Current phase: `P7`
+- Current slice: `P7.DECOMP`
+- Next slice: `P7.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T12:15:15+09:00`
+- Rebuilt at: `2026-07-14T13:04:00+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P3` | `done` | `pass` | Track 1 — GitHub Pages publishing | `none` | `works/phases/active/P3` |
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
-| [ ] `P6` | `in_progress` | `changes_requested` | Obsidian-like knowledge graph | `P6.REVIEW` | `works/phases/active/P6` |
+| [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.DECOMP` | `works/phases/active/P7` |
 
 ## Phase P1: Bootstrap Intake
@@ -90,7 +90,7 @@
 | [x] `P6.F2` | `done` | Graph overlays cannot be hidden — [hidden] loses to overlay display rules (operator browser QA) | `fix` | `works/phases/active/P6/slices/P6.F2` |
 | [x] `P6.F3` | `done` | Graph layout: more node spacing, smarter placement, placement survives reloads (operator browser QA) | `fix` | `works/phases/active/P6/slices/P6.F3` |
 | [x] `P6.F4` | `done` | Graph full-bleed breakout defeated by §10b margin rule — panel/zoom clipped off-screen (operator QA) | `fix` | `works/phases/active/P6/slices/P6.F4` |
-| [ ] `P6.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
+| [x] `P6.REVIEW` | `done` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
 
 ## Phase P7: Claude Code plugin
 

@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0003
-created_at: 2026-07-14T05:08:17+09:00
+version: v0004
+created_at: 2026-07-14T12:56:35+09:00
 source: P6.REVIEW
-summary: P6: site_smoke graph.json data-contract custom-JS allowlist built-graph-page landing graph-card invariants root negatives
-previous: v0002_p5_site-build_acceptance_site_smoke.py_after_a_compose_build_negative-test_pattern_for_the_guard
+summary: P6.S1 QA: two extra.css section-10 specificity defeats found by browser QA, CDP geometry probe added as a repeatable overlay/layout tool, publish-safety invariant reworded
+previous: v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives
 ---
 
 # QA
@@ -83,7 +83,9 @@ reported together; exits non-zero naming every violation.
     links to `graph/` that exist regardless of the card).
 
 - **Graph data-contract invariants (P6, `check_graph` over `site/graph.json`):**
-  the file exists and has **no `/Users/`** in the raw text; it is valid JSON with
+  the file exists and carries **no user-home absolute path** in its raw text (the
+  guard matches the operator home-path prefix literally, so a real leak still fails);
+  it is valid JSON with
   `version == 1`; `projects`/`nodes`/`edges` are lists; node ids are unique; every
   node has `id`/`type`/`title` with `type` ∈ `{doc, tag, missing}`; every doc node
   has `url`/`date`/`project`/`tags`/`degree`; every edge has `kind` ∈ `{related,
@@ -117,20 +119,30 @@ reported together; exits non-zero naming every violation.
   vanishing on one header; the awkward "Bootstrap agentic workspace.sh" tab (known
   and accepted — not a defect).
 
-### Knowledge map (browser — authoritative, P6)
+### Knowledge map (browser — authoritative, P6, revised at P6.S1)
 
 - **Route / entry:** `http://localhost:8765/knowledge/graph/` (Graph top tab or the
-  landing Graph card). This is **owed operator QA** — no browser ran in the build
-  harness, so the map was validated at build/structure level only.
-- **What to check:** the settle-then-still layout (~600ms, then no idle drift); both
-  color schemes (toggle the header brightness — the map should repaint); hover /
-  selection dimming + the top-right info panel; the zoom-ladder label transitions
-  (hub-only <60% → all doc labels 60–110% → neighborhood tag labels >110%); the
-  legend project-filter and the tag-visibility switch; the reduced-motion path
-  (paints at rest, no fades); and the landing Graph card in context.
+  landing Graph card). This is **owed operator QA** — no full browser ran in the build
+  harness; a re-review headless-Chrome CDP probe confirmed the *geometry/behavior*
+  (full-bleed layout, overlay-hide, reload-restore) but the *feel* is un-eyeballed.
+- **What to check (revised behaviors):** the **settle-then-mingle** motion (~600ms
+  settle, then a barely-there idle wander — never fast enough to fight the pointer);
+  **quiet labels (A′)** — marks-only at idle, titles revealing on hover/selection and
+  doc titles fading up past ~110% zoom; **pointer/pinch zoom toward the cursor** + 1:1
+  plate pan; **sticky node re-placement** (drag a node — it stays; its tag spokes
+  follow on a spring); the **legend lens** (clicking a project highlights it and dims
+  the rest, `.is-on`, click again to clear — nothing is removed) + the tag-visibility
+  switch; the **reload-restore** round-trip (drag/zoom, then trigger a same-tab reload
+  — the map returns as left, no fresh settle); both color schemes (toggle header
+  brightness — the map repaints); and the reduced-motion path (paints at rest, holds
+  still, snaps).
 - **What would feel wrong:** a second hue appearing in an interactive accent (hover/
-  selection must be teal — project inks are node fills only); the map drifting after
-  settle; labels not following the zoom ladder; a CDN request in the network panel.
+  selection must be teal — project inks are node fills only); the mingle fast enough to
+  fight the pointer, or no mingle at all under normal motion; always-on labels (A′ is
+  quiet); the loading overlay never disappearing or the canvas ignoring the pointer
+  (the F2 `[hidden]` defeat); the map box offset from the left edge with the info panel
+  / zoom stack clipped off-screen (the F4 full-bleed defeat); a fresh settle on every
+  same-tab reload; a CDN request in the network panel.
 - **Flagged, not a defect:** with `navigation.footer` on, the footer sits just below
   the viewport-height map (a small scroll reveals it).
 
@@ -167,6 +179,41 @@ nav/footer/`rel=next` `href="graph/"` links do **not** satisfy it); doctor a
 ghost node appear and the guard still **PASSes** (a dead link is data, not an error).
 All of these were exercised during P6 and re-confirmed at review.
 
+## Browser-QA layout/overlay checks (P6.S1) — the CDP geometry probe
+
+The build/smoke guard cannot see rendered geometry, so two **CSS-specificity defeats**
+in the graph page's `:has(.kb-graph)`-scoped `extra.css` §10 rule stack slipped past it
+and were only caught by the operator's live browser QA:
+
+- **F2 — overlays could never hide.** Overlays toggle visibility via the JS `hidden`
+  attribute, but `.kb-graph [hidden] { display:none }` at specificity (0,1,1) lost to
+  each overlay's own `display` rule at (0,2,0) (`.kb-graph .kb-graph-empty` grid, zoom
+  flex, tooltip inline-flex). The loading/empty overlay stayed up and swallowed all
+  canvas pointer events. Fixed by raising the `[hidden]` helpers to class+attribute
+  selectors at (0,2,1).
+- **F4 — full-bleed defeated.** `.kb-graph`'s `margin-left: calc(50% − 50vw)` breakout
+  at (0,1,0) was zeroed by `.md-typeset > .kb-graph { margin: 0 }` at (0,2,0), so the
+  100vw map box started at the article's left edge and pushed the info panel + zoom
+  stack off-screen on wide viewports. Fixed by carrying the breakout margin on the
+  higher-specificity rule itself.
+
+**Lesson (a QA invariant now):** whenever a declaration is meant to be overridden or
+extended by a later, more-specific selector, verify the *value* carries forward
+everything the earlier rule needed — a plain `[hidden] { display:none }` or a
+`margin: 0` reset can silently win a specificity race.
+
+**The CDP geometry probe (repeatable tool).** These bugs are invisible to a static
+guard but trivial to assert with **headless Chrome + the Chrome DevTools Protocol**:
+launch an own Chrome instance on a private debug port against the running dev server,
+navigate `/graph/` at several viewport widths, and read `getBoundingClientRect()` +
+computed styles via `Runtime.evaluate`. The re-review's probe asserted, at 1440×900 and
+1280×720, `graph.x ≈ 0` and `graph.right ≈ viewport` (F4 full-bleed), the empty overlay
+computed `display:none` with the canvas receiving pointer events at center (F2), and a
+same-tab reload preserving the `sessionStorage` `kb-graph:v1:` blob + node positions
+(F3, max Δ 0). Tear the Chrome instance down when done; never start/stop the operator's
+compose `kb` server. This is the template for the overlay/layout class of bug the smoke
+guard cannot see.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -181,9 +228,9 @@ All of these were exercised during P6 and re-confirmed at review.
 - **The marker/bullet contract** — parsed by `server/documents.py` and the
   `/explain` API-down fallback; any landing edit must keep it byte-intact (guarded).
 - **The `graph.json` data contract (P6)** — a schema/id/endpoint/publish-safety
-  change (or a `graph_hook.py` regression that stops emitting, leaks `/Users/`, or
-  breaks the projects-sum / doc-count identities) silently breaks the map with no
-  build error (guarded by `check_graph`).
+  change (or a `graph_hook.py` regression that stops emitting, leaks a user-home
+  absolute path, or breaks the projects-sum / doc-count identities) silently breaks
+  the map with no build error (guarded by `check_graph`).
 - **The `extra_javascript` allowlist (P6)** — it must stay exactly
   `["javascripts/graph.js"]`; adding a second entry or a CDN script is a guard
   failure, protecting the no-CDN invariant now that the site ships custom JS.

@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0006
-created_at: 2026-07-14T05:08:17+09:00
+version: v0007
+created_at: 2026-07-14T12:55:19+09:00
 source: P6.REVIEW
-summary: P6: hooks-module graph mechanism node/edge model tags-as-nodes docs-current excluded ghost edges data-viz project inks hand-rolled vendored renderer
-previous: v0005_p5_palette_1a_teal_claude-design_provenance_fonts_via_import_nav-feature_choices_cjk_plugin-lang_approach_smoke_guard_over_--strict
+summary: P6.S1 renderer revision ADR: quiet labels A-prime and idle mingle consciously supersede two locked S0 decisions (operator-directed, Claude Design provenance)
+previous: v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds four accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, and a hand-rolled vendored canvas renderer.
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle).
 
 ## Purpose
 
@@ -308,7 +308,8 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   with a **hand-rolled force sim + canvas drawing — zero third-party code, zero CDN**.
   The design's drawing grammar ports 1:1; only the layout was swapped from the design's
   hand-placed composition to a real (deterministic, hash-seeded) force sim that
-  settles then stops.
+  settles in ~600ms (and, since the P6.S1 revision below, then keeps a barely-there
+  idle mingle rather than stopping dead).
 - Alternatives considered: **`d3-force`** (the earlier lean, ~25 KB) — rejected
   because it needs ≥3 micro-packages vendored, whereas the corpus is tiny (O(n²) sim
   is trivial at ≤150 nodes) and the design's drawing spec is already hand-rolled
@@ -320,8 +321,45 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   a `data-md-color-scheme` MutationObserver. Browser visual QA is owed to the operator.
 - Source: P6.S2 `result.md`; P6 `phase.md`.
 
+### P6.S1 renderer revision: quiet labels A′ + idle mingle (supersedes two locked S0 decisions)
+
+- Date: 2026-07-14
+- Status: accepted (P6.S1 — operator-directed, via Claude Design)
+- Context: After P6 shipped, the operator did visual QA in Claude Design and directed
+  a co-designed revision of the map's interaction (the "P6.S1 revision" spec, mirrored
+  as `BRIEF_REVISION.md` + a reference `kbGraph.mount()`). Two of the revised behaviors
+  deliberately **overturn decisions locked at P6.S0**.
+- Decision: adopt the revised interaction model. It **supersedes** two S0 locks:
+  - **Label Strategy A → A′.** S0 locked "doc titles always on". A′ makes the idle map
+    **marks-only (quiet)**: a node's title reveals on hover/selection, doc titles fade
+    up past ~110% zoom, and tag labels stay on-demand.
+  - **Settle-then-still → settle-then-mingle.** S0 locked "settle ~600ms, then stop —
+    no idle drift". The map now keeps a **barely-there idle mingle** (≤
+    `--kb-graph-drift` from rest over `--kb-graph-drift-period`, tags ×1.5). Reduced
+    motion keeps the old behavior — paint at rest, hold still.
+  Additive (not supersessions): pointer/pinch zoom toward the cursor + 1:1 pan; sticky
+  node re-placement with spring-following tag spokes; a legend that **highlights
+  rather than filters** (`.is-on` lens); and (F3) roomier degree-aware/owner-anchored
+  seeding with placement/camera/lens surviving an in-tab reload via `sessionStorage`.
+  Four `--kb-graph-*` tokens were added, none changed; delivered as additive
+  `extra.css` §10 + a renderer live-model port from the design's `kbGraph.mount()`.
+- Alternatives considered: keep the S0-locked "docs-always / settle-then-still" model —
+  rejected by the operator after live QA (always-on labels were noisy on the tag-heavy
+  corpus; a dead-still map read as inert).
+- Consequences: the P6.S0 "Label Strategy A" and "settle-then-still" locks are
+  **consciously superseded** (recorded below), not silently broken; the P6.S0 design
+  provenance and the categorical project-ink extension are unchanged. Two latent CSS
+  §10 specificity defeats surfaced by the same browser QA were fixed (F2 `[hidden]`,
+  F4 full-bleed margin — see qa). Browser *feel* QA remains owed to the operator (a
+  re-review headless-Chrome CDP probe confirmed the geometry / overlay-hide /
+  reload-restore behavior).
+- Source: P6.F1 `result.md`; P6 `phase.md` → "P6.F1"; the design mirror's
+  `BRIEF_REVISION.md`.
+
 ## Superseded Decisions
 
 - The P2 "clean `sqlite-vec`/RRF seam, no embeddings this phase" framing is **consumed, not superseded**, by P4.S6: hybrid search is live via SQLite BLOB vectors + Python cosine, with the seam kept `sqlite-vec`-upgradable.
 - The **P3 "design polish deferred post-launch (D2)"** consequence is **resolved**, not superseded: D2 was promoted into P5's design-system slice and delivered as the operator-designed "calm editorial library" system (palette 1a Teal). The stock indigo / dark-mode look is retired.
 - The **P5.S1 agent-authored "calm editorial library" design system** is **superseded** by the P5.S5 operator-designed system of the same name: same visual direction, but the tokens/values and provenance are now the operator's Claude Design delivery (palette 1a Teal, fonts via `@import`), not agent taste. S1 served as the interim baseline until the delivery landed.
+- The **P6.S0 "Label Strategy A" lock (doc titles always on)** is **superseded** by the operator-directed P6.S1 quiet labels (Strategy A′): the idle map is marks-only; titles reveal on hover/selection and above ~110% zoom.
+- The **P6.S0 "settle-then-still / no idle drift" motion lock** is **superseded** by P6.S1's settle-then-mingle (a bounded idle wander; reduced motion still paints at rest and holds still).

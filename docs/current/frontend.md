@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0003
-created_at: 2026-07-14T05:08:17+09:00
+version: v0004
+created_at: 2026-07-14T12:53:49+09:00
 source: P6.REVIEW
-summary: P6: interactive knowledge-map renderer vendored hand-rolled force sim first custom JS full-bleed graph page extra.css section 10 extra_javascript allowlisted
-previous: v0002_p5_mkdocs_material_design_system_extra.css_token_hook_architecture_theme.font_false_landing_wiring_cjk_client-side_search_zero-js_hero
+summary: P6.S1 renderer revision: live-model port (persistent rAF, +4 tokens, is-on lens), retuned sim + smarter seeding, sessionStorage restore; docs describe publish-safety without the literal path token
+previous: v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted
 ---
 
 # Frontend
@@ -220,31 +220,55 @@ provenance ADR in **decisions**.
   legend/zoom/tooltip/panel containers, an empty/loading state, and a `<noscript>`
   fallback. Material auto-injects an `<h1>Graph</h1>` above the mount — §10b
   visually-hides it (kept in the a11y tree) so the map truly *is* the page.
-- **`docs/javascripts/graph.js` (the renderer).** ~810 lines, strict IIFE, **zero
+- **`docs/javascripts/graph.js` (the renderer).** ~1130 lines, strict IIFE, **zero
   third-party code / zero CDN** — the force sim and the canvas drawing are all
   hand-rolled in this one vendored file. A no-op guard returns unless a `.kb-graph`
   mount exists, so every page but `/graph/` pays nothing. It `fetch()`es the mount's
   `data-graph-src` (relative → resolves under CI's `/knowledge/` base *and* local
   serve), builds the model from `graph.json`'s `{version,projects,nodes,edges}`,
-  runs a deterministic hash-seeded force sim that **settles in ~600ms then stops**
-  (no idle drift), and draws with the design's grammar (draw order dimmed edges →
-  live edges → halo → dimmed nodes → live nodes → selection ring → labels; doc =
-  filled project-ink circle r 6→14px by degree + plate cutout rim; tag = hollow
-  ring; ghost = dashed ring; 3px plate-colored label halo). Scheme changes repaint
-  via a `data-md-color-scheme` `MutationObserver`; icons are inline SVG / text
-  glyphs (no Iconify). Interactions: pan, wheel-zoom, zoom stack, drag,
-  hover-neighborhood highlight, click-to-navigate, legend project-filter, and a
-  tag-visibility switch.
+  deterministically hash-seeds a smarter starting layout (degree-aware doc placement
+  + owner-anchored even-slot tag spokes), runs the force sim that **settles in
+  ~600ms**, and draws with the design's grammar (draw order dimmed edges → live edges
+  → halo → dimmed nodes → live nodes → selection ring → labels; doc = filled
+  project-ink circle r 6→14px by degree + plate cutout rim; tag = hollow ring; ghost =
+  dashed ring; 3px plate-colored label halo). Scheme changes repaint via a
+  `data-md-color-scheme` `MutationObserver`; icons are inline SVG / text glyphs (no
+  Iconify).
+    - **P6.S1 live-model revision (operator-directed, ported from the design's
+      `kbGraph.mount()`).** After the settle the renderer runs an **idle mingle** —
+      one persistent `requestAnimationFrame` loop, guarded by `document.hidden`,
+      drifts each node ≤ `--kb-graph-drift` from rest; under `prefers-reduced-motion`
+      there is **no loop** (rendering is event-driven and holds still). Labels are
+      **quiet (Strategy A′)**: marks-only at idle, revealed on hover/selection and
+      above ~110% zoom (ladder relative to fit). The pointer **zooms toward the
+      cursor** (wheel / ctrl-or-⌘-wheel pinch, clamped to `--kb-graph-zoom-min/max` ×
+      fit) and pans the plate 1:1; **nodes are sticky** — a drag re-places a node and
+      it stays, its tag spokes following on a spring. The legend is a **lens**
+      (`.is-on` active row highlights a project's docs + spokes and dims the rest —
+      never a filter); the tag-visibility switch remains.
+    - **Reload-restore (F3).** Placement + camera + lens are persisted per corpus
+      signature to `sessionStorage` (key `kb-graph:v1:<hash>`), debounced and flushed
+      on `pagehide`, every access wrapped in try/catch (a disabled / private-mode
+      store is a silent no-op). On a matching reload the stored rest positions are
+      restored and the settle is **skipped**; a fresh tab or a changed corpus falls
+      back to the default layout.
 - **`extra.css` §10 (the styling).** Appended as a new section (§1–§9 untouched).
   §10a = the design mirror's `tokens/graph.css` **verbatim** (additive `--kb-graph-*`
-  only, both schemes). §10b = the full-bleed page — scoped **entirely via
-  `:has(.kb-graph)`** so nothing else on the site is affected: zeroes the content
-  margins, hides the injected `<h1>`, and breaks `.kb-graph` out to `width:100vw`,
-  `height:calc(100dvh − var(--kb-graph-chrome))` (chrome `4.8rem` = header 2.4 +
-  tabs 2.4, the one knob to retune if chrome height moves). §10c = the overlay layer
-  (legend / switch / zoom / tooltip / info panel / empty), scoped under `.kb-graph`
-  so `.md-typeset` element styles don't bleed in, plus a `.kb-tag` panel pill
-  mirroring §7. §10d = reduced-motion (paint at rest, no fades).
+  only, both schemes); the P6.S1 revision added **four tokens**
+  (`--kb-graph-drift`, `--kb-graph-drift-period`, `--kb-graph-zoom-min`,
+  `--kb-graph-zoom-max` — none changed). §10b = the full-bleed page — scoped
+  **entirely via `:has(.kb-graph)`** so nothing else on the site is affected: zeroes
+  the content margins, hides the injected `<h1>`, and breaks `.kb-graph` out to
+  `width:100vw`, `height:calc(100dvh − var(--kb-graph-chrome))` (chrome `4.8rem` =
+  header 2.4 + tabs 2.4, the one knob to retune if chrome height moves). Its breakout
+  `margin-left: calc(50% − 50vw)` is carried on the higher-specificity
+  `.md-typeset > .kb-graph` rule (F4) so a later `margin` declaration cannot zero it
+  back out — a CSS-specificity fix, see qa. §10c = the overlay layer (legend / switch
+  / zoom / tooltip / info panel / empty), scoped under `.kb-graph` so `.md-typeset`
+  element styles don't bleed in, plus a `.kb-tag` panel pill mirroring §7 and the
+  P6.S1 `.is-on` legend-lens row; its `[hidden]` helpers are raised to
+  class+attribute specificity so the JS `hidden` attribute can actually hide the
+  overlays (F2, see qa). §10d = reduced-motion (paint at rest, hold still, no fades).
 
 **Project inks are a documented data-viz-only accent extension:** the map's node
 fills + legend chips use a small muted categorical set (teal / bronze / plum), but
@@ -263,7 +287,8 @@ byte-intact.
 - **Custom JS stays vendored + CDN-free (P6):** `extra_javascript` is allowlisted to
   exactly `javascripts/graph.js`; keep the renderer self-contained (no third-party
   code, no CDN `<script src>`), and extend `extra.css` §10 additively without touching
-  §1–§9. `graph.json` must stay repo-relative (no `/Users/` leak).
+  §1–§9. `graph.json` must stay repo-relative — no user-home absolute path may leak
+  into it (guard-asserted).
 - Never add `nav:`/`strict:`; keep `exclude_docs` as the only exclusion mechanism.
 - Keep the `<!-- explain:recent -->` marker + bullet format byte-intact, and
   `<!-- material/tags -->` in `docs/tags.md`.

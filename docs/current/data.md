@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0004
-created_at: 2026-07-14T05:08:17+09:00
+version: v0005
+created_at: 2026-07-14T12:58:08+09:00
 source: P6.REVIEW
-summary: P6: build-time knowledge-graph data contract node/edge model tags-as-nodes ghost/broken edges deterministic publish-safe graph.json
-previous: v0003_p4_document_embeddings_cache_related_column_cjk_query-layer_search_publish-safe_source
+summary: P6 re-review: reword the graph.json publish-safety guarantee without the literal user-home path token (data contract unchanged; F1-F4 were renderer/CSS-only)
+previous: v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json
 ---
 
 # Data
@@ -117,8 +117,8 @@ newline (keys sort alphabetically inside every object); **two builds are byte-id
 
 - **Deterministic** — stable node/edge ordering, byte-identical across builds (no
   timestamps in the payload).
-- **Publish-safe** — repo-relative ids/urls only; **no `/Users/` / absolute local path**
-  ever leaks (guard-asserted; see qa).
+- **Publish-safe** — repo-relative ids/urls only; **no user-home absolute path**
+  ever leaks into the payload (guard-asserted; see qa).
 - **Dead links are data, not errors** — a `related:` to a nonexistent doc yields a
   `broken` edge + a `missing` ghost node, never a build failure.
 - **Today's numbers (validated):** 6 doc + 26 tag = 32 nodes; 3 `related` + 27 `tag` =
