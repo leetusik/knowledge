@@ -307,6 +307,63 @@ Additional durable findings:
   matrix (a–e) + remote guard + local-fallback + corrupt-config all pass; `healthz` GET
   ok (no POST to the live KB); `workflow.py validate` passed.
 
+### P7.S5 landed (2026-07-14) — setup skill; scaffold → config → stack rehearsed end-to-end
+
+- **Deliverable:** `plugin/skills/setup/SKILL.md` (`/knowledge:setup`,
+  `disable-model-invocation: true`). ONLY source file added this slice — no helper script,
+  no third-party dep. `allowed-tools: Read, Glob, Bash(python3 -c:*)`; every mutation
+  (render.py, mkdir, marker/config Write, chmod, git, docker) takes a normal permission
+  prompt by design. `plugin.json` stays 0.1.0.
+- **Interview params & defaults (what S6's E2E must drive):** target dir (default
+  `~/knowledge`, `$ARGUMENTS` overrides) · site title (default "Knowledge Base") · GitHub
+  `owner/repo` OPTIONAL (given → `KB_SITE_URL=https://<owner>.github.io/<repo>/`; skipped →
+  local-only `KB_SITE_URL=http://localhost:<viewer_port>/`) · copyright line (default = site
+  title; whole `mkdocs.yml` copyright value) · TZ (host default via `/etc/localtime`
+  symlink / `TZ`, else UTC) · viewer/API ports (8765/8766, asked only on "advanced") ·
+  Gemini key NEVER collected (host env `GOOGLE_API_KEY`/`GEMINI_API_KEY` only) · `KB_DATE` =
+  today. Confirm summary before any disk write.
+- **render.py drive (exact):** `python3 "${CLAUDE_PLUGIN_ROOT}/setup/render.py" --dest
+  <target> --set KB_SITE_NAME=… --set KB_SITE_URL=… --set KB_COPYRIGHT=… --set KB_TZ=…
+  --set KB_VIEWER_PORT=… --set KB_API_PORT=… --set KB_DATE=…` (all 7 together; `--force`
+  only on the re-render path). Renders 35 files.
+- **Marker schema** `.kb-scaffold.json` (written into target): `{"plugin":"knowledge",
+  "plugin_version":"0.1.0","rendered_at":"<YYYY-MM-DD>","params":{<the 7 non-secret
+  KB_* values>}}`. No secret field ever.
+- **Config write (the contract S4 consumes) — proven byte-for-byte:** nested
+  `{"kb_root":<abs target>,"api":{"base_url":"http://localhost:<api_port>","token":null},
+  "site":{"base_url":"http://localhost:<viewer_port>"}}` at
+  `$XDG_CONFIG_HOME/knowledge-kb/config.json` (default `~/.config/...`), `chmod 600`,
+  prompt-before-overwrite (one config, last-setup-wins). The explain resolver snippet
+  extracted VERBATIM from `plugin/skills/explain/SKILL.md` and run against this config
+  resolved `configured` + kb_root/api 9766/site 9765 + `KB_LOCAL_FALLBACK=yes`. `token`
+  written as JSON `null` (not the string) → resolver yields empty `KB_API_TOKEN`.
+- **Re-run semantics** keyed on the marker: EMPTY → fresh render; MARKED → reconfigure
+  (skip to config) / re-render (`--force`, then show git diff) / abort; UNMARKED non-empty
+  → refuse (covers the operator's own `~/projects/personal/knowledge`, which has no marker).
+  Verified: `--force` re-render with unchanged params leaves `git status` clean; the
+  presence test is a `python3 -c` classifier returning EMPTY/MARKED/UNMARKED.
+- **For S6's E2E — exact commands to simulate a user run (all proven here with test params
+  site "Field Notes 2" / local-only / TZ Europe/Berlin / ports 9765-9766 / date
+  2026-07-14):**
+  1. classify target (python3 -c EMPTY/MARKED/UNMARKED),
+  2. `render.py --dest <t> --set …` (7 tokens),
+  3. write `.kb-scaffold.json`,
+  4. `git -C <t> init && git -C <t> add -A && git -C <t> commit -m "chore: scaffold knowledge base (knowledge plugin v0.1.0)"`,
+  5. write config JSON at `$XDG_CONFIG_HOME/knowledge-kb/config.json` + `chmod 600`,
+  6. gate: `docker run --rm -v <t>:/docs squidfunk/mkdocs-material:9.7.6 build` +
+     `python3 <t>/scripts/site_smoke.py --root <t>` → PASS,
+  7. optional stack: `docker compose -f <t>/compose.yml up -d --build`, probe
+     `curl -sS --max-time 5 http://localhost:<api_port>/healthz` → `{"status":"ok",…}` and
+     viewer root → 200, then `docker compose -f <t>/compose.yml down -v`.
+  Ports 9765/9766 avoid the operator's 8765/8766 stack. Explain E2E (both API and fallback
+  paths) is S6's own to add.
+- **Validation:** plugin validate (+strict) exit 0; rehearsal (a–f) all pass — render,
+  marker sanity, git commit + clean status, config 600 + verbatim-resolver contract check
+  (`KB_LOCAL_FALLBACK=yes`), re-run/refusal semantics, scaffold gate PASS, and a full
+  `compose up` with `/healthz`=`{"status":"ok",…,"documents":1}` + viewer 200 (then torn
+  down, image + temp dirs removed); `workflow.py validate` passed; `plugin_parity.py` still
+  PASS (adding a skill does not touch shipped_dirs/manifest).
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -378,6 +435,8 @@ lands._
   `site_smoke.py` deploy gate (the phase's crux acceptance). [S3]
 - api — shipped explain skill: config resolution order (env → config file → legacy → stop), bearer auth on POST, unchanged server API surface. [S4]
 - security — local-only fallback rule (no file writes for remote KBs), token via config file/env only, dropped path-scoped git allowed-tool in favor of prompted fallback. [S4]
+- operations — /knowledge:setup flow: interview → render → marker → git init → config (600) → compose up/healthz or no-Docker path → Pages go-live checklist; re-run = reconfigure/re-render/abort via .kb-scaffold.json marker. [S5]
+- security — setup never collects/writes secrets (Gemini via host env only; config chmod 600; token null by default); refuses unmarked non-empty targets. [S5]
 
 ## Open Questions
 
