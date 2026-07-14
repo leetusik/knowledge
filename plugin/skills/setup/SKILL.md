@@ -154,7 +154,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.1.0",
+      "plugin_version": "0.2.0",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",

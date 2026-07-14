@@ -1,9 +1,14 @@
 """FastAPI read/search surface over the S1 library.
 
-Reads (healthz, list/get/by-path, search) are always open. The bearer dependency
-guards mutating endpoints only — today just ``POST /api/reindex`` (the write path
-lands in S3) — and is a no-op when ``KB_API_TOKEN`` is unset. A fresh
-``db.connect()`` is opened per request (a dependency) so config stays
+Reads (list/get/by-path, search, tags, projects) are open by default. The bearer
+dependency (``require_bearer``) guards mutating endpoints and is a no-op when
+``KB_API_TOKEN`` is unset. The hosted box additionally gates the read/search
+surface behind the same bearer by setting ``KB_REQUIRE_READ_AUTH=true`` — then
+``require_read_bearer`` requires the token on reads too (both the flag AND a token
+must be set). ``GET /healthz`` always stays open (edge/uptime probes). There is no
+CORS: the consumer is server-to-server (the hi2vi agent runs server-side; the
+public Pages site searches browser-only via lunr and never calls this API). A
+fresh ``db.connect()`` is opened per request (a dependency) so config stays
 env-at-call-time: tests retarget ``KB_ROOT``/``KB_DB_PATH`` via env, and the
 container injects config through compose ``environment:``. Nothing is cached at
 import time.
@@ -74,6 +79,21 @@ def require_bearer(authorization: Optional[str] = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="missing or invalid bearer token")
 
 
+def require_read_bearer(authorization: Optional[str] = Header(default=None)) -> None:
+    """Guard for the read/search surface on the hosted deployment only.
+
+    No-op unless ``KB_REQUIRE_READ_AUTH`` is true AND ``KB_API_TOKEN`` is set —
+    both must hold. Local/plugin default (flag unset) leaves reads open even when
+    a token is set (a set token guards only writes there). When the flag is on the
+    check delegates to ``require_bearer``, so a flag-on-but-tokenless deployment is
+    still a no-op (same both-must-hold philosophy) and the bearer check is byte-for-
+    byte identical to the write path. healthz is never gated (edge/uptime probes).
+    """
+    if not config.require_read_auth_enabled():
+        return
+    require_bearer(authorization)
+
+
 # tags_text is an internal FTS denormalization (space-joined mirror of tags,
 # already exposed as a list), so it never leaves the API. markdown is dropped
 # from list payloads and kept on single-doc fetches.
@@ -103,6 +123,7 @@ def list_documents(
     tag: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    _: None = Depends(require_read_bearer),
     conn=Depends(get_conn),
 ):
     total = db.count_documents(conn, project=project, tag=tag)
@@ -111,19 +132,30 @@ def list_documents(
 
 
 @app.get("/api/tags")
-def list_tags(project: Optional[str] = None, conn=Depends(get_conn)):
+def list_tags(
+    project: Optional[str] = None,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     return {"tags": db.list_tags(conn, project=project)}
 
 
 @app.get("/api/projects")
-def list_projects(conn=Depends(get_conn)):
+def list_projects(
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     return {"projects": db.list_projects(conn)}
 
 
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path
 # route never collides with the id route.
 @app.get("/api/documents/by-path/{rel_path:path}")
-def get_document_by_path(rel_path: str, conn=Depends(get_conn)):
+def get_document_by_path(
+    rel_path: str,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     doc = db.get_document_by_path(conn, rel_path)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
@@ -131,7 +163,11 @@ def get_document_by_path(rel_path: str, conn=Depends(get_conn)):
 
 
 @app.get("/api/documents/{doc_id}")
-def get_document(doc_id: int, conn=Depends(get_conn)):
+def get_document(
+    doc_id: int,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     doc = db.get_document(conn, doc_id)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
@@ -146,6 +182,7 @@ def search(
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     raw: bool = False,
+    _: None = Depends(require_read_bearer),
     conn=Depends(get_conn),
 ):
     try:
@@ -289,6 +326,8 @@ def create_document(
         committed = False
         commit_sha = None
         commit_error = None
+        pushed = False
+        push_error = None
         if body.commit and config.git_commit_enabled():
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
@@ -305,6 +344,20 @@ def create_document(
                 committed = True
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
+
+            # 4b. Best-effort publish: push the commit to origin/main when
+            #     KB_GIT_PUSH is enabled (hosted box only; off by default so local
+            #     never pushes). Mirrors the commit's best-effort semantics — a
+            #     failed push never changes the 201; the doc publishes on the next
+            #     successful push. A rebase may rewrite the commit, so the PUBLISHED
+            #     head becomes the authoritative commit_sha on success. Stays inside
+            #     WRITE_LOCK so no concurrent write mutates the tree mid-rebase.
+            if committed and config.git_push_enabled():
+                try:
+                    commit_sha = gitops.push(root=config.kb_root())
+                    pushed = True
+                except gitops.GitError as exc:
+                    push_error = exc.stderr or str(exc)
 
     # 4b. Best-effort embed of the new doc, OUTSIDE the WRITE_LOCK critical section.
     #     Semantic search is a disposable cache: any failure (no key, API error) is
@@ -345,9 +398,12 @@ def create_document(
         "landing_created": landing_created,
         "committed": committed,
         "commit_sha": commit_sha,
+        "pushed": pushed,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    if push_error is not None:
+        resp["push_error"] = push_error
     return resp
 
 
@@ -373,6 +429,8 @@ def _delete_document(
         committed = False
         commit_sha = None
         commit_error = None
+        pushed = False
+        push_error = None
         if commit and config.git_commit_enabled():
             try:
                 gitops.add(
@@ -387,6 +445,16 @@ def _delete_document(
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
 
+            # Best-effort publish of the delete commit — same semantics as the POST
+            # path (see create_document 4b): KB_GIT_PUSH-gated, off by default, a
+            # failed push never changes the 200, published head becomes commit_sha.
+            if committed and config.git_push_enabled():
+                try:
+                    commit_sha = gitops.push(root=config.kb_root())
+                    pushed = True
+                except gitops.GitError as exc:
+                    push_error = exc.stderr or str(exc)
+
     resp = {
         "deleted": True,
         "id": doc["id"],
@@ -397,9 +465,12 @@ def _delete_document(
         "recent_removed": recent_removed,
         "committed": committed,
         "commit_sha": commit_sha,
+        "pushed": pushed,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    if push_error is not None:
+        resp["push_error"] = push_error
     return resp
 
 

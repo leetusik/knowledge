@@ -10,7 +10,7 @@
 - Next slice: `P8.S5`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T17:25:57+09:00`
+- Rebuilt at: `2026-07-14T17:32:33+09:00`
 
 ## Active Phases
 
@@ -115,6 +115,7 @@
 | [x] `P8.S1` | `done` | publish-on-write: server-side git push after the scoped commit | `implementation` | `works/phases/active/P8/slices/P8.S1` |
 | [x] `P8.S2` | `done` | hosted read auth: gate reads/search behind bearer (local stays open) | `implementation` | `works/phases/active/P8/slices/P8.S2` |
 | [x] `P8.S3` | `done` | prod deploy artifacts for knowledge.hi2vi.com (compose.prod + vhost + runbook) | `implementation` | `works/phases/active/P8/slices/P8.S3` |
+| [x] `P8.F1` | `done` | plugin template sync — mirror S1/S2 server+test changes, manifest entry, version bump (parity red at HEAD) | `fix` | `works/phases/active/P8/slices/P8.F1` |
 | [ ] `P8.S4` | `todo` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
 | [ ] `P8.S5` | `todo` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |

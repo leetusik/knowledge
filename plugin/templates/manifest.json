@@ -24,6 +24,7 @@
       "scripts/graph_hook.py",
       "scripts/site_smoke.py",
       "tests/conftest.py",
+      "tests/test_api_push.py",
       "tests/test_api_read.py",
       "tests/test_api_write.py",
       "tests/test_documents.py",

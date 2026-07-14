@@ -1,6 +1,6 @@
 {
   "name": "knowledge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Write beginner-friendly explainer documents into your own personal knowledge base — a searchable MkDocs site backed by a FastAPI document API — and scaffold the whole KB from scratch with one setup skill.",
   "author": {
     "name": "leetusik"
