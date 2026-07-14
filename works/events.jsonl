@@ -179,3 +179,11 @@
 {"ts": "2026-07-14T12:58:20+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only", "source": "P6.REVIEW"}
 {"ts": "2026-07-14T13:04:00+09:00", "type": "slice_status_changed", "slice": "P6.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-14T13:04:00+09:00", "type": "phase_reviewed", "phase": "P6", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-14T13:48:49+09:00", "type": "slice_status_changed", "slice": "P7.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S1"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S2"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S3"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S4"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S5"}
+{"ts": "2026-07-14T13:52:18+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.S6"}
+{"ts": "2026-07-14T13:55:16+09:00", "type": "slice_status_changed", "slice": "P7.DECOMP", "old_status": "in_progress", "new_status": "done"}
