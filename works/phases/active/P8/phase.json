@@ -2,10 +2,10 @@
   "id": "P8",
   "name": "Knowledge API for hi2vi content agent",
   "objective": "Make the knowledge document API production-consumable by the hi2vi content agent: a reachable hosted endpoint (hosting proposed at DECOMP) with bearer auth, docs/hi2vi/ project-folder bootstrap, publish-on-write so agent-written docs (md file + DB row, /explain-style) land on main and GitHub Pages without operator action, and the existing read/search endpoints (hybrid search, get) exposed under the same auth so hi2vi can use accumulated knowledge for content creation",
-  "status": "pending",
+  "status": "in_progress",
   "order": 8,
   "created_at": "2026-07-14T15:16:37+09:00",
-  "started_at": null,
+  "started_at": "2026-07-14T16:55:39+09:00",
   "completed_at": null,
   "review": {
     "status": "pending",
