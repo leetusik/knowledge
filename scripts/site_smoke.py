@@ -45,7 +45,30 @@ TAGS_MARKER = "<!-- material/tags -->"
 BULLET_RE = re.compile(r"^- \d{4}-\d{2}-\d{2} · \[[^\]]+\]\([^)]+\) — .+$")
 BUILT_BULLET_RE = re.compile(r'<li>\d{4}-\d{2}-\d{2} · <a href="[^"]+">[^<]+</a> — [^<]+</li>')
 CDN_SCRIPT_RE = re.compile(r'<script[^>]+src="https?://')
-PROJECTS = ["changple5", "hi2vi_web", "bootstrap_agentic_workspace.sh"]
+
+# Dynamic project discovery (P7.S1) — replaces the old hardcoded PROJECTS list so
+# a fresh scaffold guards its own seed project instead of the operator's names. A
+# "project" is any docs/ subdir other than the reserved chrome dirs that carries
+# >=1 doc (*.md other than its own index.md). check_built (each project must ship
+# site/<project>/index.html) and check_graph (the doc-count identity) share this
+# ONE rule, so the built-site guard and the graph guard can never drift.
+RESERVED_DOC_DIRS = frozenset({"current", "versions", "stylesheets", "assets", "javascripts"})
+
+
+def discover_projects(root: Path) -> list[str]:
+    """Sorted names of docs/ subdirs that are real project dirs: not reserved
+    chrome and containing >=1 ``*.md`` other than ``index.md``."""
+    docs_dir = root / "docs"
+    if not docs_dir.is_dir():
+        return []
+    names = [
+        sub.name
+        for sub in docs_dir.iterdir()
+        if sub.is_dir()
+        and sub.name not in RESERVED_DOC_DIRS
+        and any(f.name != "index.md" for f in sub.glob("*.md"))
+    ]
+    return sorted(names)
 
 
 def check_source(root: Path, failures: list[str]) -> None:
@@ -191,7 +214,13 @@ def check_built(root: Path, failures: list[str]) -> None:
         if not re.search(r'<a[^>]*class="kb-card"[^>]*href="graph/"', html):
             failures.append("site/index.html: landing kb-card link to graph/ missing (P6.S3 graph entry card)")
 
-    for project in PROJECTS:
+    # Each discovered project must ship its per-project landing page. Zero
+    # discovered projects is itself a failure: even a fresh scaffold seeds >=1
+    # project, and an empty docs tree must never pass the deploy gate.
+    projects = discover_projects(root)
+    if not projects:
+        failures.append("no project dirs discovered under docs/")
+    for project in projects:
         if not (site_dir / project / "index.html").is_file():
             failures.append(f"site/{project}/index.html missing")
 
@@ -289,13 +318,12 @@ def check_graph(root: Path, failures: list[str]) -> None:
 
     # Doc-node count must equal the filesystem count of docs/*/*.md at depth 2,
     # excluding index.md and reserved dirs — self-adapts to new docs/projects.
-    reserved = {"current", "versions", "stylesheets", "assets", "javascripts"}
+    # Uses the same discover_projects rule as check_built (one discovery truth).
     docs_dir = root / "docs"
-    fs_count = 0
-    if docs_dir.is_dir():
-        for sub in docs_dir.iterdir():
-            if sub.is_dir() and sub.name not in reserved:
-                fs_count += sum(1 for f in sub.glob("*.md") if f.name != "index.md")
+    fs_count = sum(
+        sum(1 for f in (docs_dir / project).glob("*.md") if f.name != "index.md")
+        for project in discover_projects(root)
+    )
     if doc_count != fs_count:
         failures.append(
             f"site/graph.json: doc-node count ({doc_count}) != filesystem docs count ({fs_count})"

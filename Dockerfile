@@ -13,7 +13,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # uv binary (used only to resolve+install the locked deps into the system env).
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Pinned (P7.S1) to the locally-proven uv version — the host uv that produced
+# uv.lock — so the build is reproducible and this Dockerfile can ship byte-identical
+# in the plugin template class. Bumps are deliberate and diff-visible.
+COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /usr/local/bin/uv
 
 # Install runtime deps from the frozen lock into the system interpreter. A /repo
 # venv would be shadowed by the runtime bind mount, so deps go system-wide.
