@@ -1,0 +1,14 @@
+{
+  "name": "knowledge",
+  "owner": {
+    "name": "leetusik"
+  },
+  "description": "Marketplace for the knowledge plugin: a personal knowledge base with an explain skill and a KB scaffolder.",
+  "plugins": [
+    {
+      "name": "knowledge",
+      "source": "./plugin",
+      "description": "Write beginner-friendly explainer documents into your own personal knowledge base — a searchable MkDocs site backed by a FastAPI document API — and scaffold the whole KB from scratch with one setup skill."
+    }
+  ]
+}
