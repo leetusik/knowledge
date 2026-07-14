@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P7`
-- Current slice: `P7.S1`
-- Next slice: `P7.S2`
+- Current slice: `P7.S2`
+- Next slice: `P7.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T13:55:16+09:00`
+- Rebuilt at: `2026-07-14T14:49:16+09:00`
 
 ## Active Phases
 
@@ -22,7 +22,7 @@
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
-| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.S1` | `works/phases/active/P7` |
+| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.S2` | `works/phases/active/P7` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -97,7 +97,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P7.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P7/slices/P7.DECOMP` |
-| [ ] `P7.S1` | `todo` | Feature portability pass | `implementation` | `works/phases/active/P7/slices/P7.S1` |
+| [x] `P7.S1` | `done` | Feature portability pass | `implementation` | `works/phases/active/P7/slices/P7.S1` |
 | [ ] `P7.S2` | `todo` | Plugin skeleton + marketplace wiring | `implementation` | `works/phases/active/P7/slices/P7.S2` |
 | [ ] `P7.S3` | `todo` | Template payload, renderer, parity guard | `implementation` | `works/phases/active/P7/slices/P7.S3` |
 | [ ] `P7.S4` | `todo` | Shipped explain skill | `implementation` | `works/phases/active/P7/slices/P7.S4` |

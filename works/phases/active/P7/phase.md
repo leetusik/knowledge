@@ -173,6 +173,39 @@ Additional durable findings:
   every installer's cache. No symlinks for template sync (Windows materializes them as
   text). `${CLAUDE_PLUGIN_ROOT}` reaches payload dirs at runtime.
 
+### P7.S1 landed (2026-07-14) — portability pass done; byte-identical class confirmed
+
+- **`scripts/site_smoke.py` de-hardcoded.** `PROJECTS` (old line 48) replaced by a
+  module-level `RESERVED_DOC_DIRS` constant + `discover_projects(root) -> list[str]`
+  (sorted non-reserved `docs/` subdirs carrying ≥1 `*.md` other than `index.md`).
+  **Both** `check_built` (per-project `site/<project>/index.html` loop) and
+  `check_graph`'s `fs_count` now use this one helper — **one discovery truth**, they
+  cannot drift. Teeth guard added in `check_built`: zero discovered projects →
+  `"no project dirs discovered under docs/"`. On this repo discovery yields exactly
+  the old three projects; guard stays green; all other checks byte-untouched. **S3
+  coupling:** the guard now self-discovers a scaffold's own seed project, so S3's
+  seed `index.md` + welcome explainer just need to satisfy the marker/bullet/graph
+  invariants — no per-name coordination needed. Note the zero-project guard sits
+  inside `check_built` after its `site/`-missing early return, so it only fires once
+  `site/` exists (always true in the real gate, which builds before smoking).
+- **`Dockerfile` uv stage pinned** `ghcr.io/astral-sh/uv:latest` →
+  `ghcr.io/astral-sh/uv:0.8.14`. **Heads-up for S3:** the plan said `0.11.28` on a
+  wrong premise ("host uv = 0.11.28"); the host actually runs `uv 0.8.14` (the uv
+  that produced `uv.lock`), so I pinned `0.8.14` — the truly locally-proven version.
+  Both tags exist on ghcr and both build. **S3 ships this Dockerfile byte-identical,
+  so the shipped pin is `0.8.14`.** If the operator later bumps uv, it is a one-line
+  change here + in the template snapshot.
+- **`compose.yml` left untouched** (confirmed non-issue per Findings §2 — no
+  `KB_PUBLIC_BASE_URL`).
+- **Byte-identical template class (from Findings §5 mapping) is now settled for S3:**
+  `scripts/site_smoke.py` (portable dynamic discovery) and `Dockerfile` (pinned uv
+  0.8.14) both join it unchanged. No shift to the 3-class mapping — the mapping
+  already anticipated "after S1" for both files; S1 simply realized it.
+- **Validation:** mkdocs 9.7.6 build + `site_smoke.py` → PASS; negative test (drop a
+  built project dir) → fails naming it, restores green; empty-`docs/` temp tree →
+  zero-project guard fires; `COMPOSE_BAKE=false docker compose build api` → Built
+  (pinned uv tag pulls); `workflow.py validate` → passed.
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -211,10 +244,19 @@ lands._
   API surface noted for the packaged distribution. [anticipated: S4]
 - operations — install/setup flow, scaffold deploy gate (portable `site_smoke.py`),
   `plugin-ci.yml` parity gate, release/version-bump discipline. [anticipated: S1, S3, S6]
+  - [S1 landed] deploy gate is now portable: `site_smoke.py` derives project dirs
+    dynamically (`discover_projects`, one truth shared by built-site + graph checks)
+    instead of three hardcoded names, with a zero-project teeth guard; Dockerfile uv
+    stage pinned to `0.8.14` for reproducible builds.
 - security — SaaS-open config model, secrets hygiene (config 600, no key/token in
   scaffolds), local-only-fallback rule. [anticipated: S4, S5]
 - decisions — MIT license; plugin-hosted-in-this-repo; `source: "./plugin"` isolation;
   no `KB_PUBLIC_BASE_URL` change (localhost root is correct). [anticipated: S1, S2]
+  - [S1 landed] dynamic project discovery chosen over a hardcoded `PROJECTS` list
+    (one discovery rule for both the built-site per-project check and the graph
+    doc-count identity, so they cannot drift); uv pinned to the locally-proven host
+    version `0.8.14` (not the plan's `0.11.28`, which rested on a wrong host-version
+    premise) — reproducible and byte-identical-shippable.
 - product — the feature is now an installable Claude Code plugin for any user.
   [anticipated: S6]
 
