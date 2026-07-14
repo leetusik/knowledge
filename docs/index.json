@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0002_personal_knowledge_base_with_two_consumption_tracks",
+      "latest": "v0003_p7_the_knowledge_feature_now_ships_as_an_installable_claude_code_plugin_marketplace_knowledge_explain_knowledge_setup_for_any_user_architecture_kept_saas-open",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -19,6 +19,14 @@
           "source": "P1.REVIEW",
           "summary": "Personal knowledge base with two consumption tracks",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p7_the_knowledge_feature_now_ships_as_an_installable_claude_code_plugin_marketplace_knowledge_explain_knowledge_setup_for_any_user_architecture_kept_saas-open",
+          "path": "docs/versions/product/v0003_p7_the_knowledge_feature_now_ships_as_an_installable_claude_code_plugin_marketplace_knowledge_explain_knowledge_setup_for_any_user_architecture_kept_saas-open.md",
+          "created_at": "2026-07-14T16:21:19+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: the knowledge feature now ships as an installable Claude Code plugin (marketplace + /knowledge:explain + /knowledge:setup) for any user; architecture kept SaaS-open",
+          "previous": "v0002_personal_knowledge_base_with_two_consumption_tracks"
         }
       ]
     },
@@ -61,7 +69,7 @@
       ]
     },
     "architecture": {
-      "latest": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam",
+      "latest": "v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -103,6 +111,14 @@
           "source": "P6.REVIEW",
           "summary": "P6: build-time knowledge-graph data pipeline (mkdocs hook to graph.json static asset) plus browser-only client-side rendering seam",
           "previous": "v0004_p5_browser-only_static-search_boundary_vs_local_fastapi_hybrid_same_corpus_two_implementations_by_deployment_target"
+        },
+        {
+          "id": "v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard",
+          "path": "docs/versions/architecture/v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard.md",
+          "created_at": "2026-07-14T16:21:04+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: /explain packaged as a Claude Code plugin hosted in this repo — marketplace + isolated plugin/ payload, template-sync snapshot + shared stdlib renderer + parity guard",
+          "previous": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam"
         }
       ]
     },
@@ -145,7 +161,7 @@
       ]
     },
     "backend": {
-      "latest": "v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer",
+      "latest": "v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -171,6 +187,14 @@
           "source": "P4.REVIEW",
           "summary": "P4: recency+RRF hybrid search, embeddings module, delete path, incremental reindex, cross-links, sanitizer",
           "previous": "v0002_server_fastapi_package_config_db_documents_search_gitops_main"
+        },
+        {
+          "id": "v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit",
+          "path": "docs/versions/backend/v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit.md",
+          "created_at": "2026-07-14T16:21:04+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: write path auto-creates a minimal docs/<project>/index.md landing for a project's first doc (F1) — never overwrites, joins the scoped commit",
+          "previous": "v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer"
         }
       ]
     },
@@ -221,7 +245,7 @@
       ]
     },
     "api": {
-      "latest": "v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links",
+      "latest": "v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -247,11 +271,19 @@
           "source": "P4.REVIEW",
           "summary": "P4: search pagination + hybrid signals, DELETE + tags/projects, incremental reindex, related links",
           "previous": "v0002_db-backed_document_api_read_list_search_reindex_api-owned_write_path"
+        },
+        {
+          "id": "v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect",
+          "path": "docs/versions/api/v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect.md",
+          "created_at": "2026-07-14T16:21:04+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: shipped /knowledge:explain skill config-resolution order + bearer; POST /api/documents auto-creates the project landing (landing_created) as a documented side effect",
+          "previous": "v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links"
         }
       ]
     },
     "operations": {
-      "latest": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only",
+      "latest": "v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -309,11 +341,19 @@
           "source": "P6.REVIEW",
           "summary": "P6 re-review: reword the smoke-guard and serve-parity publish-safety notes without the literal user-home path token (build/serve pipeline unchanged; F1-F4 were renderer/CSS-only)",
           "previous": "v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention"
+        },
+        {
+          "id": "v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline",
+          "path": "docs/versions/operations/v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline.md",
+          "created_at": "2026-07-14T16:21:12+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: plugin install/setup flow, portable site_smoke deploy gate, plugin-ci parity gate, release/version-bump discipline",
+          "previous": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only"
         }
       ]
     },
     "security": {
-      "latest": "v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface",
+      "latest": "v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -331,11 +371,19 @@
           "source": "P4.REVIEW",
           "summary": "P4: publish-safe source metadata sanitizer, no local paths on public surface",
           "previous": "v0001_bootstrap"
+        },
+        {
+          "id": "v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation",
+          "path": "docs/versions/security/v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation.md",
+          "created_at": "2026-07-14T16:21:13+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: SaaS-open config model (~/.config/knowledge-kb/config.json, chmod 600), local-only-fallback rule, no secrets in scaffolds, payload isolation",
+          "previous": "v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface"
         }
       ]
     },
     "qa": {
-      "latest": "v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded",
+      "latest": "v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -369,11 +417,19 @@
           "source": "P6.REVIEW",
           "summary": "P6.S1 QA: two extra.css section-10 specificity defeats found by browser QA, CDP geometry probe added as a repeatable overlay/layout tool, publish-safety invariant reworded",
           "previous": "v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives"
+        },
+        {
+          "id": "v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant",
+          "path": "docs/versions/qa/v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant.md",
+          "created_at": "2026-07-14T16:21:13+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7: plugin E2E + reproducer patterns (render→build→site_smoke on the grown corpus), parity guard negatives, per-project deploy-gate invariant",
+          "previous": "v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded"
         }
       ]
     },
     "decisions": {
-      "latest": "v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance",
+      "latest": "v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -431,9 +487,17 @@
           "source": "P6.REVIEW",
           "summary": "P6.S1 renderer revision ADR: quiet labels A-prime and idle mingle consciously supersede two locked S0 decisions (operator-directed, Claude Design provenance)",
           "previous": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer"
+        },
+        {
+          "id": "v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default",
+          "path": "docs/versions/decisions/v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default.md",
+          "created_at": "2026-07-14T16:21:19+09:00",
+          "source": "P7.REVIEW",
+          "summary": "P7 ADRs: MIT license, plugin hosted in this repo with source ./plugin isolation, dynamic project discovery, uv pinned 0.8.14, auto-landing on first project doc, no KB_PUBLIC_BASE_URL default",
+          "previous": "v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-14T12:58:44+09:00"
+  "last_rebuilt_at": "2026-07-14T16:28:06+09:00"
 }

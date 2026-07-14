@@ -2,16 +2,16 @@
   "id": "P7",
   "name": "Claude Code plugin",
   "objective": "Package the knowledge feature as a Claude Code plugin hosted in this repo (.claude-plugin/plugin.json + marketplace manifest): ship the explain skill plus a setup flow that scaffolds a new user's own KB (server + MkDocs + Pages); installable via /plugin by any Claude Code user. Keep the architecture open to a future SaaS-like hosted version (noted, out of scope).",
-  "status": "planned",
+  "status": "done",
   "order": 7,
   "created_at": "2026-07-08T16:35:37+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-07-14T16:30:31+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-07-14T16:30:31+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "All slices validated together (pytest 57, parity, plugin validate plain+strict, operator gate, fresh-scaffold crux). Objective + constraints met; uv-pin and custom-port url caveats recorded as non-blocking; 8 doc versions consolidated."
   },
   "paths": {
     "phase_md": "phase.md",
