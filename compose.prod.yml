@@ -1,0 +1,90 @@
+# Production deployment for https://knowledge.hi2vi.com (P8.S3).
+#
+# This is the OCI-box compose project — NOT the local dev stack (compose.yml).
+# It ships ONLY the `api` service (no `kb` viewer: the public site is GitHub
+# Pages, so the box needs only the document API). The box runs the API from its
+# OWN git clone (e.g. /opt/knowledge) with an SSH `origin` + deploy key, so the
+# container can commit AND push writes to origin/main (publish-on-write, P8.S1).
+#
+# Reached by the shared edge (`changple5-nginx-1`) over `changple_shared_network`
+# by container name — NO public host-port publish. See deploy/README.md for the
+# bring-up + edge re-apply runbook, and deploy/knowledge.hi2vi.com.conf for the
+# vhost. NO SECRETS live here: KB_API_TOKEN + GOOGLE_API_KEY come from the box's
+# gitignored `.env`; the deploy key + known_hosts are bind-mounted from the box.
+
+services:
+  api:
+    build: .                       # same Dockerfile as local (git + tzdata + deps)
+    container_name: knowledge-api  # fixed name — the edge proxies to it by name
+    # Box clone bind-mounts at /repo exactly like local: `.` is the box clone
+    # root (/opt/knowledge), so the container commits+pushes into a real clone
+    # with an SSH `origin` remote (see runbook: origin must be the SSH form
+    # git@github.com:leetusik/knowledge.git).
+    volumes:
+      - .:/repo
+      # Push credential, mounted READ-ONLY from the box (never in the repo).
+      # /opt/knowledge-secrets holds `knowledge_deploy_key` (private half of the
+      # GitHub deploy key, chmod 600) + `known_hosts` (pinned github.com host key).
+      - /opt/knowledge-secrets:/run/secrets:ro
+    env_file:
+      # Box-only, gitignored. Holds the SECRETS by name (no values in the repo):
+      #   KB_API_TOKEN=<generated>          # bearer for writes + (with the flag) reads
+      #   GOOGLE_API_KEY=<optional Gemini>  # empty/absent = BM25-only search
+      # Provisioned in P8.S4's runbook. `docker compose config` needs this file
+      # to exist (a dummy one suffices for local validation).
+      - .env
+    environment:
+      # --- Non-secret box config (literals; safe to commit) ---
+      KB_ROOT: /repo
+      TZ: Asia/Seoul
+      # Publish-on-write ON (box only). Default is false so local/plugin never
+      # push; the box opts in. After the scoped commit the server fetches +
+      # rebases onto origin/main and pushes (best-effort; a failed push never
+      # fails the request). Requires the deploy key wired below.
+      KB_GIT_PUSH: "true"
+      # Gate reads/search behind the same bearer on the hosted deployment
+      # (local/plugin default is false → reads open). healthz stays open.
+      KB_REQUIRE_READ_AUTH: "true"
+      # Viewer origin for the 201 `url` field = the real published Pages doc.
+      # (This is the PAGES URL, not the API's own origin.)
+      KB_PUBLIC_BASE_URL: https://leetusik.github.io/knowledge
+      # Fetch + reindex on boot (drift + deleted-doc reconciliation self-heal).
+      KB_STARTUP_REINDEX: "true"
+      # --- Push credential wiring (paths inside the container) ---
+      # IdentitiesOnly: use ONLY this key (ignore any agent/default keys).
+      # UserKnownHostsFile + StrictHostKeyChecking=yes: pin github.com's host key
+      # so the first push cannot be silently MITM'd (no blind TOFU accept). We
+      # pin rather than `accept-new` because github.com's host keys are static
+      # and publicly verifiable — see the runbook for generating known_hosts and
+      # verifying the fingerprints against GitHub's published set. If you prefer
+      # convenience over pinning, swap StrictHostKeyChecking=yes → accept-new and
+      # drop the UserKnownHostsFile line (weaker: trusts the first key seen).
+      GIT_SSH_COMMAND: >-
+        ssh -i /run/secrets/knowledge_deploy_key
+        -o IdentitiesOnly=yes
+        -o UserKnownHostsFile=/run/secrets/known_hosts
+        -o StrictHostKeyChecking=yes
+    # Attach to the existing external Docker network the edge lives on. The api
+    # is reachable ONLY here (knowledge-api:8000), never on a public host port.
+    networks:
+      - changple_shared_network
+    # Container health for `docker compose ps` + the runbook health assertion.
+    # Uses the image's own python (curl is not in the slim image); start_period
+    # covers the KB_STARTUP_REINDEX boot window before the server accepts traffic.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status==200 else sys.exit(1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  # Pre-existing external network the shared edge + co-tenant apps share.
+  # `external: true` = compose attaches to it, never creates/removes it.
+  changple_shared_network:
+    external: true
