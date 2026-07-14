@@ -10,7 +10,7 @@
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T11:52:14+09:00`
+- Rebuilt at: `2026-07-14T12:15:15+09:00`
 
 ## Active Phases
 
@@ -89,6 +89,7 @@
 | [x] `P6.F1` | `done` | Graph renderer revision — quiet labels, idle mingle, pointer zoom, sticky re-place, legend lens (design P6.S1) | `fix` | `works/phases/active/P6/slices/P6.F1` |
 | [x] `P6.F2` | `done` | Graph overlays cannot be hidden — [hidden] loses to overlay display rules (operator browser QA) | `fix` | `works/phases/active/P6/slices/P6.F2` |
 | [x] `P6.F3` | `done` | Graph layout: more node spacing, smarter placement, placement survives reloads (operator browser QA) | `fix` | `works/phases/active/P6/slices/P6.F3` |
+| [x] `P6.F4` | `done` | Graph full-bleed breakout defeated by §10b margin rule — panel/zoom clipped off-screen (operator QA) | `fix` | `works/phases/active/P6/slices/P6.F4` |
 | [ ] `P6.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P6/slices/P6.REVIEW` |
 
 ## Phase P7: Claude Code plugin

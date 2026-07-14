@@ -168,3 +168,6 @@
 {"ts": "2026-07-14T11:23:35+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.F3"}
 {"ts": "2026-07-14T11:23:35+09:00", "type": "slice_status_changed", "slice": "P6.F3", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-14T11:52:14+09:00", "type": "slice_status_changed", "slice": "P6.F3", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T12:10:52+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.F4"}
+{"ts": "2026-07-14T12:10:52+09:00", "type": "slice_status_changed", "slice": "P6.F4", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T12:15:15+09:00", "type": "slice_status_changed", "slice": "P6.F4", "old_status": "in_progress", "new_status": "done"}
