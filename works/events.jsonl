@@ -244,3 +244,13 @@
 {"ts": "2026-07-14T23:42:05+09:00", "type": "slice_status_changed", "slice": "P8.S5", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-07-14T23:53:58+09:00", "type": "slice_status_changed", "slice": "P8.S5", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-14T23:53:58+09:00", "type": "deferred_created", "deferred": "D4", "source": "P8.S5"}
+{"ts": "2026-07-14T23:54:28+09:00", "type": "deferred_created", "deferred": "D5", "source": "P8.F2"}
+{"ts": "2026-07-14T23:55:11+09:00", "type": "slice_status_changed", "slice": "P8.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-15T00:40:32+09:00", "type": "doc_version_created", "doc": "api", "version": "v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T00:57:06+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T00:58:38+09:00", "type": "doc_version_created", "doc": "security", "version": "v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T00:59:51+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T01:00:41+09:00", "type": "doc_version_created", "doc": "architecture", "version": "v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T01:01:46+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert", "source": "P8.REVIEW"}
+{"ts": "2026-07-15T01:07:16+09:00", "type": "slice_status_changed", "slice": "P8.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-15T01:07:16+09:00", "type": "phase_reviewed", "phase": "P8", "verdict": "pass", "reviewer": "slice-executor-high"}

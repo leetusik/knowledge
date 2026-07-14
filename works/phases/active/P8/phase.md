@@ -290,9 +290,77 @@ Expected durable-truth changes for **P8.REVIEW** to consolidate into new doc ver
 
 Contract file: [`works/phases/active/P8/contract.md`](contract.md) — **consolidate verbatim into api.md at review.** Its shapes are now **confirmed against the live production box** (P8.S5), not just the TestClient: the 201 key order, the 409 `detail` object (with `id`/`existing_title`), the 401 body, and the search item/`signals` shapes all match. Safe to carry verbatim; safe for hi2vi `P15.S4` to code against.
 
+### P8.REVIEW — phase review (verdict: **pass**; 6 doc versions consolidated)
+
+**Validation, all slices together:** pytest **65 passed**; `plugin_parity.py` **PASS**;
+`workflow.py validate` **PASS**; and — added beyond the plan — `docker compose run --rm kb build`
++ `site_smoke.py` **PASS** *after* writing the doc versions, because `docs/current/` is published
+and the review's own output rides the next Pages deploy.
+
+**Live production spot-checks (read-only), all green:** `healthz` **200** (open, `documents:7`,
+`db:ok`); `GET /api/search` and `GET /api/documents` **without** the bearer → **401** (read auth
+is genuinely on in prod); S5's doc **and** the auto-created `docs/hi2vi/` landing both **200** on
+Pages; and `383577e` confirmed an **ancestor of `origin/main`** with a 3-file tree. Publish-on-write
+is real, not just implemented.
+
+- **Two planned checks were NOT run** — the authed `GET /api/search` (`mode:hybrid`) and the box
+  clone's cleanliness both need SSH into the box to read `KB_API_TOKEN`, and the executor's
+  **permission system denied box access + token extraction**. Not worked around. Both were verified
+  live at S5 with evidence, and the un-authed 401 exercises the same route as the authed 200. No
+  defect signal — but stated plainly rather than papered over.
+- **Gotcha for anyone re-running the plan's box check:** `HEAD == origin/main` on the box is
+  **stale as an assertion** now — the orchestrator has pushed P8's slice commits since S5, so the
+  box clone is legitimately *behind*. Behind is fine and self-healing (fetch+rebase before every
+  push). Only a **dirty tree** would break the next push; that is the thing worth checking.
+
+**Judged against `intent.md`: all six deliverables met.** Endpoint live; auth enforced on writes
+*and* reads; `docs/hi2vi/` bootstrapped by the auto-landing inside the same scoped commit (so it
+could never break the deploy gate); publish-on-write proven end-to-end in production (~65s POST →
+publicly live); read/search exposed under the same bearer, with a doc embedded **in the same
+request that wrote it** (so the agent can search what it just wrote — exactly intent point 5); and
+the frozen contract now **published in `api.md` v0005**, which is the pointer hi2vi `P15.S4`
+references.
+
+**Verified in source, not merely trusted from `result.md`:** both new flags default **false**
+(`git_push_enabled` / `require_read_auth_enabled`, truthy-parse — the deliberate inversion), so
+local/plugin keeps open reads + no pushing and a set token still guards **writes only**;
+`gitops.push()` has **no `--force` and no `add -A`** anywhere; six read routes carry
+`Depends(require_read_bearer)`; `openssh-client` is in **both** Dockerfiles. Also confirmed **D3 is
+truly remediated**: no `knowledge_deploy_key*` in the tree, and `git ls-files` shows no key
+material, `.pem`/`.key`, or `.env` tracked.
+
+**Doc versions (one per doc, whole-phase):** `api` **v0005** (frozen contract **verbatim** from
+`contract.md`), `operations` **v0009** (the real declarative edge + publish flow + `openssh-client`),
+`security` **v0004** (hosted auth, box-only deploy key, the narrowed never-push rule),
+`qa` **v0006** (the hosted E2E + its two lessons), `architecture` **v0007** (two deployments, one
+codebase), `decisions` **v0009** (seven ADRs + two Superseded entries).
+
+- **The superseded S3 edge facts were kept out**, as instructed: the published set contains no
+  `changple5-nginx-1`, no `apply-to-edge.sh`, no old conf filename, and no "wiped by every
+  co-tenant deploy" rule. The only `docker cp` mentions are the F2 **prohibition**.
+- **Publish safety re-scanned:** no token, no key material, no origin IP, no `/Users/` path. Box
+  paths appear only as facts already committed in `deploy/`; the *mechanics* are referenced to
+  `deploy/README.md` / `deploy/SECRETS.md` rather than duplicated, so the durable docs cannot drift
+  against the runbooks.
+
+**The phase's most consequential decision, for the record:** making read auth an explicit
+**flag** rather than "a set token implies closed reads". The convenient version would have
+silently broken **every existing local and plugin user who had set a token** (their token guards
+writes; their reads are open by design). Same instinct behind `KB_GIT_PUSH` defaulting off.
+Default-off *is* the compatibility contract — it is what let a public, authenticated, self-publishing
+deployment ship without touching anyone else's experience.
+
+**Process lesson the phase paid twice for** (now in operations + qa): S3/S4 authored deploy
+artifacts against a *knowledge-base explainer doc* instead of the live box, and F2 found the
+targeted edge no longer existed **and** that the image could not push at all — a failure that was
+totally silent because push is best-effort. **Assert the capability, never the status code**; and
+check artifacts against reality, not against a doc that describes the world as it was.
+
 ## Open Questions
 
-- **TLS cert mechanism** — does hi2vi.com use a Cloudflare Origin CA `*.hi2vi.com` cert (one cert covers knowledge.hi2vi.com free) or a per-host cert? Confirm with the operator / hi2vi repo at P8.S3 so the vhost references the right cert. Recommendation assumes a wildcard origin cert.
-- **Push credential form** — SSH deploy key (recommended) vs fine-grained PAT. Operator preference at P8.S4; either works with the same `push()` code (remote URL differs).
-- **Gemini key at launch** (§7) — provision now (recommended) or BM25-only launch. Operator call at P8.S4/S3; zero code impact either way.
-- **DELETE push scope** — apply `pushed`/`push_error` to DELETE too (recommended, for consistency) or POST-only. Settle in P8.S1's plan.
+_All four settled during the phase; kept for provenance._
+
+- **TLS cert mechanism** — **SETTLED (F2): wildcard.** The edge's Cloudflare Origin CA cert carries `*.hi2vi.com` (valid to 2041), so `knowledge.hi2vi.com` needed **no cert provisioning**; the per-host branch was deleted from the vhost as dead code.
+- **Push credential form** — **SETTLED (S3/S4/F2): SSH deploy key**, repo-scoped, write access, **generated on the box** so the private half never leaves it. PAT remains a fallback (`push()` is URL-agnostic).
+- **Gemini key at launch** — **SETTLED: provisioned.** The box runs `mode:"hybrid"` with a live vector signal (S5 measured `vector 0.717` on the inaugural doc, and a zero-keyword-overlap query still ranked it first).
+- **DELETE push scope** — **SETTLED (S1): DELETE pushes too**, same flag, same best-effort semantics — parity for the reverse path.
