@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P7`
-- Current slice: `P7.S4`
-- Next slice: `P7.S5`
+- Current slice: `P7.S5`
+- Next slice: `P7.S6`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T15:08:35+09:00`
+- Rebuilt at: `2026-07-14T15:19:01+09:00`
 
 ## Active Phases
 
@@ -22,7 +22,8 @@
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
-| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.S4` | `works/phases/active/P7` |
+| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.S5` | `works/phases/active/P7` |
+| [ ] `P8` | `planned` | `pending` | Knowledge API for hi2vi content agent | `P8.DECOMP` | `works/phases/active/P8` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -100,7 +101,14 @@
 | [x] `P7.S1` | `done` | Feature portability pass | `implementation` | `works/phases/active/P7/slices/P7.S1` |
 | [x] `P7.S2` | `done` | Plugin skeleton + marketplace wiring | `implementation` | `works/phases/active/P7/slices/P7.S2` |
 | [x] `P7.S3` | `done` | Template payload, renderer, parity guard | `implementation` | `works/phases/active/P7/slices/P7.S3` |
-| [ ] `P7.S4` | `todo` | Shipped explain skill | `implementation` | `works/phases/active/P7/slices/P7.S4` |
+| [x] `P7.S4` | `done` | Shipped explain skill | `implementation` | `works/phases/active/P7/slices/P7.S4` |
 | [ ] `P7.S5` | `todo` | Setup skill | `implementation` | `works/phases/active/P7/slices/P7.S5` |
 | [ ] `P7.S6` | `todo` | E2E install test + docs | `implementation` | `works/phases/active/P7/slices/P7.S6` |
 | [ ] `P7.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P7/slices/P7.REVIEW` |
+
+## Phase P8: Knowledge API for hi2vi content agent
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P8.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P8/slices/P8.DECOMP` |
+| [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |

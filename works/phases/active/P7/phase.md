@@ -262,6 +262,51 @@ Additional durable findings:
   override) all correct; `plugin-ci.yml` YAML loads (via the repo's uv env — host
   python3 lacks PyYAML); manifest + params JSON valid; `workflow.py validate` passed.
 
+### P7.S4 landed (2026-07-14) — shipped explain skill; config-driven, bearer + local-only fallback
+
+- **Deliverable:** `plugin/skills/explain/SKILL.md` (invoked `/knowledge:explain`). The
+  workspace source skill `.claude/skills/explain/SKILL.md` was NOT touched (stays for
+  the operator until the bootstrap repo retires it). 8-step shape, house-style contract
+  (step 4), API-first 201/409/422/401 semantics, and the byte-identical merge `python3
+  -c` command all preserved verbatim-in-substance.
+- **Config schema S5 MUST write — settled and proven.** The skill's step-2 `python3 -c`
+  resolver reads `$XDG_CONFIG_HOME/knowledge-kb/config.json` (default
+  `~/.config/knowledge-kb/config.json`) with **exactly** these key paths (nested, not
+  flat):
+  - `kb_root` (string; may be omitted for a remote-only config)
+  - `api.base_url` (string; omitted → defaults to `http://localhost:8766`)
+  - `api.token` (string; omitted/empty → no bearer header)
+  - `site.base_url` (string; omitted → defaults to `http://localhost:8765`)
+  So S5's config write is the JSON object `{"kb_root": ..., "api": {"base_url": ...,
+  "token": ...}, "site": {"base_url": ...}}` (chmod 600). If S5 writes a **flat**
+  `api_base_url`/`api_token` shape, this skill will NOT read it — keep the nesting.
+- **Resolution precedence (per-key, highest first):** env (`KB_ROOT` /
+  `KB_API_BASE_URL` / `KB_API_TOKEN`) → config file → legacy
+  (`~/projects/personal/knowledge/mkdocs.yml` present) → unconfigured. A present config
+  file is authoritative and does NOT fall through to legacy for keys it omits (omitted
+  keys take the documented defaults; `kb_root` legitimately absent = remote-only).
+- **Snippet output contract (what the running model reads):** `KEY=VALUE` lines —
+  `KB_STATUS=configured|unconfigured|error`, then (when configured) `KB_ROOT`,
+  `KB_API_BASE_URL`, `KB_API_TOKEN` (empty = none), `KB_SITE_BASE_URL`,
+  `KB_LOCAL_FALLBACK=yes|no`. `KB_LOCAL_FALLBACK=yes` iff `kb_root` is a local dir
+  containing `mkdocs.yml`; it is the single gate for the step-6 file fallback (remote
+  KB or no local checkout → `no` → report & stop, write nothing). Validated across all
+  five tiers + the remote-only guard under isolated env.
+- **allowed-tools:** dropped the source's `Bash(git -C ~/projects/personal/knowledge:*)`
+  (KB path no longer fixed — the rare fallback `git -C <kb_root>` commands take a normal
+  permission prompt; NOT replaced by a broad `Bash(git:*)`). Kept `Read, Grep, Glob,
+  Write, Bash(curl -sS --max-time 5:*), Bash(python3 -c:*)`.
+- **For S6 (README):** the shipped explain skill's step 2 points the unconfigured user
+  at `/knowledge:setup` — it does **NOT** reference a "Recreating from scratch" README
+  section (superseding the earlier DECOMP anticipation that it would). So S6's
+  "Recreating from scratch" README section no longer needs to satisfy a dangling
+  reference from the explain skill; it stands on its own (still worth writing for the
+  setup story). S6's explain E2E should exercise both paths: API (201, via the resolved
+  base) and fallback (transport failure + `KB_LOCAL_FALLBACK=yes` local write).
+- **Validation:** `claude plugin validate ./plugin` (+ `--strict`) both exit 0; config
+  matrix (a–e) + remote guard + local-fallback + corrupt-config all pass; `healthz` GET
+  ok (no POST to the live KB); `workflow.py validate` passed.
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -331,6 +376,8 @@ lands._
   which stays a portable shipped template); a scaffold rendered with non-operator
   params builds under mkdocs-material 9.7.6 and passes its own portable
   `site_smoke.py` deploy gate (the phase's crux acceptance). [S3]
+- api — shipped explain skill: config resolution order (env → config file → legacy → stop), bearer auth on POST, unchanged server API surface. [S4]
+- security — local-only fallback rule (no file writes for remote KBs), token via config file/env only, dropped path-scoped git allowed-tool in favor of prompted fallback. [S4]
 
 ## Open Questions
 
