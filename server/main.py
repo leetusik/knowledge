@@ -1,9 +1,14 @@
 """FastAPI read/search surface over the S1 library.
 
-Reads (healthz, list/get/by-path, search) are always open. The bearer dependency
-guards mutating endpoints only — today just ``POST /api/reindex`` (the write path
-lands in S3) — and is a no-op when ``KB_API_TOKEN`` is unset. A fresh
-``db.connect()`` is opened per request (a dependency) so config stays
+Reads (list/get/by-path, search, tags, projects) are open by default. The bearer
+dependency (``require_bearer``) guards mutating endpoints and is a no-op when
+``KB_API_TOKEN`` is unset. The hosted box additionally gates the read/search
+surface behind the same bearer by setting ``KB_REQUIRE_READ_AUTH=true`` — then
+``require_read_bearer`` requires the token on reads too (both the flag AND a token
+must be set). ``GET /healthz`` always stays open (edge/uptime probes). There is no
+CORS: the consumer is server-to-server (the hi2vi agent runs server-side; the
+public Pages site searches browser-only via lunr and never calls this API). A
+fresh ``db.connect()`` is opened per request (a dependency) so config stays
 env-at-call-time: tests retarget ``KB_ROOT``/``KB_DB_PATH`` via env, and the
 container injects config through compose ``environment:``. Nothing is cached at
 import time.
@@ -74,6 +79,21 @@ def require_bearer(authorization: Optional[str] = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="missing or invalid bearer token")
 
 
+def require_read_bearer(authorization: Optional[str] = Header(default=None)) -> None:
+    """Guard for the read/search surface on the hosted deployment only.
+
+    No-op unless ``KB_REQUIRE_READ_AUTH`` is true AND ``KB_API_TOKEN`` is set —
+    both must hold. Local/plugin default (flag unset) leaves reads open even when
+    a token is set (a set token guards only writes there). When the flag is on the
+    check delegates to ``require_bearer``, so a flag-on-but-tokenless deployment is
+    still a no-op (same both-must-hold philosophy) and the bearer check is byte-for-
+    byte identical to the write path. healthz is never gated (edge/uptime probes).
+    """
+    if not config.require_read_auth_enabled():
+        return
+    require_bearer(authorization)
+
+
 # tags_text is an internal FTS denormalization (space-joined mirror of tags,
 # already exposed as a list), so it never leaves the API. markdown is dropped
 # from list payloads and kept on single-doc fetches.
@@ -103,6 +123,7 @@ def list_documents(
     tag: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    _: None = Depends(require_read_bearer),
     conn=Depends(get_conn),
 ):
     total = db.count_documents(conn, project=project, tag=tag)
@@ -111,19 +132,30 @@ def list_documents(
 
 
 @app.get("/api/tags")
-def list_tags(project: Optional[str] = None, conn=Depends(get_conn)):
+def list_tags(
+    project: Optional[str] = None,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     return {"tags": db.list_tags(conn, project=project)}
 
 
 @app.get("/api/projects")
-def list_projects(conn=Depends(get_conn)):
+def list_projects(
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     return {"projects": db.list_projects(conn)}
 
 
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path
 # route never collides with the id route.
 @app.get("/api/documents/by-path/{rel_path:path}")
-def get_document_by_path(rel_path: str, conn=Depends(get_conn)):
+def get_document_by_path(
+    rel_path: str,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     doc = db.get_document_by_path(conn, rel_path)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
@@ -131,7 +163,11 @@ def get_document_by_path(rel_path: str, conn=Depends(get_conn)):
 
 
 @app.get("/api/documents/{doc_id}")
-def get_document(doc_id: int, conn=Depends(get_conn)):
+def get_document(
+    doc_id: int,
+    _: None = Depends(require_read_bearer),
+    conn=Depends(get_conn),
+):
     doc = db.get_document(conn, doc_id)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
@@ -146,6 +182,7 @@ def search(
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     raw: bool = False,
+    _: None = Depends(require_read_bearer),
     conn=Depends(get_conn),
 ):
     try:

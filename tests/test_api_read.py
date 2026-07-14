@@ -168,3 +168,42 @@ def test_bearer_auth_on_mutating(client, monkeypatch):
         "/api/reindex", headers={"Authorization": "Bearer secret"}
     ).status_code == 200
     assert client.get("/healthz").status_code == 200  # reads stay open
+
+
+# The six read/search surfaces gated by KB_REQUIRE_READ_AUTH (doc-by-id added at
+# runtime once we know an id). healthz is deliberately excluded — always open.
+_READ_ROUTES = [
+    "/api/documents",
+    f"/api/documents/by-path/{_REL_A}",
+    "/api/search?q=nginx",
+    "/api/tags",
+    "/api/projects",
+]
+
+
+def test_reads_open_by_default_even_with_token(client, monkeypatch):
+    # Backward-compat (the key case): a set token guards WRITES only; with the
+    # read-auth flag unset, reads stay open with no header — unchanged local UX.
+    monkeypatch.setenv("KB_API_TOKEN", "secret")
+    for route in _READ_ROUTES:
+        assert client.get(route).status_code == 200, route
+    assert client.post("/api/reindex").status_code == 401  # writes still guarded
+
+
+def test_read_auth_gates_reads_when_flag_and_token_set(client, monkeypatch):
+    monkeypatch.setenv("KB_API_TOKEN", "secret")
+    monkeypatch.setenv("KB_REQUIRE_READ_AUTH", "true")
+    hdr = {"Authorization": "Bearer secret"}
+    doc_id = client.get("/api/documents", headers=hdr).json()["items"][0]["id"]
+    for route in [*_READ_ROUTES, f"/api/documents/{doc_id}"]:
+        assert client.get(route).status_code == 401, route                       # no bearer
+        assert client.get(route, headers={"Authorization": "Bearer wrong"}).status_code == 401, route
+        assert client.get(route, headers=hdr).status_code == 200, route          # correct bearer
+    assert client.get("/healthz").status_code == 200  # healthz stays open under read-auth
+
+
+def test_read_auth_noop_without_token(client, monkeypatch):
+    # Both must hold: flag on but no KB_API_TOKEN -> reads stay open (no-op).
+    monkeypatch.setenv("KB_REQUIRE_READ_AUTH", "true")
+    for route in _READ_ROUTES:
+        assert client.get(route).status_code == 200, route

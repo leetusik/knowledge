@@ -133,6 +133,17 @@ Verified ground truth (recon spot-checks this DECOMP ran — trust the plan's re
 - **Gotcha for later slices:** the test fixture bare remote needs `git init --bare -b main` (else its HEAD defaults to `master` and clones don't check out `main`, so `push origin main` fails with "src refspec main does not match any"). Relevant to any S3/S5 artifact or E2E that clones the box repo. Also, keep `KB_DB_PATH` outside the work tree in push tests so the disposable `data/` never dirties the clean-tree assertion.
 - **DELETE also pushes** (settles the DECOMP open question "DELETE push scope") — parity with POST for the reverse path.
 
+### P8.S2 — hosted read auth (delivered)
+
+- **New config accessor `require_read_auth_enabled()`** (`server/config.py`) copies the `git_push_enabled()` idiom exactly: env-at-call-time, truthy-parse `{1,true,yes,on}`, **default false** (the inverted default — like `git_push_enabled`, unlike the falsy-parsed `git_commit_enabled`/`startup_reindex_enabled`). So local/plugin reads stay open unless the box explicitly sets `KB_REQUIRE_READ_AUTH=true`.
+- **New dependency `require_read_bearer`** (`server/main.py`, right after `require_bearer`) **delegates to `require_bearer`** rather than reimplementing the check: `if not require_read_auth_enabled(): return` else `require_bearer(authorization)`. This encodes the both-must-hold rule for free — flag off → open; flag on + no token → `require_bearer` no-ops → open; flag on + token set → identical exact-match 401. Reuses the write-path check byte-for-byte, so the two auth surfaces can never drift.
+- **Attached to the six read/search routes only** (`GET /api/documents`, `/api/documents/{doc_id}`, `/api/documents/by-path/{rel_path}`, `/api/search`, `/api/tags`, `/api/projects`) as `_: None = Depends(require_read_bearer)`, inserted after each route's path/required params and before `conn` so default-arg ordering stays valid. `require_bearer` and every write route are untouched.
+- **`GET /healthz` deliberately left ungated** — always open for edge/uptime/Cloudflare probes; the `documents` count leak is immaterial (the corpus is public on Pages). No healthz change.
+- **No CORS — a deliberate, recorded decision.** No CORS middleware was added: the consumer is server-to-server (the hi2vi agent runs server-side) and the public Pages site searches browser-only via lunr and never calls this API, so no browser origin ever hits the hosted API. A future browser client would be a separate change. (Recording this here per the plan so the decision is on the record as intentional, not an omission.)
+- **Backward-compat guard is the key invariant** and is tested: `KB_API_TOKEN` set + flag unset → reads still 200 with no header (a set token guards **writes only** locally, unchanged). Verified alongside flag-on 401/200 and the flag-on-but-tokenless no-op.
+- **Module docstring updated** (`server/main.py`) — it had gone stale ("Reads … are always open"); now documents the flag-gated read auth, the always-open healthz, and the no-CORS decision. `docs/current/*.md` untouched (durable truth flows through Doc impact → P8.REVIEW).
+- **Test/tooling note:** pytest lives only in the repo `.venv` (`.venv/bin/python -m pytest`); the Homebrew `python3` (3.13) has no pytest. Full suite is now **65 passed** (was 62 at S1; +3 read-auth tests). Relevant to S5's E2E: exercising 401-without-token / 200-with-token against the live box mirrors these unit assertions.
+
 ## Constraints
 
 - **Operator sign-off precedes implementation** (intent.md): P8.S1+ do not run until the operator approves the proposal above.
@@ -156,6 +167,11 @@ Expected durable-truth changes for **P8.REVIEW** to consolidate into new doc ver
 - api.md — POST 201 and DELETE 200 bodies now always carry `pushed: bool`; `push_error` appears only when a push was attempted and failed; on a successful push `commit_sha` is the **final published HEAD** (a rebase may rewrite the commit), on failed/disabled push it stays the local commit HEAD.
 - operations.md — new `KB_GIT_PUSH` flag (default false, box-only true) enables publish-on-write: after the scoped commit the server `git fetch origin main` → rebase → non-force `push origin HEAD:main`, best-effort (a failed push never fails the request; the doc publishes on the next successful push).
 - security.md — `KB_GIT_PUSH` is the deliberate, flag-gated departure from "agent never pushes" — off by default so local/plugin never push; only the hosted box (with the deploy-key credential, provisioned in S4) turns it on. Never `--force`, never `add -A`.
+
+**Realized by P8.S2 (append to the above at review):**
+- api.md — the read/search surface (`GET /api/documents`, `/api/documents/{id}`, `/api/documents/by-path/{rel_path}`, `/api/search`, `/api/tags`, `/api/projects`) requires `Authorization: Bearer <token>` on the hosted deployment (when `KB_REQUIRE_READ_AUTH=true` and `KB_API_TOKEN` set) → 401 without it; local default leaves reads open. `GET /healthz` is always open. Writes are bearer-guarded regardless of the flag.
+- security.md — hosted read-auth model: reads/search go behind the bearer only when **both** `KB_REQUIRE_READ_AUTH=true` **and** `KB_API_TOKEN` are set (`require_read_bearer` delegates to the same `require_bearer` check); flag off (or token unset) leaves reads open, so local/plugin UX is unchanged even with a token set. healthz stays open (count leak immaterial — corpus public on Pages). **No CORS** — server-to-server consumer; the Pages site is browser-only lunr and never calls this API.
+- operations.md — new `KB_REQUIRE_READ_AUTH` box-env flag (default false, box sets `true`) that gates the read/search surface behind the existing bearer on the hosted deployment.
 
 ## Open Questions
 
