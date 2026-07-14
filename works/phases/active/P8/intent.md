@@ -22,6 +22,11 @@ the knowledge API?": )
 > good. and one more, since we utilize the knowledge, we should also able to use existing knowledge
 > for content creation. do we ready for that? if not, add the feature.
 
+(Addendum, 2026-07-14, at phase-execution kickoff — `/do-whole-phase` invocation note:)
+
+> note that the knowledge also will be deployed to public you know right? and about to use hi2vi
+> domain. knowledge.hi2vi.com will be enough.
+
 ## Confirmed Intent (refined + clarified)
 
 Make the knowledge project's **document API production-consumable by the hi2vi content agent** —
@@ -68,6 +73,14 @@ do not depend on this phase.
 - Q: How should the hi2vi prod server reach the knowledge API (hosting)? — A: **This phase's DECOMP
   proposes** (design-first; operator signs off before implementation). Candidates to weigh:
   co-tenant on the shared OCI box (private network), public endpoint + bearer token, tailnet-only.
+  - **Updated at execution kickoff (2026-07-14, operator note above; interpretation approved at the
+    orchestrator's plan gate):** the hosted knowledge API goes **public at `knowledge.hi2vi.com`**
+    (a subdomain vhost on the shared OCI edge, alongside hi2vi.com); one subdomain is enough — hi2vi
+    consumes that public URL with a bearer token, no separate private-network path required. The
+    GitHub Pages site stays at `leetusik.github.io/knowledge/`. The knowledge content is already
+    public on Pages, so a public API surface leaks nothing new — but per point 5 read/search still
+    go behind the same bearer auth on the hosted deployment. DECOMP designs the rest (publish-on-
+    write mechanism, clone freshness, secrets) for operator sign-off before implementation.
 - Q: One phase or fold into hi2vi P15? — A: **Dedicated phase in the knowledge workspace**
   (operator-directed: "make a dedicated phase for the knowledge dir so that hi2vi content agent can
   wire").
