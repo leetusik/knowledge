@@ -266,6 +266,68 @@ footer behavior**: with `navigation.footer` on, the footer sits just below the v
 map (a small scroll reveals it) — a known, deliberately-unchanged behavior; flag only if the
 operator finds it undesirable.
 
+### P6.F1 — Graph renderer revision (design P6.S1) (implemented 2026-07-14)
+
+**Scope:** operator-directed "P6.S1 REVISION" (mirror
+`…/7a3b6e1d-…/scratchpad/kb-graph-design-rev/`) — five behavior changes ported onto
+S2's renderer. Only `docs/javascripts/graph.js` + `docs/stylesheets/extra.css` §10
+touched; §1–§9, the `graph.json` contract, `graph_hook.py`, `site_smoke.py`,
+`mkdocs.yml`, `docs/graph.md`, `docs/index.md` all untouched. One vendored JS file,
+zero third-party / zero CDN. Full write-up: `slices/P6.F1/result.md`.
+
+**Live-model port (reference = the design mirror's `kbGraph.mount()`):**
+- **Kept engineering's force sim + camera.** The sim (`tick`/`convergeSync`, constants
+  from S2) still owns the ~600ms settle; the new kinematics run only AFTER `captureRest()`.
+  Camera stayed center-based (`toScreen`/`toWorld`/`displayZoom` unchanged) — I added
+  eased view TARGETS (`zt/pxt/pyt`) beside the current `z/panX/panY`, so the reference's
+  target-composed zoom/pan maps onto S2's camera without adopting the reference's
+  plate-fraction layout. **World coords are resolution-independent → resize only refits
+  the camera; no `docPos` plate-fraction persistence needed** (a deliberate divergence
+  from the reference, which is plate-fraction-based).
+- **captureRest unifies settle→mingle:** at `alpha ≤ ALPHA_MIN` (or post-`convergeSync`)
+  snap `bx/by`, seed `sd` (reference `seed()` LCG verbatim), compute `tagAnchor` off the
+  owners' REST centroid. Non-reduced = ONE persistent rAF loop (re-queues first,
+  `document.hidden` guard, dies with the page since `navigation.instant` is off);
+  reduced motion = NO loop, event-driven `scheduleDraw` with all eases snapped (factor 1),
+  no drift.
+- **Labels A′, ladder RELATIVE TO FIT** (`clamp01((displayZoom()−1.1)/0.25)`) — carries
+  S2's locked "zoom relative to fit" decision forward (the reference's z=1 ≈ its fit).
+  Deleted `tagReveal`/`HUB_DEGREE`.
+- **Legend is a LENS:** removed `offProjects`/`.is-off` wiring; `isHidden` simplified to
+  `type==='tag' && !tagsVisible` (only the tag switch hides anything now). `projectKeep`
+  dims-not-removes; **NO refit on lens toggle** (nothing moves/hides). Tag switch keeps
+  refit-if-auto.
+- **Sticky drag:** kinematic (no reheat / no `fx/fy`) after rest; `fx/fy` pin kept ONLY
+  in the pre-rest window. Commit-rest: `bx/by = x/y − drift(now)`; tag re-pins `dx/dy` to
+  owners' rest centroid; doc/ghost = rest only (spokes follow via live anchors).
+
+**Verification:** `node --check` OK; a throwaway scratch harness (33 pure-logic
+assertions — drift bounds/determinism, ladder mapping, `labelTarget` A′, `projectKeep`,
+wheel pinch-vs-scroll, commit-rest math) all PASS; CI-parity build ×2 (mkdocs-material
+9.7.6) → `graph.json` byte-identical (pipeline untouched); built `extra.css` carries the
+4 new tokens + `.is-on` rule; built `graph.js` carries `kb-graph-drift`; serve parity
+confirmed against the already-running `kb` server (`/graph/` 200, graph.js serves the
+drift token + `activeProject`); `workflow.py validate` PASS.
+
+**⚠ Pre-existing site_smoke failure surfaced (NOT a P6.F1 defect; re-review must fix):**
+`site_smoke.py` reports exactly ONE violation — a `/Users/` **prose** leak (inline-code
+`` `/Users/` `` describing the guard invariant) in 4 durable-doc pages
+`docs/current/{data,frontend,operations,qa}.md`. `git log -S` pins its origin to commit
+`43f4b79` (the **P6.REVIEW doc consolidation**), whose own `site_smoke` ran *before* it
+consolidated those docs → never caught. My two changed files contain zero `/Users/`; the
+built graph page / landing / graph.js asset don't leak; every graph/renderer/guard/landing
+assertion passed. **Fix belongs to the reopened P6.REVIEW** (re-consolidate those 4 docs
+escaping the `/Users/` mention, or refine the `qa` guard so its scan ignores
+`<code>…</code>` prose and matches only real absolute paths) — out of P6.F1's scope and
+permissions (docs/current generated, docs/versions immutable, `doc-new-version` review-only,
+`site_smoke.py` do-not-touch).
+
+**Still owed for RE-REVIEW / operator (browser visual QA — none in this harness):** both
+schemes — the idle mingle feel, quiet→hover/select label reveal + >110% doc-title fade-up,
+trackpad-pinch/wheel zoom toward pointer + 1:1 pan, sticky re-place with spring-following
+spokes, legend lens (`.is-on`, dim-not-remove), and the reduced-motion path (paint at rest,
+hold still, snap). S2/S3's graph-page footer note is unchanged.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -295,6 +357,9 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `experience`/`frontend` (P6.S3): the knowledge map is now **reachable from the landing page** — a graph `.kb-card` in `docs/index.md`'s `.kb-grid` (now 5 cards: the 3 projects + Tags + Graph), `Graph · 지식 지도`, linking `graph/` (relative, resolves under CI `/knowledge/` and local serve); it is also on the auto-nav top tab (from S2). The map's landing entry closes the journey: hero/search → Recent → Browse (projects · Tags · Graph).
 - `operations` (P6.S3): **serve parity confirmed** — the S1 `graph_hook.py` `on_post_build` fires under live `mkdocs serve` (compose `kb`, base `/knowledge/`), not just `mkdocs build`; curl-verified `graph.json` (200, version 1, 6 doc nodes) + `/graph/` + `/javascripts/graph.js` + landing all serve correctly, no watch-rebuild loop. Local dev workflow (`docker compose up -d kb` at `http://localhost:8765/knowledge/`) unchanged; `.gitignore` still excludes `site/`; README "How it's built" now documents the knowledge map.
 - `qa` (P6.S3): `site_smoke.py` `check_built` gains a **landing graph-link assertion** — the built `site/index.html` must carry the `.kb-card` link to `graph/` (keyed on the card class, distinct from the auto-nav tab / footer / `rel=next` links to `graph/`); negative-tested via a `--root` doctored copy (card removed → exactly 1 violation).
+- `experience` (P6.F1): journey revision — quiet labels A′ (on-demand reveal + >110% fade-up), idle mingle after settle, pointer/pinch zoom with token clamps + 1:1 pan, sticky node re-placement with spring-following tag spokes, legend lens (highlight-not-filter, `.is-on`).
+- `frontend` (P6.F1): §10a +4 tokens (none changed), `.is-on` legend row, renderer live-model port from the design's `kbGraph.mount()` (persistent rAF w/ document.hidden guard; reduced motion stays event-driven).
+- `decisions` (P6.F1): operator-directed P6.S1 design revision consciously supersedes two locked S0 decisions (label Strategy A → A′; settle-then-still/"no idle drift" → settle-then-mingle); Claude Design provenance.
 
 ## Open Questions
 

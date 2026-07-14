@@ -581,6 +581,8 @@
    stay teal; project inks are data-viz-only (node fills + legend chips). The
    canvas draws every mark from these tokens (docs/javascripts/graph.js reads
    them live via getComputedStyle, so the Material scheme toggle just works).
+   P6.S1 revision (2026-07-14): §10a +4 tokens (drift, drift-period, zoom-min/max
+   — none changed), §10c a legend-lens `.is-on` row, §10d a mingle note.
    ========================================================================== */
 
 /* ==========================================================================
@@ -643,12 +645,23 @@
   --kb-graph-label-size-tag: 11px;   /* tag / ghost labels · weight 400 */
   --kb-graph-label-gap: 6px;         /* node rim → label cap height */
 
-  /* ---- Motion — settle-then-still ----
-     The force sim eases to rest over ~--kb-graph-settle and STOPS; no idle
-     drift, ever (house rule: no loops). Overlay UI transitions use the
-     existing --kb-ease. Reduced motion: skip the animated settle — paint the
-     settled layout on the first frame; pan/zoom snaps instead of gliding. */
+  /* ---- Motion — settle, then mingle  (P6.S1 revision) ----
+     The force sim eases to rest over ~--kb-graph-settle, then keeps a
+     barely-there idle wander — the map "mingles" while it waits for you.
+     (Supersedes P6.S0's settle-then-still; operator-directed.) Wander is a
+     slow sum-of-sines: a node strays ≤ --kb-graph-drift from rest over
+     ~--kb-graph-drift-period; tags ×1.5, ghosts ×1.2. Never fast enough to
+     fight the pointer — hover, drag and labels stay rock-steady to hit.
+     Overlay UI transitions use the existing --kb-ease.
+     Reduced motion: NO mingle — paint the settled layout on the first
+     frame and hold still; states switch instantly; pan/zoom snaps. */
   --kb-graph-settle: 600ms; /* @kind other */
+  --kb-graph-drift: 3px;             /* max idle wander from rest, at zoom 1 */
+  --kb-graph-drift-period: 9s; /* @kind other */ /* one wander cycle, per-node ±40% */
+
+  /* ---- Pointer zoom — wheel / trackpad-pinch, toward the pointer ---- */
+  --kb-graph-zoom-min: 0.5; /* @kind other */
+  --kb-graph-zoom-max: 2.5; /* @kind other */
 }
 
 /* --------------------------------------------------------------------------
@@ -800,6 +813,9 @@
 .kb-graph .kb-graph-legend__chip { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--chip, var(--kb-graph-node-doc)); }
 .kb-graph .kb-graph-legend__chip--ring { background: transparent; border: 1.5px solid var(--kb-graph-node-tag); }   /* tag key */
 .kb-graph .kb-graph-legend__chip--ghost { background: transparent; border: 1.5px dashed var(--kb-graph-node-ghost); } /* unresolved key */
+/* highlighted project (legend click — a lens, never a filter): row keeps full ink */
+.kb-graph .kb-graph-legend__item.is-on { color: var(--kb-ink); background: var(--kb-surface-sunken); font-weight: var(--kb-weight-medium); }
+.kb-graph .kb-graph-legend__item.is-on .kb-graph-legend__count { color: var(--kb-secondary); }
 /* filtered-off project: hollow chip, receded text */
 .kb-graph .kb-graph-legend__item.is-off { color: var(--kb-hint); }
 .kb-graph .kb-graph-legend__item.is-off .kb-graph-legend__chip { background: transparent; box-shadow: inset 0 0 0 1.5px var(--chip, var(--kb-graph-node-doc)); }
@@ -911,9 +927,9 @@
 /* ==========================================================================
    §10d · Reduced motion
    --------------------------------------------------------------------------
-   Overlay transitions off; the ENGINE also skips the animated settle (paints
-   the settled layout on frame one) and snaps pan/zoom — see graph.js and the
-   motion note in the §10a tokens.
+   Overlay transitions off; the ENGINE also skips the animated settle AND the
+   idle mingle (paints the settled layout on frame one, holds still) and snaps
+   pan/zoom — see graph.js and the motion note in the §10a tokens.
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   .kb-graph, .kb-graph * { transition: none !important; }
