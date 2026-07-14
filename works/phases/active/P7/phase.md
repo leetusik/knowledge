@@ -421,6 +421,53 @@ Additional durable findings:
   unchanged (mkdocs build + `site_smoke.py` → PASS). All temp artifacts torn down;
   no leftover repro containers; live KB untouched.
 
+### P7.S6 landed (2026-07-14) — full plugin E2E proven on the F1-fixed code; install + recreate docs written
+
+- **Escalated mid → high, re-run after F1.** The mid tier passed Part A + Part B4–6 then
+  stopped at the step-7 gate gap; F1 closed it. This re-run confirmed F1 landed
+  (`uv run pytest -q` **57 passed**, parity PASS, both `claude plugin validate` exit 0),
+  then re-ran Part B **fully** on the fixed code and wrote Part C. All E2E against a TEMP
+  scaffold on ports **9765/9766** + a temp `XDG_CONFIG_HOME`; the operator's live KB on
+  8765/8766 was never touched (up 5h, never restarted). No source code changed — docs only.
+- **Part A:** four `claude plugin validate` runs (`.`/`./plugin`, plain + `--strict`) all
+  exit 0; every mechanical install-surface check green (marketplace `name`==plugin.json
+  `name`; `source:"./plugin"` → dir with `.claude-plugin/plugin.json`; both skills have
+  `name:` frontmatter; no `version` in the marketplace entry; `plugin/.claude-plugin/` holds
+  only `plugin.json`). F1 changed only the explain SKILL.md **body** (frontmatter/manifests
+  untouched, verified), so the mid tier's already-proven sandboxed non-interactive install
+  (`marketplace add <path>` + `install knowledge@knowledge`, both skills v0.1.0) stands; the
+  re-validate suffices. **Caveat left for operator QA:** a fresh sandboxed `claude` install
+  is blocked by this env's permission system (recursive `claude` invocation denied) — the
+  interactive `/plugin marketplace add` remains operator post-phase QA.
+- **Part B on the fixed code — all paths green:** render (35 files, no leftover tokens) →
+  marker → git clean commit → config 600 (nested schema) → resolver `configured` +
+  `KB_LOCAL_FALLBACK=yes` → compose up healthz+viewer 200. **201** into NEW project
+  `field-notes`: `landing_created:true`, `docs/field-notes/index.md` auto-created (F1) and in
+  the **3-path scoped commit** (doc + landing + `docs/index.md`), Recent bullet, DB row,
+  `source_repo` basename-sanitized. **409** duplicate guard (no dup file/bullet/commit).
+  **Fallback** on curl exit 7 into NEW project `ops-notes`: hand-written frontmatter +
+  **ensure-landing per the updated skill** (F1) + bullet + 3-path commit; **reindex
+  reconciliation** on `compose start api` → fallback doc appears via `/api/documents`
+  (sanitized). **Step 7 (the ex-FAIL) now PASSES:** `mkdocs build` + `site_smoke.py --root`
+  → **PASS on 3 projects / 3 docs**, no `/Users/` leak in any built HTML, 3 graph doc nodes.
+  Teardown: `compose down -v` + removed the E2E-only image; `docker ps -a` clean; live KB
+  intact.
+- **Part C docs (the release checklist lives in `plugin/README.md`):** root `README.md` got
+  "Install the plugin" (marketplace add → install → setup → explain; requirements; link to
+  plugin README) and "Recreating from scratch" (restore = clone + `docker compose up -d`
+  self-heal; rebuild = install + `/knowledge:setup` + point `~/.config/knowledge-kb/config.json`
+  `kb_root`). `plugin/README.md`: dropped the placeholder blockquote, added
+  "Development & releasing" (snapshot-sync + parity guard `plugin_parity.py`/CI
+  `plugin-ci.yml`; **release checklist** = any `plugin/**` change ⇒ `plugin.json` version
+  bump + parity + both validates + E2E before push), and one user-facing sentence on the
+  auto-landing (F1). Parity stays PASS (root/plugin READMEs are outside the
+  `plugin/templates/kb/` manifest); `workflow.py validate` passed. `plugin.json` kept 0.1.0.
+- **Minor caveat for the review to weigh (not a gate failure, out of S6 scope):** the 201
+  response `url` uses `public_base_url()`'s default `http://localhost:8765`, correct for a
+  default-port KB but wrong for an *advanced custom-port* scaffold (test used 9765). Findings
+  §2 deliberately leaves `KB_PUBLIC_BASE_URL` unset; a future slice could derive it from
+  `KB_VIEWER_PORT` if custom ports become common.
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -497,6 +544,8 @@ lands._
 - backend — write path auto-creates a minimal `docs/<project>/index.md` for a project's first document (never overwrites; joins the scoped commit); keeps every project satisfying the per-project deploy-gate invariant. [F1]
 - api — POST /api/documents side effect documented: first doc of a new project also creates the project landing (new response field `landing_created: bool`); the explain skills' fallback branches ensure the same landing when the API is unreachable. [F1]
 - qa — deploy-gate invariant (`site/<project>/index.html` per project) now holds for API- and fallback-written projects, proven by the S6 reproducer (render → POST into a new project → mkdocs build → `site_smoke.py` PASS on the grown corpus). [F1]
+- operations — E2E-proven user journey (install surface, setup, explain 201/409/fallback + reindex reconciliation, gate green on grown corpus); release checklist: plugin/** change ⇒ plugin.json version bump + parity/validate/E2E before push. [S6]
+- product — the knowledge feature now ships as an installable Claude Code plugin (marketplace + /knowledge:explain + /knowledge:setup); README carries install + recreate-from-scratch paths. [S6]
 
 ## Open Questions
 

@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P7`
-- Current slice: `P7.S6`
-- Next slice: `P7.REVIEW`
+- Current slice: `P7.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T16:01:30+09:00`
+- Rebuilt at: `2026-07-14T16:13:27+09:00`
 
 ## Active Phases
 
@@ -22,7 +22,7 @@
 | [x] `P4` | `done` | `pass` | Knowledge feature core improvements | `none` | `works/phases/active/P4` |
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
-| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.S6` | `works/phases/active/P7` |
+| [ ] `P7` | `planned` | `pending` | Claude Code plugin | `P7.REVIEW` | `works/phases/active/P7` |
 | [ ] `P8` | `planned` | `pending` | Knowledge API for hi2vi content agent | `P8.DECOMP` | `works/phases/active/P8` |
 
 ## Phase P1: Bootstrap Intake
@@ -104,7 +104,7 @@
 | [x] `P7.S4` | `done` | Shipped explain skill | `implementation` | `works/phases/active/P7/slices/P7.S4` |
 | [x] `P7.S5` | `done` | Setup skill | `implementation` | `works/phases/active/P7/slices/P7.S5` |
 | [x] `P7.F1` | `done` | Write path auto-creates project landing index.md — second-project docs break the scaffold deploy gate (S6 E2E) | `fix` | `works/phases/active/P7/slices/P7.F1` |
-| [ ] `P7.S6` | `todo` | E2E install test + docs | `implementation` | `works/phases/active/P7/slices/P7.S6` |
+| [x] `P7.S6` | `done` | E2E install test + docs | `implementation` | `works/phases/active/P7/slices/P7.S6` |
 | [ ] `P7.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P7/slices/P7.REVIEW` |
 
 ## Phase P8: Knowledge API for hi2vi content agent
