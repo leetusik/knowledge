@@ -52,6 +52,18 @@ def git_commit_enabled() -> bool:
     return str(val).strip().lower() not in {"0", "false", "no", "off"}
 
 
+def git_push_enabled() -> bool:
+    """Whether the write path pushes to origin/main after its scoped commit.
+
+    KB_GIT_PUSH defaults to **false** — local/plugin deployments never push
+    (preserves the "agent never pushes locally" convention); only the hosted box
+    opts in. Note the inverted default vs git_commit_enabled: truthy-parse, so
+    enabled only for an explicit {1, true, yes, on}.
+    """
+    val = _env("KB_GIT_PUSH", "false")
+    return str(val).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def gemini_api_key() -> str | None:
     """Gemini credential: GOOGLE_API_KEY preferred, GEMINI_API_KEY fallback.
 

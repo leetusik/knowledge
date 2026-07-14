@@ -289,6 +289,8 @@ def create_document(
         committed = False
         commit_sha = None
         commit_error = None
+        pushed = False
+        push_error = None
         if body.commit and config.git_commit_enabled():
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
@@ -305,6 +307,20 @@ def create_document(
                 committed = True
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
+
+            # 4b. Best-effort publish: push the commit to origin/main when
+            #     KB_GIT_PUSH is enabled (hosted box only; off by default so local
+            #     never pushes). Mirrors the commit's best-effort semantics — a
+            #     failed push never changes the 201; the doc publishes on the next
+            #     successful push. A rebase may rewrite the commit, so the PUBLISHED
+            #     head becomes the authoritative commit_sha on success. Stays inside
+            #     WRITE_LOCK so no concurrent write mutates the tree mid-rebase.
+            if committed and config.git_push_enabled():
+                try:
+                    commit_sha = gitops.push(root=config.kb_root())
+                    pushed = True
+                except gitops.GitError as exc:
+                    push_error = exc.stderr or str(exc)
 
     # 4b. Best-effort embed of the new doc, OUTSIDE the WRITE_LOCK critical section.
     #     Semantic search is a disposable cache: any failure (no key, API error) is
@@ -345,9 +361,12 @@ def create_document(
         "landing_created": landing_created,
         "committed": committed,
         "commit_sha": commit_sha,
+        "pushed": pushed,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    if push_error is not None:
+        resp["push_error"] = push_error
     return resp
 
 
@@ -373,6 +392,8 @@ def _delete_document(
         committed = False
         commit_sha = None
         commit_error = None
+        pushed = False
+        push_error = None
         if commit and config.git_commit_enabled():
             try:
                 gitops.add(
@@ -387,6 +408,16 @@ def _delete_document(
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
 
+            # Best-effort publish of the delete commit — same semantics as the POST
+            # path (see create_document 4b): KB_GIT_PUSH-gated, off by default, a
+            # failed push never changes the 200, published head becomes commit_sha.
+            if committed and config.git_push_enabled():
+                try:
+                    commit_sha = gitops.push(root=config.kb_root())
+                    pushed = True
+                except gitops.GitError as exc:
+                    push_error = exc.stderr or str(exc)
+
     resp = {
         "deleted": True,
         "id": doc["id"],
@@ -397,9 +428,12 @@ def _delete_document(
         "recent_removed": recent_removed,
         "committed": committed,
         "commit_sha": commit_sha,
+        "pushed": pushed,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    if push_error is not None:
+        resp["push_error"] = push_error
     return resp
 
 

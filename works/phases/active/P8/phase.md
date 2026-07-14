@@ -123,6 +123,16 @@ Verified ground truth (recon spot-checks this DECOMP ran — trust the plan's re
 - **Origin remote is `https://github.com/leetusik/knowledge.git`** — the box clone will use the SSH form (`git@github.com:leetusik/knowledge.git`) for deploy-key push.
 - **Rebuild quirk (operations.md):** `COMPOSE_BAKE=false docker compose up -d --build` on this host — carry the same note into the prod bring-up runbook.
 
+### P8.S1 — publish-on-write (delivered)
+
+- **`gitops.push()` is net-new** (`server/gitops.py`): `git fetch origin main` → `git rebase origin/main` → `git push origin HEAD:main`; returns the **final pushed HEAD** sha (a rebase may rewrite the commit). On any step failing it runs a best-effort `git rebase --abort` (raw `subprocess.run`, its own non-zero swallowed — harmless when nothing to abort) then re-raises `GitError`. Never `--force`, never `add -A`. Signature `push(*, root, remote="origin", branch="main")` — callers just pass `root`; the params exist for tests.
+- **Verified empirically** (bare-remote scratch, mirrored in `tests/test_api_push.py`): `git fetch origin main` opportunistically updates `refs/remotes/origin/main` (the standard clone refspec), so `rebase origin/main` targets the freshly-fetched tip; divergence → our commit lands on top with the operator commit still an ancestor (no clobber); a conflicting operator edit to the same `docs/index.md` Recent region → rebase conflicts, abort restores the local commit, no `.git/rebase-merge|rebase-apply` left, tree clean.
+- **Config flag `KB_GIT_PUSH` defaults FALSE** (`server/config.py:git_push_enabled`) — note the **inverted default** vs `git_commit_enabled`: truthy-parse `{1,true,yes,on}`, so local/plugin never pushes. Only the box sets it true.
+- **Wiring** (`server/main.py`): push runs **inside `WRITE_LOCK`**, immediately after the commit, only when `committed and git_push_enabled()`, in both `create_document` (POST) and `_delete_document` (both DELETE handlers). On success `commit_sha` is reassigned to the pushed HEAD; on failure/disabled it keeps the local `commit()` sha.
+- **Response contract:** `pushed: bool` always present (POST 201 + DELETE 200); `push_error` present only when a push was attempted and failed. Push failure is **never** a 5xx — mirrors `committed`/`commit_error` exactly.
+- **Gotcha for later slices:** the test fixture bare remote needs `git init --bare -b main` (else its HEAD defaults to `master` and clones don't check out `main`, so `push origin main` fails with "src refspec main does not match any"). Relevant to any S3/S5 artifact or E2E that clones the box repo. Also, keep `KB_DB_PATH` outside the work tree in push tests so the disposable `data/` never dirties the clean-tree assertion.
+- **DELETE also pushes** (settles the DECOMP open question "DELETE push scope") — parity with POST for the reverse path.
+
 ## Constraints
 
 - **Operator sign-off precedes implementation** (intent.md): P8.S1+ do not run until the operator approves the proposal above.
@@ -141,6 +151,11 @@ Expected durable-truth changes for **P8.REVIEW** to consolidate into new doc ver
 - **`docs/current/operations.md`** — production deployment on the OCI box: `compose.prod.yml` (api-only, own-clone, `changple_shared_network`), the `knowledge.hi2vi.com` vhost + TLS, `KB_GIT_PUSH`/`KB_REQUIRE_READ_AUTH`/`KB_PUBLIC_BASE_URL` box env, the edge re-apply rule + cross-repo `apply-to-edge.sh` handoff, publish-on-write flow, bring-up runbook. (Sources: P8.S1, S3, S5.)
 - **`docs/current/security.md`** — hosted auth model (reads behind bearer via `KB_REQUIRE_READ_AUTH`; writes already guarded), the push credential (repo-scoped SSH deploy key, box-only), secret provisioning on the box, the deliberate scoped departure from "agent never pushes". (Sources: P8.S1, S2, S4.)
 - **`docs/current/architecture.md`** — the hosted-deployment shape (public co-tenant API on the shared edge; box clone + server-side push as the publish-on-write path; local vs hosted flag-gated behavior). Possibly light — confirm at review whether operations/security already carry it. (Sources: P8.S1, S3.)
+
+**Realized by P8.S1 (append to the above at review):**
+- api.md — POST 201 and DELETE 200 bodies now always carry `pushed: bool`; `push_error` appears only when a push was attempted and failed; on a successful push `commit_sha` is the **final published HEAD** (a rebase may rewrite the commit), on failed/disabled push it stays the local commit HEAD.
+- operations.md — new `KB_GIT_PUSH` flag (default false, box-only true) enables publish-on-write: after the scoped commit the server `git fetch origin main` → rebase → non-force `push origin HEAD:main`, best-effort (a failed push never fails the request; the doc publishes on the next successful push).
+- security.md — `KB_GIT_PUSH` is the deliberate, flag-gated departure from "agent never pushes" — off by default so local/plugin never push; only the hosted box (with the deploy-key credential, provisioned in S4) turns it on. Never `--force`, never `add -A`.
 
 ## Open Questions
 
