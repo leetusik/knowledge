@@ -1,19 +1,23 @@
-# P6.REVIEW — re-review after P6.F1 (supersedes the first-pass plan)
+# P6.REVIEW — re-review after P6.F1 + P6.F2 (supersedes the first-pass plan)
 
 This is the RE-review. The first review passed on 2026-07-14 (its plan is in git history;
 its summary is preserved in `phase.md` → "Review summary (P6.REVIEW, 2026-07-14)"; docs
 consolidated then: architecture v0005, data v0004, frontend v0003, experience v0003,
 operations v0006, qa v0003, decisions v0006). The phase was then reopened
 `changes_requested`: the operator's visual QA — done in Claude Design co-work — produced
-the "P6.S1 revision" spec, implemented by **P6.F1** (commit `7de5fa5`). This re-review
-validates the phase WITH F1 against the REVISED spec and re-consolidates the affected
-durable docs.
+the "P6.S1 revision" spec, implemented by **P6.F1** (commit `7de5fa5`). The operator's
+subsequent live browser QA then caught a latent S2 defect (the loading overlay could never
+hide — CSS specificity), fixed by **P6.F2** (commit `3c1e952`). A first re-review run was
+stopped mid-validation when F2 was reported — it made NO writes (no doc versions, no
+phase.md changes), so start clean. This re-review validates the phase WITH F1 + F2 against
+the REVISED spec and re-consolidates the affected durable docs.
 
-## 1. Re-validate the phase with F1 in
+## 1. Re-validate the phase with F1 + F2 in
 
 The revised behavioral spec sources:
 - Slice context: `slices/P6.F1/plan.md` (full spec + verification record) and
-  `slices/P6.F1/result.md`; `phase.md` → "P6.F1" section.
+  `slices/P6.F1/result.md`; `phase.md` → "P6.F1" section. For the overlay fix:
+  `slices/P6.F2/plan.md` + `result.md`; `phase.md` → "P6.F2" section.
 - Design mirror: `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/7a3b6e1d-58a3-417e-9225-914f76c2e068/scratchpad/kb-graph-design-rev/`
   (`BRIEF_REVISION.md` verbatim spec; `components/graph/graph-render.js` reference
   `kbGraph.mount()`; `tokens/graph.css`; `components/graph/graph.css`).
@@ -32,9 +36,12 @@ Battery, from a clean `site/` in a pinned venv (`pip install mkdocs-material==9.
   (`ctrl/meta ? 0.01 : 0.0024`) + token clamps relative to fit; sticky-commit math (rest
   minus drift; tag offsets vs owners' rest centroid); `projectKeep` lens + `.is-on`
   single-select; reduced-motion paths (no mingle, no persistent loop, snap eases).
+- F2 fidelity: the `[hidden]` helper in §10c now carries the five class+attribute
+  selectors at (0,2,1) (`.kb-graph .kb-graph-empty[hidden]` etc.); confirm no overlay
+  rule with an own `display` outranks it, and that F2's diff is that one hunk only.
 - Cross-cutting invariants as in the first review: ONE vendored JS file, zero third-party
-  /CDN, `extra.css` §1–§9 untouched (F1's diff must be §10-only), `mkdocs.yml` unchanged
-  by F1, `docs/graph.md`/`docs/index.md`/`scripts/*` unchanged by F1, old
+  /CDN, `extra.css` §1–§9 untouched (F1's + F2's diffs must be §10-only), `mkdocs.yml`
+  unchanged by F1/F2, `docs/graph.md`/`docs/index.md`/`scripts/*` unchanged by F1/F2, old
   `docs/versions/*` untouched, P7/SaaS not precluded.
 - `python3 scripts/workflow.py validate`.
 
@@ -67,9 +74,10 @@ P6.REVIEW` + write each new version file as the full updated doc + `rebuild-docs
 - `decisions` — the operator-directed P6.S1 supersession of two locked S0 decisions
   (label Strategy A → A′; settle-then-still/"no idle drift" → settle-then-mingle),
   Claude Design provenance; amend the affected P6 ADR wording rather than contradicting it.
-- `data`, `operations`, `qa` — new versions primarily to remove the `/Users/` literal
-  (say so honestly in each `--summary`); fold in any small F1 truth touch-up (e.g. `qa`:
-  F1 needed no guard change; renderer behavior revalidated at re-review).
+- `data`, `operations` — new versions primarily to remove the `/Users/` literal
+  (say so honestly in each `--summary`); fold in any small F1 truth touch-up.
+- `qa` — remove the `/Users/` literal AND consolidate F2's Doc-impact line (the
+  `[hidden]`-specificity lesson from operator browser QA; F1 needed no guard change).
 - `architecture` — only if you judge F1 changed architecture-level truth (it should not:
   the build-time-data / browser-render seam is unchanged).
 - ORDERING: consolidate + `rebuild-docs` FIRST, then the final `mkdocs build` +

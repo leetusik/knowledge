@@ -363,6 +363,60 @@ write-up: `slices/P6.F2/result.md`. Final visual confirmation (overlay actually
 disappearing, canvas interactivity restored) is still owed to the operator's browser
 refresh — no browser in this harness.
 
+### P6.F3 — layout spacing, smarter placement, placement survives reloads (implemented 2026-07-14)
+
+**Scope:** operator browser QA — "more space per node by default; smart location for
+visibility; stop the time-to-time reset to default." Renderer-only
+(`docs/javascripts/graph.js` the sole source file; `graph.json` contract, `graph_hook.py`,
+`site_smoke.py`, `mkdocs.yml`, `graph.md`, `index.md`, `extra.css` all untouched). Full
+write-up: `slices/P6.F3/result.md`.
+
+**"Auto reset to default" — DIAGNOSED, do not re-investigate.** There is NO in-page reset
+(no sim reheat; `restCaptured` never clears; `resize()` only refits the camera; drag-commit
+is the only bx/by writer). The operator's experience is the **mkdocs live-reload dev server**:
+any `docs/` change makes it rebuild and force-reload the page, re-booting the map to default.
+The fix is NOT to fight live-reload — it is to make placement + camera + lens **survive a
+reload** via `sessionStorage`, so a reload (or leaving to read a doc and coming back in the
+same tab) restores the map exactly as left and SKIPS the settle. A fresh tab / changed corpus
+gets the default layout.
+
+**Spacing + seeding.** Final constants (tuned on the numeric harness): `REST_RELATED 150`,
+`REST_TAG 210`, `LAYOUT_RADIUS 400`, `COLLIDE_PAD 20`; `REPULSION 9000` / cutoff `600²` /
+`CENTER_K 0.016` **kept at baseline**. Seeding is now deterministic degree-aware for docs
+(hubs in, leaves out) and owner-anchored for tags (hub-and-spoke ring at ~`REST_TAG`, spoke 0
+outward + **even angular slots** by the tag's index in its owner's tag list) and ghosts
+(beside their linking doc). Settled bbox ~1.3× wider / 1.4× taller than baseline; fit drops
+1.156→0.823 at 1200×700 (and clears the FIT_Z_MAX rail on wider desktops); `related` edges stay
+shorter than `tag` (142<193). All deterministic (hash01 only).
+
+**GOTCHA for future layout work — the ~600ms/~37-tick settle is a hard budget.** The plan's
+anchor constants (`REPULSION 16000`, cutoff `750²`, `CENTER_K 0.012`) and a hash-random tag
+fan both **broke convergence**: stronger/wider repulsion outran the springs (bbox exploded to
+2400–4275px, residual |v| 4–8, not settled), and the narrow hash fan **stacked** two
+same-owner tags (`celery`+`self-recovery`) → explosive close-range repulsion flung them to
+r≈1200 that the weak tag spring (K 0.2) couldn't recover in 37 ticks. Lesson: within the locked
+settle budget, spread the map via **spring rest lengths + collision pad + layout radius**
+(equilibrium size, convergence-neutral) — NOT via repulsion/centering (which move the
+equilibrium out of reach in 37 ticks); and seed tags on **even angular slots**, never a
+hash-random fan, so no two siblings stack. `COLLIDE_PAD` is the reliable min-pairwise floor
+(hard, alpha-independent) — set it ≥ the required separation.
+
+**Persistence shape (for future reference):** key `'kb-graph:v1:' + hash01(sorted ids)`;
+value `{rest:{id:[x,y] r0.1}, view:{zt,pxt,pyt,auto}, tagsVisible, activeProject, selectedId}`;
+one debounced `persist()` (~250ms) at every state-changing interaction + `captureRest`, a
+`pagehide` flush; every access try/caught (private-mode Safari throws → silent no-op); restore
+skips the settle (restCaptured/alpha 0/simStarted false) and snaps a stored non-auto camera.
+
+**Verification:** `node --check` OK; throwaway spacing + persistence harnesses (real graph.js
+loaded via an in-memory IIFE→factory transform under mocked DOM) — ALL assertions PASS;
+pinned compose-`kb` container `mkdocs build` → built `graph.js` carries the changes, `graph.json`
+byte-shape intact (v1, 32 nodes, 30 edges); `site_smoke.py` → exactly 1 violation, the KNOWN
+pre-existing `/Users/` prose leak in `docs/current/{frontend,qa,operations,data}` (out of scope,
+re-review owns it) — no graph/renderer/guard/landing assertion failed; serve-parity curl against
+the running `kb` server carries `kb-graph:v1` + `seedPositions`/`restoreState`. Browser visual QA
+(roomier feel, reload-restore round-trip, camera/lens/selection restore, reduced motion) is
+operator-owed — no browser in this harness.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -399,6 +453,13 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
   `.kb-graph [hidden]` (0,1,1) lost to overlay display rules (0,2,0); fixed with
   class+attribute selectors (0,2,1) in §10c; JS untouched. Lesson: attribute-toggle
   visibility needs a specificity check against every rule that sets display.
+- `experience` (P6.F3): map layout revision from operator QA — roomier default spacing
+  (spread constants), degree-aware doc seeding + owner-anchored tag/ghost seeding for a
+  cleaner first layout, and placement/camera/lens state now survives page reloads within
+  the tab (sessionStorage; fresh tab = fresh default layout).
+- `frontend` (P6.F3): renderer-only change — retuned sim constants, deterministic
+  smarter seeding (no randomness invariant kept), sessionStorage persistence keyed by a
+  corpus signature with try/catch-silent storage access; settle skipped on restore.
 
 ## Open Questions
 

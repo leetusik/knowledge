@@ -158,3 +158,13 @@
 {"ts": "2026-07-14T10:58:44+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.F2"}
 {"ts": "2026-07-14T10:58:44+09:00", "type": "slice_status_changed", "slice": "P6.F2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-14T11:01:57+09:00", "type": "slice_status_changed", "slice": "P6.F2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T11:09:20+09:00", "type": "doc_version_created", "doc": "data", "version": "v0005_p6_re-review_publish-safe_invariant_restated_without_the_local-path_literal_guard_unchanged_still_matches_it", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:09:20+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0007_p6_re-review_no-local-path_guard_invariant_restated_without_the_literal_guard_unchanged", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:10:05+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0004_p6.f2_hidden-specificity_overlay_lesson_no-local-path_invariant_restated_without_the_literal_knowledge-map_qa_mission_updated_to_the_p6.f1_revised_behaviors", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:11:02+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0004_p6.f1_knowledge-map_renderer_revision_quiet_labels_a-prime_settle-then-mingle_pointer_pinch_zoom_sticky_re-place_legend_lens_section_10a_plus_four_tokens_is-on_lens_row_f2_hidden-specificity_fix_local-path_literal_removed_from_prose", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:13:08+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0004_p6.f1_knowledge-map_renderer_revision_section_10_truth_local-path_literal_removed", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:13:55+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0004_p6.f1_knowledge-map_journey_revision_quiet_labels_a-prime_settle-then-mingle_pointer_zoom_sticky_re-place_legend_lens", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:15:03+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0007_p6.f1_operator-directed_design_revision_supersedes_two_locked_s0_decisions_label_strategy_a_to_a-prime_settle-then-still_to_settle-then-mingle", "source": "P6.REVIEW"}
+{"ts": "2026-07-14T11:23:35+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.F3"}
+{"ts": "2026-07-14T11:23:35+09:00", "type": "slice_status_changed", "slice": "P6.F3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T11:52:14+09:00", "type": "slice_status_changed", "slice": "P6.F3", "old_status": "in_progress", "new_status": "done"}

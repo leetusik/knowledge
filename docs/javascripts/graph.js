@@ -30,6 +30,17 @@
      · Reduced motion — no settle animation, no mingle, no fades: paint at rest,
        hold still, snap pan/zoom (event-driven, no persistent loop).
 
+   P6.F3 revision (operator browser QA, 2026-07-14):
+     · Roomier default spacing — retuned sim constants so the settled map fills
+       the plate instead of clumping at the FIT_Z_MAX clamp.
+     · Smarter first placement — degree-aware doc seeding (hubs in, leaves out)
+       and owner-anchored tag/ghost seeding (deterministic; no randomness).
+     · Placement survives reloads — the rest layout + camera + lens state persist
+       to sessionStorage keyed by a corpus signature, so a page reload (mkdocs
+       live-reload, or leaving to read a doc and coming back in the same tab)
+       restores the map exactly as left and SKIPS the settle. A fresh tab (or a
+       changed corpus → changed key) gets the default layout.
+
    extra_javascript loads on every page, so the very first thing this does is a
    no-op guard: if there is no .kb-graph mount, it returns immediately.
    ========================================================================== */
@@ -51,13 +62,16 @@
      hub-and-spoke around their doc. Pairwise repulsion + mild centering +
      collision padding. Alpha cools ~0.9/tick from 1 → 0.02 in ~37 ticks ≈ the
      600ms --kb-graph-settle budget, then the sim STOPS — but the map keeps a
-     barely-there idle mingle (see the persistent rAF loop below). */
-  var REST_RELATED = 110, K_RELATED = 0.9;
-  var REST_TAG = 160, K_TAG = 0.2;
+     barely-there idle mingle (see the persistent rAF loop below).
+     P6.F3 retuned these for roomier default spacing (validated on the numeric
+     harness): the settled bbox fills the plate so fit() no longer rails at
+     FIT_Z_MAX. related still SHORTER + STRONGER than tag (doc backbone tight). */
+  var REST_RELATED = 150, K_RELATED = 0.9;
+  var REST_TAG = 210, K_TAG = 0.2;
   var REPULSION = 9000, REPULSION_MAX_D2 = 600 * 600;
-  var CENTER_K = 0.016, COLLIDE_PAD = 6, COLLIDE_ITERS = 2;
+  var CENTER_K = 0.016, COLLIDE_PAD = 20, COLLIDE_ITERS = 2;
   var ALPHA_DECAY = 0.1, ALPHA_MIN = 0.02, VEL_DECAY = 0.6;
-  var LAYOUT_RADIUS = 340;
+  var LAYOUT_RADIUS = 400;
   var FIT_PAD = 64, FIT_Z_MIN = 0.5, FIT_Z_MAX = 1.5;
 
   /* per-frame ease factors (snap to 1 under reduced motion) */
@@ -178,6 +192,7 @@
   var alpha = 0, simStarted = false, restCaptured = false;
   var frameQueued = false;
   var drag = null;                           /* { mode:'node'|'pan', id, wx, wy, moved, px, py } */
+  var STORE_KEY = null;                       /* sessionStorage key = corpus signature (set in start) */
 
   /* ============================================================ data → model */
   function buildModel(data) {
@@ -202,22 +217,8 @@
     });
     nodes.forEach(function (n) { nodeById[n.id] = n; });
 
-    /* deterministic, project-clustered initial placement (no randomness) */
-    var P = Math.max(1, projects.length);
-    nodes.forEach(function (n) {
-      var ang, rad;
-      if (n.type === 'doc') {
-        var pIdx = projectInk[n.project] != null ? projectInk[n.project] : 0;
-        ang = (2 * Math.PI * pIdx) / P + (hash01(n.id) - 0.5) * (2 * Math.PI / P) * 0.7;
-        rad = LAYOUT_RADIUS * (0.45 + hash01(n.id + '#r') * 0.5);
-      } else {
-        ang = 2 * Math.PI * hash01(n.id);
-        rad = LAYOUT_RADIUS * (0.85 + hash01(n.id + '#r') * 0.55);
-      }
-      n.x = Math.cos(ang) * rad;
-      n.y = Math.sin(ang) * rad;
-    });
-
+    /* edges + adjacency FIRST — the owner-anchored seeding below needs to know
+       which docs own each tag (and which doc links each ghost). */
     edges = rawEdges.filter(function (e) {
       return nodeById[e.source] && nodeById[e.target];
     }).map(function (e) {
@@ -230,6 +231,71 @@
     adjacency = {};
     nodes.forEach(function (n) { adjacency[n.id] = {}; });
     edges.forEach(function (e) { adjacency[e.a][e.b] = true; adjacency[e.b][e.a] = true; });
+
+    /* deterministic, degree-aware, owner-anchored initial placement (no random) */
+    seedPositions(projects.length);
+  }
+
+  /* Seed every node's start position as a pure function of the corpus (hash01
+     only — the no-randomness invariant is HARD). Docs sit in their project's
+     angular sector with a DEGREE-AWARE radius: high-degree hubs pull toward the
+     center, low-degree leaves push out (same (deg−2)/6 ramp as the r 6→14
+     sizing), ±0.08·R jitter. Tags start at their owner docs' seeded centroid,
+     spread on a hub-and-spoke RING at ~REST_TAG: the first spoke faces OUTWARD
+     (away from the origin) and the rest fan EVENLY around the owner, keyed to
+     the tag's slot in its owner's tag list. Even slotting (not a hash-random
+     fan) guarantees a doc's tags never seed on top of each other — two stacked
+     tags would repel explosively and the weak tag spring could not reel them
+     back inside the design-locked ~600ms settle. Ghosts sit ~REST_RELATED beyond
+     the doc that links to them. A good seed means the springs barely have to
+     drag, so the short settle converges. Deterministic — hash01 only. */
+  function seedPositions(projectCount) {
+    var P = Math.max(1, projectCount);
+    nodes.forEach(function (n) {              /* pass 1 — docs */
+      if (n.type !== 'doc') return;
+      var pIdx = projectInk[n.project] != null ? projectInk[n.project] : 0;
+      var ang = (2 * Math.PI * pIdx) / P + (hash01(n.id) - 0.5) * (2 * Math.PI / P) * 0.7;
+      var degNorm = Math.min(1, Math.max(0, (n.deg - 2) / 6));
+      var rad = LAYOUT_RADIUS * (0.35 + 0.5 * (1 - degNorm)) + (hash01(n.id + '#r') - 0.5) * 0.16 * LAYOUT_RADIUS;
+      n.x = Math.cos(ang) * rad; n.y = Math.sin(ang) * rad;
+    });
+    nodes.forEach(function (n) {              /* pass 2 — tags + ghosts (need doc positions) */
+      if (n.type === 'doc') return;
+      if (n.type === 'tag') {
+        var owners = ownerDocsOf(n.id);
+        var c = seedCentroid(owners);
+        var owner = owners.length ? nodeById[owners[0]] : null;   /* primary owner (for even slotting) */
+        var name = n.id.replace(/^tag:/, '');
+        var count = owner && owner.tags.length ? owner.tags.length : 1;
+        var idx = owner ? owner.tags.indexOf(name) : -1; if (idx < 0) idx = 0;
+        var base = owners.length ? Math.atan2(c.y, c.x) : 2 * Math.PI * hash01(n.id);  /* spoke 0 outward */
+        var ang2 = base + (2 * Math.PI * idx) / count;            /* remaining spokes even around the owner */
+        var off = REST_TAG * 0.9 * (1 + (hash01(n.id) - 0.5) * 0.2);
+        n.x = c.x + Math.cos(ang2) * off;
+        n.y = c.y + Math.sin(ang2) * off;
+      } else {                                /* missing / ghost — beside its linking doc */
+        var src = ghostSourceOf(n.id);
+        if (src) {
+          var ag = 2 * Math.PI * hash01(n.id + '#g');
+          n.x = src.x + Math.cos(ag) * REST_RELATED;
+          n.y = src.y + Math.sin(ag) * REST_RELATED;
+        } else {
+          var ar = 2 * Math.PI * hash01(n.id);
+          n.x = Math.cos(ar) * LAYOUT_RADIUS; n.y = Math.sin(ar) * LAYOUT_RADIUS;
+        }
+      }
+    });
+  }
+  function seedCentroid(ids) {
+    var sx = 0, sy = 0, c = 0;
+    ids.forEach(function (id) { var d = nodeById[id]; if (d) { sx += d.x; sy += d.y; c++; } });
+    return c ? { x: sx / c, y: sy / c } : { x: 0, y: 0 };
+  }
+  function ghostSourceOf(ghostId) {
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i].kind === 'related' && edges[i].b === ghostId) return nodeById[edges[i].a] || null;
+    }
+    return null;
   }
 
   /* ============================================================== force sim */
@@ -309,6 +375,7 @@
     nodes.forEach(function (n) { n.bx = n.x; n.by = n.y; n.sd = seed(n.id); });
     computeTagAnchors();
     restCaptured = true;
+    persist();      /* the first settled layout is restorable too */
   }
   function ownerDocsOf(tagId) {
     var owners = [];
@@ -334,6 +401,80 @@
       var owners = ownerDocsOf(n.id);
       var a = anchorOf(owners, false);
       tagAnchor[n.id] = { owners: owners, dx: n.bx - a.x, dy: n.by - a.y };
+    });
+  }
+
+  /* ===================================================== reload persistence ==
+     Tab-scoped sessionStorage so the rest layout + camera + lens survive a page
+     reload — the mkdocs live-reload dev server force-reloads the page on any
+     docs/ change, which is what looked like a "reset to default" in browser QA;
+     it also survives leaving to read a doc and coming back in the same tab. The
+     key is a signature over the SORTED node ids, so a changed corpus lands on a
+     different key and the stale blob is simply ignored (it expires with the tab).
+     EVERY storage access is in try/catch — private-mode Safari throws on access;
+     a storage failure must be a silent no-op, never an error. sessionStorage
+     (not localStorage) is the right conservatism: a fresh visit tomorrow gets the
+     current default layout, not a frozen one. */
+  function computeStoreKey() {
+    var ids = nodes.map(function (n) { return n.id; }).sort();
+    return 'kb-graph:v1:' + hash01(ids.join('\n'));
+  }
+  var persistTimer = null;
+  function persist() {                         /* debounced ~250ms; coalesces bursts */
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(function () { persistTimer = null; persistNow(); }, 250);
+  }
+  function flushPersist() {                    /* immediate flush (pagehide) */
+    if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
+    persistNow();
+  }
+  function persistNow() {
+    if (!STORE_KEY) return;
+    try {
+      var rest = {};
+      nodes.forEach(function (n) { rest[n.id] = [Math.round(n.bx * 10) / 10, Math.round(n.by * 10) / 10]; });
+      var blob = {
+        rest: rest,
+        view: { zt: view.zt, pxt: view.pxt, pyt: view.pyt, auto: view.auto },
+        tagsVisible: tagsVisible, activeProject: activeProject, selectedId: selectedId
+      };
+      window.sessionStorage.setItem(STORE_KEY, JSON.stringify(blob));
+    } catch (e) { /* private-mode / quota / disabled: silent no-op */ }
+  }
+  /* Load a matching stored blob into the model. Returns the blob (so start() can
+     restore the camera + selection) or null. On a hit it sets each node's rest
+     position, seeds its wander, rebuilds tag anchors, and marks the layout
+     already settled (restCaptured / alpha 0 / simStarted false) so start() skips
+     the animated settle entirely. */
+  function restoreState() {
+    if (!STORE_KEY) return null;
+    var raw;
+    try { raw = window.sessionStorage.getItem(STORE_KEY); } catch (e) { return null; }
+    if (!raw) return null;
+    var blob;
+    try { blob = JSON.parse(raw); } catch (e) { return null; }
+    if (!blob || !blob.rest) return null;
+
+    nodes.forEach(function (n) {
+      n.sd = seed(n.id);
+      var p = blob.rest[n.id];
+      if (p && isFinite(p[0]) && isFinite(p[1])) { n.x = n.bx = p[0]; n.y = n.by = p[1]; }
+      else { n.bx = n.x; n.by = n.y; }     /* belt-and-braces: seeded position (sig-match makes this rare) */
+    });
+    computeTagAnchors();
+    restCaptured = true; alpha = 0; simStarted = false;
+
+    if (typeof blob.tagsVisible === 'boolean') tagsVisible = blob.tagsVisible;
+    activeProject = (blob.activeProject != null && projectInk[blob.activeProject] != null) ? blob.activeProject : null;
+    return blob;
+  }
+  /* Reflect a restored tagsVisible / activeProject in the just-built legend DOM. */
+  function syncLegendUI() {
+    if (!elLegend) return;
+    var sw = elLegend.querySelector('.kb-graph-switch');
+    if (sw) { sw.classList.toggle('is-on', tagsVisible); sw.setAttribute('aria-pressed', tagsVisible ? 'true' : 'false'); }
+    Array.prototype.forEach.call(elLegend.querySelectorAll('.kb-graph-legend__item'), function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-project') === activeProject);
     });
   }
 
@@ -394,6 +535,7 @@
     clampPan();
     if (reduceMotion) { view.z = view.zt; view.panX = view.pxt; view.panY = view.pyt; }
     scheduleDraw();
+    persist();
   }
 
   /* ============================================================ visibility */
@@ -745,8 +887,9 @@
     var n = nodeById[id];
     if (n && (n.type === 'doc' || n.type === 'missing')) openPanel(n); else closePanel();
     scheduleDraw();
+    persist();
   }
-  function deselect() { selectedId = null; closePanel(); scheduleDraw(); }
+  function deselect() { selectedId = null; closePanel(); scheduleDraw(); persist(); }
 
   /* ================================================================= icons */
   /* NO Iconify / CDN — text glyphs for +/− and inline SVG for fit / close. */
@@ -788,6 +931,7 @@
           b.classList.toggle('is-on', b.getAttribute('data-project') === activeProject);
         });
         scheduleDraw();   /* NO refit — nothing moves or hides */
+        persist();
       });
     });
     var sw = elLegend.querySelector('.kb-graph-switch');
@@ -797,6 +941,7 @@
       sw.setAttribute('aria-pressed', tagsVisible ? 'true' : 'false');
       if (view.auto) fit(true);   /* tag switch keeps its refit-if-auto behavior */
       scheduleDraw();
+      persist();
     });
   }
 
@@ -813,7 +958,7 @@
         var kind = btn.getAttribute('data-zoom');
         if (kind === 'in') zoomAbout(W / 2, H / 2, 1.3);
         else if (kind === 'out') zoomAbout(W / 2, H / 2, 1 / 1.3);
-        else { view.auto = true; fit(reduceMotion); scheduleDraw(); }   /* fit: ease live, snap reduced */
+        else { view.auto = true; fit(reduceMotion); scheduleDraw(); persist(); }   /* fit: ease live, snap reduced */
       });
     });
   }
@@ -903,6 +1048,7 @@
       drag = null;
       canvas.style.cursor = '';
       scheduleDraw();
+      persist();      /* drag-commit / pan-end / lens change — save the new state */
     }
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', function () { if (drag && drag.mode === 'node') { var n = nodeById[drag.id]; if (n && n.fx != null) { n.fx = null; n.fy = null; } } drag = null; canvas.style.cursor = ''; });
@@ -931,6 +1077,8 @@
   function start(data) {
     T = readTokens();
     buildModel(data);
+    STORE_KEY = computeStoreKey();
+    var restored = restoreState();     /* null unless a matching blob is stored for this corpus */
 
     var docNodes = nodes.filter(function (n) { return n.type === 'doc'; });
     if (!docNodes.length) { showEmpty('empty'); return; }
@@ -943,14 +1091,27 @@
     buildZoom();
     bindInteractions();
     observeScheme();
+    if (restored) syncLegendUI();      /* reflect a restored tag switch / project lens */
 
     resize();
     if (window.ResizeObserver) { new ResizeObserver(function () { resize(); }).observe(host); }
     else window.addEventListener('resize', resize);
+    window.addEventListener('pagehide', flushPersist);
 
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { scheduleDraw(); });
 
-    if (reduceMotion) {
+    if (restored) {
+      /* restored rest layout — SKIP the animated settle: paint at rest, then go
+         straight to the mingle loop (live) / event-driven stillness (reduced). */
+      fit(true);                         /* center + fitZoom from the restored positions */
+      if (restored.view && restored.view.auto === false && isFinite(restored.view.zt)) {
+        view.zt = restored.view.zt; view.pxt = restored.view.pxt; view.pyt = restored.view.pyt;
+        view.z = view.zt; view.panX = view.pxt; view.panY = view.pyt;
+        view.auto = false;               /* snap the stored camera — do not animate a restore */
+      }
+      if (restored.selectedId && nodeById[restored.selectedId]) select(restored.selectedId);
+      if (reduceMotion) scheduleDraw(); else requestAnimationFrame(loop);
+    } else if (reduceMotion) {
       convergeSync(400);      /* solve the layout, capture rest, paint still — no settle, no mingle */
       fit(true);
       captureRest();
