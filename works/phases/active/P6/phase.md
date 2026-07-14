@@ -539,3 +539,54 @@ reduced motion, landing card) — no browser in the build harness. Also opine on
 graph-page footer sitting just below the viewport-height map (flagged, not a defect).
 The orchestrator records the verdict via `review-phase` (the executor does not transition
 status).
+
+## Re-review summary (P6.REVIEW, after P6.F1–F4)
+
+**Verdict: PASS (re-review).** The phase was reopened `changes_requested` after the
+first pass so the operator's Claude-Design visual QA (the "P6.S1 revision" spec) and
+subsequent live-browser QA could land as four committed fix slices — F1 (renderer
+revision: quiet labels A′, idle mingle, pointer zoom, sticky re-place, legend lens),
+F2 (`[hidden]` overlay specificity), F3 (roomier layout + smarter seeding + reload
+survival), F4 (full-bleed margin specificity). This re-review re-validated the whole
+phase WITH F1–F4 and re-consolidated the affected durable docs. Full write-up:
+`slices/P6.REVIEW/result.md`.
+
+**Re-validation (all green).** Pinned-venv (`mkdocs-material==9.7.6`) battery:
+`mkdocs build` artifacts present → `graph.json` byte-identical across two builds →
+`node --check` OK → `site_smoke.py` reported exactly the ONE known pre-existing
+`/Users/` prose leak (every graph/renderer/guard/landing assertion passed) → the
+`--root` negative FAILs with **exactly** the allowlist violation on the consolidated
+(leak-free) tree (guard teeth intact) → serve-parity curls against the already-running
+`kb` server all 200 (graph.js carries `kb-graph-drift`×4 + `kb-graph:v1`; graph.json v1,
+6 doc + 26 tag nodes, no leak) → spec-fidelity of F1–F4 confirmed against the design
+mirror + slice specs → `workflow validate` PASS. Cross-cutting: F1–F4 touch **only**
+`docs/javascripts/graph.js` + `extra.css` §10 (F2/F4 CSS-only, F3 JS-only); §1–§9
+untouched; ONE vendored JS file, zero third-party/zero CDN; `mkdocs.yml`, `graph.md`,
+`index.md`, `scripts/*`, `server/*`, CI, compose, and `docs/versions/*` all unchanged;
+P7/SaaS not precluded.
+
+**CDP behavior probe (own headless Chrome, port 9224, torn down; kb server untouched).**
+F4 — map full-bleed at 1440×900 and 1280×720 (`graph.x`=0, `graph.right`=viewport; zoom
+stack on-screen). F2 — the loading/empty overlay computes `display:none` after load and
+`elementFromPoint` at center hits the `<canvas>` (pointer events restored). F3 —
+same-tab reload restores the `sessionStorage kb-graph:v1:` blob with all 32 rest
+positions, max Δ 0 (settle skipped). The subjective *feel* stays operator-owed.
+
+**`/Users/` leak fixed doc-side, guard kept strict.** The literal was inline-code prose
+in `docs/current/{data,frontend,operations,qa}.md` from the first review's consolidation
+(`43f4b79`). Fixed by rewording those docs' new versions ("no user-home absolute path"
+etc.); `site_smoke.py` untouched; `docs/current/*` / old `docs/versions/*` never
+hand-edited. Post-consolidation smoke → **0 violations**.
+
+**Docs consolidated (6 new versions, source P6.REVIEW):** experience v0004, frontend
+v0004, decisions v0007, qa v0004, data v0005, operations v0007. **architecture NOT
+re-versioned** (stays v0005 — the build-time-data / browser-render seam is unchanged by
+F1–F4). Ordering: consolidate + `rebuild-docs` FIRST, then the final `mkdocs build` +
+`site_smoke.py` (green), closing the first review's sequencing gap.
+
+**Still operator-owed (unchanged):** browser visual QA of the revised map in both
+schemes (mingle feel, quiet→hover/select label reveal + >110% fade-up, pinch zoom toward
+pointer, sticky drag + spring spokes, legend lens, reload-restore, reduced motion), and
+opining on the pre-existing graph-page footer-below-the-map behavior (flagged, not a
+defect). No new defect found → no fix slices proposed. The orchestrator records the
+verdict via `review-phase`.
