@@ -149,3 +149,8 @@
 {"ts": "2026-07-14T05:08:17+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer", "source": "P6.REVIEW"}
 {"ts": "2026-07-14T05:19:12+09:00", "type": "slice_status_changed", "slice": "P6.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-14T05:19:12+09:00", "type": "phase_reviewed", "phase": "P6", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-14T10:23:47+09:00", "type": "slice_status_changed", "slice": "P6.REVIEW", "old_status": "done", "new_status": "changes_requested"}
+{"ts": "2026-07-14T10:23:47+09:00", "type": "phase_reviewed", "phase": "P6", "verdict": "changes_requested", "reviewer": "operator (Claude Design co-work)"}
+{"ts": "2026-07-14T10:23:47+09:00", "type": "slice_created", "phase": "P6", "slice": "P6.F1"}
+{"ts": "2026-07-14T10:23:47+09:00", "type": "slice_status_changed", "slice": "P6.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T10:49:28+09:00", "type": "slice_status_changed", "slice": "P6.F1", "old_status": "in_progress", "new_status": "done"}
