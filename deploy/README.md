@@ -1,70 +1,109 @@
 # Production deploy runbook — knowledge.hi2vi.com
 
 Operator-facing runbook for hosting the knowledge document API publicly at
-`https://knowledge.hi2vi.com`, as a co-tenant on the shared OCI box (the same
-box + edge that serves hi2vi.com). **All steps run on the box / edge as the
-operator** — the agent has no SSH access; it produces these artifacts, you
-apply them.
+`https://knowledge.hi2vi.com`, as a co-tenant on the OCI box (the same box +
+edge that serves hi2vi.com). Every step runs **on the box**.
 
 Artifacts this runbook applies:
 
 - **`compose.prod.yml`** (repo root) — the api-only box compose project.
-- **`deploy/knowledge.hi2vi.com.conf`** — the nginx vhost for the shared edge.
+- **`deploy/knowledge.conf`** — the nginx vhost, dropped onto the box's edge.
 
 Secret *values* live only on the box (never in this repo). Generating and
-registering those secrets + DNS — the token, the SSH deploy key (and its GitHub
-registration), the Cloudflare record + cert-coverage check, and the optional
-Gemini key — is the **[`SECRETS.md`](SECRETS.md)** provisioning runbook. Do that
-first; this runbook then *places and brings up* what it produced, referencing
-secrets by name and placement path only.
+registering them + DNS — the token, the SSH deploy key (and its GitHub
+registration), the DNS record, the optional Gemini key — is the
+**[`SECRETS.md`](SECRETS.md)** provisioning runbook. Do that first; this runbook
+then *places and brings up* what it produced, referencing secrets by name and
+placement path only.
 
 ---
 
-## 0. Prerequisites (confirm before you start)
+## 0. The box, as it actually is (confirm before you start)
 
-- The box already runs the shared edge `changple5-nginx-1` + the external Docker
-  network **`changple_shared_network`** (both exist for hi2vi.com today).
-- You have the secrets provisioned per **[`SECRETS.md`](SECRETS.md)**: a strong
-  `KB_API_TOKEN`, an SSH **deploy key** registered on `leetusik/knowledge` (allow
-  write), and (optional) a `GOOGLE_API_KEY`. Cloudflare DNS + cert coverage: see
-  steps 4–5 here and `SECRETS.md` §3.
+- **A dedicated edge**, not a shared one. Compose project **`edge`** at
+  **`/home/opc/edge`**, container **`edge-nginx`** (`nginx:1.27-alpine`), owner of
+  `0.0.0.0:80` + `:443`, attached to the external Docker network
+  **`changple_shared_network`**. (The old shared `changple5-nginx-1` edge is gone.)
+- **The edge's config is declarative host state.** `/home/opc/edge/conf.d` and
+  `/home/opc/edge/certs` are **read-only bind mounts** into the container, so a
+  config change is a **file drop on the host + a reload** — and a co-tenant deploy
+  can no longer wipe it. Current vhosts: `00-default.conf` (owns the
+  `default_server` catch-all → `444`), `changple5.conf`, `changple-web.conf`,
+  `hi2vi.conf`; we add `knowledge.conf`.
+- **The edge ships its own tooling** — use it, don't improvise:
+  - `./deploy.sh` — hard `nginx -t` gate inside the **running** container, then a
+    graceful `nginx -s reload`. **Never recreates the container.** A failed test
+    reloads nothing, so a bad edit cannot take the edge down.
+  - `./validate.sh` — optional local pre-gate (dummy certs + `compose config` +
+    throwaway-container `nginx -t` over the whole `conf.d/` tree).
+- **TLS is already covered.** `/home/opc/edge/certs/hi2vi.crt` is a Cloudflare
+  Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com` (valid to 2041) — the
+  **wildcard already covers `knowledge.hi2vi.com`**. Nothing to provision.
+- **DNS is already live.** `knowledge.hi2vi.com` resolves to the same Cloudflare
+  proxy IPs as `hi2vi.com` (see §4).
+- Secrets provisioned per **[`SECRETS.md`](SECRETS.md)**: a strong `KB_API_TOKEN`,
+  an SSH **deploy key** registered on `leetusik/knowledge` **with write access**,
+  and (optional) a `GOOGLE_API_KEY`.
 
 ---
 
 ## 1. Box prep — clone, secrets, .env
 
-```bash
-# 1a. Clone over SSH (NOT https) into /opt/knowledge — the origin MUST be the
-#     SSH form so the container can push with the deploy key.
-sudo git clone git@github.com:leetusik/knowledge.git /opt/knowledge
-cd /opt/knowledge
-git remote -v        # confirm: origin  git@github.com:leetusik/knowledge.git
-# If you cloned as root but run compose as another user, mark the tree safe:
-#   git config --global --add safe.directory /opt/knowledge
+The clone must be **owned by `opc`**: `docker compose` reads `compose.prod.yml`
+and `.env` *client-side*, as the invoking user (`opc`, which is in the `docker`
+group). A root-owned `.env` at mode 600 would be unreadable and the bring-up
+would fail with a missing-env-file error.
 
-# 1b. Place the deploy key + pinned known_hosts (mounted read-only into the api).
-sudo mkdir -p /opt/knowledge-secrets
-sudo cp /path/to/knowledge_deploy_key /opt/knowledge-secrets/knowledge_deploy_key
-sudo chmod 600 /opt/knowledge-secrets/knowledge_deploy_key   # ssh refuses group/world-readable keys
+```bash
+# 1a. Clone into /opt/knowledge, owned by opc.
+sudo mkdir -p /opt/knowledge
+sudo chown opc:opc /opt/knowledge
+git clone https://github.com/leetusik/knowledge.git /opt/knowledge   # public repo — no credential needed to READ
+cd /opt/knowledge
+
+# The PUSH path must be SSH (that is what the deploy key authenticates), so point
+# origin at the SSH form. The container pushes; the host user never needs the key.
+git remote set-url origin git@github.com:leetusik/knowledge.git
+git remote -v        # confirm: origin  git@github.com:leetusik/knowledge.git  (fetch AND push)
+```
+
+> The api container runs as **root** and commits/pushes into this clone through the
+> `/repo` bind mount (the image bakes `git config --system safe.directory /repo`),
+> so new git objects under `/opt/knowledge/.git` end up root-owned. That is
+> expected and harmless — but host-side `git` commands in this clone may need
+> `sudo`.
+
+```bash
+# 1b. The deploy key already lives at /opt/knowledge-secrets/knowledge_deploy_key —
+#     it was GENERATED there (SECRETS.md §2), so the private half never transited a
+#     laptop or a transcript. It is root-owned; the container reads it through the
+#     read-only mount (the docker daemon is root), and `opc` never needs to.
+sudo ls -l /opt/knowledge-secrets/knowledge_deploy_key    # expect: -rw------- root root
+sudo chmod 600 /opt/knowledge-secrets/knowledge_deploy_key  # ssh refuses group/world-readable keys
 
 # Pin github.com's host key (avoids blind trust-on-first-use on the first push).
-ssh-keyscan -t ed25519,rsa github.com | sudo tee /opt/knowledge-secrets/known_hosts
+ssh-keyscan -t ed25519,rsa github.com | sudo tee /opt/knowledge-secrets/known_hosts >/dev/null
 # VERIFY the scanned key against GitHub's published SSH key fingerprints
 # (https://docs.github.com/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints)
 # before trusting it. If you would rather not pin, edit compose.prod.yml's
 # GIT_SSH_COMMAND to StrictHostKeyChecking=accept-new and drop UserKnownHostsFile.
 
-# 1c. Create the gitignored .env (box only — NEVER committed; .env is in .gitignore).
-#     Values (names + generation pointers only here — provision per P8.S4):
-sudo tee /opt/knowledge/.env >/dev/null <<'EOF'
-# Bearer token for writes + (with KB_REQUIRE_READ_AUTH) reads. Generate a strong
-# random token (e.g. `openssl rand -hex 32`) — see SECRETS.md §1.
-KB_API_TOKEN=
-# Optional Gemini key for hybrid semantic search. Empty/absent = BM25-only.
+# 1c. Create the gitignored .env — owned by opc, mode 600 (compose reads it AS opc).
+#     NEVER committed (.env is in .gitignore). The bearer token is GENERATED IN
+#     PLACE here: note the UNQUOTED heredoc — $(openssl ...) expands as the file is
+#     written, so the secret value never appears in a terminal or chat transcript.
+cat > /opt/knowledge/.env <<EOF
+# Bearer token for writes + hosted reads (KB_REQUIRE_READ_AUTH=true). SECRETS.md §1.
+KB_API_TOKEN=$(openssl rand -hex 32)
+# Optional Gemini key for hybrid semantic search. Empty/absent = BM25-only. §4.
 GOOGLE_API_KEY=
 EOF
-sudo chmod 600 /opt/knowledge/.env
+chmod 600 /opt/knowledge/.env
+ls -l /opt/knowledge/.env     # expect: -rw------- 1 opc opc
 ```
+
+Read the token back only when you actually need it (e.g. to hand it to the hi2vi
+side as `KNOWLEDGE_API_TOKEN`): `sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env`.
 
 The non-secret box config (`KB_GIT_PUSH=true`, `KB_REQUIRE_READ_AUTH=true`,
 `KB_PUBLIC_BASE_URL`, `TZ`, `KB_ROOT`, `KB_STARTUP_REINDEX=true`) is baked into
@@ -80,12 +119,21 @@ cd /opt/knowledge
 # (documented in docs/current/operations.md). Carry the flag.
 COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build
 
-docker compose -f compose.prod.yml ps        # expect: knowledge-api  Up (healthy)
+docker compose -f compose.prod.yml ps            # expect: knowledge-api  Up (healthy)
 docker compose -f compose.prod.yml logs -f api   # watch the startup reindex line
 ```
 
+The image must contain **`ssh`** — `git` alone cannot push over an SSH remote, so
+publish-on-write depends on it. Assert it once after the build:
+
+```bash
+docker compose -f compose.prod.yml exec api sh -c 'command -v ssh && git --version'
+# expect: /usr/bin/ssh   (an empty result = the image predates the openssh-client
+#         fix; rebuild. Without it EVERY push fails silently — see below.)
+```
+
 Verify the api is reachable **on the shared network** (before wiring the edge) —
-run a throwaway curl container joined to the same network:
+a throwaway curl container joined to the same network:
 
 ```bash
 docker run --rm --network changple_shared_network curlimages/curl:latest \
@@ -93,67 +141,76 @@ docker run --rm --network changple_shared_network curlimages/curl:latest \
 # expect: 200
 ```
 
-If `KB_GIT_PUSH=true` but the deploy key / origin are misconfigured, **writes
-still succeed** (201) — push is best-effort; the 201 body carries
-`pushed:false` + `push_error`. Fix the key/remote, then the next write (or a
-manual `git push`) publishes the accumulated commits. Do **not** treat a push
-failure as a bring-up blocker; treat it as "not yet publishing".
+If `KB_GIT_PUSH=true` but the deploy key / origin / `ssh` binary are
+misconfigured, **writes still succeed** (201) — push is best-effort; the 201 body
+carries `pushed:false` + `push_error`. Fix it, and the next write (or a manual
+`git push`) publishes the accumulated commits. A push failure is **not** a
+bring-up blocker; it means "not yet publishing" — but it is silent, so check
+`pushed:true` on the first write (P8.S5) rather than assuming.
 
 ---
 
-## 3. Edge apply — vhost conf + cert + network membership
+## 3. Edge apply — drop the vhost, reload
 
-The vhost + cert + network attachment are **undeclared runtime state** on
-`changple5-nginx-1` (see
-`docs/hi2vi_web/2026-07-02-shared-nginx-explained.md`). Apply all three:
+The edge's `conf.d/` is a **read-only host bind mount**, so applying the vhost is
+a file drop on the host plus the edge's own reload script. No `docker cp`, no
+`exec`, no recreate.
 
 ```bash
-# 3a. Confirm the cert paths BEFORE copying the conf. Open the live hi2vi vhost
-#     and copy its exact ssl_certificate / ssl_certificate_key paths into
-#     deploy/knowledge.hi2vi.com.conf (the assumption is a *.hi2vi.com WILDCARD
-#     origin cert already covers knowledge.hi2vi.com — see the conf's TLS block).
-docker exec changple5-nginx-1 cat /etc/nginx/conf.d/hi2vi.com.conf | grep ssl_certificate
+# 3a. Drop the conf onto the host (from your Mac, in this repo):
+scp deploy/knowledge.conf oracle-cloud:/home/opc/edge/conf.d/knowledge.conf
 
-# 3b. Copy the (cert-confirmed) conf into the running nginx container.
-docker cp deploy/knowledge.hi2vi.com.conf changple5-nginx-1:/etc/nginx/conf.d/knowledge.hi2vi.com.conf
+# 3b. (Optional pre-gate) validate the whole tree locally on the box:
+ssh oracle-cloud 'cd /home/opc/edge && ./validate.sh'
 
-# 3c. Ensure the edge is on the shared network (already true for hi2vi; harmless
-#     if repeated).
-docker network connect changple_shared_network changple5-nginx-1 2>/dev/null || true
-
-# 3d. Config-test then GRACEFUL reload (never recreate the shared nginx).
-docker exec changple5-nginx-1 nginx -t
-docker exec changple5-nginx-1 nginx -s reload
+# 3c. Apply: hard `nginx -t` gate inside the RUNNING edge, then graceful reload.
+ssh oracle-cloud 'cd /home/opc/edge && ./deploy.sh'
+# expect: "config OK — issuing graceful reload" -> "reload complete. New config is live."
 ```
 
-### Cross-repo handoff — make the edge config declarative-ish (REQUIRED follow-up)
+`deploy.sh` **never** recreates `edge-nginx` — recreating drops the container's
+runtime network attachment, the exact failure cascade the dedicated edge was built
+to remove. Never run `docker compose up`/`restart` against the edge to apply a
+config change.
 
-`deploy/edge/apply-to-edge.sh` lives in the **hi2vi / changple5 repos, not
-here**. **Extend it to also restore knowledge's conf + cert** (steps 3b–3d
-above) alongside hi2vi's. Until that is done:
+If `nginx -t` fails, **nothing is reloaded** and the edge keeps serving its last
+good config. Fix `deploy/knowledge.conf` in this repo, re-`scp`, re-run
+`./deploy.sh`.
 
-> **Operational rule (same as hi2vi.com): after any changple5 deploy, assume
-> `knowledge.hi2vi.com` is DOWN** until the (extended) `apply-to-edge.sh` re-runs
-> (the `depends_on` recreation cascade wipes the conf + cert + network
-> attachment on every changple5 deploy). Probe `https://knowledge.hi2vi.com/healthz`
-> after every changple5 deploy; if it errors, re-apply.
+> **No cert step.** The vhost points at `/etc/nginx/certs/hi2vi.crt` + `.key` — the
+> Cloudflare Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com`, so the
+> wildcard already covers `knowledge.hi2vi.com`. Re-check any time with:
+> `ssh oracle-cloud "openssl x509 -in /home/opc/edge/certs/hi2vi.crt -noout -text | grep -A1 'Subject Alternative Name'"`
 
-Long-term this folds cleanly into the Option-B dedicated edge (deferred **D2**)
-as a fourth conf drop-in.
+### Durability — no re-apply rule anymore
+
+The edge's conf + certs are **declarative host state on read-only bind mounts**, and
+the edge project has no `depends_on` and no `build`. **A co-tenant (changple5)
+deploy cannot wipe `knowledge.hi2vi.com`**, and a container restart or box reboot
+re-reads the same files. This is the Option-B dedicated edge (deferred **D2**), now
+live — it replaces the old shared-edge regime in which the vhost was undeclared
+runtime state inside `changple5-nginx-1`, wiped by every changple5 deploy and
+restored by a cross-repo `apply-to-edge.sh`. **Both that operational rule and that
+handoff are obsolete; there is no `apply-to-edge.sh` and none is needed.**
+
+(Note: `docs/hi2vi_web/2026-07-02-shared-nginx-explained.md` in this knowledge base
+still *describes* the old shared edge — it predates the cutover and is now history,
+not the operating manual.)
 
 ---
 
-## 4. Cloudflare DNS
+## 4. Cloudflare DNS — done
 
-Add a **proxied** `knowledge` record for `hi2vi.com` (orange cloud on) pointing
-at the box, and confirm the `*.hi2vi.com` origin cert covers it. This is an
-operator action — the record + cert-coverage provisioning is
-**[`SECRETS.md`](SECRETS.md) §3** (do it there; step 3a above copies the
-confirmed cert paths into the vhost).
+`knowledge.hi2vi.com` already resolves to the same Cloudflare proxy IPs as
+`hi2vi.com` (proxied `knowledge` record on the `hi2vi.com` zone). Confirm any time:
+
+```bash
+dig +short knowledge.hi2vi.com    # expect: Cloudflare proxy IPs, same as hi2vi.com
+```
 
 ---
 
-## 5. Post-apply validation checklist (edge-side, from anywhere)
+## 5. Post-apply validation checklist (from anywhere)
 
 ```bash
 # Health (open, no auth):
@@ -171,7 +228,13 @@ curl -s -o /dev/null -w '%{http_code}\n' 'https://knowledge.hi2vi.com/api/search
 # expect: 401
 ```
 
-**Do NOT run a write test here.** A `POST /api/documents` pushes to `main` and
-is the phase's **E2E acceptance (P8.S5)** — the first `project:"hi2vi"` write →
-201 `pushed:true` → commit on `main` → Pages deploy → doc live. Run it there,
-not as a bring-up smoke step.
+Retrieve the token when you need it, without ever pasting it into a transcript:
+
+```bash
+ssh oracle-cloud "sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env"
+```
+
+**Do NOT run a write test here.** A `POST /api/documents` pushes to `main` and is
+the phase's **E2E acceptance (P8.S5)** — the first `project:"hi2vi"` write → 201
+`pushed:true` → commit on `main` → Pages deploy → doc live. Run it there, not as a
+bring-up smoke step.

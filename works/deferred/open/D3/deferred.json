@@ -1,0 +1,11 @@
+{
+  "id": "D3",
+  "title": "Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree",
+  "status": "deferred",
+  "source": "P8.F2",
+  "reason": "P8.F2 found a live write-capable deploy key whose private half sits untracked at ./knowledge_deploy_key (never committed; now gitignored). It is redundant — the box authenticates with knowledge-api@oci-box (157267945). Revocation + local deletion are operator-only actions (credential revocation / irreversible local deletion).",
+  "trigger": "operator runs: gh repo deploy-key delete 157264706 -R leetusik/knowledge && rm -f knowledge_deploy_key knowledge_deploy_key.pub",
+  "created_at": "2026-07-14T22:48:04+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

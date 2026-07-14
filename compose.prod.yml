@@ -6,11 +6,12 @@
 # OWN git clone (e.g. /opt/knowledge) with an SSH `origin` + deploy key, so the
 # container can commit AND push writes to origin/main (publish-on-write, P8.S1).
 #
-# Reached by the shared edge (`changple5-nginx-1`) over `changple_shared_network`
-# by container name — NO public host-port publish. See deploy/README.md for the
-# bring-up + edge re-apply runbook, and deploy/knowledge.hi2vi.com.conf for the
-# vhost. NO SECRETS live here: KB_API_TOKEN + GOOGLE_API_KEY come from the box's
-# gitignored `.env`; the deploy key + known_hosts are bind-mounted from the box.
+# Reached by the box's dedicated edge (compose project `edge` at /home/opc/edge,
+# container `edge-nginx`) over `changple_shared_network`, BY CONTAINER NAME — NO
+# public host-port publish. See deploy/README.md for the bring-up runbook and
+# deploy/knowledge.conf for the vhost it drops onto the edge. NO SECRETS live here:
+# KB_API_TOKEN + GOOGLE_API_KEY come from the box's gitignored `.env`; the deploy
+# key + known_hosts are bind-mounted from the box.
 
 services:
   api:

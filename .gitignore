@@ -6,3 +6,11 @@ __pycache__/
 *.py[co]
 .venv/
 .env
+
+# Private keys must NEVER enter this repo (it is public). The git push deploy key
+# is generated ON THE BOX, in its final location, and its private half never
+# leaves it — see deploy/SECRETS.md §2. These patterns are a backstop against an
+# accidental `git add -A`, not a place to put a key.
+knowledge_deploy_key*
+*.pem
+*.key

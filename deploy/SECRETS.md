@@ -1,164 +1,154 @@
 # Secrets & DNS provisioning runbook — knowledge.hi2vi.com
 
-Operator runbook for **generating and registering** the secrets + DNS that
-`https://knowledge.hi2vi.com` needs, *before* the box bring-up in
-[`README.md`](README.md). This is the "produce the credentials and register them
-with GitHub / Cloudflare / Google" half; `README.md` §1–2 then *places* what you
-produced on the box and starts the api.
+Operator runbook for the secrets + DNS that `https://knowledge.hi2vi.com` needs.
+This is the "**produce the credentials and register them**" half;
+[`README.md`](README.md) is the "**place them and bring the box up**" half.
 
-> **No secret values ever live in this repo.** Everything below produces values
-> that go **only** into the box's gitignored `.env` (`/opt/knowledge/.env`) or
-> the box's read-only secrets mount (`/opt/knowledge-secrets/`), or into an
-> external provider (GitHub deploy keys, Cloudflare DNS). Names and placement
-> paths only are ever committed. The placement paths below are the exact ones
-> `compose.prod.yml` mounts — do not change them without editing that file.
+> **No secret values ever live in this repo**, and — the rule this runbook is built
+> around — **no secret value ever transits a laptop, a chat, or a terminal
+> transcript.** Both the bearer token and the git push key are **generated on the
+> box**, straight into their final location. Only *public* halves and *names/paths*
+> ever leave it. Placement paths below are the exact ones `compose.prod.yml` mounts
+> — don't change them without editing that file.
 
-Work top to bottom; tick the **handoff checklist** (§5) when done, then proceed
-to `README.md` §1.
+Work top to bottom; tick the **handoff checklist** (§5) when done.
 
 ---
 
 ## 1. `KB_API_TOKEN` — the bearer token (writes + hosted reads)
 
 The box runs `KB_REQUIRE_READ_AUTH=true`, so this one token guards **every**
-`/api/*` call (both writes and reads/search); `GET /healthz` stays open.
+`/api/*` call (writes and reads/search alike); `GET /healthz` stays open.
+
+**It is generated on the box, directly into `/opt/knowledge/.env`** — see
+[`README.md`](README.md) §1c, which writes the file with an *unquoted* heredoc so
+`$(openssl rand -hex 32)` expands in place. The value is never echoed, never
+pasted, never copied anywhere. Don't generate it here and carry it over.
+
+Retrieve it only when something actually needs it:
 
 ```bash
-# Generate a strong random token (32 bytes hex = 64 chars). Run anywhere.
-openssl rand -hex 32
+ssh oracle-cloud "sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env"
 ```
 
-- Placement: the value goes into `/opt/knowledge/.env` as `KB_API_TOKEN=<value>`
-  on the box — see `README.md` §1c. Never commit it.
-- **Cross-repo:** this *exact same value* is what the hi2vi content agent uses as
-  its `KNOWLEDGE_API_TOKEN` (per the frozen consumer contract in the published
-  `api.md`). Hand it to the hi2vi side over a secure channel — it is the single
-  shared secret between the two repos. Rotating it means updating both the box
-  `.env` and hi2vi's config together.
+- **Cross-repo:** that exact value is what the hi2vi content agent uses as its
+  `KNOWLEDGE_API_TOKEN` (per the frozen consumer contract in the published
+  `api.md`). It is the single shared secret between the two repos — hand it over a
+  secure channel, and rotate both sides together (edit the box `.env`, then
+  `docker compose -f compose.prod.yml up -d` to restart the api).
 
 ---
 
 ## 2. SSH deploy key — the publish-on-write push credential
 
 The box's api container commits **and pushes** each write to `origin/main`
-(`KB_GIT_PUSH=true`), so it needs a write-capable git credential. Use a
-**repo-scoped SSH deploy key** (smaller blast radius than a personal PAT, no
-expiry to babysit).
+(`KB_GIT_PUSH=true`), so it needs a write-capable git credential. We use a
+**repo-scoped SSH deploy key**: smaller blast radius than a personal PAT, and no
+expiry to babysit.
+
+**2a. Generate the keypair ON THE BOX**, in its final location. The private half is
+born there and never leaves:
 
 ```bash
-# Generate an ed25519 keypair with NO passphrase (the container runs
-# unattended) and a recognizable comment. Write it somewhere temporary first;
-# you move the private half onto the box in README.md §1b.
-ssh-keygen -t ed25519 -N '' -C 'knowledge-api@oci' -f ./knowledge_deploy_key
-#   -> ./knowledge_deploy_key       (PRIVATE half — goes on the box)
-#   -> ./knowledge_deploy_key.pub   (PUBLIC half — goes on GitHub)
+# On the box (ssh oracle-cloud). No passphrase — the container runs unattended.
+sudo mkdir -p /opt/knowledge-secrets
+sudo ssh-keygen -t ed25519 -N '' -C 'knowledge-api@oci' \
+  -f /opt/knowledge-secrets/knowledge_deploy_key
+sudo chmod 600 /opt/knowledge-secrets/knowledge_deploy_key
+#  -> /opt/knowledge-secrets/knowledge_deploy_key      PRIVATE — stays on the box, forever
+#  -> /opt/knowledge-secrets/knowledge_deploy_key.pub  PUBLIC  — safe to copy anywhere
 ```
 
-**Register the public half on GitHub (allow write):**
+That path is exactly what `compose.prod.yml` bind-mounts read-only into the
+container as `/run/secrets/knowledge_deploy_key`. There is no "copy the key to the
+box" step and no local copy to delete — there was never a local copy.
 
-1. Open `https://github.com/leetusik/knowledge` → **Settings** → **Deploy keys**
-   → **Add deploy key**.
-2. Title: `knowledge-api@oci` (or similar). Key: paste the contents of
-   `knowledge_deploy_key.pub`.
-3. **Check "Allow write access"** — the push fails without it.
+**2b. Register the PUBLIC half on GitHub, with write access:**
 
-**Place the private half on the box:** copy `knowledge_deploy_key` to
-`/opt/knowledge-secrets/knowledge_deploy_key`, `chmod 600` — this is the exact
-path/mode `compose.prod.yml` mounts read-only into the container as
-`/run/secrets/knowledge_deploy_key`. The known-hosts pinning (`ssh-keyscan`
-github.com → `/opt/knowledge-secrets/known_hosts`) and the placement commands are
-in `README.md` §1b — do them there, don't duplicate here. After placing the key,
-**delete the local `knowledge_deploy_key*` pair** so the private half survives
-only on the box.
+```bash
+# From your Mac, with `gh` authenticated. Only the .pub half moves.
+ssh oracle-cloud 'sudo cat /opt/knowledge-secrets/knowledge_deploy_key.pub' > /tmp/knowledge_deploy_key.pub
+gh repo deploy-key add /tmp/knowledge_deploy_key.pub \
+  -R leetusik/knowledge --title 'knowledge-api-box' --allow-write
+rm /tmp/knowledge_deploy_key.pub
+gh repo deploy-key list -R leetusik/knowledge     # confirm it is listed
+```
 
-**Box clone origin must be SSH.** The push targets `origin`, so the box clone's
-remote must be `git@github.com:leetusik/knowledge.git` (not the `https://…` form)
-— `README.md` §1a clones over SSH and verifies this.
+Or the web UI: `https://github.com/leetusik/knowledge` → **Settings** → **Deploy
+keys** → **Add deploy key**, paste the `.pub` contents, **check "Allow write
+access"** (the push fails without it).
+
+**2c. Box clone origin must be SSH.** The container pushes to `origin`, so the box
+clone's remote must be `git@github.com:leetusik/knowledge.git`, not the `https://`
+form. `README.md` §1a clones over HTTPS (the repo is public — reading needs no
+credential) and then `git remote set-url origin git@github.com:…`, so the *push*
+path is the deploy key.
+
+Host-key pinning (`ssh-keyscan` → `/opt/knowledge-secrets/known_hosts`) is
+`README.md` §1b — do it there.
 
 ---
 
-## 3. Cloudflare DNS record + cert-coverage check
+## 3. Cloudflare DNS + origin TLS — **both already done, nothing to provision**
 
-`knowledge.hi2vi.com` is a new subdomain on the existing `hi2vi.com` Cloudflare
-zone, riding the shared edge exactly like `hi2vi.com`.
-
-**3a. Add the proxied DNS record.** In the Cloudflare dashboard for the
-`hi2vi.com` zone → **DNS** → **Add record**, matching however `hi2vi.com`'s own
-apex/root record points at the OCI box:
-
-- Type `A` (or `CNAME`) named **`knowledge`**, value = the box's public IP (or the
-  same target `hi2vi.com` uses).
-- **Proxy status: Proxied** (orange cloud on) — same as `hi2vi.com`, so Cloudflare
-  terminates TLS at the edge and talks HTTPS to the origin.
-
-**3b. Cert-coverage check (decides which TLS branch the vhost uses).** The vhost
-`deploy/knowledge.hi2vi.com.conf` **assumes** `hi2vi.com` serves a single
-`*.hi2vi.com` **wildcard** Cloudflare Origin CA cert — if so, it already covers
-`knowledge.hi2vi.com` and you reference the same cert files. Confirm which case
-you're in:
+**3a. DNS — done.** The proxied `knowledge` record exists on the `hi2vi.com` zone;
+`knowledge.hi2vi.com` resolves to the same Cloudflare proxy IPs as `hi2vi.com`.
+Confirm any time:
 
 ```bash
-# Read the Subject Alternative Names of the cert the origin currently serves for
-# hi2vi.com (run from the box, or anywhere that can reach the origin directly):
-docker exec changple5-nginx-1 sh -c \
-  'openssl x509 -in /etc/nginx/certs/hi2vi.com.pem -noout -text' \
-  | grep -A1 'Subject Alternative Name'
-# WILDCARD case: SANs include `*.hi2vi.com`  -> knowledge.hi2vi.com is covered.
-# PER-HOST case:  only `hi2vi.com` (+ maybe www) -> knowledge is NOT covered.
+dig +short knowledge.hi2vi.com     # Cloudflare proxy IPs, same as hi2vi.com
 ```
 
-- **Wildcard (`*.hi2vi.com`) — the assumed path:** nothing more to provision.
-  `README.md` §3a copies the confirmed `ssl_certificate` / `ssl_certificate_key`
-  paths into the vhost.
-- **Per-host cert — the assumption is wrong:** issue a **dedicated
-  `knowledge.hi2vi.com` Cloudflare Origin CA cert** (Cloudflare dashboard → SSL/TLS
-  → Origin Server → Create Certificate, hostname `knowledge.hi2vi.com`), place its
-  PEM + key on the edge (e.g. `/etc/nginx/certs/knowledge.hi2vi.com.pem` + `.key`),
-  and follow the **PER-HOST-CERT VARIANT** comment block in
-  `deploy/knowledge.hi2vi.com.conf` (point the two `ssl_certificate*` lines at the
-  new files instead of the wildcard).
+**3b. Origin cert — already covered by the wildcard.** The edge's Cloudflare Origin
+CA cert at `/home/opc/edge/certs/hi2vi.crt` carries SANs
+**`DNS:*.hi2vi.com, DNS:hi2vi.com`** (valid to 2041), so it **already covers
+`knowledge.hi2vi.com`**. `deploy/knowledge.conf` points straight at it. **No cert to
+issue, no per-host variant, no edge cert step.** Verified with:
 
-Cloudflare's edge-facing (public) TLS is handled automatically by the proxied
-record; this check is only about the **origin** cert nginx serves to Cloudflare.
+```bash
+ssh oracle-cloud "openssl x509 -in /home/opc/edge/certs/hi2vi.crt -noout -text \
+  | grep -A1 'Subject Alternative Name'"
+# confirmed: DNS:*.hi2vi.com, DNS:hi2vi.com   -> knowledge.hi2vi.com is covered
+```
+
+> If that cert is ever replaced by a per-host (non-wildcard) one, this assumption
+> breaks: issue a `knowledge.hi2vi.com` Origin CA cert, drop it at
+> `/home/opc/edge/certs/knowledge.crt` + `.key`, and repoint the two
+> `ssl_certificate*` lines in `deploy/knowledge.conf`. (Cloudflare's public-facing
+> TLS is handled by the proxied record either way; this is only the **origin** cert
+> nginx serves to Cloudflare.)
 
 ---
 
 ## 4. Optional `GOOGLE_API_KEY` — Gemini for hybrid search
 
 Recommended at launch. hi2vi's read/search use case (topic dedup, research
-grounding) is exactly what hybrid semantic search improves, and it is **one env
-var with graceful degradation**: absent or quota-limited → search silently falls
-back to BM25-only, `mode:"bm25"`, **zero code change** either way.
+grounding) is exactly what hybrid semantic search improves, and it is **one env var
+with graceful degradation**: absent or quota-limited → search silently falls back to
+BM25-only (`mode:"bm25"`), **zero code change** either way.
 
 - Obtain a key from Google AI Studio (`https://aistudio.google.com/apikey`).
 - Placement: `/opt/knowledge/.env` as `GOOGLE_API_KEY=<value>` on the box
-  (`README.md` §1c). Leaving it empty/absent is a supported launch choice — you can
-  add the key later and restart the api with **no other change**.
+  (`README.md` §1c leaves the line empty for you to fill in-place on the box, e.g.
+  with `sudo vi`). Leaving it empty is a supported launch choice — add the key later
+  and restart the api with no other change.
 
 ---
 
 ## 5. Handoff checklist — all boxes ticked = ready for bring-up
 
-Walk this before `README.md` §1. When every box is ticked, the box has (or can
-be given) everything it needs; proceed to the bring-up runbook.
+- [ ] **SSH deploy key** generated **on the box** at
+      `/opt/knowledge-secrets/knowledge_deploy_key` (ed25519, no passphrase, chmod
+      600); **public** half registered on `leetusik/knowledge` **with write access**.
+- [ ] **`KB_API_TOKEN`** — will be generated in place at `README.md` §1c (nothing to
+      do in advance); afterwards, hand the value to the hi2vi side as
+      `KNOWLEDGE_API_TOKEN`.
+- [ ] **Box clone origin** set to the SSH form `git@github.com:leetusik/knowledge.git`
+      (`README.md` §1a).
+- [ ] **Cloudflare `knowledge` record** — ✅ already live, proxied.
+- [ ] **Origin cert coverage** — ✅ already covered by the `*.hi2vi.com` wildcard
+      (`hi2vi.crt`); nothing to issue.
+- [ ] **`GOOGLE_API_KEY`** obtained (recommended) — or a deliberate BM25-only launch.
 
-- [ ] **`KB_API_TOKEN`** generated (`openssl rand -hex 32`) and recorded securely
-      for both the box `.env` and the hi2vi side (same value).
-- [ ] **SSH deploy key** generated (`ed25519`, no passphrase); **public** half
-      added to `leetusik/knowledge` → Settings → Deploy keys **with write access**;
-      **private** half ready to place at
-      `/opt/knowledge-secrets/knowledge_deploy_key` (chmod 600); local copies to be
-      deleted after placement.
-- [ ] **Box clone origin** will be the SSH form
-      `git@github.com:leetusik/knowledge.git` (verified at `README.md` §1a).
-- [ ] **Cloudflare `knowledge` record** added on the `hi2vi.com` zone, **proxied**
-      (orange cloud), pointing at the box.
-- [ ] **Cert coverage** confirmed: either `*.hi2vi.com` wildcard covers
-      `knowledge.hi2vi.com` (reuse hi2vi's cert), **or** a dedicated
-      `knowledge.hi2vi.com` origin cert issued + the vhost's per-host variant
-      applied.
-- [ ] **`GOOGLE_API_KEY`** obtained (recommended) — or a deliberate BM25-only
-      launch chosen.
-
-Next: `README.md` §1 (box clone, place the deploy key + `known_hosts`, write
-`.env`) → §2 (bring-up) → §3 (edge apply) → §5 (post-apply validation).
+Next: `README.md` §1 (clone, place `known_hosts`, write `.env`) → §2 (bring-up, incl.
+the `ssh`-in-image assertion) → §3 (drop the vhost + `./deploy.sh`) → §5 (validation).
