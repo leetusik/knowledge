@@ -214,6 +214,54 @@ Additional durable findings:
   validate` green on both manifests, including `--strict` (both came back clean —
   no metadata warnings to report).
 
+### P7.S3 landed (2026-07-14) — template payload + renderer + parity guard; crux acceptance holds
+
+- **Template-sync model is live.** ONE manifest (`plugin/templates/manifest.json`)
+  declares the 3 file classes; ONE stdlib renderer (`plugin/setup/render.py`,
+  importable `render()` + `RenderError`) is shared by the S5 setup skill and the
+  root-only parity guard (`scripts/plugin_parity.py`); a NEW root-only workflow
+  `.github/workflows/plugin-ci.yml` ("plugin parity") runs the guard on push. All
+  root-only pieces stay OUT of the shipped `plugin/` payload; `pages.yml` untouched.
+- **Final class decisions — NO reclassifications vs the baseline mapping.**
+  identical=28 files (all 9 `server/*`, `graph_hook.py`, `site_smoke.py`, 6
+  `tests/*`, `graph.md`, `tags.md`, `assets/{favicon,logo}.svg`, `extra.css`,
+  `graph.js`, `Dockerfile`, `pyproject.toml`, `uv.lock`, `.dockerignore`,
+  `pages.yml`); parameterized=2 (`mkdocs.yml` lines 1–3, `compose.yml` ports+TZ);
+  template-only=5 (`docs/index.md`, `docs/getting-started/index.md`, the dated seed
+  explainer, `Makefile`, `.gitignore`). `pyproject.toml` verified operator-agnostic
+  (`name="kb-api"`, no personal fields) → identical as-is.
+- **Placeholder set (final, 7):** `KB_SITE_NAME`/`KB_SITE_URL`/`KB_COPYRIGHT`
+  (mkdocs.yml), `KB_TZ`/`KB_VIEWER_PORT`/`KB_API_PORT` (compose.yml + Makefile),
+  `KB_DATE` (index bullet + seed-doc filename + seed-doc frontmatter). Parameterized
+  files tokenized by exact full-line replacement → operator values round-trip
+  BYTE-EXACTLY (the unquoted Korean copyright rebuilds identically; substitution is
+  raw-string, never YAML re-serialization). All 7 tokens are referenced, so the
+  renderer's typo guard reports zero unused keys.
+- **Seed project = `getting-started`** (one non-reserved `docs/` subdir with one
+  dated doc → satisfies S1's `discover_projects`). Seed explainer is a real
+  house-style micro-explainer ("How Your Knowledge Base Works") with valid
+  frontmatter (`source:` mapping w/ `project`, 4 lowercase-kebab tags, double-quoted
+  title, `date: {{KB_DATE}}`, `source.repo` = basename → no `/Users/` leak).
+- **Path-token design (S5 must know):** the dated seed explainer embeds `{{KB_DATE}}`
+  in its COMMITTED template filename; `render.py` substitutes tokens in the dest
+  relative path (no-op for token-free classes), so filename, frontmatter date, and
+  the `index.md` Recent-bullet link all carry the same date and the link resolves.
+- **Parity completeness rule** globs both sides of every `shipped_dirs` entry
+  (`server`, `tests`, `docs/assets|stylesheets|javascripts`), excluding
+  `__pycache__`/`.pyc`, and fails on any file in one side but not the other — a new
+  `server/foo.py` can't silently miss the scaffold. Both negatives proven (byte
+  drift + completeness).
+- **How S5 drives it:** `python3 ${CLAUDE_PLUGIN_ROOT}/setup/render.py --dest <dir>
+  (--params <file.json> | --set KEY=VALUE …) [--force]`; all 7 tokens required
+  together; `--force` re-renders a non-empty dir; `render()` importable. **How S6
+  reuses acceptance:** render → `mkdocs build` → `site_smoke.py --root <scaffold>`.
+- **Validation:** parity green; NON-operator scaffold (Field Notes / America/New_York
+  / ports 9765-9766 / date 2025-01-15) `mkdocs build` + `site_smoke.py --root` →
+  **PASS** (crux); negative byte-drift + negative completeness both fire & restore
+  green; renderer guards (missing key / typo `--set` / non-empty refuse / `--set`
+  override) all correct; `plugin-ci.yml` YAML loads (via the repo's uv env — host
+  python3 lacks PyYAML); manifest + params JSON valid; `workflow.py validate` passed.
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -272,6 +320,17 @@ lands._
   "./plugin"). [S2]
 - decisions — MIT license adopted (root LICENSE + plugin.json license); plugin
   hosted in this repo with payload isolation via plugin/ subdir. [S2]
+- architecture — template-sync model is live: ONE manifest
+  (`plugin/templates/manifest.json`) declares 3 file classes (identical /
+  parameterized / template-only); ONE stdlib renderer (`plugin/setup/render.py`)
+  is shared by the setup skill and the parity guard; drift is caught by a
+  completeness rule that globs fully-shipped dirs on both sides. Scaffold tree
+  under `plugin/templates/kb/` mirrors the repo layout path-for-path. [S3]
+- operations — `.github/workflows/plugin-ci.yml` ("plugin parity") is a NEW
+  root-only gate running `scripts/plugin_parity.py` on push (NOT `pages.yml`,
+  which stays a portable shipped template); a scaffold rendered with non-operator
+  params builds under mkdocs-material 9.7.6 and passes its own portable
+  `site_smoke.py` deploy gate (the phase's crux acceptance). [S3]
 
 ## Open Questions
 

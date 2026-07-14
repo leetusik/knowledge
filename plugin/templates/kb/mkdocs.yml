@@ -1,0 +1,116 @@
+site_name: {{KB_SITE_NAME}}
+site_url: {{KB_SITE_URL}}
+copyright: {{KB_COPYRIGHT}}
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  # "Calm editorial library" fonts. `font: false` disables Material's own
+  # Google Fonts request (no Roboto); all three families — Fraunces (display),
+  # Source Sans 3 (body), JetBrains Mono (code), each at the exact weights the
+  # design uses incl. 500/600 — load from the single @import at the top of
+  # docs/stylesheets/extra.css, and the --md-text/-code-font-family tokens there
+  # (with Hangul fallbacks) point Material at them.
+  font: false
+  palette:
+    # primary/accent = custom -> colors defined in docs/stylesheets/extra.css.
+    # Two-scheme toggle (prefers-color-scheme + manual) preserved.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - toc.follow
+    # P5.S2 landing/UX: top tabs (Home / project dirs / Tags, per the design's
+    # tab row) + section-title index pages (docs/<project>/index.md) + a
+    # back-to-top affordance for long explainers. NOT toc.integrate (the
+    # design skins the separate right-hand TOC, §4/§5) and NOT
+    # navigation.instant (custom-JS interplay is P5.S3's call to make).
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+
+# Design system: "calm editorial library" tokens (custom palette, typography,
+# spacing, component polish, .kb-grid/.kb-card utility). Loaded after Material's
+# own CSS so its :root/scheme overrides win. See docs/stylesheets/extra.css.
+extra_css:
+  - stylesheets/extra.css
+
+# P6.S1 — build-time knowledge-graph data. This hooks module walks the docs/ tree,
+# parses the explainer-doc frontmatter, and emits a deterministic, publish-safe
+# graph.json into site/ (fetched client-side, like site/search/search_index.json).
+# It runs in both `mkdocs build` (CI + deploy) and `mkdocs serve` (local dev), so it
+# needs zero pages.yml wiring; the path is relative to this file, so it resolves in
+# CI, a local venv, and the compose image at /docs. No `extra_javascript:` here — the
+# renderer and its guard-flip are P6.S2. scripts/site_smoke.py asserts the graph.json
+# data contract this emits.
+hooks:
+  - scripts/graph_hook.py
+
+# P6.S2 — the repo's FIRST custom JS: the interactive knowledge-map renderer.
+# Vendored + hand-rolled (zero third-party code, zero CDN — no Iconify, no
+# d3): the map's force sim + canvas drawing all live in this one file, fetched
+# client-side alongside the graph.json the hooks module above emits. It no-ops
+# on every page except /graph/ (guarded on a .kb-graph mount). This is the ONLY
+# permitted extra_javascript entry: scripts/site_smoke.py allowlists exactly
+# `javascripts/graph.js` and still fails the build on any external
+# `<script src="http…">`, so the no-CDN invariant is preserved.
+extra_javascript:
+  - javascripts/graph.js
+
+# No `nav:` key and no `strict: true` — ever. Auto-nav from the docs/ tree is
+# what lets the /explain skill add pages with zero config; a nav: key would
+# orphan every new page, and strict would turn that into a serve failure.
+
+plugins:
+  # P5.S3 — CJK-capable client-side search. `lang: [en, ko]` loads lunr's
+  # English + Korean packs (lunr.ko trimmer/stopwords + lunr.multi), both bundled
+  # in the pinned 9.7.6 image (site/assets/javascripts/lunr/min/). Korean is
+  # agglutinative, so Material's typeahead trailing-wildcard makes a query like
+  # `검색` prefix-match the indexed eojeol `검색을` / `관련` match `관련해`. The
+  # `separator` is left at the default `[\s\-]+`: the acceptance queries pass on
+  # prefix-matching alone, so no Hangul/Latin split is added (kept minimal).
+  # theme.language stays `en` — deliberately mixed-language site. See P5.S3 result
+  # + docs/current/decisions.md for the approach vs. the P4 server-side hybrid.
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+# D1: workspace internals under docs/versions/ are history, not site content —
+# excluded from the built site (pages, nav, search). docs/current/ stays published.
+# P5.S4: /README.md added — mkdocs already auto-excludes it (it collides with
+# index.md, the pre-existing build warning); this makes that exclusion explicit
+# and silences the warning without changing what's published.
+# Use exclude_docs only; never nav:/strict: (see the load-bearing comment above).
+exclude_docs: |
+  /versions/
+  /README.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences

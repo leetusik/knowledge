@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "seed_project": "getting-started",
+  "placeholders": {
+    "KB_SITE_NAME": "Human-readable site title (mkdocs site_name).",
+    "KB_SITE_URL": "Published site URL with trailing slash (mkdocs site_url).",
+    "KB_COPYRIGHT": "Footer copyright / attribution line (mkdocs copyright).",
+    "KB_TZ": "IANA timezone for the API container, e.g. Asia/Seoul (compose TZ).",
+    "KB_VIEWER_PORT": "Host port for the local MkDocs viewer (default 8765).",
+    "KB_API_PORT": "Host port for the document API (default 8766).",
+    "KB_DATE": "Date stamp (YYYY-MM-DD) for the seed welcome explainer."
+  },
+  "files": {
+    "identical": [
+      "server/__init__.py",
+      "server/config.py",
+      "server/db.py",
+      "server/documents.py",
+      "server/embeddings.py",
+      "server/gitops.py",
+      "server/main.py",
+      "server/reindex.py",
+      "server/search.py",
+      "scripts/graph_hook.py",
+      "scripts/site_smoke.py",
+      "tests/conftest.py",
+      "tests/test_api_read.py",
+      "tests/test_api_write.py",
+      "tests/test_documents.py",
+      "tests/test_embeddings.py",
+      "tests/test_reindex.py",
+      "docs/graph.md",
+      "docs/tags.md",
+      "docs/assets/favicon.svg",
+      "docs/assets/logo.svg",
+      "docs/stylesheets/extra.css",
+      "docs/javascripts/graph.js",
+      "Dockerfile",
+      "pyproject.toml",
+      "uv.lock",
+      ".dockerignore",
+      ".github/workflows/pages.yml"
+    ],
+    "parameterized": [
+      "mkdocs.yml",
+      "compose.yml"
+    ],
+    "template_only": [
+      "docs/index.md",
+      "docs/getting-started/index.md",
+      "docs/getting-started/{{KB_DATE}}-how-your-knowledge-base-works.md",
+      "Makefile",
+      ".gitignore"
+    ]
+  },
+  "shipped_dirs": [
+    "server",
+    "tests",
+    "docs/assets",
+    "docs/stylesheets",
+    "docs/javascripts"
+  ]
+}
