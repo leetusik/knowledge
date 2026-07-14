@@ -1,0 +1,11 @@
+{
+  "id": "D4",
+  "title": "Agent-published commits are authored kb-api <kb-api@localhost> in public repo history",
+  "status": "deferred",
+  "source": "P8.S5",
+  "reason": "The Dockerfile's system git identity (pre-existing, untouched by P8) means every doc the hosted API publishes to main carries a placeholder localhost identity. Harmless but unattributable; a one-line Dockerfile/env change if the operator wants real attribution.",
+  "trigger": "operator decides they want attributable agent commits",
+  "created_at": "2026-07-14T23:53:58+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
