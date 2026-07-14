@@ -4,7 +4,7 @@ _Intent: see [intent.md](intent.md)._
 
 ## Objective
 
-Make the knowledge document API production-consumable by the hi2vi content agent: a reachable hosted endpoint (hosting proposed at DECOMP) with bearer auth, docs/hi2vi/ project-folder bootstrap, and publish-on-write so agent-written docs (md file + DB row, /explain-style) land on main and GitHub Pages without operator action
+Make the knowledge document API production-consumable by the hi2vi content agent: a reachable hosted endpoint (hosting proposed at DECOMP) with bearer auth, docs/hi2vi/ project-folder bootstrap, publish-on-write so agent-written docs (md file + DB row, /explain-style) land on main and GitHub Pages without operator action, and the existing read/search endpoints (hybrid search, get) exposed under the same auth so hi2vi can use accumulated knowledge for content creation
 
 ## Context
 
