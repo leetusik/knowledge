@@ -76,7 +76,9 @@ def test_happy_path_shape_and_scoped_commit(client):
         _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
         .stdout.split()
     )
-    assert names == {f"docs/{_REL}", "docs/index.md"}  # exactly 2 touched paths
+    # First doc of a fresh project → scoped commit also carries the auto-created
+    # landing (3 paths); a later doc into the same project stays 2 (see below).
+    assert names == {f"docs/{_REL}", "docs/index.md", "docs/test-project/index.md"}
     assert _git(root, "log", "-1", "--pretty=%s").stdout.strip() == (
         "docs(test-project): add api-smoke-test"
     )
@@ -171,6 +173,71 @@ def test_post_absolute_source_repo_sanitized(client):
     # GET by path also returns sanitized source_repo.
     got_by_path = tc.get(f"/api/documents/by-path/{_REL}").json()
     assert got_by_path["source_repo"] == "test-project"
+
+
+# Auto-created project landing (docs/<project>/index.md) — the deploy-gate
+# invariant: every project mkdocs discovers must ship site/<project>/index.html.
+_LANDING = (
+    "# test-project\n\nExplainers about `test-project`, kept in this knowledge base.\n"
+)
+
+
+def test_first_doc_creates_project_landing(client):
+    tc, root = client
+    r = tc.post("/api/documents", json=_PAYLOAD)
+    assert r.status_code == 201, r.text
+    assert r.json()["landing_created"] is True
+
+    landing = root / "docs" / "test-project" / "index.md"
+    assert landing.read_text(encoding="utf-8") == _LANDING  # minimal, no frontmatter
+
+    names = set(
+        _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+        .stdout.split()
+    )
+    # 3-path scoped commit — landing joins only on the project's first doc.
+    assert names == {f"docs/{_REL}", "docs/index.md", "docs/test-project/index.md"}
+
+
+def test_second_doc_leaves_landing_untouched(client):
+    tc, root = client
+    assert tc.post("/api/documents", json=_PAYLOAD).status_code == 201
+    landing = root / "docs" / "test-project" / "index.md"
+    before = landing.read_text(encoding="utf-8")
+
+    r = tc.post("/api/documents", json={
+        **_PAYLOAD,
+        "slug": "second-note",
+        "title": "Second Note",
+        "markdown": "# Second Note\n\nMore body.\n",
+    })
+    assert r.status_code == 201 and r.json()["landing_created"] is False
+    assert landing.read_text(encoding="utf-8") == before  # not recreated/modified
+
+    names = set(
+        _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+        .stdout.split()
+    )
+    # Back to a 2-path commit — the existing landing is not re-staged.
+    assert names == {"docs/test-project/2026-07-02-second-note.md", "docs/index.md"}
+
+
+def test_existing_landing_never_overwritten(client):
+    tc, root = client
+    landing = root / "docs" / "test-project" / "index.md"
+    landing.parent.mkdir(parents=True, exist_ok=True)
+    handwritten = "# My Project\n\nHand-written landing — keep me verbatim.\n"
+    landing.write_text(handwritten, encoding="utf-8")
+
+    r = tc.post("/api/documents", json=_PAYLOAD)
+    assert r.status_code == 201 and r.json()["landing_created"] is False
+    assert landing.read_text(encoding="utf-8") == handwritten  # preserved
+
+    names = set(
+        _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD")
+        .stdout.split()
+    )
+    assert names == {f"docs/{_REL}", "docs/index.md"}  # landing not staged
 
 
 def test_invalid_tags_422(client):

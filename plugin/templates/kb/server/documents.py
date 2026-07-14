@@ -320,6 +320,44 @@ def update_recent_index(
     return True
 
 
+# --- project landing (auto-created for a project's first document) --------
+
+_PROJECT_LANDING = "# {project}\n\nExplainers about `{project}`, kept in this knowledge base.\n"
+
+
+def project_landing_content(project: str) -> str:
+    """The minimal auto-created ``docs/<project>/index.md`` body.
+
+    An H1 (the project name) plus a one-line description — and deliberately NO
+    YAML frontmatter / no ``source:`` mapping, so the landing stays a *non-doc*:
+    ``index.md`` is on ``graph_hook``'s skip-list, is excluded from
+    ``site_smoke.discover_projects`` doc-counting, and is excluded from
+    ``check_graph``'s filesystem doc count. It exists only so mkdocs builds
+    ``site/<project>/index.html`` — the per-project landing the deploy gate
+    (``site_smoke.check_built``) requires for every discovered project.
+    """
+    return _PROJECT_LANDING.format(project=project)
+
+
+def ensure_project_landing(docs_root: Union[str, Path], project: str) -> bool:
+    """Create ``docs/<project>/index.md`` when absent; NEVER overwrite an existing one.
+
+    Returns ``True`` when it created the landing (the write path then stages it in
+    the same scoped commit), ``False`` when a landing — hand-written or previously
+    auto-created — already exists and is left byte-for-byte untouched. Pairs with
+    the delete path by design: deleting a project's last document leaves this
+    landing behind, but a project dir with only ``index.md`` has zero countable
+    docs, so ``discover_projects`` no longer lists it and the gate is unaffected —
+    no delete-side cleanup is needed.
+    """
+    landing = Path(docs_root) / project / "index.md"
+    if landing.exists():
+        return False
+    landing.parent.mkdir(parents=True, exist_ok=True)
+    landing.write_text(project_landing_content(project), encoding="utf-8")
+    return True
+
+
 # --- Recent-marker removal (S2 delete path, symmetric to insertion) ------
 
 
