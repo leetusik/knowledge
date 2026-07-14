@@ -2,16 +2,16 @@
   "id": "P8",
   "name": "Knowledge API for hi2vi content agent",
   "objective": "Make the knowledge document API production-consumable by the hi2vi content agent: a reachable hosted endpoint (hosting proposed at DECOMP) with bearer auth, docs/hi2vi/ project-folder bootstrap, publish-on-write so agent-written docs (md file + DB row, /explain-style) land on main and GitHub Pages without operator action, and the existing read/search endpoints (hybrid search, get) exposed under the same auth so hi2vi can use accumulated knowledge for content creation",
-  "status": "in_progress",
+  "status": "done",
   "order": 8,
   "created_at": "2026-07-14T15:16:37+09:00",
   "started_at": "2026-07-14T16:55:39+09:00",
-  "completed_at": null,
+  "completed_at": "2026-07-15T01:07:16+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-07-15T01:07:16+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "All 8 slices validated together (pytest 65, plugin_parity, workflow validate, mkdocs build + site_smoke) and all six intent deliverables met, with publish-on-write proven in live production (201 pushed:true -> commit on main -> Pages -> live in 65s). Local/plugin UX invariant verified in source: KB_GIT_PUSH and KB_REQUIRE_READ_AUTH both default false. Six doc versions consolidated. Orchestrator closed the review's two unrun box checks: authed search returns mode=hybrid; box clone is clean with no rebase leftovers."
   },
   "paths": {
     "phase_md": "phase.md",

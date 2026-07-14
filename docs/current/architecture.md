@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0006
-created_at: 2026-07-14T16:21:04+09:00
-source: P7.REVIEW
-summary: P7: /explain packaged as a Claude Code plugin hosted in this repo — marketplace + isolated plugin/ payload, template-sync snapshot + shared stdlib renderer + parity guard
-previous: v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam
+version: v0007
+created_at: 2026-07-15T01:00:41+09:00
+source: P8.REVIEW
+summary: P8: hosted deployment shape — same codebase, two deployments (local open/never-push vs hosted authed publish-on-write); box clone + server-side push as the publish path
+previous: v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard
 ---
 
 # Architecture
 
 ## Status
 
-Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section).
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below).
 
 ## System Shape
 
@@ -31,15 +31,50 @@ A single `POST /api/documents`, under one in-process write lock:
 2. write `docs/<project>/<YYYY-MM-DD>-<slug>.md` with byte-exact frontmatter;
 3. insert the Recent bullet in `docs/index.md` (marker → `## Recent` heading → append ladder);
 4. upsert the DB row;
-5. make a **scoped** git commit — `git add` only the two touched paths (**never `-A`**), **never push**.
+5. make a **scoped** git commit — `git add` only the touched paths (**never `-A`**);
+6. **(P8, hosted only)** publish it: fetch → rebase onto `origin/main` → **non-force** push.
 
-A failed commit **never rolls back** the file/DB (`committed:false`); `docs/` stays canonical and `POST /api/reindex` reconciles any drift (manual edits, API-down fallback writes, git resets).
+A failed commit **never rolls back** the file/DB (`committed:false`); `docs/` stays canonical and `POST /api/reindex` reconciles any drift (manual edits, API-down fallback writes, git resets). A failed **push** likewise never fails the write (`pushed:false` + `push_error`) — the commit simply publishes on the next successful push.
+
+## Two deployments, one codebase (P8)
+
+The same `server/` runs in two places. **The entire difference is two flags, both defaulting
+off** — there is no hosted fork, no second code path, and no "prod mode":
+
+| | **Local / plugin** (default) | **Hosted** (`knowledge.hi2vi.com`) |
+|---|---|---|
+| Reads / search | open | bearer (`KB_REQUIRE_READ_AUTH=true`) |
+| Writes | bearer when `KB_API_TOKEN` set | bearer (always — token set) |
+| After the scoped commit | **never pushes** | fetch → rebase → non-force push (`KB_GIT_PUSH=true`) |
+| Repo it writes to | the user's own working tree (bind mount) | **its own clone on the box** |
+
+Three architectural consequences worth stating plainly:
+
+- **Default-off is the compatibility contract.** Every existing local and plugin user gets the
+  pre-P8 behavior *by doing nothing* — the open-read, never-push UX is preserved not by policy
+  but by the defaults. A hosted-only capability can never leak into a local install by accident.
+- **The write path became the publish path.** Hosted, a single `POST /api/documents` carries a
+  document all the way from JSON to a publicly readable page (~1 min): file + landing + Recent
+  bullet + DB row + embedding + commit + push → GitHub Pages CI. No operator action, no queue,
+  no worker — the whole chain runs **in-request, inside the write lock**. This is what makes
+  the single-writer invariant load-bearing rather than incidental: it is what lets a git push
+  live safely inside a request handler.
+- **The box owns a real clone, not a mount.** Because the hosted API pushes, it needs an
+  `origin` and a credential, so it clones the repo rather than bind-mounting a working tree.
+  **Fetch+rebase-before-push is therefore both the safety mechanism and the freshness
+  mechanism**: the box lands on top of the latest remote at every write, so it can neither
+  clobber operator work nor drift stale — no cron, no webhook, no mirror.
+
+The hosted API is a **co-tenant behind a shared, declaratively-configured nginx edge** on the
+operator's box; the published site stays on GitHub Pages. Deployment mechanics and the edge's
+rules live in **operations**; the auth/credential model in **security**.
 
 ## Boundaries / Constraints
 
-- **Single-writer**: one uvicorn worker + one in-process lock — never scale workers (WAL gives read concurrency).
+- **Single-writer**: one uvicorn worker + one in-process lock — never scale workers (WAL gives read concurrency). P8 makes this stricter, not looser: the in-request git push lives inside that lock.
 - **Auto-nav preserved**: `mkdocs.yml` has no `nav:` / `strict:` key; the viewer builds its sidebar from the `docs/` tree.
-- **Optional bearer auth** on mutating endpoints only (`KB_API_TOKEN`).
+- **Bearer auth** on mutating endpoints always (`KB_API_TOKEN`), and on reads/search too when `KB_REQUIRE_READ_AUTH` is set (hosted). `healthz` is always open; there is **no CORS** — the API has no browser client by design.
+- **The API never force-pushes and never `git add -A`** — a scoped, rebase-onto-remote, non-force push is the only way it touches a remote.
 - **This repo never edits the `bootstrap_agentic_workspace` repo.**
 - **Two search implementations, one corpus (P5)** — see below.
 
@@ -57,16 +92,19 @@ selected by deployment target** — they share the source content but no runtime
   riding Korean eojeol spacing (a `관련` query prefix-matches indexed `관련해`), not
   by a segmenter. This is the *only* search the deployed site has; it never
   depends on `server/`.
-- **Local FastAPI service (Track 2) — server-side hybrid.** `POST /api/search`
+- **The FastAPI service (Track 2) — server-side hybrid.** `GET /api/search`
   runs BM25 (SQLite FTS5) + recency + Gemini-embedding cosine fused via RRF, with
-  query-time CJK prefix expansion (`build_match_query`). It runs only against the
-  local DB behind the API and is **never reachable from the published static
-  site** — a static Pages host cannot call it.
+  query-time CJK prefix expansion (`build_match_query`). It runs against the DB behind
+  the API and is **never reachable from the published static site** — a static Pages
+  host cannot call it, and the site never tries.
 
-The decoupling is deliberate: the deployed site must work with zero backend, and
-the richer hybrid stays a local/SaaS-someday capability. The same `docs/` corpus
-feeds both — the API reindexes from files; mkdocs builds its index from the same
-files — but a change to one search path never affects the other.
+The decoupling is deliberate and **P8 did not weaken it**: the API is now reachable from
+the internet (hosted), but the published site *still* never calls it — the only consumer
+is a server-side agent, holding a bearer. That is exactly why the hosted deployment needs
+**no CORS**. The deployed site must work with zero backend; the richer hybrid stays an
+API-side capability, now available to server-to-server consumers as well as locally. The
+same `docs/` corpus feeds both — the API reindexes from files; mkdocs builds its index from
+the same files — but a change to one search path never affects the other.
 
 ## Knowledge Graph: build-time static data + browser-only rendering (P6)
 
@@ -150,5 +188,6 @@ the running system without changing the two-container shape, the API, or the sit
 - **Track 1 (GitHub Pages publishing) — live and redesigned (P3 → P5)**: published at <https://leetusik.github.io/knowledge/>; P5 added the operator-designed visual system and browser-only CJK search. Deploys stay on the operator's manual `git push`, now gated by `scripts/site_smoke.py`.
 - **P6 — Obsidian-like knowledge graph — delivered.** An interactive client-side map of the corpus (docs + tag nodes, `related:` + doc–tag edges) rendered on the published static site, hosting unchanged. Built as a build-time `graph.json` static asset (mkdocs hook) + a vendored no-CDN canvas renderer; consumes the P4 `related:` forward edges (backlinks derived by inverting them at build). See the Knowledge Graph section above.
 - **P7 — `/explain` as a Claude Code plugin — delivered.** The feature ships as a plugin hosted in this knowledge repo (marketplace + isolated `plugin/` payload, `/knowledge:explain` + `/knowledge:setup`; see *Plugin packaging* above). This unblocks the bootstrap repo's P7 (retire its embedded `/explain`), which stays exactly as-is until the operator runs that handover — never edited from here.
+- **P8 — hosted API + publish-on-write — delivered.** The document API runs in production at <https://knowledge.hi2vi.com> behind a bearer, and an agent write now publishes itself to GitHub Pages with no operator action. Its first real consumer is the **hi2vi content agent** (that repo's P15.S4), which both *writes* daily research docs and *reads/searches* the accumulated corpus for topic dedup and grounding — the API contract it codes against is frozen and published in **api**. See *Two deployments* above.
 - **`/explain` consumer**: the `/explain` skill (in `bootstrap_agentic_workspace`) becomes the API's client, POSTing documents instead of writing files — delivered via a prepared handover prompt in that other repo (operator action, never edited from here).
-- **SaaS-someday** remains noted; the architecture is kept from precluding it (the browser-only static-search boundary keeps the deployed site backend-free without foreclosing a hosted hybrid later).
+- **SaaS-someday** remains noted, and P8 moved it from theory toward practice without committing to it: the codebase already runs hosted, authenticated, and multi-consumer-ready behind one token. What is still missing for real SaaS is multi-tenancy (per-user corpora + auth), not hosting. The browser-only static-search boundary keeps the deployed site backend-free either way.

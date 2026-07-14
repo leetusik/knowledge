@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0008
-created_at: 2026-07-14T16:21:19+09:00
-source: P7.REVIEW
-summary: P7 ADRs: MIT license, plugin hosted in this repo with source ./plugin isolation, dynamic project discovery, uv pinned 0.8.14, auto-landing on first project doc, no KB_PUBLIC_BASE_URL default
-previous: v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance
+version: v0009
+created_at: 2026-07-15T01:01:46+09:00
+source: P8.REVIEW
+summary: P8 ADRs: public endpoint + bearer over private network, KB_GIT_PUSH default-off, read-auth as a flag not token-implied, SSH deploy key over PAT, DELETE pushes, no CORS, no edge rate-limit zone, wildcard origin cert
+previous: v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle). The **P7 plugin-packaging** set adds six accepted decisions — MIT license, the plugin hosted in this same repo with an isolated `plugin/` payload (`source: "./plugin"`), dynamic project discovery in the deploy gate, the uv pin `0.8.14`, the first-doc project-landing auto-creation, and the deliberate no-`KB_PUBLIC_BASE_URL`-default for the scaffold.
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle). The **P7 plugin-packaging** set adds six accepted decisions — MIT license, the plugin hosted in this same repo with an isolated `plugin/` payload (`source: "./plugin"`), dynamic project discovery in the deploy gate, the uv pin `0.8.14`, the first-doc project-landing auto-creation, and the deliberate no-`KB_PUBLIC_BASE_URL`-default for the scaffold. The **P8 hosted-API** set adds seven — a public bearer-guarded endpoint at `knowledge.hi2vi.com` (over a private-network or tailnet path), `KB_GIT_PUSH` publish-on-write **defaulting off**, read auth as an explicit **flag** rather than implied by a set token, a box-generated repo-scoped **SSH deploy key** over a PAT, **no CORS**, **no edge rate-limit zone**, and reuse of the edge's **wildcard origin cert**. Two of them (`KB_GIT_PUSH` default-off, read-auth-as-a-flag) exist for the same reason: **the hosted deployment must not change anything for existing local and plugin users.**
 
 ## Purpose
 
@@ -472,6 +472,74 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   `KB_VIEWER_PORT` if custom ports become common.
 - Source: P7 `phase.md` Findings §2 + S6 caveat; review judgment (`P7.REVIEW`).
 
+### Host the API publicly at `knowledge.hi2vi.com` with a bearer (over a private-network path)
+
+- Date: 2026-07-14
+- Status: accepted (P8, operator-fixed at execution kickoff)
+- Context: The hi2vi content agent (a Docker co-tenant on the same OCI box) needs to write and search this knowledge base. Candidates: reach the API over the box's **private** Docker network only; a **tailnet**-only endpoint; or a **public** subdomain + token.
+- Decision: **Public**, at `https://knowledge.hi2vi.com` — a subdomain vhost on the box's existing nginx edge, Cloudflare-proxied — with **bearer auth on every `/api/*` call**. One subdomain is enough; there is no separate private-network path.
+- Rationale / tradeoff: the corpus is **already fully public** on GitHub Pages, so a public API surface leaks no new *content* — the risk it adds is unauthenticated **abuse/load** and **write authority**, which the bearer addresses directly. A public URL also keeps the consumer simple (no network topology coupling) and leaves the door open to consumers that are not co-tenants on this box.
+- Consequences: TLS + a real auth story became mandatory (see the read-auth ADR); reads are gated not for secrecy but to stop unauthenticated abuse; `healthz` stays open for probes.
+- Source: P8 `intent.md` (operator addendum) + `phase.md` hosting design §1/§3.
+
+### `KB_GIT_PUSH` — publish-on-write, default **off**
+
+- Date: 2026-07-14
+- Status: accepted (P8.S1)
+- Context: intent point 4 requires agent writes to reach `main` → GitHub Pages **without operator action**. That directly contradicts the standing "agents/skills/API commit but **never push**" rule (P1/P2).
+- Decision: the write path pushes its scoped commit to `origin/main`, gated by a **new `KB_GIT_PUSH` flag that defaults to `false`**. Only the hosted box sets it true. The push is `fetch origin main` → **rebase onto `origin/main`** → **non-force** `push origin HEAD:main`; **never `--force`, never `git add -A`**. Failure is best-effort — still 201, with `pushed:false` + `push_error`.
+- Alternatives considered: a **knowledge-side sync** (cron/webhook pulling agent writes) — rejected as more moving parts for a once-daily writer, and it would leave a window where the doc exists but isn't published. **Push by default** — rejected: it would silently start pushing from every existing local and plugin install.
+- Consequences: "the agent never pushes" becomes a **flag-gated** rule with exactly one deliberate exception (recorded in security). The default-off inversion is the compatibility contract — an existing user upgrading gets zero behavior change. The rebase-before-push doubles as the box's freshness mechanism, so no mirror/cron is needed. **DELETE pushes too**, for parity on the reverse path.
+- Source: P8 `phase.md` design §2 + S1 findings.
+
+### Read auth is a **flag** (`KB_REQUIRE_READ_AUTH`), not implied by "a token is set"
+
+- Date: 2026-07-14
+- Status: accepted (P8.S2)
+- Context: The hosted deployment must put reads/search behind the bearer. The obvious implementation — "if `KB_API_TOKEN` is set, gate reads too" — needs no new config.
+- Decision: add a **separate `KB_REQUIRE_READ_AUTH` flag, default false**. Reads are gated only when **both** it and `KB_API_TOKEN` are set. The new `require_read_bearer` dependency **delegates to** the existing write-path `require_bearer` rather than reimplementing the check.
+- Alternatives considered: **token-implies-closed-reads** — rejected, and this is the important call: it would have **silently broken every existing local and plugin user who had set a token** (their token guards writes; their reads are open and expected to stay open). Convenience for one box is not worth a breaking change for everyone else.
+- Consequences: two flags to set on the box instead of one; a backward-compat unit test (token set + flag unset ⇒ reads still open) is now a standing invariant. Delegating to `require_bearer` means the read and write auth surfaces are literally the same code and cannot drift.
+- Source: P8 `phase.md` design §3 + S2 findings.
+
+### Push credential: a repo-scoped SSH **deploy key**, generated on the box
+
+- Date: 2026-07-14
+- Status: accepted (P8.S3/S4, hardened by P8.F2)
+- Context: The hosted API needs write access to this repo to push. Options: a fine-grained **PAT** (`contents:write`), or a **deploy key** registered on this repo alone.
+- Decision: an **SSH deploy key with write access, scoped to this repo**, generated **on the box** in its final location and mounted read-only into the container; `GIT_SSH_COMMAND` pins the identity (`IdentitiesOnly=yes`) and the **host key** (a pinned `known_hosts`, `StrictHostKeyChecking=yes`).
+- Alternatives considered: a **PAT** — rejected as a worse blast radius (it spans the operator's repos) with an expiry to babysit; kept as a fallback since `push()` is remote-URL-agnostic. **`accept-new`** host-key policy — rejected: GitHub's host keys are static and publicly verifiable, so pinning closes the first-push TOFU window for free.
+- Consequences (the hard-won part): the original "generate locally → copy to the box → delete the local copy" flow **left a live write-capable private key in this public repo's working tree**, plus an orphaned second key still authorized on GitHub. Both were remediated, and the flow was fixed at the source. The durable rule: **generate a credential where it will live**, and **never rely on a "remember to delete it" step**. Also: `openssh-client` must be in the image — `git` alone cannot push over SSH, and because push is best-effort, its absence fails *silently* (see qa).
+- Source: P8 `phase.md` S3/S4 findings + the F2 security finding.
+
+### No CORS on the hosted API
+
+- Date: 2026-07-14
+- Status: accepted (P8.S2)
+- Context: A newly-public HTTP API invites the reflex to add CORS middleware.
+- Decision: **none.** The consumer is **server-to-server** (the hi2vi agent runs server-side), and the published Pages site searches **browser-only via lunr** and never calls this API — so no browser origin ever reaches it.
+- Consequences: recorded as an intentional omission, not an oversight. A future browser client would be a separate, explicit change (and would reopen the auth question, since a browser cannot hold this bearer safely).
+- Source: P8 `phase.md` design §3 + S2 findings.
+
+### No `limit_req` rate-limit zone on the vhost
+
+- Date: 2026-07-14
+- Status: accepted (P8.F2)
+- Context: The reflex for a public endpoint is an nginx `limit_req` zone.
+- Decision: **none on our vhost.** Defenses are the bearer on every `/api/*` call, Cloudflare in front, and a single known low-volume consumer.
+- Rationale: `limit_req_zone` names are **global across the edge's whole `conf.d/` tree**, which is tested and reloaded **as a unit** — a duplicate zone name is a hard `nginx -t` failure that blocks the reload for **every site on the box** (demonstrated empirically). A rate limit we don't need is not worth a foot-gun aimed at every co-tenant.
+- Consequences: if the endpoint ever gains untrusted consumers, add throttling deliberately (app-side, or a carefully-namespaced edge zone). Recorded as an open question in security.
+- Source: P8 `phase.md` F2 findings (verified live against the edge).
+
+### Reuse the edge's wildcard origin certificate (no cert provisioning)
+
+- Date: 2026-07-14
+- Status: accepted (P8.F2 — settles the DECOMP "TLS cert mechanism" open question)
+- Context: DECOMP left open whether the box's edge used a `*.hi2vi.com` wildcard origin cert (one cert would cover a new subdomain free) or per-host certs.
+- Decision: **wildcard, confirmed by inspection of the live edge** — its Cloudflare Origin CA cert carries `*.hi2vi.com`, valid to 2041. `knowledge.hi2vi.com` needs **no cert work at all**; the per-host-cert branch drafted in the vhost was deleted as dead code.
+- Consequences: adding a subdomain to this edge is a **host file drop + a graceful reload**, nothing more. (The edge's config is declarative host state on read-only bind mounts — see operations; this is what makes the old "a co-tenant deploy wipes your vhost" fragility obsolete.)
+- Source: P8 `phase.md` F2 findings.
+
 ## Superseded Decisions
 
 - The P2 "clean `sqlite-vec`/RRF seam, no embeddings this phase" framing is **consumed, not superseded**, by P4.S6: hybrid search is live via SQLite BLOB vectors + Python cosine, with the seam kept `sqlite-vec`-upgradable.
@@ -479,3 +547,5 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - The **P5.S1 agent-authored "calm editorial library" design system** is **superseded** by the P5.S5 operator-designed system of the same name: same visual direction, but the tokens/values and provenance are now the operator's Claude Design delivery (palette 1a Teal, fonts via `@import`), not agent taste. S1 served as the interim baseline until the delivery landed.
 - The **P6.S0 "Label Strategy A" lock (doc titles always on)** is **superseded** by the operator-directed P6.S1 quiet labels (Strategy A′): the idle map is marks-only; titles reveal on hover/selection and above ~110% zoom.
 - The **P6.S0 "settle-then-still / no idle drift" motion lock** is **superseded** by P6.S1's settle-then-mingle (a bounded idle wander; reduced motion still paints at rest and holds still).
+- The **P1/P2 "the API never pushes; deploys are the operator's manual `git push`" rule** is **narrowed, not abandoned**, by P8: it remains the default and the guarantee for every local and plugin deployment (`KB_GIT_PUSH=false`), with **one** deliberate, flag-gated exception — the hosted box, whose scoped, rebase-onto-remote, non-force push is what makes agent-written docs publish without operator action.
+- The **P8 DECOMP "shared-edge fragility" rule** — that the vhost/cert/network were undeclared runtime state on the old shared nginx container, wiped by every co-tenant deploy, requiring a cross-repo re-apply script and an "assume the endpoint is down after any co-tenant deploy" operating rule — is **superseded by fact**, discovered at P8.F2: the box had already cut over to a **dedicated edge whose `conf.d/` and `certs/` are read-only host bind mounts**, so the config is declarative host state that a co-tenant deploy cannot wipe. There is no re-apply script and none is needed. (This was the end state the deferred **D2** proposal envisioned.) The design proposal above was written against the *old* topology; **operations carries the verified one.**

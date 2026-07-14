@@ -1,17 +1,17 @@
 ---
 doc_id: operations
-version: v0008
-created_at: 2026-07-14T16:21:12+09:00
-source: P7.REVIEW
-summary: P7: plugin install/setup flow, portable site_smoke deploy gate, plugin-ci parity gate, release/version-bump discipline
-previous: v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only
+version: v0009
+created_at: 2026-07-15T00:57:06+09:00
+source: P8.REVIEW
+summary: P8: production deployment at knowledge.hi2vi.com (dedicated declarative edge, own box clone, compose.prod), publish-on-write flow, KB_GIT_PUSH/KB_REQUIRE_READ_AUTH env, openssh-client is load-bearing
+previous: v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline
 ---
 
 # Operations
 
 ## Status
 
-Both tracks operational. `docker compose up -d` runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI. As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
+Both tracks operational, and **as of P8 the API also runs hosted in production** at <https://knowledge.hi2vi.com> with **publish-on-write** — an agent write reaches the public site with no operator action (see *Production deployment* below). Locally, `docker compose up -d` still runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI. As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
 
 ## Local Development
 
@@ -26,7 +26,8 @@ Both tracks operational. `docker compose up -d` runs two services over the share
 Two services over one bind-mounted repo:
 
 - **`kb`** (viewer): image `squidfunk/mkdocs-material:9.7.6` (exact pin), host port **8765**, command `serve --dev-addr=0.0.0.0:8000 --livereload`. `--livereload` is **explicit and load-bearing** — the flag never arms by default in this image, so without it new pages don't appear until restart. `restart: unless-stopped`.
-- **`api`**: `build: .` from `python:3.12-slim` + apt `git` + **`tzdata`** + uv-installed deps (`uv export --frozen --no-dev --no-emit-project` → `uv pip install --system`); host port **8766**; `KB_ROOT=/repo`, `TZ=Asia/Seoul`; **single uvicorn worker**; `restart: unless-stopped`. `tzdata` is required — without it `TZ=Asia/Seoul` silently falls back to UTC and `date.today()` yields wrong file dates near midnight KST. System-level git identity `kb-api` + `git config --system safe.directory /repo` (system-level so the `/repo` bind mount can't shadow them; without both, commits return `committed:false`).
+- **`api`**: `build: .` from `python:3.12-slim` + apt `git` + **`openssh-client`** + **`tzdata`** + uv-installed deps (`uv export --frozen --no-dev --no-emit-project` → `uv pip install --system`); host port **8766**; `KB_ROOT=/repo`, `TZ=Asia/Seoul`; **single uvicorn worker**; `restart: unless-stopped`. `tzdata` is required — without it `TZ=Asia/Seoul` silently falls back to UTC and `date.today()` yields wrong file dates near midnight KST. System-level git identity `kb-api` + `git config --system safe.directory /repo` (system-level so the `/repo` bind mount can't shadow them; without both, commits return `committed:false`).
+- **`openssh-client` is load-bearing and non-obvious (P8.F2).** The apt line uses `--no-install-recommends`, and the `ssh` binary is only a *Recommends* of `git` — so the image shipped **without `ssh`** and the container **could not push over an SSH remote at all**. Because push is best-effort by design, that failed **silently**: every write still returned 201, with `pushed:false` + a `push_error`, and nothing ever reached Pages. It must stay on the apt line. **General rule: a best-effort code path can hide a total infrastructure failure — assert the capability at bring-up** (`docker compose -f compose.prod.yml exec api command -v ssh` → `/usr/bin/ssh`), and make acceptance assert the *capability* (`pushed:true`), never the status code.
 - **Rebuild quirk on this host**: `docker compose up -d --build` panics in compose's *bake* build path (a compose-v2 bug on this host). Rebuild with **`COMPOSE_BAKE=false docker compose up -d --build`**.
 
 ## Environment Variables
@@ -36,8 +37,10 @@ Two services over one bind-mounted repo:
 | `KB_ROOT` | no | repo root (`docs_root` = `KB_ROOT/docs`) | `/repo` in the container |
 | `KB_DB_PATH` | no | SQLite path | default `KB_ROOT/data/kb.sqlite3` (gitignored, disposable) |
 | `KB_PUBLIC_BASE_URL` | no | viewer origin for response `url`s | default `http://localhost:8765` |
-| `KB_API_TOKEN` | no | bearer token for mutating endpoints | unset = localhost open |
+| `KB_API_TOKEN` | no | bearer token for mutating endpoints (and for reads when `KB_REQUIRE_READ_AUTH`) | unset = localhost open |
 | `KB_GIT_COMMIT` | no | enable/skip the write-path commit | default true |
+| `KB_GIT_PUSH` | no | **(P8)** push the scoped commit to `origin/main` → publish-on-write | **default false** — local/plugin never push; the hosted box sets `true` |
+| `KB_REQUIRE_READ_AUTH` | no | **(P8)** put reads/search behind the bearer | **default false** — local/plugin reads stay open; the hosted box sets `true` |
 | `KB_STARTUP_REINDEX` | no | run a full reindex on app boot (drift self-heal) | default true; `0/false/no/off` disables (disabled in tests) |
 | `GOOGLE_API_KEY` | no | Gemini credential (preferred) for semantic search | empty = feature off → BM25-only |
 | `GEMINI_API_KEY` | no | Gemini credential (fallback) | used when `GOOGLE_API_KEY` unset |
@@ -53,7 +56,8 @@ Two services over one bind-mounted repo:
 
 ## Auth
 
-- Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the two mutating endpoints (`POST /api/documents`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`.
+- Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the mutating endpoints (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`.
+- **(P8)** Adding `KB_REQUIRE_READ_AUTH=true` **as well** puts the read/search surface behind the same bearer. It defaults **false**, so a local token still guards writes only — reads stay open unless you deliberately opt in. The hosted box sets both. `GET /healthz` stays open either way.
 
 ## Publishing (GitHub Pages)
 
@@ -64,10 +68,93 @@ Track 1 — the `docs/` tree — is published as a static site at <https://leetu
 - **Site exclusion (P4 / D1; P5):** `mkdocs.yml` sets `exclude_docs: /versions/` (workspace-internal durable-doc history kept out of the built site — pages, nav, search — while `docs/current/` stays published) plus **`/README.md`** (P5.S4 — makes mkdocs' existing auto-exclusion explicit, silencing the standing `README.md`/`index.md` conflict warning; changes nothing published). Use `exclude_docs` **only** — never `nav:`/`strict:` (auto-nav from the `docs/` tree is load-bearing).
 - **Pin parity**: the CI pip pin and the `compose.yml` viewer image tag are the same `9.7.6` on purpose — bump them together so the local build stays a faithful CI pre-check. The smoke guard also asserts this parity.
 - **Pre-push check (P5)**: `docker compose run --rm kb build` runs the same `mkdocs build` as CI (same 9.7.6), then `python3 scripts/site_smoke.py` runs the same deploy gate CI runs (default root = repo root; run the build first so `site/` is fresh). A clean local build **and** a `PASS` predict a clean, gate-passing deploy.
-- **Manual-push-only**: deploys happen only on the operator's manual `git push` — agents, the `/explain` skill, and the API commit locally but never push.
+- **Push policy (revised at P8)**: **locally**, still manual-push-only — agents, the `/knowledge:explain` skill, and the API commit but **never push** (`KB_GIT_PUSH` defaults false). The **one** exception is the hosted production box, which sets `KB_GIT_PUSH=true` so an agent write publishes itself (see *Production deployment* below). A deploy is therefore triggered either by the operator's manual `git push` or by a hosted API write — nothing else.
 - **Dev-server eyeball (P5)**: `docker compose up -d kb` serves the live site with livereload for visual review before any push. It is served under the `site_url` subpath — open **`http://localhost:8765/knowledge/`** (a bare `http://localhost:8765/` 302-redirects there). The built `site/` artifact itself is path-agnostic. Stop with `docker compose stop kb`. Final visual acceptance of the design is the operator's, done here before pushing.
 - **One-time setting**: Settings → Pages → Source = "GitHub Actions" (done 2026-07-02; cannot be automated from this repo).
 - **First-publish lesson**: enable Pages *before* the first push, or the `deploy-pages` step fails (the initial push built green but its deploy failed because Pages wasn't enabled yet). Recover without a new push via Actions → "Run workflow" — the workflow re-runs idempotently.
+
+## Production deployment: knowledge.hi2vi.com + publish-on-write (P8)
+
+The document API is **hosted in production** at <https://knowledge.hi2vi.com>, so the
+hi2vi content agent can write research docs and read/search the accumulated corpus
+server-to-server. Live since 2026-07-14 and validated end-to-end (see qa).
+
+The mechanics — exact commands, paths, and the operator's provisioning steps — live in
+the repo's runbooks, **`deploy/README.md`** (place + bring up) and **`deploy/SECRETS.md`**
+(produce + register the credentials). This section records the durable *shape* and the
+rules that outlive any one bring-up.
+
+### Shape
+
+- **Its own compose project, api-only.** `compose.prod.yml` (repo root) ships **only** the
+  `api` service — no `kb` viewer (the public site is GitHub Pages) — as container
+  `knowledge-api` with **no published host port**. It is reached only by the edge, over
+  the external `changple_shared_network`, by container name.
+- **Its own clone on the box** (`/opt/knowledge`), not a bind-mount of anyone's working
+  tree: the container commits **and pushes** from it, so it needs a real `origin` +
+  credential. The clone must be owned by the **invoking (non-root) user** — `docker compose`
+  reads `compose.prod.yml` and `.env` **client-side**, so a root-owned mode-600 `.env` is
+  unreadable and the bring-up fails. Clone over **HTTPS** (the repo is public, no credential
+  needed), then point `origin` at the **SSH** URL so only the *push* path uses the deploy key.
+- **Box env:** `KB_GIT_PUSH=true`, `KB_REQUIRE_READ_AUTH=true`,
+  `KB_PUBLIC_BASE_URL=https://leetusik.github.io/knowledge` (so the 201 `url` names the real
+  published doc, not the API origin), `KB_ROOT=/repo`, `KB_STARTUP_REINDEX=true`, `TZ`.
+  Secrets (`KB_API_TOKEN`, `GOOGLE_API_KEY`) come **only** from a gitignored `.env` on the
+  box — the repo carries names and paths, never values.
+
+### The edge is declarative host state (P8.F2 — verified live)
+
+The box's public entrypoint is a **dedicated edge**: its own compose project (`edge`, at
+`/home/opc/edge`, container `edge-nginx`, `nginx:1.27-alpine`), the sole owner of `:80`/`:443`,
+attached to `changple_shared_network`. Its `conf.d/` and `certs/` are **read-only bind mounts
+from the host**, which is the property everything else follows from:
+
+- **The edge's config is declarative host state, not container state.** A change is a **host
+  file drop + a reload** — `cd /home/opc/edge && ./deploy.sh`, which hard-gates on `nginx -t`
+  *inside the running container* and then does a graceful `nginx -s reload`, **never a
+  recreate** (a recreate would drop the network attachment). `./validate.sh` is the local
+  pre-gate. **Never `docker cp` into the edge, never `docker compose up`/`restart` it.**
+- **A co-tenant deploy can no longer wipe us.** This is the end state of the long-standing
+  shared-edge fragility (deferred **D2**, cut over 2026-07-02): because the vhost is a host
+  file on a read-only mount and the edge project has no `depends_on`/`build`, another site's
+  deploy cannot destroy `knowledge.hi2vi.com`. The old "assume knowledge.hi2vi.com is down
+  after any co-tenant deploy until a re-apply script runs" rule is **obsolete** — there is no
+  re-apply script and none is needed. (The knowledge-base explainer
+  `docs/hi2vi_web/2026-07-02-shared-nginx-explained.md` predates this cutover and describes
+  the *old* regime: read it as history, not as an operating manual.)
+- **Our vhost ships as `deploy/knowledge.conf`** and lands in the edge's `conf.d/`. It uses
+  Docker-DNS **re-resolution** (`resolver 127.0.0.11 valid=30s` + a variable in `proxy_pass`)
+  so the proxy survives an api-container recreation, and terminates TLS with the edge's
+  existing Cloudflare Origin CA cert — a **wildcard** covering `*.hi2vi.com`, so a new
+  subdomain needs **no cert provisioning at all**. Cloudflare fronts it (proxied DNS record;
+  real-IP restore in the vhost).
+- **Two rules a vhost on this edge must obey — they break the *whole* edge, not just one
+  site.** (1) The `conf.d/` tree is tested and reloaded **as a unit**, and a `limit_req_zone`
+  name is **global across it** — a duplicate is a hard `nginx -t` failure that blocks the
+  reload for *every* site on the box (ours declares none). (2) **No IPv6 `listen [::]:…`** —
+  no sibling conf listens on v6, so adding it would silently make that vhost the **default
+  server for all v6 traffic**. Likewise never `default_server` (the catch-all conf owns it).
+
+### Publish-on-write flow
+
+With `KB_GIT_PUSH=true`, one `POST /api/documents` does the whole publish, **in-request,
+inside the write lock**: validate → write the `docs/` file → auto-create the project landing
+if this is the project's first doc → Recent bullet → DB row + embedding → **scoped** commit
+(`git add --` on the touched paths only, never `-A`) → `git fetch origin main` → rebase onto
+`origin/main` → **non-force** `git push origin HEAD:main` → GitHub Pages CI deploys (through
+the `site_smoke.py` gate) → the doc is publicly live.
+
+- **Measured in production (the SLA the agent can rely on):** the POST returns in **~6s**, the
+  Pages deploy completes in **~46s**, and the doc is **publicly readable ~65s after the POST
+  returns**.
+- **Fetch+rebase-before-push is also the freshness mechanism.** The box catches up on the
+  operator's commits at every write, so it always lands on top of the latest remote and can
+  never revert operator work — no cron, no webhook, no mirror. The box clone being *behind*
+  `origin/main` between writes is normal and self-healing.
+- **Push is best-effort and never fails the write** (mirrors commit): a failed push still
+  returns 201, with `pushed:false` + `push_error`, and the doc publishes on the **next**
+  successful push. That is precisely why bring-up must *assert* the push capability rather
+  than infer it from a 201 (see the `openssh-client` note above).
 
 ## Site Design Build Assets (P5)
 
@@ -175,3 +262,7 @@ commands plus a root-only release/parity discipline:
 - Never scale `api` workers: the write lock is in-process (single-worker only). WAL gives read concurrency.
 - The knowledge-graph hook writes only to `site_dir`, never into `docs/` — preserving the no-watch-loop property under `mkdocs serve`.
 - Any `plugin/**` change pairs with a `plugin.json` version bump; the shipped template stays byte-in-parity with the repo (`plugin_parity.py` / `plugin-ci.yml`).
+- **Any slice touching a shipped-payload path (`server/*`, `tests/*`, `Dockerfile`, …) must run `python3 scripts/plugin_parity.py` as part of its *local* validation** — parity only runs in CI on push, so pytest alone will not catch template drift. It was missed twice in P8 (F1, F2) before this became a rule.
+- **The hosted box never force-pushes and never `git add -A`** — the scoped-commit + rebase-onto-remote discipline is what keeps a server-side push from ever clobbering `main`.
+- **Both hosted behaviors stay flag-gated off by default** (`KB_GIT_PUSH`, `KB_REQUIRE_READ_AUTH`): a local or plugin user gets open reads and a never-pushing agent, exactly as before P8.
+- **Edge changes are host file drops + `./deploy.sh`** — never `docker cp`, never a recreate of the edge container.

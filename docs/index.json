@@ -69,7 +69,7 @@
       ]
     },
     "architecture": {
-      "latest": "v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard",
+      "latest": "v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -119,6 +119,14 @@
           "source": "P7.REVIEW",
           "summary": "P7: /explain packaged as a Claude Code plugin hosted in this repo — marketplace + isolated plugin/ payload, template-sync snapshot + shared stdlib renderer + parity guard",
           "previous": "v0005_p6_build-time_knowledge-graph_data_pipeline_mkdocs_hook_to_graph.json_static_asset_plus_browser-only_client-side_rendering_seam"
+        },
+        {
+          "id": "v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path",
+          "path": "docs/versions/architecture/v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path.md",
+          "created_at": "2026-07-15T01:00:41+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8: hosted deployment shape — same codebase, two deployments (local open/never-push vs hosted authed publish-on-write); box clone + server-side push as the publish path",
+          "previous": "v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard"
         }
       ]
     },
@@ -245,7 +253,7 @@
       ]
     },
     "api": {
-      "latest": "v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect",
+      "latest": "v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -279,11 +287,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: shipped /knowledge:explain skill config-resolution order + bearer; POST /api/documents auto-creates the project landing (landing_created) as a documented side effect",
           "previous": "v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links"
+        },
+        {
+          "id": "v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head",
+          "path": "docs/versions/api/v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head.md",
+          "created_at": "2026-07-15T00:40:32+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8: hosted deployment at knowledge.hi2vi.com — frozen consumer contract (bearer on all /api/*, publish-on-write pushed/push_error, commit_sha = published HEAD)",
+          "previous": "v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect"
         }
       ]
     },
     "operations": {
-      "latest": "v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline",
+      "latest": "v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -349,11 +365,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: plugin install/setup flow, portable site_smoke deploy gate, plugin-ci parity gate, release/version-bump discipline",
           "previous": "v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only"
+        },
+        {
+          "id": "v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing",
+          "path": "docs/versions/operations/v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing.md",
+          "created_at": "2026-07-15T00:57:06+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8: production deployment at knowledge.hi2vi.com (dedicated declarative edge, own box clone, compose.prod), publish-on-write flow, KB_GIT_PUSH/KB_REQUIRE_READ_AUTH env, openssh-client is load-bearing",
+          "previous": "v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline"
         }
       ]
     },
     "security": {
-      "latest": "v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation",
+      "latest": "v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -379,11 +403,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: SaaS-open config model (~/.config/knowledge-kb/config.json, chmod 600), local-only-fallback rule, no secrets in scaffolds, payload isolation",
           "previous": "v0002_p4_publish-safe_source_metadata_sanitizer_no_local_paths_on_public_surface"
+        },
+        {
+          "id": "v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live",
+          "path": "docs/versions/security/v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live.md",
+          "created_at": "2026-07-15T00:58:38+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8: hosted auth model (flag-gated read bearer), the box-only SSH deploy key and the scoped departure from agent-never-pushes, generate-credentials-where-they-live",
+          "previous": "v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation"
         }
       ]
     },
     "qa": {
-      "latest": "v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant",
+      "latest": "v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -425,11 +457,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: plugin E2E + reproducer patterns (render→build→site_smoke on the grown corpus), parity guard negatives, per-project deploy-gate invariant",
           "previous": "v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded"
+        },
+        {
+          "id": "v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally",
+          "path": "docs/versions/qa/v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally.md",
+          "created_at": "2026-07-15T00:59:51+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8: hosted E2E acceptance against live production; assert the capability (pushed:true) not the status code; shipped-payload slices must run plugin_parity locally",
+          "previous": "v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant"
         }
       ]
     },
     "decisions": {
-      "latest": "v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default",
+      "latest": "v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -495,9 +535,17 @@
           "source": "P7.REVIEW",
           "summary": "P7 ADRs: MIT license, plugin hosted in this repo with source ./plugin isolation, dynamic project discovery, uv pinned 0.8.14, auto-landing on first project doc, no KB_PUBLIC_BASE_URL default",
           "previous": "v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance"
+        },
+        {
+          "id": "v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert",
+          "path": "docs/versions/decisions/v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert.md",
+          "created_at": "2026-07-15T01:01:46+09:00",
+          "source": "P8.REVIEW",
+          "summary": "P8 ADRs: public endpoint + bearer over private network, KB_GIT_PUSH default-off, read-auth as a flag not token-implied, SSH deploy key over PAT, DELETE pushes, no CORS, no edge rate-limit zone, wildcard origin cert",
+          "previous": "v0008_p7_adrs_mit_license_plugin_hosted_in_this_repo_with_source_._plugin_isolation_dynamic_project_discovery_uv_pinned_0.8.14_auto-landing_on_first_project_doc_no_kb_public_base_url_default"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-14T16:28:06+09:00"
+  "last_rebuilt_at": "2026-07-15T01:03:08+09:00"
 }

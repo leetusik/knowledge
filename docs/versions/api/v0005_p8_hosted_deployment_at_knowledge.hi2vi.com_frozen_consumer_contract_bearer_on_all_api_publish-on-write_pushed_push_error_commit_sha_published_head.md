@@ -1,0 +1,289 @@
+---
+doc_id: api
+version: v0005
+created_at: 2026-07-15T00:40:32+09:00
+source: P8.REVIEW
+summary: P8: hosted deployment at knowledge.hi2vi.com — frozen consumer contract (bearer on all /api/*, publish-on-write pushed/push_error, commit_sha = published HEAD)
+previous: v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect
+---
+
+# API
+
+## Status
+
+Stable and validated. The Track 2 FastAPI service implements the read, search, reindex, and API-owned write contracts below. `docs/` is the canonical store; the SQLite DB is a disposable projection. P4 hardened the surface: search is paginated and hybrid (keyword + optional Gemini vector signal), documents can be deleted, `GET /api/tags` and `GET /api/projects` expose aggregations, reindex accepts a single-path form, and documents carry `related` cross-links — all additive and backward-compatible (the existing `/explain` write payload is unchanged; every new write-contract field is optional). P7 (F1) added one write-path **side effect**: the first document of a **new project** also auto-creates that project's `docs/<project>/index.md` landing page, surfaced as a new `landing_created` response field. The shipped `/knowledge:explain` skill is the client (config-resolved base URL + optional bearer — see below).
+
+**As of P8 the API has two deployments, one codebase:**
+
+- **Local / plugin** (compose service `api`, base `http://localhost:8766`) — unchanged: reads open, writes bearer-guarded only when `KB_API_TOKEN` is set, and the API **never pushes**.
+- **Hosted** — live at **`https://knowledge.hi2vi.com`**, consumed server-to-server by the hi2vi content agent. Two behaviors differ, and **both are opt-in flags that default off**, so the local/plugin experience is untouched: `KB_REQUIRE_READ_AUTH=true` puts reads/search behind the same bearer, and `KB_GIT_PUSH=true` turns the write path into **publish-on-write** (the scoped commit is pushed to `main`, which deploys to GitHub Pages). The full consumer contract is frozen below.
+
+## Auth
+
+Two layers, both driven by `KB_API_TOKEN` plus one flag:
+
+- **Writes** (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`): `Authorization: Bearer <KB_API_TOKEN>` required whenever `KB_API_TOKEN` is set (else 401). Unchanged since P2.
+- **Reads/search** (`GET /api/documents`, `/api/documents/{id}`, `/api/documents/by-path/{rel_path}`, `/api/search`, `/api/tags`, `/api/projects`): open **by default**. They require the same bearer only when **both** `KB_REQUIRE_READ_AUTH=true` **and** `KB_API_TOKEN` is set (P8) — the hosted box's configuration. The dependency (`require_read_bearer`) *delegates* to the write path's `require_bearer`, so the two auth surfaces cannot drift.
+- **Backward-compat guard (tested):** a set `KB_API_TOKEN` with the flag unset leaves reads open — a local token still guards writes only. Token unset (default) = localhost open.
+- **`GET /healthz` is always open**, even on the hosted box (edge/uptime probes need it). Its `documents` count is not a leak: the whole corpus is already public on GitHub Pages.
+- **No CORS, deliberately.** The consumer is server-to-server; the published Pages site searches browser-only via lunr and never calls this API, so no browser origin ever reaches it. A future browser client would be a separate, explicit change.
+
+## Shipped explain-skill client: config resolution + bearer (P7)
+
+The packaged `/knowledge:explain` skill is the API's client and resolves its target
+**per key, highest precedence first**: environment (`KB_ROOT` / `KB_API_BASE_URL` /
+`KB_API_TOKEN`) → the config file `$XDG_CONFIG_HOME/knowledge-kb/config.json`
+(default `~/.config/knowledge-kb/config.json`; nested keys `kb_root`, `api.base_url`,
+`api.token`, `site.base_url`) → the legacy `~/projects/personal/knowledge` convention
+(keeps the operator's own machines working pre-setup) → **stop** and tell the user to
+run `/knowledge:setup`. A present config file is authoritative and does not fall
+through to legacy for keys it omits (omitted `api.base_url` defaults to
+`http://localhost:8766`; `kb_root` may be legitimately absent = remote-only). When a
+token is configured the skill adds `Authorization: Bearer <token>` to the mutating
+POST. The API-first branch semantics are unchanged (201/409/422/401); the file+git
+fallback fires **only** when config resolves a **local** `kb_root` — a remote
+`base_url` that is unreachable is reported, never silently written to disk.
+
+## Contracts
+
+### GET /healthz
+
+- Purpose: liveness + DB reachability + document count.
+- Output: `{status:"ok", docs_root, db:"ok", documents:N}`.
+
+### GET /api/documents
+
+- Query: `project`, `tag`, `limit` (1–200, default 50), `offset` (≥0).
+- Output: `{total, items:[...]}`, newest-first. Items omit `markdown` and the internal `tags_text` mirror, and each item now carries `related` (the cross-link array, same DB-row pass-through as `tags`).
+
+### GET /api/documents/{id} and GET /api/documents/by-path/{rel_path:path}
+
+- Output: the single document including `markdown`, `source_repo` (publish-safe basename — see write path), and `related` (still no `tags_text`); 404 when missing.
+- The `by-path` route is declared before the `{id:int}` route so a path never binds to the id route.
+
+### GET /api/tags
+
+- Purpose: tag aggregation for a tag cloud / browser (added P4 for the P5 web UI). Open read.
+- Query: optional `project` — scopes the counts to one project.
+- Output: `{tags:[{tag, count}, ...]}`, ordered **count DESC, then tag ASC** for direct display.
+
+### GET /api/projects
+
+- Purpose: project aggregation for a project browser (added P4). Open read.
+- Output: `{projects:[{project, count, latest_date}, ...]}`, ordered **project ASC**.
+
+### GET /api/search
+
+- Query: `q` (required), `project`, `tag`, `limit` (1–50, default 10), `offset` (≥0, added P4), `raw` (default false).
+- Output: `{query, mode, total, limit, offset, results:[{doc fields, score, snippet, signals}]}`. `total` is the full match/fusion count; `limit`/`offset` echo the page. `mode` is `"bm25"` or `"hybrid"` (see below).
+- **Keyword ranking (always present):** `bm25(documents_fts, 8.0, 4.0, 1.0)` (title 8×, tags 4×, body 1×) fused in Python with an exponential-decay recency signal from the doc's `date` — `score = bm25 + RECENCY_WEIGHT·recency` (module constants `HALF_LIFE_DAYS=90`, `RECENCY_WEIGHT=0.5`); ordered score DESC with date DESC then id DESC as tiebreaks. The full match set is re-ranked in Python *before* `offset`/`limit` slice it, so pagination applies to the final composed ordering, not raw bm25 rank. `snippet()` wraps keyword hits in `<mark>…</mark>`.
+- **CJK / Hangul / Kana search:** achieved at the query layer, not the index — `build_match_query` prefix-expands any token containing CJK/Hangul/Kana into a `"tok"*` prefix query (`검색` → `검색"*`), so a 2-char proper noun or a stem matches its inflected forms. Pure-ASCII tokens keep exact porter-stemmed matching. (The FTS tokenizer is unchanged — `porter unicode61`.)
+- **Hybrid semantic mode:** when a Gemini API key is configured and the query embeds, a vector ordering (cosine similarity over cached embeddings) is fused with the keyword ordering via **Reciprocal Rank Fusion** (`RRF_K=60`). `mode` is then `"hybrid"`, `total` is the fused-union size, and `score` is the (small, e.g. ~0.03) RRF value. `signals` becomes `{bm25?, recency, vector?}`: `bm25` is present only for keyword hits, `vector` (cosine) only when the vector signal participated; a **pure-semantic (vector-only) hit** carries `{recency, vector}` with a leading-text `snippet` (no `<mark>`). With no key, `raw=true`, or an embed failure the search degrades gracefully to `mode:"bm25"` with byte-identical keyword behavior.
+- Safety: each whitespace token is individually double-quoted before `MATCH`, so raw FTS5 operator syntax (`NEAR/AND(`, unbalanced parens, `*`) can never 500 — it collapses to harmless quoted phrases. `raw=true` opts into raw FTS5 syntax deliberately (and stays BM25-only); a syntax error then returns **400**. Blank `q` → empty results.
+- Note: BM25 IDF collapses toward 0 on a tiny corpus (a term present in every doc), so keyword `bm25` can round toward 0 there — recency is then the effective tiebreak; the snippet and result still return.
+
+### POST /api/reindex
+
+- Rebuild the DB from `docs/`: walk `docs/<subdir>/**/*.md`, upsert by `rel_path`, delete rows for vanished files. **Never commits.**
+- Optional body `{"rel_path": "<project>/<file>.md"}` (pydantic `ReindexIn`; null/absent → full reindex unchanged) triggers an **incremental single-path** reindex — index the one file if present, delete its row if vanished — validated against absolute/`..`/reserved/non-`.md` shapes (a `ValueError` → **422**).
+- Output (full): `{indexed, removed, skipped:[{rel_path, reason}], embeddings:{embedded, cached, removed, skipped_reason?}, duration_ms}`; single-path: `{rel_path, action, reason?, embeddings:{...}, duration_ms}`. The `embeddings` block reports the content-hash-cached embedding sync (see Data/Backend).
+
+### DELETE /api/documents/{doc_id} and DELETE /api/documents/by-path/{rel_path:path}
+
+- The `POST /api/documents` write path in reverse (added P4), bearer-guarded, run entirely under `WRITE_LOCK`: remove the `docs/` file (`missing_ok` — a DB row without a file is drift, cleaned without erroring), drop the doc's Recent bullet from `docs/index.md`, delete the DB row (the FTS `AFTER DELETE` trigger and the `document_embeddings` FK `ON DELETE CASCADE` clean up automatically), then a scoped git commit.
+- Resolves the target row first → **404** when absent. The `by-path` route is declared before the `{doc_id}` route (same collision-avoidance as the GET pair).
+- Query: `commit` (default `true`), optional `co_authored_by`. Commit semantics mirror POST exactly — a failed commit surfaces `committed:false` + `commit_error`, never a rollback.
+- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, committed, commit_sha, pushed, commit_error?, push_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone.
+- **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box also reaches Pages.
+
+### POST /api/documents
+
+The API-owned write path — one call creates the convention file, the Recent bullet, the DB row, and the scoped git commit.
+
+- Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
+- Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`.
+- **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`), where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
+- **Auto-landing side effect (P7 / F1):** inside `WRITE_LOCK`, right after writing the doc file, the write path calls `ensure_project_landing(docs_root, project)` — if `docs/<project>/index.md` is **absent** (the first doc of a new project), it writes a minimal landing (H1 = project name + one line, **no frontmatter** so it stays a non-doc) and the response carries `landing_created:true`; the scoped commit then stages a **third** path (`docs/<project>/index.md`) alongside the doc + `docs/index.md`. An existing landing (hand-written or previously auto-created) is **never overwritten** → `landing_created:false`, two-path commit as before. This keeps every project satisfying the per-project `site/<project>/index.html` deploy-gate invariant (mkdocs `navigation.indexes` does not synthesize one). The `/knowledge:explain` skill's file-fallback branch performs the same ensure-landing when the API is unreachable.
+- `KB_PUBLIC_BASE_URL` note (P7): its default `http://localhost:8765` is correct for a default-port local viewer, so the scaffold's `compose.yml` deliberately leaves it unset (see security/decisions). A scaffold on **advanced custom ports** would then report a default-port `url` in the 201 body — a cosmetic mismatch in one informational field only (the write, site build, and viewer are all correct); set `KB_PUBLIC_BASE_URL` to the chosen viewer origin if custom ports are used.
+- **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`.
+- **422** on any convention validation error (project/tags/slug/date/frontmatter/`related` shape).
+- Commit semantics: a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases.
+- **Publish-on-write (P8), `KB_GIT_PUSH` — default false.** When enabled (the hosted box only), the write path pushes the scoped commit to `origin/main` **inside the same write lock, in-request**: `git fetch origin main` → rebase onto `origin/main` → non-force `git push origin HEAD:main`. **Never `--force`, never `git add -A`** — the box only ever lands its own new-file + Recent-bullet commit on top of the latest remote, so it can never clobber or revert operator work. A rebase conflict aborts cleanly, keeping the local commit.
+- **Push failure semantics mirror commit exactly (best-effort, never a 5xx).** The response always carries `pushed: bool`; `push_error` (string) appears **only** when a push was attempted and failed. A `pushed:false` write still **succeeded** — the doc is written + committed locally and publishes on the **next** successful push. `commit_sha` on a **successful push** is the **final published HEAD** on `main` (the rebase may rewrite the commit, so this — not the pre-push hash — is the authoritative published sha); on `pushed:false` it stays the local commit hash.
+- An `overwrite` re-write suppresses the duplicate Recent bullet (`recent_updated:false`).
+
+## Frozen consumer contract (P8)
+
+The section below is the **frozen** contract the hi2vi content-agent client (`hi2vi` P15.S4)
+codes against. Its shapes were captured from live responses — first through the pytest
+`TestClient` (P8.S4), then **confirmed against the production box** (P8.S5): the 201 key
+order, the 409 `detail` object, the 401 body, and the search item/`signals` shapes all
+match.
+
+**Freeze rule.** Frozen as of P8: **additive-only** thereafter. New response fields may
+appear (clients must ignore unknown keys) and new endpoints may be added, but existing
+field names, types, and status-code meanings will not change.
+
+## Hosted deployment + frozen contract
+
+The knowledge API is hosted publicly at **`https://knowledge.hi2vi.com`** (P8),
+a co-tenant on the shared OCI edge. The hi2vi content agent consumes it
+server-to-server. The local/plugin deployment is unchanged; the differences on
+the hosted box are (a) bearer required on **all** `/api/*` calls, and (b)
+publish-on-write (writes push to `main`, deploying to GitHub Pages).
+
+### Client config
+
+- `KNOWLEDGE_API_URL=https://knowledge.hi2vi.com`
+- `KNOWLEDGE_API_TOKEN=<the box's KB_API_TOKEN>` — the single shared secret; the
+  same value the box sets as `KB_API_TOKEN`.
+- Send `Authorization: Bearer <KNOWLEDGE_API_TOKEN>` on **every `/api/*` request**.
+  The hosted box runs `KB_REQUIRE_READ_AUTH=true`, so reads/search are gated too
+  (not just writes). Missing/invalid token → **401** `{"detail": "missing or
+  invalid bearer token"}`.
+- `GET /healthz` is **open** (no auth) — use it for liveness/uptime probes. Output:
+  `{status:"ok", docs_root, db:"ok", documents:N}`.
+
+### Write — `POST /api/documents`
+
+Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
+
+**Request body** (`DocumentIn`):
+
+- Required:
+  - `title` (string)
+  - `markdown` (string) — the document body **without** frontmatter, starting at
+    the H1; the API generates convention-exact frontmatter.
+  - `project` (string) — `"hi2vi"` for content-agent research docs. Pattern
+    `^[A-Za-z0-9][A-Za-z0-9._-]*$` (no `..`, no `/`). (Note: hi2vi *engineering*
+    explainers use `project:"hi2vi_web"` — a separate folder; content docs are
+    `"hi2vi"`.)
+  - `tags` (string[]) — **2–5** tags, each `^[a-z0-9]+(-[a-z0-9]+)*$`.
+  - `source_repo` (string) — a local path is sanitized to its basename at write
+    time; a URL passes through unchanged (publish-safe either way).
+- Optional:
+  - `date` (string `YYYY-MM-DD`, default today in KST)
+  - `slug` (string, default `slugify(title)`; pattern `^[a-z0-9]+(-[a-z0-9]+)*$`)
+  - `related` (string[] of rel_paths, default `[]`; shape-validated only, dead
+    links tolerated, a self-reference is dropped silently)
+  - `overwrite` (bool, default `false`)
+  - `commit` (bool, default `true`)
+  - `co_authored_by` (string, e.g. `"hi2vi-agent <bot@hi2vi.com>"`)
+
+**201 — created** (all keys always present except the two optional error keys):
+
+```json
+{
+  "id": 1,
+  "rel_path": "hi2vi/2026-07-14-growth-loops.md",
+  "url": "https://leetusik.github.io/knowledge/hi2vi/2026-07-14-growth-loops/",
+  "title": "Content Idea: Growth Loops",
+  "project": "hi2vi",
+  "slug": "growth-loops",
+  "date": "2026-07-14",
+  "tags": ["growth", "loops"],
+  "related": ["hi2vi/2026-07-10-other.md"],
+  "recent_updated": true,
+  "landing_created": true,
+  "committed": true,
+  "commit_sha": "0847f2e9ef6a4c227d35968e75c27ab6f6bf414d",
+  "pushed": false
+}
+```
+
+Field meanings:
+
+- `id` — DB row id. `rel_path` — path under `docs/` (`<project>/<date>-<slug>.md`).
+- `url` — the **published Pages URL** of the doc (`<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`;
+  on the box `KB_PUBLIC_BASE_URL=https://leetusik.github.io/knowledge`). Live once
+  the push deploys (see publish flow).
+- `recent_updated` — whether the `docs/index.md` Recent bullet was added (`false`
+  on an `overwrite` re-write).
+- `landing_created` — `true` only when this was the **first** doc of a new project
+  and the API auto-created `docs/<project>/index.md`; `false` otherwise.
+- `committed` — whether the scoped git commit succeeded. `commit_sha` — the commit
+  hash (see below); `null` when not committed.
+- `pushed` — **P8 addition.** `true` when the commit was pushed to `origin/main`
+  (box only, `KB_GIT_PUSH=true`); `false` when push is disabled (local/plugin) or a
+  push was attempted and failed.
+- `commit_sha` semantics: on a **successful push** it is the **final published
+  HEAD** on `main` (a fetch+rebase before push may rewrite the commit, so this is
+  the authoritative published hash); on `pushed:false` (disabled or failed) it stays
+  the local commit hash; `null` when `committed:false`.
+- `commit_error` (string) — present **only** when a commit was attempted and
+  failed. `push_error` (string) — present **only** when a push was attempted and
+  failed. Neither is a failure of the request: the doc is still written (201).
+
+**409 — duplicate** (target `rel_path` already exists on disk or in the DB and
+`overwrite` is false):
+
+```json
+{
+  "detail": {
+    "message": "document already exists at hi2vi/2026-07-14-growth-loops.md",
+    "rel_path": "hi2vi/2026-07-14-growth-loops.md",
+    "id": 1,
+    "existing_title": "Content Idea: Growth Loops"
+  }
+}
+```
+
+`id` and `existing_title` are included when a matching DB row exists (the normal
+case on the box, where the DB tracks every doc); a bare on-disk collision with no
+DB row yields just `message` + `rel_path`.
+
+**422 — convention error** (invalid project / tags / slug / date / frontmatter /
+`related` shape): `{"detail": "<human-readable reason>"}`, e.g.
+`{"detail": "tags must have 2-5 items, got 1"}`.
+
+**401 — auth** (missing/invalid bearer): `{"detail": "missing or invalid bearer
+token"}`.
+
+### Read / search (all require the bearer on the hosted box)
+
+- **`GET /api/search`** — params: `q` (required), `project`, `tag`, `limit` (1–50,
+  default 10), `offset` (≥0), `raw` (default false). Response:
+  `{query, mode, total, limit, offset, results:[...]}`. `mode` is `"hybrid"` when
+  the Gemini vector signal fused in, else `"bm25"`. Each result item:
+  `{id, project, slug, date, title, tags, rel_path, source_repo, created_at,
+  updated_at, score, snippet, signals}` — `snippet` wraps keyword hits in
+  `<mark>…</mark>`; `signals` is `{bm25?, recency, vector?}` (`recency` always;
+  `bm25` only for keyword hits; `vector` only when the semantic signal
+  participated). `raw=true` opts into raw FTS5 syntax and stays BM25-only; an FTS
+  syntax error then → **400**. Blank `q` → empty results.
+- **`GET /api/documents`** — params: `project`, `tag`, `limit` (1–200, default 50),
+  `offset` (≥0). Response: `{total, items:[...]}`, newest-first. Each item:
+  `{id, project, slug, date, title, tags, source_repo, rel_path, related,
+  created_at, updated_at}` (no `markdown`).
+- **`GET /api/documents/{doc_id}`** and **`GET /api/documents/by-path/{rel_path}`**
+  — the single document **including `markdown`**:
+  `{id, project, slug, date, title, tags, source_repo, rel_path, markdown, related,
+  created_at, updated_at}`; **404** when missing. (`by-path` takes the full
+  `<project>/<date>-<slug>.md` rel_path.)
+- **`GET /api/tags`** — optional `project`. Response: `{tags:[{tag, count}, ...]}`,
+  ordered count DESC then tag ASC.
+- **`GET /api/projects`** — Response:
+  `{projects:[{project, count, latest_date}, ...]}`, ordered project ASC.
+
+### Operational semantics the client relies on
+
+- **Publish flow.** A `201` with `pushed:true` means the doc was committed and
+  pushed to `main`; the GitHub Pages deploy then makes it live at `url` within a
+  few minutes. A `201` with `pushed:false` **and a `push_error`** means the doc is
+  written + committed on the box but not yet on `main` — it publishes on the **next**
+  successful push (commits accumulate) or a manual push. In both cases the write
+  **succeeded** — the client should **not** retry the write on `pushed:false`.
+- **Retry / idempotency.** Writes are keyed by `project/date/slug` → `rel_path`. If
+  a write times out or fails ambiguously, **re-POSTing the same
+  `project`+`date`+`slug` returns 409** (`rel_path` already exists) — treat a
+  409-after-timeout as *already written*, not an error (fetch it via
+  `GET /api/documents/by-path/{rel_path}` to confirm/read it back). Only use
+  `overwrite:true` when you deliberately intend to replace the existing doc.
+- **Single daily writer.** The API serializes writes under a process-wide lock and
+  assumes a single low-volume writer (the daily content agent); do not run
+  concurrent bulk writers against it.
+- **Search quality.** Hybrid semantic search is on when the box has a Gemini key
+  (`mode:"hybrid"`); with no key / quota exhaustion / `raw=true` it silently
+  degrades to `mode:"bm25"` with identical keyword behavior — the client needs no
+  branch, just read `mode` if it cares.

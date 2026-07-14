@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0005
-created_at: 2026-07-14T16:21:13+09:00
-source: P7.REVIEW
-summary: P7: plugin E2E + reproducer patterns (render→build→site_smoke on the grown corpus), parity guard negatives, per-project deploy-gate invariant
-previous: v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded
+version: v0006
+created_at: 2026-07-15T00:59:51+09:00
+source: P8.REVIEW
+summary: P8: hosted E2E acceptance against live production; assert the capability (pushed:true) not the status code; shipped-payload slices must run plugin_parity locally
+previous: v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant
 ---
 
 # QA
@@ -24,7 +24,10 @@ strategy. As of P7 the plugin distribution has its own acceptance layer: a
 render→build→`site_smoke.py` **scaffold gate** (the phase crux), a byte-parity guard
 with negative tests, and a full install/setup/explain E2E run against a temp scaffold
 on non-operator ports — plus a **per-project deploy-gate invariant** the F1 fix and its
-reproducer nailed down.
+reproducer nailed down. As of P8 the **hosted** deployment has its own acceptance layer
+too: a six-assertion E2E run against live production, whose central lesson —
+**assert the capability, never the status code** — is the most transferable thing the
+phase produced.
 
 ## Test Commands
 
@@ -38,7 +41,9 @@ reproducer nailed down.
 - **Plugin manifests (P7):** `claude plugin validate .` and
   `claude plugin validate ./plugin`, each also with `--strict` — all four exit 0.
 - **Template-sync parity (P7):** `python3 scripts/plugin_parity.py` → `PASS` (the
-  shipped snapshot is byte-in-parity with the repo).
+  shipped snapshot is byte-in-parity with the repo). **Run it locally in any slice that
+  touches a shipped-payload path** (`server/*`, `tests/*`, `Dockerfile`, …) — see the P8
+  lesson below; pytest alone does not catch template drift.
 - **Scaffold crux acceptance (P7):** render a non-operator scaffold →
   `docker run --rm -v <tmp>:/docs squidfunk/mkdocs-material:9.7.6 build` →
   `python3 <tmp>/scripts/site_smoke.py --root <tmp>` → `PASS` (a fresh KB passes its
@@ -255,6 +260,57 @@ stack on 8765/8766 stayed up, never restarted):
   corpus, no home-path leak in any built HTML. This is the template for testing a server
   change against a scaffold without ever binding a port or touching the operator's stack.
 
+## Hosted acceptance: the publish-on-write E2E (P8)
+
+The hosted deployment (<https://knowledge.hi2vi.com>, see operations) is accepted by **one
+real write to production** — not a mock, not a staging box. Run it after any change to the
+write path, the push discipline, the image, or the box config. It was run green on
+2026-07-14 and is the procedure to repeat:
+
+1. **`POST /api/documents`** (bearer, `project` = a real project) → **201** carrying
+   **`pushed:true`**, a `commit_sha`, a Pages `url`, and — for a brand-new project —
+   `landing_created:true`.
+2. **The `commit_sha` is `main`'s HEAD on the remote** (verify against **GitHub**, not the
+   box), and its tree holds **exactly** the expected paths: the doc, the auto-created
+   `docs/<project>/index.md`, and the `docs/index.md` Recent bullet. No `-A` sweep, no
+   unrelated file, and its parent is the pre-write baseline (a clean fast-forward — the box
+   did not clobber or revert anything).
+3. **CI is green on that push:** the `pages.yml` run concludes **success** (its `site_smoke.py`
+   step is the per-project landing gate) and `plugin-ci.yml` (parity) stays green.
+4. **The doc is publicly live** at the returned `url` (~1 minute end to end).
+5. **Read it back under auth:** `GET /api/search` **with** the bearer finds it (expect
+   `mode:"hybrid"` when the box has a Gemini key — a doc is embedded in the *same request*
+   that wrote it, so it is searchable immediately); **without** the bearer → **401**; a wrong
+   bearer → **401**; `GET /healthz` stays **open**.
+6. **A duplicate POST → 409** with `id` + `existing_title`, and **no second commit** on `main`.
+
+**Post-run box hygiene:** the box clone must be clean with no `.git/rebase-merge`/`rebase-apply`
+leftovers. (It may legitimately be *behind* `origin/main` — the next write fetches and rebases.)
+
+### The two lessons (both cost a fix slice — do not relearn them)
+
+- **Assert the capability, never the status code.** Push is **best-effort by design**: a
+  totally broken publish chain returns an **identical-looking 201**, just with `pushed:false`
+  and a `push_error`, and nothing ever reaches Pages. That is exactly what a missing
+  `openssh-client` in the image did — the container could not push *at all*, and the failure
+  was completely silent. The decisive assertion is **`pushed:true`**, and the same generalizes:
+  **whenever a capability is best-effort, acceptance must assert the capability itself, not the
+  request's status code** — and bring-up must assert its enablement (`command -v ssh`) rather
+  than infer it.
+- **A shipped-payload change must run the parity guard locally.** `plugin_parity.py` only runs
+  in CI on push, so slices that edited `server/*` / `tests/*` / `Dockerfile` and validated with
+  pytest alone shipped template drift **twice** in this phase (fixed by P8.F1 and again by
+  P8.F2). Local validation for any shipped-payload path now includes
+  `python3 scripts/plugin_parity.py`.
+
+### Doing this safely
+
+The E2E writes a **real, honest document** to the public knowledge base (there is no
+throwaway mode — the whole point is the real publish chain), so: write something worth
+publishing, and **leak-scan the payload before sending** (no token, no box path, no hostname
+or container name). Read-only re-checks of production (`healthz`, an un-authed 401, the Pages
+URL) are safe to repeat any time and are the cheap regression probe.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -282,7 +338,13 @@ stack on 8765/8766 stayed up, never restarted):
   per-project check + the F1 tests).
 - **Template-sync parity (P7)** — any `plugin/**` change must stay byte-in-parity with
   the repo (or update both sides); `plugin_parity.py` / `plugin-ci.yml` guard it, and a
-  `plugin/**` change also requires a `plugin.json` version bump.
+  `plugin/**` change also requires a `plugin.json` version bump. **It is only enforced in CI**,
+  so a slice that skips it locally ships drift (it happened twice in P8).
+- **The silent-publish class of failure (P8)** — anything the push path needs but nothing
+  asserts (the `ssh` binary, the deploy key, the remote URL, network egress) fails **without a
+  loud signal**: writes keep returning 201 while nothing publishes. Guarded only by the E2E's
+  `pushed:true` assertion and the bring-up capability check — there is no unit test that can
+  see it.
 
 ## Open Questions
 
