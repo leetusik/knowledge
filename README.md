@@ -7,6 +7,20 @@ non-trivial, a coding agent (Claude Code / Codex) researches the actual code
 and writes a beginner-friendly explainer here — grounded in the real repo, no
 invented claims. The library grows as I work.
 
+## Install the plugin
+
+This repo's knowledge feature ships as a Claude Code plugin, so any Claude Code
+user can spin up their own version. From inside Claude Code:
+
+    /plugin marketplace add leetusik/knowledge
+    /plugin install knowledge@knowledge
+
+Then run `/knowledge:setup` once to scaffold your own knowledge base, and
+`/knowledge:explain <topic>` whenever you want something explained and kept.
+Requirements: Python 3.12+, with Docker (optional — runs the local viewer + API)
+and a GitHub repository (optional — only to publish via Pages). Full details in
+[`plugin/README.md`](plugin/README.md).
+
 ## How it's built
 
 - **Write path** — a custom `explain` skill posts to a FastAPI + SQLite (FTS5
@@ -27,6 +41,18 @@ invented claims. The library grows as I work.
   explainer a node, shared topics and references the edges): its `graph.json`
   is emitted at build time by a MkDocs hook (`scripts/graph_hook.py`) and drawn
   client-side with vendored, no-CDN JavaScript.
+
+## Recreating from scratch
+
+Two ways to stand this knowledge base back up:
+
+- **Restore this KB** — clone this repo and run `docker compose up -d`. The API
+  reindexes `docs/` on startup, so the SQLite database self-heals from the files
+  already in git; there is nothing else to restore.
+- **Rebuild a fresh one** — install the plugin (above) and run
+  `/knowledge:setup`. It scaffolds a new KB and writes
+  `~/.config/knowledge-kb/config.json`; point that file's `kb_root` at the
+  restored or newly scaffolded directory and `/knowledge:explain` writes there.
 
 ## Agentic workflow
 
