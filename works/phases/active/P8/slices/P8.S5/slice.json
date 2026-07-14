@@ -3,7 +3,7 @@
   "phase_id": "P8",
   "name": "E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 5,
   "depends_on": [
     "P8.S4"

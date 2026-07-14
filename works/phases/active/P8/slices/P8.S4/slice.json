@@ -3,14 +3,14 @@
   "phase_id": "P8",
   "name": "secrets provisioning runbook + frozen consumer contract",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 4,
   "depends_on": [
     "P8.S3"
   ],
   "created_at": "2026-07-14T16:48:32+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-14T17:33:32+09:00",
+  "completed_at": "2026-07-14T17:42:27+09:00",
   "risk": "medium",
   "source": {
     "type": "manual",
