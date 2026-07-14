@@ -206,6 +206,14 @@ Additional durable findings:
   zero-project guard fires; `COMPOSE_BAKE=false docker compose build api` → Built
   (pinned uv tag pulls); `workflow.py validate` → passed.
 
+### P7.S2 landed (2026-07-14) — plugin identity files created; both manifests validate green
+
+- Plugin identity files exist: `.claude-plugin/marketplace.json` (marketplace
+  `knowledge`, source `./plugin`); `plugin/.claude-plugin/plugin.json` (`v0.1.0`,
+  MIT); root `LICENSE`; `plugin/` added to `.dockerignore`. `claude plugin
+  validate` green on both manifests, including `--strict` (both came back clean —
+  no metadata warnings to report).
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -259,6 +267,11 @@ lands._
     premise) — reproducible and byte-identical-shippable.
 - product — the feature is now an installable Claude Code plugin for any user.
   [anticipated: S6]
+- architecture — plugin/marketplace packaging layout landed: repo-root
+  .claude-plugin/marketplace.json + isolated plugin/ payload (source
+  "./plugin"). [S2]
+- decisions — MIT license adopted (root LICENSE + plugin.json license); plugin
+  hosted in this repo with payload isolation via plugin/ subdir. [S2]
 
 ## Open Questions
 

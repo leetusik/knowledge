@@ -1,0 +1,18 @@
+{
+  "name": "knowledge",
+  "version": "0.1.0",
+  "description": "Write beginner-friendly explainer documents into your own personal knowledge base — a searchable MkDocs site backed by a FastAPI document API — and scaffold the whole KB from scratch with one setup skill.",
+  "author": {
+    "name": "leetusik"
+  },
+  "homepage": "https://leetusik.github.io/knowledge/",
+  "repository": "https://github.com/leetusik/knowledge",
+  "license": "MIT",
+  "keywords": [
+    "knowledge-base",
+    "explainer",
+    "documentation",
+    "mkdocs",
+    "notes"
+  ]
+}
