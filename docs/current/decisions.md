@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0007
-created_at: 2026-07-14T12:55:19+09:00
-source: P6.REVIEW
-summary: P6.S1 renderer revision ADR: quiet labels A-prime and idle mingle consciously supersede two locked S0 decisions (operator-directed, Claude Design provenance)
-previous: v0006_p6_hooks-module_graph_mechanism_node_edge_model_tags-as-nodes_docs-current_excluded_ghost_edges_data-viz_project_inks_hand-rolled_vendored_renderer
+version: v0008
+created_at: 2026-07-14T16:21:19+09:00
+source: P7.REVIEW
+summary: P7 ADRs: MIT license, plugin hosted in this repo with source ./plugin isolation, dynamic project discovery, uv pinned 0.8.14, auto-landing on first project doc, no KB_PUBLIC_BASE_URL default
+previous: v0007_p6.s1_renderer_revision_adr_quiet_labels_a-prime_and_idle_mingle_consciously_supersede_two_locked_s0_decisions_operator-directed_claude_design_provenance
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle).
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle). The **P7 plugin-packaging** set adds six accepted decisions — MIT license, the plugin hosted in this same repo with an isolated `plugin/` payload (`source: "./plugin"`), dynamic project discovery in the deploy gate, the uv pin `0.8.14`, the first-doc project-landing auto-creation, and the deliberate no-`KB_PUBLIC_BASE_URL`-default for the scaffold.
 
 ## Purpose
 
@@ -355,6 +355,122 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
   reload-restore behavior).
 - Source: P6.F1 `result.md`; P6 `phase.md` → "P6.F1"; the design mirror's
   `BRIEF_REVISION.md`.
+
+### Package the feature as a Claude Code plugin hosted in this repo (`source: "./plugin"`)
+
+- Date: 2026-07-14
+- Status: accepted (P7 — operator-confirmed intent)
+- Context: The operator wanted `/explain` + the knowledge store usable by other Claude
+  Code users, and eventually SaaS-like (noted, out of scope). "Plugin style" was
+  clarified to mean a **real Claude Code plugin** (`.claude-plugin/` + marketplace
+  manifest), installable via `/plugin` — and it should **live in this knowledge repo**,
+  after which the bootstrap repo retires its embedded `/explain`.
+- Decision: One repo is both marketplace and plugin. A repo-root
+  `.claude-plugin/marketplace.json` (marketplace `knowledge`, owner `leetusik`) has a
+  single entry `{name:"knowledge", source:"./plugin"}`; the installable payload lives
+  entirely under **`plugin/`** with `plugin/.claude-plugin/plugin.json`. The `version`
+  is set **only** in `plugin.json` (never the marketplace entry). Ships the two
+  user-facing skills `/knowledge:explain` + `/knowledge:setup`.
+- Alternatives considered: extending the bootstrap installer, a fork-and-go template
+  repo, or a plugin+template combo — all rejected in favor of a real installable
+  plugin. `source: "./"` — rejected outright: a plugin's `source` is copied whole into
+  every installer's cache, so `./` would ship the operator's personal `docs/`, `works/`,
+  `data/`, `.env`, and tokens. Payload isolation under `plugin/` is the load-bearing
+  boundary.
+- Consequences: nothing personal ships (only the templated KB + two skills); the
+  scaffold is a checked-in byte-parity **snapshot** of the repo, kept in sync by a
+  root-only parity guard + CI (see architecture/operations); the bootstrap repo stays
+  exactly as-is until this review passes, then its P7 becomes unblocked (never edited
+  from here).
+- Source: P7 `intent.md`; `P7.DECOMP`/`P7.S2` `result.md`; P7 `phase.md`.
+
+### MIT license
+
+- Date: 2026-07-14
+- Status: accepted (P7 — operator decision)
+- Context: A publicly installable plugin needs an explicit license.
+- Decision: **MIT** — a root `LICENSE` file (`Copyright (c) 2026 leetusik`) plus
+  `"license": "MIT"` in `plugin.json`.
+- Source: P7 `phase.md` Constraints; `P7.S2` `result.md`.
+
+### Portable deploy gate: dynamic project discovery over a hardcoded `PROJECTS` list
+
+- Date: 2026-07-14
+- Status: accepted (P7.S1)
+- Context: `scripts/site_smoke.py` hardcoded the operator's three project names and
+  required a per-project `site/<project>/index.html`, a Recent bullet, and graph
+  doc-count identities — so a **fresh scaffold** (none of those projects) would fail its
+  own `pages.yml` deploy gate. The guard must ship byte-identical **and** be meaningful
+  on a new KB.
+- Decision: Replace the hardcoded list with a module-level `discover_projects(root)`
+  (sorted non-reserved `docs/` subdirs carrying ≥1 non-`index.md` `*.md`), used by
+  **both** the built-site per-project check **and** `check_graph`'s filesystem
+  doc-count — **one discovery truth** so they cannot drift — with a zero-project teeth
+  guard. On the operator's repo it yields exactly the previous three projects.
+- Alternatives considered: keep a hardcoded list and special-case scaffolds (rejected —
+  two code paths, drift risk); derive from `graph.json` only (rejected — the built-site
+  check needs a filesystem view independent of the graph).
+- Consequences: `site_smoke.py` joins the byte-identical template class; a scaffold with
+  only its seed project passes the same guard the operator's repo runs.
+- Source: `P7.S1` `result.md`; P7 `phase.md`.
+
+### uv pinned to `0.8.14` (reproducible container build)
+
+- Date: 2026-07-14
+- Status: accepted (P7.S1)
+- Context: The `Dockerfile` copied uv from a **floating** `ghcr.io/astral-sh/uv:latest`
+  stage — non-reproducible, and it must ship byte-identical in the template.
+- Decision: Pin to `ghcr.io/astral-sh/uv:0.8.14` — the uv version actually running on
+  the host, i.e. the one that produced `uv.lock` (the plan's suggested `0.11.28` rested
+  on a wrong host-version premise; `0.8.14` is the locally-proven, reproducible pin).
+  Shipped byte-identically in `plugin/templates/kb/Dockerfile`.
+- Consequences: reproducible builds; a future uv bump is a one-line change in both the
+  repo `Dockerfile` and the template snapshot (kept in parity by the guard).
+- Source: `P7.S1` `result.md`; P7 `phase.md` Findings §3.
+
+### Write path auto-creates a project's landing on its first document
+
+- Date: 2026-07-14
+- Status: accepted (P7.F1)
+- Context: The S6 E2E found that a scaffold user documenting a **second** project would
+  fail their next Pages deploy: `site_smoke` requires `site/<project>/index.html` per
+  project and mkdocs `navigation.indexes` does not synthesize a missing landing. The
+  write path created the dated doc + Recent bullet but never the project landing.
+- Decision: **The API owns it.** `create_document` calls
+  `ensure_project_landing(docs_root, project)` inside `WRITE_LOCK` right after writing
+  the doc; when a landing was absent it writes a minimal `docs/<project>/index.md`
+  (H1 + one line, **no frontmatter** → stays a non-doc, excluded from doc-counting and
+  the graph), joins it to the scoped commit (3 paths), and reports `landing_created`.
+  Existing landings are **never overwritten**. The explain skill's file-fallback branch
+  does the same when the API is unreachable. No delete-side cleanup (a project with only
+  `index.md` drops out of `discover_projects`, so the gate stays satisfied).
+- Alternatives considered: a mkdocs plugin/`nav` synthesis (rejected — auto-nav is
+  load-bearing, no `nav:`); a site_smoke exception for landing-less projects (rejected —
+  it would hide a real broken deploy).
+- Consequences: every project satisfies the per-project deploy-gate invariant for
+  API-written and fallback-written docs alike; one new observable response field
+  (`landing_created`).
+- Source: `P7.F1` `result.md`; P7 `phase.md` → "P7.F1".
+
+### Scaffold leaves `KB_PUBLIC_BASE_URL` unset (localhost viewer root is correct)
+
+- Date: 2026-07-14
+- Status: accepted (P7.S1 / review)
+- Context: `public_base_url()` defaults to `http://localhost:8765` and is used at
+  exactly one place to build the 201 response `url` field. That base is the **local
+  mkdocs viewer**, served at root; the `/knowledge/` subpath exists only on the
+  published Pages site. Setting `KB_PUBLIC_BASE_URL` to a subpath would **break** local
+  viewer links.
+- Decision: The scaffold's `compose.yml` deliberately does **not** set
+  `KB_PUBLIC_BASE_URL` — the default localhost root is correct for the default-port
+  local viewer. `compose.yml` stays parameterized for TZ + ports only.
+- Accepted limitation (weighed at review): a scaffold on **advanced custom ports** gets
+  a default-port `url` in the 201 response body — a **cosmetic** mismatch in one
+  informational field only; the document write, the site build, and the viewer are all
+  correct, and the default-port journey (the vast majority) is fully correct. Not a
+  release blocker at `0.1.0`; a future slice could derive `KB_PUBLIC_BASE_URL` from
+  `KB_VIEWER_PORT` if custom ports become common.
+- Source: P7 `phase.md` Findings §2 + S6 caveat; review judgment (`P7.REVIEW`).
 
 ## Superseded Decisions
 

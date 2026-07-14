@@ -1,21 +1,37 @@
 ---
 doc_id: api
-version: v0003
-created_at: 2026-07-08T21:52:17+09:00
-source: P4.REVIEW
-summary: P4: search pagination + hybrid signals, DELETE + tags/projects, incremental reindex, related links
-previous: v0002_db-backed_document_api_read_list_search_reindex_api-owned_write_path
+version: v0004
+created_at: 2026-07-14T16:21:04+09:00
+source: P7.REVIEW
+summary: P7: shipped /knowledge:explain skill config-resolution order + bearer; POST /api/documents auto-creates the project landing (landing_created) as a documented side effect
+previous: v0003_p4_search_pagination_hybrid_signals_delete_tags_projects_incremental_reindex_related_links
 ---
 
 # API
 
 ## Status
 
-Stable and validated. The Track 2 FastAPI service (compose service `api`, base `http://localhost:8766`) implements the read, search, reindex, and API-owned write contracts below. `docs/` is the canonical store; the SQLite DB is a disposable projection. P4 hardened the surface: search is paginated and hybrid (keyword + optional Gemini vector signal), documents can be deleted, `GET /api/tags` and `GET /api/projects` expose aggregations, reindex accepts a single-path form, and documents carry `related` cross-links — all additive and backward-compatible (the existing `/explain` write payload is unchanged; every new write-contract field is optional).
+Stable and validated. The Track 2 FastAPI service (compose service `api`, base `http://localhost:8766`) implements the read, search, reindex, and API-owned write contracts below. `docs/` is the canonical store; the SQLite DB is a disposable projection. P4 hardened the surface: search is paginated and hybrid (keyword + optional Gemini vector signal), documents can be deleted, `GET /api/tags` and `GET /api/projects` expose aggregations, reindex accepts a single-path form, and documents carry `related` cross-links — all additive and backward-compatible (the existing `/explain` write payload is unchanged; every new write-contract field is optional). P7 (F1) added one write-path **side effect**: the first document of a **new project** also auto-creates that project's `docs/<project>/index.md` landing page, surfaced as a new `landing_created` response field — additive and backward-compatible (existing projects and payloads unaffected). This API is unchanged for the packaged plugin distribution; the shipped `/knowledge:explain` skill is now the client (config-resolved base URL + optional bearer — see below).
 
 ## Auth
 
 `Authorization: Bearer <KB_API_TOKEN>` is required on the **mutating endpoints only** (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`) and only when `KB_API_TOKEN` is set (else 401). All `GET` endpoints — including the new `/api/tags` and `/api/projects` aggregations — are always open. Token unset (default) = localhost open.
+
+## Shipped explain-skill client: config resolution + bearer (P7)
+
+The packaged `/knowledge:explain` skill is the API's client and resolves its target
+**per key, highest precedence first**: environment (`KB_ROOT` / `KB_API_BASE_URL` /
+`KB_API_TOKEN`) → the config file `$XDG_CONFIG_HOME/knowledge-kb/config.json`
+(default `~/.config/knowledge-kb/config.json`; nested keys `kb_root`, `api.base_url`,
+`api.token`, `site.base_url`) → the legacy `~/projects/personal/knowledge` convention
+(keeps the operator's own machines working pre-setup) → **stop** and tell the user to
+run `/knowledge:setup`. A present config file is authoritative and does not fall
+through to legacy for keys it omits (omitted `api.base_url` defaults to
+`http://localhost:8766`; `kb_root` may be legitimately absent = remote-only). When a
+token is configured the skill adds `Authorization: Bearer <token>` to the mutating
+POST. The API-first branch semantics are unchanged (201/409/422/401); the file+git
+fallback fires **only** when config resolves a **local** `kb_root` — a remote
+`base_url` that is unreachable is reported, never silently written to disk.
 
 ## Contracts
 
@@ -75,7 +91,9 @@ The API-owned write path — one call creates the convention file, the Recent bu
 - Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
 - Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`.
 - **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
-- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, committed, commit_sha}`, where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, landing_created, committed, commit_sha}`, where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
+- **Auto-landing side effect (P7 / F1):** inside `WRITE_LOCK`, right after writing the doc file, the write path calls `ensure_project_landing(docs_root, project)` — if `docs/<project>/index.md` is **absent** (the first doc of a new project), it writes a minimal landing (H1 = project name + one line, **no frontmatter** so it stays a non-doc) and the response carries `landing_created:true`; the scoped commit then stages a **third** path (`docs/<project>/index.md`) alongside the doc + `docs/index.md`. An existing landing (hand-written or previously auto-created) is **never overwritten** → `landing_created:false`, two-path commit as before. This keeps every project satisfying the per-project `site/<project>/index.html` deploy-gate invariant (mkdocs `navigation.indexes` does not synthesize one). The `/knowledge:explain` skill's file-fallback branch performs the same ensure-landing when the API is unreachable.
+- `KB_PUBLIC_BASE_URL` note (P7): its default `http://localhost:8765` is correct for a default-port local viewer, so the scaffold's `compose.yml` deliberately leaves it unset (see security/decisions). A scaffold on **advanced custom ports** would then report a default-port `url` in the 201 body — a cosmetic mismatch in one informational field only (the write, site build, and viewer are all correct); set `KB_PUBLIC_BASE_URL` to the chosen viewer origin if custom ports are used.
 - **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`.
 - **422** on any convention validation error (project/tags/slug/date/frontmatter/`related` shape).
 - Commit semantics: a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases; git never pushes.

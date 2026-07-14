@@ -547,6 +547,31 @@ lands._
 - operations — E2E-proven user journey (install surface, setup, explain 201/409/fallback + reindex reconciliation, gate green on grown corpus); release checklist: plugin/** change ⇒ plugin.json version bump + parity/validate/E2E before push. [S6]
 - product — the knowledge feature now ships as an installable Claude Code plugin (marketplace + /knowledge:explain + /knowledge:setup); README carries install + recreate-from-scratch paths. [S6]
 
+### P7.REVIEW landed (2026-07-14) — PASS; 8 doc versions consolidated; live KB untouched
+
+- **Verdict PASS.** Consolidated validation all green: `pytest` 57 passed;
+  `plugin_parity.py` PASS; four `claude plugin validate` (`.`/`./plugin`, plain +
+  `--strict`) exit 0; operator-repo gate (mkdocs 9.7.6 build + `site_smoke.py`) PASS;
+  **crux** fresh-scaffold spot-check (non-operator params, ports 9765/9766) render →
+  build → `site_smoke --root` PASS; `workflow.py validate` passed. Live KB
+  (8765/8766) never restarted; temp scaffold removed.
+- **Both deferred open items are non-blocking:** (1) keep uv **0.8.14** (the uv that
+  produced `uv.lock`; byte-identical repo↔template) — recorded in decisions; (2) the
+  custom-port 201 `url` field is **cosmetic** (default-port journey fully correct;
+  write/build/view all correct) — recorded in api/decisions with a future-improvement
+  note, no fix slice.
+- **Doc consolidation (8 versions, all `--source P7.REVIEW`):** architecture v0006,
+  api v0004, backend v0004, operations v0008, security v0003, qa v0005, decisions
+  v0008, product v0003. `rebuild-docs` ran; `docs/index.json` picked all up.
+- **Gotcha for future review slices — the published-doc `/Users/` trap.**
+  `site_smoke.py` (l.249-254) fails on the **bare literal `/Users/`** in any built HTML,
+  and `docs/current/*.md` **is published**. A first draft of the qa doc wrote
+  "`/Users/`" in prose and would have broken the operator's deploy gate; reworded to
+  "home-path" phrasing (as the pre-existing docs already do) and re-ran the gate → PASS.
+  When editing docs, never write the literal `/Users/`.
+- **On PASS the bootstrap repo's P7 (retire embedded `/explain`) is now unblocked** —
+  operator's separate action in the other repo; never edited from here.
+
 ## Open Questions
 
 - None blocking. (Advisory dependency edges are encoded on the slices; S1/S2 order is

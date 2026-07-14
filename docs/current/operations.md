@@ -1,17 +1,17 @@
 ---
 doc_id: operations
-version: v0007
-created_at: 2026-07-14T12:58:20+09:00
-source: P6.REVIEW
-summary: P6 re-review: reword the smoke-guard and serve-parity publish-safety notes without the literal user-home path token (build/serve pipeline unchanged; F1-F4 were renderer/CSS-only)
-previous: v0006_p6_mkdocs_hooks_graph.json_emitter_build_and_serve_extended_smoke_guard_serve-parity_confirmed_readme_knowledge-map_mention
+version: v0008
+created_at: 2026-07-14T16:21:12+09:00
+source: P7.REVIEW
+summary: P7: plugin install/setup flow, portable site_smoke deploy gate, plugin-ci parity gate, release/version-bump discipline
+previous: v0007_p6_re-review_reword_the_smoke-guard_and_serve-parity_publish-safety_notes_without_the_literal_user-home_path_token_build_serve_pipeline_unchanged_f1-f4_were_renderer_css-only
 ---
 
 # Operations
 
 ## Status
 
-Both tracks operational. `docker compose up -d` runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI. As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS.
+Both tracks operational. `docker compose up -d` runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI. As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
 
 ## Local Development
 
@@ -60,7 +60,7 @@ Two services over one bind-mounted repo:
 Track 1 — the `docs/` tree — is published as a static site at <https://leetusik.github.io/knowledge/>.
 
 - **Pipeline**: `.github/workflows/pages.yml` runs on `push` to `main` (+ `workflow_dispatch`), concurrency group `pages` (`cancel-in-progress: false`). The build job pip-installs `mkdocs-material==9.7.6` → `mkdocs build` (never `--strict`) → **`python3 scripts/site_smoke.py`** (deploy gate, P5) → `actions/upload-pages-artifact`; the deploy job runs `actions/deploy-pages` in the `github-pages` environment.
-- **Deploy-gating smoke guard (P5 / P5.S4):** `scripts/site_smoke.py` (stdlib-only, optional `--root`) runs after `mkdocs build` and before the artifact upload — a non-zero exit blocks the deploy. It asserts source invariants (the `<!-- explain:recent -->` marker + bullet contract, `<!-- material/tags -->`, no `nav:`/`strict:`, `theme.font: false`, `plugins.search.lang` includes `en`+`ko`, pin parity) and built-site invariants (`search_index.json` `config.lang` includes `ko`, `lunr.ko`/`lunr.multi` packs shipped, the hero `#__search` toggle + `for="__search"` label, the `#recent + ul` DOM adjacency, the three per-project pages built, `site/versions/` absent, no leaked absolute local home-directory path, no `<script src="http…">` CDN tag). **P6 extended the guard:** the `extra_javascript:`-forbidden assertion was *flipped* to an exact allowlist (`== ["javascripts/graph.js"]`) plus `hooks:` wiring + `graph.md`/`graph.js` presence; new built-site assertions cover `site/javascripts/graph.js`, a `site/graph/index.html` that mounts `.kb-graph`/`data-graph-src`/the script, the landing `.kb-card` link to `graph/`, and a `check_graph` over the emitted `graph.json` (see qa for the full list). The no-CDN + no-user-home-path-leak invariants still hold. It deliberately asserts **no build *warnings*** — `--strict` was rejected so future `/explain` zero-config page adds are never blocked by warning noise. Extend `check_source`/`check_built` to add invariants; never `--strict`.
+- **Deploy-gating smoke guard (P5 / P5.S4):** `scripts/site_smoke.py` (stdlib-only, optional `--root`) runs after `mkdocs build` and before the artifact upload — a non-zero exit blocks the deploy. It asserts source invariants (the `<!-- explain:recent -->` marker + bullet contract, `<!-- material/tags -->`, no `nav:`/`strict:`, `theme.font: false`, `plugins.search.lang` includes `en`+`ko`, pin parity) and built-site invariants (`search_index.json` `config.lang` includes `ko`, `lunr.ko`/`lunr.multi` packs shipped, the hero `#__search` toggle + `for="__search"` label, the `#recent + ul` DOM adjacency, the three per-project pages built, `site/versions/` absent, no leaked absolute local home-directory path, no `<script src="http…">` CDN tag). **P6 extended the guard:** the `extra_javascript:`-forbidden assertion was *flipped* to an exact allowlist (`== ["javascripts/graph.js"]`) plus `hooks:` wiring + `graph.md`/`graph.js` presence; new built-site assertions cover `site/javascripts/graph.js`, a `site/graph/index.html` that mounts `.kb-graph`/`data-graph-src`/the script, the landing `.kb-card` link to `graph/`, and a `check_graph` over the emitted `graph.json` (see qa for the full list). The no-CDN + no-user-home-path-leak invariants still hold. It deliberately asserts **no build *warnings*** — `--strict` was rejected so future `/explain` zero-config page adds are never blocked by warning noise. Extend `check_source`/`check_built` to add invariants; never `--strict`. **P7 made the guard portable:** the built-site per-project check no longer hardcodes the operator's three project names — a module-level `discover_projects(root)` derives the project dirs dynamically (sorted non-reserved `docs/` subdirs carrying ≥1 non-`index.md` `*.md`), used by **both** `check_built` (the per-project `site/<project>/index.html` loop) **and** `check_graph`'s filesystem doc-count — one discovery truth so they cannot drift, with a zero-project teeth guard. This is what lets a fresh scaffold with only its seed project pass the same byte-identical guard; on the operator's repo discovery yields exactly the same three projects as before.
 - **Site exclusion (P4 / D1; P5):** `mkdocs.yml` sets `exclude_docs: /versions/` (workspace-internal durable-doc history kept out of the built site — pages, nav, search — while `docs/current/` stays published) plus **`/README.md`** (P5.S4 — makes mkdocs' existing auto-exclusion explicit, silencing the standing `README.md`/`index.md` conflict warning; changes nothing published). Use `exclude_docs` **only** — never `nav:`/`strict:` (auto-nav from the `docs/` tree is load-bearing).
 - **Pin parity**: the CI pip pin and the `compose.yml` viewer image tag are the same `9.7.6` on purpose — bump them together so the local build stays a faithful CI pre-check. The smoke guard also asserts this parity.
 - **Pre-push check (P5)**: `docker compose run --rm kb build` runs the same `mkdocs build` as CI (same 9.7.6), then `python3 scripts/site_smoke.py` runs the same deploy gate CI runs (default root = repo root; run the build first so `site/` is fresh). A clean local build **and** a `PASS` predict a clean, gate-passing deploy.
@@ -124,7 +124,54 @@ The knowledge map's data is produced by the repo's **first mkdocs `hooks:` modul
 - **Determinism guarantee:** two consecutive builds produce a **byte-identical**
   `graph.json` (verified by `cmp`); the payload carries no timestamps.
 
+## Plugin distribution: install, setup, and release (P7)
+
+The feature ships as a Claude Code plugin hosted in this repo. Two user-facing
+commands plus a root-only release/parity discipline:
+
+- **Install (any Claude Code user):** `/plugin marketplace add leetusik/knowledge`
+  → `/plugin install knowledge@knowledge` (a local path also works for testing:
+  `/plugin marketplace add ./`). The E2E proved the non-interactive equivalent in a
+  sandbox; the interactive `/plugin marketplace add` is the operator's post-phase QA
+  (this env's permission system blocks a nested `claude` install). Both manifests pass
+  `claude plugin validate .` and `claude plugin validate ./plugin` (plain **and**
+  `--strict`).
+- **Setup (`/knowledge:setup`)** scaffolds a new KB into a target dir (default
+  `~/knowledge`): interview (site title, optional GitHub owner/repo → `site_url` or
+  local-only, TZ from the host, ports 8765/8766 unless "advanced", Gemini key **never**
+  collected) → `render.py` renders the 35-file scaffold + a `.kb-scaffold.json` marker
+  → `git init` + initial commit → write the config file
+  (`~/.config/knowledge-kb/config.json`, chmod 600) → `docker compose up -d` +
+  `healthz`/viewer probe, else print the `uv run uvicorn …` alternative → print the
+  GitHub Pages enablement steps + a verify checklist. **Idempotent** via the marker:
+  marked target → reconfigure / re-render-with-diff / abort; a non-empty **unmarked**
+  dir is refused (protects the operator's own `~/projects/personal/knowledge`).
+  Degraded modes handled: no Docker, no GitHub (local-only), no Gemini (BM25-only).
+- **Scaffold deploy gate:** a rendered scaffold builds under
+  `squidfunk/mkdocs-material:9.7.6` and passes its **own** portable `site_smoke.py`
+  (`--root <scaffold>`) — the phase's crux acceptance, re-proven at review on a
+  non-operator scaffold (Field Notes / America/New_York / ports 9765-9766) that also
+  exercises the F1 auto-landing on a second project.
+- **Template-sync parity (root-only CI):** `scripts/plugin_parity.py` re-renders the
+  `plugin/templates/kb/` snapshot with the operator's real params
+  (`plugin/templates/params.operator.json`) and byte-compares against repo root, with
+  a completeness rule over fully-shipped dirs (a new `server/*.py` cannot silently miss
+  the scaffold). It runs on push via a **new** `.github/workflows/plugin-ci.yml`
+  ("plugin parity") — **not** `pages.yml`, which stays a portable shipped template.
+  `render.py`, `plugin_parity.py`, and `plugin-ci.yml` all live at repo root and are
+  **not** part of the shipped `plugin/` payload.
+- **Release discipline:** the plugin `version` lives **only** in
+  `plugin/.claude-plugin/plugin.json` (never in the marketplace entry) — installers
+  receive updates only on a version bump. **Any change under `plugin/**` pairs with a
+  `plugin.json` version bump**, plus parity + both `claude plugin validate` runs + the
+  E2E before push. Version stays `0.1.0` at this pre-release. **Never push** from any
+  slice; deploys and releases are the operator's manual action.
+- **uv pin (reproducible build):** the `Dockerfile` uv stage is pinned to
+  `ghcr.io/astral-sh/uv:0.8.14` (the uv that produced `uv.lock`), shipped
+  byte-identically in the template; bumping uv is a one-line change in both places.
+
 ## Invariant
 
 - Never scale `api` workers: the write lock is in-process (single-worker only). WAL gives read concurrency.
 - The knowledge-graph hook writes only to `site_dir`, never into `docs/` — preserving the no-watch-loop property under `mkdocs serve`.
+- Any `plugin/**` change pairs with a `plugin.json` version bump; the shipped template stays byte-in-parity with the repo (`plugin_parity.py` / `plugin-ci.yml`).

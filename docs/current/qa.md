@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0004
-created_at: 2026-07-14T12:56:35+09:00
-source: P6.REVIEW
-summary: P6.S1 QA: two extra.css section-10 specificity defeats found by browser QA, CDP geometry probe added as a repeatable overlay/layout tool, publish-safety invariant reworded
-previous: v0003_p6_site_smoke_graph.json_data-contract_custom-js_allowlist_built-graph-page_landing_graph-card_invariants_root_negatives
+version: v0005
+created_at: 2026-07-14T16:21:13+09:00
+source: P7.REVIEW
+summary: P7: plugin E2E + reproducer patterns (render→build→site_smoke on the grown corpus), parity guard negatives, per-project deploy-gate invariant
+previous: v0004_p6.s1_qa_two_extra.css_section-10_specificity_defeats_found_by_browser_qa_cdp_geometry_probe_added_as_a_repeatable_overlay_layout_tool_publish-safety_invariant_reworded
 ---
 
 # QA
@@ -20,7 +20,11 @@ contract, the first vendored custom JS (an `extra_javascript` allowlist replacin
 the old "must be absent" assertion), the built `/graph/` page, and the landing
 graph card. Server-side QA for Track 2 (the FastAPI store) stays as the P4
 pytest/reindex checks in operations; this doc records the site-build acceptance
-strategy.
+strategy. As of P7 the plugin distribution has its own acceptance layer: a
+render→build→`site_smoke.py` **scaffold gate** (the phase crux), a byte-parity guard
+with negative tests, and a full install/setup/explain E2E run against a temp scaffold
+on non-operator ports — plus a **per-project deploy-gate invariant** the F1 fix and its
+reproducer nailed down.
 
 ## Test Commands
 
@@ -31,6 +35,14 @@ strategy.
 - **State integrity (workspace):** `python3 scripts/workflow.py validate`.
 - **API / store (Track 2):** `uv run pytest -q`; drift repair via
   `uv run python -m server.reindex` (see operations).
+- **Plugin manifests (P7):** `claude plugin validate .` and
+  `claude plugin validate ./plugin`, each also with `--strict` — all four exit 0.
+- **Template-sync parity (P7):** `python3 scripts/plugin_parity.py` → `PASS` (the
+  shipped snapshot is byte-in-parity with the repo).
+- **Scaffold crux acceptance (P7):** render a non-operator scaffold →
+  `docker run --rm -v <tmp>:/docs squidfunk/mkdocs-material:9.7.6 build` →
+  `python3 <tmp>/scripts/site_smoke.py --root <tmp>` → `PASS` (a fresh KB passes its
+  own portable deploy gate).
 
 ## Acceptance Criteria Style
 
@@ -214,6 +226,35 @@ same-tab reload preserving the `sessionStorage` `kb-graph:v1:` blob + node posit
 compose `kb` server. This is the template for the overlay/layout class of bug the smoke
 guard cannot see.
 
+## Plugin acceptance: parity negatives, the F1 reproducer, the per-project gate invariant (P7)
+
+The plugin distribution added three acceptance patterns, all proven at build and
+re-confirmed at review — none of them touch the operator's live KB (all E2E ran
+against a temp scaffold on ports **9765/9766** + a temp `XDG_CONFIG_HOME`; the live
+stack on 8765/8766 stayed up, never restarted):
+
+- **Byte-parity guard, with negatives.** `scripts/plugin_parity.py` re-renders the
+  `plugin/templates/kb/` snapshot with the operator's real params and byte-compares
+  against repo root. Both negatives are proven: a one-byte drift in any shipped file
+  FAILs, and a file present on one side but missing on the other FAILs the
+  **completeness rule** (so a new `server/*.py` can't silently miss the scaffold).
+- **The scaffold gate is the crux invariant.** A fresh scaffold must pass its own
+  portable `site_smoke.py` (render → mkdocs 9.7.6 build → `site_smoke --root`). Because
+  the guard now derives projects **dynamically** (P7.S1), the seed `getting-started`
+  project satisfies the marker/bullet/graph invariants with no per-name coordination.
+- **The per-project deploy-gate invariant + the F1 reproducer.** `site_smoke` requires
+  `site/<project>/index.html` for **every** project `discover_projects` finds, and
+  mkdocs `navigation.indexes` does **not** synthesize a missing landing — so a scaffold
+  user documenting a **second** project would have failed their next Pages deploy. The
+  F1 reproducer nails this down as a **repeatable pattern**: render a non-operator
+  scaffold, then drive the **scaffold's own** byte-identical server via FastAPI
+  `TestClient` imported **from the scaffold path** (binds **no ports** — the live KB is
+  provably untouched) to POST a doc into a *new* project → assert `landing_created=true`
+  + the 3-path scoped commit + `source_repo` basename-sanitized (no absolute local
+  home-path leak) → `mkdocs build` → `site_smoke.py --root` **PASS** on the grown
+  corpus, no home-path leak in any built HTML. This is the template for testing a server
+  change against a scaffold without ever binding a port or touching the operator's stack.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -234,6 +275,14 @@ guard cannot see.
 - **The `extra_javascript` allowlist (P6)** — it must stay exactly
   `["javascripts/graph.js"]`; adding a second entry or a CDN script is a guard
   failure, protecting the no-CDN invariant now that the site ships custom JS.
+- **The per-project landing invariant (P7)** — every project needs
+  `site/<project>/index.html`, so the write path (and the explain fallback) must keep
+  auto-creating `docs/<project>/index.md` for a new project; a regression there
+  silently breaks a scaffold user's next Pages deploy (guarded by `site_smoke`'s
+  per-project check + the F1 tests).
+- **Template-sync parity (P7)** — any `plugin/**` change must stay byte-in-parity with
+  the repo (or update both sides); `plugin_parity.py` / `plugin-ci.yml` guard it, and a
+  `plugin/**` change also requires a `plugin.json` version bump.
 
 ## Open Questions
 
