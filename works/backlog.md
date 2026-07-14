@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P9`
+- Current slice: `P9.DECOMP`
+- Next slice: `P9.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `3`
-- Rebuilt at: `2026-07-15T01:07:16+09:00`
+- Open deferred jobs: `2`
+- Rebuilt at: `2026-07-15T08:34:05+09:00`
 
 ## Active Phases
 
@@ -24,6 +24,7 @@
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [x] `P7` | `done` | `pass` | Claude Code plugin | `none` | `works/phases/active/P7` |
 | [x] `P8` | `done` | `pass` | Knowledge API for hi2vi content agent | `none` | `works/phases/active/P8` |
+| [ ] `P9` | `planned` | `pending` | Production deploy GitHub Action for the knowledge API | `P9.DECOMP` | `works/phases/active/P9` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -120,3 +121,10 @@
 | [x] `P8.F2` | `done` | reality-fix: openssh-client in image (push was impossible), deploy artifacts retargeted to the live dedicated edge | `fix` | `works/phases/active/P8/slices/P8.F2` |
 | [x] `P8.S5` | `done` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [x] `P8.REVIEW` | `done` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |
+
+## Phase P9: Production deploy GitHub Action for the knowledge API
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P9.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P9/slices/P9.DECOMP` |
+| [ ] `P9.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P9/slices/P9.REVIEW` |
