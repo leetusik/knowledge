@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Open: `0`
+- Open: `1`
 - Promoted: `2`
 - Dropped: `0`
-- Rebuilt at: `2026-07-14T17:42:27+09:00`
+- Rebuilt at: `2026-07-14T22:48:04+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
-| - | - | - | - | - | - |
+| `D3` | `deferred` | Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree | P8.F2 | operator runs: gh repo deploy-key delete 157264706 -R leetusik/knowledge && rm -f knowledge_deploy_key knowledge_deploy_key.pub | `works/deferred/open/D3` |
 
 ## Promoted
 

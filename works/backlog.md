@@ -9,8 +9,8 @@
 - Current slice: `P8.S5`
 - Next slice: `P8.REVIEW`
 - Waiting on operator: `P8.S5`
-- Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T17:42:27+09:00`
+- Open deferred jobs: `1`
+- Rebuilt at: `2026-07-14T22:48:04+09:00`
 
 ## Active Phases
 
@@ -117,5 +117,6 @@
 | [x] `P8.S3` | `done` | prod deploy artifacts for knowledge.hi2vi.com (compose.prod + vhost + runbook) | `implementation` | `works/phases/active/P8/slices/P8.S3` |
 | [x] `P8.F1` | `done` | plugin template sync — mirror S1/S2 server+test changes, manifest entry, version bump (parity red at HEAD) | `fix` | `works/phases/active/P8/slices/P8.F1` |
 | [x] `P8.S4` | `done` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
+| [x] `P8.F2` | `done` | reality-fix: openssh-client in image (push was impossible), deploy artifacts retargeted to the live dedicated edge | `fix` | `works/phases/active/P8/slices/P8.F2` |
 | [~] `P8.S5` | `pending` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |

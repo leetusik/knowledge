@@ -5,11 +5,18 @@
 FROM python:3.12-slim
 
 # git: the API commits doc writes itself (server/gitops.py runs `git -C /repo`).
+# openssh-client: git ALONE CANNOT PUSH over an SSH remote — the `ssh` binary is
+# only a *Recommends* of git, and --no-install-recommends drops it (verified: the
+# python:3.12-slim base ships no `ssh`). The hosted deployment's push credential
+# is an SSH deploy key (origin git@github.com:…, driven by GIT_SSH_COMMAND), so
+# without this package KB_GIT_PUSH=true (publish-on-write) fails on every push —
+# and because push is best-effort, it fails SILENTLY (still 201, with
+# pushed:false + push_error) and nothing ever reaches Pages.
 # tzdata: NOT present in python:*-slim; without it TZ=Asia/Seoul silently falls
 # back to UTC and datetime.date.today() computes UTC dates — wrong file dates
-# around midnight KST. Both are load-bearing.
+# around midnight KST. All three are load-bearing.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git tzdata \
+    && apt-get install -y --no-install-recommends git openssh-client tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # uv binary (used only to resolve+install the locked deps into the system env).
