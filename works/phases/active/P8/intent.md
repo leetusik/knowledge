@@ -17,6 +17,11 @@ the knowledge API?": )
 
 (Option 1 = "Phase DECOMP proposes" — hosting is designed at this phase's DECOMP, not pinned now.)
 
+(Addendum, 2026-07-14, same conversation:)
+
+> good. and one more, since we utilize the knowledge, we should also able to use existing knowledge
+> for content creation. do we ready for that? if not, add the feature.
+
 ## Confirmed Intent (refined + clarified)
 
 Make the knowledge project's **document API production-consumable by the hi2vi content agent** —
@@ -45,9 +50,14 @@ missing.
    operator action** (how — the hosted API pushes, or a knowledge-side sync — is DECOMP's design
    call). This is an accepted, deliberate departure from the local "agent never pushes" convention,
    scoped to this write path (hi2vi research publishes unreviewed, per hi2vi P15 intent).
-5. **A frozen API contract for the consumer** — request/response + error semantics (`201` url/
-   commit_sha, `409` duplicate, `422` convention, `401` auth) that hi2vi `P15.S4` plans against, and
-   the config hi2vi needs (`KNOWLEDGE_API_URL`, `KNOWLEDGE_API_TOKEN`).
+5. **Read/search exposed too (operator addendum, 2026-07-14)** — hi2vi also *uses existing
+   knowledge for content creation*: the hosted endpoint must expose the already-built read/search
+   API (hybrid BM25 + semantic search, document get — this repo's P2/P4 work) under the same bearer
+   auth, for hi2vi's topic dedup, research grounding, and drafting context. Mostly exposure, not new
+   build — verify the existing endpoints and extend only what's missing.
+6. **A frozen API contract for the consumer** — the write path (`201` url/commit_sha, `409`
+   duplicate, `422` convention, `401` auth) **and the search/read shapes** that hi2vi `P15.S4`
+   plans against, plus the config hi2vi needs (`KNOWLEDGE_API_URL`, `KNOWLEDGE_API_TOKEN`).
 
 **Cross-repo dependency:** hi2vi `P15.S4` (research + knowledge write client) consumes this phase's
 API contract at planning time and needs a reachable endpoint for its e2e (P15.S9). hi2vi P15.S1–S3
