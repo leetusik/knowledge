@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P8`
-- Current slice: `P8.DECOMP`
-- Next slice: `P8.REVIEW`
-- Waiting on operator: `none`
+- Current slice: `none`
+- Next slice: `none`
+- Waiting on operator: `P8`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T16:30:31+09:00`
+- Rebuilt at: `2026-07-14T16:52:28+09:00`
 
 ## Active Phases
 
@@ -23,7 +23,7 @@
 | [x] `P5` | `done` | `pass` | Web UI redesign & search | `none` | `works/phases/active/P5` |
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [x] `P7` | `done` | `pass` | Claude Code plugin | `none` | `works/phases/active/P7` |
-| [ ] `P8` | `planned` | `pending` | Knowledge API for hi2vi content agent | `P8.DECOMP` | `works/phases/active/P8` |
+| [~] `P8` | `pending` | `pending` | Knowledge API for hi2vi content agent | `P8.S1` | `works/phases/active/P8` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -111,5 +111,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P8.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P8/slices/P8.DECOMP` |
+| [x] `P8.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P8/slices/P8.DECOMP` |
+| [ ] `P8.S1` | `todo` | publish-on-write: server-side git push after the scoped commit | `implementation` | `works/phases/active/P8/slices/P8.S1` |
+| [ ] `P8.S2` | `todo` | hosted read auth: gate reads/search behind bearer (local stays open) | `implementation` | `works/phases/active/P8/slices/P8.S2` |
+| [ ] `P8.S3` | `todo` | prod deploy artifacts for knowledge.hi2vi.com (compose.prod + vhost + runbook) | `implementation` | `works/phases/active/P8/slices/P8.S3` |
+| [ ] `P8.S4` | `todo` | secrets provisioning runbook + frozen consumer contract | `implementation` | `works/phases/active/P8/slices/P8.S4` |
+| [ ] `P8.S5` | `todo` | E2E acceptance: first hi2vi write -> push -> Pages -> live; search under auth | `implementation` | `works/phases/active/P8/slices/P8.S5` |
 | [ ] `P8.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P8/slices/P8.REVIEW` |

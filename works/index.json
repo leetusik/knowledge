@@ -88,17 +88,17 @@
       "id": "P8",
       "name": "Knowledge API for hi2vi content agent",
       "objective": "Make the knowledge document API production-consumable by the hi2vi content agent: a reachable hosted endpoint (hosting proposed at DECOMP) with bearer auth, docs/hi2vi/ project-folder bootstrap, publish-on-write so agent-written docs (md file + DB row, /explain-style) land on main and GitHub Pages without operator action, and the existing read/search endpoints (hybrid search, get) exposed under the same auth so hi2vi can use accumulated knowledge for content creation",
-      "status": "planned",
+      "status": "pending",
       "order": 8,
       "path": "works/phases/active/P8",
       "review_status": "pending",
-      "current_slice": "P8.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0
+      "current_slice": "P8.S1",
+      "slice_count": 7,
+      "done_slice_count": 1
     }
   ],
   "deferred_open_count": 0,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 0,
-  "last_rebuilt_at": "2026-07-14T16:30:31+09:00"
+  "last_rebuilt_at": "2026-07-14T16:52:28+09:00"
 }
