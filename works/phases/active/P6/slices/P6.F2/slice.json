@@ -1,0 +1,31 @@
+{
+  "id": "P6.F2",
+  "phase_id": "P6",
+  "name": "Graph overlays cannot be hidden — [hidden] loses to overlay display rules (operator browser QA)",
+  "kind": "fix",
+  "status": "done",
+  "order": 5,
+  "depends_on": [],
+  "created_at": "2026-07-14T10:58:44+09:00",
+  "started_at": "2026-07-14T10:58:44+09:00",
+  "completed_at": "2026-07-14T11:01:57+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
