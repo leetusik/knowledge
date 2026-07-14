@@ -752,7 +752,9 @@
 .md-content:has(.kb-graph) { max-width: none; }
 .md-content:has(.kb-graph) .md-content__inner { margin: 0; padding: 0; }
 .md-content:has(.kb-graph) .md-content__inner::before { display: none; content: none; }
-.md-typeset > .kb-graph { margin: 0; }
+/* carries the full-bleed margin at (0,2,0) — a bare .kb-graph margin loses to this
+   very selector; keep the breakout and the zeroed top/bottom margins together. */
+.md-typeset > .kb-graph { margin: 0 0 0 calc(50% - 50vw); }
 /* Auto-nav injects an <h1>Graph</h1> from the page title; the map IS the page,
    so keep it for a11y/SEO but take it visually out of flow (no title bar). */
 .md-content:has(.kb-graph) .md-content__inner > h1 {

@@ -417,6 +417,43 @@ the running `kb` server carries `kb-graph:v1` + `seedPositions`/`restoreState`. 
 (roomier feel, reload-restore round-trip, camera/lens/selection restore, reduced motion) is
 operator-owed — no browser in this harness.
 
+### P6.F4 — full-bleed breakout defeated by §10b's margin rule; panel/zoom clipped off-screen (implemented 2026-07-14)
+
+**Trap (operator-reported, CDP-measured):** `.kb-graph`'s full-bleed rule
+(`width:100vw; margin-left:calc(50% - 50vw);`, specificity (0,1,0)) was defeated by
+`.md-typeset > .kb-graph { margin: 0; }` (extra.css:755, specificity (0,2,0)) — the
+higher-specificity rule zeroed `margin-left` back out, so the 100vw box started at the
+article's left edge (Material's centered 61rem grid) instead of the viewport's, offset
+= (viewportWidth − 1220px)/2 on wide viewports. Measured before the fix: x=110 @1440
+(panel 92px off-screen right, zoom stack fully off-screen); @1920 offset 350px (panel
+reduced to an ~8px sliver — "almost out of screen"). Same disease family as P6.F2
+(`[hidden]` specificity defeat) — the map canvas mostly masked it because the plate
+still covered most of the viewport.
+
+**Fix (one line, `docs/stylesheets/extra.css:755`, no JS change):**
+`.md-typeset > .kb-graph { margin: 0; }` → `margin: 0 0 0 calc(50% - 50vw);` — carries
+the breakout margin on the higher-specificity rule instead of losing it.
+
+**Verification:** headless-Chrome CDP probe (own instance, port 9223, launched + torn
+down within the slice) against the live compose `kb` server at 1440×900, 1280×720,
+1000×800, 1440×900-scrolled-to-bottom, and an extra 1920×1080 case — at every width
+`graph.x`≈0, `graph.right`≈viewport width, `panelOffscreenRight`≤0 (all -18 to -19.8),
+`zoom.right`≤viewport width; screenshot eyeballed (no left gutter, panel + zoom stack +
+legend all fully visible). Pinned-venv `mkdocs build` (mkdocs-material 9.7.6, fresh
+venv) → `site_smoke.py` returned exactly the 1 KNOWN pre-existing `/Users/` prose leak
+in `docs/current/{frontend,qa,operations,data}` (out of scope, owned by re-review per
+F1/F2/F3 notes); no graph/renderer/guard/landing assertion failed. Full write-up:
+`slices/P6.F4/result.md`.
+
+**Lesson (reinforces P6.F2's):** the graph page's `:has(.kb-graph)`-scoped rule stack
+in §10b now has a second confirmed CSS-specificity trap (the first was `[hidden]` vs.
+overlay `display` rules in P6.F2 §10c) — whenever one selector's declaration is meant
+to be overridden/extended by a later, more-specific selector, verify the *value*
+carries forward everything the earlier rule needed (here, `margin-left`), not just
+what the later rule intended to change (here, top/bottom `margin`). A CDP geometry
+probe (launch/measure/kill headless Chrome, assert bounding-rect JSON + screenshot) is
+now a repeatable tool for this class of overlay/layout bug.
+
 ## Constraints
 
 Binding, mostly enforced by `scripts/site_smoke.py` (runs in CI `pages.yml` after `mkdocs build`, before deploy):
@@ -460,6 +497,12 @@ Running list of durable-truth changes for the REVIEW slice to consolidate into d
 - `frontend` (P6.F3): renderer-only change — retuned sim constants, deterministic
   smarter seeding (no randomness invariant kept), sessionStorage persistence keyed by a
   corpus signature with try/catch-silent storage access; settle skipped on restore.
+- `qa` (P6.F4): second §10 specificity defeat found by operator browser QA (after F2's
+  `[hidden]`) — `.md-typeset > .kb-graph { margin: 0 }` killed the full-bleed
+  `margin-left: calc(50% − 50vw)`, offsetting the map box right by (viewport−1220)/2 and
+  clipping the info panel and zoom stack off-screen on wide displays; fixed by carrying
+  the breakout margin on the higher-specificity rule. CDP probe (headless Chrome
+  geometry assertions + screenshots) added to the QA toolkit for overlay/layout checks.
 
 ## Open Questions
 
