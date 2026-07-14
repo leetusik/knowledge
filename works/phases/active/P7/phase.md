@@ -364,6 +364,63 @@ Additional durable findings:
   down, image + temp dirs removed); `workflow.py validate` passed; `plugin_parity.py` still
   PASS (adding a skill does not touch shipped_dirs/manifest).
 
+### P7.F1 landed (2026-07-14) — write path auto-creates the project landing; S6 reproducer now green
+
+- **The gap S6 found is closed.** The API write path and both explain-skill fallback
+  branches created the dated doc + Recent bullet but never `docs/<project>/index.md`;
+  `site_smoke.check_built` requires `site/<project>/index.html` for every project
+  `discover_projects` finds, and mkdocs `navigation.indexes` does not synthesize one.
+  A scaffold user documenting a SECOND project would fail their next Pages deploy gate.
+- **The fix — the API owns it.** New `server/documents.py` helpers
+  `project_landing_content(project)` + `ensure_project_landing(docs_root, project) -> bool`.
+  `create_document` (`server/main.py`) calls `ensure_project_landing` inside the
+  WRITE_LOCK right after `write_document_file`; when it returns `True` (landing was
+  absent → created) the scoped commit stages a THIRD path `docs/<project>/index.md`
+  (else the commit stays the usual 2 paths). Existing landings — hand-written or
+  previously auto-created — are NEVER overwritten. New 201 response field
+  `landing_created: bool` (symmetric to `recent_updated`) makes the side effect
+  observable/testable.
+- **The exact minimal landing content (byte-for-byte):**
+
+      # <project>
+
+      Explainers about `<project>`, kept in this knowledge base.
+
+  H1 = project name, one-line description, and **no YAML frontmatter / no `source:`
+  mapping** — so it stays a *non-doc*: `index.md` is on `graph_hook`'s `_SKIP_NAMES`,
+  excluded from `discover_projects` doc-counting, and excluded from `check_graph`'s
+  `fs_count`. It exists only to produce the per-project `site/<project>/index.html`.
+- **DELETE-path reasoning (confirmed in code, no cleanup added):** deleting a
+  project's last doc leaves the auto-landing behind, but a project dir with only
+  `index.md` has zero countable docs → `discover_projects` (needs ≥1 non-`index.md`
+  `*.md`) no longer lists it, while mkdocs still builds its landing page → the gate is
+  unaffected. No delete-side cleanup is warranted (`_delete_document` unchanged).
+- **Parity mirror set (byte-identical):** `server/documents.py`, `server/main.py`,
+  `tests/test_api_write.py` copied to `plugin/templates/kb/...`; `plugin_parity.py`
+  green. `test_api_write.py` gained 3 landing cases (first-doc creates + 3-path commit;
+  second-doc leaves it untouched → 2-path commit; existing hand-written landing never
+  overwritten) and the happy-path scoped-commit assertion was updated to the
+  now-correct 3 paths (its `test-project` is a fresh project → first doc creates it).
+- **Explain-skill ensure-landing step (fallback branch only):** added identically to
+  all THREE repo copies — `plugin/skills/explain/SKILL.md` (shipped, step 6),
+  `.claude/skills/explain/SKILL.md` and `.agents/skills/explain/SKILL.md` (kept
+  body-identical; they differ only in frontmatter lines 4–5). The step writes the same
+  minimal landing when `docs/<project>/index.md` is missing (never overwriting); the
+  fallback's `git add -A` picks it up. The API branch needs nothing (the server does
+  it). Bootstrap repo untouched (constraint stands). `plugin.json` kept at 0.1.0.
+- **Reproducer, now PASSING (was S6's FAIL).** Rendered a non-operator scaffold (ports
+  9765/9766, TZ America/New_York, date 2026-07-14), git-committed it, then drove the
+  SCAFFOLD's own byte-identical server code via FastAPI `TestClient` (imported from the
+  scaffold path — binds NO ports, so the live KB on 8765/8766 is provably untouched) to
+  POST a doc into a NEW project `field-notes`: 201, `landing_created=True`,
+  `docs/field-notes/index.md` auto-created and in the 3-path scoped commit, `source_repo`
+  sanitized to basename (no `/Users/` leak). Then
+  `docker run --rm -v <scaffold>:/docs squidfunk/mkdocs-material:9.7.6 build` →
+  `site/field-notes/index.html` built → `site_smoke.py --root <scaffold>` → **PASS**
+  (2 projects / 2 docs), no `/Users/` leak in built HTML. Operator-repo gate re-run
+  unchanged (mkdocs build + `site_smoke.py` → PASS). All temp artifacts torn down;
+  no leftover repro containers; live KB untouched.
+
 ## Constraints
 
 - **License:** MIT (operator decision 2026-07-14) — root `LICENSE` + `license: "MIT"` in
@@ -437,6 +494,9 @@ lands._
 - security — local-only fallback rule (no file writes for remote KBs), token via config file/env only, dropped path-scoped git allowed-tool in favor of prompted fallback. [S4]
 - operations — /knowledge:setup flow: interview → render → marker → git init → config (600) → compose up/healthz or no-Docker path → Pages go-live checklist; re-run = reconfigure/re-render/abort via .kb-scaffold.json marker. [S5]
 - security — setup never collects/writes secrets (Gemini via host env only; config chmod 600; token null by default); refuses unmarked non-empty targets. [S5]
+- backend — write path auto-creates a minimal `docs/<project>/index.md` for a project's first document (never overwrites; joins the scoped commit); keeps every project satisfying the per-project deploy-gate invariant. [F1]
+- api — POST /api/documents side effect documented: first doc of a new project also creates the project landing (new response field `landing_created: bool`); the explain skills' fallback branches ensure the same landing when the API is unreachable. [F1]
+- qa — deploy-gate invariant (`site/<project>/index.html` per project) now holds for API- and fallback-written projects, proven by the S6 reproducer (render → POST into a new project → mkdocs build → `site_smoke.py` PASS on the grown corpus). [F1]
 
 ## Open Questions
 

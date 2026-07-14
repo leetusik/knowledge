@@ -144,6 +144,16 @@ API would have done:
         repo: <absolute path to the current repo root>
       ---
 
+- Ensure the project landing exists — mkdocs builds `site/<project>/index.html`
+  from it, and the site deploy gate requires one per project. If
+  `~/projects/personal/knowledge/docs/<project>/index.md` is **missing**, create
+  it with this minimal content (an H1 and a one-liner, **no** YAML frontmatter).
+  NEVER overwrite an existing landing:
+
+      # <project>
+
+      Explainers about `<project>`, kept in this knowledge base.
+
 - In `~/projects/personal/knowledge/docs/index.md`, insert on a new line
   directly after the `<!-- explain:recent -->` marker:
 

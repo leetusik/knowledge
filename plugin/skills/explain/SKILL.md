@@ -235,6 +235,16 @@ Only after a transport failure in step 5 (curl exit ≠ 0):
         repo: <absolute path to the current repo root>
       ---
 
+- Ensure the project landing exists — mkdocs builds `site/<project>/index.html`
+  from it, and the site deploy gate requires one per project. If
+  `<KB_ROOT>/docs/<project>/index.md` is **missing**, create it with this minimal
+  content (an H1 and a one-liner, **no** YAML frontmatter). NEVER overwrite an
+  existing landing:
+
+      # <project>
+
+      Explainers about `<project>`, kept in this knowledge base.
+
 - In `<KB_ROOT>/docs/index.md`, insert on a new line directly after the
   `<!-- explain:recent -->` marker:
 

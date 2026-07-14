@@ -1,0 +1,31 @@
+{
+  "id": "P7.F1",
+  "phase_id": "P7",
+  "name": "Write path auto-creates project landing index.md — second-project docs break the scaffold deploy gate (S6 E2E)",
+  "kind": "fix",
+  "status": "done",
+  "order": 5.5,
+  "depends_on": [],
+  "created_at": "2026-07-14T15:48:10+09:00",
+  "started_at": "2026-07-14T15:48:10+09:00",
+  "completed_at": "2026-07-14T16:01:30+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

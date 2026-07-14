@@ -198,3 +198,8 @@
 {"ts": "2026-07-14T15:19:01+09:00", "type": "slice_status_changed", "slice": "P7.S4", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-14T15:19:12+09:00", "type": "slice_status_changed", "slice": "P7.S5", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-14T15:30:45+09:00", "type": "slice_status_changed", "slice": "P7.S5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-14T15:30:45+09:00", "type": "slice_status_changed", "slice": "P7.S6", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T15:48:10+09:00", "type": "slice_status_changed", "slice": "P7.S6", "old_status": "in_progress", "new_status": "todo"}
+{"ts": "2026-07-14T15:48:10+09:00", "type": "slice_created", "phase": "P7", "slice": "P7.F1"}
+{"ts": "2026-07-14T15:48:10+09:00", "type": "slice_status_changed", "slice": "P7.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-14T16:01:30+09:00", "type": "slice_status_changed", "slice": "P7.F1", "old_status": "in_progress", "new_status": "done"}

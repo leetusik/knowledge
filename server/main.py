@@ -258,6 +258,12 @@ def create_document(
             body=body.markdown,
             related=related,
         )
+        # Auto-create the project landing on a project's first document, so mkdocs
+        # builds site/<project>/index.html and the deploy gate stays green. Never
+        # overwrites an existing (hand-written or auto) landing.
+        landing_created = documents_mod.ensure_project_landing(
+            config.docs_root(), project
+        )
         recent_updated = documents_mod.update_recent_index(
             config.docs_root(),
             date=date,
@@ -285,9 +291,12 @@ def create_document(
         commit_error = None
         if body.commit and config.git_commit_enabled():
             try:
-                gitops.add(
-                    [f"docs/{rel}", "docs/index.md"], root=config.kb_root()
-                )
+                staged = [f"docs/{rel}", "docs/index.md"]
+                if landing_created:
+                    # Only staged when this write created it — keeps the scoped
+                    # commit to exactly the paths this write touched.
+                    staged.append(f"docs/{project}/index.md")
+                gitops.add(staged, root=config.kb_root())
                 commit_sha = gitops.commit(
                     f"docs({project}): add {slug}",
                     root=config.kb_root(),
@@ -333,6 +342,7 @@ def create_document(
         "tags": tags,
         "related": related,
         "recent_updated": recent_updated,
+        "landing_created": landing_created,
         "committed": committed,
         "commit_sha": commit_sha,
     }

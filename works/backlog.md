@@ -10,7 +10,7 @@
 - Next slice: `P7.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `0`
-- Rebuilt at: `2026-07-14T15:30:45+09:00`
+- Rebuilt at: `2026-07-14T16:01:30+09:00`
 
 ## Active Phases
 
@@ -103,6 +103,7 @@
 | [x] `P7.S3` | `done` | Template payload, renderer, parity guard | `implementation` | `works/phases/active/P7/slices/P7.S3` |
 | [x] `P7.S4` | `done` | Shipped explain skill | `implementation` | `works/phases/active/P7/slices/P7.S4` |
 | [x] `P7.S5` | `done` | Setup skill | `implementation` | `works/phases/active/P7/slices/P7.S5` |
+| [x] `P7.F1` | `done` | Write path auto-creates project landing index.md — second-project docs break the scaffold deploy gate (S6 E2E) | `fix` | `works/phases/active/P7/slices/P7.F1` |
 | [ ] `P7.S6` | `todo` | E2E install test + docs | `implementation` | `works/phases/active/P7/slices/P7.S6` |
 | [ ] `P7.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P7/slices/P7.REVIEW` |
 
