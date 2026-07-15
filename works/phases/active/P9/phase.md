@@ -464,6 +464,19 @@ can mint the key + create the secrets. Static-validated only. Notes for S5 + REV
   **one deliberate exception** (its private half *must* reach a GH secret): a minimal, controlled transit
   (`umask 077` tempdir → one `gh secret set`, client-side-encrypted → `.pub` to box → shred), not a
   free-for-all. No silent self-contradiction left.
+- **Provisioning EXECUTED by the orchestrator (operator-authorized "just do it", box access via `ssh
+  oracle-cloud`), 2026-07-15 — the `pending` gate is satisfied by real provisioning, not a paper
+  handoff.** Ran the §2b discipline exactly: minted the dedicated `knowledge-gha-runner@box` ed25519
+  (passphrase-less) in a `umask 077` tempdir; pinned `ssh-keyscan 140.245.64.173` and re-verified its
+  ed25519 fingerprint == the box's ground truth `SHA256:UC+RXfEH3m1BFIvCwvrzlZvybwUcEn04mawtPrAGB2Q`;
+  **appended** the `.pub` (authorized_keys 1→2 keys — the pre-existing shared `ssh-key-2025-05-08` left
+  intact); set `ORACLE_SSH_PRIVATE_KEY` + `ORACLE_SSH_KNOWN_HOSTS` on `leetusik/knowledge`
+  (`ORACLE_SSH_PASSPHRASE` unset); shredded the tempdir (private half now lives **only** in the GH
+  secret; nothing sensitive touched any transcript). **Critically, the new key was proven to authenticate
+  under the driver's exact flags** (`ssh -i <key> -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o
+  UserKnownHostsFile=<pinned>` → `NEWKEY_AUTH_OK as opc@…`). **For S5:** the three-secret precondition is
+  met and the runner→`opc@box` SSH-auth leg is already de-risked (proven live) — S5's remaining unknowns
+  are the in-container git reconcile (F1), both-service health, two-location routing, and fresh-on-write.
 - **Label-echo observation (for REVIEW):** §2 already uses inline bold sub-steps `2a./2b./2c.`; the new
   top-level `## 2b` heading (the plan's explicit name) visually echoes §2's inline `2b.`. Not a
   cross-reference ambiguity (no "§2b" reference in the file points at §2's inline step — all point at the
