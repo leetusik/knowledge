@@ -8,9 +8,9 @@
 - Current phase: `P9`
 - Current slice: `P9.S4`
 - Next slice: `P9.S5`
-- Waiting on operator: `none`
+- Waiting on operator: `P9.S4`
 - Open deferred jobs: `2`
-- Rebuilt at: `2026-07-15T11:27:56+09:00`
+- Rebuilt at: `2026-07-15T11:45:28+09:00`
 
 ## Active Phases
 
@@ -131,6 +131,6 @@
 | [x] `P9.S2` | `done` | On-box deploy: reconcile + redeploy both services + edge re-apply | `implementation` | `works/phases/active/P9/slices/P9.S2` |
 | [x] `P9.S3` | `done` | GHA driver + Production Deploy workflow | `implementation` | `works/phases/active/P9/slices/P9.S3` |
 | [x] `P9.F1` | `done` | Gate hardening: delegate fetch + ancestor-verify to the in-container reconcile | `fix` | `works/phases/active/P9/slices/P9.F1` |
-| [ ] `P9.S4` | `todo` | Runner SSH-key provisioning runbook + operator gate | `implementation` | `works/phases/active/P9/slices/P9.S4` |
+| [~] `P9.S4` | `pending` | Runner SSH-key provisioning runbook + operator gate | `implementation` | `works/phases/active/P9/slices/P9.S4` |
 | [ ] `P9.S5` | `todo` | E2E acceptance (real dispatch) | `implementation` | `works/phases/active/P9/slices/P9.S5` |
 | [ ] `P9.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P9/slices/P9.REVIEW` |

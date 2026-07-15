@@ -434,6 +434,49 @@ Fixed the **top S5 risk** S3 flagged: `oracle-production-deploy-remote.sh`'s aut
 - **Static validation, all pass:** `bash -n` both scripts; `plugin_parity.py` PASS (deploy files not in the
   manifest); `workflow.py validate` PASS. `shellcheck` not installed in this env.
 
+### S4 findings — runner SSH-key provisioning runbook + operator gate (authored 2026-07-15, docs-only, `needs_operator`)
+
+Extended `deploy/SECRETS.md` with the net-new **GHA runner → `opc@box`** SSH-key provisioning discipline
+(§G option b: a *dedicated* key, mint-from-scratch, not a reuse of hi2vi's). **One file** changed
+(`deploy/SECRETS.md`); no box SSH, no `gh`, no dispatch. Returned `needs_operator` — only the operator
+can mint the key + create the secrets. Static-validated only. Notes for S5 + REVIEW:
+
+- **Secret contract confirmed against the driver** (`deploy/github-actions-production-deploy.sh`):
+  `ORACLE_SSH_PRIVATE_KEY` **required** (l.65) + `ORACLE_SSH_KNOWN_HOSTS` **required** (l.66) — both must
+  exist or the runner `die`s before connecting; `ORACLE_SSH_PASSPHRASE` **optional** (empty ⇒
+  passphrase-less path, l.23/89-99). Box coords `opc@140.245.64.173:22` (driver defaults l.17-19). The
+  runbook's three secret names match the driver exactly, so **S5's dispatch just needs these three set**.
+- **Two-credentials crux, encoded hard:** new `## 2b` opens with a "This is NOT the §2 key" table
+  (direction / stored-as / born / comment-tag) + "P9 provisions §2b only." §2 (the P8 container→GitHub
+  deploy key `knowledge-api@oci`, born on the box at `/opt/knowledge-secrets/knowledge_deploy_key`) is
+  **untouched** — no content or path of §2 changed. §2b's comment tag is `knowledge-gha-runner@box`.
+- **Mint/register discipline (dedicated, from scratch):** `ssh-keygen -t ed25519 -N ''` into a `umask
+  077` `mktemp -d` on the operator's machine → private half piped **once** into `gh secret set < file`
+  (never displayed) → `.pub` **appended** to `~opc/.ssh/authorized_keys` (`>>`, never overwrite — hi2vi's
+  runner key on the same `opc` account survives) → host key `ssh-keyscan`'d and **verified out-of-band**
+  against the box's `/etc/ssh/ssh_host_ed25519_key.pub` fingerprint (defeats scan-time MITM; why
+  `StrictHostKeyChecking=yes` is safe) → tempdir **shredded**. Dedicated = blast-radius isolation
+  (rotate/revoke this key's `authorized_keys` line + its secret without touching hi2vi); it is isolation,
+  **not** a forced-command lock (the driver `scp`s + runs a script, so a command restriction isn't
+  applicable — noted in the runbook).
+- **Honest intro-invariant fix:** the file's "no secret value ever transits a laptop / both generated on
+  the box" claim was refined — it still holds for §1 (token) + §2 (push key), but the runner key is the
+  **one deliberate exception** (its private half *must* reach a GH secret): a minimal, controlled transit
+  (`umask 077` tempdir → one `gh secret set`, client-side-encrypted → `.pub` to box → shred), not a
+  free-for-all. No silent self-contradiction left.
+- **Label-echo observation (for REVIEW):** §2 already uses inline bold sub-steps `2a./2b./2c.`; the new
+  top-level `## 2b` heading (the plan's explicit name) visually echoes §2's inline `2b.`. Not a
+  cross-reference ambiguity (no "§2b" reference in the file points at §2's inline step — all point at the
+  new heading), and the plan forbids touching §2, so I kept the plan's naming. REVIEW may optionally
+  renumber §2's inline steps.
+- **For S5:** the dispatch is blocked until the operator completes the §2b to-do (mint + 3 secrets + `.pub`
+  append + OOB host-key verify + shred). Once done, S5 can `workflow_dispatch` the `Production Deploy`
+  action; the runner will authenticate to `opc@140.245.64.173` with `ORACLE_SSH_PRIVATE_KEY` against the
+  pinned `ORACLE_SSH_KNOWN_HOSTS`.
+- **Static validation:** `python3 scripts/plugin_parity.py` PASS (`SECRETS.md` not in the manifest → zero
+  parity impact); `python3 scripts/workflow.py validate` PASS; markdown internal-consistency read-through
+  PASS.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -507,6 +550,17 @@ durable truth — do **not** version docs per slice._
   git into `deploy.sh`'s root container** because the opc-side fetch can't authenticate against the SSH
   origin / root-owned publish-on-write clone — the knowledge divergence from hi2vi's opc-side fetch).
   Nothing versioned this slice.
+- **S4 realized (2026-07-15)** the runner-key provisioning discipline in the repo doc `deploy/SECRETS.md`
+  (§2b + §5 bullet + intro-invariant fix) — a **repo doc, not** a `docs/current/*` durable doc, so nothing
+  is versioned here. For **REVIEW → `security.md`**: add the **GHA runner → `opc@box` SSH-key credential**
+  (three `leetusik/knowledge` Actions secrets `ORACLE_SSH_PRIVATE_KEY` / `ORACLE_SSH_KNOWN_HOSTS` /
+  optional `ORACLE_SSH_PASSPHRASE`; dedicated ed25519, `knowledge-gha-runner@box`, `.pub` on `opc`'s
+  `authorized_keys`), kept **distinct** from the P8 container→GitHub deploy key `knowledge-api@oci-box`
+  (`/opt/knowledge-secrets/knowledge_deploy_key`, born on the box) — the two-credentials distinction is
+  the load-bearing security note. Also note the deliberate secret-transit exception for the runner key
+  (private half minted in a `umask 077` tempdir → piped once into `gh secret set` → shredded), which
+  refines `security.md`'s "secrets are box-born-and-never-leave" premise. `decisions.md` already carries
+  the "dedicated runner key (§G)" ADR from DECOMP's list. Nothing versioned this slice.
 
 ## Open Questions
 

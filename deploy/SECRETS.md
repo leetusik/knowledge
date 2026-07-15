@@ -4,12 +4,17 @@ Operator runbook for the secrets + DNS that `https://knowledge.hi2vi.com` needs.
 This is the "**produce the credentials and register them**" half;
 [`README.md`](README.md) is the "**place them and bring the box up**" half.
 
-> **No secret values ever live in this repo**, and — the rule this runbook is built
-> around — **no secret value ever transits a laptop, a chat, or a terminal
-> transcript.** Both the bearer token and the git push key are **generated on the
-> box**, straight into their final location. Only *public* halves and *names/paths*
-> ever leave it. Placement paths below are the exact ones `compose.prod.yml` mounts
-> — don't change them without editing that file.
+> **No secret values ever live in this repo.** For the bearer token (§1) and the git
+> push key (§2), the stronger rule also holds: **no value ever transits a laptop, a
+> chat, or a terminal transcript** — both are **generated on the box**, straight into
+> their final location, and only *public* halves and *names/paths* ever leave it.
+> **One deliberate exception — the GHA runner key (§2b)**, which *cannot* be box-born
+> because its *private* half must reach a GitHub Actions secret. It is minted in a
+> `umask 077` tempdir on the operator's trusted machine, piped **once** into
+> `gh secret set` (which encrypts it client-side, in flight), its `.pub` pushed to the
+> box, and the tempdir then shredded — a minimal, controlled transit, never a paste or
+> a transcript. Placement paths below are the exact ones `compose.prod.yml` mounts —
+> don't change them without editing that file.
 
 Work top to bottom; tick the **handoff checklist** (§5) when done.
 
@@ -89,6 +94,108 @@ Host-key pinning (`ssh-keyscan` → `/opt/knowledge-secrets/known_hosts`) is
 
 ---
 
+## 2b. GHA runner → `opc@box` SSH key — the production-deploy credential (P9)
+
+The automated **Production Deploy** GitHub Action (`.github/workflows/deploy-production.yml`) SSHes
+from the runner into `opc@140.245.64.173` to run the on-box deploy. Its driver,
+[`github-actions-production-deploy.sh`](github-actions-production-deploy.sh), reads **three repo
+secrets** on `leetusik/knowledge`:
+
+- **`ORACLE_SSH_PRIVATE_KEY`** — **required**. The full OpenSSH **private** key (the entire
+  `BEGIN…END` block). Written to a `umask 077` tempfile and used with `-i … -o IdentitiesOnly=yes`.
+- **`ORACLE_SSH_KNOWN_HOSTS`** — **required**. The box's real host-key line(s), keyed on
+  `140.245.64.173` (port 22 → bare-host form). Consumed under
+  `-o StrictHostKeyChecking=yes -o UserKnownHostsFile=<pinned>`, so a wrong or empty value makes
+  **every** SSH fail closed.
+- **`ORACLE_SSH_PASSPHRASE`** — **optional**. Used only if non-empty (then the driver spins up
+  `ssh-agent` + askpass). A passphrase-less key leaves this **unset**.
+
+> **This is NOT the §2 key.** They are two different credentials pointing in opposite directions;
+> conflating them is the classic footgun here (and P8 already saw a key leak). Side by side:
+>
+> | | §2 container deploy key | §2b runner key (this section) |
+> |---|---|---|
+> | direction | box container → GitHub (git push) | GHA runner → `opc@box` (SSH login) |
+> | stored as | GitHub **deploy key** + box file `/opt/knowledge-secrets/knowledge_deploy_key` | GitHub **Actions secrets** (`ORACLE_SSH_*`) + a line in `opc`'s `authorized_keys` |
+> | born | on the box, never leaves | in a locked tempdir on the operator's machine (must reach a GH secret) |
+> | comment tag | `knowledge-api@oci` | `knowledge-gha-runner@box` |
+>
+> **P9 provisions §2b only.** It never mints, moves, reads, or re-registers the §2 key — the box's
+> root-owned `/opt/knowledge-secrets/knowledge_deploy_key` (and its GitHub deploy-key registration)
+> is left completely untouched.
+
+**2b-i. Mint a dedicated, passphrase-less key** (least-privilege; a dedicated key can be
+rotated/revoked without disturbing hi2vi's deploy). Do this **on the operator's machine** — the one
+that already has `gh` authenticated to `leetusik/knowledge` **and** SSH access to the box:
+
+```bash
+umask 077
+tmp="$(mktemp -d)"                       # 0700 dir; holds the PRIVATE half only transiently
+ssh-keygen -t ed25519 -N '' -C 'knowledge-gha-runner@box' -f "$tmp/knowledge_gha_runner"
+#  -> $tmp/knowledge_gha_runner       PRIVATE — becomes the ORACLE_SSH_PRIVATE_KEY secret, then shredded
+#  -> $tmp/knowledge_gha_runner.pub   PUBLIC  — appended to opc's authorized_keys (2b-iii)
+```
+
+`-N ''` mints it **passphrase-less** — the recommended default for an unattended runner, since the
+private half is already an access-controlled GitHub secret. To use a passphrase instead, replace
+`-N ''` with `-N '<passphrase>'` and also set `ORACLE_SSH_PASSPHRASE` in 2b-ii.
+
+**2b-ii. Set the three secrets on `leetusik/knowledge`**, piping the private half **straight in** — it
+is never displayed, pasted, or written outside the tempdir:
+
+```bash
+gh secret set ORACLE_SSH_PRIVATE_KEY -R leetusik/knowledge < "$tmp/knowledge_gha_runner"
+
+# Pin the box's host key. VERIFY it out-of-band before trusting it (2b-iv).
+ssh-keyscan -p 22 140.245.64.173 | tee "$tmp/known_hosts"
+gh secret set ORACLE_SSH_KNOWN_HOSTS -R leetusik/knowledge < "$tmp/known_hosts"
+
+# ORACLE_SSH_PASSPHRASE — set ONLY if you minted the key WITH a passphrase; otherwise leave it
+# unset (the driver treats empty/absent as passphrase-less):
+# gh secret set ORACLE_SSH_PASSPHRASE -R leetusik/knowledge     # then type the passphrase at the prompt
+```
+
+Or the web UI: `leetusik/knowledge` → **Settings** → **Secrets and variables** → **Actions** → **New
+repository secret**. The driver `require_env`s the first two, so **both must exist** or the deploy dies
+before it connects; the passphrase secret may be absent.
+
+**2b-iii. Authorize the PUBLIC half on the box — append, never overwrite.** hi2vi's runner key lives on
+this same `opc` account and must survive:
+
+```bash
+ssh-copy-id -i "$tmp/knowledge_gha_runner.pub" opc@140.245.64.173
+#   ssh-copy-id APPENDS and fixes perms; it never clobbers existing keys. Equivalent manual form,
+#   run ON the box, is strictly append (note the >>):
+#     cat >> ~/.ssh/authorized_keys      # paste the single knowledge_gha_runner.pub line, then Ctrl-D
+#     chmod 600 ~/.ssh/authorized_keys
+```
+
+> A **dedicated line** is the whole point of "dedicated": this key can later be rotated or revoked by
+> deleting **just its line** from `~opc/.ssh/authorized_keys` and rotating the `ORACLE_SSH_*` secrets —
+> hi2vi's deploy on the same account is never touched (blast-radius isolation). It is isolation, **not**
+> command restriction: the driver `scp`s a script and then runs it, so an `authorized_keys`
+> forced-command lock isn't applicable here.
+
+**2b-iv. Verify the pinned host key out-of-band.** `ssh-keyscan` trusts whatever answers at scan time,
+so confirm its fingerprint against the box's real host key from an **already-trusted** session before
+relying on it — otherwise a scan-time MITM could pin an attacker's key:
+
+```bash
+ssh-keygen -lf "$tmp/known_hosts"                                          # what you just scanned
+ssh opc@140.245.64.173 'ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub'  # ground truth on the box
+# The fingerprints MUST match. This is exactly what makes StrictHostKeyChecking=yes safe in the driver.
+```
+
+**2b-v. Shred the tempdir.** The private half exists only transiently — destroy it as soon as the
+secret is set and the `.pub` is authorized:
+
+```bash
+shred -u "$tmp"/knowledge_gha_runner* 2>/dev/null || true   # (rm -P on macOS)
+rm -rf "$tmp"
+```
+
+---
+
 ## 3. Cloudflare DNS + origin TLS — **both already done, nothing to provision**
 
 **3a. DNS — done.** The proxied `knowledge` record exists on the `hi2vi.com` zone;
@@ -140,6 +247,10 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
 - [ ] **SSH deploy key** generated **on the box** at
       `/opt/knowledge-secrets/knowledge_deploy_key` (ed25519, no passphrase, chmod
       600); **public** half registered on `leetusik/knowledge` **with write access**.
+- [ ] **GHA runner key** (§2b) minted (dedicated, ed25519), `.pub` appended to
+      `~opc/.ssh/authorized_keys` (hi2vi's key left intact), and the three
+      `ORACLE_SSH_*` secrets set on `leetusik/knowledge` — gates the automated
+      **Production Deploy** action (P9), not the initial hand bring-up.
 - [ ] **`KB_API_TOKEN`** — will be generated in place at `README.md` §1c (nothing to
       do in advance); afterwards, hand the value to the hi2vi side as
       `KNOWLEDGE_API_TOKEN`.
