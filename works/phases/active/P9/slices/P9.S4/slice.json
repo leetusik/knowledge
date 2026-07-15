@@ -3,11 +3,11 @@
   "phase_id": "P9",
   "name": "Runner SSH-key provisioning runbook + operator gate",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 4,
   "depends_on": [],
   "created_at": "2026-07-15T09:58:28+09:00",
-  "started_at": null,
+  "started_at": "2026-07-15T11:36:55+09:00",
   "completed_at": null,
   "risk": "medium",
   "source": {
