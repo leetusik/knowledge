@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Runs ON the shared Oracle box (shipped + invoked by github-actions-production-deploy.sh, P9.S3). This
-# is the AUTHORITATIVE gate: it refuses a dirty tracked worktree, fetches origin/main, verifies the
-# target SHA is an ancestor of fetched origin/main, hands off to knowledge's OWN deploy/deploy.sh (which
-# owns the publish-on-write reconcile + both-service build + health-gate; see phase.md §E/§F), THEN
-# re-applies the edge vhost (deploy/knowledge.conf -> /home/opc/edge, the edge's own nginx -t gate +
-# graceful reload), and collects artifacts. Mirrors hi2vi_web/deploy/oracle-production-deploy-remote.sh
-# for the knowledge checkout, with two knowledge specifics: the git checks pass `-c safe.directory`
-# (the box clone's .git objects are root-owned — the api container commits as uid 0), and the edge
-# re-apply is layered on after a healthy deploy (hi2vi has no edge step here). This helper does NOT
-# itself check out — deploy/deploy.sh reconciles on `main`, never detaching. First real run is P9.S5.
+# Runs ON the shared Oracle box as `opc` (shipped + invoked by github-actions-production-deploy.sh,
+# P9.S3). This is the opc-safe ORCHESTRATION layer, NOT the authoritative git gate: it asserts its
+# inputs (TARGET_SHA is a 40-hex SHA, REPO_PATH is a git checkout), hands off to knowledge's OWN
+# deploy/deploy.sh — which owns ALL authoritative git INSIDE its one-shot root container (on-`main`
+# check + dirty-tracked-worktree refusal + .git/index.lock wait + `git fetch --prune origin main` +
+# fail-closed TARGET_SHA ancestor-verify + publish-on-write ff/rebase reconcile, then both-service
+# build + health-gate; see phase.md §E/§F) — THEN re-applies the edge vhost (deploy/knowledge.conf ->
+# /home/opc/edge, the edge's own nginx -t gate + graceful reload), and collects artifacts.
+#
+# Why no git gate here (P9.F1): the authoritative fetch + ancestor-verify CANNOT run as `opc`. `origin`
+# is an SSH remote whose deploy key is root-owned/unreadable by opc, and opc has no GitHub key, so an
+# opc-side `git fetch` dies before it can authenticate. deploy.sh runs that fetch + fail-closed
+# ancestor-verify inside its one-shot root container (deploy key via GIT_SSH_COMMAND + baked
+# safe.directory), so deploy.sh is the SOLE authoritative git path. The only git left in THIS helper is
+# best-effort `git status` artifact capture (git-before/git-after), which never fails the deploy.
+#
+# Mirrors hi2vi_web/deploy/oracle-production-deploy-remote.sh for the knowledge checkout, with two
+# knowledge specifics: the edge re-apply is layered on after a healthy deploy (hi2vi has no edge step
+# here), and — unlike hi2vi, whose opc-side fetch works because its clone is not a root-committing
+# publish-on-write clone — knowledge relocates ALL authoritative git into deploy.sh's root container.
+# This helper does NOT itself check out — deploy/deploy.sh reconciles on `main`, never detaching. First
+# real run is P9.S5.
 
 TARGET_SHA="${TARGET_SHA:-}"
 REPO_PATH="${REPO_PATH:-/opt/knowledge}"
@@ -20,8 +32,10 @@ EDGE_DIR="${EDGE_DIR:-/home/opc/edge}"        # the dedicated edge project (conf
 EDGE_VHOST="${EDGE_VHOST:-knowledge.conf}"    # the vhost filename in deploy/ and in the edge's conf.d/
 
 # The box clone is opc-owned but its .git objects are root-owned (the api container commits as uid 0),
-# so a bare `git` as opc can trip "detected dubious ownership". These are READ-ONLY ref reads (loose
-# objects are world-readable), so `-c safe.directory=$REPO_PATH` is enough and never mutates config.
+# so a bare `git` as opc can trip "detected dubious ownership". `-c safe.directory=$REPO_PATH` quiets
+# that ownership check and never mutates config. NB (P9.F1): this git is used ONLY for the best-effort,
+# non-fatal `git status` artifact captures below (git-before/git-after) — no authoritative git runs as
+# opc anymore. The authoritative fetch + ancestor-verify live inside deploy.sh's root container.
 GIT=(git -c "safe.directory=${REPO_PATH}")
 
 SUMMARY_FILE=""
@@ -42,10 +56,12 @@ append_summary() {
 }
 
 run_capture() {
+  # Best-effort artifact capture only (git-before/git-after status). NEVER fails the deploy: `|| true`
+  # so a git status that trips on the root-owned index (P9.F1) still can't abort the run.
   local label="$1"
   shift
   log "+ $*"
-  "$@" > "${REMOTE_ARTIFACT_DIR}/${label}.txt" 2>&1
+  "$@" > "${REMOTE_ARTIFACT_DIR}/${label}.txt" 2>&1 || true
 }
 
 collect_status() {
@@ -93,25 +109,14 @@ main() {
 
   run_capture "git-before" "${GIT[@]}" status --short --branch
 
-  # Refuse a mid-write (dirty TRACKED tree = a doc write in progress). An ahead/unpushed CLEAN tree passes
-  # — the box clone is also the publish-on-write clone, so ahead/unpushed is normal, not an error.
-  if ! "${GIT[@]}" diff --quiet || ! "${GIT[@]}" diff --cached --quiet; then
-    "${GIT[@]}" status --short > "${REMOTE_ARTIFACT_DIR}/dirty-tracked-worktree.txt" 2>&1 || true
-    append_summary "- Result: failed before deploy because tracked changes were present."
-    die "tracked production checkout has local changes; refusing to deploy"
-  fi
-
-  log "Fetching origin main."
-  if ! "${GIT[@]}" fetch --prune origin main > "${REMOTE_ARTIFACT_DIR}/git-fetch.txt" 2>&1; then
-    append_summary "- Result: failed while fetching \`origin/main\`."
-    cat "${REMOTE_ARTIFACT_DIR}/git-fetch.txt" >&2 || true
-    die "failed to fetch origin/main"
-  fi
-  fetched_main_sha="$("${GIT[@]}" rev-parse --verify "FETCH_HEAD^{commit}" 2>/dev/null)" || die "FETCH_HEAD is not a valid commit after fetching origin main"
-  "${GIT[@]}" cat-file -e "${TARGET_SHA}^{commit}" 2>/dev/null || die "target commit is not available after fetching origin main"
-  "${GIT[@]}" merge-base --is-ancestor "${TARGET_SHA}" "${fetched_main_sha}" || die "target commit is not reachable from fetched origin main"
-
-  log "Running deploy/deploy.sh (knowledge's deploy.sh owns the publish-on-write reconcile + both-service build + health-gate)."
+  # NB (P9.F1): NO authoritative git runs here. deploy/deploy.sh does the on-`main` branch check, the
+  # dirty-tracked-worktree refusal, the `.git/index.lock` wait, the `git fetch --prune origin main`, and
+  # the fail-closed TARGET_SHA ancestor-verify INSIDE its one-shot root container (which holds the deploy
+  # key) — the SOLE authoritative git path. The opc-side dirty-check + fetch + ancestor block that used
+  # to live here was removed: an opc-side fetch cannot authenticate (root-owned deploy key, no opc GitHub
+  # key), so it would fail every deploy. TARGET_SHA is asserted 40-hex above, so deploy.sh's in-container
+  # ancestor gate always fires. The git-before capture above is a best-effort artifact only.
+  log "Running deploy/deploy.sh (owns the authoritative reconcile: on-main check + dirty refusal + .git/index.lock wait + fetch origin/main + fail-closed TARGET_SHA ancestor-verify + ff/rebase, then both-service build + health-gate — all inside one root container)."
   set +e
   deploy/deploy.sh "${TARGET_SHA}" > >(tee "${REMOTE_ARTIFACT_DIR}/deploy-output.txt") \
     2> >(tee "${REMOTE_ARTIFACT_DIR}/deploy-error.txt" >&2)

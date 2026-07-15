@@ -394,6 +394,46 @@ no dispatch, no docker); behavioral proof is **S5**. Three new files, none in th
   path (a fix slice). hi2vi's identical fetch-as-opc works, but hi2vi's clone isn't a root-committing
   publish-on-write clone — this is the knowledge-specific unknown.
 
+### F1 findings — gate hardening: `deploy.sh`'s in-container reconcile is the single git-truth path (done 2026-07-15, author-only, no box impact)
+
+Fixed the **top S5 risk** S3 flagged: `oracle-production-deploy-remote.sh`'s authoritative
+`git fetch --prune origin main` + ancestor-verify ran as **`opc`**, which cannot authenticate
+(`origin` is SSH, deploy key root-owned/unreadable by opc, no opc GitHub key) — so it would kill
+**every** deploy at the gate. The fix is a **net deletion** in the gate + comment-only accuracy edits in
+`deploy.sh`. Static-validated only; behavioral proof is **S5**.
+
+- **The delegation is fully covered — verified before deleting.** `deploy/deploy.sh`'s one-shot **root**
+  reconcile container (which holds the deploy key via `GIT_SSH_COMMAND` + baked `safe.directory`) already
+  does, all fail-closed under `set -eu`: on-`main` branch check (160-164), dirty-tracked refusal (168-172,
+  identical guard to the one removed), `.git/index.lock` wait (177-186), `git fetch --prune origin main`
+  (189), `FETCH_HEAD` rev-parse (190), `cat-file -e $TARGET_SHA` (196-199), `merge-base --is-ancestor`
+  (200-203), and ff/rebase reconcile w/ abort-on-conflict (207-224) — **strictly more** than the gate's
+  removed opc-side checks. The gate asserts `TARGET_SHA` is 40-hex and hands off `deploy/deploy.sh
+  "$TARGET_SHA"`, so the in-container `if [ -n "$TARGET_SHA" ]` ancestor gate **always fires** on a real
+  deploy. Fail-closed safety (non-`main` / dirty / missing-or-non-ancestor SHA / rebase conflict) is
+  **preserved and relocated**, now inside the container before any build — not weakened.
+- **Gate changes:** deleted the opc-side dirty-check gate and the fetch+ancestor block (and the now-unused
+  `fetched_main_sha`); made `run_capture` non-fatal (`|| true`) so the git-before/git-after status
+  artifacts can never abort the deploy; kept the `GIT=(git -c safe.directory=…)` array **only** for those
+  best-effort captures (three call sites, all `git status --short --branch`); rewrote the header from
+  "AUTHORITATIVE gate" to opc-safe **orchestration** with an explicit "why no git gate here" paragraph.
+  Kept the `TARGET_SHA`/`.git` asserts, the `deploy/deploy.sh` handoff, `reapply_edge`, `collect_status`,
+  and the summary unchanged. Only executable git remaining in the gate: the 3 non-fatal status captures.
+- **`deploy.sh` = comment-only (NO logic change, `git diff`-confirmed).** Updated four comments that called
+  the in-container ancestor-verify "only a sanity assert" / pointed to "S3's remote script" as authoritative
+  (the DELIBERATE DIVERGENCE block, the usage line, the `TARGET_SHA=` knob, the reconcile comment above the
+  ancestor branch): after F1 that in-container check **is** the authoritative ancestor gate. The deliberate
+  tip-vs-`TARGET_SHA` divergence note is preserved (box deploys the fetched **tip**; `TARGET_SHA` is
+  verified an ancestor of it, fail-closed). Deviation from plan: also touched the usage line + `TARGET_SHA=`
+  knob comment (same stale "sanity assert" wording) beyond the two spots the plan named, to avoid leaving
+  the file self-contradictory — all comment-only, within plan intent.
+- **For S5:** the whole point of F1 is proven only on the box — S5 must confirm (a) the gate no longer dies
+  as opc (no opc-side fetch), and (b) `deploy.sh`'s reconcile container actually authenticates to GitHub
+  over SSH, fetches, ancestor-gates fail-closed, and ff/rebases. The gate is now pure orchestration:
+  assert inputs → `deploy.sh` (authoritative git + build + health-gate) → edge re-apply → artifacts.
+- **Static validation, all pass:** `bash -n` both scripts; `plugin_parity.py` PASS (deploy files not in the
+  manifest); `workflow.py validate` PASS. `shellcheck` not installed in this env.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -457,6 +497,16 @@ durable truth — do **not** version docs per slice._
   **`workflow_dispatch`-only, main-guarded, `concurrency: knowledge-deploy`** so the agent's constant
   publish-on-write pushes never trigger a redeploy). Repo doc `deploy/README.md` should gain the
   manual-dispatch redeploy usage (not a `docs/current/*` durable doc). Nothing versioned this slice.
+- **F1 realized (2026-07-15)** the gate hardening: the authoritative git (fetch `origin/main` + fail-closed
+  `TARGET_SHA` ancestor-verify + dirty refusal + on-`main` + `.git/index.lock` wait + ff/rebase reconcile)
+  now lives **only** inside `deploy.sh`'s one-shot **root** container — the opc-side gate cannot authenticate
+  (SSH origin, root-owned deploy key, no opc key), so `oracle-production-deploy-remote.sh` is now pure
+  opc-safe orchestration (assert inputs → `deploy.sh` owns all git → edge re-apply → artifacts). REVIEW
+  should fold into: `operations.md` (the redeploy procedure's authoritative reconcile/fetch/ancestor gate is
+  the in-container step, not an on-box opc gate) and `decisions.md` (new ADR: **relocate all authoritative
+  git into `deploy.sh`'s root container** because the opc-side fetch can't authenticate against the SSH
+  origin / root-owned publish-on-write clone — the knowledge divergence from hi2vi's opc-side fetch).
+  Nothing versioned this slice.
 
 ## Open Questions
 
