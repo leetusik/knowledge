@@ -19,8 +19,12 @@
 #      TARGET_SHA. We cannot detach to a specific SHA without risking orphaning an
 #      unpushed publish-on-write doc. Because code and docs are disjoint paths, the
 #      tip's *code* equals TARGET_SHA's code unless an interleaved code commit lands
-#      mid-run (rare, manual dispatch). TARGET_SHA is therefore only a sanity assert +
-#      log line here; the authoritative ancestor gate is S3's remote script.
+#      mid-run (rare, manual dispatch). TARGET_SHA is still enforced: the in-container
+#      ancestor-verify below (step 2) fails closed if it is missing or is not an
+#      ancestor of the fetched tip — and since P9.F1 that in-container check IS the
+#      AUTHORITATIVE ancestor gate. S3's remote script runs as `opc`, which cannot
+#      fetch or verify (root-owned deploy key, no opc GitHub key), so it delegates ALL
+#      authoritative git to this root container.
 #
 #   2. ROOT-OWNED .git → one-shot container git (§E step 4). The running api container
 #      commits as uid 0, so /opt/knowledge/.git objects are root-owned and `opc` can't
@@ -60,7 +64,9 @@
 # and that `docker compose run` is accepted on the container_name-pinned api service).
 #
 # Usage (on the box, from /opt/knowledge — opc must be in the docker group):
-#   deploy/deploy.sh [TARGET_SHA]      # TARGET_SHA optional: sanity-assert + log only
+#   deploy/deploy.sh [TARGET_SHA]      # optional; when given, the in-container ancestor-verify
+#                                      # (AUTHORITATIVE since P9.F1) fails closed unless it is an
+#                                      # ancestor of the fetched origin/main tip
 
 set -euo pipefail
 
@@ -70,7 +76,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env}"                    # api service env_file (operator-created, gitignored)
-TARGET_SHA="${1:-${TARGET_SHA:-}}"              # optional: reconcile sanity assert + log (tip is deployed)
+TARGET_SHA="${1:-${TARGET_SHA:-}}"              # optional: in-container ancestor gate (authoritative, P9.F1); tip is deployed
 HEALTH_TRIES="${HEALTH_TRIES:-24}"              # poll count per service (24*5 = up to 120s each)
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-5}"         # seconds between health polls
 LOCK_TRIES="${LOCK_TRIES:-6}"                   # .git/index.lock waits before refusing (concurrency)
@@ -190,7 +196,10 @@ git fetch --prune origin main
 fetched="$(git rev-parse --verify 'FETCH_HEAD^{commit}')"
 echo "[reconcile] fetched origin/main tip: $fetched"
 
-# Optional sanity assert vs the runner-provided TARGET_SHA (authoritative gate = S3).
+# Fail-closed ancestor gate vs the runner-provided TARGET_SHA. Since P9.F1 THIS in-container check IS
+# the authoritative ancestor gate — S3's remote script runs as `opc`, which cannot fetch/verify
+# (root-owned deploy key, no opc GitHub key), so it delegates all authoritative git here. When the gate
+# hands off it always passes a 40-hex SHA, so this branch always fires on a real deploy.
 # NB: we deploy the fetched TIP, not this SHA (deliberate divergence — see deploy.sh header).
 if [ -n "${TARGET_SHA:-}" ]; then
   if ! git cat-file -e "${TARGET_SHA}^{commit}" 2>/dev/null; then
