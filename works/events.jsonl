@@ -256,3 +256,10 @@
 {"ts": "2026-07-15T01:07:16+09:00", "type": "phase_reviewed", "phase": "P8", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-07-15T08:29:46+09:00", "type": "deferred_dropped", "deferred": "D3", "reason": "Completed by the operator (2026-07-15): ran 'gh repo deploy-key delete 157264706' (orphan knowledge-api@oci revoked) and removed ./knowledge_deploy_key* from the working tree. The box authenticates with the separate on-box key knowledge-api@oci-box (157267945). No key material remains in the repo. Closed as done, not abandoned."}
 {"ts": "2026-07-15T08:34:05+09:00", "type": "phase_created", "phase": "P9"}
+{"ts": "2026-07-15T09:54:33+09:00", "type": "slice_status_changed", "slice": "P9.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-15T09:58:28+09:00", "type": "slice_created", "phase": "P9", "slice": "P9.S1"}
+{"ts": "2026-07-15T09:58:28+09:00", "type": "slice_created", "phase": "P9", "slice": "P9.S2"}
+{"ts": "2026-07-15T09:58:28+09:00", "type": "slice_created", "phase": "P9", "slice": "P9.S3"}
+{"ts": "2026-07-15T09:58:28+09:00", "type": "slice_created", "phase": "P9", "slice": "P9.S4"}
+{"ts": "2026-07-15T09:58:28+09:00", "type": "slice_created", "phase": "P9", "slice": "P9.S5"}
+{"ts": "2026-07-15T10:04:33+09:00", "type": "slice_status_changed", "slice": "P9.DECOMP", "old_status": "in_progress", "new_status": "done"}

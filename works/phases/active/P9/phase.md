@@ -1,23 +1,311 @@
-# Phase P9: Production deploy GitHub Action for the knowledge API
+# Phase P9: Self-host the full knowledge site (web UI + API) at knowledge.hi2vi.com + automated production deploy
 
-_Intent: see [intent.md](intent.md)._
+_Intent: see [intent.md](intent.md). Scope **expanded 2026-07-15** (mid-DECOMP-planning) from
+API-only deploy automation to full self-hosted site + Pages retirement — see intent.md's
+"Expanded & Confirmed Intent"._
 
 ## Objective
 
-Add a manual (workflow_dispatch) production-deploy GitHub Action mirroring hi2vi_web's deploy-production.yml: SSH into the shared OCI box, redeploy the knowledge-api container from main with an on-box ARM build + health gate + rollback, and re-apply the edge vhost (deploy/knowledge.conf -> /home/opc/edge/conf.d/ + the edge's own deploy.sh reload). Must handle the publish-on-write wrinkle unique to this repo (the box clone at /opt/knowledge also makes and pushes agent commits) so a deploy never discards an unpushed doc or force-moves the checkout. Replaces today's hand-run SSH redeploy with a repeatable, auditable flow. DECOMP proposes the detailed deploy-script shape + GitHub secret provisioning for operator sign-off.
+Self-host the full knowledge site — the human web UI **and** the machine API — at
+**https://knowledge.hi2vi.com**, behind one **manual-dispatch (`workflow_dispatch`)**
+production-deploy GitHub Action mirroring `hi2vi_web`'s three-script split, and **retire GitHub
+Pages**. The GHA SSHes into the shared OCI box, reconciles the publish-on-write box clone with
+`origin/main` (fetch + ancestor-gate + ff/rebase, never detach/reset/force), redeploys **both**
+containers (`COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build`) with a per-service
+health-gate + rollback, and re-applies the edge vhost (now **two-location**: `/` → the mkdocs
+`knowledge-site` viewer, `/api/*`+`/healthz` → `knowledge-api`). The web UI is served **live** by a
+`mkdocs serve` viewer off the same box clone (fresh-on-write, replacing the ~65 s Pages lag). Two
+knowledge-specific wrinkles govern the deploy core — code runs from the bind-mounted checkout (image
+rollback can't revert it) and the box clone is also the publish-on-write clone (a deploy must never
+orphan an unpushed doc). DECOMP proposes the full shape (self-host + reconcile + rollback + secrets)
+for operator sign-off before implementation.
 
 ## Context
 
+The knowledge API went live at knowledge.hi2vi.com in P8 via a **hand-run** deploy. P9 automates that
+deploy — and, per the operator's mid-planning expansion, also makes the box the **single public front
+door** for the whole site (web UI + API), retiring GitHub Pages. Serving decision: **live-serve**
+(`mkdocs serve`, mirroring local `compose.yml`'s `kb`). The viewer is fully static/client-side and
+never calls the API, so the two services coexist on one domain via path-based edge routing. The
+reference deploy pattern is `hi2vi_web`'s `deploy-production.yml` + `deploy/` chain, adapted for the
+publish-on-write clone.
+
 ## Decomposition
 
-_Slice breakdown and rationale — filled by the `P9.DECOMP` slice._
+Five middle slices, `order` 1..5, created by `P9.DECOMP` as bare folders (each fills its own
+`plan.md` at its turn). Risk sets the executor tier and is the phase's cost lever — the ratings below
+are deliberate. This phase is **design-first**: S1 does not begin until the operator signs off on the
+§A–§H design proposal recorded under **Findings & Notes** below.
+
+- **P9.S1 — Self-host the web UI + retire Pages (`high`, order 1).** The enabling core of the
+  scope expansion. Adds the `knowledge-site` live-serve viewer to `compose.prod.yml`; splits the edge
+  vhost (`deploy/knowledge.conf`) into `/`→site + `/api/*`+`/healthz`→api; cuts
+  `site_url` / `KB_PUBLIC_BASE_URL` / parity-locked `params.operator.json` `KB_SITE_URL` to
+  `knowledge.hi2vi.com` (root, dropping `/knowledge/`); and retires `pages.yml` for *this* repo's site
+  while untangling its `site_smoke.py` pin-parity read + `plugin_parity.py` "identical" coupling so both
+  CIs stay green. **High** because a wrong vhost split is a site-wide edge outage (the conf.d tree is
+  tested+reloaded as a unit), the surfaces are multiply-coupled (mkdocs ↔ plugin parity ↔ two CIs), and
+  it is the piece everything downstream builds on. Fully locally validatable: `docker compose -f
+  compose.prod.yml config`, local `mkdocs serve` / `docker compose run --rm kb build`,
+  `python3 scripts/site_smoke.py`, `python3 scripts/plugin_parity.py`.
+  _May split via fractional `--order`_ (e.g. `1.1` viewer+routing+URL, `1.5` Pages retirement) **only if**
+  the surface proves too broad at planning time; default is one cohesive slice.
+- **P9.S2 — On-box deploy: reconcile + redeploy both + edge re-apply (`high`, order 2).** The novel
+  deploy core. Authors `deploy/deploy.sh` (publish-on-write-safe reconcile-on-`main` — never
+  detach/reset/force; can't copy hi2vi's detached `git checkout`), brings up **both** api+site via
+  `COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build`, health-gates **both**
+  containers, handles rollback for mount-based code (§F), navigates root-owned `.git`, and re-applies
+  the edge two-location vhost. **High** because the reconciliation and the mount-based-rollback are the
+  knowledge-specific inventions that make this its own phase rather than a hi2vi copy-paste.
+- **P9.S3 — GHA driver + Production Deploy workflow (`medium`, order 3).** SSH-transport-only runner
+  driver (`deploy/github-actions-production-deploy.sh`) + `.github/workflows/deploy-production.yml`
+  (`workflow_dispatch`, main-branch guard, three `ORACLE_SSH_*` secrets, external smoke on `/` and
+  `/healthz`, artifact upload) + the on-box gate `deploy/oracle-production-deploy-remote.sh`. **Medium**:
+  a close, well-understood mirror of hi2vi's proven scripts — mechanical but security-sensitive
+  (secret handling, host-key pinning), so not `low`.
+- **P9.S4 — Runner SSH-key provisioning runbook + operator gate (`medium`, order 4).** Precise runbook
+  for the net-new runner→`opc@box` SSH key as three `leetusik/knowledge` repo secrets, then a `pending`
+  operator gate (only the operator can create GitHub secrets + authorize the box key). **Medium, not
+  `low`**: a mis-authored secrets/known_hosts runbook is a real security hazard (P8 already saw a leaked
+  key), so it needs judgment, not literal step-following.
+- **P9.S5 — E2E acceptance, real dispatch (`high`, order 5).** Operator co-work (`pending`). Real
+  `workflow_dispatch` run; verify: reconcile leaves the box on `main` with no orphaned unpushed doc, both
+  containers healthy, two-location routing, the UI live at the root, the **fresh-on-write linchpin**
+  (§H — POST a doc → appears on the site with no restart), no secrets in logs, and the Pages cutover
+  (box proven live *before* repo Settings→Pages off). **High** because it exercises the whole novel
+  system against live production and is the phase's proof of correctness.
+
+**Dependency shape (advisory):** S2 builds on S1's `compose.prod.yml`/vhost; S3 wraps S2's on-box
+scripts; S4 provisions the secret S3's workflow consumes; S5 proves S1–S4 end-to-end. Kept linear by
+`order`; `depends_on` intentionally left empty (advisory-only, existence-checked by `validate`).
 
 ## Findings & Notes
 
-_Durable findings and cross-slice notes; `DECOMP` seeds this, and each slice appends when it finishes._
+_Seeded by `P9.DECOMP` (2026-07-15). This is the **design proposal (§A–§H)** the operator signs off on
+before S1. Grounded/refined against the actual repo + the `hi2vi_web` reference. Each later slice
+appends its own findings below when it finishes._
+
+### §A. Self-host the web UI — live-serve viewer (S1)
+
+New `compose.prod.yml` service mirroring local `compose.yml`'s `kb`:
+
+- `image: squidfunk/mkdocs-material:9.7.6` (the exact local pin),
+- `command: serve --dev-addr=0.0.0.0:8000 --livereload`,
+- `container_name: knowledge-site` (edge proxies by name),
+- `volumes: [ .:/docs ]` — the **same box clone** (`/opt/knowledge`) the api mounts at `/repo`,
+- `networks: [ changple_shared_network ]` (external; reachable only by container name, no host-port publish),
+- `restart: unless-stopped`,
+- a **healthcheck** mirroring the api's (`python -c "import urllib.request,sys; ...urlopen('http://127.0.0.1:8000/', timeout=3)...200"` — the image has no curl; give it a `start_period` for the first build).
+
+Serves live from `docs/`; because the api writes into the same bind-mounted tree, doc changes surface
+with no separate rebuild step.
+
+> **Grounding refinement (correct the DECOMP-plan draft):** the plan's §A draft wrote the command
+> **without** `--livereload`. The live `compose.yml` `kb` service uses `serve --dev-addr=0.0.0.0:8000
+> --livereload` with a load-bearing comment: _"`--livereload` must be explicit: the flag's default never
+> arms in this image, and without it new pages don't appear until the container restarts."_ So the
+> `knowledge-site` command **must include `--livereload`** — it is exactly what makes §H's fresh-on-write
+> work. S1 should match local verbatim.
+
+> `compose.prod.yml` is **not** in `plugin/templates/manifest.json` (not `identical`/`parameterized`/
+> `shipped_dirs`) — it is box-only, so adding `knowledge-site` has **zero plugin-parity impact**. (The
+> *local* `compose.yml` *is* `parameterized`; do not touch it here.)
+
+### §B. Edge vhost — two-location routing (`deploy/knowledge.conf`, S1)
+
+Today the vhost is a single `location /` → `knowledge-api:8000` (verified: conf lines 118-137). Split into:
+
+- `location /api/ { proxy_pass http://$knowledge_upstream:8000; ... }` and
+  `location = /healthz { proxy_pass http://$knowledge_upstream:8000; ... }` → the api (unchanged upstream),
+- `location / { proxy_pass http://$knowledge_site_upstream:8000; ... }` → the new `knowledge-site`.
+
+Reuse the existing `resolver 127.0.0.11 valid=30s ipv6=off` + `set $var` + variable-in-`proxy_pass`
+re-resolution pattern (load-bearing per the conf's own comment; add a second `set $knowledge_site_upstream
+knowledge-site`). Keep server-level `client_max_body_size 5m` + `proxy_read_timeout 120s` (they matter for
+the api write path). **Honor the edge house rules** (called out in the conf header): **no** `default_server`,
+**no** IPv6 `listen [::]`, **no** `limit_req_zone`. Optionally add `Upgrade`/`Connection` proxy headers on
+`/` for mkdocs livereload's websocket — **cosmetic** (drives browser auto-refresh only; with `--livereload`
+the server-side rebuild + a manual refresh already show fresh content).
+
+### §C. URL cutover + Pages retirement (S1)
+
+- `mkdocs.yml:2` `site_url: https://leetusik.github.io/knowledge/` → `https://knowledge.hi2vi.com/`
+  (drop the `/knowledge/` subpath — served at the domain root) **and** `plugin/templates/params.operator.json`
+  `KB_SITE_URL` **identically** — `mkdocs.yml` is `parameterized` in the manifest, so a mismatch fails
+  `plugin_parity.py`'s render-and-compare (verified: `plugin_parity.py:100-112`).
+- `compose.prod.yml` `KB_PUBLIC_BASE_URL: https://leetusik.github.io/knowledge` (line 51) →
+  `https://knowledge.hi2vi.com` (the 201-response `url` origin; **no code change** — `server/config.py`/
+  `main.py` are plugin-`identical` and read this from env).
+- **Disable `pages.yml` — cannot just `rm` it.** Two live CI couplings, both verified:
+  1. `scripts/site_smoke.py:147-160` reads `pages.yml` for **pin-parity** (asserts its
+     `mkdocs-material==X` matches `compose.yml`'s `squidfunk/mkdocs-material:X`). A **missing** `pages.yml`
+     appends a `failures` entry ("pin-parity check skipped: pages.yml ... missing") → `site_smoke.py`
+     **fails**, so `rm` breaks it directly. `site_smoke.py` is `identical`-shipped, so this also fires in
+     the plugin.
+  2. `plugin/templates/manifest.json` lists `.github/workflows/pages.yml` under **`identical`** (line 44),
+     and `plugin_parity.py:88-98` **byte-compares** `plugin/templates/kb/.github/workflows/pages.yml`
+     against the repo copy. So neutralizing **only** the repo's `pages.yml` while leaving the template's
+     untouched will trip `[identical] byte drift` → **plugin-CI red**.
+- **The real tension S1 must resolve (grounding refinement):** the DECOMP-plan draft said "neutralize the
+  repo workflow (drop the `push` trigger) *and* keep `plugin/templates/kb/.github/workflows/pages.yml`
+  untouched (plugin keeps Pages) *and* keep the file present for parity" — but those three cannot all hold
+  simultaneously, precisely because of coupling (2)'s byte-compare. Concrete options for S1 (pick one +
+  operator sign-off):
+  - **(pref) Reclassify + neutralize:** move `.github/workflows/pages.yml` **out of** the manifest's
+    `identical` list (repo and template may then legitimately diverge), neutralize the repo copy (drop only
+    the `push:` trigger — **keep** the `pip install mkdocs-material==9.7.6` line so `site_smoke.py`'s
+    pin-parity read still passes), and leave the plugin template with Pages intact for downstream users.
+    Retires Pages for *this* site only; keeps the shipped plugin's Pages path; keeps both CIs green.
+  - **(alt) Operator-settings-only cutover:** leave every file byte-identical and retire Pages purely by
+    the operator turning **repo Settings → Pages Off** (no file change → no CI coupling touched). Downside:
+    the `push`-triggered `pages.yml` would still *run* on each doc push and its `deploy-pages` step would
+    fail (Pages off) → a red workflow on every push. Not clean.
+  - **(alt) Full removal:** delete the repo's `pages.yml`, remove it from `identical`, **and** repoint
+    `site_smoke.py`'s pin-parity anchor off `pages.yml` (e.g. onto `compose.prod.yml`'s `knowledge-site`
+    image pin). Most churn; loses the current pin anchor.
+- The **shipped plugin keeps Pages** for downstream users regardless
+  (`plugin/templates/kb/.github/workflows/pages.yml` stays) — P9 retires Pages for **this** repo's site only.
+- **Cutover safety:** disabling the workflow does **not** take the Pages *site* down (it serves the last
+  build until the operator flips repo Settings→Pages off) → the box site must be **proven live in S5
+  before** Pages is turned off, so there is **no gap**. `knowledge.hi2vi.com` already resolves to the box
+  (Cloudflare → edge) — **no DNS change** needed.
+
+### §D. Deploy-script shape — mirror hi2vi's three-script split, now for both services (S2+S3)
+
+Mirror the verified `hi2vi_web/deploy/` chain, adapted for the publish-on-write clone + two services:
+
+- **`deploy/github-actions-production-deploy.sh`** (runner, S3 — transport only). Mirror
+  `hi2vi_web/deploy/github-actions-production-deploy.sh`: `umask 077` tempdir for key + known_hosts,
+  `ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=<pinned> -o IdentitiesOnly=yes`,
+  optional passphrase via `ssh-agent`+askpass, `scp` the remote gate + create a remote artifact dir,
+  invoke with `TARGET_SHA` / `REPO_PATH=/opt/knowledge` / `REMOTE_ARTIFACT_DIR`, collect artifacts back
+  by `scp`. Non-secret defaults as env (same shared box: `ORACLE_SSH_HOST=140.245.64.173`, `USER=opc`,
+  `PORT=22`; only `REPO_PATH` differs from hi2vi's `/home/opc/hi2vi_web`).
+- **`deploy/oracle-production-deploy-remote.sh`** (on-box gate, S2/S3). Mirror hi2vi's: refuse a dirty
+  **tracked** worktree, `git fetch --prune origin main`, `FETCH_HEAD^{commit}` + `cat-file -e $SHA^{commit}`
+  + `merge-base --is-ancestor` — **then** hand to `deploy/deploy.sh`, **then** re-apply the edge vhost per
+  §B, then collect artifacts. (Knowledge-specific: reconcile §E replaces hi2vi's detached checkout, and the
+  edge re-apply is added on top.)
+- **`deploy/deploy.sh`** (bring-up + health-gate + rollback, S2). Reconcile §E → `COMPOSE_BAKE=false docker
+  compose -f compose.prod.yml up -d --build` bringing up **both** `api` + `site` → health-gate **both**
+  via `docker inspect '{{.State.Health.Status}}'` (hi2vi's `wait_healthy` loop, extended to two services)
+  → rollback §F. Keep hi2vi's `COMPOSE_BAKE=false` workaround.
+- **`deploy/rollback.sh`** (manual, S2). Per §F.
+- **Edge re-apply** reuses P8's already-documented path: `scp deploy/knowledge.conf` →
+  `/home/opc/edge/conf.d/knowledge.conf`, then `cd /home/opc/edge && ./deploy.sh` (edge's own `nginx -t`
+  gate → graceful reload; **never** recreate the edge). Documented in `deploy/knowledge.conf`'s header +
+  `deploy/README.md`.
+
+### §E. Publish-on-write reconciliation — the deploy core (S2)
+
+Replaces hi2vi's detached `git checkout $REF` (which would move HEAD off `main` and could strand an
+unpushed publish-on-write commit). Instead, on the box clone, **on `main`**:
+
+1. **Refuse a mid-write, permit ahead/unpushed** — reuse hi2vi's guard **verbatim**:
+   `! git diff --quiet || ! git diff --cached --quiet` (refuses only a dirty tracked worktree = a write in
+   progress; an *ahead/unpushed* clean tree passes — that is the whole point).
+2. `git fetch --prune origin main`; ancestor-gate exactly as hi2vi:
+   `FETCH_HEAD^{commit}` + `git cat-file -e $TARGET_SHA^{commit}` + `git merge-base --is-ancestor $TARGET_SHA $fetched`.
+3. **Reconcile on `main`**, mirroring `server/gitops.py`'s own push discipline (fetch → rebase onto
+   `origin/main` → never force): `git merge --ff-only` when the box is strictly behind; `git rebase $fetched`
+   when the box is ahead/diverged (an unpushed doc replays cleanly on top). On rebase conflict →
+   `git rebase --abort` + refuse the deploy (never leave a half-rebased clone). **Never** detach / `reset
+   --hard` / `--force`.
+4. **Root-owned `.git`** (the api container commits as uid 0, so `/opt/knowledge/.git` objects are
+   root-owned; `opc` can't `git` against them cleanly). Two options — **recommend (a)**:
+   - **(a, recommended) one-shot container git:** `docker run --rm -v /opt/knowledge:/repo <api-image>
+     git -C /repo <cmd>` — runs as uid 0 and **reuses the image's baked `git config --system
+     safe.directory /repo` + identity** (verified in `Dockerfile:39-41`); no host sudo grant, matches the
+     ownership model the container already uses.
+   - (b) `sudo git` on the box — simpler but requires granting `opc` sudo-git.
+5. **Concurrency:** a publish-on-write commit could land mid-deploy. Retry transient `.git/index.lock`
+   contention; accept the small residual race (manual dispatch is rare; a write is ~6 s). S2 documents this.
+
+### §F. Rollback for mount-based code (S2)
+
+**Key divergence from hi2vi:** knowledge runs `server/` from the **bind mount** (`.:/repo`, `KB_ROOT=/repo`;
+`Dockerfile` ships only interpreter+git+deps, never the app — verified `Dockerfile:1-4,29-31`). So an
+image-tag flip (hi2vi's rollback) **cannot revert mounted `server/` code** — the code follows the
+working-tree checkout, not the image.
+
+- **v1 (recommended): health-gate-and-report, no auto git rollback.** On health failure, capture artifacts,
+  exit non-zero, and recover by **fix-forward** (merge a fix to `main`, re-dispatch). Simple, and it never
+  risks moving the publish-on-write checkout backwards under the running container.
+- **v2 (optional): best-effort git rollback** to a recorded `PREV_HEAD`, **only** when a clean ff-back with
+  **no stranded doc commits** is possible (else refuse and fall back to v1). More moving parts near the
+  publish-on-write invariant.
+- Present both to the operator at sign-off; **v1** is the DECOMP recommendation.
+
+### §G. Runner SSH-key provisioning (S4)
+
+Net-new runner → `opc@box` SSH key, added as **three repo secrets on `leetusik/knowledge`**, mirroring
+hi2vi's set (verified `hi2vi_web/.github/workflows/deploy-production.yml:61-63` +
+`github-actions-production-deploy.sh:17-19`): `ORACLE_SSH_PRIVATE_KEY`, `ORACLE_SSH_KNOWN_HOSTS`,
+`ORACLE_SSH_PASSPHRASE`. Two options — **recommend (b)**:
+
+- (a) reuse hi2vi's existing runner key;
+- **(b, recommended) mint a dedicated `knowledge` runner key** — least-privilege, and safer given P8's
+  leaked-key history (a dedicated key can be rotated/revoked without touching hi2vi's deploy).
+
+This key is **distinct** from the container's git deploy key `knowledge-api@oci-box` (P8, publish-on-write)
+— P9 **never** touches that credential. S4's runbook complements the existing `deploy/SECRETS.md`.
+
+### §H. Fresh-on-write linchpin — must be proven in E2E (S5)
+
+Live-serve freshness depends on mkdocs' file watcher inside `knowledge-site` detecting the **api
+container's** writes to the shared bind-mounted `docs/`. On the Linux box, cross-container `inotify` over a
+shared bind mount fires on the same host inode, so it **should** work — but this is the **critical
+assumption** of the live-serve choice, so **S5 must prove it**: POST a doc via the api → it appears on
+`https://knowledge.hi2vi.com/` with **no container restart**. The `--livereload` flag (§A) is what arms
+the watcher. **Fallback if it doesn't fire:** mkdocs' polling watch, or switch `knowledge-site` to
+rebuild-on-write. This is why S5 is `high` and gated as operator co-work.
 
 ## Constraints
 
+- **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
+  implements nothing.
+- **Two distinct credentials, never conflate:** (a) the GHA runner → `opc@box` SSH key (P9, §G) vs (b) the
+  container → GitHub git deploy key `knowledge-api@oci-box` (P8, publish-on-write). P9 provisions (a) only.
+- **Never** detach / `reset --hard` / `--force` the box clone (§E) — it is also the publish-on-write clone;
+  a deploy must never orphan an unpushed doc commit.
+- **Edge house rules** (§B): no `default_server`, no IPv6 `listen`, no `limit_req_zone` — the conf.d tree is
+  `nginx -t`-tested and reloaded **as a unit**; one break takes every site on the edge down.
+- **Keep both CIs green** (§C): touching `pages.yml` / `mkdocs.yml` / `params.operator.json` must not break
+  `site_smoke.py` pin-parity or `plugin_parity.py` `identical`/`parameterized` checks.
+- **Manual dispatch only** (`workflow_dispatch`): the agent's constant publish-on-write pushes to `main`
+  must **never** trigger a redeploy (intent.md, Clarifications Resolved).
+- **The shipped plugin keeps Pages** for downstream users — retire Pages for **this** repo's site only.
+- **No cross-repo blast radius:** knowledge-repo-internal; does not change the frozen hi2vi consumer
+  contract from P8.
+
+## Doc impact
+
+_Running list of durable-truth changes for **P9.REVIEW** to consolidate into doc versions (one version
+per affected doc, capturing the whole phase). Seeded by `P9.DECOMP`; each slice appends as it changes
+durable truth — do **not** version docs per slice._
+
+- `operations.md` — the site is now **self-hosted** (live-serve `knowledge-site` viewer on the box), not
+  Pages; **drop the ~65 s Pages publish SLA** (fresh-on-write instead); document the manual-dispatch
+  redeploy procedure (reconcile + both-service bring-up + edge re-apply) and the two-service topology.
+- `architecture.md` — Track 1 (the human web UI) becomes **self-hosted live-serve**, not GitHub Pages;
+  two independent services (`knowledge-api` + `knowledge-site`) on one box behind two-location edge routing.
+- `api.md` — the 201 `url` origin is now `https://knowledge.hi2vi.com` (root); the publish mechanism is
+  the box's live-serve site, no longer Pages (the git push is off-box backup/history only).
+- `security.md` — the public-site premise is now served by the box; add the runner→`opc@box` SSH-key
+  credential (§G), kept distinct from the container's `knowledge-api@oci-box` deploy key.
+- `decisions.md` — new ADRs: self-host the site; live-serve (vs static/cron rebuild); retire Pages;
+  automated production deploy + the reconcile / mount-based-rollback divergences from hi2vi (§E/§F); the
+  dedicated runner key (§G).
+- `deploy/README.md` — extend with the manual-dispatch redeploy procedure + the `knowledge-site` service
+  (a repo doc, **not** a `docs/current/*` durable doc — note it here for S1/REVIEW, not for `doc-new-version`).
+
 ## Open Questions
 
--
+_For operator sign-off at S1 (design-first). DECOMP's recommendations noted; operator confirms._
+
+- **§C Pages-retirement mechanism:** reclassify+neutralize (pref) vs settings-only vs full-removal? (The
+  `identical` byte-compare on `pages.yml` forces an explicit choice — see §C.)
+- **§E root-owned `.git` access:** one-shot container git (pref) vs `sudo git` on the box?
+- **§F rollback:** health-gate-and-report / fix-forward only (v1, pref) vs optional best-effort git
+  rollback (v2)?
+- **§G runner key:** dedicated `knowledge` key (pref) vs reuse hi2vi's key?

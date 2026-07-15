@@ -9,7 +9,18 @@
 > and so you did the change the edge project to deploy this? good. I think we should have
 > production deploy github action like other projects
 
-## Confirmed Intent (refined + clarified)
+## Scope Expansion — Original Input (verbatim, 2026-07-15, mid-DECOMP-planning)
+
+> And note that I'm not want to deploy only the API but the whole webpage at the knowledge web.
+> So that the otters [others] can access to the knowledge yourself itself I mean, distict from
+> hi2vi btw (the webui using existing one, and no longer github webpage will be needed. only the
+> public url)
+
+## Confirmed Intent (refined + clarified) — API-deploy baseline (EXPANDED below)
+
+> **Superseded/expanded 2026-07-15:** the confirmed intent below captured the original API-only
+> deploy automation. It still holds as the deploy **core**, but the phase scope has been **expanded**
+> — see **Expanded & Confirmed Intent** after this section. Read both.
 
 Replace this session's **hand-run** production deploy of the knowledge API with a **GitHub
 Action**, mirroring the pattern the operator's other projects on the same shared OCI box already
@@ -50,6 +61,37 @@ needs an SSH key to reach `opc@box` — a **different** credential from the cont
 key `knowledge-api@oci-box`; likely the same `ORACLE_SSH_*` secret set hi2vi uses, added to the
 `leetusik/knowledge` repo), for **operator sign-off before implementation**.
 
+## Expanded & Confirmed Intent (2026-07-15)
+
+Mid-DECOMP-planning the operator expanded the scope: **the production deploy should ship the whole
+webpage, not just the API.** The box must **self-host the human web UI** so people browse the
+knowledge base directly at **https://knowledge.hi2vi.com** (distinct from hi2vi), **reusing the
+existing mkdocs web UI**, and **GitHub Pages is retired** — one public URL serves everything.
+
+So P9 is reframed to: **self-host the full knowledge site — human web UI *and* machine API — at
+`knowledge.hi2vi.com`, behind one manual-dispatch production-deploy GitHub Action, retiring GitHub
+Pages.** Everything in the API-deploy baseline above still holds as the **deploy core** (the
+publish-on-write reconciliation, the three-script split, health-gate/rollback, runner secrets,
+external smoke). Added on top:
+
+1. **Self-hosted web UI (live-serve).** Add a `knowledge-site` viewer service to `compose.prod.yml`
+   running `mkdocs serve` off the same box clone the api mounts — mirroring the local `compose.yml`
+   `kb` service. The site is fully static/client-side (lunr + `graph.json`) and never calls the API,
+   so viewer and API are independent services sharing the domain. Because the box clone holds each
+   doc the instant the container writes it, the site is **fresher than Pages** (~65 s
+   push→Pages→CDN lag → **near-instant**); the git push continues **only for off-box backup/history**.
+2. **Two-location edge routing.** Split `deploy/knowledge.conf`'s single `location /` into
+   `/` → `knowledge-site:8000` (humans) and `/api/*` + `/healthz` → `knowledge-api:8000` (agent).
+3. **URL cutover.** `site_url` + `KB_PUBLIC_BASE_URL` (+ parity-locked `params.operator.json`
+   `KB_SITE_URL`) → `https://knowledge.hi2vi.com/` (served at the domain root, dropping `/knowledge/`).
+4. **Retire GitHub Pages for this site.** Disable `pages.yml` (cleaning up its `site_smoke.py`
+   pin-parity read + `plugin/templates/manifest.json` parity coupling so CI stays green). The shipped
+   **plugin keeps** Pages for downstream users — this retires Pages for **this** repo's site only.
+   Cutover is safe: the box site is proven live before repo Settings→Pages is turned off (no gap).
+5. **The deploy now brings up both services** (`docker compose up -d --build` → `api` + `site`),
+   health-gates both, and the E2E must prove the **fresh-on-write linchpin** (mkdocs' watcher sees
+   the api container's writes to the shared bind-mounted `docs/`).
+
 ## Clarifications Resolved
 
 - Q: How should the deploy be triggered? — A: **Manual dispatch (`workflow_dispatch`)**, like
@@ -60,6 +102,12 @@ key `knowledge-api@oci-box`; likely the same `ORACLE_SSH_*` secret set hi2vi use
   workflow re-drops `deploy/knowledge.conf` into the edge and reloads it, so the vhost lives in git
   and re-applies repeatably (closes the durability gap that it is currently a hand-applied,
   un-versioned host file).
+- Q (2026-07-15): How should the box serve the web UI? — A: **Live-serve** — a `mkdocs serve` viewer
+  container mirroring the local `kb` service (fresh-on-write, near-zero glue). Static
+  rebuild-on-write and periodic-cron rebuild were considered and declined (more glue / staleness).
+- Q (2026-07-15): What happens to GitHub Pages? — A: **Retire it fully** — the box becomes the sole
+  public site; `pages.yml` disabled; the git push is kept only for off-box backup. Keeping Pages as
+  a fallback mirror was considered and declined.
 
 ## Notes
 
