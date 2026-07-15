@@ -1,6 +1,7 @@
 # Knowledge Base
 
-**Live site → <https://leetusik.github.io/knowledge/>**
+**Live site → <https://knowledge.hi2vi.com/graph/>** — the interactive knowledge
+map; browse from any node, or read the [library index](https://knowledge.hi2vi.com/).
 
 Technical explainers written from real project work. When I solve something
 non-trivial, a coding agent (Claude Code / Codex) researches the actual code
@@ -26,9 +27,13 @@ and a GitHub repository (optional — only to publish via Pages). Full details i
 - **Write path** — a custom `explain` skill posts to a FastAPI + SQLite (FTS5
   full-text search) document API that writes the page, updates the index, and
   makes a scoped git commit. Nothing publishes until I push.
-- **Publish path** — MkDocs Material builds in CI and deploys to GitHub Pages
-  on every push to `main`. Workspace internals (versioned docs history and build
-  artifacts) are excluded from the published site.
+- **Publish path** — the site is self-hosted: a `mkdocs serve` viewer serves
+  `docs/` live at the domain root, beside the API behind one nginx edge (`/` →
+  site, `/api/*` → API). A doc written on the box is live the instant it lands —
+  *fresh-on-write*, no CI build or CDN lag — and a manual-dispatch `Production
+  Deploy` GitHub Action reconciles the box from `main`. Workspace internals
+  (versioned docs history and build artifacts) stay excluded from the served
+  site. (The old GitHub Pages deploy is retired here; the plugin still ships it.)
 - **Versioned project docs** — the repo's own design docs are kept as durable,
   versioned truth in 11 tracks (architecture, API, operations, …): latest
   under `docs/current/`, full history under `docs/versions/` (excluded from the
@@ -37,7 +42,7 @@ and a GitHub repository (optional — only to publish via Pages). Full details i
   at write time (local paths become repo basenames; URLs pass through), so no
   filesystem details leak to the public site.
 - **Knowledge map** — an interactive
-  [graph](https://leetusik.github.io/knowledge/graph/) of the library (every
+  [graph](https://knowledge.hi2vi.com/graph/) of the library (every
   explainer a node, shared topics and references the edges): its `graph.json`
   is emitted at build time by a MkDocs hook (`scripts/graph_hook.py`) and drawn
   client-side with vendored, no-CDN JavaScript.
