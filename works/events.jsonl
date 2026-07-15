@@ -286,3 +286,12 @@
 {"ts": "2026-07-15T13:03:53+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key", "source": "P9.REVIEW"}
 {"ts": "2026-07-15T13:18:02+09:00", "type": "slice_status_changed", "slice": "P9.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-15T13:18:02+09:00", "type": "phase_reviewed", "phase": "P9", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P1", "archive_path": "works/phases/archived/20260715_132925_P1_bootstrap_intake"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P2", "archive_path": "works/phases/archived/20260715_132925_P2_track_2_db-backed_document_api"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P3", "archive_path": "works/phases/archived/20260715_132925_P3_track_1_github_pages_publishing"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P4", "archive_path": "works/phases/archived/20260715_132925_P4_knowledge_feature_core_improvements"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P5", "archive_path": "works/phases/archived/20260715_132925_P5_web_ui_redesign_search"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P6", "archive_path": "works/phases/archived/20260715_132925_P6_obsidian-like_knowledge_graph"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P7", "archive_path": "works/phases/archived/20260715_132925_P7_claude_code_plugin"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P8", "archive_path": "works/phases/archived/20260715_132925_P8_knowledge_api_for_hi2vi_content_agent"}
+{"ts": "2026-07-15T13:29:25+09:00", "type": "phase_archived", "phase": "P9", "archive_path": "works/phases/archived/20260715_132925_P9_production_deploy_github_action_for_the_knowledge_api"}

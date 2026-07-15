@@ -1,0 +1,20 @@
+{
+  "phase_id": "P6",
+  "archived_at": "2026-07-15T13:29:25+09:00",
+  "archive_reason": "phase_review_passed",
+  "review_verdict": "pass",
+  "source_path": "works/phases/active/P6",
+  "archive_path": "works/phases/archived/20260715_132925_P6_obsidian-like_knowledge_graph",
+  "slices": [
+    "P6.DECOMP",
+    "P6.S0",
+    "P6.S1",
+    "P6.S2",
+    "P6.S3",
+    "P6.F1",
+    "P6.F2",
+    "P6.F3",
+    "P6.F4",
+    "P6.REVIEW"
+  ]
+}
