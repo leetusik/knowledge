@@ -1,8 +1,9 @@
 # Production deployment for https://knowledge.hi2vi.com (P8.S3).
 #
 # This is the OCI-box compose project — NOT the local dev stack (compose.yml).
-# It ships ONLY the `api` service (no `kb` viewer: the public site is GitHub
-# Pages, so the box needs only the document API). The box runs the API from its
+# It ships TWO services: `api` (the document API) and `site` (a live-serve mkdocs
+# viewer = the public web UI, self-hosted here instead of GitHub Pages, P9.S1).
+# The box runs the API from its
 # OWN git clone (e.g. /opt/knowledge) with an SSH `origin` + deploy key, so the
 # container can commit AND push writes to origin/main (publish-on-write, P8.S1).
 #
@@ -46,9 +47,10 @@ services:
       # Gate reads/search behind the same bearer on the hosted deployment
       # (local/plugin default is false → reads open). healthz stays open.
       KB_REQUIRE_READ_AUTH: "true"
-      # Viewer origin for the 201 `url` field = the real published Pages doc.
-      # (This is the PAGES URL, not the API's own origin.)
-      KB_PUBLIC_BASE_URL: https://leetusik.github.io/knowledge
+      # Viewer origin for the 201 `url` field = the self-hosted site root on this
+      # box (the `site` service below live-serves the doc), no longer GitHub Pages.
+      # config.py rstrips any trailing slash, so give none here.
+      KB_PUBLIC_BASE_URL: https://knowledge.hi2vi.com
       # Fetch + reindex on boot (drift + deleted-doc reconciliation self-heal).
       KB_STARTUP_REINDEX: "true"
       # --- Push credential wiring (paths inside the container) ---
@@ -82,6 +84,38 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    restart: unless-stopped
+
+  site:
+    # Live-serve mkdocs viewer (the public web UI), mirroring local compose.yml's
+    # `kb`. Serves docs/ off the SAME box clone the api bind-mounts, so a doc the
+    # api writes surfaces on the site with NO rebuild (fresh-on-write; both
+    # services share the bind-mounted tree). Reached by the edge BY CONTAINER NAME
+    # over changple_shared_network — NO public host-port publish (unlike local's
+    # 8765). This self-hosts the site that used to be GitHub Pages (P9.S1).
+    image: squidfunk/mkdocs-material:9.7.6  # exact pin — matches compose.yml + the pages.yml CI pin
+    container_name: knowledge-site          # fixed name — the edge proxies to it by name
+    # --livereload must be explicit: the flag's default never arms in this image,
+    # and without it new pages don't appear until the container restarts. It arms
+    # the file watcher that makes the fresh-on-write linchpin (§H) work.
+    command: serve --dev-addr=0.0.0.0:8000 --livereload
+    volumes:
+      - .:/docs
+    networks:
+      - changple_shared_network
+    # Container health for `docker compose ps` + the deploy health-gate. The image
+    # has no curl, so use its own python; start_period covers the first `serve`
+    # build before mkdocs answers on :8000.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3).status==200 else sys.exit(1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
 networks:

@@ -39,8 +39,7 @@
       "Dockerfile",
       "pyproject.toml",
       "uv.lock",
-      ".dockerignore",
-      ".github/workflows/pages.yml"
+      ".dockerignore"
     ],
     "parameterized": [
       "mkdocs.yml",
