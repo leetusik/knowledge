@@ -354,6 +354,46 @@ Static-validated only (no docker/SSH here); behavioral proof is **S5**. Notes fo
   `read` idiom is clean on both bash 3.2 and the box's modern bash. Purely a static-check
   accommodation.
 
+### S3 findings — GHA driver + `Production Deploy` workflow + on-box gate (done 2026-07-15, author-only, no box impact)
+
+Authored the three CI-to-box wrapper files per §D, mirroring `hi2vi_web`'s three-script split for the
+`/opt/knowledge` publish-on-write clone + the two-service + edge shape. Static-validated only (no SSH,
+no dispatch, no docker); behavioral proof is **S5**. Three new files, none in the plugin manifest.
+
+- **`deploy/github-actions-production-deploy.sh`** (runner driver, transport only). Near-verbatim mirror
+  of hi2vi's; only knowledge specifics: `ORACLE_REPO_PATH=/opt/knowledge`, `/tmp` names
+  `knowledge-gha-deploy-…`/`knowledge-gha-artifacts-…`, header comment. **Kept hi2vi's generic log
+  prefixes verbatim** (`[production-deploy]` / `[oracle-production-deploy]`) — they're not hi2vi-specific
+  strings, so knowledge-ifying them would only diverge the mirror (noted as a deviation in result.md).
+- **`deploy/oracle-production-deploy-remote.sh`** (on-box gate = authoritative gate). verify → deploy →
+  edge re-apply → collect. **Knowledge adaptations vs hi2vi:** (1) all git calls go through
+  `GIT=(git -c "safe.directory=$REPO_PATH")` (applied up front, not conditionally) because the box clone's
+  `.git` objects are root-owned (api commits as uid 0); (2) the edge re-apply is layered on **after** a
+  healthy deploy — `install -m 0644 $REPO_PATH/deploy/knowledge.conf /home/opc/edge/conf.d/knowledge.conf`
+  then `( cd /home/opc/edge && ./deploy.sh )` (edge's own `nginx -t` gate → graceful reload; never
+  recreate `edge-nginx`); a failed edge `nginx -t` reloads nothing **and fails the deploy loudly**
+  (`die`); (3) artifacts use plain `docker compose -f compose.prod.yml ps` (no `-p`/`--env-file` — env is
+  baked as `env_file: .env`). Edge re-apply is skipped if the deploy is non-zero (no routing cutover onto
+  unhealthy containers).
+- **`.github/workflows/deploy-production.yml`** (`Production Deploy`). `workflow_dispatch` only;
+  `preflight` guards `refs/heads/main` + outputs `target_sha=$GITHUB_SHA`; `deploy` (needs preflight,
+  timeout 90, environment `production`→`https://knowledge.hi2vi.com`, `concurrency: knowledge-deploy`,
+  `cancel-in-progress: false`) checks out `target_sha`, `bash -n`s the three helpers, runs the driver
+  with `TARGET_SHA` + the three `ORACLE_SSH_*` secrets (S4 provisions them on `leetusik/knowledge`) +
+  `ARTIFACT_DIR`, then an **external smoke on BOTH** `/healthz` **and** `/` (both must 200 under a retry
+  loop), then `upload-artifact` (`if: always()`, 14 d). Secret name set is **identical to hi2vi's**.
+- **Static validation, all pass:** `bash -n` × 3 scripts + all 4 embedded `run:` blocks; YAML via
+  `ruby -ryaml` (actionlint + pyyaml absent in this env — noted); secret names + dual smoke confirmed;
+  `plugin_parity.py` PASS (deploy files + workflow not in the manifest); `workflow.py validate` PASS.
+- **TOP S5 RISK — opc's fetch in the gate.** The gate's `git fetch --prune origin main` + ancestor
+  check is the authoritative gate but runs as **opc** on the host, while knowledge's `origin` is the
+  SSH form with a root-owned deploy key opc can't read, and a fetch must **write** into the root-owned
+  `.git`. `-c safe.directory` fixes only the ownership *check*, not key-read or `.git` write. **S5 must
+  prove opc can actually fetch origin/main**; if not, the gate should fetch via the public HTTPS URL
+  (public repo, no credential to read) or delegate the fetch/ancestor gate to deploy.sh's in-container
+  path (a fix slice). hi2vi's identical fetch-as-opc works, but hi2vi's clone isn't a root-committing
+  publish-on-write clone — this is the knowledge-specific unknown.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -406,6 +446,17 @@ durable truth — do **not** version docs per slice._
   has a concrete on-box script (reconcile → both-service bring-up → health-gate both). Repo doc
   `deploy/README.md` should gain the `deploy.sh` usage + reconcile/fix-forward behavior (not a
   `docs/current/*` durable doc — for S3/REVIEW, not `doc-new-version`). Nothing versioned this slice.
+- **S3 realized (2026-07-15)** the manual-dispatch production deploy as the concrete three-script
+  GHA→box chain — REVIEW should fold into: `operations.md` (the redeploy **procedure** is now a
+  `workflow_dispatch` `Production Deploy` action → SSH-transport driver → on-box authoritative gate
+  [dirty-check + `fetch`/ancestor-gate] → `deploy/deploy.sh` → **edge vhost re-apply** [`install` conf
+  + edge `./deploy.sh` `nginx -t` gate → graceful reload] → **dual external smoke** on `/healthz` + `/`;
+  artifacts uploaded 14 d) and `decisions.md` (new ADRs: **mirror hi2vi's three-script split**
+  [runner-transport driver / on-box gate / `deploy.sh`] for the knowledge shape; **edge re-apply inside
+  the on-box gate** after a healthy deploy [a failed edge `nginx -t` fails the deploy loudly];
+  **`workflow_dispatch`-only, main-guarded, `concurrency: knowledge-deploy`** so the agent's constant
+  publish-on-write pushes never trigger a redeploy). Repo doc `deploy/README.md` should gain the
+  manual-dispatch redeploy usage (not a `docs/current/*` durable doc). Nothing versioned this slice.
 
 ## Open Questions
 
