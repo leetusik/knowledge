@@ -260,6 +260,55 @@ assumption** of the live-serve choice, so **S5 must prove it**: POST a doc via t
 the watcher. **Fallback if it doesn't fire:** mkdocs' polling watch, or switch `knowledge-site` to
 rebuild-on-write. This is why S5 is `high` and gated as operator co-work.
 
+### S1 findings — self-host the web UI + retire Pages (done 2026-07-15, author-only, no box impact)
+
+Implemented §A/§B/§C against the signed-off design + the two confirmed operator decisions
+(Pages = reclassify + neutralize; URLs → `knowledge.hi2vi.com` **root**). Six files changed, all
+locally validated (no SSH, no edge reload, no `docker compose up`). Notes for S2–S5 + REVIEW:
+
+- **`compose.prod.yml` — new `site` service.** Added `site` (key `site`, `container_name:
+  knowledge-site`, `image: squidfunk/mkdocs-material:9.7.6`, `command: serve --dev-addr=0.0.0.0:8000
+  --livereload`, `volumes: [ .:/docs ]`, `networks: [ changple_shared_network ]`, **no host `ports:`**,
+  `restart: unless-stopped`, python-based healthcheck hitting `/` with `start_period: 40s`). `--livereload`
+  is present verbatim from local `compose.yml` `kb` (the §H fresh-on-write flag). `KB_PUBLIC_BASE_URL`
+  repointed to `https://knowledge.hi2vi.com` (no trailing slash — `config.py` rstrips). Also refreshed the
+  file's now-stale header comment ("ships ONLY the api service … Pages" → "ships TWO services"). `docker
+  compose -f compose.prod.yml config` confirms: `site` on `changple_shared_network`, no ports, healthcheck
+  + start_period 40s. **For S2:** the deploy must bring up **both** `api` + `site` and health-gate both;
+  `docker inspect '{{.State.Health.Status}}'` works for `site` too (healthcheck is now declared).
+- **`deploy/knowledge.conf` — two-location split.** Added `set $knowledge_site_upstream knowledge-site;`
+  next to the api var. Split the single `location /` into three: `location /api/` + `location = /healthz`
+  → `$knowledge_upstream` (both keep `proxy_connect_timeout 5s` + `proxy_read_timeout 120s`), and
+  `location /` → `$knowledge_site_upstream` (the mkdocs viewer). **Header-inheritance footgun handled:**
+  hoisted the shared `proxy_set_header` (Host / X-Real-IP / X-Forwarded-For / X-Forwarded-Proto) +
+  `proxy_http_version 1.1` + `proxy_set_header Connection ""` to **server level**, leaving each `location`
+  with only `proxy_pass` (+ the api timeouts) so all three inherit the full header set. Skipped the
+  livereload websocket `Upgrade`/`Connection` headers (cosmetic per §B). Refreshed the file header comment.
+  Verified: no `default_server`, no IPv6 `listen`, no `limit_req_zone` (the only grep hits are the house-rule
+  doc comments). **Isolated `nginx -t` passed** (throwaway `nginx:alpine`, dummy certs, `http{}` wrapper
+  including only this vhost) — but the real cross-tree `nginx -t` + graceful reload over the full conf.d/
+  tree (with `hi2vi.conf` + `00-default.conf`) is **S2's edge-re-apply + S5's on-box gate**, not done here.
+- **URL cutover (`mkdocs.yml` + `params.operator.json`).** `mkdocs.yml:2` `site_url` → `https://knowledge.hi2vi.com/`
+  (trailing slash — root) and `params.operator.json` `KB_SITE_URL` set **identically** (mkdocs.yml is
+  `parameterized`; `plugin_parity.py` renders the template with these params and byte-compares). Parity green.
+- **Pages retirement (`pages.yml` + `manifest.json`).** **Refinement of the approved "drop the push
+  trigger":** rather than drop the `push:` trigger, I **removed the Pages deploy** (the `deploy` job, the
+  `upload-pages-artifact` step, the `pages: write` + `id-token: write` permissions, and `concurrency:
+  group: pages`) while **keeping the `build` job on `push:[main]` + `workflow_dispatch`** (checkout →
+  setup-python → `pip install mkdocs-material==9.7.6` → `mkdocs build` → `site_smoke.py`). This retires
+  Pages for this repo's site **and** preserves the site-build CI guard (catches a broken build/site_smoke
+  before it reaches the box's live-serve); dropping the trigger would have lost that guard. Kept the
+  filename `.github/workflows/pages.yml` (`site_smoke.py:147-160` reads that exact path for pin-parity) and
+  the `mkdocs-material==9.7.6` pin line; renamed `name:` → `site build`. Reclassified `pages.yml` **out of**
+  `manifest.json` `files.identical` (removed the last entry + the now-dangling comma after `.dockerignore`)
+  so the neutralized repo copy and the untouched plugin template (`plugin/templates/kb/.github/workflows/
+  pages.yml`, still full Pages) may legitimately diverge — downstream plugin users keep Pages. `pages.yml`
+  is in no other manifest class and `.github/workflows` is not a `shipped_dir`, so it is now
+  parity-unmanaged. Both CIs green.
+- **Cutover safety (unchanged from §C):** disabling the deploy does **not** take the live Pages *site*
+  down (it serves the last build until the operator flips repo Settings→Pages **Off**). So the box site must
+  be proven live in **S5 before** Pages is turned off — no gap. This slice has **zero** production impact.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -298,6 +347,11 @@ durable truth — do **not** version docs per slice._
   dedicated runner key (§G).
 - `deploy/README.md` — extend with the manual-dispatch redeploy procedure + the `knowledge-site` service
   (a repo doc, **not** a `docs/current/*` durable doc — note it here for S1/REVIEW, not for `doc-new-version`).
+- **S1 realized (2026-07-15)** the durable-truth changes above in code — REVIEW should consolidate them into
+  the named docs: `operations.md`/`architecture.md` (self-hosted `knowledge-site` live-serve + two-location
+  edge routing, no Pages, no ~65 s SLA), `api.md` (201 `url` origin now `https://knowledge.hi2vi.com` root),
+  `decisions.md` (self-host + live-serve + retire-Pages + the Pages "reclassify-out-of-`identical`"
+  mechanism). Nothing versioned this slice (deferred to REVIEW per the once-per-phase rule).
 
 ## Open Questions
 

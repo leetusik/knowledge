@@ -1,4 +1,13 @@
-name: pages
+# site build — CI guard for the self-hosted mkdocs site (was the GitHub Pages
+# deploy; Pages retired for this repo's site in P9.S1). It builds the site and
+# runs scripts/site_smoke.py to catch a broken build / site_smoke BEFORE it
+# reaches the box's live-serve viewer (compose.prod.yml `site`, which now serves
+# the UI in place of Pages). No deploy job / Pages permissions remain.
+#
+# The FILENAME stays pages.yml on purpose: scripts/site_smoke.py reads this exact
+# path for pin-parity (its `mkdocs-material==` must match compose.yml's image
+# pin), so KEEP the `pip install mkdocs-material==9.7.6` line below.
+name: site build
 
 on:
   push:
@@ -7,12 +16,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false   # never cancel a deploy mid-flight
 
 jobs:
   build:
@@ -25,15 +28,3 @@ jobs:
       - run: pip install mkdocs-material==9.7.6   # exact pin — matches compose.yml image
       - run: mkdocs build   # never --strict; see the load-bearing comment in mkdocs.yml
       - run: python3 scripts/site_smoke.py
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
