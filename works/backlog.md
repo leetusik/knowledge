@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P9`
-- Current slice: `P9.DECOMP`
-- Next slice: `P9.REVIEW`
+- Current slice: `P9.S1`
+- Next slice: `P9.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `2`
-- Rebuilt at: `2026-07-15T08:34:05+09:00`
+- Rebuilt at: `2026-07-15T10:04:33+09:00`
 
 ## Active Phases
 
@@ -24,7 +24,7 @@
 | [x] `P6` | `done` | `pass` | Obsidian-like knowledge graph | `none` | `works/phases/active/P6` |
 | [x] `P7` | `done` | `pass` | Claude Code plugin | `none` | `works/phases/active/P7` |
 | [x] `P8` | `done` | `pass` | Knowledge API for hi2vi content agent | `none` | `works/phases/active/P8` |
-| [ ] `P9` | `planned` | `pending` | Production deploy GitHub Action for the knowledge API | `P9.DECOMP` | `works/phases/active/P9` |
+| [ ] `P9` | `planned` | `pending` | Production deploy GitHub Action for the knowledge API | `P9.S1` | `works/phases/active/P9` |
 
 ## Phase P1: Bootstrap Intake
 
@@ -126,5 +126,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P9.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P9/slices/P9.DECOMP` |
+| [x] `P9.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P9/slices/P9.DECOMP` |
+| [ ] `P9.S1` | `todo` | Self-host the web UI + retire Pages | `implementation` | `works/phases/active/P9/slices/P9.S1` |
+| [ ] `P9.S2` | `todo` | On-box deploy: reconcile + redeploy both services + edge re-apply | `implementation` | `works/phases/active/P9/slices/P9.S2` |
+| [ ] `P9.S3` | `todo` | GHA driver + Production Deploy workflow | `implementation` | `works/phases/active/P9/slices/P9.S3` |
+| [ ] `P9.S4` | `todo` | Runner SSH-key provisioning runbook + operator gate | `implementation` | `works/phases/active/P9/slices/P9.S4` |
+| [ ] `P9.S5` | `todo` | E2E acceptance (real dispatch) | `implementation` | `works/phases/active/P9/slices/P9.S5` |
 | [ ] `P9.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P9/slices/P9.REVIEW` |
