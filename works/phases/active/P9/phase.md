@@ -633,6 +633,39 @@ durable truth — do **not** version docs per slice._
   manual-dispatch redeploy usage + the one-time box-clone bootstrap note (first deploy only) — a repo doc,
   not `docs/current/*`. Nothing versioned this slice (deferred to REVIEW).
 
+### REVIEW findings — verdict `pass`; five durable docs consolidated (2026-07-15, static sweep, no re-deploy)
+
+Validated the whole phase together and consolidated the Doc-impact list. **No fix slice needed.**
+Behavioral proof is S5 (live); REVIEW re-ran only the cheap **static** sweep.
+
+- **Static sweep, all PASS:** `bash -n` × 3 deploy scripts; `plugin_parity.py` PASS; `site_smoke.py`
+  PASS (after a local `docker compose run --rm kb build` — the built-site invariants need a build; the
+  S1-touched **pin-parity source read** passed clean without one, pins match `9.7.6`); YAML sanity on
+  `deploy-production.yml` via `ruby -ryaml` (pyyaml absent here); `workflow.py validate` PASS; **`docker
+  compose -f compose.prod.yml config` PASS** (docker was available locally — ran with an empty temp `.env`,
+  since `env_file: .env` is box-only; resolved config confirms the two-service P9 topology).
+- **Objective + intent met, cited to S5:** self-hosted two-service site healthy at `knowledge.hi2vi.com`;
+  one manual-dispatch `Production Deploy` (run 29385684066) end-to-end; Pages retired (API 404, box serves);
+  fresh-on-write proven (POST → live, no restart); two-location routing; both services healthy. All phase
+  **Constraints held** (two-credential separation; never detach/reset/force; edge house rules
+  comments-only, no directives; both CIs green — `pages.yml` reclassified out of manifest `identical`;
+  `workflow_dispatch`-only + main-guard + `concurrency: knowledge-deploy`; shipped plugin keeps Pages;
+  no cross-repo blast radius — the api doc is additive-only).
+- **Five durable-doc versions created (once-per-phase point):** `operations` v0009→**v0010**,
+  `architecture` v0007→**v0008**, `api` v0005→**v0006** (additive-only — frozen contract shapes intact),
+  `security` v0004→**v0005**, `decisions` v0009→**v0010**. Each folds the phase's Doc-impact entries into the
+  full snapshot; `rebuild-docs` + `docs` + `validate` all clean. Repo doc **`deploy/README.md`** extended
+  directly (two-service compose + two-location vhost; new **§6** manual-dispatch redeploy usage + runner
+  secret set + one-time box-clone bootstrap).
+- **qa NOT versioned (v0006 kept):** S5 reused P8's exact "assert the capability, not the status code"
+  methodology (fresh-on-write is another instance), so no new durable qa truth beyond v0006 — as the plan
+  predicted.
+- **Deviations:** built the site locally for a full site_smoke PASS; used an empty temp `.env` for compose
+  config; two `doc-new-version` calls (operations, decisions) failed first on `File name too long` and were
+  retried with shorter summaries (no orphans — validate PASS, 5 clean `doc_version_created` events). No
+  source code edited (review slice). The orchestrator records the verdict via `review-phase P9 --verdict
+  pass` and commits.
+
 ## Open Questions
 
 _For operator sign-off at S1 (design-first). DECOMP's recommendations noted; operator confirms._

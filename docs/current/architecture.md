@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0007
-created_at: 2026-07-15T01:00:41+09:00
-source: P8.REVIEW
-summary: P8: hosted deployment shape — same codebase, two deployments (local open/never-push vs hosted authed publish-on-write); box clone + server-side push as the publish path
-previous: v0006_p7_explain_packaged_as_a_claude_code_plugin_hosted_in_this_repo_marketplace_isolated_plugin_payload_template-sync_snapshot_shared_stdlib_renderer_parity_guard
+version: v0008
+created_at: 2026-07-15T13:03:37+09:00
+source: P9.REVIEW
+summary: P9: Track 1 web UI is now self-hosted mkdocs live-serve (not GitHub Pages) — two services (knowledge-api + knowledge-site) on one box behind two-location edge routing (/ -> site, /api/* + /healthz -> api)
+previous: v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path
 ---
 
 # Architecture
 
 ## Status
 
-Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below).
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below). As of P9 **Track 1's public site is self-hosted too**: the human web UI is served **live** by a `mkdocs serve` `knowledge-site` viewer on the box (**not GitHub Pages**, retired), so the box runs **two independent services** (`knowledge-api` + `knowledge-site`) behind **two-location edge routing** — one public domain, `knowledge.hi2vi.com`, for both tracks (see *Self-hosted site* below).
 
 ## System Shape
 
@@ -65,9 +65,38 @@ Three architectural consequences worth stating plainly:
   mechanism**: the box lands on top of the latest remote at every write, so it can neither
   clobber operator work nor drift stale — no cron, no webhook, no mirror.
 
-The hosted API is a **co-tenant behind a shared, declaratively-configured nginx edge** on the
-operator's box; the published site stays on GitHub Pages. Deployment mechanics and the edge's
-rules live in **operations**; the auth/credential model in **security**.
+The hosted API is a **co-tenant behind a dedicated, declaratively-configured nginx edge** on the
+operator's box; as of P9 the **public site is self-hosted on the same box** (no longer GitHub
+Pages — see *Self-hosted site* below). Deployment mechanics and the edge's rules live in
+**operations**; the auth/credential model in **security**.
+
+## Self-hosted site: two services, one domain, two-location routing (P9)
+
+P9 makes the box the **single public front door** for the whole knowledge site — the human web
+UI **and** the machine API — retiring GitHub Pages. Two independent services run side by side on
+the box and are routed by path at the edge:
+
+| | **`knowledge-site`** (Track 1, humans) | **`knowledge-api`** (Track 2, agents) |
+|---|---|---|
+| What | `squidfunk/mkdocs-material:9.7.6` `mkdocs serve --livereload` viewer | the FastAPI read/write document service |
+| Serves | the browsable static/client-side site (`/`) | `/api/*` + `/healthz` |
+| Reads the API? | **never** — fully static/client-side (lunr + `graph.json`) | n/a |
+| Source | the **same** box clone (`/opt/knowledge`), bind-mounted `.:/docs` | the same clone, bind-mounted `.:/repo` |
+
+- **Live-serve, not a static build.** The viewer serves live off the box clone, so a doc the api
+  writes into the shared bind-mounted `docs/` surfaces on the site **with no rebuild and no
+  restart** (`--livereload` arms the watcher; cross-container `inotify` over the shared mount
+  fires it). This is the P9 replacement for Pages' ~65 s push→build→CDN lag — **fresh-on-write**,
+  proven live at P9.S5. Serving decision: **live-serve** over static rebuild-on-write or cron
+  rebuild (see decisions).
+- **The two services are independent and share only the domain.** Because the viewer is
+  browser-only and never calls the API, they coexist on one domain purely via **path-based edge
+  routing** (`deploy/knowledge.conf`: `/` → `knowledge-site`, `/api/*` + `/healthz` →
+  `knowledge-api`). The browser-only search/graph decoupling below is what *lets* them cohabit
+  without coupling — same corpus, no runtime dependency between them.
+- **One codebase still.** Self-hosting the site adds a compose service + an edge location; it
+  changes **no** application code — the viewer is the stock mkdocs image, and the site's content
+  is the same `docs/` tree both tracks share.
 
 ## Boundaries / Constraints
 
@@ -98,10 +127,12 @@ selected by deployment target** — they share the source content but no runtime
   the API and is **never reachable from the published static site** — a static Pages
   host cannot call it, and the site never tries.
 
-The decoupling is deliberate and **P8 did not weaken it**: the API is now reachable from
-the internet (hosted), but the published site *still* never calls it — the only consumer
-is a server-side agent, holding a bearer. That is exactly why the hosted deployment needs
-**no CORS**. The deployed site must work with zero backend; the richer hybrid stays an
+The decoupling is deliberate, and **neither P8 nor P9 weakened it — P9 made it load-bearing**:
+the API is reachable from the internet (hosted), and as of P9 the site is served from the **same
+box on the same domain** as the API — yet the site *still* never calls it (its search is
+browser-only lunr; its graph is a build-time static `graph.json`). That browser-only boundary is
+exactly what lets the two services **cohabit one domain behind path routing** with **no CORS** and
+no runtime coupling — the only API consumer is still a server-side agent holding a bearer. The deployed site must work with zero backend; the richer hybrid stays an
 API-side capability, now available to server-to-server consumers as well as locally. The
 same `docs/` corpus feeds both — the API reindexes from files; mkdocs builds its index from
 the same files — but a change to one search path never affects the other.
@@ -189,5 +220,6 @@ the running system without changing the two-container shape, the API, or the sit
 - **P6 — Obsidian-like knowledge graph — delivered.** An interactive client-side map of the corpus (docs + tag nodes, `related:` + doc–tag edges) rendered on the published static site, hosting unchanged. Built as a build-time `graph.json` static asset (mkdocs hook) + a vendored no-CDN canvas renderer; consumes the P4 `related:` forward edges (backlinks derived by inverting them at build). See the Knowledge Graph section above.
 - **P7 — `/explain` as a Claude Code plugin — delivered.** The feature ships as a plugin hosted in this knowledge repo (marketplace + isolated `plugin/` payload, `/knowledge:explain` + `/knowledge:setup`; see *Plugin packaging* above). This unblocks the bootstrap repo's P7 (retire its embedded `/explain`), which stays exactly as-is until the operator runs that handover — never edited from here.
 - **P8 — hosted API + publish-on-write — delivered.** The document API runs in production at <https://knowledge.hi2vi.com> behind a bearer, and an agent write now publishes itself to GitHub Pages with no operator action. Its first real consumer is the **hi2vi content agent** (that repo's P15.S4), which both *writes* daily research docs and *reads/searches* the accumulated corpus for topic dedup and grounding — the API contract it codes against is frozen and published in **api**. See *Two deployments* above.
+- **P9 — self-hosted full site + automated production deploy — delivered.** The whole site (web UI + API) is now self-hosted at <https://knowledge.hi2vi.com>: a `mkdocs serve` `knowledge-site` viewer joins `knowledge-api` on the box behind two-location edge routing, **GitHub Pages is retired** for this repo's site (the shipped plugin keeps it), and the write path publishes **fresh-on-write** off the live-serve clone (the ~65 s Pages lag is gone). The box deploy is now a **manual-dispatch (`workflow_dispatch`) `Production Deploy` GitHub Action** mirroring `hi2vi_web`'s three-script split, adapted for the publish-on-write clone (reconcile-on-`main`, never detach/reset/force; all authoritative git in-container; gate + fix-forward, no rollback; edge re-apply in the gate). See *Self-hosted site* above; mechanics in **operations**.
 - **`/explain` consumer**: the `/explain` skill (in `bootstrap_agentic_workspace`) becomes the API's client, POSTing documents instead of writing files — delivered via a prepared handover prompt in that other repo (operator action, never edited from here).
 - **SaaS-someday** remains noted, and P8 moved it from theory toward practice without committing to it: the codebase already runs hosted, authenticated, and multi-consumer-ready behind one token. What is still missing for real SaaS is multi-tenancy (per-user corpora + auth), not hosting. The browser-only static-search boundary keeps the deployed site backend-free either way.

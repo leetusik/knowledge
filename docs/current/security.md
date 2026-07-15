@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0004
-created_at: 2026-07-15T00:58:38+09:00
-source: P8.REVIEW
-summary: P8: hosted auth model (flag-gated read bearer), the box-only SSH deploy key and the scoped departure from agent-never-pushes, generate-credentials-where-they-live
-previous: v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod_600_local-only-fallback_rule_no_secrets_in_scaffolds_payload_isolation
+version: v0005
+created_at: 2026-07-15T13:03:37+09:00
+source: P9.REVIEW
+summary: P9: add the GHA runner->opc@box SSH-key credential (three ORACLE_SSH_* leetusik/knowledge secrets, dedicated ed25519), distinct from the P8 container->GitHub deploy key; deliberate secret-transit exception for the runner key
+previous: v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live
 ---
 
 # Security
@@ -13,7 +13,9 @@ previous: v0003_p7_saas-open_config_model_.config_knowledge-kb_config.json_chmod
 
 Personal, single-operator knowledge base. The threat model is modest — no multi-tenant data, no customer PII — but P4 hardened the **public-surface hygiene**: nothing on the published GitHub Pages site or the API leaks the author's local filesystem. P7 packaged the feature as a distributable Claude Code plugin, which adds two hygiene boundaries: a **payload-isolation** rule (nothing personal ships in the installable payload) and a **SaaS-open config model** (per-user config file + a local-only-fallback rule) that keeps a future hosted multi-user version possible without building it now.
 
-**P8 is the first time the threat model actually widens**: the API is now exposed on the **public internet** (`https://knowledge.hi2vi.com`) and holds a **write-capable git credential** that publishes to a public repo. Three things follow, all below: reads/search go behind the bearer on the hosted deployment (a new flag, off by default); the push credential is a repo-scoped SSH deploy key that **never leaves the box**; and "the agent never pushes" is now a *flag-gated* rule with exactly one deliberate exception. The corpus itself is already public on Pages, so the exposure is about **abuse and write authority**, not content secrecy.
+**P8 is the first time the threat model actually widens**: the API is now exposed on the **public internet** (`https://knowledge.hi2vi.com`) and holds a **write-capable git credential** that publishes to a public repo. Three things follow, all below: reads/search go behind the bearer on the hosted deployment (a new flag, off by default); the push credential is a repo-scoped SSH deploy key that **never leaves the box**; and "the agent never pushes" is now a *flag-gated* rule with exactly one deliberate exception. The corpus itself is already public, so the exposure is about **abuse and write authority**, not content secrecy.
+
+**P9 adds a second, independent credential** — a **GHA runner → `opc@box` SSH key** that lets the manual-dispatch `Production Deploy` Action reach the box. It is kept **strictly distinct** from P8's container → GitHub push deploy key (different direction, store, and blast radius — see *Two credentials* below), and its provisioning is the **one deliberate exception** to the "secrets are box-born and never transit" rule: the runner key's private half *must* reach a GitHub Actions secret, so it is minted in a `umask 077` tempdir, piped once into `gh secret set`, and shredded. The corpus went fully self-hosted at P9 (Pages retired), but that changes no auth surface — the box already served the public site's read path.
 
 ## Purpose
 
@@ -70,6 +72,40 @@ the durable rules are:
   because of publish-on-write, would reach the public site. It is the single shared secret with
   hi2vi (`KNOWLEDGE_API_TOKEN` there is the same value); rotate it in both places together.
   Reads leak nothing new (the corpus is already public).
+
+## Two credentials, never conflated: push deploy key vs runner SSH key (P9)
+
+P9's automated deploy introduces a **second** credential. The single most important P9 security
+rule is that the two are **distinct** — different direction, store, birthplace, and blast radius —
+and neither phase touches the other:
+
+| | **§ push deploy key** (P8) | **§ runner SSH key** (P9) |
+|---|---|---|
+| Direction | box container → **GitHub** (git push) | GitHub Actions runner → **`opc@box`** (SSH to deploy) |
+| Comment tag | `knowledge-api@oci-box` | `knowledge-gha-runner@box` |
+| Stored as | root-owned file on the box (`/opt/knowledge-secrets/knowledge_deploy_key`), mounted read-only into the api container | **three `leetusik/knowledge` Actions secrets** — `ORACLE_SSH_PRIVATE_KEY` (required), `ORACLE_SSH_KNOWN_HOSTS` (required), `ORACLE_SSH_PASSPHRASE` (optional) |
+| Born | **on the box**, in place — private half never leaves | minted on the operator's machine in a `umask 077` tempdir (see the transit exception) |
+| Authorizes | write to this repo (a GitHub deploy key) | login as `opc` on the box (its `.pub` **appended** to `opc`'s `authorized_keys`) |
+
+- **Dedicated, least-privilege runner key.** A **new** ed25519 key was minted for this — not a reuse
+  of hi2vi's runner key on the same `opc` account — so it can be rotated/revoked (drop its
+  `authorized_keys` line + its secrets) **without touching hi2vi's deploy**. The `.pub` is
+  **appended** to `opc`'s `authorized_keys` (`>>`, never overwrite), so the pre-existing shared key
+  survives. The driver connects with `StrictHostKeyChecking=yes` + `IdentitiesOnly=yes` against the
+  pinned `ORACLE_SSH_KNOWN_HOSTS`, whose fingerprint was verified **out-of-band** against the box's
+  real host key before it was trusted (defeats scan-time MITM). It is not command-restricted (the
+  driver `scp`s + runs a script) — isolation is the dedicated key + the appended-line revocability.
+- **The secret-transit exception (refines the "secrets are box-born" premise).** P8's rule is
+  "generate a credential where it will live; the private half never transits a laptop." That still
+  holds for `KB_API_TOKEN` and the push deploy key. The runner key is the **one deliberate,
+  controlled exception**: its private half *must* reach a GitHub Actions secret, so it is minted in a
+  `umask 077` `mktemp -d`, piped **once** into `gh secret set < file` (client-side-encrypted by
+  GitHub, never displayed), its `.pub` copied to the box, and the tempdir **shredded** — a minimal,
+  bounded transit, not a free-for-all. After provisioning the private half lives **only** in the GH
+  secret. This is a refinement of the premise, not a silent contradiction.
+- **No new leaked-key risk in the repo.** Neither credential's private half is ever in the repo tree
+  (the P8 leaked-key incident's lesson holds). The runner key never lands on the box's disk except as
+  the `.pub` line; the push key never leaves the box.
 
 ## The "agent never pushes" rule, revised (P8)
 
@@ -134,6 +170,10 @@ The packaged plugin adds a per-user config model designed to stay **SaaS-open**
 - [x] Plugin payload isolated — nothing personal ships (payload under `plugin/`, `source: "./plugin"`)
 - [x] No secret scaffolded — config file chmod 600, token `null` default, Gemini key host-env only
 - [x] Local-only-fallback — the explain skill never falls back to a local write for a remote KB
+- [x] **(P9)** Deploy runner key is a **dedicated** ed25519, distinct from the push deploy key and from hi2vi's runner key — revocable without touching either
+- [x] **(P9)** Runner key private half lives **only** in the GitHub Actions secret (minted in a `umask 077` tempdir → `gh secret set` → shredded; the single controlled transit exception)
+- [x] **(P9)** Runner `.pub` **appended** to `opc`'s `authorized_keys` (pre-existing key intact); host key pinned + verified out-of-band; `StrictHostKeyChecking=yes` + `IdentitiesOnly=yes`
+- [x] **(P9)** Deploy is `workflow_dispatch`-only + main-guarded — publish-on-write pushes can never trigger it; no secrets in workflow logs (verified live at P9.S5: 0 key material, 0 token occurrences)
 
 ## Open Questions
 

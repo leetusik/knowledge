@@ -1,17 +1,17 @@
 ---
 doc_id: operations
-version: v0009
-created_at: 2026-07-15T00:57:06+09:00
-source: P8.REVIEW
-summary: P8: production deployment at knowledge.hi2vi.com (dedicated declarative edge, own box clone, compose.prod), publish-on-write flow, KB_GIT_PUSH/KB_REQUIRE_READ_AUTH env, openssh-client is load-bearing
-previous: v0008_p7_plugin_install_setup_flow_portable_site_smoke_deploy_gate_plugin-ci_parity_gate_release_version-bump_discipline
+version: v0010
+created_at: 2026-07-15T13:03:53+09:00
+source: P9.REVIEW
+summary: P9: self-hosted two-service site (knowledge-api + knowledge-site live-serve) + manual-dispatch Production Deploy; fresh-on-write replaces the ~65s Pages SLA; Pages retired
+previous: v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing
 ---
 
 # Operations
 
 ## Status
 
-Both tracks operational, and **as of P8 the API also runs hosted in production** at <https://knowledge.hi2vi.com> with **publish-on-write** — an agent write reaches the public site with no operator action (see *Production deployment* below). Locally, `docker compose up -d` still runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API), and Track 1 is published live at <https://leetusik.github.io/knowledge/> via GitHub Pages CI. As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
+Both tracks operational, and **as of P9 the whole site — the human web UI *and* the machine API — is self-hosted in production** at <https://knowledge.hi2vi.com>. Two containers run on the box (`knowledge-api` + a `mkdocs serve` **`knowledge-site`** live-serve viewer) behind **two-location edge routing** (`/` → the site, `/api/*`+`/healthz` → the api), with **publish-on-write** — an agent write reaches the public site with no operator action and **no ~65 s Pages lag** (the box serves the doc off the same clone the instant it is written; *fresh-on-write*, proven live at P9.S5). A **manual-dispatch (`workflow_dispatch`) `Production Deploy` GitHub Action** automates the box deploy — reconcile the publish-on-write clone + rebuild/health-gate **both** services + re-apply the edge vhost (see *Automated production deploy* below). **GitHub Pages is retired for this repo's site** (P9); the shipped plugin keeps Pages for downstream users. Locally, `docker compose up -d` still runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API). As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
 
 ## Local Development
 
@@ -59,19 +59,18 @@ Two services over one bind-mounted repo:
 - Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the mutating endpoints (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`.
 - **(P8)** Adding `KB_REQUIRE_READ_AUTH=true` **as well** puts the read/search surface behind the same bearer. It defaults **false**, so a local token still guards writes only — reads stay open unless you deliberately opt in. The hosted box sets both. `GET /healthz` stays open either way.
 
-## Publishing (GitHub Pages)
+## Publishing: self-hosted live-serve (P9; GitHub Pages retired)
 
-Track 1 — the `docs/` tree — is published as a static site at <https://leetusik.github.io/knowledge/>.
+Track 1 — the `docs/` tree — is served **live by the box** at the root of <https://knowledge.hi2vi.com/> (the `knowledge-site` `mkdocs serve --livereload` viewer off `/opt/knowledge`), **no longer GitHub Pages** (P9). Because the api writes each doc into the same bind-mounted tree the viewer serves, a published doc is live **the instant it is written** — *fresh-on-write*, which replaces the old ~65 s push→Pages→CDN lag. The git push continues, now **only for off-box backup/history**, not as the publish path.
 
-- **Pipeline**: `.github/workflows/pages.yml` runs on `push` to `main` (+ `workflow_dispatch`), concurrency group `pages` (`cancel-in-progress: false`). The build job pip-installs `mkdocs-material==9.7.6` → `mkdocs build` (never `--strict`) → **`python3 scripts/site_smoke.py`** (deploy gate, P5) → `actions/upload-pages-artifact`; the deploy job runs `actions/deploy-pages` in the `github-pages` environment.
+- **Pages is retired for this repo's site (P9.S1/S5).** `.github/workflows/pages.yml` was reclassified out of the plugin manifest's `identical` set and **neutralized to a build-only CI guard** (`name: site build`): it still runs on `push` to `main` (+ `workflow_dispatch`) and pip-installs `mkdocs-material==9.7.6` → `mkdocs build` → **`python3 scripts/site_smoke.py`**, but the Pages **`deploy` job / `upload-pages-artifact` step / `pages:write`+`id-token:write` permissions / `concurrency: pages`** were removed. So the site build stays a CI guard (catches a broken build/smoke *before* it reaches the box's live-serve) while nothing deploys to Pages. The operator turned repo **Settings → Pages Off** at cutover (Pages API → 404) — done **after** the box was proven live (§ no-gap). The **shipped plugin keeps Pages** for downstream users (`plugin/templates/kb/.github/workflows/pages.yml` untouched, now allowed to diverge since `pages.yml` left the `identical` class).
 - **Deploy-gating smoke guard (P5 / P5.S4):** `scripts/site_smoke.py` (stdlib-only, optional `--root`) runs after `mkdocs build` and before the artifact upload — a non-zero exit blocks the deploy. It asserts source invariants (the `<!-- explain:recent -->` marker + bullet contract, `<!-- material/tags -->`, no `nav:`/`strict:`, `theme.font: false`, `plugins.search.lang` includes `en`+`ko`, pin parity) and built-site invariants (`search_index.json` `config.lang` includes `ko`, `lunr.ko`/`lunr.multi` packs shipped, the hero `#__search` toggle + `for="__search"` label, the `#recent + ul` DOM adjacency, the three per-project pages built, `site/versions/` absent, no leaked absolute local home-directory path, no `<script src="http…">` CDN tag). **P6 extended the guard:** the `extra_javascript:`-forbidden assertion was *flipped* to an exact allowlist (`== ["javascripts/graph.js"]`) plus `hooks:` wiring + `graph.md`/`graph.js` presence; new built-site assertions cover `site/javascripts/graph.js`, a `site/graph/index.html` that mounts `.kb-graph`/`data-graph-src`/the script, the landing `.kb-card` link to `graph/`, and a `check_graph` over the emitted `graph.json` (see qa for the full list). The no-CDN + no-user-home-path-leak invariants still hold. It deliberately asserts **no build *warnings*** — `--strict` was rejected so future `/explain` zero-config page adds are never blocked by warning noise. Extend `check_source`/`check_built` to add invariants; never `--strict`. **P7 made the guard portable:** the built-site per-project check no longer hardcodes the operator's three project names — a module-level `discover_projects(root)` derives the project dirs dynamically (sorted non-reserved `docs/` subdirs carrying ≥1 non-`index.md` `*.md`), used by **both** `check_built` (the per-project `site/<project>/index.html` loop) **and** `check_graph`'s filesystem doc-count — one discovery truth so they cannot drift, with a zero-project teeth guard. This is what lets a fresh scaffold with only its seed project pass the same byte-identical guard; on the operator's repo discovery yields exactly the same three projects as before.
 - **Site exclusion (P4 / D1; P5):** `mkdocs.yml` sets `exclude_docs: /versions/` (workspace-internal durable-doc history kept out of the built site — pages, nav, search — while `docs/current/` stays published) plus **`/README.md`** (P5.S4 — makes mkdocs' existing auto-exclusion explicit, silencing the standing `README.md`/`index.md` conflict warning; changes nothing published). Use `exclude_docs` **only** — never `nav:`/`strict:` (auto-nav from the `docs/` tree is load-bearing).
 - **Pin parity**: the CI pip pin and the `compose.yml` viewer image tag are the same `9.7.6` on purpose — bump them together so the local build stays a faithful CI pre-check. The smoke guard also asserts this parity.
 - **Pre-push check (P5)**: `docker compose run --rm kb build` runs the same `mkdocs build` as CI (same 9.7.6), then `python3 scripts/site_smoke.py` runs the same deploy gate CI runs (default root = repo root; run the build first so `site/` is fresh). A clean local build **and** a `PASS` predict a clean, gate-passing deploy.
-- **Push policy (revised at P8)**: **locally**, still manual-push-only — agents, the `/knowledge:explain` skill, and the API commit but **never push** (`KB_GIT_PUSH` defaults false). The **one** exception is the hosted production box, which sets `KB_GIT_PUSH=true` so an agent write publishes itself (see *Production deployment* below). A deploy is therefore triggered either by the operator's manual `git push` or by a hosted API write — nothing else.
+- **Push policy (revised at P8, refined at P9)**: **locally**, still manual-push-only — agents, the `/knowledge:explain` skill, and the API commit but **never push** (`KB_GIT_PUSH` defaults false). The **one** exception is the hosted production box, which sets `KB_GIT_PUSH=true`. As of P9 the box's live-serve viewer makes the doc **publicly live at write time** (off the shared clone); the push now serves **off-box backup/history** rather than being the publish path (there is no Pages CI to deploy). A **code/image redeploy** (a `server/*`/`Dockerfile`/`compose.prod.yml`/vhost change) reaches production through the **manual-dispatch `Production Deploy`** action (below); a **doc** reaches production the instant the api writes it.
 - **Dev-server eyeball (P5)**: `docker compose up -d kb` serves the live site with livereload for visual review before any push. It is served under the `site_url` subpath — open **`http://localhost:8765/knowledge/`** (a bare `http://localhost:8765/` 302-redirects there). The built `site/` artifact itself is path-agnostic. Stop with `docker compose stop kb`. Final visual acceptance of the design is the operator's, done here before pushing.
-- **One-time setting**: Settings → Pages → Source = "GitHub Actions" (done 2026-07-02; cannot be automated from this repo).
-- **First-publish lesson**: enable Pages *before* the first push, or the `deploy-pages` step fails (the initial push built green but its deploy failed because Pages wasn't enabled yet). Recover without a new push via Actions → "Run workflow" — the workflow re-runs idempotently.
+- **GitHub Pages settings — obsolete (P9).** The former "Settings → Pages → Source = GitHub Actions" one-time setup and the "enable Pages before the first push" lesson no longer apply: Pages is **retired** for this repo's site (turned Off at the P9 cutover), and the box's `knowledge-site` viewer is the sole public site. Kept here only as history.
 
 ## Production deployment: knowledge.hi2vi.com + publish-on-write (P8)
 
@@ -86,10 +85,15 @@ rules that outlive any one bring-up.
 
 ### Shape
 
-- **Its own compose project, api-only.** `compose.prod.yml` (repo root) ships **only** the
-  `api` service — no `kb` viewer (the public site is GitHub Pages) — as container
-  `knowledge-api` with **no published host port**. It is reached only by the edge, over
-  the external `changple_shared_network`, by container name.
+- **Its own compose project, TWO services (P9).** `compose.prod.yml` (repo root) ships
+  **`api`** (container `knowledge-api`) **and** **`site`** (container `knowledge-site`, image
+  `squidfunk/mkdocs-material:9.7.6`, `command: serve --dev-addr=0.0.0.0:8000 --livereload`,
+  the same `.:/docs` bind mount, a python-based healthcheck with `start_period: 40s`). Both
+  have **no published host port** and are reached only by the edge, over the external
+  `changple_shared_network`, by container name. Pre-P9 it shipped api-only (the public site
+  was GitHub Pages); P9 added the live-serve viewer so the box serves the whole site. The
+  `--livereload` flag is **load-bearing** — it is what arms the mkdocs watcher so an api write
+  surfaces on the site with no restart (fresh-on-write; see the flow below).
 - **Its own clone on the box** (`/opt/knowledge`), not a bind-mount of anyone's working
   tree: the container commits **and pushes** from it, so it needs a real `origin` +
   credential. The clone must be owned by the **invoking (non-root) user** — `docker compose`
@@ -97,8 +101,9 @@ rules that outlive any one bring-up.
   unreadable and the bring-up fails. Clone over **HTTPS** (the repo is public, no credential
   needed), then point `origin` at the **SSH** URL so only the *push* path uses the deploy key.
 - **Box env:** `KB_GIT_PUSH=true`, `KB_REQUIRE_READ_AUTH=true`,
-  `KB_PUBLIC_BASE_URL=https://leetusik.github.io/knowledge` (so the 201 `url` names the real
-  published doc, not the API origin), `KB_ROOT=/repo`, `KB_STARTUP_REINDEX=true`, `TZ`.
+  `KB_PUBLIC_BASE_URL=https://knowledge.hi2vi.com` (P9 — the site is now served at the
+  **domain root** by the box, so the 201 `url` names the live self-hosted doc; pre-P9 this
+  was the Pages origin `…/knowledge`), `KB_ROOT=/repo`, `KB_STARTUP_REINDEX=true`, `TZ`.
   Secrets (`KB_API_TOKEN`, `GOOGLE_API_KEY`) come **only** from a gitignored `.env` on the
   box — the repo carries names and paths, never values.
 
@@ -122,12 +127,18 @@ from the host**, which is the property everything else follows from:
   re-apply script and none is needed. (The knowledge-base explainer
   `docs/hi2vi_web/2026-07-02-shared-nginx-explained.md` predates this cutover and describes
   the *old* regime: read it as history, not as an operating manual.)
-- **Our vhost ships as `deploy/knowledge.conf`** and lands in the edge's `conf.d/`. It uses
-  Docker-DNS **re-resolution** (`resolver 127.0.0.11 valid=30s` + a variable in `proxy_pass`)
-  so the proxy survives an api-container recreation, and terminates TLS with the edge's
-  existing Cloudflare Origin CA cert — a **wildcard** covering `*.hi2vi.com`, so a new
-  subdomain needs **no cert provisioning at all**. Cloudflare fronts it (proxied DNS record;
-  real-IP restore in the vhost).
+- **Our vhost ships as `deploy/knowledge.conf`** and lands in the edge's `conf.d/`. As of P9
+  it is **two-location** (was a single `location /` → api): `location /api/` + `location =
+  /healthz` → `knowledge-api`, and `location /` → **`knowledge-site`** (the mkdocs viewer).
+  Both upstreams are `set $var` names re-resolved via Docker-DNS **re-resolution**
+  (`resolver 127.0.0.11 valid=30s ipv6=off` + a variable in `proxy_pass`) so the proxy
+  survives either container's recreation. The shared proxy headers are **hoisted to server
+  level** so both locations inherit them (nginx drops the *entire* inherited `proxy_set_header`
+  set the moment a `location` sets one of its own). It terminates TLS with the edge's existing
+  Cloudflare Origin CA cert — a **wildcard** covering `*.hi2vi.com`, so a new subdomain needs
+  **no cert provisioning at all**. Cloudflare fronts it (proxied DNS record; real-IP restore in
+  the vhost). The edge house rules still hold: **no** `default_server`, **no** IPv6
+  `listen [::]`, **no** `limit_req_zone`.
 - **Two rules a vhost on this edge must obey — they break the *whole* edge, not just one
   site.** (1) The `conf.d/` tree is tested and reloaded **as a unit**, and a `limit_req_zone`
   name is **global across it** — a duplicate is a hard `nginx -t` failure that blocks the
@@ -141,20 +152,75 @@ With `KB_GIT_PUSH=true`, one `POST /api/documents` does the whole publish, **in-
 inside the write lock**: validate → write the `docs/` file → auto-create the project landing
 if this is the project's first doc → Recent bullet → DB row + embedding → **scoped** commit
 (`git add --` on the touched paths only, never `-A`) → `git fetch origin main` → rebase onto
-`origin/main` → **non-force** `git push origin HEAD:main` → GitHub Pages CI deploys (through
-the `site_smoke.py` gate) → the doc is publicly live.
+`origin/main` → **non-force** `git push origin HEAD:main`.
 
-- **Measured in production (the SLA the agent can rely on):** the POST returns in **~6s**, the
-  Pages deploy completes in **~46s**, and the doc is **publicly readable ~65s after the POST
-  returns**.
+- **Fresh-on-write replaces the ~65 s Pages SLA (P9).** The doc is written into the same
+  bind-mounted `/opt/knowledge` tree the `knowledge-site` viewer serves, so it is **publicly
+  live the instant it is written** — cross-container `inotify` over the shared mount fires the
+  mkdocs `--livereload` rebuild with **no container restart** (proven at P9.S5: POST → the page
+  200s on the site immediately). The pre-P9 chain (push → Pages CI ~46 s → CDN, ~65 s total) is
+  gone; the push now serves **off-box backup/history only**.
 - **Fetch+rebase-before-push is also the freshness mechanism.** The box catches up on the
   operator's commits at every write, so it always lands on top of the latest remote and can
   never revert operator work — no cron, no webhook, no mirror. The box clone being *behind*
   `origin/main` between writes is normal and self-healing.
 - **Push is best-effort and never fails the write** (mirrors commit): a failed push still
-  returns 201, with `pushed:false` + `push_error`, and the doc publishes on the **next**
-  successful push. That is precisely why bring-up must *assert* the push capability rather
-  than infer it from a 201 (see the `openssh-client` note above).
+  returns 201, with `pushed:false` + `push_error`. Post-P9 the doc is **already publicly live**
+  on the box's live-serve regardless of push status — a failed push only delays the **off-box
+  backup**, which catches up on the next successful push. Bring-up must still *assert* the push
+  capability rather than infer it from a 201 (see the `openssh-client` note above).
+
+## Automated production deploy: manual-dispatch `Production Deploy` (P9)
+
+A code/image/vhost change reaches production through a **manually dispatched** GitHub Action,
+mirroring `hi2vi_web`'s three-script split adapted for the publish-on-write clone + two
+services. It is **`workflow_dispatch`-only, main-guarded**, and isolated by
+`concurrency: knowledge-deploy` — the agent's constant publish-on-write pushes to `main` must
+**never** trigger a redeploy. First proven live at P9.S5 (run 29385684066, ~1m17s).
+
+The three-script chain (`.github/workflows/deploy-production.yml` → `deploy/`):
+
+1. **Runner driver — `deploy/github-actions-production-deploy.sh`** (transport only). `umask 077`
+   tempdir for the key + `known_hosts`; `ssh -o BatchMode=yes -o StrictHostKeyChecking=yes
+   -o UserKnownHostsFile=<pinned> -o IdentitiesOnly=yes` into `opc@140.245.64.173`; `scp`s the
+   on-box gate + `TARGET_SHA`/`REPO_PATH=/opt/knowledge`/`REMOTE_ARTIFACT_DIR`, then collects
+   artifacts back. It reads the three `ORACLE_SSH_*` repo secrets (see security).
+2. **On-box gate — `deploy/oracle-production-deploy-remote.sh`** (opc-safe orchestration). Asserts
+   `TARGET_SHA` is 40-hex, hands to `deploy/deploy.sh "$TARGET_SHA"`, then re-applies the edge
+   vhost, then collects `compose ps`/`logs` artifacts. It runs **no authoritative git** — that all
+   lives in-container (F1, below); its only git is best-effort `git status` captures (non-fatal).
+3. **`deploy/deploy.sh`** (the deploy core). Runs the **authoritative** reconcile in a **one-shot
+   root container reusing the `api` service** (`docker compose run --rm --entrypoint sh api …`),
+   which inherits the `.:/repo` mount, the `/run/secrets` deploy key, `GIT_SSH_COMMAND`, and the
+   baked `safe.directory /repo` — so git fetch/rebase over SSH run as **uid 0** against the
+   root-owned `.git`. Reconcile-on-`main` (never detach/reset/force): refuse a dirty **tracked**
+   worktree (permit ahead/unpushed), wait out `.git/index.lock`, `git fetch --prune origin main`,
+   **fail-closed** `TARGET_SHA` ancestor gate (`cat-file -e` + `merge-base --is-ancestor`),
+   `merge --ff-only` when behind / `rebase` when ahead / `rebase --abort`+fail on conflict —
+   deploying origin/main's **tip**. Then `COMPOSE_BAKE=false docker compose -f compose.prod.yml
+   up -d --build` brings up **both** services, **health-gates both** (`docker inspect
+   '{{.State.Health.Status}}'`, covering the start_periods), and on failure captures artifacts
+   and exits non-zero — **§F v1: gate + fix-forward, no rollback** (the app runs from the bind
+   mount, so an image-tag flip cannot revert `server/` code anyway).
+
+- **The authoritative git lives in-container, not opc-side (F1).** The gate's fetch/ancestor check
+  originally ran as `opc`, which **cannot authenticate** (SSH origin, root-owned deploy key opc
+  can't read, no opc GitHub key) — it would kill every deploy. F1 relocated all authoritative git
+  into `deploy.sh`'s root reconcile container (the fail-closed gate always fires on a real deploy)
+  and left the on-box gate as pure orchestration. Proven live at S5 (the in-container reconcile
+  fetched/authed/ff-merged against the SSH origin).
+- **Edge re-apply is layered in the gate after a healthy deploy:** `install -m 0644
+  deploy/knowledge.conf /home/opc/edge/conf.d/knowledge.conf` → `( cd /home/opc/edge &&
+  ./deploy.sh )` (the edge's own `nginx -t` gate → graceful reload; **never** recreate
+  `edge-nginx`). A failed edge `nginx -t` reloads nothing and **fails the deploy loudly**. Skipped
+  entirely if the deploy is non-zero (no routing cutover onto unhealthy containers).
+- **External smoke, both surfaces:** the workflow curls `https://knowledge.hi2vi.com/healthz`
+  **and** `/` — both must 200 under a retry loop — then uploads `production-deploy-artifacts`
+  (`if: always()`, **14 d** retention).
+- **One-time box-clone bootstrap (first deploy only).** If `/opt/knowledge` predates the P9
+  machinery (no `deploy.sh`, old single-service compose/vhost), the first deploy reconciles the
+  clone to `origin/main` **once** via the same one-shot api container (S5 did this: `383577e →
+  c018571` ff-merge, clean). After that first bootstrap the standard chain applies.
 
 ## Site Design Build Assets (P5)
 
@@ -266,3 +332,7 @@ commands plus a root-only release/parity discipline:
 - **The hosted box never force-pushes and never `git add -A`** — the scoped-commit + rebase-onto-remote discipline is what keeps a server-side push from ever clobbering `main`.
 - **Both hosted behaviors stay flag-gated off by default** (`KB_GIT_PUSH`, `KB_REQUIRE_READ_AUTH`): a local or plugin user gets open reads and a never-pushing agent, exactly as before P8.
 - **Edge changes are host file drops + `./deploy.sh`** — never `docker cp`, never a recreate of the edge container.
+- **The production deploy is `workflow_dispatch`-only, main-guarded, `concurrency: knowledge-deploy`** (P9) — publish-on-write pushes to `main` must never trigger a redeploy.
+- **The box clone is never detached / `reset --hard` / `--force`d** (P9) — it is also the publish-on-write clone; the deploy reconciles on `main` (ff/rebase) so it can never orphan an unpushed doc.
+- **All authoritative git in the deploy runs in-container as root** (P9.F1), never opc-side — opc cannot authenticate the SSH origin against the root-owned deploy key.
+- **`knowledge-site`'s `--livereload` is load-bearing** (P9) — it arms the watcher that makes fresh-on-write work; dropping it means new docs need a container restart.

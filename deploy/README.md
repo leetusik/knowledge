@@ -1,13 +1,23 @@
 # Production deploy runbook — knowledge.hi2vi.com
 
-Operator-facing runbook for hosting the knowledge document API publicly at
-`https://knowledge.hi2vi.com`, as a co-tenant on the OCI box (the same box +
-edge that serves hi2vi.com). Every step runs **on the box**.
+Operator-facing runbook for hosting the **whole knowledge site — the human web UI
+*and* the machine API** — publicly at `https://knowledge.hi2vi.com`, as a co-tenant
+on the OCI box (the same box + edge that serves hi2vi.com). As of **P9** the box
+self-hosts the site (GitHub Pages retired) and a **manual-dispatch `Production Deploy`
+GitHub Action** automates the box deploy — see **§6**. §0–§5 below are the one-time
+bring-up / first-bootstrap steps that run **on the box**; §6 is the repeatable redeploy.
 
 Artifacts this runbook applies:
 
-- **`compose.prod.yml`** (repo root) — the api-only box compose project.
-- **`deploy/knowledge.conf`** — the nginx vhost, dropped onto the box's edge.
+- **`compose.prod.yml`** (repo root) — the box compose project. As of **P9** it ships
+  **two** services: **`api`** (`knowledge-api`) and **`site`** (`knowledge-site`, a
+  `mkdocs serve --livereload` viewer on `squidfunk/mkdocs-material:9.7.6`, off the same
+  `/opt/knowledge` clone). Both are unpublished-port, edge-only.
+- **`deploy/knowledge.conf`** — the nginx vhost (now **two-location**: `/` → the site,
+  `/api/*` + `/healthz` → the api), dropped onto the box's edge.
+- **`deploy/deploy.sh`** + **`deploy/oracle-production-deploy-remote.sh`** +
+  **`deploy/github-actions-production-deploy.sh`** — the P9 three-script deploy chain the
+  `Production Deploy` Action runs (§6).
 
 Secret *values* live only on the box (never in this repo). Generating and
 registering them + DNS — the token, the SSH deploy key (and its GitHub
@@ -119,8 +129,10 @@ cd /opt/knowledge
 # (documented in docs/current/operations.md). Carry the flag.
 COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build
 
-docker compose -f compose.prod.yml ps            # expect: knowledge-api  Up (healthy)
+# P9: this brings up BOTH services. Expect both Up (healthy):
+docker compose -f compose.prod.yml ps            # expect: knowledge-api + knowledge-site  Up (healthy)
 docker compose -f compose.prod.yml logs -f api   # watch the startup reindex line
+# knowledge-site's healthcheck has a start_period (~40s) for the first mkdocs serve boot.
 ```
 
 The image must contain **`ssh`** — `git` alone cannot push over an SSH remote, so
@@ -235,6 +247,75 @@ ssh oracle-cloud "sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env"
 ```
 
 **Do NOT run a write test here.** A `POST /api/documents` pushes to `main` and is
-the phase's **E2E acceptance (P8.S5)** — the first `project:"hi2vi"` write → 201
-`pushed:true` → commit on `main` → Pages deploy → doc live. Run it there, not as a
-bring-up smoke step.
+an **E2E acceptance** step (P8.S5 / P9.S5) — the first `project:"hi2vi"` write → 201
+→ commit on `main` → **live on the self-hosted site (fresh-on-write, P9)**. Run it
+there, not as a bring-up smoke step.
+
+---
+
+## 6. Automated redeploy — the `Production Deploy` GitHub Action (P9)
+
+After the one-time bring-up (§0–§5), a **code/image/vhost** change reaches production
+through a **manually dispatched** GitHub Action — you no longer SSH in and run
+`docker compose … up --build` + the edge apply by hand. (A **doc** does not need this:
+it goes live fresh-on-write the instant the api writes it.)
+
+### Usage
+
+- **Trigger:** GitHub → `leetusik/knowledge` → Actions → **Production Deploy** → **Run
+  workflow** (on `main`). Or: `gh workflow run deploy-production.yml --ref main`.
+- It is **`workflow_dispatch`-only** and **main-guarded** — the agent's constant
+  publish-on-write pushes to `main` never trigger it — and serialized by
+  `concurrency: knowledge-deploy`.
+- **What it does** (three-script chain, all on the box):
+  1. **`deploy/github-actions-production-deploy.sh`** (runner, transport only) SSHes into
+     `opc@140.245.64.173` with the `ORACLE_SSH_*` secrets (§6.1) and `scp`s + invokes the
+     on-box gate with `TARGET_SHA` / `REPO_PATH=/opt/knowledge`.
+  2. **`deploy/oracle-production-deploy-remote.sh`** (on-box gate) asserts inputs, hands to
+     `deploy/deploy.sh`, then re-applies the edge vhost, then collects artifacts. It runs
+     **no authoritative git** (that is in-container — see below).
+  3. **`deploy/deploy.sh`** reconciles the clone **on `main`** (fetch + fail-closed
+     ancestor gate + ff/rebase; **never** detach/reset/force) inside a **one-shot root
+     container reusing the `api` service** (so git authenticates over SSH against the
+     root-owned `.git`), then `COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d
+     --build` brings up **both** services and **health-gates both**. On failure it captures
+     `compose ps`/`logs` and exits non-zero — **fix-forward, no rollback** (the app runs
+     from the bind mount, so an image flip can't revert `server/` code).
+  4. Edge re-apply (in the gate, after a healthy deploy): `install` `knowledge.conf` into
+     `/home/opc/edge/conf.d/` → the edge's own `./deploy.sh` (`nginx -t` gate → graceful
+     reload; a failed test fails the deploy loudly, reloads nothing).
+  5. **External smoke:** the workflow curls `https://knowledge.hi2vi.com/healthz` **and**
+     `/` (both must 200) → uploads `production-deploy-artifacts` (14 d).
+- **Watch it:** `gh run watch` or the Actions run page. On failure, download the
+  artifact (`compose ps` + per-service logs) to diagnose, fix on `main`, and re-dispatch.
+
+### 6.1 The runner secret set (one-time, on `leetusik/knowledge`)
+
+The Action needs a **dedicated** SSH key to reach `opc@box` — provisioned per
+**[`SECRETS.md`](SECRETS.md) §2b** as three repo Actions secrets:
+`ORACLE_SSH_PRIVATE_KEY` (required), `ORACLE_SSH_KNOWN_HOSTS` (required),
+`ORACLE_SSH_PASSPHRASE` (optional). This key is **distinct** from the container's
+publish-on-write deploy key (§1b) — never conflate them.
+
+### 6.2 One-time box-clone bootstrap (first deploy only)
+
+If `/opt/knowledge` predates the P9 machinery (no `deploy.sh` / on-box scripts, an old
+single-service compose+vhost), the box clone must be reconciled to `origin/main`
+**once** before the Action's chain can run against it. Do it with the **same one-shot
+api container** the deploy uses (so git authenticates as root over SSH):
+
+```bash
+ssh oracle-cloud
+cd /opt/knowledge
+# Reconcile the clone to origin/main via the one-shot root container (fetch + ff/rebase,
+# never detach/reset/force). This is exactly what deploy.sh's reconcile step does.
+COMPOSE_BAKE=false docker compose -f compose.prod.yml run --rm -T --no-deps \
+  --name knowledge-bootstrap-$$ --entrypoint sh api -c \
+  'set -e; cd /repo; git fetch --prune origin main; git merge --ff-only origin/main; git log -1 --oneline'
+# Then a normal bring-up brings up BOTH services with the P9 compose:
+COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build
+```
+
+After this first bootstrap, every subsequent deploy is just the `Production Deploy`
+Action (§6). (P9.S5 did exactly this: `383577e → c018571`, clean ff-merge, then the
+first real dispatch.)

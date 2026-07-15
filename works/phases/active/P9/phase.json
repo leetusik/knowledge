@@ -2,16 +2,16 @@
   "id": "P9",
   "name": "Production deploy GitHub Action for the knowledge API",
   "objective": "Add a manual (workflow_dispatch) production-deploy GitHub Action mirroring hi2vi_web's deploy-production.yml: SSH into the shared OCI box, redeploy the knowledge-api container from main with an on-box ARM build + health gate + rollback, and re-apply the edge vhost (deploy/knowledge.conf -> /home/opc/edge/conf.d/ + the edge's own deploy.sh reload). Must handle the publish-on-write wrinkle unique to this repo (the box clone at /opt/knowledge also makes and pushes agent commits) so a deploy never discards an unpushed doc or force-moves the checkout. Replaces today's hand-run SSH redeploy with a repeatable, auditable flow. DECOMP proposes the detailed deploy-script shape + GitHub secret provisioning for operator sign-off.",
-  "status": "planned",
+  "status": "done",
   "order": 9,
   "created_at": "2026-07-15T08:34:05+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-07-15T13:18:02+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-07-15T13:18:02+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "P9 proven live at S5 (run 29385684066): self-hosted knowledge-api + knowledge-site healthy at knowledge.hi2vi.com behind two-location edge routing; manual-dispatch Production Deploy end-to-end (SSH via dedicated runner key -> gate -> in-container reconcile [F1] -> dual health-gate -> edge re-apply -> dual smoke); fresh-on-write proven (POST -> live on site, no restart); Pages retired (API 404, box serving, no gap); no secrets in logs; all constraints held (two-credential separation, never detach/reset/force, edge house rules, both CIs green, manual-dispatch-only, plugin keeps Pages). Consolidated 5 durable docs (operations v0010, architecture v0008, api v0006 additive-only, security v0005, decisions v0010) + extended deploy/README.md; qa left at v0006 (S5 reused P8 methodology). No fix slices."
   },
   "paths": {
     "phase_md": "phase.md",

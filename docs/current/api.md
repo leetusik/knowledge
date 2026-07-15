@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0005
-created_at: 2026-07-15T00:40:32+09:00
-source: P8.REVIEW
-summary: P8: hosted deployment at knowledge.hi2vi.com — frozen consumer contract (bearer on all /api/*, publish-on-write pushed/push_error, commit_sha = published HEAD)
-previous: v0004_p7_shipped_knowledge_explain_skill_config-resolution_order_bearer_post_api_documents_auto-creates_the_project_landing_landing_created_as_a_documented_side_effect
+version: v0006
+created_at: 2026-07-15T13:03:37+09:00
+source: P9.REVIEW
+summary: P9 (additive-only): the 201 url origin is now https://knowledge.hi2vi.com root, served by the box's live-serve site (no longer Pages); /api/* routes unchanged, frozen consumer contract intact
+previous: v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head
 ---
 
 # API
@@ -16,7 +16,7 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P8 the API has two deployments, one codebase:**
 
 - **Local / plugin** (compose service `api`, base `http://localhost:8766`) — unchanged: reads open, writes bearer-guarded only when `KB_API_TOKEN` is set, and the API **never pushes**.
-- **Hosted** — live at **`https://knowledge.hi2vi.com`**, consumed server-to-server by the hi2vi content agent. Two behaviors differ, and **both are opt-in flags that default off**, so the local/plugin experience is untouched: `KB_REQUIRE_READ_AUTH=true` puts reads/search behind the same bearer, and `KB_GIT_PUSH=true` turns the write path into **publish-on-write** (the scoped commit is pushed to `main`, which deploys to GitHub Pages). The full consumer contract is frozen below.
+- **Hosted** — live at **`https://knowledge.hi2vi.com`**, consumed server-to-server by the hi2vi content agent. Two behaviors differ, and **both are opt-in flags that default off**, so the local/plugin experience is untouched: `KB_REQUIRE_READ_AUTH=true` puts reads/search behind the same bearer, and `KB_GIT_PUSH=true` turns the write path into **publish-on-write**. **As of P9 the box self-hosts the site** (a `mkdocs serve` viewer off the same clone), so a written doc is live at its `url` **fresh-on-write** — no GitHub Pages (retired), and the origin of the 201 `url` is now the domain **root** `https://knowledge.hi2vi.com`. The push to `main` continues, now as off-box backup/history. **This is additive/config only** — the frozen consumer contract below (field names, types, status meanings, `/api/*` routing) is **unchanged**, and the hi2vi consumer is unaffected (proven live at P9.S5).
 
 ## Auth
 
@@ -25,8 +25,8 @@ Two layers, both driven by `KB_API_TOKEN` plus one flag:
 - **Writes** (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`): `Authorization: Bearer <KB_API_TOKEN>` required whenever `KB_API_TOKEN` is set (else 401). Unchanged since P2.
 - **Reads/search** (`GET /api/documents`, `/api/documents/{id}`, `/api/documents/by-path/{rel_path}`, `/api/search`, `/api/tags`, `/api/projects`): open **by default**. They require the same bearer only when **both** `KB_REQUIRE_READ_AUTH=true` **and** `KB_API_TOKEN` is set (P8) — the hosted box's configuration. The dependency (`require_read_bearer`) *delegates* to the write path's `require_bearer`, so the two auth surfaces cannot drift.
 - **Backward-compat guard (tested):** a set `KB_API_TOKEN` with the flag unset leaves reads open — a local token still guards writes only. Token unset (default) = localhost open.
-- **`GET /healthz` is always open**, even on the hosted box (edge/uptime probes need it). Its `documents` count is not a leak: the whole corpus is already public on GitHub Pages.
-- **No CORS, deliberately.** The consumer is server-to-server; the published Pages site searches browser-only via lunr and never calls this API, so no browser origin ever reaches it. A future browser client would be a separate, explicit change.
+- **`GET /healthz` is always open**, even on the hosted box (edge/uptime probes need it). Its `documents` count is not a leak: the whole corpus is already public on the site (self-hosted at `knowledge.hi2vi.com` as of P9; formerly GitHub Pages).
+- **No CORS, deliberately.** The consumer is server-to-server; the public site (P9: the box's self-hosted `mkdocs` viewer, formerly GitHub Pages) searches browser-only via lunr and never calls this API, so no browser origin ever reaches it. A future browser client would be a separate, explicit change.
 
 ## Shipped explain-skill client: config resolution + bearer (P7)
 
@@ -94,7 +94,7 @@ fallback fires **only** when config resolves a **local** `kb_root` — a remote
 - Resolves the target row first → **404** when absent. The `by-path` route is declared before the `{doc_id}` route (same collision-avoidance as the GET pair).
 - Query: `commit` (default `true`), optional `co_authored_by`. Commit semantics mirror POST exactly — a failed commit surfaces `committed:false` + `commit_error`, never a rollback.
 - Output: `{deleted, id, rel_path, title, project, slug, recent_removed, committed, commit_sha, pushed, commit_error?, push_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone.
-- **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box also reaches Pages.
+- **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box removes the doc from the live self-hosted site (fresh-on-write) and, via the push, from the off-box backup.
 
 ### POST /api/documents
 
@@ -131,7 +131,10 @@ The knowledge API is hosted publicly at **`https://knowledge.hi2vi.com`** (P8),
 a co-tenant on the shared OCI edge. The hi2vi content agent consumes it
 server-to-server. The local/plugin deployment is unchanged; the differences on
 the hosted box are (a) bearer required on **all** `/api/*` calls, and (b)
-publish-on-write (writes push to `main`, deploying to GitHub Pages).
+publish-on-write (writes are committed + pushed to `main`). As of P9 the box also
+**self-hosts the site** (the doc is live at its `url` fresh-on-write, at the domain
+root), so the write no longer depends on a GitHub Pages deploy; the push is off-box
+backup. Routing is path-based: `/` → the site, `/api/*` + `/healthz` → this API.
 
 ### Client config
 
@@ -177,7 +180,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
 {
   "id": 1,
   "rel_path": "hi2vi/2026-07-14-growth-loops.md",
-  "url": "https://leetusik.github.io/knowledge/hi2vi/2026-07-14-growth-loops/",
+  "url": "https://knowledge.hi2vi.com/hi2vi/2026-07-14-growth-loops/",
   "title": "Content Idea: Growth Loops",
   "project": "hi2vi",
   "slug": "growth-loops",
@@ -195,9 +198,10 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
 Field meanings:
 
 - `id` — DB row id. `rel_path` — path under `docs/` (`<project>/<date>-<slug>.md`).
-- `url` — the **published Pages URL** of the doc (`<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`;
-  on the box `KB_PUBLIC_BASE_URL=https://leetusik.github.io/knowledge`). Live once
-  the push deploys (see publish flow).
+- `url` — the **published URL** of the doc (`<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`;
+  as of P9 the box sets `KB_PUBLIC_BASE_URL=https://knowledge.hi2vi.com` — the **root** of the
+  self-hosted site, no longer the Pages origin). Live **fresh-on-write** (the box's live-serve
+  viewer serves it the instant it is written — see publish flow).
 - `recent_updated` — whether the `docs/index.md` Recent bullet was added (`false`
   on an `overwrite` re-write).
 - `landing_created` — `true` only when this was the **first** doc of a new project
@@ -268,12 +272,14 @@ token"}`.
 
 ### Operational semantics the client relies on
 
-- **Publish flow.** A `201` with `pushed:true` means the doc was committed and
-  pushed to `main`; the GitHub Pages deploy then makes it live at `url` within a
-  few minutes. A `201` with `pushed:false` **and a `push_error`** means the doc is
-  written + committed on the box but not yet on `main` — it publishes on the **next**
-  successful push (commits accumulate) or a manual push. In both cases the write
-  **succeeded** — the client should **not** retry the write on `pushed:false`.
+- **Publish flow (P9: fresh-on-write, no Pages).** A `201` means the doc is written to
+  the box and **live at `url` immediately** — the self-hosted `mkdocs serve` viewer serves it
+  off the same clone the instant it is written, with no build/CDN lag (the ~65 s GitHub Pages
+  step is gone; Pages retired). `pushed:true` means the commit also reached `origin/main` as
+  **off-box backup/history**; `pushed:false` **and a `push_error`** means the backup push has not
+  landed yet (it catches up on the **next** successful push) — but the doc is **already live** and
+  the write **succeeded**, so the client should **not** retry the write on `pushed:false`. `/api/*`
+  routing to the API is unchanged (the site serves `/`; the api serves `/api/*` + `/healthz`).
 - **Retry / idempotency.** Writes are keyed by `project/date/slug` → `rel_path`. If
   a write times out or fails ambiguously, **re-POSTing the same
   `project`+`date`+`slug` returns 409** (`rel_path` already exists) — treat a
