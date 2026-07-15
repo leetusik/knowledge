@@ -490,6 +490,52 @@ can mint the key + create the secrets. Static-validated only. Notes for S5 + REV
   parity impact); `python3 scripts/workflow.py validate` PASS; markdown internal-consistency read-through
   PASS.
 
+### S5 findings — E2E acceptance: real production deploy + Pages retirement (done 2026-07-15, LIVE, all criteria PASS)
+
+Executed the whole phase against **live production** and retired GitHub Pages. Orchestrator-driven (the
+operator delegated their co-work — "you just do it" + `ssh oracle-cloud` — a deliberate one-slice deviation
+from delegate-every-slice; REVIEW is still delegated). Every acceptance criterion passed; **no fix slice
+needed.**
+
+- **Bootstrap (steps 1–2).** Pushed the 8 unpushed P9 commits → `origin/main` (`c018571`; the operator ran
+  the harness-gated `git push`). The box clone `/opt/knowledge` was at `383577e`, **missing all P9
+  machinery** (no `deploy.sh`/on-box scripts, old single-service compose+vhost), so a one-time bootstrap
+  reconciled it to `origin/main` via the **one-shot api container** (`docker compose run --entrypoint sh
+  api`) — which **authenticated over SSH and ff-merged cleanly** (`383577e..c018571`, dirty=0). **This
+  proved F1's central unknown live** (the in-container reconcile *can* fetch/auth against the SSH origin +
+  root-owned publish-on-write clone) **before** the workflow depended on it.
+- **Real dispatch (step 3).** `workflow_dispatch` run **29385684066** (sha `c018571`) → **success** in
+  1m17s (Preflight 4s + Deploy 1m17s). The operator triggered the harness-gated dispatch. Log confirms the
+  full chain: SSH via the S4 runner key → on-box gate → `deploy/deploy.sh` → **in-container reconcile**
+  (one-shot `knowledge-reconcile-*`, `fetched origin/main tip`, `TARGET_SHA confirmed reachable from the
+  fetched tip` = **fail-closed ancestor gate fired**, `already at tip — nothing to reconcile`, `HEAD now
+  c018571 on main` = **stayed on main, not detached**) → `COMPOSE_BAKE=false docker compose up -d --build`
+  **both** services → dual external smoke → artifacts (14 d).
+- **Acceptance (step 4), all PASS:**
+  - **(a)** both `knowledge-api` + `knowledge-site` (mkdocs-material:9.7.6) `Up (healthy)` — the two-service
+    topology is live.
+  - **(b)** box on `main`, in sync with origin, clean, **not detached**, no orphaned unpushed commit.
+  - **(c)** two-location routing live: `/healthz` → api `{status:ok,…,documents:7}`, `/` → site (HTTP 200
+    `text/html`), and the **frozen consumer path** bearer'd `GET /api/documents` → 200 (S1's `location /api/`
+    passes `/api/*` through unchanged; `/` — a former API 404 — now serves the site).
+  - **(d) FRESH-ON-WRITE LINCHPIN (§H) PROVEN:** POST probe → `201 committed pushed` (commit `5782bb9`);
+    its published page `https://knowledge.hi2vi.com/hi2vi/2026-07-15-p9-s5-freshness-probe/` returned **200
+    on the site with NO container restart** (cross-container inotify over the shared bind mount → mkdocs
+    `--livereload` rebuild); DELETE → 200 cleanup (`documents` back to 7). The whole basis of the live-serve
+    choice is confirmed on the real box — **no fallback (polling / rebuild-on-write) needed.**
+  - **(e)** no secrets in the workflow log: **0** private-key material, **0** `KB_API_TOKEN` occurrences;
+    GitHub secret-masking active (`***`).
+- **Pages retirement (step 5).** With the box proven live first (§C no-gap), the operator ran `gh api -X
+  DELETE …/pages`. Verified: Pages API → **404**, `leetusik.github.io/knowledge/` → **404**, and the box
+  still serves (`/` 200, `/healthz` ok). The shipped plugin keeps Pages for downstream users (untouched).
+- **Sync (step 6).** The probe add+delete advanced `origin/main` by 2 (`5782bb9`, `4e6f09a`); local
+  ff-synced to `4e6f09a`. Transient probe churn in history is expected publish-on-write behavior.
+- **Security posture held:** the two credentials stayed distinct — S5 used the S4 runner key
+  (runner→`opc@box`) + *read* `KB_API_TOKEN` for the probe (transient var, never echoed; the box's
+  container deploy key `knowledge-api@oci-box` was never touched). No secret in any transcript or log.
+- **For REVIEW:** the whole novel system is proven live — REVIEW validates all slices + consolidates the
+  Doc-impact list (below) into durable-doc versions. Nothing here needs a fix slice.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -574,6 +620,18 @@ durable truth — do **not** version docs per slice._
   (private half minted in a `umask 077` tempdir → piped once into `gh secret set` → shredded), which
   refines `security.md`'s "secrets are box-born-and-never-leave" premise. `decisions.md` already carries
   the "dedicated runner key (§G)" ADR from DECOMP's list. Nothing versioned this slice.
+- **S5 realized (2026-07-15)** the whole phase **live**, so every deferred Doc-impact entry above is now
+  **proven true in production** and REVIEW should consolidate them into the named durable-doc versions
+  (`operations.md`, `architecture.md`, `api.md`, `security.md`, `decisions.md`) — this is the once-per-phase
+  versioning point. Facts REVIEW can now state as confirmed, not proposed: the self-hosted two-service
+  topology (`knowledge-api` + `knowledge-site` live-serve) is **running healthy** at `knowledge.hi2vi.com`
+  behind two-location edge routing; the **manual-dispatch `Production Deploy`** works end-to-end (SSH via
+  the dedicated runner key → gate → `deploy.sh` in-container reconcile [F1: fetch/ancestor/ff all
+  authenticate in-container] → dual health-gate → edge re-apply → dual smoke); **fresh-on-write is real**
+  (api write → live on the site with no restart, replacing the ~65 s Pages SLA); and **GitHub Pages is
+  retired** (API 404; box serves the root, no gap). Repo doc `deploy/README.md` should also gain the
+  manual-dispatch redeploy usage + the one-time box-clone bootstrap note (first deploy only) — a repo doc,
+  not `docs/current/*`. Nothing versioned this slice (deferred to REVIEW).
 
 ## Open Questions
 
