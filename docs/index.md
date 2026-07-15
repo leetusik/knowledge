@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-07-15 · [P9 S5 freshness probe](hi2vi/2026-07-15-p9-s5-freshness-probe.md) — hi2vi
 - 2026-07-14 · [The hi2vi Research Space](hi2vi/2026-07-14-the-hi2vi-research-space.md) — hi2vi
 - 2026-07-07 · [Measure First, Then Cache — The P39 Performance Phase Explained for Beginners](changple5/2026-07-07-measure-first-then-cache-the-p39-performance-phase-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners](changple5/2026-07-07-the-daily-ingestion-job-that-kept-getting-stuck-explained-for-beginners.md) — changple5
