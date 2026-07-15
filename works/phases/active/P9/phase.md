@@ -309,6 +309,51 @@ locally validated (no SSH, no edge reload, no `docker compose up`). Notes for S2
   down (it serves the last build until the operator flips repo Settings→Pages **Off**). So the box site must
   be proven live in **S5 before** Pages is turned off — no gap. This slice has **zero** production impact.
 
+### S2 findings — on-box deploy core `deploy/deploy.sh` (done 2026-07-15, author-only, no box impact)
+
+Authored `deploy/deploy.sh` per §E/§F + the signed-off operator decisions (one-shot container git,
+gate+fix-forward, no rollback). **Only** `deploy/deploy.sh` changed — `compose.prod.yml` untouched.
+Static-validated only (no docker/SSH here); behavioral proof is **S5**. Notes for S3–S5 + REVIEW:
+
+- **Reconcile mechanism = `docker compose run` reusing the api service (NOT a compose edit).** Chose
+  `docker compose -f compose.prod.yml run --rm -T --no-deps --name knowledge-reconcile-$$
+  --entrypoint sh api -c '<posix reconcile>'`. It inherits the api's `.:/repo` mount, `/run/secrets`
+  deploy key, `GIT_SSH_COMMAND`, `changple_shared_network`, and the baked `safe.directory /repo` +
+  identity — so git fetch/rebase over SSH run as uid 0, matching the root-owned `.git`. **The
+  `container_name: knowledge-api` caveat is handled by `--name knowledge-reconcile-$$`** (a unique
+  ephemeral name that can't clash with the live container), so **no `image:` was added to
+  `compose.prod.yml`** and the config/parity/site_smoke suite was not required. **Fallback if a given
+  Compose still refuses `run` on the pinned service:** add `image: knowledge-api:latest` + use
+  `docker run` (documented in the script header + failure message). **S5 MUST confirm live:** (a)
+  `docker compose run` is accepted on the pinned api service, (b) the run container authenticates to
+  github over SSH and reconciles, (c) the live api's bind-mounted tree reflects the reconcile.
+- **Tip-vs-`TARGET_SHA` divergence (deliberate, documented in code + result.md):** the box deploys
+  origin/main's **tip**, not the exact `TARGET_SHA` — can't `checkout --detach` to a SHA without
+  risking orphaning an unpushed publish-on-write doc. `TARGET_SHA` is a sanity assert + log only
+  (`cat-file -e` + `merge-base --is-ancestor`); the authoritative ancestor gate is **S3**'s remote
+  script. Code and docs are disjoint paths, so tip-code == `TARGET_SHA`-code absent an interleaved
+  code commit mid-run.
+- **Reconcile logic mirrors `server/gitops.py`:** refuse dirty tracked worktree (permit ahead/unpushed
+  clean); wait out `.git/index.lock` (`LOCK_TRIES`×`LOCK_INTERVAL` = 6×3 s; accept the small residual
+  race); `fetch --prune origin main`; `merge --ff-only` when behind/equal, `rebase` when
+  ahead/diverged, `rebase --abort`+fail on conflict; a defensive `main`-branch guard. **Never**
+  detach/reset/force (those tokens live only in comments).
+- **Health-gate BOTH** `knowledge-api` + `knowledge-site` (hi2vi's `wait_healthy` parameterized;
+  24×5 s each, covering start_periods 60 s / 40 s; docker's transient `starting` keeps polling). **§F
+  v1 failure path:** capture `compose ps` + per-service `logs` into `$REMOTE_ARTIFACT_DIR` (set by
+  S3's remote gate), then `die` non-zero with a fix-forward message — **no** `rollback.sh`, no image
+  flip, no `git reset` (bind-mounted code can't be reverted by an image flip anyway).
+- **For S3:** `deploy.sh` accepts `TARGET_SHA` as `$1` (or env) and honors `REMOTE_ARTIFACT_DIR`; it
+  does the reconcile itself — so S3's `oracle-production-deploy-remote.sh` does the dirty-worktree
+  refusal + `fetch`/ancestor-gate (authoritative) and then calls `deploy/deploy.sh "$TARGET_SHA"`,
+  then re-applies the edge vhost. The dirty-worktree + fetch/ancestor steps are duplicated defensively
+  inside `deploy.sh` (it can run standalone on-box) — that is intentional, not a conflict.
+- **bash-3.2 toolchain note:** the reconcile heredoc is captured via
+  `IFS='' read -r -d '' RECONCILE_SCRIPT <<'RECONCILE' … || true` (not `$(cat <<…)`), because a
+  heredoc-in-command-substitution with an apostrophe in the body trips macOS bash 3.2's parser; the
+  `read` idiom is clean on both bash 3.2 and the box's modern bash. Purely a static-check
+  accommodation.
+
 ## Constraints
 
 - **Design-first:** S1 does not start until the operator signs off on §A–§H (like P8). DECOMP proposes; it
@@ -352,6 +397,15 @@ durable truth — do **not** version docs per slice._
   edge routing, no Pages, no ~65 s SLA), `api.md` (201 `url` origin now `https://knowledge.hi2vi.com` root),
   `decisions.md` (self-host + live-serve + retire-Pages + the Pages "reclassify-out-of-`identical`"
   mechanism). Nothing versioned this slice (deferred to REVIEW per the once-per-phase rule).
+- **S2 realized (2026-07-15)** the §E/§F deploy-core divergences in code (`deploy/deploy.sh`) — REVIEW
+  should fold into `decisions.md` new ADRs: **publish-on-write reconcile-on-`main`** (fetch → ff-only
+  when behind / rebase when ahead / abort on conflict; never detach/reset/force; deploys origin/main
+  **tip** — the deliberate tip-vs-`TARGET_SHA` divergence — via a one-shot container reusing the api
+  service for root-owned-`.git` + SSH), and **gate + fix-forward, no rollback** (§F v1; bind-mounted
+  code makes an image flip useless). Also `operations.md` — the manual-dispatch redeploy procedure now
+  has a concrete on-box script (reconcile → both-service bring-up → health-gate both). Repo doc
+  `deploy/README.md` should gain the `deploy.sh` usage + reconcile/fix-forward behavior (not a
+  `docs/current/*` durable doc — for S3/REVIEW, not `doc-new-version`). Nothing versioned this slice.
 
 ## Open Questions
 
