@@ -8,24 +8,19 @@ import type {
 import { cn } from "@/lib/utils";
 
 /**
- * Form-field primitives (P12.S2 auth forms, S3/S4 create/mint). Hand-rolled on
- * the locked tokens instead of `shadcn add` — native `<input>/<textarea>/<input
- * type=checkbox>` are fully accessible. Styling is token-only:
- * `border-hairline-strong` input border, the GLOBAL green-deep `:focus-visible`
- * ring from globals.css (these add `focus-visible:outline-none` only to suppress
- * the browser default, never to hide focus), and the `destructive` token for the
- * error state (driven off `aria-invalid` so the caller flips one attribute).
- * Inputs are `min-h-[46px]` (touch target).
+ * Form-field primitives (P12.S2 auth forms, S3/S4 create/mint), re-skinned to the
+ * Knowledge Base console `.kb-field*` classes (P12.S2R). Native
+ * `<input>/<textarea>/<input type=checkbox>` — fully accessible. Styling is
+ * token-only: hairline-strong border, a teal focus ring (`0 0 0 3px accent-soft`),
+ * and the terracotta error state driven off `aria-invalid` (so the caller flips
+ * one attribute; `.kb-field__input[aria-invalid="true"]` recolors border + ring).
  *
  * A11y wiring is the caller's job: pair `<Label htmlFor>` with the control `id`,
  * point `aria-describedby` at the `<FieldError id>`, and set `aria-invalid` when
- * the field has an error. `<FieldError>` is `aria-live` so validation messages
- * are announced.
+ * the field has an error. `<FieldError>` is `aria-live` so messages are announced.
  */
 
-export const labelVariants = cva(
-  "block text-body-sm font-medium text-charcoal",
-);
+export const labelVariants = cva("kb-field__label");
 
 export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {}
 
@@ -33,11 +28,8 @@ export function Label({ className, ...props }: LabelProps) {
   return <label className={cn(labelVariants(), className)} {...props} />;
 }
 
-const controlBase =
-  "w-full rounded-md border border-hairline-strong bg-surface px-3.5 text-body-md text-ink placeholder:text-steel transition-colors focus-visible:outline-none hover:border-steel disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-destructive";
-
-export const inputVariants = cva(cn(controlBase, "min-h-[46px] py-2.5"));
-export const textareaVariants = cva(cn(controlBase, "min-h-28 py-2.5"));
+export const inputVariants = cva("kb-field__input");
+export const textareaVariants = cva("kb-field__input");
 
 export interface InputProps
   extends
@@ -55,8 +47,14 @@ export interface TextareaProps
     TextareaHTMLAttributes<HTMLTextAreaElement>,
     VariantProps<typeof textareaVariants> {}
 
-export function Textarea({ className, ...props }: TextareaProps) {
-  return <textarea className={cn(textareaVariants(), className)} {...props} />;
+export function Textarea({ className, style, ...props }: TextareaProps) {
+  return (
+    <textarea
+      className={cn(textareaVariants(), className)}
+      style={{ minHeight: "7rem", resize: "vertical", ...style }}
+      {...props}
+    />
+  );
 }
 
 export interface CheckboxProps extends Omit<
@@ -65,15 +63,16 @@ export interface CheckboxProps extends Omit<
 > {}
 
 /**
- * Native checkbox sized for touch (`size-5`), tinted to the brand green via
- * `accent-green`. The label/consent copy is rendered by the caller alongside it.
+ * Native checkbox, tinted teal (the one interactive accent) via `accent-color`.
+ * The label/consent copy is rendered by the caller alongside it — compose it
+ * inside a `.kb-check` label for the full field styling.
  */
 export function Checkbox({ className, ...props }: CheckboxProps) {
   return (
     <input
       type="checkbox"
       className={cn(
-        "mt-0.5 size-5 shrink-0 rounded-sm border border-hairline-strong accent-green focus-visible:outline-none aria-[invalid=true]:border-destructive",
+        "mt-0.5 size-[1.1rem] shrink-0 rounded-[var(--kb-radius-sm)] border border-[var(--kb-border-strong)] accent-[var(--kb-accent)] focus-visible:outline-none",
         className,
       )}
       {...props}
@@ -88,7 +87,7 @@ export interface FieldErrorProps {
 }
 
 /**
- * Inline validation message. Renders nothing (but stays in the tree as an
+ * Inline validation message. Renders nothing visible (but stays in the tree as an
  * `aria-live` region) until `children` is set, so newly-shown errors are
  * announced. Pair its `id` with the control's `aria-describedby`.
  */
@@ -98,7 +97,7 @@ export function FieldError({ id, children, className }: FieldErrorProps) {
       id={id}
       role="alert"
       aria-live="polite"
-      className={cn("min-h-[1.25rem] text-body-sm text-destructive", className)}
+      className={cn("kb-field__error", className)}
     >
       {children}
     </p>

@@ -1,0 +1,25 @@
+/* ==========================================================================
+   Knowledge Base — console canvas entry (P12 · app design mirror)
+   --------------------------------------------------------------------------
+   Trimmed subset of the design-system styles.css: only the tokens + console
+   layer the authenticated web app consumes. The reading-room components
+   (chrome/content/cards/tags/search/graph) live in the full design system;
+   they are not part of the app skin, so they are omitted here. This lets the
+   staged page specimens preview standalone.
+
+   The app itself does NOT link this file — it self-hosts fonts via next/font
+   and imports tokens/console through src/app/globals.css. This aggregator is
+   for previewing the canvas specimens only (hence the Google Fonts webfont
+   line; the app uses local woff2).
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+/* Tokens (foundations) */
+@import url("tokens/colors.css");  /* Target 1 · LOCKED */
+@import url("tokens/type.css");    /* Target 2 */
+@import url("tokens/shape.css");   /* Target 2 companion */
+@import url("tokens/app.css");     /* P12 · console status + trend tokens */
+
+/* Console component layer */
+@import url("components/console/console.css"); /* P12 · authenticated console */

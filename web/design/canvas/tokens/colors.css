@@ -1,0 +1,147 @@
+/* ==========================================================================
+   Knowledge Base — Color tokens  (Target 1 · LOCKED)
+   --------------------------------------------------------------------------
+   "Calm editorial library, evolved." Warm ivory/charcoal paper, one deep-teal
+   accent, soft warm borders, no heavy shadows. Teal is the ONLY accent hue;
+   the warm neutrals carry everything else.
+
+   This file is the color half of the site's design foundation
+   (docs/stylesheets/extra.css on leetusik/knowledge). It defines colors per
+   scheme so a coding agent can drop it straight into the site:
+
+     --kb-*   = Knowledge Base tokens, the source of truth.
+     --md-*   = mappings onto mkdocs-material's own surface + ink tiers,
+                pointed at the --kb-* tokens so both stay in lockstep.
+
+   Both schemes are always shipped:
+     [data-md-color-scheme="default"] = light (warm ivory paper, ink text)
+     [data-md-color-scheme="slate"]   = dark  (warm charcoal paper, off-white)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — warm ivory paper, ink text
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #f6f2e8;                        /* page background */
+  --kb-surface: #fffefa;                      /* raised surfaces: cards, search */
+  --kb-surface-sunken: #efe9db;               /* recessed: code blocks, header band */
+  --kb-border: #e5dcc8;                        /* soft warm hairline */
+  --kb-border-strong: #d8ccb3;                 /* firmer divider / emphasis edge */
+  --kb-accent: #0f6f66;                        /* deep teal — the one accent */
+  --kb-accent-strong: #0a544e;                 /* hover / pressed / emphasis */
+  --kb-accent-soft: rgba(15, 111, 102, 0.15);  /* selections, soft accent rules */
+  --kb-tag-bg: #eaf0ec;                        /* tag pill fill (cool-tinted neutral) */
+  --kb-tag-fg: #2c5b52;                        /* tag pill text */
+
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #26211c;                           /* primary text — warm near-black */
+  --kb-secondary: #5c5347;                     /* secondary text */
+  --kb-hint: #8f8676;                          /* hints, icons, captions */
+
+  /* ---- mkdocs-material surface tiers (page → deepest) ---- */
+  --md-default-bg-color: var(--kb-paper);
+  --md-default-bg-color--light: var(--kb-surface-sunken);
+  --md-default-bg-color--lighter: var(--kb-border);
+  --md-default-bg-color--lightest: var(--kb-border-strong);
+
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
+  --md-typeset-a-color: var(--kb-accent);
+  --md-typeset-mark-color: var(--kb-accent-soft);
+
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface-sunken);
+  --md-code-fg-color: #4a4136;
+
+  /* ---- Header / nav-tabs: wears the paper, ink text ---- */
+  --md-primary-fg-color: var(--kb-surface-sunken); /* header background */
+  --md-primary-fg-color--light: var(--kb-paper);
+  --md-primary-fg-color--dark: var(--kb-border);
+  --md-primary-bg-color: var(--kb-ink);            /* header text */
+  --md-primary-bg-color--light: var(--kb-secondary);
+
+  /* ---- Accent (interactive) ---- */
+  --md-accent-fg-color: var(--kb-accent-strong);
+  --md-accent-fg-color--transparent: var(--kb-accent-soft);
+  --md-accent-bg-color: var(--kb-surface);
+  --md-accent-bg-color--light: var(--kb-surface);
+
+  /* ---- Footer: warm near-black, editorial anchor ---- */
+  --md-footer-bg-color: var(--kb-ink);
+  --md-footer-bg-color--dark: #1f1a15;
+  --md-footer-fg-color: #f4efe4;
+  --md-footer-fg-color--light: #cbc2b2;
+  --md-footer-fg-color--lighter: #93897a;
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — warm charcoal paper, warm off-white text
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --md-hue: 34; /* @kind other */ /* warm-tint any Material-derived slate values */
+
+  /* ---- Knowledge Base tokens (source of truth) ---- */
+  --kb-paper: #1a1815;
+  --kb-surface: #232019;
+  --kb-surface-sunken: #2a261e;
+  --kb-border: #38332a;
+  --kb-border-strong: #453f34;
+  --kb-accent: #62bdb2;                          /* lighter teal for dark bg */
+  --kb-accent-strong: #86d4ca;
+  --kb-accent-soft: rgba(98, 189, 178, 0.20);
+  --kb-tag-bg: #24302b;
+  --kb-tag-fg: #97d2c7;
+
+  /* ---- Ink / text tiers ---- */
+  --kb-ink: #ece4d7;                             /* primary text — warm off-white */
+  --kb-secondary: #b6ad9d;
+  --kb-hint: #7e7566;
+
+  /* ---- mkdocs-material surface tiers (page → raised) ---- */
+  --md-default-bg-color: var(--kb-paper);
+  --md-default-bg-color--light: var(--kb-surface);
+  --md-default-bg-color--lighter: var(--kb-surface-sunken);
+  --md-default-bg-color--lightest: var(--kb-border);
+
+  /* ---- mkdocs-material ink tiers ---- */
+  --md-default-fg-color: var(--kb-ink);
+  --md-default-fg-color--light: var(--kb-secondary);
+  --md-default-fg-color--lighter: var(--kb-hint);
+  --md-default-fg-color--lightest: var(--kb-border); /* dividers / component hairlines */
+
+  /* ---- Typeset (article body) ---- */
+  --md-typeset-color: var(--kb-ink);
+  --md-typeset-a-color: var(--kb-accent);
+  --md-typeset-mark-color: var(--kb-accent-soft);
+
+  /* ---- Code ---- */
+  --md-code-bg-color: var(--kb-surface);
+  --md-code-fg-color: #ded6c7;
+
+  /* ---- Header / nav-tabs ---- */
+  --md-primary-fg-color: var(--kb-surface);
+  --md-primary-fg-color--light: var(--kb-surface-sunken);
+  --md-primary-fg-color--dark: var(--kb-paper);
+  --md-primary-bg-color: var(--kb-ink);
+  --md-primary-bg-color--light: var(--kb-secondary);
+
+  /* ---- Accent (interactive) ---- */
+  --md-accent-fg-color: var(--kb-accent-strong);
+  --md-accent-fg-color--transparent: var(--kb-accent-soft);
+  --md-accent-bg-color: #16130f;
+  --md-accent-bg-color--light: #16130f;
+
+  /* ---- Footer ---- */
+  --md-footer-bg-color: #141210;
+  --md-footer-bg-color--dark: #100e0c;
+  --md-footer-fg-color: var(--kb-ink);
+  --md-footer-fg-color--light: var(--kb-secondary);
+  --md-footer-fg-color--lighter: var(--kb-hint);
+}

@@ -9,10 +9,12 @@ import { cn } from "@/lib/utils";
  * @radix-ui/react-slot / asChild dependency.
  *
  * The base intentionally pairs `focus-visible:outline-none` with the global
- * green-deep `:focus-visible` ring from globals.css: the ring still shows; we
- * only suppress the browser default so the brand outline is the single visible
- * focus state. The `link` variant strips the pill shape / min-height. Primary
- * carries the real brand green-deep glow shadow (rgba(0,182,106,…)).
+ * `:focus-visible` ring from globals.css (now the KB teal accent-strong via the
+ * P12.S2R repoint): the ring still shows; we only suppress the browser default so
+ * the brand outline is the single visible focus state. The `link` variant strips
+ * the pill shape / min-height. Colors ride the token repoint (green → teal);
+ * Primary carries the single soft KB shadow (`--kb-shadow-hover`) rather than a
+ * hardcoded glow. (Marketing pill — reserved for the P14 public landing.)
  */
 export const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-full font-en text-button-md font-bold transition focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
@@ -20,7 +22,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-green text-on-primary shadow-[0_12px_30px_-8px_rgba(0,182,106,0.5)] hover:-translate-y-0.5 hover:bg-green-deep hover:shadow-[0_18px_38px_-10px_rgba(0,182,106,0.62)]",
+          "bg-green text-on-primary shadow-[var(--kb-shadow-hover)] hover:-translate-y-0.5 hover:bg-green-deep",
         secondary:
           "border border-hairline-strong bg-canvas font-semibold text-ink hover:bg-surface",
         secondaryOnDark:

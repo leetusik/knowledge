@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-// P12.S2 — public auth area (login + signup), skinned as hi2vi_web's dark "secure
-// threshold" gate (operator/login): a full-viewport ink stage with two aria-hidden
-// decorative layers (radial green glows + a masked hairline grid), so entering the
-// app reads as crossing a threshold. Deliberately UNGUARDED: the login page must
-// stay reachable, so the session gate lives one level over in the sibling `(app)`
-// group's layout, not here. The `(auth)` group is invisible in the URL, so these
-// render at /login and /signup.
+// P12.S2 (re-skinned P12.S2R) — public auth area (login + signup), the Knowledge
+// Base "quiet threshold": the login/signup commit to the DARK slate scheme (a
+// secure gate) while the app opens light. The stage carries
+// `data-md-color-scheme="slate"` and paints the warm charcoal paper, then centers
+// the gate card — no glow/grid decor, just the calm dark threshold. Deliberately
+// UNGUARDED: the login page must stay reachable, so the session gate lives one
+// level over in the sibling `(app)` group's layout, not here. The `(auth)` group
+// is invisible in the URL, so these render at /login and /signup.
 //
 // `robots: { index: false, follow: false }` keeps the whole auth subtree out of
 // search indexes.
@@ -20,31 +21,12 @@ export default function AuthLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-ink px-6 pt-14 pb-20">
-      {/* Two radial green glows over the ink stage. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(60% 42% at 50% 0%, rgba(47,242,143,.18), transparent 62%), radial-gradient(50% 40% at 82% 96%, rgba(31,203,145,.10), transparent 60%)",
-        }}
-      />
-      {/* Masked 52px hairline grid, faded toward the edges. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-50"
-        style={{
-          backgroundImage:
-            "linear-gradient(var(--color-hairline-dark) 1px, transparent 1px), linear-gradient(90deg, var(--color-hairline-dark) 1px, transparent 1px)",
-          backgroundSize: "52px 52px",
-          WebkitMaskImage:
-            "radial-gradient(70% 60% at 50% 30%, #000, transparent 75%)",
-          maskImage: "radial-gradient(70% 60% at 50% 30%, #000, transparent 75%)",
-        }}
-      />
-
-      <main id="main-content" className="relative z-[1] w-full">
+    <div
+      data-md-color-scheme="slate"
+      className="grid min-h-dvh place-items-center px-6 py-14"
+      style={{ background: "var(--kb-paper)", color: "var(--kb-ink)" }}
+    >
+      <main id="main-content" className="w-full">
         {children}
       </main>
     </div>

@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { APP_SHELL } from "@/content";
 
 /**
- * Logout control (P12.S2) — the light-tone console logout (hi2vi_web
- * operator/(console) `logout-button` `light`). POSTs the same-origin BFF logout
- * route (which revokes the token at knowledge and clears the sealed cookie), then
- * replaces to /login and refreshes so the now-unauthenticated server tree re-runs.
+ * Logout control (P12.S2, re-skinned P12.S2R) — the console `.kb-appbtn--ghost
+ * --sm` in the topbar. POSTs the same-origin BFF logout route (which revokes the
+ * token at knowledge and clears the sealed cookie), then replaces to /login and
+ * refreshes so the now-unauthenticated server tree re-runs.
  *
  * Best-effort by design: we navigate even if the POST throws, because the `(app)`
  * server guard — not this button — is the real gate. The same-origin fetch
@@ -37,7 +37,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={pending}
-      className="rounded-md border border-hairline-soft px-[11px] py-1.5 text-caption font-bold text-steel transition hover:border-hairline-strong hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-70"
+      className="kb-appbtn kb-appbtn--ghost kb-appbtn--sm"
     >
       {pending ? APP_SHELL.logoutPendingLabel : APP_SHELL.logoutLabel}
     </button>

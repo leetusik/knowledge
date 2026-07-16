@@ -3,21 +3,21 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * DataTable — the net-new primitive hi2vi_web lacks (P12.S1). The dashboard's
- * projects / credentials / documents lists all render tabular data, so this is a
- * headless, token-styled table:
+ * DataTable — the net-new primitive hi2vi_web lacks (P12.S1), re-skinned to the
+ * Knowledge Base console `.kb-dtable` (P12.S2R): mono uppercase headers on a
+ * sunken warm band, hairline rows, teal-soft hover. The dashboard's projects /
+ * credentials / documents lists all render tabular data, so this is a headless,
+ * token-styled table:
  *
  *  - typed `columns` (a header + a per-row `cell` renderer),
  *  - `rows` + a stable `rowKey`,
- *  - sensible defaults: hairline borders, `text-caption` headers, hover row,
- *    and an `overflow-x-auto` wrapper so a wide table scrolls instead of
- *    breaking the page layout,
- *  - an empty-state slot (`empty`) spanning all columns,
- *  - an optional right-aligned actions column (`actions: true`, or `align`).
+ *  - the `.kb-dtable` chrome (border, radius, overflow-x scroll),
+ *  - an empty-state row (`empty`) spanning all columns (`.kb-dtable__empty`),
+ *  - alignment helpers — right-aligned actions/numeric columns; pass `className`
+ *    `"num"` / `"mono"` for tabular-nums / mono figures.
  *
  * Purely presentational: all data arrives as props — it never fetches. Later
- * slices (S3/S4/S5) pass server-fetched rows straight in. Token-styled, so it
- * renders in the brand green palette automatically.
+ * slices (S3/S4/S5) pass server-fetched rows straight in.
  */
 export interface DataTableColumn<T> {
   /** Stable column key (also the React key for header/cell nodes). */
@@ -33,7 +33,7 @@ export interface DataTableColumn<T> {
   align?: "left" | "right" | "center";
   /** Marks this as the trailing actions column (right-aligned, tighter). */
   actions?: boolean;
-  /** Extra classes applied to this column's header + cells. */
+  /** Extra classes applied to this column's header + cells (e.g. `num` / `mono`). */
   className?: string;
 }
 
@@ -44,13 +44,13 @@ export interface DataTableProps<T> {
   rowKey: (row: T, index: number) => string;
   /** Shown (spanning every column) when `rows` is empty. Defaults to a note. */
   empty?: ReactNode;
-  /** Extra classes on the scroll wrapper. */
+  /** Extra classes on the `.kb-dtable` wrapper. */
   className?: string;
 }
 
 const alignClass: Record<NonNullable<DataTableColumn<unknown>["align"]>, string> = {
-  left: "text-left",
-  right: "text-right",
+  left: "",
+  right: "right",
   center: "text-center",
 };
 
@@ -66,24 +66,15 @@ export function DataTable<T>({
   className,
 }: DataTableProps<T>) {
   return (
-    <div
-      className={cn(
-        "overflow-x-auto rounded-lg border border-hairline",
-        className,
-      )}
-    >
-      <table className="w-full border-collapse text-body-sm">
+    <div className={cn("kb-dtable", className)}>
+      <table>
         <thead>
-          <tr className="border-b border-hairline bg-surface">
+          <tr>
             {columns.map((col) => (
               <th
                 key={col.key}
                 scope="col"
-                className={cn(
-                  "px-4 py-2.5 text-caption font-medium text-steel",
-                  resolveAlign(col),
-                  col.className,
-                )}
+                className={cn(resolveAlign(col), col.className) || undefined}
               >
                 {col.header}
               </th>
@@ -92,28 +83,16 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="px-4 py-10 text-center text-body-sm text-steel"
-              >
-                {empty}
-              </td>
+            <tr className="kb-dtable__empty">
+              <td colSpan={columns.length}>{empty}</td>
             </tr>
           ) : (
             rows.map((row, i) => (
-              <tr
-                key={rowKey(row, i)}
-                className="border-b border-hairline-soft transition-colors last:border-b-0 hover:bg-surface"
-              >
+              <tr key={rowKey(row, i)}>
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={cn(
-                      "px-4 py-3 align-middle text-ink",
-                      resolveAlign(col),
-                      col.className,
-                    )}
+                    className={cn(resolveAlign(col), col.className) || undefined}
                   >
                     {col.cell(row, i)}
                   </td>

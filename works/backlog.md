@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P12`
-- Current slice: `none`
-- Next slice: `none`
-- Waiting on operator: `P12`
+- Current slice: `P12.S3`
+- Next slice: `P12.S4`
+- Waiting on operator: `none`
 - Open deferred jobs: `5`
-- Rebuilt at: `2026-07-17T00:47:13+09:00`
+- Rebuilt at: `2026-07-17T02:23:35+09:00`
 
 ## Active Phases
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
-| [~] `P12` | `pending` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.S3` | `works/phases/active/P12` |
+| [ ] `P12` | `in_progress` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.S3` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
@@ -55,6 +55,7 @@
 | [x] `P12.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P12/slices/P12.DECOMP` |
 | [x] `P12.S1` | `done` | App scaffold + design-system foundation | `implementation` | `works/phases/active/P12/slices/P12.S1` |
 | [x] `P12.S2` | `done` | Auth + BFF proxy + authenticated app shell | `implementation` | `works/phases/active/P12/slices/P12.S2` |
+| [x] `P12.S2R` | `done` | Re-skin app to Knowledge Base design system | `implementation` | `works/phases/active/P12/slices/P12.S2R` |
 | [ ] `P12.S3` | `todo` | Tenant dashboard: projects + create + tenant usage | `implementation` | `works/phases/active/P12/slices/P12.S3` |
 | [ ] `P12.S4` | `todo` | Project detail: info + credentials + project usage | `implementation` | `works/phases/active/P12/slices/P12.S4` |
 | [ ] `P12.S5` | `todo` | Per-tenant documents browse + search | `implementation` | `works/phases/active/P12/slices/P12.S5` |

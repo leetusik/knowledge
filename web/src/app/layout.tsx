@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { SITE } from "@/content";
-import { inter, jetbrains, pretendard } from "@/lib/fonts";
+import { fraunces, jetbrains, pretendard, source } from "@/lib/fonts";
 import "./globals.css";
 
 // Base metadata. `metadataBase` resolves canonical/OG URLs from SITE.url
@@ -17,12 +17,15 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
 };
 
-// Root layout. Korean-first (`lang="ko"`, matching hi2vi_web) — the app renders
-// unbounded operator/agent-authored Korean via the full Pretendard face. The
-// three self-hosted next/font variables are applied to <html> so
-// font-sans / font-en / font-mono resolve everywhere; body defaults to font-sans
-// on the canvas surface. The authenticated app shell + nav land in P12.S2 (they
-// wrap the `(app)` route group, not this root layout).
+// Root layout. Korean-first (`lang="ko"`) — the app renders unbounded operator/
+// agent-authored Korean via the full Pretendard Hangul fallback. The self-hosted
+// next/font variables (Source Sans 3 / Fraunces / JetBrains Mono / Pretendard)
+// are applied to <html> so font-sans / font-display / font-mono resolve
+// everywhere. `data-md-color-scheme="default"` sets the light Knowledge Base
+// scheme as the base; the `(auth)` group overrides it to the dark `slate` gate
+// on its own stage, while the `(app)` shell carries `default` on its `.kb-app`
+// root. The body is scheme-neutral (bg-canvas / text-ink resolve to --kb-* per
+// the active scheme).
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +34,8 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${pretendard.variable} ${inter.variable} ${jetbrains.variable}`}
+      data-md-color-scheme="default"
+      className={`${pretendard.variable} ${source.variable} ${fraunces.variable} ${jetbrains.variable}`}
     >
       <body className="flex min-h-dvh flex-col bg-canvas font-sans text-ink antialiased">
         {children}

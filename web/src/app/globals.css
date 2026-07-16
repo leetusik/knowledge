@@ -1,96 +1,101 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./kb-tokens.css";
+@import "./kb-console.css";
 
 /*
- * knowledge design system — Tailwind v4 CSS-first tokens (P12.S1).
+ * knowledge design system — Tailwind v4 CSS-first tokens (P12.S2R).
  *
- * The ADOPTED hi2vi_web design system: the real bright-signal-green-on-near-
- * black-green brand. Token NAMES + the non-color scales (type / radius / spacing
- * / container / breakpoints) come from hi2vi_web via vocky's dashboard-shaped
- * extraction; the color + font VALUES are hi2vi_web's real ones (not a neutral
- * placeholder). The heavy Claude design gate is no longer deferred for the app's
- * look — only production deploy stays a P14 concern (see phase.md D-P12-3).
+ * The app now wears the Knowledge Base "calm editorial library" design system
+ * (warm ivory/charcoal paper, one deep-teal accent, Fraunces / Source Sans 3 /
+ * JetBrains Mono, hairline borders, the single soft shadow). The placeholder
+ * hi2vi_web bright-green skin is GONE — the whole `--color-green*` ramp now
+ * collapses to the single teal accent, and every `@theme` color below is
+ * repointed at the per-scheme `--kb-*` source tokens (kb-tokens.css), so any
+ * lingering Tailwind utility auto-recolors. Both schemes ship and are wired per
+ * route via `data-md-color-scheme` (login = dark `slate`, app = light `default`).
  *
- * The CVA primitives, `cn()`'s type-scale list, and every page class depend on
- * these names — do not rename tokens. No `.dark` block on purpose — the system
- * uses explicit dark surface tokens (ink/forest/canvas-dark), not a
- * prefers-color-scheme / class toggle (no dark-mode toggle).
+ * Token NAMES are unchanged (the CVA primitives, `cn()`'s type-scale list, and
+ * every page class depend on them — do not rename tokens). The console `.kb-*`
+ * classes (kb-console.css) are the source of truth the fixed components adopt.
  */
 
 @theme {
-  /* ── Colors (drive bg-/text-/border- color utilities) ────────────────────── */
-  /* Dark green surfaces */
-  --color-ink: #061512; /* primary text + almost-black green base */
-  --color-forest: #0b2a22;
-  --color-forest-mid: #123b31;
-  --color-forest-soft: #1b4a3d;
-
-  /* Signal greens */
-  --color-green: #2ff28f; /* primary CTA / signature signal */
-  --color-green-deep: #00b66a; /* pressed CTA, links on light, focus ring */
-  --color-green-dark: #007a4d;
-  --color-green-soft: #ddfbea;
-
-  /* Security accents */
-  --color-security-mint: #9af7c7;
-  --color-security-teal: #1fcb91;
-  --color-trust-sage: #c8e6d2;
-
-  /* Warm history accents */
-  --color-victory-lime: #b7e65b;
-  --color-archive-olive: #a8c85a;
-  --color-archive-cream: #f3f0d8;
-
-  /* Signal states — the two warm signals in an otherwise cool-green system.
-   * danger = fatal/destructive; caution = non-fatal warning (amber). Kept muted
-   * so they read as signals, not alarms — chroma close to the terracotta
-   * --destructive, which aliases --color-danger (below). */
-  --color-danger: #d4503c; /* pill fill / icon / retry accent */
-  --color-danger-deep: #a83c29; /* danger text on a light surface */
-  --color-surface-danger: #fdeeea; /* light warm-red surface */
-  --color-hairline-danger: #f1d3cc;
-  --color-caution: #bd7b1c; /* flagged-channel accent (amber) */
-  --color-caution-deep: #8a5810; /* caution text on a light surface */
-  --color-surface-caution: #fbf2df; /* light amber surface */
-  --color-hairline-caution: #ebddbf;
-
+  /* ── Colors — repointed at the --kb-* source tokens (per-scheme) ─────────── */
   /* Surfaces */
-  --color-canvas: #ffffff;
-  --color-canvas-dark: #061512;
-  --color-surface: #f7faf7;
-  --color-surface-soft: #f1f6f2;
-  --color-surface-green: #effbf4;
-  --color-surface-archive: #fbfaf0;
-  --color-surface-security: #f0faf5;
-  --color-surface-band: #eef6f1; /* tinted band */
+  --color-canvas: var(--kb-paper); /* page background */
+  --color-canvas-dark: var(--kb-surface-sunken);
+  --color-surface: var(--kb-surface);
+  --color-surface-soft: var(--kb-surface-sunken);
+  --color-surface-green: var(--kb-accent-soft); /* accent wash (was signal green) */
+  --color-surface-archive: var(--kb-surface-sunken);
+  --color-surface-security: var(--kb-surface-sunken);
+  --color-surface-band: var(--kb-surface-sunken); /* topbar / table band */
+
+  /* Ink / text tiers */
+  --color-ink: var(--kb-ink); /* primary text */
+  --color-charcoal: var(--kb-ink);
+  --color-slate: var(--kb-secondary);
+  --color-steel: var(--kb-secondary);
+  --color-muted: var(--kb-hint); /* hints, captions */
+  --color-on-dark: #f6f2e8; /* warm off-white for marketing dark bands (P14) */
+  --color-on-dark-muted: #cbc2b2;
+  --color-on-primary: #fbfaf5; /* text on the teal CTA */
+
+  /* The teal accent — the whole green ramp collapses to one accent hue */
+  --color-green: var(--kb-accent); /* primary / CTA / active */
+  --color-green-deep: var(--kb-accent-strong); /* hover / pressed / focus ring */
+  --color-green-dark: var(--kb-accent-strong);
+  --color-green-soft: var(--kb-accent-soft);
+
+  /* Security accents → fold into the teal accent (dots/chips reuse status tokens) */
+  --color-security-mint: var(--kb-accent-strong);
+  --color-security-teal: var(--kb-accent);
+  --color-trust-sage: var(--kb-accent-soft);
+
+  /* Warm history accents → the idle (amber-bronze) status tone */
+  --color-victory-lime: var(--kb-status-idle);
+  --color-archive-olive: var(--kb-status-idle);
+  --color-archive-cream: var(--kb-status-idle-soft);
+
+  /* Signal states — revoked (terracotta) + idle (amber-bronze) status tones */
+  --color-danger: var(--kb-status-revoked);
+  --color-danger-deep: var(--kb-status-revoked-ink);
+  --color-surface-danger: var(--kb-status-revoked-soft);
+  --color-hairline-danger: var(--kb-status-revoked-soft);
+  --color-caution: var(--kb-status-idle);
+  --color-caution-deep: var(--kb-status-idle-ink);
+  --color-surface-caution: var(--kb-status-idle-soft);
+  --color-hairline-caution: var(--kb-status-idle-soft);
 
   /* Hairlines / borders */
-  --color-hairline: #dce6df; /* default border */
-  --color-hairline-soft: #ebf1ed;
-  --color-hairline-strong: #b8c8bf; /* input border */
-  --color-hairline-dark: #24463b;
+  --color-hairline: var(--kb-border); /* default border */
+  --color-hairline-soft: var(--kb-border);
+  --color-hairline-strong: var(--kb-border-strong); /* input border */
+  --color-hairline-dark: var(--kb-border-strong);
 
-  /* Text */
-  --color-charcoal: #18231f;
-  --color-slate: #41524a;
-  --color-steel: #687a72;
-  --color-muted: #93a39b;
-  --color-on-dark: #ffffff;
-  --color-on-dark-muted: #afc5ba;
-  --color-on-primary: #061512; /* text on bright green CTA */
-
-  /* ── Font families (→ font-sans / font-en / font-mono) ───────────────────── */
-  /* font-sans: Pretendard (Korean-first, full face — knowledge renders unbounded
-   *   operator/agent-authored Korean). font-en: Inter (English accent). font-mono:
-   *   JetBrains Mono. All self-hosted via next/font/local (src/lib/fonts.ts). */
+  /* ── Font families ───────────────────────────────────────────────────────── */
+  /* Source Sans 3 (body) · Fraunces (display / headings + stat numerals) ·
+   * JetBrains Mono (data/eyebrows/tokens) — each self-hosted via next/font/local
+   * (src/lib/fonts.ts) and ending in a Pretendard Hangul fallback so unbounded
+   * operator/agent Korean renders in the brand face. `--font-en` (marketing
+   * button.tsx) folds into the Source stack — no legacy accent face remains. */
   --font-sans:
-    var(--font-pretendard), -apple-system, BlinkMacSystemFont, system-ui,
-    sans-serif;
+    var(--font-source), var(--font-pretendard), "Apple SD Gothic Neo",
+    "Noto Sans KR", system-ui, sans-serif;
+  --font-display:
+    var(--font-fraunces), "Nanum Myeongjo", var(--font-pretendard), Georgia,
+    serif;
   --font-en:
-    var(--font-inter), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "SF Mono", Menlo, Consolas, monospace;
+    var(--font-source), var(--font-pretendard), "Apple SD Gothic Neo",
+    "Noto Sans KR", system-ui, sans-serif;
+  --font-mono:
+    var(--font-jetbrains), var(--font-pretendard), ui-monospace, "SF Mono",
+    "Menlo", monospace;
 
   /* ── Type scale (→ text-<name>, with bundled lh/tracking/weight) ─────────── */
+  /* Marketing scale — kept verbatim; `cn()`'s font-size registration (utils.ts)
+   * lists these exact names, so they must not be renamed. */
   --text-hero-display: 68px;
   --text-hero-display--line-height: 1.08;
   --text-hero-display--letter-spacing: -1.6px;
@@ -154,7 +159,7 @@
   --text-code-md--font-weight: 400;
 
   /* ── Radius (→ rounded-<name>) ───────────────────────────────────────────── */
-  --radius: 14px; /* base / rounded-DEFAULT */
+  --radius: var(--kb-radius); /* base / rounded-DEFAULT */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -179,18 +184,18 @@
 
 /*
  * shadcn/ui semantic layer. Maps shadcn's conventional variable names onto the
- * brand tokens so a future `shadcn add` renders on-brand and utilities like
- * bg-background / text-foreground / border-border / ring-ring resolve. No `.dark`
- * block on purpose — explicit surface tokens, not a color-scheme toggle.
+ * brand tokens (now the KB teal/paper system via the repoint above) so a future
+ * `shadcn add` renders on-brand and utilities like bg-background / text-foreground
+ * / border-border / ring-ring resolve per scheme.
  */
 :root {
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
 
-  --card: var(--color-canvas);
+  --card: var(--color-surface);
   --card-foreground: var(--color-ink);
 
-  --popover: var(--color-canvas);
+  --popover: var(--color-surface);
   --popover-foreground: var(--color-ink);
 
   --primary: var(--color-green);
@@ -212,7 +217,7 @@
   --input: var(--color-hairline-strong);
   --ring: var(--color-green-deep);
 
-  --radius: 14px;
+  --radius: var(--kb-radius);
 }
 
 @theme inline {
@@ -240,7 +245,7 @@
  * Note: --radius-sm/md/lg/xl are NOT remapped to shadcn's calc() scale — the
  * locked design radius scale (rounded-xs/sm/md/lg/xl/xxl) owns those names.
  * Likewise --color-muted is NOT remapped: the design TEXT token --color-muted
- * (#93a39b) owns that name (drives text-muted); shadcn pieces that want the
+ * (→ --kb-hint) owns that name (drives text-muted); shadcn pieces that want the
  * muted SURFACE use raw var(--muted) or bg-surface.
  */
 
@@ -265,7 +270,8 @@
     word-break: keep-all;
   }
 
-  /* Focus ring: brand green-deep outline + offset, keyboard only. */
+  /* Focus ring: teal accent-strong outline + offset, keyboard only. (--color-
+   * green-deep now resolves to the KB teal accent-strong via the repoint.) */
   :focus-visible {
     outline: 2px solid var(--color-green-deep);
     outline-offset: 2px;
