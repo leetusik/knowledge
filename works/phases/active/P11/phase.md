@@ -164,6 +164,40 @@ Import check + 65-test legacy suite green; live DB behavior deferred to S4/REVIE
 - **Legacy inertness confirmed:** hints carry `tenant_id=None` in legacy mode, the
   middleware guard skips, no engine is created — 65-test legacy suite unchanged.
 
+### S3 built (usage read API) — response contract for S4 to assert against
+_Done in P11.S3: `server/usage_api.py` (new) mounted in `server/main.py`. Two
+session-guarded, tenant-scoped reads over S1's aggregate. No new persistence, no
+metering (S3 only reports). Import check + 65-test legacy suite green; live DB
+behavior deferred to S4/REVIEW (no Postgres in this env)._
+
+- **`GET /app/usage`** — whole-tenant. `days: int = Query(30, ge=1, le=365)`,
+  `Depends(require_user)`. Calls `get_usage_metrics(tenant_id=ctx.tenant.id,
+  project_id=None, start, end)`. **Response:**
+  `{window:{start,end}, totals:{total,documents_created,documents_deleted,searches},
+  daily_counts:[{day,total,documents_created,documents_deleted,searches}, …],
+  projects:[{id,name,tenant_id,created_at}]}`. `project_id=None` means tenant-wide,
+  so tenant-level NULL-project events count and a zero-event tenant still returns the
+  full zero-filled series (no empty-tenant short-circuit — our aggregate handles it).
+- **`GET /app/projects/{project_id}/usage`** — drill-down. Same query/guard. Uses
+  `_load_scoped_project` → **404** for missing *and* cross-tenant (existence never
+  leaks). **Response:** same `window/totals/daily_counts` +
+  `project:{id,name,tenant_id,created_at}` +
+  `credentials:[{id,project_id,name,token_prefix,created_at,last_used_at,revoked_at}]`.
+- **`days`-window semantics (for S4 assertions):** `_resolve_window(days)` = last
+  `days` UTC calendar days ending **today** inclusive, as half-open `[start, end)`
+  (`end` = midnight tomorrow, `start` = midnight `today-(days-1)`). `daily_counts` is
+  contiguous & zero-filled, **length exactly `days`**; `day` is `YYYY-MM-DD`; window
+  bounds are ISO datetimes (UTC). Default window = 30 days; bad `days` → **422**.
+- **Error surface:** `get_usage_metrics` wrapped `try/except UsageReadError →
+  HTTPException(500, "usage read failed")`. Reuses `_load_scoped_project`,
+  `serialize_project`, `serialize_credential` from `server.app_api` (imported, not
+  duplicated) so the project/credential shapes match `app_api` byte-for-byte.
+- **`last_used_at` caveat for S4:** per S2, the credential `last_used_at` this read
+  surfaces reflects last *metered* use (write/search), **not** last read — S4 must
+  drive a write/search before asserting it is non-null.
+- **No `/api/project/usage`** built (`vk_`-scoped self-usage): out of scope for P11;
+  clean future addition, noted only.
+
 ## Resolved design (shared by all middle slices)
 
 - **`usage_events` (durable Postgres, 7th control-plane table):** UUID PK; `tenant_id`
@@ -216,6 +250,12 @@ _S1 confirms the two entries it lands are already listed and accurate: `data.md`
 table now exists as the 7th control-plane table; retention still deferred) and `operations.md`
 (`alembic 0002_usage_events`, `down_revision=0001_accounts_tenancy`, run via `alembic upgrade head`).
 No new Doc impact lines needed from S1._
+
+_S3 confirms the `api.md` line is accurate and now landed: `GET /app/usage` +
+`GET /app/projects/{id}/usage` exist as additive, require_user-guarded, tenant-scoped
+control-plane reads (cross-tenant project → 404), mounted in `server/main.py`. The REVIEW
+slice should document the pinned response contract (see the S3 note above). No new Doc impact
+lines needed from S3._
 
 ## Constraints
 
