@@ -185,7 +185,7 @@
       ]
     },
     "backend": {
-      "latest": "v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed",
+      "latest": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -227,11 +227,19 @@
           "source": "P10.REVIEW",
           "summary": "P10 accounts layer server/persistence + server/accounts security-types-repository-service async SQLAlchemy 2.0 psycopg3 require_user guard api_auth two-mode resolver per-tenant content root idempotent seed",
           "previous": "v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit"
+        },
+        {
+          "id": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only",
+          "path": "docs/versions/backend/v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only.md",
+          "created_at": "2026-07-16T21:31:22+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 server/usage package + usage_api; stash + async metering middleware; credential_id; last_used_at on metered events only",
+          "previous": "v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed"
         }
       ]
     },
     "data": {
-      "latest": "v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild",
+      "latest": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -281,11 +289,19 @@
           "source": "P10.REVIEW",
           "summary": "P10 6 Postgres accounts tables; documents.tenant_id + UNIQUE(tenant_id, rel_path) + '' legacy sentinel; namespaced tenants/<uuid>/ root; reindex path-derivation survives the disposable-DB rebuild",
           "previous": "v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only"
+        },
+        {
+          "id": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8",
+          "path": "docs/versions/data/v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8.md",
+          "created_at": "2026-07-16T21:31:22+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 usage_events control-plane table; event-log grain; derive-on-read GROUP-BY-day aggregate; retention deferred D8",
+          "previous": "v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild"
         }
       ]
     },
     "api": {
-      "latest": "v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively",
+      "latest": "v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -343,11 +359,19 @@
           "source": "P10.REVIEW",
           "summary": "P10 /auth/* + /app/* + /api/* credential-to-tenant resolver; cross-tenant 404; frozen POST /api/documents consumer contract preserved additively",
           "previous": "v0006_p9_additive-only_the_201_url_origin_is_now_https_knowledge.hi2vi.com_root_served_by_the_box_s_live-serve_site_no_longer_pages_api_routes_unchanged_frozen_consumer_contract_intact"
+        },
+        {
+          "id": "v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched",
+          "path": "docs/versions/api/v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched.md",
+          "created_at": "2026-07-16T21:31:22+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 usage reads GET /app/usage + /app/projects/{id}/usage; cross-tenant 404; frozen /api/* contract untouched",
+          "previous": "v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively"
         }
       ]
     },
     "operations": {
-      "latest": "v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker",
+      "latest": "v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -437,11 +461,19 @@
           "source": "P10.REVIEW",
           "summary": "P10 postgres:17 in both compose files; explicit alembic upgrade head; python -m server.seed + KB_OPERATOR_EMAIL/KB_OPERATOR_PASSWORD prereqs; deploy/migration runbook; onboarding_smoke verifier; still single-worker",
           "previous": "v0010_p9_self-hosted_two-service_site_knowledge-api_knowledge-site_live-serve_manual-dispatch_production_deploy_fresh-on-write_replaces_the_65s_pages_sla_pages_retired"
+        },
+        {
+          "id": "v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification",
+          "path": "docs/versions/operations/v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification.md",
+          "created_at": "2026-07-16T21:30:52+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 second Alembic migration 0002_usage_events (alembic upgrade head applies both); onboarding_smoke.py extended with the usage meter->read assertions as part of post-deploy verification",
+          "previous": "v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker"
         }
       ]
     },
     "security": {
-      "latest": "v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution",
+      "latest": "v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -491,6 +523,14 @@
           "source": "P10.REVIEW",
           "summary": "P10 multi-tenant threat model; argon2id passwords; sha256 token hashing at rest; pinned un-revokable master bearer; cross-tenant content isolation; casing-tolerant operator-email resolution",
           "previous": "v0005_p9_add_the_gha_runner-_opc_box_ssh-key_credential_three_oracle_ssh__leetusik_knowledge_secrets_dedicated_ed25519_distinct_from_the_p8_container-_github_deploy_key_deliberate_secret-transit_exception_for_the_runner_key"
+        },
+        {
+          "id": "v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii",
+          "path": "docs/versions/security/v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii.md",
+          "created_at": "2026-07-16T21:31:22+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 per-tenant usage isolation; usage reads 404 for missing/cross-tenant; metering best-effort never alters a request; no new PII",
+          "previous": "v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution"
         }
       ]
     },
@@ -549,7 +589,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer",
+      "latest": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -639,9 +679,17 @@
           "source": "P10.REVIEW",
           "summary": "P10 ADRs Postgres-over-SQLite for accounts; namespaced docs-canonical per-tenant storage; KB_API_TOKEN as the pinned tenant-1 master bearer",
           "previous": "v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key"
+        },
+        {
+          "id": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type",
+          "path": "docs/versions/decisions/v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type.md",
+          "created_at": "2026-07-16T21:35:27+09:00",
+          "source": "P11.REVIEW",
+          "summary": "P11 ADRs: usage event-log over rollup; meter writes+searches only; derive-on-read; last_used_at on metered events; project name to UUID nullable; free-text event_type",
+          "previous": "v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-16T19:39:26+09:00"
+  "last_rebuilt_at": "2026-07-16T21:36:57+09:00"
 }
