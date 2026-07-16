@@ -150,11 +150,13 @@ def _vector_ordering(
     project: Optional[str],
     tag: Optional[str],
     today: datetime.date,
+    tenant_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Embed the query and rank all candidate embeddings by cosine similarity.
 
     Returns records (with ``_vector`` = rounded cosine) in descending similarity, or
     ``[]`` on any failure / empty candidate set — every caller degrades to BM25-only.
+    ``tenant_id`` (when set) scopes the candidate set so semantic hits stay in-tenant.
     """
     if not config.embeddings_enabled():
         return []
@@ -164,7 +166,7 @@ def _vector_ordering(
     except embeddings.EmbeddingError:
         return []  # no key / API failure / timeout -> graceful degradation
 
-    cands = db.get_all_embeddings(conn, model, project=project, tag=tag)
+    cands = db.get_all_embeddings(conn, model, project=project, tag=tag, tenant_id=tenant_id)
     scored: list[dict[str, Any]] = []
     for c in cands:
         sim = embeddings.cosine(qvec, embeddings.unpack_vector(c["_vector"]))
@@ -199,6 +201,7 @@ def search(
     limit: int = 10,
     offset: int = 0,
     raw: bool = False,
+    tenant_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Hybrid (BM25 + recency + vector) search over documents, best-and-newest first.
 
@@ -232,6 +235,9 @@ def search(
     """
     filters = ""
     fparams: list[Any] = []
+    if tenant_id is not None:
+        filters += " AND d.tenant_id = ?"
+        fparams.append(tenant_id)
     if project is not None:
         filters += " AND d.project = ?"
         fparams.append(project)
@@ -290,7 +296,7 @@ def search(
     )
 
     vector_ranked = [] if raw else _vector_ordering(
-        conn, q, project=project, tag=tag, today=today
+        conn, q, project=project, tag=tag, today=today, tenant_id=tenant_id
     )
 
     # No vector signal -> exact BM25 + recency behavior (graceful degradation).

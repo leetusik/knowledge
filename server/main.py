@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime
 import threading
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -32,7 +33,12 @@ from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
-from server.api_auth import ApiAuthContext, resolve_api_read, resolve_api_write
+from server.api_auth import (
+    ApiAuthContext,
+    get_tenant_one_id,
+    resolve_api_read,
+    resolve_api_write,
+)
 from server.persistence.engine import dispose_engine
 
 
@@ -42,7 +48,11 @@ async def lifespan(app: FastAPI):
     # reindex on boot cures manual edits, fallback writes, and git resets. The
     # embedding sync inside is content-hash cached, so a clean boot is ~free.
     if config.startup_reindex_enabled():
-        report = reindex_mod.reindex()
+        # Tenant mode: resolve tenant #1's id so the docs/ walk stamps the
+        # operator's tenant; namespaced tenants/<uuid>/ roots are re-derived from
+        # their paths. Legacy mode -> None -> the '' sentinel (byte-identical).
+        tenant_one_id = await get_tenant_one_id()
+        report = reindex_mod.reindex(tenant_one_id=tenant_one_id)
         emb = report.get("embeddings", {})
         print(
             f"[kb-api] startup reindex: indexed={report['indexed']} "
@@ -127,6 +137,36 @@ def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
     return {k: v for k, v in doc.items() if k not in drop}
 
 
+# --- Tenant routing (S5) --------------------------------------------------
+# Three views of the caller's tenant, derived from the resolved ApiAuthContext:
+#   _tenant_root   -> the content root ON DISK  (docs/ for public; tenants/<id>/ else)
+#   _tenant_db_id  -> the value STAMPED on writes ('' legacy sentinel, else the uuid)
+#   _tenant_filter -> the value used to SCOPE reads (None = no filter in legacy mode)
+# Legacy mode (ctx.tenant_id is None) keeps today's behavior byte-for-byte: writes
+# land in docs/ + stamp '', reads add no tenant filter.
+
+
+def _tenant_root(ctx: ApiAuthContext) -> Path:
+    """The caller's content root on disk. Public callers (legacy + tenant #1) use
+    the canonical, git-published ``docs/``; every other tenant uses a namespaced,
+    non-published ``<KB_ROOT>/tenants/<uuid>/`` sibling that mkdocs never serves."""
+    if ctx.is_public:
+        return config.docs_root()
+    return config.kb_root() / "tenants" / str(ctx.tenant_id)
+
+
+def _tenant_db_id(ctx: ApiAuthContext) -> str:
+    """The ``documents.tenant_id`` value to stamp on a write: the uuid string in
+    tenant mode, the ``''`` sentinel in legacy mode."""
+    return str(ctx.tenant_id) if ctx.tenant_id is not None else ""
+
+
+def _tenant_filter(ctx: ApiAuthContext) -> Optional[str]:
+    """The tenant scoping value for reads / scoped lookups: the uuid string in
+    tenant mode, ``None`` in legacy mode (no filter -> today's un-scoped reads)."""
+    return str(ctx.tenant_id) if ctx.tenant_id is not None else None
+
+
 @app.get("/healthz")
 def healthz(conn=Depends(get_conn)):
     return {
@@ -146,8 +186,11 @@ def list_documents(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    total = db.count_documents(conn, project=project, tag=tag)
-    items = db.list_documents(conn, project=project, tag=tag, limit=limit, offset=offset)
+    tid = _tenant_filter(ctx)
+    total = db.count_documents(conn, project=project, tag=tag, tenant_id=tid)
+    items = db.list_documents(
+        conn, project=project, tag=tag, limit=limit, offset=offset, tenant_id=tid
+    )
     return {"total": total, "items": [_public_doc(d, include_markdown=False) for d in items]}
 
 
@@ -157,7 +200,7 @@ def list_tags(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    return {"tags": db.list_tags(conn, project=project)}
+    return {"tags": db.list_tags(conn, project=project, tenant_id=_tenant_filter(ctx))}
 
 
 @app.get("/api/projects")
@@ -165,7 +208,7 @@ def list_projects(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    return {"projects": db.list_projects(conn)}
+    return {"projects": db.list_projects(conn, tenant_id=_tenant_filter(ctx))}
 
 
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path
@@ -176,7 +219,7 @@ def get_document_by_path(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document_by_path(conn, rel_path)
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
     return _public_doc(doc, include_markdown=True)
@@ -188,7 +231,7 @@ def get_document(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document(conn, doc_id)
+    doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
     return _public_doc(doc, include_markdown=True)
@@ -207,7 +250,8 @@ def search(
 ):
     try:
         out = search_mod.search(
-            conn, q, project=project, tag=tag, limit=limit, offset=offset, raw=raw
+            conn, q, project=project, tag=tag, limit=limit, offset=offset, raw=raw,
+            tenant_id=_tenant_filter(ctx),
         )
     except search_mod.SearchQueryError as exc:
         raise HTTPException(status_code=400, detail=f"invalid FTS query: {exc}")
@@ -229,16 +273,21 @@ class ReindexIn(BaseModel):
 
 
 @app.post("/api/reindex")
-def reindex(
+async def reindex(
     body: Optional[ReindexIn] = None,
     _: None = Depends(require_bearer),
 ):
+    # Operator-global op (stays on require_bearer: a vk_ key gets 401 here). In
+    # tenant mode, resolve tenant #1's id so the docs/ walk stamps the operator's
+    # tenant; namespaced tenants/<uuid>/ roots re-derive their id from the path.
+    # Legacy mode -> None -> the '' sentinel (byte-identical to before).
+    tenant_one_id = await get_tenant_one_id()
     # No body or rel_path null -> full reindex (unchanged, backward compatible).
     # With rel_path -> single-path reindex. ValueError -> 422.
     if body is None or body.rel_path is None:
-        return reindex_mod.reindex()
+        return reindex_mod.reindex(tenant_one_id=tenant_one_id)
     try:
-        return reindex_mod.reindex_path(body.rel_path)
+        return reindex_mod.reindex_path(body.rel_path, tenant_one_id=tenant_one_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -292,10 +341,16 @@ def create_document(
     # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
     source_repo = documents_mod.sanitize_source_repo(body.source_repo)
 
-    # 2. 409 if the target exists on disk OR in the DB and not overwrite.
+    # Route by tenant: public callers (legacy + tenant #1) write the canonical,
+    # git-published docs/ tree unchanged; every other tenant writes its namespaced
+    # tenants/<uuid>/ root and stamps documents.tenant_id with its uuid.
+    root = _tenant_root(ctx)
+    tid = _tenant_db_id(ctx)
+
+    # 2. 409 if the target exists on disk OR in the DB (this tenant) and not overwrite.
     if not body.overwrite:
-        existing_row = db.get_document_by_path(conn, rel)
-        if (config.docs_root() / rel).exists() or existing_row is not None:
+        existing_row = db.get_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
+        if (root / rel).exists() or existing_row is not None:
             detail = {"message": f"document already exists at {rel}", "rel_path": rel}
             if existing_row is not None:
                 detail["id"] = existing_row["id"]
@@ -305,7 +360,7 @@ def create_document(
     # 3. Locked critical section: file write -> index update -> DB upsert -> git.
     with WRITE_LOCK:
         stored_markdown = documents_mod.write_document_file(
-            docs_root=config.docs_root(),
+            docs_root=root,
             rel_path=rel,
             title=body.title,
             date=date,
@@ -315,19 +370,24 @@ def create_document(
             body=body.markdown,
             related=related,
         )
-        # Auto-create the project landing on a project's first document, so mkdocs
-        # builds site/<project>/index.html and the deploy gate stays green. Never
-        # overwrites an existing (hand-written or auto) landing.
-        landing_created = documents_mod.ensure_project_landing(
-            config.docs_root(), project
-        )
-        recent_updated = documents_mod.update_recent_index(
-            config.docs_root(),
-            date=date,
-            title=body.title,
-            rel_path=rel,
-            project=project,
-        )
+        # Public landing + Recent index are mkdocs-publish concerns, so only the
+        # public root gets them. Non-#1 tenants keep a minimal tree (their content
+        # is never served in P10) — skip both and report them as not created.
+        if ctx.is_public:
+            # Auto-create the project landing on a project's first document, so
+            # mkdocs builds site/<project>/index.html and the deploy gate stays
+            # green. Never overwrites an existing (hand-written or auto) landing.
+            landing_created = documents_mod.ensure_project_landing(root, project)
+            recent_updated = documents_mod.update_recent_index(
+                root,
+                date=date,
+                title=body.title,
+                rel_path=rel,
+                project=project,
+            )
+        else:
+            landing_created = False
+            recent_updated = False
         doc_id = db.upsert_document(
             conn,
             project=project,
@@ -339,6 +399,7 @@ def create_document(
             rel_path=rel,
             markdown=stored_markdown,
             related=related,
+            tenant_id=tid,
         )
 
         # 4. Git only when requested AND enabled. A failed commit is NOT rolled
@@ -348,7 +409,9 @@ def create_document(
         commit_error = None
         pushed = False
         push_error = None
-        if body.commit and config.git_commit_enabled():
+        # Git publish is a public-root concern only: non-#1 tenants' content lives
+        # under the gitignored tenants/ tree and is never committed/pushed.
+        if body.commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
                 if landing_created:
@@ -430,28 +493,38 @@ def create_document(
 def _delete_document(
     conn,
     doc: dict,
+    ctx: ApiAuthContext,
     *,
     commit: bool,
     co_authored_by: Optional[str],
 ) -> dict:
     """Own the whole delete path: the POST write path in reverse (file -> Recent
-    bullet -> DB -> scoped git commit), all under WRITE_LOCK. docs/ row deletion
-    is missing_ok — a DB row without a file is drift, still cleaned up. A failed
+    bullet -> DB -> scoped git commit), all under WRITE_LOCK. Routes by tenant like
+    the write path: public callers touch docs/ + Recent + git; non-#1 tenants touch
+    only their namespaced tenants/<uuid>/ file + DB row. docs/ row deletion is
+    missing_ok — a DB row without a file is drift, still cleaned up. A failed
     commit never rolls back the removal (responds with committed:false)."""
     rel = doc["rel_path"]
+    root = _tenant_root(ctx)
     with WRITE_LOCK:
-        (config.docs_root() / rel).unlink(missing_ok=True)
-        recent_removed = documents_mod.remove_from_recent_index(config.docs_root(), rel)
+        (root / rel).unlink(missing_ok=True)
+        # Recent index is a public-root concern; non-#1 tenants have none to update.
+        if ctx.is_public:
+            recent_removed = documents_mod.remove_from_recent_index(root, rel)
+        else:
+            recent_removed = False
         # FTS row cleaned by the AFTER DELETE trigger; any embedding cascades
-        # via ON DELETE CASCADE (document_embeddings.doc_id -> documents.id).
-        db.delete_document_by_path(conn, rel)
+        # via ON DELETE CASCADE (document_embeddings.doc_id -> documents.id). Scoped
+        # to this tenant so a delete can never cross tenants.
+        db.delete_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
 
         committed = False
         commit_sha = None
         commit_error = None
         pushed = False
         push_error = None
-        if commit and config.git_commit_enabled():
+        # Git publish is a public-root concern only (see create_document).
+        if commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 gitops.add(
                     [f"docs/{rel}", "docs/index.md"], root=config.kb_root()
@@ -503,10 +576,10 @@ def delete_document_by_path(
     ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document_by_path(conn, rel_path)
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)
+    return _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
 
 
 @app.delete("/api/documents/{doc_id}")
@@ -517,7 +590,7 @@ def delete_document(
     ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document(conn, doc_id)
+    doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
-    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)
+    return _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
