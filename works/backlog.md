@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P12`
-- Current slice: `P12.S3`
-- Next slice: `P12.S4`
-- Waiting on operator: `none`
+- Current slice: `none`
+- Next slice: `none`
+- Waiting on operator: `P12`
 - Open deferred jobs: `5`
-- Rebuilt at: `2026-07-16T23:37:09+09:00`
+- Rebuilt at: `2026-07-17T00:47:13+09:00`
 
 ## Active Phases
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
-| [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.S3` | `works/phases/active/P12` |
+| [~] `P12` | `pending` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.S3` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
