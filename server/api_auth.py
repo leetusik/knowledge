@@ -43,20 +43,66 @@ class ApiAuthContext:
     in tenant mode it is the resolved tenant. ``project_id`` is set only for a
     ``vk_`` project credential (its bound project); it is ``None`` for the master
     bearer and session tokens.
+
+    ``is_public`` marks the caller as the *public* content root — legacy mode
+    (``tenant_id is None``) or tenant #1 (the operator's own tenant, resolved via
+    ``KB_OPERATOR_EMAIL``). It stays ``True`` by default so legacy contexts are
+    public; the resolvers set it to ``False`` for every non-#1 tenant, and S5's
+    content plane routes public callers to ``docs/`` (git-published) and non-#1
+    tenants to the namespaced ``tenants/<uuid>/`` root.
     """
 
     tenant_id: UUID | None = None
     project_id: UUID | None = None
+    is_public: bool = True
 
 
-# Shared, immutable-in-practice legacy context (tenant_id=None, project_id=None):
-# what both resolvers return whenever the accounts plane is dormant.
+# Shared, immutable-in-practice legacy context (tenant_id=None, project_id=None,
+# is_public=True): what both resolvers return whenever the accounts plane is
+# dormant. Never mutated (the tenant-mode branches build fresh contexts).
 _LEGACY = ApiAuthContext()
+
+# Module-level cache for tenant #1's id (the operator's tenant, per KB_OPERATOR_EMAIL).
+# Cache-on-success ONLY: a None resolution (operator not seeded yet at boot, e.g.
+# the startup reindex runs before signup) is never cached, so a later request
+# re-resolves once the operator exists. Tenant #1's identity is stable for a
+# process lifetime, so a successful resolution is safe to memoize forever.
+_tenant_one_cache: UUID | None = None
 
 
 def _tenant_mode() -> bool:
     """Tenant mode is on iff the accounts plane is configured (DATABASE_URL set)."""
     return config.database_url() is not None
+
+
+async def get_tenant_one_id() -> UUID | None:
+    """Resolve tenant #1's id (the operator's first tenant), or ``None``.
+
+    Tenant mode: ``KB_OPERATOR_EMAIL`` -> ``get_user_by_email`` ->
+    ``list_tenants_for_user()[0].id``. Legacy mode / no operator email / operator
+    not yet seeded -> ``None``. The result is memoized on first success (see
+    ``_tenant_one_cache``). Used both by the pinned-master bearer path (to map
+    ``KB_API_TOKEN`` -> tenant #1) and by ``is_public`` (to tell tenant #1 apart
+    from every other tenant), and by ``reindex`` to stamp tenant #1's ``docs/``
+    corpus with the right ``tenant_id``.
+    """
+    global _tenant_one_cache
+    if _tenant_one_cache is not None:
+        return _tenant_one_cache
+    if not _tenant_mode():
+        return None
+    email = config.operator_email()
+    if not email:
+        return None
+    service = get_accounts_service()
+    user = await service.get_user_by_email(email)
+    if user is None:
+        return None
+    tenants = await service.list_tenants_for_user(user.id)
+    if not tenants:
+        return None
+    _tenant_one_cache = tenants[0].id
+    return _tenant_one_cache
 
 
 def _unauth() -> HTTPException:
@@ -88,13 +134,9 @@ async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
     #    legacy bearer, NOT a DB credential — so the live hi2vi agent is unchanged.
     api_token = config.api_token()
     if api_token is not None and token == api_token:
-        email = config.operator_email()
-        if email:
-            user = await service.get_user_by_email(email)
-            if user is not None:
-                tenants = await service.list_tenants_for_user(user.id)
-                if tenants:
-                    return ApiAuthContext(tenant_id=tenants[0].id)
+        tenant_one = await get_tenant_one_id()
+        if tenant_one is not None:
+            return ApiAuthContext(tenant_id=tenant_one)
         # Master token set but no email / operator not seeded -> misconfigured;
         # unresolvable rather than silently accepted.
         return None
@@ -145,6 +187,7 @@ async def resolve_api_write(request: Request) -> ApiAuthContext:
     ctx = await _resolve_tenant_bearer(token)
     if ctx is None:
         raise _unauth()
+    ctx.is_public = (ctx.tenant_id is None) or (ctx.tenant_id == await get_tenant_one_id())
     return ctx
 
 
@@ -174,4 +217,5 @@ async def resolve_api_read(request: Request) -> ApiAuthContext:
     ctx = await _resolve_tenant_bearer(token)
     if ctx is None:
         raise _unauth()
+    ctx.is_public = (ctx.tenant_id is None) or (ctx.tenant_id == await get_tenant_one_id())
     return ctx

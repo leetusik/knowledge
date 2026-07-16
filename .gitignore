@@ -2,6 +2,10 @@
 site/
 .cache/
 /data/
+# Namespaced, non-published content root for non-#1 tenants (S5). On-box only:
+# never git-published, never served by mkdocs. NOTE: this means non-#1 tenant
+# content has no git backup — see the deferred per-tenant backup job.
+/tenants/
 __pycache__/
 *.py[co]
 .venv/

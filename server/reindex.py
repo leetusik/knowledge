@@ -27,9 +27,15 @@ _FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 
 
 def _index_file(
-    conn: sqlite3.Connection, root: Path, path: Path, rel: str
+    conn: sqlite3.Connection, root: Path, path: Path, rel: str, tenant_id: str = ""
 ) -> tuple[bool, Optional[str]]:
-    """Upsert one walked file. Returns (indexed, skip_reason)."""
+    """Upsert one walked file under ``tenant_id``. Returns (indexed, skip_reason).
+
+    ``tenant_id`` is the owning tenant's id, re-derived from the file's content
+    root by the caller (``''`` for the public ``docs/`` root in legacy mode /
+    tenant #1; the ``<uuid>`` dir name for a namespaced ``tenants/<uuid>/`` root).
+    It is stamped onto ``documents.tenant_id`` so a rebuilt DB re-derives tenant
+    identity from the path alone (hard coupling #1)."""
     m = _FILENAME_RE.match(path.name)
     if not m:
         return False, "filename not <YYYY-MM-DD>-<slug>.md"
@@ -82,6 +88,7 @@ def _index_file(
             rel_path=rel,
             markdown=body.lstrip("\n"),
             related=related,
+            tenant_id=tenant_id,
         )
     except sqlite3.Error as exc:
         return False, f"db error: {exc}"
@@ -145,6 +152,7 @@ def reindex_path(
     rel_path: str,
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
+    tenant_one_id=None,
 ) -> dict:
     """Index a single path or delete a vanished row — incremental single-path reindex.
 
@@ -153,12 +161,18 @@ def reindex_path(
     Then run _sync_embeddings (best-effort). Returns {rel_path, action, reason?,
     embeddings:{...}, duration_ms}. Action is "indexed"/"skipped" (file exists) or
     "removed"/"skipped" (file missing).
+
+    Stays ``docs/``-scoped (tenant #1 / legacy): ``tenant_one_id`` (set only in
+    tenant mode) supplies the ``docs/`` root's tenant_id, so the row is stamped
+    for and scoped to tenant #1. Per-tenant single-path reindex isn't needed in
+    P10 — a namespaced tenant relies on the full boot reindex.
     """
     start = time.monotonic()
     own_conn = conn is None
     if conn is None:
         conn = db.connect()
     root = Path(docs_root) if docs_root is not None else config.docs_root()
+    tenant_id = str(tenant_one_id) if tenant_one_id else ""
 
     # Validate rel_path.
     if Path(rel_path).is_absolute():
@@ -179,11 +193,11 @@ def reindex_path(
     full_path = root / rel_path
 
     if full_path.is_file():
-        ok, reason = _index_file(conn, root, full_path, rel_path)
+        ok, reason = _index_file(conn, root, full_path, rel_path, tenant_id)
         action = "indexed" if ok else "skipped"
     else:
-        # File missing — delete from DB if present.
-        rowcount = db.delete_document_by_path(conn, rel_path)
+        # File missing — delete from DB if present (scoped to this root's tenant).
+        rowcount = db.delete_document_by_path(conn, rel_path, tenant_id=tenant_id)
         action = "removed" if rowcount >= 1 else "skipped"
         if action == "skipped":
             reason = "no such document"
@@ -206,16 +220,62 @@ def reindex_path(
     return result
 
 
+def _walk_root(
+    conn: sqlite3.Connection,
+    root: Path,
+    tenant_id: str,
+    disk_by_tenant: dict[str, set[str]],
+) -> tuple[int, list[dict]]:
+    """Walk one content root (``docs/`` or ``tenants/<uuid>/``), upserting each
+    valid ``<subdir>/**/*.md`` explainer under ``tenant_id`` and recording its
+    rel_path in ``disk_by_tenant[tenant_id]`` for the tenant-scoped vanished-row
+    cleanup. Reserved top-level dirs and top-level files never enter the walk.
+    Returns (indexed, skipped)."""
+    indexed = 0
+    skipped: list[dict] = []
+    seen = disk_by_tenant.setdefault(tenant_id, set())
+    if not root.is_dir():
+        return indexed, skipped
+    for sub in sorted(root.iterdir()):
+        if not sub.is_dir():
+            continue  # top-level files (index.md, tags.md, README.md, ...) are never walked
+        if sub.name in RESERVED_DIRS:
+            continue  # reserved internals: silently excluded
+        for path in sorted(sub.rglob("*.md")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root).as_posix()
+            seen.add(rel)
+            ok, reason = _index_file(conn, root, path, rel, tenant_id)
+            if ok:
+                indexed += 1
+            else:
+                skipped.append({"rel_path": rel, "reason": reason})
+    return indexed, skipped
+
+
 def reindex(
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
+    tenant_one_id=None,
 ) -> dict:
-    """Walk docs/<subdir>/**/*.md, upsert valid explainers, delete vanished rows.
+    """Walk every content root, upsert valid explainers, delete vanished rows.
+
+    Two kinds of root, each re-deriving ``tenant_id`` from the path (hard coupling
+    #1 — a rebuilt DB re-stamps tenancy from files alone):
+
+    * The **public root** ``docs/`` — tenant #1 in tenant mode (``tenant_one_id``
+      supplied) or the ``''`` legacy sentinel when unset. This keeps the live
+      hi2vi corpus + legacy single-tenant deployments byte-identical.
+    * Each **namespaced non-published root** ``<KB_ROOT>/tenants/<uuid>/`` — a
+      sibling of ``docs/`` that mkdocs never serves; the ``<uuid>`` dir name IS
+      the tenant_id.
 
     Returns {indexed, removed, skipped:[{rel_path, reason}], embeddings:{...},
-    duration_ms}. Reserved top-level dirs and top-level files never enter the walk.
-    The embedding-sync step (content-hash cached) runs after the docs walk; keep it
-    in any future reindex refactor (see phase.md cross-slice note for S3).
+    duration_ms}. The vanished-row cleanup is tenant-scoped: a row is stale only if
+    its ``(tenant_id, rel_path)`` isn't on disk, so one tenant's reindex never
+    deletes another tenant's rows. The embedding-sync step (content-hash cached)
+    runs after the walk; keep it in any future reindex refactor.
     """
     start = time.monotonic()
     own_conn = conn is None
@@ -225,30 +285,38 @@ def reindex(
 
     indexed = 0
     skipped: list[dict] = []
-    disk_rel_paths: set[str] = set()
+    # rel_paths present on disk, grouped by tenant_id, for the tenant-scoped
+    # vanished-row cleanup.
+    disk_by_tenant: dict[str, set[str]] = {}
 
-    if root.is_dir():
-        for sub in sorted(root.iterdir()):
-            if not sub.is_dir():
-                continue  # top-level files (index.md, tags.md, README.md, ...) are never walked
-            if sub.name in RESERVED_DIRS:
-                continue  # reserved internals: silently excluded
-            for path in sorted(sub.rglob("*.md")):
-                if not path.is_file():
-                    continue
-                rel = path.relative_to(root).as_posix()
-                disk_rel_paths.add(rel)
-                ok, reason = _index_file(conn, root, path, rel)
-                if ok:
-                    indexed += 1
-                else:
-                    skipped.append({"rel_path": rel, "reason": reason})
+    # 1. Public root (docs/): tenant #1 in tenant mode, else the '' legacy sentinel.
+    public_tid = str(tenant_one_id) if tenant_one_id else ""
+    n, s = _walk_root(conn, root, public_tid, disk_by_tenant)
+    indexed += n
+    skipped += s
 
-    # Delete DB rows whose file vanished from disk (drift repair).
+    # 2. Namespaced non-published roots: <KB_ROOT>/tenants/<uuid>/. Each dir name
+    #    IS the tenant_id (re-derived from the path). Absent when no non-#1 tenant
+    #    has written on this box — then this is a no-op (legacy/local stays clean).
+    tenants_root = config.kb_root() / "tenants"
+    if tenants_root.is_dir():
+        for tdir in sorted(tenants_root.iterdir()):
+            if not tdir.is_dir():
+                continue
+            n, s = _walk_root(conn, tdir, tdir.name, disk_by_tenant)
+            indexed += n
+            skipped += s
+
+    # Delete DB rows whose file vanished from disk (drift repair), tenant-scoped:
+    # a row is stale only if its (tenant_id, rel_path) is not on disk for THAT
+    # tenant. A tenant with no dir on this box has no disk set -> all its rows are
+    # stale and cleared (the DB is disposable; files are canonical).
     removed = 0
-    for row in conn.execute("SELECT rel_path FROM documents").fetchall():
-        if row["rel_path"] not in disk_rel_paths:
-            db.delete_document_by_path(conn, row["rel_path"])
+    for row in conn.execute("SELECT tenant_id, rel_path FROM documents").fetchall():
+        tid = row["tenant_id"]
+        rel = row["rel_path"]
+        if rel not in disk_by_tenant.get(tid, set()):
+            db.delete_document_by_path(conn, rel, tenant_id=tid)
             removed += 1
 
     embeddings_report = _sync_embeddings(conn)
