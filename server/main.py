@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from server import app_api
 from server import auth_api
 from server import config, db
+from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
 from server import gitops
@@ -112,6 +113,11 @@ app.add_exception_handler(AuthError, auth_error_handler)
 # vk_ credentials), all require_user-guarded and scoped to the caller's tenant.
 # Reuses the same AuthError handler above (no new wiring needed).
 app.include_router(app_api.router)
+
+# Usage read surface (P11.S3): the /app/usage + /app/projects/{id}/usage
+# derive-on-read aggregate the P12 dashboard consumes. Same require_user guard and
+# tenant scoping as app_api (cross-tenant project → 404).
+app.include_router(usage_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
