@@ -38,6 +38,12 @@ services:
       # it points at the local `postgres` service (psycopg3 scheme). Migrations
       # run explicitly: `docker compose exec api alembic upgrade head`.
       DATABASE_URL: postgresql+psycopg://kb:kb@postgres:5432/kb
+      # Pins the legacy KB_API_TOKEN master bearer to tenant #1 in tenant mode
+      # (the operator's signup email). Local dev can leave it unset — vk_/session
+      # tokens still resolve; only the KB_API_TOKEN master-bearer shortcut needs
+      # it. Set it (e.g. KB_OPERATOR_EMAIL=operator@test) for the S4 tenant-mode
+      # resolution smoke.
+      KB_OPERATOR_EMAIL: ${KB_OPERATOR_EMAIL:-}
     restart: unless-stopped
 
   postgres:

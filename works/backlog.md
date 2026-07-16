@@ -6,17 +6,17 @@
 ## Pointer
 
 - Current phase: `P10`
-- Current slice: `P10.S4`
-- Next slice: `P10.S5`
+- Current slice: `P10.S5`
+- Next slice: `P10.S6`
 - Waiting on operator: `none`
 - Open deferred jobs: `3`
-- Rebuilt at: `2026-07-16T16:21:42+09:00`
+- Rebuilt at: `2026-07-16T16:45:58+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
-| [ ] `P10` | `planned` | `pending` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `P10.S4` | `works/phases/active/P10` |
+| [ ] `P10` | `planned` | `pending` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `P10.S5` | `works/phases/active/P10` |
 | [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.DECOMP` | `works/phases/active/P11` |
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
@@ -30,7 +30,7 @@
 | [x] `P10.S1` | `done` | Accounts persistence: Postgres + schema + Alembic + accounts layer | `implementation` | `works/phases/active/P10/slices/P10.S1` |
 | [x] `P10.S2` | `done` | Auth surface /auth/* + require_user session guard | `implementation` | `works/phases/active/P10/slices/P10.S2` |
 | [x] `P10.S3` | `done` | Control plane /app/*: tenant-scoped projects + vk_ credentials | `implementation` | `works/phases/active/P10/slices/P10.S3` |
-| [ ] `P10.S4` | `todo` | /api/* credential auth: resolve credential -> tenant+project | `implementation` | `works/phases/active/P10/slices/P10.S4` |
+| [x] `P10.S4` | `done` | /api/* credential auth: resolve credential -> tenant+project | `implementation` | `works/phases/active/P10/slices/P10.S4` |
 | [ ] `P10.S5` | `todo` | Content tenant-scoping: documents.tenant_id + reindex + namespaced storage | `implementation` | `works/phases/active/P10/slices/P10.S5` |
 | [ ] `P10.S6` | `todo` | Seed tenant #1 + migrate live corpus + E2E onboarding smoke | `implementation` | `works/phases/active/P10/slices/P10.S6` |
 | [ ] `P10.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P10/slices/P10.REVIEW` |
