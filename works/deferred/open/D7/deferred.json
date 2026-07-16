@@ -1,0 +1,11 @@
+{
+  "id": "D7",
+  "title": "Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/)",
+  "status": "deferred",
+  "source": "P10.REVIEW",
+  "reason": "Non-#1 tenant content lives in a gitignored tenants/<uuid>/ tree on the box — no git backup and no published site (P10 has no per-tenant sites). If the box disk is lost, non-#1 corpora are unrecoverable. Tenant #1 stays safe via the git-published docs/ tree.",
+  "trigger": "Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants).",
+  "created_at": "2026-07-16T19:41:58+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

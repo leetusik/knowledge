@@ -69,7 +69,7 @@
       ]
     },
     "architecture": {
-      "latest": "v0008_p9_track_1_web_ui_is_now_self-hosted_mkdocs_live-serve_not_github_pages_two_services_knowledge-api_knowledge-site_on_one_box_behind_two-location_edge_routing_-_site_api_healthz_-_api",
+      "latest": "v0009_p10_two-plane_app_async_postgres_control_plane_alongside_the_unchanged_files_disposable-sqlite_content_plane_dormant_without_database_url",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -135,6 +135,14 @@
           "source": "P9.REVIEW",
           "summary": "P9: Track 1 web UI is now self-hosted mkdocs live-serve (not GitHub Pages) — two services (knowledge-api + knowledge-site) on one box behind two-location edge routing (/ -> site, /api/* + /healthz -> api)",
           "previous": "v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path"
+        },
+        {
+          "id": "v0009_p10_two-plane_app_async_postgres_control_plane_alongside_the_unchanged_files_disposable-sqlite_content_plane_dormant_without_database_url",
+          "path": "docs/versions/architecture/v0009_p10_two-plane_app_async_postgres_control_plane_alongside_the_unchanged_files_disposable-sqlite_content_plane_dormant_without_database_url.md",
+          "created_at": "2026-07-16T19:32:55+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 two-plane app: async Postgres control plane alongside the unchanged files + disposable-SQLite content plane; dormant without DATABASE_URL",
+          "previous": "v0008_p9_track_1_web_ui_is_now_self-hosted_mkdocs_live-serve_not_github_pages_two_services_knowledge-api_knowledge-site_on_one_box_behind_two-location_edge_routing_-_site_api_healthz_-_api"
         }
       ]
     },
@@ -177,7 +185,7 @@
       ]
     },
     "backend": {
-      "latest": "v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit",
+      "latest": "v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -211,11 +219,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: write path auto-creates a minimal docs/<project>/index.md landing for a project's first doc (F1) — never overwrites, joins the scoped commit",
           "previous": "v0003_p4_recency_rrf_hybrid_search_embeddings_module_delete_path_incremental_reindex_cross-links_sanitizer"
+        },
+        {
+          "id": "v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed",
+          "path": "docs/versions/backend/v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed.md",
+          "created_at": "2026-07-16T19:32:55+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 accounts layer server/persistence + server/accounts security-types-repository-service async SQLAlchemy 2.0 psycopg3 require_user guard api_auth two-mode resolver per-tenant content root idempotent seed",
+          "previous": "v0004_p7_write_path_auto-creates_a_minimal_docs_project_index.md_landing_for_a_project_s_first_doc_f1_never_overwrites_joins_the_scoped_commit"
         }
       ]
     },
     "data": {
-      "latest": "v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only",
+      "latest": "v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -257,11 +273,19 @@
           "source": "P6.REVIEW",
           "summary": "P6 re-review: reword the graph.json publish-safety guarantee without the literal user-home path token (data contract unchanged; F1-F4 were renderer/CSS-only)",
           "previous": "v0004_p6_build-time_knowledge-graph_data_contract_node_edge_model_tags-as-nodes_ghost_broken_edges_deterministic_publish-safe_graph.json"
+        },
+        {
+          "id": "v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild",
+          "path": "docs/versions/data/v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild.md",
+          "created_at": "2026-07-16T19:33:01+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 6 Postgres accounts tables; documents.tenant_id + UNIQUE(tenant_id, rel_path) + '' legacy sentinel; namespaced tenants/<uuid>/ root; reindex path-derivation survives the disposable-DB rebuild",
+          "previous": "v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only"
         }
       ]
     },
     "api": {
-      "latest": "v0006_p9_additive-only_the_201_url_origin_is_now_https_knowledge.hi2vi.com_root_served_by_the_box_s_live-serve_site_no_longer_pages_api_routes_unchanged_frozen_consumer_contract_intact",
+      "latest": "v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -311,11 +335,19 @@
           "source": "P9.REVIEW",
           "summary": "P9 (additive-only): the 201 url origin is now https://knowledge.hi2vi.com root, served by the box's live-serve site (no longer Pages); /api/* routes unchanged, frozen consumer contract intact",
           "previous": "v0005_p8_hosted_deployment_at_knowledge.hi2vi.com_frozen_consumer_contract_bearer_on_all_api_publish-on-write_pushed_push_error_commit_sha_published_head"
+        },
+        {
+          "id": "v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively",
+          "path": "docs/versions/api/v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively.md",
+          "created_at": "2026-07-16T19:33:01+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 /auth/* + /app/* + /api/* credential-to-tenant resolver; cross-tenant 404; frozen POST /api/documents consumer contract preserved additively",
+          "previous": "v0006_p9_additive-only_the_201_url_origin_is_now_https_knowledge.hi2vi.com_root_served_by_the_box_s_live-serve_site_no_longer_pages_api_routes_unchanged_frozen_consumer_contract_intact"
         }
       ]
     },
     "operations": {
-      "latest": "v0010_p9_self-hosted_two-service_site_knowledge-api_knowledge-site_live-serve_manual-dispatch_production_deploy_fresh-on-write_replaces_the_65s_pages_sla_pages_retired",
+      "latest": "v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -397,11 +429,19 @@
           "source": "P9.REVIEW",
           "summary": "P9: self-hosted two-service site (knowledge-api + knowledge-site live-serve) + manual-dispatch Production Deploy; fresh-on-write replaces the ~65s Pages SLA; Pages retired",
           "previous": "v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing"
+        },
+        {
+          "id": "v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker",
+          "path": "docs/versions/operations/v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker.md",
+          "created_at": "2026-07-16T19:33:06+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 postgres:17 in both compose files; explicit alembic upgrade head; python -m server.seed + KB_OPERATOR_EMAIL/KB_OPERATOR_PASSWORD prereqs; deploy/migration runbook; onboarding_smoke verifier; still single-worker",
+          "previous": "v0010_p9_self-hosted_two-service_site_knowledge-api_knowledge-site_live-serve_manual-dispatch_production_deploy_fresh-on-write_replaces_the_65s_pages_sla_pages_retired"
         }
       ]
     },
     "security": {
-      "latest": "v0005_p9_add_the_gha_runner-_opc_box_ssh-key_credential_three_oracle_ssh__leetusik_knowledge_secrets_dedicated_ed25519_distinct_from_the_p8_container-_github_deploy_key_deliberate_secret-transit_exception_for_the_runner_key",
+      "latest": "v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -443,6 +483,14 @@
           "source": "P9.REVIEW",
           "summary": "P9: add the GHA runner->opc@box SSH-key credential (three ORACLE_SSH_* leetusik/knowledge secrets, dedicated ed25519), distinct from the P8 container->GitHub deploy key; deliberate secret-transit exception for the runner key",
           "previous": "v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live"
+        },
+        {
+          "id": "v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution",
+          "path": "docs/versions/security/v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution.md",
+          "created_at": "2026-07-16T19:33:01+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 multi-tenant threat model; argon2id passwords; sha256 token hashing at rest; pinned un-revokable master bearer; cross-tenant content isolation; casing-tolerant operator-email resolution",
+          "previous": "v0005_p9_add_the_gha_runner-_opc_box_ssh-key_credential_three_oracle_ssh__leetusik_knowledge_secrets_dedicated_ed25519_distinct_from_the_p8_container-_github_deploy_key_deliberate_secret-transit_exception_for_the_runner_key"
         }
       ]
     },
@@ -501,7 +549,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key",
+      "latest": "v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -583,9 +631,17 @@
           "source": "P9.REVIEW",
           "summary": "P9 ADRs: self-host the site, live-serve, retire Pages, automated production deploy (in-container reconcile-on-main, fix-forward, edge re-apply, workflow_dispatch-only), dedicated runner key",
           "previous": "v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert"
+        },
+        {
+          "id": "v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer",
+          "path": "docs/versions/decisions/v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer.md",
+          "created_at": "2026-07-16T19:33:06+09:00",
+          "source": "P10.REVIEW",
+          "summary": "P10 ADRs Postgres-over-SQLite for accounts; namespaced docs-canonical per-tenant storage; KB_API_TOKEN as the pinned tenant-1 master bearer",
+          "previous": "v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-15T13:16:39+09:00"
+  "last_rebuilt_at": "2026-07-16T19:39:26+09:00"
 }

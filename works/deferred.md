@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `3`
+- Open: `4`
 - Promoted: `2`
 - Dropped: `1`
-- Rebuilt at: `2026-07-16T18:47:02+09:00`
+- Rebuilt at: `2026-07-16T19:41:58+09:00`
 
 ## Open
 
@@ -16,6 +16,7 @@
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D6` | `deferred` | Paid-plan retriever endpoint for external AI agents | operator (P10-P14 SaaS pivot intent) | operator decides to introduce the paid plan | `works/deferred/open/D6` |
+| `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 
 ## Promoted
 
