@@ -1,18 +1,18 @@
 {
-  "id": "P11.DECOMP",
+  "id": "P11.S1",
   "phase_id": "P11",
-  "name": "decompose phase",
-  "kind": "decomposition",
-  "status": "done",
-  "order": 0,
+  "name": "Usage persistence + aggregate service",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 1,
   "depends_on": [],
-  "created_at": "2026-07-16T14:25:27+09:00",
-  "started_at": "2026-07-16T20:02:39+09:00",
-  "completed_at": "2026-07-16T20:05:58+09:00",
-  "risk": "low",
+  "created_at": "2026-07-16T20:03:22+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "medium",
   "source": {
-    "type": "new_phase",
-    "id": "P11"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",

@@ -1,0 +1,11 @@
+{
+  "id": "D8",
+  "title": "usage_events retention/cleanup job",
+  "status": "deferred",
+  "source": "P11.DECOMP",
+  "reason": "P11 stores usage as an unbounded event log (operator-chosen grain); observability-only + low volume, so a retention/cleanup job is deferred until table growth becomes material",
+  "trigger": "usage_events growth becomes material / before onboarding high-volume non-#1 tenants",
+  "created_at": "2026-07-16T20:06:02+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
