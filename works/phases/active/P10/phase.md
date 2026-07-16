@@ -215,6 +215,8 @@ _Doc-impact one-liners (for `P10.REVIEW` to consolidate — do NOT version per s
 
 _Operational caveat surfaced in S6 testing (flag for `P10.REVIEW`):_ `KB_OPERATOR_EMAIL` **must be set in normalized form (lowercase, no surrounding whitespace).** The seed normalizes the email (`.strip().lower()`, matching `/auth/signup` so the operator can also log in via `/auth/login`), but `server/api_auth.py::get_tenant_one_id()` looks up `KB_OPERATOR_EMAIL` **verbatim** — so a mixed-case/whitespace value leaves the master bearer unresolvable and `docs/` stamped `''` (reproduced in testing with `Operator@Example.com`; fixed by using the lowercase form). A real email is naturally lowercase, so this is a documentation/robustness item, not a blocker. **Possible follow-up (REVIEW's call, not changed in S6 — it is S5 source):** normalize the email inside `get_tenant_one_id()` to make the master-bearer path tolerant of casing.
 
+**P10.F1 (fix, resolves the caveat above):** `get_tenant_one_id()` now normalizes `KB_OPERATOR_EMAIL` (`.strip().lower()`) like the seed / `/auth/signup`, so the `KB_API_TOKEN` master bearer is casing-tolerant (the deploy runbook's "must be lowercase" line becomes a nicety, not a hard requirement) — folds into the existing security/operations doc-impact for `P10.REVIEW`. Verified: 65-test regression green, `workflow.py validate` passed.
+
 **P10 phase status: all six middle slices (S1–S6) complete — the phase is ready for `P10.REVIEW`,** which validates S1–S6 together and consolidates every S1–S6 doc-impact one-liner (architecture / backend / data / api / security / operations / decisions) into new doc versions. `doc-new-version` is REVIEW's job — S6 did not version docs.
 
 ## Constraints

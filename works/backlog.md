@@ -10,7 +10,7 @@
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `3`
-- Rebuilt at: `2026-07-16T18:11:03+09:00`
+- Rebuilt at: `2026-07-16T18:47:02+09:00`
 
 ## Active Phases
 
@@ -33,6 +33,7 @@
 | [x] `P10.S4` | `done` | /api/* credential auth: resolve credential -> tenant+project | `implementation` | `works/phases/active/P10/slices/P10.S4` |
 | [x] `P10.S5` | `done` | Content tenant-scoping: documents.tenant_id + reindex + namespaced storage | `implementation` | `works/phases/active/P10/slices/P10.S5` |
 | [x] `P10.S6` | `done` | Seed tenant #1 + migrate live corpus + E2E onboarding smoke | `implementation` | `works/phases/active/P10/slices/P10.S6` |
+| [x] `P10.F1` | `done` | Normalize KB_OPERATOR_EMAIL casing in get_tenant_one_id | `fix` | `works/phases/active/P10/slices/P10.F1` |
 | [ ] `P10.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P10/slices/P10.REVIEW` |
 
 ## Phase P11: Per-Tenant Usage Monitoring

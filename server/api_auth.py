@@ -91,7 +91,7 @@ async def get_tenant_one_id() -> UUID | None:
         return _tenant_one_cache
     if not _tenant_mode():
         return None
-    email = config.operator_email()
+    email = (config.operator_email() or "").strip().lower()
     if not email:
         return None
     service = get_accounts_service()

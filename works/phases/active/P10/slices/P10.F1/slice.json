@@ -1,0 +1,33 @@
+{
+  "id": "P10.F1",
+  "phase_id": "P10",
+  "name": "Normalize KB_OPERATOR_EMAIL casing in get_tenant_one_id",
+  "kind": "fix",
+  "status": "done",
+  "order": 6.5,
+  "depends_on": [
+    "P10.S6"
+  ],
+  "created_at": "2026-07-16T18:27:38+09:00",
+  "started_at": "2026-07-16T18:45:45+09:00",
+  "completed_at": "2026-07-16T18:47:02+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
