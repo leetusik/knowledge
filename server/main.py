@@ -23,12 +23,14 @@ from typing import Optional
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from server import auth_api
 from server import config, db
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
 from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
+from server.accounts.auth import AuthError, auth_error_handler
 from server.persistence.engine import dispose_engine
 
 
@@ -54,6 +56,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
+
+# Control-plane auth surface: the /auth/* session endpoints (signup/login/
+# logout/me) and the shared generic-401 handler for require_user's AuthError.
+# Mounted outside /api/* so the content-plane bearer guards never touch it.
+app.include_router(auth_api.router)
+app.add_exception_handler(AuthError, auth_error_handler)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
