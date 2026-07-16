@@ -126,6 +126,44 @@ DB round-trip is deferred to S4/REVIEW (no Postgres in the S1 env)._
   (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects`
   SET NULL) — no autogenerate drift.
 
+### S2 built (metering hook) — final mechanism for S3/S4
+_Done in P11.S2: writes/deletes/searches are metered best-effort; `last_used_at` wired.
+Import check + 65-test legacy suite green; live DB behavior deferred to S4/REVIEW._
+
+- **Final metering mechanism = stash + async middleware** (chosen over per-handler async
+  hooks; resolves the sync→async wrinkle). The sync content handlers stash a
+  `UsageHint` on `request.state.usage` on their **success path only**; a single
+  `@app.middleware("http")` (`usage_metering` in `server/main.py`) calls
+  `record_usage(hint)` after `call_next` **iff** a hint is present, `hint.tenant_id is
+  not None`, and the response is 2xx. Error paths (401/404/409/422/400) raise before the
+  stash, so only successes are metered. Awaiting in the middleware keeps metering
+  synchronous w.r.t. the client while the sync handler never blocks on Postgres.
+- **`server/usage/metering.py` (new)** owns `UsageHint{tenant_id, event_type,
+  project_name, project_id, credential_id}` + `async record_usage(hint)`. `record_usage`
+  is **best-effort** (broad `try/except Exception` + `logging.warning(exc_info=True)`) —
+  it wraps S1's raising `record_event`, so a metering failure never fails a request. It
+  resolves project attribution name → UUID (`get_project_by_name`), records the event,
+  then stamps `last_used_at`. S3 should NOT re-meter reads; it only reports.
+- **`ApiAuthContext.credential_id: UUID|None`** added (`server/api_auth.py`), set **only**
+  in the `vk_` branch of `_resolve_tenant_bearer` (`credential_id=cred.id`); master and
+  session callers leave it `None`. Carried so the middleware can stamp the credential.
+- **`AccountsService.get_project_by_name(tenant_id, name) -> ProjectRecord | None`** now
+  exists (repository + service), tenant-scoped, **oldest-wins** (`ORDER BY created_at,
+  id LIMIT 1` — names aren't unique per tenant). S3's project-detail page can reuse it if
+  useful, though S3 primarily loads by id.
+- **REFINEMENT — `last_used_at` stamped on metered events only, NOT in the resolver.**
+  The DECOMP note said "keep the `last_used_at` stamp in the resolver"; S2 moved it into
+  `record_usage` (metered write/search path) because stamping in the resolver writes on
+  **every read**, contradicting the operator's "open reads stay fast." Consequence: a
+  `vk_` key used only for reads won't refresh `last_used_at` — it reflects the last
+  write/search. Acceptable for an ingest key. **S3/S4 plan against this:** the
+  credential `last_used_at` a project-usage read surfaces reflects last *metered* use
+  (write/search), not last read; S4's smoke should drive a write/search before asserting
+  `last_used_at` is non-null. Revisit only if read-recency is later wanted (a throttled
+  read stamp).
+- **Legacy inertness confirmed:** hints carry `tenant_id=None` in legacy mode, the
+  middleware guard skips, no engine is created — 65-test legacy suite unchanged.
+
 ## Resolved design (shared by all middle slices)
 
 - **`usage_events` (durable Postgres, 7th control-plane table):** UUID PK; `tenant_id`

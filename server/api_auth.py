@@ -50,10 +50,17 @@ class ApiAuthContext:
     public; the resolvers set it to ``False`` for every non-#1 tenant, and S5's
     content plane routes public callers to ``docs/`` (git-published) and non-#1
     tenants to the namespaced ``tenants/<uuid>/`` root.
+
+    ``credential_id`` is the resolved ``vk_`` project credential's id, set only
+    for a ``vk_`` caller — it is ``None`` for the master bearer (no DB row) and
+    session tokens. P11's metering middleware stamps ``last_used_at`` on this
+    credential when a metered event is recorded (never in the resolver, so plain
+    reads do not write); see ``server/usage/metering.py``.
     """
 
     tenant_id: UUID | None = None
     project_id: UUID | None = None
+    credential_id: UUID | None = None
     is_public: bool = True
 
 
@@ -148,7 +155,11 @@ async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
     if cred is not None:
         project = await service.get_project(cred.project_id)
         if project is not None:
-            return ApiAuthContext(tenant_id=project.tenant_id, project_id=project.id)
+            return ApiAuthContext(
+                tenant_id=project.tenant_id,
+                project_id=project.id,
+                credential_id=cred.id,
+            )
         # Credential points at a vanished project -> unresolvable.
         return None
 

@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P11`
-- Current slice: `P11.S2`
-- Next slice: `P11.S3`
+- Current slice: `P11.S3`
+- Next slice: `P11.S4`
 - Waiting on operator: `none`
 - Open deferred jobs: `5`
-- Rebuilt at: `2026-07-16T20:20:04+09:00`
+- Rebuilt at: `2026-07-16T20:32:20+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
-| [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.S2` | `works/phases/active/P11` |
+| [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.S3` | `works/phases/active/P11` |
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | [x] `P11.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P11/slices/P11.DECOMP` |
 | [x] `P11.S1` | `done` | Usage persistence + aggregate service | `implementation` | `works/phases/active/P11/slices/P11.S1` |
-| [ ] `P11.S2` | `todo` | Metering hook (record writes/deletes/search + wire last_used_at) | `implementation` | `works/phases/active/P11/slices/P11.S2` |
+| [x] `P11.S2` | `done` | Metering hook (record writes/deletes/search + wire last_used_at) | `implementation` | `works/phases/active/P11/slices/P11.S2` |
 | [ ] `P11.S3` | `todo` | Usage read API | `implementation` | `works/phases/active/P11/slices/P11.S3` |
 | [ ] `P11.S4` | `todo` | E2E usage smoke + verification | `implementation` | `works/phases/active/P11/slices/P11.S4` |
 | [ ] `P11.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P11/slices/P11.REVIEW` |

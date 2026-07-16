@@ -188,6 +188,21 @@ class AccountsService:
                 await session.rollback()
                 raise AccountsReadError("failed to read projects") from exc
 
+    async def get_project_by_name(
+        self,
+        tenant_id: UUID,
+        name: str,
+    ) -> ProjectRecord | None:
+        """Return a tenant's project by name (oldest-wins), or None when missing."""
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                return await repository.get_project_by_name(tenant_id, name)
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsReadError("failed to read project") from exc
+
     # -- credentials ------------------------------------------------------
 
     async def create_project_credential(
