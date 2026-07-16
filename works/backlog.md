@@ -10,7 +10,7 @@
 - Next slice: `P12.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `5`
-- Rebuilt at: `2026-07-16T21:40:06+09:00`
+- Rebuilt at: `2026-07-16T21:41:02+09:00`
 
 ## Active Phases
 
@@ -21,6 +21,7 @@
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
+| [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
 
 ## Phase P10: Accounts, Tenancy & Tenant-Scoped Knowledge API
 
@@ -67,3 +68,10 @@
 |---|---|---|---|---|
 | [ ] `P14.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P14/slices/P14.DECOMP` |
 | [ ] `P14.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P14/slices/P14.REVIEW` |
+
+## Phase P15: Agent-facing retrieval MCP service (search-as-a-service)
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P15.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P15/slices/P15.DECOMP` |
+| [ ] `P15.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P15/slices/P15.REVIEW` |

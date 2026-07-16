@@ -360,3 +360,4 @@
 {"ts": "2026-07-16T21:35:27+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type", "source": "P11.REVIEW"}
 {"ts": "2026-07-16T21:40:06+09:00", "type": "slice_status_changed", "slice": "P11.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-16T21:40:06+09:00", "type": "phase_reviewed", "phase": "P11", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-16T21:41:02+09:00", "type": "phase_created", "phase": "P15"}
