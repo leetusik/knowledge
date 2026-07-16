@@ -13,3 +13,16 @@ export const SITE: SiteMeta = {
     "knowledge — the tenant dashboard for your projects, credentials, documents, and usage.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://127.0.0.1:3030",
 };
+
+/**
+ * Wordmark split into three parts so the middle `accent` glyph renders in signal
+ * green (the brand mark), matching hi2vi_web's operator wordmark treatment (which
+ * accents its `2`). knowledge has no digit, so the leading `k` is the mark —
+ * "knowledge" with a green initial. The dark login gate accents in `text-green`;
+ * the light app-shell topbar accents in `text-green-deep` (readable on white).
+ */
+export const BRAND = {
+  prefix: "",
+  accent: "k",
+  suffix: "nowledge",
+} as const;

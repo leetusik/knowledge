@@ -100,6 +100,34 @@ Verified `2026-07-16`: all endpoint shapes, the documents-not-on-`/app/*` fact, 
 - `architecture.md` — knowledge gains a new `web/` Next.js app subdir (the authenticated browser surface); S1 is presentational-only (no BFF/auth yet — that is S2).
 - `operations.md` — web-app local build/run stub: `pnpm install` / `pnpm dev` (`:3030`) / `pnpm build` (`output: "standalone"`); full production deploy = P14.
 
+### Cross-slice notes (S2 — Auth + BFF proxy + authenticated app shell)
+
+**The BFF / sealed-cookie auth model, AS BUILT.** The browser talks only to the Next origin; Next calls `knowledge-api` server-to-server with `Authorization: Bearer`; the backend token is sealed into an httpOnly cookie. Constants that S3–S6 depend on:
+- Cookie **`knowledge_session`**, **AES-256-GCM**, key `sha256(SESSION_SECRET)`, IV `randomBytes(12)`, 16-byte tag, envelope `v1.<iv>.<ct>.<tag>` base64url, payload `{token, exp}`, TTL 30d (`Max-Age=2592000`), attrs `httpOnly / sameSite=strict / secure(prod-only) / path=/`. `openSession` → `null` on any failure, never throws.
+- **Two server-only env keys**: `KB_API_BASE_URL` (local default `http://127.0.0.1:8766`) + `SESSION_SECRET`. Both read lazily via `src/lib/env.ts` (`import "server-only"`); neither `NEXT_PUBLIC_`; `next build` needs no env. `.env.example` written.
+- **Client seam = `src/lib/knowledge/{client,auth,types}.ts`** (was vocky's `lib/vocky/*`). `client.ts` (`getJson`/`getRaw`/`sendJson`, `ApiError{status,detail}`, bearer injection, **`cache:"no-store"` on every call**) is the ONE place Next talks to the backend. **S3–S6 add `src/lib/knowledge/app.ts`** (the `/app/*` calls) + extend `types.ts` with the `/app/*` shapes — the `app.ts` file and S3+ types were deliberately NOT ported in S2.
+- **Guards** (`src/lib/auth-guards.ts`): `requireIdentity = cache(async …)` (`requireSession` → live `GET /auth/me`; catches **only `ApiError` 401 → `redirect("/login")`, rethrows everything else**). The `(app)` layout awaits it; any `(app)` page may also call it and share the single `/auth/me` (React `cache()`). `redirectIfAuthenticated` re-verifies `/auth/me` to break the revoked-cookie ping-pong. The BFF pipeline (`src/lib/bff.ts`) is `415→403→429(before parse)→400→422→502/500→200`, body always `{ok}`, backend `detail` never echoed. Routes at `/api/auth/{login,signup,logout}` (`nodejs` + `force-dynamic`).
+
+**App design language established (adopted hi2vi_web, real).**
+- **Auth pages = the dark "secure threshold" gate** (`operator/login`): `bg-ink` stage + decorative glow/grid layers (`(auth)/layout.tsx`), forest-gradient card + Secure pill + trust-chip footer (`auth-card.tsx`), dark translucent inputs + full-width green submit + badge error (`credentials-form.tsx`).
+- **App shell = the light "workspace" console** (`operator/(console)`): sticky white topbar (brand + tenant breadcrumb + email + logout) over `[248px rail | main]`; rail = white `bg-canvas`, mono-uppercase eyebrow, active row `border-green-deep bg-surface-green` + `aria-current`, not-yet-shipped routes as muted **"Soon"** pills (never a 404 link).
+- **Two button languages, kept distinct:** the flat app-chrome `AppButton`/`appButtonClass` + `Tag` chip (`components/ui/app-button.tsx`: `rounded-md`, primary `bg-green hover:bg-green-deep`, secondary/ghost/danger) is what the shell + S3–S6 app pages use. The marketing pill `Button` (rounded-full, hover-translate, green glow) **stays reserved for P14's public landing** — do not use it inside the app. Green = primary/active/focus only.
+- `BRAND` (`content/site.ts`) = wordmark with the leading **`k`** as the green mark (knowledge has no digit; `text-green` on the dark gate, `text-green-deep` on light). `StatusPill` deliberately not introduced yet (needs run/status data — S3+ adds it beside `Tag`).
+
+**Forward gotchas for S3–S6 (authed mutations = server actions).**
+- Authed mutations are **server actions**: call `requireIdentity()` **OUTSIDE** the action's `try` — it `redirect()`s by throwing, and a `try/catch` around it would swallow the redirect. A `"use server"` file may export **only** async functions (no consts/types) — put shared shapes elsewhere.
+- The `/app/*` client goes in **`src/lib/knowledge/app.ts`** (new); extend `src/lib/knowledge/types.ts` for each `/app/*` serializer. Every call keeps `cache:"no-store"` and the bearer from the guard's `token`.
+- `content/index.ts` grows per slice (add `dashboard`/`project`/`documents`/`graph` copy modules + extend the barrel). The dashboard's tenant name comes from the shell's cached `/auth/me` (no extra `GET /app/tenant`).
+- S1's `NAV_LINKS`/`SECTION_IDS`/`SKIP_TO_CONTENT` (preview-only) are now unused by any page but remain exported; a later slice may prune them.
+
+### Doc impact (S2)
+
+- `frontend.md` — the BFF + session model (sealed `knowledge_session` AES-256-GCM httpOnly cookie), the `lib/knowledge/*` server-side client seam, the auth-guards + BFF pipeline, and the app-shell (dark login gate + light console shell + flat `AppButton` chrome; marketing pill reserved for P14).
+- `architecture.md` — the sealed-cookie server-side BFF as knowledge's authenticated browser surface (no CORS change, no web-side DB); browser ↔ Next origin only, Next ↔ backend bearer.
+- `experience.md` — the signup / login / logout UX + the authenticated nav (Dashboard live; Documents/Graph "Soon").
+- `decisions.md` — D-P12-2 **as built** (Next.js server-side BFF proxy; sealed AES-256-GCM httpOnly cookie).
+- `operations.md` — the two server-only env keys `KB_API_BASE_URL` (dev `http://127.0.0.1:8766`) + `SESSION_SECRET`, both blank/server-only via `.env.example`.
+
 ## Constraints
 
 - **Surface discipline:** the app is a **session-token client of `/auth/*` + `/app/*` only** — never the `vk_`-keyed `/api/*` machine surface from its own auth flow. (S5 may deliberately choose the metered `/api/*` for documents/search with a session bearer as a fallback — that is a slice-turn decision, and the preferred path is new unmetered `/app` read routes.)
@@ -132,3 +160,5 @@ Running list of durable-truth changes for **P12.REVIEW** to consolidate into new
 - `product.md` (possibly) — the authenticated web app as the primary user surface; all web-UI features free.
 
 _(Slices append their own Doc-impact lines here as they complete.)_
+
+- **S2** → `frontend.md` (BFF + sealed-cookie session + `lib/knowledge/*` client seam + auth-guards/pipeline + app-shell: dark login gate / light console / flat `AppButton`, marketing pill reserved for P14); `architecture.md` (sealed AES-256-GCM httpOnly-cookie server-side BFF, no CORS/no web-DB); `experience.md` (signup/login/logout + Dashboard-live / Documents-Graph-"Soon" nav); `decisions.md` (D-P12-2 as built); `operations.md` (server-only `KB_API_BASE_URL` `:8766` + `SESSION_SECRET`, via `.env.example`).
