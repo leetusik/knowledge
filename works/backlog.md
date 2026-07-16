@@ -5,19 +5,19 @@
 
 ## Pointer
 
-- Current phase: `P11`
-- Current slice: `P11.REVIEW`
-- Next slice: `none`
+- Current phase: `P12`
+- Current slice: `P12.DECOMP`
+- Next slice: `P12.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `5`
-- Rebuilt at: `2026-07-16T20:54:39+09:00`
+- Rebuilt at: `2026-07-16T21:40:06+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
-| [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.REVIEW` | `works/phases/active/P11` |
+| [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
@@ -45,7 +45,7 @@
 | [x] `P11.S2` | `done` | Metering hook (record writes/deletes/search + wire last_used_at) | `implementation` | `works/phases/active/P11/slices/P11.S2` |
 | [x] `P11.S3` | `done` | Usage read API | `implementation` | `works/phases/active/P11/slices/P11.S3` |
 | [x] `P11.S4` | `done` | E2E usage smoke + verification | `implementation` | `works/phases/active/P11/slices/P11.S4` |
-| [ ] `P11.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P11/slices/P11.REVIEW` |
+| [x] `P11.REVIEW` | `done` | phase review | `review` | `works/phases/active/P11/slices/P11.REVIEW` |
 
 ## Phase P12: Web App: Tenant Dashboard & Project Detail Pages
 

@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0007
-created_at: 2026-07-16T19:33:01+09:00
-source: P10.REVIEW
-summary: P10 /auth/* + /app/* + /api/* credential-to-tenant resolver; cross-tenant 404; frozen POST /api/documents consumer contract preserved additively
-previous: v0006_p9_additive-only_the_201_url_origin_is_now_https_knowledge.hi2vi.com_root_served_by_the_box_s_live-serve_site_no_longer_pages_api_routes_unchanged_frozen_consumer_contract_intact
+version: v0008
+created_at: 2026-07-16T21:31:22+09:00
+source: P11.REVIEW
+summary: P11 usage reads GET /app/usage + /app/projects/{id}/usage; cross-tenant 404; frozen /api/* contract untouched
+previous: v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively
 ---
 
 # API
@@ -19,6 +19,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 - **Hosted** — live at **`https://knowledge.hi2vi.com`**, consumed server-to-server by the hi2vi content agent. Two behaviors differ, and **both are opt-in flags that default off**, so the local/plugin experience is untouched: `KB_REQUIRE_READ_AUTH=true` puts reads/search behind the same bearer, and `KB_GIT_PUSH=true` turns the write path into **publish-on-write**. **As of P9 the box self-hosts the site** (a `mkdocs serve` viewer off the same clone), so a written doc is live at its `url` **fresh-on-write** — no GitHub Pages (retired), and the origin of the 201 `url` is now the domain **root** `https://knowledge.hi2vi.com`. The push to `main` continues, now as off-box backup/history. **This is additive/config only** — the frozen consumer contract below (field names, types, status meanings, `/api/*` routing) is **unchanged**, and the hi2vi consumer is unaffected (proven live at P9.S5).
 
 **As of P10 the hosted API is multi-tenant.** Two new control-plane surfaces appear — `/auth/*` (signup/login/logout/me sessions) and `/app/*` (tenant projects + `vk_` credentials) — and every `/api/*` bearer now **resolves to a tenant** when `DATABASE_URL` is set (tenant mode). The live corpus is **tenant #1**, and `KB_API_TOKEN` is kept as its pinned master bearer, so **the hi2vi consumer needs zero changes** — the frozen `POST /api/documents` contract is preserved **additively** (tenant is derived from the credential, never a body field; tenant #1's `url`/`rel_path` shapes and the 201 key set are unchanged). With `DATABASE_URL` **unset** the `/api/*` surface is byte-for-byte the pre-P10 single-`KB_API_TOKEN` behavior. See *Multi-tenant surfaces* below.
+
+**As of P11 two additive control-plane usage reads appear** — `GET /app/usage` (whole-tenant) and `GET /app/projects/{id}/usage` (one project) — that serve the P12 dashboard a **derive-on-read** usage aggregate (document creates/deletes, searches) over a rolling day window. They are `require_user`-guarded and tenant-scoped like the rest of `/app/*` (a cross-tenant project → **404**). Usage is metered as a **request-state side effect** on the existing metered `/api/*` writes/searches, so **the frozen `/api/*` consumer contract is untouched** — no request or response field changed. See *Usage read API* below.
 
 ## Auth
 
@@ -132,7 +134,28 @@ Two new control-plane surfaces sit **outside `/api/*`** (so the content-plane be
 - `GET /app/projects/{id}/credentials` → metadata only (includes revoked; never `token_hash`/`key`). `DELETE …/credentials/{cid}` → **204** (idempotent soft-revoke).
 - Cross-tenant / missing project or credential → **404**; malformed UUID path / blank project name → **422**.
 
-**`/api/*` credential → tenant resolution (tenant mode, `DATABASE_URL` set):** every `/api/*` bearer resolves to an `ApiAuthContext(tenant_id, project_id, is_public)`: exact `KB_API_TOKEN` → tenant #1 (master), a `vk_` key → its project's tenant (+project), a session token → the user's `tenants[0]`. Content is then **tenant-scoped**: every read/search/list/by-id/by-path/delete is filtered to the resolved tenant, and a cross-tenant fetch or delete by id or path → **404**. Writes for tenant #1 land in `docs/` (public, git-published); every other tenant's writes land in the namespaced `tenants/<uuid>/` root (no git, no landing/Recent). Legacy mode (`DATABASE_URL` unset) adds **no** filter and is byte-identical to pre-P10.
+**`/api/*` credential → tenant resolution (tenant mode, `DATABASE_URL` set):** every `/api/*` bearer resolves to an `ApiAuthContext(tenant_id, project_id, is_public)`: exact `KB_API_TOKEN` → tenant #1 (master), a `vk_` key → its project's tenant (+project), a session token → the user's `tenants[0]`. Content is then **tenant-scoped**: every read/search/list/by-id/by-path/delete is filtered to the resolved tenant, and a cross-tenant fetch or delete by id or path → **404**. Writes for tenant #1 land in `docs/` (public, git-published); every other tenant's writes land in the namespaced `tenants/<uuid>/` root (no git, no landing/Recent). Legacy mode (`DATABASE_URL` unset) adds **no** filter and is byte-identical to pre-P10. **(P11)** the resolved context also carries `credential_id` (set only for a `vk_` caller) so the metering layer can stamp that credential's `last_used_at`.
+
+## Usage read API (P11): `GET /app/usage` + `GET /app/projects/{id}/usage`
+
+Two additive, `require_user`-guarded control-plane reads (in `server/usage_api.py`, mounted in `main.py`) over the P11 derive-on-read usage aggregate. Both are tenant-scoped exactly like the rest of `/app/*`. They only **report** usage — metering (the writes) is a side effect of the metered `/api/*` handlers, never re-triggered on a read. This is a contract P12's dashboard codes against, so it is pinned here.
+
+- **Window param:** `days` (int, default **30**, `ge=1, le=365` → a bad value is a FastAPI-native **422**). It selects the last `days` UTC calendar days ending **today** inclusive, resolved to a half-open `[start, end)` window (`end` = midnight tomorrow, `start` = midnight `today-(days-1)`). `daily_counts` is contiguous and **zero-filled to exactly `days`** entries; `day` is `YYYY-MM-DD`; the window bounds are ISO UTC datetimes.
+
+- **`GET /app/usage`** — whole-tenant (`project_id=None`, so tenant-level NULL-project events count and a zero-event tenant still returns the full zero-filled series — no empty-tenant short-circuit). Response:
+
+  ```json
+  {
+    "window": {"start": "…", "end": "…"},
+    "totals": {"total": 0, "documents_created": 0, "documents_deleted": 0, "searches": 0},
+    "daily_counts": [{"day": "YYYY-MM-DD", "total": 0, "documents_created": 0, "documents_deleted": 0, "searches": 0}, "… (length = days)"],
+    "projects": [{"id": "…", "name": "…", "tenant_id": "…", "created_at": "…"}]
+  }
+  ```
+
+- **`GET /app/projects/{project_id}/usage`** — one project (drill-down). Uses `_load_scoped_project` → **404** for both a missing **and** a cross-tenant project (existence never leaks). Same `window`/`totals`/`daily_counts`, plus `project` (the project record) and `credentials` (each `vk_` key: `{id, project_id, name, token_prefix, created_at, last_used_at, revoked_at}`). Per P11, a credential's `last_used_at` reflects its last **metered** use (a write/search), not a read.
+
+- **Error surface:** a read that cannot complete surfaces internally as `UsageReadError` and is rendered as a clean **500** (`{"detail":"usage read failed"}`), never a bare traceback. `serialize_project` / `serialize_credential` are reused from `app_api` so the project/credential shapes match byte-for-byte.
 
 ## Frozen consumer contract (P8)
 
@@ -149,7 +172,11 @@ verbatim:** multi-tenancy derives the tenant from the credential (never a `POST
 /api/documents` body field), tenant #1's `url`/`rel_path` shapes and the 201 key set are
 unchanged, and the hi2vi consumer keeps working with **zero** changes (`KB_API_TOKEN`
 still resolves to tenant #1). Verified in the P10 review E2E: the frozen 201 key set is
-intact under tenant scoping with no tenant field on the response.
+intact under tenant scoping with no tenant field on the response. **P11 upheld this
+verbatim:** usage metering is a `request.state` side effect on the metered `/api/*`
+handlers (recorded post-response by an async middleware), so **no** `/api/*` request or
+response field changed — the P11 review E2E re-confirmed the frozen 201 key set is intact
+while metering runs, and the usage reads live entirely on the additive `/app/*` surface.
 
 ## Hosted deployment + frozen contract
 

@@ -1,17 +1,17 @@
 ---
 doc_id: decisions
-version: v0011
-created_at: 2026-07-16T19:33:06+09:00
-source: P10.REVIEW
-summary: P10 ADRs Postgres-over-SQLite for accounts; namespaced docs-canonical per-tenant storage; KB_API_TOKEN as the pinned tenant-1 master bearer
-previous: v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key
+version: v0012
+created_at: 2026-07-16T21:35:27+09:00
+source: P11.REVIEW
+summary: P11 ADRs: usage event-log over rollup; meter writes+searches only; derive-on-read; last_used_at on metered events; project name to UUID nullable; free-text event_type
+previous: v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer
 ---
 
 # Decisions
 
 ## Status
 
-Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle). The **P7 plugin-packaging** set adds six accepted decisions — MIT license, the plugin hosted in this same repo with an isolated `plugin/` payload (`source: "./plugin"`), dynamic project discovery in the deploy gate, the uv pin `0.8.14`, the first-doc project-landing auto-creation, and the deliberate no-`KB_PUBLIC_BASE_URL`-default for the scaffold. The **P8 hosted-API** set adds seven — a public bearer-guarded endpoint at `knowledge.hi2vi.com` (over a private-network or tailnet path), `KB_GIT_PUSH` publish-on-write **defaulting off**, read auth as an explicit **flag** rather than implied by a set token, a box-generated repo-scoped **SSH deploy key** over a PAT, **no CORS**, **no edge rate-limit zone**, and reuse of the edge's **wildcard origin cert**. Two of them (`KB_GIT_PUSH` default-off, read-auth-as-a-flag) exist for the same reason: **the hosted deployment must not change anything for existing local and plugin users.** The **P9 self-host + automated-deploy** set adds four accepted decisions — **self-host the whole site** (web UI + API) on the box and **retire GitHub Pages** for this repo's site (via reclassifying `pages.yml` out of the plugin's `identical` class + neutralizing it to a build-only CI guard), **serve the web UI live** (a `mkdocs serve` viewer, over static rebuild-on-write or cron rebuild) so docs are fresh-on-write, and an **automated `workflow_dispatch` production deploy** mirroring `hi2vi_web`'s three-script split but diverging for the publish-on-write clone (reconcile-on-`main` never detach/reset/force + deploy the tip; gate + fix-forward, no rollback, because the app runs from a bind mount; **all authoritative git relocated in-container** since opc can't authenticate the SSH origin; edge re-apply inside the gate; `main`-guard + `concurrency: knowledge-deploy`; a **dedicated runner SSH key**). All proven live at P9.S5.
+Accepted decisions: the two-track knowledge store; the GitHub Pages generator (mkdocs-material 9.7.6, re-confirmed over Hugo); the P4 pipeline-hardening set — query-side CJK search (tokenizer unchanged) + recency ranking, hybrid RRF semantic search on Gemini + SQLite BLOB vectors, the `related` cross-link convention, and publish hygiene (`source.repo` basenames + `exclude_docs`); and the P5 web-UI-redesign set — the operator-designed "calm editorial library" visual system (palette 1a Teal, Claude Design provenance, fonts via a single `@import`), the landing/nav choices, browser-only Korean/CJK search via the Material search plugin's `lang`, and a lean site-build smoke guard chosen over `--strict`. D2 (design polish) is resolved by P5 (promoted into the design-system slice). The **P6 knowledge-graph** set adds five accepted decisions — the build-time data-generation mechanism (a mkdocs `hooks:` module), the node/edge model (docs + tag nodes, dead-link ghosts, `docs/current` excluded), project inks as a documented data-viz-only accent extension, a hand-rolled vendored canvas renderer, and an operator-directed **P6.S1 renderer revision** that consciously supersedes two locked S0 interaction decisions (quiet labels A′, idle mingle). The **P7 plugin-packaging** set adds six accepted decisions — MIT license, the plugin hosted in this same repo with an isolated `plugin/` payload (`source: "./plugin"`), dynamic project discovery in the deploy gate, the uv pin `0.8.14`, the first-doc project-landing auto-creation, and the deliberate no-`KB_PUBLIC_BASE_URL`-default for the scaffold. The **P8 hosted-API** set adds seven — a public bearer-guarded endpoint at `knowledge.hi2vi.com` (over a private-network or tailnet path), `KB_GIT_PUSH` publish-on-write **defaulting off**, read auth as an explicit **flag** rather than implied by a set token, a box-generated repo-scoped **SSH deploy key** over a PAT, **no CORS**, **no edge rate-limit zone**, and reuse of the edge's **wildcard origin cert**. Two of them (`KB_GIT_PUSH` default-off, read-auth-as-a-flag) exist for the same reason: **the hosted deployment must not change anything for existing local and plugin users.** The **P9 self-host + automated-deploy** set adds four accepted decisions — **self-host the whole site** (web UI + API) on the box and **retire GitHub Pages** for this repo's site (via reclassifying `pages.yml` out of the plugin's `identical` class + neutralizing it to a build-only CI guard), **serve the web UI live** (a `mkdocs serve` viewer, over static rebuild-on-write or cron rebuild) so docs are fresh-on-write, and an **automated `workflow_dispatch` production deploy** mirroring `hi2vi_web`'s three-script split but diverging for the publish-on-write clone (reconcile-on-`main` never detach/reset/force + deploy the tip; gate + fix-forward, no rollback, because the app runs from a bind mount; **all authoritative git relocated in-container** since opc can't authenticate the SSH origin; edge re-apply inside the gate; `main`-guard + `concurrency: knowledge-deploy`; a **dedicated runner SSH key**). All proven live at P9.S5. The **P10 accounts/tenancy** set adds three — Postgres (async SQLAlchemy 2.0 + psycopg3) over SQLite for the accounts control plane, namespaced `docs/`-canonical per-tenant storage, and `KB_API_TOKEN` as the pinned tenant-#1 master bearer. The **P11 usage-monitoring** set adds six accepted decisions — an **event-log grain** (durable per-event rows, aggregates derived on read) over per-request rollups, **metering writes + searches only** (the open read path stays unmetered to avoid a hot-path write), **derive-on-read** windowed aggregates, stamping credential **`last_used_at` on metered events only** (not on every read), **project attribution by name→UUID with a nullable fallback**, and a **free-text `event_type`** column (no DB enum). All are observability-only — no quotas/billing/entitlements — and all six were verified live at the P11 review.
 
 ## Purpose
 
@@ -615,6 +615,63 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - Alternatives considered: migrate the hi2vi agent to a `vk_` key (declined — a client change the intent forbids for P10). Make the master a real revokable DB credential (declined — adds a seeding/rotation coupling for the one bearer that must always work; the un-revokable special-case is the deliberate tradeoff).
 - Consequences: the frozen `POST /api/documents` contract is preserved with zero consumer changes (verified in the P10 review E2E); the master bearer is a documented, un-revokable exception noted in security; `KB_OPERATOR_EMAIL` is a hosted deploy prerequisite.
 - Source: P10 `phase.md` (S4/F1 doc-impact) + Legacy bearer decision.
+
+### Usage metering grain: a durable event log, aggregates derived on read (over per-request rollups)
+
+- Date: 2026-07-16
+- Status: accepted (P11 — operator-resolved before DECOMP)
+- Context: P11 needs per-tenant/per-project usage (document creates/deletes, searches) for the P12 dashboard. Documents-saved totals are already derivable from `GET /api/projects` + `GET /healthz`, but **search activity and API-call volume persist nowhere** (vocky derived usage from an existing domain table + `last_used_at`; that only half-applies here), so a small durable table is unavoidable.
+- Decision: store **one durable Postgres row per metered event** in `usage_events` (event-log grain); the dashboard's aggregates are **derived on read** (GROUP BY UTC day, conditional per-`event_type` counts), never pre-rolled. Chosen for flexibility and simplicity at low volume.
+- Alternatives considered: per-request rollup counters (declined — less flexible; a new breakdown means a schema/backfill change, whereas the event log answers any windowed question); deriving everything from existing tables (declined — search/API volume isn't persisted anywhere).
+- Consequences: the log grows unbounded, so a retention/cleanup job is **deferred (D8)** until volume is material; aggregates cost a grouped SELECT per read (backed by two composite `(…, occurred_at)` indexes). Read shape mirrors vocky's `{window, totals, daily_counts, projects|credentials}`.
+- Source: P11 `intent.md`; P11 `phase.md` "Resolved decisions" #1/#3.
+
+### Meter writes + searches only; the open read path stays unmetered
+
+- Date: 2026-07-16
+- Status: accepted (P11 — operator-resolved before DECOMP)
+- Context: The content plane's hot path is open reads/lists/searches. Metering every request would put a Postgres write on the hot path — the write-amplification vocky explicitly warned about.
+- Decision: meter only the **high-signal** events — `document.created` (201), `document.deleted` (2xx), `search` (2xx) — synchronously best-effort, and stamp credential `last_used_at` for recency. The open read/list/get path stays **unmetered** so it stays fast. This avoids the hot-path write-amplification *by construction* (no `request.state.usage` stash on the read handlers).
+- Consequences: API-call *volume* is approximated by the metered events, not a per-request counter (acceptable for a dashboard); reads never touch Postgres for metering.
+- Source: P11 `phase.md` "Resolved decisions" #2.
+
+### `last_used_at` stamped on metered events only, not in the resolver (the reads-stay-fast refinement)
+
+- Date: 2026-07-16
+- Status: accepted (P11.S2 — refines the DECOMP note)
+- Context: DECOMP proposed stamping credential `last_used_at` in the `/api/*` resolver (where `cred` is in scope). But the resolver runs on **every** request including reads, so stamping there would write on every read — contradicting "open reads stay fast".
+- Decision: move the stamp into `record_usage` (the metered write/search path), so `last_used_at` is refreshed **only on a metered event**, never on a plain read.
+- Consequences: a `vk_` key used only for reads will not refresh `last_used_at` — it reflects the key's last write/search. Acceptable for an ingest key; the usage-read API documents this, and the E2E smoke drives a write/search before asserting `last_used_at` is non-null. Revisit only if read-recency is later wanted (a throttled read stamp).
+- Source: P11 `phase.md` "S2 built" REFINEMENT.
+
+### Derive-on-read usage aggregate: half-open window + zero-filled day series
+
+- Date: 2026-07-16
+- Status: accepted (P11.S1)
+- Context: The dashboard wants a contiguous daily usage series over a rolling window, from an event log.
+- Decision: `get_usage_metrics` runs one grouped SELECT (GROUP BY the UTC calendar day of `occurred_at`, per-`event_type` `count().filter(...)`), filtered to a **half-open window `[start, end)`**; days with no events are **zero-filled** in Python to a contiguous series **bounded by the window, never by event volume**; totals are summed in Python from the daily buckets. Mirrors vocky's feedback-metrics query.
+- Consequences: `GET /app/usage` with `days=N` always returns exactly `N` daily buckets (a zero-event tenant still gets the full zero-filled series — no empty-tenant special case); the two composite `(…, occurred_at)` indexes back it. Verified live at the P11 review against `postgres:17`.
+- Source: P11 `phase.md` "S1 built" contracts.
+
+### Project attribution by name→UUID with a nullable fallback
+
+- Date: 2026-07-16
+- Status: accepted (P11.S2 — resolves the DECOMP "attribution wrinkle")
+- Context: The operator (tenant #1) writes via the **master bearer**, which has **no `project_id`** on its context — but the POST body carries `project` (name) and search carries a `project` filter. Attributing the operator's own usage per project is a primary dashboard case.
+- Decision: `record_usage` resolves the operation's project **name → tenant project UUID** (`get_project_by_name`, tenant-scoped, oldest-wins) for attribution; it falls back to the `vk_` caller's bound `project_id`, else to **tenant-level** attribution via a **nullable `project_id` with an `ON DELETE SET NULL` FK**. So an unmapped name degrades cleanly, and deleting a project keeps its usage history.
+- Alternatives considered: require a project id on every metered write (declined — the master bearer has none); a non-null `project_id` (declined — can't represent tenant-level / unmapped usage, and would block project deletion).
+- Consequences: one extra tenant-scoped SELECT per metered write (acceptable for a low-volume writer); attribution is best-effort inside the best-effort metering.
+- Source: P11 `phase.md` "Project attribution wrinkle" + "S2 built".
+
+### `event_type` is free text, not a DB enum/CHECK
+
+- Date: 2026-07-16
+- Status: accepted (P11.S1 — resolves an S1 open question)
+- Context: `usage_events.event_type` could be a Postgres enum / CHECK constraint or free text.
+- Decision: **free text** — integrity comes from the shared constants in `server.usage.types` (`EVENT_DOCUMENT_CREATED`/`EVENT_DOCUMENT_DELETED`/`EVENT_SEARCH`), imported by both the metering hook (writer) and the read API (reporter). A new event type needs no migration.
+- Alternatives considered: a DB enum/CHECK (declined — every new event type would need a migration; the constants give the same integrity at the one code boundary that matters).
+- Consequences: the metering hook and read API must import the constants, never re-declare the literals; adding an event type is a code-only change.
+- Source: P11 `phase.md` "S1 built" constants.
 
 ## Superseded Decisions
 

@@ -350,3 +350,13 @@
 {"ts": "2026-07-16T20:46:48+09:00", "type": "slice_status_changed", "slice": "P11.S3", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-16T20:52:05+09:00", "type": "slice_status_changed", "slice": "P11.S4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-16T20:54:39+09:00", "type": "slice_status_changed", "slice": "P11.S4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-16T21:23:57+09:00", "type": "slice_status_changed", "slice": "P11.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-16T21:30:52+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:30:52+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0012_p11_adrs_event-log_over_rollup_retention_deferred_d8_meter_writes_searches_only_hot-path_avoidance_derive-on-read_aggregates_last_used_at_on_metered_events_only_project_attribution_name-_uuid_nullable_fallback_free-text_event_type", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:31:22+09:00", "type": "doc_version_created", "doc": "data", "version": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:31:22+09:00", "type": "doc_version_created", "doc": "api", "version": "v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:31:22+09:00", "type": "doc_version_created", "doc": "backend", "version": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:31:22+09:00", "type": "doc_version_created", "doc": "security", "version": "v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:35:27+09:00", "type": "doc_version_created", "doc": "decisions", "version": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type", "source": "P11.REVIEW"}
+{"ts": "2026-07-16T21:40:06+09:00", "type": "slice_status_changed", "slice": "P11.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-16T21:40:06+09:00", "type": "phase_reviewed", "phase": "P11", "verdict": "pass", "reviewer": "slice-executor-high"}

@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0006
-created_at: 2026-07-16T19:33:01+09:00
-source: P10.REVIEW
-summary: P10 6 Postgres accounts tables; documents.tenant_id + UNIQUE(tenant_id, rel_path) + '' legacy sentinel; namespaced tenants/<uuid>/ root; reindex path-derivation survives the disposable-DB rebuild
-previous: v0005_p6_re-review_reword_the_graph.json_publish-safety_guarantee_without_the_literal_user-home_path_token_data_contract_unchanged_f1-f4_were_renderer_css-only
+version: v0007
+created_at: 2026-07-16T21:31:22+09:00
+source: P11.REVIEW
+summary: P11 usage_events control-plane table; event-log grain; derive-on-read GROUP-BY-day aggregate; retention deferred D8
+previous: v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild
 ---
 
 # Data
@@ -17,10 +17,12 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 
 **P10** adds a **durable Postgres control plane** for accounts/tenancy — six tables that are the source of truth for users, tenants, projects, and API credentials — and threads a `tenant_id` through the disposable SQLite content store. The content store stays files-canonical + disposable; Postgres is the one place P10 introduces durable relational state beyond `docs/`.
 
+**P11** adds a **7th** control-plane table, `usage_events` — a durable, append-only **event log** of per-tenant / per-project usage (document creates/deletes and searches) that the dashboard reads back as a **derive-on-read** GROUP-BY-day aggregate. It is observability data only (no quotas/billing), carries no new PII (only tenant/project/event-type/timestamp), and its retention is **deferred** (a cleanup job is flagged as D8, not built now).
+
 ## Storage
 
 - Primary content DB: SQLite at `data/kb.sqlite3`, **WAL** mode, idempotent DDL applied at `connect()`. Disposable and **gitignored** — the ignore rule is root-anchored `/data/` (so the `docs/versions/data/` durable-doc subtree stays trackable), and the DB is rebuilt from `docs/` by reindex.
-- **(P10) Control-plane DB: Postgres** (`postgres:17`), reached via async SQLAlchemy 2.0 + psycopg3 (`postgresql+psycopg://…`), migrated by Alembic. Holds the six accounts tables (below). **Durable** (a `pgdata` volume), unlike the disposable content SQLite. Dormant when `DATABASE_URL` is unset.
+- **(P10) Control-plane DB: Postgres** (`postgres:17`), reached via async SQLAlchemy 2.0 + psycopg3 (`postgresql+psycopg://…`), migrated by Alembic. Holds the six accounts tables + **(P11)** the `usage_events` table (below). **Durable** (a `pgdata` volume), unlike the disposable content SQLite. Dormant when `DATABASE_URL` is unset.
 - **(P10) Per-tenant content root:** non-#1 tenants' `docs/`-style files live under a namespaced `<KB_ROOT>/tenants/<tenant_uuid>/` root (a sibling of `docs/`), **gitignored + never in the mkdocs build**. Tenant #1 keeps `docs/<project>/…` unchanged.
 - Cache / object storage: none. (Non-#1 `tenants/` content is on-box only, with no git backup / no published site — see *Retention*.)
 
@@ -60,6 +62,15 @@ Six durable tables (async SQLAlchemy 2.0 models under `server/persistence/models
 
 Only sha256 hashes are stored for credentials/session tokens — the raw value is returned exactly once and never persisted.
 
+### usage_events (P11) — per-tenant usage metering (the 7th control-plane table)
+
+- Purpose: one durable row per **metered content-plane event** (a document create/delete or a search), the source data behind the tenant dashboard's usage view. **Event-log grain** — one row per event; the dashboard aggregates are derived on read, never pre-rolled.
+- Columns (async SQLAlchemy 2.0 model `UsageEventModel` under `server/persistence/models.py`, same `NAMING_CONVENTION`/`PG_UUID`/tz-aware `utc_now` conventions as the six accounts tables): `id` (UUID PK), `tenant_id` (**FK → `tenants.id` `ON DELETE CASCADE`**, `NOT NULL`), `project_id` (**nullable** FK → `projects.id` **`ON DELETE SET NULL`**), `event_type` (**free text**, `NOT NULL` — `document.created` | `document.deleted` | `search`), `occurred_at` (tz-aware, `NOT NULL`, default `utc_now` / server default `CURRENT_TIMESTAMP`).
+- **`project_id` is nullable + `SET NULL`** so master-bearer / unmapped-project usage degrades cleanly to **tenant-level** attribution, and deleting a project keeps its usage history (the row survives, project unset). `event_type` is **free text, not a DB enum/CHECK** — new event types need no migration; integrity comes from the shared constants in `server.usage.types` (`EVENT_DOCUMENT_CREATED` / `EVENT_DOCUMENT_DELETED` / `EVENT_SEARCH`), imported by both the metering hook and the read API.
+- **Indexes:** two composite indexes — `ix_usage_events_tenant_id_occurred_at (tenant_id, occurred_at)` and `ix_usage_events_project_id_occurred_at (project_id, occurred_at)` — that back the windowed GROUP-BY-day aggregate.
+- **Derive-on-read aggregate:** `UsageService.get_usage_metrics` runs a single grouped SELECT (GROUP BY the UTC calendar day of `occurred_at`, conditional per-`event_type` counts) over a **half-open window `[start, end)`**, totals summed in Python, days **zero-filled** to a contiguous windowed series (bounded by the window, never by event volume). See backend.
+- **Retention:** the log grows unbounded; a cleanup/retention job is **deferred (D8)** until volume becomes material — not built in P11.
+
 ## Indexes / Search
 
 - BM25 keyword search via `documents_fts`, fused in Python with an exp-decay recency signal (P4).
@@ -76,6 +87,7 @@ Only sha256 hashes are stored for credentials/session tokens — the raw value i
 - P4 added one **in-place** migration for continuity: `init_db` runs `PRAGMA table_info(documents)` and, if the `related` column is absent, `ALTER TABLE documents ADD COLUMN related TEXT NOT NULL DEFAULT '[]'` — idempotent, so a pre-P4 DB upgrades without a rebuild.
 - **(P10) SQLite content DB** — because the tenancy change reworks the table constraints (`UNIQUE(tenant_id, rel_path)`), an in-place `ALTER` is not enough: `init_db` checks `PRAGMA table_info(documents)` and, if `tenant_id` is absent (a pre-tenancy DB), **drops and recreates** `documents` + `documents_fts` + `document_embeddings` and re-runs the schema. Safe because the DB is disposable — the boot reindex repopulates from files.
 - **(P10) Postgres control plane** — versioned with **Alembic** (async `env.py`, initial revision `0001_accounts_tenancy` creating the six tables). Migrations run **explicitly** (`alembic upgrade head`) as a deploy step, never on boot.
+- **(P11) Second migration `0002_usage_events`** (`down_revision="0001_accounts_tenancy"`) — a hand-written Alembic revision creating `usage_events` + its two composite indexes, with constraint names matching the model (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects` SET NULL — no autogenerate drift). `alembic upgrade head` now applies **both** `0001` and `0002` in order (verified live against `postgres:17` at the P11 review).
 - Rule: the SQLite DB is disposable and rebuilt from `docs/`/`tenants/` — schema changes are applied via new idempotent DDL (or a disposable drop-and-recreate) + a reindex. The Postgres accounts schema is durable and migrated explicitly with Alembic.
 
 ## Reconciliation (reindex)
@@ -89,6 +101,7 @@ Only sha256 hashes are stored for credentials/session tokens — the raw value i
 
 - The SQLite DB is a disposable projection; `docs/` is the durable store. Reindex reconciles drift (manual edits, API-down fallback writes, git resets).
 - **(P10)** The Postgres accounts DB is **durable** (a `pgdata` volume). Tenant #1's corpus stays safe via the git-published `docs/` tree; **non-#1 tenants' `tenants/<uuid>/` content is on-box-only** — gitignored, unpublished, with no off-box backup in P10. A backup/snapshot job for `tenants/` should be added before non-#1 tenants carry real data at scale (flagged for a deferred job).
+- **(P11)** `usage_events` is durable in the same Postgres control plane and grows **append-only** (one row per metered event). No retention is applied in P11 — a cleanup/retention job is **deferred (D8)** until the log's growth becomes material (e.g. before onboarding high-volume non-#1 tenants).
 
 ## Build-time Knowledge-Graph Data Contract (P6, Track 1)
 

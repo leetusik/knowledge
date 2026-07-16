@@ -281,6 +281,41 @@ operator/CI) — not run or fabricated here.**
 The `operations.md` Doc-impact line ("onboarding smoke extended with usage assertions") is
 confirmed accurate as landed — no new Doc-impact lines needed from S4.
 
+### REVIEW (P11.REVIEW) — verdict `pass`; live E2E executed + passed; six docs consolidated
+_Done in P11.REVIEW (slice-executor-high)._
+
+- **Offline gate green:** `pytest -q` → 65 passed; `import server.main, server.usage_api,
+  server.usage.metering` clean; `py_compile scripts/onboarding_smoke.py` clean;
+  `workflow.py validate` passed.
+- **Live meter→read E2E was RUN and PASSED** (not left pending): a disposable `postgres:17`
+  container + isolated scratch `KB_ROOT` (with a minimal tenant-#1 `docs/` corpus) +
+  `alembic upgrade head` (applied **both** `0001` and `0002` cleanly; `alembic current` =
+  `0002_usage_events (head)`) + `python -m server.seed` + `uvicorn server.main:app`, then
+  `onboarding_smoke.py --master-token "$KB_API_TOKEN"` → **PASS**. Uvicorn log showed the
+  metered writes/searches 201/200 and `/app/usage` 200 with **no `usage metering failed`
+  warnings** — so the real Postgres write path + the `func.date(func.timezone("UTC", …))`
+  GROUP-BY-day aggregate execute correctly, not just import. Stack torn down cleanly. This is
+  the first live proof of the `0002` migration and the whole meter→read chain against
+  Postgres. **Gotcha for a future live run:** a co-tenant Postgres already binds host
+  `55432` — use a different port (this run used 55441 / api 8793).
+- **Review of S1–S4:** all invariants hold (legacy/dormant parity via the 65-test suite;
+  frozen `/api/*` contract — metering is a `request.state` side effect, no field changed;
+  cross-tenant usage reads → 404; open reads stay unmetered so no hot-path write;
+  best-effort metering never fails a request; `0002` FK CASCADE/SET NULL + constraint-name
+  parity + `down_revision`). No defects — not a rubber stamp; `changes_requested` was
+  considered and rejected on the merits.
+- **Six durable docs consolidated (one version per doc, whole-phase):** `data/v0007`,
+  `api/v0008`, `backend/v0006`, `operations/v0012`, `decisions/v0012`, `security/v0007` —
+  all additive, house style; `rebuild-docs` regenerated `docs/current/*`; `validate` passed.
+  All six "Doc impact" lines above are now landed.
+- **Doc-versioning gotcha (for future reviewers):** long `--summary` strings make the derived
+  version **filename** overflow the macOS 255-byte limit (`doc-new-version` fails, and even a
+  successful long name can then be too long for an in-place edit's temp suffix). Keep review
+  summaries ≲ ~150 chars. One `decisions` version was created long, reverted in
+  `docs/index.json`, and re-created shorter — net state is clean.
+- **Executor boundaries respected:** no `review-phase`/`finish-slice`/status transition/commit
+  (left to the orchestrator); no `server/` source touched.
+
 ## Constraints
 
 - **Legacy/dormant parity:** with `DATABASE_URL` unset, `/api/*` stays byte-for-byte pre-P10; the 65-test

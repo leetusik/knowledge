@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0006
-created_at: 2026-07-16T19:33:01+09:00
-source: P10.REVIEW
-summary: P10 multi-tenant threat model; argon2id passwords; sha256 token hashing at rest; pinned un-revokable master bearer; cross-tenant content isolation; casing-tolerant operator-email resolution
-previous: v0005_p9_add_the_gha_runner-_opc_box_ssh-key_credential_three_oracle_ssh__leetusik_knowledge_secrets_dedicated_ed25519_distinct_from_the_p8_container-_github_deploy_key_deliberate_secret-transit_exception_for_the_runner_key
+version: v0007
+created_at: 2026-07-16T21:31:22+09:00
+source: P11.REVIEW
+summary: P11 per-tenant usage isolation; usage reads 404 for missing/cross-tenant; metering best-effort never alters a request; no new PII
+previous: v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution
 ---
 
 # Security
@@ -18,6 +18,8 @@ Personal, single-operator knowledge base. The threat model is modest — no mult
 **P9 adds a second, independent credential** — a **GHA runner → `opc@box` SSH key** that lets the manual-dispatch `Production Deploy` Action reach the box. It is kept **strictly distinct** from P8's container → GitHub push deploy key (different direction, store, and blast radius — see *Two credentials* below), and its provisioning is the **one deliberate exception** to the "secrets are box-born and never transit" rule: the runner key's private half *must* reach a GitHub Actions secret, so it is minted in a `umask 077` tempdir, piped once into `gh secret set`, and shredded. The corpus went fully self-hosted at P9 (Pages retired), but that changes no auth surface — the box already served the public site's read path.
 
 **P10 is the largest threat-model shift: the box now holds real multi-tenant data and user PII.** It becomes a multi-tenant SaaS with accounts (emails + passwords), sessions, per-tenant corpora, and per-project API credentials. The security posture that follows — all detailed below: **argon2id** password hashing; opaque high-entropy session + `vk_` tokens stored only as **sha256-hex at rest** (raw returned once, never persisted); enumeration-safe generic 401s; **cross-tenant content isolation** enforced on every content query (a tenant can never read/search/delete another's docs — cross-tenant → 404); and a single deliberate concession, a **pinned, un-revokable master bearer** (`KB_API_TOKEN` → tenant #1) that keeps the live hi2vi agent working unchanged. See *Multi-tenant accounts + content isolation* below.
+
+**P11 adds per-tenant usage monitoring — observability only, and it widens the surface only minimally.** Usage is isolated per tenant exactly like content: the `usage_events` reads are scoped by `tenant_id`, and a cross-tenant or missing project on `GET /app/projects/{id}/usage` returns **404** (existence never leaks). Metering is **best-effort and never alters a request's outcome** (a metering failure is logged, never raised, and never changes a status code, body, or a timing-visible failure). Usage rows carry **no new PII** — only `tenant_id`, `project_id`, a free-text `event_type`, and a timestamp — so the data-sensitivity posture is unchanged from P10. See *Per-tenant usage isolation* below.
 
 ## Purpose
 
@@ -48,6 +50,14 @@ The knowledge backend is now a multi-tenant SaaS. The durable rules:
 - **Pinned, un-revokable master bearer (the one deliberate concession).** `KB_API_TOKEN` is a **config special-case**, not a DB credential: it resolves to tenant #1 (the operator's tenant, identified by `KB_OPERATOR_EMAIL`). It cannot be revoked from the DB and is the tradeoff that keeps the live hi2vi content agent working with zero changes. It is **unresolvable (401)** when `KB_OPERATOR_EMAIL` is unset or the operator user is not seeded — a safe misconfigured state, never a silent accept. **P10.F1** made the resolution **casing-tolerant**: `get_tenant_one_id()` normalizes `KB_OPERATOR_EMAIL` (`.strip().lower()`, matching the seed / `/auth/signup`), so a mixed-case env value no longer leaves the master bearer unresolvable (verified: a mixed-case `KB_OPERATOR_EMAIL` still resolves tenant #1 and stamps `docs/` with tenant #1's UUID).
 - **Solo-owner MVP.** One user = one tenant via `tenant_members` (`require_user` → `tenants[0]`); no tenant switching, invites, or role UI in P10.
 - **Non-#1 tenant content is on-box-only** (`tenants/<uuid>/`, gitignored, unpublished) — no off-box backup in P10; a snapshot job is a flagged follow-up before non-#1 tenants carry real data at scale.
+
+## Per-tenant usage isolation (P11)
+
+P11's usage monitoring is **observability only** (no quotas/billing/entitlements) and reuses P10's tenancy boundaries rather than opening new ones:
+
+- **Usage reads are tenant-scoped.** `GET /app/usage` reads `get_usage_metrics(tenant_id=ctx.tenant.id, …)` — a tenant sees only its own aggregate. `GET /app/projects/{id}/usage` goes through `_load_scoped_project`, which returns **404** for both a missing **and** a cross-tenant project (existence never leaks), then reads that project's metrics under the same tenant. A random/foreign project id → 404 (verified in the P11 review E2E).
+- **Metering never alters a request outcome.** The metered `/api/*` handlers only *stash* a hint; an async middleware records the event **after** the response, on a 2xx with a hint and `tenant_id` set, and `record_usage` swallows every exception (logged at WARNING, never raised). A metering failure cannot change a status code, response body, or introduce a timing-visible failure. In legacy mode (`DATABASE_URL` unset) the hint carries `tenant_id=None`, the guard skips, and no Postgres engine is created — metering is fully inert.
+- **No new PII.** `usage_events` rows carry only `tenant_id`, a nullable `project_id`, a free-text `event_type`, and a `occurred_at` timestamp — no document content, no user identity, no request payload. Usage data is durable in the same Postgres control plane; its retention is deferred (D8). The metered event also stamps the `vk_` credential's `last_used_at` (recency), which is metadata already stored on the credential.
 
 ## Secret Handling
 
@@ -188,6 +198,9 @@ The packaged plugin adds a per-user config model designed to stay **SaaS-open**
 - [x] **(P9)** Runner key private half lives **only** in the GitHub Actions secret (minted in a `umask 077` tempdir → `gh secret set` → shredded; the single controlled transit exception)
 - [x] **(P9)** Runner `.pub` **appended** to `opc`'s `authorized_keys` (pre-existing key intact); host key pinned + verified out-of-band; `StrictHostKeyChecking=yes` + `IdentitiesOnly=yes`
 - [x] **(P9)** Deploy is `workflow_dispatch`-only + main-guarded — publish-on-write pushes can never trigger it; no secrets in workflow logs (verified live at P9.S5: 0 key material, 0 token occurrences)
+- [x] **(P11)** Usage reads are tenant-scoped; a cross-tenant/missing project → 404 (existence never leaks) — verified in the P11 review E2E
+- [x] **(P11)** Metering is best-effort and never alters a request's outcome (errors logged, never raised); fully inert in legacy mode
+- [x] **(P11)** `usage_events` carries no new PII (tenant/project/event-type/timestamp only); retention deferred (D8)
 
 ## Open Questions
 
