@@ -335,3 +335,10 @@
 {"ts": "2026-07-16T19:41:58+09:00", "type": "deferred_created", "deferred": "D7", "source": "P10.REVIEW"}
 {"ts": "2026-07-16T19:41:58+09:00", "type": "slice_status_changed", "slice": "P10.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-16T19:41:58+09:00", "type": "phase_reviewed", "phase": "P10", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-16T20:02:39+09:00", "type": "slice_status_changed", "slice": "P11.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-16T20:03:22+09:00", "type": "slice_created", "phase": "P11", "slice": "P11.S1"}
+{"ts": "2026-07-16T20:03:22+09:00", "type": "slice_created", "phase": "P11", "slice": "P11.S2"}
+{"ts": "2026-07-16T20:03:22+09:00", "type": "slice_created", "phase": "P11", "slice": "P11.S3"}
+{"ts": "2026-07-16T20:03:23+09:00", "type": "slice_created", "phase": "P11", "slice": "P11.S4"}
+{"ts": "2026-07-16T20:05:58+09:00", "type": "slice_status_changed", "slice": "P11.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-16T20:06:02+09:00", "type": "deferred_created", "deferred": "D8", "source": "P11.DECOMP"}

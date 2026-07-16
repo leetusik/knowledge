@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `4`
+- Open: `5`
 - Promoted: `2`
 - Dropped: `1`
-- Rebuilt at: `2026-07-16T19:41:58+09:00`
+- Rebuilt at: `2026-07-16T20:06:02+09:00`
 
 ## Open
 
@@ -17,6 +17,7 @@
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D6` | `deferred` | Paid-plan retriever endpoint for external AI agents | operator (P10-P14 SaaS pivot intent) | operator decides to introduce the paid plan | `works/deferred/open/D6` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
+| `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 
 ## Promoted
 
