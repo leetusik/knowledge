@@ -1,17 +1,17 @@
 ---
 doc_id: operations
-version: v0010
-created_at: 2026-07-15T13:03:53+09:00
-source: P9.REVIEW
-summary: P9: self-hosted two-service site (knowledge-api + knowledge-site live-serve) + manual-dispatch Production Deploy; fresh-on-write replaces the ~65s Pages SLA; Pages retired
-previous: v0009_p8_production_deployment_at_knowledge.hi2vi.com_dedicated_declarative_edge_own_box_clone_compose.prod_publish-on-write_flow_kb_git_push_kb_require_read_auth_env_openssh-client_is_load-bearing
+version: v0011
+created_at: 2026-07-16T19:33:06+09:00
+source: P10.REVIEW
+summary: P10 postgres:17 in both compose files; explicit alembic upgrade head; python -m server.seed + KB_OPERATOR_EMAIL/KB_OPERATOR_PASSWORD prereqs; deploy/migration runbook; onboarding_smoke verifier; still single-worker
+previous: v0010_p9_self-hosted_two-service_site_knowledge-api_knowledge-site_live-serve_manual-dispatch_production_deploy_fresh-on-write_replaces_the_65s_pages_sla_pages_retired
 ---
 
 # Operations
 
 ## Status
 
-Both tracks operational, and **as of P9 the whole site — the human web UI *and* the machine API — is self-hosted in production** at <https://knowledge.hi2vi.com>. Two containers run on the box (`knowledge-api` + a `mkdocs serve` **`knowledge-site`** live-serve viewer) behind **two-location edge routing** (`/` → the site, `/api/*`+`/healthz` → the api), with **publish-on-write** — an agent write reaches the public site with no operator action and **no ~65 s Pages lag** (the box serves the doc off the same clone the instant it is written; *fresh-on-write*, proven live at P9.S5). A **manual-dispatch (`workflow_dispatch`) `Production Deploy` GitHub Action** automates the box deploy — reconcile the publish-on-write clone + rebuild/health-gate **both** services + re-apply the edge vhost (see *Automated production deploy* below). **GitHub Pages is retired for this repo's site** (P9); the shipped plugin keeps Pages for downstream users. Locally, `docker compose up -d` still runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API). As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below).
+Both tracks operational, and **as of P9 the whole site — the human web UI *and* the machine API — is self-hosted in production** at <https://knowledge.hi2vi.com>. Two containers run on the box (`knowledge-api` + a `mkdocs serve` **`knowledge-site`** live-serve viewer) behind **two-location edge routing** (`/` → the site, `/api/*`+`/healthz` → the api), with **publish-on-write** — an agent write reaches the public site with no operator action and **no ~65 s Pages lag** (the box serves the doc off the same clone the instant it is written; *fresh-on-write*, proven live at P9.S5). A **manual-dispatch (`workflow_dispatch`) `Production Deploy` GitHub Action** automates the box deploy — reconcile the publish-on-write clone + rebuild/health-gate **both** services + re-apply the edge vhost (see *Automated production deploy* below). **GitHub Pages is retired for this repo's site** (P9); the shipped plugin keeps Pages for downstream users. Locally, `docker compose up -d` still runs two services over the shared bind-mounted repo (the mkdocs viewer and the FastAPI document API). As of P5 the published site carries the operator-designed "calm editorial library" design (one stylesheet + a single Google-Fonts `@import` + two SVG marks) and browser-only Korean/CJK search, and the deploy pipeline is gated by `scripts/site_smoke.py` between build and artifact upload. As of P6 the build also runs a **mkdocs `hooks:` module** (`scripts/graph_hook.py`) that emits the knowledge map's `graph.json` into `site/` — in both CI `mkdocs build` and local `mkdocs serve`, with **zero `pages.yml` changes** — and the smoke guard was extended to cover the graph data contract + the first vendored custom JS. As of P7 the feature is **distributed as a Claude Code plugin** hosted in this repo: a new user installs it and runs `/knowledge:setup` to scaffold their own KB, the deploy gate (`site_smoke.py`) was made **portable** so a fresh scaffold passes its own `pages.yml`, and a **root-only** `.github/workflows/plugin-ci.yml` parity gate keeps the shipped template snapshot in sync with the repo (see *Plugin distribution* below). **As of P10 the box runs a third piece of infrastructure — a `postgres:17` accounts/tenancy control plane** — and gains **two new one-shot deploy steps** (an explicit `alembic upgrade head` migration + an idempotent `python -m server.seed`) plus a committed post-deploy verifier (`scripts/onboarding_smoke.py`). The api stays a **single uvicorn worker**; Postgres sits alongside the content plane, which is untouched in shape (see *P10 cutover* below).
 
 ## Local Development
 
@@ -29,6 +29,7 @@ Two services over one bind-mounted repo:
 - **`api`**: `build: .` from `python:3.12-slim` + apt `git` + **`openssh-client`** + **`tzdata`** + uv-installed deps (`uv export --frozen --no-dev --no-emit-project` → `uv pip install --system`); host port **8766**; `KB_ROOT=/repo`, `TZ=Asia/Seoul`; **single uvicorn worker**; `restart: unless-stopped`. `tzdata` is required — without it `TZ=Asia/Seoul` silently falls back to UTC and `date.today()` yields wrong file dates near midnight KST. System-level git identity `kb-api` + `git config --system safe.directory /repo` (system-level so the `/repo` bind mount can't shadow them; without both, commits return `committed:false`).
 - **`openssh-client` is load-bearing and non-obvious (P8.F2).** The apt line uses `--no-install-recommends`, and the `ssh` binary is only a *Recommends* of `git` — so the image shipped **without `ssh`** and the container **could not push over an SSH remote at all**. Because push is best-effort by design, that failed **silently**: every write still returned 201, with `pushed:false` + a `push_error`, and nothing ever reached Pages. It must stay on the apt line. **General rule: a best-effort code path can hide a total infrastructure failure — assert the capability at bring-up** (`docker compose -f compose.prod.yml exec api command -v ssh` → `/usr/bin/ssh`), and make acceptance assert the *capability* (`pushed:true`), never the status code.
 - **Rebuild quirk on this host**: `docker compose up -d --build` panics in compose's *bake* build path (a compose-v2 bug on this host). Rebuild with **`COMPOSE_BAKE=false docker compose up -d --build`**.
+- **(P10) `postgres:17` service in both compose files.** `compose.yml` adds a local `postgres` (kb/kb/kb defaults, `pg_isready` healthcheck, `pgdata` volume); `compose.prod.yml` adds a durable `knowledge-postgres` (on `changple_shared_network`, `pgdata` volume, password from the box `.env`). The `api` service gains `depends_on: postgres (healthy)` + a `DATABASE_URL` (`postgresql+psycopg://…`). Migrations do **not** run on boot — they are the explicit `alembic upgrade head` step below. Locally `DATABASE_URL` may be left empty to keep accounts dormant (the content plane still works).
 
 ## Environment Variables
 
@@ -46,6 +47,10 @@ Two services over one bind-mounted repo:
 | `GEMINI_API_KEY` | no | Gemini credential (fallback) | used when `GOOGLE_API_KEY` unset |
 | `GEMINI_EMBEDDING_MODEL` | no | Gemini embedding model | default `gemini-embedding-2-preview` |
 | `TZ` | no | container timezone | `Asia/Seoul` (needs `tzdata`) |
+| `DATABASE_URL` | no (hosted: yes) | **(P10)** async Postgres accounts plane URL (`postgresql+psycopg://…`) | unset → accounts dormant + `/api/*` byte-for-byte pre-P10; set → tenant mode |
+| `POSTGRES_PASSWORD` | hosted: yes | **(P10)** prod Postgres password (interpolated into the prod `DATABASE_URL`) | box `.env` only, never committed |
+| `KB_OPERATOR_EMAIL` | hosted: yes | **(P10)** operator's signup email — pins `KB_API_TOKEN` → tenant #1 | store **normalized**; F1 makes `get_tenant_one_id()` casing-tolerant, so mixed case now resolves too |
+| `KB_OPERATOR_PASSWORD` | seed: yes | **(P10)** operator password, read **only** by `python -m server.seed` | box `.env` only; never read at request time |
 
 ## Reindex as Drift-Repair Tool
 
@@ -54,9 +59,23 @@ Two services over one bind-mounted repo:
 - **Startup drift self-heal (P4):** with `KB_STARTUP_REINDEX` true (the default), the app runs a full `reindex()` in its FastAPI lifespan **before** it accepts requests, printing `[kb-api] startup reindex: indexed=… removed=… skipped=… embedded=…`. Single-worker + a tiny corpus + the content-hash embedding cache make boot reindex safe and cheap. Set `KB_STARTUP_REINDEX=0` in a production deployment whose state is already validated to skip it.
 - **Embedding sync:** every reindex path (full, single-path, startup) runs a best-effort, content-hash-cached embedding sync — it only re-embeds changed docs, clears orphans, and never fails the reindex (no key → skipped; API/429 → per-doc skip, retried next run). `gemini-embedding-2-preview` has a low per-minute quota (~4–5 req/min); reindex embeds per-doc with bounded 429 backoff and persists each success, so a rate-limited run resumes from the cache on the next reindex.
 
+## P10 cutover: Postgres migrations + seed + onboarding smoke
+
+Turning the box into the multi-tenant SaaS is a **one-time cutover**, ordered so tenant #1 (the live corpus) never loses its identity. **Seed BEFORE the reindex** — `get_tenant_one_id()` caches on first success, so the operator user + tenant must exist before the boot reindex / master bearer resolve tenant #1 (a reindex that runs before seeding stamps `docs/` with the `''` sentinel and needs a re-reindex).
+
+1. Provision the box's gitignored `.env`: add `POSTGRES_PASSWORD`, `KB_OPERATOR_EMAIL` (the operator's signup email), and `KB_OPERATOR_PASSWORD` alongside the existing `KB_API_TOKEN` / `GOOGLE_API_KEY`.
+2. `git pull` the box clone.
+3. `docker compose -f compose.prod.yml up -d postgres` (wait healthy).
+4. `docker compose -f compose.prod.yml exec api alembic upgrade head` — creates the six accounts tables (`0001_accounts_tenancy`). Migrations never run on boot.
+5. `docker compose -f compose.prod.yml exec api python -m server.seed` — creates the operator user + tenant #1 + a `projects` row per live `docs/` project (derived from the tree). **Idempotent** — safe to re-run (a second run writes zero rows).
+6. Restart the api so its boot reindex — with tenant #1 now resolvable — **re-stamps every `docs/` row's `tenant_id` as tenant #1** (path-derived, no file move). Alternatively `POST /api/reindex` with the master bearer.
+7. Verify: `python scripts/onboarding_smoke.py --base-url https://knowledge.hi2vi.com --master-token "$KB_API_TOKEN"` → **PASS** (onboards a throwaway tenant B end-to-end and proves cross-tenant isolation on the live data). The live hi2vi content agent needs **zero** changes — `KB_API_TOKEN` still resolves to tenant #1.
+
+`scripts/onboarding_smoke.py` is the committed post-deploy verifier (`site_smoke.py` style: collect-all-failures, exit non-zero or print `PASS`); it self-derives tenant #1's fixtures from the master bearer's own listing (nothing hardcoded). `python -m server.seed` is Postgres-only and never touches `kb.sqlite3`.
+
 ## Auth
 
-- Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the mutating endpoints (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`.
+- Set / uncomment `KB_API_TOKEN` in `compose.yml` (or pass as env) → `Authorization: Bearer <token>` becomes required on the mutating endpoints (`POST /api/documents`, `DELETE /api/documents/*`, `POST /api/reindex`); GETs stay open. Rotate by changing the value and restarting `api`. **(P10)** in tenant mode (`DATABASE_URL` set) `KB_API_TOKEN` is additionally the pinned **tenant #1 master bearer** (resolved via `KB_OPERATOR_EMAIL`); `vk_` per-project keys and session tokens are the other `/api/*` credentials.
 - **(P8)** Adding `KB_REQUIRE_READ_AUTH=true` **as well** puts the read/search surface behind the same bearer. It defaults **false**, so a local token still guards writes only — reads stay open unless you deliberately opt in. The hosted box sets both. `GET /healthz` stays open either way.
 
 ## Publishing: self-hosted live-serve (P9; GitHub Pages retired)

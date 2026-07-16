@@ -4,13 +4,13 @@
       "id": "P10",
       "name": "Accounts, Tenancy & Tenant-Scoped Knowledge API",
       "objective": "Introduce users/tenants/projects with signup/login/session auth and API credentials; scope the knowledge API (write/read/search) per tenant; seed the operator's own tenant and migrate the live knowledge.hi2vi.com corpus in as tenant #1",
-      "status": "planned",
+      "status": "done",
       "order": 1,
       "path": "works/phases/active/P10",
-      "review_status": "pending",
-      "current_slice": "P10.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 9,
-      "done_slice_count": 8
+      "done_slice_count": 9
     },
     {
       "id": "P11",
@@ -61,8 +61,8 @@
       "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 3,
+  "deferred_open_count": 4,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 1,
-  "last_rebuilt_at": "2026-07-16T18:47:02+09:00"
+  "last_rebuilt_at": "2026-07-16T19:41:58+09:00"
 }

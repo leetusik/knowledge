@@ -5,18 +5,18 @@
 
 ## Pointer
 
-- Current phase: `P10`
-- Current slice: `P10.REVIEW`
-- Next slice: `none`
+- Current phase: `P11`
+- Current slice: `P11.DECOMP`
+- Next slice: `P11.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `3`
-- Rebuilt at: `2026-07-16T18:47:02+09:00`
+- Open deferred jobs: `4`
+- Rebuilt at: `2026-07-16T19:41:58+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
-| [ ] `P10` | `planned` | `pending` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `P10.REVIEW` | `works/phases/active/P10` |
+| [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.DECOMP` | `works/phases/active/P11` |
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
@@ -34,7 +34,7 @@
 | [x] `P10.S5` | `done` | Content tenant-scoping: documents.tenant_id + reindex + namespaced storage | `implementation` | `works/phases/active/P10/slices/P10.S5` |
 | [x] `P10.S6` | `done` | Seed tenant #1 + migrate live corpus + E2E onboarding smoke | `implementation` | `works/phases/active/P10/slices/P10.S6` |
 | [x] `P10.F1` | `done` | Normalize KB_OPERATOR_EMAIL casing in get_tenant_one_id | `fix` | `works/phases/active/P10/slices/P10.F1` |
-| [ ] `P10.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P10/slices/P10.REVIEW` |
+| [x] `P10.REVIEW` | `done` | phase review | `review` | `works/phases/active/P10/slices/P10.REVIEW` |
 
 ## Phase P11: Per-Tenant Usage Monitoring
 

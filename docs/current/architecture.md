@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0008
-created_at: 2026-07-15T13:03:37+09:00
-source: P9.REVIEW
-summary: P9: Track 1 web UI is now self-hosted mkdocs live-serve (not GitHub Pages) — two services (knowledge-api + knowledge-site) on one box behind two-location edge routing (/ -> site, /api/* + /healthz -> api)
-previous: v0007_p8_hosted_deployment_shape_same_codebase_two_deployments_local_open_never-push_vs_hosted_authed_publish-on-write_box_clone_server-side_push_as_the_publish_path
+version: v0009
+created_at: 2026-07-16T19:32:55+09:00
+source: P10.REVIEW
+summary: P10 two-plane app: async Postgres control plane alongside the unchanged files + disposable-SQLite content plane; dormant without DATABASE_URL
+previous: v0008_p9_track_1_web_ui_is_now_self-hosted_mkdocs_live-serve_not_github_pages_two_services_knowledge-api_knowledge-site_on_one_box_behind_two-location_edge_routing_-_site_api_healthz_-_api
 ---
 
 # Architecture
 
 ## Status
 
-Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below). As of P9 **Track 1's public site is self-hosted too**: the human web UI is served **live** by a `mkdocs serve` `knowledge-site` viewer on the box (**not GitHub Pages**, retired), so the box runs **two independent services** (`knowledge-api` + `knowledge-site`) behind **two-location edge routing** — one public domain, `knowledge.hi2vi.com`, for both tracks (see *Self-hosted site* below).
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below). As of P9 **Track 1's public site is self-hosted too**: the human web UI is served **live** by a `mkdocs serve` `knowledge-site` viewer on the box (**not GitHub Pages**, retired), so the box runs **two independent services** (`knowledge-api` + `knowledge-site`) behind **two-location edge routing** — one public domain, `knowledge.hi2vi.com`, for both tracks (see *Self-hosted site* below). As of P10 the FastAPI app is a **two-plane process**: the unchanged content plane now runs alongside a new **async Postgres control plane** (accounts / tenants / projects / credentials), making the deployment a **multi-tenant SaaS** — the live corpus becomes **tenant #1** and every `/api/*` bearer resolves to a tenant (see *Two-plane app* below).
 
 ## System Shape
 
@@ -98,9 +98,21 @@ the box and are routed by path at the edge:
   changes **no** application code — the viewer is the stock mkdocs image, and the site's content
   is the same `docs/` tree both tracks share.
 
+## Two-plane app: Postgres control plane + content plane (P10)
+
+P10 turns the single-tenant deployment (one shared `KB_API_TOKEN`, no user model) into a **multi-tenant SaaS** by adding a second plane **inside the same FastAPI process** — no new service, still one uvicorn worker:
+
+- **Control plane = Postgres, async, transactional.** `/auth/*` (signup/login/logout/me sessions) and `/app/*` (tenant projects + `vk_` per-project ingest credentials). Six accounts tables (`users`, `tenants`, `tenant_members`, `projects`, `project_credentials`, `auth_tokens`) on async SQLAlchemy 2.0 + psycopg3, migrated by Alembic. Tenant-scoped: every cross-tenant read/write answers **404** so existence never leaks. Ownership is the `tenant_members` join (solo-owner MVP: `require_user` → `tenants[0]`, no tenant switching / invites / roles in P10).
+- **Content plane = unchanged in shape.** Files under `docs/` stay **canonical**; `kb.sqlite3` (FTS5 + vectors) is still a disposable projection rebuilt from files on boot. `WRITE_LOCK` + the single uvicorn worker are preserved — Postgres does **not** touch the content write lock. What P10 adds is **tenant scoping**: `documents.tenant_id`, a per-tenant content root, and a tenant filter on every read/search/list/by-id/by-path/delete query.
+- **Two roots, one canonical model.** Tenant #1 (the operator / live corpus) keeps `docs/<project>/…` **unchanged** (frozen contract + public mkdocs site intact); every other tenant's content lives under a **namespaced, non-published `<KB_ROOT>/tenants/<uuid>/` root** (a sibling of `docs/`, gitignored, never in the mkdocs build). No invariant inversion, no per-tenant git repos, no per-tenant public sites (P12 territory).
+- **Lazy / dormant control plane.** With `DATABASE_URL` **unset** the accounts engine is never created and `/api/*` behaves **byte-for-byte** like the pre-P10 single-`KB_API_TOKEN` deployment (the 65-test legacy regression gates this). Tenant mode switches on only when `DATABASE_URL` is set — the content plane boots either way.
+- **Tenant #1 = the live corpus, zero client changes.** `KB_API_TOKEN` is kept as tenant #1's **pinned master bearer** (resolved via `KB_OPERATOR_EMAIL`), so the live hi2vi content agent needs no changes; new tenants use `vk_` keys, and session tokens drive the control plane and own-corpus reads.
+
+**Hard coupling — tenant identity lives in the file path.** Because `kb.sqlite3` is rebuilt from files on every boot, a `tenant_id` stored only in the DB would be wiped on each reindex. So `reindex` **re-derives** `tenant_id` from the content root (`docs/` → tenant #1; `tenants/<uuid>/` → the dir name), and cross-tenant isolation therefore **survives a full disposable-DB rebuild** (verified in the P10 review E2E: deleting `kb.sqlite3` and rebooting re-stamps every row correctly and isolation still holds).
+
 ## Boundaries / Constraints
 
-- **Single-writer**: one uvicorn worker + one in-process lock — never scale workers (WAL gives read concurrency). P8 makes this stricter, not looser: the in-request git push lives inside that lock.
+- **Single-writer**: one uvicorn worker + one in-process lock — never scale workers (WAL gives read concurrency). P8 makes this stricter, not looser: the in-request git push lives inside that lock. P10 keeps this exactly: the async Postgres plane sits alongside but never touches `WRITE_LOCK`.
 - **Auto-nav preserved**: `mkdocs.yml` has no `nav:` / `strict:` key; the viewer builds its sidebar from the `docs/` tree.
 - **Bearer auth** on mutating endpoints always (`KB_API_TOKEN`), and on reads/search too when `KB_REQUIRE_READ_AUTH` is set (hosted). `healthz` is always open; there is **no CORS** — the API has no browser client by design.
 - **The API never force-pushes and never `git add -A`** — a scoped, rebase-onto-remote, non-force push is the only way it touches a remote.

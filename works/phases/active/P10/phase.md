@@ -219,6 +219,13 @@ _Operational caveat surfaced in S6 testing (flag for `P10.REVIEW`):_ `KB_OPERATO
 
 **P10 phase status: all six middle slices (S1–S6) complete — the phase is ready for `P10.REVIEW`,** which validates S1–S6 together and consolidates every S1–S6 doc-impact one-liner (architecture / backend / data / api / security / operations / decisions) into new doc versions. `doc-new-version` is REVIEW's job — S6 did not version docs.
 
+**P10.REVIEW — verdict `pass` (2026-07-16).** Validated S1–S6 + F1 together and consolidated the docs.
+- **Validation (Docker available, nothing gapped):** legacy regression `env -u DATABASE_URL uv run pytest -q` → **65 passed**. One consolidated ephemeral tenant-mode E2E (throwaway `postgres:17` + temp `KB_ROOT`, single-worker `uvicorn`, never the real docs/git): 40/40 auth/app + api-resolution + isolation checks, `onboarding_smoke.py` PASS **pre- and post-`kb.sqlite3`-delete rebuild** (hard coupling #1 proven — isolation survives a full disposable-DB rebuild), seed idempotent (run 2 = 0 new rows), `docs/` re-stamped with tenant #1's UUID (no `''` sentinel), and the **F1 mixed-case** `KB_OPERATOR_EMAIL` check (master bearer still resolves tenant #1). `workflow.py validate` passed.
+- **Constraints — all hold:** frozen `POST /api/documents` 201 shape intact (exact key set, no tenant body/response field); single worker (`Dockerfile` `CMD` has no `--workers`) + `WRITE_LOCK` preserved; files-canonical + disposable SQLite (no invariant inversion, no per-tenant repos); `tenants/` gitignored + unpublished (no per-tenant sites); tenant #1 zero client changes (`KB_API_TOKEN` → tenant #1). D6 still deferred (no paid retriever); plugin/self-host untouched.
+- **Docs consolidated (7 new versions):** architecture v0009, backend v0005, data v0006, api v0007, security v0006, operations v0011, decisions v0011 (3 ADRs). `rebuild-docs` + `validate` clean.
+- **Carried forward (non-blocking):** non-#1 `tenants/<uuid>/` content is on-box-only (no off-box backup / no site in P10). **Recommend filing a deferred backup/snapshot job for `tenants/`** before any non-#1 tenant carries real data at scale (a review slice cannot run `defer-job`). Tenant #1 stays safe via the git-published `docs/` tree.
+- Full detail in `slices/P10.REVIEW/result.md`. The orchestrator records the verdict via `review-phase P10 --verdict pass` and commits (REVIEW did neither).
+
 ## Constraints
 
 - **Single uvicorn worker preserved** — the content `WRITE_LOCK` is an in-process lock; never scale to multiple workers. Postgres (async) sits alongside but does not change this.

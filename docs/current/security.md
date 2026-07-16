@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0005
-created_at: 2026-07-15T13:03:37+09:00
-source: P9.REVIEW
-summary: P9: add the GHA runner->opc@box SSH-key credential (three ORACLE_SSH_* leetusik/knowledge secrets, dedicated ed25519), distinct from the P8 container->GitHub deploy key; deliberate secret-transit exception for the runner key
-previous: v0004_p8_hosted_auth_model_flag-gated_read_bearer_the_box-only_ssh_deploy_key_and_the_scoped_departure_from_agent-never-pushes_generate-credentials-where-they-live
+version: v0006
+created_at: 2026-07-16T19:33:01+09:00
+source: P10.REVIEW
+summary: P10 multi-tenant threat model; argon2id passwords; sha256 token hashing at rest; pinned un-revokable master bearer; cross-tenant content isolation; casing-tolerant operator-email resolution
+previous: v0005_p9_add_the_gha_runner-_opc_box_ssh-key_credential_three_oracle_ssh__leetusik_knowledge_secrets_dedicated_ed25519_distinct_from_the_p8_container-_github_deploy_key_deliberate_secret-transit_exception_for_the_runner_key
 ---
 
 # Security
@@ -16,6 +16,8 @@ Personal, single-operator knowledge base. The threat model is modest — no mult
 **P8 is the first time the threat model actually widens**: the API is now exposed on the **public internet** (`https://knowledge.hi2vi.com`) and holds a **write-capable git credential** that publishes to a public repo. Three things follow, all below: reads/search go behind the bearer on the hosted deployment (a new flag, off by default); the push credential is a repo-scoped SSH deploy key that **never leaves the box**; and "the agent never pushes" is now a *flag-gated* rule with exactly one deliberate exception. The corpus itself is already public, so the exposure is about **abuse and write authority**, not content secrecy.
 
 **P9 adds a second, independent credential** — a **GHA runner → `opc@box` SSH key** that lets the manual-dispatch `Production Deploy` Action reach the box. It is kept **strictly distinct** from P8's container → GitHub push deploy key (different direction, store, and blast radius — see *Two credentials* below), and its provisioning is the **one deliberate exception** to the "secrets are box-born and never transit" rule: the runner key's private half *must* reach a GitHub Actions secret, so it is minted in a `umask 077` tempdir, piped once into `gh secret set`, and shredded. The corpus went fully self-hosted at P9 (Pages retired), but that changes no auth surface — the box already served the public site's read path.
+
+**P10 is the largest threat-model shift: the box now holds real multi-tenant data and user PII.** It becomes a multi-tenant SaaS with accounts (emails + passwords), sessions, per-tenant corpora, and per-project API credentials. The security posture that follows — all detailed below: **argon2id** password hashing; opaque high-entropy session + `vk_` tokens stored only as **sha256-hex at rest** (raw returned once, never persisted); enumeration-safe generic 401s; **cross-tenant content isolation** enforced on every content query (a tenant can never read/search/delete another's docs — cross-tenant → 404); and a single deliberate concession, a **pinned, un-revokable master bearer** (`KB_API_TOKEN` → tenant #1) that keeps the live hi2vi agent working unchanged. See *Multi-tenant accounts + content isolation* below.
 
 ## Purpose
 
@@ -35,9 +37,21 @@ Use this doc for auth, authorization, secrets, customer data boundaries, and sen
 - **Hosted box:** `KB_REQUIRE_READ_AUTH=true` + `KB_GIT_PUSH=true` — every `/api/*` call needs the bearer, and writes publish to `main`.
 - Rotate the token by changing the value and restarting the `api` service.
 
+## Multi-tenant accounts + content isolation (P10)
+
+The knowledge backend is now a multi-tenant SaaS. The durable rules:
+
+- **Password hashing: argon2id** (`argon2-cffi`). `verify_password` is constant-ish and returns `False` on a malformed hash. Passwords are never logged or serialized (`password_hash` is stripped from every response).
+- **Tokens are sha256-hex at rest.** Session bearers (`secrets.token_urlsafe(32)`) and per-project `vk_` ingest keys are stored **only** as their sha256-hex digest (`auth_tokens.token_hash` / `project_credentials.token_hash`) plus, for `vk_`, a 12-char display `token_prefix`. The raw token is returned **once** at mint and never persisted; resolution hashes the presented bearer and matches the digest. Transport records omit `token_hash` entirely.
+- **Enumeration safety.** `/auth/login` returns a byte-identical `401` for unknown-email and wrong-password; guarded routes return a generic `401 {"detail":"Unauthorized"}` + `WWW-Authenticate: Bearer`; the `/api/*` resolver returns a single generic 401 for missing/invalid/unresolvable bearers (no missing-vs-invalid-vs-unknown leak). Control-plane cross-tenant access returns **404** (existence never leaks).
+- **Cross-tenant content isolation (enforced).** Storage, every read/search/list/by-id/by-path query, and semantic search are scoped to the resolved tenant; a delete cannot cross tenants; a cross-tenant get/delete by id or path → 404. Isolation is **path-durable**: reindex re-derives `tenant_id` from the content root, so it survives a full disposable-DB rebuild (verified in the P10 review E2E, including after deleting `kb.sqlite3` and rebooting).
+- **Pinned, un-revokable master bearer (the one deliberate concession).** `KB_API_TOKEN` is a **config special-case**, not a DB credential: it resolves to tenant #1 (the operator's tenant, identified by `KB_OPERATOR_EMAIL`). It cannot be revoked from the DB and is the tradeoff that keeps the live hi2vi content agent working with zero changes. It is **unresolvable (401)** when `KB_OPERATOR_EMAIL` is unset or the operator user is not seeded — a safe misconfigured state, never a silent accept. **P10.F1** made the resolution **casing-tolerant**: `get_tenant_one_id()` normalizes `KB_OPERATOR_EMAIL` (`.strip().lower()`, matching the seed / `/auth/signup`), so a mixed-case env value no longer leaves the master bearer unresolvable (verified: a mixed-case `KB_OPERATOR_EMAIL` still resolves tenant #1 and stamps `docs/` with tenant #1's UUID).
+- **Solo-owner MVP.** One user = one tenant via `tenant_members` (`require_user` → `tenants[0]`); no tenant switching, invites, or role UI in P10.
+- **Non-#1 tenant content is on-box-only** (`tenants/<uuid>/`, gitignored, unpublished) — no off-box backup in P10; a snapshot job is a flagged follow-up before non-#1 tenants carry real data at scale.
+
 ## Secret Handling
 
-- `KB_API_TOKEN` and the Gemini credential (`GOOGLE_API_KEY` preferred, `GEMINI_API_KEY` fallback) are injected via environment / compose `environment:` / a gitignored `.env`, **never committed**. An empty Gemini key simply disables semantic search (graceful BM25-only degradation).
+- `KB_API_TOKEN` and the Gemini credential (`GOOGLE_API_KEY` preferred, `GEMINI_API_KEY` fallback) are injected via environment / compose `environment:` / a gitignored `.env`, **never committed**. An empty Gemini key simply disables semantic search (graceful BM25-only degradation). **(P10)** `POSTGRES_PASSWORD`, `KB_OPERATOR_EMAIL`, and `KB_OPERATOR_PASSWORD` join the same gitignored `.env` (names/placement only, never a value); `KB_OPERATOR_PASSWORD` is read **only** by the one-shot seed CLI, never at request time.
 - The repo carries **names and placement paths only — never a value.** `.env` is gitignored, and `.gitignore` also carries a **private-key backstop** (`knowledge_deploy_key*`, `*.pem`, `*.key`).
 - Tests strip ambient `GOOGLE_API_KEY`/`GEMINI_API_KEY` (an autouse `conftest` fixture) so no test ever hits the network from a developer's exported key.
 

@@ -1,10 +1,10 @@
 ---
 doc_id: decisions
-version: v0010
-created_at: 2026-07-15T13:03:53+09:00
-source: P9.REVIEW
-summary: P9 ADRs: self-host the site, live-serve, retire Pages, automated production deploy (in-container reconcile-on-main, fix-forward, edge re-apply, workflow_dispatch-only), dedicated runner key
-previous: v0009_p8_adrs_public_endpoint_bearer_over_private_network_kb_git_push_default-off_read-auth_as_a_flag_not_token-implied_ssh_deploy_key_over_pat_delete_pushes_no_cors_no_edge_rate-limit_zone_wildcard_origin_cert
+version: v0011
+created_at: 2026-07-16T19:33:06+09:00
+source: P10.REVIEW
+summary: P10 ADRs Postgres-over-SQLite for accounts; namespaced docs-canonical per-tenant storage; KB_API_TOKEN as the pinned tenant-1 master bearer
+previous: v0010_p9_adrs_self-host_the_site_live-serve_retire_pages_automated_production_deploy_in-container_reconcile-on-main_fix-forward_edge_re-apply_workflow_dispatch-only_dedicated_runner_key
 ---
 
 # Decisions
@@ -585,6 +585,36 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - Alternatives considered: reuse hi2vi's runner key (declined — shared blast radius; a rotation would ripple across deploys). A forced-command lock (n/a — the driver `scp`s + runs a script).
 - Consequences: the two P9 credentials are kept **strictly distinct** (see security); the runner key's private half is the one deliberate secret-transit exception (`umask 077` tempdir → `gh secret set` → shred). The `.pub` is **appended** to `opc`'s `authorized_keys`; the host key is pinned + verified out-of-band. Proven to authenticate under the driver's exact flags before S5.
 - Source: P9 `phase.md` §G + S4 findings.
+
+### Postgres (async SQLAlchemy 2.0 + psycopg3) for the accounts control plane — over SQLite
+
+- Date: 2026-07-16
+- Status: accepted (P10 — S1)
+- Context: P10 introduces accounts/tenancy (users, tenants, projects, credentials, sessions) — the SaaS pivot's first durable relational, transactional, PII-bearing data. The content plane's disposable SQLite is rebuilt from files on boot, so it is unsuitable for durable account state. The `vocky` repo is the closest prior art. An Open Question: async-SQLAlchemy-in-a-sync-app vs sync SQLAlchemy + psycopg.
+- Decision: stand up a **separate Postgres control plane** (six tables ported from vocky: `users`, `tenants`, `tenant_members`, `projects`, `project_credentials`, `auth_tokens`), reached via **async SQLAlchemy 2.0 + `postgresql+psycopg` (psycopg3)** with Alembic migrations, in a layered `security → types → repository → service` accounts package. Async was chosen over sync psycopg for the cleaner integration (single worker means no async-throughput requirement); the plane is a **lazy singleton**, dormant when `DATABASE_URL` is unset.
+- Alternatives considered: keep everything in SQLite (declined — the content DB is disposable/rebuilt-from-files; account state must be durable + transactional + concurrently safe). asyncpg (declined — psycopg3 integrated more cleanly). A single shared datastore (declined — content stays files-canonical; conflating the planes would invert that invariant).
+- Consequences: a `postgres:17` service in both compose files, an explicit `alembic upgrade head` deploy step, and new `.env` prereqs (`POSTGRES_PASSWORD`). The content plane is untouched and still boots without Postgres. Passwords are argon2id; tokens are sha256-hex at rest (see security).
+- Source: P10 `phase.md` (S1 doc-impact) + intent.md.
+
+### Namespaced, `docs/`-canonical per-tenant storage — no per-tenant repos or sites
+
+- Date: 2026-07-16
+- Status: accepted (P10 — S5)
+- Context: The single-repo git-publish content model (one `docs/` tree, in-process `WRITE_LOCK`, in-request push) won't scale to many tenants as-is. P10 must store each tenant's corpus while (a) keeping tenant #1's `docs/<project>/…` paths + public site unchanged (frozen contract) and (b) not touching the disposable-SQLite / files-canonical invariant.
+- Decision: keep content **files-canonical**; tenant #1 stays in `docs/` (git-published, unchanged), and every other tenant's content lives under a **namespaced, non-published `<KB_ROOT>/tenants/<uuid>/` root** (a sibling of `docs/`, gitignored, never in the mkdocs build). `documents.tenant_id` scopes the disposable SQLite; **reindex re-derives `tenant_id` from the file path**, so tenant identity survives the disposable-DB rebuild. **No** per-tenant git repos, **no** per-tenant public sites (P12 owns dashboards), **no** invariant inversion.
+- Alternatives considered: DB-canonical content (declined — inverts the core invariant). Per-tenant git repos (declined — heavy, and P10 scopes out per-tenant publishing). A DB-only `tenant_id` (declined — wiped on every boot reindex; identity must live in the path). An mkdocs `exclude_docs` rule for `tenants/` (unnecessary — a sibling of `docs_dir` is simply never in the build; exclusion is physical separation + `.gitignore`).
+- Consequences: cross-tenant content isolation on every query + a cross-tenant 404; `/tenants/` in `.gitignore`; reindex/boot walk both roots with tenant-scoped vanished-row cleanup. **Known limitation:** non-#1 `tenants/` content is on-box-only (no git backup, no site) — a backup/snapshot job is a flagged follow-up before non-#1 tenants carry real data at scale.
+- Source: P10 `phase.md` (S5 doc-impact) + resolved Open Question.
+
+### `KB_API_TOKEN` as the pinned tenant-#1 master bearer
+
+- Date: 2026-07-16
+- Status: accepted (P10 — S4; F1 refinement)
+- Context: The live hi2vi content agent authenticates to `/api/*` with a single `KB_API_TOKEN`. Multi-tenancy must not break it — the intent requires tenant #1 to keep working with **zero** client changes.
+- Decision: keep `KB_API_TOKEN` as tenant #1's **pinned master bearer** — a config special-case (resolved to the operator's tenant via `KB_OPERATOR_EMAIL`), **not** a DB credential and therefore **un-revokable** from the accounts store. New tenants use `vk_` per-project keys; session tokens drive the control plane + own-corpus reads. Unresolvable (401) when `KB_OPERATOR_EMAIL` is unset or the operator isn't seeded (a safe misconfigured state, never a silent accept). **P10.F1** normalized `KB_OPERATOR_EMAIL` (`.strip().lower()`) inside `get_tenant_one_id()` so the pin is casing-tolerant.
+- Alternatives considered: migrate the hi2vi agent to a `vk_` key (declined — a client change the intent forbids for P10). Make the master a real revokable DB credential (declined — adds a seeding/rotation coupling for the one bearer that must always work; the un-revokable special-case is the deliberate tradeoff).
+- Consequences: the frozen `POST /api/documents` contract is preserved with zero consumer changes (verified in the P10 review E2E); the master bearer is a documented, un-revokable exception noted in security; `KB_OPERATOR_EMAIL` is a hosted deploy prerequisite.
+- Source: P10 `phase.md` (S4/F1 doc-impact) + Legacy bearer decision.
 
 ## Superseded Decisions
 
