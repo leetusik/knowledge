@@ -32,6 +32,7 @@ from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
+from server.api_auth import ApiAuthContext, resolve_api_read, resolve_api_write
 from server.persistence.engine import dispose_engine
 
 
@@ -142,7 +143,7 @@ def list_documents(
     tag: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     total = db.count_documents(conn, project=project, tag=tag)
@@ -153,7 +154,7 @@ def list_documents(
 @app.get("/api/tags")
 def list_tags(
     project: Optional[str] = None,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     return {"tags": db.list_tags(conn, project=project)}
@@ -161,7 +162,7 @@ def list_tags(
 
 @app.get("/api/projects")
 def list_projects(
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     return {"projects": db.list_projects(conn)}
@@ -172,7 +173,7 @@ def list_projects(
 @app.get("/api/documents/by-path/{rel_path:path}")
 def get_document_by_path(
     rel_path: str,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     doc = db.get_document_by_path(conn, rel_path)
@@ -184,7 +185,7 @@ def get_document_by_path(
 @app.get("/api/documents/{doc_id}")
 def get_document(
     doc_id: int,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     doc = db.get_document(conn, doc_id)
@@ -201,7 +202,7 @@ def search(
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     raw: bool = False,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     try:
@@ -262,7 +263,7 @@ class DocumentIn(BaseModel):
 @app.post("/api/documents", status_code=201)
 def create_document(
     body: DocumentIn,
-    _: None = Depends(require_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
     """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
@@ -499,7 +500,7 @@ def delete_document_by_path(
     rel_path: str,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
-    _: None = Depends(require_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
     doc = db.get_document_by_path(conn, rel_path)
@@ -513,7 +514,7 @@ def delete_document(
     doc_id: int,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
-    _: None = Depends(require_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
     doc = db.get_document(conn, doc_id)

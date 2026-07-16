@@ -32,6 +32,8 @@ services:
       # Box-only, gitignored. Holds the SECRETS by name (no values in the repo):
       #   KB_API_TOKEN=<generated>          # bearer for writes + (with the flag) reads
       #   GOOGLE_API_KEY=<optional Gemini>  # empty/absent = BM25-only search
+      #   POSTGRES_PASSWORD=<generated>     # accounts-plane Postgres password
+      #   KB_OPERATOR_EMAIL=<operator email> # pins KB_API_TOKEN -> tenant #1 (P10)
       # Provisioned in P8.S4's runbook. `docker compose config` needs this file
       # to exist (a dummy one suffices for local validation).
       - .env
@@ -59,6 +61,14 @@ services:
       # (never committed); user/db are the literals `kb`. Migrations run
       # explicitly on deploy: `docker compose exec api alembic upgrade head`.
       DATABASE_URL: postgresql+psycopg://kb:${POSTGRES_PASSWORD}@knowledge-postgres:5432/kb
+      # Pins the legacy KB_API_TOKEN master bearer to tenant #1 in tenant mode:
+      # the operator's SIGNUP email (must match the user seeded in S6). The live
+      # hi2vi content agent keeps using KB_API_TOKEN, which this resolves to
+      # tenant #1 (interpolated from the box's gitignored `.env`, a P10 deploy
+      # prerequisite alongside POSTGRES_PASSWORD — an email, not a secret, but
+      # kept out of the committed file so it can't drift from the seeded value).
+      # Unset -> the master bearer is unresolvable (vk_/session tokens still work).
+      KB_OPERATOR_EMAIL: ${KB_OPERATOR_EMAIL}
       # --- Push credential wiring (paths inside the container) ---
       # IdentitiesOnly: use ONLY this key (ignore any agent/default keys).
       # UserKnownHostsFile + StrictHostKeyChecking=yes: pin github.com's host key

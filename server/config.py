@@ -46,6 +46,18 @@ def api_token() -> str | None:
     return _env("KB_API_TOKEN")
 
 
+def operator_email() -> str | None:
+    """Operator's signup email — pins the KB_API_TOKEN master bearer to tenant #1.
+
+    Tenant mode only (``DATABASE_URL`` set): the resolver maps an exact
+    ``KB_API_TOKEN`` bearer to the tenant owned by the user with this email
+    (their first tenant = tenant #1), so the legacy hi2vi content agent keeps
+    working with zero changes. Unset -> the master bearer is unresolvable in
+    tenant mode.
+    """
+    return _env("KB_OPERATOR_EMAIL")
+
+
 def database_url() -> str | None:
     """Async SQLAlchemy URL for the Postgres accounts plane. Unset -> accounts dormant.
 
