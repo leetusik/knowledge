@@ -46,6 +46,17 @@ def api_token() -> str | None:
     return _env("KB_API_TOKEN")
 
 
+def database_url() -> str | None:
+    """Async SQLAlchemy URL for the Postgres accounts plane. Unset -> accounts dormant.
+
+    Read per-call like every other setting. When None the accounts plane never
+    creates an engine (see server/persistence/engine.py) and the content plane
+    boots normally without Postgres. Expected form:
+    ``postgresql+psycopg://user:pass@host:5432/db``.
+    """
+    return _env("DATABASE_URL")
+
+
 def git_commit_enabled() -> bool:
     """Whether the write path makes a git commit. KB_GIT_COMMIT defaults to true."""
     val = _env("KB_GIT_COMMIT", "true")

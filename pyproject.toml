@@ -8,6 +8,11 @@ dependencies = [
     "uvicorn",
     "pyyaml",
     "google-genai==1.72.0",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "alembic",
+    "argon2-cffi",
+    "greenlet",
 ]
 
 [dependency-groups]
