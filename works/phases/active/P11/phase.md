@@ -257,6 +257,30 @@ control-plane reads (cross-tenant project → 404), mounted in `server/main.py`.
 slice should document the pinned response contract (see the S3 note above). No new Doc impact
 lines needed from S3._
 
+### S4 built (E2E usage smoke) — the phase's live-acceptance script for REVIEW
+_Done in P11.S4: `scripts/onboarding_smoke.py`'s `run(...)` extended with a new "3. Usage
+metering" block, inserted at the end of the `with httpx.Client(...)` block right after the
+tenant-#1 isolation checks. It now covers the whole meter→read chain end-to-end against a
+live tenant-mode instance: with B's session token, `GET /app/usage` asserts
+`totals.documents_created == 1` (== 1, not >= 1, so it doubles as a tenant-isolation check —
+tenant #1's writes must not leak into B's totals), `totals.searches >= 1`, exactly 30
+zero-filled `daily_counts`, and B's project present in `projects`; `GET
+/app/projects/{project_id}/usage` asserts the same `documents_created == 1` at project grain
+and that a credential has a non-null `last_used_at` (the `vk_` key did metered work per S2's
+refinement — reads don't stamp it, only writes/searches do, and B already wrote + searched
+earlier in the smoke); and `GET /app/projects/<random-uuid>/usage` asserts 404 (cross-tenant/
+missing-project scoping, no existence leak). The `run(...)` summary now ends `"; usage
+metered"` and the module docstring gained a "3. Usage — …" overview item. Import
+(`py_compile`), `--help` load, and the 65-test legacy pytest suite are green — confirming
+nothing else broke and the new `import uuid` loads cleanly. **This is the phase's E2E
+live-acceptance script; S4's own env has no tenant-mode Postgres, so the live run
+(`python scripts/onboarding_smoke.py --base-url <live> --master-token "$KB_API_TOKEN"` against
+a running tenant-mode instance, expecting `PASS`) is deferred to the REVIEW slice (or the
+operator/CI) — not run or fabricated here.**
+
+The `operations.md` Doc-impact line ("onboarding smoke extended with usage assertions") is
+confirmed accurate as landed — no new Doc-impact lines needed from S4.
+
 ## Constraints
 
 - **Legacy/dormant parity:** with `DATABASE_URL` unset, `/api/*` stays byte-for-byte pre-P10; the 65-test
