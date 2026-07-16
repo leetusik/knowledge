@@ -4,6 +4,15 @@
 export { Button, buttonVariants } from "./button";
 export type { ButtonProps } from "./button";
 
+// Flat app-chrome button language (P12.S2) — the authenticated console's buttons,
+// distinct from the marketing pill `Button` (reserved for P14). Plus the `Tag` chip.
+export { AppButton, appButtonClass, Tag } from "./app-button";
+export type {
+  AppButtonProps,
+  AppButtonSize,
+  AppButtonVariant,
+} from "./app-button";
+
 export { Card, cardVariants } from "./card";
 export type { CardProps } from "./card";
 
