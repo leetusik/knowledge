@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Knowledge Base — Console layer  (P12 · Authenticated web app)
+   --------------------------------------------------------------------------
+   "A reading room's back office, not a SaaS dashboard." The signed-in console
+   carries real dashboard density (topbar + rail, stat tiles, data tables,
+   status encoding, forms) in the reading-room's calm identity: warm paper,
+   Fraunces / Source Sans 3 / JetBrains Mono, hairline borders, the single soft
+   shadow, teal reserved for interactive / active / focus only.
+
+   Unlike the reading-room components, these DON'T re-skin mkdocs-material — the
+   console is a separate Next.js app. So there is no ".md-*" hooks block; instead
+   each class maps to a fixed CVA component in the app (app-button.tsx,
+   badge.tsx, data-table.tsx, field.tsx, card.tsx, app-shell/*). That apply-map
+   is the engineering handback in APP_BRIEF.md.
+
+   All classes are portable + prefixed .kb-* and reuse the locked reading-room
+   tokens; only status/trend/delta inks are new (tokens/app.css). Console
+   specimens render at a 16px root (a real web app), NOT the mkdocs 20px root.
+   ========================================================================== */
+
+/* -------- Type helpers (console UI scale) --------------------------------- */
+.kb-app-eyebrow { font-family: var(--kb-font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-hint); }
+.kb-app-title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.65rem; line-height: 1.15; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); margin: 0; }
+.kb-app-h2 { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; line-height: var(--kb-leading-heading); color: var(--kb-ink); margin: 0; }
+.kb-app-sub { font-size: 0.92rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); margin: 0.3rem 0 0; }
+.kb-app-row { display: flex; align-items: center; gap: 0.6rem; }
+.kb-app-stack { display: flex; flex-direction: column; }
+.kb-tabnum { font-variant-numeric: tabular-nums; }
+
+/* -------- App frame + shell ----------------------------------------------- */
+.kb-app { background: var(--kb-paper); color: var(--kb-ink); font-family: var(--kb-font-body); }
+
+/* Topbar — WEARS THE PAPER: a sunken warm band, ink text, one hairline below.
+   No colored bar. Sticky. (→ components/app-shell/app-shell.tsx <header>) */
+.kb-topbar { display: flex; align-items: center; gap: 0.85rem; height: var(--kb-app-topbar-h); padding: 0 1.1rem; background: var(--kb-surface-sunken); border-bottom: 1px solid var(--kb-border); }
+.kb-topbar__brand { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+.kb-topbar__brand img { width: 22px; height: 22px; display: block; }
+.kb-topbar__word { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; letter-spacing: -0.01em; color: var(--kb-ink); }
+.kb-topbar__divider { width: 1px; height: 1.3rem; background: var(--kb-border-strong); }
+.kb-topbar__crumb { font-size: 0.86rem; color: var(--kb-secondary); }
+.kb-topbar__crumb b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-topbar__spacer { flex: 1 1 auto; }
+.kb-topbar__user { font-family: var(--kb-font-mono); font-size: var(--kb-text-caption); color: var(--kb-hint); }
+
+/* Layout grid [ rail | main ] */
+.kb-app-layout { display: grid; grid-template-columns: var(--kb-app-rail-w) minmax(0, 1fr); min-height: 30rem; }
+.kb-app-main { padding: 1.6rem 1.7rem 2.2rem; min-width: 0; }
+
+/* Rail nav — reads like a table of contents. Active = teal text + 2px teal
+   left rail + soft-teal wash. (→ components/app-shell/rail-nav.tsx) */
+.kb-rail { background: var(--kb-paper); border-right: 1px solid var(--kb-border); padding: 1.3rem 0.85rem; }
+.kb-rail__head { margin: 0 0.55rem 0.7rem; }
+.kb-rail__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.kb-rail__link { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.48rem 0.6rem; border-radius: var(--kb-radius-sm); border-left: 2px solid transparent; font-size: 0.9rem; color: var(--kb-secondary); text-decoration: none; transition: color var(--kb-ease), background var(--kb-ease), border-color var(--kb-ease); }
+.kb-rail__link:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.kb-rail__link.is-active, .kb-rail__link[aria-current="page"] { color: var(--kb-accent); font-weight: var(--kb-weight-semibold); border-left-color: var(--kb-accent); background: var(--kb-accent-soft); }
+.kb-rail__soon { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.48rem 0.6rem; border-radius: var(--kb-radius-sm); border-left: 2px solid transparent; font-size: 0.9rem; color: var(--kb-hint); }
+.kb-rail__pill { font-family: var(--kb-font-mono); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--kb-hint); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill); padding: 0.12em 0.5em; }
+
+/* -------- Panels (static console sections; chrome, not links) ------------- */
+.kb-panel { background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); padding: 1.2rem 1.3rem; }
+.kb-panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
+.kb-panel__head .kb-app-h2 { font-size: 1.05rem; }
+
+/* -------- Flat console buttons -------------------------------------------- */
+/* Distinct from the marketing pill button — flat, rounded-md, no translate, no
+   glow. Teal reserved for primary / focus only. (→ ui/app-button.tsx) */
+.kb-appbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border: 1px solid transparent; border-radius: var(--kb-radius-sm); font-family: var(--kb-font-body); font-size: 0.85rem; font-weight: var(--kb-weight-semibold); line-height: 1.2; white-space: nowrap; cursor: pointer; text-decoration: none; transition: color var(--kb-ease), background var(--kb-ease), border-color var(--kb-ease); }
+.kb-appbtn:focus-visible { outline: 2px solid var(--kb-accent); outline-offset: 2px; }
+.kb-appbtn--primary { background: var(--kb-accent); color: #fbfaf5; }
+.kb-appbtn--primary:hover { background: var(--kb-accent-strong); }
+.kb-appbtn--secondary { background: var(--kb-surface); border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.kb-appbtn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.kb-appbtn--ghost { background: transparent; border-color: var(--kb-border); color: var(--kb-secondary); }
+.kb-appbtn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.kb-appbtn--danger { background: var(--kb-status-revoked); color: #fbfaf5; }
+.kb-appbtn--danger:hover { filter: brightness(0.93); }
+.kb-appbtn--sm { padding: 0.34rem 0.65rem; font-size: var(--kb-text-caption); }
+[data-md-color-scheme="slate"] .kb-appbtn--primary, [data-md-color-scheme="slate"] .kb-appbtn--danger { color: #16130f; }
+
+/* Mono chip (in-app surface marker) — teal, positive. (→ ui/app-button Tag) */
+.kb-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--kb-font-mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--kb-accent-strong); background: var(--kb-accent-soft); border: 1px solid transparent; border-radius: var(--kb-radius-sm); padding: 0.18em 0.5em; }
+[data-md-color-scheme="slate"] .kb-chip { color: var(--kb-accent); }
+
+/* -------- Stat tiles (DECISION #1 · Fraunces numerals) -------------------- */
+.kb-tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--kb-space-md); }
+.kb-tile { background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); padding: 1rem 1.1rem 1.05rem; }
+.kb-tile__eyebrow { font-family: var(--kb-font-mono); font-size: 0.64rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-hint); }
+.kb-tile__num { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 2.35rem; line-height: 1.02; letter-spacing: -0.02em; color: var(--kb-ink); font-variant-numeric: tabular-nums; margin: 0.35rem 0 0; }
+.kb-tile__delta { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.45rem; font-family: var(--kb-font-mono); font-size: var(--kb-text-caption); color: var(--kb-delta-flat); }
+.kb-tile__delta--up { color: var(--kb-delta-up); }
+.kb-tile__delta--down { color: var(--kb-delta-down); }
+
+/* -------- Usage trend (teal area + faint grid + emphasized endpoint) ------ */
+.kb-trend { width: 100%; display: block; }
+.kb-trend__grid { stroke: var(--kb-trend-grid); stroke-width: 1; }
+.kb-trend__area { stroke: none; }
+.kb-trend__line { fill: none; stroke: var(--kb-trend-line); stroke-width: var(--kb-trend-line-w); stroke-linejoin: round; stroke-linecap: round; }
+.kb-trend__point { fill: var(--kb-trend-point); stroke: var(--kb-surface); stroke-width: 2; }
+.kb-trend__axis { font-family: var(--kb-font-mono); font-size: 10px; fill: var(--kb-hint); }
+
+/* -------- Data table (mono headers · hairline rows · teal hover) ---------- */
+/* (→ ui/data-table.tsx) */
+.kb-dtable { width: 100%; overflow-x: auto; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); background: var(--kb-surface); }
+.kb-dtable table { width: 100%; border-collapse: collapse; }
+.kb-dtable th { text-align: left; padding: 0.6rem 0.9rem; font-family: var(--kb-font-mono); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--kb-secondary); background: var(--kb-surface-sunken); border-bottom: 1px solid var(--kb-border); white-space: nowrap; }
+.kb-dtable td { padding: 0.68rem 0.9rem; font-size: 0.85rem; color: var(--kb-ink); border-bottom: 1px solid var(--kb-border); vertical-align: middle; }
+.kb-dtable tbody tr:last-child td { border-bottom: 0; }
+.kb-dtable tbody tr { transition: background var(--kb-ease); }
+.kb-dtable tbody tr:hover { background: var(--kb-accent-soft); }
+.kb-dtable__name { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-dtable__sub { color: var(--kb-hint); font-size: var(--kb-text-caption); }
+.kb-dtable .num, .kb-dtable .mono { font-family: var(--kb-font-mono); font-variant-numeric: tabular-nums; }
+.kb-dtable .num { text-align: right; }
+.kb-dtable .right { text-align: right; }
+.kb-dtable__empty td { padding: 2.6rem 1rem; text-align: center; color: var(--kb-hint); font-size: 0.9rem; }
+
+/* -------- Status encoding (DECISION #2 · form + color) -------------------- */
+/* active = FILLED teal dot · idle = HOLLOW amber ring · revoked = STRUCK
+   terracotta dot + line-through label. Legible without color (WCAG 1.4.1). */
+.kb-status { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--kb-ink); }
+.kb-status__dot { position: relative; width: var(--kb-status-dot); height: var(--kb-status-dot); border-radius: 50%; flex: none; }
+.kb-status--active .kb-status__dot { background: var(--kb-status-active); }
+.kb-status--idle .kb-status__dot { background: transparent; border: var(--kb-status-ring) solid var(--kb-status-idle); }
+.kb-status--revoked .kb-status__dot { background: var(--kb-status-revoked); }
+.kb-status--revoked .kb-status__dot::after { content: ""; position: absolute; left: -2px; right: -2px; top: 50%; height: 1.5px; background: var(--kb-status-revoked); transform: rotate(-45deg); }
+.kb-status--revoked .kb-status__label { text-decoration: line-through; color: var(--kb-secondary); }
+/* Chip form — soft fill + tinted ink (emphasis, e.g. on a project header) */
+.kb-status--chip { padding: 0.16em 0.6em 0.16em 0.5em; border-radius: var(--kb-radius-pill); font-size: var(--kb-text-caption); }
+.kb-status--chip.kb-status--active { background: var(--kb-status-active-soft); color: var(--kb-status-active-ink); }
+.kb-status--chip.kb-status--idle { background: var(--kb-status-idle-soft); color: var(--kb-status-idle-ink); }
+.kb-status--chip.kb-status--revoked { background: var(--kb-status-revoked-soft); color: var(--kb-status-revoked-ink); }
+.kb-status--chip.kb-status--revoked .kb-status__label { color: var(--kb-status-revoked-ink); }
+
+/* -------- Form fields (→ ui/field.tsx) ------------------------------------ */
+.kb-field { display: block; }
+.kb-field + .kb-field { margin-top: 1rem; }
+.kb-field__label { display: block; font-size: 0.85rem; font-weight: var(--kb-weight-medium); color: var(--kb-ink); margin-bottom: 0.35rem; }
+.kb-field__input { width: 100%; min-height: 2.85rem; padding: 0.6rem 0.8rem; background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); font-family: var(--kb-font-body); font-size: 0.95rem; color: var(--kb-ink); transition: border-color var(--kb-ease), box-shadow var(--kb-ease); }
+.kb-field__input::placeholder { color: var(--kb-hint); }
+.kb-field__input:hover { border-color: var(--kb-secondary); }
+.kb-field__input:focus { outline: none; border-color: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
+.kb-field__input[aria-invalid="true"], .kb-field.is-error .kb-field__input { border-color: var(--kb-status-revoked); }
+.kb-field__input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--kb-status-revoked-soft); }
+.kb-field__hint { margin: 0.35rem 0 0; font-family: var(--kb-font-mono); font-size: var(--kb-text-caption); color: var(--kb-hint); }
+.kb-field__error { margin: 0.35rem 0 0; min-height: 1.1rem; font-size: 0.82rem; color: var(--kb-status-revoked-ink); }
+.kb-check { display: inline-flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; color: var(--kb-secondary); }
+.kb-check input { width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; accent-color: var(--kb-accent); flex: none; }
+
+/* Console search field — flat, teal focus (→ header + documents search) */
+.kb-appsearch { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.5rem 0.75rem; background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); color: var(--kb-hint); transition: border-color var(--kb-ease), box-shadow var(--kb-ease); }
+.kb-appsearch:focus-within { border-color: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
+.kb-appsearch iconify-icon { font-size: 1.05rem; color: var(--kb-hint); }
+.kb-appsearch__input { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent; font-family: var(--kb-font-body); font-size: 0.9rem; color: var(--kb-ink); }
+.kb-appsearch__input::placeholder { color: var(--kb-hint); }
+.kb-appsearch__key { font-family: var(--kb-font-mono); font-size: 0.6rem; color: var(--kb-hint); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); padding: 0.05em 0.35em; }
+
+/* -------- Show-once secret reveal (→ ui/reveal.tsx) ----------------------- */
+.kb-reveal-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.2rem; background: color-mix(in srgb, var(--kb-ink) 42%, transparent); }
+.kb-reveal { width: min(30rem, 100%); background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); padding: 1.4rem 1.4rem 1.2rem; box-shadow: 0 1.4rem 3rem rgba(38, 33, 28, 0.22); }
+.kb-reveal__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.2rem; color: var(--kb-ink); margin: 0; }
+.kb-reveal__warn { display: flex; align-items: flex-start; gap: 0.45rem; margin: 0.6rem 0 0.9rem; font-size: 0.85rem; line-height: var(--kb-leading-snug); color: var(--kb-status-idle-ink); }
+.kb-reveal__warn .kb-status__dot { margin-top: 0.35rem; background: transparent; border: var(--kb-status-ring) solid var(--kb-status-idle); }
+.kb-reveal__key { display: flex; align-items: center; gap: 0.6rem; background: var(--kb-surface-sunken); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm); padding: 0.65rem 0.75rem; }
+.kb-reveal__code { flex: 1 1 auto; min-width: 0; font-family: var(--kb-font-mono); font-size: 0.85rem; color: var(--kb-ink); word-break: break-all; }
+.kb-reveal__actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+/* -------- Small states: toast · skeleton · empty ------------------------- */
+.kb-toast { display: inline-flex; align-items: center; gap: 0.55rem; background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); padding: 0.6rem 0.85rem; font-size: 0.85rem; color: var(--kb-ink); box-shadow: 0 0.6rem 1.4rem rgba(38, 33, 28, 0.12); }
+.kb-toast--success .kb-status__dot { background: var(--kb-status-active); }
+.kb-toast--error .kb-status__dot { background: var(--kb-status-revoked); }
+
+.kb-skel { background: linear-gradient(90deg, var(--kb-surface-sunken) 25%, var(--kb-border) 50%, var(--kb-surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--kb-radius-sm); animation: kb-skel-pulse 1.4s ease-in-out infinite; }
+@keyframes kb-skel-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .kb-skel { animation: none; } }
+
+.kb-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem; padding: 2.6rem 1.5rem; }
+.kb-empty__mark { width: 2.6rem; height: 2.6rem; border: 1.5px solid var(--kb-border-strong); border-radius: 50%; display: grid; place-items: center; color: var(--kb-hint); margin-bottom: 0.3rem; }
+.kb-empty__mark iconify-icon { font-size: 1.3rem; }
+.kb-empty__title { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.1rem; color: var(--kb-ink); margin: 0; }
+.kb-empty__sub { font-size: 0.88rem; color: var(--kb-secondary); max-width: 22rem; margin: 0; }
+
+/* -------- Specimen-only state aliases -------------------------------------
+   Let static cards SHOW hover/focus states that normally need a real pointer /
+   keyboard. Not used in production (the app relies on :hover / :focus). */
+.kb-appbtn.is-hover.kb-appbtn--primary { background: var(--kb-accent-strong); }
+.kb-appbtn.is-hover.kb-appbtn--secondary { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.kb-appbtn.is-hover.kb-appbtn--ghost { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.kb-rail__link.is-hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.kb-dtable tbody tr.is-hover { background: var(--kb-accent-soft); }
+.kb-field__input.is-focus { outline: none; border-color: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
+.kb-appsearch.is-focus { border-color: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }

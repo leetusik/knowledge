@@ -1,0 +1,69 @@
+/* ==========================================================================
+   Knowledge Base — Typography tokens  (Target 2)
+   --------------------------------------------------------------------------
+   "Calm editorial library": a serif DISPLAY face (Fraunces) for headings over
+   a clean SANS body (Source Sans 3), with JetBrains Mono for code. Tuned for
+   long-form reading — generous line-height, a comfortable measure, a restrained
+   heading ladder.
+
+   Webfont budget (respected): 2 text families + 1 code family. Korean is NOT a
+   webfont — every stack ends in a Hangul fallback so mixed EN/KR content
+   ("검색", "창플", "미라클") renders intentionally on readers' system fonts
+   (Apple SD Gothic Neo / Noto Sans KR / Malgun Gothic). The serif display
+   stack falls back to a serif Hangul (Nanum Myeongjo) to stay in character.
+
+   Rem note: values mirror the live site, where mkdocs-material's root is ~20px
+   (so --kb-text-body 0.82rem ≈ 16px, --kb-text-h1 2rem ≈ 40px). Specimen cards
+   set a 20px root so these render at the true on-site size.
+
+   Source-of-truth pattern: --kb-font-* families feed Material's
+   --md-text-font-family / --md-code-font-family (headings use --kb-font-display
+   directly in the content layer). Names are stable once introduced.
+   ========================================================================== */
+
+:root {
+  /* ---- Families (source of truth) — each ends in a Hangul fallback ---- */
+  --kb-font-display: "Fraunces", "Iowan Old Style", Georgia, "Nanum Myeongjo",
+    "Apple SD Gothic Neo", serif;
+  --kb-font-body: "Source Sans 3", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --kb-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", "Apple SD Gothic Neo", monospace;
+
+  /* Map onto mkdocs-material's family variables (fully replace them so the
+     Korean fallback always applies) */
+  --md-text-font-family: var(--kb-font-body);
+  --md-code-font-family: var(--kb-font-mono);
+
+  /* ---- Type scale (rem, on a ~20px root — matches the live site) ---- */
+  --kb-text-h1: 2rem;        /* ~40px — page / article title */
+  --kb-text-h2: 1.45rem;     /* ~29px — section heading (gets a hairline rule) */
+  --kb-text-h3: 1.15rem;     /* ~23px — sub-section */
+  --kb-text-h4: 1rem;        /* ~20px — minor heading */
+  --kb-text-h5: 0.82rem;     /* ~16px — inline heading */
+  --kb-text-h6: 0.72rem;     /* ~14px — small-caps label (uppercase, tracked) */
+  --kb-text-body: 0.82rem;   /* ~16px — long-form body */
+  --kb-text-small: 0.78rem;  /* ~16px — captions, card descriptions */
+  --kb-text-caption: 0.72rem;/* ~14px — metadata, tag text, hints */
+
+  /* ---- Line-heights ---- */
+  --kb-leading-display: 1.15; /* h1 */
+  --kb-leading-heading: 1.25; /* h2–h4 */
+  --kb-leading-snug: 1.4;     /* UI text, cards */
+  --kb-leading-body: 1.72;    /* long-form reading */
+
+  /* ---- Weights (Fraunces + Source Sans 3 share these) ---- */
+  --kb-weight-regular: 400;
+  --kb-weight-medium: 500;
+  --kb-weight-semibold: 600; /* all display headings */
+  --kb-weight-bold: 700;
+
+  /* ---- Letter-spacing ---- */
+  --kb-tracking-display: -0.01em; /* tighten large serif headings */
+  --kb-tracking-body: 0.002em;    /* a hair of air in body text */
+  --kb-tracking-label: 0.08em;    /* uppercase h6 / eyebrow labels */
+
+  /* ---- Measure (reading column width) ---- */
+  --kb-measure: 42rem; /* long-form; keeps lines ~70–80 chars */
+}

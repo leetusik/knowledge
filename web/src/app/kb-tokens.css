@@ -1,0 +1,186 @@
+/*
+ * Knowledge Base design tokens (P12.S2R) — the "calm editorial library" system.
+ * --------------------------------------------------------------------------
+ * Consolidated from the staged design handback under
+ * `web/design/canvas/tokens/{colors,type,shape,app}.css`. Only the `--kb-*`
+ * source-of-truth tokens are kept; the mkdocs-material `--md-*` mappings (and
+ * `--md-hue`) are dropped — this is a Next.js app, not the docs site.
+ *
+ * Font FAMILIES are rebound to the self-hosted `next/font/local` variables
+ * (`src/lib/fonts.ts`: `--font-fraunces` / `--font-source` / `--font-jetbrains`
+ * / `--font-pretendard`) so the `.kb-*` console classes render Fraunces /
+ * Source Sans 3 / JetBrains Mono with a Pretendard Hangul fallback — every stack
+ * ends in a Korean fallback.
+ *
+ * Both schemes always ship and are wired per route (login = dark `slate`, app =
+ * light `default`) via `data-md-color-scheme` on the layout roots:
+ *   [data-md-color-scheme="default"] = light (warm ivory paper, ink text)
+ *   [data-md-color-scheme="slate"]   = dark  (warm charcoal paper, off-white)
+ * `@import`ed from `globals.css`; the app's `@theme` colors point back at these.
+ */
+
+/* --------------------------------------------------------------------------
+   Structure (scheme-independent) — families, type scale, shape, console sizes
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Families (rebound to next/font vars; each ends in a Hangul fallback) -- */
+  --kb-font-display:
+    var(--font-fraunces), "Nanum Myeongjo", var(--font-pretendard), Georgia,
+    serif;
+  --kb-font-body:
+    var(--font-source), var(--font-pretendard), "Apple SD Gothic Neo",
+    "Noto Sans KR", system-ui, sans-serif;
+  --kb-font-mono:
+    var(--font-jetbrains), var(--font-pretendard), ui-monospace, "SF Mono",
+    "Menlo", monospace;
+
+  /* ---- Type scale (rem, on a ~16px web-app root) ---- */
+  --kb-text-h1: 2rem;
+  --kb-text-h2: 1.45rem;
+  --kb-text-h3: 1.15rem;
+  --kb-text-h4: 1rem;
+  --kb-text-h5: 0.82rem;
+  --kb-text-h6: 0.72rem;
+  --kb-text-body: 0.82rem;
+  --kb-text-small: 0.78rem;
+  --kb-text-caption: 0.72rem;
+
+  /* ---- Line-heights ---- */
+  --kb-leading-display: 1.15;
+  --kb-leading-heading: 1.25;
+  --kb-leading-snug: 1.4;
+  --kb-leading-body: 1.72;
+
+  /* ---- Weights (Fraunces + Source Sans 3 share these) ---- */
+  --kb-weight-regular: 400;
+  --kb-weight-medium: 500;
+  --kb-weight-semibold: 600;
+  --kb-weight-bold: 700;
+
+  /* ---- Letter-spacing ---- */
+  --kb-tracking-display: -0.01em;
+  --kb-tracking-body: 0.002em;
+  --kb-tracking-label: 0.08em;
+
+  /* ---- Measure (reading column width) ---- */
+  --kb-measure: 42rem;
+
+  /* ---- Corner radii ---- */
+  --kb-radius: 0.55rem;
+  --kb-radius-sm: 0.35rem;
+  --kb-radius-pill: 2rem;
+
+  /* ---- Spacing rhythm ---- */
+  --kb-space-xs: 0.35rem;
+  --kb-space-sm: 0.6rem;
+  --kb-space-md: 1rem;
+  --kb-space-lg: 1.5rem;
+  --kb-space-xl: 2.4rem;
+  --kb-space-2xl: 4rem;
+
+  /* ---- Motion ---- */
+  --kb-ease: 0.15s ease;
+
+  /* ---- Elevation — the one shadow in the system ---- */
+  --kb-shadow-hover: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.1);
+
+  /* ---- Console structure (P12 authenticated app) ---- */
+  --kb-app-rail-w: 15rem;
+  --kb-app-topbar-h: 3.5rem;
+  --kb-status-dot: 0.5rem;
+  --kb-status-ring: 1.5px;
+  --kb-trend-line-w: 2px;
+  --kb-trend-point-r: 3.5px;
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — warm ivory paper, ink text
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  /* ---- Reading-room palette (source of truth) ---- */
+  --kb-paper: #f6f2e8;
+  --kb-surface: #fffefa;
+  --kb-surface-sunken: #efe9db;
+  --kb-border: #e5dcc8;
+  --kb-border-strong: #d8ccb3;
+  --kb-accent: #0f6f66;
+  --kb-accent-strong: #0a544e;
+  --kb-accent-soft: rgba(15, 111, 102, 0.15);
+  --kb-tag-bg: #eaf0ec;
+  --kb-tag-fg: #2c5b52;
+
+  --kb-ink: #26211c;
+  --kb-secondary: #5c5347;
+  --kb-hint: #8f8676;
+
+  /* ---- Status (dots / chips only) ---- */
+  --kb-status-active: #0f6f66;
+  --kb-status-active-soft: rgba(15, 111, 102, 0.12);
+  --kb-status-active-ink: #0a544e;
+
+  --kb-status-idle: #8a6a2a;
+  --kb-status-idle-soft: #efe6d2;
+  --kb-status-idle-ink: #6b5220;
+
+  --kb-status-revoked: #a8503f;
+  --kb-status-revoked-soft: #f1e1db;
+  --kb-status-revoked-ink: #8f4030;
+
+  /* ---- Usage trend (teal) ---- */
+  --kb-trend-line: var(--kb-accent);
+  --kb-trend-point: var(--kb-accent-strong);
+  --kb-trend-fill-from: rgba(15, 111, 102, 0.16);
+  --kb-trend-fill-to: rgba(15, 111, 102, 0);
+  --kb-trend-grid: var(--kb-border);
+
+  /* ---- Deltas ---- */
+  --kb-delta-up: var(--kb-accent);
+  --kb-delta-down: #a8503f;
+  --kb-delta-flat: var(--kb-hint);
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — warm charcoal paper, warm off-white text
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  /* ---- Reading-room palette (source of truth) ---- */
+  --kb-paper: #1a1815;
+  --kb-surface: #232019;
+  --kb-surface-sunken: #2a261e;
+  --kb-border: #38332a;
+  --kb-border-strong: #453f34;
+  --kb-accent: #62bdb2;
+  --kb-accent-strong: #86d4ca;
+  --kb-accent-soft: rgba(98, 189, 178, 0.2);
+  --kb-tag-bg: #24302b;
+  --kb-tag-fg: #97d2c7;
+
+  --kb-ink: #ece4d7;
+  --kb-secondary: #b6ad9d;
+  --kb-hint: #7e7566;
+
+  /* ---- Status ---- */
+  --kb-status-active: #62bdb2;
+  --kb-status-active-soft: rgba(98, 189, 178, 0.18);
+  --kb-status-active-ink: #86d4ca;
+
+  --kb-status-idle: #c8a15e;
+  --kb-status-idle-soft: rgba(200, 161, 94, 0.16);
+  --kb-status-idle-ink: #d8b673;
+
+  --kb-status-revoked: #d68a76;
+  --kb-status-revoked-soft: rgba(214, 138, 118, 0.16);
+  --kb-status-revoked-ink: #e0a08e;
+
+  /* ---- Usage trend ---- */
+  --kb-trend-line: var(--kb-accent);
+  --kb-trend-point: var(--kb-accent-strong);
+  --kb-trend-fill-from: rgba(98, 189, 178, 0.22);
+  --kb-trend-fill-to: rgba(98, 189, 178, 0);
+  --kb-trend-grid: var(--kb-border);
+
+  /* ---- Deltas ---- */
+  --kb-delta-up: var(--kb-accent);
+  --kb-delta-down: #d68a76;
+  --kb-delta-flat: var(--kb-hint);
+}

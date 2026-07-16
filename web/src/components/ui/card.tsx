@@ -5,23 +5,32 @@ import { cn } from "@/lib/utils";
 
 /**
  * Surface card. Renders a `<div>`; children-only — the caller supplies the inner
- * heading/body structure. Shadow rgba values are the real brand ink/green ones;
- * the one-off `archive` border (`#E5E1B8`) has no design token.
+ * heading/body structure. Re-skinned to the Knowledge Base console (P12.S2R): the
+ * app-used surfaces map to the console `.kb-panel` (static section) / `.kb-tile`
+ * (stat tile). The remaining marketing/legacy variants are rebuilt from `--kb-*`
+ * tokens (warm surfaces, hairline borders, `--kb-radius`, the one soft shadow) —
+ * no hardcoded hex, no dark-green plate; they auto-recolor per scheme.
  */
 export const cardVariants = cva("", {
   variants: {
     variant: {
-      base: "rounded-lg border border-hairline bg-canvas p-6",
-      feature:
-        "rounded-xl border border-hairline bg-canvas p-7 shadow-[0_12px_32px_-18px_rgba(6,21,18,0.16)]",
-      featureMuted: "rounded-xl border border-hairline-soft bg-surface p-6",
-      dark: "rounded-xl border border-hairline-dark bg-forest p-8 text-on-dark",
-      archive: "rounded-xl border border-[#E5E1B8] bg-surface-archive p-8",
-      security: "rounded-xl border border-hairline bg-surface-security p-8",
+      /* Console surfaces (the apply-map targets) */
+      panel: "kb-panel",
+      tile: "kb-tile",
+      /* Generic surface (alias of panel) + marketing/legacy, token-repointed */
+      base: "kb-panel",
+      feature: "kb-panel shadow-[var(--kb-shadow-hover)]",
+      featureMuted:
+        "rounded-[var(--kb-radius)] border border-[var(--kb-border)] bg-[var(--kb-surface-sunken)] p-6",
+      dark: "rounded-[var(--kb-radius)] border border-[var(--kb-border)] bg-[var(--kb-surface-sunken)] p-8",
+      archive:
+        "rounded-[var(--kb-radius)] border border-[var(--kb-border)] bg-[var(--kb-surface-sunken)] p-8",
+      security:
+        "rounded-[var(--kb-radius)] border border-[var(--kb-border)] bg-[var(--kb-surface)] p-8",
       pricing:
-        "rounded-xl border border-hairline bg-canvas p-8 shadow-[0_14px_38px_-22px_rgba(6,21,18,0.18)]",
+        "rounded-[var(--kb-radius)] border border-[var(--kb-border)] bg-[var(--kb-surface)] p-8 shadow-[var(--kb-shadow-hover)]",
       pricingFeatured:
-        "rounded-xl border border-[rgba(0,182,106,0.55)] bg-canvas p-8 shadow-[0_26px_60px_-22px_rgba(0,182,106,0.40)]",
+        "rounded-[var(--kb-radius)] border border-[var(--kb-accent)] bg-[var(--kb-surface)] p-8 shadow-[var(--kb-shadow-hover)]",
     },
   },
   defaultVariants: {

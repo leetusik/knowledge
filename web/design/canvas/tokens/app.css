@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Knowledge Base — Console tokens  (P12 · Authenticated web app)
+   --------------------------------------------------------------------------
+   Additive tokens for the signed-in CONSOLE (dashboard, projects, credentials,
+   documents). --kb-status-* / --kb-trend-* / --kb-delta-* ONLY — no existing
+   token is touched (Target-1 colors stay LOCKED). The console reuses the whole
+   --kb-* reading-room palette (paper, surface, border, ink, accent, radii,
+   spacing, motion, fonts) verbatim; this file adds only what a DASHBOARD needs
+   that a reading room never did: state encoding and a usage trend.
+
+   ── DECISION #2 · status colors (open call in the design brief) ────────────
+   The system is teal-only for UI, but a dashboard must encode STATE, and state
+   is information design, not decoration. Rather than force active/idle/revoked
+   into teal-only (where idle and active collapse into the same neutral), the
+   console adopts a SMALL RESTRAINED SEMANTIC SET — exactly the precedent the
+   graph already set with its "project inks" (a muted categorical set scoped to
+   data-viz surfaces only, README → P6 Graph). Here:
+
+     active  = teal   (the accent hue — "live / good"; the one color already
+                       licensed to mean "on")
+     idle    = amber-bronze (dormant / not-yet-used — reuses the graph's bronze)
+     revoked = terracotta   (struck / dead)
+
+   These tones appear ONLY as small status dots + chips (never as surfaces,
+   buttons, links, or focus). Every interactive accent — primary buttons, active
+   nav, focus rings, hover, links — stays teal, so the one-accent rule is intact
+   wherever it was ever a UI signal. And state is encoded in FORM too, never in
+   color alone: active = FILLED dot, idle = HOLLOW ring, revoked = STRUCK dot +
+   line-through label — legible in greyscale (WCAG 1.4.1).
+
+   ── DECISION #1 · stat-tile numerals = SERIF (Fraunces) ────────────────────
+   The headline figures render in Fraunces (the editorial signature) with
+   tabular-nums, so the dashboard reads as "this product," not a stock SaaS
+   dashboard. Mono (JetBrains) carries the instrument texture — deltas, units,
+   table figures, timestamps, tokens. No new token needed (families exist); the
+   choice lives in the console layer + the foundations specimen.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Structure (scheme-independent) — sizes the console layer reads
+   -------------------------------------------------------------------------- */
+:root {
+  --kb-app-rail-w: 15rem;            /* left rail nav width */
+  --kb-app-topbar-h: 3.5rem;         /* sticky topbar height */
+  --kb-status-dot: 0.5rem;           /* status dot / ring diameter */
+  --kb-status-ring: 1.5px;           /* hollow (idle) ring width */
+  --kb-trend-line-w: 2px;            /* usage trend stroke width */
+  --kb-trend-point-r: 3.5px;         /* emphasized endpoint radius */
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — status + trend inks on ivory
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  /* ---- Status (dots / chips only — see header) ---- */
+  --kb-status-active: #0f6f66;            /* teal (= --kb-accent) · filled dot */
+  --kb-status-active-soft: rgba(15, 111, 102, 0.12); /* chip fill */
+  --kb-status-active-ink: #0a544e;        /* chip text · 6.8:1 on the soft fill */
+
+  --kb-status-idle: #8a6a2a;              /* amber-bronze (= graph bronze) · hollow ring */
+  --kb-status-idle-soft: #efe6d2;         /* warm amber chip fill */
+  --kb-status-idle-ink: #6b5220;          /* chip text · 5.2:1 */
+
+  --kb-status-revoked: #a8503f;           /* muted terracotta · struck dot */
+  --kb-status-revoked-soft: #f1e1db;      /* warm terracotta chip fill */
+  --kb-status-revoked-ink: #8f4030;       /* chip text · 5.0:1 */
+
+  /* ---- Usage trend (teal only — it's a UI accent surface) ---- */
+  --kb-trend-line: var(--kb-accent);
+  --kb-trend-point: var(--kb-accent-strong);
+  --kb-trend-fill-from: rgba(15, 111, 102, 0.16); /* area gradient top */
+  --kb-trend-fill-to: rgba(15, 111, 102, 0.00);   /* area gradient baseline */
+  --kb-trend-grid: var(--kb-border);              /* faint hairline gridlines */
+
+  /* ---- Deltas (stat-tile change) ---- */
+  --kb-delta-up: var(--kb-accent);        /* positive = teal */
+  --kb-delta-down: #a8503f;               /* negative = terracotta (= revoked) */
+  --kb-delta-flat: var(--kb-hint);        /* no change = hint */
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — status + trend inks on warm charcoal
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  /* ---- Status ---- */
+  --kb-status-active: #62bdb2;            /* teal (= --kb-accent dark) */
+  --kb-status-active-soft: rgba(98, 189, 178, 0.18);
+  --kb-status-active-ink: #86d4ca;
+
+  --kb-status-idle: #c8a15e;              /* bronze (= graph bronze dark) */
+  --kb-status-idle-soft: rgba(200, 161, 94, 0.16);
+  --kb-status-idle-ink: #d8b673;
+
+  --kb-status-revoked: #d68a76;           /* lighter terracotta for the dark plate */
+  --kb-status-revoked-soft: rgba(214, 138, 118, 0.16);
+  --kb-status-revoked-ink: #e0a08e;
+
+  /* ---- Usage trend ---- */
+  --kb-trend-line: var(--kb-accent);
+  --kb-trend-point: var(--kb-accent-strong);
+  --kb-trend-fill-from: rgba(98, 189, 178, 0.22);
+  --kb-trend-fill-to: rgba(98, 189, 178, 0.00);
+  --kb-trend-grid: var(--kb-border);
+
+  /* ---- Deltas ---- */
+  --kb-delta-up: var(--kb-accent);
+  --kb-delta-down: #d68a76;
+  --kb-delta-flat: var(--kb-hint);
+}

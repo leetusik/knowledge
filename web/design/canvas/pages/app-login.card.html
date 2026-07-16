@@ -1,0 +1,48 @@
+<!-- @dsCard group="Console Pages" viewport="1100x740" name="Sign in — dark threshold" subtitle="DECISION #3 · the quiet threshold: login commits to the dark slate scheme (secure gate), then the app opens light — hi2vi's dark-gate→light-console rhythm in our palette" -->
+<!DOCTYPE html>
+<html data-md-color-scheme="slate">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  html { font-size: 100%; } * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2.5rem 1.2rem; background: var(--kb-paper); color: var(--kb-ink); font-family: var(--kb-font-body); }
+  .gate { width: min(25rem, 100%); }
+  .card { background: linear-gradient(180deg, #26221b, #1f1c16); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); padding: 1.6rem 1.6rem 1.3rem; box-shadow: 0 2rem 4rem rgba(0,0,0,.5), inset 0 1px 0 rgba(236,228,215,.06); }
+  .brandrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .brand { display: inline-flex; align-items: center; gap: .5rem; }
+  .brand img { width: 24px; height: 24px; }
+  .brand span { font-family: var(--kb-font-display); font-weight: 600; font-size: 1.35rem; color: var(--kb-ink); }
+  .secure { display: inline-flex; align-items: center; gap: .4rem; font-family: var(--kb-font-mono); font-size: .56rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--kb-accent); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-pill); padding: .3em .6em; }
+  .secure i { width: 6px; height: 6px; border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
+  .lead { font-family: var(--kb-font-display); font-weight: 600; font-size: 1.35rem; margin: 0 0 .2rem; color: var(--kb-ink); }
+  .sub { font-size: .88rem; color: var(--kb-secondary); margin: 0 0 1.3rem; }
+  .trust { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem 1.1rem; margin-top: 1.3rem; padding-top: 1rem; border-top: 1px solid var(--kb-border); }
+  .trust span { display: inline-flex; align-items: center; gap: .4rem; font-family: var(--kb-font-mono); font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; color: var(--kb-hint); }
+  .trust i { width: 5px; height: 5px; border-radius: 50%; background: var(--kb-accent); }
+  .alt { text-align: center; font-size: .88rem; color: var(--kb-secondary); margin-top: 1.3rem; }
+  .alt a { color: var(--kb-accent); font-weight: 600; text-decoration: none; }
+  .alt a:hover { text-decoration: underline; }
+  .note { text-align: center; font-family: var(--kb-font-mono); font-size: .6rem; letter-spacing: .04em; text-transform: uppercase; color: var(--kb-hint); margin-top: 2rem; }
+  .note b { color: var(--kb-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="gate">
+    <div class="card">
+      <div class="brandrow">
+        <span class="brand"><img src="../assets/logo.svg" alt=""><span>knowledge</span></span>
+        <span class="secure"><i></i>Secure</span>
+      </div>
+      <h1 class="lead">Sign in</h1>
+      <p class="sub">Access your workspace, projects, documents, and usage.</p>
+      <div class="kb-field"><label class="kb-field__label" for="em">Email</label><input class="kb-field__input" id="em" type="email" placeholder="you@example.com" value="sohee@changple.kr"></div>
+      <div class="kb-field"><label class="kb-field__label" for="pw">Password</label><input class="kb-field__input is-focus" id="pw" type="password" value="············"></div>
+      <button class="kb-appbtn kb-appbtn--primary" style="width:100%;margin-top:1.2rem">Sign in</button>
+      <div class="trust"><span><i></i>Signed session</span><span><i></i>SameSite=Strict</span><span><i></i>Noindex</span></div>
+    </div>
+    <p class="alt">No account yet? <a href="#">Create one</a></p>
+    <p class="note">The threshold is dark — the workspace opens <b>light</b>.</p>
+  </div>
+</body>
+</html>

@@ -15,14 +15,13 @@ export const SITE: SiteMeta = {
 };
 
 /**
- * Wordmark split into three parts so the middle `accent` glyph renders in signal
- * green (the brand mark), matching hi2vi_web's operator wordmark treatment (which
- * accents its `2`). knowledge has no digit, so the leading `k` is the mark —
- * "knowledge" with a green initial. The dark login gate accents in `text-green`;
- * the light app-shell topbar accents in `text-green-deep` (readable on white).
+ * Brand mark for the Knowledge Base design system: the book-spark logo (teal
+ * `logo.svg`, self-hosted under `/public`) beside the lowercase "knowledge"
+ * wordmark set in the display serif (Fraunces). No colored initial — the mark
+ * carries the identity, the wordmark stays ink. Used by the app-shell topbar
+ * (light) and the login gate brand row (dark); both serve `logo` from the app.
  */
 export const BRAND = {
-  prefix: "",
-  accent: "k",
-  suffix: "nowledge",
+  wordmark: "knowledge",
+  logo: "/logo.svg",
 } as const;

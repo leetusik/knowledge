@@ -1,0 +1,95 @@
+<!-- @dsCard group="Console Pages" viewport="1280x940" name="Dashboard — light" subtitle="Post-login home: usage stat tiles (serif figures) + 30-day trend + projects table + recent activity — the editorial dashboard, light scheme" -->
+<!DOCTYPE html>
+<html data-md-color-scheme="default">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<script src="../components/console/console-trend.js" defer></script>
+<style>
+  html { font-size: 100%; } * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--kb-font-body); background: var(--kb-paper); }
+  .mainhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.3rem; }
+  .grid2 { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); gap: var(--kb-space-md); margin-top: var(--kb-space-md); }
+  .trendhead { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .3rem; }
+  .trendcap { font-family: var(--kb-font-mono); font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; color: var(--kb-hint); }
+  .kb-trend-wrap { display: block; height: 120px; margin-top: .3rem; }
+  .act { list-style: none; margin: 0; padding: 0; }
+  .act li { display: flex; align-items: baseline; gap: .6rem; padding: .55rem 0; border-bottom: 1px solid var(--kb-border); font-size: .85rem; }
+  .act li:last-child { border-bottom: 0; }
+  .act__t { flex: none; width: 4.6rem; font-family: var(--kb-font-mono); font-size: .68rem; color: var(--kb-hint); }
+  .act__b { color: var(--kb-secondary); }
+  .act__b b { color: var(--kb-ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="kb-app">
+  <header class="kb-topbar">
+    <a class="kb-topbar__brand" href="#"><img src="../assets/logo.svg" alt=""><span class="kb-topbar__word">knowledge</span></a>
+    <span class="kb-topbar__divider"></span>
+    <span class="kb-topbar__crumb">Workspace <b>창플</b></span>
+    <span class="kb-topbar__spacer"></span>
+    <span class="kb-topbar__user">sohee@changple.kr</span>
+    <a class="kb-appbtn kb-appbtn--ghost kb-appbtn--sm" href="#">Sign out</a>
+  </header>
+  <div class="kb-app-layout">
+    <aside class="kb-rail">
+      <div class="kb-rail__head kb-app-eyebrow">Workspace</div>
+      <ul class="kb-rail__list">
+        <li><a class="kb-rail__link is-active" href="#" aria-current="page">Dashboard</a></li>
+        <li><span class="kb-rail__soon">Documents <span class="kb-rail__pill">Soon</span></span></li>
+        <li><span class="kb-rail__soon">Graph <span class="kb-rail__pill">Soon</span></span></li>
+      </ul>
+    </aside>
+    <main class="kb-app-main">
+      <div class="mainhead">
+        <div>
+          <div class="kb-app-eyebrow">창플 · Workspace</div>
+          <h1 class="kb-app-title" style="margin-top:.35rem">Dashboard</h1>
+          <p class="kb-app-sub">Usage across your workspace over the last 30 days.</p>
+        </div>
+        <button class="kb-appbtn kb-appbtn--primary"><iconify-icon icon="mdi:plus"></iconify-icon>New project</button>
+      </div>
+
+      <div class="kb-tile-grid">
+        <div class="kb-tile"><div class="kb-tile__eyebrow">Documents created</div><div class="kb-tile__num">1,284</div><span class="kb-tile__delta kb-tile__delta--up">↑ +42 this month</span></div>
+        <div class="kb-tile"><div class="kb-tile__eyebrow">Searches</div><div class="kb-tile__num">3,970</div><span class="kb-tile__delta kb-tile__delta--up">↑ +311 this month</span></div>
+        <div class="kb-tile"><div class="kb-tile__eyebrow">Deleted</div><div class="kb-tile__num">128</div><span class="kb-tile__delta">± +6 this month</span></div>
+        <div class="kb-tile"><div class="kb-tile__eyebrow">Active total</div><div class="kb-tile__num">1,156</div><span class="kb-tile__delta kb-tile__delta--up">↑ +36 this month</span></div>
+      </div>
+
+      <div class="kb-panel" style="margin-top:var(--kb-space-md)">
+        <div class="trendhead"><h2 class="kb-app-h2" style="font-size:1rem">Searches · last 30 days</h2><span class="trendcap">3,970 total · peak 311/day</span></div>
+        <figure class="kb-trend-wrap" data-series="[88,102,96,110,120,105,130,142,118,150,160,138,170,182,165,190,205,188,210,225,200,232,245,220,255,270,248,282,300,311]"></figure>
+      </div>
+
+      <div class="grid2">
+        <div class="kb-panel">
+          <div class="kb-panel__head"><h2 class="kb-app-h2">Projects</h2><a class="kb-appbtn kb-appbtn--secondary kb-appbtn--sm" href="#">View all</a></div>
+          <div class="kb-dtable">
+            <table>
+              <thead><tr><th>Project</th><th class="right">Docs</th><th class="right">Keys</th><th>Created</th><th>Last used</th><th class="right">Action</th></tr></thead>
+              <tbody>
+                <tr><td class="kb-dtable__name">changple <span class="kb-chip" style="margin-left:.3rem">창플</span></td><td class="num">642</td><td class="num">3</td><td class="mono">2026-03-12</td><td class="mono">2h ago</td><td class="right"><a class="kb-appbtn kb-appbtn--ghost kb-appbtn--sm" href="#">Open</a></td></tr>
+                <tr><td class="kb-dtable__name">hi2vi_web</td><td class="num">318</td><td class="num">2</td><td class="mono">2026-02-01</td><td class="mono">1d ago</td><td class="right"><a class="kb-appbtn kb-appbtn--ghost kb-appbtn--sm" href="#">Open</a></td></tr>
+                <tr><td class="kb-dtable__name">docs</td><td class="num">196</td><td class="num">1</td><td class="mono">2026-05-30</td><td class="mono">3d ago</td><td class="right"><a class="kb-appbtn kb-appbtn--ghost kb-appbtn--sm" href="#">Open</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="kb-panel">
+          <div class="kb-panel__head"><h2 class="kb-app-h2">Recent activity</h2></div>
+          <ul class="act">
+            <li><span class="act__t">2h ago</span><span class="act__b">Key minted · <b>production</b></span></li>
+            <li><span class="act__t">5h ago</span><span class="act__b"><b>42</b> documents indexed · changple</span></li>
+            <li><span class="act__t">어제</span><span class="act__b">Search volume <b>+18%</b> · 창플</span></li>
+            <li><span class="act__t">2d ago</span><span class="act__b">Key revoked · old-laptop</span></li>
+            <li><span class="act__t">3d ago</span><span class="act__b">Project created · <b>docs</b></span></li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

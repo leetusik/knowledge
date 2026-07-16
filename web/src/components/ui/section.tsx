@@ -23,7 +23,6 @@ export const sectionVariants = cva("py-section md:py-section-lg", {
       security: "bg-surface-security text-ink",
       archive: "bg-surface-archive text-ink",
       ink: "bg-ink text-on-dark",
-      forest: "bg-forest text-on-dark",
     },
   },
   defaultVariants: {

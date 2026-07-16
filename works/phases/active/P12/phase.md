@@ -141,6 +141,31 @@ Verified `2026-07-16`: all endpoint shapes, the documents-not-on-`/app/*` fact, 
 
 **Status: phase `pending` — waiting on the operator's design brief.** The `do-whole-phase` loop is halted here by design; it resumes (re-skin, then S3–S6) once the brief returns and the operator clears `pending` → `in_progress`.
 
+### Cross-slice notes (S2R — Re-skin to the Knowledge Base design system)
+
+**FINAL app design = the Knowledge Base "calm editorial library" design system.** The brief returned and is applied. **This supersedes the S1 "adopt hi2vi_web green wholesale" note** (bright `#2ff28f`/`#00b66a` on near-black-green): hi2vi contributes **structure/vibe only** (paper topbar + TOC rail + stat tiles + data tables + status encoding), **not** its palette. The whole `--color-green*` ramp now collapses to the single **deep-teal accent**. Both themes ship, token-driven.
+
+**Now available to S3–S6 (build on these — do not re-derive Tailwind strings):**
+- **`--kb-*` tokens for both schemes** (`src/app/kb-tokens.css`): paper/surface/surface-sunken/border/border-strong, the teal `--kb-accent`/`-strong`/`-soft`, ink/secondary/hint, the type scale + weights/tracking/leading, radii/spacing/motion/`--kb-shadow-hover`, the console structure sizes, and the additive **status/trend/delta** inks (active=teal · idle=amber-bronze · revoked=terracotta, encoded in FORM for greyscale; trend = teal; deltas up=teal/down=terracotta).
+- **The portable `.kb-*` console classes** (`src/app/kb-console.css`, adopted from `console.css`): `.kb-app`/`.kb-topbar`/`.kb-app-layout`/`.kb-rail*`, `.kb-panel`, `.kb-appbtn--{primary,secondary,ghost,danger}`(+`--sm`)/`.kb-chip`, `.kb-tile-grid`/`.kb-tile`(+ Fraunces `.kb-tile__num`, `.kb-tile__delta--up/down`), `.kb-trend__*` (drawing spec in `web/design/canvas/components/console/console-trend.js`, for S3's TrendChart), `.kb-dtable` (+ `.num`/`.mono`/`.right`/`.kb-dtable__name`/`.kb-dtable__empty`), `.kb-status--{active,idle,revoked}` (+`--chip`), `.kb-field*`/`.kb-check`/`.kb-appsearch` (console search — S5), `.kb-reveal*` (show-once secret modal — **S4** credential mint), `.kb-toast`/`.kb-skel`/`.kb-empty`.
+- Both stylesheets are `@import`ed from `globals.css`; the app's `@theme --color-*` is **repointed at `--kb-*`** (auto-recolor safety net for any utility not explicitly rewritten). NOTE: `.kb-*` CSS is **unlayered**, so it wins over Tailwind's layered utilities — override a `.kb-*` property with an inline `style`, not a Tailwind class.
+
+**Scheme wiring (decision ③ — dark login, light app):** `<html>` base = `data-md-color-scheme="default"`; `(auth)` stage overrides to `="slate"` (the dark gate); the `(app)` shell carries `="default"` on its `.kb-app` root. Per-scheme values come free because `@theme` points at `--kb-*` and the tokens are defined per `data-md-color-scheme` block — resolved at the element, not the declaration.
+
+**Icons: `lucide-react`** (already a dependency), **not** the specimens' iconify CDN; the console `svg` selectors are wired for it. This slice's surfaces need no icons; S3–S6 use lucide where icons are called for.
+
+**Fonts:** self-hosted via `next/font/local` — **Fraunces** (`--font-fraunces` → display/headings + stat numerals) + **Source Sans 3** (`--font-source` → body) in; **Inter out** (`InterVariable.woff2` deleted, `--font-en` folded into the Source stack); JetBrains (mono) + **full Pretendard** kept as the Korean fallback ending every stack. Vendored: `web/public/fonts/{Fraunces,SourceSans3}.woff2`; brand `web/public/{logo,favicon}.svg`.
+
+**KB design mirror:** `web/design/canvas/` now holds the KB handback (`APP_BRIEF.md` apply-map, `tokens/`, `components/console/`, `pages/`, `assets/`) — the source of truth the re-skin adopted, replacing S1's hi2vi placeholder canvas.
+
+**Scope held:** tokens + component styling + fonts only, **no functional change** — auth BFF/guards/session/routes/content copy untouched; the 36 lib-level vitest tests pass unchanged. `ui/reveal.tsx` (scroll-reveal) had no colors → left as-is. `ui/button.tsx` (marketing pill, app-unused, P14) rides the repoint; its one hardcoded hi2vi-green **glow shadow** (which the repoint can't reach) was retuned to the KB `--kb-shadow-hover` token so zero hi2vi green remains in source or compiled CSS (see `result.md` deviation 1). `ui/section.tsx`'s `forest` tone was removed for the zero-`forest` verification (deviation 2).
+
+### Doc impact (S2R)
+
+- `frontend.md` — **the KB design system replaces the hi2vi_web green placeholder**: Tailwind v4 `@theme` repointed at the per-scheme `--kb-*` tokens (teal accent; both schemes), the `.kb-*` console layer (`kb-tokens.css` + `kb-console.css`) adopted from the design handback, self-hosted Fraunces + Source Sans 3 + JetBrains Mono (+ Pretendard Hangul fallback), and the per-route scheme (dark `slate` login gate → light `default` console). The app-shell/auth/`AppButton`/status/field components now compose on `.kb-*`; the marketing pill `Button` stays P14-reserved.
+- `decisions.md` — **D-P12-3 FINAL: app design = the Knowledge Base design system** (the S1 "adopt hi2vi green" half of the D-P12-3 revision is itself superseded; hi2vi = structure/vibe only). The "deploy in P14" half still stands.
+- `experience.md` — the dark "quiet threshold" login/signup gate → the light editorial workspace console (topbar + teal-active rail + Fraunces titles); status encoded in form (active/idle/revoked) for greyscale legibility.
+
 ## Constraints
 
 - **Surface discipline:** the app is a **session-token client of `/auth/*` + `/app/*` only** — never the `vk_`-keyed `/api/*` machine surface from its own auth flow. (S5 may deliberately choose the metered `/api/*` for documents/search with a session bearer as a fallback — that is a slice-turn decision, and the preferred path is new unmetered `/app` read routes.)
@@ -175,3 +200,4 @@ Running list of durable-truth changes for **P12.REVIEW** to consolidate into new
 _(Slices append their own Doc-impact lines here as they complete.)_
 
 - **S2** → `frontend.md` (BFF + sealed-cookie session + `lib/knowledge/*` client seam + auth-guards/pipeline + app-shell: dark login gate / light console / flat `AppButton`, marketing pill reserved for P14); `architecture.md` (sealed AES-256-GCM httpOnly-cookie server-side BFF, no CORS/no web-DB); `experience.md` (signup/login/logout + Dashboard-live / Documents-Graph-"Soon" nav); `decisions.md` (D-P12-2 as built); `operations.md` (server-only `KB_API_BASE_URL` `:8766` + `SESSION_SECRET`, via `.env.example`).
+- **S2R** → `frontend.md` (**KB design system replaces the hi2vi green placeholder**: `@theme` repointed at per-scheme `--kb-*` tokens + the `.kb-*` console layer adopted from the design handback + self-hosted Fraunces/Source Sans 3/JetBrains/Pretendard + per-route dark-login/light-console scheme); `decisions.md` (**D-P12-3 final**: app design = Knowledge Base design system, hi2vi = structure/vibe only; the S1 "adopt hi2vi green" note superseded; "deploy in P14" still stands); `experience.md` (dark "quiet threshold" gate → light editorial workspace console; status encoded in form for greyscale). _(This supersedes the S1 Doc-impact "adopted hi2vi_web brand green" line above — the review consolidates `frontend.md`/`decisions.md` to the final KB system.)_
