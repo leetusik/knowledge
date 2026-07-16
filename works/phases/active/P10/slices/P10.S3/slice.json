@@ -3,14 +3,14 @@
   "phase_id": "P10",
   "name": "Control plane /app/*: tenant-scoped projects + vk_ credentials",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P10.S2"
   ],
   "created_at": "2026-07-16T14:57:43+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-16T16:15:11+09:00",
+  "completed_at": "2026-07-16T16:21:42+09:00",
   "risk": "medium",
   "source": {
     "type": "manual",

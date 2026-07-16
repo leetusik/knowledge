@@ -23,6 +23,7 @@ from typing import Optional
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from server import app_api
 from server import auth_api
 from server import config, db
 from server import documents as documents_mod
@@ -62,6 +63,11 @@ app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
 # Mounted outside /api/* so the content-plane bearer guards never touch it.
 app.include_router(auth_api.router)
 app.add_exception_handler(AuthError, auth_error_handler)
+
+# Control-plane app surface: the /app/* routes (tenant, projects, and per-project
+# vk_ credentials), all require_user-guarded and scoped to the caller's tenant.
+# Reuses the same AuthError handler above (no new wiring needed).
+app.include_router(app_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
