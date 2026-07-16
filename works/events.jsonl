@@ -361,3 +361,11 @@
 {"ts": "2026-07-16T21:40:06+09:00", "type": "slice_status_changed", "slice": "P11.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-16T21:40:06+09:00", "type": "phase_reviewed", "phase": "P11", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-07-16T21:41:02+09:00", "type": "phase_created", "phase": "P15"}
+{"ts": "2026-07-16T22:14:39+09:00", "type": "slice_status_changed", "slice": "P12.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S1"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S2"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S3"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S4"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S5"}
+{"ts": "2026-07-16T22:15:51+09:00", "type": "slice_created", "phase": "P12", "slice": "P12.S6"}
+{"ts": "2026-07-16T22:19:10+09:00", "type": "slice_status_changed", "slice": "P12.DECOMP", "old_status": "in_progress", "new_status": "done"}
