@@ -140,6 +140,30 @@ class AccountsRepository:
         models = (await self._session.execute(statement)).scalars().all()
         return tuple(self._to_project_record(model) for model in models)
 
+    async def get_project_by_name(
+        self,
+        tenant_id: UUID,
+        name: str,
+    ) -> ProjectRecord | None:
+        """Return a tenant's project by name, or None when missing.
+
+        Names are not unique per tenant, so this is oldest-wins (deterministic):
+        the earliest-created match. Used by P11 metering to attribute a write /
+        search to the caller's project by the operation's project name.
+        """
+
+        statement = (
+            select(ProjectModel)
+            .where(
+                ProjectModel.tenant_id == tenant_id,
+                ProjectModel.name == name,
+            )
+            .order_by(ProjectModel.created_at, ProjectModel.id)
+            .limit(1)
+        )
+        model = (await self._session.execute(statement)).scalars().first()
+        return self._to_project_record(model) if model is not None else None
+
     # -- credentials ------------------------------------------------------
 
     async def create_project_credential(

@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from server import app_api
@@ -40,6 +40,12 @@ from server.api_auth import (
     resolve_api_write,
 )
 from server.persistence.engine import dispose_engine
+from server.usage import (
+    EVENT_DOCUMENT_CREATED,
+    EVENT_DOCUMENT_DELETED,
+    EVENT_SEARCH,
+)
+from server.usage.metering import UsageHint, record_usage
 
 
 @asynccontextmanager
@@ -68,6 +74,33 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def usage_metering(request: Request, call_next):
+    """Best-effort per-tenant metering (P11.S2), driven off ``request.state.usage``.
+
+    A metered content handler (create/delete document, search) stashes a
+    ``UsageHint`` on its success path; this async middleware — running in the event
+    loop, so it *can* ``await`` the Postgres write the sync handler cannot — records
+    the event + stamps credential recency after the response is produced. It records
+    only when a hint is present, the response is 2xx, AND ``tenant_id`` is set, so:
+    error responses (401/404/409/422) are never metered (they raise before the
+    stash), and legacy mode (``tenant_id is None``) is fully inert — no engine is
+    ever created. ``record_usage`` swallows all errors; metering never changes the
+    response, which is returned unchanged in every path.
+    """
+
+    response = await call_next(request)
+    hint = getattr(request.state, "usage", None)
+    if (
+        hint is not None
+        and hint.tenant_id is not None
+        and 200 <= response.status_code < 300
+    ):
+        await record_usage(hint)  # best-effort; never raises
+    return response
+
 
 # Control-plane auth surface: the /auth/* session endpoints (signup/login/
 # logout/me) and the shared generic-401 handler for require_user's AuthError.
@@ -239,6 +272,7 @@ def get_document(
 
 @app.get("/api/search")
 def search(
+    request: Request,
     q: str,
     project: Optional[str] = None,
     tag: Optional[str] = None,
@@ -255,6 +289,15 @@ def search(
         )
     except search_mod.SearchQueryError as exc:
         raise HTTPException(status_code=400, detail=f"invalid FTS query: {exc}")
+    # Meter a successful search (best-effort, via the middleware). project may be
+    # None -> tenant-level attribution. Inert in legacy mode (tenant_id None).
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_SEARCH,
+        project_name=project,
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
     return {
         "query": q,
         # "hybrid" when the Gemini vector signal fused in, else "bm25" (no key / raw /
@@ -312,6 +355,7 @@ class DocumentIn(BaseModel):
 @app.post("/api/documents", status_code=201)
 def create_document(
     body: DocumentIn,
+    request: Request,
     ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
@@ -487,6 +531,16 @@ def create_document(
         resp["commit_error"] = commit_error
     if push_error is not None:
         resp["push_error"] = push_error
+    # Meter the created document (best-effort, via the middleware). Attributed to
+    # `project` (the write's project name) -> tenant project UUID. Inert in legacy
+    # mode (tenant_id None -> the middleware skips).
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_CREATED,
+        project_name=project,
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
     return resp
 
 
@@ -571,6 +625,7 @@ def _delete_document(
 @app.delete("/api/documents/by-path/{rel_path:path}")
 def delete_document_by_path(
     rel_path: str,
+    request: Request,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
     ctx: ApiAuthContext = Depends(resolve_api_write),
@@ -579,12 +634,23 @@ def delete_document_by_path(
     doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    return _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # Meter the deletion (best-effort, via the middleware) — only reached when the
+    # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_DELETED,
+        project_name=doc["project"],
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
+    return resp
 
 
 @app.delete("/api/documents/{doc_id}")
 def delete_document(
     doc_id: int,
+    request: Request,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
     ctx: ApiAuthContext = Depends(resolve_api_write),
@@ -593,4 +659,14 @@ def delete_document(
     doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
-    return _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # Meter the deletion (best-effort, via the middleware) — only reached when the
+    # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_DELETED,
+        project_name=doc["project"],
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
+    return resp
