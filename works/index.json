@@ -1,7 +1,68 @@
 {
-  "active_phases": [],
-  "deferred_open_count": 2,
+  "active_phases": [
+    {
+      "id": "P10",
+      "name": "Accounts, Tenancy & Tenant-Scoped Knowledge API",
+      "objective": "Introduce users/tenants/projects with signup/login/session auth and API credentials; scope the knowledge API (write/read/search) per tenant; seed the operator's own tenant and migrate the live knowledge.hi2vi.com corpus in as tenant #1",
+      "status": "planned",
+      "order": 1,
+      "path": "works/phases/active/P10",
+      "review_status": "pending",
+      "current_slice": "P10.S1",
+      "slice_count": 8,
+      "done_slice_count": 1
+    },
+    {
+      "id": "P11",
+      "name": "Per-Tenant Usage Monitoring",
+      "objective": "Meter per-tenant/per-project usage (API calls, documents saved, search activity) and expose it via API for the dashboard; free plan only — observability, not quotas or billing",
+      "status": "planned",
+      "order": 2,
+      "path": "works/phases/active/P11",
+      "review_status": "pending",
+      "current_slice": "P11.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P12",
+      "name": "Web App: Tenant Dashboard & Project Detail Pages",
+      "objective": "Authenticated web app with a tenant dashboard and project detail pages consuming the tenancy and usage APIs; all web UI features (knowledge graph included) free",
+      "status": "planned",
+      "order": 3,
+      "path": "works/phases/active/P12",
+      "review_status": "pending",
+      "current_slice": "P12.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P13",
+      "name": "CLI & Agent-First Onboarding",
+      "objective": "Standalone installable CLI so a user inside Claude Code or Codex can sign up, log in, configure credentials, and use the knowledge features end to end, with agent-readable help/guide docs so the website is never required",
+      "status": "planned",
+      "order": 4,
+      "path": "works/phases/active/P13",
+      "review_status": "pending",
+      "current_slice": "P13.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P14",
+      "name": "Landing Page & Product Webpage via Claude Design Gate",
+      "objective": "Design and ship the product landing page and public webpage through a hi2vi_web-style Claude Design gate (design canvas + DesignSync + operator sign-off), following the hi2vi_web stack and edge-deploy patterns",
+      "status": "planned",
+      "order": 5,
+      "path": "works/phases/active/P14",
+      "review_status": "pending",
+      "current_slice": "P14.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    }
+  ],
+  "deferred_open_count": 3,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 1,
-  "last_rebuilt_at": "2026-07-15T13:29:30+09:00"
+  "last_rebuilt_at": "2026-07-16T15:01:49+09:00"
 }
