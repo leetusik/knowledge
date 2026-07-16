@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-07-16 · [Implementing Microsoft's GraphRAG Approach for Global Context Reasoning in Enterprise Knowledge Bases](hi2vi/2026-07-16-implementing-microsoft-s-graphrag-approach-for-global-context-reasoning-in-enterprise-knowledge-bases.md) — hi2vi
 - 2026-07-15 · [Optimizing Entity Extraction and Resolution in GraphRAG Pipelines Using DSPy Prompt Compilation](hi2vi/2026-07-15-optimizing-entity-extraction-and-resolution-in-graphrag-pipelines-using-dspy-pro.md) — hi2vi
 - 2026-07-15 · [Hybrid Ranking in Vector Search: Algorithms, Architectures, and Optimizations](hi2vi/2026-07-15-hybrid-ranking-in-vector-search-algorithms-architectures-and-optimizations.md) — hi2vi
 - 2026-07-14 · [The hi2vi Research Space](hi2vi/2026-07-14-the-hi2vi-research-space.md) — hi2vi
