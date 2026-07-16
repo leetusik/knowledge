@@ -1,0 +1,873 @@
+{
+  "namespace": "KnowledgeDesignSystem_89826d",
+  "note": "P12.S1 scaffold — mirror of web/src/app/globals.css @theme. The ADOPTED hi2vi_web brand green (real values, not a placeholder). Token names match hi2vi_web via vocky's dashboard extraction. This canvas is the mechanism for the P14 public-page design gate.",
+  "components": [],
+  "startingPoints": [],
+  "cards": [
+    {
+      "path": "design/canvas/foundations/colors.html",
+      "group": "Foundations",
+      "name": "Colors"
+    },
+    {
+      "path": "design/canvas/foundations/type.html",
+      "group": "Foundations",
+      "name": "Type scale"
+    },
+    {
+      "path": "design/canvas/foundations/spacing-radius.html",
+      "group": "Foundations",
+      "name": "Spacing & Radius"
+    },
+    {
+      "path": "design/canvas/components/button.html",
+      "group": "Components",
+      "name": "Button"
+    },
+    {
+      "path": "design/canvas/components/card.html",
+      "group": "Components",
+      "name": "Card"
+    },
+    {
+      "path": "design/canvas/components/badge.html",
+      "group": "Components",
+      "name": "Badge"
+    },
+    {
+      "path": "design/canvas/components/field.html",
+      "group": "Components",
+      "name": "Field"
+    },
+    {
+      "path": "design/canvas/components/grid.html",
+      "group": "Components",
+      "name": "Grid"
+    },
+    {
+      "path": "design/canvas/components/section.html",
+      "group": "Components",
+      "name": "Section"
+    },
+    {
+      "path": "design/canvas/sections/dashboard-placeholder.html",
+      "group": "Sections",
+      "name": "Dashboard (placeholder)",
+      "subtitle": "Placeholder standing in for the P12.S3 tenant dashboard; previews the DataTable primitive. Heavy design session = P14."
+    }
+  ],
+  "templates": [],
+  "hasThumbnailHtml": false,
+  "globalCssPaths": [
+    "design/canvas/tokens.css"
+  ],
+  "tokens": [
+    {
+      "name": "--font-pretendard",
+      "value": "\"Pretendard\"",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--font-inter",
+      "value": "\"Inter\"",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--font-jetbrains",
+      "value": "\"JetBrains Mono\"",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-ink",
+      "value": "#061512",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-forest",
+      "value": "#0b2a22",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-forest-mid",
+      "value": "#123b31",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-forest-soft",
+      "value": "#1b4a3d",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-green",
+      "value": "#2ff28f",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-green-deep",
+      "value": "#00b66a",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-green-dark",
+      "value": "#007a4d",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-green-soft",
+      "value": "#ddfbea",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-security-mint",
+      "value": "#9af7c7",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-security-teal",
+      "value": "#1fcb91",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-trust-sage",
+      "value": "#c8e6d2",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-victory-lime",
+      "value": "#b7e65b",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-archive-olive",
+      "value": "#a8c85a",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-archive-cream",
+      "value": "#f3f0d8",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-danger",
+      "value": "#d4503c",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-danger-deep",
+      "value": "#a83c29",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-danger",
+      "value": "#fdeeea",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline-danger",
+      "value": "#f1d3cc",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-caution",
+      "value": "#bd7b1c",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-caution-deep",
+      "value": "#8a5810",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-caution",
+      "value": "#fbf2df",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline-caution",
+      "value": "#ebddbf",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-canvas",
+      "value": "#ffffff",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-canvas-dark",
+      "value": "#061512",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface",
+      "value": "#f7faf7",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-soft",
+      "value": "#f1f6f2",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-green",
+      "value": "#effbf4",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-archive",
+      "value": "#fbfaf0",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-security",
+      "value": "#f0faf5",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-surface-band",
+      "value": "#eef6f1",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline",
+      "value": "#dce6df",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline-soft",
+      "value": "#ebf1ed",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline-strong",
+      "value": "#b8c8bf",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-hairline-dark",
+      "value": "#24463b",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-charcoal",
+      "value": "#18231f",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-slate",
+      "value": "#41524a",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-steel",
+      "value": "#687a72",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-muted",
+      "value": "#93a39b",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-on-dark",
+      "value": "#ffffff",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-on-dark-muted",
+      "value": "#afc5ba",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--color-on-primary",
+      "value": "#061512",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-hero-display",
+      "value": "68px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-hero-display--line-height",
+      "value": "1.08",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-hero-display--letter-spacing",
+      "value": "-1.6px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-hero-display--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-display-lg",
+      "value": "56px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-display-lg--line-height",
+      "value": "1.12",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-display-lg--letter-spacing",
+      "value": "-1.2px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-display-lg--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-1",
+      "value": "48px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-1--line-height",
+      "value": "1.18",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-1--letter-spacing",
+      "value": "-0.9px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-1--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-2",
+      "value": "36px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-2--line-height",
+      "value": "1.25",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-2--letter-spacing",
+      "value": "-0.5px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-2--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-3",
+      "value": "28px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-3--line-height",
+      "value": "1.32",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-3--letter-spacing",
+      "value": "-0.3px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-3--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-4",
+      "value": "22px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-4--line-height",
+      "value": "1.38",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-heading-4--font-weight",
+      "value": "680",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-lg",
+      "value": "19px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-lg--line-height",
+      "value": "1.65",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-lg--font-weight",
+      "value": "400",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md",
+      "value": "16px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md--line-height",
+      "value": "1.65",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md--font-weight",
+      "value": "400",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md-medium",
+      "value": "16px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md-medium--line-height",
+      "value": "1.6",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-md-medium--font-weight",
+      "value": "550",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-sm",
+      "value": "14px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-sm--line-height",
+      "value": "1.6",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-body-sm--font-weight",
+      "value": "400",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-caption",
+      "value": "13px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-caption--line-height",
+      "value": "1.45",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-caption--font-weight",
+      "value": "450",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-micro",
+      "value": "11px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-micro--line-height",
+      "value": "1.4",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-micro--letter-spacing",
+      "value": "1px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-micro--font-weight",
+      "value": "700",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-button-md",
+      "value": "14px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-button-md--line-height",
+      "value": "1.3",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-button-md--font-weight",
+      "value": "700",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-code-md",
+      "value": "13px",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-code-md--line-height",
+      "value": "1.55",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--text-code-md--font-weight",
+      "value": "400",
+      "kind": "font",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius",
+      "value": "14px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-xs",
+      "value": "4px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-sm",
+      "value": "6px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-md",
+      "value": "10px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-lg",
+      "value": "14px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-xl",
+      "value": "18px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-xxl",
+      "value": "28px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--radius-full",
+      "value": "9999px",
+      "kind": "radius",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--spacing-section-sm",
+      "value": "48px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--spacing-section",
+      "value": "72px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--spacing-section-lg",
+      "value": "104px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--spacing-hero",
+      "value": "128px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--container-page",
+      "value": "1180px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--container-wide",
+      "value": "1320px",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--breakpoint-xs",
+      "value": "30rem",
+      "kind": "spacing",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--background",
+      "value": "var(--color-canvas)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--foreground",
+      "value": "var(--color-ink)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--card",
+      "value": "var(--color-canvas)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--card-foreground",
+      "value": "var(--color-ink)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--popover",
+      "value": "var(--color-canvas)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--popover-foreground",
+      "value": "var(--color-ink)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--primary",
+      "value": "var(--color-green)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--primary-foreground",
+      "value": "var(--color-on-primary)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--secondary",
+      "value": "var(--color-surface-soft)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--secondary-foreground",
+      "value": "var(--color-ink)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--muted",
+      "value": "var(--color-surface)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--muted-foreground",
+      "value": "var(--color-steel)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--accent",
+      "value": "var(--color-green-soft)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--accent-foreground",
+      "value": "var(--color-green-dark)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--destructive",
+      "value": "var(--color-danger)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--destructive-foreground",
+      "value": "var(--color-on-dark)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--border",
+      "value": "var(--color-hairline)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--input",
+      "value": "var(--color-hairline-strong)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    },
+    {
+      "name": "--ring",
+      "value": "var(--color-green-deep)",
+      "kind": "color",
+      "definedIn": "design/canvas/tokens.css"
+    }
+  ],
+  "themes": [],
+  "fonts": [
+    {
+      "family": "Pretendard",
+      "weight": "45 920",
+      "style": "normal",
+      "cssPath": "design/canvas/tokens.css",
+      "source": "jsdelivr-cdn"
+    },
+    {
+      "family": "Inter",
+      "weight": "400 500 700",
+      "style": "normal",
+      "cssPath": "design/canvas/tokens.css",
+      "source": "google-fonts"
+    },
+    {
+      "family": "JetBrains Mono",
+      "weight": "400 500 700",
+      "style": "normal",
+      "cssPath": "design/canvas/tokens.css",
+      "source": "google-fonts"
+    }
+  ],
+  "brandFonts": [
+    {
+      "family": "Pretendard",
+      "status": "adopted",
+      "tokens": [
+        "--font-pretendard"
+      ],
+      "path": "design/canvas/tokens.css"
+    },
+    {
+      "family": "Inter",
+      "status": "adopted",
+      "tokens": [
+        "--font-inter"
+      ],
+      "path": "design/canvas/tokens.css"
+    },
+    {
+      "family": "JetBrains Mono",
+      "status": "adopted",
+      "tokens": [
+        "--font-jetbrains"
+      ],
+      "path": "design/canvas/tokens.css"
+    }
+  ],
+  "source": "repo-scaffold"
+}
