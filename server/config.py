@@ -58,6 +58,16 @@ def operator_email() -> str | None:
     return _env("KB_OPERATOR_EMAIL")
 
 
+def operator_password() -> str | None:
+    """Operator's password for the seed (`python -m server.seed`); pairs with KB_OPERATOR_EMAIL.
+
+    Read only by the one-shot seed CLI to create the operator user with an
+    argon2id-hashed password. Never read at request time; unset -> the seed fails
+    fast with an actionable error (it will not create a passwordless operator).
+    """
+    return _env("KB_OPERATOR_PASSWORD")
+
+
 def database_url() -> str | None:
     """Async SQLAlchemy URL for the Postgres accounts plane. Unset -> accounts dormant.
 

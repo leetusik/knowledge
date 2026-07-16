@@ -34,6 +34,7 @@ services:
       #   GOOGLE_API_KEY=<optional Gemini>  # empty/absent = BM25-only search
       #   POSTGRES_PASSWORD=<generated>     # accounts-plane Postgres password
       #   KB_OPERATOR_EMAIL=<operator email> # pins KB_API_TOKEN -> tenant #1 (P10)
+      #   KB_OPERATOR_PASSWORD=<operator pw> # seeds the operator user (P10.S6 seed)
       # Provisioned in P8.S4's runbook. `docker compose config` needs this file
       # to exist (a dummy one suffices for local validation).
       - .env
@@ -69,6 +70,13 @@ services:
       # kept out of the committed file so it can't drift from the seeded value).
       # Unset -> the master bearer is unresolvable (vk_/session tokens still work).
       KB_OPERATOR_EMAIL: ${KB_OPERATOR_EMAIL}
+      # Operator's password for the one-shot seed (`docker compose exec api python
+      # -m server.seed`): creates the operator user + tenant #1 + the live docs/
+      # projects so the KB_API_TOKEN master bearer resolves and the docs/ corpus
+      # re-stamps as tenant #1 (P10.S6). Interpolated from the box's gitignored
+      # `.env` (a P10 deploy prerequisite alongside POSTGRES_PASSWORD +
+      # KB_OPERATOR_EMAIL). Only the seed CLI reads it — never at request time.
+      KB_OPERATOR_PASSWORD: ${KB_OPERATOR_PASSWORD}
       # --- Push credential wiring (paths inside the container) ---
       # IdentitiesOnly: use ONLY this key (ignore any agent/default keys).
       # UserKnownHostsFile + StrictHostKeyChecking=yes: pin github.com's host key

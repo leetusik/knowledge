@@ -44,6 +44,10 @@ services:
       # it. Set it (e.g. KB_OPERATOR_EMAIL=operator@test) for the S4 tenant-mode
       # resolution smoke.
       KB_OPERATOR_EMAIL: ${KB_OPERATOR_EMAIL:-}
+      # Operator password for the one-shot seed (`docker compose exec api python -m
+      # server.seed`, P10.S6). Optional locally (only the seed CLI reads it); set it
+      # alongside KB_OPERATOR_EMAIL to seed tenant #1 + the docs/ projects.
+      KB_OPERATOR_PASSWORD: ${KB_OPERATOR_PASSWORD:-}
     restart: unless-stopped
 
   postgres:
