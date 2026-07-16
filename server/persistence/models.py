@@ -1,8 +1,8 @@
-"""ORM models for the Postgres accounts plane.
+"""ORM models for the Postgres control plane.
 
-Ported from vocky's accounts/tenancy tables (the six here). No feedback tables
-and no JSONB/ARRAY columns — this repo only needs accounts, tenancy, projects,
-credentials, and sessions.
+Ported from vocky's accounts/tenancy tables (the first six here) plus the P11
+``usage_events`` table (the 7th). No JSONB/ARRAY columns — this repo only needs
+accounts, tenancy, projects, credentials, sessions, and per-tenant usage events.
 """
 
 from __future__ import annotations
@@ -162,4 +162,41 @@ class AuthTokenModel(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+
+class UsageEventModel(Base):
+    """One metered content-plane event (observability; P11).
+
+    Event-log grain: one durable row per metered event, aggregated on read.
+    ``project_id`` is nullable + ``SET NULL`` so master-bearer / unmapped-project
+    usage degrades to tenant-level and deleting a project keeps its usage history.
+    ``event_type`` is free text (not a DB enum/CHECK) so new event types need no
+    migration — integrity comes from the shared constants in ``server.usage.types``.
+    The two composite indexes back the windowed GROUP-BY-day aggregate.
+    """
+
+    __tablename__ = "usage_events"
+    __table_args__ = (
+        Index("ix_usage_events_tenant_id_occurred_at", "tenant_id", "occurred_at"),
+        Index("ix_usage_events_project_id_occurred_at", "project_id", "occurred_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    project_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
