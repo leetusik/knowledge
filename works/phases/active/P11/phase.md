@@ -92,6 +92,40 @@ There is **zero pytest coverage** of the Postgres/accounts plane; the only harne
 `scripts/onboarding_smoke.py` (live httpx E2E, tenant mode). P11 **extends that script** rather than
 standing up a new pytest Postgres fixture — matches the repo's "keep tests lean, prefer smoke checks" rule.
 
+### S1 built (usage persistence + aggregate) — contracts for S2/S3
+_Done in P11.S1: `usage_events` model, `alembic 0002_usage_events`, `server/usage/` package
+(`types`/`repository`/`service`). No HTTP wiring. Import check + 65-test legacy suite green; the
+DB round-trip is deferred to S4/REVIEW (no Postgres in the S1 env)._
+
+- **Shared event-type constants** live in `server.usage.types` — **import them, never re-declare
+  the literals** (S2 records with these, S3 reports them):
+  `EVENT_DOCUMENT_CREATED = "document.created"`, `EVENT_DOCUMENT_DELETED = "document.deleted"`,
+  `EVENT_SEARCH = "search"`. `usage_events.event_type` is **free text** (no DB enum/CHECK) — this
+  resolves the S1 open question; integrity comes from these constants.
+- **`record_event` raises on failure** — `UsageService.record_event(payload: RecordUsageEvent)`
+  runs on its own isolated transaction and raises `UsagePersistenceError`; **the S2 caller must wrap
+  it best-effort** (catch + log, never fail the observed request). `RecordUsageEvent{tenant_id: UUID,
+  event_type: str, project_id: UUID|None=None, occurred_at: datetime|None=None}` — pass `project_id=None`
+  for master-bearer / unmapped-project usage (degrades to tenant-level via the nullable `SET NULL` FK).
+  Entrypoint: `from server.usage import get_usage_service` (or `record_event` / `RecordUsageEvent` /
+  the `EVENT_*` constants — all re-exported from the package).
+- **Read signature for S3:** `UsageService.get_usage_metrics(*, tenant_id: UUID,
+  project_id: UUID|None, start: datetime, end: datetime) -> UsageMetrics` — keyword-only. Window is
+  **half-open `[start, end)`** (`occurred_at >= start AND occurred_at < end`); `project_id=None` means
+  tenant-wide. Read errors surface as `UsageReadError`.
+- **`UsageMetrics` shape (S3 serializes this):**
+  `UsageMetrics{window_start: datetime, window_end: datetime, totals: UsageTotals, daily_counts:
+  tuple[UsageDailyCount, ...]}`; `UsageTotals{total, documents_created, documents_deleted, searches}`
+  (all `int`); `UsageDailyCount{day: date, total, documents_created, documents_deleted, searches}`.
+  `daily_counts` is the **contiguous zero-filled** UTC-day series bounded by the window (never by event
+  volume); `_iter_days` excludes a trailing exactly-midnight `end` day (half-open-consistent). Totals
+  are summed in Python from the daily buckets. Maps cleanly to vocky's
+  `{window:{start,end}, totals:{…}, daily_counts:[{day,…}]}` response shape S3 targets.
+- **Migration deploy step:** `alembic upgrade head` applies `0002_usage_events`
+  (`down_revision="0001_accounts_tenancy"`); constraint names verified to match the model
+  (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects`
+  SET NULL) — no autogenerate drift.
+
 ## Resolved design (shared by all middle slices)
 
 - **`usage_events` (durable Postgres, 7th control-plane table):** UUID PK; `tenant_id`
@@ -139,6 +173,11 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
   extended with usage assertions.
 - **`decisions.md`** — event-log-over-rollup, meter-writes+searches, derive-on-read, `last_used_at` wired.
 - **`security.md`** — per-tenant usage isolation, cross-tenant-404 on the usage reads.
+
+_S1 confirms the two entries it lands are already listed and accurate: `data.md` (the `usage_events`
+table now exists as the 7th control-plane table; retention still deferred) and `operations.md`
+(`alembic 0002_usage_events`, `down_revision=0001_accounts_tenancy`, run via `alembic upgrade head`).
+No new Doc impact lines needed from S1._
 
 ## Constraints
 
