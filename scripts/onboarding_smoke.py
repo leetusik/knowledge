@@ -22,6 +22,10 @@ asserts a fresh tenant is fully isolated from tenant #1's corpus:
      are auto-derived from the master bearer's own listing, so nothing about
      tenant #1's content is hardcoded; without --master-token the tenant-#1-
      specific checks are skipped (B-only isolation still runs).
+  3. Usage — with B's session token, GET /app/usage + /app/projects/{id}/usage
+     assert B's one write + search(es) are metered (documents_created == 1,
+     searches >= 1, 30 zero-filled daily buckets), the vk_ key's last_used_at is
+     set, and a foreign project id -> 404 (usage is tenant-scoped).
 
 Style mirrors scripts/site_smoke.py: argparse, collect ALL failures, exit
 non-zero with the list or print PASS. Requires the app in TENANT mode
@@ -38,6 +42,7 @@ import argparse
 import datetime
 import secrets
 import sys
+import uuid
 
 import httpx
 
@@ -220,8 +225,74 @@ def run(base_url: str, master_token: str | None, failures: list[str]) -> str:
                     f"{r.status_code} {r.text}"
                 )
 
+        # --- 3. Usage metering: B's activity is metered + tenant-scoped ----
+        # B wrote exactly one doc and searched >= 1 time via the metered /api/*
+        # path. Metering is synchronous (recorded before each write/search
+        # response returns), so /app/usage reflects it immediately.
+        r = client.get(f"{base_url}/app/usage", headers=session_auth)
+        if r.status_code != 200:
+            failures.append(f"GET /app/usage: expected 200, got {r.status_code} {r.text}")
+        else:
+            usage = r.json()
+            totals = usage.get("totals", {})
+            # Fresh tenant B wrote exactly one doc. == 1 (not >= 1) also proves
+            # cross-tenant isolation: tenant #1's writes must NOT leak into B's usage.
+            if totals.get("documents_created") != 1:
+                failures.append(
+                    "GET /app/usage: expected totals.documents_created == 1 for fresh "
+                    f"tenant B, got {totals.get('documents_created')!r} "
+                    f"(metering or tenant isolation broken): {usage}"
+                )
+            if not isinstance(totals.get("searches"), int) or totals["searches"] < 1:
+                failures.append(
+                    "GET /app/usage: expected totals.searches >= 1, got "
+                    f"{totals.get('searches')!r}: {usage}"
+                )
+            # Default 30-day window -> a contiguous, zero-filled 30-day series.
+            if len(usage.get("daily_counts", [])) != 30:
+                failures.append(
+                    "GET /app/usage: expected 30 zero-filled daily_counts, got "
+                    f"{len(usage.get('daily_counts', []))}"
+                )
+            # B's own project appears in the tenant's project list.
+            if not any(p.get("id") == project_id for p in usage.get("projects", [])):
+                failures.append(
+                    f"GET /app/usage: B's project {project_id!r} missing from projects list"
+                )
+
+        # Per-project drill-down: B's project shows the write + its credential's recency.
+        r = client.get(f"{base_url}/app/projects/{project_id}/usage", headers=session_auth)
+        if r.status_code != 200:
+            failures.append(
+                f"GET /app/projects/{{id}}/usage: expected 200, got {r.status_code} {r.text}"
+            )
+        else:
+            proj_usage = r.json()
+            if proj_usage.get("totals", {}).get("documents_created") != 1:
+                failures.append(
+                    "GET /app/projects/{id}/usage: expected totals.documents_created == 1, got "
+                    f"{proj_usage.get('totals', {}).get('documents_created')!r}: {proj_usage}"
+                )
+            # The vk_ key did metered work (write + search) -> last_used_at is set.
+            creds = proj_usage.get("credentials", [])
+            if not creds or not any(c.get("last_used_at") for c in creds):
+                failures.append(
+                    "GET /app/projects/{id}/usage: expected a credential with a non-null "
+                    f"last_used_at (the vk_ key did metered work), got {creds}"
+                )
+
+        # Cross-tenant/missing project usage is scoped: a foreign project id -> 404, no leak.
+        r = client.get(
+            f"{base_url}/app/projects/{uuid.uuid4()}/usage", headers=session_auth
+        )
+        if r.status_code != 404:
+            failures.append(
+                f"GET /app/projects/<random>/usage: expected 404 (scoped), got "
+                f"{r.status_code} {r.text}"
+            )
+
     isolation = "isolation vs tenant #1 verified" if master_token else "B-only isolation (no --master-token)"
-    return f"tenant B onboarded ({email}), doc {b_rel_path}; {isolation}"
+    return f"tenant B onboarded ({email}), doc {b_rel_path}; {isolation}; usage metered"
 
 
 def main() -> int:
