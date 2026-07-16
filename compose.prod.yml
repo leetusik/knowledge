@@ -53,6 +53,12 @@ services:
       KB_PUBLIC_BASE_URL: https://knowledge.hi2vi.com
       # Fetch + reindex on boot (drift + deleted-doc reconciliation self-heal).
       KB_STARTUP_REINDEX: "true"
+      # Async accounts plane (Postgres control plane, P10). Points at the durable
+      # `postgres` service below by container name over the shared network. The
+      # password is the SECRET POSTGRES_PASSWORD from the box's gitignored `.env`
+      # (never committed); user/db are the literals `kb`. Migrations run
+      # explicitly on deploy: `docker compose exec api alembic upgrade head`.
+      DATABASE_URL: postgresql+psycopg://kb:${POSTGRES_PASSWORD}@knowledge-postgres:5432/kb
       # --- Push credential wiring (paths inside the container) ---
       # IdentitiesOnly: use ONLY this key (ignore any agent/default keys).
       # UserKnownHostsFile + StrictHostKeyChecking=yes: pin github.com's host key
@@ -67,6 +73,11 @@ services:
         -o IdentitiesOnly=yes
         -o UserKnownHostsFile=/run/secrets/known_hosts
         -o StrictHostKeyChecking=yes
+    # Wait for the accounts-plane Postgres to be healthy before the api boots
+    # (so alembic + the control-plane endpoints always have a live DB).
+    depends_on:
+      postgres:
+        condition: service_healthy
     # Attach to the existing external Docker network the edge lives on. The api
     # is reachable ONLY here (knowledge-api:8000), never on a public host port.
     networks:
@@ -117,6 +128,36 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
+
+  postgres:
+    # Durable control-plane datastore (accounts/tenancy/projects/credentials/
+    # sessions) for the P10 two-plane app. Reached by the api BY CONTAINER NAME
+    # (knowledge-postgres:5432) over the shared network — NO public host port.
+    # Content plane is unaffected: it stays files + disposable kb.sqlite3.
+    image: postgres:17
+    container_name: knowledge-postgres  # fixed name — the api's DATABASE_URL targets it
+    environment:
+      # user/db are non-secret literals; the PASSWORD is the SECRET, supplied by
+      # the box's gitignored `.env` (POSTGRES_PASSWORD=...). Never commit a value.
+      POSTGRES_DB: kb
+      POSTGRES_USER: kb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - changple_shared_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  # Durable Postgres data (accounts plane). Only the control plane needs a
+  # persistent volume; the content plane stays files + disposable SQLite.
+  pgdata:
 
 networks:
   # Pre-existing external network the shared edge + co-tenant apps share.

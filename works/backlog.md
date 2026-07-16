@@ -6,17 +6,17 @@
 ## Pointer
 
 - Current phase: `P10`
-- Current slice: `P10.S1`
-- Next slice: `P10.S2`
+- Current slice: `P10.S2`
+- Next slice: `P10.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `3`
-- Rebuilt at: `2026-07-16T15:01:49+09:00`
+- Rebuilt at: `2026-07-16T15:29:19+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
-| [ ] `P10` | `planned` | `pending` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `P10.S1` | `works/phases/active/P10` |
+| [ ] `P10` | `planned` | `pending` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `P10.S2` | `works/phases/active/P10` |
 | [ ] `P11` | `planned` | `pending` | Per-Tenant Usage Monitoring | `P11.DECOMP` | `works/phases/active/P11` |
 | [ ] `P12` | `planned` | `pending` | Web App: Tenant Dashboard & Project Detail Pages | `P12.DECOMP` | `works/phases/active/P12` |
 | [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.DECOMP` | `works/phases/active/P13` |
@@ -27,7 +27,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P10.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P10/slices/P10.DECOMP` |
-| [ ] `P10.S1` | `todo` | Accounts persistence: Postgres + schema + Alembic + accounts layer | `implementation` | `works/phases/active/P10/slices/P10.S1` |
+| [x] `P10.S1` | `done` | Accounts persistence: Postgres + schema + Alembic + accounts layer | `implementation` | `works/phases/active/P10/slices/P10.S1` |
 | [ ] `P10.S2` | `todo` | Auth surface /auth/* + require_user session guard | `implementation` | `works/phases/active/P10/slices/P10.S2` |
 | [ ] `P10.S3` | `todo` | Control plane /app/*: tenant-scoped projects + vk_ credentials | `implementation` | `works/phases/active/P10/slices/P10.S3` |
 | [ ] `P10.S4` | `todo` | /api/* credential auth: resolve credential -> tenant+project | `implementation` | `works/phases/active/P10/slices/P10.S4` |

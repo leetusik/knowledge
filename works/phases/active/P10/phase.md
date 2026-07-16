@@ -94,6 +94,31 @@ The closest prior art; port from it, do not reinvent. Paths confirmed to exist:
 - **`last_used_at` stamping is optional** on credentials/tokens (vocky deferred it) — leave out unless a slice finds it cheap.
 - **Deferred:** D6 (paid-plan retriever endpoint for external AI agents) is this phase's standing deferral — `works/deferred/open/D6`. Do **not** build the paid retriever in P10.
 
+### S1 completion notes — what S2 (and later slices) consume
+
+**Entrypoint:** `from server.accounts import get_accounts_service` → returns an `AccountsService` bound to the lazy async session maker. Everything the auth surface needs is on that service; do **not** touch the repository/engine directly.
+
+**`AccountsService` methods S2 will use (all `async`):**
+- `create_user(CreateUser(email, password_hash)) -> UserRecord` — raises `DuplicateEmailError` on dup email (catch → 409). `UserRecord` carries `password_hash` for login verify.
+- `get_user_by_email(email) -> UserRecord | None` — login lookup.
+- `get_user_by_id(user_id: UUID) -> UserRecord | None`.
+- `create_tenant_with_owner(user_id, name) -> tuple[TenantRecord, TenantMemberRecord]` — signup primitive (atomic tenant + `role="owner"` member).
+- `list_tenants_for_user(user_id) -> tuple[TenantRecord, ...]` — oldest-first; `require_user` uses `tenants[0]` (solo-owner MVP).
+- `create_auth_token(CreateAuthToken(user_id, token_hash, expires_at=None)) -> AuthTokenRecord` — mint session; caller passes `sha256_hex(raw)`, keeps the raw token to return once. `expires_at=None` = no expiry (S2 sets a 30-day TTL).
+- `get_active_auth_token_by_hash(token_hash) -> AuthTokenRecord | None` — bearer resolve (NULL-or-future `expires_at` only). `require_user`: bearer → `sha256_hex` → this → `get_user_by_id` → `list_tenants_for_user()[0]`.
+- `delete_auth_token(token_hash) -> bool` — logout (True when a row was removed).
+- `touch_auth_token_last_used(token_hash)` — optional stamping (vocky deferred it; skip unless cheap).
+
+**S3 (projects/credentials) methods (already present):** `create_project` / `get_project` / `list_projects_for_tenant`, `create_project_credential` / `list_project_credentials` / `get_active_credential_by_token_hash` / `revoke_credential` / `touch_credential_last_used`. `vk_` mint recipe (S3): `key=f"vk_{generate_opaque_token()}"`, `token_prefix=key[:12]`, `token_hash=sha256_hex(key)`.
+
+**Security helpers:** `from server.accounts.security import hash_password, verify_password, generate_opaque_token, sha256_hex` (not re-exported from the package `__init__` — import from the module).
+
+**Transport invariant:** records never expose `token_hash`; `ProjectCredentialRecord`/`AuthTokenRecord` surface only `token_prefix`/metadata. Keep serializers hash-free.
+
+**Errors to handle:** `AccountsPersistenceError` (write failures), `AccountsReadError` (read failures), `DuplicateEmailError` (subclass of persistence error, → 409). All are `RuntimeError` subclasses under `server.accounts`.
+
+**Dormancy gotcha:** with `DATABASE_URL` unset, the first accounts call raises `RuntimeError("DATABASE_URL is not set; the accounts plane is unavailable")` from `get_engine()`. S2's `/auth/*` handlers should assume Postgres is present in the hosted deployment; local dev without `DATABASE_URL` leaves accounts dormant (content plane still works). No migration runs on boot — `alembic upgrade head` is an explicit deploy step.
+
 ### Doc-impact list (for `P10.REVIEW` to consolidate into versions — do NOT version per slice)
 
 Later slices append one-liners here as they change durable truth; the review slice consolidates each area into a single new doc version. Areas P10 is expected to touch:
@@ -105,6 +130,14 @@ Later slices append one-liners here as they change durable truth; the review sli
 - **security** — multi-tenant threat-model shift (real tenant data + PII): argon2id password hashing, sha256 token hashing at rest, cross-tenant isolation.
 - **operations** — Postgres service + migrations, seed/backfill runbook, still single-worker.
 - **decisions** — ADRs: Postgres-over-SQLite for accounts; namespaced `docs/`-canonical storage; `KB_API_TOKEN` as legacy tenant-#1 bearer.
+
+**S1 appended (for REVIEW to consolidate):**
+- **architecture** — App is now a two-plane process: unchanged content plane (files + disposable `kb.sqlite3`, single worker, `WRITE_LOCK`) alongside a new **Postgres control plane** (async SQLAlchemy 2.0). Control plane is **lazy/dormant** when `DATABASE_URL` is unset — the content plane still boots without Postgres.
+- **backend** — New `server/persistence/` (declarative `Base` + `NAMING_CONVENTION`, 6 ORM models, lazy async engine) and `server/accounts/` (security → types → repository → service). Repository is the sole ORM boundary and never commits; the service owns transactions + domain errors. Engine disposed in the app lifespan (`await dispose_engine()` after `yield`).
+- **backend/decision** — **Resolved the async-vs-sync SQLAlchemy Open Question: async SQLAlchemy 2.0 + psycopg3** (scheme `postgresql+psycopg`, not asyncpg). Accounts code is `async`; sits alongside the sync content endpoints in one FastAPI app. Config source is `server.config.database_url()` (per-call `_env`), not pydantic-settings.
+- **data** — Postgres accounts schema: **6 tables** (`users`, `tenants`, `tenant_members`, `projects`, `project_credentials`, `auth_tokens`), UUID PKs, tz-aware `created_at`. Ownership via `tenant_members` (no owner column on `tenants`). Only sha256 `token_hash` is stored for credentials/session tokens (raw never persisted). Alembic initial migration `0001_accounts_tenancy`.
+- **security** — argon2id password hashing (`argon2-cffi`), sha256-hex token hashing at rest; credential/session **records omit `token_hash`** so hashes never cross the transport boundary. (Cross-tenant data isolation is S4/S5, not yet built.)
+- **operations** — New `postgres:17` service in both compose files (local `postgres`, prod `knowledge-postgres` on `changple_shared_network`, `pgdata` volume). Migrations run **explicitly**: `docker compose exec api alembic upgrade head` (not auto-on-boot). **Deployment prerequisite:** the prod box's gitignored `.env` must define `POSTGRES_PASSWORD` (prod `DATABASE_URL` interpolates it) before P10 deploys.
 
 ## Constraints
 

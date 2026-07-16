@@ -29,6 +29,7 @@ from server import embeddings as embeddings_mod
 from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
+from server.persistence.engine import dispose_engine
 
 
 @asynccontextmanager
@@ -46,6 +47,10 @@ async def lifespan(app: FastAPI):
             flush=True,
         )
     yield
+    # Dispose the async accounts engine if it was ever created. Lazy: when
+    # DATABASE_URL is unset the engine never exists and this is a no-op, so the
+    # content plane still shuts down cleanly without Postgres.
+    await dispose_engine()
 
 
 app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
