@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P14`
-- Current slice: `P14.DECOMP`
-- Next slice: `P14.REVIEW`
+- Current slice: `P14.S1`
+- Next slice: `P14.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-18T03:34:19+09:00`
+- Rebuilt at: `2026-07-18T03:49:42+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
 | [x] `P13` | `done` | `pass` | CLI & Agent-First Onboarding | `none` | `works/phases/active/P13` |
-| [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
+| [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.S1` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
 
 ## Phase P10: Accounts, Tenancy & Tenant-Scoped Knowledge API
@@ -78,7 +78,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P14.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P14/slices/P14.DECOMP` |
+| [x] `P14.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P14/slices/P14.DECOMP` |
+| [ ] `P14.S1` | `todo` | Design gate: landing + public marketing pages (Claude Design round 1) | `co-work` | `works/phases/active/P14/slices/P14.S1` |
+| [ ] `P14.S2` | `todo` | Implement the landing + marketing pages from the read-back spec | `implementation` | `works/phases/active/P14/slices/P14.S2` |
+| [ ] `P14.S3` | `todo` | Ship the web app: standalone Dockerfile + knowledge-web compose service + edge vhost routing | `implementation` | `works/phases/active/P14/slices/P14.S3` |
 | [ ] `P14.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P14/slices/P14.REVIEW` |
 
 ## Phase P15: Agent-facing retrieval MCP service (search-as-a-service)
