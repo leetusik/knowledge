@@ -405,3 +405,11 @@
 {"ts": "2026-07-17T15:00:39+09:00", "type": "doc_version_created", "doc": "security", "version": "v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui", "source": "P12.REVIEW"}
 {"ts": "2026-07-17T15:07:36+09:00", "type": "slice_status_changed", "slice": "P12.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-17T15:07:36+09:00", "type": "phase_reviewed", "phase": "P12", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-17T15:51:33+09:00", "type": "slice_status_changed", "slice": "P13.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-17T15:55:08+09:00", "type": "slice_created", "phase": "P13", "slice": "P13.S1"}
+{"ts": "2026-07-17T15:55:08+09:00", "type": "slice_created", "phase": "P13", "slice": "P13.S2"}
+{"ts": "2026-07-17T15:55:08+09:00", "type": "slice_created", "phase": "P13", "slice": "P13.S3"}
+{"ts": "2026-07-17T15:55:08+09:00", "type": "slice_created", "phase": "P13", "slice": "P13.S4"}
+{"ts": "2026-07-17T15:55:08+09:00", "type": "slice_created", "phase": "P13", "slice": "P13.S5"}
+{"ts": "2026-07-17T15:56:57+09:00", "type": "deferred_created", "deferred": "D9", "source": "P13.DECOMP"}
+{"ts": "2026-07-17T15:58:48+09:00", "type": "slice_status_changed", "slice": "P13.DECOMP", "old_status": "in_progress", "new_status": "done"}

@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `5`
+- Open: `6`
 - Promoted: `2`
 - Dropped: `1`
-- Rebuilt at: `2026-07-17T15:33:07+09:00`
+- Rebuilt at: `2026-07-17T15:58:49+09:00`
 
 ## Open
 
@@ -18,6 +18,7 @@
 | `D6` | `deferred` | Paid-plan retriever endpoint for external AI agents | operator (P10-P14 SaaS pivot intent) | operator decides to introduce the paid plan | `works/deferred/open/D6` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
+| `D9` | `deferred` | plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1 | P13.DECOMP | before the next push to origin/main (plugin-ci.yml turns red on the first push carrying the P10-P12 commits) | `works/deferred/open/D9` |
 
 ## Promoted
 
