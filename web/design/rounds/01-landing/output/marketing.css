@@ -1,0 +1,191 @@
+/* ==========================================================================
+   knowledge — Marketing primitive layer   (Round 01 · P14.S1 · Claude Design)
+   --------------------------------------------------------------------------
+   Design-reference CSS for the public landing. The cards link this so every
+   section shares ONE vocabulary; the apply slice (P14.S2) rebuilds these as
+   Tailwind v4 utilities + the existing CVA button — this file is the visual
+   spec, not code to port. All values ride marketing/tokens.css.
+
+   House rules held throughout: teal is the only accent; depth from tone +
+   hairline, one soft shadow; warm paper / warm charcoal, never pure white/black;
+   no emoji; the settled state is the CSS default (Reveal is progressive
+   enhancement, armed only under prefers-reduced-motion: no-preference).
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 100%; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--kb-paper); color: var(--kb-ink);
+  font-family: var(--kb-font-body); font-size: var(--text-body-md);
+  line-height: var(--text-body-md--line-height);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, h5, h6 { word-break: keep-all; } /* never split a Korean eojeol */
+a { color: var(--mkt-accent); text-decoration: none; }
+a:hover { color: var(--mkt-accent-strong); }
+::selection { background: var(--mkt-accent-soft); }
+
+/* ---- Layout ------------------------------------------------------------- */
+.wrap { width: 100%; max-width: var(--container-page); margin: 0 auto; padding: 0 32px; }
+.band { position: relative; }
+.band__inner { padding: var(--spacing-section) 0; }
+.band--tight .band__inner { padding: var(--spacing-section-sm) 0; }
+.band--hero .band__inner { padding: var(--spacing-hero) 0 calc(var(--spacing-hero) - 24px); }
+
+/* Tonal bands — light tiers + the scheme-independent warm-charcoal dark band. */
+.band--paper { background: var(--kb-paper); }
+.band--surface { background: var(--kb-surface-sunken); }
+.band--dark, .band--deep {
+  background: var(--kb-band-dark); color: var(--color-on-dark);
+  --mkt-accent: var(--kb-accent-on-dark);
+  --mkt-accent-strong: var(--kb-accent-on-dark-strong);
+  --mkt-accent-soft: var(--kb-accent-on-dark-soft);
+}
+.band--deep { background: var(--kb-band-dark-deep); }
+.band--dark .band-sub, .band--deep .band-sub { color: var(--color-on-dark-muted); }
+.band--hairtop { border-top: 1px solid var(--kb-border); }
+
+/* ---- Type helpers (marketing scale) ------------------------------------- */
+.t-hero { font-family: var(--kb-font-display); font-size: var(--text-hero-display);
+  line-height: var(--text-hero-display--line-height); letter-spacing: var(--text-hero-display--letter-spacing);
+  font-weight: var(--text-hero-display--font-weight); margin: 0; }
+.t-display { font-family: var(--kb-font-display); font-size: var(--text-display-lg);
+  line-height: var(--text-display-lg--line-height); letter-spacing: var(--text-display-lg--letter-spacing);
+  font-weight: var(--text-display-lg--font-weight); margin: 0; }
+.t-h1 { font-family: var(--kb-font-display); font-size: var(--text-heading-1);
+  line-height: var(--text-heading-1--line-height); letter-spacing: var(--text-heading-1--letter-spacing);
+  font-weight: var(--text-heading-1--font-weight); margin: 0; }
+.t-h2 { font-family: var(--kb-font-display); font-size: var(--text-heading-2);
+  line-height: var(--text-heading-2--line-height); letter-spacing: var(--text-heading-2--letter-spacing);
+  font-weight: var(--text-heading-2--font-weight); margin: 0; }
+.t-h3 { font-family: var(--kb-font-display); font-size: var(--text-heading-3);
+  line-height: var(--text-heading-3--line-height); letter-spacing: var(--text-heading-3--letter-spacing);
+  font-weight: var(--text-heading-3--font-weight); margin: 0; }
+.t-h4 { font-family: var(--kb-font-display); font-size: var(--text-heading-4);
+  line-height: var(--text-heading-4--line-height); font-weight: var(--text-heading-4--font-weight); margin: 0; }
+.t-lead { font-size: var(--text-body-lg); line-height: var(--text-body-lg--line-height);
+  color: var(--kb-secondary); margin: 0; }
+.band--dark .t-lead, .band--deep .t-lead { color: var(--color-on-dark-muted); }
+.t-body { font-size: var(--text-body-md); line-height: var(--text-body-md--line-height); color: var(--kb-secondary); margin: 0; }
+.band--dark .t-body { color: var(--color-on-dark-muted); }
+.t-sm { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); color: var(--kb-secondary); }
+
+/* Eyebrow / kicker — tracked mono caps, the editorial label voice. */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--kb-font-mono);
+  font-size: var(--text-micro); line-height: 1; letter-spacing: var(--text-micro--letter-spacing);
+  font-weight: var(--text-micro--font-weight); text-transform: uppercase; color: var(--kb-hint); margin: 0 0 20px; }
+.eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--mkt-accent); opacity: .8; }
+.band--dark .eyebrow, .band--deep .eyebrow { color: var(--color-on-dark-hint); }
+.accent { color: var(--mkt-accent); }
+.serif-alt { color: var(--kb-secondary); }
+.band--dark .serif-alt { color: var(--color-on-dark-muted); }
+
+/* ---- Marketing pill button (mirrors components/ui/button.tsx CVA) -------- */
+.mkt-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: var(--kb-radius-pill); font-family: var(--kb-font-body); font-size: var(--text-button-md);
+  font-weight: 700; line-height: 1.3; text-decoration: none; cursor: pointer; white-space: nowrap;
+  border: 1px solid transparent; transition: transform var(--kb-ease), background var(--kb-ease), border-color var(--kb-ease); }
+.mkt-btn:focus-visible { outline: 2px solid var(--mkt-accent-strong); outline-offset: 2px; }
+/* sizes */
+.mkt-btn--sm { min-height: 40px; padding: 0 18px; }
+.mkt-btn--default { min-height: 44px; padding: 11px 22px; }
+.mkt-btn--lg { min-height: 52px; padding: 0 28px; font-size: 15px; }
+/* variants */
+.mkt-btn--primary { background: var(--kb-accent); color: var(--color-on-primary); box-shadow: var(--kb-shadow-hover); }
+.mkt-btn--primary:hover { background: var(--kb-accent-strong); transform: translateY(-2px); }
+.band--dark .mkt-btn--primary, .band--deep .mkt-btn--primary { background: var(--kb-accent-on-dark); color: #10201d; }
+.band--dark .mkt-btn--primary:hover, .band--deep .mkt-btn--primary:hover { background: var(--kb-accent-on-dark-strong); }
+.mkt-btn--secondary { background: var(--kb-paper); border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.mkt-btn--secondary:hover { background: var(--kb-surface); border-color: var(--kb-accent); }
+.mkt-btn--on-dark { background: transparent; border-color: var(--kb-border-on-dark-strong); color: var(--color-on-dark); }
+.mkt-btn--on-dark:hover { background: rgba(255,255,255,.08); border-color: var(--color-on-dark-muted); }
+.mkt-btn--link { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+  color: var(--mkt-accent); font-size: var(--text-body-md-medium); font-weight: var(--text-body-md-medium--font-weight); }
+.mkt-btn--link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mkt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+
+/* ---- Cards / feature layout -------------------------------------------- */
+.card { background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--radius-lg);
+  padding: 28px; transition: transform var(--kb-ease), border-color var(--kb-ease), box-shadow var(--kb-ease); }
+.card:hover { border-color: var(--kb-accent); transform: translateY(-2px); box-shadow: var(--kb-shadow-hover); }
+.band--dark .card { background: var(--kb-band-dark-soft); border-color: var(--kb-border-on-dark); }
+.grid { display: grid; gap: 20px; }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+.feature-row--flip .feature-copy { order: 2; }
+.stack-sm > * + * { margin-top: 12px; }
+.stack > * + * { margin-top: 18px; }
+.section-head { max-width: 640px; }
+
+/* Feature bullet with a small teal tick (no emoji). */
+.ticks { list-style: none; margin: 0; padding: 0; }
+.ticks li { position: relative; padding-left: 26px; margin: 12px 0; font-size: var(--text-body-md);
+  line-height: 1.55; color: var(--kb-secondary); }
+.band--dark .ticks li { color: var(--color-on-dark-muted); }
+.ticks li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 9px; height: 9px;
+  border-radius: 50%; background: var(--mkt-accent-soft); box-shadow: 0 0 0 3px var(--mkt-accent-soft); }
+.ticks li::after { content: ""; position: absolute; left: 4px; top: 10px; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--mkt-accent); }
+
+/* ---- Terminal block (the CLI / agent-first proof) ----------------------- */
+.term { border-radius: var(--radius-lg); background: var(--kb-band-dark); border: 1px solid var(--kb-border-on-dark);
+  overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+.term__bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--kb-border-on-dark); }
+.term__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kb-border-on-dark-strong); }
+.term__title { margin-left: 8px; font-family: var(--kb-font-mono); font-size: 12px; letter-spacing: .04em;
+  color: var(--color-on-dark-hint); text-transform: uppercase; }
+.term__body { padding: 20px 20px 22px; font-family: var(--kb-font-mono); font-size: var(--text-code-md);
+  line-height: 1.85; color: var(--color-on-dark); }
+.term__body .l { white-space: pre-wrap; }
+.term .p { color: var(--kb-accent-on-dark); }             /* prompt $ */
+.term .c { color: var(--color-on-dark); }                  /* command */
+.term .a { color: var(--color-on-dark-hint); }             /* arg / comment */
+.term .ok { color: var(--kb-accent-on-dark-strong); }      /* success line */
+.term .key { color: #c8a15e; }                             /* vk_ key (bronze) */
+
+/* ---- Numbered step (how it works) --------------------------------------- */
+.step__n { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  border-radius: 50%; border: 1px solid var(--kb-border-strong); font-family: var(--kb-font-display);
+  font-weight: 600; font-size: 18px; color: var(--mkt-accent); background: var(--kb-surface); }
+.band--dark .step__n { background: var(--kb-band-dark-soft); border-color: var(--kb-border-on-dark-strong); }
+.step__rule { flex: 1; height: 1px; background: var(--kb-border); }
+.band--dark .step__rule { background: var(--kb-border-on-dark); }
+
+/* ---- Pill tag / chip ---------------------------------------------------- */
+.chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--kb-font-mono); font-size: 11px;
+  font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 5px 11px; border-radius: var(--kb-radius-pill);
+  background: var(--kb-tag-bg); color: var(--kb-tag-fg); }
+.chip--coming { background: transparent; border: 1px solid var(--kb-border-strong); color: var(--kb-hint); }
+.band--dark .chip--coming { border-color: var(--kb-border-on-dark-strong); color: var(--color-on-dark-hint); }
+.chip--dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mkt-accent); }
+
+/* ---- Header / nav ------------------------------------------------------- */
+.nav { display: flex; align-items: center; gap: 28px; height: 68px; }
+.nav__brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; }
+.nav__brand img { width: 26px; height: 26px; }
+.nav__brand b { font-family: var(--kb-font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; }
+.nav__links { display: flex; align-items: center; gap: 26px; margin-left: 14px; }
+.nav__links a { font-size: var(--text-body-md); color: var(--kb-secondary); }
+.nav__links a:hover { color: var(--kb-ink); }
+.band--dark .nav__links a { color: var(--color-on-dark-muted); }
+.band--dark .nav__links a:hover { color: var(--color-on-dark); }
+.nav__spacer { flex: 1; }
+.nav__cta { display: flex; align-items: center; gap: 12px; }
+
+/* ---- Footer ------------------------------------------------------------- */
+.foot { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; }
+.foot__col h5 { font-family: var(--kb-font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--color-on-dark-hint); margin: 0 0 14px; font-weight: 700; }
+.foot__col a { display: block; font-size: var(--text-body-md); color: var(--color-on-dark-muted); margin: 9px 0; }
+.foot__col a:hover { color: var(--color-on-dark); }
+.foot__meta { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-top: 40px; padding-top: 22px;
+  border-top: 1px solid var(--kb-border-on-dark); font-family: var(--kb-font-mono); font-size: 12px;
+  letter-spacing: .03em; color: var(--color-on-dark-hint); }
+
+/* ---- Reduced-motion floor: settled state is the CSS default; nothing here
+        moves unless the Reveal island opts in under no-preference (see the
+        [data-reveal] layer the app owns in globals.css). ------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-btn, .card { transition: none; }
+}
