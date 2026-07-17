@@ -135,11 +135,28 @@ and **`/` → `knowledge-site` (mkdocs)**. So shipping this design forces two re
   plan them together. Also re-check the Next BFF `/api/auth/*` vs edge `/api/*`→FastAPI collision noted in
   Constraints.
 
-**P14.S2 reshape (do at S2 planning):** split S2 at fractional orders along the section seams — e.g. `S2`
-tokens + app-rebase-to-`/app` + marketing route group/layout/header/footer + hero; `S2.3` mid sections
-(what-it-is, how-it-works, save & search, pricing); `S2.6` the two interactive/visual features (connect
-terminal, graph motif) + SEO file routes (`sitemap`/`robots`/`manifest`/OG). Confirm the exact cut when
-planning S2 against `build-prompt.md`.
+**Resolution (operator, 2026-07-18): keep the app at its current paths; do NOT rebase to `/app`.** The
+`/app` prefix is the only thing that collided with the CLI, and the app doesn't need it — the landing frees
+`/` on its own. Final topology, all in the knowledge `web/` app on `knowledge.hi2vi.com` (one repo, one
+domain, no subdomain, no CLI change):
+- **Landing → `knowledge.hi2vi.com/`** (the Next app's root; replaces the `page.tsx` redirect). Its "Sign in"
+  → `/login`, "Get started" → `/signup` (the design's `/app` CTA targets become the app's real paths).
+- **App UI stays at `/dashboard`, `/graph`, `/documents`, `/projects`** (and `/login`, `/signup`) — no rebase,
+  so nothing collides with the CLI's `/app //auth //api`.
+- **CLI control plane unchanged:** `/auth/* //app/* //api/*` → FastAPI, exactly as P13 shipped.
+- (Considered `hi2vi.com/knowledge` for the landing — rejected: it splits the landing into the separate
+  hi2vi_web repo/site + design system and buys nothing over serving it from the knowledge app.)
+
+This is a non-visual routing decision by the operator that supersedes the design's decision #3 (`/app`); the
+landing's visual design is unchanged — only the CTA link targets shift from `/app` to `/login` / `/signup`.
+
+**Edge reconciliation → P14.S3** (not S2): keep `/api/ //auth/ //app/ //healthz` → `knowledge-api` (FastAPI,
+unchanged) but add a **more-specific `location /api/auth/` → `knowledge-web`** (the Next BFF; FastAPI has no
+such route), and route **everything else (`/`, `/dashboard`, `/graph`, …) → `knowledge-web`** (the Next app).
+Decide the mkdocs `knowledge-site`'s new home (subpath / subdomain / retire — it's also on GitHub Pages).
+
+**P14.S2 scope (no reshape / no split):** with the `/app` rebase dropped, S2 is just **build the landing** —
+one cohesive `implementation`/high slice. No auth-app route changes, no BFF path changes.
 
 ## Doc impact (running list — REVIEW consolidates; do not version docs here)
 
