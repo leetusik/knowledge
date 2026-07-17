@@ -13,7 +13,10 @@ export const dynamic = "force-dynamic";
 
 // Login is the STRICTER throttle of the two auth routes: 5 attempts per IP per 15
 // minutes, to blunt naive credential-stuffing. Weak first layer (per-process,
-// spoofable IP) — nginx at the edge is the real limit (P14).
+// spoofable IP), and it only covers browser traffic through this BFF — a direct
+// call to knowledge's `POST /auth/login` bypasses it entirely. The real limit is
+// now knowledge's own SERVER-SIDE per-IP throttle on that route (P13.S5,
+// server/auth_api.py), which a direct call cannot skip.
 const LOGIN_RATE_LIMIT = 5;
 const LOGIN_RATE_WINDOW_MS = 15 * 60_000;
 

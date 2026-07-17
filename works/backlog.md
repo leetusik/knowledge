@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P13`
-- Current slice: `P13.S5`
-- Next slice: `P13.REVIEW`
+- Current slice: `P13.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-18T01:30:52+09:00`
+- Rebuilt at: `2026-07-18T02:26:22+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
-| [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.S5` | `works/phases/active/P13` |
+| [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.REVIEW` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
 
@@ -71,7 +71,7 @@
 | [x] `P13.S2` | `done` | Auth & onboarding commands | `implementation` | `works/phases/active/P13/slices/P13.S2` |
 | [x] `P13.S3` | `done` | Knowledge commands | `implementation` | `works/phases/active/P13/slices/P13.S3` |
 | [x] `P13.S4` | `done` | Agent-readable guide docs + discovery | `implementation` | `works/phases/active/P13/slices/P13.S4` |
-| [ ] `P13.S5` | `todo` | Expose the control plane at the edge + throttle /auth + E2E CLI smoke | `implementation` | `works/phases/active/P13/slices/P13.S5` |
+| [x] `P13.S5` | `done` | Expose the control plane at the edge + throttle /auth + E2E CLI smoke | `implementation` | `works/phases/active/P13/slices/P13.S5` |
 | [ ] `P13.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P13/slices/P13.REVIEW` |
 
 ## Phase P14: Landing Page & Product Webpage via Claude Design Gate
