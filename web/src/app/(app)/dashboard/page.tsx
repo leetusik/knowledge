@@ -1,71 +1,238 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import {
+  appButtonClass,
+  DataTable,
+  type DataTableColumn,
+} from "@/components/ui";
+import { StatTiles, type StatTileVM, TrendChart } from "@/components/usage";
+import { DASHBOARD } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
+import { getDashboard, getUsage } from "@/lib/knowledge/app";
+import type { KbActivityEvent, KbDashboardProject } from "@/lib/knowledge/types";
 
-// P12.S2 (re-skinned P12.S2R) — the dashboard is a MINIMAL placeholder: it proves
-// the auth gate + light Knowledge Base console render for a real session (eyebrow
-// + serif title + the signed-in email/tenant in a `.kb-panel`). S3 swaps this for
-// the real tenant dashboard (projects list + create + usage stat tiles + trend).
-// `requireIdentity` is the same `cache()`d guard the layout awaits, so this shares
-// its /auth/me round-trip rather than making a second one.
-export const metadata: Metadata = { title: "Dashboard" };
+import { CreateProjectForm } from "./create-project-form";
+
+// P12.S3 — the tenant dashboard: the post-login home and the app's first real data
+// page. A server component throughout (only the create-project header button is a
+// client island), rendered inside the S2/S2R `(app)` shell (the topbar with the
+// tenant name + the teal-active rail already wrap this) — so it renders ONLY inside
+// `.kb-app-main`, never re-drawing chrome.
+//
+// Two PARALLEL calls: `/app/usage` for the stat tiles + 30-day search trend, and the
+// P12.S3 `/app/dashboard` rollup for the richer projects table (per-project Docs /
+// Keys / Last-used) + the recent-activity feed. `Promise.all` makes the second call
+// free in wall-clock terms. A non-401 failure from either propagates to the error
+// boundary — an outage must surface, not masquerade as an empty dashboard (the
+// 401→/login redirect lives inside `requireIdentity`). Tenant name comes from the
+// shell's cached `/auth/me`; no extra round-trip here.
+export const metadata: Metadata = { title: DASHBOARD.title };
+
+const columns: DataTableColumn<KbDashboardProject>[] = [
+  {
+    key: "name",
+    header: DASHBOARD.projects.columns.project,
+    cell: (project) => (
+      <span className="kb-dtable__name">{project.name}</span>
+    ),
+  },
+  {
+    key: "documents",
+    header: DASHBOARD.projects.columns.documents,
+    align: "right",
+    className: "num",
+    cell: (project) => project.documents.toLocaleString("en-US"),
+  },
+  {
+    key: "keys",
+    header: DASHBOARD.projects.columns.keys,
+    align: "right",
+    className: "num",
+    cell: (project) => project.keys.toLocaleString("en-US"),
+  },
+  {
+    key: "created",
+    header: DASHBOARD.projects.columns.created,
+    className: "mono",
+    cell: (project) => formatCreated(project.created_at),
+  },
+  {
+    key: "last_used",
+    header: DASHBOARD.projects.columns.lastUsed,
+    className: "mono",
+    cell: (project) => relativeTime(project.last_used_at),
+  },
+  {
+    key: "action",
+    header: DASHBOARD.projects.columns.action,
+    actions: true,
+    // The `/projects/[id]` detail route lands in S4 (the next slice); the Open link
+    // is the designed affordance and goes live then. Acceptable — the phase is not
+    // deployed until P14.
+    cell: (project) => (
+      <Link
+        href={`/projects/${project.id}`}
+        className={appButtonClass("ghost", "sm")}
+      >
+        {DASHBOARD.projects.openLabel}
+      </Link>
+    ),
+  },
+];
+
+/** `"2026-03-12T09:31:02+00:00"` → `"2026-03-12"` (mono ISO date); unparseable → first 10 chars. */
+function formatCreated(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso.slice(0, 10);
+  return at.toISOString().slice(0, 10);
+}
+
+/** `"2h ago"` / `"3d ago"` / `"just now"`; `"—"` when null or unparseable. */
+function relativeTime(iso: string | null): string {
+  if (!iso) return "—";
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "—";
+  const seconds = Math.floor((Date.now() - at.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+/** The bolded body of one activity line, per its type's template. */
+function activityBody(event: KbActivityEvent) {
+  const template = DASHBOARD.activity.templates[event.type];
+  const emphasised =
+    template.emphasis === "project"
+      ? event.project_name
+      : (event.credential_name ?? DASHBOARD.activity.unnamedKey);
+  return (
+    <>
+      {template.text} ·{" "}
+      <b className="font-semibold text-[var(--kb-ink)]">{emphasised}</b>
+    </>
+  );
+}
 
 export default async function DashboardPage() {
-  const { identity } = await requireIdentity();
+  const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
 
-  return (
-    <section style={{ maxWidth: "48rem" }}>
-      <div className="kb-app-eyebrow">{tenantName} · Workspace</div>
-      <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-        Dashboard
-      </h1>
-      <p className="kb-app-sub">
-        You are signed in. Projects, credentials, and usage arrive in the next
-        slices — this page confirms the authenticated console renders.
-      </p>
+  const [usage, dashboard] = await Promise.all([
+    getUsage(token),
+    getDashboard(token),
+  ]);
 
-      <div className="kb-panel" style={{ marginTop: "var(--kb-space-lg)" }}>
-        <div className="kb-panel__head">
-          <h2 className="kb-app-h2">Session</h2>
-          <span className="kb-chip">P12.S2R</span>
+  // The four tiles. "Active total" is derived (`documents_created − documents_deleted`),
+  // not a `totals` key; no deltas (operator decision).
+  const tiles: StatTileVM[] = [
+    {
+      key: "documents_created",
+      eyebrow: DASHBOARD.usage.tiles.documentsCreated,
+      value: usage.totals.documents_created,
+    },
+    {
+      key: "searches",
+      eyebrow: DASHBOARD.usage.tiles.searches,
+      value: usage.totals.searches,
+    },
+    {
+      key: "deleted",
+      eyebrow: DASHBOARD.usage.tiles.deleted,
+      value: usage.totals.documents_deleted,
+    },
+    {
+      key: "active_total",
+      eyebrow: DASHBOARD.usage.tiles.activeTotal,
+      value: usage.totals.documents_created - usage.totals.documents_deleted,
+    },
+  ];
+
+  const series = usage.daily_counts.map((day) => day.searches);
+  const peak = series.length > 0 ? Math.max(...series) : 0;
+
+  return (
+    <>
+      {/* .mainhead — eyebrow + title + sub, with the create-project affordance right. */}
+      <div className="mb-[1.3rem] flex items-start justify-between gap-4">
+        <div>
+          <div className="kb-app-eyebrow">
+            {tenantName} · {DASHBOARD.eyebrow}
+          </div>
+          <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
+            {DASHBOARD.title}
+          </h1>
+          <p className="kb-app-sub">{DASHBOARD.sub}</p>
         </div>
-        <dl
-          style={{
-            display: "grid",
-            gap: "var(--kb-space-md)",
-            gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
-            margin: 0,
-          }}
-        >
-          <div>
-            <dt className="kb-app-eyebrow">Signed-in user</dt>
-            <dd
-              style={{
-                margin: "0.35rem 0 0",
-                fontFamily: "var(--kb-font-mono)",
-                fontSize: "0.85rem",
-                color: "var(--kb-ink)",
-                wordBreak: "break-all",
-              }}
-            >
-              {identity.user.email}
-            </dd>
-          </div>
-          <div>
-            <dt className="kb-app-eyebrow">Workspace</dt>
-            <dd
-              style={{
-                margin: "0.35rem 0 0",
-                fontSize: "0.95rem",
-                color: "var(--kb-ink)",
-              }}
-            >
-              {tenantName}
-            </dd>
-          </div>
-        </dl>
+        <CreateProjectForm />
       </div>
-    </section>
+
+      <StatTiles tiles={tiles} />
+
+      {/* Trend panel — heading + mono caption + the line/area search trend. */}
+      <div className="kb-panel" style={{ marginTop: "var(--kb-space-md)" }}>
+        <div className="mb-[0.3rem] flex items-baseline justify-between gap-4">
+          <h2 className="kb-app-h2" style={{ fontSize: "1rem" }}>
+            {DASHBOARD.trend.heading}
+          </h2>
+          <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+            {DASHBOARD.trend.caption(usage.totals.searches, peak)}
+          </span>
+        </div>
+        <figure className="m-0 mt-[0.3rem] block h-[120px]">
+          <TrendChart
+            series={series}
+            ariaLabel={DASHBOARD.trend.ariaLabel}
+            empty={DASHBOARD.trend.empty}
+          />
+        </figure>
+      </div>
+
+      {/* .grid2 — Projects (1.7fr) | Recent activity (1fr). */}
+      <div className="mt-[var(--kb-space-md)] grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-[var(--kb-space-md)]">
+        <div className="kb-panel">
+          <div className="kb-panel__head">
+            <h2 className="kb-app-h2">{DASHBOARD.projects.heading}</h2>
+          </div>
+          <DataTable
+            columns={columns}
+            rows={dashboard.projects}
+            rowKey={(project) => project.id}
+            empty={DASHBOARD.projects.empty}
+          />
+        </div>
+
+        <div className="kb-panel">
+          <div className="kb-panel__head">
+            <h2 className="kb-app-h2">{DASHBOARD.activity.heading}</h2>
+          </div>
+          {dashboard.activity.length === 0 ? (
+            <p className="text-[0.88rem] text-[var(--kb-secondary)]">
+              {DASHBOARD.activity.empty}
+            </p>
+          ) : (
+            <ul className="m-0 list-none p-0">
+              {dashboard.activity.map((event, index) => (
+                <li
+                  key={`${event.type}-${event.at}-${index}`}
+                  className="flex items-baseline gap-[0.6rem] border-b border-[var(--kb-border)] py-[0.55rem] text-[0.85rem] last:border-b-0"
+                >
+                  <span className="w-[4.6rem] flex-none text-[0.68rem] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+                    {relativeTime(event.at)}
+                  </span>
+                  <span className="text-[var(--kb-secondary)]">
+                    {activityBody(event)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
