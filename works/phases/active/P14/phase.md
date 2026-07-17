@@ -153,7 +153,14 @@ landing's visual design is unchanged — only the CTA link targets shift from `/
 **Edge reconciliation → P14.S3** (not S2): keep `/api/ //auth/ //app/ //healthz` → `knowledge-api` (FastAPI,
 unchanged) but add a **more-specific `location /api/auth/` → `knowledge-web`** (the Next BFF; FastAPI has no
 such route), and route **everything else (`/`, `/dashboard`, `/graph`, …) → `knowledge-web`** (the Next app).
-Decide the mkdocs `knowledge-site`'s new home (subpath / subdomain / retire — it's also on GitHub Pages).
+
+**Docs-site decision (operator, 2026-07-18): RETIRE the mkdocs `knowledge-site` from the edge.** It only
+served the operator's personal KB (tenant #1); that content lives on **as tenant #1's knowledge** (the app's
+browse/search/read + graph, and the API) — nothing is lost. Drop the `site` service from `compose.prod.yml`
+and the `location / → knowledge-site` rule. **`/docs` is reserved for FUTURE product documentation** (a later
+effort) — S3 does **not** claim it. **Consequence for S3:** repoint `KB_PUBLIC_BASE_URL` (currently the mkdocs
+viewer root) so the API's written-doc `url` field isn't a dead link — target the public `docs/` GitHub Pages
+(Track 1) or degrade cleanly; confirm the exact target in the S3 plan.
 
 **P14.S2 scope (no reshape / no split):** with the `/app` rebase dropped, S2 is just **build the landing** —
 one cohesive `implementation`/high slice. No auth-app route changes, no BFF path changes.
