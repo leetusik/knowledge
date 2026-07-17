@@ -2,7 +2,7 @@
   "current_phase": "P13",
   "current_slice": "P13.REVIEW",
   "next_slice": null,
-  "waiting_on_operator": null,
-  "mode": "phase",
-  "updated_at": "2026-07-18T02:26:22+09:00"
+  "waiting_on_operator": "P13.REVIEW",
+  "mode": "waiting",
+  "updated_at": "2026-07-18T02:26:51+09:00"
 }
