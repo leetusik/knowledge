@@ -1,0 +1,342 @@
+/*
+ * knowledge — public landing primitive layer (P14.S2).
+ * --------------------------------------------------------------------------
+ * A SMALL namespaced block for the marketing surface. Layout / spacing / type /
+ * color use Tailwind v4 utilities + the @theme tokens (globals.css); this file
+ * carries only what utilities cannot cleanly express: the tonal-band custom-
+ * property re-points, the tick / eyebrow pseudo-elements, the terminal syntax
+ * inks, the numbered-step connectors, the search-highlight, and the graph plate
+ * / panel / legend. Rebuilt from the design reference
+ * `web/design/rounds/01-landing/output/marketing.css` (read-only) — NOT ported.
+ *
+ * The tonal-band mechanic (build-prompt §2): a dark band is a scoped context,
+ * not a scheme flip. Inside `.mkt-band--dark`/`--deep` the accent steps to the
+ * lighter on-dark teal and text/border switch to the on-dark tiers. These are
+ * SCOPED cascade re-points of the app's semantic accent aliases (--color-green*)
+ * plus the marketing --mkt-* helper vars — NO locked --kb-* token is renamed or
+ * revalued. The reused CVA pill button (bg-green / focus ring = --color-green*)
+ * therefore auto-steps on dark bands with no second button system.
+ */
+
+.mkt-root {
+  --mkt-border: var(--kb-border);
+  --mkt-border-strong: var(--kb-border-strong);
+}
+
+/* ── Tonal bands ─────────────────────────────────────────────────────────────
+ * Light tiers (paper ↔ sunken) follow the scheme via bg utilities in the JSX.
+ * The dark bands are scheme-INDEPENDENT charcoal and re-point accent/text/border
+ * in-scope. */
+.mkt-band--dark,
+.mkt-band--deep {
+  background: var(--kb-band-dark);
+  color: var(--color-on-dark);
+  --color-green: var(--kb-accent-on-dark);
+  --color-green-deep: var(--kb-accent-on-dark-strong);
+  --color-green-soft: var(--kb-accent-on-dark-soft);
+  --color-on-primary: #10201d; /* dark ink on the light-teal on-dark CTA fill */
+  --mkt-border: var(--kb-border-on-dark);
+  --mkt-border-strong: var(--kb-border-on-dark-strong);
+}
+.mkt-band--deep {
+  background: var(--kb-band-dark-deep);
+}
+
+.mkt-hairline-top {
+  border-top: 1px solid var(--mkt-border);
+}
+
+/* ── Text tiers that flip with the band (light default → on-dark) ────────────
+ * Headings inherit the band color (ink on paper, on-dark on charcoal), so they
+ * need only the display face + a size utility. */
+.mkt-lede,
+.mkt-body {
+  color: var(--kb-secondary);
+}
+.mkt-hint {
+  color: var(--kb-hint);
+}
+.mkt-band--dark .mkt-lede,
+.mkt-band--deep .mkt-lede,
+.mkt-band--dark .mkt-body,
+.mkt-band--deep .mkt-body {
+  color: var(--color-on-dark-muted);
+}
+.mkt-band--dark .mkt-hint,
+.mkt-band--deep .mkt-hint {
+  color: var(--color-on-dark-hint);
+}
+.mkt-eyebrow {
+  color: var(--kb-hint);
+}
+.mkt-band--dark .mkt-eyebrow,
+.mkt-band--deep .mkt-eyebrow {
+  color: var(--color-on-dark-hint);
+}
+
+/* ── Eyebrow — tracked mono caps with a short leading rule ───────────────────*/
+.mkt-eyebrow::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 1px;
+  background: var(--color-green);
+  opacity: 0.8;
+}
+
+/* ── Inline code — the editorial mono token voice ────────────────────────────*/
+.mkt-code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ── Feature tick — a small teal dot (no emoji) ──────────────────────────────*/
+.mkt-tick {
+  position: relative;
+  padding-left: 26px;
+  color: var(--kb-secondary);
+}
+.mkt-band--dark .mkt-tick,
+.mkt-band--deep .mkt-tick {
+  color: var(--color-on-dark-muted);
+}
+.mkt-tick::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.58em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-green-soft);
+  box-shadow: 0 0 0 3px var(--color-green-soft);
+}
+.mkt-tick::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: calc(0.58em + 2px);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-green);
+}
+
+/* ── Header / nav ────────────────────────────────────────────────────────────
+ * Transparent over the dark hero (on-dark text, accent stepped), then a sticky
+ * paper bar with a hairline base on scroll (client island flips data-scrolled). */
+.mkt-header {
+  color: var(--color-on-dark);
+  border-bottom: 1px solid transparent;
+  transition:
+    background var(--kb-ease),
+    border-color var(--kb-ease),
+    box-shadow var(--kb-ease),
+    color var(--kb-ease);
+  --color-green: var(--kb-accent-on-dark);
+  --color-green-deep: var(--kb-accent-on-dark-strong);
+  --color-green-soft: var(--kb-accent-on-dark-soft);
+  --color-on-primary: #10201d;
+}
+.mkt-header[data-scrolled="true"] {
+  background: var(--kb-paper);
+  border-bottom-color: var(--kb-border);
+  box-shadow: 0 6px 20px rgba(38, 33, 28, 0.05);
+  color: var(--kb-ink);
+  --color-green: var(--kb-accent);
+  --color-green-deep: var(--kb-accent-strong);
+  --color-green-soft: var(--kb-accent-soft);
+  --color-on-primary: #fbfaf5;
+}
+.mkt-nav-link {
+  color: color-mix(in srgb, currentColor 74%, transparent);
+  transition: color var(--kb-ease);
+}
+.mkt-nav-link:hover {
+  color: currentColor;
+}
+
+/* ── Terminal block (the CLI / agent-first proof) — always on a dark band ─────*/
+.mkt-term {
+  background: var(--kb-band-dark-soft);
+  border: 1px solid var(--kb-border-on-dark);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+.mkt-term__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kb-border-on-dark);
+}
+.mkt-term__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--kb-border-on-dark-strong);
+}
+.mkt-term__title {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-on-dark-hint);
+}
+.mkt-term__body {
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: var(--text-code-md);
+  line-height: 1.85;
+  color: var(--color-on-dark);
+  overflow-x: auto;
+}
+.mkt-term__line {
+  white-space: pre-wrap;
+}
+.mkt-t-p {
+  color: var(--kb-accent-on-dark);
+} /* prompt $ */
+.mkt-t-a {
+  color: var(--color-on-dark-hint);
+} /* arg / comment */
+.mkt-t-ok {
+  color: var(--kb-accent-on-dark-strong);
+} /* success line */
+.mkt-t-key {
+  color: var(--kb-ink-bronze-dark);
+} /* vk_ key (bronze) */
+
+/* ── Numbered step (how it works) ────────────────────────────────────────────*/
+.mkt-step__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--mkt-border-strong);
+  background: var(--kb-surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--color-green);
+}
+.mkt-step__rule {
+  flex: 1;
+  height: 1px;
+  background: var(--mkt-border);
+}
+
+/* ── Search-highlight (feature · save) ───────────────────────────────────────*/
+.mkt-mark {
+  background: var(--color-green-soft);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* ── The knowledge-graph motif (feature · graph) ─────────────────────────────
+ * Recessed --kb-surface-sunken plate; the canvas draws transparent over it and
+ * reads the scheme-resolved --mkt-graph-* / --mkt-ink-* inks live. */
+.mkt-graph-plate {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: var(--kb-surface-sunken);
+  border: 1px solid var(--mkt-border);
+  overflow: hidden;
+  --mkt-ink-teal: var(--kb-ink-teal);
+  --mkt-ink-bronze: var(--kb-ink-bronze);
+  --mkt-ink-plum: var(--kb-ink-plum);
+  --mkt-graph-edge: #7c7362;
+  --mkt-graph-edge-active: var(--kb-ink-teal);
+  --mkt-graph-tag: var(--kb-secondary);
+  --mkt-graph-ghost: #7f7666;
+  --mkt-graph-focus: var(--kb-accent-strong);
+  --mkt-graph-halo: rgba(15, 111, 102, 0.22);
+  --mkt-graph-label: var(--kb-ink);
+  --mkt-graph-label-muted: var(--kb-secondary);
+  --mkt-graph-outline: var(--kb-surface-sunken);
+}
+[data-md-color-scheme="slate"] .mkt-graph-plate {
+  --mkt-ink-teal: var(--kb-ink-teal-dark);
+  --mkt-ink-bronze: var(--kb-ink-bronze-dark);
+  --mkt-ink-plum: var(--kb-ink-plum-dark);
+  --mkt-graph-edge: #6f6759;
+  --mkt-graph-edge-active: var(--kb-ink-teal-dark);
+  --mkt-graph-ghost: #6b6355;
+  --mkt-graph-halo: rgba(98, 189, 178, 0.25);
+}
+.mkt-graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Floating info panel (project chip · title · meta · tags · read) */
+.mkt-graph-panel {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: min(58%, 268px);
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--kb-surface);
+  border: 1px solid var(--mkt-border);
+  box-shadow: var(--kb-shadow-card);
+}
+.mkt-graph-chip {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.mkt-graph-legend {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--kb-surface) 88%, transparent);
+  border: 1px solid var(--mkt-border);
+  backdrop-filter: blur(3px);
+}
+.mkt-graph-ring {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--kb-secondary);
+  vertical-align: middle;
+}
+.mkt-graph-switch {
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--color-green);
+  position: relative;
+  flex: none;
+}
+.mkt-graph-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--kb-surface);
+}
+
+/* Reduced-motion floor: the settled state is the CSS default; the marketing
+ * transitions here collapse so nothing animates for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-header,
+  .mkt-nav-link {
+    transition: none;
+  }
+}
