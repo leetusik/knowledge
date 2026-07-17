@@ -22,6 +22,22 @@ Requirements: Python 3.12+, with Docker (optional — runs the local viewer + AP
 and a GitHub repository (optional — only to publish via Pages). Full details in
 [`plugin/README.md`](plugin/README.md).
 
+## Command-line interface
+
+There is also a standalone `knowledge` CLI for the **hosted** service — sign up,
+configure credentials, and save and search knowledge from a terminal, without
+visiting the website or installing the plugin:
+
+    uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
+    printf %s "$PASSWORD" | knowledge init --email you@example.com --password-stdin
+    knowledge save note.md --tag python --tag testing
+
+It writes the same `~/.config/knowledge-kb/config.json` the plugin reads, so both
+share one hosted knowledge base. Full quickstart in
+[`cli/README.md`](cli/README.md). Driving this from a coding agent? Run `knowledge
+guide` — it prints the full machine-readable contract (auth, the save rules, the
+`--json`/exit-code protocol) as one bundled, offline document.
+
 ## How it's built
 
 - **Write path** — a custom `explain` skill posts to a FastAPI + SQLite (FTS5

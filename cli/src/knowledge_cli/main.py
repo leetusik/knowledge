@@ -23,7 +23,7 @@ import sys
 
 import httpx
 
-from . import __version__, auth, config, knowledge
+from . import __version__, auth, config, guide, knowledge
 from .auth import DEFAULT_BASE_URL
 from .client import ApiError
 from .errors import CliError
@@ -69,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Your personal knowledge base, from the terminal — sign up, configure "
             "credentials, save and search, without visiting the website."
         ),
+        epilog="New here? Run `knowledge guide` for the full agent-readable contract.",
     )
     parser.add_argument(
         "--version", action="version", version=f"knowledge-cli {__version__}"
@@ -93,6 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     auth.register(sub)
     knowledge.register(sub)
+    guide.register(sub)
 
     return parser
 
