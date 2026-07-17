@@ -1,0 +1,176 @@
+/*
+ * .kb-prose — the document reader's markdown styling (P12.S5).
+ *
+ * A MINIMAL on-KB-token reader surface: no `@tailwindcss/typography`, no new design
+ * vocabulary — every value is drawn from the `--kb-*` tokens (kb-tokens.css) so it
+ * tracks both schemes automatically (Fraunces headings, Source Sans body, JetBrains
+ * mono code, teal `--kb-accent` links, hairline borders/blockquote). Flagged for the
+ * P12 review: no reader/prose spec was in the design handback (only dashboard +
+ * login), so this is a faithful on-token extension a future design pass can formalize.
+ *
+ * Unlayered (a plain import), like the other `.kb-*` classes, so it wins over
+ * Tailwind's layered utilities. Selectors are scoped under `.kb-prose`.
+ */
+
+.kb-prose {
+  max-width: 46rem;
+  color: var(--kb-ink);
+  font-family: var(--kb-font-body);
+  font-size: 0.98rem;
+  line-height: var(--kb-leading-body);
+}
+
+.kb-prose > :first-child {
+  margin-top: 0;
+}
+.kb-prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* Headings — Fraunces, tight leading, generous top margin. */
+.kb-prose h1,
+.kb-prose h2,
+.kb-prose h3,
+.kb-prose h4,
+.kb-prose h5,
+.kb-prose h6 {
+  font-family: var(--kb-font-display);
+  font-weight: var(--kb-weight-semibold);
+  line-height: var(--kb-leading-heading);
+  color: var(--kb-ink);
+  margin: 1.9rem 0 0.7rem;
+  word-break: keep-all;
+}
+.kb-prose h1 {
+  font-size: 1.7rem;
+  letter-spacing: -0.01em;
+}
+.kb-prose h2 {
+  font-size: 1.35rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--kb-border);
+}
+.kb-prose h3 {
+  font-size: 1.12rem;
+}
+.kb-prose h4 {
+  font-size: 1rem;
+}
+.kb-prose h5,
+.kb-prose h6 {
+  font-size: 0.9rem;
+  color: var(--kb-secondary);
+}
+
+.kb-prose p {
+  margin: 0.85rem 0;
+}
+
+/* Links — teal accent, underline on hover only. */
+.kb-prose a {
+  color: var(--kb-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--kb-accent-soft);
+}
+.kb-prose a:hover {
+  color: var(--kb-accent-strong);
+  border-bottom-color: var(--kb-accent-strong);
+}
+
+.kb-prose strong {
+  font-weight: var(--kb-weight-semibold);
+}
+.kb-prose em {
+  font-style: italic;
+}
+
+/* Lists. */
+.kb-prose ul,
+.kb-prose ol {
+  margin: 0.85rem 0;
+  padding-left: 1.4rem;
+}
+.kb-prose li {
+  margin: 0.3rem 0;
+}
+.kb-prose li > ul,
+.kb-prose li > ol {
+  margin: 0.3rem 0;
+}
+/* GFM task-list checkboxes. */
+.kb-prose li input[type="checkbox"] {
+  margin-right: 0.4rem;
+  accent-color: var(--kb-accent);
+}
+
+/* Inline code + fenced blocks — JetBrains mono on the sunken warm surface. */
+.kb-prose code {
+  font-family: var(--kb-font-mono);
+  font-size: 0.86em;
+  background: var(--kb-surface-sunken);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  padding: 0.1em 0.35em;
+}
+.kb-prose pre {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--kb-surface-sunken);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.kb-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Blockquote — hairline rule + secondary ink. */
+.kb-prose blockquote {
+  margin: 1rem 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border-left: 2px solid var(--kb-border-strong);
+  color: var(--kb-secondary);
+}
+.kb-prose blockquote p {
+  margin: 0.4rem 0;
+}
+
+.kb-prose hr {
+  margin: 1.8rem 0;
+  border: 0;
+  border-top: 1px solid var(--kb-border);
+}
+
+/* GFM tables. */
+.kb-prose table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.kb-prose th,
+.kb-prose td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--kb-border);
+  text-align: left;
+}
+.kb-prose th {
+  background: var(--kb-surface-sunken);
+  font-family: var(--kb-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kb-secondary);
+}
+
+.kb-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--kb-radius-sm);
+}
