@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0003_p7_the_knowledge_feature_now_ships_as_an_installable_claude_code_plugin_marketplace_knowledge_explain_knowledge_setup_for_any_user_architecture_kept_saas-open",
+      "latest": "v0004_p12_authenticated_web_app_is_the_primary_user_surface_all_web-ui_features_free",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -27,11 +27,19 @@
           "source": "P7.REVIEW",
           "summary": "P7: the knowledge feature now ships as an installable Claude Code plugin (marketplace + /knowledge:explain + /knowledge:setup) for any user; architecture kept SaaS-open",
           "previous": "v0002_personal_knowledge_base_with_two_consumption_tracks"
+        },
+        {
+          "id": "v0004_p12_authenticated_web_app_is_the_primary_user_surface_all_web-ui_features_free",
+          "path": "docs/versions/product/v0004_p12_authenticated_web_app_is_the_primary_user_surface_all_web-ui_features_free.md",
+          "created_at": "2026-07-17T15:00:39+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 authenticated web app is the primary user surface; all web-UI features free",
+          "previous": "v0003_p7_the_knowledge_feature_now_ships_as_an_installable_claude_code_plugin_marketplace_knowledge_explain_knowledge_setup_for_any_user_architecture_kept_saas-open"
         }
       ]
     },
     "experience": {
-      "latest": "v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads",
+      "latest": "v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -65,11 +73,19 @@
           "source": "P6.REVIEW",
           "summary": "P6.S1 revision: quiet labels A-prime, idle mingle, pointer/pinch zoom, sticky re-placement, legend lens, roomier layout that survives in-tab reloads",
           "previous": "v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry"
+        },
+        {
+          "id": "v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph",
+          "path": "docs/versions/experience/v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph.md",
+          "created_at": "2026-07-17T15:00:38+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 authenticated web app UX: login gate, dashboard, project detail, documents, in-app graph",
+          "previous": "v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads"
         }
       ]
     },
     "architecture": {
-      "latest": "v0009_p10_two-plane_app_async_postgres_control_plane_alongside_the_unchanged_files_disposable-sqlite_content_plane_dormant_without_database_url",
+      "latest": "v0010_p12_separate-origin_next.js_app_sealed-cookie_bff_unmetered_app_read_routes_per-tenant_viewer",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -143,11 +159,19 @@
           "source": "P10.REVIEW",
           "summary": "P10 two-plane app: async Postgres control plane alongside the unchanged files + disposable-SQLite content plane; dormant without DATABASE_URL",
           "previous": "v0008_p9_track_1_web_ui_is_now_self-hosted_mkdocs_live-serve_not_github_pages_two_services_knowledge-api_knowledge-site_on_one_box_behind_two-location_edge_routing_-_site_api_healthz_-_api"
+        },
+        {
+          "id": "v0010_p12_separate-origin_next.js_app_sealed-cookie_bff_unmetered_app_read_routes_per-tenant_viewer",
+          "path": "docs/versions/architecture/v0010_p12_separate-origin_next.js_app_sealed-cookie_bff_unmetered_app_read_routes_per-tenant_viewer.md",
+          "created_at": "2026-07-17T15:00:38+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 separate-origin Next.js app + sealed-cookie BFF; unmetered /app read routes; per-tenant viewer",
+          "previous": "v0009_p10_two-plane_app_async_postgres_control_plane_alongside_the_unchanged_files_disposable-sqlite_content_plane_dormant_without_database_url"
         }
       ]
     },
     "frontend": {
-      "latest": "v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token",
+      "latest": "v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -181,6 +205,14 @@
           "source": "P6.REVIEW",
           "summary": "P6.S1 renderer revision: live-model port (persistent rAF, +4 tokens, is-on lens), retuned sim + smarter seeding, sessionStorage restore; docs describe publish-safety without the literal path token",
           "previous": "v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted"
+        },
+        {
+          "id": "v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces",
+          "path": "docs/versions/frontend/v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces.md",
+          "created_at": "2026-07-17T15:00:38+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 authenticated web app in web/ (Next.js, KB design system, sealed-cookie BFF, four surfaces)",
+          "previous": "v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token"
         }
       ]
     },
@@ -301,7 +333,7 @@
       ]
     },
     "api": {
-      "latest": "v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched",
+      "latest": "v0009_p12_unmetered_session-scoped_app_read_routes_dashboard_documents_search_graph",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -367,11 +399,19 @@
           "source": "P11.REVIEW",
           "summary": "P11 usage reads GET /app/usage + /app/projects/{id}/usage; cross-tenant 404; frozen /api/* contract untouched",
           "previous": "v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively"
+        },
+        {
+          "id": "v0009_p12_unmetered_session-scoped_app_read_routes_dashboard_documents_search_graph",
+          "path": "docs/versions/api/v0009_p12_unmetered_session-scoped_app_read_routes_dashboard_documents_search_graph.md",
+          "created_at": "2026-07-17T15:00:38+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 unmetered session-scoped /app read routes: dashboard, documents, search, graph",
+          "previous": "v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched"
         }
       ]
     },
     "operations": {
-      "latest": "v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification",
+      "latest": "v0013_p12_web-app_local_build_run_stub_kb_api_base_url_session_secret_full_deploy_p14",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -469,11 +509,19 @@
           "source": "P11.REVIEW",
           "summary": "P11 second Alembic migration 0002_usage_events (alembic upgrade head applies both); onboarding_smoke.py extended with the usage meter->read assertions as part of post-deploy verification",
           "previous": "v0011_p10_postgres_17_in_both_compose_files_explicit_alembic_upgrade_head_python_-m_server.seed_kb_operator_email_kb_operator_password_prereqs_deploy_migration_runbook_onboarding_smoke_verifier_still_single-worker"
+        },
+        {
+          "id": "v0013_p12_web-app_local_build_run_stub_kb_api_base_url_session_secret_full_deploy_p14",
+          "path": "docs/versions/operations/v0013_p12_web-app_local_build_run_stub_kb_api_base_url_session_secret_full_deploy_p14.md",
+          "created_at": "2026-07-17T15:00:39+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 web-app local build/run stub; KB_API_BASE_URL + SESSION_SECRET; full deploy P14",
+          "previous": "v0012_p11_second_alembic_migration_0002_usage_events_alembic_upgrade_head_applies_both_onboarding_smoke.py_extended_with_the_usage_meter-_read_assertions_as_part_of_post-deploy_verification"
         }
       ]
     },
     "security": {
-      "latest": "v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii",
+      "latest": "v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -531,6 +579,14 @@
           "source": "P11.REVIEW",
           "summary": "P11 per-tenant usage isolation; usage reads 404 for missing/cross-tenant; metering best-effort never alters a request; no new PII",
           "previous": "v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution"
+        },
+        {
+          "id": "v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui",
+          "path": "docs/versions/security/v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui.md",
+          "created_at": "2026-07-17T15:00:39+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 sealed-cookie BFF web surface; show-once vk_ key; unmetered read-only web UI",
+          "previous": "v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii"
         }
       ]
     },
@@ -589,7 +645,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type",
+      "latest": "v0013_p12_web-app_adrs_web_subdir_sealed-cookie_bff_kb_design_system_deploy_p14_unmetered_read-only_web",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -687,9 +743,17 @@
           "source": "P11.REVIEW",
           "summary": "P11 ADRs: usage event-log over rollup; meter writes+searches only; derive-on-read; last_used_at on metered events; project name to UUID nullable; free-text event_type",
           "previous": "v0011_p10_adrs_postgres-over-sqlite_for_accounts_namespaced_docs-canonical_per-tenant_storage_kb_api_token_as_the_pinned_tenant-1_master_bearer"
+        },
+        {
+          "id": "v0013_p12_web-app_adrs_web_subdir_sealed-cookie_bff_kb_design_system_deploy_p14_unmetered_read-only_web",
+          "path": "docs/versions/decisions/v0013_p12_web-app_adrs_web_subdir_sealed-cookie_bff_kb_design_system_deploy_p14_unmetered_read-only_web.md",
+          "created_at": "2026-07-17T15:00:39+09:00",
+          "source": "P12.REVIEW",
+          "summary": "P12 web-app ADRs: web/ subdir, sealed-cookie BFF, KB design system, deploy P14, unmetered read-only web",
+          "previous": "v0012_p11_adrs_usage_event-log_over_rollup_meter_writes_searches_only_derive-on-read_last_used_at_on_metered_events_project_name_to_uuid_nullable_free-text_event_type"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-17T09:01:10+09:00"
+  "last_rebuilt_at": "2026-07-17T15:05:19+09:00"
 }
