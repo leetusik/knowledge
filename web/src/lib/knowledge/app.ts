@@ -6,6 +6,7 @@ import type {
   KbDocument,
   KbDocumentsPage,
   KbDocumentsQuery,
+  KbGraph,
   KbMintedCredential,
   KbProject,
   KbProjectUsage,
@@ -287,4 +288,25 @@ export async function searchDocuments(
     `/app/search${documentsQueryString(query)}`,
     { token, signal },
   );
+}
+
+// ── /app/graph — the per-tenant knowledge map (P12.S6) ──────────────────────
+// The in-app graph's data source: the same `{version, projects, nodes, edges}`
+// contract the build-time mkdocs `graph.json` emits, but derived from the content
+// store for the caller's tenant. UNMETERED, session-scoped, tenant-scoped on the
+// backend. The graph route fetches this ONCE on the server and passes the payload
+// as a prop to the client `<GraphCanvas>` (no browser fetch / BFF proxy).
+
+/**
+ * `GET /app/graph` (bearer) → 200 the tenant's knowledge graph
+ * (`{version, projects, nodes, edges, truncated}`). Called BARE — the shipped UI
+ * is per-tenant (the whole corpus); the backend accepts an optional `project` UUID
+ * but the app sends none. A doc node's `url` is the S5 read route
+ * `/documents/{id}`, which is what a node click navigates to.
+ */
+export async function getGraph(
+  token: string,
+  signal?: AbortSignal,
+): Promise<KbGraph> {
+  return getJson<KbGraph>("/app/graph", { token, signal });
 }

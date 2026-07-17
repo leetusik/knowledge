@@ -1,0 +1,426 @@
+/*
+ * Knowledge Base — in-app graph overlays + container (P12.S6).
+ * --------------------------------------------------------------------------
+ * Ported from the docs' `docs/stylesheets/extra.css` §10b/c (the map frame +
+ * the legend / switch / zoom / tooltip / panel / empty overlay cards) onto the
+ * app. Two deliberate departures from the mkdocs original, both because this is
+ * NOT a full-page map:
+ *   - DROP the `100vw` full-bleed breakout and the `.md-*` `:has()` sidebar
+ *     hiding — the map lives inside the console `.kb-app-main`, so `.kb-graph`
+ *     is a plain sized `position: relative` container (a bordered card).
+ *   - Everything else is verbatim on the same `--kb-*` tokens.
+ * The one dangling `--md-default-fg-color--lightest` ref (extra.css:913, the
+ * `.kb-tag` border) is fixed here to `--kb-border`.
+ *
+ * Co-located with the graph route, imported by `graph-canvas.tsx`. The overlays
+ * are scoped under `.kb-graph` so nothing leaks in/out of the console chrome.
+ * --------------------------------------------------------------------------
+ */
+
+/* ---- Map frame (a sized in-console card; no full-bleed breakout) --------- */
+.kb-graph {
+  position: relative;
+  width: 100%;
+  /* Fill the console main below the header: viewport − topbar − main padding −
+     the page header/eyebrow block. Approximate but the ResizeObserver adapts to
+     whatever definite height resolves; a floor keeps it usable on short screens. */
+  height: calc(100dvh - var(--kb-app-topbar-h) - 13rem);
+  min-height: 30rem;
+  background: var(--kb-graph-canvas);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  overflow: hidden;
+  font-family: var(--kb-font-body);
+}
+.kb-graph__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none; /* required for pointer drag / pinch-zoom */
+}
+.kb-graph__canvas:active {
+  cursor: grabbing;
+}
+
+/* ---- Overlay card base + [hidden] outranking -----------------------------
+   `.kb-graph__ui` is the quiet surface card shared by legend / zoom / panel.
+   The [hidden] rules must outrank each overlay's own display rule (grid / flex /
+   inline-flex all beat a bare [hidden]), or the engine could never hide them. */
+.kb-graph .kb-graph__ui {
+  position: absolute;
+  background: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  color: var(--kb-ink);
+  z-index: 2;
+}
+.kb-graph [hidden],
+.kb-graph .kb-graph-empty[hidden],
+.kb-graph .kb-graph-zoom[hidden],
+.kb-graph .kb-graph-tooltip[hidden],
+.kb-graph .kb-graph-legend[hidden],
+.kb-graph .kb-graph-panel[hidden] {
+  display: none;
+}
+
+/* ---- Legend + filters (bottom-left) -------------------------------------- */
+.kb-graph .kb-graph-legend {
+  left: 0.9rem;
+  bottom: 0.9rem;
+  padding: 0.55rem 0.7rem 0.6rem;
+  width: 11rem;
+}
+.kb-graph .kb-graph-legend__head {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-hint);
+  font-weight: var(--kb-weight-semibold);
+  margin: 0 0.3rem 0.25rem;
+}
+.kb-graph .kb-graph-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.26rem 0.3rem;
+  border: 0;
+  border-radius: var(--kb-radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--kb-secondary);
+  transition:
+    color var(--kb-ease),
+    background var(--kb-ease);
+}
+.kb-graph .kb-graph-legend__item:hover {
+  color: var(--kb-ink);
+  background: var(--kb-surface-sunken);
+}
+.kb-graph .kb-graph-legend__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kb-graph .kb-graph-legend__count {
+  margin-left: auto;
+  color: var(--kb-hint);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+/* project chip — ink set per instance: style="--chip: var(--kb-graph-project-1)" */
+.kb-graph .kb-graph-legend__chip {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--chip, var(--kb-graph-node-doc));
+}
+.kb-graph .kb-graph-legend__chip--ring {
+  background: transparent;
+  border: 1.5px solid var(--kb-graph-node-tag);
+}
+.kb-graph .kb-graph-legend__chip--ghost {
+  background: transparent;
+  border: 1.5px dashed var(--kb-graph-node-ghost);
+}
+/* highlighted project (legend click — a lens, never a filter): row keeps full ink */
+.kb-graph .kb-graph-legend__item.is-on {
+  color: var(--kb-ink);
+  background: var(--kb-surface-sunken);
+  font-weight: var(--kb-weight-medium);
+}
+.kb-graph .kb-graph-legend__item.is-on .kb-graph-legend__count {
+  color: var(--kb-secondary);
+}
+.kb-graph .kb-graph-legend__item.is-off {
+  color: var(--kb-hint);
+}
+.kb-graph .kb-graph-legend__item.is-off .kb-graph-legend__chip {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--chip, var(--kb-graph-node-doc));
+}
+.kb-graph .kb-graph-legend__rule {
+  border: 0;
+  border-top: 1px solid var(--kb-border);
+  margin: 0.4rem -0.7rem 0.35rem;
+}
+.kb-graph .kb-graph-legend__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.1rem 0.3rem 0.05rem;
+  font-size: 0.72rem;
+  color: var(--kb-secondary);
+}
+.kb-graph .kb-graph-legend__row .kb-graph-legend__count {
+  margin-left: 0;
+}
+.kb-graph .kb-graph-legend__note {
+  margin: 0.4rem 0.3rem 0;
+  font-size: 0.6rem;
+  line-height: 1.45;
+  color: var(--kb-hint);
+}
+
+/* ---- Tag-visibility switch ----------------------------------------------- */
+.kb-graph .kb-graph-switch {
+  flex: none;
+  margin-left: auto;
+  width: 1.5rem;
+  height: 0.85rem;
+  border: 0;
+  border-radius: var(--kb-radius-pill);
+  cursor: pointer;
+  position: relative;
+  background: var(--kb-border-strong);
+  transition: background var(--kb-ease);
+}
+.kb-graph .kb-graph-switch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  width: 0.58rem;
+  height: 0.58rem;
+  border-radius: 50%;
+  background: var(--kb-surface);
+  transition: left var(--kb-ease);
+}
+.kb-graph .kb-graph-switch.is-on {
+  background: var(--kb-accent);
+}
+.kb-graph .kb-graph-switch.is-on::after {
+  left: calc(100% - 0.58rem - 2px);
+}
+
+/* ---- Zoom stack (bottom-right) ------------------------------------------- */
+.kb-graph .kb-graph-zoom {
+  right: 0.9rem;
+  bottom: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.kb-graph .kb-graph-zoom__btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--kb-border);
+  color: var(--kb-secondary);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--kb-ease),
+    background var(--kb-ease);
+}
+.kb-graph .kb-graph-zoom__btn:last-child {
+  border-bottom: 0;
+}
+.kb-graph .kb-graph-zoom__btn:hover {
+  color: var(--kb-accent-strong);
+  background: var(--kb-surface-sunken);
+}
+
+/* ---- Hover tooltip (low zoom, labels hidden) ----------------------------- */
+.kb-graph .kb-graph-tooltip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.55rem;
+  pointer-events: none;
+  z-index: 3;
+  background: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  font-size: 0.72rem;
+  font-weight: var(--kb-weight-medium);
+  color: var(--kb-ink);
+  white-space: nowrap;
+}
+.kb-graph .kb-graph-tooltip__chip {
+  flex: none;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--chip, var(--kb-graph-node-doc));
+}
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ring,
+.kb-graph .kb-graph-tooltip__chip.kb-graph-legend__chip--ghost {
+  background: transparent;
+}
+.kb-graph .kb-graph-tooltip__kind {
+  color: var(--kb-hint);
+  font-weight: var(--kb-weight-regular);
+}
+
+/* ---- Info panel (top-right, on node click) ------------------------------- */
+.kb-graph .kb-graph-panel {
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 17rem;
+  padding: 0.7rem 0.85rem 0.75rem;
+}
+.kb-graph .kb-graph-panel__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: var(--kb-tracking-label);
+  color: var(--kb-secondary);
+  font-weight: var(--kb-weight-semibold);
+}
+.kb-graph .kb-graph-panel__eyebrow .kb-graph-legend__chip {
+  width: 0.42rem;
+  height: 0.42rem;
+}
+.kb-graph .kb-graph-panel__close {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  padding: 0.1rem;
+  color: var(--kb-hint);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__close:hover {
+  color: var(--kb-ink);
+}
+.kb-graph .kb-graph-panel__title {
+  margin: 0.35rem 0 0.25rem;
+  font-family: var(--kb-font-display);
+  font-size: 1.02rem;
+  line-height: 1.28;
+  font-weight: var(--kb-weight-semibold);
+  color: var(--kb-ink);
+}
+.kb-graph .kb-graph-panel__meta {
+  font-size: 0.66rem;
+  color: var(--kb-hint);
+  font-variant-numeric: tabular-nums;
+}
+.kb-graph .kb-graph-panel__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.55rem 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+.kb-graph .kb-graph-panel__tags li {
+  margin: 0;
+  padding: 0;
+}
+.kb-graph .kb-graph-panel__read {
+  font-size: 0.72rem;
+  font-weight: var(--kb-weight-medium);
+  color: var(--kb-accent);
+  text-decoration: none;
+  transition: color var(--kb-ease);
+}
+.kb-graph .kb-graph-panel__read:hover {
+  color: var(--kb-accent-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+/* unresolved (ghost) variant — no read-through, a quiet badge instead */
+.kb-graph .kb-graph-panel__badge {
+  display: inline-block;
+  margin-top: 0.1rem;
+  padding: 0.08rem 0.5rem;
+  border: 1px dashed var(--kb-border-strong);
+  border-radius: var(--kb-radius-pill);
+  font-size: 0.6rem;
+  color: var(--kb-hint);
+}
+.kb-graph .kb-graph-panel--ghost .kb-graph-panel__title {
+  color: var(--kb-secondary);
+}
+
+/* ---- Tag pill (panel) — the design-system pill; border fixed to --kb-border */
+.kb-graph .kb-tag {
+  display: inline-block;
+  background: var(--kb-tag-bg);
+  color: var(--kb-tag-fg);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-pill);
+  padding: 0.1em 0.6em;
+  font-size: 0.66rem;
+  text-decoration: none;
+  transition:
+    border-color var(--kb-ease),
+    color var(--kb-ease);
+}
+.kb-graph a.kb-tag:hover {
+  color: var(--kb-accent-strong);
+  border-color: var(--kb-accent);
+}
+
+/* ---- Empty / loading states ---------------------------------------------- */
+.kb-graph .kb-graph-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  row-gap: 0.15rem;
+  text-align: center;
+  padding: 1rem;
+  z-index: 1;
+}
+.kb-graph .kb-graph-empty__icon {
+  color: var(--kb-hint);
+  margin-bottom: 0.35rem;
+}
+.kb-graph .kb-graph-empty__title {
+  font-family: var(--kb-font-display);
+  font-size: 0.95rem;
+  font-weight: var(--kb-weight-semibold);
+  color: var(--kb-ink);
+}
+.kb-graph .kb-graph-empty__sub {
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--kb-secondary);
+  max-width: 21rem;
+}
+
+/* ---- Focus & links ------------------------------------------------------- */
+.kb-graph a {
+  color: var(--kb-accent);
+}
+.kb-graph a:hover {
+  color: var(--kb-accent-strong);
+}
+.kb-graph button:focus-visible,
+.kb-graph a:focus-visible,
+.kb-graph .kb-graph__canvas:focus-visible {
+  outline: 2px solid var(--kb-accent);
+  outline-offset: 1px;
+}
+
+/* ---- Reduced motion ------------------------------------------------------
+   Overlay transitions off; the engine also skips the animated settle AND the
+   idle mingle (paints the settled layout on frame one, holds still) and snaps
+   pan/zoom — see graph-canvas.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  .kb-graph,
+  .kb-graph * {
+    transition: none !important;
+  }
+}

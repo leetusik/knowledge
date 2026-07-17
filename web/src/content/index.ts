@@ -38,3 +38,7 @@ export type { ProjectCopy } from "./project";
 // Documents surface (P12.S5) — browse / search / read the tenant's documents.
 export { DOCUMENTS } from "./documents";
 export type { DocumentsCopy } from "./documents";
+
+// Graph surface (P12.S6) — the in-app knowledge map (page frame + empty state).
+export { GRAPH } from "./graph";
+export type { GraphCopy } from "./graph";

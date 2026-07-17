@@ -277,3 +277,55 @@ export interface KbDocumentsQuery {
   limit?: number;
   offset?: number;
 }
+
+// ── /app/graph shapes (P12.S6) ─────────────────────────────────────────────
+// Mirror the `server/graph_api.py` twin of `scripts/graph_hook.py`'s inversion —
+// the SAME `{version, projects, nodes, edges}` contract graph.json emits, so the
+// ported canvas renderer consumes it unchanged. Nodes are keyed on `rel_path`; a
+// doc node's `url` is the S5 read route `/documents/{db_id}`. The renderer reads
+// only `projects` / `nodes` / `edges` (and each node's fields) — the shapes are
+// intentionally permissive (`title`/`url`/`date`/`project`/`tags`/`degree` are
+// absent on tag + missing nodes) to match the emitted union.
+
+/** One project in the legend, `(-docs, name)`-ordered (the renderer inks by index). */
+export interface KbGraphProject {
+  name: string;
+  docs: number;
+}
+
+/**
+ * One graph node. `type` discriminates: `doc` carries the full metadata (incl. the
+ * `/documents/{id}` `url`); `tag` hubs and `missing` ghosts carry only `id`/`title`/
+ * `degree`. Kept loose (all but `id`/`type` optional) so a single type covers the
+ * union without narrowing the imperative engine.
+ */
+export interface KbGraphNode {
+  id: string;
+  type: "doc" | "tag" | "missing";
+  title?: string;
+  /** Doc nodes only — the S5 read route `/documents/{db_id}`. */
+  url?: string;
+  date?: string;
+  project?: string;
+  tags?: string[];
+  degree?: number;
+}
+
+/** One graph edge: `related` (doc→doc, `broken` into a ghost) or `tag` (doc→`tag:<t>`). */
+export interface KbGraphEdge {
+  source: string;
+  target: string;
+  kind: "related" | "tag";
+  /** `related` edge into an unresolved target (a `missing` ghost node). */
+  broken?: boolean;
+}
+
+/** `GET /app/graph` — the tenant's knowledge map (graph.json contract + `truncated`). */
+export interface KbGraph {
+  version: number;
+  projects: KbGraphProject[];
+  nodes: KbGraphNode[];
+  edges: KbGraphEdge[];
+  /** True when the corpus exceeded the node cap and the newest docs were graphed. */
+  truncated?: boolean;
+}
