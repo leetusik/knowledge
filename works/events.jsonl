@@ -435,3 +435,8 @@
 {"ts": "2026-07-18T03:21:45+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover", "source": "P13.REVIEW"}
 {"ts": "2026-07-18T03:27:33+09:00", "type": "slice_status_changed", "slice": "P13.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-18T03:27:33+09:00", "type": "phase_reviewed", "phase": "P13", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-18T03:47:08+09:00", "type": "slice_status_changed", "slice": "P14.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-18T03:47:43+09:00", "type": "slice_created", "phase": "P14", "slice": "P14.S1"}
+{"ts": "2026-07-18T03:47:43+09:00", "type": "slice_created", "phase": "P14", "slice": "P14.S2"}
+{"ts": "2026-07-18T03:47:43+09:00", "type": "slice_created", "phase": "P14", "slice": "P14.S3"}
+{"ts": "2026-07-18T03:49:42+09:00", "type": "slice_status_changed", "slice": "P14.DECOMP", "old_status": "in_progress", "new_status": "done"}
