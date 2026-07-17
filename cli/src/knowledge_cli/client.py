@@ -1,9 +1,19 @@
 """HTTP client for the knowledge API — the `/auth`, `/app` and `/api` planes.
 
-Every call here is lifted from `scripts/onboarding_smoke.py`, the committed
-post-deploy verifier that already drives this exact sequence against a live
-instance. Nothing is invented: if the smoke does not prove a call, it is not
-here.
+The onboarding sequence here — signup, project, credential, write, search, list,
+usage — is lifted from `scripts/onboarding_smoke.py`, the committed post-deploy
+verifier that already drives it against a live instance. That path is proven, not
+invented.
+
+**Two reads are not in the smoke** and were written from the route definitions
+instead: `GET /api/projects` (`main.py:265-271`) and `GET /api/documents/{id}`
+(`main.py:288-297`). The original rule here was "if the smoke does not prove a
+call, it is not here"; P13.S3 needed `read` and `projects` and could not honor it,
+so it says so rather than quietly breaking it. Both are side-effect-free reads on
+the frozen `/api/*` plane, and S3 exercised both against a live server. By-path
+(`document_get_by_path`) *is* smoke-proven, in both directions —
+`onboarding_smoke.py:211` (a cross-tenant 404) and `:219-224` (a 200 for the
+owning tenant).
 
 The three planes and who may call them:
 
@@ -224,10 +234,14 @@ class KnowledgeClient:
             "DELETE", f"/app/projects/{project_id}/credentials/{credential_id}", token=token
         )
 
-    def usage(self, token: str | None = None) -> Any:
-        """GET /app/usage -> {totals, daily_counts[30], projects[]}."""
+    def usage(self, days: int | None = None, token: str | None = None) -> Any:
+        """GET /app/usage -> {window, totals, daily_counts[days], projects[]}.
 
-        return self._request("GET", "/app/usage", token=token)
+        `days` is 1-365 (default 30, `usage_api.py:91`) and sizes the zero-filled
+        `daily_counts` series as well as the window the totals cover.
+        """
+
+        return self._request("GET", "/app/usage", token=token, params=_params(days=days))
 
     def project_usage(self, project_id: str, token: str | None = None) -> Any:
         """GET /app/projects/{id}/usage -> {totals, credentials[]}. 404 if foreign."""
@@ -298,6 +312,39 @@ class KnowledgeClient:
             token=token,
             params=_params(project=project, tag=tag, limit=limit, offset=offset),
         )
+
+    def document_get(self, doc_id: int, token: str | None = None) -> Any:
+        """GET /api/documents/{id} -> one document, `markdown` included.
+
+        404 for a missing id **and** for another tenant's id (`main.py:294-296`
+        via a tenant-scoped lookup), so existence never leaks across tenants.
+        """
+
+        return self._request("GET", f"/api/documents/{doc_id}", token=token)
+
+    def document_get_by_path(self, rel_path: str, token: str | None = None) -> Any:
+        """GET /api/documents/by-path/{rel_path} -> one document, `markdown` included.
+
+        `rel_path` is the full `project/YYYY-MM-DD-slug.md`, not a bare slug. The
+        route is declared before `/api/documents/{doc_id}` and that one takes an
+        `int`, so the two never collide (`main.py:274-276`). Same 404-for-foreign
+        rule as `document_get`.
+        """
+
+        return self._request("GET", f"/api/documents/by-path/{rel_path}", token=token)
+
+    def corpus_projects(self, token: str | None = None) -> Any:
+        """GET /api/projects -> {projects: [{project, count, latest_date}]}.
+
+        **Not `projects_list`.** That one is `/app/projects`: the tenant's project
+        *records* (uuid + name), session-authed, and a project exists there the
+        moment it is created. This is a `GROUP BY project` over the caller's
+        documents (`db.py:344-355`) — counts derived from what has been written, so
+        a project with no documents yet is simply absent. Two different objects
+        that both answer to "projects"; the names keep them apart.
+        """
+
+        return self._request("GET", "/api/projects", token=token)
 
     def search(
         self,

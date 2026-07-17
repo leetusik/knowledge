@@ -7,8 +7,9 @@ this does not introduce one; the only runtime dependency is `httpx`.
 
 This module is the skeleton the rest of the phase hangs commands off. It owns
 `config` (the seam's debug command), delegates the auth & onboarding subcommands
-to `auth.register()`, and resolves `--base-url` **once, centrally**, so every
-command agrees on which service it is talking to.
+to `auth.register()` and the day-to-day ones to `knowledge.register()`, and
+resolves `--base-url` **once, centrally**, so every command agrees on which
+service it is talking to.
 
 It also owns the **error boundary**: subcommands raise `CliError`/`ApiError`/
 `ConfigError` and `main()` is the single place they become an exit code and a
@@ -22,7 +23,7 @@ import sys
 
 import httpx
 
-from . import __version__, auth, config
+from . import __version__, auth, config, knowledge
 from .auth import DEFAULT_BASE_URL
 from .client import ApiError
 from .errors import CliError
@@ -91,6 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_config)
 
     auth.register(sub)
+    knowledge.register(sub)
 
     return parser
 
