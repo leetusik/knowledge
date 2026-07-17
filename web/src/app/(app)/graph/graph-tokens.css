@@ -1,0 +1,133 @@
+/*
+ * Knowledge Base — in-app graph tokens (P12.S6).
+ * --------------------------------------------------------------------------
+ * The `--kb-graph-*` layer the ported canvas renderer (`graph-canvas.tsx`) reads
+ * LIVE via `getComputedStyle` — every colour + geometry value, never a hardcoded
+ * hex. Ported from the docs' `docs/stylesheets/extra.css` §10a and re-mapped onto
+ * the app's base `--kb-*` palette (`kb-tokens.css`) for BOTH schemes.
+ *
+ * The mapping is near-exact by construction: the docs' §10a values were themselves
+ * drawn from the same Knowledge Base palette, so most graph tokens resolve to a
+ * base token BYTE-FOR-BYTE (`--kb-graph-project-1` = `--kb-accent` teal =
+ * #0f6f66 light / #62bdb2 dark; `-2` = `--kb-status-idle` bronze; label =
+ * `--kb-ink`; focus = `--kb-accent-strong`; canvas = `--kb-surface-sunken`
+ * light). Only the handful of graph-ONLY inks that have no base token stay as
+ * literals: the third project ink (plum), the ghost/tag-edge neutrals, the accent
+ * halo rgba, the dark plate (`#16130f`, deliberately deeper than the paper so it
+ * recedes), and `--kb-graph-dim`.
+ *
+ * Co-located with the graph route and imported by `graph-canvas.tsx`; the tokens
+ * cascade from the `.kb-app` root's `data-md-color-scheme`, so `getComputedStyle`
+ * on the graph host resolves the active scheme's values.
+ * --------------------------------------------------------------------------
+ */
+
+/* --------------------------------------------------------------------------
+   Structure (scheme-independent) — geometry, labels, motion.
+   px values are at zoom = 1 and scale linearly with zoom.
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Node geometry ---- */
+  --kb-graph-node-r-min: 6px;
+  --kb-graph-node-r-max: 14px;
+  --kb-graph-node-r-tag: 4.5px;
+  --kb-graph-node-r-ghost: 5.5px;
+  --kb-graph-node-stroke: 1.5px;
+  --kb-graph-node-cutout: 1.5px;
+
+  /* ---- Edge geometry ---- */
+  --kb-graph-edge-w: 1px;
+  --kb-graph-edge-w-related: 1.75px;
+  --kb-graph-arrow: 5px;
+  --kb-graph-ghost-dash: 4, 4;
+
+  /* ---- Emphasis ---- */
+  --kb-graph-halo-blur: 8px;
+  --kb-graph-focus-w: 2px;
+  --kb-graph-focus-gap: 2px;
+
+  /* ---- Labels — the app's body family (ends in a Hangul fallback) ---- */
+  --kb-graph-font: var(--kb-font-body);
+  --kb-graph-label-size: 12.5px;
+  --kb-graph-label-size-tag: 11px;
+  --kb-graph-label-gap: 6px;
+
+  /* ---- Motion — settle, then mingle ---- */
+  --kb-graph-settle: 600ms;
+  --kb-graph-drift: 3px;
+  --kb-graph-drift-period: 9s;
+
+  /* ---- Pointer zoom ---- */
+  --kb-graph-zoom-min: 0.5;
+  --kb-graph-zoom-max: 2.5;
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — inks on the ivory map plate.
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --kb-graph-canvas: var(--kb-surface-sunken); /* #efe9db · recessed map plate */
+
+  /* ---- Project inks (map inks — data-viz only) ---- */
+  --kb-graph-project-1: var(--kb-accent); /* teal · = #0f6f66 */
+  --kb-graph-project-2: var(--kb-status-idle); /* bronze · = #8a6a2a */
+  --kb-graph-project-3: #764f6c; /* plum — graph-only, no base token */
+  --kb-graph-node-doc: var(--kb-graph-project-1);
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas); /* cutout rim = plate */
+  --kb-graph-node-tag: var(--kb-secondary); /* hollow tag ring · = #5c5347 */
+  --kb-graph-node-ghost: #7f7666; /* unresolved dashed ring */
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #7c7362; /* tag edge */
+  --kb-graph-edge-related: var(--kb-secondary); /* related edge + arrowhead */
+  --kb-graph-edge-active: var(--kb-accent); /* neighborhood edges under focus */
+
+  /* ---- Emphasis (teal-only, as everywhere) ---- */
+  --kb-graph-focus: var(--kb-accent-strong); /* selection ring · = #0a544e */
+  --kb-graph-halo: rgba(15, 111, 102, 0.22);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: var(--kb-ink); /* doc labels · = #26211c */
+  --kb-graph-label-muted: var(--kb-secondary); /* tag / ghost labels */
+  --kb-graph-label-halo: var(--kb-graph-canvas); /* text stroked behind glyphs */
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.16; /* alpha outside the neighborhood */
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — inks on the deep charcoal plate.
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --kb-graph-canvas: #16130f; /* deeper than paper — the plate recedes (bespoke) */
+
+  /* ---- Project inks ---- */
+  --kb-graph-project-1: var(--kb-accent); /* teal · = #62bdb2 */
+  --kb-graph-project-2: var(--kb-status-idle); /* bronze · = #c8a15e */
+  --kb-graph-project-3: #c99bc0; /* plum — graph-only */
+  --kb-graph-node-doc: var(--kb-graph-project-1);
+
+  /* ---- Node parts ---- */
+  --kb-graph-node-outline: var(--kb-graph-canvas);
+  --kb-graph-node-tag: var(--kb-secondary); /* = #b6ad9d */
+  --kb-graph-node-ghost: #6b6355;
+
+  /* ---- Edges ---- */
+  --kb-graph-edge: #6f6759;
+  --kb-graph-edge-related: #9a9081;
+  --kb-graph-edge-active: var(--kb-accent);
+
+  /* ---- Emphasis ---- */
+  --kb-graph-focus: var(--kb-accent-strong); /* = #86d4ca */
+  --kb-graph-halo: rgba(98, 189, 178, 0.25);
+
+  /* ---- Labels ---- */
+  --kb-graph-label: var(--kb-ink); /* = #ece4d7 */
+  --kb-graph-label-muted: var(--kb-secondary);
+  --kb-graph-label-halo: var(--kb-graph-canvas);
+
+  /* ---- Focus-loss ---- */
+  --kb-graph-dim: 0.22; /* dark dims less — faint ink vanishes sooner on charcoal */
+}

@@ -29,6 +29,7 @@ from server import auth_api
 from server import config, db
 from server import dashboard_api
 from server import documents_api
+from server import graph_api
 from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
@@ -132,6 +133,13 @@ app.include_router(dashboard_api.router)
 # project UUID to the content-plane project name, and never sets request.state.usage
 # — so web-UI browsing/search moves no usage counter (unlike the metered /api/*).
 app.include_router(documents_api.router)
+
+# Knowledge graph (P12.S6): the tenant-scoped, UNMETERED GET /app/graph the web
+# app's in-app graph reads. A server-side twin of scripts/graph_hook.py's inversion
+# run over the content store (db.list_documents scoped by tenant_id), emitting the
+# same {version, projects, nodes, edges} contract with each doc node's url = the S5
+# read route /documents/{id}. Same require_user guard; never sets request.state.usage.
+app.include_router(graph_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an

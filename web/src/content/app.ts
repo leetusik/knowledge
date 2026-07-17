@@ -16,16 +16,14 @@ export interface AppNavItem {
 /**
  * Rail navigation — the shell shows the full intended surface set from the start.
  * `/dashboard` is live in S2 (the tenant dashboard fills in at S3); Documents went
- * live in S5. Graph (S6) is still announced as `soon` so the rail reads as complete
- * without linking to a route that 404s; the slice that ships it drops its flag.
- * Project detail (`/projects/[id]`, S4) is deliberately NOT here — a project is
- * reached from the dashboard's project list; the rail carries only top-level
- * surfaces.
+ * live in S5; Graph went live in S6. Project detail (`/projects/[id]`, S4) is
+ * deliberately NOT here — a project is reached from the dashboard's project list;
+ * the rail carries only top-level surfaces.
  */
 export const APP_NAV: AppNavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Documents", href: "/documents" },
-  { label: "Graph", href: "/graph", soon: true },
+  { label: "Graph", href: "/graph" },
 ];
 
 export const APP_SHELL = {
