@@ -158,15 +158,55 @@ Decide the mkdocs `knowledge-site`'s new home (subpath / subdomain / retire — 
 **P14.S2 scope (no reshape / no split):** with the `/app` rebase dropped, S2 is just **build the landing** —
 one cohesive `implementation`/high slice. No auth-app route changes, no BFF path changes.
 
+## P14.S2 — landing implementation notes (2026-07-18)
+
+Landing shipped at `/` in `web/`, built from `output/build-prompt.md`. Cross-slice facts later slices (esp.
+S3 deploy + REVIEW) should build on:
+
+- **`/` is now the `(marketing)` route group** (`web/src/app/(marketing)/{layout,page}.tsx`). The old
+  `web/src/app/page.tsx` root redirect was **deleted** (two `page.tsx` can't both resolve to `/`) — this is
+  the intended "landing takes over `/`". The auth app is UNTOUCHED at `/dashboard //graph //documents
+  //projects //login //signup`; the BFF `/api/auth/*` and `KB_API_BASE_URL` are unchanged. **S3's edge rule
+  "everything else → `knowledge-web`" is correct as planned.**
+- **CTA targets are the app's real paths** (operator resolution, not the design's `/app`): Sign in / Open the
+  app → `/login`, Get started(— free) → `/signup`. The guide / CLI / Claude-Code / waitlist CTAs point at the
+  **live GitHub repo** (`…/leetusik/knowledge` — `cli` README = guide, `cli#install`, `plugin` README =
+  connect, repo home = the deferred-API roadmap), because the mkdocs docs site at `knowledge.hi2vi.com/` is
+  displaced by this landing. **S3 must still decide the mkdocs site's new home** (subpath/subdomain/retire) —
+  the landing does not depend on it, but the footer/guide CTAs currently route to GitHub, not the docs site.
+- **Tokens:** the build-prompt §1 band set landed **additive** in `globals.css @theme` (`--kb-band-*`,
+  `--kb-border-on-dark*`, `--kb-accent-on-dark*`, `--color-on-dark-hint`, `--kb-shadow-card`, data-viz inks
+  `--kb-ink-{teal,bronze,plum}(-dark)`). No locked `--kb-*` token renamed/revalued. The **tonal-band mechanic**
+  is a scoped cascade re-point of the app's semantic `--color-green*` aliases within `.mkt-band--dark`/`--deep`
+  (marketing.css), so the reused CVA pill button auto-steps to the on-dark teal — no second button system.
+- **Graph motif** = a faithful **static** canvas (`components/marketing/graph-motif.tsx`) reusing
+  `(app)/graph/graph-canvas.tsx`'s drawing grammar posed to the designed composition (it does NOT import the
+  live force-sim renderer or its `(app)` CSS). Info panel + legend are JSX overlays on the recessed plate.
+- **Both schemes:** no in-page toggle (matches the app's per-route fixed-scheme pattern); the marketing root
+  follows OS `prefers-color-scheme` via a pre-paint inline script (SSR default = light), dark bands are
+  scheme-independent.
+- **Copy-fidelity gap for REVIEW's visual pass:** build-prompt §4 quotes no lede text for feature-save /
+  feature-connect / feature-graph (only the topic) and no per-step sentence for how-it-works, so — honoring
+  "never invent copy" — those render H2 + verbatim ticks/tokens + the visual, no fabricated lede. All designed
+  *structural* elements ship; if the operator has the exact card lede/step text it drops into
+  `content/marketing/content.ts`. Not a design simplification.
+- **SEO:** `web/src/app/{sitemap,robots,manifest}.ts` added (landing indexes; app/auth/BFF disallowed).
+- **Validation:** `pnpm build` (`/` prerendered Static; app routes still Dynamic; SEO routes generated),
+  `pnpm lint`, `pnpm typecheck` all clean; `/login //dashboard //signup` verified still working.
+
 ## Doc impact (running list — REVIEW consolidates; do not version docs here)
 
-- `docs/current/frontend.md` — public landing + marketing surface; the additive marketing/band tokens
-  (`--kb-band-*`, `--kb-accent-on-dark*`, etc.) in the KB design-system section.
+- `docs/current/frontend.md` — public landing + marketing surface (the `(marketing)` route group at `/`, the
+  section components, the content-as-data copy layer); the additive marketing/band tokens (`--kb-band-*`,
+  `--kb-accent-on-dark*`, `--color-on-dark-hint`, `--kb-shadow-card`, data-viz inks `--kb-ink-*`) + the
+  tonal-band mechanic in the KB design-system section; the graph motif as a static reuse of the app renderer.
 - `docs/current/operations.md` — web Dockerfile / compose service / edge vhost, incl. the reworked edge
-  routing (`/` → landing, `/app/*` → Next UI, control-plane JSON relocated) (closes the P14-deferred items).
-- `docs/current/decisions.md` — landing lives in the same `web/` app and **takes over `/`**; the
-  authenticated app **rebases to `/app`**; the FastAPI control-plane / mkdocs edge routes are relocated to
-  make room (ADR).
+  routing (`/` → landing, control-plane JSON kept; mkdocs site's new home) (closes the P14-deferred items).
+  [S3]
+- `docs/current/decisions.md` — landing lives in the same `web/` app and **takes over `/`** (the root redirect
+  is dropped); per the operator resolution the authenticated app **stays at its current paths** (no `/app`
+  rebase — supersedes the design's decision #3), so nothing collides with the CLI's `/api //auth //app` edge
+  contract (ADR).
 
 ## Constraints
 

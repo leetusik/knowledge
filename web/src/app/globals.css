@@ -180,6 +180,38 @@
 
   /* ── Breakpoints (sm/md/lg/xl keep Tailwind defaults; add xs = 480px) ────── */
   --breakpoint-xs: 30rem;
+
+  /* ── Marketing tonal-band system (P14.S2 — ADDITIVE, renames/revalues nothing)
+   * The public landing is a light page that drops into scheme-INDEPENDENT
+   * warm-charcoal bands at three moments (hero, connect, footer). These bands
+   * stay dark in both schemes; a `.mkt-band--dark`/`--deep` wrapper re-points the
+   * accent/text/border custom properties (see components/marketing/marketing.css)
+   * so teal steps to the lighter on-dark tier for contrast. Values verbatim from
+   * design/rounds/01-landing/output/build-prompt.md §1. `--color-on-dark(-muted)`
+   * and `--color-on-primary` are already staged above; `--color-on-dark-hint` is
+   * new (→ `text-on-dark-hint`). */
+  --color-on-dark-hint: #938a7a; /* hint / meta on dark */
+
+  --kb-band-dark: #1c1a15; /* warm-charcoal marketing band (hero, connect, CTA) */
+  --kb-band-dark-soft: #232019; /* raised card on a dark band */
+  --kb-band-dark-deep: #14120e; /* footer / deepest anchor */
+  --kb-border-on-dark: rgba(236, 228, 215, 0.14);
+  --kb-border-on-dark-strong: rgba(236, 228, 215, 0.24);
+  --kb-accent-on-dark: #62bdb2; /* teal ON dark bands — the contrast step */
+  --kb-accent-on-dark-strong: #86d4ca;
+  --kb-accent-on-dark-soft: rgba(98, 189, 178, 0.18);
+  --kb-shadow-card: 0 1px 2px rgba(38, 33, 28, 0.04),
+    0 10px 30px rgba(38, 33, 28, 0.06);
+
+  /* Data-viz categorical inks (the graph motif) — the documented accent
+   * extension, data-viz surfaces ONLY. Teal is the anchor; the `-dark` variants
+   * are the slate-scheme steps the motif picks up on the recessed plate. */
+  --kb-ink-teal: #0f6f66;
+  --kb-ink-bronze: #8a6a2a;
+  --kb-ink-plum: #764f6c;
+  --kb-ink-teal-dark: #62bdb2;
+  --kb-ink-bronze-dark: #c8a15e;
+  --kb-ink-plum-dark: #c99bc0;
 }
 
 /*
