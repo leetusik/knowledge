@@ -3,14 +3,14 @@
   "phase_id": "P13",
   "name": "Knowledge commands",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P13.S2"
   ],
   "created_at": "2026-07-17T15:55:08+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-17T22:17:38+09:00",
+  "completed_at": "2026-07-17T22:36:45+09:00",
   "risk": "medium",
   "source": {
     "type": "manual",

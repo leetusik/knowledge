@@ -135,7 +135,9 @@ def test_no_password_and_no_tty_fails_instead_of_hanging(home):
 def test_init_writes_a_remote_only_0600_config_that_resolves(home, api):
     assert _run_pw(("init", "--email", "ada@example.com"), PW) == 0
     data = cfg(home)
-    assert data["api"] == {"base_url": "http://api.test", "token": VK}
+    # `project` is S3's additive key: it pins the key to the project it was minted
+    # for, and is `save`'s fallback outside a git repo.
+    assert data["api"] == {"base_url": "http://api.test", "token": VK, "project": "knowledge"}
     assert "kb_root" not in data  # remote-only: the no-local-fallback safety property
     assert data["auth"]["session_token"] == "sess1"
     assert stat.S_IMODE((home / ".config" / "knowledge-kb" / "config.json").stat().st_mode) == 0o600
@@ -175,6 +177,34 @@ def test_init_new_key_mints_again(home, api):
     _run_pw(("init", "--email", "ada@example.com", "--new-key"), PW)
     assert api.minted == 2
     assert len(api.projects) == 1
+
+
+def test_init_reuses_the_key_of_a_config_that_predates_api_project(home, api):
+    """Absent api.project is UNKNOWN, not mismatched.
+
+    Every config written before S3 lacks the key. Treating absent as a mismatch
+    would mint a redundant live credential for every existing user on their first
+    upgraded `init` — the one real regression risk in S3.
+    """
+
+    _run_pw(("init", "--email", "ada@example.com"), PW)
+    path = home / ".config" / "knowledge-kb" / "config.json"
+    data = json.loads(path.read_text())
+    del data["api"]["project"]  # rewind to an S2-era config
+    path.write_text(json.dumps(data))
+
+    _run_pw(("init", "--email", "ada@example.com"), PW)
+    assert api.minted == 1  # reused, not re-minted
+    assert cfg(home)["api"]["project"] == "knowledge"  # and backfilled
+
+
+def test_init_mints_a_key_bound_to_the_project_it_is_asked_for(home, api):
+    """A vk_ is bound server-side to one project, so foo's key cannot serve bar."""
+
+    _run_pw(("init", "--email", "ada@example.com"), PW)
+    _run_pw(("init", "--email", "ada@example.com", "--project", "other"), PW)
+    assert api.minted == 2
+    assert cfg(home)["api"]["project"] == "other"
 
 
 # --- logout must not take the vk_ down with it ---------------------------------

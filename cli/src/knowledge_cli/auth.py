@@ -22,11 +22,11 @@ Three rules shape every line here:
    duplicate projects on every re-run; and re-minting on every run piles up live
    credentials. Both are checked before acting, not after.
 
-**Who writes the seam.** Only `init` writes `api.token` / `site.base_url` —
-configuring this machine is its whole job. `signup`/`login` persist just the
-session (plus `api.base_url`, so every later command knows which service that
-session belongs to). Logging in must never silently repoint someone's document
-API somewhere new.
+**Who writes the seam.** Only `init` writes `api.token` / `api.project` /
+`site.base_url` — configuring this machine is its whole job. `signup`/`login`
+persist just the session (plus `api.base_url`, so every later command knows which
+service that session belongs to). Logging in must never silently repoint someone's
+document API somewhere new.
 """
 
 from __future__ import annotations
@@ -106,29 +106,41 @@ def read_password(args: argparse.Namespace) -> str:
     return password
 
 
-# --- talking to /auth ---------------------------------------------------------
+# --- talking to /auth and /app ------------------------------------------------
 
 
-def _auth_call(base_url: str, fn, *args: Any, **kwargs: Any) -> Any:
-    """Call an `/auth/*` wrapper, turning "the plane is not routed" into English.
+# The two planes that cannot legitimately 404, and what to call them when they do.
+# `/api/*` is deliberately absent: `read` 404s for real, on a document that does
+# not exist, so this branch would lie about it.
+_PLANES = {
+    "auth": ("auth API", "Signup and login"),
+    "app": ("control-plane API", "This command"),
+}
 
-    `/auth/signup`, `/auth/login`, `/auth/logout` and `/auth/me` **cannot answer
-    404 when they are routed** — so a 404 means the request reached some *other*
-    server. That is the exact symptom of an edge that proxies only `/api/*` and
-    lets everything else fall into a static site, and it arrives as a bare `404`
-    with an HTML body that `client._detail()` correctly refuses to echo. Without
-    this branch the user would see an unexplained, empty `HTTP 404`.
+
+def plane_call(base_url: str, fn, *args: Any, plane: str = "auth", **kwargs: Any) -> Any:
+    """Call an `/auth/*` or `/app/*` wrapper, turning "not routed" into English.
+
+    Neither plane **can answer 404 when it is routed**: `/auth/signup`,
+    `/auth/login`, `/auth/logout`, `/auth/me` and `/app/usage` take no path
+    parameters, so there is no missing thing for them to 404 about. A 404 means the
+    request reached some *other* server. That is the exact symptom of an edge that
+    proxies only `/api/*` and lets everything else fall into a static site (the
+    live host does this today, until P13.S5), and it arrives as a bare `404` with
+    an HTML body that `client._detail()` correctly refuses to echo. Without this
+    branch the user would see an unexplained, empty `HTTP 404`.
     """
 
     try:
         return fn(*args, **kwargs)
     except ApiError as exc:
         if exc.status == 404:
+            label, subject = _PLANES[plane]
             raise CliError(
-                f"{base_url} is not serving the auth API (HTTP 404). Signup and login "
-                "cannot 404 when they are routed, so something else answered — most "
-                "likely a static site at that origin, or the wrong --base-url. A local "
-                "stack listens on http://localhost:8766."
+                f"{base_url} is not serving the {label} (HTTP 404). {subject} cannot "
+                "404 when routed, so something else answered — most likely a static "
+                "site at that origin, or the wrong --base-url. A local stack listens "
+                "on http://localhost:8766."
             ) from None
         raise
 
@@ -169,11 +181,11 @@ def _signup_or_login(
     """
 
     try:
-        return _auth_call(base_url, client.auth_signup, email, password), "signed up"
+        return plane_call(base_url, client.auth_signup, email, password), "signed up"
     except ApiError as exc:
         if exc.status != 409:
             raise
-    return _auth_call(base_url, client.auth_login, email, password), "logged in"
+    return plane_call(base_url, client.auth_login, email, password), "logged in"
 
 
 def _login(client: KnowledgeClient, base_url: str, email: str, password: str) -> Any:
@@ -186,14 +198,14 @@ def _login(client: KnowledgeClient, base_url: str, email: str, password: str) ->
     """
 
     try:
-        return _auth_call(base_url, client.auth_login, email, password)
+        return plane_call(base_url, client.auth_login, email, password)
     except ApiError as exc:
         if exc.status == 401:
             raise CliError(f"login failed: {exc.detail or 'invalid email or password'}") from None
         raise
 
 
-# --- the stored session -------------------------------------------------------
+# --- what the CLI stored ------------------------------------------------------
 
 
 def _stored() -> dict[str, Any]:
@@ -217,7 +229,34 @@ def _section(cfg: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def stored_session_token() -> str:
+    """The 30-day `/app/*` session token this CLI last wrote, or `""`."""
+
     return _section(_stored(), "auth").get("session_token") or ""
+
+
+def stored_api_token() -> str:
+    """The non-expiring `vk_` key in `api.token`, or `""`. **Literal, not resolved.**
+
+    This is the key `/knowledge:explain` reads, and the one `/api/*` commands ride.
+    Literal on purpose, same as `stored_session_token`: callers that need the seam's
+    *effective* token (`$KB_API_TOKEN` first) must apply that precedence themselves
+    and say so, because the env var is not an innocent override — see
+    `knowledge.api_token()`.
+    """
+
+    return _section(_stored(), "api").get("token") or ""
+
+
+def stored_project() -> str:
+    """The project `init` configured for this machine, or `""` when unknown.
+
+    An **additive** key (`api.project`), invisible to the plugin skill's resolver,
+    which reads exactly four keys and ignores the rest — the same trick `auth.*`
+    plays. Every config written before P13.S3 lacks it, so `""` means "unknown",
+    never "none".
+    """
+
+    return _section(_stored(), "api").get("project") or ""
 
 
 def resolve_base_url(explicit: str | None) -> str:
@@ -252,7 +291,7 @@ def _legacy_checkout_active() -> bool:
     return os.path.isfile(os.path.join(root, "mkdocs.yml"))
 
 
-def _note(message: str) -> None:
+def note(message: str) -> None:
     """A warning, on stderr — stdout stays parseable for an agent."""
 
     print(f"note: {message}", file=sys.stderr)
@@ -270,7 +309,7 @@ def _warn_before_first_write() -> None:
     """
 
     if not os.path.isfile(config.config_path()) and _legacy_checkout_active():
-        _note(
+        note(
             f"creating {config.config_path()} — /knowledge:explain will read it "
             "instead of falling back to your ~/projects/personal/knowledge checkout"
         )
@@ -289,7 +328,7 @@ def _save_session(base_url: str, token: str, email: str) -> None:
     _warn_before_first_write()
     api = _section(_stored(), "api")
     if api.get("token") and str(api.get("base_url") or "").rstrip("/") not in ("", base_url):
-        _note(
+        note(
             f"api.base_url changes from {api['base_url']} to {base_url}; the api.token "
             "already in your config was minted by the old one — run `knowledge init` "
             "to mint a key for the new one"
@@ -316,7 +355,7 @@ def cmd_signup(args: argparse.Namespace) -> int:
     password = read_password(args)
     with KnowledgeClient(args.base_url) as client:
         try:
-            payload = _auth_call(args.base_url, client.auth_signup, email, password)
+            payload = plane_call(args.base_url, client.auth_signup, email, password)
         except ApiError as exc:
             if exc.status == 409:
                 raise CliError(
@@ -360,7 +399,7 @@ def cmd_logout(args: argparse.Namespace) -> int:
         print("not logged in")
         return 0
     with KnowledgeClient(args.base_url) as client:
-        _auth_call(args.base_url, client.auth_logout, token=token)
+        plane_call(args.base_url, client.auth_logout, token=token)
     # `config.save()` deep-merges and has no removal path, so absence is written as
     # JSON null — the same convention /knowledge:setup already uses for api.token
     # (setup/SKILL.md:203). The resolver reads null as "no value".
@@ -377,7 +416,7 @@ def cmd_whoami(args: argparse.Namespace) -> int:
         raise CliError("not logged in — run `knowledge login --email you@example.com`")
     with KnowledgeClient(args.base_url) as client:
         try:
-            payload = _auth_call(args.base_url, client.auth_me, token=token)
+            payload = plane_call(args.base_url, client.auth_me, token=token)
         except ApiError as exc:
             if exc.status == 401:
                 raise CliError(
@@ -437,16 +476,35 @@ def cmd_init(args: argparse.Namespace) -> int:
 
         # Keep a key we already have: each mint is a live credential, and piling
         # them up on every re-run is a security smell, not just noise. Only reuse a
-        # key minted by *this* service, though — one from another base is useless
-        # here (the server keeps only a hash, so it cannot be checked, only trusted).
+        # key minted by *this* service and *this* project, though: a `vk_` is bound
+        # server-side to one project (`api_auth.py:152-163`), so carrying foo's key
+        # while the config claims bar is incoherent. One from another base is
+        # likewise useless here — the server keeps only a hash, so a key can never
+        # be checked, only trusted.
         api = _section(_stored(), "api")
         same_service = str(api.get("base_url") or "").rstrip("/") in ("", base_url)
-        if api.get("token") and same_service and not args.new_key:
+        # ABSENT is "unknown", never "mismatched". Every config written before this
+        # key existed lacks it, so a naive `!=` would mint a redundant live
+        # credential for every existing user on their first upgraded `init`.
+        configured_project = stored_project()
+        same_project = not configured_project or configured_project == project_name
+        if api.get("token") and same_service and same_project and not args.new_key:
             key = str(api["token"])
             print(
                 f"key: reusing the one in your config ({config.redact_token(key)}) "
                 "— pass --new-key to mint a fresh one"
             )
+            if not configured_project and project_name != DEFAULT_PROJECT:
+                # The one case the "absent = unknown" rule cannot get right: an
+                # older config's key is bound to whichever project minted it, and
+                # here that is probably not the one being asked for. Backfilling
+                # api.project below records the claim either way, so say so once.
+                note(
+                    f"your config predates api.project, so the key it carries may be "
+                    f"bound to a project other than {project_name!r} — writes still "
+                    "land under that name, but usage is metered against the key's own "
+                    "project; pass --new-key to mint one bound to this project"
+                )
         else:
             # Show-once: this plaintext exists nowhere else, ever. It goes into the
             # config below and is never printed, logged, or raised.
@@ -459,8 +517,10 @@ def cmd_init(args: argparse.Namespace) -> int:
     path = config.save(
         {
             # No kb_root, deliberately: a hosted user is remote-only, and an absent
-            # kb_root is what makes local_fallback false forever.
-            "api": {"base_url": base_url, "token": key},
+            # kb_root is what makes local_fallback false forever. `project` is
+            # additive (the skill's resolver ignores it) and is what `knowledge save`
+            # falls back to outside a git repo — and what pins this key to a project.
+            "api": {"base_url": base_url, "token": key, "project": project_name},
             # One origin serves both planes on the hosted service, so the site base
             # is the same URL. Omitting it would default to http://localhost:8765 —
             # a link to nothing.
@@ -485,7 +545,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         # Only reachable when a kb_root was already in the file: save() deep-merges
         # and cannot remove a key, and destroying someone's local checkout setting
         # is not init's call to make.
-        _note(
+        note(
             f"your config still has kb_root={resolved.kb_root}, so /knowledge:explain "
             "may write locally if the API is unreachable; remove it to go remote-only"
         )
