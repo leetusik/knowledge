@@ -1,7 +1,13 @@
 import "server-only";
 
 import { getJson, sendJson } from "./client";
-import type { KbDashboard, KbProject, KbUsage } from "./types";
+import type {
+  KbDashboard,
+  KbMintedCredential,
+  KbProject,
+  KbProjectUsage,
+  KbUsage,
+} from "./types";
 
 // P12.S3 — typed server-side calls against knowledge's session-scoped `/app/*`
 // surface, the sibling of `auth.ts` (which is scoped to `/auth/*`). Both sit on the
@@ -91,4 +97,103 @@ export async function getDashboard(
   signal?: AbortSignal,
 ): Promise<KbDashboard> {
   return getJson<KbDashboard>("/app/dashboard", { token, signal });
+}
+
+// ── /app/projects/{id} — project detail + credential lifecycle (P12.S4) ─────
+// The per-project drill-down's server calls. `encodeURIComponent` every path id.
+// The project page reads `getProjectUsage` alone (it bundles `project` +
+// `credentials`); `getProject` is the standalone header fetch for callers that do
+// not need usage.
+
+/**
+ * `GET /app/projects/{id}` (bearer) → 200 `{project}` — reuses the
+ * `POST /app/projects` envelope (knowledge wraps both in `{project}`).
+ *
+ * Failure statuses meaningful to the caller: 400 (`id` is not a UUID) and 404
+ * (missing OR another tenant's — knowledge answers 404-never-403 via
+ * `_load_scoped_project`, so project ids can never be probed across tenants). The
+ * UI maps both to the branded not-found so the two are indistinguishable.
+ */
+export async function getProject(
+  token: string,
+  projectId: string,
+  signal?: AbortSignal,
+): Promise<KbProject> {
+  const raw = await getJson<RawProjectResponse>(
+    `/app/projects/${encodeURIComponent(projectId)}`,
+    { token, signal },
+  );
+  return raw.project;
+}
+
+/**
+ * `POST /app/projects/{id}/credentials` (bearer) `{name?}` → 201
+ * `{credential, key}`.
+ *
+ * Returns the envelope WHOLE (`KbMintedCredential`), unlike every other call here:
+ * `key` is the PLAINTEXT `vk_…` credential and knowledge returns it EXACTLY ONCE
+ * (only its sha256 hash + short prefix are persisted), so unwrapping to
+ * `credential` would silently discard the only copy in existence. The caller owns
+ * the secret from here: show it once, never log it, never persist it.
+ *
+ * `name` is OPTIONAL — knowledge accepts an empty body and defaults it to `null` —
+ * so an omitted name sends `{}` rather than `{name: null}`/`{name: ""}`.
+ */
+export async function createCredential(
+  token: string,
+  projectId: string,
+  name?: string,
+): Promise<KbMintedCredential> {
+  return sendJson<KbMintedCredential>(
+    `/app/projects/${encodeURIComponent(projectId)}/credentials`,
+    "POST",
+    name === undefined ? {} : { name },
+    { token },
+  );
+}
+
+/**
+ * `DELETE /app/projects/{id}/credentials/{cid}` (bearer) → 204, empty body.
+ *
+ * Revoke is a STAMP, not a delete: knowledge sets `revoked_at` and the credential
+ * stays listed (the revalidated render flips its status to Revoked). 404 when the
+ * credential is not in the scoped project (so foreign credential ids cannot be
+ * probed or revoked), 400 on a malformed id, 404 on a foreign project id.
+ *
+ * `sendJson<void>` is the `auth.ts::logout` idiom — the 204 maps to `undefined`,
+ * so there is nothing to unwrap.
+ */
+export async function revokeCredential(
+  token: string,
+  projectId: string,
+  credentialId: string,
+): Promise<void> {
+  await sendJson<void>(
+    `/app/projects/${encodeURIComponent(projectId)}/credentials/${encodeURIComponent(credentialId)}`,
+    "DELETE",
+    undefined,
+    { token },
+  );
+}
+
+/**
+ * `GET /app/projects/{id}/usage` (bearer) → 200
+ * `{window, totals, daily_counts, project, credentials}`.
+ *
+ * Called BARE, exactly like `getUsage`: knowledge defaults the window to the last
+ * 30 days and echoes the resolved bounds back in `window`. No envelope (the payload
+ * IS the response). This is the project page's SINGLE fetch — knowledge bundles the
+ * `project` header + the `credentials` table here (cleaner than vocky's two calls),
+ * so the page reads everything from this one response. Same not-found mapping as
+ * `getProject` (400/404 → branded not-found).
+ */
+export async function getProjectUsage(
+  token: string,
+  projectId: string,
+  signal?: AbortSignal,
+): Promise<KbProjectUsage> {
+  return getJson<KbProjectUsage>(
+    `/app/projects/${encodeURIComponent(projectId)}/usage`,
+    { token, signal },
+  );
 }

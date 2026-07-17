@@ -25,3 +25,12 @@ export type {
   ActivityTemplate,
   DashboardCopy,
 } from "./dashboard";
+
+// Project detail (P12.S4) — project info / usage / credential mint-list-revoke +
+// the status-keyed mint/revoke errors.
+export {
+  MINT_CREDENTIAL_ERRORS,
+  PROJECT,
+  REVOKE_CREDENTIAL_ERRORS,
+} from "./project";
+export type { ProjectCopy } from "./project";
