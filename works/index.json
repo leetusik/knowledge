@@ -40,13 +40,13 @@
       "id": "P13",
       "name": "CLI & Agent-First Onboarding",
       "objective": "Standalone installable CLI so a user inside Claude Code or Codex can sign up, log in, configure credentials, and use the knowledge features end to end, with agent-readable help/guide docs so the website is never required",
-      "status": "planned",
+      "status": "done",
       "order": 4,
       "path": "works/phases/active/P13",
-      "review_status": "pending",
-      "current_slice": "P13.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7
     },
     {
       "id": "P14",
@@ -76,5 +76,5 @@
   "deferred_open_count": 6,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 1,
-  "last_rebuilt_at": "2026-07-18T02:26:51+09:00"
+  "last_rebuilt_at": "2026-07-18T03:27:33+09:00"
 }
