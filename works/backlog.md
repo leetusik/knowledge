@@ -8,9 +8,9 @@
 - Current phase: `P14`
 - Current slice: `P14.S1`
 - Next slice: `P14.S2`
-- Waiting on operator: `none`
+- Waiting on operator: `P14.S1`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-18T03:49:42+09:00`
+- Rebuilt at: `2026-07-18T03:56:26+09:00`
 
 ## Active Phases
 
@@ -79,7 +79,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P14.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P14/slices/P14.DECOMP` |
-| [ ] `P14.S1` | `todo` | Design gate: landing + public marketing pages (Claude Design round 1) | `co-work` | `works/phases/active/P14/slices/P14.S1` |
+| [~] `P14.S1` | `pending` | Design gate: landing + public marketing pages (Claude Design round 1) | `co-work` | `works/phases/active/P14/slices/P14.S1` |
 | [ ] `P14.S2` | `todo` | Implement the landing + marketing pages from the read-back spec | `implementation` | `works/phases/active/P14/slices/P14.S2` |
 | [ ] `P14.S3` | `todo` | Ship the web app: standalone Dockerfile + knowledge-web compose service + edge vhost routing | `implementation` | `works/phases/active/P14/slices/P14.S3` |
 | [ ] `P14.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P14/slices/P14.REVIEW` |
