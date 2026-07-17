@@ -5,35 +5,27 @@ House style, matching every other CLI in this repo (`scripts/workflow.py`,
 `set_defaults(func=...)`**. There is no typer/click/rich anywhere in the tree and
 this does not introduce one; the only runtime dependency is `httpx`.
 
-This module is the skeleton the rest of the phase hangs commands off, plus one
-real command (`config`). It also owns the **error boundary**: subcommands raise
-`ApiError`/`ConfigError` and `main()` is the single place they become an exit
-code and a one-line message on stderr.
+This module is the skeleton the rest of the phase hangs commands off. It owns
+`config` (the seam's debug command), delegates the auth & onboarding subcommands
+to `auth.register()`, and resolves `--base-url` **once, centrally**, so every
+command agrees on which service it is talking to.
+
+It also owns the **error boundary**: subcommands raise `CliError`/`ApiError`/
+`ConfigError` and `main()` is the single place they become an exit code and a
+one-line message on stderr — never a traceback, which could carry a `vk_` key.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 
 import httpx
 
-from . import __version__, config
+from . import __version__, auth, config
+from .auth import DEFAULT_BASE_URL
 from .client import ApiError
-
-# The hosted service. A brand-new user with no config must reach the SaaS, not
-# localhost — so this differs from `config.DEFAULT_API_BASE_URL` on purpose. The
-# two answer different questions: `resolve()` reports what an *existing* config
-# says (and must match the plugin skill exactly, localhost default and all);
-# this is the *onboarding target* for a fresh one.
-DEFAULT_BASE_URL = "https://knowledge.hi2vi.com"
-
-
-def default_base_url() -> str:
-    """The onboarding target: `KB_API_BASE_URL` if set, else the hosted service."""
-
-    return os.environ.get(config.ENV_API_BASE_URL) or DEFAULT_BASE_URL
+from .errors import CliError
 
 
 def cmd_config(args: argparse.Namespace) -> int:
@@ -56,7 +48,8 @@ def cmd_config(args: argparse.Namespace) -> int:
     if resolved.status == "unconfigured":
         print(
             "# No knowledge base configured: no config file at the path above, no "
-            "KB_ROOT/KB_API_BASE_URL/KB_API_TOKEN env var, and no legacy checkout."
+            "KB_ROOT/KB_API_BASE_URL/KB_API_TOKEN env var, and no legacy checkout.\n"
+            "# Run: knowledge init --email you@example.com"
         )
         return 1
     print(f"KB_ROOT={resolved.kb_root}")
@@ -81,10 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--base-url",
-        default=default_base_url(),
+        default=None,
         help=(
-            "API base URL to talk to (default: $KB_API_BASE_URL or "
-            f"{DEFAULT_BASE_URL}). Use http://localhost:8766 against a local stack."
+            "API base URL to talk to. Default: $KB_API_BASE_URL, else the api.base_url "
+            f"already in your config, else {DEFAULT_BASE_URL}. Use "
+            "http://localhost:8766 against a local stack."
         ),
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -96,14 +90,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_config)
 
+    auth.register(sub)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    # Resolved once, centrally, so every command agrees on which service it is
+    # talking to and no command has to re-derive it. Inside the try: it reads the
+    # config file, which may itself be the thing that is broken.
     try:
+        args.base_url = auth.resolve_base_url(args.base_url)
         return int(args.func(args) or 0)
+    except CliError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     except ApiError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
