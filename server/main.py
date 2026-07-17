@@ -28,6 +28,7 @@ from server import app_api
 from server import auth_api
 from server import config, db
 from server import dashboard_api
+from server import documents_api
 from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
@@ -124,6 +125,13 @@ app.include_router(usage_api.router)
 # rollup (per-project usage/credential state + lifecycle activity feed) the web
 # app's post-login home reads in one round-trip. Same require_user guard; pure reads.
 app.include_router(dashboard_api.router)
+
+# Documents read/search (P12.S5): the tenant-scoped, UNMETERED /app/documents +
+# /app/search read routes the web app's knowledge viewer codes against. Reuses the
+# S1 content store/search as-is (scoped by tenant_id), bridges the control-plane
+# project UUID to the content-plane project name, and never sets request.state.usage
+# — so web-UI browsing/search moves no usage counter (unlike the metered /api/*).
+app.include_router(documents_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an

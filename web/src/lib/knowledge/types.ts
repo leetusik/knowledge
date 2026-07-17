@@ -185,3 +185,95 @@ export interface KbProjectUsage {
   project: KbProject;
   credentials: KbCredential[];
 }
+
+// ── /app/documents + /app/search shapes (P12.S5) ───────────────────────────
+// Mirror the `server/documents_api.py` `/app` projector (`_app_doc`) and the
+// `server/search.py::_finalize` result shape verbatim. These are the CONTENT plane
+// (documents key off the project NAME string), distinct from the control-plane
+// `/app/projects` UUIDs — the page bridges the two by sending a project UUID that the
+// backend resolves to a name. The `/app` projector drops `markdown` (list only),
+// `tags_text`, and `tenant_id`.
+
+/**
+ * One document in the `GET /app/documents` list — no `markdown` (dropped from list
+ * rows; a single fetch adds it). `project` is the content-plane project NAME string,
+ * not a UUID. `related` is the doc's forward `related:` links (rel_paths).
+ */
+export interface KbDocumentListItem {
+  id: number;
+  project: string;
+  slug: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  title: string;
+  tags: string[];
+  rel_path: string;
+  source_repo: string | null;
+  related: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** `GET /app/documents/{id}` — a list item PLUS the rendered-from `markdown` body. */
+export interface KbDocument extends KbDocumentListItem {
+  /** The document body WITHOUT frontmatter (starts at the H1). */
+  markdown: string;
+}
+
+/** `GET /app/documents` → `{total, items}` (offset-paged; `total` is the full count). */
+export interface KbDocumentsPage {
+  total: number;
+  items: KbDocumentListItem[];
+}
+
+/**
+ * One `GET /app/search` result (`server/search.py::_finalize`): the list-item fields
+ * (minus `related`) PLUS the ranking `score`, a highlighted `snippet` (contains
+ * literal `<mark>…</mark>` delimiters — never raw HTML to inject), and the `signals`
+ * breakdown. Never carries `markdown` or `tenant_id`.
+ */
+export interface KbSearchResult {
+  id: number;
+  project: string;
+  slug: string;
+  date: string;
+  title: string;
+  tags: string[];
+  rel_path: string;
+  source_repo: string | null;
+  created_at: string;
+  updated_at: string;
+  score: number;
+  /** FTS excerpt with matched terms wrapped in literal `<mark>`/`</mark>`. */
+  snippet: string;
+  /** `{bm25?, recency, vector?}` — the per-signal contributions. */
+  signals: {
+    bm25?: number;
+    recency: number;
+    vector?: number;
+  };
+}
+
+/** `GET /app/search` → `{query, mode, total, limit, offset, results}`. */
+export interface KbSearchPage {
+  query: string;
+  /** `"hybrid"` when the Gemini vector signal fused in, else `"bm25"`. */
+  mode: string;
+  total: number;
+  limit: number;
+  offset: number;
+  results: KbSearchResult[];
+}
+
+/**
+ * The query for `getDocuments`/`searchDocuments`. `project` is a control-plane
+ * project UUID (the backend bridges it to a name). All fields optional; blanks are
+ * omitted from the URL by `documentsQueryString`.
+ */
+export interface KbDocumentsQuery {
+  q?: string;
+  project?: string;
+  tag?: string;
+  limit?: number;
+  offset?: number;
+}

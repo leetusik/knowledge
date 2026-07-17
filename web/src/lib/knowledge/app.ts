@@ -3,9 +3,13 @@ import "server-only";
 import { getJson, sendJson } from "./client";
 import type {
   KbDashboard,
+  KbDocument,
+  KbDocumentsPage,
+  KbDocumentsQuery,
   KbMintedCredential,
   KbProject,
   KbProjectUsage,
+  KbSearchPage,
   KbUsage,
 } from "./types";
 
@@ -194,6 +198,93 @@ export async function getProjectUsage(
 ): Promise<KbProjectUsage> {
   return getJson<KbProjectUsage>(
     `/app/projects/${encodeURIComponent(projectId)}/usage`,
+    { token, signal },
+  );
+}
+
+// ── /app/documents + /app/search — the per-tenant knowledge viewer (P12.S5) ──
+// The documents browse/search/read seam. These `/app` routes are UNMETERED,
+// session-scoped, and tenant-scoped on the backend, so web-UI browsing never
+// pollutes the metered `searches` figure. `project` is a control-plane project UUID
+// that the backend bridges to the content-plane project NAME (404 if cross-tenant).
+
+/**
+ * Build the query string, mirroring vocky's `feedbackQueryString` (the rules it
+ * settles):
+ *   - BLANK IS OMITTED, never sent. A GET form submits its empty fields, so an
+ *     unfiltered submit yields `?q=&project=`; the backend would 422 a blank
+ *     `project` (`UUID("")`). Dropping blanks is what makes the empty form mean "no
+ *     filter". Strings are trimmed to match the page's own normalization.
+ *   - `URLSearchParams` does ALL the escaping — do NOT `encodeURIComponent` on top,
+ *     or Korean double-encodes (`검색` → `%25EA%25B2%25...`). It encodes a space as
+ *     `+`, which Starlette decodes back correctly.
+ *   - No params ⇒ the path stays BARE (`/app/documents`, no trailing `?`).
+ */
+function documentsQueryString(query: KbDocumentsQuery): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null) continue;
+    const raw = typeof value === "string" ? value.trim() : String(value);
+    if (raw === "") continue;
+    search.set(key, raw);
+  }
+  const qs = search.toString();
+  return qs === "" ? "" : `?${qs}`;
+}
+
+/**
+ * `GET /app/documents` (bearer) → 200 `{total, items}` — the caller's tenant's
+ * documents, newest-first (`date DESC, id DESC`), OFFSET-paged. `total` is the full
+ * filtered count (independent of the `limit`/`offset` window). Items carry no
+ * `markdown` (a single fetch adds it).
+ *
+ * `project` (a control-plane UUID) narrows the scope: the backend resolves it to a
+ * project NAME, answering 404 when it is missing OR another tenant's — a malformed
+ * one is a 422. The page maps 400/404 to the branded not-found.
+ */
+export async function getDocuments(
+  token: string,
+  query: KbDocumentsQuery = {},
+  signal?: AbortSignal,
+): Promise<KbDocumentsPage> {
+  return getJson<KbDocumentsPage>(
+    `/app/documents${documentsQueryString(query)}`,
+    { token, signal },
+  );
+}
+
+/**
+ * `GET /app/documents/{id}` (bearer) → 200 the projected document WITH `markdown`.
+ *
+ * Ids are integers. 404 when missing OR another tenant's (the backend scopes by
+ * `tenant_id`, so a cross-tenant id resolves to nothing — 404-never-403, ids cannot
+ * be probed); a non-integer id is a 422. The read page maps both to the branded
+ * not-found.
+ */
+export async function getDocument(
+  token: string,
+  id: number,
+  signal?: AbortSignal,
+): Promise<KbDocument> {
+  // `id` is a number, so there is nothing to URL-escape — interpolate directly.
+  return getJson<KbDocument>(`/app/documents/${id}`, { token, signal });
+}
+
+/**
+ * `GET /app/search` (bearer) → 200 `{query, mode, total, limit, offset, results}` —
+ * BM25 + recency ranking (fused with the Gemini vector signal when embeddings are
+ * enabled → `mode: "hybrid"`), scoped to the caller's tenant. `q` is REQUIRED (a
+ * blank/absent `q` would be a 422); the page only calls this when `q` is present and
+ * uses `getDocuments` otherwise. Same `project` bridge + 400/404 mapping as
+ * `getDocuments`.
+ */
+export async function searchDocuments(
+  token: string,
+  query: KbDocumentsQuery & { q: string },
+  signal?: AbortSignal,
+): Promise<KbSearchPage> {
+  return getJson<KbSearchPage>(
+    `/app/search${documentsQueryString(query)}`,
     { token, signal },
   );
 }

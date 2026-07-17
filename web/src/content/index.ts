@@ -34,3 +34,7 @@ export {
   REVOKE_CREDENTIAL_ERRORS,
 } from "./project";
 export type { ProjectCopy } from "./project";
+
+// Documents surface (P12.S5) — browse / search / read the tenant's documents.
+export { DOCUMENTS } from "./documents";
+export type { DocumentsCopy } from "./documents";
