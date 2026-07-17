@@ -17,3 +17,11 @@ export type { AuthPageCopy } from "./auth";
 // Authenticated app shell (P12.S2) — chrome labels + rail nav.
 export { APP_NAV, APP_SHELL } from "./app";
 export type { AppNavItem } from "./app";
+
+// Tenant dashboard (P12.S3) — usage tiles / trend / projects / activity + create.
+export { CREATE_PROJECT_ERRORS, DASHBOARD } from "./dashboard";
+export type {
+  ActivityEmphasis,
+  ActivityTemplate,
+  DashboardCopy,
+} from "./dashboard";

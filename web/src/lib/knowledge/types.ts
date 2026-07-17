@@ -44,3 +44,83 @@ export interface KbIdentity {
   /** Every tenant the user belongs to, in knowledge's order (`tenants[0]` = active). */
   tenants: KbTenant[];
 }
+
+// ── /app/* shapes (P12.S3) ────────────────────────────────────────────────
+// Mirror knowledge's `/app/*` serializers verbatim: ids are stringified UUIDs and
+// timestamps are ISO-8601 strings. The dashboard page codes against these.
+
+/** `serialize_project` (`server/app_api.py`) — a tenant's project. */
+export interface KbProject {
+  id: string;
+  name: string;
+  tenant_id: string;
+  created_at: string;
+}
+
+/**
+ * The echoed usage window `[start, end)`. NOTE: knowledge uses `start`/`end` (not
+ * vocky's `*_ingested_at`) — `server/usage_api.py::serialize_usage_metrics`.
+ */
+export interface KbUsageWindow {
+  start: string;
+  end: string;
+}
+
+/** Window-wide usage totals (summed from the daily buckets). */
+export interface KbUsageTotals {
+  total: number;
+  documents_created: number;
+  documents_deleted: number;
+  searches: number;
+}
+
+/** One UTC calendar day's zero-filled usage counts. */
+export interface KbDailyCount {
+  /** `YYYY-MM-DD`. */
+  day: string;
+  total: number;
+  documents_created: number;
+  documents_deleted: number;
+  searches: number;
+}
+
+/**
+ * `GET /app/usage` — the whole-tenant usage aggregate: window + totals + the
+ * contiguous zero-filled daily series + the tenant's project list.
+ */
+export interface KbUsage {
+  window: KbUsageWindow;
+  totals: KbUsageTotals;
+  daily_counts: KbDailyCount[];
+  projects: KbProject[];
+}
+
+/**
+ * One project row in the dashboard rollup (`GET /app/dashboard`, P12.S3). NOTE:
+ * `documents` is `documents_created` over the window, NOT a live per-project total
+ * (the content-plane bridge is S5).
+ */
+export interface KbDashboardProject {
+  id: string;
+  name: string;
+  created_at: string;
+  documents: number;
+  /** Non-revoked credential count. */
+  keys: number;
+  /** Most-recent ingest recency across the project's credentials, or null. */
+  last_used_at: string | null;
+}
+
+/** One lifecycle event in the dashboard activity feed. */
+export interface KbActivityEvent {
+  type: "project_created" | "key_minted" | "key_revoked";
+  at: string;
+  project_name: string;
+  credential_name: string | null;
+}
+
+/** `GET /app/dashboard` — per-project rollup + newest-first lifecycle activity. */
+export interface KbDashboard {
+  projects: KbDashboardProject[];
+  activity: KbActivityEvent[];
+}

@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from server import app_api
 from server import auth_api
 from server import config, db
+from server import dashboard_api
 from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
@@ -118,6 +119,11 @@ app.include_router(app_api.router)
 # derive-on-read aggregate the P12 dashboard consumes. Same require_user guard and
 # tenant scoping as app_api (cross-tenant project → 404).
 app.include_router(usage_api.router)
+
+# Dashboard aggregate (P12.S3): the tenant-scoped, unmetered GET /app/dashboard
+# rollup (per-project usage/credential state + lifecycle activity feed) the web
+# app's post-login home reads in one round-trip. Same require_user guard; pure reads.
+app.include_router(dashboard_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
