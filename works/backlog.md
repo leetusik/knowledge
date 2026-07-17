@@ -8,9 +8,9 @@
 - Current phase: `P13`
 - Current slice: `P13.REVIEW`
 - Next slice: `none`
-- Waiting on operator: `none`
+- Waiting on operator: `P13.REVIEW`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-18T02:26:22+09:00`
+- Rebuilt at: `2026-07-18T02:26:51+09:00`
 
 ## Active Phases
 
@@ -72,7 +72,7 @@
 | [x] `P13.S3` | `done` | Knowledge commands | `implementation` | `works/phases/active/P13/slices/P13.S3` |
 | [x] `P13.S4` | `done` | Agent-readable guide docs + discovery | `implementation` | `works/phases/active/P13/slices/P13.S4` |
 | [x] `P13.S5` | `done` | Expose the control plane at the edge + throttle /auth + E2E CLI smoke | `implementation` | `works/phases/active/P13/slices/P13.S5` |
-| [ ] `P13.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P13/slices/P13.REVIEW` |
+| [~] `P13.REVIEW` | `pending` | phase review | `review` | `works/phases/active/P13/slices/P13.REVIEW` |
 
 ## Phase P14: Landing Page & Product Webpage via Claude Design Gate
 
