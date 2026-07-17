@@ -111,6 +111,46 @@ def require_read_auth_enabled() -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def auth_rate_limit() -> int:
+    """Max unauthenticated ``/auth/{signup,login}`` requests per client IP per window.
+
+    ``KB_AUTH_RATE_LIMIT`` (default **20**). Read per-call like every setting so a
+    test or the E2E CLI smoke can force a low value via the env without a reload;
+    ``<= 0`` disables the throttle entirely. Applies P13.S5's server-side backstop:
+    the ``/auth/*`` grant surface goes public at the edge in P13, and there is no
+    ``limit_req_zone`` at the edge (the ``conf.d/`` tree bans it) — so the throttle
+    lives here, in-process (one uvicorn worker → one coherent counter). The counter
+    is keyed per (IP, route), so signup and login are limited independently.
+
+    Lenient by design: a legit agent re-running ``knowledge init`` a handful of
+    times never trips it, while a single IP is capped on the now-public password
+    grant + open signup. 20 also clears the accounts test suite's per-``testclient``
+    signup count with room to spare.
+    """
+
+    raw = _env("KB_AUTH_RATE_LIMIT", "20")
+    try:
+        return int(str(raw))
+    except (TypeError, ValueError):
+        return 20
+
+
+def auth_rate_window_s() -> int:
+    """Fixed-window length in seconds for :func:`auth_rate_limit`.
+
+    ``KB_AUTH_RATE_WINDOW_S`` (default **900** = 15 minutes). Read per-call; a
+    non-positive or unparseable value falls back to the 900s default so the window
+    is never zero-length (which would make the limiter count-per-request).
+    """
+
+    raw = _env("KB_AUTH_RATE_WINDOW_S", "900")
+    try:
+        value = int(str(raw))
+    except (TypeError, ValueError):
+        return 900
+    return value if value > 0 else 900
+
+
 def gemini_api_key() -> str | None:
     """Gemini credential: GOOGLE_API_KEY preferred, GEMINI_API_KEY fallback.
 
