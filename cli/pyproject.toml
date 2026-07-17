@@ -1,0 +1,32 @@
+[project]
+name = "knowledge-cli"
+version = "0.1.0"
+description = "Standalone CLI for a personal knowledge base — sign up, configure credentials, save and search, without ever visiting the website"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx",
+]
+
+# The whole point of this package: a `knowledge` executable on PATH, installable
+# with `uv tool install`. The repo root deliberately has NO [build-system] and is
+# `package = false` (a virtual project — server/ runs bind-mounted and Docker
+# reproduces it with `uv export --no-emit-project`), so the CLI cannot hang off
+# it and lives here in its own distribution instead. Never make the root
+# installable to "simplify" this — that breaks the image build.
+[project.scripts]
+knowledge = "knowledge_cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowledge_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

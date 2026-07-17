@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P13`
-- Current slice: `P13.S1`
-- Next slice: `P13.S2`
+- Current slice: `P13.S2`
+- Next slice: `P13.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-17T15:58:49+09:00`
+- Rebuilt at: `2026-07-17T16:22:19+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
-| [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.S1` | `works/phases/active/P13` |
+| [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.S2` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
 
@@ -67,7 +67,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P13.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P13/slices/P13.DECOMP` |
-| [ ] `P13.S1` | `todo` | CLI package + config seam + API client | `implementation` | `works/phases/active/P13/slices/P13.S1` |
+| [x] `P13.S1` | `done` | CLI package + config seam + API client | `implementation` | `works/phases/active/P13/slices/P13.S1` |
 | [ ] `P13.S2` | `todo` | Auth & onboarding commands | `implementation` | `works/phases/active/P13/slices/P13.S2` |
 | [ ] `P13.S3` | `todo` | Knowledge commands | `implementation` | `works/phases/active/P13/slices/P13.S3` |
 | [ ] `P13.S4` | `todo` | Agent-readable guide docs + discovery | `implementation` | `works/phases/active/P13/slices/P13.S4` |
