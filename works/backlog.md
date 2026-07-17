@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P13`
-- Current slice: `P13.REVIEW`
-- Next slice: `none`
-- Waiting on operator: `P13.REVIEW`
+- Current phase: `P14`
+- Current slice: `P14.DECOMP`
+- Next slice: `P14.REVIEW`
+- Waiting on operator: `none`
 - Open deferred jobs: `6`
-- Rebuilt at: `2026-07-18T02:26:51+09:00`
+- Rebuilt at: `2026-07-18T03:27:33+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P10` | `done` | `pass` | Accounts, Tenancy & Tenant-Scoped Knowledge API | `none` | `works/phases/active/P10` |
 | [x] `P11` | `done` | `pass` | Per-Tenant Usage Monitoring | `none` | `works/phases/active/P11` |
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
-| [ ] `P13` | `planned` | `pending` | CLI & Agent-First Onboarding | `P13.REVIEW` | `works/phases/active/P13` |
+| [x] `P13` | `done` | `pass` | CLI & Agent-First Onboarding | `none` | `works/phases/active/P13` |
 | [ ] `P14` | `planned` | `pending` | Landing Page & Product Webpage via Claude Design Gate | `P14.DECOMP` | `works/phases/active/P14` |
 | [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
 
@@ -72,7 +72,7 @@
 | [x] `P13.S3` | `done` | Knowledge commands | `implementation` | `works/phases/active/P13/slices/P13.S3` |
 | [x] `P13.S4` | `done` | Agent-readable guide docs + discovery | `implementation` | `works/phases/active/P13/slices/P13.S4` |
 | [x] `P13.S5` | `done` | Expose the control plane at the edge + throttle /auth + E2E CLI smoke | `implementation` | `works/phases/active/P13/slices/P13.S5` |
-| [~] `P13.REVIEW` | `pending` | phase review | `review` | `works/phases/active/P13/slices/P13.REVIEW` |
+| [x] `P13.REVIEW` | `done` | phase review | `review` | `works/phases/active/P13/slices/P13.REVIEW` |
 
 ## Phase P14: Landing Page & Product Webpage via Claude Design Gate
 

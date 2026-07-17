@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0008
-created_at: 2026-07-17T15:00:39+09:00
-source: P12.REVIEW
-summary: P12 sealed-cookie BFF web surface; show-once vk_ key; unmetered read-only web UI
-previous: v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii
+version: v0009
+created_at: 2026-07-18T03:14:51+09:00
+source: P13.REVIEW
+summary: P13 CLI two-token model; passwords never in argv; show-once vk_ written to the seam not printed; chmod 600 enforced in code; public /auth grant throttled server-side per-IP; KB_API_TOKEN tenant-#1 public-write hazard
+previous: v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui
 ---
 
 # Security
@@ -20,6 +20,8 @@ Personal, single-operator knowledge base. The threat model is modest — no mult
 **P10 is the largest threat-model shift: the box now holds real multi-tenant data and user PII.** It becomes a multi-tenant SaaS with accounts (emails + passwords), sessions, per-tenant corpora, and per-project API credentials. The security posture that follows — all detailed below: **argon2id** password hashing; opaque high-entropy session + `vk_` tokens stored only as **sha256-hex at rest** (raw returned once, never persisted); enumeration-safe generic 401s; **cross-tenant content isolation** enforced on every content query (a tenant can never read/search/delete another's docs — cross-tenant → 404); and a single deliberate concession, a **pinned, un-revokable master bearer** (`KB_API_TOKEN` → tenant #1) that keeps the live hi2vi agent working unchanged. See *Multi-tenant accounts + content isolation* below.
 
 **P11 adds per-tenant usage monitoring — observability only, and it widens the surface only minimally.** Usage is isolated per tenant exactly like content: the `usage_events` reads are scoped by `tenant_id`, and a cross-tenant or missing project on `GET /app/projects/{id}/usage` returns **404** (existence never leaks). Metering is **best-effort and never alters a request's outcome** (a metering failure is logged, never raised, and never changes a status code, body, or a timing-visible failure). Usage rows carry **no new PII** — only `tenant_id`, `project_id`, a free-text `event_type`, and a timestamp — so the data-sensitivity posture is unchanged from P10. See *Per-tenant usage isolation* below.
+
+**P13 ships a standalone `knowledge` CLI and, to make its onboarding reachable on the hosted host, publishes the `/auth/*` grant to the internet — the phase's real security event.** Two threads follow, both below in *CLI credential handling + the public `/auth` throttle*: (1) **credential hygiene at the client** — a **two-token model** (a non-expiring `vk_` in `api.token`, an additive 30-day session in `auth.session_token`), passwords that **never reach `argv`** or logs, a **show-once `vk_` written to the config seam and never printed** (`redact_token` is the only display form), the generic-401 enumeration-safety preserved verbatim from the terminal, and `chmod 600` on the config now **enforced in code** rather than a prose instruction; and (2) **a new exposed surface** — publishing `/auth/{signup,login}` (an unauthenticated password grant + open signup) invalidates the pre-P13 "this API needs no rate limit" rationale, so P13 lands a **server-side per-IP throttle** on that grant in the same slice. One standing hazard is also documented: a stray `$KB_API_TOKEN` in the CLI user's environment resolves to **tenant #1** (whose writes publish to the public site), so the CLI warns and the smoke scrubs it.
 
 ## Purpose
 
@@ -196,6 +198,30 @@ P12 adds knowledge's first **authenticated browser surface** (a Next.js app in `
 - **Unmetered reads never alter a request.** The web app's `/app` reads (dashboard/documents/search/graph) never set `request.state.usage`, so a web-UI read cannot move a usage counter or introduce a timing-visible side effect. The web UI is read-only; there is no plan-gating anywhere — all web-UI features are free.
 - **Two server-only secrets.** `SESSION_SECRET` (cookie key material) and `KB_API_BASE_URL` (backend origin) are `import "server-only"`, neither `NEXT_PUBLIC_`, both via `web/.env.example` (names only, never a value) — a browser bundle can carry neither.
 
+## CLI credential handling + the public `/auth` throttle (P13)
+
+P13's `knowledge` CLI is the **first code to write the `~/.config/knowledge-kb/config.json` seam** (previously prose-only) and the reason the `/auth/*` grant is now public. Its security surface is credential handling on the client and a throttle on the newly-exposed server surface.
+
+### Client credential hygiene
+
+- **Two tokens, two lifetimes, two config keys.** `knowledge init` mints and stores a **non-expiring `vk_` ingest key in `api.token`** — the seam key `/knowledge:explain` already reads, so the plugin keeps writing to the hosted SaaS after any session lapses — plus a **30-day session token in the additive `auth.session_token`** key (used only for the `/app/*` control plane, e.g. `usage`). The resolver reads only four keys and ignores `auth.*`, so the session key is backward-compatible. This is the concrete proof of "SaaS-open" (`v0003` security): a config written entirely by the CLI resolves through the verbatim `explain/SKILL.md` heredoc as `KB_STATUS=configured`.
+- **Passwords never reach `argv` or logs.** There is **no `--password` flag, ever**: the password comes from `--password-stdin` > `$KNOWLEDGE_PASSWORD` > `getpass` on a TTY, and a hard error otherwise (never a silent hang). A `ps` during a live login proves 0 processes carry the password.
+- **The show-once `vk_` is written to the seam, never printed or logged.** The raw `vk_` (returned once by `POST /app/projects/{id}/credentials`) is written straight into `api.token`; `redact_token()` (`vk_…last4`) is the **only** display form anywhere, asserted by a test. No traceback is allowed to escape the CLI (it could carry a `vk_`): every error is a user-facing `error: …` on stderr with exit 1.
+- **Generic-401 enumeration-safety preserved from the terminal.** `knowledge login` never distinguishes bad-email from bad-password — unknown email and wrong password produce **byte-identical** output (verified live), carrying the server's own wording through the client boundary, and this holds **through the throttle** (see below).
+- **`chmod 600` is now enforced in code, not just documented.** The config file was a prose "chmod 600" instruction nothing checked; the CLI sets mode `0600` **on the temp file before `os.replace`**, so the file is never briefly world-readable with a `vk_` in it (no chmod-after-the-fact). The `knowledge-kb` dir is created `0700`.
+- **The `$KB_API_TOKEN` → tenant-#1 public-publish hazard.** The seam's env precedence means a `$KB_API_TOKEN` exported in the CLI user's shell **overrides** `api.token` — and if it happens to equal the box master bearer it resolves to **tenant #1**, whose writes are `is_public` (canonical `docs/`, public Recent index, committed **and pushed to the live site**). The CLI **warns** when `$KB_API_TOKEN` is set while a config `api.token` exists (redacting the displaced key), and the `cli_smoke.py` E2E **scrubs** `KB_API_TOKEN`/`KB_API_BASE_URL` from the child env so it can never ride the master bearer onto the public corpus. The hazard is latent, not live (the operator's shell does not export it), but documented so no one rediscovers it the hard way.
+
+### The public `/auth` throttle (server-side, in-process, per-IP)
+
+Publishing `/auth/{signup,login}` at the edge (see api/operations) is the phase's exposure event: it is a plain JSON password grant + open signup with no CSRF/cookie/origin check, and the Next BFF's 5/IP/15 min throttle is **bypassed entirely** by a direct API call. So exposure and throttling landed **in the same slice** (S5), never apart:
+
+- **Where it lives, and why not nginx.** The `deploy/knowledge.conf` house rules **ban `limit_req_zone`** in this vhost (zone names are global across the edge's `conf.d/` tree; a duplicate is a hard `nginx -t` failure that blocks the reload for *every* site on the box), and the local stack has no nginx to test a zone against. So the throttle is **server-side**: an inlined fixed-window limiter in `server/auth_api.py`, gating `signup` + `login` only.
+- **Per-`(client-IP, route)`, independent buckets, default 20/15 min.** `server/config.py` exposes `auth_rate_limit()` (default **20**) + `auth_rate_window_s()` (default **900 s**), read per-call and `_env`-tunable via `KB_AUTH_RATE_LIMIT` / `KB_AUTH_RATE_WINDOW_S`. Signup and login have **independent** windows (proven live: a signup does not consume the login window). On trip, `429` + `Retry-After` + a generic body.
+- **Keyed on the CF-restored real IP, trustworthy only because the API is edge-only.** The client IP is `X-Real-IP` → first `X-Forwarded-For` hop → `request.client.host`; these are trustworthy because the API container is reachable **exclusively through the edge** (no published host port), so those headers are always edge-set. Cloudflare real-IP restore is in place, so the key is the real visitor.
+- **Enumeration-safety is preserved through the throttle.** The IP check runs **before** the credential check and keys off IP alone, so it never leaks which of email/password was wrong — the generic `401` stays byte-identical (verified live: 20×`401` then `429`, with unknown-email and wrong-password identical throughout).
+- **Single-worker coherence — a real invariant.** The limiter is in-process and does **no `await`**, so it is atomic under the single uvicorn worker's event loop (no lock). This leans on the `main.py` single-worker invariant already load-bearing for the content write lock: **scaling workers would break the throttle's coherence** (each worker would keep its own counter). Memory is bounded (expired windows roll over lazily; a defensive `_RATE_MAX_KEYS` cap drops oldest under a distributed flood).
+- **Default value chosen test-safe.** 20/15 min is lenient for a real agent re-running `init` yet a real cap on the public grant; it is also above the Postgres accounts suite's ~8 signups from one shared `testclient` IP (verified `8 passed` with the throttle live). Never lower the shared default below ~10 without raising it back — do not weaken those DB-backed tests.
+
 ## Security Checklist
 
 - [x] No secrets committed (token + Gemini key via env only; `.env` + a private-key backstop in `.gitignore`)
@@ -220,15 +246,16 @@ P12 adds knowledge's first **authenticated browser surface** (a Next.js app in `
 - [x] **(P12)** A minted `vk_` key is shown exactly once and never logged/persisted/cached client-side (grep-verified); the list endpoint returns only `token_prefix`
 - [x] **(P12)** Web-UI `/app` reads are unmetered and never alter a request; the web UI is read-only, no plan-gating (all web-UI features free)
 - [x] **(P12)** Web-app server-only secrets (`SESSION_SECRET`, `KB_API_BASE_URL`) are `server-only`, non-`NEXT_PUBLIC_`, `.env.example` names only
+- [x] **(P13)** CLI passwords never reach `argv`/logs (`--password-stdin` > `$KNOWLEDGE_PASSWORD` > `getpass`; no `--password` flag); no traceback escapes (could carry a `vk_`)
+- [x] **(P13)** The show-once `vk_` is written to the config seam and **never printed/logged** — `redact_token()` (`vk_…last4`) is the only display form (test-asserted)
+- [x] **(P13)** Config `chmod 600` is enforced **in code** (mode set on the temp file before `os.replace`), not a prose instruction
+- [x] **(P13)** Generic-401 enumeration-safety preserved from the CLI **and through the per-IP throttle** (unknown-email == wrong-password, byte-identical, verified live)
+- [x] **(P13)** The now-public `/auth/{signup,login}` grant is throttled server-side (in-process, per-`(IP, route)`, default 20/15 min, CF-restored real IP, `KB_AUTH_RATE_LIMIT`/`KB_AUTH_RATE_WINDOW_S`-tunable) — leans on the single-worker invariant
+- [x] **(P13)** The `$KB_API_TOKEN` → tenant-#1 public-publish hazard is warned by the CLI and scrubbed by the smoke's child env
 
 ## Open Questions
 
-- **No rate limiting on the hosted vhost, deliberately.** The defenses are the bearer (every
-  `/api/*` call), Cloudflare in front, and a single known low-volume consumer. An nginx
-  `limit_req` zone was *not* added because zone names are global across the edge's whole
-  `conf.d/` tree — a careless one is a hard config-test failure that would block the reload for
-  **every** site on the box. If the endpoint ever gains untrusted consumers, add throttling
-  (app-side, or a carefully-named edge zone) as a deliberate change.
+- **~~No rate limiting on the hosted vhost, deliberately.~~ Superseded at P13 for the `/auth` grant.** The pre-P13 rationale ("every `/api/*` call is bearer-gated, one known low-volume consumer, so no throttle is needed") **went false the moment P13 published `/auth/{signup,login}`** — an unauthenticated password grant + open signup. P13 added the throttle **app-side** (server-side per-IP, above), which is exactly the "app-side … deliberate change" this note foresaw, chosen over an nginx zone because the edge's global-zone-name ban still holds (a duplicate `limit_req_zone` breaks the whole `conf.d/` tree). The `/api/*` surface stays unthrottled (still bearer-gated, one consumer); only the newly-public `/auth/*` grant is limited. If `/api/*` ever gains untrusted consumers, throttle it the same app-side way.
 - **Agent-published commits carry a placeholder identity** (`kb-api <kb-api@localhost>`) in a
   public repo's history, and every future agent-published doc will carry it. Cosmetic, not a
   vulnerability; tracked as a deferred job.

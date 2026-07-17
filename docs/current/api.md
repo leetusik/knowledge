@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0009
-created_at: 2026-07-17T15:00:38+09:00
-source: P12.REVIEW
-summary: P12 unmetered session-scoped /app read routes: dashboard, documents, search, graph
-previous: v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched
+version: v0010
+created_at: 2026-07-18T03:13:35+09:00
+source: P13.REVIEW
+summary: P13 CLI onboarding widened the frozen public contract to /api/* + /auth/* + /app/* + /healthz; new 429 on /auth/{signup,login}
+previous: v0009_p12_unmetered_session-scoped_app_read_routes_dashboard_documents_search_graph
 ---
 
 # API
@@ -23,6 +23,10 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P11 two additive control-plane usage reads appear** — `GET /app/usage` (whole-tenant) and `GET /app/projects/{id}/usage` (one project) — that serve the P12 dashboard a **derive-on-read** usage aggregate (document creates/deletes, searches) over a rolling day window. They are `require_user`-guarded and tenant-scoped like the rest of `/app/*` (a cross-tenant project → **404**). Usage is metered as a **request-state side effect** on the existing metered `/api/*` writes/searches, so **the frozen `/api/*` consumer contract is untouched** — no request or response field changed. See *Usage read API* below.
 
 **As of P12 five additive control-plane read routes appear on `/app/*`** — `GET /app/dashboard`, `GET /app/documents`, `GET /app/documents/{id}`, `GET /app/search`, `GET /app/graph` — all `require_user`-guarded, tenant-scoped, and **unmetered** (web-UI reads never move a usage counter). They back the P12 authenticated web app, reuse the existing store/search/services scoped by `tenant_id`, and leave the **frozen `/api/*` consumer contract untouched**. See *Web-app read API (P12)* below.
+
+**As of P13 the frozen *public consumer contract widens* — for the first time — from `/api/* + /healthz` to `/api/* + /auth/* + /app/* + /healthz`, and a new `429` appears on the public auth surface.** The control-plane surfaces `/auth/*` (sessions) and `/app/*` (tenant/project/credential) — which have existed in code since P10 but were **404-ing into the mkdocs catch-all at the edge** — are now **routed at the edge** to the API (`deploy/knowledge.conf` gained `location /auth/` + `location /app/` mirroring `/api/`). This is what lets the P13 `knowledge` CLI run its whole onboarding first half (signup → login → project → mint `vk_`) against the hosted host, not just localhost. Because publishing an unauthenticated password grant is a new exposure, `POST /auth/signup` and `POST /auth/login` now answer **`429` + `Retry-After`** (generic body) when a per-IP fixed window is exceeded — a **new documented status on that surface** (throttle mechanics live in **security**/**operations**). The existing `/api/*` field names, types, status meanings, and routing are **unchanged** — the widening is a routing + additive-status change, not a shape change, so the frozen `/api/*` consumer (the hi2vi agent) is unaffected. See *Public contract widened + `/auth` throttle (P13)* below.
+
+> **Prod-cutover caveat (P13).** The edge routing above is deployed and verified (the edge returns FastAPI JSON on `/auth/*`, not the old mkdocs HTML). But the **accounts plane itself (P10–P12) is not yet running on the prod box** (no `knowledge-postgres`, box clone at pre-P13 code, box `.env` missing the accounts secrets) — so a hosted `knowledge init` cannot complete end-to-end until the operator runs the one-time P10–P13 production cutover (see **operations** → *Hosted accounts-plane cutover*). The contract *shape* below is proven on localhost tenant mode; "hosted end-to-end" is pending that cutover, not a code gap.
 
 ## Auth
 
@@ -167,6 +171,14 @@ P12's authenticated web app consumes five additive, `require_user`-guarded, tena
 - **`GET /app/documents`** (`project?:UUID`, `tag?`, `limit=50 ≤200`, `offset=0`) → `{total, items}` newest-first · **`GET /app/documents/{id:int}`** → the doc **with** `markdown` (404 missing/cross-tenant) · **`GET /app/search`** (`q` required, `project?:UUID`, `tag?`, `limit=10 ≤50`, `offset=0`) → `{query, mode, total, limit, offset, results}` (`SearchQueryError → 400`). These reuse the store/search as-is scoped by `tenant_id`; the `/app` projector drops `tags_text` + `tenant_id` (and `markdown` on the list), keeping `related`. A supplied `project` UUID is resolved to the content-plane project **name** (documents key off name) via a tenant-scoped bridge — **404 on missing/cross-tenant**.
 - **`GET /app/graph`** (optional `project?:UUID`) → `{version, projects, nodes, edges}` (+ a `truncated` flag; `MAX_DOC_NODES = 2000`). A **server-side twin** of `scripts/graph_hook.py`'s inversion over `db.list_documents(tenant_id=…)` — nodes keyed on `rel_path`, related/tag edges (deduped, ghost/broken on dead targets), `degree`, the `(-docs, name)` project order — with the one substitution that each doc node's `url` = `/documents/{db_id}` (the read route). `scripts/graph_hook.py` is untouched (it stays server-free — tenant #1's public mkdocs surface).
 
+## Public contract widened + `/auth` throttle (P13)
+
+P13 shipped a standalone `knowledge` CLI whose onboarding half (signup → login → project → `vk_`) speaks to `/auth/*` + `/app/*`. Those planes existed in code from P10 but **404-ed into the mkdocs catch-all at the edge** — so the CLI's first half was unreachable on the hosted host. P13 routes them at the edge and throttles the newly-public grant. What the consumer now sees:
+
+- **Widened public surface: `/api/* + /auth/* + /app/* + /healthz`.** The `/auth/*` session grant and the `/app/*` tenant/project/credential (+ usage) surfaces are now edge-routed to the API. Their shapes are the P10/P11 contracts documented under *Multi-tenant surfaces* and *Usage read API* above — P13 added **no** new route or field there, only edge routing. The `vk_` minted at `POST /app/projects/{id}/credentials` is what the CLI writes into `api.token`, and it authenticates `/api/*` exactly as before.
+- **New status on the public auth surface: `429`.** `POST /auth/signup` and `POST /auth/login` return **`429`** with a `Retry-After` header and a generic body `{"detail":"too many requests — please retry later"}` when a per-IP fixed window is exceeded (server-side, in-process, per-`(IP, route)`, default 20/15 min, `KB_AUTH_RATE_LIMIT`/`KB_AUTH_RATE_WINDOW_S`-tunable — see security/operations). The throttle runs **before** the credential check and keys off IP only, so the enumeration-safe generic `401` (unknown-email and wrong-password stay byte-identical) is **preserved through it**. Signup and login have independent buckets.
+- **Two `/api/*` response-shape facts the CLI surfaced (unchanged contract, load-bearing to a consumer).** These are pre-existing behaviors P13's `save`/`search`/`list`/`projects` commands depend on, worth stating where a client codes against them: `GET /api/documents` answers `{total, items}` while `GET /api/search` answers `{total, results}` — the two list shapes differ by key. And `GET /api/projects` is a **GROUP BY over documents**, not a project registry: a just-created project (or a `vk_`-bound project with zero documents) is **absent** from it until its first save, and a document written under a *different* free-form `project` name than the key's bound project appears under that name (the write's `body.project` runs `validate_project()` as a convention check only — it is **never** checked against the `vk_`'s bound project, `main.py:396`). The CLI defaults `save`'s project to the git repo basename to partition the corpus identically to `/knowledge:explain`, but the server does not enforce it.
+
 ## Frozen consumer contract (P8)
 
 The section below is the **frozen** contract the hi2vi content-agent client (`hi2vi` P15.S4)
@@ -187,6 +199,10 @@ verbatim:** usage metering is a `request.state` side effect on the metered `/api
 handlers (recorded post-response by an async middleware), so **no** `/api/*` request or
 response field changed — the P11 review E2E re-confirmed the frozen 201 key set is intact
 while metering runs, and the usage reads live entirely on the additive `/app/*` surface.
+**P13 widened the public surface additively:** it edge-routes the pre-existing `/auth/*` + `/app/*`
+planes (no field/shape change) and adds a `429` status to `/auth/{signup,login}` — a new status on
+a newly-public surface, not a change to any existing `/api/*` field, type, or status meaning, so the
+frozen `/api/*` consumer is untouched.
 
 ## Hosted deployment + frozen contract
 
@@ -197,7 +213,8 @@ the hosted box are (a) bearer required on **all** `/api/*` calls, and (b)
 publish-on-write (writes are committed + pushed to `main`). As of P9 the box also
 **self-hosts the site** (the doc is live at its `url` fresh-on-write, at the domain
 root), so the write no longer depends on a GitHub Pages deploy; the push is off-box
-backup. Routing is path-based: `/` → the site, `/api/*` + `/healthz` → this API.
+backup. Routing is path-based: `/` → the site, `/api/*` + `/auth/*` + `/app/*` + `/healthz` → this API
+(**P13** added `/auth/*` + `/app/*` to the edge; pre-P13 it was `/api/*` + `/healthz` only).
 
 ### Client config
 

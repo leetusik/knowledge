@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0005
-created_at: 2026-07-17T15:00:38+09:00
-source: P12.REVIEW
-summary: P12 authenticated web app UX: login gate, dashboard, project detail, documents, in-app graph
-previous: v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads
+version: v0006
+created_at: 2026-07-18T03:16:59+09:00
+source: P13.REVIEW
+summary: P13 CLI journey: one-shot init; save/search/list/read/projects/usage; two-token model visible from the terminal; --json/exit-code agent contract
+previous: v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph
 ---
 
 # Experience
@@ -35,6 +35,12 @@ threshold" login gate into a light editorial workspace console and reach four su
 a tenant dashboard, project detail, per-tenant documents (browse/search/read), and the
 in-app knowledge graph — all free, all on the Knowledge Base design system. See *The
 authenticated web app (P12)* below.
+
+**As of P13 there is a third experience: the terminal.** A standalone `knowledge` CLI lets a
+user (or their coding agent) run the whole lifecycle from inside Claude Code or Codex — a
+one-shot `knowledge init` onboards them to the hosted SaaS, then `save`/`search`/`list`/`read`/
+`projects`/`usage` do the day-to-day work, all with a `--json`/exit-code contract for agents and
+a bundled `knowledge guide`. No browser, no website. See *The CLI journey (P13)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -205,6 +211,17 @@ P12 delivers knowledge's tenant-facing console — a separate authenticated expe
 - **Free.** Every web-UI feature — dashboard, project detail, documents, graph — is free; nothing is plan-gated. Web-UI search is deliberately unmetered.
 
 Final visual acceptance of the live app (a real browser render of login → surfaces, mint/revoke, search, graph drag/zoom/click-through) is owed to the operator at the **P14 deploy** — the phase could not stand up the live BFF + backend + browser stack; route behavior is covered by the backend `TestClient` suites and the frontend by typecheck/lint/build.
+
+## The CLI journey (P13)
+
+P13 adds a terminal experience for a user living inside Claude Code or Codex: the standalone `knowledge` CLI (`uv tool install`, console script `knowledge`). It is deliberately **agent-first** — designed to be driven unattended by a coding agent — and the journey has two halves.
+
+- **Onboard — one shot.** `knowledge init` runs the entire sequence in one command: signup-or-login → create the project → mint a `vk_` ingest key → write the config seam (`~/.config/knowledge-kb/config.json`, `0600`, `api.base_url` + `api.token=vk_…`) → verify it resolves as configured. It is **idempotent** (proven server-side: one project, one credential after two runs — a re-run reports "reusing the one in your config"). The password never comes from an interactive flag: `--password-stdin` > `$KNOWLEDGE_PASSWORD` > a TTY prompt. Signup `409` (duplicate email) offers login; a wrong login is the generic, enumeration-safe "invalid email or password". After `init`, `/knowledge:explain` itself starts writing to the hosted SaaS with **zero plugin change** — that is the payoff.
+- **Day to day — six commands.** `save` (H1-first markdown body, 2–5 tags, `409` → `--overwrite`; project defaults to the git repo's basename so the CLI and the plugin partition one corpus identically; prints `id`/`rel_path`/a `knowledge read <id>` hint — paths that always work — never the mkdocs `url` that 404s for a non-#1 tenant), `search` (any query is safe to type — no "malformed query" error exists from the CLI), `list`, `read` (by id or rel_path, round-trips the body byte-for-byte), `projects` (a GROUP BY over documents — a just-created project is absent until its first save), and `usage`.
+- **The two-token model, visible from the terminal.** After `knowledge logout`, `save`/`search`/`list`/`read` **keep working** on the non-expiring `vk_` while `usage` reports the session expired (your API key is unaffected) — the two tokens have two lifetimes and the terminal shows it. `logout` revokes the 30-day session but deliberately leaves `api.token` alive.
+- **The agent contract — `--json` and exit codes.** All six commands take `--json`, which emits the server's payload **verbatim**; text is the opinionated default. Errors are **never** a JSON envelope — they are `error: …` on stderr with exit 1, so stdout is always "valid JSON or nothing" and an agent branches on the **exit code**, not on parsing an error shape. A `knowledge guide` command prints the full machine-readable lifecycle contract (bundled, offline) for an agent to read before driving the flow.
+
+Onboarding + the full lifecycle + logout-survival + the 429 throttle are proven live on a local stack by `scripts/cli_smoke.py` (see qa). Hosted end-to-end awaits the operator's one-time accounts-plane cutover (see operations); the terminal experience itself is complete and proven.
 
 ## Open Questions
 

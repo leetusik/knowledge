@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0006
-created_at: 2026-07-15T00:59:51+09:00
-source: P8.REVIEW
-summary: P8: hosted E2E acceptance against live production; assert the capability (pushed:true) not the status code; shipped-payload slices must run plugin_parity locally
-previous: v0005_p7_plugin_e2e_reproducer_patterns_render_build_site_smoke_on_the_grown_corpus_parity_guard_negatives_per-project_deploy-gate_invariant
+version: v0007
+created_at: 2026-07-18T03:21:45+09:00
+source: P13.REVIEW
+summary: P13 CLI smoke scripts/cli_smoke.py drives the installed binary through lifecycle + logout-survival + 429; generic-401 preserved through the throttle proven live; hosted E2E pending the accounts-plane cutover
+previous: v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally
 ---
 
 # QA
@@ -27,7 +27,11 @@ on non-operator ports — plus a **per-project deploy-gate invariant** the F1 fi
 reproducer nailed down. As of P8 the **hosted** deployment has its own acceptance layer
 too: a six-assertion E2E run against live production, whose central lesson —
 **assert the capability, never the status code** — is the most transferable thing the
-phase produced.
+phase produced. As of P13 the **standalone `knowledge` CLI** has its own acceptance layer:
+`scripts/cli_smoke.py` drives the *installed* binary through the full lifecycle +
+logout-survival + the `/auth` 429 throttle against a running local stack — proven green on
+localhost; hosted end-to-end is pending the operator's P10–P13 accounts-plane cutover (see
+operations). See *CLI smoke acceptance (P13)* below.
 
 ## Test Commands
 
@@ -48,6 +52,12 @@ phase produced.
   `docker run --rm -v <tmp>:/docs squidfunk/mkdocs-material:9.7.6 build` →
   `python3 <tmp>/scripts/site_smoke.py --root <tmp>` → `PASS` (a fresh KB passes its
   own portable deploy gate).
+- **CLI unit tests (P13):** `cd cli && uv run pytest -q` → **39 passed** (config resolver
+  contract, auth/onboard, knowledge commands, guide anti-rot). CLI tests live under
+  `cli/tests/`, never root `tests/` (parity guard).
+- **CLI E2E smoke (P13):** `python3 scripts/cli_smoke.py --base-url http://localhost:8766`
+  → `PASS` — drives the **installed** `knowledge` binary through the whole lifecycle + the
+  429 (prerequisites + the fresh-stack caveat below).
 
 ## Acceptance Criteria Style
 
@@ -311,6 +321,16 @@ publishing, and **leak-scan the payload before sending** (no token, no box path,
 or container name). Read-only re-checks of production (`healthz`, an un-authed 401, the Pages
 URL) are safe to repeat any time and are the cheap regression probe.
 
+## CLI smoke acceptance (P13)
+
+The standalone `knowledge` CLI is accepted by `scripts/cli_smoke.py` — the sibling of `scripts/onboarding_smoke.py`, but where that drives the raw HTTP surface, this drives the **installed binary** as a user's agent would: one `subprocess` per command under a throwaway `XDG_CONFIG_HOME`, collect-all-failures, `PASS`/exit-1. It exists + reads as a faithful lifecycle+429 driver (confirmed at the review; the live run itself was proven at `P13.S5`, not re-run here).
+
+- **Prerequisites (the caller sets up):** a running local stack (`docker compose up -d postgres api`), **migrated in-container** (`docker compose exec -T api uv run alembic upgrade head` — the host has no `DATABASE_URL` route to postgres), and the CLI installed with **`uv tool install ./cli --reinstall`** (never `--force` — uv reuses the cached wheel and silently keeps the stale binary).
+- **What it drives + asserts:** `init` (signup → project → mint `vk_` → config seam **0600**, `api.token=vk_…`, resolves configured) → `projects` empty-state (before the first save — `/api/projects` is a GROUP BY over documents) → `save` (2 tags) → `list` → `search` (unique token) → `read` (**byte-for-byte round-trip**) → `projects` present → `usage` (live) → `logout` → **post-logout `save`/`search` still work on the `vk_` while `usage` fails** (the two-token model from the terminal) → the **throttle**.
+- **The 429 + enumeration-safety, proven live at S5:** hammering `login` from one IP returned **20×`401` then `429`** with `Retry-After` + a generic body; unknown-email and wrong-password 401s were **byte-identical** (the IP-keyed throttle runs before the credential check, so it never leaks which was wrong); signup and login have independent windows. Through the CLI the 429 surfaces as a clean `error: HTTP 429: …` — no hang, no raw body (S5 touched no CLI code; that clean surfacing is `main()`'s existing `ApiError` boundary — do not "improve" it without re-running the smoke).
+- **Fresh-window caveat:** the limiter state is **in-process**, so the throttle assertion assumes a **fresh** `api` (empty window). A re-run against the same long-lived container within the window sees residual counts — `docker compose restart api` resets it (the smoke's failure messages say so). Tune the threshold with `--login-limit` if the stack's `KB_AUTH_RATE_LIMIT` differs from the default 20.
+- **Hosted E2E is pending, not failing.** Every P13 slice validated against **localhost** because the accounts plane is not yet deployed to prod (no `knowledge-postgres` on the box, box clone at pre-P13 code, box `.env` missing the accounts secrets). Hosted acceptance — one real `knowledge init --base-url https://knowledge.hi2vi.com` — becomes possible after the operator runs the one-time P10–P13 cutover (operations); the edge routing that makes it reachable is already deployed and verified.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -345,6 +365,22 @@ URL) are safe to repeat any time and are the cheap regression probe.
   loud signal**: writes keep returning 201 while nothing publishes. Guarded only by the E2E's
   `pushed:true` assertion and the bring-up capability check — there is no unit test that can
   see it.
+- **The two-implementation config seam (P13)** — `cli/src/knowledge_cli/config.py:resolve()`
+  and the `plugin/skills/explain/SKILL.md:31-78` heredoc are two independent implementations of
+  the same `knowledge-kb` resolver that **cannot be merged** (each must work without the other).
+  Drift is the standing risk; the only guard is `cli/tests/test_config.py` (which pins the
+  documented behavior, validated verbatim against the real SKILL heredoc over a 20-scenario
+  matrix). **Anyone editing either side must edit both** — and `plugin/` is untouched by decree,
+  so the SKILL side moves only on an explicit operator decision.
+- **The `/auth` throttle's single-worker coherence (P13)** — the per-IP limiter is in-process
+  and lock-free (atomic only under one uvicorn worker). Scaling `api` workers gives each its own
+  counter and silently breaks the throttle; no test can see it (it needs a multi-worker box).
+  The `cli_smoke.py` throttle assertion also assumes a **fresh** window — a stale window makes a
+  green run impossible, not a false green (the failure messages name the restart fix).
+- **CLI re-install with `--force` ships a stale binary (P13)** — `uv tool install ./cli --force`
+  reuses the cached `0.1.0` wheel, so a CLI change can silently test yesterday's code. Any live
+  CLI run or `cli_smoke.py` invocation must use `--reinstall`; the smoke's binary resolver points
+  at the installed path, so it inherits whatever was installed.
 
 ## Open Questions
 
