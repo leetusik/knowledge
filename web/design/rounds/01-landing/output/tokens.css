@@ -1,0 +1,206 @@
+/* ==========================================================================
+   knowledge — Marketing surface tokens   (Round 01 · P14.S1 · Claude Design)
+   --------------------------------------------------------------------------
+   The token layer the public landing / marketing webpage is built on. It
+   EXTENDS the locked "calm editorial library" system — it invents no new brand,
+   no second accent. Two things live here:
+
+     1. The locked reading-room palette (--kb-*), both schemes, copied verbatim
+        from the design system's tokens/colors.css so these cards render
+        standalone at the true brand values. LOCKED — names + values unchanged.
+
+     2. The MARKETING surface tokens (additive, this round's real values): the
+        marketing type scale (--text-*), the tonal-band system (--color-on-dark*,
+        --kb-band-*), marketing spacing/containers, and the scroll-reveal layer.
+        These mirror the names already staged for P14 in web/src/app/globals.css
+        (--text-hero-display … --text-micro, --color-on-dark*, --spacing-hero,
+        --container-page) so the apply slice (P14.S2) maps 1:1 — no renames.
+
+   Teal is still the ONLY accent. On light bands it is the deep teal (#0f6f66);
+   on dark bands it steps to the lighter teal (#62bdb2) purely for contrast — the
+   same hue, never a second accent. Warm paper / warm charcoal, never pure
+   white/black. Every text stack ends in a Hangul fallback (mixed EN/KR corpus).
+   ========================================================================== */
+
+/* --- Webfonts: Fraunces (display) · Source Sans 3 (body) · JetBrains Mono
+       (data). Full Fraunces weight range so the marketing 680 weight renders.
+       Korean is NOT a webfont (budget) — system Hangul fallback per stack. --- */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+/* --------------------------------------------------------------------------
+   Structure — scheme-independent (families, marketing scale, spacing, shape)
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Families (real webfont names + Hangul fallback — standalone-safe) ---- */
+  --kb-font-display: "Fraunces", "Iowan Old Style", Georgia, "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+  --kb-font-body: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Helvetica, Arial, sans-serif;
+  --kb-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Apple SD Gothic Neo", monospace;
+
+  /* ---- Marketing type scale (px, on a 16px web-app root — NOT the 20px docs
+          root). Names + values mirror globals.css @theme so utils.ts's font-size
+          registration maps directly. Each carries lh / tracking / weight. ---- */
+  --text-hero-display: 68px;
+  --text-hero-display--line-height: 1.08;
+  --text-hero-display--letter-spacing: -1.6px;
+  --text-hero-display--font-weight: 680;
+
+  --text-display-lg: 56px;
+  --text-display-lg--line-height: 1.12;
+  --text-display-lg--letter-spacing: -1.2px;
+  --text-display-lg--font-weight: 680;
+
+  --text-heading-1: 48px;
+  --text-heading-1--line-height: 1.18;
+  --text-heading-1--letter-spacing: -0.9px;
+  --text-heading-1--font-weight: 680;
+
+  --text-heading-2: 36px;
+  --text-heading-2--line-height: 1.25;
+  --text-heading-2--letter-spacing: -0.5px;
+  --text-heading-2--font-weight: 680;
+
+  --text-heading-3: 28px;
+  --text-heading-3--line-height: 1.32;
+  --text-heading-3--letter-spacing: -0.3px;
+  --text-heading-3--font-weight: 680;
+
+  --text-heading-4: 22px;
+  --text-heading-4--line-height: 1.38;
+  --text-heading-4--font-weight: 680;
+
+  --text-body-lg: 19px;
+  --text-body-lg--line-height: 1.65;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.65;
+  --text-body-md--font-weight: 400;
+
+  --text-body-md-medium: 16px;
+  --text-body-md-medium--line-height: 1.6;
+  --text-body-md-medium--font-weight: 550;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.6;
+  --text-body-sm--font-weight: 400;
+
+  --text-caption: 13px;
+  --text-caption--line-height: 1.45;
+  --text-caption--font-weight: 450;
+
+  /* Eyebrow / kicker — tracked mono caps (the site's editorial label voice). */
+  --text-micro: 11px;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 1px;
+  --text-micro--font-weight: 700;
+
+  --text-button-md: 14px;
+  --text-button-md--line-height: 1.3;
+  --text-button-md--font-weight: 700;
+
+  --text-code-md: 13px;
+  --text-code-md--line-height: 1.55;
+  --text-code-md--font-weight: 400;
+
+  /* ---- Corner radii (from the locked shape scale) ---- */
+  --kb-radius: 0.55rem;
+  --kb-radius-sm: 0.35rem;
+  --kb-radius-pill: 2rem;
+  --radius-lg: 14px;   /* larger marketing card corner */
+  --radius-xl: 18px;
+
+  /* ---- Marketing spacing rhythm (px — staged for P14) ---- */
+  --spacing-section-sm: 48px;
+  --spacing-section: 72px;
+  --spacing-section-lg: 104px;
+  --spacing-hero: 128px;
+
+  /* ---- Container widths ---- */
+  --container-page: 1180px;   /* the marketing measure */
+  --container-wide: 1320px;
+
+  /* ---- Motion (the house transition) ---- */
+  --kb-ease: 0.15s ease;
+  --kb-ease-reveal: 0.6s ease-out;   /* the one-shot scroll Reveal */
+
+  /* ---- Elevation — the one shadow in the system, plus a marketing lift ---- */
+  --kb-shadow-hover: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.1);
+  --kb-shadow-card: 0 1px 2px rgba(38, 33, 28, 0.04), 0 10px 30px rgba(38, 33, 28, 0.06);
+
+  /* ---- Tonal-band system — scheme-INDEPENDENT dark bands (the marketing page
+          is a light page that drops into warm-charcoal bands for the hero, the
+          terminal/connect section, and the footer; these bands stay dark in both
+          schemes). Text-on-dark tiers + the teal to use on dark. ---- */
+  --color-on-dark: #f6f2e8;          /* warm off-white — headings/body on dark */
+  --color-on-dark-muted: #cbc2b2;    /* secondary on dark */
+  --color-on-dark-hint: #938a7a;     /* hint / meta on dark */
+  --color-on-primary: #fbfaf5;       /* text on the teal CTA fill */
+
+  --kb-band-dark: #1c1a15;           /* the warm-charcoal marketing dark band */
+  --kb-band-dark-soft: #232019;      /* raised card on the dark band */
+  --kb-band-dark-deep: #14120e;      /* footer / deepest anchor */
+  --kb-border-on-dark: rgba(236, 228, 215, 0.14);   /* hairline on dark */
+  --kb-border-on-dark-strong: rgba(236, 228, 215, 0.24);
+
+  --kb-accent-on-dark: #62bdb2;          /* teal ON dark bands (contrast step) */
+  --kb-accent-on-dark-strong: #86d4ca;
+  --kb-accent-on-dark-soft: rgba(98, 189, 178, 0.18);
+
+  /* ---- Data-viz categorical inks (graph motif) — the documented accent
+          extension, data-viz surfaces ONLY. Teal is the anchor. ---- */
+  --kb-ink-teal: #0f6f66;
+  --kb-ink-bronze: #8a6a2a;
+  --kb-ink-plum: #764f6c;
+  --kb-ink-teal-dark: #62bdb2;
+  --kb-ink-bronze-dark: #c8a15e;
+  --kb-ink-plum-dark: #c99bc0;
+}
+
+/* --------------------------------------------------------------------------
+   Light scheme (default) — warm ivory paper, ink text   [LOCKED palette]
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --kb-paper: #f6f2e8;
+  --kb-surface: #fffefa;
+  --kb-surface-sunken: #efe9db;
+  --kb-border: #e5dcc8;
+  --kb-border-strong: #d8ccb3;
+  --kb-accent: #0f6f66;
+  --kb-accent-strong: #0a544e;
+  --kb-accent-soft: rgba(15, 111, 102, 0.15);
+  --kb-tag-bg: #eaf0ec;
+  --kb-tag-fg: #2c5b52;
+
+  --kb-ink: #26211c;
+  --kb-secondary: #5c5347;
+  --kb-hint: #8f8676;
+
+  /* Interactive accent for the marketing surface (resolves per band below). */
+  --mkt-accent: var(--kb-accent);
+  --mkt-accent-strong: var(--kb-accent-strong);
+  --mkt-accent-soft: var(--kb-accent-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Dark scheme (slate) — warm charcoal paper, warm off-white text   [LOCKED]
+   -------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --kb-paper: #1a1815;
+  --kb-surface: #232019;
+  --kb-surface-sunken: #2a261e;
+  --kb-border: #38332a;
+  --kb-border-strong: #453f34;
+  --kb-accent: #62bdb2;
+  --kb-accent-strong: #86d4ca;
+  --kb-accent-soft: rgba(98, 189, 178, 0.2);
+  --kb-tag-bg: #24302b;
+  --kb-tag-fg: #97d2c7;
+
+  --kb-ink: #ece4d7;
+  --kb-secondary: #b6ad9d;
+  --kb-hint: #7e7566;
+
+  --mkt-accent: var(--kb-accent);
+  --mkt-accent-strong: var(--kb-accent-strong);
+  --mkt-accent-soft: var(--kb-accent-soft);
+}

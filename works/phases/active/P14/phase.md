@@ -84,12 +84,72 @@ are no `low` slices.
   `default_server`; no IPv6 `listen`; Cloudflare real-IP restore; `nginx -t` gate before graceful
   reload; never recreate `edge-nginx`.
 
+## Approved design direction — Round 01 (P14.S1 read-back, 2026-07-18)
+
+**Design landed AS-IS** from the *Knowledge Base Design System* Claude Design project (id
+`f49ab425-e75f-46c4-a6fa-48bb9938b203`, `marketing/` group — 12 cards: Foundations 2 · Landing 9 ·
+Components 1). Record (read-only) at `web/design/rounds/01-landing/output/`: `result.md`, `build-prompt.md`,
+`tokens.css`, `marketing.css`; SIGNOFF at `web/design/rounds/01-landing/SIGNOFF.md`. **`build-prompt.md` is
+the implementation contract for P14.S2** (real copy verbatim, section specs, band order, a11y floor). The
+pane cards remain the canonical visual; the two `.css` files are read-only *reference*, rebuilt as Tailwind
+utilities in S2 (not ported).
+
+**Five decisions (resolved in the design):**
+1. Wordmark **`knowledge`** (lowercase); tagline **"Durable knowledge for developers and their coding
+   agents."**; hero promise **"Knowledge that outlives the conversation."**
+2. Pricing = a **Free ($0/forever)** card beside an **"Agent Retrieval API — Coming"** waitlist tier (honest
+   free-only launch; names the deferred paid surface → P15).
+3. **Landing takes over `/`; the authenticated app rebases to `/app`.** All CTAs + "Sign in" → `/app`.
+4. **Dark hero** (echoes the login threshold), opening into light editorial bands, back to charcoal for the
+   connect section + footer. A light-hero swap is one class (the *Tonal bands* card shows both).
+5. **Type-led, illustration-only** — a real-command terminal + a graph motif from the system's own marks. No
+   photography, no invented screenshots (slots ready if assets arrive).
+
+**Section + band order (S2 builds top→bottom):** header/nav → hero (dark) → what-it-is/three-ways-in (paper)
+→ how-it-works (sunken) → save & hybrid search (paper) → connect your agent (dark) → knowledge graph (paper,
+recessed plate; reuse the live graph renderer) → pricing (paper) → final CTA + footer (dark → deep).
+
+**Token delta — ADDITIVE (state for SIGNOFF): not "None".** New marketing/band tokens for
+`web/src/app/globals.css` `@theme` (values in `build-prompt.md §1`): `--color-on-dark-hint`,
+`--kb-band-dark/-soft/-deep`, `--kb-border-on-dark(-strong)`, `--kb-accent-on-dark(/-strong/-soft)`,
+`--kb-shadow-card`, and data-viz inks `--kb-ink-{teal,bronze,plum}(-dark)`. The **locked `--kb-*` palette and
+the already-staged marketing `--text-*` / `--color-on-dark(-muted)` / `--color-on-primary` / spacing /
+container tokens are UNCHANGED** — no locked token renamed.
+
+**Departures logged (result.md):** retrieval API has no standalone feature card (lives in the value triad +
+how-it-works step 4 + pricing); Final CTA + Footer share one card; `marketing.css` added beyond the required
+`tokens.css`; copy drafted real (the dated in-play exception); `Components` is a pre-existing pane group.
+
+### ⚠ Routing collision to resolve in P14.S2/S3 (NEW — surfaced by the read-back)
+
+Decision #3 rebases the Next authenticated UI to **`/app/*`** — but the edge (`deploy/knowledge.conf`,
+P13.S5) already routes **`/app/*` and `/auth/*` → `knowledge-api` (FastAPI control-plane JSON for the CLI)**,
+and **`/` → `knowledge-site` (mkdocs)**. So shipping this design forces two reconciliations:
+- **`/` (edge):** must serve the Next **landing** instead of mkdocs — decide the mkdocs docs site's new home
+  (subpath/subdomain) or whether it stays.
+- **`/app/*` (edge):** the Next authenticated UI and the FastAPI CLI control-plane **both want `/app/*`**.
+  Resolve without breaking the P13 CLI edge contract — e.g. relocate the control-plane JSON under a namespaced
+  prefix (verify what path the CLI actually calls: `cli/src/knowledge_cli/client.py` / `config.py`), or route
+  by a more specific location. **Respect the design** (`/app` for the UI); do not silently pick a different UI
+  prefix. This is an S3 (edge/compose) concern with an S2 (Next route group + BFF `/api/auth/*`) dependency —
+  plan them together. Also re-check the Next BFF `/api/auth/*` vs edge `/api/*`→FastAPI collision noted in
+  Constraints.
+
+**P14.S2 reshape (do at S2 planning):** split S2 at fractional orders along the section seams — e.g. `S2`
+tokens + app-rebase-to-`/app` + marketing route group/layout/header/footer + hero; `S2.3` mid sections
+(what-it-is, how-it-works, save & search, pricing); `S2.6` the two interactive/visual features (connect
+terminal, graph motif) + SEO file routes (`sitemap`/`robots`/`manifest`/OG). Confirm the exact cut when
+planning S2 against `build-prompt.md`.
+
 ## Doc impact (running list — REVIEW consolidates; do not version docs here)
 
-- `docs/current/frontend.md` — public landing + marketing surface.
-- `docs/current/operations.md` — web Dockerfile / compose service / edge vhost (closes the
-  P14-deferred deploy items).
-- Possible `docs/current/decisions.md` entry — landing lives in the same `web/` app and takes over `/`.
+- `docs/current/frontend.md` — public landing + marketing surface; the additive marketing/band tokens
+  (`--kb-band-*`, `--kb-accent-on-dark*`, etc.) in the KB design-system section.
+- `docs/current/operations.md` — web Dockerfile / compose service / edge vhost, incl. the reworked edge
+  routing (`/` → landing, `/app/*` → Next UI, control-plane JSON relocated) (closes the P14-deferred items).
+- `docs/current/decisions.md` — landing lives in the same `web/` app and **takes over `/`**; the
+  authenticated app **rebases to `/app`**; the FastAPI control-plane / mkdocs edge routes are relocated to
+  make room (ADR).
 
 ## Constraints
 
