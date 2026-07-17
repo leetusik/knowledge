@@ -124,3 +124,64 @@ export interface KbDashboard {
   projects: KbDashboardProject[];
   activity: KbActivityEvent[];
 }
+
+// ── /app/projects/{id} credential + usage shapes (P12.S4) ──────────────────
+// Mirror `server/app_api.py::serialize_credential` and
+// `server/usage_api.py::_project_usage_response` verbatim.
+
+/**
+ * `serialize_credential` — one project ingest key's METADATA. Never carries
+ * `token_hash`, and never the plaintext key (see `KbMintedCredential`).
+ *
+ * There is NO `status` field: the UI DERIVES a three-state status from
+ * `revoked_at` / `last_used_at` (`credential-status.ts`). Revoked credentials
+ * REMAIN listed (knowledge's revoke is a soft stamp, not a delete), so any
+ * consumer must derive the state rather than assume the list is live-only.
+ *
+ * `token_prefix` is `"vk_"` plus a short slice of the opaque token — a DISPLAY
+ * STUB, never a usable credential.
+ */
+export interface KbCredential {
+  id: string;
+  project_id: string;
+  /** Optional display label; `null` when the key was minted unnamed. */
+  name: string | null;
+  token_prefix: string;
+  created_at: string;
+  /** Stamped on each ingest call; `null` until the key is first used. */
+  last_used_at: string | null;
+  /** `null` ⇔ not revoked. */
+  revoked_at: string | null;
+}
+
+/**
+ * `POST /app/projects/{id}/credentials` → 201 `{credential, key}` — the one
+ * response that cannot be unwrapped to a single domain type.
+ *
+ * `key` is the PLAINTEXT `vk_…` credential, returned EXACTLY ONCE and never
+ * recoverable: knowledge persists only the sha256 hash + short prefix. Unwrapping
+ * this to a bare `KbCredential` would throw away the only copy, so the envelope is
+ * kept whole and the caller is forced to decide what to do with the secret. It
+ * must never be logged, put in a URL, or persisted.
+ */
+export interface KbMintedCredential {
+  credential: KbCredential;
+  key: string;
+}
+
+/**
+ * `GET /app/projects/{id}/usage` — one project's usage PLUS the project itself and
+ * that project's credentials. Unlike `KbUsage`, this payload carries no `projects`
+ * list; instead knowledge bundles `project` (through the same `serialize_project`)
+ * and `credentials` (through the same `serialize_credential` as the standalone list
+ * route). That single-call bundling is why the project page needs no separate
+ * `getProject`/credentials-list round-trips. `window`/`totals`/`daily_counts` come
+ * from the same `serialize_usage_metrics` and are identical to the dashboard's.
+ */
+export interface KbProjectUsage {
+  window: KbUsageWindow;
+  totals: KbUsageTotals;
+  daily_counts: KbDailyCount[];
+  project: KbProject;
+  credentials: KbCredential[];
+}
