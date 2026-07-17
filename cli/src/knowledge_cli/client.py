@@ -87,6 +87,7 @@ class KnowledgeClient:
         base_url: str,
         token: str | None = None,
         timeout: float = DEFAULT_TIMEOUT,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.token = token or None
@@ -97,6 +98,10 @@ class KnowledgeClient:
             # points; the smoke pins this too.
             follow_redirects=False,
             headers={"User-Agent": USER_AGENT},
+            # `None` is httpx's own default, so this changes nothing at runtime; it
+            # exists so tests can hand in an `httpx.MockTransport` and exercise the
+            # real request path without a live server.
+            transport=transport,
         )
 
     def __enter__(self) -> KnowledgeClient:
