@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0008
-created_at: 2026-07-16T21:31:22+09:00
-source: P11.REVIEW
-summary: P11 usage reads GET /app/usage + /app/projects/{id}/usage; cross-tenant 404; frozen /api/* contract untouched
-previous: v0007_p10_auth_app_api_credential-to-tenant_resolver_cross-tenant_404_frozen_post_api_documents_consumer_contract_preserved_additively
+version: v0009
+created_at: 2026-07-17T15:00:38+09:00
+source: P12.REVIEW
+summary: P12 unmetered session-scoped /app read routes: dashboard, documents, search, graph
+previous: v0008_p11_usage_reads_get_app_usage_app_projects_id_usage_cross-tenant_404_frozen_api_contract_untouched
 ---
 
 # API
@@ -21,6 +21,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P10 the hosted API is multi-tenant.** Two new control-plane surfaces appear — `/auth/*` (signup/login/logout/me sessions) and `/app/*` (tenant projects + `vk_` credentials) — and every `/api/*` bearer now **resolves to a tenant** when `DATABASE_URL` is set (tenant mode). The live corpus is **tenant #1**, and `KB_API_TOKEN` is kept as its pinned master bearer, so **the hi2vi consumer needs zero changes** — the frozen `POST /api/documents` contract is preserved **additively** (tenant is derived from the credential, never a body field; tenant #1's `url`/`rel_path` shapes and the 201 key set are unchanged). With `DATABASE_URL` **unset** the `/api/*` surface is byte-for-byte the pre-P10 single-`KB_API_TOKEN` behavior. See *Multi-tenant surfaces* below.
 
 **As of P11 two additive control-plane usage reads appear** — `GET /app/usage` (whole-tenant) and `GET /app/projects/{id}/usage` (one project) — that serve the P12 dashboard a **derive-on-read** usage aggregate (document creates/deletes, searches) over a rolling day window. They are `require_user`-guarded and tenant-scoped like the rest of `/app/*` (a cross-tenant project → **404**). Usage is metered as a **request-state side effect** on the existing metered `/api/*` writes/searches, so **the frozen `/api/*` consumer contract is untouched** — no request or response field changed. See *Usage read API* below.
+
+**As of P12 five additive control-plane read routes appear on `/app/*`** — `GET /app/dashboard`, `GET /app/documents`, `GET /app/documents/{id}`, `GET /app/search`, `GET /app/graph` — all `require_user`-guarded, tenant-scoped, and **unmetered** (web-UI reads never move a usage counter). They back the P12 authenticated web app, reuse the existing store/search/services scoped by `tenant_id`, and leave the **frozen `/api/*` consumer contract untouched**. See *Web-app read API (P12)* below.
 
 ## Auth
 
@@ -156,6 +158,14 @@ Two additive, `require_user`-guarded control-plane reads (in `server/usage_api.p
 - **`GET /app/projects/{project_id}/usage`** — one project (drill-down). Uses `_load_scoped_project` → **404** for both a missing **and** a cross-tenant project (existence never leaks). Same `window`/`totals`/`daily_counts`, plus `project` (the project record) and `credentials` (each `vk_` key: `{id, project_id, name, token_prefix, created_at, last_used_at, revoked_at}`). Per P11, a credential's `last_used_at` reflects its last **metered** use (a write/search), not a read.
 
 - **Error surface:** a read that cannot complete surfaces internally as `UsageReadError` and is rendered as a clean **500** (`{"detail":"usage read failed"}`), never a bare traceback. `serialize_project` / `serialize_credential` are reused from `app_api` so the project/credential shapes match byte-for-byte.
+
+## Web-app read API (P12): the unmetered `/app` read routes
+
+P12's authenticated web app consumes five additive, `require_user`-guarded, tenant-scoped control-plane reads (in `server/{dashboard,documents,graph}_api.py`, mounted after `usage_api`). All are **unmetered** — none sets `request.state.usage` or calls `record_event`, so web-UI browsing/search/graph never appear in the billable `searches` metric (the paid retriever is P15). The frozen `/api/*` contract is untouched. These are consumed by the Next.js BFF **server-to-server** (the browser never calls them directly — see architecture/security); they add no CORS.
+
+- **`GET /app/dashboard`** (`days=30`, `1..365`) → `{projects:[{id,name,created_at,documents,keys,last_used_at}], activity:[{type,at,project_name,credential_name}]}`. A one-round-trip rollup: `documents` = `documents_created` over the window; `keys` = non-revoked credential count; `last_used_at` = max across the project's credentials; `activity` = real lifecycle events (`project_created`/`key_minted`/`key_revoked`), newest-first, capped 8.
+- **`GET /app/documents`** (`project?:UUID`, `tag?`, `limit=50 ≤200`, `offset=0`) → `{total, items}` newest-first · **`GET /app/documents/{id:int}`** → the doc **with** `markdown` (404 missing/cross-tenant) · **`GET /app/search`** (`q` required, `project?:UUID`, `tag?`, `limit=10 ≤50`, `offset=0`) → `{query, mode, total, limit, offset, results}` (`SearchQueryError → 400`). These reuse the store/search as-is scoped by `tenant_id`; the `/app` projector drops `tags_text` + `tenant_id` (and `markdown` on the list), keeping `related`. A supplied `project` UUID is resolved to the content-plane project **name** (documents key off name) via a tenant-scoped bridge — **404 on missing/cross-tenant**.
+- **`GET /app/graph`** (optional `project?:UUID`) → `{version, projects, nodes, edges}` (+ a `truncated` flag; `MAX_DOC_NODES = 2000`). A **server-side twin** of `scripts/graph_hook.py`'s inversion over `db.list_documents(tenant_id=…)` — nodes keyed on `rel_path`, related/tag edges (deduped, ghost/broken on dead targets), `degree`, the `(-docs, name)` project order — with the one substitution that each doc node's `url` = `/documents/{db_id}` (the read route). `scripts/graph_hook.py` is untouched (it stays server-free — tenant #1's public mkdocs surface).
 
 ## Frozen consumer contract (P8)
 

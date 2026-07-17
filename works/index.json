@@ -28,13 +28,13 @@
       "id": "P12",
       "name": "Web App: Tenant Dashboard & Project Detail Pages",
       "objective": "Authenticated web app with a tenant dashboard and project detail pages consuming the tenancy and usage APIs; all web UI features (knowledge graph included) free",
-      "status": "in_progress",
+      "status": "done",
       "order": 3,
       "path": "works/phases/active/P12",
-      "review_status": "pending",
-      "current_slice": "P12.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 9,
-      "done_slice_count": 8
+      "done_slice_count": 9
     },
     {
       "id": "P13",
@@ -76,5 +76,5 @@
   "deferred_open_count": 5,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 1,
-  "last_rebuilt_at": "2026-07-17T14:47:42+09:00"
+  "last_rebuilt_at": "2026-07-17T15:07:36+09:00"
 }

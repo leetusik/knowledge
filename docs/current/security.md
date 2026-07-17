@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0007
-created_at: 2026-07-16T21:31:22+09:00
-source: P11.REVIEW
-summary: P11 per-tenant usage isolation; usage reads 404 for missing/cross-tenant; metering best-effort never alters a request; no new PII
-previous: v0006_p10_multi-tenant_threat_model_argon2id_passwords_sha256_token_hashing_at_rest_pinned_un-revokable_master_bearer_cross-tenant_content_isolation_casing-tolerant_operator-email_resolution
+version: v0008
+created_at: 2026-07-17T15:00:39+09:00
+source: P12.REVIEW
+summary: P12 sealed-cookie BFF web surface; show-once vk_ key; unmetered read-only web UI
+previous: v0007_p11_per-tenant_usage_isolation_usage_reads_404_for_missing_cross-tenant_metering_best-effort_never_alters_a_request_no_new_pii
 ---
 
 # Security
@@ -58,6 +58,8 @@ P11's usage monitoring is **observability only** (no quotas/billing/entitlements
 - **Usage reads are tenant-scoped.** `GET /app/usage` reads `get_usage_metrics(tenant_id=ctx.tenant.id, …)` — a tenant sees only its own aggregate. `GET /app/projects/{id}/usage` goes through `_load_scoped_project`, which returns **404** for both a missing **and** a cross-tenant project (existence never leaks), then reads that project's metrics under the same tenant. A random/foreign project id → 404 (verified in the P11 review E2E).
 - **Metering never alters a request outcome.** The metered `/api/*` handlers only *stash* a hint; an async middleware records the event **after** the response, on a 2xx with a hint and `tenant_id` set, and `record_usage` swallows every exception (logged at WARNING, never raised). A metering failure cannot change a status code, response body, or introduce a timing-visible failure. In legacy mode (`DATABASE_URL` unset) the hint carries `tenant_id=None`, the guard skips, and no Postgres engine is created — metering is fully inert.
 - **No new PII.** `usage_events` rows carry only `tenant_id`, a nullable `project_id`, a free-text `event_type`, and a `occurred_at` timestamp — no document content, no user identity, no request payload. Usage data is durable in the same Postgres control plane; its retention is deferred (D8). The metered event also stamps the `vk_` credential's `last_used_at` (recency), which is metadata already stored on the credential.
+
+**P12 opens knowledge's first authenticated *browser* surface, and it adds a new front-of-house threat model without widening the backend's.** The web app never holds the backend bearer in browser JS: a **server-side BFF** seals it into an **AES-256-GCM httpOnly cookie** (`SameSite=Strict`, `Secure` in prod), so a token never reaches client script, and the backend needs **no CORS change** (the browser talks only to the Next origin; Next is the server-to-server consumer). The BFF mutation pipeline stays enumeration-safe (the backend `detail` is never echoed). A minted `vk_` key is shown **exactly once** and never logged/persisted/cached client-side. Web-UI `/app` reads are **unmetered and never alter a request**. See *Authenticated web app: the sealed-cookie BFF* below.
 
 ## Secret Handling
 
@@ -182,6 +184,18 @@ The packaged plugin adds a per-user config model designed to stay **SaaS-open**
   by the parity guard — no secret, no local path. (`docs/current/` publish-safety and
   `exclude_docs: /versions/` from P4 still hold.)
 
+## Authenticated web app: the sealed-cookie BFF (P12)
+
+P12 adds knowledge's first **authenticated browser surface** (a Next.js app in `web/`). It introduces a browser-facing threat model but deliberately widens **no** backend auth surface:
+
+- **No browser-JS token — a server-side BFF + sealed cookie.** The browser never holds the backend session token. The Next server calls the backend with `Authorization: Bearer` and seals `{token, exp}` into a **`knowledge_session` AES-256-GCM httpOnly cookie** (key `sha256(SESSION_SECRET)`, random 12-byte IV, 16-byte tag, `SameSite=Strict`, `Secure` in prod, 30-day TTL matching the backend). `openSession` returns `null` on any failure and never throws. A stolen-cookie replay is bounded by the TTL and a live `GET /auth/me` re-check on every guarded route; XSS cannot read the token (httpOnly), and a revoked cookie is caught by the re-verify (no ping-pong).
+- **No backend CORS change.** The browser talks only to the Next origin; Next is a **server-to-server** consumer of the backend — so the P8/P10 no-CORS invariant is preserved. The app is a client of `/auth/*` + `/app/*` only, never the `vk_`-keyed `/api/*` machine surface from its own flow.
+- **Enumeration-safe BFF pipeline.** The public mutations (`/api/auth/{login,signup,logout}`) run `415 → 403 same-origin → 429 per-IP → 400/422 zod → backend → seal → {ok}`; the backend `detail` is **never echoed** to the browser (preserving the backend's enumeration-safety), and login is throttled stricter than signup.
+- **Show-once `vk_` credential handling.** Minting a project credential returns the raw `vk_` key **once**; in the web app it rides back only in the mint server-action state (the one sanctioned server→client crossing) and is rendered exactly once by the reveal modal — grep-verified **not** logged, cached, persisted, cookied, or placed in a URL/storage; the list endpoint only ever returns the `token_prefix`. This matches the backend's mint-once rule (P10).
+- **404-never-403 upheld in the UI.** Foreign / cross-tenant project or document ids surface as a branded not-found, never a 403 — the app assumes the backend's cross-tenant-404 (existence never leaks).
+- **Unmetered reads never alter a request.** The web app's `/app` reads (dashboard/documents/search/graph) never set `request.state.usage`, so a web-UI read cannot move a usage counter or introduce a timing-visible side effect. The web UI is read-only; there is no plan-gating anywhere — all web-UI features are free.
+- **Two server-only secrets.** `SESSION_SECRET` (cookie key material) and `KB_API_BASE_URL` (backend origin) are `import "server-only"`, neither `NEXT_PUBLIC_`, both via `web/.env.example` (names only, never a value) — a browser bundle can carry neither.
+
 ## Security Checklist
 
 - [x] No secrets committed (token + Gemini key via env only; `.env` + a private-key backstop in `.gitignore`)
@@ -201,6 +215,11 @@ The packaged plugin adds a per-user config model designed to stay **SaaS-open**
 - [x] **(P11)** Usage reads are tenant-scoped; a cross-tenant/missing project → 404 (existence never leaks) — verified in the P11 review E2E
 - [x] **(P11)** Metering is best-effort and never alters a request's outcome (errors logged, never raised); fully inert in legacy mode
 - [x] **(P11)** `usage_events` carries no new PII (tenant/project/event-type/timestamp only); retention deferred (D8)
+- [x] **(P12)** The web app holds **no backend token in browser JS** — a server-side BFF seals it into an AES-256-GCM httpOnly `SameSite=Strict` cookie; **no backend CORS change**
+- [x] **(P12)** BFF mutation pipeline stays enumeration-safe (backend `detail` never echoed; login throttled stricter than signup)
+- [x] **(P12)** A minted `vk_` key is shown exactly once and never logged/persisted/cached client-side (grep-verified); the list endpoint returns only `token_prefix`
+- [x] **(P12)** Web-UI `/app` reads are unmetered and never alter a request; the web UI is read-only, no plan-gating (all web-UI features free)
+- [x] **(P12)** Web-app server-only secrets (`SESSION_SECRET`, `KB_API_BASE_URL`) are `server-only`, non-`NEXT_PUBLIC_`, `.env.example` names only
 
 ## Open Questions
 

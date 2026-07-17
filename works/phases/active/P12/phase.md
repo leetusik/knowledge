@@ -301,6 +301,42 @@ Running list of durable-truth changes for **P12.REVIEW** to consolidate into new
 
 _(Slices append their own Doc-impact lines here as they complete.)_
 
+## Review outcome (P12.REVIEW)
+
+**Verdict: `pass`** (executor `slice-executor-high`). All six middle slices validated
+together and green; every constraint verified by code inspection; the eight durable-doc
+versions consolidated. Full detail in `slices/P12.REVIEW/result.md`.
+
+- **Validation re-run (not trusted from per-slice verdicts):** backend **77 passed, 0
+  skipped** with the Postgres DSN (`postgresql://vocky:vocky@127.0.0.1:55432/postgres`) and
+  **65 passed, 12 skipped** on the default no-DSN run (Postgres-gated `/app` suites skip
+  cleanly); web **typecheck/lint** clean, **test 54 passed**, **build** OK (all routes
+  compile); `workflow.py validate` passed.
+- **Constraints held (verified):** surface discipline (`web/src/lib/knowledge/*` calls no
+  `/api/*`; only its own `/api/auth` BFF); sealed httpOnly cookie (no browser-JS token);
+  **no backend CORS middleware in `server/`**; the `/app` dashboard/documents/graph routes
+  set **no `request.state.usage` and call no `record_event`** (unmetered); show-once `vk_`;
+  404-never-403; read-only/no plan-gating; all web-UI features free.
+- **Flagged deviations — all ACCEPTED, no fix slices:** (1) the S3 "View all" omission (no
+  all-projects route; a live link would 404 — dashboard already lists the full set); (2)
+  no design specimen for project-detail/documents/graph — faithful `.kb-*` compositions +
+  the on-token `.kb-prose` (S5) and `--kb-graph-*` (S6) extensions (a future design pass may
+  formalize reader/graph specs); (3) S2R's non-functional re-skin tweaks; (4) S6's
+  `truncated` superset key + shell-wording adaptations.
+- **Interactive/visual browser E2E:** deferred to the **P14 deploy / operator
+  verification** (the sealed-cookie BFF + live uvicorn + seeded login + browser could not be
+  stood up — the S3–S6 limit); recorded, **not a blocker**.
+- **Docs consolidated (extend, not restate):** `frontend` v0005 · `architecture` v0010 ·
+  `api` v0009 · `experience` v0005 · `decisions` v0013 · `operations` v0013 · `product`
+  v0004 · `security` v0008 (source `P12.REVIEW`; `rebuild-docs` run; `docs/index.json`
+  updated). `security` was promoted to a new version (plan left it to reviewer judgment) —
+  the browser-facing sealed-cookie BFF + show-once credential + unmetered-reads model is new
+  durable security truth beyond P10/P11.
+- **Orchestrator next:** record with `review-phase P12 --verdict pass --reviewer
+  slice-executor-high`, then `validate`, then commit. Phase stays in `active/` (archiving is
+  a separate later step). Owed at P14: live-app visual acceptance + production deploy +
+  public landing page + optional reader/graph design specimens.
+
 - **S2** → `frontend.md` (BFF + sealed-cookie session + `lib/knowledge/*` client seam + auth-guards/pipeline + app-shell: dark login gate / light console / flat `AppButton`, marketing pill reserved for P14); `architecture.md` (sealed AES-256-GCM httpOnly-cookie server-side BFF, no CORS/no web-DB); `experience.md` (signup/login/logout + Dashboard-live / Documents-Graph-"Soon" nav); `decisions.md` (D-P12-2 as built); `operations.md` (server-only `KB_API_BASE_URL` `:8766` + `SESSION_SECRET`, via `.env.example`).
 - **S2R** → `frontend.md` (**KB design system replaces the hi2vi green placeholder**: `@theme` repointed at per-scheme `--kb-*` tokens + the `.kb-*` console layer adopted from the design handback + self-hosted Fraunces/Source Sans 3/JetBrains/Pretendard + per-route dark-login/light-console scheme); `decisions.md` (**D-P12-3 final**: app design = Knowledge Base design system, hi2vi = structure/vibe only; the S1 "adopt hi2vi green" note superseded; "deploy in P14" still stands); `experience.md` (dark "quiet threshold" gate → light editorial workspace console; status encoded in form for greyscale). _(This supersedes the S1 Doc-impact "adopted hi2vi_web brand green" line above — the review consolidates `frontend.md`/`decisions.md` to the final KB system.)_
 - **S3** → `api.md` / `architecture.md` (new session-scoped, tenant-scoped, **unmetered** `GET /app/dashboard` aggregate route — per-project usage/credential rollup + lifecycle activity feed; the first of the DECOMP-anticipated isolated `/app` read-route additions, no CORS/BFF change); `frontend.md` (the dashboard page + `lib/knowledge/app.ts` `/app/*` client seam + `components/usage/` StatTiles/TrendChart — line/area `console-trend.js` port — + projects DataTable + activity feed + create-project server action); `experience.md` (the post-login dashboard UX: usage tiles / 30-day search trend / projects table / recent activity / create-project). _(Deviation for the review: the specimen's "View all" projects button is omitted — no all-projects route exists in P12.)_

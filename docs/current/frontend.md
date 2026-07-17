@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0004
-created_at: 2026-07-14T12:53:49+09:00
-source: P6.REVIEW
-summary: P6.S1 renderer revision: live-model port (persistent rAF, +4 tokens, is-on lens), retuned sim + smarter seeding, sessionStorage restore; docs describe publish-safety without the literal path token
-previous: v0003_p6_interactive_knowledge-map_renderer_vendored_hand-rolled_force_sim_first_custom_js_full-bleed_graph_page_extra.css_section_10_extra_javascript_allowlisted
+version: v0005
+created_at: 2026-07-17T15:00:38+09:00
+source: P12.REVIEW
+summary: P12 authenticated web app in web/ (Next.js, KB design system, sealed-cookie BFF, four surfaces)
+previous: v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token
 ---
 
 # Frontend
@@ -23,6 +23,14 @@ interactive knowledge map — so `extra_javascript` is now wired (allowlisted to
 exactly that one entry) and a build-time `hooks:` module emits the map's `graph.json`.
 Still no `overrides/` `custom_dir`, still **no CDN scripts** and no third-party JS —
 the renderer is entirely self-contained.
+
+**As of P12 the repo contains a second, separate front end: an authenticated Next.js
+app in `web/`** — knowledge's first SPA-framework surface, wholly independent of the
+mkdocs site above. It ships the **Knowledge Base design system** as CSS-first Tailwind
+v4 `@theme` tokens + a portable `.kb-*` console layer, a **sealed-cookie server-side
+BFF**, and four authenticated surfaces (tenant dashboard, project detail, documents
+browse/search/read, in-app knowledge graph). See *The authenticated web app (`web/`,
+P12)* below.
 
 ## Stack
 
@@ -308,3 +316,107 @@ byte-intact.
   "Bootstrap agentic workspace.sh" tab label is a known, accepted auto-nav
   constraint. The article metadata/related treatments (§9) remain staged until a
   per-page template or `overrides/` exists.
+
+## The authenticated web app (`web/`, P12)
+
+P12 stands up knowledge's first **authenticated browser app** — a Next.js 16 / React 19
+/ TypeScript application in a `web/` subdir, wholly separate from the public mkdocs site
+(Track 1). It is the tenant-facing console: sign in, see the tenant dashboard, drill into
+a project, browse/search/read that tenant's documents, and explore the tenant's knowledge
+graph. All web-UI features are free. The app is a session-token client of `/auth/*` +
+`/app/*` only — never the `vk_`-keyed `/api/*` machine surface from its own flow.
+
+### Stack + build
+
+- Next.js 16 App Router (Turbopack), React 19, TypeScript, pnpm; Tailwind v4 CSS-first
+  `@theme`; ESLint/Prettier; `next.config.ts` `output: "standalone"`. Local dev:
+  `pnpm --dir web dev` on `127.0.0.1:3030`. `next build` needs **no** env (server-only keys
+  are lazy-read). Vitest covers the pure modules (54 tests at review). Production deploy
+  (Dockerfile / compose / edge) is **P14**.
+- **Load-bearing:** `src/lib/utils.ts` `cn()` registers the custom `text-*` scale in
+  tailwind-merge — keep it in sync with the `--text-*` tokens, or a size + colour in one
+  `cn()` call silently drops the size.
+
+### The Knowledge Base design system (the app's real design)
+
+- **The KB "calm editorial library" system is the app's final design** (S2R) — warm paper +
+  one deep-teal accent, both light and dark schemes, token-driven. It **supersedes** the
+  S1/S2 hi2vi-green placeholder; hi2vi contributes dashboard **structure/vibe** only, not
+  its palette (the whole `--color-green*` ramp collapses to the single teal accent).
+- `src/app/kb-tokens.css` defines the `--kb-*` tokens per `data-md-color-scheme` (`default`
+  light / `slate` dark): paper/surface/border, teal `--kb-accent`/`-strong`/`-soft`,
+  ink/secondary/hint, the type scale, radii/spacing/motion, and additive status/trend/delta
+  inks (active = teal, idle = amber-bronze, revoked = terracotta — encoded in **form** for
+  greyscale legibility). `src/app/kb-console.css` is the portable `.kb-*` console layer
+  (topbar, rail, panels, tiles, `.kb-dtable`, status pills, `.kb-field`, flat
+  `.kb-appbtn--*`, `.kb-appsearch`, the `.kb-reveal` show-once modal, `.kb-trend`).
+  `globals.css` `@import`s both and repoints `@theme --color-*` at `--kb-*` (an auto-recolor
+  safety net). **NOTE: `.kb-*` CSS is *unlayered***, so it beats Tailwind's layered utilities
+  — override a `.kb-*` property with an inline `style`, not a Tailwind class.
+- Per-route scheme: the `(auth)` gate = dark `slate`; the `(app)` console = light `default`
+  (carried on `.kb-app`). Fonts self-hosted via `next/font/local`: Fraunces (display + stat
+  numerals) + Source Sans 3 (body), JetBrains Mono, and full Pretendard as the Hangul
+  fallback ending every stack. Icons: `lucide-react`. The KB design handback lives in
+  `web/design/canvas/` (`APP_BRIEF.md` apply-map, tokens, console components, specimens) —
+  the source of truth the app adopted.
+
+### The sealed-cookie BFF + server client seam
+
+- **`src/lib/knowledge/{client,auth,app,types}.ts`** is the one place Next talks to the
+  backend server-to-server: `getJson`/`getRaw`/`sendJson`, `ApiError{status,detail}`, bearer
+  injection, **`cache:"no-store"` on every call** (per-user data must never hit Next's fetch
+  cache). `app.ts` holds the `/app/*` calls (dashboard, projects, credentials, usage,
+  documents, search, graph); `types.ts` the serializer shapes.
+- **Session** (`src/lib/session.ts`): the backend token is sealed into a `knowledge_session`
+  **AES-256-GCM httpOnly** cookie (key `sha256(SESSION_SECRET)`, `SameSite=Strict`, `Secure`
+  in prod, 30-day TTL), never exposed to browser JS. Two server-only env keys
+  (`src/lib/env.ts`, `import "server-only"`): `KB_API_BASE_URL` (dev default
+  `http://127.0.0.1:8766`) + `SESSION_SECRET`; neither `NEXT_PUBLIC_`.
+- **Guards** (`src/lib/auth-guards.ts`): `requireIdentity = cache(async …)` verifies live via
+  `GET /auth/me`, catches **only** `ApiError` 401 → `redirect("/login")`, rethrows everything
+  else; `redirectIfAuthenticated` re-verifies to break the revoked-cookie ping-pong. The
+  **BFF pipeline** (`src/lib/bff.ts`) for the public mutations is
+  `415 → 403 same-origin → 429 per-IP → 400/422 zod → backend → seal → {ok}`; the backend
+  `detail` is never echoed (preserving enumeration-safety). Routes at
+  `/api/auth/{login,signup,logout}` (`nodejs` + `force-dynamic`).
+
+### The app shell + four surfaces
+
+- **App shell:** a dark login/signup gate (`(auth)`) and a light console (`(app)`) — a sticky
+  paper topbar (brand · tenant crumb · email · logout) over `[rail | main]`. Two button
+  languages kept distinct: the flat `.kb-appbtn--*` app chrome (shell + all app pages) and the
+  marketing pill `Button` reserved for the P14 public landing. Rail items link only to shipped
+  routes; the whole rail (Dashboard · Documents · Graph) is live at end of P12.
+- **Dashboard** (`app/(app)/dashboard`): `GET /app/dashboard` + `GET /app/usage` → four
+  Fraunces stat tiles, a teal 30-day search TrendChart (a faithful `console-trend.js` geometry
+  port, unit-locked), a projects DataTable, a recent-activity feed, and a create-project
+  **server action**.
+- **Project detail** (`app/(app)/projects/[projectId]`): `GET /app/projects/{id}/usage`
+  (bundles project + credentials) → header, a credentials table with a derived **3-state
+  status** (`credential-status.ts`: active/idle/revoked), per-project usage. Mint/revoke are
+  **server actions**; the minted `vk_` key rides back only in the mint action-state and is
+  rendered exactly once by the `<ShowOnceKey>` `.kb-reveal` portal modal (viewport-fixed,
+  focus-trapped, Escape/Dismiss only, copy-once) — never logged/persisted/cached.
+- **Documents** (`app/(app)/documents` + `[id]`): a `.kb-appsearch` GET form → browse
+  newest-first / project-filtered / full-text search (highlighted snippets, XSS-safe `<mark>`
+  rebuild) → an offset pager; a read view renders markdown via `react-markdown` + `remark-gfm`
+  with **no `rehype-raw`** (XSS-safe by construction), styled by a minimal on-token `.kb-prose`
+  block. Pure `documents-query.ts` (searchParams round-trip + pager math) is unit-locked.
+- **Knowledge graph** (`app/(app)/graph`): `GraphCanvas`, the app's first `"use client"` canvas
+  + rAF component — a faithful port of the ~1130-line zero-dependency `<canvas>` force-sim
+  renderer (`docs/javascripts/graph.js`): the deterministic sim and the full interaction model
+  (drag/pan, wheel zoom, hover-highlight, legend project-lens + tag toggle, node-tap → panel,
+  sessionStorage persistence), reading every colour/geometry token live via `getComputedStyle`
+  of the **`--kb-graph-*`** token layer (mapped onto the KB palette for both schemes). The
+  critical React work is the `useEffect` teardown (cancel rAF, disconnect observers, remove
+  listeners, a `disposed` guard) — the model for any future canvas/rAF client component.
+
+### Conventions
+
+- The app is a session-token client of `/auth/*` + `/app/*` only; the sealed cookie is the
+  only place the backend token lives; **no browser-JS token, no backend CORS change, no
+  web-side DB.**
+- Two on-token design extensions were added where the KB handback shipped no specimen — the
+  `.kb-prose` reader block (S5) and the `--kb-graph-*` token layer (S6); both compose only on
+  the KB `--kb-*` palette. A future design pass (P14 or a design round) may formalize a reader
+  spec + a graph spec.

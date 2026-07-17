@@ -2,16 +2,16 @@
   "id": "P12",
   "name": "Web App: Tenant Dashboard & Project Detail Pages",
   "objective": "Authenticated web app with a tenant dashboard and project detail pages consuming the tenancy and usage APIs; all web UI features (knowledge graph included) free",
-  "status": "in_progress",
+  "status": "done",
   "order": 3,
   "created_at": "2026-07-16T14:25:27+09:00",
   "started_at": "2026-07-17T01:31:08+09:00",
-  "completed_at": null,
+  "completed_at": "2026-07-17T15:07:36+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-07-17T15:07:36+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "P12 delivered the free authenticated web app (dashboard · project detail · documents · in-app graph) on the Knowledge Base design system; all constraints held (surface discipline, sealed-cookie BFF/no-CORS, unmetered /app web reads, show-once credential, 404-never-403, read-only/no plan-gating); all flagged deviations accepted (no fix slices); live-browser E2E deferred to P14. 8 durable-doc versions consolidated."
   },
   "paths": {
     "phase_md": "phase.md",

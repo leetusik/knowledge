@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0004
-created_at: 2026-07-14T12:51:53+09:00
-source: P6.REVIEW
-summary: P6.S1 revision: quiet labels A-prime, idle mingle, pointer/pinch zoom, sticky re-placement, legend lens, roomier layout that survives in-tab reloads
-previous: v0003_p6_interactive_knowledge-map_journey_settle-then-still_label_strategy_a_zoom_ladder_info_panel_legend_filters_landing_and_nav_entry
+version: v0005
+created_at: 2026-07-17T15:00:38+09:00
+source: P12.REVIEW
+summary: P12 authenticated web app UX: login gate, dashboard, project detail, documents, in-app graph
+previous: v0004_p6.s1_revision_quiet_labels_a-prime_idle_mingle_pointer_pinch_zoom_sticky_re-placement_legend_lens_roomier_layout_that_survives_in-tab_reloads
 ---
 
 # Experience
@@ -28,6 +28,13 @@ sticky node re-placement, and a legend that highlights rather than filters — p
 roomier default layout that survives an in-tab reload (see the map journey below).
 Browser *feel* QA is still owed to the operator (no browser in the build harness; a
 CDP geometry/behavior probe covered the structural parts — see Open Questions).
+
+**As of P12 there is a second experience entirely: an authenticated web app** (Next.js,
+`web/`), separate from the public mkdocs site. Signed-in tenants move from a dark "quiet
+threshold" login gate into a light editorial workspace console and reach four surfaces —
+a tenant dashboard, project detail, per-tenant documents (browse/search/read), and the
+in-app knowledge graph — all free, all on the Knowledge Base design system. See *The
+authenticated web app (P12)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -185,6 +192,19 @@ CDP geometry/behavior probe covered the structural parts — see Open Questions)
 - Grounded, concrete lede/descriptions drawn from the actual documents, not
   marketing filler.
 - Calm and library-like: restrained type, generous space, one accent.
+
+## The authenticated web app (P12)
+
+P12 delivers knowledge's tenant-facing console — a separate authenticated experience from the public mkdocs library. It wears the **Knowledge Base "calm editorial library"** design system (warm paper + one deep-teal accent, both schemes), carrying hi2vi's dashboard structure/vibe. Status is encoded in *form* (not colour alone) for greyscale legibility.
+
+- **Sign in → console.** The signup/login gate is a dark "quiet threshold" (`slate` scheme); on success the tenant lands in the light editorial console — a paper topbar (brand · tenant crumb · email · logout) over a teal-active TOC rail (Dashboard · Documents · Graph, all live at end of P12).
+- **Dashboard.** Four Fraunces stat tiles, a 30-day search trend, a projects table (Open → project detail), a recent-activity feed, and inline create-project.
+- **Project detail.** Project info, a credentials table with a 3-state key status (active / idle / revoked, encoded in form), and per-project usage. **Mint a `vk_` key → it is shown exactly once** in a focus-trapped reveal modal (copy-once, unrecoverable; Escape or Dismiss only — a scrim click won't destroy it); revoke is a terracotta danger action with an inline confirm.
+- **Documents.** Browse newest-first, filter by project, full-text search with highlighted snippets, and read the rendered markdown in a calm on-token reader.
+- **Knowledge graph.** The corpus as a per-tenant force-directed map: settle→mingle motion, drag/pan, wheel/pinch zoom, hover-neighbor-highlight + tooltip, a legend project-lens + tag toggle, and node-tap → an info panel → read the document / filter by tag. (The public mkdocs `/graph/` stays tenant #1's public map; this is the per-tenant in-app view.)
+- **Free.** Every web-UI feature — dashboard, project detail, documents, graph — is free; nothing is plan-gated. Web-UI search is deliberately unmetered.
+
+Final visual acceptance of the live app (a real browser render of login → surfaces, mint/revoke, search, graph drag/zoom/click-through) is owed to the operator at the **P14 deploy** — the phase could not stand up the live BFF + backend + browser stack; route behavior is covered by the backend `TestClient` suites and the frontend by typecheck/lint/build.
 
 ## Open Questions
 
