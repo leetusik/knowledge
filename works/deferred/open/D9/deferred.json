@@ -1,0 +1,11 @@
+{
+  "id": "D9",
+  "title": "plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1",
+  "status": "deferred",
+  "source": "P13.DECOMP",
+  "reason": "plugin/templates/manifest.json declares shipped_dirs: [server, tests, ...] and scripts/plugin_parity.py fails on any file present in the repo root but missing from the template. The P10-P12 SaaS pivot added server/accounts/*, api_auth.py, app_api.py, auth_api.py, usage/*, documents_api.py, graph_api.py, persistence/*, seed.py plus test files and never mirrored them into the template. Verified 2026-07-17: python3 scripts/plugin_parity.py exits 1 with 34 issues = 26 completeness failures (in repo but not shipped) + 8 byte-drift files (server/config.py, server/db.py, server/main.py, server/reindex.py, server/search.py, pyproject.toml, uv.lock, and parameterized compose.yml). CI is currently green ONLY because local main is 29 commits ahead of origin/main - every P10-P12 commit is unpushed, so plugin-ci.yml has never seen this tree. Not P13's job: P13 is CLI onboarding and its intent says the plugin stays untouched (P13 keeps CLI code/tests out of server/ and tests/ so it adds no new parity debt). Resolution requires a deliberate call: re-sync the template with the SaaS server files, or narrow shipped_dirs so the open-core plugin template stops claiming to ship the multi-tenant control plane.",
+  "trigger": "before the next push to origin/main (plugin-ci.yml turns red on the first push carrying the P10-P12 commits)",
+  "created_at": "2026-07-17T15:56:57+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
