@@ -486,3 +486,7 @@
 {"ts": "2026-07-18T16:56:54+09:00", "type": "slice_created", "phase": "P15", "slice": "P15.F1"}
 {"ts": "2026-07-18T16:59:30+09:00", "type": "slice_status_changed", "slice": "P15.F1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-18T17:03:39+09:00", "type": "slice_status_changed", "slice": "P15.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-18T19:35:25+09:00", "type": "slice_status_changed", "slice": "P15.REVIEW", "old_status": "done", "new_status": "in_progress"}
+{"ts": "2026-07-18T19:37:44+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on", "source": "P15.REVIEW"}
+{"ts": "2026-07-18T19:43:07+09:00", "type": "slice_status_changed", "slice": "P15.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-18T19:43:07+09:00", "type": "phase_reviewed", "phase": "P15", "verdict": "pass", "reviewer": "slice-executor-high"}

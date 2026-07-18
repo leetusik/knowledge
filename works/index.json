@@ -64,7 +64,7 @@
       "id": "P15",
       "name": "Agent-facing retrieval MCP service (search-as-a-service)",
       "objective": "Expose knowledge retrieval as an MCP server over HTTP so external AI agents consume search-as-a-service: a search tool (query -> ranked title/snippet/url hits, corpus-scoped) plus optional fetch_document, authed by project (vk_) keys over Streamable-HTTP/SSE, backed by the existing frozen /api/search + embeddings. Realizes deferred D6; first consumer is the hi2vi customer-service chatbot (OpenClaw).",
-      "status": "in_progress",
+      "status": "done",
       "order": 6,
       "path": "works/phases/active/P15",
       "review_status": "pass",
@@ -76,5 +76,5 @@
   "deferred_open_count": 9,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-18T17:03:39+09:00"
+  "last_rebuilt_at": "2026-07-18T19:43:07+09:00"
 }

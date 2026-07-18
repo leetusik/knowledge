@@ -475,7 +475,7 @@
       ]
     },
     "operations": {
-      "latest": "v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run",
+      "latest": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -605,6 +605,14 @@
           "source": "P15.REVIEW",
           "summary": "P15 knowledge-mcp deploy: mcp-server Dockerfile + compose service, SSE-safe edge /mcp, three-service health-gate + /mcp liveness smoke, dual reachability, e2e_smoke verifier + operator post-deploy run",
           "previous": "v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired"
+        },
+        {
+          "id": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on",
+          "path": "docs/versions/operations/v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on.md",
+          "created_at": "2026-07-18T19:37:44+09:00",
+          "source": "P15.REVIEW",
+          "summary": "P15.F1 MCP transport-security Host allowlist: MCP_ALLOWED_HOSTS/MCP_ALLOWED_ORIGINS required — FastMCP localhost-only DNS-rebinding default 421s public+internal hosts; protection stays on",
+          "previous": "v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run"
         }
       ]
     },
@@ -875,5 +883,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-18T13:37:29+09:00"
+  "last_rebuilt_at": "2026-07-18T19:40:44+09:00"
 }
