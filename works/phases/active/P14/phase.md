@@ -240,6 +240,61 @@ future deploy slice) should build on:
   `./deploy.sh`; smoke `/healthz` + `/`). This slice returns `done` (artifacts built + locally validated), not
   `pending` — REVIEW should hold the operator-deploy gate for the whole phase.
 
+## P14.REVIEW — phase review outcome (2026-07-18)
+
+**Verdict: PASS.** All three slices validated together, behaviorally; the phase meets the
+objective / `intent.md` and respects the design AS-IS. Docs consolidated (below).
+
+- **Landing (S2) validation:** `cd web && pnpm build` (clean — `/` prerendered ○ Static, app
+  routes ƒ Dynamic, SEO routes generated), `pnpm lint` (clean), `pnpm typecheck` (clean).
+  Drove `/` via `pnpm start` (127.0.0.1:3030) + curl: all **9 sections in band order** present
+  (hero-dark → what-it-is → how-it-works-sunken → save → connect-dark → graph-plate → pricing
+  → final-CTA-dark → footer), verbatim EN+KR copy (hero "Knowledge that outlives the
+  conversation.", tagline, `요청은 어디로 가는가`, `지식이 오래 남도록`, Free `$0` + "Agent
+  Retrieval API — Coming" waitlist), CTAs `/login`×4 · `/signup`×5 + the live GitHub repo
+  guide targets (`cli`, `cli#install`, `plugin`, repo home) — **no dead links**. SSR
+  `data-reveal`=0 (island arms only under `no-preference`); pre-paint `prefers-color-scheme`
+  script present; `#mkt-root` SSR scheme `default`. App intact: `/login`→200, `/signup`→200,
+  `/dashboard`→307 `/login` (unauth), `/robots.txt` + `/sitemap.xml`→200. (The lone `next
+  start`/standalone warning is harmless — the container runs `node server.js`.)
+- **Deploy (S3) validation:** `docker compose -f compose.prod.yml config` with a throwaway
+  gitignored `.env` → exit 0, no warnings; services = `api, postgres, web`; **`site` gone**;
+  web keys correct (`knowledge-web`, `KB_API_BASE_URL` literal, `SESSION_SECRET` interpolated,
+  `expose 3000`, `NEXT_PUBLIC_APP_URL` build arg). `.env` removed after (not in git).
+  Reviewed `web/Dockerfile` (multi-stage node:22-slim standalone; NODE_ENV only in runtime;
+  NEXT_PUBLIC_APP_URL asserted non-empty; USER node; HEALTHCHECK; `CMD node server.js`) and
+  `deploy/knowledge.conf` against the edge invariants — **all hold** (most-specific `/api/auth/`
+  beats `/api/`; every `proxy_set_header` hoisted to server, none per-location; variable
+  `proxy_pass` + `resolver`; no `default_server`/IPv6/`limit_req_zone`; CF real-IP;
+  `/api //auth //app /=/healthz`→knowledge-api unchanged; `/`→knowledge-web). `bash -n` clean
+  on `deploy/deploy.sh`, `oracle-production-deploy-remote.sh`, `github-actions-production-deploy.sh`;
+  the health-gate is swapped `site`→`web`, no lingering `knowledge-site` gate (only documentary
+  mentions). No live `nginx -t` claimed (box gate). `python3 scripts/workflow.py validate` → passed.
+- **Two known gaps, assessed:**
+  - *(a) Copy-fidelity gap* — confirmed in `content/marketing/content.ts`: HERO + VALUE
+    (what-it-is) carry the §4-verbatim `lede`; the three FEATURE sections + HOW carry
+    `eyebrow`+`title`+`ticks`/`steps` but **no lede** (§4 quoted none), and content.ts documents
+    that no lede was fabricated. Every designed *structural* element ships — a **design-round
+    copy gap, not an impl defect or a dropped element**. Filed **deferred job D10** ("Landing
+    feature-section lede copy"); did NOT invent copy. Not a blocker.
+  - *(b) Un-pixel-verified overflow / visual polish* — guarded structurally (container max-width
+    + responsive px, grids stack to 1-col, `word-break: keep-all`, terminal `overflow-x:auto`,
+    graph plate `overflow:hidden`) but not pixel-verified without a browser. **Noted for the
+    operator's post-deploy visual check**; not a defect.
+- **Design fidelity:** the landing implements round 01 AS-IS — no dropped/simplified/"improved"
+  designed element. The `/login`/`/signup` CTA targets are the operator's recorded **non-visual**
+  routing decision (not a design drop).
+- **Objective / intent met:** landing + proper public webpage via the Claude Design gate ✓;
+  hi2vi_web stack (Next standalone in Docker behind the edge) + edge-deploy pattern ✓; free-only
+  launch, paid retriever deferred → P15 ✓; `knowledge.hi2vi.com` ✓.
+- **Docs consolidated (this review, PASS):** `frontend v0006`, `operations v0015`,
+  `decisions v0015` — all `--source P14.REVIEW`, then `rebuild-docs`. See result.md for the
+  exact commands.
+- **Operator deploy gate still owed (phase-level):** the live edge apply is operator-run —
+  generate `SESSION_SECRET` into the box `.env`; `up -d --build` + `rm -sf site`; `scp
+  knowledge.conf` + `./deploy.sh`; smoke `/healthz` + `/`. Artifacts are built + locally proven;
+  nothing is live yet.
+
 ## Doc impact (running list — REVIEW consolidates; do not version docs here)
 
 - `docs/current/frontend.md` — public landing + marketing surface (the `(marketing)` route group at `/`, the

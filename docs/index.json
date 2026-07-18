@@ -195,7 +195,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces",
+      "latest": "v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -237,6 +237,14 @@
           "source": "P12.REVIEW",
           "summary": "P12 authenticated web app in web/ (Next.js, KB design system, sealed-cookie BFF, four surfaces)",
           "previous": "v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token"
+        },
+        {
+          "id": "v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01",
+          "path": "docs/versions/frontend/v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01.md",
+          "created_at": "2026-07-18T09:47:52+09:00",
+          "source": "P14.REVIEW",
+          "summary": "P14 public marketing landing at / in web/ via the Claude Design gate (round 01)",
+          "previous": "v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces"
         }
       ]
     },
@@ -443,7 +451,7 @@
       ]
     },
     "operations": {
-      "latest": "v0014_p13_knowledge_cli_install_edge_routes_auth_app_hosted_accounts-plane_cutover_runbook_auth_throttle_knobs",
+      "latest": "v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -557,6 +565,14 @@
           "source": "P13.REVIEW",
           "summary": "P13 knowledge CLI install + edge routes /auth+/app + hosted accounts-plane cutover runbook + auth throttle knobs",
           "previous": "v0013_p12_web-app_local_build_run_stub_kb_api_base_url_session_secret_full_deploy_p14"
+        },
+        {
+          "id": "v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired",
+          "path": "docs/versions/operations/v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired.md",
+          "created_at": "2026-07-18T09:49:02+09:00",
+          "source": "P14.REVIEW",
+          "summary": "P14 web-app deploy: knowledge-web Dockerfile + compose service + reworked edge vhost; mkdocs site retired",
+          "previous": "v0014_p13_knowledge_cli_install_edge_routes_auth_app_hosted_accounts-plane_cutover_runbook_auth_throttle_knobs"
         }
       ]
     },
@@ -701,7 +717,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0014_p13_cli_adrs_separate_cli_package_git-subdir_distribution_direct_password_grant_two-token_model_bundled_guide_over_served_cli_named_knowledge_save_project_repo_basename_server-side_auth_throttle",
+      "latest": "v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -815,9 +831,17 @@
           "source": "P13.REVIEW",
           "summary": "P13 CLI ADRs: separate cli/ package + git-subdir distribution; direct password grant; two-token model; bundled guide over served; CLI named knowledge; save project = repo basename; server-side auth throttle",
           "previous": "v0013_p12_web-app_adrs_web_subdir_sealed-cookie_bff_kb_design_system_deploy_p14_unmetered_read-only_web"
+        },
+        {
+          "id": "v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing",
+          "path": "docs/versions/decisions/v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing.md",
+          "created_at": "2026-07-18T09:51:19+09:00",
+          "source": "P14.REVIEW",
+          "summary": "P14 landing takes /; app stays at current paths (no /app rebase); mkdocs retired, /docs reserved; Free + waitlist pricing",
+          "previous": "v0014_p13_cli_adrs_separate_cli_package_git-subdir_distribution_direct_password_grant_two-token_model_bundled_guide_over_served_cli_named_knowledge_save_project_repo_basename_server-side_auth_throttle"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-18T03:34:16+09:00"
+  "last_rebuilt_at": "2026-07-18T09:52:33+09:00"
 }
