@@ -68,7 +68,7 @@ jobs:
           ARTIFACT_DIR: production-deploy-artifacts
         run: deploy/github-actions-production-deploy.sh
 
-      - name: External smoke (public URLs, both surfaces, no secrets)
+      - name: External smoke (public URLs, all surfaces, no secrets)
         shell: bash
         run: |
           set -euo pipefail
@@ -82,9 +82,33 @@ jobs:
             echo "external smoke failed: ${url} did not return 200" >&2
             return 1
           }
-          # Both public surfaces must return 200: the api health endpoint AND `/` (the Next web app).
+          # The MCP server's /healthz is INTERNAL only (the api owns the public `= /healthz`),
+          # so prove the edge routes /mcp to a LIVE MCP server via the endpoint itself. A bare
+          # GET (no `Accept: text/event-stream`) makes the Streamable-HTTP server answer
+          # 406 "Client must accept text/event-stream" with a JSON-RPC error body — a routed
+          # MCP-server response, NOT a gateway 502/504. NB: NO `curl -f` here — 406 IS the
+          # success signal (a non-2xx), so `-f` (fail on HTTP error) would wrongly discard it.
+          smoke_mcp() {
+            local url="https://knowledge.hi2vi.com/mcp" code tmp
+            tmp="$(mktemp)"
+            for i in 1 2 3 4 5; do
+              code="$(curl -sS -m 15 -o "${tmp}" -w '%{http_code}' "${url}" || true)"
+              # 406 (bare GET) or 400 — a routed MCP-server client-error carrying a JSON-RPC
+              # body — proves liveness; a 5xx/000 means the edge is not reaching knowledge-mcp.
+              if { [ "${code}" = "406" ] || [ "${code}" = "400" ]; } && grep -q 'jsonrpc' "${tmp}"; then
+                echo "smoke OK (${code}, routed MCP server): ${url}"; rm -f "${tmp}"; return 0
+              fi
+              echo "attempt ${i} for ${url}: got ${code:-none}; retrying in 6s"; sleep 6
+            done
+            echo "external MCP smoke failed: ${url} did not answer as a routed MCP server (got ${code:-none}; a 502/504/none means the edge is not reaching knowledge-mcp)" >&2
+            rm -f "${tmp}"; return 1
+          }
+          # All public surfaces: the api health endpoint, `/` (the Next web app), and the
+          # MCP retrieval endpoint (routed-liveness, not a full protocol handshake — the
+          # authenticated tool-call E2E over both reachability paths is P15.S4's job).
           smoke_one https://knowledge.hi2vi.com/healthz
           smoke_one https://knowledge.hi2vi.com/
+          smoke_mcp
 
       - name: Upload deploy artifacts
         if: always()

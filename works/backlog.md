@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P15`
-- Current slice: `P15.S3`
-- Next slice: `P15.S4`
+- Current slice: `P15.S4`
+- Next slice: `P15.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `9`
-- Rebuilt at: `2026-07-18T11:26:40+09:00`
+- Rebuilt at: `2026-07-18T12:33:21+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
 | [x] `P13` | `done` | `pass` | CLI & Agent-First Onboarding | `none` | `works/phases/active/P13` |
 | [x] `P14` | `done` | `pass` | Landing Page & Product Webpage via Claude Design Gate | `none` | `works/phases/active/P14` |
-| [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.S3` | `works/phases/active/P15` |
+| [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.S4` | `works/phases/active/P15` |
 
 ## Phase P10: Accounts, Tenancy & Tenant-Scoped Knowledge API
 
@@ -91,6 +91,6 @@
 | [x] `P15.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P15/slices/P15.DECOMP` |
 | [x] `P15.S1` | `done` | MCP service scaffold + Streamable-HTTP transport + search tool | `implementation` | `works/phases/active/P15/slices/P15.S1` |
 | [x] `P15.S2` | `done` | fetch_document tool + response size caps | `implementation` | `works/phases/active/P15/slices/P15.S2` |
-| [ ] `P15.S3` | `todo` | Containerize: Dockerfile + compose service + SSE-safe edge routing + dual reachability | `implementation` | `works/phases/active/P15/slices/P15.S3` |
+| [x] `P15.S3` | `done` | Containerize: Dockerfile + compose service + SSE-safe edge routing + dual reachability | `implementation` | `works/phases/active/P15/slices/P15.S3` |
 | [ ] `P15.S4` | `todo` | Stable versioned tool contract + OpenClaw first-consumer E2E smoke | `implementation` | `works/phases/active/P15/slices/P15.S4` |
 | [ ] `P15.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P15/slices/P15.REVIEW` |

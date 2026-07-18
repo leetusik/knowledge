@@ -4,8 +4,9 @@
 #
 # Runs ON the shared OCI box from the publish-on-write clone (default /opt/knowledge).
 # Reconciles that clone with origin/main, rebuilds + recreates the app compose services
-# (`api` = the document API + CLI control plane, `web` = the Next.js standalone UI + BFF;
-# the mkdocs `site` was RETIRED in P14.S3), and health-gates both. `postgres` is the
+# (`api` = the document API + CLI control plane, `web` = the Next.js standalone UI + BFF,
+# `mcp` = the MCP-over-HTTP retrieval server at /mcp, P15.S3; the mkdocs `site` was
+# RETIRED in P14.S3), and health-gates all three. `postgres` is the
 # durable control-plane store, brought up as the api's dependency (not gated here).
 # This is the knowledge analogue of hi2vi_web/deploy/deploy.sh, but with two
 # knowledge-specific inventions (see phase.md §E/§F):
@@ -55,8 +56,8 @@
 # Lifecycle:
 #   1. preflight (git/docker/compose v2; compose file, .git, .env present)
 #   2. reconcile the box clone on `main` inside a one-shot api-service container (§E)
-#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web; both)
-#   4. health-gate BOTH knowledge-api and knowledge-web (docker inspect Health.Status)
+#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web + mcp)
+#   4. health-gate knowledge-api + knowledge-web + knowledge-mcp (docker inspect Health.Status)
 #   5. on failure: capture ps + logs (into $REMOTE_ARTIFACT_DIR if set), die non-zero
 #      with a fix-forward message; NO rollback.
 #
@@ -140,6 +141,7 @@ capture_artifacts() {
         dc ps                              > "$REMOTE_ARTIFACT_DIR/deploy-compose-ps.txt"   2>&1 || true
         dc logs --no-color --tail 300 api  > "$REMOTE_ARTIFACT_DIR/deploy-api-logs.txt"     2>&1 || true
         dc logs --no-color --tail 300 web  > "$REMOTE_ARTIFACT_DIR/deploy-web-logs.txt"     2>&1 || true
+        dc logs --no-color --tail 300 mcp  > "$REMOTE_ARTIFACT_DIR/deploy-mcp-logs.txt"     2>&1 || true
         log "diagnostics written to $REMOTE_ARTIFACT_DIR"
     else
         log "REMOTE_ARTIFACT_DIR unset — printing compose ps inline"
@@ -270,23 +272,25 @@ if ! dc run --rm -T --no-deps \
 fi
 
 # --- 2. build + recreate the app services ------------------------------------
-# Builds the api + web images and recreates both containers (uvicorn reloads
-# against the reconciled bind-mounted code; the web app serves the rebuilt Next
-# standalone bundle). `postgres` comes up as the api's healthy-dependency.
+# Builds the api + web + mcp images and recreates all three containers (uvicorn
+# reloads against the reconciled bind-mounted code; the web app serves the rebuilt
+# Next standalone bundle; the mcp server ships its own self-contained image).
+# `postgres` comes up as the api's healthy-dependency.
 log "building + recreating the app services (COMPOSE_BAKE=false docker compose up -d --build)"
 dc up -d --build
 
-# --- 3. health-gate BOTH app services ----------------------------------------
+# --- 3. health-gate the app services (api + web + mcp) -----------------------
 gate_ok=1
 wait_healthy api knowledge-api || gate_ok=0
 wait_healthy web knowledge-web || gate_ok=0
+wait_healthy mcp knowledge-mcp || gate_ok=0
 
 if (( gate_ok )); then
-    log "both services healthy — knowledge-api + knowledge-web are live"
+    log "all three services healthy — knowledge-api + knowledge-web + knowledge-mcp are live"
 else
     # --- 4. on failure: capture + fix-forward, NO rollback (§F v1) ------------
     capture_artifacts
-    die "health-gate FAILED for knowledge-api and/or knowledge-web. NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs api web${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
+    die "health-gate FAILED for knowledge-api and/or knowledge-web and/or knowledge-mcp. NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs api web mcp${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
 fi
 
-log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000; edge re-apply is S3)."
+log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000, mcp at knowledge-mcp:9000; edge re-apply is S3)."
