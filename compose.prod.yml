@@ -203,6 +203,15 @@ services:
       # regardless (proxy_buffering off + long timeouts) so a single tool call's
       # streamed response is never buffered/cut. (S1 built this flag for exactly this.)
       MCP_STATELESS_HTTP: "1"
+      # DNS-rebinding Host allowlist (P15.F1). FastMCP's localhost-only default
+      # returns `421 Invalid Host header` to every non-localhost caller — the
+      # public edge host AND the internal knowledge-mcp:9000 path. These widen it
+      # (protection stays on). MATCHING: a port-less host needs an EXACT entry, a
+      # host-with-port needs a `base:*` wildcard — so `knowledge.hi2vi.com` (edge)
+      # is exact, `knowledge-mcp` + `knowledge-mcp:*` cover the internal path;
+      # localhost stays a built-in config.py default (image healthcheck + smoke).
+      MCP_ALLOWED_HOSTS: "knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*"
+      MCP_ALLOWED_ORIGINS: "https://knowledge.hi2vi.com"
     # Documentary only (no publish) — the edge + co-tenant agents reach it over the
     # shared network by container name (knowledge-mcp:9000), never a host port.
     expose:

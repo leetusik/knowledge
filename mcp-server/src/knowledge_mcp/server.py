@@ -23,12 +23,25 @@ from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import config, upstream
 
-mcp = FastMCP(config.SERVER_NAME, stateless_http=config.stateless_http())
+# Pass an EXPLICIT transport_security so FastMCP does NOT fall into its
+# localhost-only auto-branch (which 421s every non-localhost caller — the public
+# edge host AND the internal knowledge-mcp:9000 path). Protection stays ON; the
+# allowlist is widened to the hosts we serve, env-driven (see config.allowed_hosts).
+mcp = FastMCP(
+    config.SERVER_NAME,
+    stateless_http=config.stateless_http(),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=config.allowed_hosts(),
+        allowed_origins=config.allowed_origins(),
+    ),
+)
 
 _MARK_OPEN = "<mark>"
 _MARK_CLOSE = "</mark>"
