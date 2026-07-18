@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0005_p13_standalone_knowledge_cli_as_a_third_distribution_surface_agent-first_non-interactive_onboarding_bundled_agent-readable_guide_docs",
+      "latest": "v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -43,6 +43,14 @@
           "source": "P13.REVIEW",
           "summary": "P13 standalone knowledge CLI as a third distribution surface; agent-first non-interactive onboarding; bundled agent-readable guide docs",
           "previous": "v0004_p12_authenticated_web_app_is_the_primary_user_surface_all_web-ui_features_free"
+        },
+        {
+          "id": "v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future",
+          "path": "docs/versions/product/v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future.md",
+          "created_at": "2026-07-18T13:36:26+09:00",
+          "source": "P15.REVIEW",
+          "summary": "P15 agent-facing MCP retrieval surface (search as a service); realizes deferred D6; first consumer hi2vi OpenClaw; monetization still future",
+          "previous": "v0005_p13_standalone_knowledge_cli_as_a_third_distribution_surface_agent-first_non-interactive_onboarding_bundled_agent-readable_guide_docs"
         }
       ]
     },
@@ -101,7 +109,7 @@
       ]
     },
     "architecture": {
-      "latest": "v0011_p13_cli_package_boundary_two_deliberate_implementations_of_the_knowledge-kb_config_contract_base-url_reads_config_literally_via_load_raw_not_resolve_additive_api.project_key",
+      "latest": "v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -191,6 +199,14 @@
           "source": "P13.REVIEW",
           "summary": "P13 cli/ package boundary; two deliberate implementations of the knowledge-kb config contract; base-url reads config literally via load_raw not resolve; additive api.project key",
           "previous": "v0010_p12_separate-origin_next.js_app_sealed-cookie_bff_unmetered_app_read_routes_per-tenant_viewer"
+        },
+        {
+          "id": "v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api",
+          "path": "docs/versions/architecture/v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api.md",
+          "created_at": "2026-07-18T13:31:08+09:00",
+          "source": "P15.REVIEW",
+          "summary": "P15 MCP retrieval service: proxy-and-forward-bearer thin server (no retrieval rebuilt, scoping inherited), mcp-server/ + knowledge_mcp package boundary, stable contract v1, stateless Streamable-HTTP deploy alongside frozen /api/*",
+          "previous": "v0011_p13_cli_package_boundary_two_deliberate_implementations_of_the_knowledge-kb_config_contract_base-url_reads_config_literally_via_load_raw_not_resolve_additive_api.project_key"
         }
       ]
     },
@@ -365,7 +381,7 @@
       ]
     },
     "api": {
-      "latest": "v0010_p13_cli_onboarding_widened_the_frozen_public_contract_to_api_auth_app_healthz_new_429_on_auth_signup_login",
+      "latest": "v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -447,11 +463,19 @@
           "source": "P13.REVIEW",
           "summary": "P13 CLI onboarding widened the frozen public contract to /api/* + /auth/* + /app/* + /healthz; new 429 on /auth/{signup,login}",
           "previous": "v0009_p12_unmetered_session-scoped_app_read_routes_dashboard_documents_search_graph"
+        },
+        {
+          "id": "v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api",
+          "path": "docs/versions/api/v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api.md",
+          "created_at": "2026-07-18T13:31:08+09:00",
+          "source": "P15.REVIEW",
+          "summary": "P15 agent-facing MCP retrieval service: contract v1 (search + fetch_document tools, Bearer vk_ over Streamable-HTTP /mcp, additive-only versioning + /healthz.contract_version, tenant-wide corpus scoping) alongside the frozen REST /api/*",
+          "previous": "v0010_p13_cli_onboarding_widened_the_frozen_public_contract_to_api_auth_app_healthz_new_429_on_auth_signup_login"
         }
       ]
     },
     "operations": {
-      "latest": "v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired",
+      "latest": "v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -573,6 +597,14 @@
           "source": "P14.REVIEW",
           "summary": "P14 web-app deploy: knowledge-web Dockerfile + compose service + reworked edge vhost; mkdocs site retired",
           "previous": "v0014_p13_knowledge_cli_install_edge_routes_auth_app_hosted_accounts-plane_cutover_runbook_auth_throttle_knobs"
+        },
+        {
+          "id": "v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run",
+          "path": "docs/versions/operations/v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run.md",
+          "created_at": "2026-07-18T13:31:13+09:00",
+          "source": "P15.REVIEW",
+          "summary": "P15 knowledge-mcp deploy: mcp-server Dockerfile + compose service, SSE-safe edge /mcp, three-service health-gate + /mcp liveness smoke, dual reachability, e2e_smoke verifier + operator post-deploy run",
+          "previous": "v0015_p14_web-app_deploy_knowledge-web_dockerfile_compose_service_reworked_edge_vhost_mkdocs_site_retired"
         }
       ]
     },
@@ -843,5 +875,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-18T09:52:33+09:00"
+  "last_rebuilt_at": "2026-07-18T13:37:29+09:00"
 }

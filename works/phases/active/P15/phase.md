@@ -289,6 +289,32 @@ Survey verified against the repo at decomposition time (2026-07-18):
   `contract_version` + `CONTRACT_VERSION` constant, and one terse test assertion. Full
   mcp-server suite: **10 passed** (`cd mcp-server && uv run pytest -q`).
 
+### REVIEW — phase validated + docs consolidated → PASS (2026-07-18)
+
+- **Verdict: `pass`.** All four slices validated **together**: `mcp-server` suite **10 passed**;
+  `compose.prod.yml config` parses clean with the `knowledge-mcp` service; `bash -n` clean on both
+  deploy scripts; edge `location /mcp` honors every house rule (variable `proxy_pass`, NO per-location
+  `proxy_set_header`, `proxy_buffering off`, 3600s timeouts, no zone/default_server/IPv6); the
+  **first-consumer E2E was re-run fresh at review and PASSED** (scratch legacy api + 1 doc → local
+  stateless mcp → `e2e_smoke.py` → `PASS`, both tools, grounded hit, `fetch` markdown); `workflow.py
+  validate` clean.
+- **Constraints verified, not assumed.** `git diff be488f7..787498f -- server/` is **empty** — the
+  frozen `/api/*` was untouched; all changes confined to `mcp-server/ deploy/ .github/workflows/
+  compose.prod.yml` + docs/works metadata. Single-writer untouched (read-only service); lean tests;
+  MCP alongside REST; `url` reserved-empty (D13); corpus scoping tenant-wide per `vk_`. D6 dropped at
+  DECOMP / D12 / D13 need no review action.
+- **Docs consolidated (one version per affected doc, `--source P15.REVIEW`):**
+  - **api `v0011`** — new "Agent-facing MCP retrieval service: tool contract v1 (P15)" section + Status.
+  - **architecture `v0012`** — "proxy-and-forward-bearer (P15)" section + Status + Roadmap bullet.
+  - **operations `v0016`** — "MCP retrieval service deploy (P15)" section + env rows + Status.
+  - **product `v0006`** — retriever recast from "deferred (P15)" to a delivered agent-facing
+    "search as a service" surface (4th distribution surface); Target-Users + Product-Direction added.
+  - (operations/product version summaries were shortened to fit the OS filename-length limit; the
+    first `product` attempt was removed + recreated clean.)
+- **Outstanding for the operator (not phase gaps):** (1) public-path E2E with a real hi2vi `vk_`
+  after the manual Production Deploy; (2) **D13** `url` population via `source_url`; (3) hi2vi `vk_`
+  provisioning + OpenClaw `mcp.servers.knowledge` config (hi2vi P18.S5). Nothing is live on the box yet.
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
