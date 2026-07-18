@@ -315,6 +315,37 @@ Survey verified against the repo at decomposition time (2026-07-18):
   after the manual Production Deploy; (2) **D13** `url` population via `source_url`; (3) hi2vi `vk_`
   provisioning + OpenClaw `mcp.servers.knowledge` config (hi2vi P18.S5). Nothing is live on the box yet.
 
+### P15.F1 fixed the deployed `421 Invalid Host header` — what the REVIEW / redeploy must know (2026-07-18)
+
+- **Root cause (post-deploy defect, not caught by S4's smoke).** `server.py` built `FastMCP(...)`
+  with **no explicit `transport_security`**, so `mcp==1.28.1` auto-enabled DNS-rebinding protection
+  with a **localhost-only** allowlist (FastMCP's internal `host` defaults to `127.0.0.1`). That 421'd
+  every non-localhost caller — **both** the public `knowledge.hi2vi.com` edge host **and** the internal
+  `knowledge-mcp:9000` dual-reachability path — before the MCP handler ran. `MCP_HOST=0.0.0.0` only sets
+  uvicorn's *bind* host (a different knob), so it never helped. S4's E2E only hit `localhost:9000` (the
+  one allowed host), which is why the defect surfaced only against the deployed box.
+- **Fix (protection kept ON, allowlist widened, env-driven).** `config.allowed_hosts()` /
+  `allowed_origins()` = built-in localhost defaults **+** `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS`
+  (comma-separated, read at call time). `server.py` now passes an explicit
+  `TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=…, allowed_origins=…)`,
+  which skips FastMCP's localhost-only auto-branch. `compose.prod.yml` sets
+  `MCP_ALLOWED_HOSTS="knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*"` and
+  `MCP_ALLOWED_ORIGINS="https://knowledge.hi2vi.com"` (non-secret literals — no box `.env` change).
+- **Matching-rule gotcha (verified against `mcp/server/transport_security.py`).** `_validate_host` =
+  **exact** string match OR a `base:*` wildcard via `host.startswith(base + ":")`. So a **port-less**
+  host like `knowledge.hi2vi.com` needs an **EXACT** allowlist entry — a `knowledge.hi2vi.com:*` pattern
+  would NOT match it — while `knowledge-mcp:9000` (has a port) is covered by `knowledge-mcp:*`. An absent
+  Origin passes, so server-side agents (no Origin header) are unaffected regardless.
+- **Verification done by the executor.** `cd mcp-server && uv run pytest -q` → **11 passed** (prior 10 +
+  1 new terse regression test `tests/test_host_allowlist.py`); `uv run python -c "import
+  knowledge_mcp.server as s; ..."` → `import ok` (proves the new `transport_security` construction is
+  valid); `workflow.py validate` clean. **Did NOT deploy / ssh / hit any endpoint.**
+- **Operator/orchestrator post-redeploy check.** After the `mcp` service is redeployed, `GET
+  https://knowledge.hi2vi.com/mcp` should return the routed MCP 406 (`"Client must accept
+  text/event-stream"`) instead of `421`, and `e2e_smoke.py` should pass on both the public edge and the
+  internal `knowledge-mcp:9000` path with a real hi2vi `vk_`. Files changed: `mcp-server/src/knowledge_mcp/{config,server}.py`,
+  `compose.prod.yml`, `mcp-server/tests/test_host_allowlist.py`. `/api/*` untouched (frozen).
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
@@ -375,3 +406,4 @@ one-line notes here; the review versions the docs (never per slice)._
 - (S4) **Stable contract v1** for the knowledge MCP service (tools `search` + `fetch_document`, Streamable-HTTP `/mcp`, `Authorization: Bearer <key>` auth, dual reachability), pinned in `mcp-server/CONTRACT.md` — the in-repo handshake surface hi2vi P18.S5 points `mcp.servers.knowledge` at; **additive-only** within v1 (new tool / optional param / new output field is non-breaking; a breaking change bumps the version); surfaced at `GET /healthz` as `contract_version` (`CONTRACT_VERSION = "1"`, distinct from MCP `serverInfo.version` = the SDK release `1.28.1`) — api + architecture docs.
 - (S4) **Corpus scoping = tenant-wide per `vk_`** — search/fetch scope to the whole tenant's corpus (`server/main.py:316` filters by `tenant_id`, not the key's bound project), so **one hi2vi `vk_` key covers both `hi2vi` + `hi2vi_web`** (no two-key scheme); the `search` `project` param optionally narrows. Final key provisioning coordinated with hi2vi P18.S5 (operator side) — api + architecture docs.
 - (S4) **`e2e_smoke.py` first-consumer verifier** (`mcp-server/scripts/`) — a committed, path-agnostic OpenClaw-shaped MCP client (`streamablehttp_client` + `ClientSession`, bearer injected via a custom `httpx_client_factory`); the direct path (client → mcp → `/api` → grounded hit) is proven locally, the public-path run with a real hi2vi `vk_` is **operator post-deploy verification** — operations doc.
+- (F1) **The P15 MCP deploy requires `MCP_ALLOWED_HOSTS` (+ `MCP_ALLOWED_ORIGINS`)** — FastMCP's localhost-only DNS-rebinding default returns `421 Invalid Host header` to the public edge host `knowledge.hi2vi.com` and the internal `knowledge-mcp:9000` path otherwise. Protection stays ON (env-driven `config.allowed_hosts()`/`allowed_origins()` = localhost defaults + these vars, passed as an explicit `TransportSecuritySettings`). MATCHING: the port-less public host needs an **exact** allowlist entry (`knowledge.hi2vi.com`); the internal path uses `knowledge-mcp:*`. `compose.prod.yml` sets `MCP_ALLOWED_HOSTS="knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*"`, `MCP_ALLOWED_ORIGINS="https://knowledge.hi2vi.com"` — operations doc.

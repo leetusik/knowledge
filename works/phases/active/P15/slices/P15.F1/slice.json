@@ -1,0 +1,31 @@
+{
+  "id": "P15.F1",
+  "phase_id": "P15",
+  "name": "MCP transport-security allowlist: accept public + internal Hosts (fix 421 Invalid Host header)",
+  "kind": "fix",
+  "status": "done",
+  "order": 5,
+  "depends_on": [],
+  "created_at": "2026-07-18T16:56:54+09:00",
+  "started_at": "2026-07-18T16:59:30+09:00",
+  "completed_at": "2026-07-18T17:03:39+09:00",
+  "risk": "medium",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

@@ -49,6 +49,12 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_list(name: str) -> list[str]:
+    """Read a comma-separated env var into a trimmed list (empties dropped)."""
+
+    return [item.strip() for item in os.environ.get(name, "").split(",") if item.strip()]
+
+
 # `fetch_document` full-markdown cap. The body is text, so we cap by CHARACTERS
 # (predictable for an agent's token budgeting). Over the cap, `fetch_document`
 # returns the first `FETCH_MAX_CHARS` chars + a truncation marker and signals
@@ -111,3 +117,50 @@ def stateless_http() -> bool:
     """
 
     return _env("MCP_STATELESS_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+# --- transport-security allowlists (DNS-rebinding protection) -----------------
+#
+# WHY THIS EXISTS: FastMCP auto-enables DNS-rebinding protection with a
+# **localhost-only** allowlist whenever its internal `host` is 127.0.0.1/localhost
+# (the default). That default returns **`421 Invalid Host header`** to EVERY
+# non-localhost caller — both the public edge host `knowledge.hi2vi.com` and the
+# internal `knowledge-mcp:9000` dual-reachability path — before the MCP handler
+# even runs. `server.py` therefore passes an EXPLICIT `TransportSecuritySettings`
+# built from these readers, which keeps the protection ON but widens the allowlist
+# to the hosts we actually serve (env-driven, no host hardcoded in code).
+#
+# MATCHING RULE (mcp==1.28.1, `mcp/server/transport_security.py:_validate_host`):
+# a Host is allowed on an **EXACT** string match OR a `base:*` wildcard matched as
+# `host.startswith(base + ":")`. Consequences that are easy to get wrong:
+#   - a **port-less** host like `knowledge.hi2vi.com` needs an **EXACT** entry — a
+#     `knowledge.hi2vi.com:*` pattern would NOT match it.
+#   - an internal `knowledge-mcp:9000` (has a port) is covered by `knowledge-mcp:*`.
+# Origins: an ABSENT Origin passes (server-side agents send none), so origins are
+# secondary; the public origin is still configured for browser-based MCP clients.
+
+# Always-trusted localhost patterns (the image healthcheck + local smoke hit these).
+_LOCALHOST_HOSTS = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+_LOCALHOST_ORIGINS = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+
+
+def allowed_hosts() -> list[str]:
+    """Allowed ``Host`` header values for DNS-rebinding protection.
+
+    Localhost defaults **plus** ``MCP_ALLOWED_HOSTS`` (comma-separated). Read at
+    call time (12-factor). Remember the matching rule above: a port-less public
+    host needs an EXACT entry (e.g. ``knowledge.hi2vi.com``); a host that carries a
+    port needs a ``base:*`` wildcard (e.g. ``knowledge-mcp:*``).
+    """
+
+    return _LOCALHOST_HOSTS + _env_list("MCP_ALLOWED_HOSTS")
+
+
+def allowed_origins() -> list[str]:
+    """Allowed ``Origin`` header values for DNS-rebinding protection.
+
+    Localhost defaults **plus** ``MCP_ALLOWED_ORIGINS`` (comma-separated). An absent
+    Origin already passes, so this only matters for browser-based MCP clients.
+    """
+
+    return _LOCALHOST_ORIGINS + _env_list("MCP_ALLOWED_ORIGINS")
