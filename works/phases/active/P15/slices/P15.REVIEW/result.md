@@ -79,3 +79,63 @@ because the auto-generated slug filename exceeded the OS 255-byte filename limit
 No source edited; no `new-slice`; no commit; no `review-phase`/`finish-slice`/`set-phase-status`;
 phase not archived. Only `doc-new-version` + `rebuild-docs` (review-slice privilege) and doc/
 `result.md`/`phase.md` writes.
+
+---
+
+# P15.REVIEW — RE-REVIEW (consolidate P15.F1) — 2026-07-18
+
+**Verdict: `pass` (re-review).** The phase was reopened after the original pass above only to
+add **P15.F1**, which fixed the deployed `knowledge-mcp`'s `421 Invalid Host header` (FastMCP's
+localhost-only DNS-rebinding allowlist rejected both the public edge host and the internal
+`knowledge-mcp:9000` path). The fix was **already verified in production** by the orchestrator
+after the F1 redeploy (Production Deploy sha `284fc03`, success): public `GET /mcp` → routed
+`406`, and the full authenticated `e2e_smoke.py` against `https://knowledge.hi2vi.com/mcp` with
+the master `KB_API_TOKEN` → **PASS** (initialize → both tools → search 5 hits → fetch_document
+40298 chars). This re-review did **not** re-prove prod behavior — its only job was a fast sanity
+re-validate + consolidating the F1 delta into the durable docs. No code changed; only
+**operations** re-versioned.
+
+## Sanity re-validation
+
+| Command | Outcome |
+|---|---|
+| `python3 scripts/workflow.py validate` | **PASS** — "Workflow validation passed." |
+| `cd mcp-server && uv run pytest -q` | **PASS** — **11 passed**, 1 benign warning (prior 10 + F1 regression `tests/test_host_allowlist.py`) |
+| `python3 scripts/workflow.py rebuild-docs` | rebuilt `docs/current` from latest versions |
+| `python3 scripts/workflow.py docs` (operations) | latest = **v0017** |
+| `python3 scripts/workflow.py validate` (post-rebuild) | **PASS** |
+
+## Doc consolidation — operations `v0017` only
+
+The last `(F1)` line in `phase.md`'s "Doc impact" list is tagged **operations**; no other doc's
+durable truth moved, so **operations is the only new version** (no api/architecture/product/
+security re-version). `operations v0017` (`--source P15.REVIEW`, seeded from v0016) folds in,
+all inside the operations doc:
+
+1. New subsection **"Transport security: DNS-rebinding Host allowlist (P15.F1) — required on the
+   box"** under *MCP retrieval service deploy (P15)*: root cause (FastMCP localhost-only default;
+   `MCP_HOST=0.0.0.0` is only the uvicorn bind), the fix (protection stays ON via an explicit
+   env-driven `TransportSecuritySettings`; `config.allowed_hosts()`/`allowed_origins()` = localhost
+   defaults + the env vars), the **matching rule** (exact OR `base:*` — a port-less public host
+   needs an **exact** entry `knowledge.hi2vi.com`; the internal path uses `knowledge-mcp:*`; an
+   absent `Origin` passes), and the concrete `compose.prod.yml` values.
+2. Two new **Environment Variables** rows — `MCP_ALLOWED_HOSTS`, `MCP_ALLOWED_ORIGINS` (both
+   "box: yes", with the matching-rule note).
+3. **"Nothing live yet / operator post-deploy" phrasing flipped to deployed + verified** in the
+   Status paragraph, the MCP-section intro, the "Public-path run" bullet (now "DONE — PASSed
+   with the master token"), and the "Operator box-side steps" bullet; the real hi2vi `vk_`
+   provisioning + D13 named as the only outstanding follow-ups.
+4. New **Invariant** bullet: `knowledge-mcp` MUST run with `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS`
+   or every non-localhost caller `421`s.
+
+`rebuild-docs` regenerated `docs/current/operations.md` (8 `P15.F1` references, code block + table
+render clean). The old v0016 file and `docs/current/*` were never hand-edited.
+
+## Deviations (re-review)
+
+None material. The plan scoped the "nothing live yet" flip to the MCP section; I also updated
+the one matching "operator gate" clause in the **Status** paragraph (same operations doc) so the
+summary and detail section don't contradict, and added the Invariant bullet — both within
+operations; no other doc touched.
+
+Phase P15 is ready for the orchestrator to record `review-phase P15 --verdict pass`.

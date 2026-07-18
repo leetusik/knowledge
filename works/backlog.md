@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P15`
+- Current phase: `none`
 - Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `9`
-- Rebuilt at: `2026-07-18T17:03:39+09:00`
+- Rebuilt at: `2026-07-18T19:43:07+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
 | [x] `P13` | `done` | `pass` | CLI & Agent-First Onboarding | `none` | `works/phases/active/P13` |
 | [x] `P14` | `done` | `pass` | Landing Page & Product Webpage via Claude Design Gate | `none` | `works/phases/active/P14` |
-| [ ] `P15` | `in_progress` | `pass` | Agent-facing retrieval MCP service (search-as-a-service) | `none` | `works/phases/active/P15` |
+| [x] `P15` | `done` | `pass` | Agent-facing retrieval MCP service (search-as-a-service) | `none` | `works/phases/active/P15` |
 
 ## Phase P10: Accounts, Tenancy & Tenant-Scoped Knowledge API
 
