@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P15`
-- Current slice: `P15.DECOMP`
-- Next slice: `P15.REVIEW`
+- Current slice: `P15.S1`
+- Next slice: `P15.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `8`
-- Rebuilt at: `2026-07-18T10:08:19+09:00`
+- Rebuilt at: `2026-07-18T10:33:36+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P12` | `done` | `pass` | Web App: Tenant Dashboard & Project Detail Pages | `none` | `works/phases/active/P12` |
 | [x] `P13` | `done` | `pass` | CLI & Agent-First Onboarding | `none` | `works/phases/active/P13` |
 | [x] `P14` | `done` | `pass` | Landing Page & Product Webpage via Claude Design Gate | `none` | `works/phases/active/P14` |
-| [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.DECOMP` | `works/phases/active/P15` |
+| [ ] `P15` | `planned` | `pending` | Agent-facing retrieval MCP service (search-as-a-service) | `P15.S1` | `works/phases/active/P15` |
 
 ## Phase P10: Accounts, Tenancy & Tenant-Scoped Knowledge API
 
@@ -88,5 +88,9 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P15.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P15/slices/P15.DECOMP` |
+| [x] `P15.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P15/slices/P15.DECOMP` |
+| [ ] `P15.S1` | `todo` | MCP service scaffold + Streamable-HTTP transport + search tool | `implementation` | `works/phases/active/P15/slices/P15.S1` |
+| [ ] `P15.S2` | `todo` | fetch_document tool + response size caps | `implementation` | `works/phases/active/P15/slices/P15.S2` |
+| [ ] `P15.S3` | `todo` | Containerize: Dockerfile + compose service + SSE-safe edge routing + dual reachability | `implementation` | `works/phases/active/P15/slices/P15.S3` |
+| [ ] `P15.S4` | `todo` | Stable versioned tool contract + OpenClaw first-consumer E2E smoke | `implementation` | `works/phases/active/P15/slices/P15.S4` |
 | [ ] `P15.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P15/slices/P15.REVIEW` |
