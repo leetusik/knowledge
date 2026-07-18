@@ -1,18 +1,18 @@
 {
-  "id": "P15.DECOMP",
+  "id": "P15.S1",
   "phase_id": "P15",
-  "name": "decompose phase",
-  "kind": "decomposition",
-  "status": "done",
-  "order": 0,
+  "name": "MCP service scaffold + Streamable-HTTP transport + search tool",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 1,
   "depends_on": [],
-  "created_at": "2026-07-16T21:41:02+09:00",
-  "started_at": "2026-07-18T10:26:59+09:00",
-  "completed_at": "2026-07-18T10:33:36+09:00",
-  "risk": "low",
+  "created_at": "2026-07-18T10:30:29+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
   "source": {
-    "type": "new_phase",
-    "id": "P15"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",

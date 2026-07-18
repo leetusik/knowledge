@@ -1,0 +1,11 @@
+{
+  "id": "D6",
+  "title": "Paid-plan retriever endpoint for external AI agents",
+  "status": "dropped",
+  "source": "operator (P10-P14 SaaS pivot intent)",
+  "reason": "SaaS launches free-only: knowledge saving, the Claude Code /explain connection, and all web UI features are free; the retriever endpoint for AI-agent consumption is the designated paid feature and no paid plan exists yet",
+  "trigger": "operator decides to introduce the paid plan",
+  "created_at": "2026-07-16T14:28:25+09:00",
+  "promoted_to": null,
+  "dropped_reason": "Superseded by P15 (Agent-facing retrieval MCP service). P15 builds the external-agent retriever surface D6 anticipated — an MCP search/fetch_document service over Streamable-HTTP, vk_-scoped per project, dual-reachable (internal service-name + public edge). The retriever interface now exists. D6's remaining aspect — actually charging for it (a paid plan / gating the MCP surface) — is a separate business + billing decision P15 does not build; the P11 usage-event metering is the substrate for it when the operator introduces a paid plan. That monetization step is re-captured as a new, narrower deferred job."
+}
