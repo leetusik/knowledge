@@ -1,20 +1,25 @@
 # Production deploy runbook — knowledge.hi2vi.com
 
-Operator-facing runbook for hosting the **whole knowledge site — the human web UI
-*and* the machine API** — publicly at `https://knowledge.hi2vi.com`, as a co-tenant
-on the OCI box (the same box + edge that serves hi2vi.com). As of **P9** the box
-self-hosts the site (GitHub Pages retired) and a **manual-dispatch `Production Deploy`
-GitHub Action** automates the box deploy — see **§6**. §0–§5 below are the one-time
-bring-up / first-bootstrap steps that run **on the box**; §6 is the repeatable redeploy.
+Operator-facing runbook for hosting the **whole knowledge product — the Next.js web
+app *and* the machine API** — publicly at `https://knowledge.hi2vi.com`, as a co-tenant
+on the OCI box (the same box + edge that serves hi2vi.com). As of **P14** the box serves
+the **Next.js app** at `/` (the public landing + the authenticated UI + the `/api/auth/*`
+BFF); the old **mkdocs `site` viewer is RETIRED** (its content lives on as tenant #1's
+knowledge in the app + api). A **manual-dispatch `Production Deploy` GitHub Action**
+automates the box deploy — see **§6**. §0–§5 below are the one-time bring-up /
+first-bootstrap steps that run **on the box**; §6 is the repeatable redeploy.
 
 Artifacts this runbook applies:
 
-- **`compose.prod.yml`** (repo root) — the box compose project. As of **P9** it ships
-  **two** services: **`api`** (`knowledge-api`) and **`site`** (`knowledge-site`, a
-  `mkdocs serve --livereload` viewer on `squidfunk/mkdocs-material:9.7.6`, off the same
-  `/opt/knowledge` clone). Both are unpublished-port, edge-only.
-- **`deploy/knowledge.conf`** — the nginx vhost (now **two-location**: `/` → the site,
-  `/api/*` + `/healthz` → the api), dropped onto the box's edge.
+- **`compose.prod.yml`** (repo root) — the box compose project. As of **P14** it ships
+  **`api`** (`knowledge-api`), **`web`** (`knowledge-web`, the Next.js standalone app
+  built from `web/Dockerfile`), and **`postgres`** (`knowledge-postgres`, the P10
+  control-plane store). The mkdocs `site` service was **removed** in P14.S3. All are
+  unpublished-port, edge-only.
+- **`deploy/knowledge.conf`** — the nginx vhost. Two upstreams: the CLI control plane
+  (`/api/*`, `/auth/*`, `/app/*`, `= /healthz` → `knowledge-api`, the P13 contract,
+  unchanged) and the Next app (`/api/auth/*` — the BFF, more specific than `/api/` — and
+  everything else, incl. `/`, → `knowledge-web:3000`). Dropped onto the box's edge.
 - **`deploy/deploy.sh`** + **`deploy/oracle-production-deploy-remote.sh`** +
   **`deploy/github-actions-production-deploy.sh`** — the P9 three-script deploy chain the
   `Production Deploy` Action runs (§6).
@@ -107,10 +112,20 @@ cat > /opt/knowledge/.env <<EOF
 KB_API_TOKEN=$(openssl rand -hex 32)
 # Optional Gemini key for hybrid semantic search. Empty/absent = BM25-only. §4.
 GOOGLE_API_KEY=
+# Web BFF session secret (P14): the AES-256-GCM session key derives from it, so the
+# `web` service seals each user's bearer into an httpOnly cookie. A NEW secret,
+# generated in place. Rotating it invalidates every live session (all users re-login).
+SESSION_SECRET=$(openssl rand -base64 32)
 EOF
 chmod 600 /opt/knowledge/.env
 ls -l /opt/knowledge/.env     # expect: -rw------- 1 opc opc
 ```
+
+> The box `.env` also carries the **P10 control-plane secrets** — `POSTGRES_PASSWORD`,
+> `KB_OPERATOR_EMAIL`, `KB_OPERATOR_PASSWORD` (see `SECRETS.md` + the `api`/`web`
+> `environment:` comments in `compose.prod.yml`, the authoritative per-var list). The
+> `web` service reads **only `SESSION_SECRET`** from `.env` (interpolated, not
+> `env_file:`), so the api's `KB_API_TOKEN` never reaches the web container.
 
 Read the token back only when you actually need it (e.g. to hand it to the hi2vi
 side as `KNOWLEDGE_API_TOKEN`): `sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env`.
@@ -129,11 +144,24 @@ cd /opt/knowledge
 # (documented in docs/current/operations.md). Carry the flag.
 COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build
 
-# P9: this brings up BOTH services. Expect both Up (healthy):
-docker compose -f compose.prod.yml ps            # expect: knowledge-api + knowledge-site  Up (healthy)
+# P14: this builds + brings up the api and the web app (and postgres). Expect Up (healthy):
+docker compose -f compose.prod.yml ps            # expect: knowledge-api + knowledge-web + knowledge-postgres  Up (healthy)
 docker compose -f compose.prod.yml logs -f api   # watch the startup reindex line
-# knowledge-site's healthcheck has a start_period (~40s) for the first mkdocs serve boot.
+# knowledge-web builds the Next standalone image (web/Dockerfile) on first up; its
+# healthcheck has a ~20s start_period for the server's cold boot. The web app depends
+# on the api being healthy, so it starts after the api's ~60s reindex start_period.
+
+# One-time on an EXISTING box that still runs the retired mkdocs viewer: drop it.
+# (A fresh clone never had it; harmless if `site` is already gone.)
+docker compose -f compose.prod.yml rm -sf site   # retire the mkdocs knowledge-site
 ```
+
+> **`KB_PUBLIC_BASE_URL` caveat (P14).** The api's 201 `url` field is
+> `https://knowledge.hi2vi.com/<project>/<date>-<slug>/`, which the retired mkdocs site
+> used to render. The Next app has no such route, so that link no longer resolves to a
+> page — **cosmetic only** (docs are read by id via the api/app, never this link).
+> `KB_PUBLIC_BASE_URL` is left unchanged in `compose.prod.yml`; repointing or degrading
+> it is deferred to a future docs effort / the prod cutover.
 
 The image must contain **`ssh`** — `git` alone cannot push over an SSH remote, so
 publish-on-write depends on it. Assert it once after the build:
@@ -248,8 +276,9 @@ ssh oracle-cloud "sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env"
 
 **Do NOT run a write test here.** A `POST /api/documents` pushes to `main` and is
 an **E2E acceptance** step (P8.S5 / P9.S5) — the first `project:"hi2vi"` write → 201
-→ commit on `main` → **live on the self-hosted site (fresh-on-write, P9)**. Run it
-there, not as a bring-up smoke step.
+→ commit on `main` → **readable via the api/app by id** (publish-on-write; the doc is
+no longer rendered on a mkdocs page — see the `KB_PUBLIC_BASE_URL` caveat in §2). Run
+it there, not as a bring-up smoke step.
 
 ---
 

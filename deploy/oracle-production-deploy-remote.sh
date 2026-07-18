@@ -71,7 +71,7 @@ collect_status() {
     > "${REMOTE_ARTIFACT_DIR}/compose-ps.txt" 2>&1 || true
 }
 
-# Re-apply the edge vhost AFTER a healthy deploy (containers up before `/` cuts over to the site). Drop
+# Re-apply the edge vhost AFTER a healthy deploy (containers up before `/` cuts over to the web app). Drop
 # the just-reconciled conf onto the edge's read-only conf.d/ host mount, then run the edge's OWN deploy.sh
 # — a hard `nginx -t` gate inside the RUNNING edge-nginx followed by a graceful `nginx -s reload`, NEVER a
 # recreate. A failed `nginx -t` reloads nothing (the edge keeps its last-good config) but MUST fail this
