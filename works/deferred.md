@@ -4,16 +4,17 @@
 
 ## Summary
 
-- Open: `7`
+- Open: `8`
 - Promoted: `2`
 - Dropped: `1`
-- Rebuilt at: `2026-07-18T09:54:53+09:00`
+- Rebuilt at: `2026-07-18T10:08:19+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
 | `D10` | `deferred` | Landing feature-section lede copy | P14.REVIEW | operator provides copy / next design round | `works/deferred/open/D10` |
+| `D11` | `deferred` | Production Deploy: reconcile box clone before invoking deploy.sh (self-upgrade trap) | P14.S3 | next time the deploy machinery's compose service set or health-gate changes | `works/deferred/open/D11` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D6` | `deferred` | Paid-plan retriever endpoint for external AI agents | operator (P10-P14 SaaS pivot intent) | operator decides to introduce the paid plan | `works/deferred/open/D6` |
