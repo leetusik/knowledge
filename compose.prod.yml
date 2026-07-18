@@ -1,8 +1,11 @@
 # Production deployment for https://knowledge.hi2vi.com (P8.S3).
 #
 # This is the OCI-box compose project — NOT the local dev stack (compose.yml).
-# It ships TWO services: `api` (the document API) and `site` (a live-serve mkdocs
-# viewer = the public web UI, self-hosted here instead of GitHub Pages, P9.S1).
+# It ships `api` (the document API + CLI control plane), `web` (the Next.js
+# standalone app — the public landing at `/`, the authenticated UI, and the
+# `/api/auth/*` BFF, P14.S3), and `postgres` (the control-plane datastore, P10).
+# The mkdocs `site` viewer that used to serve `/` was RETIRED in P14 (its content
+# lives on as tenant #1's knowledge in the app + api; nothing is lost).
 # The box runs the API from its
 # OWN git clone (e.g. /opt/knowledge) with an SSH `origin` + deploy key, so the
 # container can commit AND push writes to origin/main (publish-on-write, P8.S1).
@@ -50,9 +53,14 @@ services:
       # Gate reads/search behind the same bearer on the hosted deployment
       # (local/plugin default is false → reads open). healthz stays open.
       KB_REQUIRE_READ_AUTH: "true"
-      # Viewer origin for the 201 `url` field = the self-hosted site root on this
-      # box (the `site` service below live-serves the doc), no longer GitHub Pages.
-      # config.py rstrips any trailing slash, so give none here.
+      # Origin for the 201 `url` field (server/main.py builds {base}/{project}/
+      # {date}-{slug}/). config.py rstrips any trailing slash, so give none here.
+      # ⚠ CAVEAT (P14.S3, left UNCHANGED deliberately): the mkdocs `site` that used
+      # to serve that path at `/` is retired, so this `url` no longer resolves to a
+      # rendered page (the Next app has no such route). COSMETIC ONLY — docs are read
+      # by id via the api/app, never this link. Repointing it (to the public docs/
+      # GitHub-Pages track, or degrading it cleanly) is deferred to the operator's
+      # prod cutover / a future docs effort; S3 does not change it.
       KB_PUBLIC_BASE_URL: https://knowledge.hi2vi.com
       # Fetch + reindex on boot (drift + deleted-doc reconciliation self-heal).
       KB_STARTUP_REINDEX: "true"
@@ -115,36 +123,57 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  site:
-    # Live-serve mkdocs viewer (the public web UI), mirroring local compose.yml's
-    # `kb`. Serves docs/ off the SAME box clone the api bind-mounts, so a doc the
-    # api writes surfaces on the site with NO rebuild (fresh-on-write; both
-    # services share the bind-mounted tree). Reached by the edge BY CONTAINER NAME
-    # over changple_shared_network — NO public host-port publish (unlike local's
-    # 8765). This self-hosts the site that used to be GitHub Pages (P9.S1).
-    image: squidfunk/mkdocs-material:9.7.6  # exact pin — matches compose.yml + the pages.yml CI pin
-    container_name: knowledge-site          # fixed name — the edge proxies to it by name
-    # --livereload must be explicit: the flag's default never arms in this image,
-    # and without it new pages don't appear until the container restarts. It arms
-    # the file watcher that makes the fresh-on-write linchpin (§H) work.
-    command: serve --dev-addr=0.0.0.0:8000 --livereload
-    volumes:
-      - .:/docs
+  web:
+    # The Next.js 16 standalone app (P14): the public landing at `/`, the
+    # authenticated UI (/dashboard, /graph, /documents, /projects, /login,
+    # /signup), and the `/api/auth/*` BFF. Multi-stage build from web/Dockerfile
+    # (output:'standalone' → node server.js). Reached by the edge BY CONTAINER NAME
+    # (knowledge-web:3000) over changple_shared_network — NO public host-port
+    # publish. Replaces the retired mkdocs `site` as the `/` web UI (P14.S3).
+    build:
+      context: ./web
+      args:
+        # Public app origin, baked into the client bundle at build time
+        # (src/content/site.ts → canonical URL / OG / sitemap / robots). A build
+        # arg, not a runtime env — changing it needs a rebuild. Safe to commit.
+        NEXT_PUBLIC_APP_URL: "https://knowledge.hi2vi.com"
+    container_name: knowledge-web  # fixed name — the edge proxies to it by name
+    environment:
+      # Server-to-server base URL of the api container the BFF calls (the browser
+      # NEVER sees it — server-only, not NEXT_PUBLIC_). A literal container-name
+      # URL over the shared network; NOT a secret.
+      KB_API_BASE_URL: http://knowledge-api:8000
+      # Secret the AES-256-GCM session key derives from (sha256) to seal the
+      # bearer token into the httpOnly session cookie. A NEW box secret the
+      # OPERATOR MUST GENERATE into the gitignored `.env` (e.g. `openssl rand
+      # -base64 32`) — SESSION_SECRET=<value>. Rotating it invalidates every live
+      # session (all users re-login). Interpolated from `.env` here (like the api's
+      # POSTGRES_PASSWORD) rather than `env_file: .env`, so the api's KB_API_TOKEN /
+      # POSTGRES_PASSWORD / operator creds are NOT injected into the web container.
+      # Unset/blank → the BFF throws at request time (src/lib/env.ts) — `docker
+      # compose config` still passes (a dummy value suffices for local validation).
+      SESSION_SECRET: ${SESSION_SECRET}
+    # Documentary only (no publish) — the edge reaches it over the shared network.
+    expose:
+      - "3000"
+    # Do not start the web app until the api it proxies to is healthy.
+    depends_on:
+      api:
+        condition: service_healthy
     networks:
       - changple_shared_network
-    # Container health for `docker compose ps` + the deploy health-gate. The image
-    # has no curl, so use its own python; start_period covers the first `serve`
-    # build before mkdocs answers on :8000.
+    # Container health for `docker compose ps` + the deploy health-gate. node 22
+    # has global fetch; start_period covers the standalone server's cold boot.
     healthcheck:
       test:
         - CMD
-        - python
-        - -c
-        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3).status==200 else sys.exit(1)"
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 40s
+      start_period: 20s
     restart: unless-stopped
 
   postgres:

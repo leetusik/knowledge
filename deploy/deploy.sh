@@ -3,9 +3,11 @@
 # deploy.sh — on-box container-deploy core for https://knowledge.hi2vi.com (P9.S2).
 #
 # Runs ON the shared OCI box from the publish-on-write clone (default /opt/knowledge).
-# Reconciles that clone with origin/main, rebuilds + recreates BOTH compose services
-# (`api` = the document API, `site` = the live-serve mkdocs viewer), and health-gates
-# both. This is the knowledge analogue of hi2vi_web/deploy/deploy.sh, but with two
+# Reconciles that clone with origin/main, rebuilds + recreates the app compose services
+# (`api` = the document API + CLI control plane, `web` = the Next.js standalone UI + BFF;
+# the mkdocs `site` was RETIRED in P14.S3), and health-gates both. `postgres` is the
+# durable control-plane store, brought up as the api's dependency (not gated here).
+# This is the knowledge analogue of hi2vi_web/deploy/deploy.sh, but with two
 # knowledge-specific inventions (see phase.md §E/§F):
 #
 #   1. RECONCILE, NOT `git checkout --detach` (§E). hi2vi detaches HEAD to an exact
@@ -53,8 +55,8 @@
 # Lifecycle:
 #   1. preflight (git/docker/compose v2; compose file, .git, .env present)
 #   2. reconcile the box clone on `main` inside a one-shot api-service container (§E)
-#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api, pins site; both)
-#   4. health-gate BOTH knowledge-api and knowledge-site (docker inspect Health.Status)
+#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web; both)
+#   4. health-gate BOTH knowledge-api and knowledge-web (docker inspect Health.Status)
 #   5. on failure: capture ps + logs (into $REMOTE_ARTIFACT_DIR if set), die non-zero
 #      with a fix-forward message; NO rollback.
 #
@@ -137,7 +139,7 @@ capture_artifacts() {
         mkdir -p "$REMOTE_ARTIFACT_DIR" 2>/dev/null || true
         dc ps                              > "$REMOTE_ARTIFACT_DIR/deploy-compose-ps.txt"   2>&1 || true
         dc logs --no-color --tail 300 api  > "$REMOTE_ARTIFACT_DIR/deploy-api-logs.txt"     2>&1 || true
-        dc logs --no-color --tail 300 site > "$REMOTE_ARTIFACT_DIR/deploy-site-logs.txt"    2>&1 || true
+        dc logs --no-color --tail 300 web  > "$REMOTE_ARTIFACT_DIR/deploy-web-logs.txt"     2>&1 || true
         log "diagnostics written to $REMOTE_ARTIFACT_DIR"
     else
         log "REMOTE_ARTIFACT_DIR unset — printing compose ps inline"
@@ -254,8 +256,8 @@ log "repo: $APP_DIR   compose: $COMPOSE_FILE   target-sha: ${TARGET_SHA:-<none, 
 # --- 1. reconcile the box clone on `main` (one-shot api-service container, §E) ---
 # A SEPARATE ephemeral container reusing the api service (mounts, secrets,
 # GIT_SSH_COMMAND, network, baked safe.directory + identity). The live knowledge-api
-# is untouched. `--no-deps` never spins up `site`; `-T` disables the TTY (non-interactive
-# GHA/SSH context); `--name` sidesteps the api service's pinned container_name.
+# is untouched. `--no-deps` never spins up `web`/`postgres`; `-T` disables the TTY
+# (non-interactive GHA/SSH context); `--name` sidesteps the api's pinned container_name.
 log "reconciling box clone (one-shot container '$RECONCILE_CONTAINER' reusing the api service)"
 if ! dc run --rm -T --no-deps \
         --name "$RECONCILE_CONTAINER" \
@@ -267,24 +269,24 @@ if ! dc run --rm -T --no-deps \
     die "reconcile failed (see [reconcile] output above). The box clone was NOT moved backwards and NO rollback was performed. Fix forward: merge a corrected commit to origin/main and re-dispatch — the reconcile picks it up. If 'docker compose run' refused because the api service pins 'container_name: knowledge-api', apply the documented fallback (add 'image: knowledge-api:latest' to the api service + use 'docker run', see this script's header); S5 confirms the run path live."
 fi
 
-# --- 2. build + recreate BOTH services ---------------------------------------
-# Builds the api image, uses the pinned mkdocs image for `site`, recreates both
-# containers (uvicorn reloads against the reconciled bind-mounted code; the viewer
-# picks up the reconciled docs/).
-log "building + recreating both services (COMPOSE_BAKE=false docker compose up -d --build)"
+# --- 2. build + recreate the app services ------------------------------------
+# Builds the api + web images and recreates both containers (uvicorn reloads
+# against the reconciled bind-mounted code; the web app serves the rebuilt Next
+# standalone bundle). `postgres` comes up as the api's healthy-dependency.
+log "building + recreating the app services (COMPOSE_BAKE=false docker compose up -d --build)"
 dc up -d --build
 
-# --- 3. health-gate BOTH services --------------------------------------------
+# --- 3. health-gate BOTH app services ----------------------------------------
 gate_ok=1
-wait_healthy api  knowledge-api  || gate_ok=0
-wait_healthy site knowledge-site || gate_ok=0
+wait_healthy api knowledge-api || gate_ok=0
+wait_healthy web knowledge-web || gate_ok=0
 
 if (( gate_ok )); then
-    log "both services healthy — knowledge-api + knowledge-site are live"
+    log "both services healthy — knowledge-api + knowledge-web are live"
 else
     # --- 4. on failure: capture + fix-forward, NO rollback (§F v1) ------------
     capture_artifacts
-    die "health-gate FAILED for knowledge-api and/or knowledge-site. NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs api site${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
+    die "health-gate FAILED for knowledge-api and/or knowledge-web. NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs api web${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
 fi
 
-log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, site at knowledge-site:8000; edge re-apply is S3)."
+log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000; edge re-apply is S3)."

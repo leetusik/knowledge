@@ -201,15 +201,59 @@ S3 deploy + REVIEW) should build on:
 - **Validation:** `pnpm build` (`/` prerendered Static; app routes still Dynamic; SEO routes generated),
   `pnpm lint`, `pnpm typecheck` all clean; `/login //dashboard //signup` verified still working.
 
+## P14.S3 — deploy implementation notes (2026-07-18)
+
+The web app ships behind the edge; mkdocs retired; the BFF/FastAPI collision resolved. Facts REVIEW (and any
+future deploy slice) should build on:
+
+- **New artifacts:** `web/Dockerfile` (multi-stage `node:22-slim`, standalone; hi2vi pattern **minus** the
+  sharp/@img block — no `next/image`; only `NEXT_PUBLIC_APP_URL` is baked, the one `NEXT_PUBLIC_*` the app
+  has) + `web/.dockerignore`. **Verified end-to-end locally:** `docker build` clean (408 MB), container boots
+  (`node server.js` → Next 16.2.10 on `0.0.0.0:3000`), `GET /` and `/login` → 200, image HEALTHCHECK →
+  `healthy`. So the Dockerfile is proven, not just `pnpm build`-proven.
+- **compose:** added `web` (service key `web`, `container_name: knowledge-web`), `expose: 3000`, no host
+  ports, `depends_on: api service_healthy`, node-fetch healthcheck. **Removed the `site` (mkdocs) service.**
+  Runtime env: `KB_API_BASE_URL: http://knowledge-api:8000` literal + `SESSION_SECRET: ${SESSION_SECRET}`
+  **interpolated** (not `env_file: .env`) so the api's secrets never enter the web container. `api`,
+  `postgres`, `pgdata`, network unchanged.
+- **edge (`deploy/knowledge.conf`):** new `location /api/auth/` → `knowledge-web:3000` (more specific than
+  `/api/`, so it wins longest-prefix; FastAPI has no such route → nothing shadowed); `location /` →
+  `knowledge-web:3000` (was mkdocs). `/api/ //auth/ //app/ /= /healthz` → `knowledge-api` **unchanged** (P13
+  CLI contract). **All edge invariants preserved** (most-specific wins; hoisted `proxy_set_header` with NO
+  per-location set — the new location sets none too; `resolver` + variable `proxy_pass` for the web upstream;
+  no `default_server`/IPv6/`limit_req_zone`; CF real-IP; `client_max_body_size 5m`; api 120s). **No live
+  `nginx -t` claimed** — that gate is the box's `./deploy.sh`.
+- **Deploy-automation coupling (heads-up for REVIEW):** removing `site` from compose would have broken
+  `deploy/deploy.sh` — it health-gated `wait_healthy site knowledge-site`, which with the service gone returns
+  non-zero and **fails every automated `Production Deploy` with a false failure**. Fixed the gate + strings to
+  `knowledge-web`; also fixed stale service-name comments in `oracle-production-deploy-remote.sh` and
+  `.github/workflows/deploy-production.yml` (their functional smoke `/healthz` + `/` was already correct since
+  `/` now serves the Next app). This is beyond the plan's five enumerated files — a necessary consequence of
+  the mandated `site` removal (logged as a deviation in `result.md`).
+- **`KB_PUBLIC_BASE_URL` caveat (NOT changed, per plan — flagged only):** the api's 201 `url`
+  (`{base}/{project}/{date}-{slug}/`) used to render on mkdocs at `/`; the Next app has no such route, so the
+  link is now a dead page — **cosmetic** (docs read by id via api/app). Deferred to the prod cutover / a
+  future docs effort. Flagged in `compose.prod.yml` (comment beside `KB_PUBLIC_BASE_URL`), `deploy/README.md
+  §2`, and `result.md`.
+- **Operator gate:** the live edge apply is operator-run at REVIEW — `result.md` lists the box-side steps
+  (generate `SESSION_SECRET` into `.env`; `up -d --build` + `rm -sf site`; `scp knowledge.conf` +
+  `./deploy.sh`; smoke `/healthz` + `/`). This slice returns `done` (artifacts built + locally validated), not
+  `pending` — REVIEW should hold the operator-deploy gate for the whole phase.
+
 ## Doc impact (running list — REVIEW consolidates; do not version docs here)
 
 - `docs/current/frontend.md` — public landing + marketing surface (the `(marketing)` route group at `/`, the
   section components, the content-as-data copy layer); the additive marketing/band tokens (`--kb-band-*`,
   `--kb-accent-on-dark*`, `--color-on-dark-hint`, `--kb-shadow-card`, data-viz inks `--kb-ink-*`) + the
   tonal-band mechanic in the KB design-system section; the graph motif as a static reuse of the app renderer.
-- `docs/current/operations.md` — web Dockerfile / compose service / edge vhost, incl. the reworked edge
-  routing (`/` → landing, control-plane JSON kept; mkdocs site's new home) (closes the P14-deferred items).
-  [S3]
+- `docs/current/operations.md` — the web-app deploy: `web/Dockerfile` (multi-stage node:22-slim standalone)
+  + the `knowledge-web` compose service (`expose 3000`, no host port, `depends_on api healthy`,
+  `SESSION_SECRET` from the box `.env`, `KB_API_BASE_URL` literal) + the reworked edge vhost (`/api/auth/` →
+  knowledge-web BFF as a more-specific location; `/` → the Next app; `/api //auth //app /=/healthz` →
+  knowledge-api unchanged). **The mkdocs `site` service is RETIRED** (removed from compose + the edge; content
+  lives on as tenant #1's knowledge). Deploy-automation (`deploy.sh` + GHA + remote gate) now health-gates
+  `knowledge-web` instead of `knowledge-site`. New box secret `SESSION_SECRET` (operator-generated). The
+  `KB_PUBLIC_BASE_URL` dead-link caveat (cosmetic; deferred). Closes the P14-deferred web-deploy items. [S3]
 - `docs/current/decisions.md` — landing lives in the same `web/` app and **takes over `/`** (the root redirect
   is dropped); per the operator resolution the authenticated app **stays at its current paths** (no `/app`
   rebase — supersedes the design's decision #3), so nothing collides with the CLI's `/api //auth //app` edge

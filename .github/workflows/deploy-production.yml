@@ -3,8 +3,9 @@ name: Production Deploy
 # Manual, main-only production deploy of the full knowledge site (web UI + API) to the shared Oracle box
 # (P9). knowledge runs as a Docker co-tenant behind the standalone `edge` project; the deploy SSHes into
 # the box and runs deploy/oracle-production-deploy-remote.sh, which verifies + reconciles the
-# publish-on-write clone (/opt/knowledge), rebuilds + health-gates BOTH services (knowledge-api +
-# knowledge-site), and re-applies the edge vhost. Mirrors hi2vi_web's deploy-production.yml, isolated by
+# publish-on-write clone (/opt/knowledge), rebuilds + health-gates BOTH app services (knowledge-api +
+# knowledge-web; the mkdocs knowledge-site was retired in P14.S3), and re-applies the edge vhost.
+# Mirrors hi2vi_web's deploy-production.yml, isolated by
 # a distinct concurrency group (knowledge-deploy) and checkout path (/opt/knowledge). Never touches
 # hi2vi or changple. `workflow_dispatch` ONLY — the agent's constant publish-on-write pushes to `main`
 # must NEVER trigger a redeploy. First real run is P9.S5.
@@ -81,7 +82,7 @@ jobs:
             echo "external smoke failed: ${url} did not return 200" >&2
             return 1
           }
-          # Both public surfaces must return 200: the api health endpoint AND the site root (the web UI).
+          # Both public surfaces must return 200: the api health endpoint AND `/` (the Next web app).
           smoke_one https://knowledge.hi2vi.com/healthz
           smoke_one https://knowledge.hi2vi.com/
 
