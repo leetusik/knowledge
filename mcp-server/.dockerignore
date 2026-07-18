@@ -1,0 +1,14 @@
+# Lean the build context sent to the Docker daemon. The image COPYs only
+# pyproject.toml, uv.lock, and src/ — everything else here is build/test/editor
+# noise the image never needs.
+.venv
+__pycache__
+.pytest_cache
+tests
+.git
+.gitignore
+.env
+.env*
+.DS_Store
+*.egg-info
+README.md

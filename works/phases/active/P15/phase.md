@@ -195,6 +195,43 @@ Survey verified against the repo at decomposition time (2026-07-18):
   (id/rel_path addressing, slash preservation, char-cap truncation, XOR-before-upstream, 404, 401), all via
   `httpx.MockTransport`. Full suite: **10 passed** from `mcp-server/` (`uv run pytest -q`).
 
+### S3 containerized + edge-routed — what S4 must know (2026-07-18)
+
+- **Container/edge topology is live in config (not yet deployed).** The `knowledge-mcp` service
+  (`mcp-server/Dockerfile` → `compose.prod.yml`) serves the whole two-tool surface on ONE endpoint
+  `/mcp` + internal `GET /healthz` on port 9000. **Dual-reachable:** (a) internal
+  `http://knowledge-mcp:9000/mcp` over `changple_shared_network` by container name (no edge hop — the
+  OpenClaw prod path), and (b) public `https://knowledge.hi2vi.com/mcp` via the edge `location /mcp`
+  (`deploy/knowledge.conf`, SSE-safe). **S4's dual-path E2E runs against the DEPLOYED service** — S3
+  only authored + locally validated; the box cutover is the operator's manual Production Deploy.
+- **Deployed server is STATELESS** (`MCP_STATELESS_HTTP=1` on the compose service — decision realized
+  here). Both tools are pure per-call proxies; no session affinity. An `initialize` POST completes and
+  **closes** the stream (verified against the built container — no long-lived session, no hang), so an
+  E2E client connects, calls a tool, and disconnects per call. The edge stays SSE-safe regardless
+  (`proxy_buffering off` + 3600s timeouts) so a single streamed call is never buffered/cut — but note
+  **Cloudflare still caps the public path at ~100s**, which is why stateless was chosen.
+- **Auth on the wire, confirmed empirically.** `initialize` needs **NO** bearer (the MCP handshake is
+  unauthenticated — verified: a no-bearer `initialize` POST returns 200 with the server capabilities).
+  The **tool call** carries `Authorization: Bearer vk_…`, forwarded upstream to `/api/*` for corpus
+  scoping (S1/S2). S4's E2E asserts grounded, citable hits on both paths with a `vk_` key.
+- **Public liveness signal = bare `GET /mcp` → 406** (JSON-RPC body `"Client must accept
+  text/event-stream"`). This is what the deploy-workflow smoke asserts — a routed MCP-server response,
+  NOT a gateway 502/504. The MCP `/healthz` is **internal-only** (the api owns the public `= /healthz`;
+  the edge does NOT route MCP's healthz). S4's authenticated E2E is a SEPARATE check from this liveness
+  gate — don't fold the E2E into the deploy workflow.
+- **`X-Accel-Buffering: no`** is set by the MCP server itself on its SSE responses (observed) — the
+  edge's `proxy_buffering off` is the explicit, belt-and-suspenders complement. Not something S4 needs
+  to do, just context for why streaming works across the edge.
+- **`url` still empty corpus-wide** (the `_citation_url`/`source_url` seam, deferred D13) for BOTH
+  tools. S4's contract artifact should document `url` as "empty until `source_url` lands" so a consumer
+  treats empty as "no citation link," not an error; `fetch_document` also signals `{truncated,
+  total_chars}` (S2's char-cap).
+- **Image facts** (for S4 sanity / any local repro): `python:3.12-slim`, unprivileged (`uid 10001`),
+  `CMD ["knowledge-mcp"]`, image-native HEALTHCHECK (python `urllib` GET `/healthz` — reaches `healthy`
+  immediately, no startup reindex). Build: `docker build -t knowledge-mcp:test ./mcp-server`; run:
+  `docker run -e MCP_STATELESS_HTTP=1 -p 9000:9000 knowledge-mcp:test`. `serverInfo` advertises
+  `{name: knowledge, version: 1.28.1}` (the mcp SDK version).
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
@@ -249,3 +286,6 @@ one-line notes here; the review versions the docs (never per slice)._
 - (S1) **`search` tool contract** (durable, consumer-pinned): `search(query, project?, limit?)` → `{query, total, results[]}`, each hit `{title, snippet, url, id, rel_path}`; `snippet` has `<mark>`/`</mark>` stripped; `url` = the document's public citation origin, `""` for the whole current corpus until a future `source_url` data-model + ingester job populates it (deliberately NOT the login-gated web app or the retired mkdocs path).
 - (S2) **Second MCP tool `fetch_document(id | rel_path)`** (durable, consumer-pinned): given exactly one of `id`/`rel_path` → full markdown, **char-capped** (`MCP_FETCH_MAX_CHARS`, default 20000) with a truncation marker + `{truncated, total_chars}` signal. Response `{id, rel_path, title, project, date, tags, url, markdown, truncated, total_chars}`; `url` via the same `_citation_url` seam as search (empty for the whole corpus today). Proxies the frozen `GET /api/documents/{id}` + `GET /api/documents/by-path/{rel_path}`, forwarding the caller's `Authorization: Bearer vk_…` verbatim — same corpus scoping as search.
 - (S2) **`fetch_document` addressing = XOR** of `id`/`rel_path` (both-or-neither → tool error before any upstream call); error mapping `404 → "not found: no document with that id/rel_path"`, `401 → "unauthorized: missing/invalid bearer"` (shared with search; search's `400 → "bad search query"` unchanged).
+- (S3) **New `knowledge-mcp` compose service** (own `mcp-server/Dockerfile`, `expose 9000`, `changple_shared_network`, `KB_API_BASE_URL=http://knowledge-api:8000`, `MCP_STATELESS_HTTP=1`, image-native `/healthz` healthcheck, no secrets) — **dual-reachable**: internal `knowledge-mcp:9000` (no edge hop) + public `https://knowledge.hi2vi.com/mcp` — operations doc.
+- (S3) **Edge `location /mcp` → `knowledge-mcp:9000`, SSE-safe** (`proxy_buffering off`, `proxy_read_timeout`/`proxy_send_timeout 3600s`, inherited HTTP/1.1 keep-alive, variable `proxy_pass` for DNS re-resolution, NO per-location `proxy_set_header`); Cloudflare's ~100s origin cap → the deployed server runs **stateless** (both tools are per-call proxies, correct either way) — operations doc.
+- (S3) **Deploy machinery extended to the MCP surface**: `deploy.sh` health-gate now `wait_healthy mcp knowledge-mcp` (three services), and `deploy-production.yml`'s external smoke adds a public `/mcp` routed-liveness check (bare `GET /mcp` → 406 with a `jsonrpc` body, since the MCP `/healthz` is internal-only) — operations doc.

@@ -176,6 +176,50 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  mcp:
+    # The MCP-over-HTTP retrieval server (P15): the `search` + `fetch_document`
+    # tools on ONE Streamable-HTTP ASGI app at /mcp, plus GET /healthz. A THIN
+    # PROXY of the frozen /api/* — it reimplements no retrieval, forwards the
+    # caller's `Authorization: Bearer vk_…` upstream, and holds NO secrets (the only
+    # credential is that per-request inbound bearer). Built from its own
+    # self-contained image (mcp-server/Dockerfile — installs the knowledge_mcp
+    # package + its `knowledge-mcp` console script; NOT bind-mounted like the api).
+    # DUAL-REACHABLE: internally by container name (knowledge-mcp:9000, no edge hop —
+    # a co-tenant agent like OpenClaw reaches it here) AND publicly at
+    # https://knowledge.hi2vi.com/mcp (deploy/knowledge.conf `location /mcp`, P15.S3).
+    build:
+      context: ./mcp-server
+    container_name: knowledge-mcp  # fixed name — the edge proxies to it by name
+    environment:
+      # Server-to-server base URL of the api container the MCP tools proxy — the
+      # exact container-name-over-shared-network shape the web BFF uses above. NOT a
+      # secret; the tenant/project corpus scoping rides the forwarded inbound bearer.
+      KB_API_BASE_URL: http://knowledge-api:8000
+      # Run the Streamable-HTTP transport STATELESS on the box (P15.S3 decision).
+      # Both tools are pure per-call proxies (no session state to keep), and the
+      # PUBLIC path crosses Cloudflare's ~100s origin cap where a long-lived stateful
+      # SSE session stream is fragile — so stateless is correct, needs no session
+      # affinity, and is trivially scalable. The edge `location /mcp` stays SSE-safe
+      # regardless (proxy_buffering off + long timeouts) so a single tool call's
+      # streamed response is never buffered/cut. (S1 built this flag for exactly this.)
+      MCP_STATELESS_HTTP: "1"
+    # Documentary only (no publish) — the edge + co-tenant agents reach it over the
+    # shared network by container name (knowledge-mcp:9000), never a host port.
+    expose:
+      - "9000"
+    # Do not start the MCP server until the api it proxies to is healthy.
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - changple_shared_network
+    # Health is IMAGE-NATIVE (mcp-server/Dockerfile HEALTHCHECK: python urllib GET
+    # /healthz -> 200 — curl is absent in the slim image). The deploy health-gate
+    # (deploy/deploy.sh `wait_healthy mcp knowledge-mcp`) reads it via `docker
+    # inspect`; no compose override needed. /healthz is UNAUTHENTICATED + internal
+    # only (the api owns the public `= /healthz`); public liveness is proven on /mcp.
+    restart: unless-stopped
+
   postgres:
     # Durable control-plane datastore (accounts/tenancy/projects/credentials/
     # sessions) for the P10 two-plane app. Reached by the api BY CONTAINER NAME

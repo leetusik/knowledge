@@ -6,8 +6,8 @@ set -Eeuo pipefail
 # inputs (TARGET_SHA is a 40-hex SHA, REPO_PATH is a git checkout), hands off to knowledge's OWN
 # deploy/deploy.sh — which owns ALL authoritative git INSIDE its one-shot root container (on-`main`
 # check + dirty-tracked-worktree refusal + .git/index.lock wait + `git fetch --prune origin main` +
-# fail-closed TARGET_SHA ancestor-verify + publish-on-write ff/rebase reconcile, then both-service
-# build + health-gate; see phase.md §E/§F) — THEN re-applies the edge vhost (deploy/knowledge.conf ->
+# fail-closed TARGET_SHA ancestor-verify + publish-on-write ff/rebase reconcile, then three-service
+# build + health-gate (api + web + mcp); see phase.md §E/§F) — THEN re-applies the edge vhost (deploy/knowledge.conf ->
 # /home/opc/edge, the edge's own nginx -t gate + graceful reload), and collects artifacts.
 #
 # Why no git gate here (P9.F1): the authoritative fetch + ancestor-verify CANNOT run as `opc`. `origin`
@@ -116,7 +116,7 @@ main() {
   # to live here was removed: an opc-side fetch cannot authenticate (root-owned deploy key, no opc GitHub
   # key), so it would fail every deploy. TARGET_SHA is asserted 40-hex above, so deploy.sh's in-container
   # ancestor gate always fires. The git-before capture above is a best-effort artifact only.
-  log "Running deploy/deploy.sh (owns the authoritative reconcile: on-main check + dirty refusal + .git/index.lock wait + fetch origin/main + fail-closed TARGET_SHA ancestor-verify + ff/rebase, then both-service build + health-gate — all inside one root container)."
+  log "Running deploy/deploy.sh (owns the authoritative reconcile: on-main check + dirty refusal + .git/index.lock wait + fetch origin/main + fail-closed TARGET_SHA ancestor-verify + ff/rebase, then three-service build + health-gate (api + web + mcp) — all inside one root container)."
   set +e
   deploy/deploy.sh "${TARGET_SHA}" > >(tee "${REMOTE_ARTIFACT_DIR}/deploy-output.txt") \
     2> >(tee "${REMOTE_ARTIFACT_DIR}/deploy-error.txt" >&2)
@@ -130,9 +130,9 @@ main() {
     append_summary "- Result: deploy failed with status \`${deploy_status}\` (edge NOT re-applied)."
     exit "${deploy_status}"
   fi
-  append_summary "- Deploy: both services built + healthy."
+  append_summary "- Deploy: all three services built + healthy (knowledge-api + knowledge-web + knowledge-mcp)."
 
-  # Both containers are healthy — now cut the edge over to the reconciled vhost.
+  # All three containers are healthy — now cut the edge over to the reconciled vhost.
   if ! reapply_edge; then
     run_capture "git-after" "${GIT[@]}" status --short --branch
     append_summary "- Finished at: \`$(date -u '+%Y-%m-%dT%H:%M:%SZ')\`"
@@ -143,7 +143,7 @@ main() {
 
   run_capture "git-after" "${GIT[@]}" status --short --branch
   append_summary "- Finished at: \`$(date -u '+%Y-%m-%dT%H:%M:%SZ')\`"
-  append_summary "- Result: deploy completed successfully (both services healthy, edge routing live)."
+  append_summary "- Result: deploy completed successfully (all three services healthy, edge routing live)."
   log "Deploy completed successfully."
 }
 
