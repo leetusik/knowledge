@@ -1,0 +1,39 @@
+[project]
+name = "knowledge-mcp"
+version = "0.1.0"
+description = "MCP server exposing knowledge retrieval (search) as an agent tool over Streamable-HTTP, by proxying the frozen GET /api/search and forwarding the caller's vk_ bearer"
+requires-python = ">=3.12"
+dependencies = [
+    # Pinned deliberately: this slice's inbound-header accessor
+    # (ctx.request_context.request.headers) and streamable_http_app() were
+    # verified against exactly this release. Bump is a deliberate, re-verified
+    # change — not a floating range.
+    "mcp==1.28.1",
+    "httpx",
+    "uvicorn",
+]
+
+# The point of this package: a `knowledge-mcp` executable that serves the MCP
+# server over HTTP. Its own src-layout distribution mirrors `cli/` — the repo
+# root is a virtual project (`package = false`, no [build-system]), so this
+# service cannot hang off it and lives here in its own package. The folder is
+# `mcp-server/` (NOT `mcp/`): a top-level `mcp/` dir would shadow the installed
+# `mcp` SDK import when repo root is on sys.path (root pytest sets
+# pythonpath=["."]).
+[project.scripts]
+knowledge-mcp = "knowledge_mcp.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowledge_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

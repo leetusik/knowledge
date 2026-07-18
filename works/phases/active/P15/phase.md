@@ -129,6 +129,45 @@ Survey verified against the repo at decomposition time (2026-07-18):
   builds the retriever *surface* (free/internal dogfooding first); it does **not** build billing/plan
   gating — relevant to the D6 reconciliation (result.md).
 
+### S1 built the scaffold — what S2–S4 must know (2026-07-18)
+
+- **SDK pinned: `mcp==1.28.1`** (latest release; hard `==` pin in `mcp-server/pyproject.toml`, captured
+  in `mcp-server/uv.lock`). The inbound-header accessor and `streamable_http_app()` were verified against
+  exactly this release. A bump is a deliberate, re-verified change.
+- **Inbound-bearer accessor — CONFIRMED, no workaround needed.** Inside a FastMCP tool, add a
+  `ctx: Context` param; under Streamable-HTTP, `ctx.request_context.request` is the Starlette `Request`
+  for the POST that carried the tool call (the transport builds it at `mcp/server/streamable_http.py` and
+  threads it via `RequestContext.request` → low-level server → `Context.request_context.request`). So
+  `ctx.request_context.request.headers.get("authorization")` is the caller's inbound header. See
+  `server.py:_inbound_authorization`. **S2's `fetch_document` reuses this same accessor + forward pattern.**
+- **MCP endpoint path is `/mcp`** (FastMCP default `streamable_http_path`); unauthenticated liveness at
+  **`GET /healthz`** (registered via `@mcp.custom_route`, which is auth-exempt by design). **S3's container
+  healthcheck + edge gate point at `/healthz`; the edge `location` for MCP proxies `/mcp`.**
+- **Transport/statefulness.** Default **stateful** Streamable-HTTP with SSE streaming (`stateless_http`
+  default False) — matches the phase's "Streamable-HTTP/SSE" framing and S3's SSE-safe edge work; a
+  single-container deploy gives automatic session affinity. A `MCP_STATELESS_HTTP=1` env flag
+  (`config.stateless_http()`) flips to stateless if S3/S4 find edge session-stickiness painful — the
+  `search` tool is a pure per-call proxy, correct either way. **Multi-replica scaling under stateful mode
+  would need sticky sessions or an event store — a note for S3/S4, not built here.**
+- **Run commands (dev):** from `mcp-server/`, `uv run knowledge-mcp` (serves on `MCP_HOST:MCP_PORT`,
+  default `0.0.0.0:9000`, MCP at `/mcp`) and `uv run pytest`. Config seam (`config.py`): `KB_API_BASE_URL`
+  (dev `http://localhost:8000`; **S3 sets prod `http://knowledge-api:8000`**), `KB_PUBLIC_BASE_URL`
+  (reserved, unused), `MCP_HOST`, `MCP_PORT`, `MCP_STATELESS_HTTP`.
+- **`url` seam for S4/`source_url` job.** `server.py:_citation_url(result)` is the single place citation
+  URLs are derived; it reads a reserved `source_url` field that today's `/api/search` response does not
+  carry, so it returns `""` for the whole corpus now. The future `source_url` data-model + ingester job
+  (deferred) only needs to populate that field upstream and (if the origin isn't literally in the search
+  result) extend this one helper. **S4's contract artifact should document `url` as "empty until
+  `source_url` lands" so OpenClaw treats an empty `url` as "no citation link," not an error.**
+- **Upstream error mapping (reuse in S2).** `upstream.UpstreamError(status, detail)` (FastAPI-`detail`
+  extraction, never a raw body) → `server._tool_error`: 401 → "unauthorized: missing/invalid bearer",
+  400 → "bad search query: {detail}", other non-2xx → generic. FastMCP re-wraps any raised exception as a
+  `ToolError` with an "Error executing tool …" prefix, so the message text is preserved to the client.
+- **Test isolation.** `mcp-server/` has its own `pyproject.toml` pytest config (`testpaths=["tests"]`),
+  like `cli/`; the **root** pytest (`pyproject.toml`: `testpaths=["tests"]`, `pythonpath=["."]`) does NOT
+  collect `mcp-server/tests`, and the `mcp-server/` folder name (not `mcp/`) keeps `import mcp` on the
+  root path resolving to the SDK. Run S1's tests from `mcp-server/` with `uv run pytest`.
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
@@ -177,4 +216,7 @@ _For the implementation slices to resolve and record; not blockers to decomposit
 _Running list of durable-truth changes for the P15 review to consolidate into doc versions. Slices append
 one-line notes here; the review versions the docs (never per slice)._
 
--
+- (S1) New agent-facing product surface: an **MCP-over-HTTP retrieval service**. SDK = official `mcp` (FastMCP) with the **Streamable-HTTP** transport (MCP endpoint `/mcp`), served by uvicorn — durable architecture doc.
+- (S1) **Proxy-and-forward-bearer architecture**: the MCP server reimplements no retrieval — it proxies the frozen `GET /api/search` and forwards the caller's `Authorization: Bearer vk_…` verbatim, so tenant/project corpus scoping is inherited from `server/api_auth.py` with no new auth code. Sits *alongside* `/api/*`, never modifies it.
+- (S1) New **package boundary**: `mcp-server/` (own pyproject, hatchling src-layout, package `knowledge_mcp`), mirroring the `cli/` precedent. Folder is `mcp-server/` (NOT `mcp/`) so it never shadows the installed `mcp` SDK when repo root is on `sys.path`.
+- (S1) **`search` tool contract** (durable, consumer-pinned): `search(query, project?, limit?)` → `{query, total, results[]}`, each hit `{title, snippet, url, id, rel_path}`; `snippet` has `<mark>`/`</mark>` stripped; `url` = the document's public citation origin, `""` for the whole current corpus until a future `source_url` data-model + ingester job populates it (deliberately NOT the login-gated web app or the retired mkdocs path).

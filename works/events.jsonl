@@ -465,3 +465,6 @@
 {"ts": "2026-07-18T10:33:29+09:00", "type": "deferred_dropped", "deferred": "D6", "reason": "Superseded by P15 (Agent-facing retrieval MCP service). P15 builds the external-agent retriever surface D6 anticipated — an MCP search/fetch_document service over Streamable-HTTP, vk_-scoped per project, dual-reachable (internal service-name + public edge). The retriever interface now exists. D6's remaining aspect — actually charging for it (a paid plan / gating the MCP surface) — is a separate business + billing decision P15 does not build; the P11 usage-event metering is the substrate for it when the operator introduces a paid plan. That monetization step is re-captured as a new, narrower deferred job."}
 {"ts": "2026-07-18T10:33:33+09:00", "type": "deferred_created", "deferred": "D12", "source": "P15.DECOMP"}
 {"ts": "2026-07-18T10:33:36+09:00", "type": "slice_status_changed", "slice": "P15.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-18T10:58:25+09:00", "type": "slice_status_changed", "slice": "P15.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-18T11:09:24+09:00", "type": "slice_status_changed", "slice": "P15.S1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-18T11:09:37+09:00", "type": "deferred_created", "deferred": "D13", "source": "P15.S1"}
