@@ -168,6 +168,33 @@ Survey verified against the repo at decomposition time (2026-07-18):
   collect `mcp-server/tests`, and the `mcp-server/` folder name (not `mcp/`) keeps `import mcp` on the
   root path resolving to the SDK. Run S1's tests from `mcp-server/` with `uv run pytest`.
 
+### S2 added `fetch_document` — what S3–S4 must know (2026-07-18)
+
+- **Two tools now on the one ASGI app.** `search` **and** `fetch_document` both register (`@mcp.tool`)
+  before `server.app = mcp.streamable_http_app()` is built, so both are served on the single `/mcp`
+  endpoint. **S3 containerizes + edge-routes the whole two-tool surface behind `/mcp`** — no per-tool
+  routing, no new endpoint. `mcp.list_tools()` → `['fetch_document', 'search']` (verified).
+- **Fetch endpoint mapping (for S4's contract artifact).** `fetch_document(id)` → `GET /api/documents/{id}`;
+  `fetch_document(rel_path)` → `GET /api/documents/by-path/{rel_path}` (the by-path URL is built by direct
+  concatenation, so httpx preserves the `project/YYYY-MM-DD-slug.md` slashes). Both **404 for a missing
+  OR cross-tenant** id/path (existence never leaks) and **401 for a bad bearer** — same forward-the-inbound-
+  bearer corpus scoping as `search`; `/api/*` untouched.
+- **Truncation knob.** `config.FETCH_MAX_CHARS` (module constant, read once at import from
+  `MCP_FETCH_MAX_CHARS`, default **20000 chars**; new `_env_int` helper). Body is capped by **characters**
+  (predictable token budgeting); over-cap → first N chars + marker `\n\n…[truncated: showing N of TOTAL
+  characters]`, `{truncated: true, total_chars: <original length>}`. S3 can keep the default; **S4's contract
+  should document `truncated`/`total_chars`** so consumers know a `markdown` body may be partial and can
+  narrow via `search`.
+- **Shared error mapper.** `server._tool_error(exc, *, kind="search"|"fetch")` — one function keyed by tool.
+  `401` maps identically for both; `fetch` adds `404 → "not found"`. `search`'s mapping is unchanged (its
+  call site still uses the default kind). S4/S3 reuse this if they add tools.
+- **`url` still empty for fetch too** — same `_citation_url` seam as search (returns `""` for the whole
+  corpus). S4's contract should state `url` is "empty until `source_url` lands" for **both** tools; deferred
+  D13 populates it.
+- **Tests.** 6 terse `fetch_document` cases added to the single `mcp-server/tests/test_search_tool.py`
+  (id/rel_path addressing, slash preservation, char-cap truncation, XOR-before-upstream, 404, 401), all via
+  `httpx.MockTransport`. Full suite: **10 passed** from `mcp-server/` (`uv run pytest -q`).
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
@@ -220,3 +247,5 @@ one-line notes here; the review versions the docs (never per slice)._
 - (S1) **Proxy-and-forward-bearer architecture**: the MCP server reimplements no retrieval — it proxies the frozen `GET /api/search` and forwards the caller's `Authorization: Bearer vk_…` verbatim, so tenant/project corpus scoping is inherited from `server/api_auth.py` with no new auth code. Sits *alongside* `/api/*`, never modifies it.
 - (S1) New **package boundary**: `mcp-server/` (own pyproject, hatchling src-layout, package `knowledge_mcp`), mirroring the `cli/` precedent. Folder is `mcp-server/` (NOT `mcp/`) so it never shadows the installed `mcp` SDK when repo root is on `sys.path`.
 - (S1) **`search` tool contract** (durable, consumer-pinned): `search(query, project?, limit?)` → `{query, total, results[]}`, each hit `{title, snippet, url, id, rel_path}`; `snippet` has `<mark>`/`</mark>` stripped; `url` = the document's public citation origin, `""` for the whole current corpus until a future `source_url` data-model + ingester job populates it (deliberately NOT the login-gated web app or the retired mkdocs path).
+- (S2) **Second MCP tool `fetch_document(id | rel_path)`** (durable, consumer-pinned): given exactly one of `id`/`rel_path` → full markdown, **char-capped** (`MCP_FETCH_MAX_CHARS`, default 20000) with a truncation marker + `{truncated, total_chars}` signal. Response `{id, rel_path, title, project, date, tags, url, markdown, truncated, total_chars}`; `url` via the same `_citation_url` seam as search (empty for the whole corpus today). Proxies the frozen `GET /api/documents/{id}` + `GET /api/documents/by-path/{rel_path}`, forwarding the caller's `Authorization: Bearer vk_…` verbatim — same corpus scoping as search.
+- (S2) **`fetch_document` addressing = XOR** of `id`/`rel_path` (both-or-neither → tool error before any upstream call); error mapping `404 → "not found: no document with that id/rel_path"`, `401 → "unauthorized: missing/invalid bearer"` (shared with search; search's `400 → "bad search query"` unchanged).

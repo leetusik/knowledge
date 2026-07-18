@@ -33,6 +33,22 @@ def _env(name: str, default: str) -> str:
     return value if value is not None and value != "" else default
 
 
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(_env(name, str(default)))
+    except ValueError:
+        return default
+
+
+# `fetch_document` full-markdown cap. The body is text, so we cap by CHARACTERS
+# (predictable for an agent's token budgeting). Over the cap, `fetch_document`
+# returns the first `FETCH_MAX_CHARS` chars + a truncation marker and signals
+# `{truncated: true, total_chars}`; the default ~5–6k tokens covers the current
+# "explained-for-beginners" corpus while bounding an agent's context spend.
+# `MCP_FETCH_MAX_CHARS` overrides it (read once at import, like the other caps).
+FETCH_MAX_CHARS = _env_int("MCP_FETCH_MAX_CHARS", 20000)
+
+
 def api_base_url() -> str:
     """Base URL of the frozen knowledge REST API the tools proxy.
 

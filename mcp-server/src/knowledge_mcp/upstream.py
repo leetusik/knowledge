@@ -1,6 +1,7 @@
-"""Thin async httpx proxy over the frozen ``GET /api/search``.
+"""Thin async httpx proxy over the frozen read endpoints (``GET /api/search`` and
+the single-document reads ``GET /api/documents/{id}`` / ``.../by-path/{rel_path}``).
 
-This is the whole "proxy-and-forward-bearer" architecture in one function: the
+This is the whole "proxy-and-forward-bearer" architecture in a couple of functions: the
 caller's inbound ``Authorization`` header is forwarded **verbatim** upstream, so
 the existing ``server/api_auth.py`` resolver scopes the corpus to the bearer's
 tenant/project with no new auth code here. Nothing is stored — the header lives
@@ -98,6 +99,59 @@ async def search(
         transport=transport,
     ) as client:
         response = await client.get("/api/search", params=_params(q=q, project=project, limit=limit))
+
+    if response.status_code >= 400:
+        raise UpstreamError(response.status_code, _detail(response))
+    try:
+        return response.json()
+    except ValueError:
+        raise UpstreamError(response.status_code, "upstream response was not JSON") from None
+
+
+async def fetch_document(
+    *,
+    base_url: str,
+    authorization: str | None,
+    id: int | None = None,
+    rel_path: str | None = None,
+    timeout: float = 15.0,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, Any]:
+    """``GET`` one document from the frozen API, inbound bearer forwarded verbatim.
+
+    Addresses by ``id`` (int) → ``GET /api/documents/{id}`` or by ``rel_path``
+    (str) → ``GET /api/documents/by-path/{rel_path}``. The path is built by direct
+    concatenation like ``cli/knowledge_cli/client.py:document_get_by_path`` — httpx
+    keeps the ``/`` separators, which the upstream ``{rel_path:path}`` converter
+    expects. Returns the parsed doc JSON (``markdown`` **included**).
+
+    Exactly one of ``id``/``rel_path`` must be given; the caller
+    (``server.run_fetch_document``) enforces that XOR before this is reached. Same
+    proxy conventions as :func:`search`: forwarded header, ``follow_redirects=
+    False``, non-2xx → :class:`UpstreamError`. Upstream returns **404** for a
+    missing id/path **and** a cross-tenant one (existence never leaks), **401** for
+    a missing/invalid bearer.
+    """
+
+    if id is not None:
+        path = f"/api/documents/{id}"
+    elif rel_path is not None:
+        path = f"/api/documents/by-path/{rel_path}"
+    else:  # defensive — the caller validates XOR first
+        raise ValueError("fetch_document requires exactly one of id or rel_path")
+
+    headers = {"User-Agent": USER_AGENT}
+    if authorization:
+        headers["Authorization"] = authorization
+
+    async with httpx.AsyncClient(
+        base_url=base_url.rstrip("/"),
+        timeout=timeout,
+        follow_redirects=False,
+        headers=headers,
+        transport=transport,
+    ) as client:
+        response = await client.get(path)
 
     if response.status_code >= 400:
         raise UpstreamError(response.status_code, _detail(response))
