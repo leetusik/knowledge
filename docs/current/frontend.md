@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0005
-created_at: 2026-07-17T15:00:38+09:00
-source: P12.REVIEW
-summary: P12 authenticated web app in web/ (Next.js, KB design system, sealed-cookie BFF, four surfaces)
-previous: v0004_p6.s1_renderer_revision_live-model_port_persistent_raf_4_tokens_is-on_lens_retuned_sim_smarter_seeding_sessionstorage_restore_docs_describe_publish-safety_without_the_literal_path_token
+version: v0006
+created_at: 2026-07-18T09:47:52+09:00
+source: P14.REVIEW
+summary: P14 public marketing landing at / in web/ via the Claude Design gate (round 01)
+previous: v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces
 ---
 
 # Frontend
@@ -31,6 +31,16 @@ v4 `@theme` tokens + a portable `.kb-*` console layer, a **sealed-cookie server-
 BFF**, and four authenticated surfaces (tenant dashboard, project detail, documents
 browse/search/read, in-app knowledge graph). See *The authenticated web app (`web/`,
 P12)* below.
+
+**As of P14 that same `web/` app also carries the public marketing landing at `/`** —
+the product's first real landing page, designed through a **Claude Design gate** (round
+01) and built AS-IS from the returned `build-prompt.md` contract. It reclaims `/` from
+the old `page.tsx` redirect via a public, indexable `(marketing)` route group, renders
+nine sections in a light/dark tonal-band rhythm reusing the KB design system, and adds
+the SEO file routes (`sitemap`/`robots`/`manifest`). The mkdocs site above is being
+**retired from the hosted edge** in P14 (see operations) — so `web/` becomes the single
+front end on `knowledge.hi2vi.com`. See *The public marketing landing (`web/`, P14)*
+below.
 
 ## Stack
 
@@ -420,3 +430,120 @@ graph. All web-UI features are free. The app is a session-token client of `/auth
   `.kb-prose` reader block (S5) and the `--kb-graph-*` token layer (S6); both compose only on
   the KB `--kb-*` palette. A future design pass (P14 or a design round) may formalize a reader
   spec + a graph spec.
+
+## The public marketing landing (`web/`, P14)
+
+P14 ships the product's **public marketing landing at `/`** inside the same `web/` app,
+designed through a **Claude Design gate** (round 01) and implemented AS-IS from the
+returned contract. It is the third front-end surface (after the mkdocs site and the P12
+authenticated console), and it reuses the KB design system rather than introducing a new
+one — no new brand, no second button/token system.
+
+### The design gate (round 01) — provenance
+
+- The visual language is the operator's, produced in the *Knowledge Base Design System*
+  Claude Design project (`marketing/` group, 12 cards: Foundations 2 · Landing 9 ·
+  Components 1). The agent authored **only** `handoff.md`, held a hard `pending` gate,
+  read the returned cards back with DesignSync, **landed the design AS-IS**, and built
+  from it — no mockups, palettes, or type scales of its own (the design provenance ADR is
+  in decisions).
+- The design record is kept read-only under **`web/design/rounds/01-landing/`**:
+  `handoff.md` (out), `SIGNOFF.md`, and `output/` (`result.md`, `build-prompt.md`,
+  `tokens.css`, `marketing.css`). **`build-prompt.md` is the implementation contract**
+  (verbatim copy, section specs, band order, a11y floor); the two `.css` files are
+  read-only *reference*, rebuilt as Tailwind utilities in the app, **not** ported.
+
+### Route takeover of `/` (the `(marketing)` route group)
+
+- `/` now resolves to a public, indexable **`(marketing)` route group**
+  (`src/app/(marketing)/{layout,page}.tsx`). The old `src/app/page.tsx` root redirect
+  (`redirect(token ? /dashboard : /login)`) was **deleted** — two `page.tsx` cannot both
+  resolve to `/` — so the landing owns `/` directly. `layout.tsx` carries the scheme
+  root, a skip-to-content link, the indexable marketing metadata (title/description/OG,
+  canonical `/`), and imports the marketing CSS; `page.tsx` composes the sections
+  top→bottom.
+- The **authenticated app is untouched** at `/dashboard`, `/graph`, `/documents`,
+  `/projects`, `/login`, `/signup`; the BFF `/api/auth/*` and `KB_API_BASE_URL` are
+  unchanged. CTAs point at the app's **real** paths — "Sign in"/"Open the app" →
+  `/login`, "Get started (— free)" → `/signup` (the operator's routing resolution, not
+  the design's `/app`; the visual design is unchanged, only the link targets shift). The
+  guide/CLI/Claude-Code/waitlist CTAs point at the **live GitHub repo** (`…/leetusik/
+  knowledge` — `cli` README = guide, `cli#install`, `plugin` README = connect, repo home
+  = the deferred-API roadmap), because the mkdocs docs site that used to serve `/` is
+  being retired.
+- **SEO file routes** added (`src/app/{sitemap,robots,manifest}.ts`): the landing indexes;
+  the app/auth/BFF paths are disallowed in `robots`. `NEXT_PUBLIC_APP_URL` supplies the
+  canonical/OG origin (baked at build in prod; a dev fallback of the request host).
+
+### The nine sections + content-as-data
+
+- **Section components** live under `src/components/marketing/` (separate from
+  `app-shell/`): `marketing-header` (sticky-scroll island), `hero`, `value-triad`
+  (what-it-is), `how-it-works`, `feature-save`, `feature-connect`, `feature-graph`,
+  `pricing`, `final-cta`, `footer`, plus shared `primitives.tsx` (Band/Container/Eyebrow/
+  Ticks/Chip/CtaLink/RichText), `terminal.tsx`, `graph-motif.tsx`, and `marketing.css`.
+  Sections are server components; the only client islands are the header (scroll state),
+  the graph motif (canvas), and the existing `<Reveal>`.
+- **Copy lives as data** under `src/content/marketing/` (`links.ts`, `content.ts`,
+  `terminals.ts`, `graph-motif.ts`, `index.ts`), extending the app's `@/content` pattern.
+  Copy is **verbatim** from `build-prompt.md §4` — never invented (see the copy-fidelity
+  note below).
+- **Band order (top→bottom):** hero (dark) → what-it-is (paper) → how-it-works (sunken) →
+  save (paper) → connect (dark) → graph (paper, recessed plate) → pricing (paper) → final
+  CTA (dark) → footer (deep). Pricing is a **Free ($0/forever)** card beside an **"Agent
+  Retrieval API — Coming"** waitlist tier (honest free-only launch; the paid retriever is
+  deferred to P15).
+
+### Additive marketing/band tokens + the tonal-band mechanic
+
+- The `build-prompt §1` band set landed **additive** in `globals.css @theme`:
+  `--color-on-dark-hint`, `--kb-band-dark/-soft/-deep`, `--kb-border-on-dark(-strong)`,
+  `--kb-accent-on-dark(/-strong/-soft)`, `--kb-shadow-card`, and the data-viz inks
+  `--kb-ink-{teal,bronze,plum}(-dark)`. **No locked `--kb-*` token was renamed or
+  revalued;** the already-staged marketing scale / `--color-on-dark(-muted)` /
+  `--color-on-primary` / spacing / container / radius / `[data-reveal]` layer are reused
+  as-is.
+- The **tonal-band mechanic** is a scoped cascade, not a scheme flip: within
+  `.mkt-band--dark`/`--deep` (`marketing.css`), the app's **semantic** accent aliases
+  `--color-green*` (+ `--color-on-primary` → dark ink) are re-pointed to the
+  `--kb-accent-on-dark*` tier and the `--mkt-*` text/border helpers to the on-dark tiers.
+  So the **reused CVA pill button** (`components/ui/button.tsx`, `secondaryOnDark` on dark
+  bands) and the global focus ring auto-step to the on-dark teal — no second button
+  system.
+- **Both schemes, no in-page toggle** (matching the app's per-route fixed-scheme
+  pattern): the marketing root follows OS `prefers-color-scheme` via a pre-paint inline
+  script (SSR default = light `default`); the dark bands are scheme-independent, so the
+  light/dark rhythm holds for every visitor.
+
+### The graph motif (static reuse of the app renderer)
+
+- `components/marketing/graph-motif.tsx` is a **faithful static canvas** that reuses the
+  drawing grammar of `(app)/graph/graph-canvas.tsx` (node + cutout-rim, hollow tag ring,
+  dashed ghost, related edge with arrowhead, focus halo, offset selection ring, haloed
+  label) and the same live token read (`getComputedStyle` of the scheme-resolved
+  `--mkt-ink-*`/`--mkt-graph-*` inks) — but **posed to the one designed composition**
+  rather than run through the live force sim. It does NOT import the live renderer or its
+  `(app)` CSS/data types; it draws once and redraws on resize + scheme change (no rAF
+  loop, no interaction, no persistence). The info panel + legend are JSX overlays on the
+  recessed `--kb-surface-sunken` plate.
+
+### Copy-fidelity note (a design-round gap, not a defect)
+
+`build-prompt §4` quotes verbatim ledes for hero / what-it-is / pricing / final-CTA (which
+ship as prose), but for the three mid-feature sections (save / connect / graph) and the
+how-it-works steps it **names the topic without quoting lede text**. Honoring the "copy is
+real, never invented" design rule, those sections render their heading + the verbatim §4
+ticks/tokens + the visual, with **no fabricated lede** — every designed *structural*
+element ships. This is a copy-round gap, not a dropped design element; the exact lede/step
+text drops into `content/marketing/content.ts` when the operator or a copy round supplies
+it (**deferred job D10**).
+
+### Conventions (P14 landing)
+
+- Reuse the KB design system; add **no new brand**, no second button/token system — new
+  tokens are additive and no locked `--kb-*` value changes.
+- Copy is **verbatim from the design contract** — never invent lede/marketing prose.
+- Respect the design AS-IS — no dropped/simplified/"improved" designed element; the only
+  non-visual deviation is the operator's CTA-target routing (`/login`/`/signup`).
+- The design record under `web/design/rounds/01-landing/` is **read-only** provenance, not
+  a live source; the app is the built truth.

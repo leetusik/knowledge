@@ -1,0 +1,11 @@
+{
+  "id": "D10",
+  "title": "Landing feature-section lede copy",
+  "status": "deferred",
+  "source": "P14.REVIEW",
+  "reason": "build-prompt quoted no lede for feature/how-it-works; copy must come from the operator or a copy round, not invented",
+  "trigger": "operator provides copy / next design round",
+  "created_at": "2026-07-18T09:46:25+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
