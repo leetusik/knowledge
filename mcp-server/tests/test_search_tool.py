@@ -129,7 +129,10 @@ def test_app_builds_and_healthz_ok():
     with TestClient(server.app) as client:
         resp = client.get("/healthz")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    body = resp.json()
+    assert body["status"] == "ok"
+    # /healthz surfaces the consumer-pinned contract version (S4, CONTRACT.md).
+    assert body["contract_version"] == server.config.CONTRACT_VERSION == "1"
 
 
 # --- fetch_document (S2) -----------------------------------------------------

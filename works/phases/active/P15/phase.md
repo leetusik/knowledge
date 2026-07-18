@@ -232,6 +232,63 @@ Survey verified against the repo at decomposition time (2026-07-18):
   `docker run -e MCP_STATELESS_HTTP=1 -p 9000:9000 knowledge-mcp:test`. `serverInfo` advertises
   `{name: knowledge, version: 1.28.1}` (the mcp SDK version).
 
+### S4 pinned the contract + ran the first-consumer E2E — what the REVIEW must know (2026-07-18)
+
+- **Contract v1 is now an explicit in-repo artifact: `mcp-server/CONTRACT.md`.** It pins
+  transport (Streamable-HTTP `/mcp`), dual reachability (internal `knowledge-mcp:9000` +
+  public `https://knowledge.hi2vi.com/mcp`), auth (`Authorization: Bearer` header,
+  forwarded verbatim; `initialize` needs none, tool calls do), the **full input/output
+  schema of both tools** (drawn from the S1/S2/S3 notes above, not re-derived), corpus
+  scoping, and the versioning rules. It is the handshake surface hi2vi P18.S5 targets.
+  Nothing about the tools or `/api/*` changed — S4 only **formalized + validated** the
+  finished S1–S3 surface.
+- **Versioning decision (v1, additive-only).** `CONTRACT_VERSION = "1"` (in `config.py`),
+  surfaced at `GET /healthz` → `{"status":"ok","service":"knowledge","contract_version":"1"}`.
+  Additive changes (a new tool, a new optional param, a new output field — e.g. `url`
+  becoming populated when D13 lands) stay v1; a breaking change (removed/renamed
+  tool/field, changed type, changed auth) bumps it. Explicitly distinct from MCP
+  `serverInfo.version` (= the `mcp` SDK release `1.28.1`) — the artifact says so.
+- **Corpus-scoping Open Question RESOLVED (no operator input needed).** A `vk_` scopes
+  search to the **whole tenant's** corpus (`server/main.py` uses `ctx.tenant_id`, not the
+  key's bound project), so **one tenant-scoped hi2vi `vk_` already sees both `hi2vi` and
+  `hi2vi_web`**; the `search` `project` param narrows. No two-key scheme. The actual key
+  provisioning is hi2vi P18.S5 / the operator's job.
+- **The one uncertain client API — RESOLVED and documented.** In `mcp==1.28.1` the
+  Streamable-HTTP transport's `headers=`/`auth=` params are **deprecated and ignored**
+  (they never reach the wire). The bearer must be set on the underlying
+  `httpx.AsyncClient` via `streamablehttp_client(url, httpx_client_factory=…)`.
+  **GOTCHA (verified empirically):** the plan's suggested
+  `partial(create_mcp_http_client, headers={...})` **silently drops the auth** — the
+  transport calls the factory with `headers=None`, and functools.partial's call-time
+  keyword *overrides* the bound one. The working path is a **custom factory that MERGES**
+  `Authorization` into whatever headers it is handed (`e2e_smoke.py:_bearer_factory`).
+  Note also `streamablehttp_client` itself is `@deprecated` (typing-only marker, no
+  runtime warning) in favor of `streamable_http_client`; the deprecated wrapper still
+  works and is fine for a smoke — a future SDK bump may need the new entry point.
+- **E2E run locally — PASSED (direct path).** Stack: legacy-mode api
+  (`uvicorn server.main:app`, no `DATABASE_URL`, `KB_API_TOKEN=<t>`, `KB_GIT_COMMIT=false`,
+  a scratch `KB_ROOT`) with one POSTed doc → mcp server
+  (`KB_API_BASE_URL=http://127.0.0.1:8000 MCP_STATELESS_HTTP=1 uv run knowledge-mcp`,
+  binds `0.0.0.0:9000`) → `python mcp-server/scripts/e2e_smoke.py --url
+  http://127.0.0.1:9000/mcp --key <t> --query retrieval`. Result: `PASS` — `initialize`
+  (serverInfo `knowledge 1.28.1`), `list_tools` → both tools, `search` → 1 grounded hit
+  `{title, snippet, url, id, rel_path}`, `fetch_document(id)` → markdown returned.
+  Search ran in **bm25 mode** (no Gemini key locally — hybrid vector signal is absent but
+  irrelevant to the chain proof). The MCP layer forwards *any* bearer, so legacy+master is
+  a faithful proof of the client→mcp→api→hit chain; the true `vk_` tenant scoping is
+  already proven by `scripts/onboarding_smoke.py` + S1/S2's forward-bearer design.
+- **What remains for the operator (post-deploy).** The public-path + real-hi2vi-`vk_` run
+  is operator post-deploy verification: after the manual Production Deploy of the
+  `knowledge-mcp` container + edge routing (S3), re-run the SAME `e2e_smoke.py` against
+  `https://knowledge.hi2vi.com/mcp` with a real hi2vi `vk_` key. This slice deliberately
+  did **not** reach the box. Also outstanding: **D13** (populate `url` via `source_url`;
+  empty `url` today is contract-documented as "no citation link, not an error") and the
+  final hi2vi `vk_` provisioning (P18.S5).
+- **Scope kept tight.** No tool/schema change, no `/api/*` touch (frozen), no deploy. Only
+  additions: `mcp-server/CONTRACT.md`, `mcp-server/scripts/e2e_smoke.py`, the `/healthz`
+  `contract_version` + `CONTRACT_VERSION` constant, and one terse test assertion. Full
+  mcp-server suite: **10 passed** (`cd mcp-server && uv run pytest -q`).
+
 ## Constraints
 
 - **`/api/*` is frozen** — additive-only, consumed elsewhere. The MCP server wraps it; it never changes
@@ -289,3 +346,6 @@ one-line notes here; the review versions the docs (never per slice)._
 - (S3) **New `knowledge-mcp` compose service** (own `mcp-server/Dockerfile`, `expose 9000`, `changple_shared_network`, `KB_API_BASE_URL=http://knowledge-api:8000`, `MCP_STATELESS_HTTP=1`, image-native `/healthz` healthcheck, no secrets) — **dual-reachable**: internal `knowledge-mcp:9000` (no edge hop) + public `https://knowledge.hi2vi.com/mcp` — operations doc.
 - (S3) **Edge `location /mcp` → `knowledge-mcp:9000`, SSE-safe** (`proxy_buffering off`, `proxy_read_timeout`/`proxy_send_timeout 3600s`, inherited HTTP/1.1 keep-alive, variable `proxy_pass` for DNS re-resolution, NO per-location `proxy_set_header`); Cloudflare's ~100s origin cap → the deployed server runs **stateless** (both tools are per-call proxies, correct either way) — operations doc.
 - (S3) **Deploy machinery extended to the MCP surface**: `deploy.sh` health-gate now `wait_healthy mcp knowledge-mcp` (three services), and `deploy-production.yml`'s external smoke adds a public `/mcp` routed-liveness check (bare `GET /mcp` → 406 with a `jsonrpc` body, since the MCP `/healthz` is internal-only) — operations doc.
+- (S4) **Stable contract v1** for the knowledge MCP service (tools `search` + `fetch_document`, Streamable-HTTP `/mcp`, `Authorization: Bearer <key>` auth, dual reachability), pinned in `mcp-server/CONTRACT.md` — the in-repo handshake surface hi2vi P18.S5 points `mcp.servers.knowledge` at; **additive-only** within v1 (new tool / optional param / new output field is non-breaking; a breaking change bumps the version); surfaced at `GET /healthz` as `contract_version` (`CONTRACT_VERSION = "1"`, distinct from MCP `serverInfo.version` = the SDK release `1.28.1`) — api + architecture docs.
+- (S4) **Corpus scoping = tenant-wide per `vk_`** — search/fetch scope to the whole tenant's corpus (`server/main.py:316` filters by `tenant_id`, not the key's bound project), so **one hi2vi `vk_` key covers both `hi2vi` + `hi2vi_web`** (no two-key scheme); the `search` `project` param optionally narrows. Final key provisioning coordinated with hi2vi P18.S5 (operator side) — api + architecture docs.
+- (S4) **`e2e_smoke.py` first-consumer verifier** (`mcp-server/scripts/`) — a committed, path-agnostic OpenClaw-shaped MCP client (`streamablehttp_client` + `ClientSession`, bearer injected via a custom `httpx_client_factory`); the direct path (client → mcp → `/api` → grounded hit) is proven locally, the public-path run with a real hi2vi `vk_` is **operator post-deploy verification** — operations doc.
