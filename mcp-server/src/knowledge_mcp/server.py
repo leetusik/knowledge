@@ -309,9 +309,21 @@ async def fetch_document(
 
 @mcp.custom_route("/healthz", methods=["GET"])
 async def healthz(_request: Request) -> JSONResponse:
-    """Unauthenticated liveness probe for S3's container healthcheck / edge gate."""
+    """Unauthenticated liveness probe for S3's container healthcheck / edge gate.
 
-    return JSONResponse({"status": "ok", "service": config.SERVER_NAME})
+    Also surfaces ``contract_version`` (the consumer-pinned tool-contract version,
+    see ``mcp-server/CONTRACT.md``) so a consumer/monitor can read the contract it
+    is talking to without an MCP handshake. Distinct from the MCP
+    ``serverInfo.version`` (the SDK release).
+    """
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "service": config.SERVER_NAME,
+            "contract_version": config.CONTRACT_VERSION,
+        }
+    )
 
 
 # The assembled Streamable-HTTP ASGI app: MCP endpoint at /mcp + GET /healthz.

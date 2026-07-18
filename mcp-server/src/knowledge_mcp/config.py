@@ -18,6 +18,15 @@ import os
 # hi2vi OpenClaw consumer (P18.S5) pins its `mcp.servers.knowledge` at this.
 SERVER_NAME = "knowledge"
 
+# The knowledge MCP **tool contract** version (see mcp-server/CONTRACT.md).
+# DISTINCT from the MCP `serverInfo.version` the SDK advertises (that is the
+# `mcp` SDK release, `1.28.1`). This is the consumer-pinned contract: bumped only
+# on a BREAKING change (a removed/renamed tool, a removed output field, a changed
+# type or auth model). Additive changes (a new tool, a new optional param, a new
+# output field) stay v1. Surfaced at `GET /healthz` so a consumer/monitor can read
+# it without a protocol handshake.
+CONTRACT_VERSION = "1"
+
 # `search` result-count caps. `limit` defaults to a small, agent-friendly page
 # and is clamped to a small max before being forwarded to /api/search (which is
 # itself capped 1–50 server-side). Snippets are already short (~12 tokens).
