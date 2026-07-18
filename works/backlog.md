@@ -9,8 +9,8 @@
 - Current slice: `P15.DECOMP`
 - Next slice: `P15.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `7`
-- Rebuilt at: `2026-07-18T09:54:53+09:00`
+- Open deferred jobs: `8`
+- Rebuilt at: `2026-07-18T10:08:19+09:00`
 
 ## Active Phases
 
