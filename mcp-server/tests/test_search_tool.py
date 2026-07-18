@@ -1,10 +1,12 @@
-"""Terse behavioral tests for the `search` tool and the served app.
+"""Terse behavioral tests for the `search` + `fetch_document` tools and the app.
 
 Upstream is stubbed with an `httpx.MockTransport` (no live API): we exercise the
-real request path — bearer forwarding, param building — and assert the mapping to
-the search-hit contract, `<mark>` stripping, the empty citation `url`, and the
-401 → tool-error mapping. A Starlette `TestClient` smoke proves the ASGI app
-(MCP mounted) builds and `GET /healthz` answers 200.
+real request path — bearer forwarding, param/path building — and assert the mapping
+to each tool's contract, `<mark>` stripping, the empty citation `url`, the `search`
+401 → tool-error mapping, and for `fetch_document` the id/rel_path addressing (XOR),
+char-cap truncation, and 404 → "not found" / 401 → "unauthorized" mapping. A
+Starlette `TestClient` smoke proves the ASGI app (MCP mounted) builds and
+`GET /healthz` answers 200.
 
 Async cores are driven with `asyncio.run` so the only dev dependency is pytest
 (mirroring `cli/`).
@@ -128,3 +130,161 @@ def test_app_builds_and_healthz_ok():
         resp = client.get("/healthz")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+# --- fetch_document (S2) -----------------------------------------------------
+
+# One upstream single-doc read in the shape server/main.py:_public_doc(..., include_
+# markdown=True) emits (tags already parsed to a list, tags_text dropped).
+_DOC = {
+    "id": 42,
+    "tenant_id": "",
+    "project": "changple5",
+    "slug": "vector-index-notes",
+    "date": "2026-05-01",
+    "title": "Vector index notes",
+    "tags": ["search", "vectors"],
+    "source_repo": "changple5",
+    "rel_path": "changple5/2026-05-01-vector-index-notes.md",
+    "markdown": "# Vector index notes\n\nA short body about embeddings.",
+    "related": [],
+    "created_at": "2026-05-01T00:00:00Z",
+    "updated_at": "2026-05-01T00:00:00Z",
+}
+
+_FETCH_KEYS = {
+    "id", "rel_path", "title", "project", "date",
+    "tags", "url", "markdown", "truncated", "total_chars",
+}
+
+
+def test_fetch_by_id_maps_contract_and_forwards_bearer():
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["authorization"] = request.headers.get("authorization")
+        seen["path"] = request.url.path
+        return httpx.Response(200, json=_DOC)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            id=42,
+            authorization="Bearer vk_test_123",
+            transport=httpx.MockTransport(handler),
+        )
+    )
+
+    # Exact fetch contract, no extra keys.
+    assert set(out) == _FETCH_KEYS
+    assert out["id"] == 42
+    assert out["rel_path"] == "changple5/2026-05-01-vector-index-notes.md"
+    assert out["title"] == "Vector index notes"
+    assert out["project"] == "changple5"
+    assert out["date"] == "2026-05-01"
+    assert out["tags"] == ["search", "vectors"]
+    assert out["url"] == ""  # same reserved seam as search — empty for the corpus
+
+    # Under the default cap -> full body, not truncated.
+    assert out["markdown"] == _DOC["markdown"]
+    assert out["truncated"] is False
+    assert out["total_chars"] == len(_DOC["markdown"])
+
+    # Inbound bearer forwarded verbatim to GET /api/documents/{id}.
+    assert seen["authorization"] == "Bearer vk_test_123"
+    assert seen["path"] == "/api/documents/42"
+
+
+def test_fetch_by_rel_path_hits_by_path_endpoint_slashes_preserved():
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        return httpx.Response(200, json=_DOC)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            rel_path="changple5/2026-05-01-vector-index-notes.md",
+            authorization="Bearer vk_x",
+            transport=httpx.MockTransport(handler),
+        )
+    )
+    assert out["id"] == 42
+    # The `/` separators survive into the {rel_path:path} upstream route.
+    assert seen["path"] == "/api/documents/by-path/changple5/2026-05-01-vector-index-notes.md"
+
+
+def test_fetch_truncates_over_cap(monkeypatch):
+    monkeypatch.setattr(server.config, "FETCH_MAX_CHARS", 50)
+    body = "x" * 120
+    doc = {**_DOC, "markdown": body}
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=doc)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            id=42, authorization="Bearer vk_x",
+            transport=httpx.MockTransport(handler),
+        )
+    )
+    assert out["truncated"] is True
+    assert out["total_chars"] == 120          # original length, not the shown length
+    assert out["markdown"].count("x") == 50   # only the cap's worth of body chars
+    assert "truncated: showing 50 of 120" in out["markdown"]
+
+
+def test_fetch_xor_violation_raises_before_upstream():
+    called = {"hit": False}
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        called["hit"] = True
+        return httpx.Response(200, json=_DOC)
+
+    transport = httpx.MockTransport(handler)
+
+    # Both provided -> error before any upstream call.
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(
+            server.run_fetch_document(
+                id=42, rel_path="a/b.md",
+                authorization="Bearer vk_x", transport=transport,
+            )
+        )
+    assert "exactly one" in str(excinfo.value).lower()
+
+    # Neither provided -> same error, still no upstream call.
+    with pytest.raises(ToolError):
+        asyncio.run(
+            server.run_fetch_document(
+                authorization="Bearer vk_x", transport=transport,
+            )
+        )
+    assert called["hit"] is False
+
+
+def test_fetch_404_becomes_not_found():
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"detail": "no document with id 999"})
+
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(
+            server.run_fetch_document(
+                id=999, authorization="Bearer vk_x",
+                transport=httpx.MockTransport(handler),
+            )
+        )
+    assert "not found" in str(excinfo.value).lower()
+
+
+def test_fetch_401_becomes_unauthorized():
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"detail": "invalid credential"})
+
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(
+            server.run_fetch_document(
+                id=42, authorization="Bearer bad",
+                transport=httpx.MockTransport(handler),
+            )
+        )
+    assert "unauthorized" in str(excinfo.value).lower()
