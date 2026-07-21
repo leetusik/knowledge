@@ -243,6 +243,46 @@ class AccountsService:
                 await session.rollback()
                 raise AccountsReadError("failed to read project") from exc
 
+    async def get_or_create_project(
+        self,
+        tenant_id: UUID,
+        name: str,
+    ) -> ProjectRecord:
+        """Return the tenant's project named ``name``, creating it if absent.
+
+        The write-path (and dupe-name ``POST /app/projects``) primitive: read by
+        name first, else insert. Race-safe against ``UNIQUE(tenant_id, name)`` (added
+        in 0003) — a concurrent insert that wins the race surfaces as an
+        ``IntegrityError`` on flush, which is rolled back and re-read so both callers
+        converge on the same row (never a 500).
+        """
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                existing = await repository.get_project_by_name(tenant_id, name)
+                if existing is not None:
+                    return existing
+                try:
+                    record = await repository.create_project(
+                        CreateProject(tenant_id=tenant_id, name=name)
+                    )
+                    await session.commit()
+                    return record
+                except IntegrityError:
+                    # A concurrent insert won the UNIQUE(tenant_id, name) race —
+                    # roll back and re-read the row the other writer committed.
+                    await session.rollback()
+                    raced = await repository.get_project_by_name(tenant_id, name)
+                    if raced is not None:
+                        return raced
+                    raise
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsPersistenceError(
+                    "failed to get or create project"
+                ) from exc
+
     # -- credentials ------------------------------------------------------
 
     async def create_project_credential(
@@ -278,6 +318,22 @@ class AccountsService:
                 await session.rollback()
                 raise AccountsReadError(
                     "failed to read project credentials"
+                ) from exc
+
+    async def list_org_credentials(
+        self,
+        tenant_id: UUID,
+    ) -> tuple[ProjectCredentialRecord, ...]:
+        """Return a tenant's org-level credentials (``project_id NULL``), oldest-first."""
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                return await repository.list_org_credentials(tenant_id)
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsReadError(
+                    "failed to read org credentials"
                 ) from exc
 
     async def get_active_credential_by_token_hash(

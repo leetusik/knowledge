@@ -6,9 +6,12 @@ gated by ``Depends(require_user)``; a raised ``AuthError`` is rendered as a
 generic 401 by the app-wide handler registered in ``server/main.py``. Project
 reads are scoped to the caller's tenant: a project that is missing *or* owned by
 another tenant answers **404**, so cross-tenant existence never leaks. Credential
-endpoints mint a per-project ingest key whose plaintext ``vk_`` value is returned
-once (on create) and never persisted or re-exposed — only its sha256 hash and a
-short display prefix are stored.
+endpoints mint either a per-project ingest key (``/app/projects/{id}/credentials``)
+or an org-level key (``/app/credentials``, ``project_id NULL`` — one key authorizes
+every project in the org); either way the plaintext ``vk_`` value is returned once
+(on create) and never persisted or re-exposed — only its sha256 hash and a short
+display prefix are stored. Projects are get-or-create by name (``POST /app/projects``
+is idempotent on the tenant's ``UNIQUE(tenant_id, name)``).
 
 Ported from vocky ``app_api.py`` (Starlette → FastAPI): body binding and path
 params are FastAPI-native (malformed UUID / blank name → standard **422**, not
@@ -72,11 +75,15 @@ def serialize_project(record) -> dict[str, object]:
 
 
 def serialize_credential(record) -> dict[str, object]:
-    """Serialize a project credential's metadata (never exposes ``token_hash``)."""
+    """Serialize a credential's metadata (never exposes ``token_hash``).
+
+    ``project_id`` is ``None`` for an org-level credential and a UUID string for a
+    project-bound one — NULL-safe so org keys never serialize the literal ``"None"``.
+    """
 
     return {
         "id": str(record.id),
-        "project_id": str(record.project_id),
+        "project_id": str(record.project_id) if record.project_id is not None else None,
         "name": record.name,
         "token_prefix": record.token_prefix,
         "created_at": record.created_at.isoformat(),
@@ -125,12 +132,14 @@ async def create_project(
     payload: CreateProjectInput,
     ctx: AuthContext = Depends(require_user),
 ) -> dict[str, object]:
-    """Create a project under the caller's tenant."""
+    """Get-or-create a project by name under the caller's tenant.
+
+    Idempotent on name (``UNIQUE(tenant_id, name)``): a duplicate name returns the
+    existing row with the same 201 shape instead of a 500 from the unique violation.
+    """
 
     service = get_accounts_service()
-    project = await service.create_project(
-        CreateProject(tenant_id=ctx.tenant.id, name=payload.name)
-    )
+    project = await service.get_or_create_project(ctx.tenant.id, payload.name)
     return {"project": serialize_project(project)}
 
 
@@ -200,6 +209,70 @@ async def delete_credential(
     project = await _load_scoped_project(project_id, ctx)
     service = get_accounts_service()
     credentials = await service.list_project_credentials(project.id)
+    if not any(record.id == credential_id for record in credentials):
+        raise HTTPException(status_code=404, detail="credential not found")
+    await service.revoke_credential(credential_id)
+    return Response(status_code=204)
+
+
+# -- org-level credentials --------------------------------------------------
+# One org key (``project_id NULL``) authorizes writes to every project in the org;
+# the resolver reads the credential's ``tenant_id`` directly. Additive to the
+# frozen ``/app/*`` contract — these routes sit alongside the per-project ones.
+
+
+@router.post("/app/credentials", status_code=201)
+async def create_org_credential(
+    ctx: AuthContext = Depends(require_user),
+    body: CreateCredentialInput = CreateCredentialInput(),
+) -> dict[str, object]:
+    """Mint an org-level ingest credential (``project_id NULL``); the plaintext ``vk_``
+    key is returned once.
+
+    One org key authorizes writes across every project in the caller's org. Only its
+    sha256 hash (and a short display prefix) is persisted — the raw key is never
+    recoverable afterward.
+    """
+
+    key = f"vk_{generate_opaque_token()}"
+    record = await get_accounts_service().create_project_credential(
+        CreateProjectCredential(
+            tenant_id=ctx.tenant.id,
+            project_id=None,
+            token_prefix=key[:12],
+            token_hash=sha256_hex(key),
+            name=body.name,
+        )
+    )
+    return {"credential": serialize_credential(record), "key": key}
+
+
+@router.get("/app/credentials")
+async def list_org_credentials(
+    ctx: AuthContext = Depends(require_user),
+) -> dict[str, object]:
+    """List the caller's org-level credentials (metadata only; includes revoked)."""
+
+    credentials = await get_accounts_service().list_org_credentials(ctx.tenant.id)
+    return {
+        "credentials": [serialize_credential(record) for record in credentials]
+    }
+
+
+@router.delete("/app/credentials/{credential_id}", status_code=204)
+async def delete_org_credential(
+    credential_id: UUID,
+    ctx: AuthContext = Depends(require_user),
+) -> Response:
+    """Revoke one of the caller's org-level credentials by id (idempotent soft-revoke).
+
+    Answers 404 when the id is not one of the caller's org-level credentials, so a
+    caller cannot revoke or probe another org's — or a project-bound — credential id
+    (the same anti-probe pattern as the per-project delete).
+    """
+
+    service = get_accounts_service()
+    credentials = await service.list_org_credentials(ctx.tenant.id)
     if not any(record.id == credential_id for record in credentials):
         raise HTTPException(status_code=404, detail="credential not found")
     await service.revoke_credential(credential_id)

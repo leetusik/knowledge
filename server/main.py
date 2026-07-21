@@ -20,6 +20,7 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal, Optional
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -37,6 +38,7 @@ from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
+from server.accounts.service import get_accounts_service
 from server.api_auth import (
     ApiAuthContext,
     get_tenant_one_id,
@@ -386,11 +388,44 @@ class DocumentIn(BaseModel):
     co_authored_by: Optional[str] = None
 
 
+async def ensure_registry_project(
+    body: DocumentIn,
+    ctx: ApiAuthContext = Depends(resolve_api_write),
+) -> UUID | None:
+    """Get-or-create the Postgres registry project for a write's project name.
+
+    An **async** dependency because the ``create_document`` handler is sync (it holds
+    ``WRITE_LOCK`` over a sqlite critical section and cannot ``await`` Postgres), yet
+    the ``projects`` row must exist by the time the write lands so an unregistered
+    name stops leaving the registry blank. FastAPI shares the parsed ``DocumentIn``
+    body with the handler and caches ``resolve_api_write`` per request, so this runs
+    exactly once, before the handler.
+
+    Legacy mode (``ctx.tenant_id is None``) -> ``None`` (no Postgres). The project
+    name is validated with the same ``validate_project`` the handler uses, but a
+    ``ConventionError`` is swallowed here so the handler's own 422 stays the single
+    source of the shape error; a valid name is get-or-created race-safely against
+    ``UNIQUE(tenant_id, name)``. The row may be created even when the handler then
+    409s (target already exists) — harmless and idempotent. Returns the registry
+    project id, or ``None`` (legacy mode / an invalid name the handler will 422).
+    """
+
+    if ctx.tenant_id is None:
+        return None
+    try:
+        project = documents_mod.validate_project(body.project)
+    except documents_mod.ConventionError:
+        return None
+    record = await get_accounts_service().get_or_create_project(ctx.tenant_id, project)
+    return record.id
+
+
 @app.post("/api/documents", status_code=201)
 def create_document(
     body: DocumentIn,
     request: Request,
     ctx: ApiAuthContext = Depends(resolve_api_write),
+    registry_project_id: UUID | None = Depends(ensure_registry_project),
     conn=Depends(get_conn),
 ):
     """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
@@ -586,7 +621,10 @@ def create_document(
         tenant_id=ctx.tenant_id,
         event_type=EVENT_DOCUMENT_CREATED,
         project_name=project,
-        project_id=ctx.project_id,
+        # The registry row now always exists (get-or-create above), so metering's
+        # name-first lookup resolves it; the id here is the fallback, preferring the
+        # just-ensured registry project over the vk_ caller's bound project.
+        project_id=registry_project_id or ctx.project_id,
         credential_id=ctx.credential_id,
     )
     return resp
