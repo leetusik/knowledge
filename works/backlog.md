@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P18`
+- Current slice: `P18.DECOMP`
+- Next slice: `P18.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `8`
-- Rebuilt at: `2026-07-21T23:39:55+09:00`
+- Open deferred jobs: `9`
+- Rebuilt at: `2026-07-22T02:04:50+09:00`
 
 ## Active Phases
 
@@ -18,6 +18,9 @@
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
+| [ ] `P18` | `planned` | `pending` | Accounts v2: user/org/project with org-level keys | `P18.DECOMP` | `works/phases/active/P18` |
+| [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.DECOMP` | `works/phases/active/P19` |
+| [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.DECOMP` | `works/phases/active/P20` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -41,3 +44,24 @@
 | [x] `P17.S5` | `done` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
 | [x] `P17.F1` | `done` | Production Deploy: force-recreate bind-mounted api + P16-discriminating smoke | `fix` | `works/phases/active/P17/slices/P17.F1` |
 | [x] `P17.REVIEW` | `done` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
+
+## Phase P18: Accounts v2: user/org/project with org-level keys
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P18.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P18/slices/P18.DECOMP` |
+| [ ] `P18.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P18/slices/P18.REVIEW` |
+
+## Phase P19: Public projects & direct doc links
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P19.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P19/slices/P19.DECOMP` |
+| [ ] `P19.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P19/slices/P19.REVIEW` |
+
+## Phase P20: Frictionless onboarding: hero, install, env-var quickstart, skill on landing
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P20.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P20/slices/P20.DECOMP` |
+| [ ] `P20.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P20/slices/P20.REVIEW` |

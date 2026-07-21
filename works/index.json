@@ -23,10 +23,46 @@
       "current_slice": null,
       "slice_count": 8,
       "done_slice_count": 8
+    },
+    {
+      "id": "P18",
+      "name": "Accounts v2: user/org/project with org-level keys",
+      "objective": "Restructure the accounts plane to an explicit user → org → project model: signup auto-provisions a \"default\" org and \"default\" project; API keys become mintable at org level (making today's de-facto tenant-wide enforcement honest); project resolution is get-or-create by name; knowledge save keeps the repo-basename default with a --project override and \"default\" fallback. Org creation + member invites stay out of scope (deferred).",
+      "status": "planned",
+      "order": 3,
+      "path": "works/phases/active/P18",
+      "review_status": "pending",
+      "current_slice": "P18.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P19",
+      "name": "Public projects & direct doc links",
+      "objective": "Add per-project public/private visibility: public projects' docs and graph are readable by anonymous visitors and other users (the graph exposes only public-project nodes to outsiders), and every save returns a working direct URL to the doc — replacing the legacy mkdocs url field — shareable when the project is public.",
+      "status": "planned",
+      "order": 4,
+      "path": "works/phases/active/P19",
+      "review_status": "pending",
+      "current_slice": "P19.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P20",
+      "name": "Frictionless onboarding: hero, install, env-var quickstart, skill on landing",
+      "objective": "Make the landing hero flow real end to end: fix the broken uv tool install knowledge-cli line (publish to PyPI or switch the copy to the working install form), make the depicted init/password step honest (show the prompt or generate a password), promote the env-var REST setup (KB_API_BASE_URL/KB_API_TOKEN) as the recommended agent path with blockers addressed, and publish the explain skill on the landing page — copyable and downloadable — with agent-first guidance.",
+      "status": "planned",
+      "order": 5,
+      "path": "works/phases/active/P20",
+      "review_status": "pending",
+      "current_slice": "P20.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 8,
+  "deferred_open_count": 9,
   "deferred_promoted_count": 3,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-21T23:39:55+09:00"
+  "last_rebuilt_at": "2026-07-22T02:04:50+09:00"
 }
