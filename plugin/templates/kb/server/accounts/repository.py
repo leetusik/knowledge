@@ -198,6 +198,23 @@ class AccountsRepository:
         models = (await self._session.execute(statement)).scalars().all()
         return tuple(self._to_credential_record(model) for model in models)
 
+    async def list_org_credentials(
+        self,
+        tenant_id: UUID,
+    ) -> tuple[ProjectCredentialRecord, ...]:
+        """Return a tenant's org-level credentials (``project_id NULL``), oldest-first."""
+
+        statement = (
+            select(ProjectCredentialModel)
+            .where(
+                ProjectCredentialModel.tenant_id == tenant_id,
+                ProjectCredentialModel.project_id.is_(None),
+            )
+            .order_by(ProjectCredentialModel.created_at, ProjectCredentialModel.id)
+        )
+        models = (await self._session.execute(statement)).scalars().all()
+        return tuple(self._to_credential_record(model) for model in models)
+
     async def get_active_credential_by_token_hash(
         self,
         token_hash: str,

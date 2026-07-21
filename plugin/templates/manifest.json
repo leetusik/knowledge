@@ -58,6 +58,7 @@
       "tests/test_embeddings.py",
       "tests/test_graph_api.py",
       "tests/test_html_documents.py",
+      "tests/test_org_credentials.py",
       "tests/test_reindex.py",
       "docs/graph.md",
       "docs/tags.md",

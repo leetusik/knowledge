@@ -12,7 +12,9 @@ Two modes, switched per-call on ``config.database_url()``:
     1. the pinned master ``KB_API_TOKEN`` -> tenant #1 (the operator's tenant,
        identified by ``KB_OPERATOR_EMAIL``) — an un-revokable legacy special-case,
        not a DB credential;
-    2. a ``vk_`` project credential -> its project's tenant (+ the project id);
+    2. a ``vk_`` credential -> its own ``tenant_id`` (org-scoped authorization); an
+       org-level key (``project_id NULL``) carries no bound project, a project-bound
+       key additionally carries its ``project_id`` for attribution;
     3. a session token -> the user's first tenant (own-corpus reads/writes).
   An unresolvable bearer (or none) -> a generic 401.
 
@@ -41,8 +43,9 @@ class ApiAuthContext:
 
     ``tenant_id`` is ``None`` in legacy/single-tenant mode (today's behavior);
     in tenant mode it is the resolved tenant. ``project_id`` is set only for a
-    ``vk_`` project credential (its bound project); it is ``None`` for the master
-    bearer and session tokens.
+    project-bound ``vk_`` credential (its bound project, for attribution); it is
+    ``None`` for an org-level ``vk_`` key (``project_id NULL``), the master bearer,
+    and session tokens — every ``vk_`` key is authorized at tenant/org scope.
 
     ``is_public`` marks the caller as the *public* content root — legacy mode
     (``tenant_id is None``) or tenant #1 (the operator's own tenant, resolved via
@@ -51,11 +54,11 @@ class ApiAuthContext:
     content plane routes public callers to ``docs/`` (git-published) and non-#1
     tenants to the namespaced ``tenants/<uuid>/`` root.
 
-    ``credential_id`` is the resolved ``vk_`` project credential's id, set only
-    for a ``vk_`` caller — it is ``None`` for the master bearer (no DB row) and
-    session tokens. P11's metering middleware stamps ``last_used_at`` on this
-    credential when a metered event is recorded (never in the resolver, so plain
-    reads do not write); see ``server/usage/metering.py``.
+    ``credential_id`` is the resolved ``vk_`` credential's id (org-level or
+    project-bound), set only for a ``vk_`` caller — it is ``None`` for the master
+    bearer (no DB row) and session tokens. P11's metering middleware stamps
+    ``last_used_at`` on this credential when a metered event is recorded (never in
+    the resolver, so plain reads do not write); see ``server/usage/metering.py``.
     """
 
     tenant_id: UUID | None = None
@@ -150,17 +153,26 @@ async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
 
     token_hash = sha256_hex(token)
 
-    # 2. vk_ (any project credential) -> its project's tenant + the project id.
+    # 2. vk_ credential -> its own tenant (org-scoped authorization). The
+    #    credential's tenant_id is always set (S18.S1 schema); the project binding
+    #    only carries project_id for attribution and is NULL for an org-level key.
     cred = await service.get_active_credential_by_token_hash(token_hash)
     if cred is not None:
+        if cred.project_id is None:
+            # Org-level key: authorized at tenant/org scope, no bound project.
+            return ApiAuthContext(
+                tenant_id=cred.tenant_id,
+                credential_id=cred.id,
+            )
+        # Project-bound key: keep the existence guard — a credential pointing at a
+        # vanished project stays unresolvable (only where a project_id is set).
         project = await service.get_project(cred.project_id)
         if project is not None:
             return ApiAuthContext(
-                tenant_id=project.tenant_id,
-                project_id=project.id,
+                tenant_id=cred.tenant_id,
+                project_id=cred.project_id,
                 credential_id=cred.id,
             )
-        # Credential points at a vanished project -> unresolvable.
         return None
 
     # 3. Session token -> the user's first tenant (own-corpus reads/writes).

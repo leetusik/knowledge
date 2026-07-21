@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P18`
-- Current slice: `P18.S2`
-- Next slice: `P18.S3`
+- Current slice: `P18.S3`
+- Next slice: `P18.S4`
 - Waiting on operator: `none`
 - Open deferred jobs: `9`
-- Rebuilt at: `2026-07-22T02:47:20+09:00`
+- Rebuilt at: `2026-07-22T03:00:44+09:00`
 
 ## Active Phases
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
-| [ ] `P18` | `planned` | `pending` | Accounts v2: user/org/project with org-level keys | `P18.S2` | `works/phases/active/P18` |
+| [ ] `P18` | `planned` | `pending` | Accounts v2: user/org/project with org-level keys | `P18.S3` | `works/phases/active/P18` |
 | [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.DECOMP` | `works/phases/active/P19` |
 | [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.DECOMP` | `works/phases/active/P20` |
 
@@ -51,7 +51,7 @@
 |---|---|---|---|---|
 | [x] `P18.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P18/slices/P18.DECOMP` |
 | [x] `P18.S1` | `done` | Schema 0003 + models + signup/seed default-org/default-project provisioning | `implementation` | `works/phases/active/P18/slices/P18.S1` |
-| [ ] `P18.S2` | `todo` | Org-level keys: resolver + mint endpoint + write-path get-or-create + metering | `implementation` | `works/phases/active/P18/slices/P18.S2` |
+| [x] `P18.S2` | `done` | Org-level keys: resolver + mint endpoint + write-path get-or-create + metering | `implementation` | `works/phases/active/P18/slices/P18.S2` |
 | [ ] `P18.S3` | `todo` | Web app: org-level keys surface + workspace->org copy | `implementation` | `works/phases/active/P18/slices/P18.S3` |
 | [ ] `P18.S4` | `todo` | CLI --project/default fallback + explain/setup skill text + parity | `implementation` | `works/phases/active/P18/slices/P18.S4` |
 | [ ] `P18.S5` | `todo` | Prod migration + deploy + extended onboarding E2E (operator-gated) | `implementation` | `works/phases/active/P18/slices/P18.S5` |
