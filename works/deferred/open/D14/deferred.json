@@ -1,0 +1,11 @@
+{
+  "id": "D14",
+  "title": "Org management: create additional orgs + invite members",
+  "status": "deferred",
+  "source": "P18",
+  "reason": "P18 deliberately ships only the auto-provisioned default org; operator wants org creation and member invites eventually",
+  "trigger": "operator asks for multi-org/team features, or a second member needs org access",
+  "created_at": "2026-07-22T02:01:36+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
