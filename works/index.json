@@ -4,13 +4,13 @@
       "id": "P16",
       "name": "HTML explainer documents end-to-end",
       "objective": "Make standalone self-contained HTML explainer documents a first-class KB document type: the document API accepts them, the web app renders them safely with their interactivity (quiz JS) working, search indexes their extracted text, and the MCP read path handles them sanely — alongside existing markdown docs.",
-      "status": "planned",
+      "status": "done",
       "order": 1,
       "path": "works/phases/active/P16",
-      "review_status": "pending",
-      "current_slice": "P16.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 5,
-      "done_slice_count": 4
+      "done_slice_count": 5
     },
     {
       "id": "P17",
@@ -28,5 +28,5 @@
   "deferred_open_count": 9,
   "deferred_promoted_count": 2,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-21T15:11:55+09:00"
+  "last_rebuilt_at": "2026-07-21T15:30:35+09:00"
 }

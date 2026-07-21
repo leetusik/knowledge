@@ -386,6 +386,36 @@ _Non-review slices append one line per durable-truth change here; do NOT run
   doc — but the durable **api** truth here is worth the review reflecting alongside the
   S1 read-projection lines.)
 
+### P16.REVIEW — phase review PASS (2026-07-21)
+
+The phase passes. Everything validated together, no defect found; docs consolidated.
+
+- **Suites (fresh):** backend `uv run pytest tests -q` → 70 passed / 13 skipped / 1 warning;
+  web `pnpm test` → 8 files / 58 tests, `pnpm lint` clean, `pnpm build` compiled (TS clean, the
+  `ƒ /api/documents/[id]/raw` route registered); mcp `uv run pytest` → 12 passed; `workflow.py
+  validate` passed (before and after doc consolidation).
+- **E2E (API round-trip, scratchpad):** html POST → `.html` + `<!--kb` frontmatter → detail
+  `format:"html"` + extracted-text `markdown`, never `raw_html` → search finds extracted terms,
+  not `<script>` terms → wipe SQLite + `reindex()` reproduces html AND md rows byte-for-byte → md
+  doc round-trips alongside. ALL PASS. The live in-browser "quiz JS runs" check stays an operator
+  residual (no browser tooling; not faked).
+- **Constraints held:** additive-only contracts (spot-checked git `69d00a8` — `DocumentIn.format`
+  additive default, new route only, MCP contract stays v1); markdown byte-identity (the `test_api_write.py`
+  guard is green; `_normalize_body` is P2-era, untouched by P16 — verified); the sandbox pin survived
+  exactly (`sandbox="allow-scripts"` only, no `allow-same-origin`; CSP `sandbox allow-scripts;
+  frame-ancestors 'self'` + `X-Frame-Options: SAMEORIGIN` byte-identical across the S1 route, S2 relay,
+  and next.config; parent stays `DENY`).
+- **Residuals judged (not tripped):** plugin_parity is a PRE-EXISTING red gate (34→36; P16 not the
+  cause; remediation is P17); the format-flip-same-slug coexistence quirk (accepted, S1); the S1
+  landing-skip test relaxation (pre-existing landing behavior); the live browser quiz check (operator).
+- **Docs consolidated — 8 new versions (source `P16.REVIEW`):** api v0012, backend v0007,
+  architecture v0013, data v0008, frontend v0007, experience v0007, product v0007, **security v0010**.
+  operations/decisions/qa NOT versioned (no new services/env/migrations; no durable-truth change there).
+  **Deviation from the review plan:** the plan said "there is NO security doc" and to fold the
+  XSS-containment stance only into architecture+frontend — but a `security` doc *does* exist and the
+  Doc-impact list flags **security** twice, so (at full judgment) I versioned security too, additively,
+  while also folding the stance into architecture (rationale) + frontend (render side) as instructed.
+
 ## Constraints
 
 - **Existing markdown docs unaffected — byte-for-byte.** Rendering (react-markdown, no

@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0006
-created_at: 2026-07-18T03:16:59+09:00
-source: P13.REVIEW
-summary: P13 CLI journey: one-shot init; save/search/list/read/projects/usage; two-token model visible from the terminal; --json/exit-code agent contract
-previous: v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph
+version: v0007
+created_at: 2026-07-21T15:22:40+09:00
+source: P16.REVIEW
+summary: P16 documents journey: an HTML explainer renders as an interactive in-app document (quiz JS runs) safely sandboxed; markdown docs unchanged
+previous: v0006_p13_cli_journey_one-shot_init_save_search_list_read_projects_usage_two-token_model_visible_from_the_terminal_--json_exit-code_agent_contract
 ---
 
 # Experience
@@ -41,6 +41,13 @@ user (or their coding agent) run the whole lifecycle from inside Claude Code or 
 one-shot `knowledge init` onboards them to the hosted SaaS, then `save`/`search`/`list`/`read`/
 `projects`/`usage` do the day-to-day work, all with a `--json`/exit-code contract for agents and
 a bundled `knowledge guide`. No browser, no website. See *The CLI journey (P13)* below.
+
+**As of P16 a document can be an interactive HTML explainer, not just markdown.** In the
+authenticated web app's document viewer, opening an HTML explainer renders it as a live,
+**interactive** page — its multiple-choice quiz answers and feedback work — inside a safely
+sandboxed frame, while the surrounding page chrome (title, metadata) is unchanged and a
+markdown document reads exactly as before. Search finds an HTML explainer by its readable
+text like any other document. See *The HTML explainer document (P16)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -222,6 +229,31 @@ P13 adds a terminal experience for a user living inside Claude Code or Codex: th
 - **The agent contract — `--json` and exit codes.** All six commands take `--json`, which emits the server's payload **verbatim**; text is the opinionated default. Errors are **never** a JSON envelope — they are `error: …` on stderr with exit 1, so stdout is always "valid JSON or nothing" and an agent branches on the **exit code**, not on parsing an error shape. A `knowledge guide` command prints the full machine-readable lifecycle contract (bundled, offline) for an agent to read before driving the flow.
 
 Onboarding + the full lifecycle + logout-survival + the 429 throttle are proven live on a local stack by `scripts/cli_smoke.py` (see qa). Hosted end-to-end awaits the operator's one-time accounts-plane cutover (see operations); the terminal experience itself is complete and proven.
+
+## The HTML explainer document (P16)
+
+P16 makes an HTML explainer a first-class document type in the web app's document journey,
+alongside markdown — the reader gets the explainer's full interactivity without a new
+surface or a redesign.
+
+- **Reading an explainer.** From the documents list, opening an HTML explainer renders the
+  document body as a live interactive page: HTML diagrams, and a multiple-choice quiz whose
+  answer selection + feedback actually run. The page's header/metadata strip and the app
+  chrome are unchanged; only the body differs from a markdown document. The baseline layout
+  is a generous fixed-height frame with its own internal scroll (no page-height handshake in
+  P16). A markdown document reads exactly as before.
+- **Safe by construction, invisibly.** The interactivity is contained so untrusted explainer
+  JS cannot read the signed-in session, browser storage, or the surrounding app — the reader
+  experiences a normal interactive document with no visible seams; the containment is an
+  architecture concern, not a UX one. A person who navigates straight to the raw document URL
+  is privilege-stripped the same way.
+- **Findable.** An HTML explainer is indexed by its readable (extracted) text, so it appears
+  in the app's full-text search results like any markdown document, and never surfaces on its
+  script/style contents.
+- **Owed to the operator (recorded, not a defect).** The live in-browser confirmation that
+  the quiz runs (and that a direct raw-URL visit is sandbox-stripped) needs a real browser —
+  there is no browser/jsdom tooling in the repo — so it is an operator visual-acceptance
+  residual; every machine-verifiable layer passed at the P16 review.
 
 ## Open Questions
 

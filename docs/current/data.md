@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0007
-created_at: 2026-07-16T21:31:22+09:00
-source: P11.REVIEW
-summary: P11 usage_events control-plane table; event-log grain; derive-on-read GROUP-BY-day aggregate; retention deferred D8
-previous: v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild
+version: v0008
+created_at: 2026-07-21T15:22:34+09:00
+source: P16.REVIEW
+summary: P16 content-plane documents gains format + raw_html columns (disposable ALTER TABLE); DB markdown = extracted text so FTS unchanged; Postgres control plane untouched
+previous: v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8
 ---
 
 # Data
@@ -19,6 +19,8 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 
 **P11** adds a **7th** control-plane table, `usage_events` — a durable, append-only **event log** of per-tenant / per-project usage (document creates/deletes and searches) that the dashboard reads back as a **derive-on-read** GROUP-BY-day aggregate. It is observability data only (no quotas/billing), carries no new PII (only tenant/project/event-type/timestamp), and its retention is **deferred** (a cleanup job is flagged as D8, not built now).
 
+**P16** adds an HTML explainer document format to the **disposable content plane only**: the `documents` table gains two columns — `format TEXT NOT NULL DEFAULT 'md'` and nullable `raw_html TEXT` (the raw HTML, populated for html docs only) — via an idempotent `ALTER TABLE ADD COLUMN` in `init_db`. The `markdown` column for an html doc holds **server-extracted plain text** (so FTS5 / `snippet()` / embeddings are unchanged), while `raw_html` holds the raw HTML the web viewer's raw route serves. Canonical storage is still files (`docs/<project>/<date>-<slug>.html`, metadata in a leading `<!--kb … -->` comment-frontmatter), and reindex rebuilds both columns from the file alone. **The Postgres control plane is untouched — no Alembic migration.**
+
 ## Storage
 
 - Primary content DB: SQLite at `data/kb.sqlite3`, **WAL** mode, idempotent DDL applied at `connect()`. Disposable and **gitignored** — the ignore rule is root-anchored `/data/` (so the `docs/versions/data/` durable-doc subtree stays trackable), and the DB is rebuilt from `docs/` by reindex.
@@ -31,7 +33,8 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 ### documents
 
 - Purpose: one row per explainer document.
-- Columns: `id`, `project`, `slug`, `date` (GLOB-checked `YYYY-MM-DD`), `title`, `tags` (JSON array), `tags_text` (space-joined mirror of `tags` for FTS), `source_repo` (P4: a **publish-safe** basename — sanitized at write time, never an absolute local path), `related` (P4: `TEXT NOT NULL DEFAULT '[]'`, a JSON array of forward-link rel_paths, **not** in `documents_fts`), `rel_path` (= `<project>/<date>-<slug>.md`, relative to the tenant's content root), `markdown` (body **without** frontmatter, starting at the H1), `created_at`, `updated_at`, **(P10)** `tenant_id` (`TEXT NOT NULL DEFAULT ''`).
+- Columns: `id`, `project`, `slug`, `date` (GLOB-checked `YYYY-MM-DD`), `title`, `tags` (JSON array), `tags_text` (space-joined mirror of `tags` for FTS), `source_repo` (P4: a **publish-safe** basename — sanitized at write time, never an absolute local path), `related` (P4: `TEXT NOT NULL DEFAULT '[]'`, a JSON array of forward-link rel_paths, **not** in `documents_fts`), `rel_path` (= `<project>/<date>-<slug>.md` **or** `.html`, relative to the tenant's content root), `markdown` (the doc's **readable text** without frontmatter, starting at the H1 for md; the **extracted plain text** for html), `created_at`, `updated_at`, **(P10)** `tenant_id` (`TEXT NOT NULL DEFAULT ''`), **(P16)** `format` (`TEXT NOT NULL DEFAULT 'md'`, `'md' | 'html'`) and `raw_html` (nullable `TEXT`, the raw HTML for html docs only; **never in any JSON body** — dropped by the read projectors).
+- **(P16) `format`/`raw_html` semantics:** `format` discriminates the doc type; for an html doc `markdown` = the stdlib-`html.parser`-extracted visible text (so FTS/embeddings index the readable content, never `<script>`/`<style>`) and `raw_html` = the raw self-contained HTML the web viewer's raw route serves. Both are **path-derived by reindex** from the on-disk `.html` file, not durable in the DB. The FTS trigger trio and `document_embeddings` are unchanged (both key off `markdown`/rowid).
 - **(P10) `tenant_id` semantics:** `''` is the **legacy / tenant-#1 sentinel** (legacy single-tenant mode and the operator's own `docs/` corpus after re-stamp use the resolved tenant #1 UUID); any other tenant's rows carry their tenant UUID string. It is **path-derived** by reindex, not client-supplied.
 - Constraints: **(P10)** `UNIQUE(tenant_id, rel_path)` — the old `UNIQUE(rel_path)` and `UNIQUE(project, date, slug)` were **dropped**, so the same `rel_path` can exist once per tenant; a same-tenant repeat is an in-place upsert. A `CHECK` still GLOB-validates the date format.
 - Upsert keys on `(tenant_id, rel_path)` (preserves `created_at`, refreshes `updated_at`; `tenant_id` is set on insert, not in the `DO UPDATE`). `document_embeddings` + `documents_fts` are unchanged — tenant is transitive via `doc_id`/rowid.
@@ -85,6 +88,7 @@ Only sha256 hashes are stored for credentials/session tokens — the raw value i
 
 - Tooling: none for the disposable DB. DDL is idempotent and applied at connect.
 - P4 added one **in-place** migration for continuity: `init_db` runs `PRAGMA table_info(documents)` and, if the `related` column is absent, `ALTER TABLE documents ADD COLUMN related TEXT NOT NULL DEFAULT '[]'` — idempotent, so a pre-P4 DB upgrades without a rebuild.
+- **(P16)** `init_db` adds `format` and `raw_html` the same way — PRAGMA-guarded `ALTER TABLE documents ADD COLUMN` for each (the P4 `related` precedent), idempotent, so a pre-P16 disposable DB upgrades without a rebuild (a reindex then back-fills them from the on-disk files). No Alembic / Postgres change.
 - **(P10) SQLite content DB** — because the tenancy change reworks the table constraints (`UNIQUE(tenant_id, rel_path)`), an in-place `ALTER` is not enough: `init_db` checks `PRAGMA table_info(documents)` and, if `tenant_id` is absent (a pre-tenancy DB), **drops and recreates** `documents` + `documents_fts` + `document_embeddings` and re-runs the schema. Safe because the DB is disposable — the boot reindex repopulates from files.
 - **(P10) Postgres control plane** — versioned with **Alembic** (async `env.py`, initial revision `0001_accounts_tenancy` creating the six tables). Migrations run **explicitly** (`alembic upgrade head`) as a deploy step, never on boot.
 - **(P11) Second migration `0002_usage_events`** (`down_revision="0001_accounts_tenancy"`) — a hand-written Alembic revision creating `usage_events` + its two composite indexes, with constraint names matching the model (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects` SET NULL — no autogenerate drift). `alembic upgrade head` now applies **both** `0001` and `0002` in order (verified live against `postgres:17` at the P11 review).

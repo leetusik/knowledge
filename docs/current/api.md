@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0011
-created_at: 2026-07-18T13:31:08+09:00
-source: P15.REVIEW
-summary: P15 agent-facing MCP retrieval service: contract v1 (search + fetch_document tools, Bearer vk_ over Streamable-HTTP /mcp, additive-only versioning + /healthz.contract_version, tenant-wide corpus scoping) alongside the frozen REST /api/*
-previous: v0010_p13_cli_onboarding_widened_the_frozen_public_contract_to_api_auth_app_healthz_new_429_on_auth_signup_login
+version: v0012
+created_at: 2026-07-21T15:22:34+09:00
+source: P16.REVIEW
+summary: P16 HTML explainer doc type: additive format on POST + read projections, new GET /app/documents/{id}/raw route, MCP fetch_document format field; frozen /api/* + contract v1 preserved additively
+previous: v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api
 ---
 
 # API
@@ -29,6 +29,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 > **Prod-cutover caveat (P13).** The edge routing above is deployed and verified (the edge returns FastAPI JSON on `/auth/*`, not the old mkdocs HTML). But the **accounts plane itself (P10–P12) is not yet running on the prod box** (no `knowledge-postgres`, box clone at pre-P13 code, box `.env` missing the accounts secrets) — so a hosted `knowledge init` cannot complete end-to-end until the operator runs the one-time P10–P13 production cutover (see **operations** → *Hosted accounts-plane cutover*). The contract *shape* below is proven on localhost tenant mode; "hosted end-to-end" is pending that cutover, not a code gap.
 
 **As of P15 the API gains an agent-facing companion — an MCP-over-HTTP retrieval service — that sits *alongside* the frozen `/api/*` and never modifies it.** A separate thin server (`mcp-server/`, package `knowledge_mcp`; see *Agent-facing MCP retrieval service* below and **architecture**) exposes knowledge retrieval to AI agents as MCP tools (`search`, `fetch_document`) over the **Streamable-HTTP** transport at `/mcp`, authed by an `Authorization: Bearer vk_…` header **forwarded verbatim** to `/api/*` — so it reimplements no retrieval and inherits the exact tenant/project corpus scoping of the REST surface. Its consumer-pinned **tool contract is v1** (additive-only; surfaced at the service's own internal `GET /healthz` as `contract_version`), and the frozen `/api/*` field names, types, statuses, and routes are **untouched** (P15 changed **no `server/` code** — verified at review). This is a new *agent-facing* API surface, documented in full below.
+
+**As of P16 HTML explainer documents are a first-class doc type, added to every read/write surface additively.** `POST /api/documents` gains an optional `format: "md" | "html"` input (default `"md"` — the raw content still arrives in the `markdown` body field, which for `format:"html"` carries the self-contained HTML). Every document read projection (`/api/documents/{id}`, `/api/documents/by-path/{rel}`, and the `/app/*` doc reads) gains an additive `format` output; the raw HTML lives in an **internal `raw_html` column that is never in any JSON body**. A new session-guarded, tenant-scoped route **`GET /app/documents/{id}/raw`** serves the raw HTML as `text/html` with the sandbox headers (below) for the web viewer's iframe. The MCP `fetch_document` tool output gains an additive `format` field, and for an html doc its `markdown` is the server-extracted readable text — so **`markdown`'s contract meaning ("readable text body") is preserved, not repurposed**: markdown docs are byte-identical, and html is a *new* format whose readable body is its extracted text. **The frozen `/api/*` consumer contract and the MCP tool contract v1 are preserved verbatim** — every P16 change is a new optional field or an entirely new `/app` route; no existing field's name, type, presence, status, or route changed (verified at the P16 review). See *HTML explainer document type (P16)* below.
 
 ## Auth
 
@@ -193,6 +195,16 @@ P15 adds a **new agent-facing surface** — an MCP (Model Context Protocol) serv
 - **`url` is reserved-empty (deferred D13).** For the **whole current corpus** every hit's / `fetch`'s `url` is `""` — no document carries a public citation origin yet. **Treat empty `url` as "no citation link," not an error.** A future `source_url` data-model + ingester job (deferred **D13**) populates it; that is additive and stays contract v1.
 - **Corpus scoping = tenant-wide per `vk_`.** A `vk_` resolves to a **tenant**, and search/fetch scope to the **whole tenant's** corpus (upstream filters by `tenant_id`, not the key's bound project). So **one hi2vi `vk_` key covers both the `hi2vi` and `hi2vi_web` knowledge projects** — no two-key scheme; the `search` `project` param optionally narrows. Final key provisioning is coordinated with hi2vi P18.S5 on the operator side.
 - **Versioning — contract v1, additive-only.** `CONTRACT_VERSION = "1"`, surfaced at the service's `GET /healthz` as `contract_version`. **Non-breaking (stays v1):** a new tool, a new optional param, a new output field (e.g. `url` becoming populated). **Breaking (bumps the version):** removing/renaming a tool or field, changing a type, or changing the auth model. This `contract_version` is **distinct from** MCP `serverInfo.version` (= the `mcp` SDK release `1.28.1`).
+
+## HTML explainer document type (P16)
+
+P16 makes a standalone, self-contained interactive HTML explainer a first-class KB document format, added **additively** to the write path, the read projections, and the MCP tool — the frozen `/api/*` consumer contract and MCP contract v1 are untouched.
+
+- **Write — `POST /api/documents` gains `format`.** Optional `format: "md" | "html"` (a pydantic `Literal`, default `"md"`; a bad value → a free **422**). The document body still arrives in the existing **`markdown`** field — for `format:"html"` it carries the raw self-contained HTML (`<!DOCTYPE html>…` with inline CSS/JS). No mutually-exclusive second body field. The `.html` doc's `rel_path` is `<project>/<date>-<slug>.html`. Existing markdown callers are unchanged (the default keeps the request byte-identical).
+- **Read projections gain `format`, hide `raw_html`.** `/api/documents/{id}`, `/api/documents/by-path/{rel_path}`, `GET /app/documents`, and `GET /app/documents/{id}` each carry an additive `format` field. The raw HTML is stored in an internal **`raw_html` column that is dropped from every JSON body** (added to the response projectors' drop-sets) — agents and the read API never receive `<script>`/`<style>` markup, only the extracted text in `markdown` for html docs.
+- **New route — `GET /app/documents/{doc_id}/raw`.** Session-guarded (`require_user`) and tenant-scoped; serves the raw HTML (the on-disk body **without** its comment-frontmatter, starting at `<!DOCTYPE html>`) as `media_type="text/html; charset=utf-8"` with exactly four headers: `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`. **404** for a missing / cross-tenant / non-html / empty-`raw_html` doc (existence never leaks). Unmetered. It is a NEW route — no existing route changed. The web BFF relays it (see **frontend**); the sandbox/XSS-containment stance is in **architecture**.
+- **MCP `fetch_document` gains `format`.** The tool output carries an additive `format` (`"md" | "html"`), relayed verbatim from the upstream single-doc read (an older upstream omitting the key defaults to `"md"`). For an html doc, `markdown` is the **server-extracted readable text** — contract-v1 meaning preserved — and the character-cap truncation applies to it unchanged. The MCP tool contract stays **v1** (a new output field is additive; no `CONTRACT_VERSION` bump); `mcp-server/CONTRACT.md` was updated in-source.
+- **Search over html docs.** FTS5 / `snippet()` / embeddings run over the DB `markdown` column, which for an html doc holds the **extracted text** — so html explainers are searchable by their visible content and **never** by `<script>`/`<style>` text (verified at the P16 review E2E). See **data**/**backend** for the extraction + storage shape.
 
 ## Frozen consumer contract (P8)
 

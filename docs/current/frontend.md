@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0006
-created_at: 2026-07-18T09:47:52+09:00
-source: P14.REVIEW
-summary: P14 public marketing landing at / in web/ via the Claude Design gate (round 01)
-previous: v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces
+version: v0007
+created_at: 2026-07-21T15:22:40+09:00
+source: P16.REVIEW
+summary: P16 web viewer renders HTML explainers in a sandboxed opaque-origin iframe via a same-origin BFF raw-relay route; markdown docs render byte-identically
+previous: v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01
 ---
 
 # Frontend
@@ -41,6 +41,14 @@ the SEO file routes (`sitemap`/`robots`/`manifest`). The mkdocs site above is be
 **retired from the hosted edge** in P14 (see operations) — so `web/` becomes the single
 front end on `knowledge.hi2vi.com`. See *The public marketing landing (`web/`, P14)*
 below.
+
+**As of P16 the `web/` document viewer renders a first-class HTML explainer document
+type** — a `format === "html"` document renders as an **interactive** explainer (its
+quiz JS runs) inside a **sandboxed opaque-origin `<iframe sandbox="allow-scripts">`**
+(never `allow-same-origin`) pointing at a new **same-origin BFF raw-relay route**
+(`GET /api/documents/{id}/raw`), while a markdown document renders **byte-identically**
+via the existing `<MarkdownBody>`. No new visual design — the iframe chrome reuses the
+existing KB `--kb-*` tokens. See *The HTML explainer render (`web/`, P16)* below.
 
 ## Stack
 
@@ -547,3 +555,48 @@ it (**deferred job D10**).
   non-visual deviation is the operator's CTA-target routing (`/login`/`/signup`).
 - The design record under `web/design/rounds/01-landing/` is **read-only** provenance, not
   a live source; the app is the built truth.
+
+## The HTML explainer render (`web/`, P16)
+
+P16 adds the `web/` document viewer's second render path: a first-class **HTML explainer**
+document type rendered **with its interactivity intact but XSS-contained**. Every change
+is additive and markdown docs render byte-identically; no new visual design (existing
+`--kb-*` tokens only). The XSS-containment rationale lives in **architecture**.
+
+- **The render switch (`src/app/(app)/documents/[id]/page.tsx`).** Only the **body**
+  render branches (the header/metadata strip is untouched): `doc.format === "html"` → a
+  `.kb-explainer` container wrapping
+  `<iframe src="/api/documents/{id}/raw" sandbox="allow-scripts" referrerPolicy="no-referrer" …>`;
+  else the existing `.kb-panel` + `<MarkdownBody>` (`react-markdown` + `remark-gfm`, **no
+  `rehype-raw`**), byte-identical. **`sandbox="allow-scripts"` only — never
+  `allow-same-origin`** (the opaque-origin pin), and no allow-forms/popups/top-navigation/
+  modals. `format` is added to `KbDocumentListItem` (covers `KbDocument`).
+- **The same-origin BFF raw-relay route (`src/app/api/documents/[id]/raw/route.ts`).** The
+  app's first non-auth Route Handler — it **self-guards** (the `(app)` layout guard does
+  not cover `/api/*`): validates the id first (`Number.isInteger && >= 1`, else 404 before
+  any session/upstream), reads the sealed session cookie (`openSession(readSessionCookie(req))`,
+  null → 401 with no upstream call), then relays S1's `GET /app/documents/{id}/raw` via the
+  previously-unused `client.ts::getRaw` byte-passthrough seam (`app.ts::getDocumentRaw`):
+  upstream 404 → 404, any other failure → 502. Success streams `new Response(upstream.body, …)`
+  with **five pinned headers set EXPLICITLY** (never copied from upstream):
+  `Content-Type: text/html; charset=utf-8`,
+  `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`,
+  `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`.
+- **The X-Frame-Options exemption (`next.config.ts`).** The global `/:path*` entry stays
+  `X-Frame-Options: DENY` (the parent document page keeps DENY). A **second, later,
+  more-specific** entry `source: "/api/documents/:id/raw"` sets `X-Frame-Options: SAMEORIGIN`
+  + the same CSP — values **identical** to the handler's, so no layer precedence can resolve
+  to a wrong value (confirmed at runtime: `/api/documents/1/raw` returns a single SAMEORIGIN
+  + the sandbox CSP; `/` stays DENY).
+- **iframe chrome (`explainer.css`, co-located).** `.kb-explainer` mirrors the `.kb-graph`
+  sizing/border/radius/overflow; the baseline is a **fixed generous height with internal
+  scroll** (`--kb-*` tokens only) — the framed opaque-origin doc can't be measured
+  cross-origin, so no `postMessage` height handshake in P16 (that is a P17 explainer-template
+  enhancement). `referrerPolicy="no-referrer"` keeps the relay URL out of any referer.
+- **What the live check still owes the operator (not executor-verifiable).** The unit tests
+  (`tests/raw-route.test.ts`) cover the handler's status/headers/body + id/auth guards, and
+  the header layering is confirmed at runtime; what remains is the live **authenticated,
+  in-browser** round-trip — open `/documents/{id}`, confirm the iframe renders and the quiz
+  JS runs, a direct top-level visit to the raw URL is sandbox-stripped, and a markdown doc
+  still renders byte-identically. No jsdom/browser tooling exists in this repo, so this is a
+  recorded operator residual, not a defect.

@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0009
-created_at: 2026-07-18T03:14:51+09:00
-source: P13.REVIEW
-summary: P13 CLI two-token model; passwords never in argv; show-once vk_ written to the seam not printed; chmod 600 enforced in code; public /auth grant throttled server-side per-IP; KB_API_TOKEN tenant-#1 public-write hazard
-previous: v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui
+version: v0010
+created_at: 2026-07-21T15:27:20+09:00
+source: P16.REVIEW
+summary: P16 HTML explainer XSS containment: opaque-origin sandboxed iframe (allow-scripts, no allow-same-origin) + CSP/X-Frame exemption; raw_html never in JSON; XSS-safe-by-construction preserved while quiz JS runs
+previous: v0009_p13_cli_two-token_model_passwords_never_in_argv_show-once_vk__written_to_the_seam_not_printed_chmod_600_enforced_in_code_public_auth_grant_throttled_server-side_per-ip_kb_api_token_tenant-_1_public-write_hazard
 ---
 
 # Security
@@ -22,6 +22,8 @@ Personal, single-operator knowledge base. The threat model is modest — no mult
 **P11 adds per-tenant usage monitoring — observability only, and it widens the surface only minimally.** Usage is isolated per tenant exactly like content: the `usage_events` reads are scoped by `tenant_id`, and a cross-tenant or missing project on `GET /app/projects/{id}/usage` returns **404** (existence never leaks). Metering is **best-effort and never alters a request's outcome** (a metering failure is logged, never raised, and never changes a status code, body, or a timing-visible failure). Usage rows carry **no new PII** — only `tenant_id`, `project_id`, a free-text `event_type`, and a timestamp — so the data-sensitivity posture is unchanged from P10. See *Per-tenant usage isolation* below.
 
 **P13 ships a standalone `knowledge` CLI and, to make its onboarding reachable on the hosted host, publishes the `/auth/*` grant to the internet — the phase's real security event.** Two threads follow, both below in *CLI credential handling + the public `/auth` throttle*: (1) **credential hygiene at the client** — a **two-token model** (a non-expiring `vk_` in `api.token`, an additive 30-day session in `auth.session_token`), passwords that **never reach `argv`** or logs, a **show-once `vk_` written to the config seam and never printed** (`redact_token` is the only display form), the generic-401 enumeration-safety preserved verbatim from the terminal, and `chmod 600` on the config now **enforced in code** rather than a prose instruction; and (2) **a new exposed surface** — publishing `/auth/{signup,login}` (an unauthenticated password grant + open signup) invalidates the pre-P13 "this API needs no rate limit" rationale, so P13 lands a **server-side per-IP throttle** on that grant in the same slice. One standing hazard is also documented: a stray `$KB_API_TOKEN` in the CLI user's environment resolves to **tenant #1** (whose writes publish to the public site), so the CLI warns and the smoke scrubs it.
+
+**P16 introduces the first document format whose content is *executable untrusted code* — a self-contained HTML explainer with inline JS — and contains it by construction rather than sanitizing it away.** The web app's markdown viewer was "XSS-safe by construction" (react-markdown, no `rehype-raw`); an HTML explainer must instead *run* its quiz JS. P16 keeps the safety stance while allowing that interactivity via an **opaque-origin sandboxed iframe**: `sandbox="allow-scripts"` **without** `allow-same-origin`, pointed at a same-origin BFF raw-relay route, with the raw response also carrying a `Content-Security-Policy: sandbox allow-scripts` (defense in depth) and an `X-Frame-Options` exemption scoped to that one path. The untrusted explainer JS runs but has **no session cookie, no storage, no cross-origin parent DOM, and no way to call the API as the user**; the raw HTML never appears in a JSON body, and search indexes only extracted text. See *HTML explainer XSS containment (P16)* below.
 
 ## Purpose
 
@@ -222,6 +224,18 @@ Publishing `/auth/{signup,login}` at the edge (see api/operations) is the phase'
 - **Single-worker coherence — a real invariant.** The limiter is in-process and does **no `await`**, so it is atomic under the single uvicorn worker's event loop (no lock). This leans on the `main.py` single-worker invariant already load-bearing for the content write lock: **scaling workers would break the throttle's coherence** (each worker would keep its own counter). Memory is bounded (expired windows roll over lazily; a defensive `_RATE_MAX_KEYS` cap drops oldest under a distributed flood).
 - **Default value chosen test-safe.** 20/15 min is lenient for a real agent re-running `init` yet a real cap on the public grant; it is also above the Postgres accounts suite's ~8 signups from one shared `testclient` IP (verified `8 passed` with the throttle live). Never lower the shared default below ~10 without raising it back — do not weaken those DB-backed tests.
 
+## HTML explainer XSS containment (P16)
+
+P16 makes a standalone interactive HTML explainer a first-class document type. Its content is **untrusted executable code** (inline JS), so the security question is *how does the quiz run without becoming an XSS vector*. The answer is containment, not sanitization (sanitizing would kill the quiz — the whole point).
+
+- **Opaque origin via `sandbox="allow-scripts"` without `allow-same-origin`.** The web viewer frames a `format === "html"` document in `<iframe sandbox="allow-scripts">` — and crucially **never** `allow-same-origin` (nor allow-forms/popups/top-navigation/modals). Omitting `allow-same-origin` gives the framed document an **opaque origin**: no `document.cookie`, no `localStorage`/`sessionStorage`/IndexedDB, and `window.parent`/`window.top` DOM access is cross-origin (blocked by the same-origin policy). `allow-scripts` alone keeps the multiple-choice quiz working.
+- **Cannot exfiltrate the session or act as the user.** The app session cookie is `httpOnly` (JS can't read it regardless), **and** the `/app` + `/api` planes have **no CORS** (server-to-server) — so a credentialed cross-origin `fetch` from the opaque iframe to the API is blocked. The untrusted explainer JS therefore can neither read the session nor call the API as the signed-in user.
+- **Defense in depth for a direct top-level visit.** The raw bytes are served with `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`, so a person who navigates **straight to the raw URL** gets the sandbox applied to the top-level document too — also privilege-stripped. `frame-ancestors 'self'` means only the app may frame it. The relay sets `referrerPolicy="no-referrer"` on the iframe so the relay URL doesn't leak in a referer.
+- **The X-Frame-Options exemption is scoped and consistent.** The global `X-Frame-Options: DENY` (which blocks even same-origin framing) is exempted **only** for `/api/documents/:id/raw` → `SAMEORIGIN`; the parent document page keeps `DENY`. The CSP + X-Frame pair is set **identically** at the backend raw route, the BFF relay, and the `next.config` header entry, so no header-layer order can resolve to a permissive value (verified at runtime).
+- **Raw HTML never crosses a JSON boundary; search sees only extracted text.** The `raw_html` column is dropped from every JSON projection (`/api/*` and `/app/*` reads) — only the dedicated `text/html` raw route (session-guarded, tenant-scoped, 404 on missing/cross-tenant/non-html) serves it. Full-text search / snippets / embeddings index the **extracted** text, so an explainer is never findable by, and never surfaces, its `<script>`/`<style>` contents (verified at the P16 review E2E).
+- **Auth + tenancy unchanged.** The raw route is `require_user`-guarded and tenant-scoped exactly like the rest of `/app/*` (cross-tenant → 404, existence never leaks); the web relay self-guards on the sealed session cookie (401 with no upstream call when absent). No new credential, secret, CORS change, or auth surface — P16 widens the *content* threat model (executable doc content) but not the auth model.
+- **Residual (operator visual acceptance).** The live in-browser confirmation that the quiz runs while a direct raw-URL visit is sandbox-stripped needs a real browser (no jsdom/browser tooling in the repo); it is an operator residual. Every machine-verifiable layer — the sandbox attribute, the identical CSP/X-Frame across all three layers, the runtime header check, extracted-text-only search, and `raw_html` never in a JSON body — passed at the P16 review.
+
 ## Security Checklist
 
 - [x] No secrets committed (token + Gemini key via env only; `.env` + a private-key backstop in `.gitignore`)
@@ -252,6 +266,9 @@ Publishing `/auth/{signup,login}` at the edge (see api/operations) is the phase'
 - [x] **(P13)** Generic-401 enumeration-safety preserved from the CLI **and through the per-IP throttle** (unknown-email == wrong-password, byte-identical, verified live)
 - [x] **(P13)** The now-public `/auth/{signup,login}` grant is throttled server-side (in-process, per-`(IP, route)`, default 20/15 min, CF-restored real IP, `KB_AUTH_RATE_LIMIT`/`KB_AUTH_RATE_WINDOW_S`-tunable) — leans on the single-worker invariant
 - [x] **(P13)** The `$KB_API_TOKEN` → tenant-#1 public-publish hazard is warned by the CLI and scrubbed by the smoke's child env
+- [x] **(P16)** An HTML explainer's untrusted JS runs only in an **opaque-origin** iframe (`sandbox="allow-scripts"`, **no** `allow-same-origin`) — no cookie/storage/parent-DOM/credentialed-API access; the app is CORS-less + the session cookie is httpOnly
+- [x] **(P16)** Defense in depth: the raw response carries `CSP: sandbox allow-scripts; frame-ancestors 'self'` (a direct top-level visit is privilege-stripped) and the CSP/X-Frame pair is identical across the backend route, the BFF relay, and `next.config` (verified at runtime)
+- [x] **(P16)** `raw_html` is never in any JSON body (dropped from every read projection); the raw route is `require_user`-guarded + tenant-scoped (404 on missing/cross-tenant/non-html); search indexes only extracted text (never `<script>`/`<style>`)
 
 ## Open Questions
 
