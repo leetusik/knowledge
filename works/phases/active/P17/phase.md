@@ -688,3 +688,46 @@ concrete change it made.
   The step-2 / header prose was corrected to describe this reality. Arms on the **second**
   post-F1 dispatch (the first runs the pre-F1 script from the box clone). No smoke-probe
   change was made (out of F1 scope).
+
+### P17.REVIEW
+
+**Verdict: `pass`** (2026-07-21, `slice-executor-high`). All five middle slices + F1
+validated together and the phase meets the intent's four confirmed points; residuals are
+honest and non-blocking; six durable-doc versions consolidated the ten `### Doc impact`
+done-lines. Full report in `slices/P17.REVIEW/result.md`.
+
+- **Validation matrix — green.** `workflow validate` pass; the seven work commits present;
+  `plugin_parity.py` exit 0 (was FAIL 36) + `skills_parity.py` exit 0; `claude plugin
+  validate .` / `./plugin` both ✔; `sample-explainer.html` first line `<!DOCTYPE html>` +
+  all 8 self-containment greps empty + 5 sections / 5 correct answers; the §2 resolver →
+  `KB_STATUS=configured` (scratch connect-mode config, real config untouched);
+  `.claude/skills/explain/` absent and **`diff ~/.claude/skills/explain/SKILL.md
+  plugin/skills/explain/SKILL.md` empty** (operator applied the staged v2 `cp` — S2's
+  `needs_operator` gate is resolved); S3 scratch connect-mode → remote-only
+  (`KB_LOCAL_FALLBACK=no`); S5 live re-probes `/healthz` 200 · login-discriminator 401
+  `invalid email or password` · unauth `/app/documents/1/raw` **401** (P16 route present on
+  the box — a stale api 404s); `bash -n deploy/deploy.sh` clean + the three F1 edits present;
+  regression backend **70 passed / 13 skipped** + mcp-server **12 passed** (P17 touched no
+  `server/`/`mcp-server/`/`web/` source, so these prove non-regression). Web suite skipped
+  (zero web changes). The 17/17 hosted E2E + MCP `vk_` pass is cited from S5's `result.md`.
+- **Intent met.** (1) always-HTML both modes, markdown house style removed — verified in the
+  canonical SKILL.md; (2) best-practices default-on + judgment gate + mandatory
+  visible-domain citations + graceful offline skip — verified in §3/§4.3; (3) public
+  multi-user ingestion — Connect mode (S3) + live prod cutover + hosted `vk_`/MCP E2E (S5),
+  one-key-all-repos; (4) copies reconciled + `skills_parity` CI guard (S2). Beyond intent:
+  D9 delivered (S4), the split-deploy fix (F1). Constraints all held (no `/api/*`/MCP
+  contract change — `format:"html"` is additive USE; no design-cowork breach; terse tests;
+  docs versioned only here).
+- **Residuals (none block):** in-browser quiz-render eyeball (operator, P16-precedent); F1
+  armed-but-not-live-proven (arms on 2nd dispatch); two throwaway prod tenants + doc 13 (no
+  delete API); `alembic/` deliberately unshipped (S4). D13 + the F1 P16-discriminating smoke
+  probe stay noted-not-built (out of scope), carried forward.
+- **Docs consolidated (source `P17.REVIEW`):** **product** v0008 · **experience** v0008 ·
+  **decisions** v0016 · **operations** v0018 · **qa** v0008 · **architecture** v0014. The S1
+  "api usage" line was folded into decisions/architecture as a no-contract-change additive
+  use (per plan) rather than versioning **api** — `api` genuinely did not change. `rebuild-docs`
+  regenerated `docs/current/*`; `validate` + `docs` confirm the index is consistent. (The
+  operations version was recreated once with a shorter summary — the first slug + the
+  editor's temp-suffix exceeded the 255-byte filename limit; bookkeeping only.)
+- **Orchestrator:** record via `python3 scripts/workflow.py review-phase P17 --verdict pass`.
+  No code touched, no commit, no status transition by this slice.

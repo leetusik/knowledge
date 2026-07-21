@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0007
-created_at: 2026-07-21T15:22:40+09:00
-source: P16.REVIEW
-summary: P16 documents journey: an HTML explainer renders as an interactive in-app document (quiz JS runs) safely sandboxed; markdown docs unchanged
-previous: v0006_p13_cli_journey_one-shot_init_save_search_list_read_projects_usage_two-token_model_visible_from_the_terminal_--json_exit-code_agent_contract
+version: v0008
+created_at: 2026-07-21T23:31:06+09:00
+source: P17.REVIEW
+summary: P17 /knowledge:explain outputs an interactive HTML explainer (quiz + cited best-practices) for both modes; /knowledge:setup offers Connect (hosted) vs Scaffold (self-host) modes
+previous: v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged
 ---
 
 # Experience
@@ -48,6 +48,8 @@ authenticated web app's document viewer, opening an HTML explainer renders it as
 sandboxed frame, while the surrounding page chrome (title, metadata) is unchanged and a
 markdown document reads exactly as before. Search finds an HTML explainer by its readable
 text like any other document. See *The HTML explainer document (P16)* below.
+
+**As of P17 the `/explain` skill authors that interactive HTML explainer for every explanation, and any plugin user can point it at the hosted KB.** `/knowledge:explain` now always produces the quiz-bearing HTML page — with a default-on, cited "Best practices & next steps" section — for **both** topic and code-change modes (no markdown output remains), and `/knowledge:setup` opens with a **Connect** (hosted, zero-infra) vs **Scaffold** (self-host) mode choice, so a plugin user can sign up, mint one key, and have their explainers land in their own tenant on the public host. See *Explain v2 authoring + hosted onboarding (P17)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -254,6 +256,40 @@ surface or a redesign.
   the quiz runs (and that a direct raw-URL visit is sandbox-stripped) needs a real browser —
   there is no browser/jsdom tooling in the repo — so it is an operator visual-acceptance
   residual; every machine-verifiable layer passed at the P16 review.
+
+## Explain v2 authoring + hosted onboarding (P17)
+
+P17 changes what `/knowledge:explain` writes and where a plugin user can send it.
+
+- **One output, both modes.** Every `/explain` — whether the argument names a topic
+  (a concept, tool, subsystem, or file) or a code change (a diff, branch, commit range,
+  or "what we just changed") — produces the **same** single self-contained interactive
+  HTML explainer: a table of contents over Background → Intuition → Code →
+  **Best practices & next steps** → **Quiz**, with HTML/CSS-or-SVG diagrams (never ASCII),
+  callouts, worked toy-data examples, and a Kleppmann-clear essay tone. The quiz is 5
+  medium multiple-choice questions with immediate correct/incorrect feedback. Only the
+  lens differs between modes; the sections are shared. The markdown house style is gone.
+- **The cited comparison section.** "Best practices & next steps" is on by default: it
+  says where the implementation aligns with prevailing practice, where it deliberately
+  diverges, and 2–4 concrete next steps — and **every claim shows its source in plain
+  text** (link plus the bare domain), so provenance survives search and MCP extraction.
+  The skill skips the section for purely-internal or trivial subjects (no in-document
+  "skipped" note — the chat report explains) and skips it cleanly when offline. Trailing
+  `research` / `no-research` words force it on or off.
+- **Choosing your KB at setup.** `/knowledge:setup` asks **Connect** vs **Scaffold** up
+  front. **Connect mode** (the zero-infra default) walks the user through a browser
+  signup on `https://knowledge.hi2vi.com`, creating a project, and minting one `vk_` key
+  shown once — then the skill writes that key into the local config; from then on
+  `/explain` posts to the user's own tenant. **One key serves every repo.** Email and
+  password never reach the agent; only the pasted key does. **Scaffold mode** is the
+  unchanged self-host flow (stand up your own KB from scratch). A terminal-only
+  alternative (`knowledge init` from the CLI) writes the identical config.
+- **Reading it back.** A posted explainer renders in the authenticated web app's
+  Documents view exactly as a P16 HTML explainer — interactive quiz and all — inside the
+  sandboxed frame, and is found by full-text search on its visible text. (The live
+  in-browser eyeball of the quiz rendering under a fresh tenant is the one operator
+  visual-acceptance residual; every machine-verifiable layer — the raw-HTML relay and
+  the four sandbox headers — is proven live on prod.)
 
 ## Open Questions
 

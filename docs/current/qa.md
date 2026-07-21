@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0007
-created_at: 2026-07-18T03:21:45+09:00
-source: P13.REVIEW
-summary: P13 CLI smoke scripts/cli_smoke.py drives the installed binary through lifecycle + logout-survival + 429; generic-401 preserved through the throttle proven live; hosted E2E pending the accounts-plane cutover
-previous: v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally
+version: v0008
+created_at: 2026-07-21T23:31:07+09:00
+source: P17.REVIEW
+summary: P17 hosted end-to-end skill path verified live on prod (signup to vk_ to format html ingest to P16 read and raw to tenant search to MCP vk_ fetch); in-browser quiz-render eyeball is the one operator residual
+previous: v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover
 ---
 
 # QA
@@ -31,7 +31,16 @@ phase produced. As of P13 the **standalone `knowledge` CLI** has its own accepta
 `scripts/cli_smoke.py` drives the *installed* binary through the full lifecycle +
 logout-survival + the `/auth` 429 throttle against a running local stack — proven green on
 localhost; hosted end-to-end is pending the operator's P10–P13 accounts-plane cutover (see
-operations). See *CLI smoke acceptance (P13)* below.
+operations). See *CLI smoke acceptance (P13)* below. **As of P17 the hosted end-to-end
+skill path is verified live on prod** (`https://knowledge.hi2vi.com`) against a fresh
+throwaway tenant — signup → project → mint `vk_` → `POST /api/documents format:"html"`
+(the S1 `sample-explainer.html`) → 201 `.html` + `format:"html"` → `/api` read-back
+(extracted-text `markdown`, no `raw_html`) → session-guarded `GET /app/documents/{id}/raw`
+(200 raw HTML + the four sandbox headers) → tenant FTS by visible text → the **MCP
+`vk_`-path** (`e2e_smoke.py` search + `fetch_document` relaying `format:"html"`). This
+**closes** the P13 "hosted E2E pending" and the P15 MCP `vk_` residual; the one
+un-automated item left is the operator's **in-browser quiz-render eyeball**. See *Hosted
+skill-path E2E (P17)* below.
 
 ## Test Commands
 
@@ -330,6 +339,44 @@ The standalone `knowledge` CLI is accepted by `scripts/cli_smoke.py` — the sib
 - **The 429 + enumeration-safety, proven live at S5:** hammering `login` from one IP returned **20×`401` then `429`** with `Retry-After` + a generic body; unknown-email and wrong-password 401s were **byte-identical** (the IP-keyed throttle runs before the credential check, so it never leaks which was wrong); signup and login have independent windows. Through the CLI the 429 surfaces as a clean `error: HTTP 429: …` — no hang, no raw body (S5 touched no CLI code; that clean surfacing is `main()`'s existing `ApiError` boundary — do not "improve" it without re-running the smoke).
 - **Fresh-window caveat:** the limiter state is **in-process**, so the throttle assertion assumes a **fresh** `api` (empty window). A re-run against the same long-lived container within the window sees residual counts — `docker compose restart api` resets it (the smoke's failure messages say so). Tune the threshold with `--login-limit` if the stack's `KB_AUTH_RATE_LIMIT` differs from the default 20.
 - **Hosted E2E is pending, not failing.** Every P13 slice validated against **localhost** because the accounts plane is not yet deployed to prod (no `knowledge-postgres` on the box, box clone at pre-P13 code, box `.env` missing the accounts secrets). Hosted acceptance — one real `knowledge init --base-url https://knowledge.hi2vi.com` — becomes possible after the operator runs the one-time P10–P13 cutover (operations); the edge routing that makes it reachable is already deployed and verified.
+
+## Hosted skill-path E2E (P17)
+
+P17's behavioral acceptance is the **hosted, live-prod skill path** — the counterpart to
+P8's publish-on-write E2E, but exercising the P16 HTML pipeline through the accounts plane
+with a real per-tenant `vk_` key. It was run green at the phase's S5 (17/17 checks) and
+re-probed at the review. Two tiers, both credential-free-repeatable and secret-safe:
+
+- **Credential-free re-probes (the cheap regression, safe to repeat any time).** Against
+  `https://knowledge.hi2vi.com` with a browser `User-Agent` (Cloudflare 403s the default
+  `Python-urllib` UA — a transport detail only): `GET /healthz` → **200**; `POST
+  /auth/login` with nonsense creds → **401 `invalid email or password`** (the
+  migrated/live discriminator — dormant or unmigrated would 500); unauth `GET
+  /app/documents/1/raw` → **401** (the P16 route is present; a pre-P16 api returns
+  route-absent **404**). These three settle "accounts plane live + P16 shipped" without any
+  account or write.
+- **The full throwaway-account E2E (run when the skill path or the deploy changes).** Sign
+  up a **reserved-domain `example.com` throwaway**, create a project, mint a `vk_` (shown
+  once), then: `POST /api/documents format:"html"` with the S1 `sample-explainer.html` →
+  **201** `.html` `rel_path` + `"format":"html"`; `GET /api/documents/{id}` (vk_) →
+  `format:"html"` + `markdown` = **extracted text** (not raw HTML) + **no `raw_html` key**;
+  `GET /app/documents/{id}/raw` (session) → **200 `<!DOCTYPE html>`** with all four sandbox
+  headers (CSP `sandbox allow-scripts; frame-ancestors 'self'`, `X-Frame-Options`,
+  `nosniff`, `no-store`); `GET /api/search` finds it by visible text; and `e2e_smoke.py`
+  (public host, the minted `vk_`) PASSes `search` + `fetch_document` with the tool now
+  relaying `format:"html"`. **Rules:** create no persistent accounts you cannot clean up
+  (there is **no delete API** — throwaway tenants are namespaced and isolated from tenant
+  #1's corpus; the operator may purge later), hold the `vk_`/session token in tmp only
+  (never in `works/`), and keep the auth-throttle budget tiny (a couple of login/signup
+  calls, well under 20/900 s/IP).
+- **The one operator residual: the in-browser quiz-render eyeball.** Confirming the P16
+  sandboxed iframe *renders* the interactive explainer (quiz clicks + feedback) under a
+  fresh tenant needs a real browser — none is in the harness. It is an operator
+  visual-acceptance residual (P16 accepted the same class); every machine-verifiable layer
+  behind it — the raw-HTML relay and the four sandbox headers — is proven live. The natural
+  moment is the operator's post-phase dogfood (install the plugin from the public
+  marketplace, `/knowledge:setup` connect, `/explain`, view the doc), which also completes
+  S2's flagged steady-state (drop the redundant user-level skill copy).
 
 ## Known Fragile Areas
 

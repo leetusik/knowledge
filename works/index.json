@@ -16,17 +16,17 @@
       "id": "P17",
       "name": "Explain skill v2: interactive HTML + public multi-user ingestion",
       "objective": "Upgrade the explain skill (plugin canonical, all copies) to always emit a gist-style self-contained interactive HTML explainer (Background/Intuition/Code/Quiz) for both topic and code-change modes — including a default-on, citation-backed 'Best practices & next steps' section from web research (skipped when the subject has no external comparison surface or offline) — and wire ingestion to the publicly deployed KB so every knowledge user posts explainers to their own tenant with their own key, closing the prod accounts/auth deploy gap as required.",
-      "status": "planned",
+      "status": "done",
       "order": 2,
       "path": "works/phases/active/P17",
-      "review_status": "pending",
-      "current_slice": "P17.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 8,
-      "done_slice_count": 7
+      "done_slice_count": 8
     }
   ],
   "deferred_open_count": 8,
   "deferred_promoted_count": 3,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-21T22:32:58+09:00"
+  "last_rebuilt_at": "2026-07-21T23:39:55+09:00"
 }

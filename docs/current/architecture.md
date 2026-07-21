@@ -1,17 +1,17 @@
 ---
 doc_id: architecture
-version: v0013
-created_at: 2026-07-21T15:22:34+09:00
-source: P16.REVIEW
-summary: P16 HTML explainer doc type end-to-end: raw-on-disk canonical + extracted-text-in-DB, and the opaque-origin sandboxed-iframe XSS-containment stance (allow-scripts without allow-same-origin + CSP/X-Frame exemption)
-previous: v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api
+version: v0014
+created_at: 2026-07-21T23:31:07+09:00
+source: P17.REVIEW
+summary: P17 open-core plugin template mirrors the multi-tenant SaaS server dormant-safe without DATABASE_URL; a second CI drift gate skills_parity guards the shipped explain-skill copies
+previous: v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption
 ---
 
 # Architecture
 
 ## Status
 
-Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below). As of P9 **Track 1's public site is self-hosted too**: the human web UI is served **live** by a `mkdocs serve` `knowledge-site` viewer on the box (**not GitHub Pages**, retired), so the box runs **two independent services** (`knowledge-api` + `knowledge-site`) behind **two-location edge routing** — one public domain, `knowledge.hi2vi.com`, for both tracks (see *Self-hosted site* below). As of P10 the FastAPI app is a **two-plane process**: the unchanged content plane now runs alongside a new **async Postgres control plane** (accounts / tenants / projects / credentials), making the deployment a **multi-tenant SaaS** — the live corpus becomes **tenant #1** and every `/api/*` bearer resolves to a tenant (see *Two-plane app* below). As of P12 the deployment gains a **separate-origin authenticated browser app** (a Next.js app in `web/`) fronted by a **server-side sealed-cookie BFF**: the browser talks only to the Next origin, Next calls the backend server-to-server with a bearer, and the backend session token lives in a sealed httpOnly cookie — **no backend CORS change, no web-side DB**. The app adds four new **session-scoped, tenant-scoped, unmetered `/app` read routes** and becomes the **per-tenant knowledge viewer**, resolving P10's coexist-vs-replace-mkdocs question (see *Authenticated web app + BFF* below). As of P13 the repo gains a **standalone CLI package boundary** — a `cli/` subdirectory package (own hatchling dist, console script `knowledge`) that leaves the root virtual project untouched and is the **first *code* implementation** of the previously prose-only `knowledge-kb` config seam, so the same contract now has **two deliberate implementations** that must move together (see *CLI package boundary + the two-implementation config seam (P13)* below). As of P15 the deployment gains a **new agent-facing service**: a thin **MCP-over-HTTP retrieval server** (`mcp-server/`, package `knowledge_mcp`) that **proxies the frozen `/api/search` + document reads and forwards the caller's `vk_` bearer verbatim** — so it rebuilds no retrieval and inherits tenant/project corpus scoping — exposing `search` + `fetch_document` to AI agents over the **Streamable-HTTP** transport under a stable, additive-only **tool contract v1**; it runs **stateless** on the box **alongside** the REST surface, never modifying it (see *Agent-facing MCP retrieval service* below). As of P16 a **standalone self-contained HTML explainer is a first-class KB document format end-to-end**: raw HTML is **canonical on disk** (with extracted text in the disposable DB so search is unchanged), and the web viewer renders it **with its quiz JS running** inside a **sandboxed opaque-origin iframe** that preserves the "XSS-safe by construction" stance — the interactivity runs but cannot read the session, storage, or the parent app. No new services, deploy topology, or Postgres change (see *HTML explainer document type + opaque-origin render (P16)* below).
+Both tracks are implemented (Track 2 the DB-backed document API, Track 1 public GitHub Pages publishing). This doc records the stable system shape. As of P4 the previously-documented `sqlite-vec`/RRF extension seam is **consumed**: hybrid semantic search is live, reusing changple5's Gemini embedding setup, with the single-worker invariant untouched. As of P5 the search *boundary* is explicit: the deployed static site searches **entirely in the browser** and is fully decoupled from the local FastAPI hybrid — same corpus, two independent search implementations chosen by deployment target. As of P6 the static site also carries an **interactive knowledge graph** built the same browser-only way: a build-time mkdocs hook emits a `graph.json` static asset and a vendored client-side renderer draws it — no server, no new hosting (see below). As of P7 the whole feature is **packaged as a Claude Code plugin hosted in this same repo**: a repo-root marketplace manifest + an isolated `plugin/` payload ship the `/knowledge:explain` and `/knowledge:setup` skills so any Claude Code user can install it and scaffold their own KB, without changing the system shape below (see *Plugin packaging* section). As of P8 the API is also **deployed hosted** — one codebase, **two deployments** whose differences are two default-off flags — which turns the write path into a **publish path** (see *Two deployments* below). As of P9 **Track 1's public site is self-hosted too**: the human web UI is served **live** by a `mkdocs serve` `knowledge-site` viewer on the box (**not GitHub Pages**, retired), so the box runs **two independent services** (`knowledge-api` + `knowledge-site`) behind **two-location edge routing** — one public domain, `knowledge.hi2vi.com`, for both tracks (see *Self-hosted site* below). As of P10 the FastAPI app is a **two-plane process**: the unchanged content plane now runs alongside a new **async Postgres control plane** (accounts / tenants / projects / credentials), making the deployment a **multi-tenant SaaS** — the live corpus becomes **tenant #1** and every `/api/*` bearer resolves to a tenant (see *Two-plane app* below). As of P12 the deployment gains a **separate-origin authenticated browser app** (a Next.js app in `web/`) fronted by a **server-side sealed-cookie BFF**: the browser talks only to the Next origin, Next calls the backend server-to-server with a bearer, and the backend session token lives in a sealed httpOnly cookie — **no backend CORS change, no web-side DB**. The app adds four new **session-scoped, tenant-scoped, unmetered `/app` read routes** and becomes the **per-tenant knowledge viewer**, resolving P10's coexist-vs-replace-mkdocs question (see *Authenticated web app + BFF* below). As of P13 the repo gains a **standalone CLI package boundary** — a `cli/` subdirectory package (own hatchling dist, console script `knowledge`) that leaves the root virtual project untouched and is the **first *code* implementation** of the previously prose-only `knowledge-kb` config seam, so the same contract now has **two deliberate implementations** that must move together (see *CLI package boundary + the two-implementation config seam (P13)* below). As of P15 the deployment gains a **new agent-facing service**: a thin **MCP-over-HTTP retrieval server** (`mcp-server/`, package `knowledge_mcp`) that **proxies the frozen `/api/search` + document reads and forwards the caller's `vk_` bearer verbatim** — so it rebuilds no retrieval and inherits tenant/project corpus scoping — exposing `search` + `fetch_document` to AI agents over the **Streamable-HTTP** transport under a stable, additive-only **tool contract v1**; it runs **stateless** on the box **alongside** the REST surface, never modifying it (see *Agent-facing MCP retrieval service* below). As of P16 a **standalone self-contained HTML explainer is a first-class KB document format end-to-end**: raw HTML is **canonical on disk** (with extracted text in the disposable DB so search is unchanged), and the web viewer renders it **with its quiz JS running** inside a **sandboxed opaque-origin iframe** that preserves the "XSS-safe by construction" stance — the interactivity runs but cannot read the session, storage, or the parent app. No new services, deploy topology, or Postgres change (see *HTML explainer document type + opaque-origin render (P16)* below). As of P17 the **open-core plugin scaffold template** (`plugin/templates/kb/`) mirrors the full **P10–P16 multi-tenant SaaS server** (the `accounts`/`persistence`/`usage` packages, the `*_api` control-plane modules, `seed.py`, and the accounts-plane deps) so `plugin_parity.py` is green, while a rendered scaffold stays **dormant single-tenant** (a new `{{KB_DATABASE_URL}}` render token is the full tenant URL under the operator's parity params but **empty** for a scaffold → `DATABASE_URL` unset → accounts plane off); a second root-only CI drift gate (`skills_parity.py`) guards the shipped explain-skill copies. The explain skill's move to HTML output is an **additive USE** of the frozen P16 `/api/*` + MCP contract — no contract change (see *Open-core template mirrors the SaaS server (P17)* below).
 
 ## System Shape
 
@@ -257,6 +257,50 @@ the running system without changing the two-container shape, the API, or the sit
   its per-project checks now derive project dirs **dynamically** from the docs tree,
   so a scaffold with only its seed project passes — the same guard the operator's repo
   runs, shipped byte-identical.
+
+## Open-core template mirrors the SaaS server (P17)
+
+Through P7–P16 the repo grew a full multi-tenant SaaS server (the P10 accounts control
+plane, P11 usage, P16 HTML pipeline) but the shipped scaffold under `plugin/templates/kb/`
+never followed, so `plugin_parity.py` was FAIL 36. P17.S4 (the promoted D9) resolved it by
+**mirroring, not narrowing**: the template now carries the whole `server/` tree.
+
+- **The mirror.** 27 previously-only-in-repo files were added and 8 byte-drifted files
+  refreshed — all in the manifest's `identical` (byte-copy) class: the
+  `server/{accounts,persistence,usage}/*` packages, the `*_api` control-plane modules
+  (`api_auth`, `app_api`, `auth_api`, `dashboard_api`, `documents_api`, `graph_api`,
+  `usage_api`), `seed.py`, four `tests/test_*`, and the refreshed
+  `server/{config,db,documents,main,reindex,search}.py` + `pyproject.toml` + `uv.lock`
+  (the latter two carry the accounts-plane deps, so the mirrored server imports and boots
+  cleanly). A rendered scaffold's api was Docker-boot-verified: postgres healthy → api up →
+  `/healthz` 200 → md round-trip.
+- **Dormancy via one render token, not a `render.py` change.** The repo `compose.yml` sets a
+  literal tenant-mode `DATABASE_URL`; a plain mirror would put every scaffold user into
+  tenant mode (migrate/seed obligations, the P10 boot-failure class). The DATABASE_URL line
+  became a single new render token `{{KB_DATABASE_URL}}`, making `compose.yml`
+  **parameterized**. The **operator** render supplies the full literal (parity byte-matches
+  repo → green); a **scaffold** render passes `--set KB_DATABASE_URL=""` → `DATABASE_URL:`
+  null → **unset** in the container → `config.database_url()` None → **accounts plane
+  dormant, single-tenant**. `render.py` was unchanged (an empty string suffices; a
+  quoted-passthrough form couldn't reproduce the repo literal parity needs). One benign
+  consequence: a scaffold boots an unused `postgres` container (mirrored `depends_on`), and
+  a self-host user who exports `DATABASE_URL` in their shell can opt the accounts plane on
+  (never fires by default).
+- **Deliberately unshipped.** `alembic/`, `scripts/onboarding_smoke.py`, and `cli/` are
+  **not** in the scaffold (none are in `shipped_dirs`), so self-hosted multi-tenant
+  migrations stay undocumented for the open-core template — a recorded limitation.
+- **A second drift gate for the skill copies (P17.S2).** `plugin_parity.py` only covers
+  `plugin/templates/kb/`, never `plugin/skills/`. A new root-only `scripts/skills_parity.py`
+  byte-compares the two **shipped** explain-skill copy bodies (`plugin/skills/explain/`
+  canonical vs `.agents/skills/explain/` portable) and is wired into `plugin-ci.yml` beside
+  `plugin_parity.py`. The portable copy's body is byte-identical to canonical; only its
+  frontmatter differs, and its `openai.yaml` schema exposes **no tools/permissions field**,
+  so the v2 WebSearch/WebFetch + git-read tool needs are expressible only in the SKILL prose
+  and in the Claude-plugin `allowed-tools` on the canonical copy — not in the portable yaml.
+- **No contract change.** The explain skill's shift to HTML output is an **additive USE** of
+  the frozen P16 `/api/*` contract (`format:"html"` on POST, riding the existing `markdown`
+  field) — the API and MCP contract v1 are untouched (P17 edited no repo `server/`,
+  `mcp-server/`, or `web/` source).
 
 ## Extension Points
 
