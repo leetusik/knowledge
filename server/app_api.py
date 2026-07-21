@@ -161,6 +161,7 @@ async def create_credential(
     key = f"vk_{generate_opaque_token()}"
     record = await get_accounts_service().create_project_credential(
         CreateProjectCredential(
+            tenant_id=project.tenant_id,
             project_id=project.id,
             token_prefix=key[:12],
             token_hash=sha256_hex(key),

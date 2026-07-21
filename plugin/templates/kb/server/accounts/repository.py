@@ -173,6 +173,7 @@ class AccountsRepository:
         """Persist a project credential and return its metadata record."""
 
         model = ProjectCredentialModel(
+            tenant_id=payload.tenant_id,
             project_id=payload.project_id,
             name=payload.name,
             token_prefix=payload.token_prefix,
@@ -334,6 +335,7 @@ class AccountsRepository:
     ) -> ProjectCredentialRecord:
         return ProjectCredentialRecord(
             id=model.id,
+            tenant_id=model.tenant_id,
             project_id=model.project_id,
             name=model.name,
             token_prefix=model.token_prefix,

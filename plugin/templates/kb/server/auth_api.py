@@ -1,8 +1,9 @@
 """Account auth routes: signup, login, logout, and the caller's identity.
 
 Public ``/auth/*`` surface (outside ``/api/*`` so the content-plane bearer
-guards never touch it). Signup provisions a user, a tenant, and the owner
-membership, then mints an opaque DB-backed bearer token; login re-issues one.
+guards never touch it). Signup provisions a user plus a default org (tenant) +
+owner membership + default project in one transaction (the ``provision_signup``
+primitive), then mints an opaque DB-backed bearer token; login re-issues one.
 Raw tokens are returned once and stored only as a sha256 hash. Responses never
 expose ``password_hash`` or any ``token_hash``.
 
@@ -10,9 +11,11 @@ Ported from vocky ``auth_api.py`` (Starlette → FastAPI): body validation is
 FastAPI-native (pydantic model params → standard 422), not vocky's Starlette
 400-single-string; every other behavior is preserved verbatim — the identical
 generic 401 for unknown-email vs wrong-password (no user enumeration), the 409
-duplicate, the 30-day session TTL, the ``"<localpart>'s workspace"`` tenant
-default, the singular-``tenant`` signup shape vs plural-``tenants`` login/me
-shape, and hash-free serializers.
+duplicate, the 30-day session TTL, the singular-``tenant`` signup shape vs
+plural-``tenants`` login/me shape, and hash-free serializers. Signup's tenant
+naming changed in P18: it now provisions a ``"default"`` org + ``"default"``
+project (was ``"<localpart>'s workspace"``) and its response gained an additive
+``project`` field.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from server.accounts.service import DuplicateEmailError, get_accounts_service
 from server.accounts.types import (
     CreateAuthToken,
     CreateUser,
+    ProjectRecord,
     TenantRecord,
     UserRecord,
 )
@@ -198,6 +202,23 @@ def serialize_tenant(record: TenantRecord) -> dict[str, object]:
     }
 
 
+def serialize_project(record: ProjectRecord) -> dict[str, object]:
+    """Serialize a project for a response.
+
+    Mirrors ``server.app_api.serialize_project`` (the canonical project serializer)
+    byte-for-byte so signup can return its new default project without importing
+    ``app_api`` — which imports ``serialize_tenant`` back from this module, so the
+    dependency has to point one way.
+    """
+
+    return {
+        "id": str(record.id),
+        "name": record.name,
+        "tenant_id": str(record.tenant_id),
+        "created_at": record.created_at.isoformat(),
+    }
+
+
 async def _mint_token(user_id: UUID) -> str:
     """Mint an opaque bearer token, store its hash, and return the raw token."""
 
@@ -214,7 +235,12 @@ async def _mint_token(user_id: UUID) -> str:
 
 @router.post("/auth/signup", status_code=201)
 async def signup(payload: SignupIn, request: Request) -> dict[str, object]:
-    """Create a user, their tenant, and owner membership; mint a session token."""
+    """Create a user with a default org + project + owner membership; mint a token.
+
+    The org and project are both named ``"default"`` (``provision_signup``); the
+    response carries the new ``project`` alongside the ``tenant`` (additive — the
+    ``/auth/*`` contract is frozen, so signup's shape only gains fields).
+    """
 
     _enforce_rate_limit(request)
     service = get_accounts_service()
@@ -227,14 +253,14 @@ async def signup(payload: SignupIn, request: Request) -> dict[str, object]:
             status_code=409, detail="a user with this email already exists"
         )
 
-    workspace_name = f"{payload.email.split('@')[0]}'s workspace"
-    tenant, _member = await service.create_tenant_with_owner(user.id, workspace_name)
+    tenant, _member, project = await service.provision_signup(user.id)
     token = await _mint_token(user.id)
 
     return {
         "token": token,
         "user": serialize_user(user),
         "tenant": serialize_tenant(tenant),
+        "project": serialize_project(project),
     }
 
 
