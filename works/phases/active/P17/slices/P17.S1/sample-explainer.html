@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Debouncing a Search Box — Explained</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      max-width: 46rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.65;
+      color: #1c1c1c;
+      background: #fff;
+    }
+    h1 { line-height: 1.25; }
+    h2 { margin-top: 2.4rem; border-bottom: 1px solid #e5e5e5; padding-bottom: .3rem; }
+    nav { background: #f6f8fa; border: 1px solid #e5e5e5; border-radius: 8px; padding: .5rem 1rem; }
+    nav ol { margin: .4rem 0; padding-left: 1.4rem; }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f4f4f4;
+      padding: .8rem 1rem;
+      border-radius: 6px;
+      font-size: .92em;
+    }
+    code { background: #f0f0f0; padding: .05rem .3rem; border-radius: 4px; }
+    .callout {
+      border-left: 4px solid #3b82a0;
+      background: #eef6fa;
+      padding: .75rem 1rem;
+      margin: 1.2rem 0;
+      border-radius: 4px;
+    }
+    .lesson {
+      border-left: 4px solid #b8860b;
+      background: #fbf6e9;
+      padding: .75rem 1rem;
+      margin: 1.2rem 0;
+      border-radius: 4px;
+      font-style: italic;
+    }
+    /* Timeline diagram — pure CSS, no images fetched */
+    .timeline { margin: 1.2rem 0; }
+    .track { position: relative; height: 2.4rem; background: #eee; border-radius: 4px; }
+    .key {
+      position: absolute; top: .3rem;
+      width: 1.5rem; height: 1.5rem; line-height: 1.5rem; text-align: center;
+      background: #3b82a0; color: #fff; border-radius: 50%; font-size: .8rem;
+    }
+    .fire {
+      position: absolute; top: .1rem;
+      width: 0; height: 2rem; border-left: 3px solid #b02a37;
+    }
+    .fire::after {
+      content: "search()"; position: absolute; top: -1.2rem; left: -1.5rem;
+      font-size: .72rem; color: #b02a37; white-space: nowrap;
+    }
+    .q .opt {
+      display: block; width: 100%; text-align: left; margin: .35rem 0;
+      padding: .55rem .8rem; border: 1px solid #ccc; border-radius: 6px;
+      background: #fafafa; cursor: pointer; font: inherit;
+    }
+    .q .opt:hover { background: #f0f0f0; }
+    .q .opt.correct { background: #d6f5d6; border-color: #4a7; }
+    .q .opt.incorrect { background: #f7d6d6; border-color: #c66; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; color: #333; }
+    a { color: #1a5f8a; }
+  </style>
+</head>
+<body>
+  <h1>Debouncing a Search Box — Explained for Beginners</h1>
+  <p><em>A teaching companion, not a runbook. Every piece of jargon is defined the first
+  time it appears.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+    <p><strong>Deep background (skip if you already know how event handlers fire).</strong>
+    A browser fires an <strong>event</strong> — a small notification that something
+    happened — every time the user presses a key inside a text box. If you attach a
+    function to the <code>input</code> event, that function runs once <em>per keystroke</em>.
+    So typing a five-letter word runs your function five times, in quick succession.</p>
+
+    <p><strong>Narrower background, directly relevant.</strong> Imagine a search box that
+    asks a server for results as the user types. If the handler runs on every keystroke,
+    typing <code>react</code> triggers <em>five</em> searches — <code>r</code>,
+    <code>re</code>, <code>rea</code>, <code>reac</code>, <code>react</code> — even though
+    only the last one is what the user actually wants. Four of those five are wasted work,
+    and if the network is slow their answers can even arrive out of order.</p>
+
+    <div class="callout">
+      <strong>Debounce</strong> — a technique that delays running a function until a burst
+      of rapid events has <em>stopped</em>. It collapses a flurry of calls into a single
+      call after things go quiet.
+    </div>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+    <p>The core idea in one sentence: <em>every new keystroke cancels the previous
+    pending call and schedules a fresh one, so the real work only happens once the typing
+    pauses.</em> Think of it like a lift (elevator) that waits a few seconds after the
+    last person steps in before closing its doors — each new arrival resets the wait.</p>
+
+    <p>Here is that idea with concrete toy data. The user types <code>react</code>, one
+    letter every 100&nbsp;ms, and the debounce delay is 300&nbsp;ms. Each keystroke
+    restarts the 300&nbsp;ms timer, so the actual <code>search()</code> only fires
+    300&nbsp;ms after the <em>last</em> letter — at 700&nbsp;ms, exactly once:</p>
+
+    <div class="timeline">
+      <div class="track">
+        <span class="key" style="left:0%">r</span>
+        <span class="key" style="left:14%">e</span>
+        <span class="key" style="left:28%">a</span>
+        <span class="key" style="left:42%">c</span>
+        <span class="key" style="left:56%">t</span>
+        <span class="fire" style="left:98%"></span>
+      </div>
+      <p style="font-size:.8rem;color:#666;">t = 0, 100, 200, 300, 400&nbsp;ms (keystrokes)
+      &nbsp;·&nbsp; 700&nbsp;ms (single fired search)</p>
+    </div>
+
+    <div class="lesson">
+      One search instead of five: debouncing trades a tiny, unnoticeable delay for a large
+      cut in wasted work.
+    </div>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+    <p>A minimal debounced search handler needs just two browser primitives:
+    <strong><code>setTimeout</code></strong> (schedule a function to run later) and
+    <strong><code>clearTimeout</code></strong> (cancel a scheduled function that has not
+    run yet). The trick is to keep the pending timer's id in a variable that outlives a
+    single call, so the next call can cancel it:</p>
+
+    <pre>let timerId;                       // survives across keystrokes (closure/module scope)
+
+function onInput(event) {
+  clearTimeout(timerId);           // cancel the search scheduled by the previous keystroke
+  const query = event.target.value;
+  timerId = setTimeout(function () {
+    search(query);                 // only runs if no new keystroke arrived within 300ms
+  }, 300);
+}
+
+searchBox.addEventListener("input", onInput);</pre>
+
+    <p>Walk it through in the order it runs. On each keystroke, <code>clearTimeout</code>
+    throws away the call the <em>previous</em> keystroke scheduled (if it has not fired
+    yet), then <code>setTimeout</code> schedules a new one 300&nbsp;ms out and stores its
+    id. As long as keystrokes keep arriving faster than 300&nbsp;ms apart, every scheduled
+    call is cancelled before it can run — until the user pauses, the last timer survives,
+    and <code>search()</code> finally fires once.</p>
+
+    <div class="callout">
+      Why keep <code>timerId</code> <em>outside</em> the handler? Because each keystroke is
+      a separate call to <code>onInput</code>. A variable declared inside the function
+      would be born and die with that one call, so the next keystroke could never see —
+      let alone cancel — the previous timer.
+    </div>
+  </section>
+
+  <section id="best-practices">
+    <h2>Best practices &amp; next steps</h2>
+    <p><strong>Where this aligns with prevailing practice.</strong> Using
+    <code>setTimeout</code>/<code>clearTimeout</code> to defer and cancel work is the
+    textbook way to debounce in the browser — these are the standard timer primitives for
+    exactly this job
+    (<a href="https://developer.mozilla.org/en-US/docs/Web/API/setTimeout">MDN:
+    setTimeout</a> — developer.mozilla.org;
+    <a href="https://developer.mozilla.org/en-US/docs/Web/API/clearTimeout">MDN:
+    clearTimeout</a> — developer.mozilla.org). Firing after the burst goes quiet is the
+    common <em>trailing-edge</em> behaviour most debounce implementations default to
+    (<a href="https://css-tricks.com/debouncing-throttling-explained-examples/">CSS-Tricks:
+    Debouncing and Throttling Explained</a> — css-tricks.com).</p>
+
+    <p><strong>Where it deliberately diverges — and why that can be fine.</strong> This is
+    a hand-rolled debounce rather than a library helper such as Lodash's
+    <code>_.debounce</code>. For a single search box that is a legitimate choice: it avoids
+    a dependency for a few lines of code. But mature helpers also offer a
+    <em>leading-edge</em> option (fire immediately on the first event, then wait) and a
+    <code>maxWait</code> cap (guarantee the function runs at least every N ms even during
+    continuous typing) — features this toy version omits
+    (<a href="https://css-tricks.com/debouncing-throttling-explained-examples/">CSS-Tricks:
+    Debouncing and Throttling Explained</a> — css-tricks.com).</p>
+
+    <p><strong>Suggested next steps.</strong></p>
+    <ol>
+      <li>Extract the pattern into a reusable <code>debounce(fn, delay)</code> wrapper so
+      other inputs can share it instead of copy-pasting the timer logic.</li>
+      <li>Cancel the pending timer when the component unmounts or the box is cleared, so a
+      stray <code>search()</code> never runs against a dead view.</li>
+      <li>For high-frequency streams like <code>scroll</code> or <code>resize</code>,
+      consider <em>throttling</em> (run at most once per interval) instead of debouncing,
+      since those events may never "go quiet"
+      (<a href="https://css-tricks.com/debouncing-throttling-explained-examples/">CSS-Tricks:
+      Debouncing and Throttling Explained</a> — css-tricks.com).</li>
+    </ol>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+    <p>Five questions to check you have understood the essentials. Click an option for
+    immediate feedback.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> What is the purpose of the <code>clearTimeout(timerId)</code>
+      call at the top of the handler?</p>
+      <button class="opt" data-correct="false">It runs the search immediately.</button>
+      <button class="opt" data-correct="true">It cancels the search the previous keystroke scheduled, so only the latest survives.</button>
+      <button class="opt" data-correct="false">It clears the text the user typed.</button>
+      <p class="why" hidden>Each keystroke cancels the previous pending timer; without it, every keystroke would still fire its own delayed search.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> The user types <code>react</code>, one letter every 100&nbsp;ms,
+      with a 300&nbsp;ms debounce. How many searches actually run?</p>
+      <button class="opt" data-correct="false">Five — one per keystroke.</button>
+      <button class="opt" data-correct="false">Zero — they all get cancelled.</button>
+      <button class="opt" data-correct="true">One — 300&nbsp;ms after the last keystroke.</button>
+      <p class="why" hidden>Keystrokes arrive faster than 300&nbsp;ms apart, so each cancels the last; only the final timer survives the pause and fires once.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> How does <em>throttling</em> differ from <em>debouncing</em>?</p>
+      <button class="opt" data-correct="true">Throttling runs the function at most once per interval; debouncing waits for a quiet gap before running.</button>
+      <button class="opt" data-correct="false">They are two names for the exact same technique.</button>
+      <button class="opt" data-correct="false">Throttling never runs the function at all.</button>
+      <p class="why" hidden>Throttle caps frequency (good for streams that never go quiet, like scroll); debounce waits for the burst to stop.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> What does a <em>leading-edge</em> debounce change compared to
+      the trailing-edge version shown here?</p>
+      <button class="opt" data-correct="false">It waits twice as long before firing.</button>
+      <button class="opt" data-correct="true">It fires immediately on the first event, then ignores the rest of the burst.</button>
+      <button class="opt" data-correct="false">It disables cancellation entirely.</button>
+      <p class="why" hidden>Leading-edge fires on the first event of a burst; the trailing-edge default fires only after the burst ends.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Why is <code>timerId</code> declared <em>outside</em> the
+      <code>onInput</code> handler?</p>
+      <button class="opt" data-correct="true">So successive keystrokes share the same id and can cancel the previous timer.</button>
+      <button class="opt" data-correct="false">Because <code>setTimeout</code> refuses variables declared inside functions.</button>
+      <button class="opt" data-correct="false">To make the search run faster.</button>
+      <p class="why" hidden>A variable inside the handler would be recreated on every call, so the next keystroke could never see or clear the previous timer.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      var opts = q.querySelectorAll('.opt');
+      opts.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (!right) {
+            opts.forEach(function (o) {
+              if (o.dataset.correct === 'true') o.classList.add('correct');
+            });
+          }
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

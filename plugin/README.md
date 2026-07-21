@@ -3,12 +3,16 @@
 Turn what you just figured out into a personal knowledge base. The plugin ships
 two skills:
 
-- `/knowledge:explain <topic>` — researches the topic in your current repo or
-  conversation and writes a beginner-friendly explainer document into your own
-  knowledge base (via its local document API, with a plain-file fallback). The
-  first explainer filed under a brand-new project also creates that project's
-  landing page automatically, so your published site keeps building as the
-  library grows.
+- `/knowledge:explain <topic or change-ref>` — researches a topic **or a code
+  change** in your current repo or conversation and writes a single
+  self-contained **interactive HTML explainer** — Background, Intuition, Code, a
+  cited "Best practices & next steps" section from web research, and a 5-question
+  quiz with immediate feedback — into your own knowledge base (API-first, with a
+  plain-file fallback). The best-practices section is default-on but skips itself
+  for purely-internal subjects or when offline (`research` / `no-research` force
+  it on/off; add `here` to also drop a copy in the current project). The first
+  explainer filed under a brand-new project also creates that project's landing
+  page automatically, so your published site keeps building as the library grows.
 - `/knowledge:setup` — scaffolds that knowledge base from scratch: a MkDocs
   Material site, a FastAPI + SQLite document API, an interactive knowledge
   graph, and a GitHub Pages publishing workflow. Run it once after install.

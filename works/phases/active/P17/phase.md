@@ -234,6 +234,41 @@ double-check nothing new breaks, don't build for it. **No design-cowork gate**
 generated-document template; a slice that would invent a genuinely *new* product visual
 language must stop and go through `design-cowork` (S1 should not need to).
 
+**S1 done (2026-07-21) — canonical explain skill v2 shipped.** Cross-slice notes for the
+copies (S2):
+
+- **What the S2 copies must derive from the canonical body.** The whole `## 3–## 8` body
+  is now portable prose (mode detection, HTML spec, save/fallback/report) and should be
+  **derived structurally** into both OLD copies. The **only Claude-specific surface is the
+  frontmatter**: `plugin/skills/explain/SKILL.md` carries `argument-hint` +
+  `allowed-tools` (now including `WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*),
+  Bash(git show:*)` on top of `Read, Grep, Glob, Write, Bash(curl -sS --max-time 5:*),
+  Bash(python3 -c:*)`). The portable `.agents/skills/explain/SKILL.md` variant drops
+  `argument-hint`/`allowed-tools` (its tool policy lives in the sibling
+  `agents/openai.yaml`) — so S2 must reflect the **new tool needs (WebSearch/WebFetch +
+  git read)** into that yaml's policy, not just the SKILL body.
+- **§2 config resolver is byte-identical** to the pre-v2 canonical copy (proven by diff) —
+  keep it byte-identical across every copy; do not re-derive it.
+- **New behavioral facts every copy must carry:** always-HTML output for both modes; the
+  `research` / `no-research` trailing flags (compose with `here`); the default-on
+  judgment-gated + offline-degrading web-research section with mandatory visible-domain
+  citations; §5 `format:"html"` + `body.html` (no frontmatter); §6 fallback writes a
+  `.html` doc with the exact `<!--kb …-->` comment-frontmatter (title JSON-double-quoted,
+  bare date, YAML tags, `source: project/repo`, blank line, then `<!DOCTYPE html>`).
+  The OLD copies today hardcode `~/projects/personal/knowledge` + `localhost:8766` and have
+  no token — S2 decides whether those keep their hardcoded resolver or adopt the
+  config-driven one (a genuine S2 call; the canonical copy is config-driven).
+- **Version pin:** plugin is now `0.3.0` — bumped in `plugin/.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, and `plugin/skills/setup/SKILL.md` (version strings
+  only). Any later `plugin/**` change ships with its own bump.
+- **S1 owned decisions (now settled, do not re-litigate):** best-practices section sits
+  **between Code and Quiz**; skipped ⇒ section + ToC entry absent, no in-doc "skipped"
+  note (chat report explains); `research`/`no-research` force on/off, last-one-wins, both
+  strip like `here`; both modes share the four section names.
+- **Fixture reuse:** `slices/P17.S1/sample-explainer.html` is a spec-conformant miniature
+  explainer (self-containment grep-proven, 3 live-verified citations, working 5-Q quiz) —
+  reuse it as S5's hosted-E2E render fixture rather than authoring a new one.
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -311,3 +346,21 @@ concrete change it made.
 - _(anticipated, S5)_ **operations** — the P10–P13 hosted accounts-plane cutover is
   executed (mark the `operations.md` L410–428 runbook done / update its state); hosted
   `vk_`-path skill E2E verified. **qa** — hosted end-to-end coverage of the skill path.
+- _(S1, done)_ **product** / **experience** — `/knowledge:explain` now always emits a
+  single self-contained interactive HTML explainer (Background → Intuition → Code → Best
+  practices & next steps → Quiz; ToC; 5-MCQ quiz with immediate feedback; HTML/CSS-or-SVG
+  diagrams, never ASCII) for **both** topic and code-change modes; the markdown house
+  style is fully removed. Adds a default-on, judgment-gated, offline-degrading, **cited**
+  "Best practices & next steps" web-research section (placed between Code and Quiz;
+  absent-with-no-marker when skipped).
+- _(S1, done)_ **decisions** — always-HTML (one output format everywhere); web research
+  default-on with a judgment gate (skip purely-internal / trivial) + mandatory
+  visible-domain citations ("no citation, no claim") + graceful offline skip that never
+  fails the save; `research`/`no-research` trailing force-flags (compose with `here`,
+  last-one-wins); shared four-section names across both modes; best-practices section
+  placement (between Code and Quiz). The §2 config resolver stays byte-identical across
+  copies. Plugin bumped `0.2.1 → 0.3.0`.
+- _(S1, done)_ **api usage** (contract unchanged, additive use) — the skill now POSTs
+  `format:"html"` with the raw `<!DOCTYPE html>` body riding the existing `markdown`
+  field and emits **no** frontmatter (the API writes the `<!--kb …-->` comment-frontmatter);
+  the local-file fallback writes a `.html` doc carrying that same comment-frontmatter.

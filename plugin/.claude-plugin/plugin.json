@@ -1,7 +1,7 @@
 {
   "name": "knowledge",
-  "version": "0.2.1",
-  "description": "Write beginner-friendly explainer documents into your own personal knowledge base — a searchable MkDocs site backed by a FastAPI document API — and scaffold the whole KB from scratch with one setup skill.",
+  "version": "0.3.0",
+  "description": "Write single self-contained interactive HTML explainers — Background, Intuition, Code, a cited best-practices-and-next-steps section, and a 5-question quiz — into your own personal knowledge base (a searchable MkDocs site backed by a FastAPI document API), and scaffold the whole KB from scratch with one setup skill.",
   "author": {
     "name": "leetusik"
   },
