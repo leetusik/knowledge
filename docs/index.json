@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future",
+      "latest": "v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -51,11 +51,19 @@
           "source": "P15.REVIEW",
           "summary": "P15 agent-facing MCP retrieval surface (search as a service); realizes deferred D6; first consumer hi2vi OpenClaw; monetization still future",
           "previous": "v0005_p13_standalone_knowledge_cli_as_a_third_distribution_surface_agent-first_non-interactive_onboarding_bundled_agent-readable_guide_docs"
+        },
+        {
+          "id": "v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read",
+          "path": "docs/versions/product/v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read.md",
+          "created_at": "2026-07-21T15:22:40+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 HTML explainer documents are a first-class KB doc type end-to-end (ingest, safe interactive render, search, MCP read)",
+          "previous": "v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future"
         }
       ]
     },
     "experience": {
-      "latest": "v0006_p13_cli_journey_one-shot_init_save_search_list_read_projects_usage_two-token_model_visible_from_the_terminal_--json_exit-code_agent_contract",
+      "latest": "v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -105,11 +113,19 @@
           "source": "P13.REVIEW",
           "summary": "P13 CLI journey: one-shot init; save/search/list/read/projects/usage; two-token model visible from the terminal; --json/exit-code agent contract",
           "previous": "v0005_p12_authenticated_web_app_ux_login_gate_dashboard_project_detail_documents_in-app_graph"
+        },
+        {
+          "id": "v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged",
+          "path": "docs/versions/experience/v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged.md",
+          "created_at": "2026-07-21T15:22:40+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 documents journey: an HTML explainer renders as an interactive in-app document (quiz JS runs) safely sandboxed; markdown docs unchanged",
+          "previous": "v0006_p13_cli_journey_one-shot_init_save_search_list_read_projects_usage_two-token_model_visible_from_the_terminal_--json_exit-code_agent_contract"
         }
       ]
     },
     "architecture": {
-      "latest": "v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api",
+      "latest": "v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -207,11 +223,19 @@
           "source": "P15.REVIEW",
           "summary": "P15 MCP retrieval service: proxy-and-forward-bearer thin server (no retrieval rebuilt, scoping inherited), mcp-server/ + knowledge_mcp package boundary, stable contract v1, stateless Streamable-HTTP deploy alongside frozen /api/*",
           "previous": "v0011_p13_cli_package_boundary_two_deliberate_implementations_of_the_knowledge-kb_config_contract_base-url_reads_config_literally_via_load_raw_not_resolve_additive_api.project_key"
+        },
+        {
+          "id": "v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption",
+          "path": "docs/versions/architecture/v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption.md",
+          "created_at": "2026-07-21T15:22:34+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 HTML explainer doc type end-to-end: raw-on-disk canonical + extracted-text-in-DB, and the opaque-origin sandboxed-iframe XSS-containment stance (allow-scripts without allow-same-origin + CSP/X-Frame exemption)",
+          "previous": "v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api"
         }
       ]
     },
     "frontend": {
-      "latest": "v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01",
+      "latest": "v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -261,11 +285,19 @@
           "source": "P14.REVIEW",
           "summary": "P14 public marketing landing at / in web/ via the Claude Design gate (round 01)",
           "previous": "v0005_p12_authenticated_web_app_in_web_next.js_kb_design_system_sealed-cookie_bff_four_surfaces"
+        },
+        {
+          "id": "v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically",
+          "path": "docs/versions/frontend/v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically.md",
+          "created_at": "2026-07-21T15:22:40+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 web viewer renders HTML explainers in a sandboxed opaque-origin iframe via a same-origin BFF raw-relay route; markdown docs render byte-identically",
+          "previous": "v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01"
         }
       ]
     },
     "backend": {
-      "latest": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only",
+      "latest": "v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -315,11 +347,19 @@
           "source": "P11.REVIEW",
           "summary": "P11 server/usage package + usage_api; stash + async metering middleware; credential_id; last_used_at on metered events only",
           "previous": "v0005_p10_accounts_layer_server_persistence_server_accounts_security-types-repository-service_async_sqlalchemy_2.0_psycopg3_require_user_guard_api_auth_two-mode_resolver_per-tenant_content_root_idempotent_seed"
+        },
+        {
+          "id": "v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route",
+          "path": "docs/versions/backend/v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route.md",
+          "created_at": "2026-07-21T15:22:34+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 HTML explainer ingest/storage/extraction/indexing: raw-HTML-on-disk with comment-frontmatter + stdlib html.parser extracted-text in DB markdown column, format/raw_html columns, reindex/seed widened to .html, raw route",
+          "previous": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only"
         }
       ]
     },
     "data": {
-      "latest": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8",
+      "latest": "v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -377,11 +417,19 @@
           "source": "P11.REVIEW",
           "summary": "P11 usage_events control-plane table; event-log grain; derive-on-read GROUP-BY-day aggregate; retention deferred D8",
           "previous": "v0006_p10_6_postgres_accounts_tables_documents.tenant_id_unique_tenant_id_rel_path_legacy_sentinel_namespaced_tenants_uuid_root_reindex_path-derivation_survives_the_disposable-db_rebuild"
+        },
+        {
+          "id": "v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched",
+          "path": "docs/versions/data/v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched.md",
+          "created_at": "2026-07-21T15:22:34+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 content-plane documents gains format + raw_html columns (disposable ALTER TABLE); DB markdown = extracted text so FTS unchanged; Postgres control plane untouched",
+          "previous": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8"
         }
       ]
     },
     "api": {
-      "latest": "v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api",
+      "latest": "v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -471,6 +519,14 @@
           "source": "P15.REVIEW",
           "summary": "P15 agent-facing MCP retrieval service: contract v1 (search + fetch_document tools, Bearer vk_ over Streamable-HTTP /mcp, additive-only versioning + /healthz.contract_version, tenant-wide corpus scoping) alongside the frozen REST /api/*",
           "previous": "v0010_p13_cli_onboarding_widened_the_frozen_public_contract_to_api_auth_app_healthz_new_429_on_auth_signup_login"
+        },
+        {
+          "id": "v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively",
+          "path": "docs/versions/api/v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively.md",
+          "created_at": "2026-07-21T15:22:34+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 HTML explainer doc type: additive format on POST + read projections, new GET /app/documents/{id}/raw route, MCP fetch_document format field; frozen /api/* + contract v1 preserved additively",
+          "previous": "v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api"
         }
       ]
     },
@@ -617,7 +673,7 @@
       ]
     },
     "security": {
-      "latest": "v0009_p13_cli_two-token_model_passwords_never_in_argv_show-once_vk__written_to_the_seam_not_printed_chmod_600_enforced_in_code_public_auth_grant_throttled_server-side_per-ip_kb_api_token_tenant-_1_public-write_hazard",
+      "latest": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -691,6 +747,14 @@
           "source": "P13.REVIEW",
           "summary": "P13 CLI two-token model; passwords never in argv; show-once vk_ written to the seam not printed; chmod 600 enforced in code; public /auth grant throttled server-side per-IP; KB_API_TOKEN tenant-#1 public-write hazard",
           "previous": "v0008_p12_sealed-cookie_bff_web_surface_show-once_vk__key_unmetered_read-only_web_ui"
+        },
+        {
+          "id": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs",
+          "path": "docs/versions/security/v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs.md",
+          "created_at": "2026-07-21T15:27:20+09:00",
+          "source": "P16.REVIEW",
+          "summary": "P16 HTML explainer XSS containment: opaque-origin sandboxed iframe (allow-scripts, no allow-same-origin) + CSP/X-Frame exemption; raw_html never in JSON; XSS-safe-by-construction preserved while quiz JS runs",
+          "previous": "v0009_p13_cli_two-token_model_passwords_never_in_argv_show-once_vk__written_to_the_seam_not_printed_chmod_600_enforced_in_code_public_auth_grant_throttled_server-side_per-ip_kb_api_token_tenant-_1_public-write_hazard"
         }
       ]
     },
@@ -883,5 +947,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-18T19:40:44+09:00"
+  "last_rebuilt_at": "2026-07-21T15:28:12+09:00"
 }
