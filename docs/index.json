@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read",
+      "latest": "v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -59,11 +59,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 HTML explainer documents are a first-class KB doc type end-to-end (ingest, safe interactive render, search, MCP read)",
           "previous": "v0006_p15_agent-facing_mcp_retrieval_surface_search_as_a_service_realizes_deferred_d6_first_consumer_hi2vi_openclaw_monetization_still_future"
+        },
+        {
+          "id": "v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo",
+          "path": "docs/versions/product/v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo.md",
+          "created_at": "2026-07-21T23:31:06+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 explain skill emits an interactive HTML explainer (both modes) with a cited best-practices section; plugin users onboard to the hosted KB via /knowledge:setup Connect mode, one vk_ serving every repo",
+          "previous": "v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read"
         }
       ]
     },
     "experience": {
-      "latest": "v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged",
+      "latest": "v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -121,11 +129,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 documents journey: an HTML explainer renders as an interactive in-app document (quiz JS runs) safely sandboxed; markdown docs unchanged",
           "previous": "v0006_p13_cli_journey_one-shot_init_save_search_list_read_projects_usage_two-token_model_visible_from_the_terminal_--json_exit-code_agent_contract"
+        },
+        {
+          "id": "v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes",
+          "path": "docs/versions/experience/v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes.md",
+          "created_at": "2026-07-21T23:31:06+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 /knowledge:explain outputs an interactive HTML explainer (quiz + cited best-practices) for both modes; /knowledge:setup offers Connect (hosted) vs Scaffold (self-host) modes",
+          "previous": "v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged"
         }
       ]
     },
     "architecture": {
-      "latest": "v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption",
+      "latest": "v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -231,6 +247,14 @@
           "source": "P16.REVIEW",
           "summary": "P16 HTML explainer doc type end-to-end: raw-on-disk canonical + extracted-text-in-DB, and the opaque-origin sandboxed-iframe XSS-containment stance (allow-scripts without allow-same-origin + CSP/X-Frame exemption)",
           "previous": "v0012_p15_mcp_retrieval_service_proxy-and-forward-bearer_thin_server_no_retrieval_rebuilt_scoping_inherited_mcp-server_knowledge_mcp_package_boundary_stable_contract_v1_stateless_streamable-http_deploy_alongside_frozen_api"
+        },
+        {
+          "id": "v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies",
+          "path": "docs/versions/architecture/v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies.md",
+          "created_at": "2026-07-21T23:31:07+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 open-core plugin template mirrors the multi-tenant SaaS server dormant-safe without DATABASE_URL; a second CI drift gate skills_parity guards the shipped explain-skill copies",
+          "previous": "v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption"
         }
       ]
     },
@@ -531,7 +555,7 @@
       ]
     },
     "operations": {
-      "latest": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on",
+      "latest": "v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -669,6 +693,14 @@
           "source": "P15.REVIEW",
           "summary": "P15.F1 MCP transport-security Host allowlist: MCP_ALLOWED_HOSTS/MCP_ALLOWED_ORIGINS required — FastMCP localhost-only DNS-rebinding default 421s public+internal hosts; protection stays on",
           "previous": "v0016_p15_knowledge-mcp_deploy_mcp-server_dockerfile_compose_service_sse-safe_edge_mcp_three-service_health-gate_mcp_liveness_smoke_dual_reachability_e2e_smoke_verifier_operator_post-deploy_run"
+        },
+        {
+          "id": "v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate",
+          "path": "docs/versions/operations/v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate.md",
+          "created_at": "2026-07-21T23:34:28+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 accounts-plane prod cutover executed and verified live; P16 shipped same push; deploy.sh force-recreates the bind-mounted api + freshness self-assert; skills_parity second CI gate",
+          "previous": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on"
         }
       ]
     },
@@ -759,7 +791,7 @@
       ]
     },
     "qa": {
-      "latest": "v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover",
+      "latest": "v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -817,11 +849,19 @@
           "source": "P13.REVIEW",
           "summary": "P13 CLI smoke scripts/cli_smoke.py drives the installed binary through lifecycle + logout-survival + 429; generic-401 preserved through the throttle proven live; hosted E2E pending the accounts-plane cutover",
           "previous": "v0006_p8_hosted_e2e_acceptance_against_live_production_assert_the_capability_pushed_true_not_the_status_code_shipped-payload_slices_must_run_plugin_parity_locally"
+        },
+        {
+          "id": "v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual",
+          "path": "docs/versions/qa/v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual.md",
+          "created_at": "2026-07-21T23:31:07+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 hosted end-to-end skill path verified live on prod (signup to vk_ to format html ingest to P16 read and raw to tenant search to MCP vk_ fetch); in-browser quiz-render eyeball is the one operator residual",
+          "previous": "v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover"
         }
       ]
     },
     "decisions": {
-      "latest": "v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing",
+      "latest": "v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -943,9 +983,17 @@
           "source": "P14.REVIEW",
           "summary": "P14 landing takes /; app stays at current paths (no /app rebase); mkdocs retired, /docs reserved; Free + waitlist pricing",
           "previous": "v0014_p13_cli_adrs_separate_cli_package_git-subdir_distribution_direct_password_grant_two-token_model_bundled_guide_over_served_cli_named_knowledge_save_project_repo_basename_server-side_auth_throttle"
+        },
+        {
+          "id": "v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0",
+          "path": "docs/versions/decisions/v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0.md",
+          "created_at": "2026-07-21T23:31:12+09:00",
+          "source": "P17.REVIEW",
+          "summary": "P17 always-HTML explainer; default-on gated cited offline-degrading web research; plugin-canonical to copies derivation + skills_parity CI guard; parity mirror-not-narrow; plugin 0.3.0",
+          "previous": "v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-21T15:28:12+09:00"
+  "last_rebuilt_at": "2026-07-21T23:37:11+09:00"
 }

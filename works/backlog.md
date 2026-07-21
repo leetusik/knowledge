@@ -5,19 +5,19 @@
 
 ## Pointer
 
-- Current phase: `P17`
-- Current slice: `P17.REVIEW`
+- Current phase: `none`
+- Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `8`
-- Rebuilt at: `2026-07-21T22:32:58+09:00`
+- Rebuilt at: `2026-07-21T23:39:55+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
-| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.REVIEW` | `works/phases/active/P17` |
+| [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -40,4 +40,4 @@
 | [x] `P17.S4` | `done` | Plugin-template parity remediation: mirror the SaaS server into plugin/templates/kb (D9) | `implementation` | `works/phases/active/P17/slices/P17.S4` |
 | [x] `P17.S5` | `done` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
 | [x] `P17.F1` | `done` | Production Deploy: force-recreate bind-mounted api + P16-discriminating smoke | `fix` | `works/phases/active/P17/slices/P17.F1` |
-| [ ] `P17.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
+| [x] `P17.REVIEW` | `done` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
