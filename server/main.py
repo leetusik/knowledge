@@ -19,7 +19,7 @@ import datetime
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -186,9 +186,11 @@ def require_read_bearer(authorization: Optional[str] = Header(default=None)) -> 
 
 
 # tags_text is an internal FTS denormalization (space-joined mirror of tags,
-# already exposed as a list), so it never leaves the API. markdown is dropped
-# from list payloads and kept on single-doc fetches.
-_INTERNAL = {"tags_text"}
+# already exposed as a list), so it never leaves the API. raw_html is an internal
+# viewer-only column (served only by the /app raw route), never in /api JSON — but
+# `format` IS exposed (additive). markdown is dropped from list payloads and kept on
+# single-doc fetches.
+_INTERNAL = {"tags_text", "raw_html"}
 
 
 def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
@@ -375,6 +377,10 @@ class DocumentIn(BaseModel):
     date: Optional[str] = None
     slug: Optional[str] = None
     related: list[str] = []
+    # Additive (default "md" — existing callers unchanged). "html" ingests a
+    # self-contained explainer: the `markdown` field carries the raw HTML body, and
+    # a bad value gets a free 422 from the Literal. Pydantic v2 forbids by default.
+    format: Literal["md", "html"] = "md"
     overwrite: bool = False
     commit: bool = True
     co_authored_by: Optional[str] = None
@@ -407,7 +413,7 @@ def create_document(
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    rel = documents_mod.rel_path(project, date, slug)
+    rel = documents_mod.rel_path(project, date, slug, fmt=body.format)
     # Self-reference dropped silently (a doc can't be related to itself).
     related = [r for r in related if r != rel]
     # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
@@ -431,7 +437,11 @@ def create_document(
 
     # 3. Locked critical section: file write -> index update -> DB upsert -> git.
     with WRITE_LOCK:
-        stored_markdown = documents_mod.write_document_file(
+        # `stored_body` is the on-disk body minus its frontmatter — the raw markdown
+        # for an md doc, the raw HTML for an html doc. The body rule then derives what
+        # each plane stores: the DB `markdown` column always holds the readable text
+        # (extracted plain text for html), `raw_html` holds the HTML only for html.
+        stored_body = documents_mod.write_document_file(
             docs_root=root,
             rel_path=rel,
             title=body.title,
@@ -441,7 +451,14 @@ def create_document(
             source_repo=source_repo,
             body=body.markdown,
             related=related,
+            fmt=body.format,
         )
+        if body.format == "html":
+            raw_html = stored_body
+            stored_markdown = documents_mod.extract_html_text(stored_body)
+        else:
+            raw_html = None
+            stored_markdown = stored_body
         # Public landing + Recent index are mkdocs-publish concerns, so only the
         # public root gets them. Non-#1 tenants keep a minimal tree (their content
         # is never served in P10) — skip both and report them as not created.
@@ -471,6 +488,8 @@ def create_document(
             rel_path=rel,
             markdown=stored_markdown,
             related=related,
+            format=body.format,
+            raw_html=raw_html,
             tenant_id=tid,
         )
 
@@ -549,6 +568,7 @@ def create_document(
         "date": date,
         "tags": tags,
         "related": related,
+        "format": body.format,
         "recent_updated": recent_updated,
         "landing_created": landing_created,
         "committed": committed,

@@ -48,7 +48,7 @@ def _discover_projects(docs_root: Path) -> list[str]:
 
     Mirrors reindex's project derivation exactly (``server.reindex``): a project
     is ``Path(rel).parts[0]`` for every file whose name matches ``_FILENAME_RE``
-    (``<YYYY-MM-DD>-<slug>.md``). Top-level files (``len(parts) == 1`` — e.g.
+    (``<YYYY-MM-DD>-<slug>.{md,html}``). Top-level files (``len(parts) == 1`` — e.g.
     ``index.md``) and reserved chrome dirs (``current``/``versions``) are skipped,
     so the seeded ``projects`` names line up with ``documents.project`` from a
     reindex. Today's set: ``bootstrap_agentic_workspace.sh``, ``changple5``,
@@ -59,7 +59,9 @@ def _discover_projects(docs_root: Path) -> list[str]:
     if not docs_root.is_dir():
         return []
     projects: set[str] = set()
-    for path in docs_root.rglob("*.md"):
+    # Both doc formats — _FILENAME_RE (widened in P16) matches `.md` and `.html`
+    # alike, so an HTML-only project is discovered too. Order is irrelevant (a set).
+    for path in [*docs_root.rglob("*.md"), *docs_root.rglob("*.html")]:
         if not path.is_file():
             continue
         if not _FILENAME_RE.match(path.name):

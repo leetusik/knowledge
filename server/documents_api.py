@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from server import db
 from server import search as search_mod
@@ -67,10 +67,11 @@ async def get_conn():
 
 
 # tags_text is an internal FTS denormalization (a space-joined mirror of the tags,
-# already exposed as a list); tenant_id is the internal scoping column. Neither
-# leaves the /app surface. markdown is dropped from list rows and kept on a single
-# document fetch.
-_DROP = {"tags_text", "tenant_id"}
+# already exposed as a list); tenant_id is the internal scoping column; raw_html is
+# the viewer-only raw-HTML column served solely by the /raw route below. None of the
+# three leaves the /app JSON surface (`format` does — additive). markdown is dropped
+# from list rows and kept on a single document fetch.
+_DROP = {"tags_text", "tenant_id", "raw_html"}
 
 
 def _app_doc(doc: dict, *, include_markdown: bool) -> dict:
@@ -150,6 +151,43 @@ async def get_document(
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
     return _app_doc(doc, include_markdown=True)
+
+
+@router.get("/app/documents/{doc_id}/raw")
+async def get_document_raw(
+    doc_id: int,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> Response:
+    """Serve one HTML explainer's raw HTML as ``text/html`` for the sandboxed viewer.
+
+    Session-guarded and tenant-scoped like every other ``/app`` read: a missing id,
+    another tenant's id, a non-HTML doc (``format != "html"``), or an empty
+    ``raw_html`` all answer **404** (cross-tenant existence never leaks). The
+    response carries the sandbox headers that make it safe to frame the untrusted
+    explainer in an opaque-origin iframe AND privilege-strip a direct top-level
+    visit (defense in depth): ``Content-Security-Policy: sandbox allow-scripts;
+    frame-ancestors 'self'`` applies the sandbox to the top-level document too, and
+    the ``X-Frame-Options: SAMEORIGIN`` here overrides the global ``DENY`` so only
+    the same-origin app may frame it. ``no-store`` keeps the raw bytes uncached and
+    ``nosniff`` pins the content type. This route is unmetered (``/app``) — no usage
+    stash. The served bytes are the raw body (no comment-frontmatter), so the
+    document starts at ``<!DOCTYPE html>`` with no quirks-mode prefix.
+    """
+
+    doc = db.get_document(conn, doc_id, tenant_id=str(ctx.tenant.id))
+    if doc is None or doc.get("format") != "html" or not doc.get("raw_html"):
+        raise HTTPException(status_code=404, detail=f"no HTML document with id {doc_id}")
+    return Response(
+        content=doc["raw_html"],
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Security-Policy": "sandbox allow-scripts; frame-ancestors 'self'",
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/app/search")

@@ -98,6 +98,63 @@ The orchestrator's starting-point recon holds. Confirmed:
   (no frontmatter, a non-doc). Delete path (`_delete_document`) keys off `rel_path` →
   already format-agnostic.
 
+### P16.S1 backend landed (2026-07-21) — cross-slice notes for S2/S3
+
+The format-aware backend is in. Durable facts the later slices build on:
+
+- **`format` field.** `POST /api/documents` takes an additive
+  `format: "md" | "html"` (default `"md"`; bad value → free 422). The raw content
+  still arrives in the `markdown` request field (for html it carries the raw HTML).
+  Every read projection (`/api/documents/{id}`, `/api/documents/by-path/{rel}`,
+  `/app/documents`, `/app/documents/{id}`) now carries an additive `format`;
+  `raw_html` is internal (dropped by `_INTERNAL` in `main.py` and `_DROP` in
+  `documents_api.py`) and never in any JSON body. **S2**: add `format` to
+  `KbDocument`/`KbDocumentListItem`; **S3**: add `format` to `_map_document`.
+- **Body rule (disk↔DB).** DB `markdown` column = readable text always (raw markdown
+  for md; `extract_html_text(body)` for html). `raw_html` column = the raw HTML body
+  only for html docs. FTS/snippets/embeddings run over `markdown` unchanged, so html
+  docs are searchable by their *extracted* text and never by `<script>`/`<style>`
+  content. **S3**: `fetch_document`'s `markdown` therefore already = extracted text for
+  html (the correct agent surface — contract v1 meaning preserved); the char-cap
+  truncation applies to it unchanged.
+- **Raw route (the S2 relay target).** `GET /app/documents/{doc_id}/raw`
+  (`require_user`, tenant-scoped). 200 → the raw HTML **without** the
+  comment-frontmatter (starts at `<!DOCTYPE html>`), `media_type="text/html;
+  charset=utf-8"`, with exactly these four headers S2 must relay verbatim:
+  `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`,
+  `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`,
+  `Cache-Control: no-store`. 404 on missing / cross-tenant / non-html / empty
+  `raw_html`. Unmetered (no usage stash). The `getRaw` byte-passthrough seam in
+  `web/.../client.ts` is the intended hook.
+- **On-disk `.html` shape.** `docs/<project>/<date>-<slug>.html` = a leading
+  `<!--kb\n<yaml field lines>\n-->\n` HTML-comment frontmatter block, a blank line,
+  then the raw `<!DOCTYPE html>…` document. The served/`raw_html` body excludes the
+  comment (no quirks-mode prefix). `reindex` re-derives title/date/tags/related/source
+  from the comment and rebuilds `markdown`+`raw_html` from the file alone — a fresh-DB
+  reindex reproduces the write-path row byte-for-byte (proved by test).
+- **Widened `.md`→`.md`/`.html` points** (all done): `documents.rel_path`,
+  `validate_related`, `reindex._FILENAME_RE` / `_walk_root` / `reindex_path` /
+  `_index_file`, `seed._discover_projects`. `db.upsert_document` gained
+  `format`/`raw_html`. Delete path is `rel_path`-keyed (already format-agnostic).
+- **Accepted quirk**: overwriting a slug with the other format yields a different
+  `rel_path` (extension differs), so both files can coexist for the same
+  project/date-slug. Not engineered around; delete is per-rel_path.
+
+### Findings — plugin parity is a pre-existing RED gate (not P16's cause)
+
+`python3 scripts/plugin_parity.py` **fails on `main` before any P16 change** — 34
+issues, from P10+ server growth never mirrored into `plugin/templates/kb/`
+(`main.py`, `db.py`, `reindex.py`, `search.py`, `config.py`, `pyproject.toml`,
+`uv.lock` byte-drift + a batch of P10–P12 modules "in repo but not shipped"). P16.S1
+adds **2** more (34 → 36): `server/documents.py` — which was byte-identical to its
+shipped template before this slice — newly byte-drifts, and the new
+`tests/test_html_documents.py` is "in repo but not shipped". Per the S1 plan the slice
+did **not** touch `plugin/templates/` (mirroring the server into the plugin template
+is P17's — the plugin/skill phase — job, not P16's). **P16.REVIEW must not trip on
+this red gate**: it predates P16 and its remediation is out of scope for this phase.
+(Note: the S1 plan assumed my edits would only touch *already-drifted* files;
+documents.py was the exception — recorded for accuracy, conclusion unchanged.)
+
 ### Pinned design decisions
 
 **1. Rendering approach — dedicated raw route + sandboxed iframe (opaque origin).**
@@ -209,6 +266,27 @@ _Non-review slices append one line per durable-truth change here; do NOT run
   opaque-origin XSS-containment stance + CSP/X-Frame exemption), and possibly
   **product** (HTML explainers as a first-class KB doc type). Each implementation slice
   should append its own precise Doc-impact line as it lands.
+- (P16.S1) **api** — `POST /api/documents` gains an additive `format: "md"|"html"`
+  input (default `"md"`); the doc read projections (`/api/documents/{id}`,
+  `/api/documents/by-path/{rel}`, `/app/documents`, `/app/documents/{id}`) gain an
+  additive `format` output; new session-guarded, tenant-scoped route
+  `GET /app/documents/{doc_id}/raw` serves the raw HTML as `text/html` with the
+  sandbox CSP + `X-Frame-Options: SAMEORIGIN` + `nosniff` + `no-store` headers (404 on
+  missing/cross-tenant/non-html). `raw_html` is internal, never in any JSON body.
+- (P16.S1) **backend**/**architecture** — HTML explainer is a first-class doc format:
+  canonical raw HTML on disk at `docs/<project>/<date>-<slug>.html` with a leading
+  `<!--kb … -->` comment-frontmatter; stdlib `html.parser` text extraction fills the
+  DB `markdown` column (FTS/snippets/embeddings unchanged); the body rule keeps write
+  path and reindex identical; `reindex`/`seed` widened from `.md` to `.md`/`.html`.
+- (P16.S1) **data** — content-plane `documents` table gains two disposable columns:
+  `format TEXT NOT NULL DEFAULT 'md'` and nullable `raw_html TEXT` (raw HTML for html
+  docs only), added by idempotent `ALTER TABLE ADD COLUMN` in `init_db`; Postgres
+  control plane untouched.
+- (P16.S1) **security** (partial — S2 completes the render side) — the raw route's
+  `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'` +
+  `X-Frame-Options: SAMEORIGIN` are the backend half of the opaque-origin
+  XSS-containment stance; a direct top-level visit to the raw URL is privilege-stripped
+  by the CSP sandbox (defense in depth).
 
 ## Constraints
 
