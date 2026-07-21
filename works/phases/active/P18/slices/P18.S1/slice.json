@@ -1,18 +1,18 @@
 {
-  "id": "P18.DECOMP",
+  "id": "P18.S1",
   "phase_id": "P18",
-  "name": "decompose phase",
-  "kind": "decomposition",
-  "status": "done",
-  "order": 0,
+  "name": "Schema 0003 + models + signup/seed default-org/default-project provisioning",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 1,
   "depends_on": [],
-  "created_at": "2026-07-22T01:58:41+09:00",
-  "started_at": "2026-07-22T02:18:41+09:00",
-  "completed_at": "2026-07-22T02:25:12+09:00",
-  "risk": "low",
+  "created_at": "2026-07-22T02:21:47+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
   "source": {
-    "type": "new_phase",
-    "id": "P18"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",
