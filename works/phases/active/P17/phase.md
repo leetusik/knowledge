@@ -489,6 +489,40 @@ was route-absent **404**; `/healthz` 200), the full skill-path E2E was re-run wi
   operator may purge; `vk_` held in tmp only, never in `works/`. This slice made no source
   edits and ran no operator action (the api restart was the operator's; verified externally).
 
+**P17.F1 done (2026-07-21) — deploy-hygiene fix landed (the S5 split-deploy incident).**
+Static-only slice; one source file changed: `deploy/deploy.sh`. Notes for REVIEW:
+
+- **Three edits, all in `deploy/deploy.sh`.** (1) New step **2b** after `dc up -d --build`:
+  `dc up -d --force-recreate --no-deps api` — force-recreates the bind-mounted api
+  unconditionally (`--no-deps` leaves the running postgres alone). (2) A **freshness
+  self-assert**: `DEPLOY_START_TS="$(date -u +%s)"` after the config knobs, and a new
+  `assert_api_fresh` (styled like `wait_healthy`) called in the `gate_ok` success branch
+  before the final DONE log — it reads `docker inspect … {{.State.StartedAt}} knowledge-api`,
+  converts via GNU `date -u -d … +%s` (box-only; **guarded** so a parse failure or missing
+  container `die`s loudly), and `die`s if StartedAt < DEPLOY_START_TS ("api process
+  predates this deploy — bind-mount stale-process trap; see P17.F1"). (3) Fixed the **false
+  prose**: the old step-2 comment ("uvicorn reloads against the reconciled bind-mounted
+  code") and the header's "rebuilds + recreates the app compose services" now describe
+  reality (images rebuild; web/mcp recreate on image change; api is force-recreated
+  explicitly). The header Lifecycle list was renumbered 5→6 steps to include the two new
+  steps (minor within-intent extension of edit 3).
+- **Static validation:** `bash -n` clean; `shellcheck` NOT installed here (not run); a
+  portable dry-test of `assert_api_fresh`'s branch logic passed 5/5 (fresh / exactly-at /
+  stale / missing-container / parse-failure), with the GNU `date -d` RFC3339 parse box-only
+  by design; `workflow validate` passed; `plugin_parity.py` + `skills_parity.py` both still
+  green (untouched — deploy/ is outside their coverage). Nothing in `.github/workflows/**`,
+  `server/**`, or `compose.prod.yml` was touched.
+- **ARMING RESIDUAL for REVIEW.** `deploy.sh` runs from the box clone and its own reconcile
+  updates that clone, so the **first** post-F1 `Production Deploy` dispatch runs the OLD
+  script (arms the fix by ff-ing the clone); the fix + self-assert **arm from the second
+  dispatch onward**. The box is already current (operator restart today) → the first
+  dispatch is a normal green, no forced red. A live two-dispatch proof is an **optional
+  operator step** the orchestrator offers (dispatch #2's logs should show the
+  `force-recreating the api` + `api process is fresh …` lines). If skipped, REVIEW should
+  record "F1 armed, proven on next organic deploy" as a residual. This slice did NOT open a
+  P16-discriminating smoke probe (the S5 note's secondary suggestion) — only the
+  force-recreate + freshness self-assert were in F1's plan scope.
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -646,3 +680,11 @@ concrete change it made.
   markdown). The outstanding P15 MCP `vk_` residual is closed. The **only** un-automated
   REVIEW item left is the in-browser quiz-render eyeball (the P16 iframe rendering the
   interactive explainer in the web app; its raw-HTML relay + sandbox headers are proven live).
+- _(F1, done)_ **operations** — the `Production Deploy` (`deploy/deploy.sh`) now
+  **force-recreates the bind-mounted `api`** after the build (`up -d --force-recreate
+  --no-deps api`) and **self-asserts api-process freshness post-gate** (fails closed if the
+  api container's `StartedAt` predates the deploy run — the "bind-mount stale-process trap")
+  — closing the S5 split-deploy gap where a GREEN deploy left `knowledge-api` on stale code.
+  The step-2 / header prose was corrected to describe this reality. Arms on the **second**
+  post-F1 dispatch (the first runs the pre-F1 script from the box clone). No smoke-probe
+  change was made (out of F1 scope).

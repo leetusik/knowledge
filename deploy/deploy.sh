@@ -3,10 +3,14 @@
 # deploy.sh — on-box container-deploy core for https://knowledge.hi2vi.com (P9.S2).
 #
 # Runs ON the shared OCI box from the publish-on-write clone (default /opt/knowledge).
-# Reconciles that clone with origin/main, rebuilds + recreates the app compose services
+# Reconciles that clone with origin/main and rebuilds the app images
 # (`api` = the document API + CLI control plane, `web` = the Next.js standalone UI + BFF,
 # `mcp` = the MCP-over-HTTP retrieval server at /mcp, P15.S3; the mkdocs `site` was
-# RETIRED in P14.S3), and health-gates all three. `postgres` is the
+# RETIRED in P14.S3). Compose recreates `web`/`mcp` when their image changes; `api` is
+# FORCE-recreated unconditionally because it runs server/ from the bind mount — a
+# code-only push changes neither its image nor its config, so a plain `up` would leave
+# the stale uvicorn running (the S5/P17 split-deploy incident). Health-gates all three,
+# then self-asserts the api process is fresh. `postgres` is the
 # durable control-plane store, brought up as the api's dependency (not gated here).
 # This is the knowledge analogue of hi2vi_web/deploy/deploy.sh, but with two
 # knowledge-specific inventions (see phase.md §E/§F):
@@ -56,9 +60,13 @@
 # Lifecycle:
 #   1. preflight (git/docker/compose v2; compose file, .git, .env present)
 #   2. reconcile the box clone on `main` inside a one-shot api-service container (§E)
-#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web + mcp)
-#   4. health-gate knowledge-api + knowledge-web + knowledge-mcp (docker inspect Health.Status)
-#   5. on failure: capture ps + logs (into $REMOTE_ARTIFACT_DIR if set), die non-zero
+#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web + mcp; recreates
+#      web/mcp on image change, but NOT the bind-mounted api)
+#   4. force-recreate the bind-mounted api (up -d --force-recreate --no-deps api) so it runs
+#      the reconciled code, not the stale uvicorn (the S5/P17 split-deploy fix)
+#   5. health-gate knowledge-api + knowledge-web + knowledge-mcp (docker inspect Health.Status),
+#      then self-assert the api's StartedAt postdates this deploy run (freshness trap)
+#   6. on failure: capture ps + logs (into $REMOTE_ARTIFACT_DIR if set), die non-zero
 #      with a fix-forward message; NO rollback.
 #
 # Authored + statically checked off-box (P9.S2): `bash -n`, logic review vs §E/§F.
@@ -90,6 +98,11 @@ RECONCILE_CONTAINER="knowledge-reconcile-$$"    # unique ephemeral name (never c
 # host's Compose version (P8/hi2vi: compose/build_bake.go slice-bounds — a CLI bug).
 # Exported so the docker subprocess inherits it.
 export COMPOSE_BAKE=false
+
+# Wall-clock start of this deploy run (UTC epoch). The post-gate freshness self-assert
+# (assert_api_fresh) compares the api container's StartedAt against this to prove the
+# force-recreate landed a NEW uvicorn, not the pre-existing stale one (the S5/P17 trap).
+DEPLOY_START_TS="$(date -u +%s)"
 
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -129,6 +142,25 @@ wait_healthy() {
     done
     log "$name health-gate TIMED OUT after $((HEALTH_TRIES * HEALTH_INTERVAL))s"
     return 1
+}
+
+# --- assert the api process is fresh (post-gate bind-mount stale-process trap) ---
+# The api runs server/ from the bind mount, so a plain `up` can leave the OLD uvicorn
+# running against new code (the S5/P17 split-deploy incident). Step 2b force-recreates
+# it, and this PROVES it landed: read the api container's StartedAt and fail closed if it
+# predates this deploy run. StartedAt is RFC3339 (e.g. 2026-07-21T08:31:02.123456789Z);
+# the box is Oracle Linux / GNU date, so `date -u -d <ts> +%s` parses it — the conversion
+# is guarded so a parse failure dies loudly rather than passing a possibly-stale api.
+assert_api_fresh() {
+    local started_at started_ts
+    started_at="$(docker inspect --format '{{.State.StartedAt}}' knowledge-api 2>/dev/null || true)"
+    [[ -n "$started_at" ]] || die "cannot read knowledge-api StartedAt (container missing?) — bind-mount stale-process trap; see P17.F1"
+    started_ts="$(date -u -d "$started_at" +%s 2>/dev/null || true)"
+    [[ -n "$started_ts" ]] || die "could not parse knowledge-api StartedAt='$started_at' to an epoch (GNU 'date -d' expected on the box) — refusing to pass a possibly-stale api; see P17.F1"
+    if (( started_ts < DEPLOY_START_TS )); then
+        die "api process predates this deploy (StartedAt=$started_at = ${started_ts}s < deploy start ${DEPLOY_START_TS}s) — bind-mount stale-process trap: the force-recreate did not land a fresh uvicorn; see P17.F1"
+    fi
+    log "api process is fresh (StartedAt=$started_at, ${started_ts}s >= deploy start ${DEPLOY_START_TS}s)"
 }
 
 # --- diagnostics on failure (no rollback, §F v1) -----------------------------
@@ -271,13 +303,23 @@ if ! dc run --rm -T --no-deps \
     die "reconcile failed (see [reconcile] output above). The box clone was NOT moved backwards and NO rollback was performed. Fix forward: merge a corrected commit to origin/main and re-dispatch — the reconcile picks it up. If 'docker compose run' refused because the api service pins 'container_name: knowledge-api', apply the documented fallback (add 'image: knowledge-api:latest' to the api service + use 'docker run', see this script's header); S5 confirms the run path live."
 fi
 
-# --- 2. build + recreate the app services ------------------------------------
-# Builds the api + web + mcp images and recreates all three containers (uvicorn
-# reloads against the reconciled bind-mounted code; the web app serves the rebuilt
-# Next standalone bundle; the mcp server ships its own self-contained image).
-# `postgres` comes up as the api's healthy-dependency.
-log "building + recreating the app services (COMPOSE_BAKE=false docker compose up -d --build)"
+# --- 2. build the app images + recreate web/mcp ------------------------------
+# Builds the api + web + mcp images. Compose recreates a container only when its image or
+# config changed: `web` serves the rebuilt Next standalone bundle and `mcp` ships its own
+# self-contained image, so both recreate on a code push. The `api` does NOT — it runs
+# server/ from the BIND MOUNT (.:/repo), so a code-only push changes neither its image nor
+# its config and this plain `up` leaves the running uvicorn on stale code; step 2b
+# force-recreates it explicitly. `postgres` comes up as the api's healthy-dependency.
+log "building images + recreating web/mcp (COMPOSE_BAKE=false docker compose up -d --build)"
 dc up -d --build
+
+# --- 2b. force-recreate the bind-mounted api ---------------------------------
+# The api runs server/ from the BIND MOUNT — a code-only push changes neither its image
+# nor its config, so the plain `up` above never recreates it and the running uvicorn keeps
+# stale code (the S5/P17 split-deploy incident). Recreate it unconditionally; `--no-deps`
+# leaves the already-running postgres untouched.
+log "force-recreating the api (bind-mounted code — plain up won't recreate it)"
+dc up -d --force-recreate --no-deps api
 
 # --- 3. health-gate the app services (api + web + mcp) -----------------------
 gate_ok=1
@@ -287,6 +329,9 @@ wait_healthy mcp knowledge-mcp || gate_ok=0
 
 if (( gate_ok )); then
     log "all three services healthy — knowledge-api + knowledge-web + knowledge-mcp are live"
+    # Post-gate freshness self-assert: prove step 2b's force-recreate actually landed a
+    # NEW uvicorn, not the pre-existing stale one (the S5/P17 split-deploy trap).
+    assert_api_fresh
 else
     # --- 4. on failure: capture + fix-forward, NO rollback (§F v1) ------------
     capture_artifacts

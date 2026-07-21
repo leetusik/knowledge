@@ -21,12 +21,12 @@
       "path": "works/phases/active/P17",
       "review_status": "pending",
       "current_slice": "P17.REVIEW",
-      "slice_count": 7,
-      "done_slice_count": 6
+      "slice_count": 8,
+      "done_slice_count": 7
     }
   ],
   "deferred_open_count": 8,
   "deferred_promoted_count": 3,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-21T22:22:44+09:00"
+  "last_rebuilt_at": "2026-07-21T22:32:58+09:00"
 }
