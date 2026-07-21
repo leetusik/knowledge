@@ -100,7 +100,10 @@ def default_project() -> str:
     repo's notes across two project names depending on which tool wrote them.
 
     Outside a git repo there is no repo name to use, so fall back to the project
-    `init` configured (`api.project`), then to `init`'s own default.
+    `init` configured (`api.project`), then to the literal `"default"` project
+    (`auth.DEFAULT_PROJECT`) — the org's signup-provisioned default project (P18).
+    Any name resolves regardless: the write path get-or-creates a project on first
+    save, so `"default"` is always a real registry row.
     """
 
     root = repo_root()

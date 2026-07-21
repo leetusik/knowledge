@@ -59,9 +59,13 @@ ENV_PASSWORD = "KNOWLEDGE_PASSWORD"
 # and login. Checked here too so a short password is a sentence, not a raw 422.
 MIN_PASSWORD_LEN = 8
 
-# Must satisfy server/documents.py:32 `^[A-Za-z0-9][A-Za-z0-9._-]*$`, because S3's
-# writes carry this name through `validate_project()`.
-DEFAULT_PROJECT = "knowledge"
+# The project a fresh onboarding lands in: `init --project`'s default and `save`'s
+# outside-a-repo fallback. It is the signup-provisioned `"default"` project (P18) —
+# so a brand-new user's `init` reuses the project already made for them rather than
+# minting a second one. Must satisfy server/documents.py:32
+# `^[A-Za-z0-9][A-Za-z0-9._-]*$`, because writes carry this name through
+# `validate_project()`.
+DEFAULT_PROJECT = "default"
 
 CREDENTIAL_NAME = "knowledge-cli"
 
@@ -345,7 +349,7 @@ def _save_session(base_url: str, token: str, email: str) -> None:
 
 
 def cmd_signup(args: argparse.Namespace) -> int:
-    """Create an account and a workspace, and remember the session.
+    """Create an account and an org, and remember the session.
 
     Does **not** configure this machine: no project, no key, no `api.token`. Run
     `knowledge init` for that (it will sign you up too, if you have not already).
@@ -366,8 +370,8 @@ def cmd_signup(args: argparse.Namespace) -> int:
     _save_session(args.base_url, payload["token"], email)
     tenant = _active_tenant(payload)
     print(f"signed up as {email}")
-    print(f"workspace: {tenant.get('name', '?')}")
-    print(f"next: knowledge init --email {email}   # project + API key + config")
+    print(f"org: {tenant.get('name', '?')}")
+    print(f"next: knowledge init --email {email}   # project + org key + config")
     return 0
 
 
@@ -381,7 +385,7 @@ def cmd_login(args: argparse.Namespace) -> int:
     _save_session(args.base_url, payload["token"], email)
     tenant = _active_tenant(payload)
     print(f"logged in as {email}")
-    print(f"workspace: {tenant.get('name', '?')}")
+    print(f"org: {tenant.get('name', '?')}")
     return 0
 
 
@@ -427,7 +431,7 @@ def cmd_whoami(args: argparse.Namespace) -> int:
     user = payload.get("user") or {}
     tenant = _active_tenant(payload)
     print(f"user: {user.get('email', '?')}")
-    print(f"workspace: {tenant.get('name', '?')}")
+    print(f"org: {tenant.get('name', '?')}")
     print(f"api: {args.base_url}")
     return 0
 
@@ -437,10 +441,11 @@ def _ensure_project(
 ) -> tuple[dict[str, Any], bool]:
     """The project called `name`, created only if it does not already exist.
 
-    `POST /app/projects` has no uniqueness check (`app_api.py:123-134`): two calls
-    with the same name yield two distinct project UUIDs. So list first and reuse a
-    name match — otherwise every `init` re-run silently litters the tenant with
-    duplicates, and later `save`s scatter across identically-named projects.
+    `POST /app/projects` is get-or-create server-side since P18.S2 (a duplicate name
+    returns the existing row, 201, against the new `UNIQUE(tenant_id, name)`), so a
+    blind create can no longer litter the org with duplicates. Listing first and
+    reusing a name match is kept as a belt-and-braces guard and to skip a redundant
+    write on every idempotent `init` re-run.
     """
 
     existing = client.projects_list(token=token).get("projects") or []
@@ -469,18 +474,20 @@ def cmd_init(args: argparse.Namespace) -> int:
         payload, verb = _signup_or_login(client, base_url, email, password)
         session = payload["token"]
         tenant = _active_tenant(payload)
-        print(f"{verb} as {email} (workspace: {tenant.get('name', '?')})")
+        print(f"{verb} as {email} (org: {tenant.get('name', '?')})")
 
         project, created = _ensure_project(client, session, project_name)
         print(f"project: {project_name} ({'created' if created else 'already existed'})")
 
         # Keep a key we already have: each mint is a live credential, and piling
-        # them up on every re-run is a security smell, not just noise. Only reuse a
-        # key minted by *this* service and *this* project, though: a `vk_` is bound
-        # server-side to one project (`api_auth.py:152-163`), so carrying foo's key
-        # while the config claims bar is incoherent. One from another base is
-        # likewise useless here — the server keeps only a hash, so a key can never
-        # be checked, only trusted.
+        # them up on every re-run is a security smell, not just noise. The minted
+        # key is now **org-level** (P18) — one `vk_` authorizes every project in the
+        # org — so it is not bound to a project server-side. `api.project` still
+        # records which project this machine's key was minted for, and the reuse
+        # gate keeps its shape: only reuse a key minted by *this* service and
+        # recorded against *this* project, re-minting when the config asks for a
+        # different one. One from another base is likewise useless here — the server
+        # keeps only a hash, so a key can never be checked, only trusted.
         api = _section(_stored(), "api")
         same_service = str(api.get("base_url") or "").rstrip("/") in ("", base_url)
         # ABSENT is "unknown", never "mismatched". Every config written before this
@@ -507,10 +514,11 @@ def cmd_init(args: argparse.Namespace) -> int:
                 )
         else:
             # Show-once: this plaintext exists nowhere else, ever. It goes into the
-            # config below and is never printed, logged, or raised.
-            key = client.credential_create(
-                project["id"], name=CREDENTIAL_NAME, token=session
-            )["key"]
+            # config below and is never printed, logged, or raised. Minted at **org
+            # level** (`POST /app/credentials`, `project_id NULL`): one key serves
+            # every repo the user saves from, which is what makes "one key, all
+            # repos" literal rather than just enforced.
+            key = client.credential_create_org(name=CREDENTIAL_NAME, token=session)["key"]
             print(f"key: minted {config.redact_token(key)}")
 
     _warn_before_first_write()

@@ -217,6 +217,23 @@ class KnowledgeClient:
             "POST", f"/app/projects/{project_id}/credentials", token=token, json=body
         )
 
+    def credential_create_org(
+        self,
+        name: str | None = None,
+        token: str | None = None,
+    ) -> Any:
+        """POST /app/credentials -> 201 {credential, key} (P18.S2, org-level).
+
+        Mints an **org-level** `vk_` key (`project_id NULL`): one key authorizes
+        writes across **every** project in the caller's org, unlike the
+        project-scoped `credential_create`. Same show-once contract — `key` is the
+        plaintext `vk_...`, returned exactly once, the server keeping only a hash.
+        Takes no project id; it is scoped to the caller's org by the session token.
+        """
+
+        body = {} if name is None else {"name": name}
+        return self._request("POST", "/app/credentials", token=token, json=body)
+
     def credential_list(self, project_id: str, token: str | None = None) -> Any:
         """GET /app/projects/{id}/credentials — metadata only, never the key."""
 

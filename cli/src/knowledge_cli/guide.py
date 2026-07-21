@@ -75,8 +75,9 @@ env var, then an interactive prompt on a TTY. An unattended agent must pipe it i
 set the env var; with neither and no TTY, `init` errors rather than hang. Minimum 8
 characters (the server's rule).
 
-`--project NAME` overrides the project name (default `knowledge`); `--new-key` forces
-a fresh key even when the config already holds one.
+`--project NAME` overrides the project name (it defaults to `default`, the org's
+signup-provisioned default project); `--new-key` forces a fresh key even when the
+config already holds one.
 
 Signup and login share one **generic** failure: the server answers an identical error
 for an unknown email and a wrong password, so a caller cannot tell which was wrong.
@@ -88,7 +89,9 @@ expect the message to say which field was bad.
 `init` writes **two** credentials into the config, with two lifetimes:
 
 - A non-expiring **`vk_` API key** (`api.token`) drives the five data commands:
-  `save`, `search`, `list`, `read`, `projects`. These keep working forever.
+  `save`, `search`, `list`, `read`, `projects`. These keep working forever. It is an
+  **org-level** key — one key authorizes writes to every project in your org, so the
+  same key serves every repo you save from.
 - A 30-day **session token** (`auth.session_token`) drives `usage`, and only `usage`.
 
 So after `knowledge logout` — or after the session simply expires — `save`, `search`,
@@ -123,9 +126,10 @@ knowledge base with no extra setup.
 - **The project defaults to the git repo's directory name**, verbatim — exactly what
   `/knowledge:explain` uses, so the CLI and the plugin file one repo's notes under the
   same project. Override with `--project`. Outside a git repo it falls back to the
-  project `init` configured. If the repo's directory name is not a usable project name
-  (a space in it, say), the CLI stops and suggests a `--project` value instead of
-  guessing.
+  project `init` configured, then to `default`. Any name is fine — the server
+  get-or-creates the project on first save, so you never pre-create one. If the repo's
+  directory name is not a usable project name (a space in it, say), the CLI stops and
+  suggests a `--project` value instead of guessing.
 - **The title** defaults to the body's first `# H1`; override with `--title`.
 - A document already at the same path is a **409**; pass `--overwrite` to replace it,
   or `--slug`/`--date` to save alongside it.

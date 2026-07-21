@@ -13,8 +13,8 @@ thing this skill does is ask which one the user wants:
 
 - **Connect** (recommended for most plugin users) — link to the **hosted** knowledge base
   at `https://knowledge.hi2vi.com`. No Docker, no server to run: the user signs up in
-  their browser, mints one ingest key, pastes it here, and is done. Their explainers post
-  to their own tenant and render in the web app.
+  their browser, mints one org-level ingest key, pastes it here, and is done. Their
+  explainers post to their own org and render in the web app.
 - **Scaffold** — stand up the user's **own self-hosted** knowledge base from the plugin's
   templates: a MkDocs Material site, a FastAPI + SQLite document API, an interactive
   knowledge graph, and a GitHub Pages publishing workflow. Full control, runs on their own
@@ -41,15 +41,16 @@ plugin user who just wants `/knowledge:explain` to work with zero infrastructure
 
 Connect mode wires `/knowledge:explain` to the hosted knowledge base at
 `https://knowledge.hi2vi.com` — no Docker, no scaffold, no site to run. The user signs up
-in their browser, mints one ingest key, and pastes it here; from then on
-`/knowledge:explain` posts explainers to **their own tenant**, and they render in the web
+in their browser, mints one org-level ingest key, and pastes it here; from then on
+`/knowledge:explain` posts explainers to **their own org**, and they render in the web
 app. This is the zero-infrastructure default for plugin users.
 
-**One key, all repos.** The user mints a **single** `vk_` key, once. `/knowledge:explain`
-sends the current repo's directory name as each document's `project` on every call, so the
-same key files explainers from **every** repo the user works in — each under its own
-project name in their tenant. The key's own bound project is only how usage is attributed;
-there is **no** need for a second key per repo.
+**One key, all repos.** The user mints a **single** org-level `vk_` key, once.
+`/knowledge:explain` sends the current repo's directory name as each document's `project`
+on every call, so the same key files explainers from **every** repo the user works in —
+each under its own project name in their org. An org key has **no** bound project of its
+own; one key authorizes every project, and usage is attributed to whichever project each
+save targets. There is **no** need for a second key per repo.
 
 **The only secret is the pasted key.** The user's email and password **never** pass
 through the agent — the browser does the sign-in, and the one thing that crosses back to
@@ -62,27 +63,31 @@ at all.
 
 Tell the user to open `https://knowledge.hi2vi.com/signup` and **Create your account** with
 an email and a password of at least 8 characters (the form's hint is *"At least 8
-characters"*). A workspace is created for them automatically. If they already have an
-account, they open `https://knowledge.hi2vi.com/login` and **Sign in** instead.
+characters"*). A **default** org and a **default** project are created for them
+automatically. If they already have an account, they open
+`https://knowledge.hi2vi.com/login` and **Sign in** instead.
 
 The user does this in their own browser. **Do not** ask the user to type their email or
 password to the agent — authentication happens entirely in the browser, and only the
 minted key comes back here.
 
-### C2. Create a project
+### C2. Projects are automatic — nothing to create
 
-On the **Dashboard**, under **Projects**, the user clicks **New project**, types a
-**Project name** (e.g. a repo they will file explainers from), and clicks **Create**. Then
-they click **Open** on that project's row to go to its page.
+Signup already gave the user a **default** org and a **default** project, and the write
+path get-or-creates any project on its first save, so there is **nothing to create here**:
+`/knowledge:explain` files each explainer under its repo's name automatically, and a
+new project name springs into existence the moment it is first saved to.
 
-(A brand-new project name can also be used later without pre-creating it — the write path
-accepts any project name — but creating one now gives a place to mint the key and watch
-usage.)
+(A user who wants a named project *ready in advance* — to watch its usage before the first
+save — can still create one on the **Dashboard**, under **Projects** → **New project**. It
+is optional; the org key minted below already authorizes every project in the org.)
 
-### C3. Mint an ingest key
+### C3. Mint an org-level ingest key
 
-On the project page, under **API keys**, the user clicks **New key**, optionally gives it a
-**Key name** (e.g. *"Production ingest"*) to tell keys apart, and clicks **Create key**.
+On the **Dashboard**, in the **Org API keys** panel (below the projects and activity), the
+user clicks **New key**, optionally gives it a **Key name** (e.g. *"Production ingest"*) to
+tell keys apart, and clicks **Create key**. This is **org-level**: the one key grants
+access to **every** project in their org — one key, all repos.
 
 The web app then shows the **Copy your new key now** panel, warning *"This is the only time
 this key will ever be shown. It cannot be recovered — if you lose it, revoke it and create
@@ -154,11 +159,11 @@ writes nothing), substituting the pasted key:
       "https://knowledge.hi2vi.com/api/documents?limit=1"
 
 - **HTTP 200** (a JSON `{total, items}` body) → **connected.** Report to the user:
-  `/knowledge:explain` now saves to **their** tenant from **any** repo, and their documents
+  `/knowledge:explain` now saves to **their** org from **any** repo, and their documents
   render in the web app under **Documents** (`https://knowledge.hi2vi.com/documents`).
 - **HTTP 401** → the key is wrong or was revoked. Have the user re-check they pasted the
-  whole `vk_…` string, or mint a fresh key (project page → **API keys** → **New key**) and
-  re-run connect mode. Do **not** fall back to anything.
+  whole `vk_…` string, or mint a fresh key (**Dashboard** → **Org API keys** → **New key**)
+  and re-run connect mode. Do **not** fall back to anything.
 
 Connect mode is then done — suggest `/knowledge:explain <topic>` to file the first
 explainer to the hosted KB.
@@ -166,7 +171,8 @@ explainer to the hosted KB.
 ### Prefer the terminal? Use the standalone CLI instead
 
 A user who would rather stay in the terminal can do this whole onboarding (sign up →
-project → key → config) without a browser hand-off, via the standalone `knowledge` CLI:
+default project → org key → config) without a browser hand-off, via the standalone
+`knowledge` CLI — `knowledge init` mints the same org-level key from the terminal:
 
     uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
     knowledge init
