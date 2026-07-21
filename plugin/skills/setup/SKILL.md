@@ -154,7 +154,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.2.1",
+      "plugin_version": "0.3.0",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",
@@ -167,7 +167,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
       }
     }
 
-`plugin_version` is `0.1.0` — the current plugin version; it never contains a
+`plugin_version` is `0.3.0` — the current plugin version; it never contains a
 secret. (On re-render, overwrite the marker with the new params and today's
 `rendered_at`.)
 
@@ -177,7 +177,7 @@ Run in the target dir; never push:
 
     git -C "<target-dir>" init
     git -C "<target-dir>" add -A
-    git -C "<target-dir>" commit -m "chore: scaffold knowledge base (knowledge plugin v0.1.0)"
+    git -C "<target-dir>" commit -m "chore: scaffold knowledge base (knowledge plugin v0.3.0)"
 
 The scaffold ships a `.gitignore` that already excludes `site/`, `.env`,
 `__pycache__/`, and `/data/`, so the initial commit is clean.
