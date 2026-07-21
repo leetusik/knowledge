@@ -5,5 +5,6 @@
   "KB_TZ": "Asia/Seoul",
   "KB_VIEWER_PORT": "8765",
   "KB_API_PORT": "8766",
-  "KB_DATE": "2026-07-14"
+  "KB_DATE": "2026-07-14",
+  "KB_DATABASE_URL": "postgresql+psycopg://kb:kb@postgres:5432/kb"
 }

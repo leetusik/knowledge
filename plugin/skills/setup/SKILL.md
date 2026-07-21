@@ -235,6 +235,7 @@ change ports ("advanced").
 | viewer port | default `8765` (ask only if "advanced") | `KB_VIEWER_PORT`, `site.base_url` |
 | API port | default `8766` (ask only if "advanced") | `KB_API_PORT`, `api.base_url` |
 | Gemini key | **do NOT collect** — explain host-env only (see below) | nothing written |
+| database URL | **do NOT collect** — always empty for a scaffold | `KB_DATABASE_URL` (dormant) |
 
 Derive the rest without asking:
 
@@ -263,9 +264,13 @@ Derive the rest without asking:
   needs a Gemini key set as `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) in the shell
   or compose env **later**; without it, search still works (keyword/BM25 only).
   This skill writes no key anywhere.
+- **`KB_DATABASE_URL`** — always the **empty string** for a scaffold; never ask.
+  A self-hosted scaffold runs **single-tenant, accounts plane dormant** — an empty
+  `DATABASE_URL` leaves the accounts/Postgres control plane off (the compose
+  `postgres` service still starts but nothing connects to it). Pass it as `""`.
 
 **Confirm before touching disk.** Print a summary of every resolved value
-(target dir, mode, all 7 `KB_*` tokens, ports, config path) and the actions you
+(target dir, mode, all 8 `KB_*` tokens, ports, config path) and the actions you
 are about to take, and ask the user to confirm. Only proceed on a yes.
 
 ## 3. Target-dir safety
@@ -300,9 +305,10 @@ Classify the target dir before rendering:
 
 ## 4. Render + marker + git
 
-**Render** the scaffold. Pass all seven tokens together (the renderer fails if
-any is missing or if an unknown key is given). Quote each value; add `--force`
-only in the stage-3 re-render path:
+**Render** the scaffold. Pass all eight tokens together (the renderer fails if
+any is missing or if an unknown key is given). Quote each value; `KB_DATABASE_URL`
+is always empty for a scaffold (dormant accounts plane). Add `--force` only in the
+stage-3 re-render path:
 
     python3 "${CLAUDE_PLUGIN_ROOT}/setup/render.py" --dest "<target-dir>" \
       --set KB_SITE_NAME="<site title>" \
@@ -311,7 +317,8 @@ only in the stage-3 re-render path:
       --set KB_TZ="<timezone>" \
       --set KB_VIEWER_PORT="<viewer port>" \
       --set KB_API_PORT="<api port>" \
-      --set KB_DATE="<YYYY-MM-DD>"
+      --set KB_DATE="<YYYY-MM-DD>" \
+      --set KB_DATABASE_URL=""
 
 The renderer writes the whole KB tree (server, docs, mkdocs.yml, compose.yml,
 Dockerfile, workflows, a seed `getting-started` explainer dated `KB_DATE`, …)
@@ -332,7 +339,8 @@ mutation) with exactly this shape, filling the **non-secret** params only:
         "KB_TZ": "<timezone>",
         "KB_VIEWER_PORT": "<viewer port>",
         "KB_API_PORT": "<api port>",
-        "KB_DATE": "<YYYY-MM-DD>"
+        "KB_DATE": "<YYYY-MM-DD>",
+        "KB_DATABASE_URL": ""
       }
     }
 

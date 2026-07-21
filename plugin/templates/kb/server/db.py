@@ -21,6 +21,7 @@ from server import config
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents (
   id          INTEGER PRIMARY KEY,
+  tenant_id   TEXT NOT NULL DEFAULT '',     -- '' = legacy/tenant-#1 sentinel; else the tenant UUID
   project     TEXT NOT NULL,
   slug        TEXT NOT NULL,
   date        TEXT NOT NULL CHECK (date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
@@ -28,12 +29,14 @@ CREATE TABLE IF NOT EXISTS documents (
   tags        TEXT NOT NULL DEFAULT '[]',   -- JSON array
   tags_text   TEXT NOT NULL DEFAULT '',     -- space-joined tags, for FTS
   source_repo TEXT,
-  rel_path    TEXT NOT NULL UNIQUE,         -- '<project>/<date>-<slug>.md' relative to docs/
-  markdown    TEXT NOT NULL,                -- body WITHOUT frontmatter
+  rel_path    TEXT NOT NULL,                -- '<project>/<date>-<slug>.{md,html}' relative to the tenant's content root
+  markdown    TEXT NOT NULL,                -- readable text body WITHOUT frontmatter (extracted plain text for html docs)
   related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
+  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' (the on-disk doc format)
+  raw_html    TEXT,                          -- raw HTML body for format='html' (the raw viewer route source); NULL for md
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
-  UNIQUE (project, date, slug)
+  UNIQUE (tenant_id, rel_path)
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
@@ -84,16 +87,44 @@ def _now() -> str:
 def init_db(conn: sqlite3.Connection) -> None:
     """Create tables/triggers if absent (idempotent).
 
-    Also migrates a pre-S4 DB (created before the ``related`` column existed):
-    ``PRAGMA table_info`` is a plain read, so checking-then-``ALTER TABLE`` is
-    safe to run on every call. Not added to ``documents_fts`` — rel_paths are
-    not search terms, and the FTS trigger trio names its columns explicitly, so
-    it is unaffected by an extra base-table column.
+    Two migrations, both safe to run on every call (``PRAGMA table_info`` is a
+    plain read):
+
+    * **Pre-tenancy DB rebuild (S5).** A DB created before ``documents.tenant_id``
+      cannot gain the new ``UNIQUE (tenant_id, rel_path)`` constraint by an
+      in-place ``ALTER`` (SQLite can't add table-level constraints), so the whole
+      content DB is dropped and recreated from ``_SCHEMA``. This is safe because
+      the DB is disposable — the startup reindex repopulates every row from the
+      canonical files, re-deriving ``tenant_id`` from the file path (hard
+      coupling #1). Dropping ``documents`` also drops its FTS trigger trio.
+    * **Pre-``related`` column back-fill.** For a DB that already has ``tenant_id``
+      but predates ``related``, an idempotent ``ALTER TABLE ... ADD COLUMN`` adds
+      it. Not added to ``documents_fts`` — rel_paths are not search terms, and the
+      FTS trigger trio names its columns explicitly, so it is unaffected by an
+      extra base-table column.
+    * **Pre-HTML ``format``/``raw_html`` back-fill (P16).** Same idempotent
+      ``ALTER TABLE ... ADD COLUMN`` pattern for the two disposable HTML-doc columns
+      (``format`` defaults ``'md'`` so every legacy row stays a markdown doc;
+      ``raw_html`` is nullable). Neither is in ``documents_fts`` — the index covers
+      the extracted text via the unchanged ``markdown`` column.
     """
     conn.executescript(_SCHEMA)
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
+    if "tenant_id" not in cols:
+        # Pre-tenancy DB: rebuild from scratch (disposable; reindex repopulates).
+        conn.executescript(
+            "DROP TABLE IF EXISTS documents_fts;"
+            "DROP TABLE IF EXISTS document_embeddings;"
+            "DROP TABLE IF EXISTS documents;"
+        )
+        conn.executescript(_SCHEMA)
+        cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
     if "related" not in cols:
         conn.execute("ALTER TABLE documents ADD COLUMN related TEXT NOT NULL DEFAULT '[]'")
+    if "format" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN format TEXT NOT NULL DEFAULT 'md'")
+    if "raw_html" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN raw_html TEXT")
     conn.commit()
 
 
@@ -136,12 +167,23 @@ def upsert_document(
     rel_path: str,
     markdown: str,
     related: Optional[list[str]] = None,
+    format: str = "md",
+    raw_html: Optional[str] = None,
+    tenant_id: str = "",
     now: Optional[str] = None,
 ) -> int:
-    """Insert or update by rel_path. Preserves created_at, refreshes updated_at.
+    """Insert or update by ``(tenant_id, rel_path)``. Preserves created_at, refreshes updated_at.
 
     ``related`` (optional list of rel_paths, forward links only) is stored as
-    JSON; ``None`` -> ``[]``. Returns the row id.
+    JSON; ``None`` -> ``[]``. ``format`` (``'md'`` default | ``'html'``) records the
+    on-disk doc format and ``raw_html`` (nullable, populated only for HTML docs)
+    holds the raw HTML the viewer's raw route serves — both disposable, re-derived
+    by reindex. ``tenant_id`` is the owning tenant's UUID string (``''`` = legacy /
+    tenant-#1 sentinel); it is part of the conflict target so the same ``rel_path``
+    can exist once per tenant, and is omitted from the UPDATE set (like
+    ``created_at``) since it never changes for a given row. Returns the row id.
+    (``format`` shadows the builtin here on purpose — a keyword-only param — and the
+    builtin is never called in this scope.)
     """
     ts = now or _now()
     tags = list(tags)
@@ -151,10 +193,10 @@ def upsert_document(
     conn.execute(
         """
         INSERT INTO documents
-          (project, slug, date, title, tags, tags_text, source_repo, rel_path,
-           markdown, related, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(rel_path) DO UPDATE SET
+          (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
+           markdown, related, format, raw_html, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
           date        = excluded.date,
@@ -164,37 +206,64 @@ def upsert_document(
           source_repo = excluded.source_repo,
           markdown    = excluded.markdown,
           related     = excluded.related,
+          format      = excluded.format,
+          raw_html    = excluded.raw_html,
           updated_at  = excluded.updated_at
         """,
-        (project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
-         markdown, related_json, ts, ts),
+        (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
+         markdown, related_json, format, raw_html, ts, ts),
     )
     conn.commit()
     row = conn.execute(
-        "SELECT id FROM documents WHERE rel_path = ?", (rel_path,)
+        "SELECT id FROM documents WHERE tenant_id = ? AND rel_path = ?",
+        (tenant_id, rel_path),
     ).fetchone()
     return int(row["id"])
 
 
-def get_document(conn: sqlite3.Connection, doc_id: int) -> Optional[dict[str, Any]]:
-    row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
+def get_document(
+    conn: sqlite3.Connection, doc_id: int, tenant_id: Optional[str] = None
+) -> Optional[dict[str, Any]]:
+    """One document by id. When ``tenant_id`` is set, a cross-tenant id -> None
+    (the handler turns that into a 404); ``None`` = legacy, no tenant filter."""
+    if tenant_id is not None:
+        row = conn.execute(
+            "SELECT * FROM documents WHERE id = ? AND tenant_id = ?",
+            (doc_id, tenant_id),
+        ).fetchone()
+    else:
+        row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
     return _row_to_dict(row)
 
 
 def get_document_by_path(
-    conn: sqlite3.Connection, rel_path: str
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
 ) -> Optional[dict[str, Any]]:
-    row = conn.execute(
-        "SELECT * FROM documents WHERE rel_path = ?", (rel_path,)
-    ).fetchone()
+    """One document by rel_path. When ``tenant_id`` is set, another tenant's row
+    at the same rel_path -> None; ``None`` = legacy, no tenant filter."""
+    if tenant_id is not None:
+        row = conn.execute(
+            "SELECT * FROM documents WHERE rel_path = ? AND tenant_id = ?",
+            (rel_path, tenant_id),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT * FROM documents WHERE rel_path = ?", (rel_path,)
+        ).fetchone()
     return _row_to_dict(row)
 
 
-def _filtered(sql_head: str, project: Optional[str], tag: Optional[str]):
-    """Build a (sql, params) pair applying optional project/tag filters.
+def _filtered(
+    sql_head: str,
+    project: Optional[str],
+    tag: Optional[str],
+    tenant_id: Optional[str] = None,
+):
+    """Build a (sql, params) pair applying optional project/tag/tenant filters.
 
     The tag filter joins json_each(documents.tags) so a JSON-array membership test
-    stays index-agnostic and correct for any tag.
+    stays index-agnostic and correct for any tag. ``tenant_id`` (when not ``None``)
+    scopes the result to one tenant; ``None`` leaves it unscoped (legacy behavior).
     """
     sql = sql_head
     params: list[Any] = []
@@ -202,6 +271,9 @@ def _filtered(sql_head: str, project: Optional[str], tag: Optional[str]):
         sql += " JOIN json_each(documents.tags) AS je ON je.value = ?"
         params.append(tag)
     where = []
+    if tenant_id is not None:
+        where.append("documents.tenant_id = ?")
+        params.append(tenant_id)
     if project is not None:
         where.append("documents.project = ?")
         params.append(project)
@@ -216,9 +288,12 @@ def list_documents(
     tag: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
+    tenant_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Newest-first (date DESC, id DESC), optional project/tag filters."""
-    sql, params = _filtered("SELECT documents.* FROM documents", project, tag)
+    """Newest-first (date DESC, id DESC), optional project/tag/tenant filters."""
+    sql, params = _filtered(
+        "SELECT documents.* FROM documents", project, tag, tenant_id
+    )
     sql += " ORDER BY documents.date DESC, documents.id DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     rows = conn.execute(sql, params).fetchall()
@@ -229,16 +304,29 @@ def count_documents(
     conn: sqlite3.Connection,
     project: Optional[str] = None,
     tag: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> int:
-    sql, params = _filtered("SELECT COUNT(*) AS n FROM documents", project, tag)
+    sql, params = _filtered(
+        "SELECT COUNT(*) AS n FROM documents", project, tag, tenant_id
+    )
     row = conn.execute(sql, params).fetchone()
     return int(row["n"])
 
 
-def delete_document_by_path(conn: sqlite3.Connection, rel_path: str) -> int:
-    """Delete by rel_path. FTS row cleaned by the AFTER DELETE trigger; any
-    document_embeddings row cascades via ON DELETE CASCADE. Returns rowcount."""
-    cur = conn.execute("DELETE FROM documents WHERE rel_path = ?", (rel_path,))
+def delete_document_by_path(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
+) -> int:
+    """Delete by rel_path. When ``tenant_id`` is set the delete is scoped to that
+    tenant (a delete can't cross tenants); ``None`` = legacy, no tenant filter.
+    FTS row cleaned by the AFTER DELETE trigger; any document_embeddings row
+    cascades via ON DELETE CASCADE. Returns rowcount."""
+    if tenant_id is not None:
+        cur = conn.execute(
+            "DELETE FROM documents WHERE rel_path = ? AND tenant_id = ?",
+            (rel_path, tenant_id),
+        )
+    else:
+        cur = conn.execute("DELETE FROM documents WHERE rel_path = ?", (rel_path,))
     conn.commit()
     return cur.rowcount
 
@@ -247,29 +335,43 @@ def delete_document_by_path(conn: sqlite3.Connection, rel_path: str) -> int:
 
 
 def list_tags(
-    conn: sqlite3.Connection, project: Optional[str] = None
+    conn: sqlite3.Connection,
+    project: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Tag usage counts, optionally scoped to one project. Highest count first,
-    tag ASC as the tiebreak."""
+    """Tag usage counts, optionally scoped to one project and/or tenant. Highest
+    count first, tag ASC as the tiebreak."""
     sql = (
         "SELECT je.value AS tag, COUNT(*) AS count "
         "FROM documents JOIN json_each(documents.tags) AS je"
     )
     params: list[Any] = []
+    where = []
+    if tenant_id is not None:
+        where.append("documents.tenant_id = ?")
+        params.append(tenant_id)
     if project is not None:
-        sql += " WHERE documents.project = ?"
+        where.append("documents.project = ?")
         params.append(project)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
     sql += " GROUP BY je.value ORDER BY count DESC, tag ASC"
     rows = conn.execute(sql, params).fetchall()
     return [{"tag": r["tag"], "count": int(r["count"])} for r in rows]
 
 
-def list_projects(conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """Per-project document counts + latest doc date, project ASC."""
-    rows = conn.execute(
-        "SELECT project, COUNT(*) AS count, MAX(date) AS latest_date "
-        "FROM documents GROUP BY project ORDER BY project ASC"
-    ).fetchall()
+def list_projects(
+    conn: sqlite3.Connection, tenant_id: Optional[str] = None
+) -> list[dict[str, Any]]:
+    """Per-project document counts + latest doc date, project ASC. When
+    ``tenant_id`` is set, only that tenant's projects; ``None`` = legacy."""
+    sql = "SELECT project, COUNT(*) AS count, MAX(date) AS latest_date FROM documents"
+    params: list[Any] = []
+    if tenant_id is not None:
+        sql += " WHERE tenant_id = ?"
+        params.append(tenant_id)
+    sql += " GROUP BY project ORDER BY project ASC"
+    rows = conn.execute(sql, params).fetchall()
     return [
         {"project": r["project"], "count": int(r["count"]), "latest_date": r["latest_date"]}
         for r in rows
@@ -332,12 +434,14 @@ def get_all_embeddings(
     model: str,
     project: Optional[str] = None,
     tag: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Candidate embeddings joined to their documents, honoring project/tag filters.
+    """Candidate embeddings joined to their documents, honoring project/tag/tenant filters.
 
     Each dict is the full ``documents`` row (incl. ``markdown`` for snippet fallback)
     plus ``_vector`` (the packed BLOB). Used by search.py to build the vector ordering
-    and to materialize vector-only hits.
+    and to materialize vector-only hits. When ``tenant_id`` is set the candidate set is
+    scoped to that tenant, so semantic search never surfaces another tenant's docs.
     """
     sql = (
         "SELECT d.*, de.vector AS _vector "
@@ -352,6 +456,9 @@ def get_all_embeddings(
     if project is not None:
         sql += " AND d.project = ?"
         params.append(project)
+    if tenant_id is not None:
+        sql += " AND d.tenant_id = ?"
+        params.append(tenant_id)
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
