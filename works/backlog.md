@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P17`
-- Current slice: `P17.S5`
-- Next slice: `P17.REVIEW`
+- Current slice: `P17.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `8`
-- Rebuilt at: `2026-07-21T16:59:23+09:00`
+- Rebuilt at: `2026-07-21T22:22:44+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
-| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.S5` | `works/phases/active/P17` |
+| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.REVIEW` | `works/phases/active/P17` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -38,5 +38,5 @@
 | [x] `P17.S2` | `done` | Reconcile explain skill copies from the canonical plugin copy (resolve the duplicate registration) | `implementation` | `works/phases/active/P17/slices/P17.S2` |
 | [x] `P17.S3` | `done` | Public-host onboarding surface for plugin users (signup -> project -> vk_ -> config) | `implementation` | `works/phases/active/P17/slices/P17.S3` |
 | [x] `P17.S4` | `done` | Plugin-template parity remediation: mirror the SaaS server into plugin/templates/kb (D9) | `implementation` | `works/phases/active/P17/slices/P17.S4` |
-| [ ] `P17.S5` | `todo` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
+| [x] `P17.S5` | `done` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
 | [ ] `P17.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
