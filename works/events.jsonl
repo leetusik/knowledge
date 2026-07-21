@@ -498,3 +498,8 @@
 {"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P15", "archive_path": "works/phases/archived/20260721_124533_P15_agent-facing_retrieval_mcp_service_search-as-a-service"}
 {"ts": "2026-07-21T13:17:09+09:00", "type": "phase_created", "phase": "P16"}
 {"ts": "2026-07-21T13:17:14+09:00", "type": "phase_created", "phase": "P17"}
+{"ts": "2026-07-21T14:07:55+09:00", "type": "slice_status_changed", "slice": "P16.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-21T14:13:20+09:00", "type": "slice_created", "phase": "P16", "slice": "P16.S1"}
+{"ts": "2026-07-21T14:13:20+09:00", "type": "slice_created", "phase": "P16", "slice": "P16.S2"}
+{"ts": "2026-07-21T14:13:20+09:00", "type": "slice_created", "phase": "P16", "slice": "P16.S3"}
+{"ts": "2026-07-21T14:16:17+09:00", "type": "slice_status_changed", "slice": "P16.DECOMP", "old_status": "in_progress", "new_status": "done"}

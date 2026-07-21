@@ -1,0 +1,33 @@
+{
+  "id": "P16.S2",
+  "phase_id": "P16",
+  "name": "Web: safe interactive HTML render (sandboxed iframe + raw relay)",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 2,
+  "depends_on": [
+    "P16.S1"
+  ],
+  "created_at": "2026-07-21T14:13:20+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
