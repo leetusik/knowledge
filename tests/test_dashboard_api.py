@@ -169,20 +169,26 @@ def test_dashboard_shape_and_tenant_isolation(dashboard_client):
     body = res.json()
 
     rows = {row["name"]: row for row in body["projects"]}
-    assert set(rows) == {"alpha", "beta"}  # only the caller's projects, no leak
+    # signup auto-provisions a "default" project (P18); alpha/beta are the caller's;
+    # the intruder tenant's projects must never appear — only these three.
+    assert set(rows) == {"default", "alpha", "beta"}
     assert rows["alpha"]["documents"] == 2
     assert rows["alpha"]["keys"] == 1  # revoked key excluded
     assert rows["alpha"]["last_used_at"] is not None
     assert rows["beta"]["documents"] == 0
     assert rows["beta"]["keys"] == 0
     assert rows["beta"]["last_used_at"] is None
-    assert {project_a, project_a2} == {row["id"] for row in body["projects"]}
+    assert rows["default"]["documents"] == 0
+    assert rows["default"]["keys"] == 0
+    assert {rows["default"]["id"], project_a, project_a2} == {
+        row["id"] for row in body["projects"]
+    }
 
     # Activity is the real lifecycle events, newest-first, no cross-tenant bleed.
     types = {event["type"] for event in body["activity"]}
     assert types == {"project_created", "key_minted", "key_revoked"}
     names = {event["project_name"] for event in body["activity"]}
-    assert names == {"alpha", "beta"}
+    assert names == {"default", "alpha", "beta"}  # incl. the auto-provisioned default
     assert "intruder-project" not in names and "intruder-two" not in names
     ats = [event["at"] for event in body["activity"]]
     assert ats == sorted(ats, reverse=True)

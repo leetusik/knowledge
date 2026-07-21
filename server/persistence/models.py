@@ -85,10 +85,13 @@ class TenantMemberModel(Base):
 
 
 class ProjectModel(Base):
-    """Project owned by a tenant."""
+    """Project owned by a tenant. Project names are unique per tenant."""
 
     __tablename__ = "projects"
-    __table_args__ = (Index("ix_projects_tenant_id", "tenant_id"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name"),
+        Index("ix_projects_tenant_id", "tenant_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(
@@ -106,16 +109,31 @@ class ProjectModel(Base):
 
 
 class ProjectCredentialModel(Base):
-    """Per-project API credential. Only the sha256 ``token_hash`` is stored."""
+    """An API credential scoped to a tenant. Only the sha256 ``token_hash`` is stored.
+
+    ``tenant_id`` is always populated (the resolver authorizes at org scope from it).
+    ``project_id`` is nullable: an **org-level** credential carries ``project_id NULL``
+    (the key grants the whole tenant/org), while a **project-bound** credential keeps
+    ``project_id`` set for attribution. The org-level (NULL) rows are introduced by the
+    org-mint path; every row this repo writes today is project-bound.
+    """
 
     __tablename__ = "project_credentials"
-    __table_args__ = (Index("ix_project_credentials_project_id", "project_id"),)
+    __table_args__ = (
+        Index("ix_project_credentials_project_id", "project_id"),
+        Index("ix_project_credentials_tenant_id", "tenant_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    project_id: Mapped[UUID] = mapped_column(
+    tenant_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    project_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
     token_prefix: Mapped[str] = mapped_column(Text, nullable=False)

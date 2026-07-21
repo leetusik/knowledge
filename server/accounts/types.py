@@ -70,24 +70,33 @@ class ProjectRecord:
 
 @dataclass(slots=True, kw_only=True)
 class CreateProjectCredential:
-    """Input for storing a per-project credential.
+    """Input for storing a credential.
 
-    The caller computes ``token_prefix`` (short display prefix) and
-    ``token_hash`` (sha256 hex of the plaintext key); the raw key is never stored.
+    ``tenant_id`` is always set (the credential is authorized at org scope from it).
+    ``project_id`` binds the credential to a project for attribution; an org-level
+    credential (introduced by the org-mint path) leaves it ``None``. The caller
+    computes ``token_prefix`` (short display prefix) and ``token_hash`` (sha256 hex
+    of the plaintext key); the raw key is never stored.
     """
 
-    project_id: UUID
+    tenant_id: UUID
     token_prefix: str
     token_hash: str
+    project_id: UUID | None = None
     name: str | None = None
 
 
 @dataclass(slots=True, kw_only=True)
 class ProjectCredentialRecord:
-    """Stored project credential metadata. Never exposes ``token_hash``."""
+    """Stored credential metadata. Never exposes ``token_hash``.
+
+    ``project_id`` is ``None`` for an org-level credential (project-bound rows keep
+    it set for attribution).
+    """
 
     id: UUID
-    project_id: UUID
+    tenant_id: UUID
+    project_id: UUID | None
     name: str | None
     token_prefix: str
     created_at: datetime

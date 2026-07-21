@@ -2,16 +2,19 @@
 
 Run once per deployment as ``python -m server.seed`` (or, on the box, ``docker
 compose exec api python -m server.seed``) AFTER ``alembic upgrade head`` and with
-``DATABASE_URL`` + ``KB_OPERATOR_EMAIL`` + ``KB_OPERATOR_PASSWORD`` set. It creates
-exactly three things and nothing else:
+``DATABASE_URL`` + ``KB_OPERATOR_EMAIL`` + ``KB_OPERATOR_PASSWORD`` set. It creates:
 
 1. the **operator user** (email = ``KB_OPERATOR_EMAIL``, argon2id password hash of
    ``KB_OPERATOR_PASSWORD``);
-2. the operator's **tenant #1** (``create_tenant_with_owner`` — the same signup
-   primitive ``/auth/signup`` uses, name = ``"<local-part>'s workspace"``);
+2. the operator's **tenant #1**. On a fresh database this is the same signup
+   primitive ``/auth/signup`` uses (``provision_signup`` — a ``"default"`` org +
+   ``"default"`` project, atomically), so the seed and signup never drift. On an
+   existing database the operator's tenant is kept verbatim — its name is **not**
+   rewritten (prod tenant #1 keeps whatever it was first seeded as);
 3. a ``projects`` row for each **live ``docs/`` project**, derived from the tree by
    reindex's filename rule (never hardcoded), so the seeded project names line up
-   exactly with what the content plane stamps on ``documents.project``.
+   exactly with what the content plane stamps on ``documents.project``. A
+   ``"default"`` project already provisioned in step 2 is tolerated (skipped).
 
 Why this matters (the ordering coupling): ``server.api_auth.get_tenant_one_id()``
 resolves tenant #1 from ``KB_OPERATOR_EMAIL`` and **caches on first success only**.
@@ -113,19 +116,24 @@ async def main() -> None:
         if user is None:  # pragma: no cover - only on a torn-down DB mid-run
             raise SystemExit("failed to create or read the operator user")
 
-        # 2. Tenant #1 = the operator's first tenant (signup's naming derivation).
+        # 2. Tenant #1 = the operator's first tenant. On a FRESH database this is
+        #    the same signup primitive /auth/signup uses (provision_signup): a
+        #    "default" org + "default" project, atomically, so the seed and signup
+        #    never drift. On an EXISTING database the operator already has a tenant,
+        #    so we keep it verbatim (its name is NOT rewritten — prod tenant #1 keeps
+        #    whatever it was seeded as; a "default" project is added lazily via
+        #    get-or-create, or below in step 3 if it is a live docs/ project).
         tenants = await service.list_tenants_for_user(user.id)
         if not tenants:
-            tenant, _ = await service.create_tenant_with_owner(
-                user.id, f"{email.split('@')[0]}'s workspace"
-            )
+            tenant, _member, _project = await service.provision_signup(user.id)
             created_tenant = True
         else:
             tenant = tenants[0]
             created_tenant = False
 
         # 3. A projects row per live docs/ project (derived from the tree, not
-        #    hardcoded — matches documents.project after a reindex).
+        #    hardcoded — matches documents.project after a reindex). The set-membership
+        #    check below already tolerates a "default" project provisioned in step 2.
         existing = {p.name for p in await service.list_projects_for_tenant(tenant.id)}
         discovered = _discover_projects(config.docs_root())
         created_projects: list[str] = []
