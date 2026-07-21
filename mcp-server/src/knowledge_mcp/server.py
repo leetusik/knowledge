@@ -119,10 +119,13 @@ def _map_document(
     """Project one upstream single-doc read to the ``fetch_document`` contract.
 
     Upstream shape (``server/main.py:_public_doc`` with ``markdown`` included):
-    ``{id, project, slug, date, title, tags, rel_path, source_repo, markdown,
-    related, created_at, updated_at}``. We surface the citable metadata plus the
-    (possibly truncated) body and the truncation signal. ``url`` goes through the
-    same ``_citation_url`` seam as ``search`` (empty for the whole corpus today).
+    ``{id, project, slug, date, title, tags, rel_path, source_repo, format,
+    markdown, related, created_at, updated_at}``. We surface the citable metadata
+    plus the (possibly truncated) body and the truncation signal. ``url`` goes
+    through the same ``_citation_url`` seam as ``search`` (empty for the whole
+    corpus today). ``format`` is relayed verbatim from upstream — ``"md" | "html"``
+    — defaulting to ``"md"`` so an older upstream that omits it still maps cleanly;
+    for an ``"html"`` doc ``markdown`` carries the server-extracted readable text.
     """
 
     return {
@@ -133,6 +136,7 @@ def _map_document(
         "date": doc.get("date", ""),
         "tags": doc.get("tags", []),
         "url": _citation_url(doc),
+        "format": doc.get("format") or "md",
         "markdown": markdown,
         "truncated": truncated,
         "total_chars": total_chars,
@@ -300,10 +304,12 @@ async def search(
     description=(
         "Fetch one document's full markdown, size-capped, by `id` OR `rel_path` "
         "(provide exactly one — use the `id`/`rel_path` from a `search` hit). "
-        "Returns {id, rel_path, title, project, date, tags, url, markdown, "
+        "Returns {id, rel_path, title, project, date, tags, url, format, markdown, "
         "truncated, total_chars}. When `truncated` is true, `markdown` is the first "
         "N characters and `total_chars` is the full length — narrow with `search` "
-        "for the rest. `url` is the document's public citation origin when one "
+        "for the rest. `format` is `\"md\" | \"html\"`; for an `\"html\"` doc (a "
+        "standalone HTML explainer) `markdown` carries the server-extracted "
+        "readable text. `url` is the document's public citation origin when one "
         "exists (empty otherwise)."
     ),
 )
