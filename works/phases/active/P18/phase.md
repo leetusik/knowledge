@@ -8,16 +8,114 @@ Restructure the accounts plane to an explicit user → org → project model: si
 
 ## Context
 
+Accounts-plane map, verified against the code on 2026-07-22 (line refs are anchors, re-verify before editing — the tree moves):
+
+- **Two planes.** *Control plane* = Postgres (tenant mode iff `DATABASE_URL`): `users`, `tenants` (name only; ownership via `tenant_members` role=owner), `projects` (tenant_id, name — **no UNIQUE(tenant_id,name)** today), `project_credentials` (project_id FK **NOT NULL**, name, token_prefix, token_hash sha256 UNIQUE, last_used_at, revoked_at — no tenant_id, no expiry/scopes), `auth_tokens`, `usage_events`. ORM `server/persistence/models.py` (verified: `ProjectModel` has only `Index("ix_projects_tenant_id")`; `ProjectCredentialModel.project_id` is non-nullable FK). Migrations `alembic/versions/0001_accounts_tenancy.py`, `0002_usage_events.py`; applied **manually** in prod (`docker compose exec api alembic upgrade head`, then `python -m server.seed`). *Content plane* = disposable SQLite: `documents.tenant_id TEXT DEFAULT ''` sentinel, `UNIQUE(tenant_id, rel_path)`; rebuilt from files on boot; self-migrates in `server/db.py:init_db`.
+- **Signup** `server/auth_api.py:215-238`: argon2id, tenant named `f"{email.localpart}'s workspace"` via `service.create_tenant_with_owner(user.id, name)` (`server/accounts/service.py:99-126` — tenant + owner `tenant_members` row atomically, no project), 30-day session token, **no project created**. Per-IP throttle on signup/login.
+- **Minting** `server/app_api.py:148-170` `POST /app/projects/{id}/credentials`: `vk_` + `generate_opaque_token()`; sha256 hash + `key[:12]` prefix stored; plaintext returned once. `list_credentials` GET at `:173`. Web UI `web/src/app/(app)/projects/[projectId]/mint-credential-form.tsx` + `revoke-credential-button.tsx` + `actions.ts`.
+- **Resolver** `server/api_auth.py:130-175` `_resolve_tenant_bearer`: (1) master `KB_API_TOKEN` → tenant #1 (`get_tenant_one_id`, cached on first success); (2) `vk_` credential → `service.get_active_credential_by_token_hash` then `service.get_project(cred.project_id)` → `ApiAuthContext(tenant_id=project.tenant_id, project_id, credential_id)` — **so authorization is already tenant-wide; the project binding only carries project_id for attribution**; a credential pointing at a vanished project is unresolvable; (3) session token → user's first tenant. `ApiAuthContext(tenant_id, project_id, credential_id, is_public)`.
+- **Write path** `server/main.py:389-592` `POST /api/documents` (`resolve_api_write` guard): any resolvable credential authorizes (tenant-level); `body.project` free-form, validated for shape but **never checked against the credential**; routes to `_tenant_root(ctx)` / `_tenant_db_id(ctx)`; public tenants get the canonical `docs/` tree + landing + Recent, others a namespaced `tenants/<uuid>/`. **No Postgres `projects` row is created here** — saving an unregistered name leaves no registry row. Metering `server/usage/metering.py:50-98` (`record_usage`): resolves project by `get_project_by_name(tenant_id, project_name)` **first**, falls back to `hint.project_id`, else tenant-level NULL — it *reads* the row, never creates it.
+- **Seed** `server/seed.py`: idempotent; operator user + tenant #1 (`"<localpart>'s workspace"`) + a `projects` row per live `docs/` project (derived from the tree by reindex's filename rule, not hardcoded). **No `vk_` seeded** (master bearer suffices).
+- **CLI** `cli/src/knowledge_cli/knowledge.py`: `--project` **already exists** on `save` (:632-635) and is threaded through (`args.project or default_project()`, :378); `default_project()` (:93-109) = git-repo-root basename → `auth.stored_project()` → `auth.DEFAULT_PROJECT`. **`auth.DEFAULT_PROJECT = "knowledge"`** (`cli/src/knowledge_cli/auth.py:64`) — also the default for `init --project` (:585). So the CLI's outside-a-repo fallback is `"knowledge"` today, **not** `"default"`. Project sent as a JSON body field (`client.py:282`).
+- **Skills.** Explain skill canonical `plugin/skills/explain/SKILL.md` (project = repo dir name verbatim; env `KB_API_BASE_URL`/`KB_API_TOKEN` precedence). Setup skill `plugin/skills/setup/SKILL.md` (~:48-51: "one vk_, all repos; the key's own bound project is only how usage is attributed").
+- **Web app** (P12 design system): topbar/nav "Workspace" copy in `web/src/content/app.ts:33,35` + `dashboard.ts:33,35` + `auth.ts:57,73` ("A workspace is created for you automatically") + `documents.ts:9,11,77`. Per-project keys table + mint modal already exist (`web/src/app/(app)/projects/[projectId]/`).
+- **Parity gates (P17, CI `plugin-ci.yml`):** `scripts/plugin_parity.py` — `plugin/templates/manifest.json` `shipped_dirs = ["server", "tests", "docs/assets", "docs/stylesheets", "docs/javascripts"]` must match `plugin/templates/kb/<dir>/` **set-for-set and content-identical**. **`alembic/` is NOT a shipped_dir** (template has no alembic dir) — migrations stay repo-only, but **every `server/**` and `tests/**` change must be mirrored into `plugin/templates/kb/` in the same slice.** `scripts/skills_parity.py` — the explain skill's two copies `plugin/skills/explain/SKILL.md` ↔ `.agents/skills/explain/SKILL.md` must stay body-identical.
+- **Invariants:** single uvicorn worker (write lock + in-process rate limiter depend on it); frozen public contract `/api/*` + `/auth/*` + `/app/*` — **additive only**; tests pytest (accounts coverage Postgres-gated via `KB_TEST_DATABASE_URL`, else skips); E2E `scripts/onboarding_smoke.py`; prod deploy `deploy/deploy.sh` (api runs from bind mount; schema changes are manual alembic + seed).
+
 ## Decomposition
 
-_Slice breakdown and rationale — filled by the `P18.DECOMP` slice._
+Five middle slices (S1..S5), orders 1-5; DECOMP=0, REVIEW=9999 stays last. Backend first (S1 schema → S2 behavior), then the two client surfaces (S3 web, S4 CLI/skills — parallel-safe, both depend only on S2), then the operator-gated prod cutover + E2E (S5). Every slice that edits `server/**` or `tests/**` mirrors into `plugin/templates/kb/` in the same slice (parity). No slice is `low` — every one carries schema, hot-path, cross-copy-parity, or prod judgment.
+
+### P18.S1 — Schema 0003 + models + signup/seed default-org/default-project provisioning (risk: high, order 1)
+
+**Scope.** The control-plane foundation everything else builds on: (a) alembic `0003` migration — `UNIQUE(tenant_id, name)` on `projects` (get-or-create needs it; must **defensively de-dupe pre-existing duplicate names** before adding the constraint), add `project_credentials.tenant_id` (FK `tenants`, **backfilled from each row's `project.tenant_id`**), make `project_credentials.project_id` **nullable** (org-level rows will carry `project_id NULL`); (b) mirror those column/constraint changes in `server/persistence/models.py` (`ProjectModel` UniqueConstraint, `ProjectCredentialModel` tenant_id + nullable project_id); (c) signup (`server/auth_api.py`) provisions org `"default"` + project `"default"` in one transaction — introduce/extend an accounts-service primitive (e.g. `create_tenant_with_owner` gains a default-project insert, or a new `provision_default_workspace`) so tenant + owner + `"default"` project commit atomically, replacing the `"<localpart>'s workspace"` naming with `"default"`; (d) reconcile `server/seed.py` (idempotent; existing tenant #1 keeps its name per design stance #1 — labels only; decide whether the seed also ensures a `"default"` project for tenant #1 or leaves it to lazy get-or-create); (e) mirror all `server/**` edits into `plugin/templates/kb/server/`; Postgres-gated accounts tests for provisioning + the new columns (mirror any `tests/**` additions into the template).
+
+**Rationale.** S2's resolver reads `credential.tenant_id` directly and S2's write path get-or-creates against `UNIQUE(tenant_id,name)` — both are impossible until the columns/constraint exist. Signup provisioning is the user-visible core of the intent and belongs with the schema that makes `"default"` project a real registry row.
+
+**Risk = high.** A live alembic migration on prod data: a new UNIQUE constraint that fails outright if duplicate `(tenant_id,name)` rows exist, plus a backfill of `project_credentials.tenant_id`, plus a nullability change on a hot FK — this needs a defensive, reversible migration and full judgment. Signup is a transactional primitive on the auth path. Not mechanical.
+
+### P18.S2 — Org-level keys: resolver + mint endpoint + write-path get-or-create + metering (risk: high, order 2, depends P18.S1)
+
+**Scope.** Make org-level keys honest and projects get-or-create: (a) resolver `server/api_auth.py:153-164` reads `cred.tenant_id` **directly** (org-level rows have `project_id NULL`; project-bound rows still populate `project_id` for attribution) — must keep every existing project-bound key working unchanged and preserve the "credential → vanished project → unresolvable" guard only where a `project_id` is actually set; (b) a new **additive** org-level mint endpoint (e.g. `POST /app/credentials` or `POST /app/orgs/{id}/credentials`) that mints a `vk_` with `tenant_id` set + `project_id NULL`, plus its list route — additive-only to the frozen `/app/*` contract; (c) write-path get-or-create — when `POST /api/documents` accepts `body.project`, ensure a Postgres `projects` row exists for `(ctx.tenant_id, project)` (get-or-create, race-safe against the new UNIQUE), so unregistered names stop leaving the registry blank (decide the seam: `server/main.py` write path vs. inside `record_usage`/service — prefer an explicit get-or-create in the write path so the row exists even for a save that isn't metered); (d) align `server/usage/metering.py` to the get-or-create row; (e) mirror all `server/**` edits into `plugin/templates/kb/server/`; Postgres-gated tests (org-key mint+resolve, project-bound key still works, get-or-create idempotency) mirrored into the template.
+
+**Rationale.** These are the three behavioral halves of the intent's points 2 + 3, all sitting on S1's schema, and all touching the same resolver/write/metering call chain — splitting them would thrash the same files across slices.
+
+**Risk = high.** The resolver is the hot auth path on every `/api/*` request; a regression there breaks the live hi2vi agent and every vk_ user. New endpoint + write-path get-or-create with UNIQUE-race handling. Full judgment, prod-regression-sensitive.
+
+### P18.S3 — Web app: org-level keys surface + workspace→org copy (risk: medium, order 3, depends P18.S2)
+
+**Scope.** (a) An org-level keys surface reusing the **existing** P12 keys-table + mint-modal + revoke components at org scope (mint/list/revoke org `vk_` keys via S2's endpoint) — decide where it lives (dashboard section vs. a dedicated org-settings route) using existing design-system components; (b) the BFF read/write routes for org-level credentials mirroring the project ones (`web/src/app/(app)/projects/[projectId]/actions.ts` pattern); (c) rename user-facing "Workspace" → "Org" copy in `web/src/content/app.ts`, `dashboard.ts`, `auth.ts` (signup: "A workspace is created for you automatically" → org wording), `documents.ts` (label-only).
+
+**Rationale.** Web is a client of S2's endpoint, so it follows S2. Copy + org-keys surface are one cohesive web concern; keeping them in one slice avoids two Next.js round-trips.
+
+**Risk = medium.** Web-only, no schema/auth-hot-path exposure, and it reuses existing components — but it adds a new surface + BFF wiring and needs judgment on placement, so not mechanical. **Design note:** per design stance #6, reusing the existing keys-table/mint-modal at org scope is the *same* visual language at a different scope, **not** a new design surface → **no Claude Design round**. If S3's planning concludes a genuinely new-design surface is required (e.g. a net-new org-settings information architecture), it must flag that in this phase.md and stop rather than invent visual design.
+
+### P18.S4 — CLI --project/default fallback + explain/setup skill text + parity (risk: medium, order 4, depends P18.S2)
+
+**Scope.** (a) CLI outside-a-repo fallback → `"default"`: `default_project()` (`knowledge.py:93-109`) currently falls back to `auth.DEFAULT_PROJECT = "knowledge"`. **Decide** whether to introduce a distinct save-fallback constant (`"default"`) leaving `init --project`'s `"knowledge"` default untouched, or to retarget `DEFAULT_PROJECT` — `--project` already exists, so this is the one real behavior change (favor a separate save-fallback so P13's `init` default is not silently changed; record the decision). (b) Update explain skill + setup skill text for the org-key model (get-or-create projects, one org `vk_` serving every repo, repo-basename default with `--project` + `"default"` fallback). (c) **skills_parity**: keep `plugin/skills/explain/SKILL.md` and `.agents/skills/explain/SKILL.md` body-identical; update the setup skill copy(ies) consistently.
+
+**Rationale.** CLI + skills describe the same user-facing model (get-or-create, org keys, default fallback), so they change together. Independent of the web surface — both S3 and S4 depend only on S2, so they can run in either order.
+
+**Risk = medium.** Mostly text, but the `DEFAULT_PROJECT` decision is a real judgment call (it can silently change `init`'s behavior) and the dual explain-copy parity must stay byte-exact — not fully mechanical, so not `low`.
+
+### P18.S5 — Prod migration + deploy + extended onboarding E2E (operator-gated) (risk: high, order 5, depends P18.S2, P18.S4)
+
+**Scope.** (a) Extend `scripts/onboarding_smoke.py`: new signup → auto default org + default project → mint an **org** key → save via repo-basename / `--project <name>` / outside-repo `"default"` → assert an **old project-bound key still works** → verify get-or-create registered the project. (b) Operator-gated prod cutover: prod `alembic upgrade head` (0003) + `python -m server.seed` + `deploy/deploy.sh` are operator-run — set the slice `pending`, hand the operator the exact commands, STOP, then verify the live E2E on resume. (c) Post-deploy verification (freshness self-assert per the P17 deploy pattern).
+
+**Rationale.** The prod migration/seed/deploy must run after all code slices merge; the extended E2E is the phase's end-to-end proof and is the natural home for the operator gates. Isolating prod risk in the last slice keeps the code slices commit-clean.
+
+**Risk = high.** Live migration on prod data + operator-coordinated deploy + full E2E. Full judgment + operator co-work (`pending`).
 
 ## Findings & Notes
 
-_Durable findings and cross-slice notes; `DECOMP` seeds this, and each slice appends when it finishes._
+Seeded by P18.DECOMP (2026-07-22). Cross-slice decisions later slices must honor:
+
+- **No `tenants` → `orgs` rename** in either plane (design stance #1, confirmed against the code). The tenant id threads through SQLite `documents.tenant_id`, `usage_events`, the resolver, seed, MCP, and the web BFF; a rename is a large mechanical diff with prod-regression risk and **zero behavior change**. The tenant row **is** the org. Product-facing naming becomes "org" in web copy, docs, and skill text only. → **decisions-doc impact.**
+- **Org-level credentials are additive.** Add `project_credentials.tenant_id` (backfilled from the bound project's tenant), make `project_id` nullable; org-level rows = `project_id NULL`; existing project-bound keys keep working; the resolver reads `tenant_id` directly. No column is dropped, no existing row rewritten in meaning.
+- **Get-or-create requires `UNIQUE(tenant_id, name)` on `projects`** — the 0003 migration must de-dupe pre-existing duplicate names defensively before adding the constraint (prod may already hold dupes because there is no unique today).
+- **Signup provisions `"default"` org + `"default"` project atomically**; the seed stays idempotent and existing tenants keep their names (labels only), gaining `"default"` lazily via get-or-create. Existing tenant #1 is **not** renamed.
+- **`--project` already ships on the CLI** (P13); the only CLI behavior change is the outside-a-repo fallback (`"knowledge"` → `"default"`) — and `DEFAULT_PROJECT` is shared with `init --project`, so S4 must not change `init`'s default as a side effect.
+- **Verified de-facto tenant-wide enforcement:** the resolver already returns `ctx.tenant_id` for a `vk_` key; the write path authorizes by tenant, never checking `body.project` against the credential — so "org-level keys" makes existing behavior honest, it does not loosen enforcement.
+- **Parity is per-slice, not deferred to review:** any `server/**` or `tests/**` edit must be mirrored into `plugin/templates/kb/` **in the slice that makes it** (CI `plugin_parity` fails otherwise). `alembic/` is repo-only (not a shipped_dir). Explain-skill edits must keep both copies body-identical (`skills_parity`).
 
 ## Constraints
 
+- **Frozen public contract** `/api/*` + `/auth/*` + `/app/*` is **additive-only**. The org-level mint endpoint and any new fields are additions; `POST /api/documents`' consumer contract must be preserved (signup's response may gain fields, not lose them).
+- **Single uvicorn worker** invariant: the write lock and in-process rate limiter depend on it — do not introduce anything requiring multiple workers or cross-process shared state.
+- **Parity gates (CI `plugin-ci.yml`):** `plugin_parity` — `server/` + `tests/` (among the `shipped_dirs`) must match `plugin/templates/kb/` set-for-set and content-identical, mirrored **within the same slice**. `skills_parity` — `plugin/skills/explain/SKILL.md` ≡ `.agents/skills/explain/SKILL.md` (body-identical). `alembic/` is not shipped — migrations stay repo-only.
+- **Prod schema changes are manual:** `alembic upgrade head` + `python -m server.seed` on the box, then `deploy/deploy.sh` — operator-run (S5 `pending` gate). No auto-migrate on boot for the control plane.
+- **Postgres-gated tests:** accounts coverage runs only with `KB_TEST_DATABASE_URL` set, else skips; keep new tests terse (CLAUDE.md: minimal high-value cases, no fixture sprawl).
+- **Scope boundaries (do not build here):** org **creation** + member **invites** / roles → deferred **D14**; **public/private** projects + direct doc URLs → **P19** (P19's visibility flag hangs off the project entity P18 reshapes); landing/hero/onboarding/skill-on-landing → **P20**. P18 stops at: default org+project on signup, org-level keys, get-or-create projects, CLI `--project`/`"default"` fallback.
+
+## Doc impact expectations
+
+Durable-truth areas each slice is expected to touch (append one-line "Doc impact" notes below as slices land; the REVIEW slice consolidates them into one new version per affected doc — never per slice). Anticipated across the phase:
+
+- **product** — accounts model becomes user → org → project; signup gives a default org + default project; org-level keys. (S1, S3 wording)
+- **backend** — signup provisioning primitive; resolver reads credential `tenant_id`; write-path get-or-create; metering alignment. (S1, S2)
+- **api** — additive org-level mint/list endpoint(s); signup response shape; `POST /api/documents` get-or-create side effect; contract stays frozen/additive. (S1, S2)
+- **data** — `projects UNIQUE(tenant_id,name)`; `project_credentials.tenant_id` + nullable `project_id`; alembic 0003; org-level (`project_id NULL`) credential rows. (S1, S2)
+- **architecture** — user→org→project model; the tenant-row-is-org decision; org-level-key resolution seam. (S1, S2)
+- **decisions** — no tenants→orgs rename (stance #1); org keys additive vs. rename; get-or-create + UNIQUE choice; CLI save-fallback constant vs. retargeting `DEFAULT_PROJECT`; no Claude Design round for the org-keys surface. (all slices — record rationale)
+- **frontend** — org-level keys surface (reused components) + workspace→org copy; new BFF routes. (S3)
+- **experience** — signup UX (auto default org/project), org-keys journey, CLI `--project`/`"default"` fallback flow. (S3, S4)
+- **operations** — prod alembic 0003 + seed + deploy runbook; extended `onboarding_smoke.py` E2E steps. (S5)
+- **security** — org-level key authorization semantics (one vk_ grants the whole org, made honest); credential resolution unchanged in trust boundary. (S2 — confirm whether the trust boundary shifts; likely a wording update since enforcement was already tenant-wide)
+- **qa** — extended onboarding E2E + new Postgres-gated accounts tests. (S1, S2, S5)
+
+(These are expectations, not commitments — the review consolidates the actual "Doc impact" notes accumulated below.)
+
+### Doc impact (running list — slices append; REVIEW consolidates)
+
+_(none yet — DECOMP records no durable-truth code change of its own; slices append here.)_
+
 ## Open Questions
 
--
+Resolved during decomposition (no open blockers):
+
+- **Split shape?** → 5 middle slices (S1 schema+provisioning, S2 org-keys behavior, S3 web, S4 CLI/skills, S5 prod+E2E). Backend before clients; clients (S3/S4) parallel-safe on S2; prod isolated last.
+- **Rename tenants→orgs?** → No (design stance #1) — tenant row is the org; product naming only.
+- **Org-key schema shape?** → Additive: `project_credentials.tenant_id` backfilled + `project_id` nullable; org rows carry `project_id NULL`.
+- **CLI `--project`?** → Already exists (P13); only the outside-a-repo fallback changes to `"default"` (S4 decides constant vs. `DEFAULT_PROJECT` retarget).
+- **New design surface for org keys?** → No Claude Design round (reuses existing P12 components at org scope); S3 flags if it disagrees.
+- **Deferred as noted:** org creation + invites → D14 (out of scope).
