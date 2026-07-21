@@ -520,3 +520,10 @@
 {"ts": "2026-07-21T15:27:20+09:00", "type": "doc_version_created", "doc": "security", "version": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs", "source": "P16.REVIEW"}
 {"ts": "2026-07-21T15:30:35+09:00", "type": "slice_status_changed", "slice": "P16.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-21T15:30:35+09:00", "type": "phase_reviewed", "phase": "P16", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-21T15:46:41+09:00", "type": "slice_status_changed", "slice": "P17.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-21T15:51:38+09:00", "type": "slice_created", "phase": "P17", "slice": "P17.S1"}
+{"ts": "2026-07-21T15:51:38+09:00", "type": "slice_created", "phase": "P17", "slice": "P17.S2"}
+{"ts": "2026-07-21T15:51:38+09:00", "type": "slice_created", "phase": "P17", "slice": "P17.S3"}
+{"ts": "2026-07-21T15:51:38+09:00", "type": "slice_created", "phase": "P17", "slice": "P17.S5"}
+{"ts": "2026-07-21T15:55:14+09:00", "type": "deferred_promoted", "deferred": "D9", "phase": "P17", "slice": "P17.S4"}
+{"ts": "2026-07-21T15:55:22+09:00", "type": "slice_status_changed", "slice": "P17.DECOMP", "old_status": "in_progress", "new_status": "done"}

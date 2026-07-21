@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `9`
-- Promoted: `2`
+- Open: `8`
+- Promoted: `3`
 - Dropped: `2`
-- Rebuilt at: `2026-07-21T15:30:35+09:00`
+- Rebuilt at: `2026-07-21T15:55:23+09:00`
 
 ## Open
 
@@ -21,7 +21,6 @@
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
-| `D9` | `deferred` | plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1 | P13.DECOMP | before the next push to origin/main (plugin-ci.yml turns red on the first push carrying the P10-P12 commits) | `works/deferred/open/D9` |
 
 ## Promoted
 
@@ -29,6 +28,7 @@
 |---|---|---|---|---|
 | `D1` | `promoted` | Decide whether works/docs internals appear on the public site | `P4.S5` | `works/deferred/promoted/D1` |
 | `D2` | `promoted` | Design polish for the Pages site (palette/fonts/logo, optional extra_css) | `P5.S1` | `works/deferred/promoted/D2` |
+| `D9` | `promoted` | plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1 | `P17.S4` | `works/deferred/promoted/D9` |
 
 ## Dropped
 
