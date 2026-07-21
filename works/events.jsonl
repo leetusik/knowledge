@@ -529,3 +529,7 @@
 {"ts": "2026-07-21T15:55:22+09:00", "type": "slice_status_changed", "slice": "P17.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-21T16:00:04+09:00", "type": "slice_status_changed", "slice": "P17.S1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-07-21T16:10:50+09:00", "type": "slice_status_changed", "slice": "P17.S1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-21T16:19:32+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-21T16:26:00+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-07-21T16:27:35+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-07-21T16:27:35+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "in_progress", "new_status": "done"}

@@ -269,6 +269,37 @@ copies (S2):
   explainer (self-containment grep-proven, 3 live-verified citations, working 5-Q quiz) —
   reuse it as S5's hosted-E2E render fixture rather than authoring a new one.
 
+**S2 done (2026-07-21) — old copies reconciled; user-level copy handed to operator.**
+Cross-slice notes for S5/REVIEW:
+
+- **Dupe resolution (settled).** The project copy `.claude/skills/explain/` is **deleted**
+  (it was the double-registration source in this repo's sessions). The user-level
+  `~/.claude/skills/explain/SKILL.md` is **kept and must be updated to v2** by the operator —
+  S2 returned **`needs_operator`** with the staged
+  `cp plugin/skills/explain/SKILL.md ~/.claude/skills/explain/SKILL.md` (orchestrator verifies
+  via `diff … && …`). So the **two shipped copies are `plugin/` (canonical) + `.agents/`
+  (portable)**; the user-level bare copy is a personal-machine convenience, not a shipped
+  artifact.
+- **New drift guard.** `scripts/skills_parity.py` (root-only, never shipped; sibling to
+  `plugin_parity.py`) now byte-compares the two shipped copies' **bodies** (FAIL on drift),
+  WARNs on `description:` divergence, FAILs if either is missing; wired into
+  `.github/workflows/plugin-ci.yml` as one step after `plugin_parity.py`. Any future edit to
+  the canonical body MUST re-derive `.agents/skills/explain/SKILL.md` or CI goes red. The
+  `.agents` body is now **byte-identical** to canonical; only its frontmatter differs
+  (`name` + v2 `description`, no `argument-hint`/`allowed-tools`).
+- **openai.yaml tools ceiling.** `.agents/skills/*/agents/openai.yaml` has **no
+  tools/permissions field** in its schema (only `interface` + `policy.allow_implicit_invocation`)
+  — the v2 WebSearch/WebFetch + git-read tool needs **cannot be declared there**; on the
+  Codex/OpenAI side the SKILL prose is the tool guidance, and `allowed-tools` lives only on
+  the Claude-plugin canonical copy. Left `policy` untouched.
+- **S5/REVIEW "dogfood" end-state (flagged, NOT done in S2).** Post-cutover, the operator's
+  own machine should install the plugin **user-wide from the public marketplace** and then
+  **delete the user-level bare `~/.claude/skills/explain/` copy** — once the marketplace
+  plugin is installed, the hand-maintained user-level copy is redundant and just a fourth
+  drift surface. This is the desired steady state (one shipped source of truth per surface),
+  but it depends on S5's public-marketplace cutover; S2 only updates the bare copy in place.
+  Flag it in S5 planning / REVIEW, do not act on it now.
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -364,3 +395,17 @@ concrete change it made.
   `format:"html"` with the raw `<!DOCTYPE html>` body riding the existing `markdown`
   field and emits **no** frontmatter (the API writes the `<!--kb …-->` comment-frontmatter);
   the local-file fallback writes a `.html` doc carrying that same comment-frontmatter.
+- _(S2, done)_ **decisions** — explain-skill copy topology resolved: the project copy
+  `.claude/skills/explain/` is **deleted** (was a double-registration); the two **shipped**
+  copies are `plugin/skills/explain/` (canonical, Claude-plugin frontmatter) and
+  `.agents/skills/explain/` (portable, `name` + `description` frontmatter only, body
+  byte-identical to canonical); the user-level `~/.claude/skills/explain/` copy is **kept and
+  operator-updated** to v2 (operator-machine path, never written from the repo). A new
+  root-only CI guard `scripts/skills_parity.py` (in `plugin-ci.yml`) enforces body parity
+  between the two shipped copies so they cannot silently drift. Post-cutover steady state
+  (S5/REVIEW): install the plugin user-wide from the public marketplace and drop the bare
+  user-level copy.
+- _(S2, done)_ **architecture** / **operations** — the plugin CI (`.github/workflows/plugin-ci.yml`)
+  now runs a second drift gate, `skills_parity.py`, alongside `plugin_parity.py`; the
+  `.agents` portable-skill schema (`openai.yaml`) exposes no tools/permissions field, so
+  per-tool policy for the portable copy is expressible only via the SKILL prose, not the yaml.
