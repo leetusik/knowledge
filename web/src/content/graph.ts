@@ -9,7 +9,7 @@ export const GRAPH = {
   /** Document <title> (the SITE template appends " · knowledge"). */
   title: "Graph",
   /** Mono eyebrow suffix on the page header, rendered as `{tenant} · {eyebrow}`. */
-  eyebrow: "Workspace",
+  eyebrow: "Org",
   /** Sub-line under the page title. */
   sub: "An interactive map of your documents — related links and shared tags.",
   /** Accessible name for the <canvas> (role=img). */
@@ -18,7 +18,7 @@ export const GRAPH = {
   /** The empty state, shown when the tenant has no documents yet. */
   empty: {
     title: "No documents yet",
-    sub: "The map draws itself as documents land in your workspace. 문서가 추가되면 지도가 그려집니다.",
+    sub: "The map draws itself as documents land in your org. 문서가 추가되면 지도가 그려집니다.",
   },
 } as const;
 

@@ -82,8 +82,11 @@ const columns: DataTableColumn<KbCredential>[] = [
     ),
     actions: true,
     // A revoked key has nothing to revoke; its struck badge tells the story.
+    // The `project_id !== null` guard is a type narrow, not new behavior: a
+    // project-detail credential is always project-bound (non-null `project_id`)
+    // now that `KbCredential.project_id` is `string | null` for P18 org keys.
     cell: (credential) =>
-      credential.revoked_at === null ? (
+      credential.revoked_at === null && credential.project_id !== null ? (
         <RevokeCredentialButton
           projectId={credential.project_id}
           credentialId={credential.id}

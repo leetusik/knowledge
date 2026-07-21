@@ -43,7 +43,7 @@ export const PROJECT = {
 
   header: {
     /** Mono eyebrow above the title. */
-    eyebrow: "Workspace · Project",
+    eyebrow: "Org · Project",
     /** Prefix for the created-date sub-line, rendered as `{prefix} {date}`. */
     createdPrefix: "Created",
   },
@@ -141,7 +141,7 @@ export const PROJECT = {
   /** The branded not-found (`not-found.tsx`), on the `.kb-empty` empty-state classes. */
   notFound: {
     title: "Project not found",
-    sub: "This project doesn't exist, or it isn't part of your workspace.",
+    sub: "This project doesn't exist, or it isn't part of your org.",
     backLabel: "Back to dashboard",
   },
 } as const;

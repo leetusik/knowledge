@@ -19,7 +19,13 @@ export { APP_NAV, APP_SHELL } from "./app";
 export type { AppNavItem } from "./app";
 
 // Tenant dashboard (P12.S3) — usage tiles / trend / projects / activity + create.
-export { CREATE_PROJECT_ERRORS, DASHBOARD } from "./dashboard";
+// P18.S3 adds the org-level API-keys panel copy + its status-keyed mint/revoke errors.
+export {
+  CREATE_PROJECT_ERRORS,
+  DASHBOARD,
+  MINT_ORG_CREDENTIAL_ERRORS,
+  REVOKE_ORG_CREDENTIAL_ERRORS,
+} from "./dashboard";
 export type {
   ActivityEmphasis,
   ActivityTemplate,

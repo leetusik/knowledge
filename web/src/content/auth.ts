@@ -54,7 +54,7 @@ export const AUTH_TRUST_ITEMS = [
 export const LOGIN_PAGE: AuthPageCopy = {
   title: "Sign in",
   lead: "Sign in",
-  sub: "Access your workspace, projects, documents, and usage.",
+  sub: "Access your org, projects, documents, and usage.",
   securePill: "Secure",
   emailLabel: "Email",
   emailPlaceholder: "you@example.com",
@@ -70,7 +70,7 @@ export const LOGIN_PAGE: AuthPageCopy = {
 export const SIGNUP_PAGE: AuthPageCopy = {
   title: "Create account",
   lead: "Create your account",
-  sub: "A workspace is created for you automatically.",
+  sub: "A default org and project are created for you automatically.",
   securePill: "Secure",
   emailLabel: "Email",
   emailPlaceholder: "you@example.com",
