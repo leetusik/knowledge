@@ -341,6 +341,37 @@ Cross-slice notes for S5/REVIEW:
     accounts plane. Nothing here can be verified until the S5 prod cutover — it is
     deploy-gated, as DECOMP anticipated.
 
+**S4 done (2026-07-21) — plugin-template parity remediation shipped (D9 delivered).**
+`scripts/plugin_parity.py` now exits **0** (was FAIL 36). Cross-slice notes for S5/REVIEW:
+
+- **Parity is green → the S5 push no longer turns `plugin-ci.yml` red on the parity gate.**
+  This was D9's promote trigger ("before the next push to origin/main"). The template now
+  mirrors the P10–P16 SaaS server; `skills_parity.py` (S2's second gate) is also still
+  green, so both plugin-ci drift gates pass. S5 can push without the parity step going red.
+- **Mirror = 27 added + 8 refreshed files, all `identical`** (byte-copies:
+  `server/{accounts,persistence,usage}/*`, the 8 top-level api modules, 4 `tests/test_*`,
+  and refreshed `server/{config,db,documents,main,reindex,search}.py` + `pyproject.toml` +
+  `uv.lock`). Any *future* `server/**` or `tests/**` growth in the repo re-opens parity —
+  it must be mirrored again (or `shipped_dirs` narrowed). This is now a standing
+  maintenance surface, same as it was pre-D9.
+- **Dormancy is via one new render token, `{{KB_DATABASE_URL}}` on `compose.yml`'s
+  DATABASE_URL line.** Operator params supply the full tenant URL (parity byte-matches
+  repo); the setup skill's scaffold render passes `--set KB_DATABASE_URL=""` → `DATABASE_URL:`
+  null → **UNSET in the container** → `config.database_url()` None → dormant. Proven with a
+  full Docker boot (postgres healthy → api up → `/healthz` 200 → md POST/GET round-trip).
+  `render.py` was **not** changed (no default mechanism; empty string suffices). Plugin
+  stays **0.3.0**.
+- **A scaffold now boots an *unused* postgres container + `pgdata` volume** (mirrored
+  `depends_on: service_healthy`). Accepted per the operator-ratified "mirror, don't narrow"
+  direction; postgres publishes no host port so there is no new bind conflict. Latent
+  capability: a self-host user who exports `DATABASE_URL` in their shell lights the accounts
+  plane up against the bundled postgres (opt-in; never fires by default).
+- **Deliberately unshipped (limitation):** `alembic/`, `scripts/onboarding_smoke.py`, `cli/`
+  are NOT in the scaffold — multi-tenant self-hosting (migrations) stays undocumented for the
+  open-core template. D11 (deploy self-upgrade) is **not** triggered — no compose *service
+  set* change to `compose.prod.yml`/`deploy/**` (those are untouched); the postgres service
+  already exists in prod. Setup skill stage-6 wording left unchanged (still accurate).
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -462,3 +493,16 @@ concrete change it made.
   `knowledge init`) writes the identical config. `plugin.json` / `marketplace.json`
   descriptions and `plugin/README.md` updated to the two-path story; **no version bump**
   (0.3.0 carries the whole phase).
+- _(S4, done)_ **architecture** / **operations** — the open-core plugin scaffold template
+  (`plugin/templates/kb/`) now **mirrors the P10–P16 multi-tenant SaaS server** (accounts /
+  persistence / usage packages, the `*_api` control-plane modules, `seed.py`, and the
+  refreshed `pyproject.toml`/`uv.lock` carrying the accounts-plane deps), so
+  `scripts/plugin_parity.py` is **green (exit 0, was FAIL 36)** and the plugin-CI parity
+  gate stops blocking pushes. A rendered scaffold stays **dormant single-tenant**: a new
+  `{{KB_DATABASE_URL}}` render token is the full tenant Postgres URL under the operator's
+  params (parity round-trip) but **empty** for a scaffold → compose `DATABASE_URL:` null →
+  UNSET in-container → `config.database_url()` None → accounts plane off (Docker-boot
+  verified). The scaffold boots an unused `postgres` service (mirrored `depends_on`), and
+  `alembic/` / `scripts/onboarding_smoke.py` / `cli/` are **deliberately not shipped** (so
+  self-hosted multi-tenant migrations remain undocumented). Plugin stays 0.3.0; `render.py`
+  and `compose.prod.yml`/`deploy/**` unchanged.

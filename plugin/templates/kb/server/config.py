@@ -46,6 +46,39 @@ def api_token() -> str | None:
     return _env("KB_API_TOKEN")
 
 
+def operator_email() -> str | None:
+    """Operator's signup email — pins the KB_API_TOKEN master bearer to tenant #1.
+
+    Tenant mode only (``DATABASE_URL`` set): the resolver maps an exact
+    ``KB_API_TOKEN`` bearer to the tenant owned by the user with this email
+    (their first tenant = tenant #1), so the legacy hi2vi content agent keeps
+    working with zero changes. Unset -> the master bearer is unresolvable in
+    tenant mode.
+    """
+    return _env("KB_OPERATOR_EMAIL")
+
+
+def operator_password() -> str | None:
+    """Operator's password for the seed (`python -m server.seed`); pairs with KB_OPERATOR_EMAIL.
+
+    Read only by the one-shot seed CLI to create the operator user with an
+    argon2id-hashed password. Never read at request time; unset -> the seed fails
+    fast with an actionable error (it will not create a passwordless operator).
+    """
+    return _env("KB_OPERATOR_PASSWORD")
+
+
+def database_url() -> str | None:
+    """Async SQLAlchemy URL for the Postgres accounts plane. Unset -> accounts dormant.
+
+    Read per-call like every other setting. When None the accounts plane never
+    creates an engine (see server/persistence/engine.py) and the content plane
+    boots normally without Postgres. Expected form:
+    ``postgresql+psycopg://user:pass@host:5432/db``.
+    """
+    return _env("DATABASE_URL")
+
+
 def git_commit_enabled() -> bool:
     """Whether the write path makes a git commit. KB_GIT_COMMIT defaults to true."""
     val = _env("KB_GIT_COMMIT", "true")
@@ -76,6 +109,46 @@ def require_read_auth_enabled() -> bool:
     """
     val = _env("KB_REQUIRE_READ_AUTH", "false")
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def auth_rate_limit() -> int:
+    """Max unauthenticated ``/auth/{signup,login}`` requests per client IP per window.
+
+    ``KB_AUTH_RATE_LIMIT`` (default **20**). Read per-call like every setting so a
+    test or the E2E CLI smoke can force a low value via the env without a reload;
+    ``<= 0`` disables the throttle entirely. Applies P13.S5's server-side backstop:
+    the ``/auth/*`` grant surface goes public at the edge in P13, and there is no
+    ``limit_req_zone`` at the edge (the ``conf.d/`` tree bans it) — so the throttle
+    lives here, in-process (one uvicorn worker → one coherent counter). The counter
+    is keyed per (IP, route), so signup and login are limited independently.
+
+    Lenient by design: a legit agent re-running ``knowledge init`` a handful of
+    times never trips it, while a single IP is capped on the now-public password
+    grant + open signup. 20 also clears the accounts test suite's per-``testclient``
+    signup count with room to spare.
+    """
+
+    raw = _env("KB_AUTH_RATE_LIMIT", "20")
+    try:
+        return int(str(raw))
+    except (TypeError, ValueError):
+        return 20
+
+
+def auth_rate_window_s() -> int:
+    """Fixed-window length in seconds for :func:`auth_rate_limit`.
+
+    ``KB_AUTH_RATE_WINDOW_S`` (default **900** = 15 minutes). Read per-call; a
+    non-positive or unparseable value falls back to the 900s default so the window
+    is never zero-length (which would make the limiter count-per-request).
+    """
+
+    raw = _env("KB_AUTH_RATE_WINDOW_S", "900")
+    try:
+        value = int(str(raw))
+    except (TypeError, ValueError):
+        return 900
+    return value if value > 0 else 900
 
 
 def gemini_api_key() -> str | None:

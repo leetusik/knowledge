@@ -18,17 +18,38 @@ from __future__ import annotations
 import datetime
 import threading
 from contextlib import asynccontextmanager
-from typing import Optional
+from pathlib import Path
+from typing import Literal, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from server import app_api
+from server import auth_api
 from server import config, db
+from server import dashboard_api
+from server import documents_api
+from server import graph_api
+from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
 from server import gitops
 from server import reindex as reindex_mod
 from server import search as search_mod
+from server.accounts.auth import AuthError, auth_error_handler
+from server.api_auth import (
+    ApiAuthContext,
+    get_tenant_one_id,
+    resolve_api_read,
+    resolve_api_write,
+)
+from server.persistence.engine import dispose_engine
+from server.usage import (
+    EVENT_DOCUMENT_CREATED,
+    EVENT_DOCUMENT_DELETED,
+    EVENT_SEARCH,
+)
+from server.usage.metering import UsageHint, record_usage
 
 
 @asynccontextmanager
@@ -37,7 +58,11 @@ async def lifespan(app: FastAPI):
     # reindex on boot cures manual edits, fallback writes, and git resets. The
     # embedding sync inside is content-hash cached, so a clean boot is ~free.
     if config.startup_reindex_enabled():
-        report = reindex_mod.reindex()
+        # Tenant mode: resolve tenant #1's id so the docs/ walk stamps the
+        # operator's tenant; namespaced tenants/<uuid>/ roots are re-derived from
+        # their paths. Legacy mode -> None -> the '' sentinel (byte-identical).
+        tenant_one_id = await get_tenant_one_id()
+        report = reindex_mod.reindex(tenant_one_id=tenant_one_id)
         emb = report.get("embeddings", {})
         print(
             f"[kb-api] startup reindex: indexed={report['indexed']} "
@@ -46,9 +71,75 @@ async def lifespan(app: FastAPI):
             flush=True,
         )
     yield
+    # Dispose the async accounts engine if it was ever created. Lazy: when
+    # DATABASE_URL is unset the engine never exists and this is a no-op, so the
+    # content plane still shuts down cleanly without Postgres.
+    await dispose_engine()
 
 
 app = FastAPI(title="kb-api", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def usage_metering(request: Request, call_next):
+    """Best-effort per-tenant metering (P11.S2), driven off ``request.state.usage``.
+
+    A metered content handler (create/delete document, search) stashes a
+    ``UsageHint`` on its success path; this async middleware — running in the event
+    loop, so it *can* ``await`` the Postgres write the sync handler cannot — records
+    the event + stamps credential recency after the response is produced. It records
+    only when a hint is present, the response is 2xx, AND ``tenant_id`` is set, so:
+    error responses (401/404/409/422) are never metered (they raise before the
+    stash), and legacy mode (``tenant_id is None``) is fully inert — no engine is
+    ever created. ``record_usage`` swallows all errors; metering never changes the
+    response, which is returned unchanged in every path.
+    """
+
+    response = await call_next(request)
+    hint = getattr(request.state, "usage", None)
+    if (
+        hint is not None
+        and hint.tenant_id is not None
+        and 200 <= response.status_code < 300
+    ):
+        await record_usage(hint)  # best-effort; never raises
+    return response
+
+
+# Control-plane auth surface: the /auth/* session endpoints (signup/login/
+# logout/me) and the shared generic-401 handler for require_user's AuthError.
+# Mounted outside /api/* so the content-plane bearer guards never touch it.
+app.include_router(auth_api.router)
+app.add_exception_handler(AuthError, auth_error_handler)
+
+# Control-plane app surface: the /app/* routes (tenant, projects, and per-project
+# vk_ credentials), all require_user-guarded and scoped to the caller's tenant.
+# Reuses the same AuthError handler above (no new wiring needed).
+app.include_router(app_api.router)
+
+# Usage read surface (P11.S3): the /app/usage + /app/projects/{id}/usage
+# derive-on-read aggregate the P12 dashboard consumes. Same require_user guard and
+# tenant scoping as app_api (cross-tenant project → 404).
+app.include_router(usage_api.router)
+
+# Dashboard aggregate (P12.S3): the tenant-scoped, unmetered GET /app/dashboard
+# rollup (per-project usage/credential state + lifecycle activity feed) the web
+# app's post-login home reads in one round-trip. Same require_user guard; pure reads.
+app.include_router(dashboard_api.router)
+
+# Documents read/search (P12.S5): the tenant-scoped, UNMETERED /app/documents +
+# /app/search read routes the web app's knowledge viewer codes against. Reuses the
+# S1 content store/search as-is (scoped by tenant_id), bridges the control-plane
+# project UUID to the content-plane project name, and never sets request.state.usage
+# — so web-UI browsing/search moves no usage counter (unlike the metered /api/*).
+app.include_router(documents_api.router)
+
+# Knowledge graph (P12.S6): the tenant-scoped, UNMETERED GET /app/graph the web
+# app's in-app graph reads. A server-side twin of scripts/graph_hook.py's inversion
+# run over the content store (db.list_documents scoped by tenant_id), emitting the
+# same {version, projects, nodes, edges} contract with each doc node's url = the S5
+# read route /documents/{id}. Same require_user guard; never sets request.state.usage.
+app.include_router(graph_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
@@ -95,9 +186,11 @@ def require_read_bearer(authorization: Optional[str] = Header(default=None)) -> 
 
 
 # tags_text is an internal FTS denormalization (space-joined mirror of tags,
-# already exposed as a list), so it never leaves the API. markdown is dropped
-# from list payloads and kept on single-doc fetches.
-_INTERNAL = {"tags_text"}
+# already exposed as a list), so it never leaves the API. raw_html is an internal
+# viewer-only column (served only by the /app raw route), never in /api JSON — but
+# `format` IS exposed (additive). markdown is dropped from list payloads and kept on
+# single-doc fetches.
+_INTERNAL = {"tags_text", "raw_html"}
 
 
 def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
@@ -105,6 +198,36 @@ def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
     if not include_markdown:
         drop.add("markdown")
     return {k: v for k, v in doc.items() if k not in drop}
+
+
+# --- Tenant routing (S5) --------------------------------------------------
+# Three views of the caller's tenant, derived from the resolved ApiAuthContext:
+#   _tenant_root   -> the content root ON DISK  (docs/ for public; tenants/<id>/ else)
+#   _tenant_db_id  -> the value STAMPED on writes ('' legacy sentinel, else the uuid)
+#   _tenant_filter -> the value used to SCOPE reads (None = no filter in legacy mode)
+# Legacy mode (ctx.tenant_id is None) keeps today's behavior byte-for-byte: writes
+# land in docs/ + stamp '', reads add no tenant filter.
+
+
+def _tenant_root(ctx: ApiAuthContext) -> Path:
+    """The caller's content root on disk. Public callers (legacy + tenant #1) use
+    the canonical, git-published ``docs/``; every other tenant uses a namespaced,
+    non-published ``<KB_ROOT>/tenants/<uuid>/`` sibling that mkdocs never serves."""
+    if ctx.is_public:
+        return config.docs_root()
+    return config.kb_root() / "tenants" / str(ctx.tenant_id)
+
+
+def _tenant_db_id(ctx: ApiAuthContext) -> str:
+    """The ``documents.tenant_id`` value to stamp on a write: the uuid string in
+    tenant mode, the ``''`` sentinel in legacy mode."""
+    return str(ctx.tenant_id) if ctx.tenant_id is not None else ""
+
+
+def _tenant_filter(ctx: ApiAuthContext) -> Optional[str]:
+    """The tenant scoping value for reads / scoped lookups: the uuid string in
+    tenant mode, ``None`` in legacy mode (no filter -> today's un-scoped reads)."""
+    return str(ctx.tenant_id) if ctx.tenant_id is not None else None
 
 
 @app.get("/healthz")
@@ -123,29 +246,32 @@ def list_documents(
     tag: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    total = db.count_documents(conn, project=project, tag=tag)
-    items = db.list_documents(conn, project=project, tag=tag, limit=limit, offset=offset)
+    tid = _tenant_filter(ctx)
+    total = db.count_documents(conn, project=project, tag=tag, tenant_id=tid)
+    items = db.list_documents(
+        conn, project=project, tag=tag, limit=limit, offset=offset, tenant_id=tid
+    )
     return {"total": total, "items": [_public_doc(d, include_markdown=False) for d in items]}
 
 
 @app.get("/api/tags")
 def list_tags(
     project: Optional[str] = None,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    return {"tags": db.list_tags(conn, project=project)}
+    return {"tags": db.list_tags(conn, project=project, tenant_id=_tenant_filter(ctx))}
 
 
 @app.get("/api/projects")
 def list_projects(
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    return {"projects": db.list_projects(conn)}
+    return {"projects": db.list_projects(conn, tenant_id=_tenant_filter(ctx))}
 
 
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path
@@ -153,10 +279,10 @@ def list_projects(
 @app.get("/api/documents/by-path/{rel_path:path}")
 def get_document_by_path(
     rel_path: str,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document_by_path(conn, rel_path)
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
     return _public_doc(doc, include_markdown=True)
@@ -165,10 +291,10 @@ def get_document_by_path(
 @app.get("/api/documents/{doc_id}")
 def get_document(
     doc_id: int,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document(conn, doc_id)
+    doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
     return _public_doc(doc, include_markdown=True)
@@ -176,21 +302,32 @@ def get_document(
 
 @app.get("/api/search")
 def search(
+    request: Request,
     q: str,
     project: Optional[str] = None,
     tag: Optional[str] = None,
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     raw: bool = False,
-    _: None = Depends(require_read_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
     try:
         out = search_mod.search(
-            conn, q, project=project, tag=tag, limit=limit, offset=offset, raw=raw
+            conn, q, project=project, tag=tag, limit=limit, offset=offset, raw=raw,
+            tenant_id=_tenant_filter(ctx),
         )
     except search_mod.SearchQueryError as exc:
         raise HTTPException(status_code=400, detail=f"invalid FTS query: {exc}")
+    # Meter a successful search (best-effort, via the middleware). project may be
+    # None -> tenant-level attribution. Inert in legacy mode (tenant_id None).
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_SEARCH,
+        project_name=project,
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
     return {
         "query": q,
         # "hybrid" when the Gemini vector signal fused in, else "bm25" (no key / raw /
@@ -209,16 +346,21 @@ class ReindexIn(BaseModel):
 
 
 @app.post("/api/reindex")
-def reindex(
+async def reindex(
     body: Optional[ReindexIn] = None,
     _: None = Depends(require_bearer),
 ):
+    # Operator-global op (stays on require_bearer: a vk_ key gets 401 here). In
+    # tenant mode, resolve tenant #1's id so the docs/ walk stamps the operator's
+    # tenant; namespaced tenants/<uuid>/ roots re-derive their id from the path.
+    # Legacy mode -> None -> the '' sentinel (byte-identical to before).
+    tenant_one_id = await get_tenant_one_id()
     # No body or rel_path null -> full reindex (unchanged, backward compatible).
     # With rel_path -> single-path reindex. ValueError -> 422.
     if body is None or body.rel_path is None:
-        return reindex_mod.reindex()
+        return reindex_mod.reindex(tenant_one_id=tenant_one_id)
     try:
-        return reindex_mod.reindex_path(body.rel_path)
+        return reindex_mod.reindex_path(body.rel_path, tenant_one_id=tenant_one_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -235,6 +377,10 @@ class DocumentIn(BaseModel):
     date: Optional[str] = None
     slug: Optional[str] = None
     related: list[str] = []
+    # Additive (default "md" — existing callers unchanged). "html" ingests a
+    # self-contained explainer: the `markdown` field carries the raw HTML body, and
+    # a bad value gets a free 422 from the Literal. Pydantic v2 forbids by default.
+    format: Literal["md", "html"] = "md"
     overwrite: bool = False
     commit: bool = True
     co_authored_by: Optional[str] = None
@@ -243,7 +389,8 @@ class DocumentIn(BaseModel):
 @app.post("/api/documents", status_code=201)
 def create_document(
     body: DocumentIn,
-    _: None = Depends(require_bearer),
+    request: Request,
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
     """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
@@ -266,16 +413,22 @@ def create_document(
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    rel = documents_mod.rel_path(project, date, slug)
+    rel = documents_mod.rel_path(project, date, slug, fmt=body.format)
     # Self-reference dropped silently (a doc can't be related to itself).
     related = [r for r in related if r != rel]
     # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
     source_repo = documents_mod.sanitize_source_repo(body.source_repo)
 
-    # 2. 409 if the target exists on disk OR in the DB and not overwrite.
+    # Route by tenant: public callers (legacy + tenant #1) write the canonical,
+    # git-published docs/ tree unchanged; every other tenant writes its namespaced
+    # tenants/<uuid>/ root and stamps documents.tenant_id with its uuid.
+    root = _tenant_root(ctx)
+    tid = _tenant_db_id(ctx)
+
+    # 2. 409 if the target exists on disk OR in the DB (this tenant) and not overwrite.
     if not body.overwrite:
-        existing_row = db.get_document_by_path(conn, rel)
-        if (config.docs_root() / rel).exists() or existing_row is not None:
+        existing_row = db.get_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
+        if (root / rel).exists() or existing_row is not None:
             detail = {"message": f"document already exists at {rel}", "rel_path": rel}
             if existing_row is not None:
                 detail["id"] = existing_row["id"]
@@ -284,8 +437,12 @@ def create_document(
 
     # 3. Locked critical section: file write -> index update -> DB upsert -> git.
     with WRITE_LOCK:
-        stored_markdown = documents_mod.write_document_file(
-            docs_root=config.docs_root(),
+        # `stored_body` is the on-disk body minus its frontmatter — the raw markdown
+        # for an md doc, the raw HTML for an html doc. The body rule then derives what
+        # each plane stores: the DB `markdown` column always holds the readable text
+        # (extracted plain text for html), `raw_html` holds the HTML only for html.
+        stored_body = documents_mod.write_document_file(
+            docs_root=root,
             rel_path=rel,
             title=body.title,
             date=date,
@@ -294,20 +451,32 @@ def create_document(
             source_repo=source_repo,
             body=body.markdown,
             related=related,
+            fmt=body.format,
         )
-        # Auto-create the project landing on a project's first document, so mkdocs
-        # builds site/<project>/index.html and the deploy gate stays green. Never
-        # overwrites an existing (hand-written or auto) landing.
-        landing_created = documents_mod.ensure_project_landing(
-            config.docs_root(), project
-        )
-        recent_updated = documents_mod.update_recent_index(
-            config.docs_root(),
-            date=date,
-            title=body.title,
-            rel_path=rel,
-            project=project,
-        )
+        if body.format == "html":
+            raw_html = stored_body
+            stored_markdown = documents_mod.extract_html_text(stored_body)
+        else:
+            raw_html = None
+            stored_markdown = stored_body
+        # Public landing + Recent index are mkdocs-publish concerns, so only the
+        # public root gets them. Non-#1 tenants keep a minimal tree (their content
+        # is never served in P10) — skip both and report them as not created.
+        if ctx.is_public:
+            # Auto-create the project landing on a project's first document, so
+            # mkdocs builds site/<project>/index.html and the deploy gate stays
+            # green. Never overwrites an existing (hand-written or auto) landing.
+            landing_created = documents_mod.ensure_project_landing(root, project)
+            recent_updated = documents_mod.update_recent_index(
+                root,
+                date=date,
+                title=body.title,
+                rel_path=rel,
+                project=project,
+            )
+        else:
+            landing_created = False
+            recent_updated = False
         doc_id = db.upsert_document(
             conn,
             project=project,
@@ -319,6 +488,9 @@ def create_document(
             rel_path=rel,
             markdown=stored_markdown,
             related=related,
+            format=body.format,
+            raw_html=raw_html,
+            tenant_id=tid,
         )
 
         # 4. Git only when requested AND enabled. A failed commit is NOT rolled
@@ -328,7 +500,9 @@ def create_document(
         commit_error = None
         pushed = False
         push_error = None
-        if body.commit and config.git_commit_enabled():
+        # Git publish is a public-root concern only: non-#1 tenants' content lives
+        # under the gitignored tenants/ tree and is never committed/pushed.
+        if body.commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
                 if landing_created:
@@ -394,6 +568,7 @@ def create_document(
         "date": date,
         "tags": tags,
         "related": related,
+        "format": body.format,
         "recent_updated": recent_updated,
         "landing_created": landing_created,
         "committed": committed,
@@ -404,34 +579,54 @@ def create_document(
         resp["commit_error"] = commit_error
     if push_error is not None:
         resp["push_error"] = push_error
+    # Meter the created document (best-effort, via the middleware). Attributed to
+    # `project` (the write's project name) -> tenant project UUID. Inert in legacy
+    # mode (tenant_id None -> the middleware skips).
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_CREATED,
+        project_name=project,
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
     return resp
 
 
 def _delete_document(
     conn,
     doc: dict,
+    ctx: ApiAuthContext,
     *,
     commit: bool,
     co_authored_by: Optional[str],
 ) -> dict:
     """Own the whole delete path: the POST write path in reverse (file -> Recent
-    bullet -> DB -> scoped git commit), all under WRITE_LOCK. docs/ row deletion
-    is missing_ok — a DB row without a file is drift, still cleaned up. A failed
+    bullet -> DB -> scoped git commit), all under WRITE_LOCK. Routes by tenant like
+    the write path: public callers touch docs/ + Recent + git; non-#1 tenants touch
+    only their namespaced tenants/<uuid>/ file + DB row. docs/ row deletion is
+    missing_ok — a DB row without a file is drift, still cleaned up. A failed
     commit never rolls back the removal (responds with committed:false)."""
     rel = doc["rel_path"]
+    root = _tenant_root(ctx)
     with WRITE_LOCK:
-        (config.docs_root() / rel).unlink(missing_ok=True)
-        recent_removed = documents_mod.remove_from_recent_index(config.docs_root(), rel)
+        (root / rel).unlink(missing_ok=True)
+        # Recent index is a public-root concern; non-#1 tenants have none to update.
+        if ctx.is_public:
+            recent_removed = documents_mod.remove_from_recent_index(root, rel)
+        else:
+            recent_removed = False
         # FTS row cleaned by the AFTER DELETE trigger; any embedding cascades
-        # via ON DELETE CASCADE (document_embeddings.doc_id -> documents.id).
-        db.delete_document_by_path(conn, rel)
+        # via ON DELETE CASCADE (document_embeddings.doc_id -> documents.id). Scoped
+        # to this tenant so a delete can never cross tenants.
+        db.delete_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
 
         committed = False
         commit_sha = None
         commit_error = None
         pushed = False
         push_error = None
-        if commit and config.git_commit_enabled():
+        # Git publish is a public-root concern only (see create_document).
+        if commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 gitops.add(
                     [f"docs/{rel}", "docs/index.md"], root=config.kb_root()
@@ -478,26 +673,48 @@ def _delete_document(
 @app.delete("/api/documents/by-path/{rel_path:path}")
 def delete_document_by_path(
     rel_path: str,
+    request: Request,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
-    _: None = Depends(require_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document_by_path(conn, rel_path)
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)
+    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # Meter the deletion (best-effort, via the middleware) — only reached when the
+    # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_DELETED,
+        project_name=doc["project"],
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
+    return resp
 
 
 @app.delete("/api/documents/{doc_id}")
 def delete_document(
     doc_id: int,
+    request: Request,
     commit: bool = True,
     co_authored_by: Optional[str] = None,
-    _: None = Depends(require_bearer),
+    ctx: ApiAuthContext = Depends(resolve_api_write),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document(conn, doc_id)
+    doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
-    return _delete_document(conn, doc, commit=commit, co_authored_by=co_authored_by)
+    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # Meter the deletion (best-effort, via the middleware) — only reached when the
+    # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
+    request.state.usage = UsageHint(
+        tenant_id=ctx.tenant_id,
+        event_type=EVENT_DOCUMENT_DELETED,
+        project_name=doc["project"],
+        project_id=ctx.project_id,
+        credential_id=ctx.credential_id,
+    )
+    return resp
