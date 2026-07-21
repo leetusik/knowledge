@@ -337,6 +337,8 @@ not a literal template to paste:
 
 - project = the current repo's root directory name, verbatim (e.g. `hi2vi_web`);
   if it contains path-unsafe characters, lowercase it and replace them with `-`.
+  Outside a git repo (no repo directory name to use), fall back to `default`; the KB
+  get-or-creates any project name on the first write, so `default` always resolves.
 - slug = short lowercase-kebab topic name (e.g. `shared-nginx-explained`);
   date = today, `YYYY-MM-DD`.
 - Build the request in a temp dir — `<tmp>` below means

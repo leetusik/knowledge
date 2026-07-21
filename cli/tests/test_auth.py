@@ -29,7 +29,12 @@ VK = "vk_" + "k" * 40
 
 
 class FakeApi:
-    """The /auth + /app routes S2 touches, in the server's real response shapes."""
+    """The /auth + /app routes the CLI drives, in the server's real response shapes.
+
+    The `/credentials` branch matches both the per-project mint
+    (`/app/projects/{id}/credentials`) and the org-level mint (`/app/credentials`,
+    P18) — `init` uses the latter; tests assert which endpoint was hit via `calls`.
+    """
 
     def __init__(self, users=None, projects=None):
         self.users = dict(users or {})
@@ -135,11 +140,14 @@ def test_no_password_and_no_tty_fails_instead_of_hanging(home):
 def test_init_writes_a_remote_only_0600_config_that_resolves(home, api):
     assert _run_pw(("init", "--email", "ada@example.com"), PW) == 0
     data = cfg(home)
-    # `project` is S3's additive key: it pins the key to the project it was minted
-    # for, and is `save`'s fallback outside a git repo.
-    assert data["api"] == {"base_url": "http://api.test", "token": VK, "project": "knowledge"}
+    # `project` is the additive save-fallback key (default `"default"`, P18); the key
+    # itself is org-level so it is not bound to that project.
+    assert data["api"] == {"base_url": "http://api.test", "token": VK, "project": "default"}
     assert "kb_root" not in data  # remote-only: the no-local-fallback safety property
     assert data["auth"]["session_token"] == "sess1"
+    # The mint is org-level (POST /app/credentials), never the per-project endpoint.
+    assert ("POST", "/app/credentials") in api.calls
+    assert not any(p.startswith("/app/projects/") and p.endswith("/credentials") for _, p in api.calls)
     assert stat.S_IMODE((home / ".config" / "knowledge-kb" / "config.json").stat().st_mode) == 0o600
     resolved = config.resolve()
     assert (resolved.status, resolved.api_token, resolved.local_fallback) == ("configured", VK, False)
@@ -195,11 +203,16 @@ def test_init_reuses_the_key_of_a_config_that_predates_api_project(home, api):
 
     _run_pw(("init", "--email", "ada@example.com"), PW)
     assert api.minted == 1  # reused, not re-minted
-    assert cfg(home)["api"]["project"] == "knowledge"  # and backfilled
+    assert cfg(home)["api"]["project"] == "default"  # and backfilled
 
 
-def test_init_mints_a_key_bound_to_the_project_it_is_asked_for(home, api):
-    """A vk_ is bound server-side to one project, so foo's key cannot serve bar."""
+def test_init_remints_when_the_configured_project_changes(home, api):
+    """The reuse gate keys on the config's recorded project (P18-preserved shape).
+
+    Org keys are not project-bound, but `init` still re-mints when the config asks
+    for a different project than the one recorded in `api.project` — the reuse gate
+    kept its structure, so a second key is minted and `api.project` is re-recorded.
+    """
 
     _run_pw(("init", "--email", "ada@example.com"), PW)
     _run_pw(("init", "--email", "ada@example.com", "--project", "other"), PW)
