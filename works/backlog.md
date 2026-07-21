@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P17`
-- Current slice: `P17.DECOMP`
-- Next slice: `P17.REVIEW`
+- Current slice: `P17.S1`
+- Next slice: `P17.S2`
 - Waiting on operator: `none`
-- Open deferred jobs: `9`
-- Rebuilt at: `2026-07-21T15:30:35+09:00`
+- Open deferred jobs: `8`
+- Rebuilt at: `2026-07-21T15:55:23+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
-| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.DECOMP` | `works/phases/active/P17` |
+| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.S1` | `works/phases/active/P17` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -33,5 +33,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P17.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P17/slices/P17.DECOMP` |
+| [x] `P17.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P17/slices/P17.DECOMP` |
+| [ ] `P17.S1` | `todo` | Explain skill v2: always-HTML interactive explainer + cited web-research section (canonical) | `implementation` | `works/phases/active/P17/slices/P17.S1` |
+| [ ] `P17.S2` | `todo` | Reconcile explain skill copies from the canonical plugin copy (resolve the duplicate registration) | `implementation` | `works/phases/active/P17/slices/P17.S2` |
+| [ ] `P17.S3` | `todo` | Public-host onboarding surface for plugin users (signup -> project -> vk_ -> config) | `implementation` | `works/phases/active/P17/slices/P17.S3` |
+| [ ] `P17.S4` | `todo` | Plugin-template parity remediation: mirror the SaaS server into plugin/templates/kb (D9) | `implementation` | `works/phases/active/P17/slices/P17.S4` |
+| [ ] `P17.S5` | `todo` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
 | [ ] `P17.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
