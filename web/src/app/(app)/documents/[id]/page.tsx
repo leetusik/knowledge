@@ -12,6 +12,7 @@ import { getDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument } from "@/lib/knowledge/types";
 
+import "./explainer.css";
 import { MarkdownBody } from "./markdown-body";
 
 // P12.S5 — one document in full, reached from the list's title link. A server
@@ -137,16 +138,35 @@ export default async function DocumentPage({
         </Meta>
       </div>
 
-      {/* The rendered markdown body, in a panel. */}
-      <div className="kb-panel">
-        {doc.markdown.trim() === "" ? (
-          <p className="text-[0.9rem] text-[var(--kb-secondary)]">
-            {DOCUMENTS.read.emptyBody}
-          </p>
-        ) : (
-          <MarkdownBody markdown={doc.markdown} />
-        )}
-      </div>
+      {/* The body. HTML explainers (P16) render interactive in a sandboxed
+          opaque-origin iframe — `sandbox="allow-scripts"` and, crucially, NEVER
+          `allow-same-origin` (nor allow-forms/popups/top-navigation/modals): the
+          framed doc gets an opaque origin, so its untrusted quiz JS runs but cannot
+          read cookies/storage, reach the parent app, or call the API as the user
+          (phase P16 pinned decision 1). The `src` is the same-origin BFF relay.
+          Markdown docs render XSS-safe via <MarkdownBody> (react-markdown, no
+          rehype-raw) exactly as before. */}
+      {doc.format === "html" ? (
+        <div className="kb-explainer">
+          <iframe
+            src={`/api/documents/${id}/raw`}
+            sandbox="allow-scripts"
+            title={doc.title}
+            className="kb-explainer__frame"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      ) : (
+        <div className="kb-panel">
+          {doc.markdown.trim() === "" ? (
+            <p className="text-[0.9rem] text-[var(--kb-secondary)]">
+              {DOCUMENTS.read.emptyBody}
+            </p>
+          ) : (
+            <MarkdownBody markdown={doc.markdown} />
+          )}
+        </div>
+      )}
     </article>
   );
 }

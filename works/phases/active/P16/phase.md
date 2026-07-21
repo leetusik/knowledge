@@ -155,6 +155,53 @@ this red gate**: it predates P16 and its remediation is out of scope for this ph
 (Note: the S1 plan assumed my edits would only touch *already-drifted* files;
 documents.py was the exception — recorded for accuracy, conclusion unchanged.)
 
+### P16.S2 web landed (2026-07-21) — cross-slice notes for S3/REVIEW
+
+The safe interactive render is in. Markdown docs render byte-identically; every change
+is additive. Durable facts:
+
+- **The relay URL: `GET /api/documents/{id}/raw`** (same-origin BFF Route Handler,
+  `web/src/app/api/documents/[id]/raw/route.ts` — the app's first non-auth route
+  handler). It self-guards (the `(app)` layout guard does NOT cover `/api/*`): reads
+  the sealed session cookie via `openSession(readSessionCookie(req))`, 401 with NO
+  upstream call when absent/invalid. Validates the id first (`Number.isInteger && >= 1`,
+  else 404 before any session/upstream). Relays S1's `GET /app/documents/{id}/raw` via
+  the `client.ts::getRaw` byte-passthrough seam (`app.ts::getDocumentRaw`): upstream
+  404 → 404, any other failure → 502. Success streams `new Response(upstream.body, …)`
+  with the FIVE pinned headers set EXPLICITLY (not copied from upstream):
+  `Content-Type: text/html; charset=utf-8` /
+  `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'` /
+  `X-Frame-Options: SAMEORIGIN` / `X-Content-Type-Options: nosniff` /
+  `Cache-Control: no-store`.
+- **Header-layering decision (the plan's main gotcha) — verified at runtime.** The
+  global `next.config.ts` `/:path*` entry sets `X-Frame-Options: DENY` (blocks even
+  same-origin framing). A SECOND, later, more-specific entry
+  `source: "/api/documents/:id/raw"` sets `X-Frame-Options: SAMEORIGIN` + the same CSP
+  — values identical to the handler's, so no layer order can produce a wrong value.
+  **Confirmed** with `next start` + `curl -D-`: `/api/documents/1/raw` returns a SINGLE
+  `X-Frame-Options: SAMEORIGIN` (+ the sandbox CSP), no duplicate/conflict; `/`
+  (control) keeps `X-Frame-Options: DENY`. So only the app frames the raw path; the
+  parent document page stays `DENY`. (This does not need the auth round-trip — the
+  config-header layer applies to any response on the path, including the 401.)
+- **The render switch.** `documents/[id]/page.tsx` branches the BODY render only
+  (header/metadata strip untouched): `doc.format === "html"` → `.kb-explainer`
+  container wrapping `<iframe src="/api/documents/{id}/raw" sandbox="allow-scripts"
+  referrerPolicy="no-referrer" …>`; else the existing `.kb-panel` + `<MarkdownBody>`,
+  byte-identical. **`sandbox="allow-scripts"` only — never `allow-same-origin`** (the
+  opaque-origin pin), no allow-forms/popups/top-navigation/modals. `format` added to
+  `KbDocumentListItem` (covers `KbDocument`). New co-located `explainer.css` mirrors
+  `.kb-graph` sizing/border/radius/overflow; fixed generous height + internal scroll is
+  the pinned baseline (no postMessage handshake in P16 — that is a P17 template
+  enhancement, Open Question 2 resolved this way).
+- **What REVIEW's e2e pass still owes** (not unit-testable here — no jsdom/browser
+  tooling; the terse `tests/raw-route.test.ts` covers the handler's status/headers/body
+  behavior and the id/auth guards): the live AUTHENTICATED round-trip against a real
+  backend — create an `.html` doc, open `/documents/{id}`, confirm the iframe renders +
+  the quiz JS runs, a direct top-level visit to the raw URL is sandbox-stripped, and a
+  markdown doc still renders byte-identically.
+- **S3 is independent of S2** — it only needs S1's `format` field on the upstream read
+  (already landed); nothing here changes the MCP path.
+
 ### Pinned design decisions
 
 **1. Rendering approach — dedicated raw route + sandboxed iframe (opaque origin).**
@@ -287,6 +334,24 @@ _Non-review slices append one line per durable-truth change here; do NOT run
   `X-Frame-Options: SAMEORIGIN` are the backend half of the opaque-origin
   XSS-containment stance; a direct top-level visit to the raw URL is privilege-stripped
   by the CSP sandbox (defense in depth).
+- (P16.S2) **frontend**/**experience** — the web viewer renders a `format === "html"`
+  document as an interactive explainer in a sandboxed opaque-origin `<iframe
+  sandbox="allow-scripts">` (never `allow-same-origin`) pointing at a new same-origin
+  BFF relay route `GET /api/documents/{id}/raw` (self-guarded by the sealed session
+  cookie; relays S1's `/app/documents/{id}/raw` bytes + sandbox headers). Markdown docs
+  render byte-identically via `<MarkdownBody>`. Baseline iframe UX is a fixed generous
+  height (mirroring `.kb-graph`) with internal scroll; `format` is now on the web doc
+  types. No new visual design (existing `--kb-*` tokens only).
+- (P16.S2) **security** (completes S1's partial line — the render side) — the
+  opaque-origin XSS-containment stance is now end-to-end: `sandbox="allow-scripts"`
+  without `allow-same-origin` gives the framed explainer an opaque origin (no cookie/
+  storage access, no cross-origin parent DOM, no credentialed API calls — the app is
+  CORS-less + the session cookie is httpOnly), so untrusted quiz JS runs while it can
+  neither exfiltrate the session nor act as the user. The relay re-asserts the sandbox
+  CSP explicitly (defense in depth for a direct top-level visit), and the
+  `next.config.ts` `/api/documents/:id/raw` entry exempts the raw path from the global
+  `X-Frame-Options: DENY` (→ `SAMEORIGIN` + CSP `frame-ancestors 'self'`) so only the
+  app frames it while the parent page stays `DENY` (layering verified at runtime).
 
 ## Constraints
 

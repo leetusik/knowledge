@@ -210,6 +210,13 @@ export interface KbDocumentListItem {
   rel_path: string;
   source_repo: string | null;
   related: string[];
+  /**
+   * `"md"` (default) or `"html"` (P16) — an additive field the backend now sends on
+   * every list + detail projection. `"html"` docs are self-contained HTML explainers
+   * the viewer renders in a sandboxed opaque-origin iframe (never as markdown); `"md"`
+   * docs render byte-identically to before via `<MarkdownBody>`.
+   */
+  format: "md" | "html";
   created_at: string;
   updated_at: string;
 }
