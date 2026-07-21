@@ -490,3 +490,9 @@
 {"ts": "2026-07-18T19:37:44+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on", "source": "P15.REVIEW"}
 {"ts": "2026-07-18T19:43:07+09:00", "type": "slice_status_changed", "slice": "P15.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-18T19:43:07+09:00", "type": "phase_reviewed", "phase": "P15", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P10", "archive_path": "works/phases/archived/20260721_124533_P10_accounts_tenancy_tenant-scoped_knowledge_api"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P11", "archive_path": "works/phases/archived/20260721_124533_P11_per-tenant_usage_monitoring"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P12", "archive_path": "works/phases/archived/20260721_124533_P12_web_app_tenant_dashboard_project_detail_pages"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P13", "archive_path": "works/phases/archived/20260721_124533_P13_cli_agent-first_onboarding"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P14", "archive_path": "works/phases/archived/20260721_124533_P14_landing_page_product_webpage_via_claude_design_gate"}
+{"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P15", "archive_path": "works/phases/archived/20260721_124533_P15_agent-facing_retrieval_mcp_service_search-as-a-service"}

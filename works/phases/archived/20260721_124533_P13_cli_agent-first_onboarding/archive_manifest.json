@@ -1,0 +1,17 @@
+{
+  "phase_id": "P13",
+  "archived_at": "2026-07-21T12:45:33+09:00",
+  "archive_reason": "phase_review_passed",
+  "review_verdict": "pass",
+  "source_path": "works/phases/active/P13",
+  "archive_path": "works/phases/archived/20260721_124533_P13_cli_agent-first_onboarding",
+  "slices": [
+    "P13.DECOMP",
+    "P13.S1",
+    "P13.S2",
+    "P13.S3",
+    "P13.S4",
+    "P13.S5",
+    "P13.REVIEW"
+  ]
+}
