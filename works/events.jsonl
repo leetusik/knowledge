@@ -496,3 +496,5 @@
 {"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P13", "archive_path": "works/phases/archived/20260721_124533_P13_cli_agent-first_onboarding"}
 {"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P14", "archive_path": "works/phases/archived/20260721_124533_P14_landing_page_product_webpage_via_claude_design_gate"}
 {"ts": "2026-07-21T12:45:33+09:00", "type": "phase_archived", "phase": "P15", "archive_path": "works/phases/archived/20260721_124533_P15_agent-facing_retrieval_mcp_service_search-as-a-service"}
+{"ts": "2026-07-21T13:17:09+09:00", "type": "phase_created", "phase": "P16"}
+{"ts": "2026-07-21T13:17:14+09:00", "type": "phase_created", "phase": "P17"}
