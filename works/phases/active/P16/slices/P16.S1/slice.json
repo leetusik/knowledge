@@ -1,18 +1,18 @@
 {
-  "id": "P16.DECOMP",
+  "id": "P16.S1",
   "phase_id": "P16",
-  "name": "decompose phase",
-  "kind": "decomposition",
-  "status": "done",
-  "order": 0,
+  "name": "Backend: HTML ingest, storage, text extraction, indexing",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 1,
   "depends_on": [],
-  "created_at": "2026-07-21T13:17:09+09:00",
-  "started_at": "2026-07-21T14:07:55+09:00",
-  "completed_at": "2026-07-21T14:16:17+09:00",
-  "risk": "low",
+  "created_at": "2026-07-21T14:13:20+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
   "source": {
-    "type": "new_phase",
-    "id": "P16"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",
