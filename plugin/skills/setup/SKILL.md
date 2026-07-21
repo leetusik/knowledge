@@ -1,28 +1,197 @@
 ---
 name: setup
-description: Scaffold your own knowledge base (MkDocs site + document API + knowledge graph + Pages workflow) and wire /knowledge:explain to it; run once after installing the plugin, or re-run to reconfigure.
+description: Wire /knowledge:explain to a knowledge base — either connect to the hosted KB at https://knowledge.hi2vi.com (sign up, mint a key, paste it; zero infrastructure) or scaffold your own self-hosted KB (MkDocs site + document API + knowledge graph + Pages workflow). Run once after installing the plugin, or re-run to reconfigure.
 argument-hint: [target-dir]
 disable-model-invocation: true
-allowed-tools: Read, Glob, Bash(python3 -c:*)
+allowed-tools: Read, Glob, Bash(python3 -c:*), Bash(curl -sS --max-time 5:*)
 ---
 
 # setup
 
-Scaffold a brand-new personal knowledge base for the user and wire
-`/knowledge:explain` to it. This is a one-time installer: it interviews the
-user, renders their KB from the plugin's templates, initializes git, writes the
-config file that `/knowledge:explain` reads, brings the stack up (or prints the
-no-Docker alternative), and hands them the GitHub Pages go-live steps. It is
-safe to re-run — a second run reconfigures or re-renders an existing scaffold
-rather than clobbering it.
+Wire `/knowledge:explain` to a knowledge base. There are **two modes**, and the first
+thing this skill does is ask which one the user wants:
 
-**This skill mutates the filesystem, runs git, and starts containers.** Only the
-read-only probes below (`python3 -c` one-liners, `Read`, `Glob`) are
-pre-approved. Every mutation — running the renderer, `mkdir`, writing the config
-and the marker, `chmod`, `git`, `docker` — will ask the user for permission the
-first time. That is deliberate: the user should see each thing this skill does
-to their machine. Do NOT try to suppress those prompts. **Never write a secret
-(Gemini/API key, bearer token) into any file this skill creates.**
+- **Connect** (recommended for most plugin users) — link to the **hosted** knowledge base
+  at `https://knowledge.hi2vi.com`. No Docker, no server to run: the user signs up in
+  their browser, mints one ingest key, pastes it here, and is done. Their explainers post
+  to their own tenant and render in the web app.
+- **Scaffold** — stand up the user's **own self-hosted** knowledge base from the plugin's
+  templates: a MkDocs Material site, a FastAPI + SQLite document API, an interactive
+  knowledge graph, and a GitHub Pages publishing workflow. Full control, runs on their own
+  machine (Docker recommended).
+
+Both modes end by writing the single config file `/knowledge:explain` reads
+(`$XDG_CONFIG_HOME/knowledge-kb/config.json`, default
+`~/.config/knowledge-kb/config.json`), so afterwards `/knowledge:explain` just works. The
+skill is safe to re-run — switch modes, or reconfigure an existing setup, any time.
+
+## Choose your mode
+
+If the user passed a **target-dir argument** (`$ARGUMENTS` non-empty), they mean scaffold
+mode — skip the question and go straight to **Scaffold mode**. Otherwise ask: **connect to
+the hosted KB, or scaffold a self-hosted one?** Suggest **connect** as the default for a
+plugin user who just wants `/knowledge:explain` to work with zero infrastructure;
+**scaffold** is for someone who wants to run and own the whole stack on their own machine.
+
+- **Connect** → follow **Connect mode** below and stop there; the numbered scaffold stages
+  do **not** run.
+- **Scaffold** → skip to **Scaffold mode** (stage 1 onward).
+
+## Connect mode — link to the hosted knowledge base
+
+Connect mode wires `/knowledge:explain` to the hosted knowledge base at
+`https://knowledge.hi2vi.com` — no Docker, no scaffold, no site to run. The user signs up
+in their browser, mints one ingest key, and pastes it here; from then on
+`/knowledge:explain` posts explainers to **their own tenant**, and they render in the web
+app. This is the zero-infrastructure default for plugin users.
+
+**One key, all repos.** The user mints a **single** `vk_` key, once. `/knowledge:explain`
+sends the current repo's directory name as each document's `project` on every call, so the
+same key files explainers from **every** repo the user works in — each under its own
+project name in their tenant. The key's own bound project is only how usage is attributed;
+there is **no** need for a second key per repo.
+
+**The only secret is the pasted key.** The user's email and password **never** pass
+through the agent — the browser does the sign-in, and the one thing that crosses back to
+this skill is the pasted `vk_` key. Treat it like a password: this skill writes it into the
+user's private config file (and nowhere else), **never** into a commit or a shell-visible
+argument. This is the one sanctioned secret write — scaffold mode below writes no secrets
+at all.
+
+### C1. Sign up (or sign in) in the browser
+
+Tell the user to open `https://knowledge.hi2vi.com/signup` and **Create your account** with
+an email and a password of at least 8 characters (the form's hint is *"At least 8
+characters"*). A workspace is created for them automatically. If they already have an
+account, they open `https://knowledge.hi2vi.com/login` and **Sign in** instead.
+
+The user does this in their own browser. **Do not** ask the user to type their email or
+password to the agent — authentication happens entirely in the browser, and only the
+minted key comes back here.
+
+### C2. Create a project
+
+On the **Dashboard**, under **Projects**, the user clicks **New project**, types a
+**Project name** (e.g. a repo they will file explainers from), and clicks **Create**. Then
+they click **Open** on that project's row to go to its page.
+
+(A brand-new project name can also be used later without pre-creating it — the write path
+accepts any project name — but creating one now gives a place to mint the key and watch
+usage.)
+
+### C3. Mint an ingest key
+
+On the project page, under **API keys**, the user clicks **New key**, optionally gives it a
+**Key name** (e.g. *"Production ingest"*) to tell keys apart, and clicks **Create key**.
+
+The web app then shows the **Copy your new key now** panel, warning *"This is the only time
+this key will ever be shown. It cannot be recovered — if you lose it, revoke it and create
+a new one."* The user clicks **Copy**. That `vk_…` string is the ingest key.
+
+### C4. Paste the key and wire up the config
+
+Ask the user to paste the `vk_…` key. Then write the config that points
+`/knowledge:explain` at the hosted KB — this exact shape (**no `kb_root`**; connect mode is
+remote-only, so there is no local KB and therefore no file fallback):
+
+    {
+      "api": {
+        "base_url": "https://knowledge.hi2vi.com",
+        "token": "<the pasted vk_ key>"
+      },
+      "site": {
+        "base_url": "https://knowledge.hi2vi.com"
+      }
+    }
+
+Write it **secret-safely** — the key must never land in a shell argument or a commit. Do it
+in this order:
+
+1. Resolve the config path (the same path `/knowledge:explain`'s resolver reads):
+
+       python3 -c '
+       import os
+       xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+       print(os.path.join(xdg, "knowledge-kb", "config.json"))
+       '
+
+2. If that file **already exists**, read it, **show the user its current contents**, and
+   **ask before replacing it** — a local self-host config may already live there, and
+   connect mode would overwrite it. Only proceed on a yes; if the user declines, keep the
+   old config and say `/knowledge:explain` still points where it did.
+3. `mkdir -p` the `knowledge-kb` directory (Bash — prompts).
+4. Write the pasted key **alone** to a temp file (e.g. `/tmp/kb-connect/vk.txt`) with the
+   Write tool (prompts). Nothing else goes in that file.
+5. Compose the config from that temp file, so the key is read from disk and never becomes a
+   shell argument (`base_url` is the fixed public host, safe as a literal):
+
+       python3 -c '
+       import json, sys
+       token = open(sys.argv[1]).read().strip()
+       cfg = {
+           "api": {"base_url": "https://knowledge.hi2vi.com", "token": token},
+           "site": {"base_url": "https://knowledge.hi2vi.com"},
+       }
+       json.dump(cfg, open(sys.argv[2], "w"), indent=2)
+       ' /tmp/kb-connect/vk.txt "<config path from step 1>"
+
+6. `chmod 600 "<config path>"` (Bash — prompts): the file holds the user's key, keep it
+   private.
+7. Delete the temp key file — `rm /tmp/kb-connect/vk.txt` (Bash — prompts) — so the
+   plaintext key survives only inside the private config.
+
+**Env-var escape hatch.** For a one-off or a per-shell override, the user can skip the file
+and export `KB_API_BASE_URL=https://knowledge.hi2vi.com` and `KB_API_TOKEN=<vk_>` in their
+shell — `/knowledge:explain`'s resolver honors those over the config file. The config file
+is the durable, machine-wide setting; the env vars are the transient override.
+
+### C5. Verify the connection
+
+Confirm the key works with one authenticated read (safe — it lists at most one document and
+writes nothing), substituting the pasted key:
+
+    curl -sS --max-time 5 -H "Authorization: Bearer <vk_>" \
+      "https://knowledge.hi2vi.com/api/documents?limit=1"
+
+- **HTTP 200** (a JSON `{total, items}` body) → **connected.** Report to the user:
+  `/knowledge:explain` now saves to **their** tenant from **any** repo, and their documents
+  render in the web app under **Documents** (`https://knowledge.hi2vi.com/documents`).
+- **HTTP 401** → the key is wrong or was revoked. Have the user re-check they pasted the
+  whole `vk_…` string, or mint a fresh key (project page → **API keys** → **New key**) and
+  re-run connect mode. Do **not** fall back to anything.
+
+Connect mode is then done — suggest `/knowledge:explain <topic>` to file the first
+explainer to the hosted KB.
+
+### Prefer the terminal? Use the standalone CLI instead
+
+A user who would rather stay in the terminal can do this whole onboarding (sign up →
+project → key → config) without a browser hand-off, via the standalone `knowledge` CLI:
+
+    uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
+    knowledge init
+
+`knowledge init` writes the **same** `~/.config/knowledge-kb/config.json` this skill writes,
+so `/knowledge:explain` picks it up identically. Either path works — the user needs only
+one.
+
+## Scaffold mode — self-host your own knowledge base
+
+Scaffold mode stands up a brand-new personal knowledge base for the user and wires
+`/knowledge:explain` to it. This is a one-time installer: it interviews the user, renders
+their KB from the plugin's templates, initializes git, writes the config file that
+`/knowledge:explain` reads, brings the stack up (or prints the no-Docker alternative), and
+hands them the GitHub Pages go-live steps. It is safe to re-run — a second run reconfigures
+or re-renders an existing scaffold rather than clobbering it.
+
+**This mode mutates the filesystem, runs git, and starts containers.** Only the read-only
+probes below (`python3 -c` one-liners, `Read`, `Glob`) are pre-approved. Every mutation —
+running the renderer, `mkdir`, writing the config and the marker, `chmod`, `git`, `docker`
+— will ask the user for permission the first time. That is deliberate: the user should see
+each thing this skill does to their machine. Do NOT try to suppress those prompts. **Never
+write a secret (Gemini/API key, bearer token) into any file scaffold mode creates** — the
+self-hosted config's `api.token` stays `null` (unlike connect mode, which writes the user's
+own `vk_` key into `api.token`).
 
 ## 1. Preflight — resolve the payload and detect tools
 

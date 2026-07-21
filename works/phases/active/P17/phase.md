@@ -300,6 +300,47 @@ Cross-slice notes for S5/REVIEW:
   but it depends on S5's public-marketplace cutover; S2 only updates the bare copy in place.
   Flag it in S5 planning / REVIEW, do not act on it now.
 
+**S3 done (2026-07-21) — public-host onboarding folded into `/knowledge:setup`.**
+Cross-slice notes for S5/REVIEW:
+
+- **Shape landed.** No new skill and no web/server/cli change. `/knowledge:setup` gained a
+  **mode question** (`## Choose your mode`) → **Connect mode** (hosted KB, the zero-infra
+  default) vs **Scaffold mode** (the existing self-host flow, preserved verbatim under a new
+  umbrella heading; stages `## 1.`–`## 7.` byte-unchanged, all "stage N" refs intact).
+  Connect mode writes `~/.config/knowledge-kb/config.json` `{api.base_url/token,
+  site.base_url}` with **no `kb_root`** → the explain resolver reports remote-only,
+  `KB_LOCAL_FALLBACK=no` (proven this session against a scratch `XDG_CONFIG_HOME`). Files
+  touched: `plugin/skills/setup/SKILL.md`, `plugin/README.md`,
+  `plugin/.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` (description
+  clause only, **byte-same**, **no version bump** — 0.3.0 carries the phase).
+- **`allowed-tools` gained `Bash(curl -sS --max-time 5:*)`** for connect verification; a
+  benign side effect is that scaffold stage-6's localhost `curl` probes stop prompting
+  (read-only; same behavior otherwise). Note for REVIEW: no version bump accompanied this
+  `plugin/**` edit — deliberate, the phase ships as one 0.3.0 release (S1's decision).
+- **What S5's hosted E2E must exercise for onboarding** (the outstanding `vk_`-path E2E,
+  the connect-mode half): on the **live** public host after cutover —
+  1. **Fresh web signup** at `https://knowledge.hi2vi.com/signup` (Create account, ≥8-char
+     password) → a tenant/workspace is auto-created.
+  2. **Create a project** (Dashboard → New project) and **open** it.
+  3. **Mint a `vk_` credential** (project → API keys → New key → Create key) → the plaintext
+     key is shown **exactly once** in the "Copy your new key now" panel; capture it.
+  4. **Connect-mode config**: write `~/.config/knowledge-kb/config.json` with
+     `api.base_url = api site.base_url = https://knowledge.hi2vi.com`, `api.token = <vk_>`,
+     **no `kb_root`** (equivalently run `knowledge init`, which writes the same file — worth
+     asserting the CLI and the setup skill converge on byte-equal config for the same
+     inputs).
+  5. **Verify** with `curl … -H "Authorization: Bearer <vk_>" ".../api/documents?limit=1"`
+     → **200** (`{total, items}`); a bad/revoked key → **401** with no fallback.
+  6. **`/explain` posts** an HTML explainer from an arbitrary repo → lands in **that user's
+     tenant** under the repo-dirname project (one key, all repos — assert a *second* repo
+     under a different project name files under the same key), and **renders interactively**
+     in the web app under **Documents** (`/documents`) via the P16 sandboxed iframe.
+     Reuse `slices/P17.S1/sample-explainer.html` as the render fixture (S1's note).
+  - This connect-mode onboarding E2E is the counterpart to S5's `onboarding_smoke.py` +
+    `knowledge init` checks; the render assertion depends on S5 having deployed web + the
+    accounts plane. Nothing here can be verified until the S5 prod cutover — it is
+    deploy-gated, as DECOMP anticipated.
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -409,3 +450,15 @@ concrete change it made.
   now runs a second drift gate, `skills_parity.py`, alongside `plugin_parity.py`; the
   `.agents` portable-skill schema (`openai.yaml`) exposes no tools/permissions field, so
   per-tool policy for the portable copy is expressible only via the SKILL prose, not the yaml.
+- _(S3, done)_ **product** / **operations** — plugin users onboard to the **hosted** KB
+  (`https://knowledge.hi2vi.com`) directly from `/knowledge:setup`: the setup skill now
+  offers **Connect mode** (web signup → create a project → mint one `vk_` key → paste it →
+  the skill writes `~/.config/knowledge-kb/config.json` with `api.base_url`/`token` +
+  `site.base_url` and **no `kb_root`**, remote-only) alongside the preserved **Scaffold**
+  (self-host) mode. Explainers post to the user's **own tenant**; **one `vk_` key serves
+  every repo** (`/explain` sends the repo dirname as each doc's `project`; the key's bound
+  project is usage attribution only). Email/password never cross the agent — only the
+  minted key does. A terminal-only alternative (`uv tool install …#subdirectory=cli` →
+  `knowledge init`) writes the identical config. `plugin.json` / `marketplace.json`
+  descriptions and `plugin/README.md` updated to the two-path story; **no version bump**
+  (0.3.0 carries the whole phase).

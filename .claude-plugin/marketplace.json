@@ -8,7 +8,7 @@
     {
       "name": "knowledge",
       "source": "./plugin",
-      "description": "Write single self-contained interactive HTML explainers — Background, Intuition, Code, a cited best-practices-and-next-steps section, and a 5-question quiz — into your own personal knowledge base (a searchable MkDocs site backed by a FastAPI document API), and scaffold the whole KB from scratch with one setup skill."
+      "description": "Write single self-contained interactive HTML explainers — Background, Intuition, Code, a cited best-practices-and-next-steps section, and a 5-question quiz — into your own personal knowledge base (a searchable MkDocs site backed by a FastAPI document API), and connect to the hosted KB or scaffold the whole KB from scratch with one setup skill."
     }
   ]
 }

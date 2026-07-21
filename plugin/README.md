@@ -13,9 +13,13 @@ two skills:
   it on/off; add `here` to also drop a copy in the current project). The first
   explainer filed under a brand-new project also creates that project's landing
   page automatically, so your published site keeps building as the library grows.
-- `/knowledge:setup` — scaffolds that knowledge base from scratch: a MkDocs
-  Material site, a FastAPI + SQLite document API, an interactive knowledge
-  graph, and a GitHub Pages publishing workflow. Run it once after install.
+- `/knowledge:setup` — wires `/knowledge:explain` to a knowledge base, two ways.
+  **Connect** (the zero-infra default): sign up at the hosted KB
+  (<https://knowledge.hi2vi.com>), mint one ingest key, paste it, and your explainers
+  post to your own tenant — no server to run, one key serves every repo. **Scaffold**
+  (full control): stand up your own self-hosted KB from scratch — a MkDocs Material site,
+  a FastAPI + SQLite document API, an interactive knowledge graph, and a GitHub Pages
+  publishing workflow. Run it once after install and pick a mode.
 
 ## Install
 
@@ -26,6 +30,9 @@ Then run `/knowledge:setup` once to create your KB, and `/knowledge:explain`
 whenever you want something explained and kept.
 
 ## Requirements
+
+**Connect mode needs none of the below** — just a browser to sign up and mint a key. The
+list is for **scaffold** (self-hosted) mode:
 
 - Python 3.12+ (the document API and site tooling).
 - Docker (optional but recommended — runs the local viewer + API; without it
