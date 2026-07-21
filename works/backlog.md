@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P17`
-- Current slice: `P17.S3`
-- Next slice: `P17.S4`
+- Current slice: `P17.S4`
+- Next slice: `P17.S5`
 - Waiting on operator: `none`
 - Open deferred jobs: `8`
-- Rebuilt at: `2026-07-21T16:27:35+09:00`
+- Rebuilt at: `2026-07-21T16:42:47+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
-| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.S3` | `works/phases/active/P17` |
+| [ ] `P17` | `planned` | `pending` | Explain skill v2: interactive HTML + public multi-user ingestion | `P17.S4` | `works/phases/active/P17` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -36,7 +36,7 @@
 | [x] `P17.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P17/slices/P17.DECOMP` |
 | [x] `P17.S1` | `done` | Explain skill v2: always-HTML interactive explainer + cited web-research section (canonical) | `implementation` | `works/phases/active/P17/slices/P17.S1` |
 | [x] `P17.S2` | `done` | Reconcile explain skill copies from the canonical plugin copy (resolve the duplicate registration) | `implementation` | `works/phases/active/P17/slices/P17.S2` |
-| [ ] `P17.S3` | `todo` | Public-host onboarding surface for plugin users (signup -> project -> vk_ -> config) | `implementation` | `works/phases/active/P17/slices/P17.S3` |
+| [x] `P17.S3` | `done` | Public-host onboarding surface for plugin users (signup -> project -> vk_ -> config) | `implementation` | `works/phases/active/P17/slices/P17.S3` |
 | [ ] `P17.S4` | `todo` | Plugin-template parity remediation: mirror the SaaS server into plugin/templates/kb (D9) | `implementation` | `works/phases/active/P17/slices/P17.S4` |
 | [ ] `P17.S5` | `todo` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
 | [ ] `P17.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |

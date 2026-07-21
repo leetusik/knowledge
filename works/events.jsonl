@@ -533,3 +533,5 @@
 {"ts": "2026-07-21T16:26:00+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-07-21T16:27:35+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-07-21T16:27:35+09:00", "type": "slice_status_changed", "slice": "P17.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-21T16:31:23+09:00", "type": "slice_status_changed", "slice": "P17.S3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-21T16:42:47+09:00", "type": "slice_status_changed", "slice": "P17.S3", "old_status": "in_progress", "new_status": "done"}
