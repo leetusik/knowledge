@@ -10,7 +10,7 @@
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `8`
-- Rebuilt at: `2026-07-21T22:22:44+09:00`
+- Rebuilt at: `2026-07-21T22:32:58+09:00`
 
 ## Active Phases
 
@@ -39,4 +39,5 @@
 | [x] `P17.S3` | `done` | Public-host onboarding surface for plugin users (signup -> project -> vk_ -> config) | `implementation` | `works/phases/active/P17/slices/P17.S3` |
 | [x] `P17.S4` | `done` | Plugin-template parity remediation: mirror the SaaS server into plugin/templates/kb (D9) | `implementation` | `works/phases/active/P17/slices/P17.S4` |
 | [x] `P17.S5` | `done` | Prod accounts-plane cutover + hosted end-to-end skill-path verification (operator gates) | `implementation` | `works/phases/active/P17/slices/P17.S5` |
+| [x] `P17.F1` | `done` | Production Deploy: force-recreate bind-mounted api + P16-discriminating smoke | `fix` | `works/phases/active/P17/slices/P17.F1` |
 | [ ] `P17.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P17/slices/P17.REVIEW` |
