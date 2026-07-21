@@ -372,6 +372,123 @@ Cross-slice notes for S5/REVIEW:
   set* change to `compose.prod.yml`/`deploy/**` (those are untouched); the postgres service
   already exists in prod. Setup skill stage-6 wording left unchanged (still accurate).
 
+**S5 Stage A done (2026-07-21) — external pre-flight + operator runbook.** Ran the 4
+external probes + 2 discriminators against `https://knowledge.hi2vi.com`; returned
+`needs_operator` with a customized checklist in `slices/P17.S5/result.md`. Headline
+finding for Stage B / REVIEW:
+
+- **The accounts-plane cutover (`operations.md` L410–428) is ALREADY DONE.** Discriminator
+  `POST /auth/login` with nonsense creds → **401 `invalid email or password`** (the
+  enumeration-safe answer), not a 500. Code-verified this is decisive: the login handler
+  (`server/auth_api.py:242`) has no try/except; the service (`accounts/service.py:75`)
+  re-raises DB errors as `AccountsReadError`, and an unset `DATABASE_URL` raises
+  `RuntimeError` (`persistence/engine.py:36`) — so **dormant → 500, unmigrated → 500**,
+  and only a **live+migrated** DB with the email absent yields the clean 401. Plus
+  `/healthz` `documents:11` under `KB_STARTUP_REINDEX=true` ⇒ boot reindex resolved
+  **tenant #1** ⇒ **seed ran**. So Postgres is up, migrations `0001`+`0002` applied, seed
+  done, and the box `.env` secrets are present. The plan's "unknown" is resolved: **it is
+  provisioned/migrated/seeded.**
+- **What is still missing is P16 code, not the accounts plane.** The box deploys
+  origin/main = `284fc03` (P15-era); local `main` `3ad7bd9` is **13 ahead / 0 behind**,
+  carrying all of P16 (the HTML-explainer ingest/render/MCP pipeline Stage B's E2E needs)
+  + P17 S1–S4. So the **push + `Production Deploy` are required — for P16.**
+- **The redeploy is one-step and deadlock-free.** No new alembic migration
+  (`alembic/versions/` byte-identical `284fc03`↔`3ad7bd9`); P16's `format`/`raw_html`
+  columns are in the **SQLite** doc store, auto-added on boot by `db.py:init_db()`
+  (`ALTER TABLE … ADD COLUMN`). The fresh-DB boot deadlock (L417) does **not** apply — the
+  accounts DB is already migrated+seeded, so this is the "already-migrated later redeploy"
+  path (api boots clean). The `stop→migrate→seed→up` one-shot is **omitted** from the
+  required checklist; a fallback copy is in `result.md` for the unlikely case on-box
+  confirmation contradicts the probes. seed is idempotent (`seed.py:28` — re-run = all
+  "exists").
+- **Stale runbook warning corrected:** the push does **not** turn `plugin-ci.yml` red
+  (S4 made `plugin_parity.py` green; S2's `skills_parity.py` green) — both drift gates
+  pass. When REVIEW consolidates the **operations** doc-version, L410–428 should be
+  marked **executed/done** (accounts plane) with a note that P16 shipped in the same push.
+- **Required operator actions (the `pending` gate):** (1) `git push origin main` (clean
+  FF to `3ad7bd9`; `git pull --rebase` first only if the publish-on-write box advanced
+  origin); (2) dispatch `Production Deploy` (`gh workflow run "Production Deploy" --ref
+  main`). Steps 3 (on-box confirmation) + the fallback one-shot are optional.
+- **Stage B re-dispatch** will re-verify (login discriminator + `/healthz`) then run the
+  throwaway-account skill-path E2E incl. the outstanding MCP `vk_` path.
+
+**S5 Stage B done (2026-07-21) — returned `needs_operator`: `knowledge-api` shipped STALE
+(pre-P16) code.** Ran the secret-free throwaway-account skill-path E2E against the live
+host after the operator's push (`3ad7bd9`) + GREEN `Production Deploy` (run 29830927799).
+Headline for REVIEW / re-dispatch:
+
+- **Accounts-plane cutover verified live (holds).** `/healthz` 200; `POST /auth/login`
+  nonsense → 401 `invalid email or password` (migrated 401). Signup → project → `vk_`
+  mint → tenant search → the **MCP `vk_`-path** (`e2e_smoke.py` search + fetch_document)
+  all PASS against `knowledge.hi2vi.com`. The onboarding/`vk_` plumbing and the P15
+  MCP residual are proven end to end. Throwaway acct:
+  `kb-e2e-p17s5-20260721t214338@example.com`, tenant `8333f560-…`, doc id 12 (no delete
+  API → operator may purge later; `vk_` held in tmp only, never in `works/`).
+- **DEPLOYMENT DEFECT — `knowledge-api` is running pre-P16 code** despite
+  `origin/main = 3ad7bd9` (which contains the P16 `format`/`raw_html` code at
+  `server/main.py:383`, `server/documents_api.py:156`) and a GREEN deploy. Decisive live
+  evidence: `POST /api/documents format:"html"` is **silently ignored** (→ `.md` doc, raw
+  HTML stored verbatim in `markdown`, **no `format` in the 201**); `/api/documents/{id}`
+  and `/app/documents/{id}` read projections **omit `format`**; **`GET /app/documents/{id}/raw`
+  returns 404 `{"detail":"Not Found"}`** = FastAPI's route-absent default, i.e. the P16
+  route does not exist on the box. Meanwhile **`knowledge-mcp` IS P16-aware**
+  (`fetch_document` carries the additive `format`, value `"md"` defaulted because upstream
+  omits it) — so the deploy rebuilt the MCP container but **not** the API container (a
+  split deploy; likely a build-cache / no-recreate on `api`). The deploy's external smoke
+  only checks `/healthz`/`/`/`​/mcp` — none exercise P16 — so GREEN did not prove P16 shipped.
+- **Not a code defect and not Stage B's to fix** — `3ad7bd9`'s `server/` code is correct
+  and complete; the fix is an **operator redeploy** (force-rebuild + `--force-recreate`
+  the `api` service so it runs `3ad7bd9`; `init_db()` adds the SQLite `format`/`raw_html`
+  columns idempotently on boot — no migration/seed/`.env` change). Exact commands +
+  post-redeploy spot check are in `slices/P17.S5/result.md`. **Re-dispatch Stage B after
+  the redeploy.** This slice made no source edits.
+- **Doc-impact caveat for REVIEW:** the **operations** L410–428 accounts-plane cutover is
+  executed & verified (mark it done) — but the **P16 hosted skill-path is NOT yet verified
+  on prod** and the "P16 shipped in the same push" claim is currently **false on the box**.
+  Do NOT let REVIEW record a "hosted P16 E2E verified" **qa** doc-version until `knowledge-api`
+  actually runs P16 and Stage B re-passes. (Doc-impact lines below reflect this split.)
+
+**S5 Stage B RE-RUN done (2026-07-21) — returned `done`: hosted P16 skill-path E2E FULLY
+PASSES; run-1 caveat RESOLVED.** After the operator **restarted the bind-mounted
+`knowledge-api` container** (now `Up` fresh) and the orchestrator verified the
+discriminator flipped (unauth `GET /app/documents/1/raw` now **401** = P16 route present,
+was route-absent **404**; `/healthz` 200), the full skill-path E2E was re-run with a
+**fresh throwaway account**. Headline for REVIEW:
+
+- **Run-1's `knowledge-api` staleness is fixed.** The restarted api now runs the P16
+  `server/` code end to end. Every P16 assertion that failed in run 1 now passes: `POST
+  /api/documents format:"html"` → **201 with a `.html` `rel_path` + `"format":"html"`**;
+  `/api/documents/13` read-back → `"format":"html"` + `markdown` = **extracted text**
+  (6723 chars, not raw HTML) + **no `raw_html` key**; `GET /app/documents/13/raw`
+  (session) → **200 `<!DOCTYPE html>`** with **all four sandbox headers** (CSP `sandbox
+  allow-scripts; frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `nosniff`,
+  `no-store`); tenant search finds doc 13 by visible text `Debouncing`.
+- **MCP `vk_`-path now relays the real `format`.** `e2e_smoke.py` PASS (search → 1 hit
+  id 13, `fetch_document` → 6723 chars); a direct `fetch_document(13)` inspection shows
+  **`"format":"html"`** (run 1 defaulted to `"md"` because the upstream api omitted it) +
+  extracted markdown. The box is now fully P16-consistent (api + mcp + web).
+- **QA caveat from run 1 is RESOLVED.** REVIEW **may** now record the **qa** doc-version:
+  hosted end-to-end coverage of the skill path (signup → project → `vk_` mint → `format:
+  "html"` ingest → P16 read shape → sandboxed-raw serve → tenant search → MCP `vk_`
+  fetch) is **verified live on prod**. The one remaining human item for `P17.REVIEW` is
+  the **in-browser quiz-render eyeball** (the P16 iframe rendering the interactive
+  explainer in the web app — its raw-HTML relay + sandbox headers are now proven live).
+- **Deployment incident to record (candidate `P17.F1`).** Run 1 revealed a real
+  operational gap: a **GREEN `Production Deploy` (run 29830927799) left `knowledge-api`
+  running stale pre-P16 code** while `knowledge-mcp` updated (a split deploy — likely a
+  build-cache / no-`--force-recreate` on the `api` service under the bind-mount), and the
+  deploy's external smoke (`/healthz`, `/`, `/mcp` only) **never exercises P16**, so GREEN
+  did not prove the api picked up new `server/` code. It took an **operator container
+  restart** to land P16. This is not a code defect (`3ad7bd9` was always correct) — it is
+  a deploy-hygiene gap: the `Production Deploy` job should force-recreate `api` and its
+  smoke should exercise a P16-discriminating probe (e.g. unauth `/app/documents/1/raw`
+  expecting 401, not 404). Recommend REVIEW open **`P17.F1`** for this (deploy job hardening);
+  it did not block the S5 verification, which is now complete.
+- **Fresh throwaway (this run):** `kb-e2e-p17s5-rerun-20260721t131816@example.com`, tenant
+  `48e2cc73-…`, doc id 13 (+ run-1's `8333f560-…`/doc 12 still present) — no delete API,
+  operator may purge; `vk_` held in tmp only, never in `works/`. This slice made no source
+  edits and ran no operator action (the api restart was the operator's; verified externally).
+
 ## Constraints
 
 - **One output format everywhere:** v2 always emits the interactive HTML explainer for
@@ -506,3 +623,26 @@ concrete change it made.
   `alembic/` / `scripts/onboarding_smoke.py` / `cli/` are **deliberately not shipped** (so
   self-hosted multi-tenant migrations remain undocumented). Plugin stays 0.3.0; `render.py`
   and `compose.prod.yml`/`deploy/**` unchanged.
+- _(S5 Stage A+B, DONE — full pass after api restart)_ **operations** — the P10–P13 hosted
+  **accounts-plane cutover is executed and verified live** (`operations.md` L410–428:
+  Postgres up, migrations `0001`+`0002` applied, seed done, box `.env` secrets present;
+  proven by the migrated `401 invalid email or password` + a healthy `/healthz`). Mark that
+  runbook state **done**, and record that **P16 shipped in the same `3ad7bd9` push** and is
+  now live on the box. **Deploy-hygiene incident to capture (candidate `P17.F1`):** the
+  first `Production Deploy` (run 29830927799) went **GREEN but left `knowledge-api` running
+  stale pre-P16 code** while `knowledge-mcp` updated — a split deploy (build-cache /
+  no-`--force-recreate` on the bind-mounted `api`); it took an **operator container restart**
+  to land P16. The deploy's external smoke checks only `/healthz` `/` `/mcp` — none exercise
+  P16 — so GREEN did not prove the api picked up new `server/` code. REVIEW should note this
+  under operations and (recommended) open `P17.F1` to force-recreate `api` on deploy + add a
+  P16-discriminating smoke probe (unauth `/app/documents/1/raw` → 401, not 404).
+- _(S5 Stage B re-run, DONE)_ **qa** — the **hosted end-to-end skill path is verified live
+  on prod** (`https://knowledge.hi2vi.com`), against a fresh throwaway tenant: signup →
+  project → mint `vk_` → `POST /api/documents format:"html"` (S1 `sample-explainer.html`) →
+  201 `.html` `rel_path` + `format:"html"` → `/api` read-back (`format:"html"`, extracted-text
+  `markdown`, no `raw_html`) → session-guarded `GET /app/documents/{id}/raw` (200 raw HTML +
+  the four sandbox headers) → tenant FTS finds it by visible text → **MCP `vk_`-path**
+  (`e2e_smoke.py` search + `fetch_document`, the latter relaying `format:"html"` + extracted
+  markdown). The outstanding P15 MCP `vk_` residual is closed. The **only** un-automated
+  REVIEW item left is the in-browser quiz-render eyeball (the P16 iframe rendering the
+  interactive explainer in the web app; its raw-HTML relay + sandbox headers are proven live).
