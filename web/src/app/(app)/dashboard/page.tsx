@@ -3,16 +3,28 @@ import Link from "next/link";
 
 import {
   appButtonClass,
+  Badge,
   DataTable,
   type DataTableColumn,
 } from "@/components/ui";
 import { StatTiles, type StatTileVM, TrendChart } from "@/components/usage";
 import { DASHBOARD } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
-import { getDashboard, getUsage } from "@/lib/knowledge/app";
-import type { KbActivityEvent, KbDashboardProject } from "@/lib/knowledge/types";
+import {
+  getDashboard,
+  getUsage,
+  listOrgCredentials,
+} from "@/lib/knowledge/app";
+import { credentialStatus } from "@/lib/knowledge/credential-status";
+import type {
+  KbActivityEvent,
+  KbCredential,
+  KbDashboardProject,
+} from "@/lib/knowledge/types";
 
 import { CreateProjectForm } from "./create-project-form";
+import { MintOrgKeyForm } from "./mint-org-key-form";
+import { RevokeOrgKeyButton } from "./revoke-org-key-button";
 
 // P12.S3 — the tenant dashboard: the post-login home and the app's first real data
 // page. A server component throughout (only the create-project header button is a
@@ -81,6 +93,73 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
   },
 ];
 
+// P18.S3 — the org-level API-keys table. Mirrors the project page's credential
+// columns (name / key stub / derived status / created / last used / revoke) at ORG
+// scope: an org key carries `project_id null` and grants the whole org. Revoke rides
+// by credential id alone (no project id).
+const orgKeyColumns: DataTableColumn<KbCredential>[] = [
+  {
+    key: "name",
+    header: DASHBOARD.orgKeys.columns.name,
+    cell: (credential) =>
+      credential.name === null ? (
+        <span className="text-[var(--kb-hint)] italic">
+          {DASHBOARD.orgKeys.unnamed}
+        </span>
+      ) : (
+        <span className="kb-dtable__name">{credential.name}</span>
+      ),
+  },
+  {
+    key: "key",
+    header: DASHBOARD.orgKeys.columns.key,
+    className: "mono",
+    // `token_prefix` is a display stub (`"vk_"` + a slice), never a usable
+    // credential. The plaintext key exists only in the mint response.
+    cell: (credential) => `${credential.token_prefix}…`,
+  },
+  {
+    key: "status",
+    header: DASHBOARD.orgKeys.columns.status,
+    // Derived three-state status (`credential-status.ts`): revoked / active / idle,
+    // encoded in FORM as well as color via the `Badge` (WCAG 1.4.1).
+    cell: (credential) => {
+      const status = credentialStatus(credential);
+      return (
+        <Badge status={status}>{DASHBOARD.orgKeys.status[status]}</Badge>
+      );
+    },
+  },
+  {
+    key: "created",
+    header: DASHBOARD.orgKeys.columns.created,
+    className: "mono",
+    cell: (credential) => formatCreated(credential.created_at),
+  },
+  {
+    key: "last_used",
+    header: DASHBOARD.orgKeys.columns.lastUsed,
+    className: "mono",
+    // `null` until the key is first used to ingest → `relativeTime` renders "—".
+    cell: (credential) => relativeTime(credential.last_used_at),
+  },
+  {
+    key: "action",
+    header: (
+      <span className="sr-only">{DASHBOARD.orgKeys.columns.actions}</span>
+    ),
+    actions: true,
+    // A revoked key has nothing to revoke; its struck badge tells the story.
+    cell: (credential) =>
+      credential.revoked_at === null ? (
+        <RevokeOrgKeyButton
+          credentialId={credential.id}
+          credentialLabel={credential.name ?? credential.token_prefix}
+        />
+      ) : null,
+  },
+];
+
 /** `"2026-03-12T09:31:02+00:00"` → `"2026-03-12"` (mono ISO date); unparseable → first 10 chars. */
 function formatCreated(iso: string): string {
   const at = new Date(iso);
@@ -122,9 +201,10 @@ export default async function DashboardPage() {
   const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
 
-  const [usage, dashboard] = await Promise.all([
+  const [usage, dashboard, orgCredentials] = await Promise.all([
     getUsage(token),
     getDashboard(token),
+    listOrgCredentials(token),
   ]);
 
   // The four tiles. "Active total" is derived (`documents_created − documents_deleted`),
@@ -233,6 +313,38 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Org API keys — a full-width panel below the projects/activity grid. The
+          panel head carries the "New key" disclosure; the table lists metadata only
+          (`token_prefix`, never the full key). One org key grants the whole org. */}
+      <section
+        className="kb-panel"
+        style={{ marginTop: "var(--kb-space-md)" }}
+        aria-labelledby="org-keys-head"
+      >
+        <div className="mb-[0.9rem] flex items-start justify-between gap-4">
+          <div>
+            <h2
+              id="org-keys-head"
+              className="kb-app-h2"
+              style={{ fontSize: "1.05rem" }}
+            >
+              {DASHBOARD.orgKeys.heading}
+            </h2>
+            <p className="mt-[0.3rem] text-[0.85rem] text-[var(--kb-secondary)]">
+              {DASHBOARD.orgKeys.lead}
+            </p>
+          </div>
+          <MintOrgKeyForm />
+        </div>
+
+        <DataTable
+          columns={orgKeyColumns}
+          rows={orgCredentials}
+          rowKey={(credential) => credential.id}
+          empty={DASHBOARD.orgKeys.empty}
+        />
+      </section>
     </>
   );
 }

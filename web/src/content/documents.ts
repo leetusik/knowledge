@@ -6,9 +6,9 @@ export const DOCUMENTS = {
   /** Document <title> for the list (the SITE template appends " · knowledge"). */
   title: "Documents",
   /** Mono eyebrow suffix on the list header, rendered as `{tenant} · {eyebrow}`. */
-  eyebrow: "Workspace",
+  eyebrow: "Org",
   /** Sub-line under the list title. */
-  sub: "Browse and search every document in your workspace.",
+  sub: "Browse and search every document in your org.",
 
   search: {
     /** Accessible label for the search input. */
@@ -74,7 +74,7 @@ export const DOCUMENTS = {
   /** The branded not-found (`[id]/not-found.tsx`), on the `.kb-empty` classes. */
   notFound: {
     title: "Document not found",
-    sub: "This document doesn't exist, or it isn't part of your workspace.",
+    sub: "This document doesn't exist, or it isn't part of your org.",
     backLabel: "Back to documents",
   },
 
@@ -84,7 +84,7 @@ export const DOCUMENTS = {
    */
   filterNotFound: {
     title: "No such view",
-    sub: "That project filter doesn't match a project in your workspace.",
+    sub: "That project filter doesn't match a project in your org.",
     backLabel: "Back to documents",
   },
 } as const;

@@ -30,9 +30,13 @@ export const APP_SHELL = {
   /** Accessible name for the rail's <nav> landmark. */
   navLabel: "Primary",
   /** Mono-uppercase eyebrow heading over the rail's nav section. */
-  railHeading: "Workspace",
-  /** Prefix before the tenant name in the topbar identity. */
-  workspaceLabel: "Workspace",
+  railHeading: "Org",
+  /**
+   * Prefix before the org (tenant) name in the topbar identity. Key name kept
+   * (`workspaceLabel`) — code identifiers are not renamed in the P18 copy pass; only
+   * the user-facing value moves Workspace → Org.
+   */
+  workspaceLabel: "Org",
   soonTag: "Soon",
   logoutLabel: "Sign out",
   logoutPendingLabel: "Signing out…",

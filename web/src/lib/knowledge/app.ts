@@ -2,6 +2,7 @@ import "server-only";
 
 import { getJson, getRaw, sendJson } from "./client";
 import type {
+  KbCredential,
   KbDashboard,
   KbDocument,
   KbDocumentsPage,
@@ -200,6 +201,81 @@ export async function getProjectUsage(
   return getJson<KbProjectUsage>(
     `/app/projects/${encodeURIComponent(projectId)}/usage`,
     { token, signal },
+  );
+}
+
+// ── /app/credentials — org-level credential lifecycle (P18.S3) ──────────────
+// The tenant/org-scoped credential seam, mirroring the per-project calls above but
+// keyed to the ORG (there is no project id in the path). An org key authorizes the
+// whole tenant and serializes `project_id: null`. These sit ALONGSIDE the per-project
+// credential routes (both work) — additive to the frozen `/app/*` contract (P18.S2).
+
+/** The `GET /app/credentials` envelope. */
+interface RawOrgCredentialsResponse {
+  credentials?: KbCredential[];
+}
+
+/**
+ * `GET /app/credentials` (bearer) → 200 `{credentials: [...]}` — the caller's ORG
+ * (tenant) credentials, oldest-first, INCLUDING revoked (the revoke is a soft stamp,
+ * so a revoked key stays listed and the UI derives its Revoked state). Org-level only
+ * (`project_id null`); the per-project keys live under `/app/projects/{id}/usage`.
+ *
+ * The `?? []` is defensive only — knowledge always sends the key.
+ */
+export async function listOrgCredentials(
+  token: string,
+  signal?: AbortSignal,
+): Promise<KbCredential[]> {
+  const raw = await getJson<RawOrgCredentialsResponse>("/app/credentials", {
+    token,
+    signal,
+  });
+  return raw.credentials ?? [];
+}
+
+/**
+ * `POST /app/credentials` (bearer) `{name?}` → 201 `{credential, key}`.
+ *
+ * Mirrors `createCredential` exactly, minus the project id: mints an ORG-level `vk_`
+ * (`project_id null`) scoped to the caller's tenant. Returns the envelope WHOLE
+ * (`KbMintedCredential`) — `key` is the PLAINTEXT credential knowledge returns EXACTLY
+ * ONCE (only its sha256 hash + short prefix persist), so unwrapping to `credential`
+ * would discard the only copy. Show it once, never log/persist it.
+ *
+ * `name` is OPTIONAL — knowledge accepts an empty body and defaults it to `null` — so
+ * an omitted name sends `{}` rather than `{name: null}`/`{name: ""}`.
+ */
+export async function createOrgCredential(
+  token: string,
+  name?: string,
+): Promise<KbMintedCredential> {
+  return sendJson<KbMintedCredential>(
+    "/app/credentials",
+    "POST",
+    name === undefined ? {} : { name },
+    { token },
+  );
+}
+
+/**
+ * `DELETE /app/credentials/{cid}` (bearer) → 204, empty body.
+ *
+ * Revoke is a STAMP, not a delete (like the per-project revoke): knowledge sets
+ * `revoked_at` and the key stays listed (the revalidated render flips it to Revoked).
+ * 404 when the id is not one of the caller's own ORG-level credentials (so foreign /
+ * project-bound ids cannot be probed or revoked here); 400 on a malformed id. The 204
+ * maps to `undefined`, so there is nothing to unwrap.
+ */
+export async function revokeOrgCredential(
+  token: string,
+  credentialId: string,
+): Promise<void> {
+  await sendJson<void>(
+    `/app/credentials/${encodeURIComponent(credentialId)}`,
+    "DELETE",
+    undefined,
+    { token },
   );
 }
 

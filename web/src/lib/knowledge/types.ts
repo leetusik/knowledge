@@ -143,7 +143,14 @@ export interface KbDashboard {
  */
 export interface KbCredential {
   id: string;
-  project_id: string;
+  /**
+   * The bound project's UUID, or `null` for an **org-level** key (P18.S2's
+   * `serialize_credential` is NULL-safe): an org key authorizes the whole tenant and
+   * carries no project binding, while a project-bound key still names its project for
+   * attribution. Consumers that need a project id for a project-bound key should read
+   * it from the project in scope, not from here.
+   */
+  project_id: string | null;
   /** Optional display label; `null` when the key was minted unnamed. */
   name: string | null;
   token_prefix: string;

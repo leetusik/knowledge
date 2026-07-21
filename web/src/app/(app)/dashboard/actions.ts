@@ -3,9 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { CREATE_PROJECT_ERRORS } from "@/content";
+import {
+  CREATE_PROJECT_ERRORS,
+  MINT_ORG_CREDENTIAL_ERRORS,
+  REVOKE_ORG_CREDENTIAL_ERRORS,
+} from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
-import { createProject } from "@/lib/knowledge/app";
+import {
+  createOrgCredential,
+  createProject,
+  revokeOrgCredential,
+} from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 
 /**
@@ -89,5 +97,132 @@ export async function createProjectAction(
   // The page re-fetches `/app/dashboard` + `/app/usage` on the next render, so the
   // new project (and its now-zero-filled row) appears without a client-side refresh.
   revalidatePath("/dashboard");
+  return { error: null, ok: Date.now() };
+}
+
+// ── Org-level API keys (P18.S3) ─────────────────────────────────────────────
+// Mint/revoke ORG credentials as SERVER ACTIONS, page-local copies of the
+// `projects/[projectId]/actions.ts` pattern minus the per-project id: an org key
+// grants the whole tenant (`POST/DELETE /app/credentials`). Same rules — behind
+// `requireIdentity()`, status-mapped error copy, `revalidatePath` the dashboard. The
+// knowledge token never reaches the browser; the minted plaintext `vk_` rides back
+// only in the mint action state and is shown once.
+//
+// As above, only ASYNC functions may be exported from this `"use server"` module, so
+// each form's initial state lives in its client island (never here).
+
+/**
+ * `name` is OPTIONAL and capped at 200 chars measured BEFORE stripping, exactly as
+ * knowledge's pydantic `Field(max_length=200)` runs ahead of its strip validator. A
+ * blank/whitespace-only name is NOT an error — knowledge maps it to `null` — so it is
+ * normalized to `undefined` below and the body omits the field entirely.
+ */
+const orgKeyNameSchema = z.string().max(200).optional();
+
+export interface MintOrgCredentialState {
+  /** Display copy for a failure, or `null` on success / first render. */
+  error: string | null;
+  /**
+   * The PLAINTEXT `vk_…` key, present only on the render right after a successful
+   * mint — the ONE sanctioned server→client crossing (knowledge returns it exactly
+   * once and persists only its sha256 hash, so the user MUST see it now or lose it
+   * forever). Never logged, never in a URL, never persisted; it lives in the action
+   * state and dies with the next submit or navigation.
+   */
+  key?: string;
+  /** Bumped on each success; the client island keys the show-once modal on it. */
+  ok?: number;
+}
+
+export interface RevokeOrgCredentialState {
+  error: string | null;
+  ok?: number;
+}
+
+/**
+ * `useActionState` action: validate → `POST /app/credentials` → revalidate. Returns
+ * the minted key in the state (see `MintOrgCredentialState.key`).
+ *
+ * Failures map by HTTP STATUS, never by knowledge's `detail` text. knowledge answers a
+ * body-validation failure (name >200 chars) as **422**, mapped to `invalidName`. No
+ * `notFound` case: an org key targets the caller's tenant, which always exists.
+ */
+export async function mintOrgCredentialAction(
+  _prevState: MintOrgCredentialState,
+  formData: FormData,
+): Promise<MintOrgCredentialState> {
+  // Blank/whitespace → `undefined` → an omitted field, which knowledge stores as
+  // `null`. Only a too-long name is a real rejection.
+  const rawName = formData.get("name");
+  const candidate =
+    typeof rawName === "string" && rawName.trim() !== "" ? rawName : undefined;
+  const name = orgKeyNameSchema.safeParse(candidate);
+  if (!name.success) {
+    return { error: MINT_ORG_CREDENTIAL_ERRORS.invalidName };
+  }
+
+  // OUTSIDE the try on purpose: `requireIdentity()` signals "no session" by calling
+  // `redirect()`, which works by THROWING a control-flow error Next must see.
+  // Catching it would swallow the redirect and render a bogus error instead of
+  // bouncing to /login.
+  const { token } = await requireIdentity();
+
+  let minted;
+  try {
+    minted = await createOrgCredential(token, name.data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 400 || error.status === 422) {
+        return { error: MINT_ORG_CREDENTIAL_ERRORS.invalidName };
+      }
+      if (error.status === 401) {
+        return { error: MINT_ORG_CREDENTIAL_ERRORS.sessionExpired };
+      }
+    }
+    return { error: MINT_ORG_CREDENTIAL_ERRORS.generic };
+  }
+
+  // Re-renders the page (refetching the org-credentials list), so the new row appears
+  // without client-side list state. The show-once modal survives it: it lives in the
+  // action state, not in the server-rendered tree.
+  revalidatePath("/dashboard", "page");
+  return { error: null, key: minted.key, ok: Date.now() };
+}
+
+/**
+ * `useActionState` action: validate → `DELETE /app/credentials/{cid}` → revalidate.
+ * knowledge answers 204 and the credential stays LISTED with a `revoked_at` stamp, so
+ * the revalidated render flips the row's status to Revoked rather than dropping it.
+ */
+export async function revokeOrgCredentialAction(
+  _prevState: RevokeOrgCredentialState,
+  formData: FormData,
+): Promise<RevokeOrgCredentialState> {
+  const credentialId = z.uuid().safeParse(formData.get("credentialId"));
+  if (!credentialId.success) {
+    return { error: REVOKE_ORG_CREDENTIAL_ERRORS.invalidRequest };
+  }
+
+  // Outside the try — same reason as above.
+  const { token } = await requireIdentity();
+
+  try {
+    await revokeOrgCredential(token, credentialId.data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 400) {
+        return { error: REVOKE_ORG_CREDENTIAL_ERRORS.invalidRequest };
+      }
+      if (error.status === 401) {
+        return { error: REVOKE_ORG_CREDENTIAL_ERRORS.sessionExpired };
+      }
+      if (error.status === 404) {
+        return { error: REVOKE_ORG_CREDENTIAL_ERRORS.notFound };
+      }
+    }
+    return { error: REVOKE_ORG_CREDENTIAL_ERRORS.generic };
+  }
+
+  revalidatePath("/dashboard", "page");
   return { error: null, ok: Date.now() };
 }
