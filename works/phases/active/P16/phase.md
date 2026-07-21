@@ -202,6 +202,30 @@ is additive. Durable facts:
 - **S3 is independent of S2** — it only needs S1's `format` field on the upstream read
   (already landed); nothing here changes the MCP path.
 
+### P16.S3 MCP read path landed (2026-07-21) — cross-slice notes for REVIEW
+
+The format-aware `fetch_document` is in. Additive-only; markdown docs map
+byte-identically. Durable facts:
+
+- **`_map_document` relays `format` verbatim.** `doc.get("format") or "md"` — the
+  value is upstream's (`"md" | "html"`), never a hardcoded constant; the `or "md"`
+  default tolerates an older upstream that omits the key. The `fetch_document` output
+  now carries `format` alongside the existing 10 keys. Search hits (`_map_hit`) are
+  unchanged — upstream search results carry no format (out of scope).
+- **`markdown`'s contract meaning is preserved, not repurposed.** For an html doc,
+  `markdown` = the server-extracted readable text S1 stores in the DB `markdown`
+  column (the correct agent surface); the character-cap truncation (`_truncate`,
+  `FETCH_MAX_CHARS`) applies to it unchanged. Md docs are byte-identical.
+- **Contract stays v1 — no `CONTRACT_VERSION` bump.** A new output field is additive
+  under CONTRACT.md's `## Versioning & stability` rule. `CONTRACT.md`'s
+  `### fetch_document` → `**Output**` block was updated in-source (it is a
+  hand-maintained contract file, not a `docs/current` versioned doc). `config.py`
+  and the `/healthz` `contract_version` ("1") are untouched.
+- **Test:** `tests/test_search_tool.py` — `_FETCH_KEYS`/`_DOC` gained `format`; one
+  new terse test asserts an `"html"` payload relays `format` + passes `markdown`
+  through, and a payload with the key removed defaults to `"md"`. `uv run pytest` →
+  12 passed (1 pre-existing Starlette deprecation warning, unrelated).
+
 ### Pinned design decisions
 
 **1. Rendering approach — dedicated raw route + sandboxed iframe (opaque origin).**
@@ -352,6 +376,15 @@ _Non-review slices append one line per durable-truth change here; do NOT run
   `next.config.ts` `/api/documents/:id/raw` entry exempts the raw path from the global
   `X-Frame-Options: DENY` (→ `SAMEORIGIN` + CSP `frame-ancestors 'self'`) so only the
   app frames it while the parent page stays `DENY` (layering verified at runtime).
+- (P16.S3) **api** — the MCP `fetch_document` tool output gains an additive `format`
+  (`"md" | "html"`) field, relayed verbatim from S1's upstream single-doc read
+  (default `"md"` for an older upstream); for an html doc `markdown` stays the
+  server-extracted readable text (contract-v1 meaning preserved) and the char-cap
+  truncation applies unchanged. `mcp-server/CONTRACT.md` updated in-source; the MCP
+  tool contract stays **v1** — a new output field is additive, no `CONTRACT_VERSION`
+  bump. (CONTRACT.md is a hand-maintained source file, not a `docs/current` versioned
+  doc — but the durable **api** truth here is worth the review reflecting alongside the
+  S1 read-projection lines.)
 
 ## Constraints
 

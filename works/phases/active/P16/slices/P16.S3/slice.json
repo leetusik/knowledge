@@ -3,14 +3,14 @@
   "phase_id": "P16",
   "name": "MCP read path: format-aware fetch_document",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P16.S1"
   ],
   "created_at": "2026-07-21T14:13:20+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-21T15:09:17+09:00",
+  "completed_at": "2026-07-21T15:11:55+09:00",
   "risk": "medium",
   "source": {
     "type": "manual",

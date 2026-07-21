@@ -123,7 +123,7 @@ Provide **exactly one** (XOR). Both or neither → tool error
 ```json
 {
   "id": 42, "rel_path": "project/…​.md", "title": "…", "project": "…",
-  "date": "YYYY-MM-DD", "tags": ["…"], "url": "",
+  "date": "YYYY-MM-DD", "tags": ["…"], "url": "", "format": "md",
   "markdown": "# …", "truncated": false, "total_chars": 207
 }
 ```
@@ -132,6 +132,11 @@ Provide **exactly one** (XOR). Both or neither → tool error
   `MCP_FETCH_MAX_CHARS`). Over the cap, `markdown` is the first N chars plus a marker
   `…[truncated: showing N of TOTAL characters]`, `truncated` is `true`, and `total_chars`
   is the **full** length — so the agent knows there is more and can narrow via `search`.
+- `format` — `"md" | "html"`. For an `"html"` doc (a standalone HTML explainer)
+  `markdown` carries the server-extracted **readable text** (not the raw HTML), so the
+  agent surface stays plain text and character-capped exactly as for markdown docs.
+  Consumers must **tolerate this field being absent** on an older server; treat a
+  missing `format` as `"md"`.
 - `url` — same citation seam as `search`; empty for the whole current corpus (D13).
 
 **Errors:** `not found: no document with that id/rel_path` (404 — a missing **or**

@@ -149,6 +149,7 @@ _DOC = {
     "tags": ["search", "vectors"],
     "source_repo": "changple5",
     "rel_path": "changple5/2026-05-01-vector-index-notes.md",
+    "format": "md",
     "markdown": "# Vector index notes\n\nA short body about embeddings.",
     "related": [],
     "created_at": "2026-05-01T00:00:00Z",
@@ -157,7 +158,7 @@ _DOC = {
 
 _FETCH_KEYS = {
     "id", "rel_path", "title", "project", "date",
-    "tags", "url", "markdown", "truncated", "total_chars",
+    "tags", "url", "format", "markdown", "truncated", "total_chars",
 }
 
 
@@ -186,6 +187,7 @@ def test_fetch_by_id_maps_contract_and_forwards_bearer():
     assert out["date"] == "2026-05-01"
     assert out["tags"] == ["search", "vectors"]
     assert out["url"] == ""  # same reserved seam as search — empty for the corpus
+    assert out["format"] == "md"  # relayed verbatim from the upstream md doc
 
     # Under the default cap -> full body, not truncated.
     assert out["markdown"] == _DOC["markdown"]
@@ -195,6 +197,39 @@ def test_fetch_by_id_maps_contract_and_forwards_bearer():
     # Inbound bearer forwarded verbatim to GET /api/documents/{id}.
     assert seen["authorization"] == "Bearer vk_test_123"
     assert seen["path"] == "/api/documents/42"
+
+
+def test_fetch_relays_html_format_and_defaults_when_absent():
+    # An html doc: format relayed verbatim; markdown = the server-extracted readable
+    # text (not raw HTML), passed through unchanged under the cap.
+    html_text = "Quiz explainer\n\nQ1: pick one. A) yes B) no"
+    html_doc = {**_DOC, "format": "html", "markdown": html_text}
+
+    def html_handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=html_doc)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            id=42, authorization="Bearer vk_x",
+            transport=httpx.MockTransport(html_handler),
+        )
+    )
+    assert out["format"] == "html"
+    assert out["markdown"] == html_text
+
+    # An older upstream that omits `format` -> the mapper defaults to "md".
+    legacy_doc = {k: v for k, v in _DOC.items() if k != "format"}
+
+    def legacy_handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=legacy_doc)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            id=42, authorization="Bearer vk_x",
+            transport=httpx.MockTransport(legacy_handler),
+        )
+    )
+    assert out["format"] == "md"
 
 
 def test_fetch_by_rel_path_hits_by_path_endpoint_slashes_preserved():
