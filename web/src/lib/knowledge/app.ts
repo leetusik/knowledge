@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getJson, sendJson } from "./client";
+import { getJson, getRaw, sendJson } from "./client";
 import type {
   KbDashboard,
   KbDocument,
@@ -269,6 +269,27 @@ export async function getDocument(
 ): Promise<KbDocument> {
   // `id` is a number, so there is nothing to URL-escape — interpolate directly.
   return getJson<KbDocument>(`/app/documents/${id}`, { token, signal });
+}
+
+/**
+ * `GET /app/documents/{id}/raw` (bearer) → 200 the raw HTML bytes of an HTML
+ * explainer doc as `text/html`, returned as the UNREAD `Response` (the
+ * `client.ts::getRaw` byte-passthrough seam) for the BFF relay route to stream
+ * straight to the browser's sandboxed iframe. Only the `/api/documents/{id}/raw`
+ * relay calls this — the JSON read path uses `getDocument`.
+ *
+ * `ApiError` (from the shared `!res.ok` contract) on a non-2xx: 404 for a missing /
+ * cross-tenant / non-HTML doc, which the relay maps to a 404. The caller MUST relay
+ * or consume the body.
+ */
+export async function getDocumentRaw(
+  token: string,
+  id: number,
+  signal?: AbortSignal,
+): Promise<Response> {
+  // `id` is a number, so there is nothing to URL-escape — interpolate directly
+  // (mirrors `getDocument`).
+  return getRaw(`/app/documents/${id}/raw`, { token, signal });
 }
 
 /**

@@ -1,0 +1,33 @@
+/*
+ * Knowledge Base — HTML explainer render container (P16.S2).
+ * --------------------------------------------------------------------------
+ * The frame for a `format === "html"` explainer document: a sized bordered card
+ * (mirroring `.kb-graph`'s sizing / border / radius / overflow) holding the
+ * sandboxed opaque-origin <iframe> that renders the interactive explainer.
+ *
+ * The framed document is cross-origin (sandbox WITHOUT allow-same-origin — phase
+ * P16 pinned decision 1), so the parent cannot measure its content height. The
+ * baseline is therefore a generous fixed height with the iframe scrolling
+ * internally (phase P16 Open Question 2); an opt-in postMessage height handshake
+ * is a later P17 explainer-template enhancement, not required here.
+ *
+ * Reuses `--kb-*` design tokens only — NO new visual design. Co-located with the
+ * documents/[id] route, imported by page.tsx.
+ * --------------------------------------------------------------------------
+ */
+.kb-explainer {
+  position: relative;
+  width: 100%;
+  /* Same sizing as `.kb-graph`: fill the console main below the header, with a
+     floor that keeps it usable on short screens. */
+  height: calc(100dvh - var(--kb-app-topbar-h) - 13rem);
+  min-height: 30rem;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius);
+  overflow: hidden;
+}
+.kb-explainer__frame {
+  border: 0;
+  width: 100%;
+  height: 100%;
+}

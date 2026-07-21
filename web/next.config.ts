@@ -27,6 +27,25 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
+      // P16.S2 — the sandboxed-iframe explainer relay exemption. The global
+      // `X-Frame-Options: DENY` above blocks even SAME-ORIGIN framing, so the raw
+      // HTML route (which the app frames in a sandboxed opaque-origin iframe) must
+      // relax it to SAMEORIGIN and gate framing on CSP `frame-ancestors 'self'`
+      // instead — only the app can frame it. This entry is LATER + more specific
+      // than the global `/:path*`, so for this exact path Next's "last matching
+      // entry wins per key" rule resolves `X-Frame-Options` to SAMEORIGIN. The
+      // values match the route handler's own headers verbatim, so no layering order
+      // can ever produce a wrong value. The parent document page keeps `DENY`.
+      {
+        source: "/api/documents/:id/raw",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: "sandbox allow-scripts; frame-ancestors 'self'",
+          },
+        ],
+      },
     ];
   },
 };
