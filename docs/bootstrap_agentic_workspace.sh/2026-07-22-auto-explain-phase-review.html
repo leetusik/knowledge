@@ -1,0 +1,462 @@
+<!--kb
+title: "Auto-explain at the phase review (bootstrap P8)"
+date: 2026-07-22
+tags:
+  - phase-review
+  - auto-explain
+  - docs-as-code
+  - agentic-workflow
+  - graceful-degradation
+source:
+  project: bootstrap_agentic_workspace.sh
+  repo: /Users/sugang/projects/personal/bootstrap_agentic_workspace.sh
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto-explain at the phase review (bootstrap P8)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.6; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           background: rgba(128,128,128,.15); padding: .05rem .3rem; border-radius: 4px; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; color: #111; padding: .75rem; border-radius: 6px;
+           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           font-size: .9em; }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4; color: #111;
+               padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .warn { border-left-color: #d98; background: #fdf5ec; }
+    .fig { border: 1px solid rgba(128,128,128,.35); border-radius: 8px;
+           padding: 1rem; margin: 1.25rem 0; background: rgba(128,128,128,.05); }
+    .flow { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem;
+            font-size: .9em; }
+    .node { border: 1px solid #4a7; border-radius: 6px; padding: .35rem .6rem;
+            background: #eafaf1; color: #111; white-space: nowrap; }
+    .node.skip { border-color: #d98; background: #fdf1e3; }
+    .arrow { color: #4a7; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1rem 0; }
+    th, td { border: 1px solid rgba(128,128,128,.4); padding: .4rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: rgba(128,128,128,.12); }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; border: 1px solid rgba(128,128,128,.4);
+              border-radius: 6px; background: rgba(128,128,128,.06); font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; }
+    .q .opt.incorrect { background: #f7d6d6; }
+    .q .why { margin: .4rem 0 0; font-size: .95em; }
+    nav ol { line-height: 1.9; }
+  </style>
+</head>
+<body>
+  <h1>Auto-explain at the phase review: how a bootstrap workspace learned to document its own phases</h1>
+
+  <p><em>A change-mode explainer for phase <strong>P8</strong> of the
+  <code>bootstrap_agentic_workspace.sh</code> repo. It walks what P8 changed, why, and how
+  the design holds together — including the fact that <strong>this very document</strong> was
+  produced by the machinery P8 added.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+
+    <p>This repository builds a <strong>self-installing "agentic workspace"</strong>: a set of
+    conventions and a small Python engine (<code>scripts/workflow.py</code>) that let AI coding
+    agents drive real software work in disciplined units. If you have never seen it, here is the
+    one-paragraph mental model you need before the change makes sense — skip ahead to
+    <em>the review step</em> if you already know it.</p>
+
+    <h3>The vocabulary: phases, slices, and the orchestrator/executor split</h3>
+    <p>Work is organized into <strong>phases</strong> (a unit of intent, like "add feature X"),
+    and each phase is cut into <strong>slices</strong> (small, individually shippable steps). A
+    phase always begins with a <code>DECOMP</code> slice (which plans the middle slices) and ends
+    with a <code>REVIEW</code> slice. Two kinds of agent cooperate:</p>
+    <ul>
+      <li>The <strong>orchestrator</strong> — the main thread. It plans each slice, transitions
+      workflow state, talks to the operator, and <strong>owns every git commit</strong>.</li>
+      <li>The <strong>executor</strong> — a dispatched sub-agent (<code>slice-executor-low</code> /
+      <code>-mid</code> / <code>-high</code>, chosen by the slice's risk). It does the slice's
+      actual work in an isolated context, writes a <code>result.md</code>, and returns a verdict.
+      Crucially, an executor <strong>never commits and never transitions state</strong> — that
+      boundary is what keeps the main thread's context lean and the workflow auditable.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>The phase review, before P8.</strong> The <code>REVIEW</code> slice is run by the
+      top-tier <code>slice-executor-high</code>. Its job was two things: (1) <strong>validate</strong>
+      all of the phase's slices together (re-running their checks), and (2) on a passing review,
+      <strong>consolidate documentation</strong> — turning the running "Doc impact" notes that
+      earlier slices left in <code>phase.md</code> into new versioned doc entries. In shorthand:
+      <em>review = validate + consolidate docs</em>.
+    </div>
+
+    <h3>Where "explain" comes from</h3>
+    <p>Separately, the project long carried an <code>/explain</code> skill: given a topic or a code
+    change, it researches the real code and writes a single self-contained interactive HTML
+    "explainer" — Background, Intuition, Code, a cited best-practices section, and a quiz — filed
+    into a personal knowledge base (KB). Originally this skill was <strong>embedded</strong> in the
+    bootstrap and shipped to every adopting workspace. But it was coupled to one person's machine
+    (a KB at a fixed path, an API on <code>localhost</code>), so a prior phase, <strong>P7</strong>,
+    <strong>retired the embedded copy</strong> and moved explain into a portable external
+    <strong>Claude Code plugin</strong> (in a separate "knowledge" repo). After P7, the bootstrap no
+    longer <em>ships</em> explain at all.</p>
+
+    <p>That set up an obvious gap. The operator's original request had two halves: make explain
+    portable (done by P7 + the knowledge repo's own phases), <em>and</em> "for all review slices,
+    want to use the skill automatically… basically phase review + docs + and the explain." P8 is
+    that second half — wiring the now-external explain skill back <em>into</em> the review, so a
+    passing review also produces a phase explainer.</p>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <p>The essence of P8 is a single sentence: <strong>a passing phase review now also produces a
+    phase explainer</strong>, so the review's job grows from <em>validate + consolidate docs</em> to
+    <em>validate + consolidate docs + <strong>explain</strong></em>. Everything else is about doing
+    that <em>safely</em> — because the machinery ships to every adopting workspace, most of which
+    have no knowledge plugin and no KB at all.</p>
+
+    <div class="fig">
+      <div class="flow">
+        <span class="node">REVIEW slice runs</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node">validate all slices</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node">verdict?</span>
+      </div>
+      <p style="margin:.6rem 0 .2rem;font-size:.88em;">On <strong>pass</strong> only:</p>
+      <div class="flow">
+        <span class="node">consolidate docs</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node">auto-explain</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node skip">skip / saved (best-effort)</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node">record verdict</span>
+      </div>
+      <p style="margin:.6rem 0 0;font-size:.85em;">On <code>changes_requested</code> /
+      <code>blocked</code>: no docs, no explainer — fixes land first.</p>
+    </div>
+
+    <p>Five design decisions make the sentence work. Think of them as answers to five sharp
+    questions:</p>
+
+    <table>
+      <tr><th>Question</th><th>Decision</th></tr>
+      <tr>
+        <td><strong>Who runs it?</strong></td>
+        <td>The <code>slice-executor-high</code> review executor — by <em>locating the installed
+        explain skill and following it</em>, never copying its ~500 lines into the machinery (that
+        would drift from the plugin). The full procedure lives in <strong>one place</strong>, the
+        review checklist; the agent files carry only a short pointer.</td>
+      </tr>
+      <tr>
+        <td><strong>What if it isn't installed?</strong></td>
+        <td>An <strong>ordered search</strong> — project, then user, then plugin installs — with
+        graceful skip. Not found (or the KB probe says "unconfigured") &rarr; skip with a note.</td>
+      </tr>
+      <tr>
+        <td><strong>When does it fire?</strong></td>
+        <td><strong>Pass-gated</strong>: only on a passing review, exactly like doc consolidation.
+        And <strong>verdict-neutral</strong> — the explain outcome never changes the review verdict,
+        even on failure.</td>
+      </tr>
+      <tr>
+        <td><strong>Can it research the web?</strong></td>
+        <td>Yes, but only where safe: <code>WebSearch</code> and <code>WebFetch</code> were added to
+        the <em>Claude high executor only</em>, so the cited "best practices" section can run.
+        Without them (e.g. Codex) it degrades to <code>skipped-offline</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Doesn't it need to commit?</strong></td>
+        <td>Only in the rare offline fallback — and only in the <em>separate KB repo</em>. A
+        <strong>narrow carve-out</strong> to the "executor never commits" rule allows exactly that,
+        never in this workspace, never a push.</td>
+      </tr>
+    </table>
+
+    <h3>Why "best-effort" is the whole game</h3>
+    <p>The key intuition is that the explainer is a <strong>garnish, not a gate</strong>. Doc
+    consolidation is load-bearing (the docs must stay true), but the explainer is a teaching
+    artifact — nice to have, never required. So its outcome is reported as a single line
+    (<code>explain: saved …</code> / <code>skipped …</code> / <code>failed …</code>) and is
+    forbidden from touching the verdict. A review of a real, correct phase must never turn red
+    because a KB server happened to be down. Hold on to that idea — it is exactly the
+    "continue-on-error" pattern the Best-practices section compares against.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+
+    <p>P8 was deliberately a <strong>single atomic slice</strong> (<code>P8.S1</code>), because the
+    project has a non-negotiable rule: a machinery edit and the rebuilt single-file installer
+    artifact must land in the <em>same commit</em> (a pre-commit hook enforces it). Splitting would
+    leave a "lying" intermediate state. So one commit,
+    <code>feat(review): auto-explain the phase at a passing review</code>, touches the checklist,
+    the agent files, the contract, the version, and the rebuilt artifact together. Let us walk the
+    real diff, grouped logically.</p>
+
+    <h3>1. The heart: the review checklist gains one paragraph</h3>
+    <p>The whole procedure lives in <code>.claude/skills/review-phase/SKILL.md</code> (and its byte-
+    identical <code>.agents/</code> mirror), inserted right after the existing doc-consolidation
+    paragraph — its natural home, since that paragraph already governs the pass-gated consolidation
+    step. The new paragraph, verbatim from the diff, defines detection order, the read-and-follow
+    rule, graceful skip, the commit exception, and the outcome vocabulary:</p>
+    <pre>On a **passing** review, after consolidating docs, also **auto-explain
+the phase** — produce a phase explainer via the knowledge plugin's
+installed explain skill. This is best-effort: like doc versions it fires
+**only on a passing review** ... and its outcome **NEVER** changes the
+`review_verdict`. **Locate the installed explain skill** (first hit wins):
+project `.claude/skills/explain/SKILL.md` -> user
+`~/.claude/skills/explain/SKILL.md` -> plugin installs (a bounded search
+... covering `cache/` and `marketplaces/`). None found -> skip and report
+`explain: skipped (skill not installed)`. Found -> **read that `SKILL.md`
+and follow its instructions as written** (never duplicate its procedure
+here ...), in **change mode with this phase as the change-ref**.</pre>
+    <div class="callout"><strong>Why reference, never duplicate?</strong> The explain skill lives
+    in a different repo and evolves on its own. If the checklist pasted a copy of its steps, the two
+    would silently drift apart. "Locate and follow the installed skill" makes the plugin the single
+    source of truth — the review just knows <em>how to find it</em> and <em>when to run it</em>.</div>
+
+    <h3>2. The high executor: three small edits</h3>
+    <p><code>.claude/agents/slice-executor-high.md</code> changed in three ways. First, its
+    <code>tools:</code> line gained two entries:</p>
+    <pre>tools: Read, Edit, Write, Glob, Grep, Bash, WebSearch, WebFetch</pre>
+    <p>These are read-only research tools, so they cannot mutate state or commit — a good fit for a
+    review executor's read-heavy job, and they let the explain skill's cited best-practices section
+    actually run. A subtle safety check made this cheap: the <code>sync-agents</code> command, which
+    keeps agent files in step with <code>executors.toml</code>, only ever rewrites the
+    <code>model:</code>/<code>effort:</code> lines — so a hand-added <code>tools:</code> line
+    survives a sync and does not trip the drift checker. Only the high tier got them (reviews always
+    run there); mid/low and the Codex executors were left untouched.</p>
+
+    <p>Second, its review bullet gained a short pointer back to the checklist (the "single source of
+    truth" discipline). Third — and most interesting — its "never commit" rule gained a
+    <strong>scoped exception</strong>:</p>
+    <pre>- commit or push (no `git commit`, `git add`, `git push`) — the
+  orchestrator owns commits; the one scoped exception: a **review** slice's
+  auto-explain offline fallback may run the explain skill's own
+  `git -C &lt;KB_ROOT&gt; add/commit` in the **separate knowledge-base repo**
+  (never in this workspace's repo, and never any `git push`);</pre>
+
+    <div class="fig">
+      <p style="margin:.2rem 0 .5rem;font-size:.9em;"><strong>The three KB states, and which one
+      needs the carve-out:</strong></p>
+      <div class="flow" style="margin-bottom:.4rem;">
+        <span class="node skip">unconfigured</span>
+        <span class="arrow">&rarr;</span>
+        <span>skill STOPs at its probe &rarr; skip. <strong>No git.</strong></span>
+      </div>
+      <div class="flow" style="margin-bottom:.4rem;">
+        <span class="node">API reachable</span>
+        <span class="arrow">&rarr;</span>
+        <span>API returns 201 and makes its <em>own server-side</em> commit &rarr;
+        <strong>executor runs no git at all.</strong></span>
+      </div>
+      <div class="flow">
+        <span class="node warn" style="border:1px solid #d98;background:#fdf1e3;color:#111;border-radius:6px;padding:.35rem .6rem;">API down, local KB exists</span>
+        <span class="arrow">&rarr;</span>
+        <span>skill writes + commits with <code>git -C &lt;KB_ROOT&gt;</code>.
+        <strong>Only this path needs the carve-out.</strong></span>
+      </div>
+    </div>
+    <p>The reasoning behind the carve-out is precise: the "orchestrator owns commits" rule exists to
+    keep <em>this workspace's</em> slice boundary clean. A commit in a <em>different</em> git root (the
+    KB) never crosses that boundary, and the explain skill's offline path is designed to always fall
+    through to a durable, committed save. Narrow enough to not weaken the bright-line rule; broad
+    enough to let the designed fallback work.</p>
+
+    <h3>3. The Codex mirror: asymmetry accepted</h3>
+    <p><code>.codex/agents/slice-executor-high.toml</code> received the same <em>body</em> edits
+    (pointer, carve-out, an <code>explain:</code> verdict field) mirrored into its
+    <code>developer_instructions</code> — but <strong>no</strong> <code>tools</code> key and no web
+    tools. Codex governs tools via its <code>sandbox_mode</code>, not a per-agent list, so its review
+    simply degrades the research section to <code>skipped-offline</code>, and under its
+    <code>workspace-write</code> sandbox the offline file-write fallback is an automatic skip too.
+    Both are exactly the graceful degradation the skill is designed for.</p>
+
+    <h3>4. Contract, driving skills, version, and the rebuild</h3>
+    <ul>
+      <li>The contract files <code>CLAUDE.md</code> and <code>AGENTS.md</code> (kept body-identical
+      from line 4, each with its own title/pointer header) had their review sentence extended to
+      "…consolidates the phase's durable-doc versions, <strong>and — on a pass — produces the phase
+      explainer via the knowledge plugin's explain skill</strong>."</li>
+      <li>The driving-skill review paragraphs (<code>do-whole-phase</code>,
+      <code>do-next-slice</code> + its mirror) were updated the same way.</li>
+      <li><code>installer/main.py</code> bumped <code>WORKSPACE_VERSION</code> 15 &rarr; 16, with a
+      new top <code>## v16</code> <code>CHANGELOG.md</code> entry (historical entries never
+      patched).</li>
+      <li><code>python3 installer/build.py</code> regenerated the single-file
+      <code>bootstrap_agentic_workspace.sh</code>, staged in the <em>same</em> commit;
+      <code>build.py --check</code> confirms the artifact matches source.</li>
+    </ul>
+
+    <div class="callout"><strong>Dogfooding.</strong> The <code>REVIEW</code> slice for P8 ran on the
+    new machinery it had just landed. It validated all slices, consolidated two doc versions
+    (<code>operations v0016</code>, <code>decisions v0022</code>), and then executed the auto-explain
+    step for the first time in anger — producing the very page you are reading.</div>
+  </section>
+
+  <section id="best-practices">
+    <h2>Best practices &amp; next steps</h2>
+
+    <p>P8 is, at heart, a tiny <strong>docs-as-code + CI automation</strong> design, expressed in an
+    agent workflow rather than a YAML pipeline. It is worth measuring against how the wider industry
+    handles the same problems.</p>
+
+    <h3>Where P8 aligns with prevailing practice</h3>
+    <ul>
+      <li><strong>Documentation is versioned and reviewed like code.</strong> The whole workspace
+      treats durable docs as version-controlled artifacts consolidated at a review gate — exactly the
+      docs-as-code creed that "everything lives in your Git repository… apply the same review standards
+      to documentation as code changes" (<a href="https://buildwithfern.com/post/docs-as-code">Fern,
+      "Docs-as-code"</a> — buildwithfern.com). P8 extends this to a <em>generated</em> artifact
+      produced at merge/review time.</li>
+      <li><strong>Generate documentation at the merge/review boundary.</strong> A common industry
+      pattern is that when a change lands, CI regenerates docs and drafts changelog/release material
+      from the change itself (<a href="https://doc.holiday/blog/update-documentation-automatically-when-pr-merges">Doc
+      Holiday, "Update Documentation Automatically When a PR Merges"</a> — doc.holiday). P8's
+      pass-gated explainer, built in change mode from the phase's real diff, sits squarely in this
+      family.</li>
+      <li><strong>The optional step is best-effort, not a gate.</strong> P8's verdict-neutral rule is
+      textbook <em>continue-on-error</em>: an attribute that lets "task execution proceed even when a
+      specific task encounters an error… useful when a task failure is undesirable but not fatal to
+      the release" (<a href="https://praveenkumarsreeram.com/2022/04/20/azure-devops-tips-and-tricks-4-how-to-use-continueonerror-to-continue-when-the-task-is-failing/">Praveen
+      Kumar, "How to use ContinueOnError"</a> — praveenkumarsreeram.com). The explainer is precisely a
+      non-critical step that must never block the review.</li>
+      <li><strong>Graceful degradation as a first-class design.</strong> Reducing a non-essential
+      feature to preserve the core service during partial failure is the definition of graceful
+      degradation (<a href="https://sreschool.com/blog/graceful-degradation/">SRE School, "What is
+      Graceful degradation?"</a> — sreschool.com). P8's ordered skill detection, KB probe, and
+      offline fallback are a small ladder of exactly such reductions.</li>
+    </ul>
+
+    <h3>Where P8 deliberately diverges (and why that is legitimate here)</h3>
+    <ul>
+      <li><strong>Automation as a finished publish, not a supervised first draft.</strong> Industry
+      guidance stresses that generated docs should be "a first draft that gets refined, not a final
+      publish that runs unsupervised," with a human editing before publication
+      (<a href="https://doc.holiday/blog/update-documentation-automatically-when-pr-merges">Doc
+      Holiday</a> — doc.holiday). P8 files the explainer straight into the KB with no human gate. That
+      is acceptable because the artifact is a <em>teaching explainer in a personal knowledge base</em>,
+      not customer-facing product documentation — the load-bearing docs still go through the reviewed
+      consolidation step; the explainer is downstream of it.</li>
+      <li><strong>A carve-out in a bright-line safety rule.</strong> Most pipelines never let a
+      non-privileged step commit at all. P8 opens a keyhole exception (KB repo only, offline only, no
+      push). The divergence is justified by scoping it to a <em>different git root</em>, so the
+      workspace's own commit-ownership invariant is untouched.</li>
+    </ul>
+
+    <h3>Two to four concrete next steps</h3>
+    <ol>
+      <li><strong>Add a lightweight integration smoke for the detection ladder.</strong> A tiny test
+      that stubs the three skill locations and asserts first-hit-wins + the graceful-skip line would
+      lock in the behavior the way <code>retrofit_smoke.sh</code> locks in installer invariants —
+      matching the docs-as-code advice to "run automated tests" as part of the pipeline
+      (<a href="https://buildwithfern.com/post/docs-as-code">Fern</a> — buildwithfern.com).</li>
+      <li><strong>Record the explain outcome in phase state, not just prose.</strong> Today the
+      <code>explain:</code> line lives in <code>result.md</code>. Capturing it as a structured field
+      (saved-url / skip-reason) would let the operator later see which phases have explainers and
+      re-run the misses — the observability half of continue-on-error, which recommends surfacing the
+      failure for "manual review" rather than only swallowing it.</li>
+      <li><strong>Offer a batch back-fill.</strong> Phases reviewed before v16 have no explainer; a
+      one-shot command to auto-explain a range of past phases would let an adopter who installs the KB
+      later catch up, without re-reviewing.</li>
+    </ol>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> After P8, what does a passing phase review do?</p>
+      <button class="opt" data-correct="false">Only validate all slices together</button>
+      <button class="opt" data-correct="false">Validate and consolidate docs</button>
+      <button class="opt" data-correct="true">Validate, consolidate docs, and produce a phase explainer</button>
+      <button class="opt" data-correct="false">Commit the phase and archive it</button>
+      <p class="why" hidden>The review grew from <em>validate + consolidate docs</em> to
+      <em>validate + consolidate docs + explain</em>. Committing/archiving remain the orchestrator's
+      job, not the review executor's.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> The auto-explain step fails because the KB server is down. What happens
+      to the <code>review_verdict</code>?</p>
+      <button class="opt" data-correct="true">Nothing — the verdict is unaffected; the outcome is just reported</button>
+      <button class="opt" data-correct="false">The review is downgraded to changes_requested</button>
+      <button class="opt" data-correct="false">The review becomes blocked until the KB is back</button>
+      <button class="opt" data-correct="false">The phase re-runs from the DECOMP slice</button>
+      <p class="why" hidden>Auto-explain is best-effort and verdict-neutral — like a
+      continue-on-error CI step, its failure is reported (e.g. <code>explain: skipped-offline</code>)
+      but never changes the verdict.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> Why does the review checklist "locate and follow" the installed explain
+      skill instead of embedding its steps?</p>
+      <button class="opt" data-correct="false">To make the review run faster</button>
+      <button class="opt" data-correct="true">So the plugin stays the single source of truth and the machinery can't drift from it</button>
+      <button class="opt" data-correct="false">Because the executor cannot read Markdown files</button>
+      <button class="opt" data-correct="false">To avoid needing web-research tools</button>
+      <p class="why" hidden>The explain skill lives in a separate, independently-evolving repo. Copying
+      its ~500 lines into the checklist would silently drift; referencing it keeps one source of
+      truth.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> P8 added a narrow exception to the executor's "never commit" rule. What
+      does it permit?</p>
+      <button class="opt" data-correct="false">Committing the phase's code changes in this workspace</button>
+      <button class="opt" data-correct="false">Pushing the explainer to a remote KB</button>
+      <button class="opt" data-correct="true">Committing the explainer only in the separate KB repo, only on the offline fallback, never a push</button>
+      <button class="opt" data-correct="false">Committing anything the executor wants, as long as it's a review slice</button>
+      <p class="why" hidden>The carve-out is deliberately tiny: KB repo only (a different git root),
+      offline fallback only, no push, and never in this workspace's repo — so the workspace's
+      commit-ownership invariant is untouched.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Why were <code>WebSearch</code>/<code>WebFetch</code> added only to the
+      Claude <code>slice-executor-high</code>, and why was that safe?</p>
+      <button class="opt" data-correct="false">Because mid/low executors run more reviews and needed them less</button>
+      <button class="opt" data-correct="true">Reviews always run at the high tier; the tools are read-only, and sync-agents only rewrites model/effort so the tools line survives sync</button>
+      <button class="opt" data-correct="false">Because Codex requires web tools in every agent</button>
+      <button class="opt" data-correct="false">To let the executor commit research results to the KB</button>
+      <p class="why" hidden>Reviews always run on <code>slice-executor-high</code>, so only it needs
+      the tools for the cited best-practices section. They are read-only (no mutation/commit risk),
+      and <code>sync-agents</code> only patches <code>model:</code>/<code>effort:</code>, so the
+      hand-added <code>tools:</code> line survives sync and doesn't trip the drift check.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
