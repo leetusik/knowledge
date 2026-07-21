@@ -9,6 +9,7 @@ scalar, so colons/quotes/em-dashes are safe — while parsing uses yaml.safe_loa
 from __future__ import annotations
 
 import datetime
+import html.parser
 import json
 import re
 from pathlib import Path, PurePosixPath
@@ -84,8 +85,12 @@ def validate_date(date: str) -> str:
     return date
 
 
-def rel_path(project: str, date: str, slug: str) -> str:
-    return f"{project}/{date}-{slug}.md"
+def rel_path(project: str, date: str, slug: str, fmt: str = "md") -> str:
+    """The docs/-convention rel_path. ``fmt`` picks the extension: ``.html`` for
+    an HTML explainer, ``.md`` otherwise. The default keeps every existing caller
+    (markdown docs) byte-identical."""
+    ext = "html" if fmt == "html" else "md"
+    return f"{project}/{date}-{slug}.{ext}"
 
 
 def validate_related(related) -> list[str]:
@@ -112,8 +117,10 @@ def validate_related(related) -> list[str]:
             raise ConventionError(
                 f"related entry must have at least 2 path parts: {r!r}"
             )
-        if not r.endswith(".md"):
-            raise ConventionError(f"related entry must end with .md: {r!r}")
+        if not (r.endswith(".md") or r.endswith(".html")):
+            raise ConventionError(
+                f"related entry must end with .md or .html: {r!r}"
+            )
         if r not in seen:
             seen.add(r)
             out.append(r)
@@ -140,6 +147,37 @@ def sanitize_source_repo(value: Optional[str]) -> str:
 # --- frontmatter ----------------------------------------------------------
 
 
+def _frontmatter_inner_lines(
+    *,
+    title: str,
+    date: str,
+    tags: list[str],
+    project: str,
+    source_repo: str,
+    related: Optional[list[str]] = None,
+) -> list[str]:
+    """The YAML field lines shared by the '---' fenced (md) and '<!--kb' comment
+    (html) frontmatter serializers — everything BETWEEN the fences. Factored out so
+    both wrappers emit byte-identical field content; only the delimiters differ.
+
+    ``related`` (optional list of rel_paths) is emitted between ``tags`` and
+    ``source`` only when non-empty — ``None``/``[]`` emits nothing.
+    """
+    lines = [f"title: {json.dumps(title, ensure_ascii=False)}"]
+    lines.append(f"date: {date}")
+    lines.append("tags:")
+    for t in tags:
+        lines.append(f"  - {t}")
+    if related:
+        lines.append("related:")
+        for r in related:
+            lines.append(f"  - {r}")
+    lines.append("source:")
+    lines.append(f"  project: {project}")
+    lines.append(f"  repo: {source_repo}")
+    return lines
+
+
 def serialize_frontmatter(
     *,
     title: str,
@@ -158,21 +196,43 @@ def serialize_frontmatter(
     Ends with the closing '---\\n'; compose a full document as
     serialize_frontmatter(...) + "\\n" + body.
     """
-    lines = ["---"]
-    lines.append(f"title: {json.dumps(title, ensure_ascii=False)}")
-    lines.append(f"date: {date}")
-    lines.append("tags:")
-    for t in tags:
-        lines.append(f"  - {t}")
-    if related:
-        lines.append("related:")
-        for r in related:
-            lines.append(f"  - {r}")
-    lines.append("source:")
-    lines.append(f"  project: {project}")
-    lines.append(f"  repo: {source_repo}")
-    lines.append("---")
-    return "\n".join(lines) + "\n"
+    inner = _frontmatter_inner_lines(
+        title=title,
+        date=date,
+        tags=tags,
+        project=project,
+        source_repo=source_repo,
+        related=related,
+    )
+    return "---\n" + "\n".join(inner) + "\n---\n"
+
+
+def serialize_html_frontmatter(
+    *,
+    title: str,
+    date: str,
+    tags: list[str],
+    project: str,
+    source_repo: str,
+    related: Optional[list[str]] = None,
+) -> str:
+    """The HTML-comment frontmatter block for an explainer ``.html`` doc.
+
+    Wraps the SAME inner YAML field lines as ``serialize_frontmatter`` in a leading
+    ``<!--kb … -->`` HTML comment so the browser ignores the metadata while
+    ``reindex`` can still re-derive title/date/tags/related/source from the file
+    alone (disk canonical). Ends with '-->\\n'; compose a full document as
+    serialize_html_frontmatter(...) + "\\n" + html_body.
+    """
+    inner = _frontmatter_inner_lines(
+        title=title,
+        date=date,
+        tags=tags,
+        project=project,
+        source_repo=source_repo,
+        related=related,
+    )
+    return "<!--kb\n" + "\n".join(inner) + "\n-->\n"
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -200,6 +260,100 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(meta, dict):
         raise FrontmatterError("frontmatter is not a mapping")
     return meta, body
+
+
+def parse_html_frontmatter(text: str) -> tuple[dict, str]:
+    """Split a leading ``<!--kb … -->`` comment-frontmatter block off an HTML doc.
+
+    Parallel to ``parse_frontmatter``: the file must start with a bare ``<!--kb``
+    line, the header ends at the first bare ``-->`` line, and the inner lines are
+    ``yaml.safe_load``ed. Returns (meta, body) where ``body`` is everything after
+    the closing ``-->`` (the raw ``<!DOCTYPE html>…`` document — the comment is
+    excluded, so the served body never has a comment before the doctype). Raises
+    ``FrontmatterError`` for a file without a valid leading comment-frontmatter — the
+    caller maps that to a reindex skip reason, exactly like the md path.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "<!--kb":
+        raise FrontmatterError("missing opening '<!--kb' comment-frontmatter")
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "-->":
+            end = i
+            break
+    if end is None:
+        raise FrontmatterError("missing closing '-->' for comment-frontmatter")
+    header = "\n".join(lines[1:end])
+    body = "\n".join(lines[end + 1:])
+    try:
+        meta = yaml.safe_load(header)
+    except yaml.YAMLError as exc:  # pragma: no cover - defensive
+        raise FrontmatterError(f"invalid YAML comment-frontmatter: {exc}")
+    if not isinstance(meta, dict):
+        raise FrontmatterError("comment-frontmatter is not a mapping")
+    return meta, body
+
+
+# --- HTML text extraction (for the DB `markdown` column) ------------------
+
+# Tags whose *content* is never readable text (scripts, styling, inert
+# templates). HTMLParser puts script/style into CDATA mode and hands their body to
+# handle_data, so the skip guard is what keeps quiz JS / CSS out of the index.
+_SKIP_TAGS = {"script", "style", "template", "noscript"}
+# Block-level tags: a boundary newline before/after so adjacent blocks don't glue
+# their text together (coarse — good enough for FTS/snippets/embeddings).
+_BLOCK_TAGS = {
+    "p", "div", "section", "article", "header", "footer", "main", "aside", "nav",
+    "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "table", "tr", "td",
+    "th", "blockquote", "pre", "figure", "figcaption", "br", "hr",
+}
+
+
+class _TextExtractor(html.parser.HTMLParser):
+    """Collect readable text nodes, dropping script/style/template/noscript."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._skip = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag in _SKIP_TAGS:
+            self._skip += 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _SKIP_TAGS:
+            if self._skip > 0:
+                self._skip -= 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._skip == 0:
+            self.parts.append(data)
+
+
+_WS_RUN_RE = re.compile(r"[ \t]+")
+
+
+def extract_html_text(html_text: str) -> str:
+    """Server-side plain-text extraction from an HTML explainer body (stdlib only).
+
+    Feeds the HTML through ``html.parser.HTMLParser``, dropping the content of
+    ``script``/``style``/``template``/``noscript`` (so quiz JS and CSS never reach
+    the index) and inserting coarse newlines at block boundaries. The result is
+    whitespace-normalized (space runs collapsed, per-line trimmed, blank lines
+    dropped) and is what fills the DB ``markdown`` column — FTS5 / ``snippet()`` /
+    embeddings then work unchanged over HTML docs.
+    """
+    parser = _TextExtractor()
+    parser.feed(html_text)
+    parser.close()
+    raw = "".join(parser.parts)
+    lines = (_WS_RUN_RE.sub(" ", ln).strip() for ln in raw.split("\n"))
+    return "\n".join(ln for ln in lines if ln)
 
 
 # --- Recent-marker insertion ---------------------------------------------
@@ -268,15 +422,20 @@ def write_document_file(
     source_repo: Optional[str],
     body: str,
     related: Optional[list[str]] = None,
+    fmt: str = "md",
 ) -> str:
-    """Write ``docs/<rel_path>`` as ``serialize_frontmatter(...) + "\\n" + body``.
+    """Write ``docs/<rel_path>`` as ``<frontmatter> + "\\n" + body``.
 
-    Creates parent dirs. Returns the body **as the DB stores it** (identical to
-    what reindex derives from the same file: starts at the H1, no trailing
-    newline) so the on-disk file and the DB row can't drift on a later reindex.
+    ``fmt`` picks the frontmatter flavor: ``md`` writes the ``---`` fenced YAML
+    block (byte-identical to before); ``html`` writes the leading ``<!--kb … -->``
+    HTML-comment block so the browser ignores it. Creates parent dirs. Returns the
+    body **as the DB stores it** — reindex derives the identical body from the same
+    file with the matching parser, so on-disk and DB can't drift on a rebuild. For
+    ``html`` that returned body is the raw HTML (``raw_html``); the caller runs it
+    through ``extract_html_text`` for the DB ``markdown`` column (the body rule).
     """
-    content = (
-        serialize_frontmatter(
+    if fmt == "html":
+        header = serialize_html_frontmatter(
             title=title,
             date=date,
             tags=tags,
@@ -284,14 +443,24 @@ def write_document_file(
             source_repo=source_repo or "",
             related=related,
         )
-        + "\n"
-        + _normalize_body(body)
-    )
+    else:
+        header = serialize_frontmatter(
+            title=title,
+            date=date,
+            tags=tags,
+            project=project,
+            source_repo=source_repo or "",
+            related=related,
+        )
+    content = header + "\n" + _normalize_body(body)
     target = Path(docs_root) / rel_path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
-    # Reuse the reindex parse so the stored markdown is byte-identical to a rebuild.
-    _meta, parsed_body = parse_frontmatter(content)
+    # Reuse the reindex parse so the stored body is byte-identical to a rebuild.
+    if fmt == "html":
+        _meta, parsed_body = parse_html_frontmatter(content)
+    else:
+        _meta, parsed_body = parse_frontmatter(content)
     return parsed_body.lstrip("\n")
 
 

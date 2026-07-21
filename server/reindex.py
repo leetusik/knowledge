@@ -22,8 +22,8 @@ from server import config, db, documents, embeddings
 # noise. See phase.md "Discovered consideration".
 RESERVED_DIRS = {"current", "versions"}
 
-# '<YYYY-MM-DD>-<slug>.md'
-_FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
+# '<YYYY-MM-DD>-<slug>.{md,html}' — group(1) date, group(2) slug, group(3) ext.
+_FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.(md|html)$")
 
 
 def _index_file(
@@ -38,8 +38,9 @@ def _index_file(
     identity from the path alone (hard coupling #1)."""
     m = _FILENAME_RE.match(path.name)
     if not m:
-        return False, "filename not <YYYY-MM-DD>-<slug>.md"
+        return False, "filename not <YYYY-MM-DD>-<slug>.{md,html}"
     date_from_name, slug_from_name = m.group(1), m.group(2)
+    is_html = m.group(3) == "html"
     project = Path(rel).parts[0]
 
     try:
@@ -48,7 +49,10 @@ def _index_file(
         return False, f"unreadable: {exc}"
 
     try:
-        meta, body = documents.parse_frontmatter(text)
+        if is_html:
+            meta, body = documents.parse_html_frontmatter(text)
+        else:
+            meta, body = documents.parse_frontmatter(text)
     except documents.FrontmatterError as exc:
         return False, f"missing/invalid frontmatter: {exc}"
 
@@ -76,6 +80,20 @@ def _index_file(
     if isinstance(source, dict) and source.get("repo") is not None:
         source_repo = documents.sanitize_source_repo(str(source.get("repo"))) or None
 
+    # Body rule (must match the write path so a fresh-DB rebuild reproduces the same
+    # rows): the DB `markdown` column always holds readable text — the raw markdown
+    # for an md doc, extracted plain text for an html doc — while `raw_html` carries
+    # the raw HTML only for html docs.
+    body_stripped = body.lstrip("\n")
+    if is_html:
+        markdown_val = documents.extract_html_text(body_stripped)
+        raw_html_val: Optional[str] = body_stripped
+        fmt = "html"
+    else:
+        markdown_val = body_stripped
+        raw_html_val = None
+        fmt = "md"
+
     try:
         db.upsert_document(
             conn,
@@ -86,8 +104,10 @@ def _index_file(
             tags=tags,
             source_repo=source_repo,
             rel_path=rel,
-            markdown=body.lstrip("\n"),
+            markdown=markdown_val,
             related=related,
+            format=fmt,
+            raw_html=raw_html_val,
             tenant_id=tenant_id,
         )
     except sqlite3.Error as exc:
@@ -184,8 +204,8 @@ def reindex_path(
         raise ValueError("rel_path must have at least 2 parts (project/file)")
     if parts[0] in RESERVED_DIRS:
         raise ValueError(f"rel_path top dir cannot be a reserved dir: {parts[0]}")
-    if not rel_path.endswith(".md"):
-        raise ValueError("rel_path must end with .md")
+    if not (rel_path.endswith(".md") or rel_path.endswith(".html")):
+        raise ValueError("rel_path must end with .md or .html")
 
     # Index or delete.
     action: str
@@ -227,7 +247,7 @@ def _walk_root(
     disk_by_tenant: dict[str, set[str]],
 ) -> tuple[int, list[dict]]:
     """Walk one content root (``docs/`` or ``tenants/<uuid>/``), upserting each
-    valid ``<subdir>/**/*.md`` explainer under ``tenant_id`` and recording its
+    valid ``<subdir>/**/*.{md,html}`` explainer under ``tenant_id`` and recording its
     rel_path in ``disk_by_tenant[tenant_id]`` for the tenant-scoped vanished-row
     cleanup. Reserved top-level dirs and top-level files never enter the walk.
     Returns (indexed, skipped)."""
@@ -241,7 +261,9 @@ def _walk_root(
             continue  # top-level files (index.md, tags.md, README.md, ...) are never walked
         if sub.name in RESERVED_DIRS:
             continue  # reserved internals: silently excluded
-        for path in sorted(sub.rglob("*.md")):
+        # Both doc formats, merged into one deterministic (sorted) order so a rebuild
+        # is stable regardless of extension.
+        for path in sorted([*sub.rglob("*.md"), *sub.rglob("*.html")]):
             if not path.is_file():
                 continue
             rel = path.relative_to(root).as_posix()

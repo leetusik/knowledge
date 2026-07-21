@@ -29,9 +29,11 @@ CREATE TABLE IF NOT EXISTS documents (
   tags        TEXT NOT NULL DEFAULT '[]',   -- JSON array
   tags_text   TEXT NOT NULL DEFAULT '',     -- space-joined tags, for FTS
   source_repo TEXT,
-  rel_path    TEXT NOT NULL,                -- '<project>/<date>-<slug>.md' relative to the tenant's content root
-  markdown    TEXT NOT NULL,                -- body WITHOUT frontmatter
+  rel_path    TEXT NOT NULL,                -- '<project>/<date>-<slug>.{md,html}' relative to the tenant's content root
+  markdown    TEXT NOT NULL,                -- readable text body WITHOUT frontmatter (extracted plain text for html docs)
   related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
+  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' (the on-disk doc format)
+  raw_html    TEXT,                          -- raw HTML body for format='html' (the raw viewer route source); NULL for md
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (tenant_id, rel_path)
@@ -100,6 +102,11 @@ def init_db(conn: sqlite3.Connection) -> None:
       it. Not added to ``documents_fts`` — rel_paths are not search terms, and the
       FTS trigger trio names its columns explicitly, so it is unaffected by an
       extra base-table column.
+    * **Pre-HTML ``format``/``raw_html`` back-fill (P16).** Same idempotent
+      ``ALTER TABLE ... ADD COLUMN`` pattern for the two disposable HTML-doc columns
+      (``format`` defaults ``'md'`` so every legacy row stays a markdown doc;
+      ``raw_html`` is nullable). Neither is in ``documents_fts`` — the index covers
+      the extracted text via the unchanged ``markdown`` column.
     """
     conn.executescript(_SCHEMA)
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
@@ -114,6 +121,10 @@ def init_db(conn: sqlite3.Connection) -> None:
         cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
     if "related" not in cols:
         conn.execute("ALTER TABLE documents ADD COLUMN related TEXT NOT NULL DEFAULT '[]'")
+    if "format" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN format TEXT NOT NULL DEFAULT 'md'")
+    if "raw_html" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN raw_html TEXT")
     conn.commit()
 
 
@@ -156,17 +167,23 @@ def upsert_document(
     rel_path: str,
     markdown: str,
     related: Optional[list[str]] = None,
+    format: str = "md",
+    raw_html: Optional[str] = None,
     tenant_id: str = "",
     now: Optional[str] = None,
 ) -> int:
     """Insert or update by ``(tenant_id, rel_path)``. Preserves created_at, refreshes updated_at.
 
     ``related`` (optional list of rel_paths, forward links only) is stored as
-    JSON; ``None`` -> ``[]``. ``tenant_id`` is the owning tenant's UUID string
-    (``''`` = legacy / tenant-#1 sentinel); it is part of the conflict target so
-    the same ``rel_path`` can exist once per tenant, and is omitted from the
-    UPDATE set (like ``created_at``) since it never changes for a given row.
-    Returns the row id.
+    JSON; ``None`` -> ``[]``. ``format`` (``'md'`` default | ``'html'``) records the
+    on-disk doc format and ``raw_html`` (nullable, populated only for HTML docs)
+    holds the raw HTML the viewer's raw route serves — both disposable, re-derived
+    by reindex. ``tenant_id`` is the owning tenant's UUID string (``''`` = legacy /
+    tenant-#1 sentinel); it is part of the conflict target so the same ``rel_path``
+    can exist once per tenant, and is omitted from the UPDATE set (like
+    ``created_at``) since it never changes for a given row. Returns the row id.
+    (``format`` shadows the builtin here on purpose — a keyword-only param — and the
+    builtin is never called in this scope.)
     """
     ts = now or _now()
     tags = list(tags)
@@ -177,8 +194,8 @@ def upsert_document(
         """
         INSERT INTO documents
           (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
-           markdown, related, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, related, format, raw_html, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -189,10 +206,12 @@ def upsert_document(
           source_repo = excluded.source_repo,
           markdown    = excluded.markdown,
           related     = excluded.related,
+          format      = excluded.format,
+          raw_html    = excluded.raw_html,
           updated_at  = excluded.updated_at
         """,
         (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
-         markdown, related_json, ts, ts),
+         markdown, related_json, format, raw_html, ts, ts),
     )
     conn.commit()
     row = conn.execute(
