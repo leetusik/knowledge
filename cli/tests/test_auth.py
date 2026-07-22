@@ -206,18 +206,23 @@ def test_init_reuses_the_key_of_a_config_that_predates_api_project(home, api):
     assert cfg(home)["api"]["project"] == "default"  # and backfilled
 
 
-def test_init_remints_when_the_configured_project_changes(home, api):
-    """The reuse gate keys on the config's recorded project (P18-preserved shape).
+def test_init_project_change_reuses_the_org_key(home, api, capsys):
+    """A different --project reuses the org key, never re-mints (D16).
 
-    Org keys are not project-bound, but `init` still re-mints when the config asks
-    for a different project than the one recorded in `api.project` — the reuse gate
-    kept its structure, so a second key is minted and `api.project` is re-recorded.
+    Org keys are project-agnostic (`project_id NULL`, P18), so the reuse gate no
+    longer keys on the recorded project: `init --project other` reuses the existing
+    same-service key instead of minting a redundant live credential, re-records
+    api.project as the requested name, and warns once that a pre-P18 key may be
+    project-bound.
     """
 
     _run_pw(("init", "--email", "ada@example.com"), PW)
     _run_pw(("init", "--email", "ada@example.com", "--project", "other"), PW)
-    assert api.minted == 2
-    assert cfg(home)["api"]["project"] == "other"
+    assert api.minted == 1  # reused across projects, not re-minted (was 2 pre-D16)
+    assert cfg(home)["api"]["project"] == "other"  # the request is re-recorded
+    captured = capsys.readouterr()
+    assert "reusing the one in your config" in captured.out
+    assert "project-agnostic" in captured.err  # the one-time cross-project note
 
 
 # --- logout must not take the vk_ down with it ---------------------------------

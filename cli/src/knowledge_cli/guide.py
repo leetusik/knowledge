@@ -57,7 +57,9 @@ never as JSON. Branch on the **exit code**; parse stdout only after a zero exit.
 This puts a `knowledge` executable on PATH. Requires Python 3.12+ and `uv`. The only
 runtime dependency is `httpx`; there is no PyPI, npm, or brew package — the git URL is
 the distribution channel. Re-run the same command with `--reinstall` to upgrade
-(`--force` reuses the cached wheel and does not rebuild).
+(`--force` reuses the cached wheel and does not rebuild). A human can instead run the
+one-liner `curl -fsSL https://knowledge.hi2vi.com/install.sh | bash`, which bootstraps
+`uv` and then runs exactly this command.
 
 ## 2. Onboard — one command
 

@@ -481,36 +481,42 @@ def cmd_init(args: argparse.Namespace) -> int:
 
         # Keep a key we already have: each mint is a live credential, and piling
         # them up on every re-run is a security smell, not just noise. The minted
-        # key is now **org-level** (P18) — one `vk_` authorizes every project in the
-        # org — so it is not bound to a project server-side. `api.project` still
-        # records which project this machine's key was minted for, and the reuse
-        # gate keeps its shape: only reuse a key minted by *this* service and
-        # recorded against *this* project, re-minting when the config asks for a
-        # different one. One from another base is likewise useless here — the server
+        # key is **org-level** (P18) — one `vk_` authorizes every project in the
+        # org — so it is not bound to a project server-side. Reusing it across
+        # projects is therefore the *point* of an org key, not a bug (D16): the gate
+        # reuses any key minted by *this* service, whatever `--project` is asked for,
+        # and re-mints only on `--new-key`. `api.project` still records which project
+        # this machine last configured (config.save re-records it every run), but it
+        # no longer gates reuse. A key from another base is useless here — the server
         # keeps only a hash, so a key can never be checked, only trusted.
         api = _section(_stored(), "api")
         same_service = str(api.get("base_url") or "").rstrip("/") in ("", base_url)
-        # ABSENT is "unknown", never "mismatched". Every config written before this
-        # key existed lacks it, so a naive `!=` would mint a redundant live
-        # credential for every existing user on their first upgraded `init`.
+        # D16: the recorded project no longer gates reuse — a different `--project`
+        # reuses the org key instead of minting a redundant live credential.
+        # `configured_project` now only shapes the one-time note below (ABSENT is
+        # still "unknown", never "mismatched", so a same-default re-run stays quiet).
         configured_project = stored_project()
-        same_project = not configured_project or configured_project == project_name
-        if api.get("token") and same_service and same_project and not args.new_key:
+        if api.get("token") and same_service and not args.new_key:
             key = str(api["token"])
             print(
                 f"key: reusing the one in your config ({config.redact_token(key)}) "
                 "— pass --new-key to mint a fresh one"
             )
-            if not configured_project and project_name != DEFAULT_PROJECT:
-                # The one case the "absent = unknown" rule cannot get right: an
-                # older config's key is bound to whichever project minted it, and
-                # here that is probably not the one being asked for. Backfilling
-                # api.project below records the claim either way, so say so once.
+            # A key minted before P18 may still be bound to its origin project
+            # server-side, and we cannot tell a legacy key from a new one (the
+            # server keeps only a hash). Say so once when the requested project
+            # differs from the recorded one — or, for a pre-api.project config, when
+            # the request is non-default (absent = unknown; default→default is silent).
+            project_may_differ = (
+                configured_project and configured_project != project_name
+            ) or (not configured_project and project_name != DEFAULT_PROJECT)
+            if project_may_differ:
                 note(
-                    f"your config predates api.project, so the key it carries may be "
-                    f"bound to a project other than {project_name!r} — writes still "
-                    "land under that name, but usage is metered against the key's own "
-                    "project; pass --new-key to mint one bound to this project"
+                    f"reusing your org key for project {project_name!r}: org keys are "
+                    "project-agnostic (P18), but a key minted before P18 may be bound "
+                    f"to its origin project server-side — writes still land under "
+                    f"{project_name!r}, usage is metered against the key's own project; "
+                    "pass --new-key to mint one bound to this project"
                 )
         else:
             # Show-once: this plaintext exists nowhere else, ever. It goes into the
@@ -557,6 +563,10 @@ def cmd_init(args: argparse.Namespace) -> int:
             f"your config still has kb_root={resolved.kb_root}, so /knowledge:explain "
             "may write locally if the API is unreachable; remove it to go remote-only"
         )
+    # CLI and web share one accounts plane (POST /auth/signup · /auth/login), so
+    # the same email + password that just onboarded this machine also logs into the
+    # web UI. base_url-aware because a self-hosted service has its own origin.
+    print(f"web login: {base_url}/login (same email + password)")
     print("done — /knowledge:explain now writes to this knowledge base")
     return 0
 

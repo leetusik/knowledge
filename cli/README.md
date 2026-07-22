@@ -8,12 +8,20 @@ the same config the plugin reads, so the two share one hosted knowledge base.
 
 ## Install
 
+The quick path — one command that installs [`uv`](https://docs.astral.sh/uv/) if
+you don't have it, then the CLI:
+
+    curl -fsSL https://knowledge.hi2vi.com/install.sh | bash
+
+Or install it directly with `uv` (the canonical, manual channel — what the
+one-liner wraps):
+
     uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
 
-This puts a `knowledge` executable on PATH. Requires Python 3.12+ and
-[`uv`](https://docs.astral.sh/uv/). There is no PyPI, npm, or brew package — the
-git URL is the distribution channel. Upgrade with `--reinstall` (`--force` reuses
-the cached wheel and does not rebuild).
+Either way this puts a `knowledge` executable on PATH. Requires Python 3.12+ and
+`uv`. There is no PyPI, npm, or brew package — the git URL is the distribution
+channel. Upgrade by re-running either command; the `uv` form takes `--reinstall`
+(`--force` reuses the cached wheel and does not rebuild).
 
 ## A one-command tour
 
