@@ -1,10 +1,10 @@
 ---
 doc_id: decisions
-version: v0017
-created_at: 2026-07-22T11:24:32+09:00
-source: P18.REVIEW
-summary: P18 no tenants->orgs rename; org-level keys additive; get-or-create + UNIQUE(tenant_id,name); CLI DEFAULT_PROJECT retargeted to default; no design round for the org-keys surface
-previous: v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0
+version: v0018
+created_at: 2026-07-22T18:32:15+09:00
+source: P20.REVIEW
+summary: P20 ADRs: curl installer over PyPI (D-P13-1 stands), D16 org-key reuse across projects, depict-the-prompt password honesty (no generator), skill-publishing full-file parity gate (third web copy), D10 resolved
+previous: v0017_p18_no_tenants-_orgs_rename_org-level_keys_additive_get-or-create_unique_tenant_id_name_cli_default_project_retargeted_to_default_no_design_round_for_the_org-keys_surface
 ---
 
 # Decisions
@@ -902,6 +902,51 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - Decision: Reuse the **existing P12 keys-table + mint-modal + revoke components at org scope** — the *same* visual language at a different scope, **not** a new design surface (design stance #6) → **no Claude Design round**. Placement is a **full-width dashboard panel** (not a dedicated org-settings route → no rail/route change). Workspace→Org is **label-only** (the `workspaceLabel` code identifier and CSS classes are kept; only string values move). `KbCredential.project_id` was widened to `string | null` (one shared credential shape, honest to the NULL-safe serializer) rather than a separate org-credential type; the org mint/revoke actions were appended to the existing `dashboard/actions.ts` with page-local client islands (the established P12 convention).
 - Source: `P18.S3` `result.md`; P18 `phase.md`.
 
+### Fix the broken hero install line with a live curl installer, not a PyPI publish (D-P20-1)
+
+- Date: 2026-07-22
+- Status: accepted (P20.S1)
+- Context: The hero's `uv tool install knowledge-cli` was live-broken — the package was never published to PyPI (D-P13-1: git-subdir distribution, "PyPI stays a later, separate call"). The operator hit the failure live and left the choice open ("make it work or fix the command").
+- Decision: Ship a **live curl installer** at `web/public/install.sh` (served at `/install.sh`, zero infra) that bootstraps `uv` if missing then runs the canonical `uv tool install --reinstall git+…#subdirectory=cli`; the hero line becomes `curl -fsSL https://knowledge.hi2vi.com/install.sh | bash`. **PyPI stays out of scope** — D-P13-1 is unchanged (still needs an operator-owned PyPI account). The raw `git+` line stays the canonical/manual fallback in `cli/README.md` + `guide.py`. Windows `install.ps1` is a POSIX-only deferral (**D20**).
+- Consequences: The installer delivers whatever is on GitHub main, so S1's CLI changes reach installer users only after the operator-gated push (S4); `--reinstall` makes re-runs idempotent + upgrade-safe.
+- Source: P20.S1 `result.md`; P20 `phase.md`.
+
+### Relax the CLI reuse-gate: reuse the org key across projects (D-P20-2, resolves D16)
+
+- Date: 2026-07-22
+- Status: accepted (P20.S1); resolves deferred **D16**
+- Context: `knowledge init --project other` re-minted a second org key on a recorded-project change, even though org keys are project-agnostic (`project_id NULL`, P18). P18 (D-P18) flagged this re-mint as a candidate follow-up (D16).
+- Decision: Drop `same_project` from the reuse condition (→ `if api.get("token") and same_service and not args.new_key`), so a recorded org key is **reused across projects**; still re-mint on `--new-key`, still gate on same-service. Preserve the "absent = unknown, never mismatched" invariant + the show-once property. A pre-P18 project-bound key fires a one-time note when the requested project differs.
+- Consequences: One org key now serves every project from the CLI (matching "one key, all repos"); resolves D16.
+- Source: P20.S1 `result.md`; P20 `phase.md`.
+
+### Password honesty = depict the prompt + a web-login line; no password generator (D-P20-3)
+
+- Date: 2026-07-22
+- Status: accepted (P20.S1)
+- Context: The hero never showed the password step, so a user couldn't tell how to log into the web UI (the operator suggested generating a random password). The flow already prompts via getpass; there is no `--password` flag by design.
+- Decision: **Depict the real prompt** in the hero and add one base_url-aware line to `knowledge init` success output — `web login: {base_url}/login (same email + password)` — making the shared accounts plane obvious. **No password generator, no signup-flow/backend change.**
+- Consequences: The web-login connection is now explicit from the terminal; no new credential surface.
+- Source: P20.S1 `result.md`; P20 `phase.md`.
+
+### Publish the explain skill as a served `/SKILL.md` under a third, full-file parity copy (D-P20-4)
+
+- Date: 2026-07-22
+- Status: accepted (P20.S3)
+- Context: The landing must offer the canonical explain skill copyable + downloadable. The skill is byte-parity-guarded across `plugin/` (canonical) and `.agents/` (body-only) by `scripts/skills_parity.py`; a landing copy must never fork.
+- Decision: Serve `web/public/SKILL.md` at `/SKILL.md` (standalone image + nginx catch-all, zero infra) as a **third** parity copy `WEB`, held to a **stricter full-file** byte match (frontmatter included — a straight publish, not the body-only derivation the `.agents/` copy uses); missing/mismatch FAILs in CI. Download = `<a download>`; **Copy fetches the served file** (never a pasted fork).
+- Consequences: The landing artifact can never drift from the canonical skill; `plugin-ci.yml` needs no change (it already runs the script).
+- Source: P20.S3 `result.md`; P20 `phase.md`.
+
+### Hero copy is a content fix (no design round); new landing sections go through design round 02 (D-P20-5)
+
+- Date: 2026-07-22
+- Status: accepted (P20.S2/S3)
+- Context: The hero fix changes designed-component *content*; the env-var quickstart + skill-on-landing are genuinely new landing sections.
+- Decision: Treat the hero terminal copy change as a **content/copy fix inside the already-designed hero** — no design round; note the departure in a code comment; `web/design/rounds/01-*` stays read-only. The two new sections went through the **design-cowork gate (round 02)**, landed AS-IS, then were implemented in a separate slice. **No token delta** (bronze `#c8a15e` stays a literal); **D10 resolved** (the two mid-feature ledes quoted verbatim from build-prompt §D10).
+- Consequences: Round 02 record kept read-only under `web/design/rounds/02-onboarding/`; deferred **D10** closed as done.
+- Source: P20.S2/S3 `result.md`; P20 `phase.md`.
+
 ## Superseded Decisions
 
 - The P2 "clean `sqlite-vec`/RRF seam, no embeddings this phase" framing is **consumed, not superseded**, by P4.S6: hybrid search is live via SQLite BLOB vectors + Python cosine, with the seam kept `sqlite-vec`-upgradable.
@@ -919,3 +964,4 @@ Use this doc as a lightweight ADR index: important choices, rejected alternative
 - **The P14 design round's decision #3 — "landing at `/`, app rebases to `/app/*`"** — is **superseded (its `/app` half only)** by the operator's P14 routing resolution: the landing takes `/`, but the authenticated app **stays at its current paths** (no `/app` rebase), because `/app` collided with the P13 CLI edge plane. This is a non-visual change — the landing's visual design is unchanged; only the CTA targets shift from `/app` to `/login`/`/signup`. The rest of the design (visual language, sections, tokens) landed AS-IS.
 - **The P9 "Track 1 self-hosted mkdocs live-serve at `/`" + fresh-on-write publishing regime** is **superseded (its `/`-serving half) by P14**: the Next `web/` app now serves the domain root, and the `knowledge-site` mkdocs service is removed from `compose.prod.yml` + the edge + the deploy health-gate. Track 1's content is not lost — it lives on as tenant #1's knowledge in the app + api. The P9 GitHub-Pages retirement itself is **unchanged** (Pages stays retired for this repo; the shipped plugin keeps Pages downstream); `/docs` is reserved for future product documentation, unclaimed by P14.
 - The **`/explain` §4 markdown house style** (the markdown-explainer output format used since the skill's inception) is **superseded** by P17.S1's always-HTML output: both modes now emit a single self-contained interactive HTML explainer, and no mode still writes markdown. The KB itself still holds markdown documents (P16 made HTML an *additional* first-class type, byte-for-byte preserving markdown docs); only the *skill's own output* changed format.
+- **D-P18's "the `init` reuse-gate keeps its structure verbatim, so `init --project other` re-mints"** consequence — flagged there as a candidate deferred follow-up (D16) — is **resolved** by D-P20-2: the reuse-gate now reuses the org key across projects (org keys are project-agnostic), so `init --project other` no longer re-mints. The rest of D-P18 (the `"default"` retarget, org-key mint on `init`, same-service gate, `--new-key` re-mint) is **unchanged**.

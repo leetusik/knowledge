@@ -474,3 +474,33 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
 - **Curl-installer mention in CLI docs** — whether `cli/README.md` / `guide.py INSTALL_COMMAND`
   should also surface the one-liner; the S1 executor decides at plan time (the `git+` form stays canonical).
 - **S3 exact shape** — deliberately deferred until the S2 design read-back; do not lock it now.
+
+## REVIEW — closing notes (verdict: `pass`)
+
+Phase reviewed whole (DECOMP + S1–S4) at P20.REVIEW; all validation green, all four intent threads
+delivered and **live-verified**, constraints held. Full detail in `slices/P20.REVIEW/result.md`.
+
+- **Validation (all slices together):** `skills_parity.py` PASS (third web copy held); `bash -n
+  install.sh` clean; `cli/.venv` pytest **40 passed**; web typecheck/lint/**test (66)**/build green
+  (`/` = Static); live re-probes green — `/healthz` 200, `/install.sh` + `/SKILL.md` 200 byte-identical,
+  landing carries the curl hero + `#agents`/`#skill` + `/SKILL.md` download, broken line gone;
+  `workflow.py validate` PASS.
+- **Threads:** (1) curl installer live, not PyPI (D-P13-1 stands); (2) hero password prompt +
+  `init` `web login:` line, no generator; (3) env-var quickstart with the `~/.zshenv`/Codex-sandbox
+  blockers on the landing; (4) `/SKILL.md` published copyable+downloadable under the parity gate,
+  agent-first. Bookkeeping coherent: D16 promoted, D10 dropped-as-done, D20 (Windows `install.ps1`)
+  filed.
+- **Doc consolidation (6 versions, `--source P20.REVIEW`):** `product` v0011, `experience` v0011,
+  `frontend` v0010, `operations` v0021, `decisions` v0018 (5 ADRs + a supersession), `qa` v0010.
+  `architecture`/`backend`/`data`/`api`/`security` unchanged (no schema/endpoint/trust-boundary
+  change). `rebuild-docs` + `validate` green after.
+- **Non-blocking observations (no fix slices):** (a) `content/marketing/content.ts:99` still reads
+  "An authenticated workspace" — a generic P14-era connect-section phrase, outside P20's confirmed
+  scope (S2 round 02 covered only the two new sections + D10 ledes); a minor future copy touch-up,
+  design-gated. `workspace-write` at :230 is the correct Codex sandbox-mode name. (b) Prod init#1
+  shows `project: default (already existed)` (server pre-creates the org default at signup) vs the
+  hero's `(created)` — honest for a genuinely new org; captured in `experience`/`qa`.
+- **Cosmetic:** the `frontend` version filename has a doubled `.md.md` (the passed summary ended in
+  `.md`); index/version/current all coherent, left as-is.
+- **Orchestrator next:** `review-phase P20 --verdict pass --reviewer slice-executor-high` (closes
+  REVIEW + phase), then `validate`, commit. No archiving (separate manual step).

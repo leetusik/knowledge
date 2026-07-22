@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0010
-created_at: 2026-07-22T15:28:30+09:00
-source: P19.REVIEW
-summary: P19 public sharing: visibility toggle + share link, anonymous public doc/graph pages, CLI save prints a direct url
-previous: v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init
+version: v0011
+created_at: 2026-07-22T18:32:09+09:00
+source: P20.REVIEW
+summary: P20 onboarding UX: honest hero (curl one-liner + init password prompt + working save url), init web-login line + D16 cross-project org-key reuse, landing env-var quickstart + copyable/downloadable skill
+previous: v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url
 ---
 
 # Experience
@@ -54,6 +54,8 @@ text like any other document. See *The HTML explainer document (P16)* below.
 **As of P18 the accounts experience is "org," not "workspace," across every surface.** Signup now says a **default org and default project** are created automatically (was "a workspace is created for you"); users mint/list/revoke an **org-level `vk_`** (one key → the whole org) from a new **Org API keys** panel on the dashboard, alongside the unchanged per-project keys on a project page; and the app chrome/eyebrows read "Org." From the terminal, `knowledge init` mints that org key and `save` falls back to the `"default"` project outside a git repo. Projects are get-or-create everywhere — no "create a project" step in any flow. See *Accounts v2: the org experience (P18)* below.
 
 **As of P19 a project can be made public, and a saved doc is directly shareable.** On a project page a member flips a **Make public / Make private** toggle (with a Public/Private badge, mirrored as a column on the dashboard projects table); once public, the project's docs and its knowledge graph become readable by **anonymous visitors** at their normal URLs (`/documents/{id}` and `/graph/{org}`), and a **copy-link** affordance shares the direct doc URL. From the terminal, `knowledge save` now prints the working direct `url` (previously hidden because the old mkdocs link 404'd). A private/nonexistent doc an anonymous visitor tries to open bounces to `/login`; a public one just renders, minus the app rail. See *Public sharing: toggle, share link, and anonymous pages (P19)* below.
+
+**As of P20 the landing hero's onboarding journey is real and honest, and the landing is the easiest on-ramp for coding agents.** The hero terminal now shows a working `curl …/install.sh | bash` install, a real `init` password prompt, and a `knowledge save` that returns a working direct doc URL; `knowledge init` prints a `web login: …/login (same email + password)` line and, per D16, an `init --project other` **reuses** the org key across projects. Below the hero, an **agent env-var quickstart** promotes the plain-REST path (`KB_API_BASE_URL`/`KB_API_TOKEN` → any agent saves) with its real blockers, and the **explain skill is published** on the landing — copyable + downloadable — with agent-first guidance. See *Frictionless onboarding: real hero, env-var quickstart, published skill (P20)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -314,6 +316,18 @@ P19 adds a public-sharing journey to the authenticated app and, for the first ti
 - **The anonymous reader.** A public project's doc is readable by a signed-out visitor at the **unchanged** `/documents/{id}` (an optional-identity page: the same URL serves a member with their app shell or an anonymous visitor with a lighter public shell — brand + a single "Sign in" action, no rail), and its graph at `/graph/{org}` (the org's public subset; a member's own org id renders the full map). An anonymous **doc** miss (private/nonexistent → 404) uniformly bounces to **`/login`**; a public-**graph** miss renders a branded not-found rather than a login bounce. Crawlers may now reach `/documents` + `/graph` (robots updated).
 - **CLI save prints the direct url.** `knowledge save` now shows a `url:` line (between `path:` and the read hint) carrying the working direct doc page — the deliberately-hidden mkdocs URL is gone. Shareable with others when the project is public.
 - **Deferred niceties (recorded, not built):** an anonymous doc miss drops the visitor at the dashboard after login (no `returnTo`); the public graph's **tag-hub** links still point at the session-gated `/documents?tag=` list, so an anonymous visitor clicking a tag hub lands on `/login` (the doc-node "Read" links work anonymously); org-**slug** vanity graph URLs (UUID suffices); and a member hitting a genuinely-missing doc id sees the centered empty-state without the app-shell chrome (a minor, rare cosmetic regression of the moved not-found page). All proven live end-to-end by the extended `onboarding_smoke.py` against prod (with web pages in scope).
+
+## Frictionless onboarding: real hero, env-var quickstart, published skill (P20)
+
+P20 turns the landing hero's depicted journey into a real, honest on-ramp and makes the landing the easiest way for a coding agent to start using knowledge. The hero-copy fix is a content change inside the already-designed hero; the two new below-the-hero sections came through design round 02 (see **frontend**).
+
+- **An honest hero terminal.** The hero now depicts a journey that actually works, in order: `curl -fsSL https://knowledge.hi2vi.com/install.sh | bash` → `knowledge init --email …` → a real `Password:` prompt → the real `init` output (`signed up …` / `project: default (created)` / `key: minted vk_…` / `config: … (0600)`) → `knowledge save …` → `saved: …` / `url: https://…/documents/…` (showcasing the P19 direct link). The old live-broken `uv tool install knowledge-cli` line is gone.
+- **`knowledge init` points you at the web login.** `init` prints `web login: {base_url}/login (same email + password)` — the terminal user now knows the same credentials log into the web UI (CLI + web share one accounts plane). No random-password generator; the flow already prompts for a password (getpass; `--password-stdin` > `$KNOWLEDGE_PASSWORD` > TTY).
+- **One org key across every project (D16).** `knowledge init --project other` now **reuses** the existing org key instead of re-minting (org keys are project-agnostic since P18) and creates the new project; a pre-P18 project-bound key still triggers a one-time note. The curl one-liner also surfaces in `cli/README.md` §Install and `guide.py` §1 (the `git+` form stays the canonical/manual channel).
+- **The env-var REST path, on the landing (the recommended agent setup).** An **agent quickstart** section shows the two exports (`KB_API_BASE_URL` + `KB_API_TOKEN`, an org-level key) that light up any coding agent's plain-REST save, with the real blockers stated honestly: a repo `.env` is never auto-loaded → put the exports in `~/.zshenv`; Codex's workspace-write sandbox needs `[sandbox_workspace_write] network_access = true`; a one-line health check reads `200 connected` / `401 wrong-or-revoked key`.
+- **The explain skill, published on the landing.** The canonical explain skill is offered **copyable** (Copy fetches the served `/SKILL.md`, never a pasted fork) and **downloadable** (`<a href="/SKILL.md" download>`), with an expandable in-page reader showing the head of the file, and agent-first guidance ("the recommended path is a coding agent following this file"). The REST API stays fully usable by hand.
+
+Shipped and verified live on prod (throwaway account): the clean-env installer runs end to end, `init` prints the web-login line + mints an org key, `init --project other` reuses it (D16 live), and `save` returns a `…/documents/{id}` URL. One depicted-vs-live nuance (not a defect): on prod a brand-new org's `default` project is server-pre-created at signup, so init #1 shows `project: default (already existed)` rather than the hero's `(created)` — the hero copy stays honest for a genuinely new org.
 
 ## Open Questions
 

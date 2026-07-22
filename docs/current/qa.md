@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0009
-created_at: 2026-07-22T11:24:32+09:00
-source: P18.REVIEW
-summary: P18 Postgres-gated org-credentials + provisioning tests; CLI test_auth adjusted; onboarding_smoke org-model journey green local + live prod; pre-existing documents_api format-key failure flagged
-previous: v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual
+version: v0010
+created_at: 2026-07-22T18:32:15+09:00
+source: P20.REVIEW
+summary: P20 QA: web copy-button vitest (61->66); skills_parity third full-file web-copy gate; live clean-env installer + init/D16/save prod E2E
+previous: v0009_p18_postgres-gated_org-credentials_provisioning_tests_cli_test_auth_adjusted_onboarding_smoke_org-model_journey_green_local_live_prod_pre-existing_documents_api_format-key_failure_flagged
 ---
 
 # QA
@@ -397,6 +397,17 @@ P18's acceptance is Postgres-gated pytest + CLI unit tests + the extended `onboa
 - **Extended `onboarding_smoke.py` (the committed post-deploy verifier).** Gained a **section-4 org-model journey** run in its own fresh tenant (keeping the tenant-B `documents_created == 1` equalities pristine): one org key → two get-or-create projects with per-named-project usage, revoke → 401, project-bound regression. Proven green against a disposable `postgres:17` tenant-mode stack **and live against prod** (exit 0). `scripts/` is not a plugin `shipped_dir` → no template mirror.
 - **Pre-existing gated failure (NOT P18):** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` fails because the document-list projection carries a `format` key that the test's `_LIST_KEYS` set omits. This is a **P16-era** mismatch — the test was last touched in P12, and `format` entered the list projection in P16 (`server/main.py`), while the suite is Postgres-gated so default CI (no Postgres) never runs it. Confirmed by S1/S2 on clean trees and re-confirmed at the P18 review (no P18 commit touches that test or the projection). **It is a documents/content-plane concern outside P18's accounts scope; recommended as a small deferred job** (either add `format` to `_LIST_KEYS` or drop it from the list projection) — it does not block the P18 objective.
 
+## P20 onboarding acceptance (curl installer + published skill)
+
+P20's acceptance is the CLI + web unit suites, the extended skill-parity gate, and a **live prod E2E** of the installer + `init`/D16/`save`. The ship carries **no migration**, so `onboarding_smoke.py` is unchanged (no committed P20 verifier). All green at the P20 review.
+
+- **CLI unit tests.** `cli/.venv/bin/python -m pytest cli/tests -q` → **40 passed** (the system `python3` here is 3.13 without pytest/httpx; the suite runs via the repo `cli/.venv` — 3.12, editable `knowledge_cli`). `test_auth.py` was adjusted (not expanded): the reuse-gate test became `test_init_project_change_reuses_the_org_key` (proves `init --project other` reuses — `minted == 1`, `api.project` re-recorded, the cross-project note fires); `test_init_new_key_mints_again` still proves `--new-key` re-mints.
+- **Web unit suite + build.** `cd web && npm run typecheck && npm run lint && npm run test && npm run build` all green — **66 vitest tests** (was 61; +1 file `web/tests/copy-button.test.ts`: idle→copied, two failure paths, two byte-locks on the copy payloads), and `next build` static-generates `/` (`○ Static`), proving the build-time `fs` read of `public/SKILL.md`. **No vitest covers the marketing terminal content**, so the hero-copy guard is typecheck/lint, not a unit test.
+- **The three-copy skill-parity gate.** `python3 scripts/skills_parity.py` PASS — the existing two copies (`plugin/` canonical vs `.agents/` body-only) plus the **new third copy** `web/public/SKILL.md`, held to a **stricter full-file** byte match (frontmatter included) against the canonical. CI runs it via the unchanged `plugin-ci.yml`.
+- **Installer syntax.** `bash -n web/public/install.sh` clean (shellcheck not installed on this box).
+- **Live prod E2E (executor-run, sanitized).** A clean-env `curl -fsSL https://knowledge.hi2vi.com/install.sh | bash` (fully isolated temp HOME/XDG/UV, `env -i` PATH hygiene, torn down) resolved the `git+` channel to the post-P20 tip and installed a CLI carrying S1's `web login:` line + D16 reuse; a throwaway-account `init` printed the web-login line + minted an org key, `init --project other` reused it (D16 live), and `save` returned a `…/documents/{id}` URL. Read-only re-probes at the review confirmed `/install.sh` + `/SKILL.md` 200 byte-identical + the landing surface. Residue: one throwaway account + one private doc (no delete API); operator env verified untouched. This is executor verification, **not** a committed verifier.
+- **Depicted-vs-live nuance (not a defect).** On prod a brand-new org's `default` project is server-pre-created at signup, so init #1 shows `project: default (already existed)` rather than the hero's `(created)`; the hero copy stays honest for a genuinely new org.
+
 ## Known Fragile Areas
 
 - **The `#recent + ul` DOM adjacency** — a future markup change that inserts an
@@ -447,6 +458,12 @@ P18's acceptance is Postgres-gated pytest + CLI unit tests + the extended `onboa
   reuses the cached `0.1.0` wheel, so a CLI change can silently test yesterday's code. Any live
   CLI run or `cli_smoke.py` invocation must use `--reinstall`; the smoke's binary resolver points
   at the installed path, so it inherits whatever was installed.
+- **The third web `SKILL.md` parity copy (P20)** — `web/public/SKILL.md` must stay **byte-identical
+  (full file, frontmatter included)** to the canonical `plugin/skills/explain/SKILL.md`; editing the
+  canonical without re-copying (or forking the web copy) FAILs `scripts/skills_parity.py` in CI. The
+  landing's Copy control fetches the *served* file, so a forked copy would be both a CI failure and a
+  live-content divergence. The gate is CI-only (like the other parity gates), so a local edit that
+  skips it ships drift.
 
 ## Open Questions
 

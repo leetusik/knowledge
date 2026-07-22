@@ -52,17 +52,17 @@
       "id": "P20",
       "name": "Frictionless onboarding: hero, install, env-var quickstart, skill on landing",
       "objective": "Make the landing hero flow real end to end: fix the broken uv tool install knowledge-cli line (publish to PyPI or switch the copy to the working install form), make the depicted init/password step honest (show the prompt or generate a password), promote the env-var REST setup (KB_API_BASE_URL/KB_API_TOKEN) as the recommended agent path with blockers addressed, and publish the explain skill on the landing page — copyable and downloadable — with agent-first guidance.",
-      "status": "planned",
+      "status": "done",
       "order": 5,
       "path": "works/phases/active/P20",
-      "review_status": "pending",
-      "current_slice": "P20.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 6,
-      "done_slice_count": 5
+      "done_slice_count": 6
     }
   ],
   "deferred_open_count": 13,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-07-22T18:22:11+09:00"
+  "last_rebuilt_at": "2026-07-22T18:40:30+09:00"
 }
