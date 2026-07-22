@@ -629,3 +629,10 @@
 {"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D17", "source": "P19.REVIEW"}
 {"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D18", "source": "P19.REVIEW"}
 {"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D19", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:53:10+09:00", "type": "slice_status_changed", "slice": "P20.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-22T15:55:05+09:00", "type": "slice_created", "phase": "P20", "slice": "P20.S2"}
+{"ts": "2026-07-22T15:55:05+09:00", "type": "slice_created", "phase": "P20", "slice": "P20.S3"}
+{"ts": "2026-07-22T15:55:05+09:00", "type": "slice_created", "phase": "P20", "slice": "P20.S4"}
+{"ts": "2026-07-22T15:58:13+09:00", "type": "deferred_promoted", "deferred": "D16", "phase": "P20", "slice": "P20.S1"}
+{"ts": "2026-07-22T15:58:13+09:00", "type": "deferred_created", "deferred": "D20", "source": "P20.DECOMP"}
+{"ts": "2026-07-22T15:58:13+09:00", "type": "slice_status_changed", "slice": "P20.DECOMP", "old_status": "in_progress", "new_status": "done"}

@@ -56,13 +56,13 @@
       "order": 5,
       "path": "works/phases/active/P20",
       "review_status": "pending",
-      "current_slice": "P20.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0
+      "current_slice": "P20.S1",
+      "slice_count": 6,
+      "done_slice_count": 1
     }
   ],
   "deferred_open_count": 14,
-  "deferred_promoted_count": 3,
+  "deferred_promoted_count": 4,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-22T15:37:12+09:00"
+  "last_rebuilt_at": "2026-07-22T15:58:13+09:00"
 }

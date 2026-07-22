@@ -1,0 +1,11 @@
+{
+  "id": "D20",
+  "title": "Windows install.ps1 (PowerShell curl-installer equivalent)",
+  "status": "deferred",
+  "source": "P20.DECOMP",
+  "reason": "P20 ships a POSIX curl|bash installer only; Windows users need a PowerShell equivalent",
+  "trigger": "Windows onboarding demand / operator asks",
+  "created_at": "2026-07-22T15:58:13+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
