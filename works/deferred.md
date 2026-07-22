@@ -4,16 +4,15 @@
 
 ## Summary
 
-- Open: `14`
+- Open: `13`
 - Promoted: `4`
-- Dropped: `2`
-- Rebuilt at: `2026-07-22T16:37:18+09:00`
+- Dropped: `3`
+- Rebuilt at: `2026-07-22T16:56:57+09:00`
 
 ## Open
 
 | ID | Status | Title | Source | Trigger | Path |
 |---|---|---|---|---|---|
-| `D10` | `deferred` | Landing feature-section lede copy | P14.REVIEW | operator provides copy / next design round | `works/deferred/open/D10` |
 | `D11` | `deferred` | Production Deploy: reconcile box clone before invoking deploy.sh (self-upgrade trap) | P14.S3 | next time the deploy machinery's compose service set or health-gate changes | `works/deferred/open/D11` |
 | `D12` | `deferred` | Monetize the MCP retriever: introduce the paid plan + gate the agent-facing retrieval surface | P15.DECOMP | operator decides to introduce the paid plan | `works/deferred/open/D12` |
 | `D13` | `deferred` | source_url (public-origin) field + ingester population | P15.S1 | public-scraping/ingestion features land, or clickable citations become required for a consumer (e.g. OpenClaw's citation chip) | `works/deferred/open/D13` |
@@ -41,5 +40,6 @@
 
 | ID | Status | Title | Reason | Path |
 |---|---|---|---|---|
+| `D10` | `dropped` | Landing feature-section lede copy | Resolved by design round 02 (P20.S2): the round-01 cards' feature ledes are quoted verbatim in build-prompt-02 §D10 for content.ts; P20.S3 implements them. Closed as done, not abandoned. | `works/deferred/dropped/D10` |
 | `D3` | `dropped` | Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree | Completed by the operator (2026-07-15): ran 'gh repo deploy-key delete 157264706' (orphan knowledge-api@oci revoked) and removed ./knowledge_deploy_key* from the working tree. The box authenticates with the separate on-box key knowledge-api@oci-box (157267945). No key material remains in the repo. Closed as done, not abandoned. | `works/deferred/dropped/D3` |
 | `D6` | `dropped` | Paid-plan retriever endpoint for external AI agents | Superseded by P15 (Agent-facing retrieval MCP service). P15 builds the external-agent retriever surface D6 anticipated — an MCP search/fetch_document service over Streamable-HTTP, vk_-scoped per project, dual-reachable (internal service-name + public edge). The retriever interface now exists. D6's remaining aspect — actually charging for it (a paid plan / gating the MCP surface) — is a separate business + billing decision P15 does not build; the P11 usage-event metering is the substrate for it when the operator introduces a paid plan. That monetization step is re-captured as a new, narrower deferred job. | `works/deferred/dropped/D6` |

@@ -1,11 +1,11 @@
 {
   "id": "D10",
   "title": "Landing feature-section lede copy",
-  "status": "deferred",
+  "status": "dropped",
   "source": "P14.REVIEW",
   "reason": "build-prompt quoted no lede for feature/how-it-works; copy must come from the operator or a copy round, not invented",
   "trigger": "operator provides copy / next design round",
   "created_at": "2026-07-18T09:46:25+09:00",
   "promoted_to": null,
-  "dropped_reason": null
+  "dropped_reason": "Resolved by design round 02 (P20.S2): the round-01 cards' feature ledes are quoted verbatim in build-prompt-02 §D10 for content.ts; P20.S3 implements them. Closed as done, not abandoned."
 }

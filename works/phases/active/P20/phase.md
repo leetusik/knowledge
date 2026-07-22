@@ -216,6 +216,24 @@ Grounded facts verified this session (spot-checked against the live repo):
   (61 vitest tests) all pass; no vitest covers the marketing terminal content, so the hero-copy
   guard is typecheck/lint, not a unit test.
 
+### S2 cross-slice notes — design round 02 landed (2026-07-22)
+
+- **Round record (read-only):** `web/design/rounds/02-onboarding/` — `handoff.md` (OUT), `SIGNOFF.md`,
+  `output/result.md` + `output/build-prompt.md` (IN, landed as-is from the design project).
+  **`output/build-prompt.md` is P20.S3's implementation contract** — S3 sizes its work from it and gets
+  no DesignSync. Cards stay in the design project (*Knowledge Base Design System*,
+  id `f49ab425-e75f-46c4-a6fa-48bb9938b203` — target future rounds by this id).
+- **Key landed decisions:** final page order — … save → **connect → agent-quickstart** (one continuous
+  dark territory, hairline-divided) → **the-skill** (sunken band) → graph → …, with `MKT_SECTION_IDS`
+  anchors `agents` / `skill`; the skill artifact is served at **`/SKILL.md` from `web/public/SKILL.md`
+  under the existing byte-parity CI gate** (Download = `<a download>`; Copy fetches the served file —
+  never a pasted fork); a new small **copy-control client island** (the `copy-link-button.tsx` idiom:
+  idle/copied/failed, never logs the value); **D10 resolved** — the two feature ledes are quoted verbatim
+  in build-prompt §D10 for `content.ts`; **no token delta** (bronze `#c8a15e` stays a literal).
+- **Open flag at gate close:** bronze as the trap-note `KNOWN TRAP` kicker — default is as-returned;
+  if the operator says bronze stays keys-only, S3 swaps the kicker ink (one value; replacement ink is the
+  operator's/Claude Design's call). See `SIGNOFF.md`.
+
 ### Deferrals linkage
 
 - **D16** ("knowledge init --project other re-mints an org key — reuse-gate relaxation";
@@ -290,6 +308,12 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
 - `frontend.md` — hero terminal copy (`web/src/content/marketing/terminals.ts` `HERO_TERMINAL`) now
   depicts the working curl-installer + honest `init`/`save` output; content-only change inside the
   already-designed hero component (no design round; `web/design/rounds/01-*` untouched).
+
+**S2 touched (concrete):**
+
+- `frontend.md` — design round 02 provenance: record at `web/design/rounds/02-onboarding/` (no token
+  delta; D10 resolved via build-prompt §D10 ledes; `/SKILL.md` static-serving decision under the parity
+  gate). The sections themselves land in S3, which appends its own entries.
 
 ## Open Questions
 
