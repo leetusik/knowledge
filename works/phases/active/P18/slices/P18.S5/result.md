@@ -202,6 +202,86 @@ re-verifies the cutover and runs the live extended `onboarding_smoke.py` E2E.
 
 ---
 
-## Stage B — hosted end-to-end (appended after the operator clears the gate)
+## Stage B — hosted end-to-end (2026-07-22)
 
-_Pending the operator's cutover._
+The operator ran the §4 runbook (reconcile → `alembic upgrade head` 0003 → optional seed →
+`deploy/deploy.sh`). Stage B re-verifies the P18-present flip and runs the extended
+`onboarding_smoke.py` against the live host. **All green — the cutover is live.**
+
+### 1. P18-present flip + freshness (read-only probes)
+
+| Probe | Result | Reading |
+|---|---|---|
+| `GET /healthz` | **200** `{"status":"ok","docs_root":"/repo/docs","db":"ok","documents":14}` | api live; content + accounts planes healthy (14 public docs — was 13 in Stage A; a doc published between stages; the smoke's writes are non-public and don't count here) |
+| **`GET /app/credentials`** (unauth) | **401** `{"detail":"Unauthorized"}` | **decisive P18-present flip** — was **404** pre-cutover (route-absent). 404→401 proves S2's org endpoint is now mounted → **P18 code is on the box** |
+| `POST /auth/login` nonsense creds | **401** `{"detail":"invalid email or password"}` | accounts DB **migrated + seeded + live** (a dormant/unmigrated DB would 500; the generic 401 is the credential-check discriminator) |
+
+**Login-probe methodology note (not a P18 change, not a defect).** The first login probe
+used password `"x"` (matching Stage A's form) and returned **422**
+`string_too_short (min_length 8)` — request-shape validation short-circuits before the
+credential check, so it does **not** reach the DB discriminator. `LoginIn` shares
+`_EmailPasswordInput` (`password: Field(min_length=8)`) with signup — and that constraint
+is **already present at P17 (`git show 84fc855:server/auth_api.py`)**, so it is
+long-standing login validation, *not* a P18 tightening. (Stage A's 401-with-`"x"` reflects
+the box then running code older than the 84fc855 tree.) A single retry with a valid-length
+nonsense password reached the credential check → the true **401 "invalid email or
+password"** above. 2 login calls total, well within the 20/900 s/IP throttle.
+
+### 2. Extended `onboarding_smoke.py` — hosted, WITHOUT `--master-token`
+
+```
+.venv/bin/python scripts/onboarding_smoke.py --base-url https://knowledge.hi2vi.com
+```
+
+**Exit 0 / PASS.** Summary line verbatim:
+
+> `PASS — tenant B onboarded (onboard-smoke+ed030f51ee1c@example.com), doc onboarding-smoke/2026-07-22-smoke-ed030f51ee1c.md; B-only isolation (no --master-token); usage metered; org journey OK (onboard-smoke-org+6152c6ab5902@example.com): 1 org key -> 2 get-or-create projects, per-project usage, revoke->401, project-bound regression`
+
+That single run covers, against live prod:
+- **Tenant-B journey** — signup → project → project-bound `vk_` → one `POST /api/documents`
+  (frozen 201 shape) → `GET /api/search` (B finds its own doc) → `GET /api/documents` (B
+  lists only its own) → B-only isolation → `documents_created == 1` metered (`/app/usage` +
+  `/app/projects/{id}/usage`), `last_used_at` set, foreign project id → 404.
+- **Section-4 org-model journey (P18)** in its own fresh tenant C — signup's additive
+  `project == "default"` (visible via `/app/projects`); **one org key** (`POST /app/credentials`,
+  `project_id: null`) writes to **two never-pre-created project names** → both appear in
+  `/app/projects` (**get-or-create** proof) → per-named-project usage `documents_created == 1`
+  each; `DELETE /app/credentials/{id}` revoke → subsequent write **401**; project-bound key
+  still mints + writes (regression).
+
+The `--master-token` cross-tenant-vs-tenant-#1 leg was intentionally omitted (the operator
+did not provide the master `KB_API_TOKEN`, per plan) — B-only isolation still ran.
+
+### 3. Anomalies
+
+None. The 422→retry on the login probe is a probe-methodology detail (documented above),
+not a prod anomaly. The smoke passed on the first (and only) run — no retry-loop against
+prod throttles.
+
+### Stage B validation
+
+| Command | Outcome |
+|---|---|
+| `curl GET /healthz` | **200** — api + both planes healthy |
+| `curl GET /app/credentials` (unauth) | **401** — P18-present flip (was 404 pre-cutover) |
+| `curl POST /auth/login` (nonsense, valid-length pw) | **401** "invalid email or password" — accounts DB migrated + live |
+| `.venv/bin/python scripts/onboarding_smoke.py --base-url https://knowledge.hi2vi.com` | **PASS** (exit 0) — tenant-B journey + P18 org-model journey, all green against live prod |
+| `python3 scripts/workflow.py validate` | **PASS** (workspace state integrity) |
+
+**Residual (expected):** the hosted smoke onboarded two throwaway tenants (tenant B +
+org-journey tenant C) and wrote their docs under `tenants/<uuid>/` — namespaced, isolated
+from tenant #1's public corpus (same residual shape as P16/P17 runs). No delete API; the
+operator may purge later. No other prod mutations.
+
+**Deviations from `plan.md` (Stage B):** the login discriminator took **2** calls, not the
+plan's "one call only" — the first (`password:"x"`) 422'd on the long-standing
+`min_length=8` login validation before reaching the credential check, so one throttle-aware
+retry with a valid-length nonsense password produced the true 401 discriminator (2 of
+20/900 s/IP). No other deviations. No fixes attempted, no commits, no status transitions, no
+doc versioning, no pushes.
+
+### Slice outcome
+
+Stage B is **green**: the P18 accounts-v2 cutover is live on `https://knowledge.hi2vi.com`
+(404→401 org-endpoint flip confirmed), and the extended hosted E2E passes end-to-end
+(tenant-B isolation/usage + the full P18 org-model journey). Stage B returns **`done`**.
