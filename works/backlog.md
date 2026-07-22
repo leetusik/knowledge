@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P20`
-- Current slice: `P20.S3`
-- Next slice: `P20.S4`
+- Current slice: `P20.S4`
+- Next slice: `P20.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `13`
-- Rebuilt at: `2026-07-22T16:56:57+09:00`
+- Rebuilt at: `2026-07-22T17:19:39+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
 | [x] `P18` | `done` | `pass` | Accounts v2: user/org/project with org-level keys | `none` | `works/phases/active/P18` |
 | [x] `P19` | `done` | `pass` | Public projects & direct doc links | `none` | `works/phases/active/P19` |
-| [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.S3` | `works/phases/active/P20` |
+| [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.S4` | `works/phases/active/P20` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -76,6 +76,6 @@
 | [x] `P20.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P20/slices/P20.DECOMP` |
 | [x] `P20.S1` | `done` | installer + hero honesty + CLI onboarding fixes | `implementation` | `works/phases/active/P20/slices/P20.S1` |
 | [x] `P20.S2` | `done` | Design round 02: env-var quickstart + skill-on-landing sections (handoff) | `co-work` | `works/phases/active/P20/slices/P20.S2` |
-| [ ] `P20.S3` | `todo` | Implement designed sections: env-var quickstart + parity-gated skill on landing | `implementation` | `works/phases/active/P20/slices/P20.S3` |
+| [x] `P20.S3` | `done` | Implement designed sections: env-var quickstart + parity-gated skill on landing | `implementation` | `works/phases/active/P20/slices/P20.S3` |
 | [ ] `P20.S4` | `todo` | Ship + live verify: push main, prod deploy, installer/hero/skill/init smoke | `implementation` | `works/phases/active/P20/slices/P20.S4` |
 | [ ] `P20.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P20/slices/P20.REVIEW` |

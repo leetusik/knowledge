@@ -1,7 +1,7 @@
 import { CONNECT_TERMINAL, FEATURE_CONNECT } from "@/content/marketing";
 import { Reveal } from "@/components/ui/reveal";
 
-import { Band, CtaLink, Eyebrow, Ticks } from "./primitives";
+import { Band, CtaLink, Eyebrow, RichText, Ticks } from "./primitives";
 import { TerminalBlock } from "./terminal";
 
 // Feature · Connect your agent (dark band, flipped: terminal left / copy right).
@@ -20,6 +20,9 @@ export function FeatureConnect() {
           <h2 className="font-display text-heading-2">
             {FEATURE_CONNECT.title}
           </h2>
+          <p className="mkt-lede mt-5 text-body-lg">
+            <RichText text={FEATURE_CONNECT.lede} />
+          </p>
           <div className="mt-7">
             <Ticks items={FEATURE_CONNECT.ticks} />
           </div>

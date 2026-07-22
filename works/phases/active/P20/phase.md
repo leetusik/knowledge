@@ -315,6 +315,64 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
   delta; D10 resolved via build-prompt §D10 ledes; `/SKILL.md` static-serving decision under the parity
   gate). The sections themselves land in S3, which appends its own entries.
 
+**S3 touched (concrete):**
+
+- `frontend.md` — two new landing sections shipped from round 02: the **agent env-var quickstart**
+  (`agent-quickstart.tsx`, dark band continuing Connect as one hairline-divided "built for agents"
+  territory — anchor `#agents`) and the **published explain skill** (`feature-skill.tsx`, sunken band —
+  anchor `#skill`), re-slotted in `page.tsx` between connect and graph. New primitives: a copy-control
+  client island (`copy-button.tsx`, the `copy-link-button.tsx` idle/copied/failed idiom; copies the full
+  artifact, never logs it), a server `snippet-block.tsx` (labeled charcoal paste-plate, distinct from the
+  terminal transcript chrome), and the `skill-pane.tsx` document pane (head-of-file preview read from the
+  served file at build via `fs`, in-place expand to a 70vh reader; no-JS fallback = Download). New
+  `marketing.css` round-02 vocabulary (`.mkt-snip*` / `.mkt-copy*` / `.mkt-trap*` / `.mkt-skill*`) — no
+  new token (bronze `KNOWN TRAP` kicker = the existing `--kb-ink-bronze-dark` `#c8a15e` literal). D10
+  ledes now render in `feature-save.tsx` / `feature-connect.tsx`.
+- `experience.md` — the onboarding UX gains, on the landing itself, the **env-var REST path as the
+  recommended agent setup**: two exports (`KB_API_BASE_URL` / `KB_API_TOKEN`) → every coding agent on the
+  machine saves; the `.env`-never-auto-loaded trap → put exports in `~/.zshenv`; the Codex
+  `[sandbox_workspace_write] network_access = true` toggle; a one-line health check with `200
+  connected` / `401 wrong-or-revoked key`. And the **explain skill is published on the landing** —
+  copyable (fetches the served file) + downloadable — with agent-first guidance ("the recommended path is
+  a coding agent following this file").
+- `product.md` — the landing now publishes the canonical explain skill as a first-class product surface
+  (`/SKILL.md`, 486-line file, Download + Copy) and promotes the plain-REST env-var path as the
+  recommended agent on-ramp beneath the hero — humans by hand, agents driving the skill.
+- `decisions.md` — **skill-publishing parity gate**: `web/public/SKILL.md` is served at `/SKILL.md` and
+  is now a **third copy under `scripts/skills_parity.py`**, held to a stricter **full-file** byte match
+  against the canonical `plugin/skills/explain/SKILL.md` (frontmatter included — it is a straight
+  publish, not the body-only derivation the `.agents/` copy uses); a mismatch/missing FAILs in CI. The
+  landing artifact can never fork. Also: **D10 resolved** (the two mid-feature ledes quoted verbatim from
+  round-02 §D10, not invented); **no new tokens** (bronze stays the `#c8a15e` literal).
+
+## S3 cross-slice notes (for S4 live smoke + REVIEW)
+
+- **What to check/click/copy on prod after S4's web deploy** (the two new sections are static, so a web
+  deploy ships them; no push needed for these — the push in S4 is only for S1's CLI changes):
+  - Scroll to `#agents` (Agent quickstart, dark band under Connect) and `#skill` (the published skill,
+    sunken band). Both must render with a Reveal per column.
+  - **Copy controls** (need a **secure origin** — `https://knowledge.hi2vi.com` qualifies; clipboard is
+    denied on insecure origins, which is the "Copy failed" path): click Copy on the `~/.zshenv` block →
+    pasting must yield the byte-exact two lines incl. the trailing comment + 8-space gap; click Copy on
+    the health-check block → the whole curl line; click **Copy the skill** (section-scale pill) → the
+    whole 486-line `SKILL.md`. Each pill: idle **Copy** → **Copied** (teal, reverts ~2 s).
+  - **Download SKILL.md** → downloads `/SKILL.md`; `curl -s https://knowledge.hi2vi.com/SKILL.md | diff -
+    plugin/skills/explain/SKILL.md` must be empty (byte-identical to canonical — the parity gate proves
+    it in CI, the live fetch proves the deploy served it).
+  - **Skill pane expand**: "read the whole skill ↓" releases the pane to a 70vh scroll and flips to
+    "collapse ↑"; the collapsed head shows the real frontmatter + `# explain` opening (build-time read).
+  - **No-JS**: with JS off, the collapsed head + the Download link still work (the expand toggle is inert
+    by design — Download is the documented fallback).
+  - **Both schemes**: the two dark bands stay charcoal in light + dark; the sunken skill band + pane
+    follow the scheme.
+- **`/SKILL.md` serving semantics** (same as S1's `install.sh`): served straight from the committed
+  `web/public/SKILL.md` via the standalone image (`COPY public`) + nginx `/` catch-all — **live only
+  after S4's web deploy**. No route, no infra. The CI parity gate keeps `web/public/SKILL.md` == canonical
+  on every push, so a deploy can never publish a forked skill.
+- **Vitest count moved 61 → 66** (new `web/tests/copy-button.test.ts`, +1 file / +5 tests). Web checks
+  for REVIEW unchanged: `cd web && npm run typecheck && npm run lint && npm run test && npm run build`,
+  plus `python3 scripts/skills_parity.py` (now asserts the third web copy).
+
 ## Open Questions
 
 - **D10 lede copy** — the feature-section lede copy is operator-owned; resolved inside the S2 design

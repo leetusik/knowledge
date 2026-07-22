@@ -332,11 +332,258 @@
   background: var(--kb-surface);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+ * Round 02 — onboarding vocabulary (P20.S3): the paste-snippet block, the copy pill,
+ * the .env trap note, and the published-skill document pane. The design project's
+ * round-02 marketing.css (.snip / .cpy / .trap / .skillpane) is a VISUAL SPEC, not
+ * code to port — these follow this file's conventions (Tailwind utilities carry
+ * layout/spacing in the JSX; CSS carries only the tonal inks + the pane mechanics),
+ * ride the shipped tokens with NO new token (bronze = the existing
+ * --kb-ink-bronze-dark #c8a15e literal, the terminal .key ink), and stay mkt-namespaced.
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Snippet block — a labeled charcoal plate for lines you PASTE ─────────────
+ * Distinct from mkt-term (a transcript); always the dark charcoal plate in both
+ * bands (code stays dark here). */
+.mkt-snip {
+  background: var(--kb-band-dark-soft);
+  border: 1px solid var(--kb-border-on-dark);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.mkt-snip__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kb-border-on-dark);
+}
+.mkt-snip__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--color-on-dark-hint);
+}
+.mkt-snip__body {
+  margin: 0;
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: var(--text-code-md);
+  line-height: 1.7;
+  color: var(--color-on-dark);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mkt-snip__kw {
+  color: var(--kb-accent-on-dark);
+} /* export — teal on dark */
+.mkt-snip__val {
+  color: var(--kb-ink-bronze-dark);
+} /* "vk_..." — bronze */
+.mkt-snip__cmt {
+  color: var(--color-on-dark-hint);
+} /* comment line — hint */
+.mkt-snip__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--kb-border-on-dark);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-on-dark-muted);
+}
+.mkt-snip__ok {
+  color: var(--kb-accent-on-dark-strong);
+} /* 200 / 401 — teal-strong */
+
+/* ── Copy pill — mono ghost, the copy-link-button idiom, idle/copied/failed ──── */
+.mkt-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--kb-border-strong);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--kb-secondary);
+  cursor: pointer;
+  transition:
+    color var(--kb-ease),
+    border-color var(--kb-ease),
+    background var(--kb-ease);
+}
+.mkt-copy:hover {
+  border-color: var(--color-green);
+  color: var(--kb-ink);
+}
+.mkt-copy--section {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 13px;
+}
+.mkt-copy[data-state="copied"] {
+  color: var(--color-green);
+  border-color: var(--color-green);
+} /* teal accent + accent border */
+.mkt-copy[data-state="failed"] {
+  border-style: dashed;
+  color: var(--kb-hint);
+} /* dashed border, hint text */
+/* On a dark band: on-dark border + muted text (--color-green already steps here). */
+.mkt-band--dark .mkt-copy,
+.mkt-band--deep .mkt-copy {
+  border-color: var(--kb-border-on-dark-strong);
+  color: var(--color-on-dark-muted);
+}
+.mkt-band--dark .mkt-copy:hover,
+.mkt-band--deep .mkt-copy:hover {
+  color: var(--color-on-dark);
+}
+.mkt-band--dark .mkt-copy[data-state="failed"],
+.mkt-band--deep .mkt-copy[data-state="failed"] {
+  color: var(--color-on-dark-hint);
+}
+
+/* ── Trap note — dashed on-dark hairline, bronze mono KNOWN TRAP kicker ──────── */
+.mkt-trap {
+  padding: 12px 14px;
+  border: 1px dashed var(--kb-border-on-dark-strong);
+  border-radius: var(--radius-md);
+}
+.mkt-trap__kicker {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--kb-ink-bronze-dark); /* bronze #c8a15e — same literal as .key ink */
+}
+.mkt-trap__body {
+  font-size: var(--text-body-sm);
+  line-height: 1.6;
+  color: var(--color-on-dark-muted);
+}
+
+/* ── Skill document pane — surface card on the sunken band; head preview that
+ * releases to a scrollable reader in place (build-prompt §(b)). ──────────────── */
+.mkt-skill {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--mkt-border);
+  background: var(--kb-surface);
+  box-shadow: var(--kb-shadow-card);
+  overflow: hidden;
+}
+.mkt-skill__topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--mkt-border);
+  font-family: var(--font-mono);
+}
+.mkt-skill__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kb-ink);
+}
+.mkt-skill__size {
+  font-size: 12px;
+  color: var(--kb-hint);
+}
+.mkt-skill__cmd {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--kb-accent);
+}
+.mkt-skill__body {
+  position: relative;
+  max-height: 430px;
+  overflow: hidden;
+}
+.mkt-skill__code {
+  margin: 0;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--kb-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Bottom fade to the surface while collapsed — masks the head clip. */
+.mkt-skill__body::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96px;
+  background: linear-gradient(to bottom, transparent, var(--kb-surface));
+  pointer-events: none;
+}
+.mkt-skill[data-expanded] .mkt-skill__body {
+  max-height: 70vh;
+  overflow: auto;
+}
+.mkt-skill[data-expanded] .mkt-skill__body::after {
+  display: none;
+}
+.mkt-skill__fence {
+  color: var(--kb-hint);
+} /* --- frontmatter fences */
+.mkt-skill__key {
+  color: var(--kb-accent);
+} /* YAML keys — teal */
+.mkt-skill__val {
+  color: var(--kb-secondary);
+} /* YAML values — secondary */
+.mkt-skill__heading {
+  color: var(--kb-ink);
+  font-weight: 600;
+} /* markdown headings — ink-700 */
+.mkt-skill__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--mkt-border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--kb-hint);
+}
+.mkt-skill__toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--kb-accent);
+  cursor: pointer;
+}
+.mkt-skill__toggle:hover {
+  text-decoration: underline;
+}
+.mkt-skill__parity {
+  text-align: right;
+  color: var(--kb-hint);
+}
+
 /* Reduced-motion floor: the settled state is the CSS default; the marketing
  * transitions here collapse so nothing animates for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .mkt-header,
-  .mkt-nav-link {
+  .mkt-nav-link,
+  .mkt-copy {
     transition: none;
   }
 }
