@@ -3,14 +3,14 @@
   "phase_id": "P19",
   "name": "Web public surfaces: visibility toggle + public doc/graph pages + share link",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P19.S2"
   ],
   "created_at": "2026-07-22T12:02:41+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-22T13:36:05+09:00",
+  "completed_at": "2026-07-22T13:55:34+09:00",
   "risk": "high",
   "source": {
     "type": "manual",

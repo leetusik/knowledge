@@ -35,6 +35,16 @@ export const REVOKE_CREDENTIAL_ERRORS = {
   generic: "Could not revoke the key. Please try again.",
 } as const;
 
+/** Status-keyed set-visibility error copy (P19) — the project's public/private toggle. */
+export const SET_VISIBILITY_ERRORS = {
+  /** A tampered hidden input, or knowledge's 400/422 on a bad value. */
+  invalidRequest: "Could not update visibility. Reload the page and try again.",
+  sessionExpired: "Your session has expired. Sign in again to continue.",
+  /** 404 — the project vanished (or was never ours) between render and submit. */
+  notFound: "This project no longer exists.",
+  generic: "Could not update visibility. Please try again.",
+} as const;
+
 export const PROJECT = {
   /** Document <title> (the SITE template appends " · knowledge"). STATIC — the
    * knowledge client is `cache: "no-store"`, so a `generateMetadata` title would
@@ -46,6 +56,31 @@ export const PROJECT = {
     eyebrow: "Org · Project",
     /** Prefix for the created-date sub-line, rendered as `{prefix} {date}`. */
     createdPrefix: "Created",
+  },
+
+  /**
+   * Per-project visibility (P19) — the header Public/Private badge + the toggle
+   * button beside it. `badge` labels the current state (`active`=Public / `idle`=
+   * Private via the closed Badge enum); `toggle` labels the ACTION (the inverse of
+   * the current state); `hint` is a one-line explanation under the toggle.
+   */
+  visibility: {
+    badge: {
+      public: "Public",
+      private: "Private",
+    },
+    toggle: {
+      /** Shown when the project is private — the button makes it public. */
+      makePublic: "Make public",
+      /** Shown when the project is public — the button makes it private. */
+      makePrivate: "Make private",
+      pendingLabel: "Saving…",
+    },
+    /** Explains what public visibility means, once, beside the toggle. */
+    hint: {
+      public: "Anyone with the link can read this project's documents and graph.",
+      private: "Only your org can read this project's documents and graph.",
+    },
   },
 
   usage: {

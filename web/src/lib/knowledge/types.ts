@@ -55,6 +55,14 @@ export interface KbProject {
   name: string;
   tenant_id: string;
   created_at: string;
+  /**
+   * Per-project read visibility (P19). `"private"` (the default for every new
+   * project) keeps docs/graph member-only; `"public"` exposes the project's docs +
+   * graph nodes to anonymous and cross-org readers. Toggled via
+   * `PATCH /app/projects/{id}` (session-only); every `serialize_project` payload
+   * carries it.
+   */
+  visibility: "private" | "public";
 }
 
 /**
@@ -109,6 +117,12 @@ export interface KbDashboardProject {
   keys: number;
   /** Most-recent ingest recency across the project's credentials, or null. */
   last_used_at: string | null;
+  /**
+   * The project's read visibility (P19) — the dashboard rollup surfaces it as a
+   * Public/Private badge column. Built straight from the Postgres `ProjectRecord`
+   * the rollup already loads, so it needs no extra query.
+   */
+  visibility: "private" | "public";
 }
 
 /** One lifecycle event in the dashboard activity feed. */

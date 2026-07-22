@@ -44,7 +44,8 @@ async def get_dashboard(
         {
           "projects": [
             {"id": str, "name": str, "created_at": ISO,
-             "documents": int, "keys": int, "last_used_at": ISO|null}
+             "documents": int, "keys": int, "last_used_at": ISO|null,
+             "visibility": "private"|"public"}
           ],
           "activity": [
             {"type": "project_created"|"key_minted"|"key_revoked",
@@ -103,6 +104,7 @@ async def get_dashboard(
                 "documents": metrics.totals.documents_created,
                 "keys": sum(1 for c in credentials if c.revoked_at is None),
                 "last_used_at": last_used_at.isoformat() if last_used_at else None,
+                "visibility": project.visibility,
             }
         )
 

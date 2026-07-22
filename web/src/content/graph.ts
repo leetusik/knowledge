@@ -20,6 +20,17 @@ export const GRAPH = {
     title: "No documents yet",
     sub: "The map draws itself as documents land in your org. 문서가 추가되면 지도가 그려집니다.",
   },
+
+  /**
+   * The public-graph branded not-found (`(public)/graph/[org]/not-found.tsx`, P19),
+   * on the `.kb-empty` classes — reached when the org id is malformed or resolves to
+   * no public projects (404-never-403, so a nonexistent org is indistinguishable).
+   */
+  notFound: {
+    title: "No public graph here",
+    sub: "This org has no public projects, or it doesn't exist.",
+    backLabel: "Back to knowledge",
+  },
 } as const;
 
 export type GraphCopy = typeof GRAPH;

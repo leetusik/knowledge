@@ -33,13 +33,18 @@ export type {
 } from "./dashboard";
 
 // Project detail (P12.S4) — project info / usage / credential mint-list-revoke +
-// the status-keyed mint/revoke errors.
+// the status-keyed mint/revoke errors. P19 adds the visibility toggle errors.
 export {
   MINT_CREDENTIAL_ERRORS,
   PROJECT,
   REVOKE_CREDENTIAL_ERRORS,
+  SET_VISIBILITY_ERRORS,
 } from "./project";
 export type { ProjectCopy } from "./project";
+
+// Public surfaces + share links (P19) — PublicShell chrome + copy-link island copy.
+export { PUBLIC_SHELL, SHARE } from "./share";
+export type { PublicShellCopy, ShareCopy } from "./share";
 
 // Documents surface (P12.S5) — browse / search / read the tenant's documents.
 export { DOCUMENTS } from "./documents";
