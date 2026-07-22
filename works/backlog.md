@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P19`
-- Current slice: `P19.DECOMP`
-- Next slice: `P19.REVIEW`
+- Current slice: `P19.S1`
+- Next slice: `P19.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `11`
-- Rebuilt at: `2026-07-22T11:38:24+09:00`
+- Rebuilt at: `2026-07-22T12:04:53+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
 | [x] `P18` | `done` | `pass` | Accounts v2: user/org/project with org-level keys | `none` | `works/phases/active/P18` |
-| [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.DECOMP` | `works/phases/active/P19` |
+| [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.S1` | `works/phases/active/P19` |
 | [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.DECOMP` | `works/phases/active/P20` |
 
 ## Phase P16: HTML explainer documents end-to-end
@@ -61,7 +61,12 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P19.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P19/slices/P19.DECOMP` |
+| [x] `P19.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P19/slices/P19.DECOMP` |
+| [ ] `P19.S1` | `todo` | Backend visibility core: projects.visibility migration + PATCH toggle | `implementation` | `works/phases/active/P19/slices/P19.S1` |
+| [ ] `P19.S2` | `todo` | Backend public read surface: anon doc/raw read + org-scoped public graph | `implementation` | `works/phases/active/P19/slices/P19.S2` |
+| [ ] `P19.S3` | `todo` | Web public surfaces: visibility toggle + public doc/graph pages + share link | `implementation` | `works/phases/active/P19/slices/P19.S3` |
+| [ ] `P19.S4` | `todo` | Save-URL fix (mode-aware) + CLI un-hide + skill + template/manifest parity | `implementation` | `works/phases/active/P19/slices/P19.S4` |
+| [ ] `P19.S5` | `todo` | Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke | `implementation` | `works/phases/active/P19/slices/P19.S5` |
 | [ ] `P19.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P19/slices/P19.REVIEW` |
 
 ## Phase P20: Frictionless onboarding: hero, install, env-var quickstart, skill on landing
