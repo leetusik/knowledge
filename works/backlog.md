@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P19`
-- Current slice: `P19.S5`
-- Next slice: `P19.REVIEW`
+- Current slice: `P19.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `11`
-- Rebuilt at: `2026-07-22T14:33:10+09:00`
+- Rebuilt at: `2026-07-22T15:19:41+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
 | [x] `P18` | `done` | `pass` | Accounts v2: user/org/project with org-level keys | `none` | `works/phases/active/P18` |
-| [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.S5` | `works/phases/active/P19` |
+| [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.REVIEW` | `works/phases/active/P19` |
 | [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.DECOMP` | `works/phases/active/P20` |
 
 ## Phase P16: HTML explainer documents end-to-end
@@ -66,7 +66,7 @@
 | [x] `P19.S2` | `done` | Backend public read surface: anon doc/raw read + org-scoped public graph | `implementation` | `works/phases/active/P19/slices/P19.S2` |
 | [x] `P19.S3` | `done` | Web public surfaces: visibility toggle + public doc/graph pages + share link | `implementation` | `works/phases/active/P19/slices/P19.S3` |
 | [x] `P19.S4` | `done` | Save-URL fix (mode-aware) + CLI un-hide + skill + template/manifest parity | `implementation` | `works/phases/active/P19/slices/P19.S4` |
-| [ ] `P19.S5` | `in_progress` | Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke | `implementation` | `works/phases/active/P19/slices/P19.S5` |
+| [x] `P19.S5` | `done` | Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke | `implementation` | `works/phases/active/P19/slices/P19.S5` |
 | [ ] `P19.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P19/slices/P19.REVIEW` |
 
 ## Phase P20: Frictionless onboarding: hero, install, env-var quickstart, skill on landing

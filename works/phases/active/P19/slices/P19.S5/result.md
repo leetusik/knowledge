@@ -205,3 +205,73 @@ operator runs **Step 1 (push) → Steps 2–5 (reconcile → `0004` → deploy, 
 (verify)**; Step 4 (seed) is optional. On completion, re-dispatch **Stage B**, which re-verifies
 the cutover (401→404 flip) and runs the live extended `onboarding_smoke.py` E2E with web pages in
 scope. Stage A returns **`needs_operator`**.
+
+---
+
+## Stage B — hosted verification (done 2026-07-22, cutover live)
+
+The operator executed the runbook (push → reconcile → `alembic upgrade head` applied
+`0003_org_level_credentials -> 0004_project_visibility` → `deploy/deploy.sh`: all services
+Up (healthy), api process fresh, `/healthz` 200, flip probe 401→404 verified twice). Stage B
+re-verifies the cutover from the workstation and drives the full public-link E2E live.
+
+### 1. Read-only prod probes — the P19 live-flip confirmed
+
+`curl` (default UA, clean through Cloudflare) against `https://knowledge.hi2vi.com`.
+
+| Probe | Result | Reading |
+|---|---|---|
+| `GET /healthz` | **200** `{"status":"ok","docs_root":"/repo/docs","db":"ok","documents":18}` | api live; content + accounts planes healthy; 18 public docs (unchanged from the Stage A baseline) |
+| **Flip probe** `GET /app/graph?org=C1C4F228-49ED-451E-9EBA-3237FDE09DF1` (unauth, random org) | **404** `{"detail":"graph not found"}` | **P19 is LIVE** — the pre-P19 baseline was **401** (`require_user`); the optional-identity public-graph path now resolves the random org to the public path and answers **404 "graph not found"**. The decisive **401 → 404** flip. |
+
+### 2. Hosted extended smoke — full public-link E2E, web pages in scope
+
+`.venv/bin/python scripts/onboarding_smoke.py --base-url https://knowledge.hi2vi.com`
+(httpx 0.28.1; **no** `--skip-web-pages` — the Next public pages are the same origin on prod).
+This signs up two throwaway tenants (tenant B + section-4 tenant C), exercises B-isolation +
+usage metering + the P18 org journey, and runs the P19 public-link leg end-to-end against the
+live host: 201 `url` shape → anonymous 404-while-private → session PATCH public → anonymous
+doc/`raw`/graph 200s **plus the same-origin web pages** → PATCH back private → 404 + `/login`
+redirect.
+
+**Exit 0 — zero failures collected.** Verbatim PASS summary line:
+
+> `PASS — tenant B onboarded (onboard-smoke+3b4b27203d79@example.com), doc onboarding-smoke/2026-07-22-smoke-3b4b27203d79.md; B-only isolation (no --master-token); usage metered; org journey OK (onboard-smoke-org+0013738e6128@example.com): 1 org key -> 2 get-or-create projects, per-project usage, revoke->401, project-bound regression; public-link (private->public->private, web pages OK)`
+
+The `web pages OK` tail (vs Stage A's local `web skipped`) is the new signal: the anonymous
+same-origin public pages passed live for the first time — `GET {the 201 url}` → 200 HTML and
+`GET /graph/{tenant_uuid}` → 200 HTML while public, and after the toggle-back the doc page
+returned a `/login` redirect. Every anonymous-surface assertion held live: the S4 mode-aware 201
+`url` ending `/documents/{id}`, the 404-before-public, the 200-after-public JSON with no
+`tenant_id`, the `/raw` P16 sandbox CSP header byte-for-byte, the public graph carrying the doc
+node, the random-org 404 (no existence leak), and the toggle-back 404. The public-link leg's
+throwaway project ends **private** (private→public→private round-trip), so no throwaway content
+stays publicly reachable.
+
+### 3. Anomalies
+
+**None.** Both probes and the full hosted smoke passed on the first run — no retry, no transient
+error, no failures collected. `--master-token` was not supplied (operator-only secret this
+executor never sees), so the smoke ran B-only isolation as designed; the isolation-vs-tenant-#1
+extra remains an optional operator-run check.
+
+### 4. Residue (as documented in the runbook)
+
+The hosted smoke onboarded two throwaway tenants (B + section-4 C) whose docs live under
+`tenants/<uuid>/` — namespaced, isolated from tenant #1's public corpus (same residual shape as
+P16/P17/P18 runs). The public-link leg left its throwaway project **private**. No delete API; the
+operator may purge later. `/healthz` still reports `documents: 18` (tenant-#1 public corpus
+unchanged) — the throwaway tenants' docs are not counted in the public docs plane.
+
+### Stage B validation
+
+| Command | Outcome |
+|---|---|
+| `curl -sS https://knowledge.hi2vi.com/healthz` | **200** `{"status":"ok",…,"documents":18}` |
+| `curl -sS "https://knowledge.hi2vi.com/app/graph?org=<random-uuid>"` (flip probe) | **404** `{"detail":"graph not found"}` — the P19 401→404 live-flip |
+| `.venv/bin/python scripts/onboarding_smoke.py --base-url https://knowledge.hi2vi.com` (web pages in scope) | **PASS** (exit 0) — full B-isolation + usage + P18 org journey + **P19 public-link leg with same-origin web pages** |
+| `python3 scripts/workflow.py validate` | see verdict — state integrity clean |
+
+**Deviations from `plan.md` (Stage B):** none. Probes read-only; the smoke ran its own throwaway
+signup/write journey only. No commits, no status transitions, no doc versioning, no pushes, no
+alembic. Stage B returns **`done`**.
