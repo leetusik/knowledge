@@ -8,9 +8,9 @@
 - Current phase: `P20`
 - Current slice: `P20.S2`
 - Next slice: `P20.S3`
-- Waiting on operator: `none`
+- Waiting on operator: `P20.S2`
 - Open deferred jobs: `14`
-- Rebuilt at: `2026-07-22T16:30:29+09:00`
+- Rebuilt at: `2026-07-22T16:37:18+09:00`
 
 ## Active Phases
 
@@ -75,7 +75,7 @@
 |---|---|---|---|---|
 | [x] `P20.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P20/slices/P20.DECOMP` |
 | [x] `P20.S1` | `done` | installer + hero honesty + CLI onboarding fixes | `implementation` | `works/phases/active/P20/slices/P20.S1` |
-| [ ] `P20.S2` | `todo` | Design round 02: env-var quickstart + skill-on-landing sections (handoff) | `co-work` | `works/phases/active/P20/slices/P20.S2` |
+| [~] `P20.S2` | `pending` | Design round 02: env-var quickstart + skill-on-landing sections (handoff) | `co-work` | `works/phases/active/P20/slices/P20.S2` |
 | [ ] `P20.S3` | `todo` | Implement designed sections: env-var quickstart + parity-gated skill on landing | `implementation` | `works/phases/active/P20/slices/P20.S3` |
 | [ ] `P20.S4` | `todo` | Ship + live verify: push main, prod deploy, installer/hero/skill/init smoke | `implementation` | `works/phases/active/P20/slices/P20.S4` |
 | [ ] `P20.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P20/slices/P20.REVIEW` |
