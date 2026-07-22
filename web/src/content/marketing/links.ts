@@ -26,6 +26,15 @@ export const LINKS = {
   connectClaude: `${REPO}/tree/main/plugin`,
   /** Agent Retrieval API — coming (P15); follow the roadmap on the repo. */
   waitlist: REPO,
+  /** "Mint an org key →" (P20.S3) — the dashboard Org API keys panel. Anchors to the
+   *  panel heading (`id="org-keys-head"`); auth-gated is fine (the panel mints the
+   *  org-level key the env-var quickstart uses). */
+  mintOrgKey: "/dashboard#org-keys-head",
+  /** The explain skill published on the landing (P20.S3) — the canonical
+   *  `plugin/skills/explain/SKILL.md` served byte-for-byte from `web/public/` under
+   *  the `scripts/skills_parity.py` gate. Download (`<a download>`) + copy-the-skill
+   *  (fetch) both point here. */
+  skillFile: "/SKILL.md",
 } as const;
 
 // In-page anchor ids for the landing sections, in band order. Kept local to the
@@ -37,6 +46,11 @@ export const MKT_SECTION_IDS = {
   howItWorks: "how-it-works",
   save: "save",
   connect: "connect",
+  // P20.S3 — the two onboarding sections, in band order between connect and graph:
+  // the env-var agent quickstart continues the Connect dark territory, the published
+  // skill follows on a sunken band.
+  agents: "agents",
+  skill: "skill",
   graph: "graph",
   pricing: "pricing",
   cta: "get-started",

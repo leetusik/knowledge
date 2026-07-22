@@ -3,8 +3,14 @@
 // exception). Inline `code` spans keep their backticks — the RichText renderer
 // splits on them. Where §4 gives a section's ticks/free-offer as phrases (not a
 // single quoted string) the phrases are used verbatim; where §4 names a lede's
-// topic but quotes no lede text (the two mid features), no lede is fabricated —
-// "never invented" outranks re-adding a sentence we do not have. See result.md.
+// topic but quotes no lede text (the two mid features), no lede was fabricated.
+//
+// P20.S3 — D10 resolved: the two mid-feature ledes (FEATURE_SAVE / FEATURE_CONNECT)
+// are now carried verbatim from round-02 build-prompt.md §D10 (they were already the
+// ledes on the shipped round-01 cards, just never quoted into content). Two new copy
+// modules — AGENT_QUICKSTART and FEATURE_SKILL — plus the locked env-var snippet
+// strings land the round-02 onboarding sections; every string is verbatim from
+// web/design/rounds/02-onboarding/output/build-prompt.md §(a)/§(b)/§D10.
 import { LINKS, MKT_SECTION_IDS } from "./links";
 import type { MktSectionId } from "./links";
 
@@ -135,6 +141,8 @@ export const FEATURE_SAVE = {
   id: MKT_SECTION_IDS.save as MktSectionId,
   eyebrow: "SAVE & HYBRID SEARCH",
   title: "Everything they learn, in one durable place.",
+  // D10 (P20.S3) — verbatim from round-02 build-prompt §D10.
+  lede: "Each explainer is grounded in real code and tagged on the way in. Find it again with hybrid search — keyword and semantic, together — across a mixed English / Korean corpus.",
   ticks: [
     "Long-form explainers, read like a book",
     "Hybrid keyword + semantic search, Korean typeahead",
@@ -170,6 +178,9 @@ export const FEATURE_CONNECT = {
   id: MKT_SECTION_IDS.connect as MktSectionId,
   eyebrow: "CONNECT YOUR AGENT",
   title: "Onboarding built for agents, not forms.",
+  // D10 (P20.S3) — verbatim from round-02 build-prompt §D10. `knowledge init` renders
+  // as an inline code span (RichText splits on the backticks).
+  lede: "A one-shot `knowledge init` runs the whole sequence — sign up, create a project, mint a key, write the config, verify — unattended. Your coding agent drives it; you never open the website.",
   ticks: [
     "Idempotent & non-interactive (no password flag)",
     "Every command has a `--json` / exit-code contract",
@@ -184,6 +195,76 @@ export const FEATURE_CONNECT = {
       variant: "secondaryOnDark",
     },
   ] satisfies MktCta[],
+};
+
+// ── Locked env-var snippets (P20.S3) — byte-exact from round-02 build-prompt §(a).
+// The COPY payloads are what the clipboard receives; the ~/.zshenv DISPLAY (rendered
+// in agent-quickstart.tsx) floats the comment onto its own hint line — the trailing-
+// comment form clips at column width — while the copy stays the exact two locked
+// lines. Byte-exactness of these strings is part of the design contract: do not
+// reflow, re-space, or re-quote them (there are exactly 8 spaces before the comment).
+export const ZSHENV_COMMENT =
+  "# org-level key: Dashboard → Org API keys → New key";
+export const ZSHENV_EXPORT_BASE =
+  'export KB_API_BASE_URL="https://knowledge.hi2vi.com"';
+export const ZSHENV_TOKEN_VALUE = '"vk_..."';
+/** The clipboard payload for the ~/.zshenv block: the two locked export lines,
+ *  including the trailing comment and its exact 8-space gap. */
+export const ZSHENV_COPY =
+  'export KB_API_BASE_URL="https://knowledge.hi2vi.com"\n' +
+  'export KB_API_TOKEN="vk_..."        # org-level key: Dashboard → Org API keys → New key';
+/** The health-check curl line — the whole line is both the display and the copy. */
+export const HEALTH_CHECK_CURL =
+  'curl -sS --max-time 5 -H "Authorization: Bearer $KB_API_TOKEN" "$KB_API_BASE_URL/api/documents?limit=1"';
+
+// Agent quickstart — dark band continuing Connect (build-prompt §(a)). Copy left /
+// setup column right. Every string verbatim from §(a); ticks carry inline `code`.
+export const AGENT_QUICKSTART = {
+  id: MKT_SECTION_IDS.agents as MktSectionId,
+  eyebrow: "AGENT QUICKSTART · THE RECOMMENDED PATH",
+  title: "Two exports, and every agent can save.",
+  lede: "Set two environment variables once, and every coding agent on the machine — Claude Code, Codex, anything that can speak REST — saves into the same knowledge base. No plugin, no config file, nothing per-repo.",
+  ticks: [
+    "One org-level key serves every repo — each save's project is derived from the repo directory name (`default` outside one)",
+    "Plain REST underneath: the two variables are the whole contract, fully usable by hand — the recommended path is a coding agent driving the skill below",
+    "Codex only: its workspace-write sandbox blocks outbound network — set `[sandbox_workspace_write] network_access = true` in `~/.codex/config.toml`",
+  ],
+  cta: { label: "Mint an org key →", href: LINKS.mintOrgKey } satisfies MktNavLink,
+  zshenvLabel: "~/.zshenv",
+  trapKicker: "KNOWN TRAP",
+  trap: "A repo `.env` is never auto-loaded by Claude Code or Codex. Put the exports in `~/.zshenv`, where every agent's shell sees them.",
+  healthLabel: "HEALTH CHECK · ONE LINE",
+  health: {
+    ok: "200",
+    okLabel: "connected",
+    err: "401",
+    errLabel: "wrong-or-revoked key",
+  },
+};
+
+// The explain skill, published — sunken band (build-prompt §(b)). Copy left 1fr /
+// document pane right 1.15fr; Download + Copy always take the FULL served file.
+export const FEATURE_SKILL = {
+  id: MKT_SECTION_IDS.skill as MktSectionId,
+  eyebrow: "THE EXPLAIN SKILL · PUBLISHED",
+  title: "The skill your agent drives — in the open.",
+  lede: "Saving isn't a form. It's a 486-line skill: research the topic or the diff, write a self-contained interactive explainer, cite sources, add a quiz, save over REST. The API works by hand; the recommended path is a coding agent following this file. Copy it straight into your agent — or download it.",
+  ticks: [
+    "Runs as `/knowledge:explain` in Claude Code; the identical skill text ships for Codex under `.agents/`",
+    "This page serves the canonical file — a byte-parity CI gate keeps it from ever forking",
+    "One markdown file, YAML frontmatter included — everything the agent needs, offline",
+  ],
+  downloadLabel: "Download SKILL.md",
+  copyLabel: "Copy the skill",
+  pane: {
+    name: "SKILL.md",
+    meta: "486 lines · yaml + markdown",
+    cmd: "/knowledge:explain",
+    footLead: "showing the head",
+    expand: "read the whole skill ↓",
+    collapse: "collapse ↑",
+    parity: "byte-parity with plugin/skills/explain/SKILL.md",
+  },
 };
 
 export const FEATURE_GRAPH = {

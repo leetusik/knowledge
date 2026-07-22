@@ -14,6 +14,7 @@ export function FeatureSave() {
         <Reveal>
           <Eyebrow>{FEATURE_SAVE.eyebrow}</Eyebrow>
           <h2 className="font-display text-heading-2">{FEATURE_SAVE.title}</h2>
+          <p className="mkt-lede mt-5 text-body-lg">{FEATURE_SAVE.lede}</p>
           <div className="mt-7">
             <Ticks items={FEATURE_SAVE.ticks} />
           </div>

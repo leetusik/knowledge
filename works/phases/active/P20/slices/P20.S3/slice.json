@@ -3,14 +3,14 @@
   "phase_id": "P20",
   "name": "Implement designed sections: env-var quickstart + parity-gated skill on landing",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P20.S2"
   ],
   "created_at": "2026-07-22T15:55:05+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-07-22T17:00:04+09:00",
+  "completed_at": "2026-07-22T17:19:39+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
