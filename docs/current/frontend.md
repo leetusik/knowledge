@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0007
-created_at: 2026-07-21T15:22:40+09:00
-source: P16.REVIEW
-summary: P16 web viewer renders HTML explainers in a sandboxed opaque-origin iframe via a same-origin BFF raw-relay route; markdown docs render byte-identically
-previous: v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01
+version: v0008
+created_at: 2026-07-22T11:24:22+09:00
+source: P18.REVIEW
+summary: P18 Org API keys dashboard panel reusing P12 components at org scope (no new route/design round); org BFF helpers; project_id string|null; Workspace to Org copy
+previous: v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically
 ---
 
 # Frontend
@@ -49,6 +49,15 @@ quiz JS runs) inside a **sandboxed opaque-origin `<iframe sandbox="allow-scripts
 (`GET /api/documents/{id}/raw`), while a markdown document renders **byte-identically**
 via the existing `<MarkdownBody>`. No new visual design — the iframe chrome reuses the
 existing KB `--kb-*` tokens. See *The HTML explainer render (`web/`, P16)* below.
+
+**As of P18 the `web/` app grows an Org API keys panel and renames Workspace → Org copy** —
+a full-width `kb-panel` on `/dashboard` (below the projects/activity grid, **no new route or
+rail change**) that reuses the P12 keys-table + mint-modal + revoke components **at org scope**,
+so it is the **same visual language at a different scope — no Claude Design round** (design
+stance #6). It adds new BFF org-credential helpers + two dashboard server actions, widens
+`KbCredential.project_id` to `string | null` (org keys serialize `null`), and renames the
+user-facing "Workspace" strings to "Org" (labels only — no CSS class or code identifier
+renamed). See *The Org API keys panel + Workspace→Org copy (`web/`, P18)* below.
 
 ## Stack
 
@@ -600,3 +609,45 @@ is additive and markdown docs render byte-identically; no new visual design (exi
   JS runs, a direct top-level visit to the raw URL is sandbox-stripped, and a markdown doc
   still renders byte-identically. No jsdom/browser tooling exists in this repo, so this is a
   recorded operator residual, not a defect.
+
+## The Org API keys panel + Workspace→Org copy (`web/`, P18)
+
+P18 adds an **org-level** API-keys surface to the authenticated app and renames the user-facing
+"Workspace" copy to "Org." It is a web-only slice: no `server/**`, no new route, and **no new
+visual design** — the panel reuses the P12 keys-table + mint-modal + revoke components at org
+scope (design stance #6 → **no Claude Design round**; a genuinely new-design surface would have
+had to flag and stop rather than invent one, which it did not need to).
+
+- **Placement — a dashboard panel, not a new route.** A full-width **`Org API keys`** `kb-panel`
+  renders on `/dashboard` (`app/(app)/dashboard/page.tsx`) below the projects/activity grid — no
+  rail item, no new route. Project pages keep their per-project keys unchanged.
+- **Reused components + page-local islands.** The panel is a `DataTable` of the reused key columns
+  (name / mono `token_prefix` / derived status `Badge` / created / last-used / revoke) over a
+  `MintOrgKeyForm` disclosure. `dashboard/mint-org-key-form.tsx` (`MintOrgKeyForm`, with
+  `ShowOnceKey` inlined) and `dashboard/revoke-org-key-button.tsx` (`RevokeOrgKeyButton`,
+  `credentialId`-only) are **page-local copies** of the project mint/revoke islands (the
+  established P12 convention — no shared abstraction invented).
+- **BFF org-credential helpers.** `web/src/lib/knowledge/app.ts` gains `listOrgCredentials` /
+  `createOrgCredential` / `revokeOrgCredential`, mirroring the project helpers minus the path
+  project id — they hit S2's `GET/POST/DELETE /app/credentials`. `mintOrgCredentialAction` /
+  `revokeOrgCredentialAction` were **appended to the existing** `dashboard/actions.ts` (one
+  `"use server"` module that already held `createProjectAction`) — same rules as the project
+  mint/revoke (`requireIdentity()` outside the try, status-mapped errors, show-once key in the
+  action state, `revalidatePath("/dashboard","page")`; mint has no `notFound` case since the org
+  is the caller's own tenant).
+- **`KbCredential.project_id` widened to `string | null`** (`lib/knowledge/types.ts`) — the honest
+  shape of S2's NULL-safe `serialize_credential` (org keys serialize `null`). This forced one
+  type-narrow on the project detail page's revoke cell (`credential.project_id !== null`; behavior
+  identical — a project-detail credential is always project-bound). Any future consumer of
+  `project_id` must treat it as nullable.
+- **Workspace → Org copy is label-only.** The user-facing "Workspace" string *values* were renamed
+  to "Org" across `content/{app,dashboard,auth,documents,graph,project}.ts` (signup line →
+  "A default org and project are created for you automatically"), while the **code identifier**
+  `APP_SHELL.workspaceLabel` (and all CSS classes) are **unchanged** — only the value moved. The
+  only deliberately-surviving `workspace` string is the P20 marketing landing copy
+  (`content/marketing/content.ts`), left for P20. New content exports: `DASHBOARD.orgKeys` +
+  `MINT_ORG_CREDENTIAL_ERRORS` / `REVOKE_ORG_CREDENTIAL_ERRORS`.
+- **Validation.** typecheck / lint / `next build` / `vitest` (58) all green; the live
+  mint→show-once→revoke click-through is the same operator residual shape as P16's in-browser
+  round-trip — the live org-key path is proven end-to-end by S5's extended `onboarding_smoke.py`
+  against prod.

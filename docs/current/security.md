@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0010
-created_at: 2026-07-21T15:27:20+09:00
-source: P16.REVIEW
-summary: P16 HTML explainer XSS containment: opaque-origin sandboxed iframe (allow-scripts, no allow-same-origin) + CSP/X-Frame exemption; raw_html never in JSON; XSS-safe-by-construction preserved while quiz JS runs
-previous: v0009_p13_cli_two-token_model_passwords_never_in_argv_show-once_vk__written_to_the_seam_not_printed_chmod_600_enforced_in_code_public_auth_grant_throttled_server-side_per-ip_kb_api_token_tenant-_1_public-write_hazard
+version: v0011
+created_at: 2026-07-22T11:24:32+09:00
+source: P18.REVIEW
+summary: P18 org-level key authorization made honest (one vk_ grants the whole org); no trust-boundary shift (enforcement already tenant-wide); revoked org keys 401
+previous: v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs
 ---
 
 # Security
@@ -24,6 +24,8 @@ Personal, single-operator knowledge base. The threat model is modest — no mult
 **P13 ships a standalone `knowledge` CLI and, to make its onboarding reachable on the hosted host, publishes the `/auth/*` grant to the internet — the phase's real security event.** Two threads follow, both below in *CLI credential handling + the public `/auth` throttle*: (1) **credential hygiene at the client** — a **two-token model** (a non-expiring `vk_` in `api.token`, an additive 30-day session in `auth.session_token`), passwords that **never reach `argv`** or logs, a **show-once `vk_` written to the config seam and never printed** (`redact_token` is the only display form), the generic-401 enumeration-safety preserved verbatim from the terminal, and `chmod 600` on the config now **enforced in code** rather than a prose instruction; and (2) **a new exposed surface** — publishing `/auth/{signup,login}` (an unauthenticated password grant + open signup) invalidates the pre-P13 "this API needs no rate limit" rationale, so P13 lands a **server-side per-IP throttle** on that grant in the same slice. One standing hazard is also documented: a stray `$KB_API_TOKEN` in the CLI user's environment resolves to **tenant #1** (whose writes publish to the public site), so the CLI warns and the smoke scrubs it.
 
 **P16 introduces the first document format whose content is *executable untrusted code* — a self-contained HTML explainer with inline JS — and contains it by construction rather than sanitizing it away.** The web app's markdown viewer was "XSS-safe by construction" (react-markdown, no `rehype-raw`); an HTML explainer must instead *run* its quiz JS. P16 keeps the safety stance while allowing that interactivity via an **opaque-origin sandboxed iframe**: `sandbox="allow-scripts"` **without** `allow-same-origin`, pointed at a same-origin BFF raw-relay route, with the raw response also carrying a `Content-Security-Policy: sandbox allow-scripts` (defense in depth) and an `X-Frame-Options` exemption scoped to that one path. The untrusted explainer JS runs but has **no session cookie, no storage, no cross-origin parent DOM, and no way to call the API as the user**; the raw HTML never appears in a JSON body, and search indexes only extracted text. See *HTML explainer XSS containment (P16)* below.
+
+**P18 makes org-level API keys honest, and it is a wording change to this doc — not a trust-boundary shift.** A `vk_` is now mintable at **org level** (one key grants the whole org/tenant). Crucially, enforcement was **already** tenant-wide before P18: the resolver returned `ctx.tenant_id` for any `vk_`, and the write path never checked a document's `project` against the credential — the key's project binding only ever drove usage attribution. So org-level keys make the de-facto behavior explicit; they do **not** loosen isolation. Every P10 boundary holds unchanged (per-tenant content isolation, cross-tenant → 404, sha256-at-rest tokens, argon2id, enumeration-safe 401s), and a **revoked** org key resolves to nothing → **401**, exactly like a project-bound one. See *Org-level key authorization made honest (P18)* below.
 
 ## Purpose
 
@@ -236,6 +238,15 @@ P16 makes a standalone interactive HTML explainer a first-class document type. I
 - **Auth + tenancy unchanged.** The raw route is `require_user`-guarded and tenant-scoped exactly like the rest of `/app/*` (cross-tenant → 404, existence never leaks); the web relay self-guards on the sealed session cookie (401 with no upstream call when absent). No new credential, secret, CORS change, or auth surface — P16 widens the *content* threat model (executable doc content) but not the auth model.
 - **Residual (operator visual acceptance).** The live in-browser confirmation that the quiz runs while a direct raw-URL visit is sandbox-stripped needs a real browser (no jsdom/browser tooling in the repo); it is an operator residual. Every machine-verifiable layer — the sandbox attribute, the identical CSP/X-Frame across all three layers, the runtime header check, extracted-text-only search, and `raw_html` never in a JSON body — passed at the P16 review.
 
+## Org-level key authorization made honest (P18)
+
+P18 makes `vk_` keys mintable at **org level** (one key grants the whole org/tenant). This is a **wording change** to the auth model, not a boundary change — recorded so no one mistakes it for a loosening:
+
+- **Enforcement was already tenant-wide.** Since P10 the `/api/*` resolver mapped any `vk_` → `ctx.tenant_id`, and the write path authorized by tenant and **never** checked a document's `body.project` against the credential (`validate_project` is a convention check only). The key's project binding drove **usage attribution**, not authorization. Org-level keys make that explicit — they authorize exactly what a project-bound key already did (the whole tenant).
+- **The resolver reads the credential's own `tenant_id`.** An org key carries `project_id NULL` and resolves to its `tenant_id` with no bound project; a project-bound key keeps its `project_id` and the vanished-project existence guard. No cross-tenant reach is introduced (a credential still only ever resolves to its own tenant).
+- **Revocation is unchanged.** A revoked org key resolves to nothing → **401**, identical to a revoked project-bound key (verified in the Postgres-gated `test_org_credentials` and live at the P18 cutover — revoke → subsequent write 401).
+- **No new secret, credential store, CORS change, or PII.** Org keys are stored exactly like project-bound ones (sha256-hex `token_hash` + `token_prefix`, raw key shown once at mint, never persisted). The `0003` schema adds a backfilled `tenant_id` column and makes `project_id` nullable — no credential material or trust boundary changes.
+
 ## Security Checklist
 
 - [x] No secrets committed (token + Gemini key via env only; `.env` + a private-key backstop in `.gitignore`)
@@ -269,6 +280,8 @@ P16 makes a standalone interactive HTML explainer a first-class document type. I
 - [x] **(P16)** An HTML explainer's untrusted JS runs only in an **opaque-origin** iframe (`sandbox="allow-scripts"`, **no** `allow-same-origin`) — no cookie/storage/parent-DOM/credentialed-API access; the app is CORS-less + the session cookie is httpOnly
 - [x] **(P16)** Defense in depth: the raw response carries `CSP: sandbox allow-scripts; frame-ancestors 'self'` (a direct top-level visit is privilege-stripped) and the CSP/X-Frame pair is identical across the backend route, the BFF relay, and `next.config` (verified at runtime)
 - [x] **(P16)** `raw_html` is never in any JSON body (dropped from every read projection); the raw route is `require_user`-guarded + tenant-scoped (404 on missing/cross-tenant/non-html); search indexes only extracted text (never `<script>`/`<style>`)
+- [x] **(P18)** Org-level `vk_` keys are a **wording change, not a boundary shift** — enforcement was already tenant-wide; org keys authorize the same whole-tenant scope a project-bound key did, resolve only to their own tenant, and a revoked org key → 401 (verified gated + live)
+- [x] **(P18)** No new secret/credential store/CORS change/PII — org keys are stored like project-bound (`token_hash` + `token_prefix`, raw shown once); `0003` adds a backfilled `tenant_id` + nullable `project_id`, no trust-boundary change
 
 ## Open Questions
 

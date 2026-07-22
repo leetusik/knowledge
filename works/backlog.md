@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P18`
-- Current slice: `P18.REVIEW`
-- Next slice: `none`
+- Current phase: `P19`
+- Current slice: `P19.DECOMP`
+- Next slice: `P19.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `9`
-- Rebuilt at: `2026-07-22T11:10:38+09:00`
+- Open deferred jobs: `11`
+- Rebuilt at: `2026-07-22T11:38:24+09:00`
 
 ## Active Phases
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|
 | [x] `P16` | `done` | `pass` | HTML explainer documents end-to-end | `none` | `works/phases/active/P16` |
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
-| [ ] `P18` | `planned` | `pending` | Accounts v2: user/org/project with org-level keys | `P18.REVIEW` | `works/phases/active/P18` |
+| [x] `P18` | `done` | `pass` | Accounts v2: user/org/project with org-level keys | `none` | `works/phases/active/P18` |
 | [ ] `P19` | `planned` | `pending` | Public projects & direct doc links | `P19.DECOMP` | `works/phases/active/P19` |
 | [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.DECOMP` | `works/phases/active/P20` |
 
@@ -55,7 +55,7 @@
 | [x] `P18.S3` | `done` | Web app: org-level keys surface + workspace->org copy | `implementation` | `works/phases/active/P18/slices/P18.S3` |
 | [x] `P18.S4` | `done` | CLI --project/default fallback + explain/setup skill text + parity | `implementation` | `works/phases/active/P18/slices/P18.S4` |
 | [x] `P18.S5` | `done` | Prod migration + deploy + extended onboarding E2E (operator-gated) | `implementation` | `works/phases/active/P18/slices/P18.S5` |
-| [ ] `P18.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P18/slices/P18.REVIEW` |
+| [x] `P18.REVIEW` | `done` | phase review | `review` | `works/phases/active/P18/slices/P18.REVIEW` |
 
 ## Phase P19: Public projects & direct doc links
 

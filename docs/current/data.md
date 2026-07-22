@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0008
-created_at: 2026-07-21T15:22:34+09:00
-source: P16.REVIEW
-summary: P16 content-plane documents gains format + raw_html columns (disposable ALTER TABLE); DB markdown = extracted text so FTS unchanged; Postgres control plane untouched
-previous: v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8
+version: v0009
+created_at: 2026-07-22T11:27:38+09:00
+source: P18.REVIEW
+summary: P18 alembic 0003: projects UNIQUE(tenant_id,name) with de-dupe; project_credentials.tenant_id NOT NULL + project_id nullable; org keys carry project_id NULL
+previous: v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched
 ---
 
 # Data
@@ -20,6 +20,8 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 **P11** adds a **7th** control-plane table, `usage_events` — a durable, append-only **event log** of per-tenant / per-project usage (document creates/deletes and searches) that the dashboard reads back as a **derive-on-read** GROUP-BY-day aggregate. It is observability data only (no quotas/billing), carries no new PII (only tenant/project/event-type/timestamp), and its retention is **deferred** (a cleanup job is flagged as D8, not built now).
 
 **P16** adds an HTML explainer document format to the **disposable content plane only**: the `documents` table gains two columns — `format TEXT NOT NULL DEFAULT 'md'` and nullable `raw_html TEXT` (the raw HTML, populated for html docs only) — via an idempotent `ALTER TABLE ADD COLUMN` in `init_db`. The `markdown` column for an html doc holds **server-extracted plain text** (so FTS5 / `snippet()` / embeddings are unchanged), while `raw_html` holds the raw HTML the web viewer's raw route serves. Canonical storage is still files (`docs/<project>/<date>-<slug>.html`, metadata in a leading `<!--kb … -->` comment-frontmatter), and reindex rebuilds both columns from the file alone. **The Postgres control plane is untouched — no Alembic migration.**
+
+**P18** reshapes the **Postgres control plane** for org-level credentials + get-or-create projects, via the **third Alembic migration `0003_org_level_credentials`** (`down_revision="0002_usage_events"`). See *Accounts v2 control-plane schema (P18)* below.
 
 ## Storage
 
@@ -74,6 +76,15 @@ Only sha256 hashes are stored for credentials/session tokens — the raw value i
 - **Derive-on-read aggregate:** `UsageService.get_usage_metrics` runs a single grouped SELECT (GROUP BY the UTC calendar day of `occurred_at`, conditional per-`event_type` counts) over a **half-open window `[start, end)`**, totals summed in Python, days **zero-filled** to a contiguous windowed series (bounded by the window, never by event volume). See backend.
 - **Retention:** the log grows unbounded; a cleanup/retention job is **deferred (D8)** until volume becomes material — not built in P11.
 
+### Accounts v2 control-plane schema (P18) — org-level credentials + unique project names
+
+P18 reshapes two of the P10 accounts tables (migration `0003_org_level_credentials`); the six-table set is otherwise unchanged. The changes **supersede** the P10 `projects` / `project_credentials` bullets above:
+
+- **`projects` gains `UNIQUE(tenant_id, name)`** (`uq_projects_tenant_id`). This is the constraint **get-or-create** relies on (saving to a name is now safely idempotent per tenant). Because prod had **no** unique before, `0003` **defensively de-dupes** any duplicate `(tenant_id, name)` rows first — **oldest-wins** by `(created_at, id)` (matching `get_project_by_name`'s ordering), re-pointing every `project_credentials.project_id` + `usage_events.project_id` from a dead duplicate to the survivor, then deleting the dead rows — so the constraint can be added without failing on live data.
+- **`project_credentials.tenant_id`** is added **`NOT NULL`** (FK → `tenants.id` `ON DELETE CASCADE`, indexed `ix_project_credentials_tenant_id`), **backfilled** from each row's bound `project.tenant_id`. The resolver now reads `tenant_id` off the credential directly.
+- **`project_credentials.project_id` becomes nullable.** An **org-level** credential carries `project_id NULL` (it authorizes the whole tenant/org); a **project-bound** credential keeps its `project_id` (attribution + the vanished-project existence guard). No column is dropped, no existing row's meaning rewritten — org-level keys are purely additive.
+- The ORM (`server/persistence/models.py`) mirrors all three (`ProjectModel` `UniqueConstraint`; `ProjectCredentialModel` non-null `tenant_id` FK + index + nullable `project_id`). `0003`'s downgrade is destructive-by-design (a fix-forward repo): it drops `project_id IS NULL` rows before restoring `NOT NULL`.
+
 ## Indexes / Search
 
 - BM25 keyword search via `documents_fts`, fused in Python with an exp-decay recency signal (P4).
@@ -92,6 +103,7 @@ Only sha256 hashes are stored for credentials/session tokens — the raw value i
 - **(P10) SQLite content DB** — because the tenancy change reworks the table constraints (`UNIQUE(tenant_id, rel_path)`), an in-place `ALTER` is not enough: `init_db` checks `PRAGMA table_info(documents)` and, if `tenant_id` is absent (a pre-tenancy DB), **drops and recreates** `documents` + `documents_fts` + `document_embeddings` and re-runs the schema. Safe because the DB is disposable — the boot reindex repopulates from files.
 - **(P10) Postgres control plane** — versioned with **Alembic** (async `env.py`, initial revision `0001_accounts_tenancy` creating the six tables). Migrations run **explicitly** (`alembic upgrade head`) as a deploy step, never on boot.
 - **(P11) Second migration `0002_usage_events`** (`down_revision="0001_accounts_tenancy"`) — a hand-written Alembic revision creating `usage_events` + its two composite indexes, with constraint names matching the model (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects` SET NULL — no autogenerate drift). `alembic upgrade head` now applies **both** `0001` and `0002` in order (verified live against `postgres:17` at the P11 review).
+- **(P18) Third migration `0003_org_level_credentials`** (`down_revision="0002_usage_events"`) — the org-level-credentials + unique-project-names change (de-dupe → `UNIQUE(tenant_id,name)` → `project_credentials.tenant_id` add/backfill/NOT-NULL/FK/index → `project_id` nullable; see *Accounts v2 control-plane schema (P18)* above). `alembic upgrade head` now applies `0001`+`0002`+`0003` in order; validated against a disposable `postgres:17` at the P18 review (clean upgrade + downgrade round-trip + a seeded-duplicate de-dupe scenario). It is a **manual** deploy step (never on boot) and is the actual de-dupe run on prod — `alembic/` stays repo-only (not shipped in the plugin template).
 - Rule: the SQLite DB is disposable and rebuilt from `docs/`/`tenants/` — schema changes are applied via new idempotent DDL (or a disposable drop-and-recreate) + a reindex. The Postgres accounts schema is durable and migrated explicitly with Alembic.
 
 ## Reconciliation (reindex)

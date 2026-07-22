@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0008
-created_at: 2026-07-21T23:31:06+09:00
-source: P17.REVIEW
-summary: P17 /knowledge:explain outputs an interactive HTML explainer (quiz + cited best-practices) for both modes; /knowledge:setup offers Connect (hosted) vs Scaffold (self-host) modes
-previous: v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged
+version: v0009
+created_at: 2026-07-22T11:24:22+09:00
+source: P18.REVIEW
+summary: P18 default org+project on signup; org-level vk_ from the dashboard Org API keys panel; org-not-workspace copy; CLI default fallback + org-key init
+previous: v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes
 ---
 
 # Experience
@@ -50,6 +50,8 @@ markdown document reads exactly as before. Search finds an HTML explainer by its
 text like any other document. See *The HTML explainer document (P16)* below.
 
 **As of P17 the `/explain` skill authors that interactive HTML explainer for every explanation, and any plugin user can point it at the hosted KB.** `/knowledge:explain` now always produces the quiz-bearing HTML page — with a default-on, cited "Best practices & next steps" section — for **both** topic and code-change modes (no markdown output remains), and `/knowledge:setup` opens with a **Connect** (hosted, zero-infra) vs **Scaffold** (self-host) mode choice, so a plugin user can sign up, mint one key, and have their explainers land in their own tenant on the public host. See *Explain v2 authoring + hosted onboarding (P17)* below.
+
+**As of P18 the accounts experience is "org," not "workspace," across every surface.** Signup now says a **default org and default project** are created automatically (was "a workspace is created for you"); users mint/list/revoke an **org-level `vk_`** (one key → the whole org) from a new **Org API keys** panel on the dashboard, alongside the unchanged per-project keys on a project page; and the app chrome/eyebrows read "Org." From the terminal, `knowledge init` mints that org key and `save` falls back to the `"default"` project outside a git repo. Projects are get-or-create everywhere — no "create a project" step in any flow. See *Accounts v2: the org experience (P18)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -290,6 +292,16 @@ P17 changes what `/knowledge:explain` writes and where a plugin user can send it
   in-browser eyeball of the quiz rendering under a fresh tenant is the one operator
   visual-acceptance residual; every machine-verifiable layer — the raw-HTML relay and
   the four sandbox headers — is proven live on prod.)
+
+## Accounts v2: the org experience (P18)
+
+P18 reshapes the accounts journey around a default org + default project and org-level keys, using the existing surfaces — no new visual design (the org-keys panel reuses the P12 keys-table + mint-modal at org scope; no Claude Design round).
+
+- **Signup gives you a working workspace immediately.** A new user's first session already has a `"default"` org and a `"default"` project — nothing to create before the first save. The web signup copy now reads "A **default org and project** are created for you automatically" (was "A workspace is created for you"), and the CLI `knowledge signup` narration matches.
+- **One org key, minted from the dashboard.** The authenticated web app grows an **Org API keys** panel (a full-width section on `/dashboard`, below the projects/activity grid) where a user mints, lists, and revokes an **org-level `vk_`** — one key that authorizes every project in the org. The raw key is shown **exactly once** in the same reveal modal as the per-project mint. The per-project keys on a project page are unchanged — both key kinds work.
+- **"Org," not "workspace," in the chrome.** The app topbar/eyebrows/labels and the CLI's `login`/`whoami`/`init` output read "org." (Internally the tenant row is still the org — a label change only.)
+- **Get-or-create everywhere.** Saving to a project name that doesn't exist creates it — in the web app, the CLI (`--project <name>`, or the git-repo-basename default, or `"default"` outside a repo), and the explain/setup skills. No client flow has a "create a project" step.
+- **CLI + skill onboarding.** `knowledge init` mints the **org** key (`POST /app/credentials`) and writes `api.project` as the save fallback; the setup skill's Connect mode says a default org + project are auto-provisioned (C1), that projects are automatic (C2), and mints from the Dashboard → Org API keys panel (C3).
 
 ## Open Questions
 

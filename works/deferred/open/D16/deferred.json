@@ -1,0 +1,11 @@
+{
+  "id": "D16",
+  "title": "knowledge init --project other re-mints an org key (reuse-gate relaxation)",
+  "status": "deferred",
+  "source": "P18.S4",
+  "reason": "S4 preserved the init reuse-gate structure verbatim, so a recorded-project change still mints a fresh org key even though org keys are not project-bound — mild tension with one-key-all-repos. Relax the gate to reuse an existing org key across projects.",
+  "trigger": "next CLI onboarding slice (e.g. P20) or operator reports duplicate org keys",
+  "created_at": "2026-07-22T11:38:24+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

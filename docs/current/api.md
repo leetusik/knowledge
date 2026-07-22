@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0012
-created_at: 2026-07-21T15:22:34+09:00
-source: P16.REVIEW
-summary: P16 HTML explainer doc type: additive format on POST + read projections, new GET /app/documents/{id}/raw route, MCP fetch_document format field; frozen /api/* + contract v1 preserved additively
-previous: v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api
+version: v0013
+created_at: 2026-07-22T11:24:32+09:00
+source: P18.REVIEW
+summary: P18 additive org-level /app/credentials endpoints; signup response gains project; nullable serialize_credential; get-or-create on POST /app/projects + writes; frozen contract additive
+previous: v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively
 ---
 
 # API
@@ -31,6 +31,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P15 the API gains an agent-facing companion — an MCP-over-HTTP retrieval service — that sits *alongside* the frozen `/api/*` and never modifies it.** A separate thin server (`mcp-server/`, package `knowledge_mcp`; see *Agent-facing MCP retrieval service* below and **architecture**) exposes knowledge retrieval to AI agents as MCP tools (`search`, `fetch_document`) over the **Streamable-HTTP** transport at `/mcp`, authed by an `Authorization: Bearer vk_…` header **forwarded verbatim** to `/api/*` — so it reimplements no retrieval and inherits the exact tenant/project corpus scoping of the REST surface. Its consumer-pinned **tool contract is v1** (additive-only; surfaced at the service's own internal `GET /healthz` as `contract_version`), and the frozen `/api/*` field names, types, statuses, and routes are **untouched** (P15 changed **no `server/` code** — verified at review). This is a new *agent-facing* API surface, documented in full below.
 
 **As of P16 HTML explainer documents are a first-class doc type, added to every read/write surface additively.** `POST /api/documents` gains an optional `format: "md" | "html"` input (default `"md"` — the raw content still arrives in the `markdown` body field, which for `format:"html"` carries the self-contained HTML). Every document read projection (`/api/documents/{id}`, `/api/documents/by-path/{rel}`, and the `/app/*` doc reads) gains an additive `format` output; the raw HTML lives in an **internal `raw_html` column that is never in any JSON body**. A new session-guarded, tenant-scoped route **`GET /app/documents/{id}/raw`** serves the raw HTML as `text/html` with the sandbox headers (below) for the web viewer's iframe. The MCP `fetch_document` tool output gains an additive `format` field, and for an html doc its `markdown` is the server-extracted readable text — so **`markdown`'s contract meaning ("readable text body") is preserved, not repurposed**: markdown docs are byte-identical, and html is a *new* format whose readable body is its extracted text. **The frozen `/api/*` consumer contract and the MCP tool contract v1 are preserved verbatim** — every P16 change is a new optional field or an entirely new `/app` route; no existing field's name, type, presence, status, or route changed (verified at the P16 review). See *HTML explainer document type (P16)* below.
+
+**As of P18 the control plane gains org-level credentials and get-or-create projects — all additive to the frozen `/api/* + /auth/* + /app/*` contract.** New org-level credential routes appear on `/app/*` (`POST /app/credentials` mints an org key with `project_id NULL`, `GET /app/credentials` lists them, `DELETE /app/credentials/{id}` revokes), sitting **alongside** the unchanged per-project `/app/projects/{id}/credentials` routes. `POST /auth/signup`'s response gains an additive `project` field beside `tenant`. `POST /app/projects` becomes **get-or-create** (a duplicate name → 201 existing row, no longer a 500), and `POST /api/documents` gains a **get-or-create side effect** (an unregistered `body.project` now leaves a `projects` registry row) — its consumer contract is otherwise unchanged. `serialize_credential.project_id` is now nullable (`null` for org keys). No existing field, type, status, or route changed. See *Org-level credentials + get-or-create projects (P18)* below.
 
 ## Auth
 
@@ -206,6 +208,21 @@ P16 makes a standalone, self-contained interactive HTML explainer a first-class 
 - **MCP `fetch_document` gains `format`.** The tool output carries an additive `format` (`"md" | "html"`), relayed verbatim from the upstream single-doc read (an older upstream omitting the key defaults to `"md"`). For an html doc, `markdown` is the **server-extracted readable text** — contract-v1 meaning preserved — and the character-cap truncation applies to it unchanged. The MCP tool contract stays **v1** (a new output field is additive; no `CONTRACT_VERSION` bump); `mcp-server/CONTRACT.md` was updated in-source.
 - **Search over html docs.** FTS5 / `snippet()` / embeddings run over the DB `markdown` column, which for an html doc holds the **extracted text** — so html explainers are searchable by their visible content and **never** by `<script>`/`<style>` text (verified at the P16 review E2E). See **data**/**backend** for the extraction + storage shape.
 
+## Org-level credentials + get-or-create projects (P18)
+
+P18 adds org-level `vk_` keys and get-or-create projects to the control plane — additive to the frozen `/api/* + /auth/* + /app/*` contract (no existing field/type/status/route changed; verified at the P18 review).
+
+- **`POST /auth/signup` gains an additive `project`.** The response is now `{token, user, tenant, project}` (`project` = `{id, name, tenant_id, created_at}`, the auto-provisioned `"default"` project) — additive on the frozen `/auth/*` grant. Signup provisions a `"default"` org **and** `"default"` project atomically (see backend).
+- **Org-level credential endpoints (additive on `/app/*`, all `require_user`-guarded, scoped to the caller's org/tenant):**
+  - `POST /app/credentials` → **201** `{credential, key}` — mints an **org-level** `vk_` (`project_id NULL`); the raw key is shown once. Authorizes every project in the org.
+  - `GET /app/credentials` → `{credentials:[...]}` — org-level keys only (includes revoked), oldest-first.
+  - `DELETE /app/credentials/{credential_id}` → **204** (idempotent soft-revoke); **404** unless the id is one of the caller's own org-level credentials (same anti-probe as the per-project delete).
+  - These sit **alongside** the unchanged per-project `POST|GET /app/projects/{id}/credentials` + `DELETE …/credentials/{cid}` — both key kinds work.
+- **`serialize_credential.project_id` is now nullable** — `null` for an org key, the UUID string for a project-bound key (the shared serializer `usage_api` also imports; backward-compatible for project-bound rows).
+- **`POST /app/projects` is now get-or-create** — a duplicate name returns the existing row (**201**, same shape) instead of the 500 the new `UNIQUE(tenant_id, name)` would otherwise cause.
+- **`POST /api/documents` gains a get-or-create side effect** — an unregistered `body.project` now leaves a `projects` registry row (so a saved-to name always appears in `/app/projects`). The write's `body.project` is still a free-form convention check only, **never** matched against the credential (enforcement is tenant-wide). The frozen 201 consumer contract is otherwise unchanged.
+- **Resolver.** In tenant mode an **org key** (`project_id NULL`) resolves to its `tenant_id` with no bound project; a **project-bound** key keeps its existence guard + `project_id`. A **revoked** org key resolves to nothing → **401**, same as a project-bound one.
+
 ## Frozen consumer contract (P8)
 
 The section below is the **frozen** contract the hi2vi content-agent client (`hi2vi` P15.S4)
@@ -229,7 +246,11 @@ while metering runs, and the usage reads live entirely on the additive `/app/*` 
 **P13 widened the public surface additively:** it edge-routes the pre-existing `/auth/*` + `/app/*`
 planes (no field/shape change) and adds a `429` status to `/auth/{signup,login}` — a new status on
 a newly-public surface, not a change to any existing `/api/*` field, type, or status meaning, so the
-frozen `/api/*` consumer is untouched.
+frozen `/api/*` consumer is untouched. **P18 upheld this verbatim:** the org-level `/app/credentials`
+routes and the additive signup `project` field are new additions; `POST /app/projects` and
+`POST /api/documents` gained get-or-create behavior with **no** change to any existing field, type,
+status, or route, so the frozen `/api/*` consumer keeps working unchanged (re-verified live at the
+P18 cutover — the extended `onboarding_smoke.py` posts the frozen 201 shape end to end).
 
 ## Hosted deployment + frozen contract
 

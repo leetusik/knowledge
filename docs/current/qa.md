@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0008
-created_at: 2026-07-21T23:31:07+09:00
-source: P17.REVIEW
-summary: P17 hosted end-to-end skill path verified live on prod (signup to vk_ to format html ingest to P16 read and raw to tenant search to MCP vk_ fetch); in-browser quiz-render eyeball is the one operator residual
-previous: v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover
+version: v0009
+created_at: 2026-07-22T11:24:32+09:00
+source: P18.REVIEW
+summary: P18 Postgres-gated org-credentials + provisioning tests; CLI test_auth adjusted; onboarding_smoke org-model journey green local + live prod; pre-existing documents_api format-key failure flagged
+previous: v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual
 ---
 
 # QA
@@ -40,7 +40,16 @@ throwaway tenant — signup → project → mint `vk_` → `POST /api/documents 
 `vk_`-path** (`e2e_smoke.py` search + `fetch_document` relaying `format:"html"`). This
 **closes** the P13 "hosted E2E pending" and the P15 MCP `vk_` residual; the one
 un-automated item left is the operator's **in-browser quiz-render eyeball**. See *Hosted
-skill-path E2E (P17)* below.
+skill-path E2E (P17)* below. **As of P18 the accounts-v2 work (org-level keys + get-or-create)
+adds Postgres-gated coverage and an extended E2E** — new gated suites
+`test_accounts_provisioning.py` + `test_org_credentials.py` (mirrored into the plugin
+template), `test_dashboard_api.py` updated for the auto-provisioned default project, the CLI
+`test_auth.py` adjusted, and `scripts/onboarding_smoke.py` extended with an **org-model
+journey** proven green both against a disposable `postgres:17` and **live against prod**. The
+`0003` migration was validated at the review (clean upgrade + downgrade round-trip + a
+seeded-duplicate de-dupe scenario). One **pre-existing, unrelated** gated failure was
+re-confirmed and flagged (not P18's): `test_documents_api.py::
+test_documents_list_detail_and_project_bridge`. See *Accounts v2 acceptance (P18)* below.
 
 ## Test Commands
 
@@ -377,6 +386,16 @@ re-probed at the review. Two tiers, both credential-free-repeatable and secret-s
   moment is the operator's post-phase dogfood (install the plugin from the public
   marketplace, `/knowledge:setup` connect, `/explain`, view the doc), which also completes
   S2's flagged steady-state (drop the redundant user-level skill copy).
+
+## Accounts v2 acceptance (P18)
+
+P18's acceptance is Postgres-gated pytest + CLI unit tests + the extended `onboarding_smoke.py` E2E (there is no browser residual — the org-keys panel reuses proven P12 components). All green at the P18 review.
+
+- **Postgres-gated pytest (the accounts plane is Postgres-only).** Run the full suite against a disposable `postgres:17` with `KB_TEST_DATABASE_URL` set (the gated tests build the post-`0003` schema via `metadata.create_all`, so no alembic step is needed for pytest). New terse gated suites: `tests/test_accounts_provisioning.py` (signup → `tenant.name == "default"`, `project.name == "default"`, minted credential persists `tenant_id`) and `tests/test_org_credentials.py` (org mint → `project_id NULL` + authorizes a write + the unregistered project appears in `/app/projects` [get-or-create proof]; project-bound key still writes; revoked org key → 401; duplicate `POST /app/projects` → 201 same id). `tests/test_dashboard_api.py` was updated for the auto-provisioned default project. **All mirrored into `plugin/templates/kb/` + `manifest.json` (parity).** At the P18 review the full gated suite ran **88 passed, 1 failed** — the 1 failure is the pre-existing `documents_api` case below.
+- **The `0003` migration is validated separately** (gated tests use `create_all`, not alembic, so they don't exercise the real migration): at the review, `alembic upgrade head` applied `0001→0002→0003` cleanly against a fresh Postgres (schema verified: nullable `project_id`, NOT-NULL `tenant_id` FK+indexed, `uq_projects_tenant_id`), a downgrade→re-upgrade round-trip succeeded, and S1 had validated the de-dupe path against a seeded-duplicate scenario.
+- **CLI unit tests.** `cd cli && uv run pytest -q` → **39 passed**. `test_auth.py` was adjusted (not expanded): `"default"` project assertions, a pin that `init` mints via `POST /app/credentials` (org) and **never** the per-project endpoint, and the renamed reuse-gate test `test_init_remints_when_the_configured_project_changes`.
+- **Extended `onboarding_smoke.py` (the committed post-deploy verifier).** Gained a **section-4 org-model journey** run in its own fresh tenant (keeping the tenant-B `documents_created == 1` equalities pristine): one org key → two get-or-create projects with per-named-project usage, revoke → 401, project-bound regression. Proven green against a disposable `postgres:17` tenant-mode stack **and live against prod** (exit 0). `scripts/` is not a plugin `shipped_dir` → no template mirror.
+- **Pre-existing gated failure (NOT P18):** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` fails because the document-list projection carries a `format` key that the test's `_LIST_KEYS` set omits. This is a **P16-era** mismatch — the test was last touched in P12, and `format` entered the list projection in P16 (`server/main.py`), while the suite is Postgres-gated so default CI (no Postgres) never runs it. Confirmed by S1/S2 on clean trees and re-confirmed at the P18 review (no P18 commit touches that test or the projection). **It is a documents/content-plane concern outside P18's accounts scope; recommended as a small deferred job** (either add `format` to `_LIST_KEYS` or drop it from the list projection) — it does not block the P18 objective.
 
 ## Known Fragile Areas
 
