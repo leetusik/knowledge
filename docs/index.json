@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0009_p18_accounts_v2_user_org_project_default_org_project_on_signup_org-level_vk__keys_get-or-create_projects_org_mgmt_deferred_d14",
+      "latest": "v0010_p19_per-project_public_private_visibility_anonymous_public_doc_graph_reads_shareable_direct_doc_links",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -75,11 +75,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 accounts v2: user/org/project; default org+project on signup; org-level vk_ keys; get-or-create projects; org mgmt deferred (D14)",
           "previous": "v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo"
+        },
+        {
+          "id": "v0010_p19_per-project_public_private_visibility_anonymous_public_doc_graph_reads_shareable_direct_doc_links",
+          "path": "docs/versions/product/v0010_p19_per-project_public_private_visibility_anonymous_public_doc_graph_reads_shareable_direct_doc_links.md",
+          "created_at": "2026-07-22T15:28:30+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 per-project public/private visibility; anonymous public doc+graph reads; shareable direct doc links",
+          "previous": "v0009_p18_accounts_v2_user_org_project_default_org_project_on_signup_org-level_vk__keys_get-or-create_projects_org_mgmt_deferred_d14"
         }
       ]
     },
     "experience": {
-      "latest": "v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init",
+      "latest": "v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -153,6 +161,14 @@
           "source": "P18.REVIEW",
           "summary": "P18 default org+project on signup; org-level vk_ from the dashboard Org API keys panel; org-not-workspace copy; CLI default fallback + org-key init",
           "previous": "v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes"
+        },
+        {
+          "id": "v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url",
+          "path": "docs/versions/experience/v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url.md",
+          "created_at": "2026-07-22T15:28:30+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 public sharing: visibility toggle + share link, anonymous public doc/graph pages, CLI save prints a direct url",
+          "previous": "v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init"
         }
       ]
     },
@@ -283,7 +299,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy",
+      "latest": "v0009_p19_public_route_group_optional-identity_doc_public_graph_pages_publicshell_visibility_toggle_badges_copy-link_robots",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -349,11 +365,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 Org API keys dashboard panel reusing P12 components at org scope (no new route/design round); org BFF helpers; project_id string|null; Workspace to Org copy",
           "previous": "v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically"
+        },
+        {
+          "id": "v0009_p19_public_route_group_optional-identity_doc_public_graph_pages_publicshell_visibility_toggle_badges_copy-link_robots",
+          "path": "docs/versions/frontend/v0009_p19_public_route_group_optional-identity_doc_public_graph_pages_publicshell_visibility_toggle_badges_copy-link_robots.md",
+          "created_at": "2026-07-22T15:28:37+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 public route group: optional-identity doc + public graph pages, PublicShell, visibility toggle+badges, copy-link, robots",
+          "previous": "v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy"
         }
       ]
     },
     "backend": {
-      "latest": "v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep",
+      "latest": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -419,11 +443,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 provision_signup primitive; resolver reads credential tenant_id (org keys project_id NULL); get_or_create_project + list_org_credentials; write-path async get-or-create dep",
           "previous": "v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route"
+        },
+        {
+          "id": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url",
+          "path": "docs/versions/backend/v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url.md",
+          "created_at": "2026-07-22T15:28:30+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 optional_user dependency; public read resolution + Postgres-to-SQLite visibility bridge; mode-aware save url",
+          "previous": "v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep"
         }
       ]
     },
     "data": {
-      "latest": "v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null",
+      "latest": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -497,11 +529,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 alembic 0003: projects UNIQUE(tenant_id,name) with de-dupe; project_credentials.tenant_id NOT NULL + project_id nullable; org keys carry project_id NULL",
           "previous": "v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched"
+        },
+        {
+          "id": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate",
+          "path": "docs/versions/data/v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate.md",
+          "created_at": "2026-07-22T15:28:37+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 alembic 0004 projects.visibility text NOT NULL default private; SQLite projects allowlist predicate",
+          "previous": "v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null"
         }
       ]
     },
     "api": {
-      "latest": "v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive",
+      "latest": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -607,11 +647,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 additive org-level /app/credentials endpoints; signup response gains project; nullable serialize_credential; get-or-create on POST /app/projects + writes; frozen contract additive",
           "previous": "v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively"
+        },
+        {
+          "id": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url",
+          "path": "docs/versions/api/v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url.md",
+          "created_at": "2026-07-22T15:28:30+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 visibility field + PATCH toggle; optional-identity public doc/raw reads; org-scoped public graph; mode-aware 201 url",
+          "previous": "v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive"
         }
       ]
     },
     "operations": {
-      "latest": "v0019_p18_accounts-v2_prod_cutover_0003_migration_makes_ordering_load-bearing_reconcile-_migrate-_recreate_back-to-back_executed_verified_live_onboarding_smoke_gains_an_org-model_leg",
+      "latest": "v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -765,11 +813,19 @@
           "source": "P18.REVIEW",
           "summary": "P18 accounts-v2 prod cutover: 0003 migration makes ordering load-bearing (reconcile->migrate->recreate back-to-back); executed + verified live; onboarding_smoke gains an org-model leg",
           "previous": "v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate"
+        },
+        {
+          "id": "v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404",
+          "path": "docs/versions/operations/v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404.md",
+          "created_at": "2026-07-22T15:28:37+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 public-projects cutover: additive 0004 no mint-window; onboarding_smoke public-link leg; anonymous surface live 401 to 404",
+          "previous": "v0019_p18_accounts-v2_prod_cutover_0003_migration_makes_ordering_load-bearing_reconcile-_migrate-_recreate_back-to-back_executed_verified_live_onboarding_smoke_gains_an_org-model_leg"
         }
       ]
     },
     "security": {
-      "latest": "v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401",
+      "latest": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -859,6 +915,14 @@
           "source": "P18.REVIEW",
           "summary": "P18 org-level key authorization made honest (one vk_ grants the whole org); no trust-boundary shift (enforcement already tenant-wide); revoked org keys 401",
           "previous": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs"
+        },
+        {
+          "id": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay",
+          "path": "docs/versions/security/v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay.md",
+          "created_at": "2026-07-22T15:28:37+09:00",
+          "source": "P19.REVIEW",
+          "summary": "P19 first anonymous read surface; optional-identity 404-never-403; visibility bridge fail-closed; tokenless BFF relay",
+          "previous": "v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401"
         }
       ]
     },
@@ -1083,5 +1147,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-22T11:35:38+09:00"
+  "last_rebuilt_at": "2026-07-22T15:34:37+09:00"
 }
