@@ -1,0 +1,36 @@
+{
+  "id": "P19.S5",
+  "phase_id": "P19",
+  "name": "Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 5,
+  "depends_on": [
+    "P19.S1",
+    "P19.S2",
+    "P19.S3",
+    "P19.S4"
+  ],
+  "created_at": "2026-07-22T12:02:46+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
