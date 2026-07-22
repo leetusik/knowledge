@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P20`
-- Current slice: `P20.REVIEW`
+- Current phase: `none`
+- Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `13`
-- Rebuilt at: `2026-07-22T18:22:11+09:00`
+- Rebuilt at: `2026-07-22T18:40:30+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P17` | `done` | `pass` | Explain skill v2: interactive HTML + public multi-user ingestion | `none` | `works/phases/active/P17` |
 | [x] `P18` | `done` | `pass` | Accounts v2: user/org/project with org-level keys | `none` | `works/phases/active/P18` |
 | [x] `P19` | `done` | `pass` | Public projects & direct doc links | `none` | `works/phases/active/P19` |
-| [ ] `P20` | `planned` | `pending` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `P20.REVIEW` | `works/phases/active/P20` |
+| [x] `P20` | `done` | `pass` | Frictionless onboarding: hero, install, env-var quickstart, skill on landing | `none` | `works/phases/active/P20` |
 
 ## Phase P16: HTML explainer documents end-to-end
 
@@ -78,4 +78,4 @@
 | [x] `P20.S2` | `done` | Design round 02: env-var quickstart + skill-on-landing sections (handoff) | `co-work` | `works/phases/active/P20/slices/P20.S2` |
 | [x] `P20.S3` | `done` | Implement designed sections: env-var quickstart + parity-gated skill on landing | `implementation` | `works/phases/active/P20/slices/P20.S3` |
 | [x] `P20.S4` | `done` | Ship + live verify: push main, prod deploy, installer/hero/skill/init smoke | `implementation` | `works/phases/active/P20/slices/P20.S4` |
-| [ ] `P20.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P20/slices/P20.REVIEW` |
+| [x] `P20.REVIEW` | `done` | phase review | `review` | `works/phases/active/P20/slices/P20.REVIEW` |
