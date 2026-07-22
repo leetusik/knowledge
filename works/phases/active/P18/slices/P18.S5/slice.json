@@ -3,14 +3,14 @@
   "phase_id": "P18",
   "name": "Prod migration + deploy + extended onboarding E2E (operator-gated)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 5,
   "depends_on": [
     "P18.S2",
     "P18.S4"
   ],
   "created_at": "2026-07-22T02:21:47+09:00",
-  "started_at": null,
+  "started_at": "2026-07-22T09:49:50+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {

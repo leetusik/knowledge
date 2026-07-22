@@ -8,9 +8,9 @@
 - Current phase: `P18`
 - Current slice: `P18.S5`
 - Next slice: `P18.REVIEW`
-- Waiting on operator: `none`
+- Waiting on operator: `P18.S5`
 - Open deferred jobs: `9`
-- Rebuilt at: `2026-07-22T03:28:43+09:00`
+- Rebuilt at: `2026-07-22T10:06:01+09:00`
 
 ## Active Phases
 
@@ -54,7 +54,7 @@
 | [x] `P18.S2` | `done` | Org-level keys: resolver + mint endpoint + write-path get-or-create + metering | `implementation` | `works/phases/active/P18/slices/P18.S2` |
 | [x] `P18.S3` | `done` | Web app: org-level keys surface + workspace->org copy | `implementation` | `works/phases/active/P18/slices/P18.S3` |
 | [x] `P18.S4` | `done` | CLI --project/default fallback + explain/setup skill text + parity | `implementation` | `works/phases/active/P18/slices/P18.S4` |
-| [ ] `P18.S5` | `todo` | Prod migration + deploy + extended onboarding E2E (operator-gated) | `implementation` | `works/phases/active/P18/slices/P18.S5` |
+| [~] `P18.S5` | `pending` | Prod migration + deploy + extended onboarding E2E (operator-gated) | `implementation` | `works/phases/active/P18/slices/P18.S5` |
 | [ ] `P18.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P18/slices/P18.REVIEW` |
 
 ## Phase P19: Public projects & direct doc links
