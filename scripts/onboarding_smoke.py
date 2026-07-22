@@ -35,16 +35,33 @@ asserts a fresh tenant is fully isolated from tenant #1's corpus:
      project (documents_created == 1 each); DELETE /app/credentials/{id} revokes the
      org key and a subsequent write with it -> 401; and a project-bound key
      (POST /app/projects/{id}/credentials) still mints + writes (regression).
+  5. Public-link leg (P19) — inside the section-4 tenant, with the org key still
+     live: ONE org-key write of an html-format doc to a fresh project (asserts the
+     201 `url` ends `/documents/{id}` — the S4 mode-aware save URL); the doc is
+     private by default, so an anonymous GET /app/documents/{id} -> 404. A session
+     PATCH /app/projects/{id} {"visibility":"public"} then flips it, and anonymously
+     (no bearer): GET /app/documents/{id} -> 200 JSON with NO tenant_id key; its /raw
+     -> 200 + the P16 sandbox CSP header byte-for-byte; GET /app/graph?org={tenant}
+     -> 200 with the doc's rel_path among the nodes; GET /app/graph?org={random} ->
+     404 (no existence leak). With web pages in scope (default; --skip-web-pages
+     opts out when the Next app is not up), the same-origin public pages answer too:
+     anonymous GET {the 201 url} -> 200 HTML and GET /graph/{tenant} -> 200 HTML.
+     A PATCH back to private then restores the 404 (anonymous doc read) and, with web
+     pages in scope, a /login redirect on the doc page — an instant-toggle round-trip
+     that leaves the throwaway tenant private.
 
 Style mirrors scripts/site_smoke.py: argparse, collect ALL failures, exit
 non-zero with the list or print PASS. Requires the app in TENANT mode
 (DATABASE_URL set) so `vk_`/master-bearer resolution is live; section 4 also
 requires the P18 schema (alembic 0003 — org-level credentials + get-or-create
-projects) and the additive /app/credentials endpoints.
+projects) and the additive /app/credentials endpoints; section 5 requires the P19
+schema (alembic 0004 — projects.visibility) and the anonymous read surface.
 
 Usage:
     python scripts/onboarding_smoke.py --base-url http://127.0.0.1:8765
     python scripts/onboarding_smoke.py --base-url … --master-token "$KB_API_TOKEN"
+    # local: the Next web app is usually not up — skip the same-origin page checks
+    python scripts/onboarding_smoke.py --base-url … --skip-web-pages
 """
 
 from __future__ import annotations
@@ -77,7 +94,177 @@ def _word_from_title(title: str) -> str | None:
     return words[0].lower() if words else None
 
 
-def _run_org_journey(client: httpx.Client, base_url: str, failures: list[str]) -> str:
+def _run_public_link_leg(
+    client: httpx.Client,
+    base_url: str,
+    session: dict[str, str],
+    org_auth: dict[str, str],
+    tenant_uuid: str | None,
+    hexid: str,
+    today: str,
+    failures: list[str],
+    skip_web_pages: bool,
+) -> str:
+    """P19 public-link leg: write an html doc, flip visibility, verify the anonymous
+    read surface, toggle back. Runs inside the section-4 tenant with the org key still
+    live (BEFORE the revoke). Appends failures; returns a one-line note.
+
+    A fresh project keeps the per-project usage assertions (proj_a/proj_b == 1) pristine.
+    """
+    proj = f"org-smoke-public-{hexid}"
+    html = (
+        "<!DOCTYPE html>\n<html><head><title>Public link smoke</title></head>"
+        "<body><h1>Public link smoke</h1><p>Anonymous read probe.</p></body></html>\n"
+    )
+
+    # --- 1. org-key html write -> get-or-creates a fresh project ---------------
+    r = client.post(
+        f"{base_url}/api/documents",
+        headers=org_auth,
+        json={
+            "title": "Public link smoke",
+            "markdown": html,
+            "project": proj,
+            "tags": ["smoke", "public"],
+            "source_repo": "onboarding-smoke",
+            "slug": f"public-link-{hexid}",
+            "date": today,
+            "format": "html",
+        },
+    )
+    if r.status_code != 201:
+        failures.append(
+            f"[public] POST /api/documents (html, org key): expected 201, got {r.status_code} {r.text}"
+        )
+        return "public-link leg aborted at html write"
+    doc = r.json()
+    doc_id = doc.get("id")
+    rel_path = doc.get("rel_path")
+    url = doc.get("url")
+    # S4 mode-aware save URL — value assertion on the frozen `url` key.
+    if not isinstance(url, str) or not url.endswith(f"/documents/{doc_id}"):
+        failures.append(f"[public] 201 url must end '/documents/{doc_id}', got {url!r}")
+
+    # --- 2. anonymous read BEFORE public -> 404 (private default; negative first)
+    r = client.get(f"{base_url}/app/documents/{doc_id}")
+    if r.status_code != 404:
+        failures.append(
+            f"[public] anon GET /app/documents/{doc_id} (still private): expected 404, "
+            f"got {r.status_code} {r.text}"
+        )
+
+    # --- 3. find the project + flip it public ----------------------------------
+    r = client.get(f"{base_url}/app/projects", headers=session)
+    proj_id = None
+    if r.status_code == 200:
+        proj_id = next(
+            (p.get("id") for p in r.json().get("projects", []) if p.get("name") == proj), None
+        )
+    if not proj_id:
+        failures.append(f"[public] project {proj!r} not found in /app/projects; cannot toggle")
+        return "public-link leg aborted (no project id)"
+    r = client.patch(
+        f"{base_url}/app/projects/{proj_id}", headers=session, json={"visibility": "public"}
+    )
+    if r.status_code != 200:
+        failures.append(
+            f"[public] PATCH /app/projects/{{id}} visibility=public: expected 200, got "
+            f"{r.status_code} {r.text}"
+        )
+        return "public-link leg aborted at PATCH public"
+    if r.json().get("project", {}).get("visibility") != "public":
+        failures.append(f"[public] PATCH did not echo visibility=public: {r.text}")
+
+    # --- 4. anonymous reads now succeed (no bearer at all) ---------------------
+    r = client.get(f"{base_url}/app/documents/{doc_id}")
+    if r.status_code != 200:
+        failures.append(
+            f"[public] anon GET /app/documents/{doc_id} (public): expected 200, got "
+            f"{r.status_code} {r.text}"
+        )
+    elif "tenant_id" in r.json():
+        failures.append(f"[public] anon doc JSON leaked tenant_id: {sorted(r.json().keys())}")
+
+    r = client.get(f"{base_url}/app/documents/{doc_id}/raw")
+    if r.status_code != 200:
+        failures.append(
+            f"[public] anon GET /app/documents/{doc_id}/raw (public): expected 200, got "
+            f"{r.status_code} {r.text}"
+        )
+    else:
+        csp = r.headers.get("content-security-policy")
+        if csp != "sandbox allow-scripts; frame-ancestors 'self'":
+            failures.append(f"[public] /raw CSP sandbox header wrong/absent: {csp!r}")
+
+    if tenant_uuid:
+        r = client.get(f"{base_url}/app/graph", params={"org": tenant_uuid})
+        if r.status_code != 200:
+            failures.append(
+                f"[public] anon GET /app/graph?org={{tenant}}: expected 200, got "
+                f"{r.status_code} {r.text}"
+            )
+        else:
+            node_ids = {n.get("id") for n in r.json().get("nodes", [])}
+            if rel_path not in node_ids:
+                failures.append(
+                    f"[public] public graph missing the public doc node {rel_path!r}: {sorted(node_ids)}"
+                )
+    else:
+        failures.append("[public] no tenant uuid from signup payload; cannot probe the public graph")
+
+    r = client.get(f"{base_url}/app/graph", params={"org": str(uuid.uuid4())})
+    if r.status_code != 404:
+        failures.append(
+            f"[public] anon GET /app/graph?org={{random}}: expected 404, got {r.status_code} {r.text}"
+        )
+
+    # --- 5. same-origin public web pages (skippable when the Next app is down) --
+    if not skip_web_pages and isinstance(url, str):
+        r = client.get(url)
+        if r.status_code != 200 or "text/html" not in r.headers.get("content-type", ""):
+            failures.append(
+                f"[public] anon GET {url} (public doc page): expected 200 HTML, got "
+                f"{r.status_code} {r.headers.get('content-type')!r}"
+            )
+        if tenant_uuid:
+            r = client.get(f"{base_url}/graph/{tenant_uuid}")
+            if r.status_code != 200 or "text/html" not in r.headers.get("content-type", ""):
+                failures.append(
+                    f"[public] anon GET /graph/{{tenant}} (public graph page): expected 200 HTML, "
+                    f"got {r.status_code} {r.headers.get('content-type')!r}"
+                )
+
+    # --- 6. toggle back to private -> the anonymous surface closes again -------
+    r = client.patch(
+        f"{base_url}/app/projects/{proj_id}", headers=session, json={"visibility": "private"}
+    )
+    if r.status_code != 200:
+        failures.append(
+            f"[public] PATCH /app/projects/{{id}} visibility=private (toggle back): expected 200, "
+            f"got {r.status_code} {r.text}"
+        )
+    if not skip_web_pages and isinstance(url, str):
+        r = client.get(url)
+        loc = r.headers.get("location", "")
+        if r.status_code not in (302, 303, 307, 308) or "/login" not in loc:
+            failures.append(
+                f"[public] anon GET {url} (now private): expected a /login redirect, got "
+                f"{r.status_code} location={loc!r}"
+            )
+    r = client.get(f"{base_url}/app/documents/{doc_id}")
+    if r.status_code != 404:
+        failures.append(
+            f"[public] anon GET /app/documents/{doc_id} (private again): expected 404, got "
+            f"{r.status_code} {r.text}"
+        )
+
+    web = "skipped" if skip_web_pages else "pages OK"
+    return f"public-link (private->public->private, web {web})"
+
+
+def _run_org_journey(
+    client: httpx.Client, base_url: str, failures: list[str], skip_web_pages: bool
+) -> str:
     """P18 org-model journey in its OWN fresh tenant (keeps the tenant-B checks
     above pristine). Appends failures; returns a one-line note.
 
@@ -117,6 +304,7 @@ def _run_org_journey(client: httpx.Client, base_url: str, failures: list[str]) -
         return "org journey aborted at signup"
     body = r.json()
     session = {"Authorization": f"Bearer {body.get('token')}"}
+    tenant_uuid = (body.get("tenant") or {}).get("id")  # for the P19 public-graph probe
     default_project = body.get("project")
     if not isinstance(default_project, dict) or default_project.get("name") != "default":
         failures.append(
@@ -204,6 +392,11 @@ def _run_org_journey(client: httpx.Client, base_url: str, failures: list[str]) -
                 f"(one org-key write), got {created!r}"
             )
 
+    # --- P19 public-link leg (org key still live; BEFORE the revoke) -----------
+    public_note = _run_public_link_leg(
+        client, base_url, session, org_auth, tenant_uuid, hexid, today, failures, skip_web_pages
+    )
+
     # --- revoke the org key -> a subsequent write 401s -------------------------
     if org_cred_id:
         r = client.delete(f"{base_url}/app/credentials/{org_cred_id}", headers=session)
@@ -255,11 +448,13 @@ def _run_org_journey(client: httpx.Client, base_url: str, failures: list[str]) -
 
     return (
         f"org journey OK ({email}): 1 org key -> 2 get-or-create projects, "
-        "per-project usage, revoke->401, project-bound regression"
+        f"per-project usage, revoke->401, project-bound regression; {public_note}"
     )
 
 
-def run(base_url: str, master_token: str | None, failures: list[str]) -> str:
+def run(
+    base_url: str, master_token: str | None, failures: list[str], skip_web_pages: bool = False
+) -> str:
     """Run the smoke; append failures. Returns a one-line summary."""
     base_url = base_url.rstrip("/")
     token_hex = secrets.token_hex(6)
@@ -484,8 +679,8 @@ def run(base_url: str, master_token: str | None, failures: list[str]) -> str:
                 f"{r.status_code} {r.text}"
             )
 
-        # --- 4. Org-model journey (P18), in its own fresh tenant ----------
-        org_note = _run_org_journey(client, base_url, failures)
+        # --- 4. Org-model journey (P18) + P19 public-link leg, own tenant --
+        org_note = _run_org_journey(client, base_url, failures, skip_web_pages)
 
     isolation = "isolation vs tenant #1 verified" if master_token else "B-only isolation (no --master-token)"
     return (
@@ -502,11 +697,17 @@ def main() -> int:
         default=None,
         help="the KB_API_TOKEN legacy tenant-#1 bearer (enables the cross-tenant isolation checks)",
     )
+    parser.add_argument(
+        "--skip-web-pages",
+        action="store_true",
+        help="skip the P19 same-origin public web-page checks (use when the Next app is not up, "
+        "e.g. a bare local uvicorn); the anonymous API surface is still exercised",
+    )
     args = parser.parse_args()
 
     failures: list[str] = []
     try:
-        summary = run(args.base_url, args.master_token, failures)
+        summary = run(args.base_url, args.master_token, failures, args.skip_web_pages)
     except httpx.HTTPError as exc:
         failures.append(f"HTTP transport error against {args.base_url}: {exc}")
         summary = "aborted (transport error)"
