@@ -10,7 +10,7 @@
 - Next slice: `P19.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `11`
-- Rebuilt at: `2026-07-22T14:19:34+09:00`
+- Rebuilt at: `2026-07-22T14:33:10+09:00`
 
 ## Active Phases
 
@@ -66,7 +66,7 @@
 | [x] `P19.S2` | `done` | Backend public read surface: anon doc/raw read + org-scoped public graph | `implementation` | `works/phases/active/P19/slices/P19.S2` |
 | [x] `P19.S3` | `done` | Web public surfaces: visibility toggle + public doc/graph pages + share link | `implementation` | `works/phases/active/P19/slices/P19.S3` |
 | [x] `P19.S4` | `done` | Save-URL fix (mode-aware) + CLI un-hide + skill + template/manifest parity | `implementation` | `works/phases/active/P19/slices/P19.S4` |
-| [ ] `P19.S5` | `todo` | Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke | `implementation` | `works/phases/active/P19/slices/P19.S5` |
+| [ ] `P19.S5` | `in_progress` | Prod cutover: reconcile + alembic 0004 + deploy + public-link live smoke | `implementation` | `works/phases/active/P19/slices/P19.S5` |
 | [ ] `P19.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P19/slices/P19.REVIEW` |
 
 ## Phase P20: Frictionless onboarding: hero, install, env-var quickstart, skill on landing
