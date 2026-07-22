@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo",
+      "latest": "v0009_p18_accounts_v2_user_org_project_default_org_project_on_signup_org-level_vk__keys_get-or-create_projects_org_mgmt_deferred_d14",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -67,11 +67,19 @@
           "source": "P17.REVIEW",
           "summary": "P17 explain skill emits an interactive HTML explainer (both modes) with a cited best-practices section; plugin users onboard to the hosted KB via /knowledge:setup Connect mode, one vk_ serving every repo",
           "previous": "v0007_p16_html_explainer_documents_are_a_first-class_kb_doc_type_end-to-end_ingest_safe_interactive_render_search_mcp_read"
+        },
+        {
+          "id": "v0009_p18_accounts_v2_user_org_project_default_org_project_on_signup_org-level_vk__keys_get-or-create_projects_org_mgmt_deferred_d14",
+          "path": "docs/versions/product/v0009_p18_accounts_v2_user_org_project_default_org_project_on_signup_org-level_vk__keys_get-or-create_projects_org_mgmt_deferred_d14.md",
+          "created_at": "2026-07-22T11:24:22+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 accounts v2: user/org/project; default org+project on signup; org-level vk_ keys; get-or-create projects; org mgmt deferred (D14)",
+          "previous": "v0008_p17_explain_skill_emits_an_interactive_html_explainer_both_modes_with_a_cited_best-practices_section_plugin_users_onboard_to_the_hosted_kb_via_knowledge_setup_connect_mode_one_vk__serving_every_repo"
         }
       ]
     },
     "experience": {
-      "latest": "v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes",
+      "latest": "v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -137,11 +145,19 @@
           "source": "P17.REVIEW",
           "summary": "P17 /knowledge:explain outputs an interactive HTML explainer (quiz + cited best-practices) for both modes; /knowledge:setup offers Connect (hosted) vs Scaffold (self-host) modes",
           "previous": "v0007_p16_documents_journey_an_html_explainer_renders_as_an_interactive_in-app_document_quiz_js_runs_safely_sandboxed_markdown_docs_unchanged"
+        },
+        {
+          "id": "v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init",
+          "path": "docs/versions/experience/v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init.md",
+          "created_at": "2026-07-22T11:24:22+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 default org+project on signup; org-level vk_ from the dashboard Org API keys panel; org-not-workspace copy; CLI default fallback + org-key init",
+          "previous": "v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes"
         }
       ]
     },
     "architecture": {
-      "latest": "v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies",
+      "latest": "v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -255,11 +271,19 @@
           "source": "P17.REVIEW",
           "summary": "P17 open-core plugin template mirrors the multi-tenant SaaS server dormant-safe without DATABASE_URL; a second CI drift gate skills_parity guards the shipped explain-skill copies",
           "previous": "v0013_p16_html_explainer_doc_type_end-to-end_raw-on-disk_canonical_extracted-text-in-db_and_the_opaque-origin_sandboxed-iframe_xss-containment_stance_allow-scripts_without_allow-same-origin_csp_x-frame_exemption"
+        },
+        {
+          "id": "v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler",
+          "path": "docs/versions/architecture/v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler.md",
+          "created_at": "2026-07-22T11:24:22+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 user/org/project (tenant row is the org, no rename); org vs project-bound credential split; write-path get-or-create in an async dep before the sync handler",
+          "previous": "v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies"
         }
       ]
     },
     "frontend": {
-      "latest": "v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically",
+      "latest": "v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -317,11 +341,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 web viewer renders HTML explainers in a sandboxed opaque-origin iframe via a same-origin BFF raw-relay route; markdown docs render byte-identically",
           "previous": "v0006_p14_public_marketing_landing_at_in_web_via_the_claude_design_gate_round_01"
+        },
+        {
+          "id": "v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy",
+          "path": "docs/versions/frontend/v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy.md",
+          "created_at": "2026-07-22T11:24:22+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 Org API keys dashboard panel reusing P12 components at org scope (no new route/design round); org BFF helpers; project_id string|null; Workspace to Org copy",
+          "previous": "v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically"
         }
       ]
     },
     "backend": {
-      "latest": "v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route",
+      "latest": "v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -379,11 +411,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 HTML explainer ingest/storage/extraction/indexing: raw-HTML-on-disk with comment-frontmatter + stdlib html.parser extracted-text in DB markdown column, format/raw_html columns, reindex/seed widened to .html, raw route",
           "previous": "v0006_p11_server_usage_package_usage_api_stash_async_metering_middleware_credential_id_last_used_at_on_metered_events_only"
+        },
+        {
+          "id": "v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep",
+          "path": "docs/versions/backend/v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep.md",
+          "created_at": "2026-07-22T11:24:22+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 provision_signup primitive; resolver reads credential tenant_id (org keys project_id NULL); get_or_create_project + list_org_credentials; write-path async get-or-create dep",
+          "previous": "v0007_p16_html_explainer_ingest_storage_extraction_indexing_raw-html-on-disk_with_comment-frontmatter_stdlib_html.parser_extracted-text_in_db_markdown_column_format_raw_html_columns_reindex_seed_widened_to_.html_raw_route"
         }
       ]
     },
     "data": {
-      "latest": "v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched",
+      "latest": "v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -449,11 +489,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 content-plane documents gains format + raw_html columns (disposable ALTER TABLE); DB markdown = extracted text so FTS unchanged; Postgres control plane untouched",
           "previous": "v0007_p11_usage_events_control-plane_table_event-log_grain_derive-on-read_group-by-day_aggregate_retention_deferred_d8"
+        },
+        {
+          "id": "v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null",
+          "path": "docs/versions/data/v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null.md",
+          "created_at": "2026-07-22T11:27:38+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 alembic 0003: projects UNIQUE(tenant_id,name) with de-dupe; project_credentials.tenant_id NOT NULL + project_id nullable; org keys carry project_id NULL",
+          "previous": "v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched"
         }
       ]
     },
     "api": {
-      "latest": "v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively",
+      "latest": "v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -551,11 +599,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 HTML explainer doc type: additive format on POST + read projections, new GET /app/documents/{id}/raw route, MCP fetch_document format field; frozen /api/* + contract v1 preserved additively",
           "previous": "v0011_p15_agent-facing_mcp_retrieval_service_contract_v1_search_fetch_document_tools_bearer_vk__over_streamable-http_mcp_additive-only_versioning_healthz.contract_version_tenant-wide_corpus_scoping_alongside_the_frozen_rest_api"
+        },
+        {
+          "id": "v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive",
+          "path": "docs/versions/api/v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive.md",
+          "created_at": "2026-07-22T11:24:32+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 additive org-level /app/credentials endpoints; signup response gains project; nullable serialize_credential; get-or-create on POST /app/projects + writes; frozen contract additive",
+          "previous": "v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively"
         }
       ]
     },
     "operations": {
-      "latest": "v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate",
+      "latest": "v0019_p18_accounts-v2_prod_cutover_0003_migration_makes_ordering_load-bearing_reconcile-_migrate-_recreate_back-to-back_executed_verified_live_onboarding_smoke_gains_an_org-model_leg",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -701,11 +757,19 @@
           "source": "P17.REVIEW",
           "summary": "P17 accounts-plane prod cutover executed and verified live; P16 shipped same push; deploy.sh force-recreates the bind-mounted api + freshness self-assert; skills_parity second CI gate",
           "previous": "v0017_p15.f1_mcp_transport-security_host_allowlist_mcp_allowed_hosts_mcp_allowed_origins_required_fastmcp_localhost-only_dns-rebinding_default_421s_public_internal_hosts_protection_stays_on"
+        },
+        {
+          "id": "v0019_p18_accounts-v2_prod_cutover_0003_migration_makes_ordering_load-bearing_reconcile-_migrate-_recreate_back-to-back_executed_verified_live_onboarding_smoke_gains_an_org-model_leg",
+          "path": "docs/versions/operations/v0019_p18_accounts-v2_prod_cutover_0003_migration_makes_ordering_load-bearing_reconcile-_migrate-_recreate_back-to-back_executed_verified_live_onboarding_smoke_gains_an_org-model_leg.md",
+          "created_at": "2026-07-22T11:24:32+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 accounts-v2 prod cutover: 0003 migration makes ordering load-bearing (reconcile->migrate->recreate back-to-back); executed + verified live; onboarding_smoke gains an org-model leg",
+          "previous": "v0018_p17_accounts-plane_prod_cutover_executed_and_verified_live_p16_shipped_same_push_deploy.sh_force-recreates_the_bind-mounted_api_freshness_self-assert_skills_parity_second_ci_gate"
         }
       ]
     },
     "security": {
-      "latest": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs",
+      "latest": "v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -787,11 +851,19 @@
           "source": "P16.REVIEW",
           "summary": "P16 HTML explainer XSS containment: opaque-origin sandboxed iframe (allow-scripts, no allow-same-origin) + CSP/X-Frame exemption; raw_html never in JSON; XSS-safe-by-construction preserved while quiz JS runs",
           "previous": "v0009_p13_cli_two-token_model_passwords_never_in_argv_show-once_vk__written_to_the_seam_not_printed_chmod_600_enforced_in_code_public_auth_grant_throttled_server-side_per-ip_kb_api_token_tenant-_1_public-write_hazard"
+        },
+        {
+          "id": "v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401",
+          "path": "docs/versions/security/v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401.md",
+          "created_at": "2026-07-22T11:24:32+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 org-level key authorization made honest (one vk_ grants the whole org); no trust-boundary shift (enforcement already tenant-wide); revoked org keys 401",
+          "previous": "v0010_p16_html_explainer_xss_containment_opaque-origin_sandboxed_iframe_allow-scripts_no_allow-same-origin_csp_x-frame_exemption_raw_html_never_in_json_xss-safe-by-construction_preserved_while_quiz_js_runs"
         }
       ]
     },
     "qa": {
-      "latest": "v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual",
+      "latest": "v0009_p18_postgres-gated_org-credentials_provisioning_tests_cli_test_auth_adjusted_onboarding_smoke_org-model_journey_green_local_live_prod_pre-existing_documents_api_format-key_failure_flagged",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -857,11 +929,19 @@
           "source": "P17.REVIEW",
           "summary": "P17 hosted end-to-end skill path verified live on prod (signup to vk_ to format html ingest to P16 read and raw to tenant search to MCP vk_ fetch); in-browser quiz-render eyeball is the one operator residual",
           "previous": "v0007_p13_cli_smoke_scripts_cli_smoke.py_drives_the_installed_binary_through_lifecycle_logout-survival_429_generic-401_preserved_through_the_throttle_proven_live_hosted_e2e_pending_the_accounts-plane_cutover"
+        },
+        {
+          "id": "v0009_p18_postgres-gated_org-credentials_provisioning_tests_cli_test_auth_adjusted_onboarding_smoke_org-model_journey_green_local_live_prod_pre-existing_documents_api_format-key_failure_flagged",
+          "path": "docs/versions/qa/v0009_p18_postgres-gated_org-credentials_provisioning_tests_cli_test_auth_adjusted_onboarding_smoke_org-model_journey_green_local_live_prod_pre-existing_documents_api_format-key_failure_flagged.md",
+          "created_at": "2026-07-22T11:24:32+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 Postgres-gated org-credentials + provisioning tests; CLI test_auth adjusted; onboarding_smoke org-model journey green local + live prod; pre-existing documents_api format-key failure flagged",
+          "previous": "v0008_p17_hosted_end-to-end_skill_path_verified_live_on_prod_signup_to_vk__to_format_html_ingest_to_p16_read_and_raw_to_tenant_search_to_mcp_vk__fetch_in-browser_quiz-render_eyeball_is_the_one_operator_residual"
         }
       ]
     },
     "decisions": {
-      "latest": "v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0",
+      "latest": "v0017_p18_no_tenants-_orgs_rename_org-level_keys_additive_get-or-create_unique_tenant_id_name_cli_default_project_retargeted_to_default_no_design_round_for_the_org-keys_surface",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -991,9 +1071,17 @@
           "source": "P17.REVIEW",
           "summary": "P17 always-HTML explainer; default-on gated cited offline-degrading web research; plugin-canonical to copies derivation + skills_parity CI guard; parity mirror-not-narrow; plugin 0.3.0",
           "previous": "v0015_p14_landing_takes_app_stays_at_current_paths_no_app_rebase_mkdocs_retired_docs_reserved_free_waitlist_pricing"
+        },
+        {
+          "id": "v0017_p18_no_tenants-_orgs_rename_org-level_keys_additive_get-or-create_unique_tenant_id_name_cli_default_project_retargeted_to_default_no_design_round_for_the_org-keys_surface",
+          "path": "docs/versions/decisions/v0017_p18_no_tenants-_orgs_rename_org-level_keys_additive_get-or-create_unique_tenant_id_name_cli_default_project_retargeted_to_default_no_design_round_for_the_org-keys_surface.md",
+          "created_at": "2026-07-22T11:24:32+09:00",
+          "source": "P18.REVIEW",
+          "summary": "P18 no tenants->orgs rename; org-level keys additive; get-or-create + UNIQUE(tenant_id,name); CLI DEFAULT_PROJECT retargeted to default; no design round for the org-keys surface",
+          "previous": "v0016_p17_always-html_explainer_default-on_gated_cited_offline-degrading_web_research_plugin-canonical_to_copies_derivation_skills_parity_ci_guard_parity_mirror-not-narrow_plugin_0.3.0"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-07-21T23:37:11+09:00"
+  "last_rebuilt_at": "2026-07-22T11:35:38+09:00"
 }

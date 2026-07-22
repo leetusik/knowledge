@@ -28,13 +28,13 @@
       "id": "P18",
       "name": "Accounts v2: user/org/project with org-level keys",
       "objective": "Restructure the accounts plane to an explicit user → org → project model: signup auto-provisions a \"default\" org and \"default\" project; API keys become mintable at org level (making today's de-facto tenant-wide enforcement honest); project resolution is get-or-create by name; knowledge save keeps the repo-basename default with a --project override and \"default\" fallback. Org creation + member invites stay out of scope (deferred).",
-      "status": "planned",
+      "status": "done",
       "order": 3,
       "path": "works/phases/active/P18",
-      "review_status": "pending",
-      "current_slice": "P18.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7
     },
     {
       "id": "P19",
@@ -61,8 +61,8 @@
       "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 9,
+  "deferred_open_count": 11,
   "deferred_promoted_count": 3,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-22T11:10:38+09:00"
+  "last_rebuilt_at": "2026-07-22T11:38:24+09:00"
 }

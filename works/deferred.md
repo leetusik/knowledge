@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `9`
+- Open: `11`
 - Promoted: `3`
 - Dropped: `2`
-- Rebuilt at: `2026-07-22T11:10:38+09:00`
+- Rebuilt at: `2026-07-22T11:38:24+09:00`
 
 ## Open
 
@@ -18,6 +18,8 @@
 | `D12` | `deferred` | Monetize the MCP retriever: introduce the paid plan + gate the agent-facing retrieval surface | P15.DECOMP | operator decides to introduce the paid plan | `works/deferred/open/D12` |
 | `D13` | `deferred` | source_url (public-origin) field + ingester population | P15.S1 | public-scraping/ingestion features land, or clickable citations become required for a consumer (e.g. OpenClaw's citation chip) | `works/deferred/open/D13` |
 | `D14` | `deferred` | Org management: create additional orgs + invite members | P18 | operator asks for multi-org/team features, or a second member needs org access | `works/deferred/open/D14` |
+| `D15` | `deferred` | Fix pre-existing P16-era gated failure: documents list projection format key (test_documents_api) | P18.S1 | next documents-plane slice, or before wiring Postgres-gated tests into CI | `works/deferred/open/D15` |
+| `D16` | `deferred` | knowledge init --project other re-mints an org key (reuse-gate relaxation) | P18.S4 | next CLI onboarding slice (e.g. P20) or operator reports duplicate org keys | `works/deferred/open/D16` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
