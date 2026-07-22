@@ -22,6 +22,7 @@ mints (``name=None``).
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -63,6 +64,12 @@ class CreateCredentialInput(BaseModel):
         return value.strip() or None
 
 
+class SetProjectVisibilityInput(BaseModel):
+    """Visibility-toggle request body. Any other value gets a free 422 from the Literal."""
+
+    visibility: Literal["private", "public"]
+
+
 def serialize_project(record) -> dict[str, object]:
     """Serialize a project for a response."""
 
@@ -70,6 +77,7 @@ def serialize_project(record) -> dict[str, object]:
         "id": str(record.id),
         "name": record.name,
         "tenant_id": str(record.tenant_id),
+        "visibility": record.visibility,
         "created_at": record.created_at.isoformat(),
     }
 
@@ -152,6 +160,27 @@ async def get_project(
 
     project = await _load_scoped_project(project_id, ctx)
     return {"project": serialize_project(project)}
+
+
+@router.patch("/app/projects/{project_id}")
+async def set_project_visibility(
+    project_id: UUID,
+    payload: SetProjectVisibilityInput,
+    ctx: AuthContext = Depends(require_user),
+) -> dict[str, object]:
+    """Toggle a project's visibility (``private``/``public``); 404 if cross-tenant.
+
+    Session-only (``require_user``); the ``_load_scoped_project`` guard answers 404
+    for a missing *or* cross-tenant project, so the toggle never leaks another
+    tenant's project existence. An invalid ``visibility`` value gets a 422 from the
+    ``Literal`` before any DB work.
+    """
+
+    await _load_scoped_project(project_id, ctx)
+    updated = await get_accounts_service().set_project_visibility(
+        project_id, payload.visibility
+    )
+    return {"project": serialize_project(updated)}
 
 
 @router.post("/app/projects/{project_id}/credentials", status_code=201)

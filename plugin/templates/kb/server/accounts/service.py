@@ -283,6 +283,28 @@ class AccountsService:
                     "failed to get or create project"
                 ) from exc
 
+    async def set_project_visibility(
+        self,
+        project_id: UUID,
+        visibility: str,
+    ) -> ProjectRecord | None:
+        """Set a project's visibility (``"private"``/``"public"``); None when missing."""
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                record = await repository.set_project_visibility(
+                    project_id, visibility
+                )
+                await session.commit()
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsPersistenceError(
+                    "failed to set project visibility"
+                ) from exc
+
+        return record
+
     # -- credentials ------------------------------------------------------
 
     async def create_project_credential(

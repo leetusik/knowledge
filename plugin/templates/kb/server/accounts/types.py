@@ -52,19 +52,25 @@ class TenantMemberRecord:
 
 @dataclass(slots=True, kw_only=True)
 class CreateProject:
-    """Input for creating a project under a tenant."""
+    """Input for creating a project under a tenant.
+
+    ``visibility`` defaults to ``"private"`` so every existing creation path keeps
+    making private projects; only an explicit caller opts a new row into ``"public"``.
+    """
 
     tenant_id: UUID
     name: str
+    visibility: str = "private"
 
 
 @dataclass(slots=True, kw_only=True)
 class ProjectRecord:
-    """Stored project."""
+    """Stored project. ``visibility`` is ``"private"`` or ``"public"``."""
 
     id: UUID
     tenant_id: UUID
     name: str
+    visibility: str
     created_at: datetime
 
 

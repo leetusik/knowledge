@@ -116,3 +116,66 @@ def test_minted_credential_carries_tenant_id(accounts_client):
         ).one()
     assert str(row.tenant_id) == body["tenant"]["id"]
     assert str(row.project_id) == body["project"]["id"]
+
+
+def test_new_project_defaults_private(accounts_client):
+    """Signup's project is private, on the create response and both read shapes."""
+
+    client, _sync = accounts_client
+    body = _signup(client)
+    assert body["project"]["visibility"] == "private"
+
+    headers = {"Authorization": f"Bearer {body['token']}"}
+    listed = client.get("/app/projects", headers=headers)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["projects"][0]["visibility"] == "private"
+
+    one = client.get(f"/app/projects/{body['project']['id']}", headers=headers)
+    assert one.status_code == 200, one.text
+    assert one.json()["project"]["visibility"] == "private"
+
+
+def test_patch_visibility_toggles_both_ways(accounts_client):
+    """PATCH flips visibility to public and back to private, returning the new value."""
+
+    client, _sync = accounts_client
+    body = _signup(client)
+    headers = {"Authorization": f"Bearer {body['token']}"}
+    project_id = body["project"]["id"]
+
+    public = client.patch(
+        f"/app/projects/{project_id}", json={"visibility": "public"}, headers=headers
+    )
+    assert public.status_code == 200, public.text
+    assert public.json()["project"]["visibility"] == "public"
+
+    private = client.patch(
+        f"/app/projects/{project_id}", json={"visibility": "private"}, headers=headers
+    )
+    assert private.status_code == 200, private.text
+    assert private.json()["project"]["visibility"] == "private"
+
+
+def test_patch_visibility_missing_project_is_404(accounts_client):
+    """PATCH an unknown project id -> 404 (never leaks cross-tenant existence)."""
+
+    client, _sync = accounts_client
+    headers = {"Authorization": f"Bearer {_signup(client)['token']}"}
+    res = client.patch(
+        f"/app/projects/{uuid4()}", json={"visibility": "public"}, headers=headers
+    )
+    assert res.status_code == 404, res.text
+
+
+def test_patch_visibility_invalid_value_is_422(accounts_client):
+    """PATCH an out-of-enum visibility value -> 422 from the Literal, no DB write."""
+
+    client, _sync = accounts_client
+    body = _signup(client)
+    headers = {"Authorization": f"Bearer {body['token']}"}
+    res = client.patch(
+        f"/app/projects/{body['project']['id']}",
+        json={"visibility": "unlisted"},
+        headers=headers,
+    )
+    assert res.status_code == 422, res.text

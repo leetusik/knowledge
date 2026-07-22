@@ -114,7 +114,11 @@ class AccountsRepository:
     async def create_project(self, payload: CreateProject) -> ProjectRecord:
         """Persist a project and return the stored record."""
 
-        model = ProjectModel(tenant_id=payload.tenant_id, name=payload.name)
+        model = ProjectModel(
+            tenant_id=payload.tenant_id,
+            name=payload.name,
+            visibility=payload.visibility,
+        )
         self._session.add(model)
         await self._session.flush()
         await self._session.refresh(model)
@@ -163,6 +167,25 @@ class AccountsRepository:
         )
         model = (await self._session.execute(statement)).scalars().first()
         return self._to_project_record(model) if model is not None else None
+
+    async def set_project_visibility(
+        self,
+        project_id: UUID,
+        visibility: str,
+    ) -> ProjectRecord | None:
+        """Set a project's ``visibility`` by id; None when the project is missing.
+
+        Load-mutate-flush-refresh (the ``revoke_credential`` idiom); the service owns
+        the transaction, so this never commits.
+        """
+
+        model = await self._session.get(ProjectModel, project_id)
+        if model is None:
+            return None
+        model.visibility = visibility
+        await self._session.flush()
+        await self._session.refresh(model)
+        return self._to_project_record(model)
 
     # -- credentials ------------------------------------------------------
 
@@ -343,6 +366,7 @@ class AccountsRepository:
             id=model.id,
             tenant_id=model.tenant_id,
             name=model.name,
+            visibility=model.visibility,
             created_at=model.created_at,
         )
 

@@ -37,6 +37,13 @@ Five implementation middle slices, ordered by dependency. Risk selects the execu
 
 **Deferred / out-of-scope candidates (record, do not build):** org **slug** vanity URLs for the public graph (UUID suffices for MVP); any genuinely new visual chrome — branded share pages, an anonymous-visitor sign-up CTA — is a future design round, out of scope here.
 
+**Cross-slice notes (P19.S1, done):**
+- `ProjectRecord` and both `serialize_project` copies (`app_api.py` canonical + `auth_api.py` mirror) now carry `visibility` (`"private"`/`"public"`); `CreateProject.visibility` defaults `"private"`, so `provision_signup`/`get_or_create_project` keep making private rows untouched. **S2** resolves the tenant's public-project **name** set by reading `ProjectRecord.visibility` from Postgres; **S3** surfaces the toggle + badge off `serialize_project`'s `visibility` key.
+- New `AccountsService.set_project_visibility(project_id, visibility) -> ProjectRecord | None` (repository load-mutate-flush-refresh, service commits) backs `PATCH /app/projects/{project_id}` (session-only via `require_user`; `_load_scoped_project` → 404 on missing/cross-tenant; invalid value → 422 from `Literal["private","public"]`). First PATCH route in the codebase.
+- Migration `0004_project_visibility` (`projects.visibility Text NOT NULL DEFAULT 'private'`, single-step add, no CHECK; root-only, not mirrored). **Not applied to any DB** — prod apply is S5's operator-gated `alembic upgrade head`. Tests get the column from `Base.metadata.create_all`; the model's `server_default=text("'private'")` keeps that schema byte-equal to the migration (verified: `create_all` yields `text NOT NULL DEFAULT 'private'::text`). Note for anyone re-running the Postgres suites on a **reused** disposable DB: `create_all(checkfirst=True)` won't add the new column to a pre-existing `projects` table — drop/recreate the schema (or use a fresh DB) or every accounts insert 500s.
+
+**Doc impact (for the P19 review to consolidate):** `api.md` + `backend.md` — `/app/projects` responses (list, get, signup) gain a `visibility` field; new `PATCH /app/projects/{project_id}` visibility toggle (session-only, 404 cross-tenant, 422 invalid); new projects default `private`.
+
 ## Constraints
 
 - **No design authoring — composition from existing designed pieces only.** Every public surface composes 1:1 from already-designed components (public doc view = document-detail rendering minus the authenticated app shell; public graph = `<GraphCanvas>` as-is; toggle + copy-link reuse existing form/clipboard patterns). No `design-cowork` round in P19. Anything genuinely new (branded share chrome, sign-up CTA) is deferred as a later design candidate — do not author mockups/palettes/type here.
