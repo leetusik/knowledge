@@ -3,13 +3,13 @@
   "phase_id": "P20",
   "name": "Ship + live verify: push main, prod deploy, installer/hero/skill/init smoke",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 4,
   "depends_on": [
     "P20.S3"
   ],
   "created_at": "2026-07-22T15:55:05+09:00",
-  "started_at": null,
+  "started_at": "2026-07-22T17:22:06+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
