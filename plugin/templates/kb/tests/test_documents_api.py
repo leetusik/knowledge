@@ -257,6 +257,10 @@ def test_documents_are_unmetered(documents_client):
 
 def test_documents_require_auth(documents_client):
     client, _ = documents_client
+    # The list + search routes stay session-only -> 401 unauthenticated.
     assert client.get("/app/documents").status_code == 401
-    assert client.get("/app/documents/1").status_code == 401
     assert client.get("/app/search", params={"q": "x"}).status_code == 401
+    # The single-doc read became optional-identity in P19.S2 (anonymous-capable for
+    # public-project docs), so an unauthenticated request for a non-public / missing
+    # id is now an indistinguishable 404, not a 401 (404-never-403).
+    assert client.get("/app/documents/1").status_code == 404

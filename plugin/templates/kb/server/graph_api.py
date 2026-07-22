@@ -39,10 +39,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from server import db
-from server.accounts.auth import AuthContext, require_user
+from server import config, db
+from server.accounts.auth import AuthContext, AuthError, optional_user
+from server.accounts.service import get_accounts_service
 
 # Reuse the S5 helpers verbatim (the S5 notes flag both as reusable here): the
 # async generator connection dependency (SQLite must be opened on the handler's
@@ -154,28 +155,23 @@ def build_tenant_graph(docs: list[dict[str, Any]]) -> dict[str, Any]:
     return {"version": 1, "projects": projects, "nodes": nodes, "edges": edges}
 
 
-@router.get("/app/graph")
-async def graph(
-    project: UUID | None = None,
-    ctx: AuthContext = Depends(require_user),
-    conn=Depends(get_conn),
+async def _build_graph(
+    conn,
+    *,
+    tenant_id: str,
+    project_name: str | None,
+    projects: list[str] | None,
 ) -> dict[str, Any]:
-    """The caller's tenant's knowledge graph (per-tenant), unmetered.
+    """Count → single windowed ``list_documents`` → invert → ``truncated`` flag.
 
-    Fetches ALL the tenant's documents (count, then a single ``list_documents``
-    with that count as the limit — deliberately NOT the ``/app/documents`` 200
-    cap — bounded by ``MAX_DOC_NODES``) and inverts them into the ``graph.json``
-    contract. ``project`` (a control-plane UUID) is accepted for symmetry and
-    bridged to a name (404 when missing/cross-tenant), but the shipped UI sends
-    none. Adds a ``truncated`` flag (a harmless superset of the four-key
-    contract) when the corpus exceeds the node cap.
+    Shared by the member and public paths. ``projects`` (a public-project-name
+    allowlist) is passed only on the public path; ``None`` on the member path keeps
+    the count/list calls byte-identical to the pre-P19 bare call.
     """
 
-    tenant_id = str(ctx.tenant.id)
-    project_name = (
-        await _resolve_project_name(project, ctx) if project is not None else None
+    total = db.count_documents(
+        conn, project=project_name, tenant_id=tenant_id, projects=projects
     )
-    total = db.count_documents(conn, project=project_name, tenant_id=tenant_id)
     limit = min(total, MAX_DOC_NODES)
     docs = db.list_documents(
         conn,
@@ -183,7 +179,66 @@ async def graph(
         limit=limit,
         offset=0,
         tenant_id=tenant_id,
+        projects=projects,
     )
     graph_data = build_tenant_graph(docs)
     graph_data["truncated"] = total > MAX_DOC_NODES
     return graph_data
+
+
+@router.get("/app/graph")
+async def graph(
+    project: UUID | None = None,
+    org: UUID | None = None,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """A tenant's knowledge graph: member (whole corpus) or public (P19.S2).
+
+    Optional-identity with an ``org`` selector:
+
+    * **No ``org``** — the bare call the logged-in app makes. A resolved ``ctx`` is
+      required (an anonymous bare call raises the same generic 401 as before, so
+      member behavior is preserved); the member sees their whole tenant corpus.
+      ``project`` (a control-plane UUID, bridged to a name, 404 on
+      missing/cross-tenant) is accepted for symmetry but the shipped UI sends none.
+    * **``org`` = the caller's own tenant** — identical to the bare member call.
+    * **``org`` = another tenant (or anonymous)** — the **public view**: only that
+      org's ``public``-visibility projects' nodes/edges/tag-hubs. Legacy-mode guard
+      (no ``DATABASE_URL`` ⇒ 404); an org with **no** public projects — which also
+      covers a nonexistent org — answers 404 ``"graph not found"`` (no existence
+      leak). The ``project`` narrowing param is **ignored** on the public path (the
+      UI never sends it). The response shape is unchanged and carries no org echo.
+
+    Fetches via a single windowed ``list_documents`` bounded by ``MAX_DOC_NODES``
+    and sets ``truncated`` (a harmless superset of the four-key contract) when the
+    corpus exceeds the node cap. Unmetered.
+    """
+
+    # Member paths: no org, or org == the caller's own tenant. Both are the exact
+    # pre-P19 bare call (whole-corpus, project-symmetry param honored).
+    if org is None or (ctx is not None and ctx.tenant.id == org):
+        if ctx is None:
+            # Bare unauthenticated call: same generic 401 as the pre-P19 route.
+            raise AuthError("missing bearer token")
+        project_name = (
+            await _resolve_project_name(project, ctx) if project is not None else None
+        )
+        return await _build_graph(
+            conn, tenant_id=str(ctx.tenant.id), project_name=project_name, projects=None
+        )
+
+    # Public view: anonymous or a non-member caller addressing another org.
+    if config.database_url() is None:
+        raise HTTPException(status_code=404, detail="graph not found")
+    public_names = [
+        p.name
+        for p in await get_accounts_service().list_projects_for_tenant(org)
+        if p.visibility == "public"
+    ]
+    if not public_names:
+        # No public projects (also covers a nonexistent org) — no existence leak.
+        raise HTTPException(status_code=404, detail="graph not found")
+    return await _build_graph(
+        conn, tenant_id=str(org), project_name=None, projects=public_names
+    )
