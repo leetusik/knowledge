@@ -345,6 +345,28 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
   landing artifact can never fork. Also: **D10 resolved** (the two mid-feature ledes quoted verbatim from
   round-02 §D10, not invented); **no new tokens** (bronze stays the `#c8a15e` literal).
 
+**S4 touched (Stage B — concrete, confirms the Stage A note as live truth):**
+
+- `operations.md` — the **P20 ship shape is now verified live** (2026-07-22, `origin/main` = `HEAD`
+  = `9742f56`). All three flip probes flipped as predicted: `/install.sh` **404 → 200** (shebang
+  `#!/usr/bin/env bash`, byte-identical to `web/public/install.sh`); `/SKILL.md` **404 → 200**
+  (byte-identical to canonical `plugin/skills/explain/SKILL.md` — the deploy served the parity-gated
+  file, never a fork); the landing hero replaced the broken `uv tool install knowledge-cli` with the
+  curl one-liner and grew the `#agents` / `#skill` sections (`KNOWN TRAP` kicker + `<a
+  href="/SKILL.md" download>` + both D10 ledes all present). **The shipping caveat is discharged:** a
+  clean-env `curl -fsSL …/install.sh | bash` resolved the `git+…#subdirectory=cli` channel to the
+  **post-P20** tip `9742f56` and installed a CLI whose `auth.py` now carries S1's `web login:` line +
+  D16 reuse — the operator-gated push is exactly what flipped it (Stage A's isolated install still
+  resolved to pre-P20 `3d73917`). No migration / no seed / no compose change confirmed in-flight
+  (D11 stayed inert). REVIEW consolidates this into the same `operations.md` version as the Stage A note.
+- `experience.md` / `cli.md` (onboarding) — **live-proven on prod** (throwaway account): `knowledge
+  init` prints the base_url-aware **`web login: https://knowledge.hi2vi.com/login (same email +
+  password)`** line and mints an org key; a second `init --email <same> --project other` **reuses**
+  the org key (D16 live — the `note: reusing your org key … org keys are project-agnostic (P18)`
+  fires) and creates `project: other (created)`; a `knowledge save` returns 201 with `url:
+  https://knowledge.hi2vi.com/documents/24` (P19 mode-aware direct doc link, live). These confirm
+  S1/S3's `experience.md` entries as live truth — no new durable claim, just verification.
+
 **S4 touched (Stage A — concrete):**
 
 - `operations.md` — the **P20 ship shape**: an operator-gated `git push origin main` + a **web-image
@@ -378,6 +400,44 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
 - **Stage A returned `needs_operator`** with the §Runbook in `result.md` (push → deploy → verify). No push,
   no prod mutation, no commit, no status transition performed by the executor — the orchestrator commits
   Stage A, sets `P20.S4 pending`, and surfaces the runbook.
+
+## S4 Stage B cross-slice notes (for REVIEW)
+
+- **Cutover verified live 2026-07-22.** Operator ran the Stage A runbook (push + prod deploy);
+  `origin/main` = local `HEAD` = **`9742f56`** (Stage A commit, post-P20 — carries all P20 code atop
+  `a8847bc`). `/healthz` 200 (23 public docs, unchanged). All Stage B assertions **passed**; slice is
+  `done`-worthy. No code changed, nothing committed, no state transitioned by the executor.
+- **Flip probes (all green):** `/install.sh` 404→200 (shebang `#!/usr/bin/env bash`, `cmp`-identical
+  to `web/public/install.sh`, `application/x-sh`); `/SKILL.md` 404→200 (`cmp`-identical to canonical
+  `plugin/skills/explain/SKILL.md`, `text/markdown`, 26041 B — parity gate held through deploy);
+  landing HTML carries the curl hero (2×), `id="agents"` (1×), `id="skill"` (1×), `KNOWN TRAP` (2×),
+  `href="/SKILL.md" download`, both D10 ledes (2× each), and the broken `uv tool install knowledge-cli`
+  is **gone** (0×).
+- **Clean-env installer E2E green:** `curl -fsSL …/install.sh | bash` in a fully-isolated env (temp
+  HOME/XDG/UV dirs, `env -i` PATH hygiene, torn down) → exit 0, resolved `git+` @ **`9742f56`**
+  (post-P20), `knowledge --version` → `knowledge-cli 0.1.0`; installed `auth.py` **now carries** the
+  `web login:` line + D16 reuse markers (Stage A's isolated install resolved to pre-P20 `3d73917`
+  without them — the push is what flipped it). **Shipping caveat discharged.**
+- **Live init / D16 / save E2E green** (throwaway account `p20-smoke+ecc4e195@example.com`, prod,
+  fully sanitized — key/password never printed): init prints `web login:
+  https://knowledge.hi2vi.com/login (same email + password)` + mints an org key; `init --project
+  other` **reuses** the org key (D16 live: `key: reusing` + the P18 project-agnostic `note:`) and
+  creates `project: other (created)`; `knowledge save` → 201 `url:
+  https://knowledge.hi2vi.com/documents/24` (P19 direct doc link, live).
+- **Prod multi-tenancy observation (for REVIEW, not a blocker):** init#1 on a brand-new account shows
+  `project: default (already existed)`, not `(created)` — server-side signup pre-creates the org's
+  `default` project before init's ensure-project runs. The hero's depicted `project: default (created)`
+  is honest for a genuinely new org, but on prod the default project already exists at ensure time.
+  Not a plan-required assertion (init#1 asserts web-login + `key: minted`, both green) and no impact
+  on the cutover — flagged only so REVIEW is aware of the depicted-vs-live wording nuance.
+- **Throwaway residue (no delete API — same as P18/P19 smokes):** account
+  `p20-smoke+ecc4e195@example.com`, org `default`, a `other` project + the shared `default` project,
+  one saved doc **id 24** at `other/2026-07-22-p20-stage-b-smoke.md` (private under `other` → does not
+  raise the public `/healthz` count of 23). The minted org key lived only in the temp config, torn down.
+  Operator env re-verified untouched (no `knowledge` on PATH, no `~/.config/knowledge-kb`, `uv tool
+  list` empty).
+- **`workflow.py validate` → passed.** No `doc-new-version` run (durable docs are consolidated once at
+  REVIEW from the Doc impact list above).
 
 ## S3 cross-slice notes (for S4 live smoke + REVIEW)
 
