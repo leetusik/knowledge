@@ -146,6 +146,105 @@ operator environment verified untouched afterward.
 
 ---
 
-## Stage B — live verification (appended after the operator clears the gate)
+## Stage B — live verification (done 2026-07-22, after the operator cleared the gate)
 
-_Pending. Filled by executor dispatch 2 once push + deploy are live._
+Operator ran the Stage A runbook (push `main` + prod deploy). `origin/main` = local `HEAD` =
+**`9742f56`** (the Stage A commit — post-P20; it sits on top of `a8847bc` = P20.S3, so it carries
+all P20 code). The cutover is live on `https://knowledge.hi2vi.com`. Everything below is read-only
+against prod plus one throwaway tenant; **no code changed, nothing committed, no state transitioned.**
+
+### 1. Flip probes — all three flipped, all pass
+
+| Probe | Stage A (pre) | Stage B (live) | Assertion |
+|---|---|---|---|
+| `GET /healthz` | 200 (23 docs) | **200** `{"status":"ok","docs_root":"/repo/docs","db":"ok","documents":23}` | api + planes healthy |
+| **Flip** `GET /install.sh` | 404 (Next not-found) | **200**, `application/x-sh`, 1983 B | first line **`#!/usr/bin/env bash`**; **byte-identical** to repo `web/public/install.sh` (`cmp` clean) |
+| **Flip** `GET /SKILL.md` | 404 | **200**, `text/markdown; charset=UTF-8`, 26041 B | **byte-identical** to canonical `plugin/skills/explain/SKILL.md` (`cmp` clean — the deploy served the parity-gated file, not a fork) |
+| `GET /` landing HTML | pre-P20 (broken hero, no anchors) | **200**, 215173 B | see below |
+
+Landing HTML assertions (all against the one live fetch):
+
+| Assertion | Result |
+|---|---|
+| curl hero one-liner (`knowledge.hi2vi.com/install.sh`) present | **yes (2×)** |
+| broken `uv tool install knowledge-cli` **gone** | **yes (0×)** |
+| `id="agents"` | **yes (1×)** |
+| `id="skill"` | **yes (1×)** |
+| `KNOWN TRAP` | **yes (2×)** |
+| `href="/SKILL.md" download` (Download SKILL.md) | **yes** — `<a href="/SKILL.md" download …>Download SKILL.md</a>` served |
+| D10 lede — FEATURE_SAVE (`…read like a book. Not a runbook.`) | **yes (2×)** |
+| D10 lede — FEATURE_CONNECT (`…A reading room on the web, a terminal for your agent…`) | **yes (2×)** |
+
+So the web deploy baked `public/install.sh`, `public/SKILL.md`, the honest hero, the two new
+`#agents` / `#skill` sections, the `KNOWN TRAP` kicker, the `<a download>` skill link, and the two
+D10 ledes — the full P20 landing surface is live.
+
+### 2. Clean-env installer E2E — `curl -fsSL …/install.sh | bash` (the real thing)
+
+Fully isolated disposable env (`mktemp -d` root): temp `HOME`, temp `XDG_CONFIG_HOME` /
+`XDG_DATA_HOME`, temp `UV_TOOL_DIR` / `UV_TOOL_BIN_DIR` / `UV_CACHE_DIR`, and `env -i` PATH hygiene
+— a controlled PATH exposing **only** `uv` (a lone symlink into a temp bin) + system dirs, so the
+operator's `~/.local/bin` never entered PATH. `command -v knowledge` **clean (none)** pre-run.
+Never touched the real `~/.config/knowledge-kb` or the operator's uv tools.
+
+| Step | Outcome |
+|---|---|
+| `curl -fsSL https://knowledge.hi2vi.com/install.sh \| bash` | **exit 0**. uv detected; `uv tool install --reinstall git+…#subdirectory=cli` → **Updated … → `9742f566…`** (= `origin/main` HEAD, **post-P20**); provisioned cpython-3.12.11 into the temp env, resolved 8 pkgs, **Built knowledge-cli @ …@9742f566…#subdirectory=cli**, `Installed 1 executable: knowledge`; printed `==> installed: knowledge-cli 0.1.0` then `==> Next: knowledge init --email you@example.com` |
+| `knowledge --version` (installed temp bin) | **`knowledge-cli 0.1.0`** |
+| **Installed CLI is post-P20** (proof the push shipped S1) | installed `knowledge_cli/auth.py` **HAS** the `web login:` line (1×) and the D16 reuse markers (`reusing` 4×); source built from commit **`9742f56`**. Contrast Stage A, where the same isolated install resolved to pre-P20 `3d73917` whose `auth.py` **lacked** the line — the operator-gated push is exactly what flipped it. |
+
+The installer now delivers S1's CLI changes (web-login line, D16 reuse) to `curl \| bash` users —
+the shipping caveat is discharged live.
+
+### 3. Live init / D16 / save E2E — throwaway account on prod (sanitized)
+
+Isolated config home (temp `XDG_CONFIG_HOME`), `KB_API_BASE_URL=https://knowledge.hi2vi.com` (the
+CLI's compiled default is `localhost:8766`, so the env override is required to target prod; the
+web-login line prints `{base_url}/login` off this same resolved base). Throwaway identity
+**generated in-process and never echoed** (the password lives only in `KNOWLEDGE_PASSWORD`, never in
+a command literal or output); all output filtered so no `key:` value and no `vk_` token is ever
+printed (the CLI already prints only a redacted `vk_…tail` fingerprint via `config.redact_token`,
+and even that is redacted whole here).
+
+Account: `p20-smoke+ecc4e195@example.com`.
+
+| Command | Key output | Assertion |
+|---|---|---|
+| `KNOWLEDGE_PASSWORD=… knowledge init --email p20-smoke+ecc4e195@example.com` | `signed up as … (org: default)`; `key: <minted>`; **`web login: https://knowledge.hi2vi.com/login (same email + password)`**; `KB_STATUS=configured` — **exit 0** | **`web login: …/login (same email + password)` present (1×)** ✓ · **`key: minted` present (1×)** ✓ (fresh org key minted) |
+| `KNOWLEDGE_PASSWORD=… knowledge init --email <same> --project other` | `note: reusing your org key for project 'other': org keys are project-agnostic (P18)…`; `logged in as …`; **`project: other (created)`**; **`key: reusing …`** — **exit 0** | **`key: reusing` present (1×) — D16 live** ✓ · **`project: other (created)` present (1×)** ✓ |
+| `knowledge save <tiny.md> --project other --source-repo p20-smoke --tag p20-smoke --tag verification` | `saved: P20 Stage B smoke`; `id: 24`; `path: other/2026-07-22-p20-stage-b-smoke.md`; **`url: https://knowledge.hi2vi.com/documents/24`** — **exit 0** | **201 `url:` ends `/documents/{id}` (`…/documents/24`)** ✓ (P19 mode-aware direct doc link, live) |
+
+**Observation (not a failure, not a plan-required assertion):** init #1 printed
+`project: default (already existed)`, not `(created)` — server-side signup pre-creates the org's
+`default` project before init's ensure-project runs, so init finds it. The plan's init#1 assertions
+are only the web-login line + `key: minted` (both ✓); `project: … (created)` is required for init#2
+(`other`), which passed. The hero's depicted `project: default (created)` remains honest for a
+genuinely new org; on prod the default project already exists at ensure time. Noted for REVIEW; no
+impact on the cutover.
+
+**Throwaway-tenant residue** (documented, no cleanup possible — there is no delete API, same shape
+as the P18/P19 smokes): one account `p20-smoke+ecc4e195@example.com`, org `default`, its `default`
+project (pre-existing) + a `other` project created by this run, and one saved document **id 24** at
+`other/2026-07-22-p20-stage-b-smoke.md` (private under `other`, so it does **not** raise the public
+`/healthz` doc count, still 23). The minted org key lived only in the temp config home and was
+destroyed with the sandbox. No operator secrets used.
+
+### 4. Teardown + operator-environment verification
+
+Sandbox tree removed (`find <root> -depth -delete`; the harness's permission layer declines
+`rm -rf`, as in Stage A — same effect). Probe scratch files cleaned. Operator env re-checked:
+`command -v knowledge` → **none (unchanged)**; real `~/.config/knowledge-kb` → **absent
+(unchanged)**; `uv tool list` → **no tools installed (unchanged)**; no `/tmp/p20-stageb*` remnants.
+The operator machine is exactly as it was pre-run.
+
+### 5. `python3 scripts/workflow.py validate` → **Workflow validation passed.**
+
+---
+
+## Stage B — deviations from plan.md
+
+None material. Two harness/prod notes: (a) the isolated-env teardown used `find -depth -delete`
+(the permission layer declines `rm -rf`) — same effect, operator env verified untouched; (b) init#1
+shows `project: default (already existed)` rather than `(created)` because prod signup pre-creates
+the org's default project — not a plan-required assertion (init#1 asserts the web-login line +
+`key: minted`, both green) and not a failure. All plan assertions passed.
