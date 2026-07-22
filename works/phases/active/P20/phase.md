@@ -192,6 +192,30 @@ Grounded facts verified this session (spot-checked against the live repo):
 - **Changing the hero terminal command text is a content/copy fix inside the already-designed
   component** (content in `terminals.ts`) — it does **NOT** need a design round. New sections DO.
 
+### S1 done — cross-slice notes (for S2/S3/S4)
+
+- **Final hero line set** (S2's design context): the hero now depicts, in order,
+  `$ curl -fsSL https://knowledge.hi2vi.com/install.sh | bash` → `$ knowledge init --email …` →
+  `Password:` → `signed up as … (org: default)` / `project: default (created)` / `key: minted vk_…9f2c`
+  / `config: ~/.config/knowledge-kb/config.json (0600)` → `$ knowledge save explainer.md` →
+  `saved: explainer` / `url: https://knowledge.hi2vi.com/documents/a1b2c3`. The new S2/S3 sections
+  (env-var quickstart, skill-on-landing) sit **below** this hero — the hero already tells the
+  install→init→save story, so the env-var section is the *agent* on-ramp, not a repeat.
+- **Installer URL semantics for S4's smoke:** `https://knowledge.hi2vi.com/install.sh` is served
+  straight from the committed `web/public/install.sh` (standalone image + nginx `/` catch-all — no
+  route, no infra). It is only **live after S4's web deploy**. The script runs
+  `uv tool install --reinstall git+…#subdirectory=cli`, which installs GitHub **main** — so the
+  installer delivers S1's CLI changes (web-login line, D16 reuse) to `curl | bash` users **only after
+  S4's operator-gated `git push` of main**. `--reinstall` makes re-runs idempotent + upgrade-safe.
+  S4's clean-env smoke should assert: `install.sh` runs end-to-end (uv bootstrap if absent →
+  `knowledge --version`), then `knowledge init` shows the web-login line and D16 reuse on a second
+  `--project other` run.
+- **Test/validation gotcha (S4/REVIEW):** system `python3` here is 3.13 **without** pytest/httpx;
+  the CLI suite runs green via **`cli/.venv/bin/python -m pytest cli/tests -q`** (3.12, editable
+  `knowledge_cli` + pytest + httpx). `web/`: `npm run typecheck && npm run lint && npm run test`
+  (61 vitest tests) all pass; no vitest covers the marketing terminal content, so the hero-copy
+  guard is typecheck/lint, not a unit test.
+
 ### Deferrals linkage
 
 - **D16** ("knowledge init --project other re-mints an org key — reuse-gate relaxation";
@@ -243,6 +267,29 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
 - (expected) `cli.md` / onboarding doc — the `knowledge init` web-login success line and the
   reuse-gate behavior change; possibly the curl-installer mention in `cli/README.md` / `guide.py`.
 - S1/S3/S4 each append the concrete doc(s) they actually touched; REVIEW consolidates.
+
+**S1 touched (concrete):**
+
+- `decisions.md` — the broken-hero-line (`uv tool install knowledge-cli`, D-P13-1) is resolved
+  by a **curl installer** (`web/public/install.sh`, served at `/install.sh`, bootstraps `uv` then
+  `uv tool install --reinstall git+…#subdirectory=cli`), explicitly **not** PyPI (D-P13-1 stands);
+  the **D16 reuse-gate relaxation** (org keys are project-agnostic → `init --project other` reuses
+  the org key, re-mints only on `--new-key`); **hero honesty** via a depicted password prompt (no
+  password generator); the `knowledge init` **web-login success line** (CLI + web share one
+  accounts plane).
+- `experience.md` (CLI/onboarding UX) — the honest hero terminal (curl one-liner + real `init`
+  password prompt + real `init`/`save` output, the `url:` line showcasing the P19 direct doc link),
+  the `knowledge init` `web login: {base_url}/login (same email + password)` line, the D16
+  cross-project org-key reuse behavior, and the curl one-liner now surfaced in `cli/README.md`
+  §Install + `guide.py` §1 (the `git+` form stays canonical).
+- `operations.md` — `web/public/install.sh` is served **live** at
+  `https://knowledge.hi2vi.com/install.sh` with zero infra work (standalone image ships `public/`,
+  nginx `/` catch-all); it wraps the canonical `uv tool install --reinstall git+…#subdirectory=cli`
+  (installs GitHub **main** → S1's CLI changes reach installer users only after S4's operator-gated
+  `git push`).
+- `frontend.md` — hero terminal copy (`web/src/content/marketing/terminals.ts` `HERO_TERMINAL`) now
+  depicts the working curl-installer + honest `init`/`save` output; content-only change inside the
+  already-designed hero component (no design round; `web/design/rounds/01-*` untouched).
 
 ## Open Questions
 
