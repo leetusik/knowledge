@@ -5,9 +5,9 @@
 ## Summary
 
 - Open: `14`
-- Promoted: `3`
+- Promoted: `4`
 - Dropped: `2`
-- Rebuilt at: `2026-07-22T15:37:12+09:00`
+- Rebuilt at: `2026-07-22T15:58:13+09:00`
 
 ## Open
 
@@ -19,10 +19,10 @@
 | `D13` | `deferred` | source_url (public-origin) field + ingester population | P15.S1 | public-scraping/ingestion features land, or clickable citations become required for a consumer (e.g. OpenClaw's citation chip) | `works/deferred/open/D13` |
 | `D14` | `deferred` | Org management: create additional orgs + invite members | P18 | operator asks for multi-org/team features, or a second member needs org access | `works/deferred/open/D14` |
 | `D15` | `deferred` | Fix pre-existing P16-era gated failure: documents list projection format key (test_documents_api) | P18.S1 | next documents-plane slice, or before wiring Postgres-gated tests into CI | `works/deferred/open/D15` |
-| `D16` | `deferred` | knowledge init --project other re-mints an org key (reuse-gate relaxation) | P18.S4 | next CLI onboarding slice (e.g. P20) or operator reports duplicate org keys | `works/deferred/open/D16` |
 | `D17` | `deferred` | Rate-limit the anonymous read surface (public doc/raw/graph) | P19.REVIEW | Before promoting public links to real traffic, or at first sign of scraping/abuse on the anonymous surface | `works/deferred/open/D17` |
 | `D18` | `deferred` | Login returnTo + public tag surface for public-graph tag links | P19.REVIEW | Next web UX slice, or operator/user reports friction on shared links | `works/deferred/open/D18` |
 | `D19` | `deferred` | Org slug vanity URLs for the public graph | P19.REVIEW | Operator wants pretty share URLs, or org management features (D14) land | `works/deferred/open/D19` |
+| `D20` | `deferred` | Windows install.ps1 (PowerShell curl-installer equivalent) | P20.DECOMP | Windows onboarding demand / operator asks | `works/deferred/open/D20` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
@@ -33,6 +33,7 @@
 | ID | Status | Title | Promoted To | Path |
 |---|---|---|---|---|
 | `D1` | `promoted` | Decide whether works/docs internals appear on the public site | `P4.S5` | `works/deferred/promoted/D1` |
+| `D16` | `promoted` | knowledge init --project other re-mints an org key (reuse-gate relaxation) | `P20.S1` | `works/deferred/promoted/D16` |
 | `D2` | `promoted` | Design polish for the Pages site (palette/fonts/logo, optional extra_css) | `P5.S1` | `works/deferred/promoted/D2` |
 | `D9` | `promoted` | plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1 | `P17.S4` | `works/deferred/promoted/D9` |
 

@@ -1,0 +1,32 @@
+{
+  "id": "P20.S1",
+  "phase_id": "P20",
+  "name": "installer + hero honesty + CLI onboarding fixes",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 1,
+  "depends_on": [],
+  "created_at": "2026-07-22T15:58:13+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "deferred",
+    "id": "D16",
+    "path": "works/deferred/open/D16"
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

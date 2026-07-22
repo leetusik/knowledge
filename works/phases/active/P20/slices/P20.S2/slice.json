@@ -1,18 +1,18 @@
 {
-  "id": "P20.DECOMP",
+  "id": "P20.S2",
   "phase_id": "P20",
-  "name": "decompose phase",
-  "kind": "decomposition",
-  "status": "done",
-  "order": 0,
+  "name": "Design round 02: env-var quickstart + skill-on-landing sections (handoff)",
+  "kind": "co-work",
+  "status": "todo",
+  "order": 2,
   "depends_on": [],
-  "created_at": "2026-07-22T01:58:41+09:00",
-  "started_at": "2026-07-22T15:53:10+09:00",
-  "completed_at": "2026-07-22T15:58:13+09:00",
-  "risk": "low",
+  "created_at": "2026-07-22T15:55:05+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
   "source": {
-    "type": "new_phase",
-    "id": "P20"
+    "type": "manual",
+    "id": null
   },
   "paths": {
     "plan": "plan.md",
