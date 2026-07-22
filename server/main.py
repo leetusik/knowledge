@@ -590,9 +590,15 @@ def create_document(
             pass
 
     # 5. Response.
-    url = (
-        f"{config.public_base_url().rstrip('/')}/{project}/{date}-{slug}/"
-    )
+    # Mode-aware direct URL. Tenant mode (`ctx.tenant_id is not None`) points at the
+    # web app's direct doc page (`KB_PUBLIC_BASE_URL` is the app origin on prod);
+    # shareable when the project is public. Legacy/single-tenant mode keeps the
+    # mkdocs site URL, which still exists in the dormant template stack. Branch on
+    # `ctx.tenant_id`, never `is_public` — tenant #1's mkdocs URL is equally broken.
+    if ctx.tenant_id is not None:
+        url = f"{config.public_base_url()}/documents/{doc_id}"
+    else:
+        url = f"{config.public_base_url()}/{project}/{date}-{slug}/"
     resp = {
         "id": doc_id,
         "rel_path": rel,

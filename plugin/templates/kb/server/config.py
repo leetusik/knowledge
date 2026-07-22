@@ -37,7 +37,13 @@ def db_path() -> Path:
 
 
 def public_base_url() -> str:
-    """Viewer origin used to build response `url`s (the mkdocs site, not the API)."""
+    """Viewer origin used to build response `url`s (not the API origin).
+
+    Mode-aware at the save site: in tenant mode this is the web app origin (the
+    save `url` becomes ``{origin}/documents/{id}``); in legacy/single-tenant mode
+    it is the mkdocs site origin (the save `url` keeps the ``{project}/{date}-{slug}/``
+    mkdocs shape). Already right-stripped of trailing ``/``.
+    """
     return (_env("KB_PUBLIC_BASE_URL", "http://localhost:8765") or "").rstrip("/")
 
 
