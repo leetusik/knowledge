@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0008
-created_at: 2026-07-22T11:24:22+09:00
-source: P18.REVIEW
-summary: P18 Org API keys dashboard panel reusing P12 components at org scope (no new route/design round); org BFF helpers; project_id string|null; Workspace to Org copy
-previous: v0007_p16_web_viewer_renders_html_explainers_in_a_sandboxed_opaque-origin_iframe_via_a_same-origin_bff_raw-relay_route_markdown_docs_render_byte-identically
+version: v0009
+created_at: 2026-07-22T15:28:37+09:00
+source: P19.REVIEW
+summary: P19 public route group: optional-identity doc + public graph pages, PublicShell, visibility toggle+badges, copy-link, robots
+previous: v0008_p18_org_api_keys_dashboard_panel_reusing_p12_components_at_org_scope_no_new_route_design_round_org_bff_helpers_project_id_string_null_workspace_to_org_copy
 ---
 
 # Frontend
@@ -58,6 +58,8 @@ stance #6). It adds new BFF org-credential helpers + two dashboard server action
 `KbCredential.project_id` to `string | null` (org keys serialize `null`), and renames the
 user-facing "Workspace" strings to "Org" (labels only — no CSS class or code identifier
 renamed). See *The Org API keys panel + Workspace→Org copy (`web/`, P18)* below.
+
+**As of P19 the `web/` app grows a public/private boundary: a `(public)` route group outside the `(app)` auth gate.** A public project's doc renders at the **unchanged** `/documents/{id}` (moved into `(public)`, now an **optional-identity** page — a member gets the app shell, an anonymous visitor a lighter `PublicShell`), and its graph at a new **`/graph/{org}`** page; both compose 1:1 from the existing document-view render and `<GraphCanvas>` (no new visual design, no Claude Design round). A new `optionalIdentity()` guard + a **tokenless** raw-HTML relay let an anonymous visitor read a public doc without ever fetching-with-token; a project-detail **visibility toggle + badge**, a dashboard badge column, and a shared **copy-link** island round out the surface; `robots.ts` now allows `/documents` + `/graph`. See *The public route group + visibility surfaces (`web/`, P19)* below.
 
 ## Stack
 
@@ -651,3 +653,17 @@ had to flag and stop rather than invent one, which it did not need to).
   mint→show-once→revoke click-through is the same operator residual shape as P16's in-browser
   round-trip — the live org-key path is proven end-to-end by S5's extended `onboarding_smoke.py`
   against prod.
+
+## The public route group + visibility surfaces (`web/`, P19)
+
+P19 adds the web public/private boundary: a public project's doc + graph become anonymously readable, and a member can toggle visibility and copy a share link. Composed 1:1 from already-designed pieces — **no new CSS, no new tokens, no Claude Design round**.
+
+- **The `(public)` route group (URLs unchanged).** `documents/[id]/` was **`git mv`d** from `(app)` to a new `(public)` group (page + not-found + explainer/prose CSS), so `/documents/{id}` is unchanged but now lives outside the auth gate; the `/documents` list stays in `(app)`. The doc render was extracted verbatim into a co-located `document-view.tsx` (zero visual change). The page branches on `optionalIdentity()`: a **member** → `getDocument(token, id)` + `<AppShell>` with back-link + copy-link (`ApiError` 404/400 → `notFound()`); an **anonymous** visitor → `getDocument(undefined, id)` + `<PublicShell>` (a miss → `redirect("/login")`). A malformed id short-circuits to `notFound()` **before** any session read. A new `(public)/graph/[org]/page.tsx` UUID-validates `org` (malformed → `notFound()`), calls `getGraph(token ?? undefined, { org })`, maps an `ApiError` 404 → `notFound()` (a branded not-found, never a login bounce), and renders `<PublicShell>` + `<GraphCanvas>` imported as-is from `(app)/graph`.
+- **`PublicShell` (`components/public-shell.tsx`).** A server component reusing AppShell's exact `.kb-app`/`.kb-topbar` pieces — brand block (→ `/`) + spacer + a single "Sign in" ghost link — with no rail/crumb/user. Composition of existing classes only.
+- **`optionalIdentity()` (`lib/auth-guards.ts`).** The anonymous-capable sibling of `requireIdentity` (`cache()`d): returns the member context for a live session, `null` for no-cookie **or** a dead cookie (knowledge 401), rethrows real outages. It **never redirects** — mirroring the server `optional_user`.
+- **The raw-HTML relay is now optional-identity.** `/api/documents/{id}/raw` replaced its 401 short-circuit with `const token = openSession(readSessionCookie(req)) ?? undefined;` then `getDocumentRaw(token, id)` — an anonymous browser sends no cookie ⇒ tokenless relay ⇒ knowledge serves only public raw HTML (private/nonexistent = 404). The four `RAW_HTML_HEADERS` are **byte-identical**; `next.config.ts` matcher untouched. (Security detail in **security**.)
+- **BFF plumbing (`lib/knowledge/app.ts`, `types.ts`).** `getDocument`/`getDocumentRaw` now take `token: string | undefined`; `getGraph(token, { org? })` appends `?org=` (the bare call byte-unchanged); new `setProjectVisibility(token, id, visibility)` → `PATCH /app/projects/{id}`. `KbProject.visibility` + `KbDashboardProject.visibility` (`"private" | "public"`) added.
+- **Toggle + badges + copy-link.** The project-detail header carries a `Badge` (`active`=Public / `idle`=Private, `chip`) + a `visibility-toggle.tsx` island wired to `setProjectVisibilityAction` (the mint-action idiom + `revalidatePath`); the current visibility is read off the existing `getProjectUsage` bundle (no extra `getProject` round-trip). The **only server change** in the web slice: `dashboard_api.py` gained a `"visibility"` key (byte-mirrored to the plugin template) so the dashboard projects table shows a Public/Private badge column. `copy-link-button.tsx` (`navigator.clipboard`, idle/copied/failed states) builds `${origin}${path}` client-side, used on the member doc view and the member graph header.
+- **`robots.ts`.** `/documents` + `/graph` removed from `disallow` (they now carry public surfaces); `/dashboard`, `/projects`, `/login`, `/signup`, `/api/` stay blocked. `sitemap.ts` unchanged.
+- **Recorded edges (within scope).** The moved `(public)` not-found pages render **bare** (no `(public)` layout by design), so a member hitting a genuinely-missing doc id sees the centered empty-state without app-shell chrome (minor, rare). The ported `GraphCanvas` tag-hub links still target the session-gated `/documents?tag=`, so an anonymous visitor clicking a tag hub on a public graph lands on `/login` (the doc-node "Read" links work anonymously). Both are deferred niceties (login `returnTo`; anonymous tag browse).
+- **Validation.** `pnpm lint` / `typecheck` / `test` (61) / `build` all green; `plugin_parity.py` PASS (the one dashboard server change is mirrored); the live anonymous same-origin pages (`GET {url}` 200, `GET /graph/{tenant}` 200 while public, `/login` redirect after toggle-back) are proven end-to-end by S5's extended `onboarding_smoke.py` against prod (web pages in scope).

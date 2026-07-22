@@ -615,3 +615,14 @@
 {"ts": "2026-07-22T14:43:32+09:00", "type": "slice_status_changed", "slice": "P19.S5", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-07-22T15:16:47+09:00", "type": "slice_status_changed", "slice": "P19.S5", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-07-22T15:19:41+09:00", "type": "slice_status_changed", "slice": "P19.S5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-22T15:22:20+09:00", "type": "slice_status_changed", "slice": "P19.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-07-22T15:28:30+09:00", "type": "doc_version_created", "doc": "product", "version": "v0010_p19_per-project_public_private_visibility_anonymous_public_doc_graph_reads_shareable_direct_doc_links", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:30+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:30+09:00", "type": "doc_version_created", "doc": "api", "version": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:30+09:00", "type": "doc_version_created", "doc": "backend", "version": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:37+09:00", "type": "doc_version_created", "doc": "security", "version": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:37+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0009_p19_public_route_group_optional-identity_doc_public_graph_pages_publicshell_visibility_toggle_badges_copy-link_robots", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:37+09:00", "type": "doc_version_created", "doc": "data", "version": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:28:37+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:36:56+09:00", "type": "slice_status_changed", "slice": "P19.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-07-22T15:36:56+09:00", "type": "phase_reviewed", "phase": "P19", "verdict": "pass", "reviewer": "slice-executor-high"}

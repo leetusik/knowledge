@@ -40,13 +40,13 @@
       "id": "P19",
       "name": "Public projects & direct doc links",
       "objective": "Add per-project public/private visibility: public projects' docs and graph are readable by anonymous visitors and other users (the graph exposes only public-project nodes to outsiders), and every save returns a working direct URL to the doc — replacing the legacy mkdocs url field — shareable when the project is public.",
-      "status": "planned",
+      "status": "done",
       "order": 4,
       "path": "works/phases/active/P19",
-      "review_status": "pending",
-      "current_slice": "P19.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7
     },
     {
       "id": "P20",
@@ -64,5 +64,5 @@
   "deferred_open_count": 11,
   "deferred_promoted_count": 3,
   "deferred_dropped_count": 2,
-  "last_rebuilt_at": "2026-07-22T15:19:41+09:00"
+  "last_rebuilt_at": "2026-07-22T15:36:56+09:00"
 }

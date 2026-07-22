@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0013
-created_at: 2026-07-22T11:24:32+09:00
-source: P18.REVIEW
-summary: P18 additive org-level /app/credentials endpoints; signup response gains project; nullable serialize_credential; get-or-create on POST /app/projects + writes; frozen contract additive
-previous: v0012_p16_html_explainer_doc_type_additive_format_on_post_read_projections_new_get_app_documents_id_raw_route_mcp_fetch_document_format_field_frozen_api_contract_v1_preserved_additively
+version: v0014
+created_at: 2026-07-22T15:28:30+09:00
+source: P19.REVIEW
+summary: P19 visibility field + PATCH toggle; optional-identity public doc/raw reads; org-scoped public graph; mode-aware 201 url
+previous: v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive
 ---
 
 # API
@@ -33,6 +33,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P16 HTML explainer documents are a first-class doc type, added to every read/write surface additively.** `POST /api/documents` gains an optional `format: "md" | "html"` input (default `"md"` — the raw content still arrives in the `markdown` body field, which for `format:"html"` carries the self-contained HTML). Every document read projection (`/api/documents/{id}`, `/api/documents/by-path/{rel}`, and the `/app/*` doc reads) gains an additive `format` output; the raw HTML lives in an **internal `raw_html` column that is never in any JSON body**. A new session-guarded, tenant-scoped route **`GET /app/documents/{id}/raw`** serves the raw HTML as `text/html` with the sandbox headers (below) for the web viewer's iframe. The MCP `fetch_document` tool output gains an additive `format` field, and for an html doc its `markdown` is the server-extracted readable text — so **`markdown`'s contract meaning ("readable text body") is preserved, not repurposed**: markdown docs are byte-identical, and html is a *new* format whose readable body is its extracted text. **The frozen `/api/*` consumer contract and the MCP tool contract v1 are preserved verbatim** — every P16 change is a new optional field or an entirely new `/app` route; no existing field's name, type, presence, status, or route changed (verified at the P16 review). See *HTML explainer document type (P16)* below.
 
 **As of P18 the control plane gains org-level credentials and get-or-create projects — all additive to the frozen `/api/* + /auth/* + /app/*` contract.** New org-level credential routes appear on `/app/*` (`POST /app/credentials` mints an org key with `project_id NULL`, `GET /app/credentials` lists them, `DELETE /app/credentials/{id}` revokes), sitting **alongside** the unchanged per-project `/app/projects/{id}/credentials` routes. `POST /auth/signup`'s response gains an additive `project` field beside `tenant`. `POST /app/projects` becomes **get-or-create** (a duplicate name → 201 existing row, no longer a 500), and `POST /api/documents` gains a **get-or-create side effect** (an unregistered `body.project` now leaves a `projects` registry row) — its consumer contract is otherwise unchanged. `serialize_credential.project_id` is now nullable (`null` for org keys). No existing field, type, status, or route changed. See *Org-level credentials + get-or-create projects (P18)* below.
+
+**As of P19 the control plane gains per-project visibility and the product's first anonymous read surface — additive to the frozen contract.** Every `/app/projects` response (list, get, the signup `project`) and `/app/dashboard` rollup row gains an additive **`visibility`** field (`"private"` | `"public"`, default private); a new **`PATCH /app/projects/{project_id}`** session-only toggle flips it (404 cross-tenant/missing, 422 invalid). The read routes **`GET /app/documents/{id}` + `.../raw`** become **optional-identity** — a resolved member reads their own tenant's doc exactly as before, an anonymous or cross-org caller reads it **only** when its project is public — and **`GET /app/graph`** gains an **`org={tenant_uuid}`** selector that returns an **org-scoped public graph** (public projects only). Everything private/nonexistent is an indistinguishable **404** on this surface (404-never-403, no 403 anywhere). Separately, the `POST /api/documents` 201 **`url` is now mode-aware** (tenant → the direct doc page, legacy → the mkdocs shape) — a value change to an existing always-present key, so the frozen contract holds additively. See *Public projects + anonymous read surface (P19)* below.
 
 ## Auth
 
@@ -120,7 +122,7 @@ The API-owned write path — one call creates the convention file, the Recent bu
 - Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
 - Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`.
 - **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
-- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`), where `url = <KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`). **`url` is mode-aware (P19):** tenant mode → `<KB_PUBLIC_BASE_URL>/documents/<id>` (the direct doc page, shareable when public); legacy/single-tenant mode → `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/` (the mkdocs shape). The key/type are unchanged.
 - **Auto-landing side effect (P7 / F1):** inside `WRITE_LOCK`, right after writing the doc file, the write path calls `ensure_project_landing(docs_root, project)` — if `docs/<project>/index.md` is **absent** (the first doc of a new project), it writes a minimal landing (H1 = project name + one line, **no frontmatter** so it stays a non-doc) and the response carries `landing_created:true`; the scoped commit then stages a **third** path (`docs/<project>/index.md`) alongside the doc + `docs/index.md`. An existing landing (hand-written or previously auto-created) is **never overwritten** → `landing_created:false`, two-path commit as before. This keeps every project satisfying the per-project `site/<project>/index.html` deploy-gate invariant (mkdocs `navigation.indexes` does not synthesize one). The `/knowledge:explain` skill's file-fallback branch performs the same ensure-landing when the API is unreachable.
 - `KB_PUBLIC_BASE_URL` note (P7): its default `http://localhost:8765` is correct for a default-port local viewer, so the scaffold's `compose.yml` deliberately leaves it unset (see security/decisions). A scaffold on **advanced custom ports** would then report a default-port `url` in the 201 body — a cosmetic mismatch in one informational field only (the write, site build, and viewer are all correct); set `KB_PUBLIC_BASE_URL` to the chosen viewer origin if custom ports are used.
 - **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`.
@@ -223,6 +225,17 @@ P18 adds org-level `vk_` keys and get-or-create projects to the control plane �
 - **`POST /api/documents` gains a get-or-create side effect** — an unregistered `body.project` now leaves a `projects` registry row (so a saved-to name always appears in `/app/projects`). The write's `body.project` is still a free-form convention check only, **never** matched against the credential (enforcement is tenant-wide). The frozen 201 consumer contract is otherwise unchanged.
 - **Resolver.** In tenant mode an **org key** (`project_id NULL`) resolves to its `tenant_id` with no bound project; a **project-bound** key keeps its existence guard + `project_id`. A **revoked** org key resolves to nothing → **401**, same as a project-bound one.
 
+## Public projects + anonymous read surface (P19)
+
+P19 adds per-project visibility and the product's first anonymous read path. All changes are additive to the frozen `/api/* + /auth/* + /app/*` contract (verified at the P19 review): new fields, one new route, one new query param, and a mode-aware value on the existing `url` key — no existing field/type/status/route changed.
+
+- **`visibility` field on projects.** `serialize_project` gains `"visibility"` (`"private"` | `"public"`), so it appears on `GET /app/projects`, `GET /app/projects/{id}`, the `POST /auth/signup` response's `project`, and the `GET /app/dashboard` projects rollup rows. New projects (including implicitly get-or-created ones) default `"private"`.
+- **New route — `PATCH /app/projects/{project_id}`.** Session-only (`require_user`), body `{"visibility": "private" | "public"}` (a pydantic `Literal` → **422** on any other value). Reuses `_load_scoped_project` → **404** for both a missing **and** a cross-tenant project (existence never leaks). Returns `{"project": <serialized project>}` with the new visibility. This is the first PATCH route in the codebase.
+- **`GET /app/documents/{id}` + `GET /app/documents/{id}/raw` become optional-identity.** Both switched from `require_user` to an **optional-identity** dependency (`optional_user` — returns a member context for a resolvable session/bearer, else anonymous). A resolved member reads their own tenant's doc exactly as before (byte-preserved); an anonymous **or cross-org** caller reads it only when the doc's project is `visibility == "public"`. The `/raw` route keeps the exact P16 sandbox headers (`Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`). A missing id, another tenant's **private** id, a nonexistent id, a non-html doc (raw), and a legacy-mode call are **all indistinguishable 404s** (404-never-403). The two `unauth → 401` assertions that codified the old contract on these exact routes moved to **404** accordingly; `/app/documents` (list) and `/app/search` stay session-only (still 401 unauth).
+- **`GET /app/graph` gains `org={tenant_uuid}`.** The bare call (no `org`) is unchanged — a member sees their whole corpus, an anonymous bare call still **401**s. `org` = the caller's own tenant → identical to the bare member call. `org` = another tenant (or anonymous) → the **public view**: only that org's `public`-visibility projects' nodes/edges/tag-hubs. An org with **no** public projects — which also covers a nonexistent org — answers **404** `{"detail":"graph not found"}` (no existence leak); legacy mode (`DATABASE_URL` unset) also 404s. The `project` narrowing param is ignored on the public path; the response shape is unchanged and carries no org echo. (The member's own org UUID for the web to build `?org=` is the tenant id from `/auth/me`.)
+- **`POST /api/documents` 201 `url` is now mode-aware.** Built at the single site keyed on the resolved context's `tenant_id` (never `is_public`): **tenant mode** → `{KB_PUBLIC_BASE_URL}/documents/{id}` (the direct doc page — on prod `KB_PUBLIC_BASE_URL` is the app origin, so this resolves 200 for a public project and is shareable); **legacy/single-tenant mode** → the unchanged mkdocs `{project}/{date}-{slug}/`. The 201 key set is unchanged (the value of the always-present `url` key changed, not the key/type/status), so the frozen contract holds additively — the examples in *Frozen consumer contract* below are updated to the tenant-mode shape.
+- **The Postgres→SQLite visibility bridge** backing these reads is a backend concern — see **backend**/**security** for the per-read resolution and its fail-closed guarantees.
+
 ## Frozen consumer contract (P8)
 
 The section below is the **frozen** contract the hi2vi content-agent client (`hi2vi` P15.S4)
@@ -250,7 +263,14 @@ frozen `/api/*` consumer is untouched. **P18 upheld this verbatim:** the org-lev
 routes and the additive signup `project` field are new additions; `POST /app/projects` and
 `POST /api/documents` gained get-or-create behavior with **no** change to any existing field, type,
 status, or route, so the frozen `/api/*` consumer keeps working unchanged (re-verified live at the
-P18 cutover — the extended `onboarding_smoke.py` posts the frozen 201 shape end to end).
+P18 cutover — the extended `onboarding_smoke.py` posts the frozen 201 shape end to end). **P19 upheld
+this additively:** the only `/api/*` change is the **value** of the always-present 201 `url` key,
+which is now mode-aware (tenant → `{app origin}/documents/{id}`, legacy → the mkdocs shape) — the key
+name, type (string), presence, and the whole 201 key set are unchanged, so an unknown-keys-ignoring
+consumer is unaffected. On prod tenant #1's master bearer resolves in tenant mode (`tenant_id` set),
+so its 201 `url` now names the direct doc page too (the old mkdocs link was already broken there); the
+example below is the tenant-mode shape. The extended `onboarding_smoke.py` re-verified the frozen 201
+key set live while asserting the `url` ends `/documents/{id}`.
 
 ## Hosted deployment + frozen contract
 
@@ -308,7 +328,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
 {
   "id": 1,
   "rel_path": "hi2vi/2026-07-14-growth-loops.md",
-  "url": "https://knowledge.hi2vi.com/hi2vi/2026-07-14-growth-loops/",
+  "url": "https://knowledge.hi2vi.com/documents/1",
   "title": "Content Idea: Growth Loops",
   "project": "hi2vi",
   "slug": "growth-loops",
@@ -326,10 +346,14 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
 Field meanings:
 
 - `id` — DB row id. `rel_path` — path under `docs/` (`<project>/<date>-<slug>.md`).
-- `url` — the **published URL** of the doc (`<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`;
-  as of P9 the box sets `KB_PUBLIC_BASE_URL=https://knowledge.hi2vi.com` — the **root** of the
-  self-hosted site, no longer the Pages origin). Live **fresh-on-write** (the box's live-serve
-  viewer serves it the instant it is written — see publish flow).
+- `url` — the doc's viewer URL. **Mode-aware as of P19** (branched on the resolved credential's
+  `tenant_id`, not `is_public`): **tenant mode** → `<KB_PUBLIC_BASE_URL>/documents/<id>` — the direct
+  doc page in the Next app (on the box `KB_PUBLIC_BASE_URL=https://knowledge.hi2vi.com` is the app
+  origin), which resolves for the saving member and is **shareable to anyone once the project is
+  public**; **legacy/single-tenant mode** → the old mkdocs `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/`
+  shape (the dormant template stack still serves mkdocs there, so legacy stays correct). Before P19
+  the tenant-mode value was the mkdocs shape (broken for every non-#1 tenant, which is why the CLI hid
+  it). The `url` key/type/presence are unchanged — only the value moved (additive-only).
 - `recent_updated` — whether the `docs/index.md` Recent bullet was added (`false`
   on an `overwrite` re-write).
 - `landing_created` — `true` only when this was the **first** doc of a new project

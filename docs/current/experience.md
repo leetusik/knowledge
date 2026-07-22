@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0009
-created_at: 2026-07-22T11:24:22+09:00
-source: P18.REVIEW
-summary: P18 default org+project on signup; org-level vk_ from the dashboard Org API keys panel; org-not-workspace copy; CLI default fallback + org-key init
-previous: v0008_p17_knowledge_explain_outputs_an_interactive_html_explainer_quiz_cited_best-practices_for_both_modes_knowledge_setup_offers_connect_hosted_vs_scaffold_self-host_modes
+version: v0010
+created_at: 2026-07-22T15:28:30+09:00
+source: P19.REVIEW
+summary: P19 public sharing: visibility toggle + share link, anonymous public doc/graph pages, CLI save prints a direct url
+previous: v0009_p18_default_org_project_on_signup_org-level_vk__from_the_dashboard_org_api_keys_panel_org-not-workspace_copy_cli_default_fallback_org-key_init
 ---
 
 # Experience
@@ -52,6 +52,8 @@ text like any other document. See *The HTML explainer document (P16)* below.
 **As of P17 the `/explain` skill authors that interactive HTML explainer for every explanation, and any plugin user can point it at the hosted KB.** `/knowledge:explain` now always produces the quiz-bearing HTML page — with a default-on, cited "Best practices & next steps" section — for **both** topic and code-change modes (no markdown output remains), and `/knowledge:setup` opens with a **Connect** (hosted, zero-infra) vs **Scaffold** (self-host) mode choice, so a plugin user can sign up, mint one key, and have their explainers land in their own tenant on the public host. See *Explain v2 authoring + hosted onboarding (P17)* below.
 
 **As of P18 the accounts experience is "org," not "workspace," across every surface.** Signup now says a **default org and default project** are created automatically (was "a workspace is created for you"); users mint/list/revoke an **org-level `vk_`** (one key → the whole org) from a new **Org API keys** panel on the dashboard, alongside the unchanged per-project keys on a project page; and the app chrome/eyebrows read "Org." From the terminal, `knowledge init` mints that org key and `save` falls back to the `"default"` project outside a git repo. Projects are get-or-create everywhere — no "create a project" step in any flow. See *Accounts v2: the org experience (P18)* below.
+
+**As of P19 a project can be made public, and a saved doc is directly shareable.** On a project page a member flips a **Make public / Make private** toggle (with a Public/Private badge, mirrored as a column on the dashboard projects table); once public, the project's docs and its knowledge graph become readable by **anonymous visitors** at their normal URLs (`/documents/{id}` and `/graph/{org}`), and a **copy-link** affordance shares the direct doc URL. From the terminal, `knowledge save` now prints the working direct `url` (previously hidden because the old mkdocs link 404'd). A private/nonexistent doc an anonymous visitor tries to open bounces to `/login`; a public one just renders, minus the app rail. See *Public sharing: toggle, share link, and anonymous pages (P19)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -302,6 +304,16 @@ P18 reshapes the accounts journey around a default org + default project and org
 - **"Org," not "workspace," in the chrome.** The app topbar/eyebrows/labels and the CLI's `login`/`whoami`/`init` output read "org." (Internally the tenant row is still the org — a label change only.)
 - **Get-or-create everywhere.** Saving to a project name that doesn't exist creates it — in the web app, the CLI (`--project <name>`, or the git-repo-basename default, or `"default"` outside a repo), and the explain/setup skills. No client flow has a "create a project" step.
 - **CLI + skill onboarding.** `knowledge init` mints the **org** key (`POST /app/credentials`) and writes `api.project` as the save fallback; the setup skill's Connect mode says a default org + project are auto-provisioned (C1), that projects are automatic (C2), and mints from the Dashboard → Org API keys panel (C3).
+
+## Public sharing: toggle, share link, and anonymous pages (P19)
+
+P19 adds a public-sharing journey to the authenticated app and, for the first time, an **anonymous** reader journey — all composed from already-designed pieces (no new visual design, no Claude Design round).
+
+- **Make a project public.** On a project page a member sees a **Public / Private** badge (the closed `Badge` status enum reused: `active` = Public, `idle` = Private) and a **Make public / Make private** toggle button. Flipping it is a session-only PATCH that takes effect **instantly**; the dashboard projects table gained a matching Public/Private badge column so a member sees each project's visibility at a glance.
+- **Share the direct link.** A **copy-link** affordance (the reused mint-key clipboard idiom) sits on the member's doc view and on the member graph header, copying the direct URL (`{origin}/documents/{id}` or `/graph/{org}`) to the clipboard — shareable with anyone once the project is public.
+- **The anonymous reader.** A public project's doc is readable by a signed-out visitor at the **unchanged** `/documents/{id}` (an optional-identity page: the same URL serves a member with their app shell or an anonymous visitor with a lighter public shell — brand + a single "Sign in" action, no rail), and its graph at `/graph/{org}` (the org's public subset; a member's own org id renders the full map). An anonymous **doc** miss (private/nonexistent → 404) uniformly bounces to **`/login`**; a public-**graph** miss renders a branded not-found rather than a login bounce. Crawlers may now reach `/documents` + `/graph` (robots updated).
+- **CLI save prints the direct url.** `knowledge save` now shows a `url:` line (between `path:` and the read hint) carrying the working direct doc page — the deliberately-hidden mkdocs URL is gone. Shareable with others when the project is public.
+- **Deferred niceties (recorded, not built):** an anonymous doc miss drops the visitor at the dashboard after login (no `returnTo`); the public graph's **tag-hub** links still point at the session-gated `/documents?tag=` list, so an anonymous visitor clicking a tag hub lands on `/login` (the doc-node "Read" links work anonymously); org-**slug** vanity graph URLs (UUID suffices); and a member hitting a genuinely-missing doc id sees the centered empty-state without the app-shell chrome (a minor, rare cosmetic regression of the moved not-found page). All proven live end-to-end by the extended `onboarding_smoke.py` against prod (with web pages in scope).
 
 ## Open Questions
 

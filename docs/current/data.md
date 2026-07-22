@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0009
-created_at: 2026-07-22T11:27:38+09:00
-source: P18.REVIEW
-summary: P18 alembic 0003: projects UNIQUE(tenant_id,name) with de-dupe; project_credentials.tenant_id NOT NULL + project_id nullable; org keys carry project_id NULL
-previous: v0008_p16_content-plane_documents_gains_format_raw_html_columns_disposable_alter_table_db_markdown_extracted_text_so_fts_unchanged_postgres_control_plane_untouched
+version: v0010
+created_at: 2026-07-22T15:28:37+09:00
+source: P19.REVIEW
+summary: P19 alembic 0004 projects.visibility text NOT NULL default private; SQLite projects allowlist predicate
+previous: v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null
 ---
 
 # Data
@@ -22,6 +22,8 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 **P16** adds an HTML explainer document format to the **disposable content plane only**: the `documents` table gains two columns — `format TEXT NOT NULL DEFAULT 'md'` and nullable `raw_html TEXT` (the raw HTML, populated for html docs only) — via an idempotent `ALTER TABLE ADD COLUMN` in `init_db`. The `markdown` column for an html doc holds **server-extracted plain text** (so FTS5 / `snippet()` / embeddings are unchanged), while `raw_html` holds the raw HTML the web viewer's raw route serves. Canonical storage is still files (`docs/<project>/<date>-<slug>.html`, metadata in a leading `<!--kb … -->` comment-frontmatter), and reindex rebuilds both columns from the file alone. **The Postgres control plane is untouched — no Alembic migration.**
 
 **P18** reshapes the **Postgres control plane** for org-level credentials + get-or-create projects, via the **third Alembic migration `0003_org_level_credentials`** (`down_revision="0002_usage_events"`). See *Accounts v2 control-plane schema (P18)* below.
+
+**P19** adds **per-project visibility** to the Postgres control plane via the **fourth Alembic migration `0004_project_visibility`** (`down_revision="0003_org_level_credentials"`) — a single additive column `projects.visibility text NOT NULL DEFAULT 'private'`. The **disposable SQLite content plane is unchanged** (no new column, no migration); visibility is bridged into reads at query time via a new project-**name** allowlist predicate on the existing `documents` reads. See *Project visibility control-plane schema (P19)* below.
 
 ## Storage
 
@@ -85,6 +87,14 @@ P18 reshapes two of the P10 accounts tables (migration `0003_org_level_credentia
 - **`project_credentials.project_id` becomes nullable.** An **org-level** credential carries `project_id NULL` (it authorizes the whole tenant/org); a **project-bound** credential keeps its `project_id` (attribution + the vanished-project existence guard). No column is dropped, no existing row's meaning rewritten — org-level keys are purely additive.
 - The ORM (`server/persistence/models.py`) mirrors all three (`ProjectModel` `UniqueConstraint`; `ProjectCredentialModel` non-null `tenant_id` FK + index + nullable `project_id`). `0003`'s downgrade is destructive-by-design (a fix-forward repo): it drops `project_id IS NULL` rows before restoring `NOT NULL`.
 
+### Project visibility control-plane schema (P19) — `projects.visibility`
+
+P19 adds one additive column to the `projects` table (migration `0004_project_visibility`); nothing else in the six-table set changes, and the disposable SQLite content plane is untouched.
+
+- **`projects` gains `visibility` `text NOT NULL DEFAULT 'private'`** — the per-project public/private flag (`'private' | 'public'`, app-layer validated, **no DB CHECK**, matching the `usage_events.event_type` free-text convention). The constant server DEFAULT means the add is a **single-step** migration with no two-phase backfill, and pre-P19 code (which neither reads nor writes the column) keeps working during any migrate→recreate overlap — so `0004` carries **no mint-window** (unlike `0003`). The ORM mirrors it (`ProjectModel.visibility`, `default="private"`, `server_default=text("'private'")`), so `Base.metadata.create_all` (used by the Postgres-gated tests) yields a schema byte-equal to the migration. `0004`'s downgrade is `op.drop_column`.
+- **`ProjectRecord.visibility` / `serialize_project`** carry it up through the accounts layer; `CreateProject.visibility` defaults `"private"`, so signup / `provision_signup` / `get_or_create_project` keep making private rows untouched (implicitly created projects are private by default). See **backend**.
+- **The visibility bridge is query-layer, not schema (SQLite content plane).** SQLite `documents` rows carry only the project **name string** (no visibility column, no FK). Each anonymous read resolves the owner's set of public-project **names** from the small Postgres `projects` table and passes it as an allowlist predicate into the existing SQLite reads: `server/db.py`'s `_filtered`/`list_documents`/`count_documents` gained an optional `projects: Sequence[str] | None` → `documents.project IN (?,…)`. Default `None` leaves every existing caller byte-identical; an **empty** list is `WHERE … 0` (**fail-closed** — matches nothing). No SQLite schema change and no reindex — the toggle takes effect instantly. See **backend**/**security**.
+
 ## Indexes / Search
 
 - BM25 keyword search via `documents_fts`, fused in Python with an exp-decay recency signal (P4).
@@ -104,6 +114,7 @@ P18 reshapes two of the P10 accounts tables (migration `0003_org_level_credentia
 - **(P10) Postgres control plane** — versioned with **Alembic** (async `env.py`, initial revision `0001_accounts_tenancy` creating the six tables). Migrations run **explicitly** (`alembic upgrade head`) as a deploy step, never on boot.
 - **(P11) Second migration `0002_usage_events`** (`down_revision="0001_accounts_tenancy"`) — a hand-written Alembic revision creating `usage_events` + its two composite indexes, with constraint names matching the model (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects` SET NULL — no autogenerate drift). `alembic upgrade head` now applies **both** `0001` and `0002` in order (verified live against `postgres:17` at the P11 review).
 - **(P18) Third migration `0003_org_level_credentials`** (`down_revision="0002_usage_events"`) — the org-level-credentials + unique-project-names change (de-dupe → `UNIQUE(tenant_id,name)` → `project_credentials.tenant_id` add/backfill/NOT-NULL/FK/index → `project_id` nullable; see *Accounts v2 control-plane schema (P18)* above). `alembic upgrade head` now applies `0001`+`0002`+`0003` in order; validated against a disposable `postgres:17` at the P18 review (clean upgrade + downgrade round-trip + a seeded-duplicate de-dupe scenario). It is a **manual** deploy step (never on boot) and is the actual de-dupe run on prod — `alembic/` stays repo-only (not shipped in the plugin template).
+- **(P19) Fourth migration `0004_project_visibility`** (`down_revision="0003_org_level_credentials"`) — a single additive `op.add_column("projects", visibility text NOT NULL server_default 'private')` (downgrade `op.drop_column`). `alembic upgrade head` now applies `0001`+`0002`+`0003`+`0004` in order; validated against a disposable `postgres:17` at the P19 review (clean `0001→0004` upgrade + a `0004→0003` downgrade→re-upgrade round-trip, column verified `text NOT NULL DEFAULT 'private'`). A **manual** deploy step; unlike `0003` it carries **no mint-window** (the constant server DEFAULT makes the old-code+new-schema overlap fully safe). Root-only; not mirrored to the plugin template.
 - Rule: the SQLite DB is disposable and rebuilt from `docs/`/`tenants/` — schema changes are applied via new idempotent DDL (or a disposable drop-and-recreate) + a reindex. The Postgres accounts schema is durable and migrated explicitly with Alembic.
 
 ## Reconciliation (reindex)
