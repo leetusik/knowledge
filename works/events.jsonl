@@ -626,3 +626,6 @@
 {"ts": "2026-07-22T15:28:37+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404", "source": "P19.REVIEW"}
 {"ts": "2026-07-22T15:36:56+09:00", "type": "slice_status_changed", "slice": "P19.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-07-22T15:36:56+09:00", "type": "phase_reviewed", "phase": "P19", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D17", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D18", "source": "P19.REVIEW"}
+{"ts": "2026-07-22T15:37:12+09:00", "type": "deferred_created", "deferred": "D19", "source": "P19.REVIEW"}

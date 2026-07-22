@@ -1,0 +1,11 @@
+{
+  "id": "D18",
+  "title": "Login returnTo + public tag surface for public-graph tag links",
+  "status": "deferred",
+  "source": "P19.REVIEW",
+  "reason": "Anonymous doc misses redirect to /login with no returnTo (visitor loses the destination), and public-graph tag-hub links land on the session-gated /documents?tag= (anonymous -> login bounce).",
+  "trigger": "Next web UX slice, or operator/user reports friction on shared links",
+  "created_at": "2026-07-22T15:37:12+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
