@@ -107,6 +107,9 @@ def test_org_key_mints_authorizes_write_and_get_or_creates_project(org_client):
         headers={"Authorization": f"Bearer {org_key}"},
     )
     assert write.status_code == 201, write.text
+    # Tenant-mode 201 `url` is the direct doc page, not the legacy mkdocs shape (P19.S4).
+    saved = write.json()
+    assert saved["url"].endswith(f"/documents/{saved['id']}")
 
     projects = org_client.get("/app/projects", headers=session).json()["projects"]
     names = {p["name"] for p in projects}

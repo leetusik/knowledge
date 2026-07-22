@@ -10,8 +10,9 @@ Two output contracts, and they are not the same thing:
 
 * **stdout is the answer.** With `--json` it is the server's payload *verbatim* —
   every field, nothing opinionated, so an agent (or `jq`) never has to guess what
-  was dropped. Without it, stdout is an opinionated human rendering that
-  deliberately hides some fields (see `save`'s `url`).
+  was dropped. Without it, stdout is an opinionated human rendering that shows only
+  the fields a person needs (e.g. `save` prints title/id/path/url/read-hint, not the
+  commit/push bookkeeping).
 * **Errors are never JSON.** They go to stderr as `error: …` with exit 1
   (`main()`'s boundary). So stdout is always "valid JSON or nothing" under
   `--json`, and an agent branches on the **exit code**, never on parsing.
@@ -401,12 +402,12 @@ def cmd_save(args: argparse.Namespace) -> int:
 
     if emit(payload, args.json):
         return 0
-    # The 201's `url` is deliberately not printed. It is built from
-    # KB_PUBLIC_BASE_URL — the mkdocs origin (`config.py:39-41`) — so for any tenant
-    # but #1 it is a link to a page that does not exist. `--json` still carries it.
+    # The 201's `url` is a working direct doc page (mode-aware server-side,
+    # `main.py:592-601`) — shareable with others when the project is public.
     print(f"saved: {payload.get('title')}")
     print(f"  id:   {payload.get('id')}")
     print(f"  path: {payload.get('rel_path')}")
+    print(f"  url:  {payload.get('url')}")
     print(f"  read: knowledge read {payload.get('id')}")
     return 0
 

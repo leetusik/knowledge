@@ -134,8 +134,9 @@ knowledge base with no extra setup.
 - A document already at the same path is a **409**; pass `--overwrite` to replace it,
   or `--slug`/`--date` to save alongside it.
 
-`save` prints the new document's `id`, `rel_path`, and a `knowledge read <id>` hint —
-the paths that always work. `--json` carries the full 201 payload.
+`save` prints the new document's `id`, `rel_path`, the direct `url` (a working doc
+page — shareable when the project is public), and a `knowledge read <id>` hint.
+`--json` carries the full 201 payload.
 
 ## 5. Read back — search, list, read, projects, usage
 

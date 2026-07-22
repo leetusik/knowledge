@@ -134,6 +134,15 @@ def test_save_falls_back_to_the_configured_project_outside_a_repo(home, api, tmp
     assert api.calls[0][3]["project"] == "cfgproj"
 
 
+def test_save_prints_the_direct_url(home, api, repo, tmp_path, capsys):
+    """The 201's `url` (a working direct doc page) is shown, not hidden."""
+
+    doc = tmp_path / "note.md"
+    doc.write_text("# A note\n\nbody\n")
+    assert run("save", str(doc), "--tag", "a", "--tag", "b") == 0
+    assert "  url:  http://site.test/x/" in capsys.readouterr().out
+
+
 # --- T2: the rules the server would 422 about ---------------------------------
 
 

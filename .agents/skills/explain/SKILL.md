@@ -471,7 +471,8 @@ frontmatter** (starting at `<!DOCTYPE html>`) — to
 Tell the user:
 
 - API path: the document is saved and committed in the KB; view at the `url`
-  from the response. If `committed` is `false` with a `commit_error`, say the
+  from the response (the direct doc page; shareable with others when the project
+  is public). If `committed` is `false` with a `commit_error`, say the
   document was saved but the commit failed, and quote the error.
 - Fallback path: the absolute file path `<KB_ROOT>/docs/<project>/<date>-<slug>.html`
   from step 6; view at `<KB_SITE_BASE_URL>/<project>/<date>-<slug>.html`; and note the
