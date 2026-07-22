@@ -26,10 +26,21 @@ asserts a fresh tenant is fully isolated from tenant #1's corpus:
      assert B's one write + search(es) are metered (documents_created == 1,
      searches >= 1, 30 zero-filled daily buckets), the vk_ key's last_used_at is
      set, and a foreign project id -> 404 (usage is tenant-scoped).
+  4. Org-model journey (P18) — in its OWN fresh tenant C (so the tenant-B checks
+     above stay pristine): signup auto-provisions a "default" org + "default"
+     project (the additive `project` field on the signup response, also visible
+     via GET /app/projects); ONE org-level key (POST /app/credentials, project_id
+     NULL) writes docs to TWO never-pre-created project names — proving get-or-create
+     registers both (they appear in /app/projects) and that usage meters per NAMED
+     project (documents_created == 1 each); DELETE /app/credentials/{id} revokes the
+     org key and a subsequent write with it -> 401; and a project-bound key
+     (POST /app/projects/{id}/credentials) still mints + writes (regression).
 
 Style mirrors scripts/site_smoke.py: argparse, collect ALL failures, exit
 non-zero with the list or print PASS. Requires the app in TENANT mode
-(DATABASE_URL set) so `vk_`/master-bearer resolution is live.
+(DATABASE_URL set) so `vk_`/master-bearer resolution is live; section 4 also
+requires the P18 schema (alembic 0003 — org-level credentials + get-or-create
+projects) and the additive /app/credentials endpoints.
 
 Usage:
     python scripts/onboarding_smoke.py --base-url http://127.0.0.1:8765
@@ -64,6 +75,188 @@ def _word_from_title(title: str) -> str | None:
         reverse=True,
     )
     return words[0].lower() if words else None
+
+
+def _run_org_journey(client: httpx.Client, base_url: str, failures: list[str]) -> str:
+    """P18 org-model journey in its OWN fresh tenant (keeps the tenant-B checks
+    above pristine). Appends failures; returns a one-line note.
+
+    Signup auto-provisions a default org + default project; ONE org key writes to
+    TWO never-pre-created project names (get-or-create); usage meters per named
+    project; the org key revokes -> a later write 401s; a project-bound key still
+    works. Bails out of just this section (returns) on a hard failure.
+    """
+    hexid = secrets.token_hex(6)
+    email = f"onboard-smoke-org+{hexid}@example.com"
+    proj_a = f"org-smoke-alpha-{hexid}"
+    proj_b = f"org-smoke-beta-{hexid}"
+    today = datetime.date.today().isoformat()
+
+    def _write(auth: dict[str, str], project: str, slug: str, title: str):
+        return client.post(
+            f"{base_url}/api/documents",
+            headers=auth,
+            json={
+                "title": title,
+                "markdown": f"# {title}\n\nProbe for {project}.\n",
+                "project": project,
+                "tags": ["smoke", "org"],
+                "source_repo": "onboarding-smoke",
+                "slug": slug,
+                "date": today,
+            },
+        )
+
+    # --- signup: additive `project` field + auto default project ---------------
+    r = client.post(
+        f"{base_url}/auth/signup",
+        json={"email": email, "password": f"smoke-pw-{hexid}"},
+    )
+    if r.status_code != 201:
+        failures.append(f"[org] POST /auth/signup: expected 201, got {r.status_code} {r.text}")
+        return "org journey aborted at signup"
+    body = r.json()
+    session = {"Authorization": f"Bearer {body.get('token')}"}
+    default_project = body.get("project")
+    if not isinstance(default_project, dict) or default_project.get("name") != "default":
+        failures.append(
+            f"[org] POST /auth/signup: expected additive project.name=='default', "
+            f"got {default_project!r}"
+        )
+
+    r = client.get(f"{base_url}/app/projects", headers=session)
+    if r.status_code != 200:
+        failures.append(
+            f"[org] GET /app/projects (initial): expected 200, got {r.status_code} {r.text}"
+        )
+    else:
+        names = {p.get("name") for p in r.json().get("projects", [])}
+        if "default" not in names:
+            failures.append(
+                f"[org] auto 'default' project missing from /app/projects: {sorted(names)}"
+            )
+
+    # --- mint ONE org-level key (project_id NULL) ------------------------------
+    r = client.post(
+        f"{base_url}/app/credentials", headers=session, json={"name": "org smoke key"}
+    )
+    if r.status_code != 201:
+        failures.append(f"[org] POST /app/credentials: expected 201, got {r.status_code} {r.text}")
+        return "org journey aborted at org-key mint"
+    org_cred = r.json().get("credential", {})
+    org_cred_id = org_cred.get("id")
+    org_key = r.json().get("key")
+    if org_cred.get("project_id") is not None:
+        failures.append(
+            f"[org] org key must serialize project_id=null, got {org_cred.get('project_id')!r}"
+        )
+    if not isinstance(org_key, str) or not org_key.startswith("vk_"):
+        failures.append(f"[org] org key missing or not vk_-prefixed: {r.text}")
+        return "org journey aborted (bad org vk_)"
+    org_auth = {"Authorization": f"Bearer {org_key}"}
+
+    # --- ONE org key writes to TWO project names (get-or-create) ---------------
+    for name in (proj_a, proj_b):
+        r = _write(org_auth, name, f"org-{name}", f"Org smoke {name}")
+        if r.status_code != 201:
+            failures.append(
+                f"[org] POST /api/documents (org key -> {name}): expected 201, got "
+                f"{r.status_code} {r.text}"
+            )
+            continue
+        missing = FROZEN_201_KEYS - r.json().keys()
+        if missing:
+            failures.append(
+                f"[org] POST /api/documents ({name}) 201 missing frozen keys: {sorted(missing)}"
+            )
+
+    # --- both names appear via get-or-create; capture their ids ----------------
+    r = client.get(f"{base_url}/app/projects", headers=session)
+    project_ids: dict[str, str] = {}
+    if r.status_code != 200:
+        failures.append(
+            f"[org] GET /app/projects (post-write): expected 200, got {r.status_code} {r.text}"
+        )
+    else:
+        project_ids = {p.get("name"): p.get("id") for p in r.json().get("projects", [])}
+        for name in (proj_a, proj_b):
+            if name not in project_ids:
+                failures.append(
+                    f"[org] get-or-create FAILED: {name!r} not in /app/projects after an org-key "
+                    f"write (it was never explicitly created): {sorted(project_ids)}"
+                )
+
+    # --- usage metered per NAMED project (documents_created == 1 each) ---------
+    for name in (proj_a, proj_b):
+        pid = project_ids.get(name)
+        if not pid:
+            continue
+        r = client.get(f"{base_url}/app/projects/{pid}/usage", headers=session)
+        if r.status_code != 200:
+            failures.append(
+                f"[org] GET /app/projects/{{{name}}}/usage: expected 200, got {r.status_code} {r.text}"
+            )
+            continue
+        created = r.json().get("totals", {}).get("documents_created")
+        if created != 1:
+            failures.append(
+                f"[org] per-project usage for {name!r}: expected documents_created==1 "
+                f"(one org-key write), got {created!r}"
+            )
+
+    # --- revoke the org key -> a subsequent write 401s -------------------------
+    if org_cred_id:
+        r = client.delete(f"{base_url}/app/credentials/{org_cred_id}", headers=session)
+        if r.status_code != 204:
+            failures.append(
+                f"[org] DELETE /app/credentials/{{id}}: expected 204, got {r.status_code} {r.text}"
+            )
+        r = _write(org_auth, proj_a, "org-revoked", "Org smoke revoked")
+        if r.status_code != 401:
+            failures.append(
+                f"[org] write with REVOKED org key: expected 401, got {r.status_code} {r.text}"
+            )
+
+    # --- regression: a project-bound key still mints + writes ------------------
+    pid_a = project_ids.get(proj_a)
+    if pid_a:
+        r = client.post(
+            f"{base_url}/app/projects/{pid_a}/credentials",
+            headers=session,
+            json={"name": "project-bound regression key"},
+        )
+        if r.status_code != 201:
+            failures.append(
+                f"[org] POST /app/projects/{{id}}/credentials (regression): expected 201, got "
+                f"{r.status_code} {r.text}"
+            )
+        else:
+            bound_cred = r.json().get("credential", {})
+            bound_key = r.json().get("key")
+            if bound_cred.get("project_id") != pid_a:
+                failures.append(
+                    f"[org] project-bound key must carry project_id=={pid_a!r}, got "
+                    f"{bound_cred.get('project_id')!r}"
+                )
+            if isinstance(bound_key, str) and bound_key.startswith("vk_"):
+                r = _write(
+                    {"Authorization": f"Bearer {bound_key}"},
+                    proj_a,
+                    "bound-regression",
+                    "Project-bound regression",
+                )
+                if r.status_code != 201:
+                    failures.append(
+                        f"[org] project-bound key write (regression): expected 201, got "
+                        f"{r.status_code} {r.text}"
+                    )
+            else:
+                failures.append(f"[org] project-bound regression key missing/not vk_: {r.text}")
+
+    return (
+        f"org journey OK ({email}): 1 org key -> 2 get-or-create projects, "
+        "per-project usage, revoke->401, project-bound regression"
+    )
 
 
 def run(base_url: str, master_token: str | None, failures: list[str]) -> str:
@@ -291,8 +484,14 @@ def run(base_url: str, master_token: str | None, failures: list[str]) -> str:
                 f"{r.status_code} {r.text}"
             )
 
+        # --- 4. Org-model journey (P18), in its own fresh tenant ----------
+        org_note = _run_org_journey(client, base_url, failures)
+
     isolation = "isolation vs tenant #1 verified" if master_token else "B-only isolation (no --master-token)"
-    return f"tenant B onboarded ({email}), doc {b_rel_path}; {isolation}; usage metered"
+    return (
+        f"tenant B onboarded ({email}), doc {b_rel_path}; {isolation}; usage metered; "
+        f"{org_note}"
+    )
 
 
 def main() -> int:
