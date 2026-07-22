@@ -215,6 +215,7 @@ def serialize_project(record: ProjectRecord) -> dict[str, object]:
         "id": str(record.id),
         "name": record.name,
         "tenant_id": str(record.tenant_id),
+        "visibility": record.visibility,
         "created_at": record.created_at.isoformat(),
     }
 

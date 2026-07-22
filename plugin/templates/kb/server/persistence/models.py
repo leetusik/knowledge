@@ -100,6 +100,12 @@ class ProjectModel(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    visibility: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="private",
+        server_default=text("'private'"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
