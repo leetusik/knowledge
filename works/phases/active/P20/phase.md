@@ -345,6 +345,40 @@ _Running list of durable-truth changes for the REVIEW slice to consolidate into 
   landing artifact can never fork. Also: **D10 resolved** (the two mid-feature ledes quoted verbatim from
   round-02 §D10, not invented); **no new tokens** (bronze stays the `#c8a15e` literal).
 
+**S4 touched (Stage A — concrete):**
+
+- `operations.md` — the **P20 ship shape**: an operator-gated `git push origin main` + a **web-image
+  rebuild deploy** (`Production Deploy` Action / `deploy/deploy.sh`) that bakes `web/public/install.sh`
+  and `web/public/SKILL.md` into the standalone image (served at `/install.sh` and `/SKILL.md` via the
+  nginx `/` catch-all — zero infra). **No migration** (`alembic/versions/` unchanged between origin/main
+  and HEAD), **no seed**, **no new service / edge change**, so **D11's compose-change trigger does not
+  fire**. Prod flip probes: `/install.sh` and `/SKILL.md` go **404 → 200** on deploy; the landing hero's
+  broken `uv tool install knowledge-cli` is replaced by the curl one-liner and the `#agents` / `#skill`
+  sections appear. This **confirms S1's operations note is now live truth**: the `git+…#subdirectory=cli`
+  install form installs GitHub **main**, so S1's CLI changes (web-login line, D16 reuse) reach
+  `curl | bash` users **only after** this push — directly proven in Stage A (isolated install resolved to
+  origin/main `3d73917` = pre-P20, whose installed `auth.py` lacks the web-login line). REVIEW consolidates.
+
+## S4 Stage A cross-slice notes (for Stage B dispatch + REVIEW)
+
+- **Live baseline captured (2026-07-22, pre-push/pre-deploy):** `origin/main` = `3d73917` (P19.S5 Stage A;
+  what the box deploys), local `HEAD` = `a8847bc` (P20.S3), **8 ahead / 0 behind**. Prod is at the exact
+  pre-P20 baseline — `/healthz` 200 (23 docs); `/install.sh` **404**; `/SKILL.md` **404**; landing carries
+  the broken hero `uv tool install knowledge-cli` (1×) and no `install.sh` / `id="agents"` / `id="skill"` /
+  `SKILL.md`. So all three flip probes are genuinely armed for Stage B (404→200 ×2 + hero/anchors flip).
+- **The push ships 8 commits** — 3 P19-tail (`8be6eac`, `587b83b`, `4a68bff`) + all 5 P20
+  (`583c83c` DECOMP, `0563563` S1, `15b5f23`/`d71b541` S2, `a8847bc` S3). No migration, no compose change.
+- **Installer mechanics are proven green** in a fully-isolated temp env (temp HOME/XDG/UV dirs, `env -i`
+  PATH hygiene, torn down; operator env verified untouched): `bash web/public/install.sh` → exit 0, uv
+  detected, `git+` channel resolved + built, `knowledge --version` → `knowledge-cli 0.1.0`, next-step
+  printed. The isolated CLI is pre-P20 (proves the shipping caveat) — **new CLI behavior is Stage B's job**
+  on live prod (behavior itself already unit-proven, 40 CLI tests).
+- **`web/public/SKILL.md` == canonical** `plugin/skills/explain/SKILL.md` at HEAD (`cmp` clean, 486 lines) —
+  Stage B's `curl -s /SKILL.md | diff - plugin/skills/explain/SKILL.md` should be empty once deployed.
+- **Stage A returned `needs_operator`** with the §Runbook in `result.md` (push → deploy → verify). No push,
+  no prod mutation, no commit, no status transition performed by the executor — the orchestrator commits
+  Stage A, sets `P20.S4 pending`, and surfaces the runbook.
+
 ## S3 cross-slice notes (for S4 live smoke + REVIEW)
 
 - **What to check/click/copy on prod after S4's web deploy** (the two new sections are static, so a web
