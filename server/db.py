@@ -11,7 +11,7 @@ import datetime
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from server import config
 
@@ -258,12 +258,21 @@ def _filtered(
     project: Optional[str],
     tag: Optional[str],
     tenant_id: Optional[str] = None,
+    projects: Optional[Sequence[str]] = None,
 ):
     """Build a (sql, params) pair applying optional project/tag/tenant filters.
 
     The tag filter joins json_each(documents.tags) so a JSON-array membership test
     stays index-agnostic and correct for any tag. ``tenant_id`` (when not ``None``)
     scopes the result to one tenant; ``None`` leaves it unscoped (legacy behavior).
+
+    ``projects`` (when not ``None``) is a **project-name allowlist** — the row's
+    ``project`` must be one of the names (``project IN (?,…)``). It backs the P19
+    org-scoped public graph: pass the tenant's set of *public* project names so an
+    anonymous/cross-org read sees only those. Default ``None`` leaves it off, so
+    every existing caller is byte-identical. An **empty** allowlist matches nothing
+    (fail-closed: ``AND 0``) — the graph route already 404s before reaching here on
+    an empty public set, but the predicate never opens up on an empty list.
     """
     sql = sql_head
     params: list[Any] = []
@@ -277,6 +286,13 @@ def _filtered(
     if project is not None:
         where.append("documents.project = ?")
         params.append(project)
+    if projects is not None:
+        if projects:
+            placeholders = ",".join("?" for _ in projects)
+            where.append(f"documents.project IN ({placeholders})")
+            params.extend(projects)
+        else:
+            where.append("0")  # empty allowlist matches nothing (fail-closed)
     if where:
         sql += " WHERE " + " AND ".join(where)
     return sql, params
@@ -289,10 +305,14 @@ def list_documents(
     limit: int = 50,
     offset: int = 0,
     tenant_id: Optional[str] = None,
+    projects: Optional[Sequence[str]] = None,
 ) -> list[dict[str, Any]]:
-    """Newest-first (date DESC, id DESC), optional project/tag/tenant filters."""
+    """Newest-first (date DESC, id DESC), optional project/tag/tenant filters.
+
+    ``projects`` (a project-name allowlist) narrows to those names — the P19
+    public-graph predicate; default ``None`` leaves it off (byte-identical)."""
     sql, params = _filtered(
-        "SELECT documents.* FROM documents", project, tag, tenant_id
+        "SELECT documents.* FROM documents", project, tag, tenant_id, projects
     )
     sql += " ORDER BY documents.date DESC, documents.id DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
@@ -305,9 +325,10 @@ def count_documents(
     project: Optional[str] = None,
     tag: Optional[str] = None,
     tenant_id: Optional[str] = None,
+    projects: Optional[Sequence[str]] = None,
 ) -> int:
     sql, params = _filtered(
-        "SELECT COUNT(*) AS n FROM documents", project, tag, tenant_id
+        "SELECT COUNT(*) AS n FROM documents", project, tag, tenant_id, projects
     )
     row = conn.execute(sql, params).fetchone()
     return int(row["n"])

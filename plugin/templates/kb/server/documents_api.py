@@ -38,9 +38,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
+from server import config
 from server import db
 from server import search as search_mod
-from server.accounts.auth import AuthContext, require_user
+from server.accounts.auth import AuthContext, optional_user, require_user
 from server.accounts.service import get_accounts_service
 
 router = APIRouter()
@@ -99,6 +100,58 @@ async def _resolve_project_name(project_id: UUID, ctx: AuthContext) -> str:
     return project.name
 
 
+async def _resolve_readable_doc(
+    conn, doc_id: int, ctx: AuthContext | None
+) -> dict | None:
+    """Resolve a document for a possibly-anonymous caller, or ``None`` (⇒ 404).
+
+    The trust boundary for the P19 anonymous read surface. Two ordered gates:
+
+    1. **Member fast-path.** With a resolved ``ctx``, try today's tenant-scoped
+       fetch (``get_document(..., tenant_id=<caller>)``). A hit is served exactly as
+       before — member behavior is **byte-preserved**, including legacy ``''``-row
+       semantics — and the accounts service is never consulted.
+    2. **Public path** (no ``ctx``, or a scoped miss — which covers anonymous *and*
+       cross-org callers). An unscoped lookup gated by the owner project's
+       visibility:
+       * **Legacy-mode guard** — ``DATABASE_URL`` unset ⇒ ``None`` before touching
+         the (absent) accounts service, so the single-tenant template stack never
+         500s and never exposes a public path.
+       * missing row ⇒ ``None``; a registry-less owner (empty/legacy ``''`` sentinel
+         or an unparseable UUID) ⇒ ``None`` (such rows are never public).
+       * the owner tenant's project (resolved by name) must exist **and** be
+         ``visibility == "public"`` — otherwise ``None``.
+
+    Every miss returns ``None`` so the caller renders an indistinguishable 404:
+    private and nonexistent look identical (404-never-403), and no private doc or
+    cross-org existence ever leaks anonymously.
+    """
+
+    if ctx is not None:
+        doc = db.get_document(conn, doc_id, tenant_id=str(ctx.tenant.id))
+        if doc is not None:
+            return doc
+        # scoped miss: fall through to the public path (covers cross-org callers).
+
+    if config.database_url() is None:
+        return None  # legacy/template mode: no accounts registry ⇒ never public.
+
+    doc = db.get_document(conn, doc_id)
+    if doc is None:
+        return None
+    owner = doc.get("tenant_id")
+    if not owner:
+        return None  # '' legacy sentinel / NULL: registry-less rows are never public.
+    try:
+        owner_uuid = UUID(str(owner))
+    except (ValueError, TypeError):
+        return None
+    project = await get_accounts_service().get_project_by_name(owner_uuid, doc["project"])
+    if project is None or project.visibility != "public":
+        return None
+    return doc
+
+
 @router.get("/app/documents")
 async def list_documents(
     project: UUID | None = None,
@@ -138,16 +191,19 @@ async def list_documents(
 @router.get("/app/documents/{doc_id}")
 async def get_document(
     doc_id: int,
-    ctx: AuthContext = Depends(require_user),
+    ctx: AuthContext | None = Depends(optional_user),
     conn=Depends(get_conn),
 ) -> dict[str, object]:
-    """One of the caller's tenant's documents by id, with ``markdown``.
+    """One document by id, with ``markdown`` — member-scoped **or** public (P19.S2).
 
-    A missing id OR another tenant's id both answer **404** (``get_document`` scopes
-    by ``tenant_id``, so a cross-tenant id resolves to ``None`` and never leaks).
+    Optional-identity: a resolved caller gets their own tenant's document exactly as
+    before (member behavior byte-preserved); an anonymous or cross-org caller gets
+    the document only when it belongs to a **public** project (``_resolve_readable_doc``).
+    A missing id, another tenant's *private* id, and a nonexistent id are all
+    indistinguishable **404**s (404-never-403; private/nonexistent never leak).
     """
 
-    doc = db.get_document(conn, doc_id, tenant_id=str(ctx.tenant.id))
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
     return _app_doc(doc, include_markdown=True)
@@ -156,14 +212,17 @@ async def get_document(
 @router.get("/app/documents/{doc_id}/raw")
 async def get_document_raw(
     doc_id: int,
-    ctx: AuthContext = Depends(require_user),
+    ctx: AuthContext | None = Depends(optional_user),
     conn=Depends(get_conn),
 ) -> Response:
     """Serve one HTML explainer's raw HTML as ``text/html`` for the sandboxed viewer.
 
-    Session-guarded and tenant-scoped like every other ``/app`` read: a missing id,
-    another tenant's id, a non-HTML doc (``format != "html"``), or an empty
-    ``raw_html`` all answer **404** (cross-tenant existence never leaks). The
+    Optional-identity like ``GET /app/documents/{id}`` (P19.S2): a resolved caller
+    reads their own tenant's raw HTML exactly as before (member behavior
+    byte-preserved), and an anonymous or cross-org caller reads it only when it
+    belongs to a **public** project (``_resolve_readable_doc``). A missing id,
+    another tenant's *private* id, a non-HTML doc (``format != "html"``), or an empty
+    ``raw_html`` all answer **404** (private/nonexistent existence never leaks). The
     response carries the sandbox headers that make it safe to frame the untrusted
     explainer in an opaque-origin iframe AND privilege-strip a direct top-level
     visit (defense in depth): ``Content-Security-Policy: sandbox allow-scripts;
@@ -175,7 +234,7 @@ async def get_document_raw(
     document starts at ``<!DOCTYPE html>`` with no quirks-mode prefix.
     """
 
-    doc = db.get_document(conn, doc_id, tenant_id=str(ctx.tenant.id))
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
     if doc is None or doc.get("format") != "html" or not doc.get("raw_html"):
         raise HTTPException(status_code=404, detail=f"no HTML document with id {doc_id}")
     return Response(

@@ -258,5 +258,7 @@ def test_raw_route_serves_html_and_404s_for_md(documents_client):
     assert client.get(f"/app/documents/{md_id}/raw", headers=headers).status_code == 404
     detail = client.get(f"/app/documents/{html_id}", headers=headers).json()
     assert detail["format"] == "html" and "raw_html" not in detail
-    # Unauthenticated -> 401 (session-guarded like every /app route).
-    assert client.get(f"/app/documents/{html_id}/raw").status_code == 401
+    # Unauthenticated: the raw route became optional-identity in P19.S2. This doc's
+    # project is not public (never registered/toggled), so an anonymous read is an
+    # indistinguishable 404 (404-never-403), not the old session-guard 401.
+    assert client.get(f"/app/documents/{html_id}/raw").status_code == 404

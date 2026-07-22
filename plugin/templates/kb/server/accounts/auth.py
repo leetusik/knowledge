@@ -97,6 +97,52 @@ async def require_user(request: Request) -> AuthContext:
     return AuthContext(user=user, tenant=tenants[0])
 
 
+async def optional_user(request: Request) -> AuthContext | None:
+    """Resolve the request's bearer token to an ``AuthContext``, or ``None``.
+
+    The optional-identity twin of :func:`require_user` (P19.S2): it resolves a
+    caller **exactly** as ``require_user`` does — same token extraction, same
+    session/user/tenant lookup, same best-effort ``last_used_at`` stamp on a
+    successful resolve — but **returns ``None`` instead of raising** on every miss
+    path (no header, unknown/expired token, missing user, no tenant). It never
+    raises ``AuthError``.
+
+    This backs the anonymous-capable read surface: a route depending on it gets a
+    full tenant context for a resolvable session (member reads) or ``None`` for an
+    anonymous / unresolvable caller (public-only reads). A deliberate consequence
+    is that an unresolvable token on a private doc yields the anonymous 404 rather
+    than a 401 — that leaks strictly less (no "this id exists" signal) and the BFF
+    pre-verifies sessions before relaying anyway.
+    """
+
+    token = extract_bearer_token(request)
+    if token is None:
+        return None
+
+    service = get_accounts_service()
+    token_hash = sha256_hex(token)
+    auth_token = await service.get_active_auth_token_by_hash(token_hash)
+    if auth_token is None:
+        return None
+
+    # Best-effort usage stamp (identical to require_user); a failure never fails
+    # auth — here it simply never blocks resolving the optional identity.
+    try:
+        await service.touch_auth_token_last_used(token_hash)
+    except AccountsPersistenceError:
+        logger.warning("failed to stamp last_used_at for auth token", exc_info=True)
+
+    user = await service.get_user_by_id(auth_token.user_id)
+    if user is None:
+        return None
+
+    tenants = await service.list_tenants_for_user(user.id)
+    if not tenants:
+        return None
+
+    return AuthContext(user=user, tenant=tenants[0])
+
+
 async def auth_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Render ``AuthError`` as a generic 401 with a bearer challenge."""
 
