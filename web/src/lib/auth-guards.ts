@@ -55,6 +55,42 @@ export const requireIdentity = cache(
 );
 
 /**
+ * The `(public)` optional-identity guard — the anonymous-capable sibling of
+ * `requireIdentity`, added for P19's public doc/graph surfaces. It NEVER redirects
+ * and NEVER throws for the unauthenticated case: it returns the caller's context
+ * when a live session resolves, or `null` when the visitor is anonymous.
+ *
+ * Two "anonymous" paths both yield `null` (mirroring knowledge's server-side
+ * `optional_user`, which returns `None` on every miss rather than raising):
+ *   - no/invalid/expired cookie → `getSession()` is null → `null`;
+ *   - a crypto-valid cookie whose knowledge token is dead (revoked/expired
+ *     server-side) → knowledge answers 401 → we treat it as anonymous (`null`),
+ *     so a stale cookie simply degrades to the public view rather than erroring.
+ * Any OTHER error (knowledge down, transport failure) is rethrown — an outage must
+ * surface, never masquerade as "anonymous".
+ *
+ * The caller decides what a `null` means for its surface: the public doc page
+ * renders the anonymous view; a private/nonexistent read then 404s server-side
+ * (404-never-403), which the page turns into `/login` (docs) or `notFound()` (graph).
+ *
+ * `cache()` dedupes per request, exactly like `requireIdentity`.
+ */
+export const optionalIdentity = cache(
+  async (): Promise<AuthenticatedContext | null> => {
+    const token = await getSession();
+    if (!token) return null;
+    try {
+      return { token, identity: await me(token) };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return null;
+      }
+      throw error;
+    }
+  },
+);
+
+/**
  * The `(auth)` page bounce: send an already-signed-in visitor to the dashboard.
  *
  * It VERIFIES the token against knowledge before bouncing, on purpose. Checking

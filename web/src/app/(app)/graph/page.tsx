@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CopyLinkButton } from "@/components/copy-link-button";
 import { GRAPH } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
 import { getGraph } from "@/lib/knowledge/app";
@@ -25,19 +26,24 @@ export const metadata: Metadata = { title: GRAPH.title };
 export default async function GraphPage() {
   const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
+  const orgId = identity.tenant?.id ?? null;
   const graph = await getGraph(token);
 
   return (
     <>
-      {/* .mainhead — eyebrow + Fraunces title + sub. */}
-      <div className="mb-[1.3rem]">
-        <div className="kb-app-eyebrow">
-          {tenantName} · {GRAPH.eyebrow}
+      {/* .mainhead — eyebrow + Fraunces title + sub, with the P19 share copy-link
+          (the public graph URL `/graph/{org}`) when the caller has a tenant. */}
+      <div className="mb-[1.3rem] flex items-start justify-between gap-4">
+        <div>
+          <div className="kb-app-eyebrow">
+            {tenantName} · {GRAPH.eyebrow}
+          </div>
+          <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
+            {GRAPH.title}
+          </h1>
+          <p className="kb-app-sub">{GRAPH.sub}</p>
         </div>
-        <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-          {GRAPH.title}
-        </h1>
-        <p className="kb-app-sub">{GRAPH.sub}</p>
+        {orgId ? <CopyLinkButton path={`/graph/${orgId}`} /> : null}
       </div>
 
       <GraphCanvas data={graph} />

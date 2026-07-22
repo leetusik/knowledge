@@ -3,9 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { MINT_CREDENTIAL_ERRORS, REVOKE_CREDENTIAL_ERRORS } from "@/content";
+import {
+  MINT_CREDENTIAL_ERRORS,
+  REVOKE_CREDENTIAL_ERRORS,
+  SET_VISIBILITY_ERRORS,
+} from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
-import { createCredential, revokeCredential } from "@/lib/knowledge/app";
+import {
+  createCredential,
+  revokeCredential,
+  setProjectVisibility,
+} from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 
 /**
@@ -72,6 +80,14 @@ export interface RevokeCredentialState {
   error: string | null;
   ok?: number;
 }
+
+export interface SetVisibilityState {
+  error: string | null;
+  ok?: number;
+}
+
+/** The two accepted visibility values, validated before the PATCH (knowledge 422s others). */
+const visibilitySchema = z.enum(["private", "public"]);
 
 /**
  * `useActionState` action: validate → `POST /app/projects/{id}/credentials` →
@@ -165,6 +181,49 @@ export async function revokeCredentialAction(
       }
     }
     return { error: REVOKE_CREDENTIAL_ERRORS.generic };
+  }
+
+  revalidatePath("/projects/[projectId]", "page");
+  return { error: null, ok: Date.now() };
+}
+
+/**
+ * P19 — `useActionState` action: validate → `PATCH /app/projects/{id}` `{visibility}`
+ * → revalidate. The toggle island submits the INVERSE of the current visibility as a
+ * hidden input, so this only forwards a validated value. knowledge is session-only
+ * on the PATCH and answers 404 for a missing/cross-tenant project (404-never-403) and
+ * 400/422 for a bad value. `revalidatePath` re-renders the page so the header badge +
+ * toggle label flip to the new state.
+ */
+export async function setProjectVisibilityAction(
+  _prevState: SetVisibilityState,
+  formData: FormData,
+): Promise<SetVisibilityState> {
+  const projectId = idSchema.safeParse(formData.get("projectId"));
+  const visibility = visibilitySchema.safeParse(formData.get("visibility"));
+  if (!projectId.success || !visibility.success) {
+    return { error: SET_VISIBILITY_ERRORS.invalidRequest };
+  }
+
+  // Outside the try — `requireIdentity()` signals "no session" by throwing a
+  // redirect Next must see; catching it would swallow the /login bounce.
+  const { token } = await requireIdentity();
+
+  try {
+    await setProjectVisibility(token, projectId.data, visibility.data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 400 || error.status === 422) {
+        return { error: SET_VISIBILITY_ERRORS.invalidRequest };
+      }
+      if (error.status === 401) {
+        return { error: SET_VISIBILITY_ERRORS.sessionExpired };
+      }
+      if (error.status === 404) {
+        return { error: SET_VISIBILITY_ERRORS.notFound };
+      }
+    }
+    return { error: SET_VISIBILITY_ERRORS.generic };
   }
 
   revalidatePath("/projects/[projectId]", "page");

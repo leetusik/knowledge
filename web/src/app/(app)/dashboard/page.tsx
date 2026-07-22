@@ -64,6 +64,19 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
     cell: (project) => project.keys.toLocaleString("en-US"),
   },
   {
+    // P19 — per-project Public/Private badge, straight off the rollup's `visibility`
+    // (active=Public / idle=Private reuse the closed Badge status enum, no new CSS).
+    key: "visibility",
+    header: DASHBOARD.projects.columns.visibility,
+    cell: (project) => (
+      <Badge status={project.visibility === "public" ? "active" : "idle"}>
+        {project.visibility === "public"
+          ? DASHBOARD.projects.visibility.public
+          : DASHBOARD.projects.visibility.private}
+      </Badge>
+    ),
+  },
+  {
     key: "created",
     header: DASHBOARD.projects.columns.created,
     className: "mono",

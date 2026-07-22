@@ -133,6 +133,27 @@ export async function getProject(
 }
 
 /**
+ * `PATCH /app/projects/{id}` (bearer) `{visibility}` → 200 `{project}` — the P19
+ * visibility toggle. Session-only on the backend; `_load_scoped_project` answers
+ * 404 for a missing OR cross-tenant project (404-never-403), and an invalid value is
+ * a 422 (the backend's `Literal["private","public"]`). Reuses the `{project}`
+ * envelope, so the updated `visibility` rides back on the same shape as `getProject`.
+ */
+export async function setProjectVisibility(
+  token: string,
+  projectId: string,
+  visibility: "private" | "public",
+): Promise<KbProject> {
+  const raw = await sendJson<RawProjectResponse>(
+    `/app/projects/${encodeURIComponent(projectId)}`,
+    "PATCH",
+    { visibility },
+    { token },
+  );
+  return raw.project;
+}
+
+/**
  * `POST /app/projects/{id}/credentials` (bearer) `{name?}` → 201
  * `{credential, key}`.
  *
@@ -331,15 +352,18 @@ export async function getDocuments(
 }
 
 /**
- * `GET /app/documents/{id}` (bearer) → 200 the projected document WITH `markdown`.
+ * `GET /app/documents/{id}` → 200 the projected document WITH `markdown`.
  *
- * Ids are integers. 404 when missing OR another tenant's (the backend scopes by
- * `tenant_id`, so a cross-tenant id resolves to nothing — 404-never-403, ids cannot
- * be probed); a non-integer id is a 422. The read page maps both to the branded
- * not-found.
+ * OPTIONAL-IDENTITY (P19): `token` is `string | undefined`. With a bearer the
+ * backend serves the member-scoped read (plus a public-project fallback for a
+ * cross-org caller); tokenless it serves ONLY public-project docs. Either way a
+ * private/nonexistent/cross-tenant id answers **404** (404-never-403, ids cannot be
+ * probed); a non-integer id is a 422. The read page maps 404/400 to the branded
+ * not-found (member) or a `/login` bounce (anonymous). `authHeaders(undefined)`
+ * sends no `Authorization`, so an anonymous read never smuggles a token upstream.
  */
 export async function getDocument(
-  token: string,
+  token: string | undefined,
   id: number,
   signal?: AbortSignal,
 ): Promise<KbDocument> {
@@ -357,9 +381,14 @@ export async function getDocument(
  * `ApiError` (from the shared `!res.ok` contract) on a non-2xx: 404 for a missing /
  * cross-tenant / non-HTML doc, which the relay maps to a 404. The caller MUST relay
  * or consume the body.
+ *
+ * OPTIONAL-IDENTITY (P19): `token` is `string | undefined`, mirroring `getDocument`.
+ * The anonymous relay (a public doc's sandboxed iframe, loaded by a visitor with no
+ * cookie) calls it tokenless and the backend serves only public raw HTML; a member's
+ * iframe forwards their bearer. A private/nonexistent doc is a 404 either way.
  */
 export async function getDocumentRaw(
-  token: string,
+  token: string | undefined,
   id: number,
   signal?: AbortSignal,
 ): Promise<Response> {
@@ -395,15 +424,29 @@ export async function searchDocuments(
 // as a prop to the client `<GraphCanvas>` (no browser fetch / BFF proxy).
 
 /**
- * `GET /app/graph` (bearer) → 200 the tenant's knowledge graph
- * (`{version, projects, nodes, edges, truncated}`). Called BARE — the shipped UI
- * is per-tenant (the whole corpus); the backend accepts an optional `project` UUID
- * but the app sends none. A doc node's `url` is the S5 read route
- * `/documents/{id}`, which is what a node click navigates to.
+ * `GET /app/graph` → 200 a knowledge graph
+ * (`{version, projects, nodes, edges, truncated}`). Two shapes, one route (P19):
+ *   - BARE (`options.org` omitted, member bearer) — the in-app per-tenant map: the
+ *     caller's whole corpus. `token` required in practice for this path (401 if
+ *     absent), which is how the logged-in `/graph` page still calls it.
+ *   - `?org={tenant_uuid}` — the OPTIONAL-IDENTITY public view: only that org's
+ *     public-project nodes/edges/tag-hubs. `token` is `string | undefined` here — a
+ *     member viewing their own org gets the full map, an anonymous or cross-org
+ *     caller gets the public subset, and an org with no public projects (or a
+ *     nonexistent org) is a **404** (no existence leak).
+ *
+ * `org` is appended via `encodeURIComponent`; no `org` keeps the path BARE (no `?`),
+ * byte-compatible with the pre-P19 logged-in call. A doc node's `url` is the read
+ * route `/documents/{id}`.
  */
 export async function getGraph(
-  token: string,
+  token: string | undefined,
+  options: { org?: string } = {},
   signal?: AbortSignal,
 ): Promise<KbGraph> {
-  return getJson<KbGraph>("/app/graph", { token, signal });
+  const query =
+    options.org === undefined
+      ? ""
+      : `?org=${encodeURIComponent(options.org)}`;
+  return getJson<KbGraph>(`/app/graph${query}`, { token, signal });
 }

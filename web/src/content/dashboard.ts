@@ -88,9 +88,16 @@ export const DASHBOARD = {
       project: "Project",
       documents: "Docs",
       keys: "Keys",
+      /** P19 — per-project Public/Private visibility badge column. */
+      visibility: "Visibility",
       created: "Created",
       lastUsed: "Last used",
       action: "Action",
+    },
+    /** P19 — the two visibility badge labels (rendered off `project.visibility`). */
+    visibility: {
+      public: "Public",
+      private: "Private",
     },
     /** Per-row drill-down affordance (the `/projects/[id]` detail route lands in S4). */
     openLabel: "Open",

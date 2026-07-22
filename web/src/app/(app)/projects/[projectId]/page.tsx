@@ -12,6 +12,7 @@ import type { KbCredential, KbProjectUsage } from "@/lib/knowledge/types";
 
 import { MintCredentialForm } from "./mint-credential-form";
 import { RevokeCredentialButton } from "./revoke-credential-button";
+import { VisibilityToggle } from "./visibility-toggle";
 
 // P12.S4 — the per-project drill-down, reached from the dashboard's project rows.
 // A server component throughout, rendered inside the S2/S2R `(app)` shell (so it
@@ -187,15 +188,34 @@ export default async function ProjectPage({
 
   return (
     <>
-      {/* .mainhead — eyebrow + Fraunces title (the project name) + created sub. */}
-      <div className="mb-[1.3rem]">
-        <div className="kb-app-eyebrow">{PROJECT.header.eyebrow}</div>
-        <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-          {project.name}
-        </h1>
-        <p className="kb-app-sub">
-          {PROJECT.header.createdPrefix} {formatDate(project.created_at)}
-        </p>
+      {/* .mainhead — eyebrow + Fraunces title (the project name) + created sub, with
+          the P19 visibility badge + toggle on the right (the dashboard-header idiom). */}
+      <div className="mb-[1.3rem] flex items-start justify-between gap-4">
+        <div>
+          <div className="kb-app-eyebrow">{PROJECT.header.eyebrow}</div>
+          <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
+            {project.name}
+          </h1>
+          <p className="kb-app-sub">
+            {PROJECT.header.createdPrefix} {formatDate(project.created_at)}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-[0.5rem]">
+          {/* active=Public / idle=Private reuse the closed Badge status enum (no new
+              CSS); `chip` is the soft-fill header emphasis. */}
+          <Badge
+            status={project.visibility === "public" ? "active" : "idle"}
+            chip
+          >
+            {project.visibility === "public"
+              ? PROJECT.visibility.badge.public
+              : PROJECT.visibility.badge.private}
+          </Badge>
+          <VisibilityToggle
+            projectId={project.id}
+            visibility={project.visibility}
+          />
+        </div>
       </div>
 
       {/* Project usage — S3's StatTiles + TrendChart reused as-is (one block per

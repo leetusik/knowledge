@@ -10,10 +10,13 @@ import { openSession, readSessionCookie } from "@/lib/session";
 // session-guarded `GET /app/documents/{id}/raw` straight to the browser.
 //
 // XSS-safety-critical (phase P16 pinned decision 1). Two properties it upholds:
-//   - It SELF-GUARDS. The `(app)` layout's `requireIdentity()` covers server
-//     components, NOT `/api/*` route handlers, so this route reads + validates the
-//     sealed session cookie itself — a missing/tampered/expired session is a 401
-//     with NO upstream call (never probe knowledge unauthenticated).
+//   - It is OPTIONAL-IDENTITY (P19). The `(app)` layout's `requireIdentity()` covers
+//     server components, NOT `/api/*` route handlers, so this route reads the sealed
+//     session cookie itself — but no longer REQUIRES it: a valid session forwards its
+//     bearer (member read), while a missing/tampered/expired cookie relays TOKENLESS,
+//     letting an anonymous visitor's iframe on a PUBLIC doc load. knowledge's
+//     `optional_user` is the boundary: a private/nonexistent doc is an
+//     indistinguishable 404 with or without a token (404-never-403).
 //   - It re-asserts the sandbox headers EXPLICITLY (never trusts upstream drift):
 //     `Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`
 //     privilege-strips even a direct top-level visit to this URL (defense in depth),
@@ -52,17 +55,20 @@ export async function GET(
     return json(404, { ok: false });
   }
 
-  // 2. Self-guard: this route is NOT under the `(app)` layout guard. Read + open the
-  //    sealed cookie; a missing/tampered/expired session is a 401 with NO upstream
-  //    call.
-  const token = openSession(readSessionCookie(req));
-  if (!token) {
-    return json(401, { ok: false });
-  }
+  // 2. OPTIONAL-IDENTITY (P19): read + open the sealed cookie, but do NOT require it.
+  //    A valid session forwards its bearer (member-scoped read); a missing/tampered/
+  //    expired cookie relays TOKENLESS (`undefined`), so an anonymous visitor's
+  //    sandboxed iframe on a public doc is served the public raw HTML. The
+  //    public/private boundary is enforced UPSTREAM by knowledge's `optional_user`:
+  //    a private/nonexistent doc is an indistinguishable 404 with or without a token,
+  //    and a tokenless call never smuggles credentials (`authHeaders(undefined)` → no
+  //    `Authorization` header). We never fetch-with-token on behalf of an anonymous
+  //    visitor — an anonymous browser sends no cookie, so `token` is `undefined` here.
+  const token = openSession(readSessionCookie(req)) ?? undefined;
 
-  // 3. Relay the raw HTML from knowledge. A 404 (missing / cross-tenant / non-HTML
-  //    doc / empty raw_html) passes through as a 404; any other upstream fault is a
-  //    502 — an outage is never reported as if it were the user's mistake.
+  // 3. Relay the raw HTML from knowledge. A 404 (missing / cross-tenant / private /
+  //    non-HTML doc / empty raw_html) passes through as a 404; any other upstream
+  //    fault is a 502 — an outage is never reported as if it were the user's mistake.
   let upstream: Response;
   try {
     upstream = await getDocumentRaw(token, id);

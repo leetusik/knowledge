@@ -1,54 +1,23 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { ChevronLeft } from "lucide-react";
-
-import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
-import { requireIdentity } from "@/lib/auth-guards";
-import { getDocument } from "@/lib/knowledge/app";
-import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument } from "@/lib/knowledge/types";
 
 import "./explainer.css";
 import { MarkdownBody } from "./markdown-body";
 
-// P12.S5 — one document in full, reached from the list's title link. A server
-// component throughout; NO client island and NO server action — this surface is
-// READ-ONLY by design (writes stay on the `vk_`-keyed `/api/*` machine surface). The
-// body markdown is rendered XSS-safe by `MarkdownBody` (react-markdown, no
-// rehype-raw). Rendered inside the S2/S2R `(app)` shell, so it draws only into
-// `.kb-app-main`.
+// P19 — the shared document rendering (header + metadata strip + format branch),
+// extracted VERBATIM from the P12.S5 read page so the member and public (anonymous)
+// doc pages render byte-identical bodies. A SERVER component throughout; NO client
+// island and NO auth import — this is READ-ONLY presentation of an already-fetched
+// `KbDocument`. The two pages differ only in their surrounding chrome (AppShell vs
+// PublicShell) and the member-only back-link/copy-link row, both of which live in the
+// page, not here.
 //
-// The <title> is STATIC copy, not the document title: the knowledge client is
-// `cache: "no-store"`, so `generateMetadata` would cost a second uncached fetch.
-export const metadata: Metadata = { title: DOCUMENTS.title };
-
-/**
- * Fetch one document, mapping the backend's rejections to the 404 page. 404 (missing
- * OR another tenant's — 404-never-403 so ids cannot be probed) and 400 both render
- * the SAME branded not-found. A 401 never reaches here (`requireIdentity` already
- * redirected); EVERYTHING ELSE rethrows — an outage must surface, not masquerade as
- * a missing document.
- *
- * The mapping lives here so `notFound()` can never sit inside the `try` that would
- * swallow it (it signals by throwing, like `redirect()`).
- */
-async function loadDocument(token: string, id: number): Promise<KbDocument> {
-  try {
-    return await getDocument(token, id);
-  } catch (error) {
-    if (
-      error instanceof ApiError &&
-      (error.status === 404 || error.status === 400)
-    ) {
-      notFound();
-    }
-    throw error;
-  }
-}
+// The body markdown is rendered XSS-safe by `MarkdownBody` (react-markdown, no
+// rehype-raw). HTML explainers (P16) render interactive in a sandboxed opaque-origin
+// iframe pointed at the same-origin `/api/documents/{id}/raw` relay (now
+// optional-identity), which re-asserts the pinned sandbox headers.
 
 /** One labeled field in the metadata strip. */
 function Meta({
@@ -78,33 +47,10 @@ function Meta({
   );
 }
 
-export default async function DocumentPage({
-  params,
-}: {
-  // Next 16: dynamic route params arrive as a Promise.
-  params: Promise<{ id: string }>;
-}) {
-  const { id: idParam } = await params;
-  // Doc ids are integers. A non-integer / non-positive id is effectively not-found
-  // (the backend would 422 it); short-circuit to the branded not-found instead. This
-  // sits OUTSIDE any try, so the `notFound()` throw is never swallowed.
-  const id = Number(idParam);
-  if (!Number.isInteger(id) || id < 1) notFound();
-
-  const { token } = await requireIdentity();
-  const doc = await loadDocument(token, id);
-
+/** The header + metadata strip + format branch for one document. */
+export function DocumentView({ doc, id }: { doc: KbDocument; id: number }) {
   return (
-    <article>
-      <Link
-        href="/documents"
-        className={appButtonClass("ghost", "sm")}
-        style={{ marginBottom: "1rem" }}
-      >
-        <ChevronLeft size={15} aria-hidden />
-        {DOCUMENTS.read.backLabel}
-      </Link>
-
+    <>
       {/* .mainhead — eyebrow (project) + Fraunces title + date sub. */}
       <div className="mb-[var(--kb-space-md)]">
         <div className="kb-app-eyebrow">{DOCUMENTS.read.eyebrow(doc.project)}</div>
@@ -167,6 +113,6 @@ export default async function DocumentPage({
           )}
         </div>
       )}
-    </article>
+    </>
   );
 }
