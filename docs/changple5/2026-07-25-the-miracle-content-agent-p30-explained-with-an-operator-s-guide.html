@@ -1,0 +1,1177 @@
+<!--kb
+title: "The Miracle Content Agent (P30), Explained — With an Operator's Guide"
+date: 2026-07-25
+tags:
+  - llm-agent
+  - human-in-the-loop
+  - content-pipeline
+  - operator-tools
+  - retrieval
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Miracle Content Agent (P30) — Explained, With an Operator's Guide</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --brand: #315baf;
+      --brand-strong: #274a93;
+      --brand-soft: #eaf0fa;
+      --ink: #16202e;
+      --copy: #33414f;
+      --muted: #6c7a89;
+      --line: #dfe5ec;
+      --paper: #ffffff;
+      --ground: #f4f7fb;
+      --code-bg: #f2f5f9;
+      --ok: #2f7d59;
+      --ok-soft: #e6f4ec;
+      --warn: #9a6714;
+      --warn-soft: #fbf1dd;
+      --danger: #a63d3d;
+      --danger-soft: #fbeaea;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --brand: #8fb0e6;
+        --brand-strong: #a9c3ee;
+        --brand-soft: #1b2740;
+        --ink: #e8edf4;
+        --copy: #c3cddb;
+        --muted: #8d9aab;
+        --line: #2b3646;
+        --paper: #131a24;
+        --ground: #0f151d;
+        --code-bg: #182130;
+        --ok: #77c79c;
+        --ok-soft: #16281f;
+        --warn: #d9ab5c;
+        --warn-soft: #2a2213;
+        --danger: #e08a8a;
+        --danger-soft: #2c1a1a;
+      }
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --brand: #315baf; --brand-strong: #274a93; --brand-soft: #eaf0fa;
+      --ink: #16202e; --copy: #33414f; --muted: #6c7a89; --line: #dfe5ec;
+      --paper: #ffffff; --ground: #f4f7fb; --code-bg: #f2f5f9;
+      --ok: #2f7d59; --ok-soft: #e6f4ec; --warn: #9a6714; --warn-soft: #fbf1dd;
+      --danger: #a63d3d; --danger-soft: #fbeaea;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --brand: #8fb0e6; --brand-strong: #a9c3ee; --brand-soft: #1b2740;
+      --ink: #e8edf4; --copy: #c3cddb; --muted: #8d9aab; --line: #2b3646;
+      --paper: #131a24; --ground: #0f151d; --code-bg: #182130;
+      --ok: #77c79c; --ok-soft: #16281f; --warn: #d9ab5c; --warn-soft: #2a2213;
+      --danger: #e08a8a; --danger-soft: #2c1a1a;
+    }
+
+    body {
+      max-width: 48rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.15rem 5rem;
+      background: var(--ground);
+      color: var(--copy);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+                   "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 1.02rem;
+      line-height: 1.72;
+      -webkit-text-size-adjust: 100%;
+    }
+    h1, h2, h3 { color: var(--ink); line-height: 1.28; }
+    h1 { font-size: clamp(1.75rem, 5vw, 2.3rem); margin: 0 0 .5rem; letter-spacing: -.02em; }
+    h2 {
+      font-size: 1.42rem; margin: 3.2rem 0 1rem;
+      padding-top: 1.4rem; border-top: 1px solid var(--line);
+    }
+    h3 { font-size: 1.1rem; margin: 2rem 0 .6rem; }
+    h4 { font-size: .98rem; margin: 1.4rem 0 .4rem; color: var(--ink); }
+    p { margin: 0 0 1.05rem; }
+    a { color: var(--brand); text-underline-offset: 2px; }
+    a:hover { color: var(--brand-strong); }
+    ul, ol { margin: 0 0 1.05rem; padding-left: 1.35rem; }
+    li { margin: .3rem 0; }
+    strong { color: var(--ink); }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .87em;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: .08em .34em;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--brand);
+      border-radius: 8px;
+      padding: .85rem 1rem;
+      margin: 0 0 1.2rem;
+      font-size: .84rem;
+      line-height: 1.62;
+      overflow-x: auto;
+    }
+    pre code { background: none; border: none; padding: 0; font-size: 1em; }
+    .lede {
+      font-size: 1.1rem;
+      color: var(--copy);
+      border-left: 3px solid var(--brand);
+      padding-left: 1rem;
+      margin: 1.5rem 0 2rem;
+    }
+    .meta {
+      font-size: .8rem; color: var(--muted); margin: 0 0 1.6rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    nav.toc {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: 10px; padding: 1rem 1.2rem; margin: 0 0 2.4rem;
+    }
+    nav.toc strong { display: block; font-size: .8rem; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: .5rem; }
+    nav.toc ol { margin: 0; padding-left: 1.25rem; }
+    nav.toc li { margin: .18rem 0; }
+    .callout {
+      border: 1px solid var(--line); border-left: 4px solid var(--brand);
+      background: var(--paper); border-radius: 8px;
+      padding: .85rem 1.1rem; margin: 1.3rem 0;
+    }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout .tag {
+      display: block; font-size: .72rem; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--brand); font-weight: 700;
+      margin-bottom: .3rem;
+    }
+    .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+    .callout.warn .tag { color: var(--warn); }
+    .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+    .callout.danger .tag { color: var(--danger); }
+    .callout.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+    .callout.ok .tag { color: var(--ok); }
+
+    .fig {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: 10px; padding: 1.1rem; margin: 1.5rem 0;
+    }
+    .fig .cap {
+      font-size: .82rem; color: var(--muted); margin: .8rem 0 0;
+      text-align: center;
+    }
+    .flow { display: flex; flex-direction: column; gap: .45rem; }
+    .flow .row { display: flex; align-items: stretch; gap: .5rem; flex-wrap: wrap; }
+    .box {
+      flex: 1 1 8rem; min-width: 7rem;
+      border: 1px solid var(--line); border-radius: 7px;
+      background: var(--ground); padding: .5rem .6rem;
+      font-size: .82rem; line-height: 1.45; text-align: center;
+    }
+    .box b { display: block; color: var(--ink); font-size: .84rem; }
+    .box small { color: var(--muted); font-size: .75rem; }
+    .box.gate { border-color: var(--brand); background: var(--brand-soft); border-width: 2px; }
+    .box.gate b { color: var(--brand-strong); }
+    .box.term { border-style: dashed; }
+    .arrow { text-align: center; color: var(--muted); font-size: .95rem; line-height: 1; }
+
+    .tablewrap { overflow-x: auto; margin: 1.3rem 0; border: 1px solid var(--line);
+      border-radius: 10px; background: var(--paper); }
+    table { border-collapse: collapse; width: 100%; font-size: .87rem; min-width: 34rem; }
+    th, td { text-align: left; padding: .55rem .75rem; border-bottom: 1px solid var(--line);
+      vertical-align: top; }
+    th { color: var(--ink); font-size: .78rem; letter-spacing: .05em;
+      text-transform: uppercase; background: var(--ground); }
+    tr:last-child td { border-bottom: none; }
+    td code { font-size: .82em; }
+
+    .pill {
+      display: inline-block; font-size: .72rem; font-weight: 700;
+      padding: .1rem .45rem; border-radius: 999px; white-space: nowrap;
+    }
+    .pill.work { background: var(--brand-soft); color: var(--brand-strong); }
+    .pill.you { background: var(--warn-soft); color: var(--warn); }
+    .pill.end { background: var(--ok-soft); color: var(--ok); }
+    .pill.bad { background: var(--danger-soft); color: var(--danger); }
+
+    .steps { counter-reset: step; list-style: none; padding: 0; margin: 1.4rem 0; }
+    .steps > li {
+      counter-increment: step; position: relative;
+      padding: .1rem 0 1.1rem 2.6rem; margin: 0;
+      border-left: 1px solid var(--line); margin-left: .9rem;
+    }
+    .steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .steps > li::before {
+      content: counter(step);
+      position: absolute; left: -.92rem; top: .1rem;
+      width: 1.8rem; height: 1.8rem; border-radius: 50%;
+      background: var(--brand); color: #fff;
+      font-size: .82rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @media (prefers-color-scheme: dark) { .steps > li::before { color: #0f151d; } }
+    :root[data-theme="dark"] .steps > li::before { color: #0f151d; }
+    :root[data-theme="light"] .steps > li::before { color: #fff; }
+    .steps h4 { margin-top: 0; }
+
+    .screen {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+      overflow: hidden; margin: 1.2rem 0; font-size: .8rem;
+    }
+    .screen .bar {
+      background: var(--ground); border-bottom: 1px solid var(--line);
+      padding: .4rem .7rem; color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .72rem;
+    }
+    .screen .panes { display: flex; min-height: 8rem; }
+    .screen .pane { padding: .7rem .8rem; }
+    .screen .pane.left { flex: 1 1 45%; border-right: 1px solid var(--line); }
+    .screen .pane.right { flex: 1 1 55%; background: var(--ground); }
+    .screen .lbl {
+      font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: .45rem;
+    }
+    .bubble {
+      border: 1px solid var(--line); border-radius: 8px; padding: .35rem .55rem;
+      margin-bottom: .4rem; background: var(--ground); font-size: .78rem;
+    }
+    .bubble.agent { background: var(--brand-soft); border-color: var(--brand-soft); }
+    .doccard {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+      padding: .55rem .7rem; font-size: .78rem;
+    }
+    .btn {
+      display: inline-block; background: var(--brand); color: #fff;
+      border-radius: 999px; padding: .2rem .7rem; font-size: .74rem; font-weight: 600;
+    }
+    :root[data-theme="dark"] .btn { color: #0f151d; }
+    @media (prefers-color-scheme: dark) { .btn { color: #0f151d; } }
+    :root[data-theme="light"] .btn { color: #fff; }
+    .chip {
+      display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+      padding: .1rem .55rem; font-size: .72rem; color: var(--muted);
+      margin: .1rem .15rem .1rem 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .q { background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+      padding: 1rem 1.15rem; margin: 1rem 0; }
+    .q > p:first-child { margin-bottom: .7rem; }
+    .q .opt {
+      display: block; width: 100%; text-align: left; margin: .35rem 0;
+      padding: .5rem .75rem; font: inherit; font-size: .92rem;
+      color: var(--copy); background: var(--ground);
+      border: 1px solid var(--line); border-radius: 7px; cursor: pointer;
+    }
+    .q .opt:hover { border-color: var(--brand); }
+    .q .opt:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .q .opt.correct { background: var(--ok-soft); border-color: var(--ok); color: var(--ink); }
+    .q .opt.incorrect { background: var(--danger-soft); border-color: var(--danger); color: var(--ink); }
+    .q .why {
+      margin: .7rem 0 0; font-size: .9rem; color: var(--copy);
+      border-left: 3px solid var(--brand); padding-left: .75rem;
+    }
+    .footnote { font-size: .85rem; color: var(--muted); }
+    hr { border: none; border-top: 1px solid var(--line); margin: 2.5rem 0; }
+  </style>
+</head>
+<body>
+
+<h1>The Miracle Content Agent, Explained</h1>
+<p class="meta">changple5 · phase P30 (미라클 콘텐츠 생성 에이전트) · 17 slices · review passed 2026-07-14 · includes an operator's guide</p>
+
+<p class="lede">Changple has years of Naver Cafe posts about opening and running small food-and-service
+businesses, already indexed and searchable. P30 turned that archive from something the
+consulting chatbot <em>reads</em> into something an agent can <em>write from</em> — a full-screen
+admin workspace where you brief an agent, it researches the corpus, proposes a structure, writes
+the article section by section with real photos from real posts, and — only after you approve —
+publishes a clean copy to the live Miracle catalogue.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — what came before, and the words you'll need</a></li>
+    <li><a href="#intuition">Intuition — one pipeline, two gates</a></li>
+    <li><a href="#operator">Operator's guide — driving it, screen by screen</a></li>
+    <li><a href="#code">Code — following one article through three services</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ==================================================================== -->
+<section id="background">
+<h2>Background</h2>
+
+<h3>What "Miracle content" is</h3>
+
+<p>Miracle (미라클, at <code>miracle.changple.ai</code>) is Changple's paid-ish content catalogue —
+long, photo-heavy case studies about opening a real shop. Each article is a row in the Django
+model <code>content.NotionContent</code>. The article body is not stored in the database: it is a
+folder of HTML plus images on disk under <code>MEDIA_ROOT/html_content/{id}/</code>, and the row's
+<code>html_path</code> column doubles as the visibility flag — empty path, invisible article.</p>
+
+<h3>How an article got there before P30</h3>
+
+<p>Entirely by hand. A human wrote the piece in Notion, exported it as a ZIP, and uploaded it
+through the operator console. The backend chunked the upload into a
+<code>ContentUploadSession</code>, queued a <code>ContentImportJob</code>, and a Celery task
+(<code>content.run_import_job</code> → <code>import_uploaded_zip</code>) unpacked the ZIP,
+rewrote the relative asset paths, and swapped the finished directory into place. Good machinery —
+but every word of every article was still written by a person.</p>
+
+<p>Meanwhile, a completely separate part of the system had been quietly accumulating something
+valuable: an indexed corpus of Naver Cafe posts (thousands of them, with vector embeddings and
+per-image alt text generated by Gemini), used by the consulting agent to ground its answers.
+P30's premise is a single observation — <em>that corpus is not just reference material for
+answering questions, it is raw material for writing new articles.</em></p>
+
+<h3>Three ideas worth having straight before we go on</h3>
+
+<p><strong>Retrieval-augmented generation (RAG), in one paragraph.</strong> A language model
+knows nothing about Changple's cafe archive. So instead of asking it to recall, you
+<em>retrieve</em>: turn a question into a search over your own documents (here: a hybrid of
+pgvector similarity and a Gemini re-ranking pass), pull back the most relevant posts, paste their
+text into the prompt, and ask the model to write <em>only</em> from that. The model supplies
+fluency and structure; your corpus supplies the facts. Grounding is the whole point — an
+ungrounded draft about 상권 분석 would be plausible, generic, and useless.</p>
+
+<p><strong>"Job-shaped", not "chat-shaped".</strong> Changple already has a streaming chat
+architecture (server-sent events, nonce routing, JWT claims). P30 deliberately did <em>not</em>
+reuse it. Generating one article takes minutes and involves a dozen model calls; the operator will
+close the laptop halfway through; the whole thing must survive a page reload, a worker crash, and a
+deploy. So the unit of work is a <strong>row in a database</strong> — a
+<code>ContentDraftJob</code> with a status column — advanced by Celery tasks, and the browser
+simply <strong>polls</strong> it every 2.5 seconds. Nothing lives in memory. If the browser
+vanishes, the job carries on.</p>
+
+<p><strong>Human-in-the-loop (HITL).</strong> An agent that autonomously publishes to a live
+catalogue is a bad idea, and P30 never entertained it. The design instead places explicit human
+gates where the agent must stop and wait. Which gates, and why <em>those</em> two, is the subject
+of the next section.</p>
+
+<div class="callout">
+  <span class="tag">Who can use it</span>
+  <p>This is an <strong>admin-only internal tool</strong>. Every endpoint sits behind
+  <code>IsOperatorUser</code> (<code>user_type == "admin"</code>), and the browser never talks to
+  the agent service directly — the Django backend brokers every generation call with a shared
+  service token. It is also <strong>PC-web only</strong>, by explicit decision: there is no mobile
+  layout and none is planned.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The naive version, and why it fails</h3>
+
+<p>The obvious design is: operator types a brief → agent searches the corpus → agent writes the
+article → operator reads it and says yes or no. One shot.</p>
+
+<p>This fails in a specific, expensive way. A 6,000-character illustrated article costs several
+model calls to produce. If the operator reads it and says "no, this should have been about the
+build-out timeline, not the menu", every one of those calls is wasted — and the feedback arrives at
+the point where it is most costly to act on. Worse, a single "write the whole article now" prompt
+tends to drift: by section 12 the model has forgotten the voice it established in section 2.</p>
+
+<h3>The shape P30 actually took</h3>
+
+<p>Split the work at its natural seam, and put a human at each one. The agent proposes a
+<strong>구성안</strong> (an abstract draft: a title, a table of contents, and a plan for which
+photos go where) and stops. That is cheap to produce and cheap to reject. Only once the operator
+approves the shape does the expensive writing begin — and even then it happens
+<strong>section by section</strong>, each call seeing the approved outline and the sections already
+written, followed by one integration pass that stitches everything into a single coherent voice.</p>
+
+<div class="fig">
+  <div class="flow">
+    <div class="row">
+      <div class="box"><b>brief</b><small>operator writes it</small></div>
+      <div class="box"><b>research</b><small>≤8 searches, ≤24 posts</small></div>
+      <div class="box"><b>구성안</b><small>title + ToC + image plan</small></div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="row">
+      <div class="box gate" style="flex-basis:100%"><b>GATE 1 — 구성 승인 · 작성 시작</b><small>the operator approves or reshapes the structure · nothing is written yet</small></div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="row">
+      <div class="box"><b>write §1…§M</b><small>one model call per section</small></div>
+      <div class="box"><b>integrate</b><small>one whole-body pass</small></div>
+      <div class="box"><b>v1</b><small>+ revise loop, v2, v3…</small></div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="row">
+      <div class="box gate" style="flex-basis:100%"><b>GATE 2 — 승인 → 정말 승인하시겠어요? → 승인 확정</b><small>publishes the version you are looking at · the only irreversible action</small></div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="row">
+      <div class="box term"><b>scrub</b><small>strip every internal marker</small></div>
+      <div class="box term"><b>materialize</b><small>markdown + images → HTML on disk</small></div>
+      <div class="box term"><b>published</b><small>live NotionContent row</small></div>
+    </div>
+  </div>
+  <p class="cap">Figure 1 — the pipeline. Two human gates: one where changing your mind is cheap,
+  one in front of the only action that touches the public site.</p>
+</div>
+
+<h3>The mechanic that makes it all work: turn precedence</h3>
+
+<p>Here is the part worth understanding properly, because everything else follows from it. There is
+exactly <strong>one</strong> generation endpoint on the agent service. It does three completely
+different jobs, and which one it does is decided by two fields in the payload — nothing else:</p>
+
+<pre><code>latest_version is not None   →  REVISE turn   (research if needed, then edit the existing draft)
+approved_outline is not None →  WRITE turn    (skip research entirely, write the approved 구성안)
+neither                      →  OUTLINE turn  (research, then propose a 구성안 — never writes a body)</code></pre>
+
+<p>Read it top to bottom: once a version exists, every future turn is a revision, so the agent can
+never wander back and re-propose an outline. And an approved outline is only sent while no version
+exists — the write turn happens exactly once.</p>
+
+<p>The elegance is in what the WRITE turn <em>doesn't</em> do. It does not research. When the
+outline turn finishes, it stores its entire research state — which posts it read, which corpus
+photos it found, keyed by the same identifiers — inside the outline row. The write turn
+<em>rehydrates</em> that state deterministically. So approving a 구성안 means "write exactly this,
+from exactly the material you showed me", not "go off and think again". No second research bill, no
+drift between what you approved and what gets written.</p>
+
+<h3>A worked example</h3>
+
+<p>Suppose you brief it with <em>"성수동 5평 테이크아웃 커피 매장 오픈기 — 보증금·권리금 협상과
+초기 비용 통제 중심으로"</em>.</p>
+
+<ul>
+  <li><strong>Research turn.</strong> A fast model (<code>gemini-3.5-flash</code>) is given two
+  tools, <code>search_cafe_posts</code> and <code>read_posts</code>, and left to drive. It searches
+  <span class="chip">소형 매장 권리금 협상</span> <span class="chip">테이크아웃 커피 초기 비용</span>,
+  gets candidate post IDs back, decides which ones to read in full, maybe searches again. It stops
+  when it stops calling tools, or when it hits a cap: 8 searches, 24 documents, 6 loop iterations.</li>
+  <li><strong>Gate + outline.</strong> A stronger model looks at the brief plus everything read and
+  asks: is there enough here? If yes, it emits a title, ~8 sections with key points, and an image
+  plan — slots saying "this section gets 2 photos, and here are the candidates from the corpus".
+  If genuinely not enough, it can pause once and ask you questions instead.</li>
+  <li><strong>You approve.</strong> Or you type "section 4 and 5 should be one section, and add
+  something on 인테리어 견적 비교" — which re-runs the outline turn with your feedback and replaces
+  the proposal.</li>
+  <li><strong>Write.</strong> 8 model calls, one per section, each seeing the approved outline and
+  the previous sections, each placing image markers for its assigned photos. Then one integration
+  call over the whole body: write the intro, smooth the seams, remove repetition.</li>
+  <li><strong>v1 appears.</strong> With photos in it. You revise, or edit the markdown yourself, or
+  approve it.</li>
+</ul>
+
+<h3>How photos get in — the marker grammar</h3>
+
+<p>The model never handles image bytes or URLs. It places a placeholder,
+<code>{{img:&lt;uuid&gt;}}</code>, and the position of that placeholder on the line
+<em>is</em> the layout instruction:</p>
+
+<div class="fig">
+  <pre><code>매장을 처음 봤을 때는 이런 상태였습니다.
+
+{{img:8f3a…}}                        ← alone on its line = one full-width figure
+
+철거 후, 배관과 전기 위치를 다시 잡았습니다.
+
+{{img:1c07…}} {{img:b42e…}} {{img:9dd1…}}   ← 2–3 on ONE line = a side-by-side row</code></pre>
+  <p class="cap">Figure 2 — the whole image layout language. Two rules, and they are honoured
+  identically in the workspace preview, the published HTML, and the archive mirror.</p>
+</div>
+
+<p>The subtle decision behind this: a photo pulled from a cafe post and a photo you uploaded from
+your desktop become <strong>the same kind of thing</strong> — an attachment row whose primary key
+<em>is</em> the marker's uuid. Corpus images are minted a uuid by pipeline code before the model
+ever sees them, so the model just places markers as usual; afterwards the backend downloads
+whichever ones survived into local storage. Because the stored text never needs rewriting, the
+preview renderer, the publisher, and the thumbnail picker required <em>zero</em> changes when
+corpus images were added. That is the reward for choosing a representation carefully.</p>
+
+<h3>The status machine</h3>
+
+<p>A job has twelve statuses, and the useful way to read them is: <em>who is holding the ball?</em></p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Status</th><th>Label you see</th><th>Whose turn</th></tr></thead>
+  <tbody>
+    <tr><td><code>requested</code></td><td>요청됨</td><td><span class="pill work">agent</span></td></tr>
+    <tr><td><code>collecting</code></td><td>자료 수집 중</td><td><span class="pill work">agent</span></td></tr>
+    <tr><td><code>drafting</code></td><td>초안 작성 중</td><td><span class="pill work">agent</span></td></tr>
+    <tr><td><code>revising</code></td><td>수정 중</td><td><span class="pill work">agent</span></td></tr>
+    <tr><td><code>needs_input</code></td><td>답변 필요</td><td><span class="pill you">you</span> — answer, or 건너뛰기</td></tr>
+    <tr><td><code>outline_review</code></td><td>구성안 검토 대기</td><td><span class="pill you">you</span> — GATE 1</td></tr>
+    <tr><td><code>awaiting_review</code></td><td>검토 대기</td><td><span class="pill you">you</span> — revise, edit, or GATE 2</td></tr>
+    <tr><td><code>approved</code> → <code>publishing</code></td><td>승인됨 → 게시 중</td><td><span class="pill work">system</span></td></tr>
+    <tr><td><code>published</code></td><td>게시됨</td><td><span class="pill end">done</span></td></tr>
+    <tr><td><code>cancelled</code></td><td>취소됨</td><td><span class="pill end">done</span></td></tr>
+    <tr><td><code>failed</code></td><td>실패</td><td><span class="pill bad">dead</span> — start a new job</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The browser's polling loop keys off exactly this: it polls while the agent is working
+(and through <code>approved</code>/<code>publishing</code>), and it <strong>stops</strong> the
+moment the ball is in your court. A workspace sitting quietly on 구성안 검토 대기 is not stuck —
+it is waiting for you.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="operator">
+<h2>Operator's guide</h2>
+
+<p>What follows is the real loop, in the order you will actually do it. Everything in
+<code>monospace</code> or quoted in Korean is a literal label on screen.</p>
+
+<div class="callout warn">
+  <span class="tag">Before you start</span>
+  <p>A full run costs <strong>real money</strong> — a flash-model research loop plus one strong-model
+  call per section plus an integration pass. A cancelled job still costs whatever it already spent.
+  Editing the draft yourself costs nothing. And on a passing run you will create a <strong>live
+  article</strong> in the Miracle catalogue; if you are just exploring, delete it afterwards from the
+  operator content console.</p>
+</div>
+
+<ol class="steps">
+
+<li>
+<h4>Get in</h4>
+<p>Go to <strong><code>/operator/content</code></strong> in the operator console and click the
+<strong>미라클 에이전트</strong> button. That takes you to <code>/operator/miracle-agent</code>,
+which deliberately looks like nothing else in the console: no header, no nav sidebar, full screen.
+There is no menu entry for it — the button is the only door.</p>
+</li>
+
+<li>
+<h4>Read the landing screen</h4>
+<div class="screen">
+  <div class="bar">/operator/miracle-agent</div>
+  <div class="panes">
+    <div class="pane left">
+      <div class="lbl">composer</div>
+      <div class="bubble">어떤 콘텐츠를 만들까요?</div>
+      <div><span class="chip">기준 · 김태용의 섬집 병점점… #19</span> <span class="chip">📎</span> <span class="btn">보내기</span></div>
+    </div>
+    <div class="pane right">
+      <div class="lbl">최근 작업</div>
+      <div class="doccard">성수동 5평 테이크아웃…<br><span class="chip">manual · ref #19</span></div>
+      <div style="height:.35rem"></div>
+      <div class="doccard">부천 정육식당 리뉴얼…<br><span class="chip">manual · ref #19</span></div>
+    </div>
+  </div>
+</div>
+<p>Two things to notice. The recent-jobs list lets you re-open any past job. And the leftmost item
+in the composer footer is the <strong>기준 콘텐츠 chip</strong> — the standing format reference.</p>
+</li>
+
+<li>
+<h4>Understand the 기준 콘텐츠 (and change it if you want)</h4>
+<p>The agent doesn't invent a house style from nothing. It extracts the structure and tone of one
+existing Miracle article and adapts them. By default that is <strong>content id 19</strong>
+("김태용의 섬집 병점점, 골목 상권의 한계를 극복하는…") — a ~6,700-character piece with 54
+interleaved photos, 18 numbered chronological process sections, first-person-plural 창플 voice, and
+concrete numbers throughout.</p>
+<p>Click the chip on the landing to open a small settings popover, type a different content id, and
+save. Invalid ids are rejected immediately (<em>존재하는 콘텐츠 ID를 입력해 주세요</em>). Note the
+hint: <em>변경은 다음 새 작업부터 적용됩니다</em> — each job <strong>snapshots</strong> its
+reference at creation, so changing the setting never rewrites a job already in flight. On the job
+screen the chip is therefore read-only.</p>
+<p><strong>The reference supplies format and tone only — never substance.</strong> Substance comes
+from your brief plus the cafe corpus. If a draft ever reads like a rigid clone of #19, that is a
+bug, not the design.</p>
+</li>
+
+<li>
+<h4>Write the brief</h4>
+<p>Type what you want written. Be concrete about the subject and the angle — that text drives both
+the corpus search and the outline. You may attach photos with captions using the 📎 button, but you
+do not have to: <strong>working with zero operator input is the designed default</strong>, and the
+agent will source its own photos from the corpus.</p>
+</li>
+
+<li>
+<h4>Watch it research</h4>
+<p>After you send, the thread's activity area becomes a live transparency panel — not a spinner. You
+see the agent's <em>actual</em> search strings as chips, and a running count in the shape
+<strong>카페 글 N건 검색 · M건 정독</strong> (N surfaced, M read in full). Rows track 카페 자료
+수집 → 구성안 제안.</p>
+<div class="callout danger">
+  <span class="tag">Red flag</span>
+  <p>If you see a generic spinner with no query chips and no counts, the progress channel between
+  the agent and the backend is dead. The work may still complete, but you have lost all visibility
+  into what the agent actually read.</p>
+</div>
+</li>
+
+<li>
+<h4>Possibly answer one round of questions</h4>
+<p>If the brief plus what it found are genuinely too thin, the agent pauses <strong>once</strong>
+with a structured card: numbered questions, plus a 필요한 사진 block with <em>약 N장</em> count
+pills. You have two options, and both work:</p>
+<ul>
+  <li>Answer in the composer, or</li>
+  <li>press <strong>건너뛰기</strong> — which posts a plain "답변 없이 진행해 주세요." message and
+  lets it proceed regardless.</li>
+</ul>
+<p>It is guaranteed never to ask twice in the same job. That guarantee is enforced in two places
+(the prompt is rebuilt without the ask option, and there is a code-level backstop if the model tries
+anyway), so you cannot get stuck in a question loop.</p>
+</li>
+
+<li>
+<h4>GATE 1 — review the 구성안</h4>
+<div class="screen">
+  <div class="bar">status: 구성안 검토 대기</div>
+  <div class="panes">
+    <div class="pane left">
+      <div class="lbl">thread</div>
+      <div class="bubble agent">구성안을 오른쪽에 올려두었어요. 확인해 주세요.</div>
+      <div class="bubble">구성안에 대한 수정 요청을 적어 주세요…</div>
+    </div>
+    <div class="pane right">
+      <div class="lbl">artifact · 구성안</div>
+      <div class="doccard">
+        <b>성수동 5평, 권리금 없이 시작한 테이크아웃 커피</b><br>
+        <span class="chip">8개 섹션</span><br>
+        1. 상권과 입지 판단<br>2. 보증금·권리금 협상<br>3. 철거와 배관…<br>
+        <span class="chip">12컷 · 코퍼스 9 · 선택 3</span>
+      </div>
+      <div style="height:.4rem"></div>
+      <span class="btn">구성 승인 · 작성 시작</span>
+    </div>
+  </div>
+</div>
+<p>This is the cheapest place in the whole system to change your mind, so spend time here. The
+canvas shows the proposed title, the numbered table of contents with key points, and the image plan.
+Each image slot is badged either <strong>코퍼스 있음</strong> (the agent already has candidate
+photos — and you can see actual thumbnails of them, click to open the source) or <strong>운영자
+추가 · 선택</strong> (a spot where an operator photo would help; always optional, never blocking).</p>
+<p>Two moves available:</p>
+<ul>
+  <li><strong>Reshape it</strong> — type feedback into the thread. This re-runs the outline turn and
+  replaces the proposal with a new one. Repeat as often as you like.</li>
+  <li><strong>Approve it</strong> — press <strong>구성 승인 · 작성 시작</strong>. Single click, no
+  confirmation, because nothing irreversible happens.</li>
+</ul>
+</li>
+
+<li>
+<h4>Watch it build</h4>
+<p>The thread panel switches to a per-section build read-out: a row per outline section, a
+<strong>N / M</strong> counter as it advances, and a final <strong>통합 · 이미지·인용 정리</strong>
+row while it stitches everything together. Section count should match the outline you just
+approved. When it lands, <strong>v1</strong> appears in the artifact pane.</p>
+</li>
+
+<li>
+<h4>Read v1 properly</h4>
+<p>The right pane now shows the draft as a document card: real corpus photos placed inline, some
+full-width, some in 2–3-across rows, with captions from the auto-generated alt text. A version
+stepper reads <strong>v1 / 1</strong>.</p>
+<p>You will also see things a reader never will: <strong><code>[n]</code> citation markers</strong>
+in the text, and a collapsible <strong>sources panel</strong> listing the cafe posts behind the
+draft. These are review aids. They are stripped at publish time — deliberately, per the project rule
+that the public copy carries no source markers.</p>
+</li>
+
+<li>
+<h4>Change it — three different tools</h4>
+<p><strong>(a) Ask the agent to revise.</strong> Type feedback. Afterwards the artifact header tells
+you what it actually did: a pill reading <strong>부분 편집 · N곳</strong> (it made N targeted
+find-and-replace edits, everything else byte-identical) or <strong>전체 재작성</strong>, plus
+<strong>v{base} 기반</strong>. Press <strong>변경 보기</strong> to swap the card for a word-level
+diff — additions highlighted, deletions struck through, with a legend. Small requests should produce
+부분 편집; if a one-line tweak triggers a full rewrite, be suspicious.</p>
+<p><strong>(b) Revise an <em>older</em> version.</strong> Step the version stepper back to, say, v1
+while v3 exists, and leave feedback there. The composer placeholder confirms it
+(<em>v1에 대한 수정 요청을 적어 주세요</em>) and the revision genuinely bases on v1 — this was a real
+behavioural fix, not just a label.</p>
+<p><strong>(c) Edit it yourself.</strong> <strong>초안 직접 수정</strong> opens the raw markdown in a
+textarea. Save, and you get a new version marked <code>operator</code>-origin. <strong>No model call
+is made</strong> — this is free and instant. If you ever see an activity indicator after a manual
+save, something is wrong.</p>
+</li>
+
+<li>
+<h4>GATE 2 — approve and publish</h4>
+<p><strong>승인</strong> → <em>정말 승인하시겠어요?</em> → <strong>승인 확정</strong>. Two steps, on
+purpose: this is the only irreversible action in the tool.</p>
+<div class="callout warn">
+  <span class="tag">Important</span>
+  <p>Approval publishes <strong>the version currently on screen</strong>, not necessarily the newest
+  one. If you stepped back to compare v2 and v4, check the stepper before you confirm.</p>
+</div>
+<p>The job then moves 승인됨 → 게시 중 → 게시됨 on its own, without a reload, and a
+<strong>게시된 콘텐츠 보기</strong> link appears. Open it. This is the moment of truth.</p>
+</li>
+
+<li>
+<h4>Check the published article</h4>
+<p>Read it as a reader would. It must contain <strong>none</strong> of the following:</p>
+<ul>
+  <li>any <code>[1]</code> / <code>[n]</code> citation numbers,</li>
+  <li>any <code>[post:123]</code> internal markers,</li>
+  <li>any leftover <code>{{img:…}}</code> placeholder text,</li>
+  <li>a sources / 근거 카페 글 list,</li>
+  <li>a bare <code>Post 4821</code> string (a known leak shape from posts whose titles were
+  backfilled),</li>
+  <li>any <code>cafe.naver.com</code> URL.</li>
+</ul>
+<p>Photos should render with captions, and should be served from your own
+<code>/media/…</code> — never hotlinked from a Naver host. Any of these appearing publicly is a
+content-safety failure, not a cosmetic bug.</p>
+</li>
+</ol>
+
+<h3>Quick reference: what to do in each state</h3>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>You see</th><th>Meaning</th><th>Do</th></tr></thead>
+  <tbody>
+    <tr><td>자료 수집 중 / 초안 작성 중 / 수정 중</td><td>Agent is working; the panel shows what it's doing</td><td>Wait. Up to ~20 minutes before the UI offers a manual refresh.</td></tr>
+    <tr><td>답변 필요</td><td>One-time question round</td><td>Answer, or press 건너뛰기.</td></tr>
+    <tr><td>구성안 검토 대기</td><td>GATE 1 — outline proposed</td><td>Reshape via thread feedback, or 구성 승인 · 작성 시작.</td></tr>
+    <tr><td>검토 대기</td><td>A version exists</td><td>Revise / step versions / edit directly / 승인.</td></tr>
+    <tr><td>게시 중 stuck for a long time</td><td>Publish task hasn't completed</td><td>Wait; a failure returns the job to 검토 대기 with a Korean system message. Just approve again — republishing is safe and reuses the same content row.</td></tr>
+    <tr><td>실패</td><td>Generation gave up (3 attempts)</td><td>Cannot be resumed. Press 새 작업 시작.</td></tr>
+    <tr><td><code>기준 · #19</code> with no title</td><td>Reference article isn't in this environment</td><td>Environment gap, not a bug — id 19 lives in production. Point the setting at a local article.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout ok">
+  <span class="tag">Rules of thumb</span>
+  <p>Spend your attention at GATE 1 — restructuring is nearly free there and expensive later. Prefer
+  <strong>초안 직접 수정</strong> for wording nits (free, instant, exact) and save agent revisions for
+  changes that need re-grounding in the corpus. And always open the published article before you walk
+  away.</p>
+</div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="code">
+<h2>Code</h2>
+
+<p>Three services are involved: <strong>Next.js</strong> (<code>apps/web</code>) for the workspace,
+<strong>Django</strong> (<code>apps/backend</code>) which owns all state and every gate, and a
+<strong>FastAPI</strong> agent service (<code>apps/agent</code>) which owns the model calls and owns
+no state at all. Let's follow one article through.</p>
+
+<h3>1. The door and the chrome-free shell</h3>
+
+<p>The entry point is a plain link on the existing content page
+(<code>operator-content-workspace-route.tsx</code>):</p>
+
+<pre><code>&lt;Link href="/operator/miracle-agent" data-testid="operator-content-agent-entry"&gt;
+  미라클 에이전트
+&lt;/Link&gt;</code></pre>
+
+<p>Full-screen-ness is achieved without a second auth system. <code>operator-shell.tsx</code>
+branches on <code>usePathname()</code>: anything under <code>/operator/miracle-agent</code> renders
+the shared <code>OperatorAdminGate</code> with <code>variant="standalone"</code> — same admin gate,
+same four non-admin states (loading, login, denied, bootstrap error), but the header/nav wrapper is
+dropped. Every other operator route is byte-identically unaffected.</p>
+
+<h3>2. The data model</h3>
+
+<p><code>apps/backend/content/models.py</code> holds seven models. The ones that carry the design:</p>
+
+<ul>
+  <li><strong><code>ContentDraftSettings</code></strong> — a singleton row holding
+  <code>reference_content_id</code>, default 19. Notice it is a
+  <code>PositiveIntegerField</code>, <em>not</em> a foreign key, and the docstring says why: the
+  configured id may not exist in every environment, and resolution must fail soft with a clear job
+  error rather than explode at the FK layer.</li>
+  <li><strong><code>ContentDraftJob</code></strong> — the unit of work. UUID pk, the twelve-value
+  status enum, a snapshotted <code>reference_content_id</code>, Celery bookkeeping
+  (<code>generation_task_id</code>, <code>generation_attempt_count</code>), a schema-light
+  <code>progress</code> JSON blob for the live panel, and <code>published_content</code> — an FK to
+  <code>NotionContent</code> that acts as the publish idempotency anchor.</li>
+  <li><strong><code>ContentDraftVersion</code></strong> — immutable, append-only, numbered per job.
+  <code>base_number</code> records which version it was derived from and <code>revision_meta</code>
+  records <code>{mode, edit_count}</code> for an agent revision. Both are plain columns, so lineage
+  is queryable rather than buried in an audit message.</li>
+  <li><strong><code>ContentDraftAttachment</code></strong> — a UUID pk that <em>is</em> the
+  <code>{{img:uuid}}</code> marker key. A non-empty <code>source_url</code> marks the row as
+  corpus-sourced; empty means an operator upload. No enum, no second table.</li>
+  <li><strong><code>ContentDraftOutline</code></strong> — the 구성안, with a
+  <code>proposed → superseded | approved</code> status so the reshape history survives.</li>
+</ul>
+
+<h3>3. Dispatch: how a message becomes model work</h3>
+
+<p><code>content/draft_dispatch.py</code> is a close clone of the existing consulting-report
+dispatcher, which is deliberate — it is the house pattern for "backend asks the agent to do
+something slow". The shape:</p>
+
+<ul>
+  <li>Queueing happens <strong>after commit</strong> (<code>transaction.on_commit</code>), so a task
+  can never start against a row that hasn't landed.</li>
+  <li><code>DRAFT_GENERATION_MAX_ATTEMPTS = 3</code>, with transient vs permanent error
+  classification — a 503 from the agent retries, a missing reference article does not.</li>
+  <li>Two status sets that intentionally differ: <code>QUEUEABLE</code> (which jobs may be
+  dispatched and claimed) includes <code>requested</code>; <code>STALE</code> (which jobs the
+  crash-recovery sweep may re-claim) excludes it.</li>
+  <li>The actual call is plain <code>urllib</code> with an <code>X-Agent-Service-Token</code> header
+  — the browser has no admin claim in its JWT, so brokering through the backend <em>is</em> the
+  authorization boundary.</li>
+</ul>
+
+<p>The payload builder is where turn precedence is decided. This is the part worth reading closely:</p>
+
+<pre><code># content/draft_dispatch.py — _build_generation_payload
+
+max_number_version = job.versions.order_by("-number").first()
+targeted_message = (
+    job.messages.filter(
+        role=ContentDraftMessage.Role.OPERATOR,
+        kind__in=(Kind.FEEDBACK, Kind.ANSWER),
+        version_id__isnull=False,
+    ).select_related("version").order_by("-created_at", "-id").first()
+)
+latest_version = (
+    targeted_message.version if targeted_message is not None else max_number_version
+)
+
+# WRITE turn: a job with an approved 구성안 and no version yet carries the
+# stored outline so the agent skips research and writes against it.
+approved_outline = None
+if latest_version is None:
+    outline_row = job.outlines.filter(status=APPROVED).order_by("-number").first()
+    if outline_row is not None:
+        approved_outline = outline_row.payload</code></pre>
+
+<p>That first block is the fix that makes "step back to v1 and leave feedback" mean something. The
+revise base is not the highest-numbered version — it is the version your most recent targeted
+message pointed at. The field name in the payload stayed <code>latest_version</code>; only which
+row it resolves to changed.</p>
+
+<h3>4. The agent pipeline</h3>
+
+<p><code>apps/agent/app/content_drafts/agent.py</code> — one entry point,
+<code>run_content_draft_pipeline</code>, whose branch mirrors the precedence rule exactly:</p>
+
+<pre><code>is_revision  = latest_version is not None
+is_write_turn = (not is_revision) and (approved_outline is not None)
+
+if is_write_turn:
+    doc_map = await _rehydrate_doc_map(settings, approved_outline)      # no research
+    corpus_candidates = _rebuild_corpus_candidates(approved_outline)    # same keys
+else:
+    doc_map, research_stats = await _run_research_loop(..., flow=("revise" if is_revision else "outline"))</code></pre>
+
+<p><strong>The research loop</strong> is the one genuinely agentic part. A flash model is bound to
+two tools and left to plan its own reading; the loop dispatches each tool call by hand, accumulates
+a <code>doc_map</code> of <code>{post_id: {meta, body}}</code>, and stops on a no-tool-call response
+or at <code>MAX_RESEARCH_ITERATIONS = 6</code>. Caps are enforced <em>inside</em> dispatch rather
+than by trusting the prompt — past 8 searches the tool simply returns
+<em>"검색 한도에 도달했습니다. 정리해서 마치세요."</em> Each search and read then emits a progress
+payload with the real query strings and truthful cumulative counts, which is what you see as chips
+in the UI.</p>
+
+<p><strong>The gate</strong> (<code>_gate_and_outline</code>) decides "enough material?" and either
+emits asks or an outline. The never-ask-twice guarantee is two-layered:
+<code>allow_asks=not _has_prior_asks(messages)</code> rebuilds the prompt without the asks option,
+and if the model returns <code>needs_input</code> anyway the result is coerced to draft mode in
+Python. Prompt instruction plus deterministic backstop — the guarantee doesn't depend on the model
+complying.</p>
+
+<p><strong>The write</strong> is a per-section call (<code>_write_section</code>, which sees the
+approved outline, its own section's key points, and the previous sections) followed by
+<code>_integrate_sections</code> over the whole body. Integration <em>subsumes</em> the older
+reflection pass — they are never both run. If integration fails, sections are simply concatenated:
+a degraded article beats no article.</p>
+
+<p><strong>The revise</strong> returns <code>(mode, body, note, edit_count)</code>. In
+<code>edits</code> mode the model returns a JSON block of find/replace pairs, and
+<code>_apply_edits</code> applies each one <em>only</em> if its <code>find</code> string occurs
+exactly once; otherwise the entire edit set is discarded and it falls back to a full rewrite. That
+strictness is what makes "untouched text stays byte-identical" a real promise rather than a hope —
+and <code>edit_count</code> is computed from the applied edits, never self-reported by the model.</p>
+
+<h3>5. Corpus images</h3>
+
+<p>Selection lives in <code>content_drafts/images.py</code>:
+<code>build_corpus_image_inventory</code> keeps only images that have generated alt text, excludes
+URLs already attached to the job, mints a <code>uuid4</code> per candidate, and round-robins one
+image per post so a single photo-heavy post can't dominate. Crucially, images are offered
+<strong>only from posts the research loop actually read</strong> — relevance follows the agent's own
+reading choices.</p>
+
+<p>Download happens backend-side at result-apply time
+(<code>content/draft_images.py</code>), <em>outside</em> the locked transaction, and is guarded:
+HTTPS only, host must end in <code>*.pstatic.net</code>, content type must be <code>image/*</code>,
+~15 MB cap enforced both on the declared length and while streaming. Anything failing those checks
+is dropped fail-soft — its marker is stripped from the body, one Korean system message notes the
+drop count, and the version still lands. <em>A photo failing to download never fails the article.</em></p>
+
+<h3>6. Publish — the part that must be right</h3>
+
+<p>Approving writes the decision and queues the publish task <em>in the same transaction</em>. Then
+<code>content/draft_publish.py</code>:</p>
+
+<ol>
+  <li><strong>Anchors identity first.</strong> <code>_ensure_published_content</code> creates the
+  <code>NotionContent</code> row with an empty <code>html_path</code> before any file work — so it
+  is invisible to readers, and any retry or crash-recovery re-publish reuses the same content id
+  instead of littering the catalogue with duplicates.</li>
+  <li><strong>Splits blocks</strong> with <code>_split_blocks</code>, a line-level mirror of the
+  frontend's <code>splitMiracleAgentArtifactBlocks</code>. Same regex, same buffering rules — which
+  is why the preview and the published page agree about what is a row and what is a full-width
+  figure.</li>
+  <li><strong>Scrubs</strong> every markdown chunk, the title, and the description through
+  <code>publish_scrub.py</code>.</li>
+  <li><strong>Renders</strong> lone markers as <code>&lt;figure&gt;</code> and same-line groups as
+  <code>&lt;div class="column-list"&gt;</code>, into a document whose
+  <code>&lt;h1 class="page-title"&gt;</code> comes first — the public reader detects that canonical
+  header and suppresses its own duplicate title.</li>
+  <li><strong>Swaps the directory atomically</strong>, reusing the very same primitives the ZIP
+  importer uses. Only then is <code>html_path</code> filled in and the article becomes visible.</li>
+</ol>
+
+<p>The scrub itself is 56 lines of pure Python with no Django imports, so it is trivially testable
+in isolation. The order matters and the comments say why:</p>
+
+<pre><code># content/publish_scrub.py
+def scrub_public_text(text: str) -&gt; str:
+    without_internal    = _INTERNAL_CITATION_MARKER_RE.sub("", text)   # [post:123]
+    without_cafe_url    = _CAFE_URL_RE.sub("", without_internal)       # cafe.naver.com/...
+    without_visible     = _strip_visible_citation_markers(without_cafe_url)  # [1]..[50]
+    without_post_title  = _BACKFILLED_POST_TITLE_RE.sub("", without_visible) # "Post 4821"
+    return _IMAGE_MARKER_RE.sub("", without_post_title)                # {{img:uuid}}</code></pre>
+
+<p>Note the one piece of real judgment in there: visible <code>[n]</code> markers are stripped only
+for <code>n ≤ 50</code>. Above that the bracketed number is far more likely to be a year or a
+quantity in the prose than a citation, so it is preserved. And <code>Post \d+</code> is stripped
+because of a previously-discovered leak: posts with empty titles get backfilled to the literal
+string <code>Post {post_id}</code>, which is an internal identifier wearing a title's clothes.</p>
+
+<div class="callout">
+  <span class="tag">Failure semantics</span>
+  <p>Any exception during publish returns the job to <strong>검토 대기</strong> — never
+  <code>failed</code>, which stays reserved for generation. It sets an error detail and writes a
+  Korean system message telling the operator to approve again. Because materialization is idempotent
+  and identity was anchored up front, "approve again" is a complete recovery procedure, and the
+  reclaim sweep needs no attempt ceiling.</p>
+</div>
+
+<h3>7. One progress channel, two payload shapes</h3>
+
+<p>Live progress could easily have become two half-built systems. It didn't, and the discipline is
+explicit in the code comments. There is one path:</p>
+
+<pre><code>agent  content_drafts/progress.py :: emit_draft_progress()     # fail-silent, ~5s timeout,
+   ↓                                                          # swallows every error
+backend POST /api/content/internal/miracle-agent/jobs/&lt;uuid&gt;/progress
+   ↓        (X-Agent-Service-Token; 204 no-op unless the job is actively generating)
+        ContentDraftJob.progress  (JSONField)
+   ↓
+web    2.5s poll → getMiracleAgentBuildProgress() → the staged panel</code></pre>
+
+<p>Two payload variants ride it — a <code>writing</code>/<code>integrating</code> build shape and a
+<code>collecting</code>/<code>outlining</code>/<code>revising</code>/<code>reflecting</code> research
+shape — discriminated on <code>stage</code>. The endpoint stores whatever envelope arrives, so
+adding the research variant required <strong>zero backend changes</strong>.</p>
+
+<p>Two properties make this safe rather than fragile. The emitter is <em>fail-silent</em>: if the
+backend is unreachable the article still gets written, because cosmetic telemetry must never be able
+to fail real work. And progress is cleared at claim, at apply, and at failure, so a late callback
+for a finished job is a cheap 204 and can never resurrect a stale panel.</p>
+
+<h3>8. The web side, briefly</h3>
+
+<p><code>operator-miracle-agent-route.tsx</code> is a single large client component. Its state
+machine is small and readable: <code>getMiracleAgentComposerMode(status)</code> returns
+<code>"feedback"</code>, <code>"answer"</code>, or <code>null</code>; the poll runs at 2.5 s for at
+most 480 attempts (a 20-minute ceiling, comfortably past the 900-second generation timeout) and
+keeps running through <code>approved</code>/<code>publishing</code> so the published link appears
+without a reload. Beyond the ceiling it degrades to a stalled notice with a manual refresh rather
+than pretending to be stuck.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<h3>Where P30 matches prevailing practice</h3>
+
+<p><strong>Gating the irreversible action, not every step.</strong> Anthropic's guidance on agent
+design notes that agents "can pause for human feedback at checkpoints or when encountering
+blockers", and that "human review remains crucial for ensuring solutions align with broader system
+requirements" (<a href="https://www.anthropic.com/engineering/building-effective-agents">Building
+effective agents</a> — anthropic.com). P30 gates exactly twice, and the second gate sits directly in
+front of the only action that touches the public site. The research loop, by contrast, runs
+unsupervised — which is right, because it is cheap and reversible.</p>
+
+<p><strong>Outline-then-write for long grounded articles.</strong> This is not a stylistic
+preference; it is a measured result. Stanford's STORM system generates Wikipedia-length articles by
+treating research and outlining as a distinct pre-writing stage, and reports roughly a 25-point
+absolute gain in perceived organization over outline-driven baselines
+(<a href="https://arxiv.org/abs/2402.14207">Assisting in Writing Wikipedia-like Articles From
+Scratch with Large Language Models</a> — arxiv.org). P30 lands in the same place from a different
+direction: the outline exists to be <em>approved</em>, and gets structural quality as a side effect.</p>
+
+<p><strong>Durable state so the workflow can genuinely pause.</strong> LangGraph frames this as
+durable execution — persisting state at key points so a run can pause for human review and later
+"be resumed from its last recorded state"
+(<a href="https://docs.langchain.com/oss/python/langgraph/durable-execution">Durable execution /
+persistence</a> — docs.langchain.com). P30 needs precisely this property and gets it from a Django
+row plus Celery rather than a checkpointer, which is a defensible trade when a pause may last days
+and the "resume trigger" is a human clicking a button in a web app.</p>
+
+<p><strong>Filtering internal context out of user-facing output.</strong> OWASP's LLM Top 10 lists
+Sensitive Information Disclosure as a top risk and recommends output-side sanitization and redaction
+rather than relying on prompt instructions, noting that system-prompt restrictions "may not always
+be honored"
+(<a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/">LLM02:2025
+Sensitive Information Disclosure</a> — genai.owasp.org). <code>publish_scrub.py</code> is exactly
+that posture: the model is <em>asked</em> to cite properly, but the published copy is
+<em>mechanically</em> stripped, and the strip is a pure function with its own tests.</p>
+
+<h3>Where it deliberately diverges — and why that's defensible</h3>
+
+<ul>
+  <li><strong>No agent framework.</strong> No LangGraph, no state graph — plain async functions and a
+  database status column. Given that the "graph" has three nodes, the pauses are measured in hours,
+  and the resume trigger is an HTTP request from a browser, a framework checkpointer would add a
+  second source of truth next to the one Django already owns.</li>
+  <li><strong>Agentic research, deterministic writing.</strong> The model plans its own reading, but
+  the write path is a fixed spine: N section calls, one integration, one post-process. Anthropic's
+  framing is that "workflows offer predictability and consistency for well-defined tasks, whereas
+  agents are the better option when flexibility and model-driven decision-making are needed"
+  (anthropic.com, cited above). P30 splits the difference along exactly that line — research is
+  open-ended, writing is not.</li>
+  <li><strong>No fully automatic mode.</strong> Scheduled generation was designed and then
+  deliberately deferred to a later phase, and even there it would land drafts in the review queue
+  rather than publish them.</li>
+</ul>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+  <li><strong>Sanitize raw HTML in the materializer.</strong> Python-markdown passes raw HTML through
+  by default, and <code>draft_publish.py</code> does not currently strip it — operator review before
+  approve is the only gate. A bleach-based allowlist on the rendered fragments would close it. This
+  is a known, documented deferral, not an oversight; it is the highest-value hardening left.</li>
+  <li><strong>Add a regression test that asserts the published copy is clean.</strong> The scrub is
+  unit-tested, but the end-to-end property operators actually care about — "nothing internal reaches
+  the public HTML" — is currently verified by a human opening the article. A single test that
+  publishes a draft stuffed with every marker shape and greps the materialized HTML would make that
+  guarantee automatic.</li>
+  <li><strong>Audit for dead environment knobs.</strong> Shipping P30's ops slice surfaced that two
+  consulting model variables are set in both env files but referenced by no compose file — they have
+  been silently inert. The content knobs are wired correctly today; a small check that every
+  documented variable actually reaches a container would stop the class of bug rather than the
+  instance.</li>
+  <li><strong>Decide on a revision cost cap.</strong> Manual revisions are currently unbounded, with
+  only a per-attempt retry limit. Since every revise turn is real spend, a soft warning past N
+  revisions — or a visible per-job cost read-out — would make the trade-off legible at the moment
+  the operator is making it.</li>
+</ol>
+</section>
+
+<!-- ==================================================================== -->
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p class="footnote">Five questions. Click an answer to see whether it's right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A job has an approved 구성안 <em>and</em> three existing versions. The
+  operator leaves feedback. Which turn does the agent run?</p>
+  <button class="opt" data-correct="false">A WRITE turn — the approved outline is present, so it writes against it again</button>
+  <button class="opt" data-correct="true">A REVISE turn — <code>latest_version</code> takes precedence over <code>approved_outline</code></button>
+  <button class="opt" data-correct="false">An OUTLINE turn — feedback always re-opens the structure for review</button>
+  <p class="why" hidden>Precedence is checked in a fixed order: <code>latest_version</code> first,
+  then <code>approved_outline</code>, then outline. And the backend never even sends
+  <code>approved_outline</code> once a version exists. That ordering is what guarantees a job can't
+  slide backwards into re-proposing structure after it has started producing drafts.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Why does the published article strip <code>[3]</code> but keep
+  <code>[2026]</code>?</p>
+  <button class="opt" data-correct="false">Because only single-digit numbers are ever used as citations</button>
+  <button class="opt" data-correct="true">Because the scrub only removes bracketed numbers up to 50 — above that it is far more likely to be a year or a quantity in the prose</button>
+  <button class="opt" data-correct="false">Because the agent tags real citations with a special character the regex matches</button>
+  <p class="why" hidden>A published copy has no valid citations at all, so any bracketed number is
+  suspect — but stripping every one of them would mangle prose like "[2026]" or "[300]". The
+  cutoff at 50 is a pragmatic heuristic, written down and commented, rather than a guess buried in a
+  regex.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> An operator steps the version stepper back to v1 (while v3 exists) and
+  leaves feedback. What was the fix that made this actually work?</p>
+  <button class="opt" data-correct="false">The frontend now sends the full v1 body text in the feedback request</button>
+  <button class="opt" data-correct="true">The backend resolves the revise base from the newest operator message carrying a version reference, instead of always taking the highest-numbered version</button>
+  <button class="opt" data-correct="false">v3 is deleted so that v1 becomes the latest version again</button>
+  <p class="why" hidden>Before the fix, the UI honestly told the operator they were revising v1 while
+  the payload builder silently based the revision on v3. The fix is entirely server-side and the
+  payload's field name never changed — only which row it resolves to. Versions stay immutable and
+  are never deleted.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Corpus photos are turned into ordinary attachment rows keyed by an
+  agent-minted UUID. What did that buy?</p>
+  <button class="opt" data-correct="false">It let the model receive image data directly, so it could judge each photo visually</button>
+  <button class="opt" data-correct="true">The stored draft text needs no rewriting, so the preview, publisher and thumbnail picker all worked on corpus images with zero changes</button>
+  <button class="opt" data-correct="false">It removed the need to download images, since the marker points at the Naver URL</button>
+  <p class="why" hidden>Because a corpus photo and an uploaded photo become the same kind of row, the
+  <code>{{img:uuid}}</code> markers the model writes are already final — nothing downstream has to
+  know where a picture came from. (Images are definitely downloaded, not hotlinked: the published
+  page must never reference an external host.)</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> The agent asks a round of questions, the operator presses 건너뛰기, and the
+  turn re-runs. What stops it from asking again?</p>
+  <button class="opt" data-correct="false">The skip sets a flag on the job that the gate checks</button>
+  <button class="opt" data-correct="false">Nothing — it may ask again, and the operator just skips once more</button>
+  <button class="opt" data-correct="true">Two layers: the prompt is rebuilt without the asks option, and a Python backstop coerces the result to draft mode if the model returns <code>needs_input</code> anyway</button>
+  <p class="why" hidden>The guard reads the thread's own history — has any message of kind
+  <code>asks</code> ever been written? — so it holds no matter how the first round was resolved:
+  skip, a real answer, or a later outline reshape. And it doesn't trust the prompt to be obeyed;
+  the deterministic backstop is what makes "at most once" a guarantee rather than a tendency. The
+  skip itself needs no new mechanism: it is a plain answer message with a fixed body.</p>
+</div>
+</section>
+
+<hr>
+<p class="footnote">Grounded in the P30 phase record and the shipped code across
+<code>apps/backend/content/</code>, <code>apps/agent/app/content_drafts/</code>, and
+<code>apps/web/src/components/operator/</code> as of 2026-07-25.</p>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (right) {
+          q.querySelectorAll('.opt').forEach(function (other) {
+            other.disabled = true;
+          });
+        }
+        if (why) { why.hidden = false; }
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
