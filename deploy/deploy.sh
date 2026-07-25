@@ -172,7 +172,7 @@ capture_artifacts() {
         mkdir -p "$REMOTE_ARTIFACT_DIR" 2>/dev/null || true
         dc ps                              > "$REMOTE_ARTIFACT_DIR/deploy-compose-ps.txt"   2>&1 || true
         dc logs --no-color --tail 300 api  > "$REMOTE_ARTIFACT_DIR/deploy-api-logs.txt"     2>&1 || true
-        dc logs --no-color --tail 300 web  > "$REMOTE_ARTIFACT_DIR/deploy-web-logs.txt"     2>&1 || true
+        dc logs --no-color --tail 300 knowledge-web  > "$REMOTE_ARTIFACT_DIR/deploy-web-logs.txt"     2>&1 || true
         dc logs --no-color --tail 300 mcp  > "$REMOTE_ARTIFACT_DIR/deploy-mcp-logs.txt"     2>&1 || true
         log "diagnostics written to $REMOTE_ARTIFACT_DIR"
     else
@@ -311,7 +311,7 @@ fi
 # its config and this plain `up` leaves the running uvicorn on stale code; step 2b
 # force-recreates it explicitly. `postgres` comes up as the api's healthy-dependency.
 log "building images + recreating web/mcp (COMPOSE_BAKE=false docker compose up -d --build)"
-dc up -d --build
+dc up -d --build --remove-orphans
 
 # --- 2b. force-recreate the bind-mounted api ---------------------------------
 # The api runs server/ from the BIND MOUNT — a code-only push changes neither its image
@@ -324,7 +324,7 @@ dc up -d --force-recreate --no-deps api
 # --- 3. health-gate the app services (api + web + mcp) -----------------------
 gate_ok=1
 wait_healthy api knowledge-api || gate_ok=0
-wait_healthy web knowledge-web || gate_ok=0
+wait_healthy knowledge-web knowledge-web || gate_ok=0
 wait_healthy mcp knowledge-mcp || gate_ok=0
 
 if (( gate_ok )); then
