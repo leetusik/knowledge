@@ -123,7 +123,11 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  web:
+  # Named knowledge-web (NOT `web`): changple_web also defines a `web` service, so a
+  # bare `web` here collided on changple_shared_network's `web` alias and Docker DNS
+  # round-robined changple.ai's upstream onto this container (2026-07-25 incident).
+  # Keep this name unique; the edge already proxies to knowledge-web by container name.
+  knowledge-web:
     # The Next.js 16 standalone app (P14): the public landing at `/`, the
     # authenticated UI (/dashboard, /graph, /documents, /projects, /login,
     # /signup), and the `/api/auth/*` BFF. Multi-stage build from web/Dockerfile
