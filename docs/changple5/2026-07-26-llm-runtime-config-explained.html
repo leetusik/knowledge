@@ -1,0 +1,802 @@
+<!--kb
+title: "Moving LLM configuration out of environment variables and into the database (P44)"
+date: 2026-07-26
+tags:
+  - runtime-configuration
+  - llm-operations
+  - graceful-degradation
+  - caching
+  - django
+source:
+  project: changple5
+  repo: /Users/sugang/projects/personal/changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moving LLM configuration out of environment variables and into the database (P44)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.25; }
+    h2 { margin-top: 2.4rem; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: .3rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; color: #111; padding: .75rem; border-radius: 6px;
+           font-size: .9em; }
+    code { background: rgba(128,128,128,.15); padding: .1rem .3rem; border-radius: 3px;
+           font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4; color: #123;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #d68; background: #fbf0f3; }
+    .callout.note { border-left-color: #58a; background: #eff4fb; }
+    .callout h4 { margin: 0 0 .4rem; font-size: 1em; }
+    table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .93em; }
+    th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: rgba(128,128,128,.12); }
+    figure { margin: 1.4rem 0; }
+    figcaption { font-size: .88em; opacity: .8; margin-top: .5rem; text-align: center; }
+    .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .5rem; }
+    .box { flex: 1 1 8rem; border: 2px solid #58a; border-radius: 8px; padding: .6rem .7rem;
+           background: #eff4fb; color: #123; font-size: .86em; }
+    .box.b-green { border-color: #4a7; background: #f0f8f4; }
+    .box.b-red   { border-color: #d68; background: #fbf0f3; }
+    .box.b-gray  { border-color: #999; background: #f3f3f3; }
+    .box strong { display: block; margin-bottom: .25rem; }
+    .arrow { align-self: center; font-size: 1.5rem; opacity: .6; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
+              padding: .55rem .8rem; cursor: pointer; border: 1px solid rgba(128,128,128,.5);
+              border-radius: 6px; background: transparent; color: inherit;
+              font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; border-color: #4a7; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; border-color: #d68; }
+    .q .why { margin: .5rem 0 1.6rem; font-size: .95em; opacity: .9;
+              border-left: 3px solid rgba(128,128,128,.5); padding-left: .7rem; }
+    .q p:first-child { margin-bottom: .5rem; }
+    nav ol { line-height: 1.9; }
+  </style>
+</head>
+<body>
+
+<h1>Moving LLM configuration out of environment variables and into the database</h1>
+
+<p><em>How changple5 gave its operator a web page for choosing which Gemini model each part of the
+product uses — and how much thinking each one does — without a redeploy, a restart, or a single
+outage. Phase P44, shipped 2026-07-26.</em></p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<h3>The very beginning: what "configuration" even means</h3>
+
+<p><em>If you already know what an environment variable is and why config lives outside code, skip
+to "Eleven places, one product" below.</em></p>
+
+<p>Every program has values that are not really <em>part</em> of the program. A database password.
+A port number. The name of an AI model to call. These are <strong>configuration</strong>: things
+the same code should be able to run with different values, depending on where it is running.</p>
+
+<p>The industry's standard answer for the last decade or so is the
+<strong>twelve-factor</strong> rule: keep configuration in <strong>environment variables</strong>
+— key/value pairs the operating system hands to a process when it starts. The
+<a href="https://12factor.net/config">twelve-factor manifesto</a> (12factor.net) puts it plainly:
+"the twelve-factor app stores config in environment variables," because they can be changed
+between deploys without touching code, are unlikely to be committed to version control by
+accident, and work in every language.</p>
+
+<p>changple5 follows this. A file called <code>.dev.env</code> holds the developer's values, a
+file called <code>.prod.env</code> holds production's, Docker Compose passes them into each
+container, and the code reads them at startup.</p>
+
+<div class="callout note">
+<h4>The catch that this whole story is about</h4>
+<p>Environment variables are read <strong>once, when the process starts</strong>. To change one,
+you must edit a file on the server and <strong>restart the container</strong>. That is completely
+fine for a database password. It is <em>not</em> fine for a value a non-engineer wants to change
+on a Tuesday afternoon.</p>
+</div>
+
+<h3>Eleven places, one product</h3>
+
+<p>changple5 is an AI product for Korean small-business owners. Under the hood it does not call
+"the AI" once — it calls a large language model (LLM) in <strong>eleven different roles</strong>,
+each doing a different job:</p>
+
+<table>
+  <thead><tr><th>Service</th><th>Roles</th><th>What they do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>apps/agent</code><br>(FastAPI, 8 roles)</td>
+      <td><code>chat</code>, <code>chat_context_token_estimation</code>,
+          <code>chat_history_compaction</code>, <code>retrieval_rerank</code>,
+          <code>consulting_chat</code>, <code>consulting_report</code>,
+          <code>content_draft</code>, <code>content_research</code></td>
+      <td>Answering the user, re-ranking search results, summarising long histories,
+          running the consulting flow, drafting marketing content</td>
+    </tr>
+    <tr>
+      <td><code>apps/backend</code><br>(Django, 3 roles)</td>
+      <td><code>conversation_title</code>, <code>image_alt</code>,
+          <code>text_enrichment</code></td>
+      <td>Naming a conversation, writing alt-text for images, enriching scraped documents</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Each role had its own environment variable naming a Gemini model. Cheap-and-fast models
+(<code>gemini-3.1-flash-lite</code>) for mechanical jobs, expensive-and-smart ones
+(<code>gemini-3.1-pro-preview</code>) for writing. Choosing well is a real business decision:
+it trades money against answer quality, and the person best placed to make it is the
+<strong>operator</strong> running the product — not an engineer with SSH access.</p>
+
+<h3>The two complaints that started the phase</h3>
+
+<p>The operator asked for something short: <em>"make llm configurable in webui (out of env). with
+their effort level. every model."</em> Behind it were two concrete frustrations.</p>
+
+<p><strong>First: "the content agent LLM is hardcoded."</strong> This turned out to be true, and
+for a sneaky reason. The agent's settings loader is configured with
+<code>env_ignore_empty=True</code>, meaning an <em>empty</em> environment variable is treated as
+if it were absent, so the code default applies. Compose passed the content-model variables through
+as <code>${VAR:-}</code> — empty when unset — and <code>.dev.env</code> had no line for them at
+all. So the variables existed, were passed, were empty, and were ignored. The model was
+effectively hardcoded, exactly as reported. Worse, a related pair
+(<code>GEMINI_CONSULTING_CHAT_MODEL</code>, <code>GEMINI_CONSULTING_AGENT_MODEL</code>) was
+<em>set</em> in both env files but named in <strong>no</strong> Compose block at all — so those
+values never reached a container in any environment, ever.</p>
+
+<p><strong>Second: there was no way to control reasoning effort per role.</strong> Modern Gemini
+models can be told how hard to think before answering — a <code>thinking_level</code> of
+<code>minimal</code>, <code>low</code>, <code>medium</code> or <code>high</code>. A previous phase
+had wired this for the main <code>chat</code> role only, through an environment variable. The
+other ten roles had no control at all.</p>
+
+<p>So the phase's job: build the store, make both services read it live, build the web page, fix
+the env plumbing underneath it, and prove the whole thing works on a real running stack.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The shape of the change, in one picture</h3>
+
+<figure>
+  <div class="flow">
+    <div class="box b-gray"><strong>Before</strong>
+      operator asks an engineer → engineer edits <code>.prod.env</code> on the server →
+      <code>docker compose up</code> → containers restart → new model live
+      <br><br><em>minutes to days, needs SSH</em></div>
+    <div class="arrow">→</div>
+    <div class="box b-green"><strong>After</strong>
+      operator types a model name on a web page → presses 저장 → new model live
+      <br><br><em>≤ 30 seconds, no restart, no engineer</em></div>
+  </div>
+  <figcaption>The whole point of the phase, stated as a before/after.</figcaption>
+</figure>
+
+<h3>Why this is harder than "just read from the database"</h3>
+
+<p>The naive version — look up the model in the database every time you need it — has three
+problems, and the interesting design work is all in dodging them.</p>
+
+<p><strong>Problem 1: the settings object is frozen.</strong> The agent's
+<code>get_settings()</code> function is decorated with <code>@lru_cache</code>, a Python
+decorator meaning "call this once, then hand out the same object forever." That is a deliberate
+performance choice, but it means anything read <em>through</em> settings is frozen for the life of
+the process. A database-backed value therefore has to be read <strong>outside</strong> the cached
+settings object entirely — a separate code path that nobody has cached.</p>
+
+<p><strong>Problem 2: one query per LLM call is too many.</strong> A single chat turn constructs
+several models. Querying the database each time adds latency to the hottest path in the product.
+The standard fix is a <strong>TTL cache</strong> — "time to live." Read the table once, keep the
+answer in memory, and only re-read when the answer is older than <em>N</em> seconds. Here
+<em>N</em> is 30. So the cost is one query per process per 30 seconds no matter how much traffic
+flows, and the operator's edit shows up within 30 seconds. That is the trade: a tiny, bounded
+staleness in exchange for effectively free reads.</p>
+
+<div class="callout">
+<h4>Toy example of the TTL</h4>
+<pre><code>t = 0s    process reads the table       snapshot = {chat: "flash", ...}, expires at t=30
+t = 5s    operator saves "pro" via the web page   (database now says "pro")
+t = 6s    a chat turn asks for the model → snapshot is still fresh → "flash"
+t = 31s   a chat turn asks for the model → snapshot expired → re-read → "pro"</code></pre>
+<p>The read at <em>t = 6s</em> returning the <em>old</em> value is not a bug — it is the proof
+that the cache is real. When the P44 team verified this on a live stack, that unchanged read was
+the load-bearing piece of evidence: without it, a later change could just have been an accidental
+fresh read rather than the TTL doing its job.</p>
+</div>
+
+<p><strong>Problem 3: a config read must never break the product.</strong> This is the one that
+shapes everything else. The database holding the configuration is the same database everything
+else uses, but the failure modes are not the same. If the conversation table is unreachable the
+product is down anyway. If the <em>config</em> table is unreachable — a bad migration, a typo, a
+network blip — the product should carry on happily with whatever it used yesterday.</p>
+
+<h3>The three-step ladder</h3>
+
+<p>So every role resolves its model through a ladder, and each rung is a fallback for the one
+above:</p>
+
+<figure>
+  <div class="flow">
+    <div class="box b-green"><strong>1. Database</strong>
+      The operator's choice. Wins whenever it can be read.</div>
+    <div class="arrow">→</div>
+    <div class="box"><strong>2. Environment variable</strong>
+      The old mechanism, demoted. Used at first boot and during an outage.</div>
+    <div class="arrow">→</div>
+    <div class="box b-gray"><strong>3. <code>DEFAULT_*</code> constant</strong>
+      A literal in the source, right next to the code that uses it. Always present.</div>
+  </div>
+  <figcaption>DB → env → code default. Falling down the ladder is normal operation, not an error.</figcaption>
+</figure>
+
+<p>The environment variables were deliberately <strong>not deleted</strong>. That sounds like it
+undercuts "get config out of env," but it does the opposite: it is what makes moving to the
+database safe. Rung 2 exists so a brand-new container that has never reached the database still
+starts with sensible values.</p>
+
+<div class="callout">
+<h4>The trick that made this a one-step, zero-risk migration</h4>
+<p>Before writing any code, the team checked every one of the eleven roles across
+<code>.dev.env</code>, <code>.prod.env.example</code> and both Compose files, and found that
+<strong>every value actually in use already equalled its code default</strong>. So the database
+migration seeds each row with the code default, and on the day it lands
+<em>nothing changes anywhere</em>. Dev behaves identically. Production behaves identically. That
+is what makes the rule "the database wins" safe to ship in one go instead of behind a flag. It
+was later verified on the live stack, not just argued:
+<code>ALL SEEDED VALUES == REGISTRY CODE DEFAULTS: True</code>.</p>
+</div>
+
+<h3>The two shapes a config table can have</h3>
+
+<p>There was a real design fork here. changple5 already had an operator-editable config table,
+<code>DocumentRetrievalPolicy</code>, built as a <strong>singleton</strong>: exactly one row, one
+column per setting. Copying that shape would have meant a table with 22 columns (a model id and a
+thinking level for each of the eleven roles).</p>
+
+<figure>
+  <div class="flow">
+    <div class="box b-red"><strong>Singleton (rejected)</strong>
+      One row, 22 columns. Adding a 12th role = a schema migration + serializer edits + UI
+      edits.</div>
+    <div class="arrow">vs</div>
+    <div class="box b-green"><strong>Per-role rows (chosen)</strong>
+      11 rows, 3 meaningful columns: <code>role</code>, <code>model_id</code>,
+      <code>thinking_level</code>. Adding a 12th role = inserting a row.</div>
+  </div>
+  <figcaption>The classic "wide table vs. tall table" choice, decided by what changes most often.</figcaption>
+</figure>
+
+<p>The deciding evidence was in the repo's own history: another table,
+<code>LandingPageCopy</code>, had <em>started</em> as a singleton and been
+<strong>migrated away from it</strong> in an earlier phase. The team had already paid for that
+lesson once. Crucially, the <code>role</code> column has no <code>choices=</code> constraint, so
+the database does not need to know the list of valid roles — that list lives in code, and adding
+to it never requires touching the schema.</p>
+
+<h3>What "no value" has to mean</h3>
+
+<p>One subtle but load-bearing decision: <code>thinking_level</code> is
+<strong>nullable</strong>, and <code>NULL</code> means <em>"send no thinking parameter at
+all"</em> — not "send zero," not "use some default we picked." Ten of the eleven roles seed as
+<code>NULL</code>, which preserves the provider's own behaviour exactly. Only <code>chat</code>
+seeds a real value (<code>high</code>), preserving what the previous phase had already shipped.</p>
+
+<p>This is why the web UI has a <code>기본값 (미설정)</code> ("default / unset") option that sends
+an explicit JSON <code>null</code> — which is meaningfully different from <em>omitting</em> the
+field. Omitting means "leave it alone"; <code>null</code> means "clear it." Confusing the two
+would make it impossible to ever turn a thinking level back off.</p>
+
+<h3>Guarding against a typo</h3>
+
+<p>Free text in a box that feeds a paid API call is a little scary. If the operator types
+<code>gemini-3.1-fash-lite</code>, what happens?</p>
+
+<p>The tempting answer is "detect it at call time and quietly substitute a known-good model." The
+team rejected that, and the reasoning is worth internalising: silently substituting
+<strong>masks</strong> the misconfiguration, so the operator sees a working product and never
+learns their setting is wrong, while the bill quietly reflects a model they did not choose. Later,
+behaviour becomes unexplainable — the config says one thing, reality does another.</p>
+
+<p>Instead, validation happens <strong>on write</strong>, at the moment the operator can actually
+do something about it:</p>
+
+<div class="flow">
+  <div class="box"><strong>1. Shape check</strong> A conservative regex on the id, ≤ 200
+    characters.</div>
+  <div class="box"><strong>2. Embedding guard</strong> Reject known embedding-model ids for any
+    generation role.</div>
+  <div class="box b-green"><strong>3. Live probe</strong> Actually call the provider with the
+    submitted id and see if it exists.</div>
+</div>
+
+<p>The probe is the interesting one. Before saving, the server builds a throwaway client with the
+submitted id and asks it to count the tokens in the word "ping" — the cheapest real call
+available. If Google says "no such model," the save fails and the operator sees
+<em>Google's own words</em>. If the probe fails for some <em>other</em> reason — a quota error, a
+timeout, a missing API key — the save is <strong>allowed</strong>. That asymmetry is the whole
+craft of it: a provider outage must never lock an operator out of their own settings page.</p>
+
+<p>And because a genuinely brand-new model might not answer a token-count call yet, there is a
+deliberate escape hatch: a <code>?probe=false</code> flag, surfaced in the UI as a
+<code>검증 없이 저장</code> ("save without verification") button that appears only <em>after</em> a
+probe rejection. The alternative — a hardcoded list of allowed models — would go stale within
+weeks and block the operator from adopting a new Gemini model, which is the entire point of the
+feature.</p>
+
+<h3>Why embeddings are deliberately excluded</h3>
+
+<p>The operator said "every model." Eleven roles are configurable; one model is not, and that
+exclusion is enforced in code. An <strong>embedding model</strong> is the thing that turns
+documents into vectors for semantic search. changple5 has thousands of documents already
+converted using one specific embedding model. Swapping it at runtime would not produce worse
+search — it would produce <em>nonsense</em>, because new vectors would live in a different
+mathematical space than the stored ones. The whole index would need rebuilding. So the embedding
+model stays pinned to an environment variable, is absent from the table, the API and the UI, and
+the write path actively rejects known embedding ids for any generation role.</p>
+
+<div class="callout note">
+<h4>A nice detail in that guard</h4>
+<p>The rejection matches embedding ids <strong>exactly</strong>, after lower-casing and stripping
+a <code>models/</code> prefix — deliberately <em>not</em> by substring. If it matched substrings,
+a future generation model whose name happened to contain the word "embedding" would be
+permanently unselectable, and the operator would be locked out by a guard meant to protect
+them.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>The change landed as six commits. Rather than walk them chronologically, it is clearer to walk
+the <strong>data flow</strong>: where the value is stored, how each service reads it, how the
+operator writes it, and what had to be fixed underneath.</p>
+
+<figure>
+  <div class="flow">
+    <div class="box b-green"><strong>Web (Next.js)</strong>
+      <code>OperatorLLMConfigPanel</code><br>on <code>/operator/settings</code></div>
+    <div class="arrow">↓ PATCH</div>
+    <div class="box"><strong>Django</strong>
+      <code>LLMRoleConfigView</code><br>validates, probes, writes</div>
+  </div>
+  <div class="flow" style="margin-top:.5rem">
+    <div class="box b-gray"><strong>Postgres</strong>
+      <code>"backend"."operators_llmroleconfig"</code> — 11 rows</div>
+  </div>
+  <div class="flow" style="margin-top:.5rem">
+    <div class="box b-green"><strong>FastAPI agent</strong>
+      <code>app/llm_config.py</code><br>cross-schema SELECT, 30 s TTL snapshot<br>8 roles</div>
+    <div class="box b-green"><strong>Celery worker</strong>
+      <code>operators/llm_runtime.py</code><br>one ORM read per job, no cache<br>3 roles</div>
+  </div>
+  <figcaption>One writer, one table, two readers with deliberately different caching strategies.</figcaption>
+</figure>
+
+<h3>1. The store (<code>apps/backend/operators/</code>)</h3>
+
+<p>A Django model with a unique <code>role</code> slug, plus a migration that both creates the
+table and seeds all eleven rows. The seed is a <em>frozen inline snapshot</em> of the registry —
+a copy of the values as they were the day the migration was written, deliberately not an import,
+because a migration that imports live code stops being reproducible the moment that code
+changes.</p>
+
+<p>Alongside it, <code>operators/llm_roles.py</code> is the canonical registry: a tuple of frozen
+<code>LLMRoleSpec</code> records carrying each role's slug, which app owns it, a Korean UI label,
+whether it supports a thinking level, and its defaults.</p>
+
+<h3>2. The agent-side reader (<code>apps/agent/app/llm_config.py</code>)</h3>
+
+<p>This is where the <code>@lru_cache</code> problem is solved. The module keeps a snapshot in a
+module-level variable guarded by a lock, refreshed by a plain SQL query:</p>
+
+<pre><code>_lock = threading.Lock()
+_snapshot: dict[str, tuple[str | None, str | None]] | None = None
+_snapshot_expires_at: float = 0.0
+
+def refresh_llm_config(settings=None, *, force=False) -> None:
+    """Refresh the snapshot when it is stale (or force). Never raises."""
+    global _snapshot, _snapshot_expires_at, _failure_logged_at
+    now = time.monotonic()
+    with _lock:
+        if not force and _snapshot_expires_at > now:
+            return
+        ttl = _cache_ttl_seconds(settings)
+        try:
+            rows = _fetch_llm_config_rows(settings)
+        except Exception as exc:      # broad on purpose — see below
+            _snapshot_expires_at = now + ttl
+            ...  # log at most once per failure window
+            return                     # keep the OLD snapshot
+        _snapshot = rows
+        _snapshot_expires_at = now + ttl</code></pre>
+
+<p>Three things in those twenty lines carry most of the design:</p>
+
+<ul>
+  <li><strong>The <code>except</code> catches bare <code>Exception</code>, not a database
+    error.</strong> That is normally a code smell. Here it is deliberate and documented: a stubbed
+    or partial settings object raises <code>AttributeError</code> while <em>building the
+    connection string</em>, long before any database library is reached, and that path must
+    degrade exactly like a dead network would.</li>
+  <li><strong>On failure the old snapshot is kept.</strong> "Last known good" beats falling back
+    to environment variables. A process that has read the store once keeps serving the operator's
+    real choices straight through an outage.</li>
+  <li><strong>The failure is cached too</strong> (<code>_snapshot_expires_at = now + ttl</code>).
+    Without that line, an outage would mean a fresh connection attempt on <em>every</em>
+    resolution — turning a database problem into a latency problem. The warning log is separately
+    throttled to one line per window, so a broken table cannot flood the logs during a stream.</li>
+</ul>
+
+<p>The query itself has to be schema-qualified, because Django's tables live in a
+<code>backend</code> schema while the agent's own search path points at <code>agent</code>:</p>
+
+<pre><code>SELECT role, model_id, thinking_level FROM "backend"."operators_llmroleconfig"</code></pre>
+
+<p>Call sites then resolve through small helpers. Here is the <code>chat</code> role's thinking
+level, inside the streaming hot path:</p>
+
+<pre><code># P44.S2: store -> GEMINI_CHAT_THINKING_LEVEL -> unset. Still conditional:
+# the kwarg is omitted entirely when nothing resolves, which is also what keeps
+# the stubbed-settings tests from seeing an unexpected kwarg.
+thinking_level = resolve_role_thinking_level(
+    settings,
+    role=ROLE_CHAT,
+    settings_attr="gemini_chat_thinking_level",
+)
+if thinking_level:
+    extra_model_kwargs["thinking_level"] = thinking_level</code></pre>
+
+<p>That <code>if</code> is not defensive padding. It is the difference between "unset" and
+"explicitly none": passing <code>thinking_level=None</code> to the model constructor is a
+different thing from not passing the argument at all, and only the latter preserves the
+provider's own default. It also keeps the existing test suite green — the tests build fake model
+constructors with strict signatures that reject unexpected keyword arguments, so an unconditional
+pass-through would have broken hundreds of tests.</p>
+
+<div class="callout warn">
+<h4>The test-isolation trap this uncovered</h4>
+<p>Postgres publishes port 5432 to the host, and the agent's default database host is
+<code>127.0.0.1</code>. So a test suite run on a developer's laptop can reach the
+<strong>real development database</strong>. Without a guard, the moment the table existed, roughly
+700 unit tests would silently start resolving whatever the operator last saved instead of their
+stubbed values — tests that pass or fail depending on a web form. The fix is an autouse fixture in
+<code>conftest.py</code> that patches the connection factory to raise and resets the snapshot
+around every test, forcing the store "offline" for the whole suite.</p>
+</div>
+
+<h3>3. The backend-side reader (<code>apps/backend/operators/llm_runtime.py</code>)</h3>
+
+<p>The Django side has no cache at all — one function, one query, no TTL:</p>
+
+<pre><code>def resolve_role_config(role, *, settings_attr, default_model, default_thinking=None):
+    try:
+        row = (LLMRoleConfig.objects.filter(role=role)
+               .values_list("model_id", "thinking_level").first())
+    except DatabaseError:
+        logger.warning("LLM runtime config read failed for role %r; "
+                       "falling back to env/default.", role, exc_info=True)
+        row = None
+    stored_model_id, stored_thinking_level = row if row is not None else (None, None)
+    model_id = (stored_model_id
+                or getattr(settings, settings_attr, default_model)
+                or default_model)
+    thinking_level = stored_thinking_level
+    if thinking_level not in THINKING_LEVELS:
+        thinking_level = default_thinking
+    return model_id, thinking_level</code></pre>
+
+<p>Why no cache, when the agent needed one? Because of <em>where these three roles run</em>. Each
+is invoked from a builder function that is called <strong>once per background job</strong>, not
+once per item. A job might process hundreds of images, but it asks for the model exactly once. So
+a single query per job already gives per-job freshness for free; a cache would add staleness
+without saving any queries. The measured effect is ~20 ms from a save to the next job seeing the
+new value.</p>
+
+<p>Note also <code>if thinking_level not in THINKING_LEVELS</code>. A junk value stored through
+the Django admin back door would otherwise reach a strict enum field and raise
+<em>at model construction</em> — i.e. it would break generation, which the whole design forbids.
+The agent has the identical guard.</p>
+
+<h3>4. The batch path</h3>
+
+<p>Two of the backend roles have a second consumer: a Gemini <em>batch</em> API, which sends
+requests as lines of JSON rather than as client calls. A thinking level cannot ride on a client
+there — it has to go inside the request body:</p>
+
+<pre><code>def _batch_generation_config(base, *, thinking_level):
+    config = dict(base)
+    if thinking_level:
+        config["thinking_config"] = {"thinking_level": thinking_level}
+    return config</code></pre>
+
+<p>The team verified against the installed SDK's type definitions — rather than guessing — that
+the snake_case dictionary this repo already builds corresponds to
+<code>types.GenerationConfig</code> (the class backing a raw request's
+<code>generation_config</code>, <em>not</em> the higher-level wrapper the SDK's convenience method
+uses), that it declares a <code>thinking_config</code> field, and that the nested enum's values
+match this repo's lowercase vocabulary. Both batch roles currently seed <code>NULL</code>, so the
+key is omitted in practice today; the wiring exists for the first time an operator sets one.</p>
+
+<h3>5. The write API and the UI</h3>
+
+<p>One endpoint, two methods. <code>GET /api/admin/llm-config</code> returns all eleven roles
+merged with their code defaults — including <code>thinking_levels</code>, the vocabulary itself,
+so the web form never hardcodes the options. <code>PATCH</code> takes a partial map keyed by role
+slug and applies it in one transaction:</p>
+
+<pre><code>{"chat": {"model_id": "gemini-3-flash-preview", "thinking_level": "medium"},
+ "image_alt": {"thinking_level": null}}</code></pre>
+
+<p>The probes run <em>before</em> the transaction opens — a small but important detail, so no
+database row lock is ever held across a network call to Google. The web panel computes a diff
+against the last-loaded state and sends only what changed, which is also what keeps it clear of
+the API's "reject an empty payload" rule.</p>
+
+<div class="callout warn">
+<h4>A gotcha for anyone touching that panel again</h4>
+<p>The shared operator error helper flattens only <em>one</em> level of
+<code>{field: [messages]}</code>. This endpoint's errors are <em>two</em> levels deep —
+<code>{role_slug: {field: [messages]}}</code> — because they are keyed by role. Using the shared
+helper unmodified silently swallowed Google's actual message and showed a generic "(HTTP 400)"
+instead, defeating the entire point of the live probe. The fix was a small local flattener in the
+panel, deliberately leaving the shared helper untouched so no other operator screen was
+affected.</p>
+</div>
+
+<h3>6. Fixing the plumbing underneath</h3>
+
+<p>With the store landed, the phase went back and repaired the environment layer it now sits on
+top of: the two consulting variables were finally added to both Compose files (they had never
+reached a container), and the two content variables were added to <code>.dev.env</code> (they had
+never existed). Because the database wins, these changes alter no behaviour today — they complete
+the <em>fallback</em> chain so that an outage degrades to something sensible.</p>
+
+<h3>7. The proof — and the thing that nearly shipped broken</h3>
+
+<p>The last slice wrote no product code at all. Its whole job was to prove the feature on a real
+running stack: switch a value through the real HTTP API, watch a real process pick it up, and
+point a container at an unroutable database to confirm it degrades instead of dying. All of it
+passed — 8 roles resolved from fallbacks, <strong>0 exceptions, exactly 1 warning</strong>.</p>
+
+<p>But it also caught the single most dangerous thing in the phase.</p>
+
+<div class="callout warn">
+<h4>The deploy trap: the Celery workers are the real backend runtime</h4>
+<p>The rollout plan named three services: the Django backend, the FastAPI agent, and the Next.js
+frontend. But the three backend roles <strong>do not run in the Django container at all</strong> —
+they run inside <code>celery_worker</code>, the background job process. When the team checked, that
+container was running a 14-hour-old image with the new resolver module missing entirely.</p>
+<p>The failure mode is the nastiest kind: <strong>completely silent</strong>. The operator saves a
+new model. The web page confirms it. The database has it. The agent honours it. And title
+generation and image enrichment go on using the old model <em>forever</em>, with no error
+anywhere. The verification only caught it because someone asked "but where does this code actually
+execute?" and re-ran the proof <em>inside the worker</em>.</p>
+<p>Two corollaries were recorded with it: this is an image <strong>rebuild</strong>, not a restart
+(Compose builds images, it does not mount source — restarting a stale container changes nothing),
+and the same audit found the FastAPI agent was stale too.</p>
+</div>
+
+<p>That finding is now the <em>first</em> thing in the operations documentation, ahead of any
+"how to change a model" instructions — because a runbook that teaches the happy path before the
+deploy prerequisite teaches people to ship the feature dead.</p>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<p>Runtime configuration that a human changes without a deploy is a well-trodden problem — it is
+essentially the same problem as a feature-flag system, and the same patterns apply.</p>
+
+<h3>Where this implementation aligns with prevailing practice</h3>
+
+<p><strong>A local cache with a configurable TTL is the standard answer</strong>, not a shortcut.
+Unleash's guidance for feature-flag SDKs is that the client should "query the local cache, and ask
+the central service for updates in the background," with the cache holding a configurable
+time-to-live (<a href="https://docs.getunleash.io/topics/feature-flags/feature-flag-best-practices">Unleash
+feature-flag best practices</a> — getunleash.io). AWS's dynamic-configuration guidance is the
+same shape: store the configuration in a local cache with a configurable TTL to cut API calls and
+cost, exposed as a single max-age knob
+(<a href="https://ran-isenberg.github.io/aws-lambda-handler-cookbook/best_practices/dynamic_configuration/">AWS
+Lambda Handler Cookbook, dynamic configuration</a> — ran-isenberg.github.io). P44's
+<code>LLM_CONFIG_CACHE_TTL_SECONDS</code> is exactly that knob; its 30-second default is on the
+aggressive-freshness end of the usual range, which is a reasonable trade when the table is eleven
+rows and a human is waiting to see their change take effect.</p>
+
+<p><strong>Falling back to last-known-good rather than hard-failing is the recommended
+posture.</strong> AWS's Well-Architected reliability pillar frames it as turning hard dependencies
+into soft ones: components "should continue to perform their core function even if dependencies
+become unavailable," possibly serving "slightly stale data." It names "a parameter store is
+unavailable" as a worked example, prescribing soft-dependency caching or sane defaults baked into
+the image — and, pointedly, lists as an <em>anti-pattern</em> "invalidating or emptying local state
+as a result of a failed refresh"
+(<a href="https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html">AWS
+Well-Architected, REL05-BP01</a> — docs.aws.amazon.com). P44 does precisely this: a failed refresh
+keeps the previous snapshot, and the compiled-in <code>DEFAULT_*</code> constants are the
+"sane defaults included in the image" rung. Unleash makes the same argument from the product side —
+graceful degradation means falling back to cached data so that infrastructure degradation never
+becomes total application failure
+(<a href="https://www.getunleash.io/blog/graceful-degradation-featureops-resilience">Unleash on
+graceful degradation</a> — getunleash.io).</p>
+
+<p><strong>Validating configuration on write is standard too.</strong> The AWS cookbook validates
+fetched configuration against a Pydantic schema before use, so a malformed value is caught rather
+than propagated (ran-isenberg.github.io, above). P44 pushes that validation one step earlier — to
+the moment of writing, where a human is present to fix it — and adds a live provider probe on top,
+which is stronger than schema validation alone because it catches a *well-shaped but nonexistent*
+model id that no schema could reject.</p>
+
+<h3>Where it deliberately diverges</h3>
+
+<p><strong>It keeps environment variables rather than eliminating them.</strong> Strict
+twelve-factor says config belongs in the environment (<a href="https://12factor.net/config">12factor.net,
+Config</a>). P44 demotes env to a fallback rung instead of deleting it, which is a considered
+divergence: twelve-factor's concern is <em>deploy-time</em> configuration, and it has little to
+say about values a non-engineer must change at runtime. Keeping env as the bootstrap and
+degradation path is what makes rung 3 of the ladder meaningful and what let the migration land in
+one step with zero behaviour change.</p>
+
+<p><strong>It uses no dedicated feature-flag or config service.</strong> No LaunchDarkly, no
+Unleash, no AWS AppConfig — just a table in the database the application already uses. For eleven
+rows read by two services in one deployment, an external service would add a network dependency,
+an SLA and a bill in exchange for capabilities (targeting rules, gradual rollouts, audit UIs) that
+nothing here needs. The trade shows up honestly in what P44 had to hand-build: the TTL cache, the
+degradation path, and the "log once per failure window" throttle are all things a mature SDK would
+have provided.</p>
+
+<p><strong>It refuses a generation-time fallback.</strong> Fail-open is the usual advice for
+flags, and P44 <em>is</em> fail-open about <em>reading</em> config. But it is deliberately
+fail-loud about a <em>bad value</em>: no silent substitution of a known-good model. That matches
+the Amazon Builders' Library caution that fallback paths in distributed systems are themselves a
+risk — they run rarely, so they are the least-tested code you own
+(<a href="https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems">Amazon
+Builders' Library, avoiding fallback</a> — aws.amazon.com). Here the reasoning was more
+product-shaped: substituting a model would hide the misconfiguration and quietly change the bill.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+  <li><strong>Show the operator the <em>resolved</em> value, not just the stored one.</strong>
+    Today the panel shows what is in the table plus the code default. It cannot show what a given
+    service is <em>actually</em> using right now — which, thanks to last-known-good caching, can
+    legitimately differ during an outage. A small read-only echo endpoint on each service would
+    close the loop and make the Celery-staleness class of bug visible in the UI instead of
+    invisible. This was explicitly parked as out of scope; it is the most valuable follow-up.</li>
+  <li><strong>Make the deploy prerequisite mechanical rather than documentary.</strong> The
+    "rebuild the Celery services too" rule currently lives in a runbook, which means it holds
+    exactly as long as people read runbooks. A startup assertion — each service logging its
+    resolver module version, or a health check that fails when the config module is missing —
+    would turn a silent failure into a loud one.</li>
+  <li><strong>Add the rerank thinking level to the retrieval cache key.</strong> The ranked-result
+    cache is keyed on the resolved rerank <em>model</em>, so a model change invalidates it for
+    free; an <em>effort-only</em> change does not, so identical queries can be served at the old
+    effort for up to five more minutes. Bounded and harmless today, but it is the one place where
+    "the change took effect" is not quite true.</li>
+  <li><strong>Exercise the batch thinking-config path for real.</strong> It is unit-tested against
+    the SDK's type definitions and is a no-op while both batch roles hold <code>NULL</code>. The
+    first time an operator sets an effort on <code>image_alt</code> or <code>text_enrichment</code>
+    it becomes live code that has never met the real API — worth a deliberate batch run at that
+    moment.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Why did the agent need a separate module to read the config instead of
+  just adding a field to its settings object?</p>
+  <button class="opt" data-correct="false">Because the settings object is not thread-safe</button>
+  <button class="opt" data-correct="true">Because <code>get_settings()</code> is
+    <code>@lru_cache</code>d, so anything read through it is frozen for the life of the
+    process</button>
+  <button class="opt" data-correct="false">Because Django and FastAPI cannot share a settings
+    class</button>
+  <button class="opt" data-correct="false">Because environment variables cannot hold model
+    names</button>
+  <p class="why" hidden>The <code>@lru_cache</code> decorator means the settings object is built
+  once and reused forever. A value the operator must change without a restart has to be read
+  outside that cached object entirely — which is exactly what
+  <code>app/llm_config.py</code> exists to do.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> During the live verification, a model id was changed through the API and
+  the very next read in the same process returned the <strong>old</strong> value. Why was that
+  treated as evidence of success rather than a bug?</p>
+  <button class="opt" data-correct="false">It proved the write had failed safely</button>
+  <button class="opt" data-correct="false">It proved the database was unreachable and the
+    fallback worked</button>
+  <button class="opt" data-correct="true">It proved the TTL snapshot was real, so the later change
+    must have come from an unaided refresh rather than an incidental fresh read</button>
+  <button class="opt" data-correct="false">It proved the operator lacked permission to write</button>
+  <p class="why" hidden>Without that unchanged read, a value that differs 35 seconds later proves
+  nothing — it could have come from a process that simply re-read the table for unrelated reasons.
+  The unchanged read establishes that the cache was genuinely holding a stale value, so the later
+  change can only have come from the TTL expiring.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The live probe rejects a save when the provider returns a 400 or 404, but
+  <em>allows</em> the save when the probe fails with a timeout, a quota error, or a missing API
+  key. What is the reasoning?</p>
+  <button class="opt" data-correct="false">Timeouts and quota errors are impossible to detect
+    reliably</button>
+  <button class="opt" data-correct="true">Only a provider rejection is evidence the model id is
+    wrong; every other failure is evidence about infrastructure, and letting it block the save
+    would lock the operator out of their own settings during an outage</button>
+  <button class="opt" data-correct="false">Quota errors mean the model exists but is too
+    expensive</button>
+  <button class="opt" data-correct="false">Allowing the save keeps the probe's latency off the
+    request path</button>
+  <p class="why" hidden>The distinction is between "the provider told us this id is bad" and "we
+  could not ask." A 403 is deliberately on the allow side too: a key-scoping problem says nothing
+  about whether the model id is valid.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Why does a <code>NULL</code> <code>thinking_level</code> mean "send no
+  thinking parameter at all" rather than "send the lowest level"?</p>
+  <button class="opt" data-correct="false">Because Gemini rejects an explicit
+    <code>minimal</code></button>
+  <button class="opt" data-correct="true">Because omitting the parameter preserves the provider's
+    own default exactly, so seeding ten roles as NULL changed no behaviour on the day the store
+    landed</button>
+  <button class="opt" data-correct="false">Because the database cannot store an enum value</button>
+  <button class="opt" data-correct="false">Because the UI has no widget for the lowest level</button>
+  <p class="why" hidden>"Unset" and "explicitly lowest" are different instructions to the provider.
+  Only "unset" is behaviour-neutral, which is what let all eleven rows be seeded at once without
+  changing anything — and it also sidesteps models that reject a thinking level entirely.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A deploy refreshes the Django backend, the FastAPI agent and the frontend,
+  but not the Celery services. What does the operator observe?</p>
+  <button class="opt" data-correct="false">The settings page returns a 500 error</button>
+  <button class="opt" data-correct="false">Title generation and image enrichment crash with a
+    missing-module error the operator can see</button>
+  <button class="opt" data-correct="true">Nothing at all — the save succeeds, the page confirms
+    the new value, and the three backend roles keep using the old models silently and
+    indefinitely</button>
+  <button class="opt" data-correct="false">The agent falls back to environment variables for all
+    eleven roles</button>
+  <p class="why" hidden>This is exactly why the deploy note leads the operations runbook. The three
+  backend roles execute inside <code>celery_worker</code>, so a stale worker simply never runs the
+  new resolver — no error, no warning, just the old models forever, while every visible surface
+  reports success.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
