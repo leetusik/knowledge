@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-07-28 · [Six Documents to a Hundred: The P52 Content-Agent Curation Gate](changple5/2026-07-28-six-documents-to-a-hundred-the-p52-content-agent-curation-gate.html) — changple5
 - 2026-07-28 · [Filling the Idle Window: Pipelined Slice Planning and Copy-Based Plan Capture (P10)](bootstrap_agentic_workspace.sh/2026-07-28-pipelined-planning-and-copy-based-plan-capture-p10.html) — bootstrap_agentic_workspace.sh
 - 2026-07-26 · [Moving LLM configuration out of environment variables and into the database (P44)](changple5/2026-07-26-llm-runtime-config-explained.html) — changple5
 - 2026-07-25 · [The Answer That Cited Nothing: Strict This-Turn Chat Citations (P51)](changple5/2026-07-25-strict-this-turn-citations-p51.html) — changple5
