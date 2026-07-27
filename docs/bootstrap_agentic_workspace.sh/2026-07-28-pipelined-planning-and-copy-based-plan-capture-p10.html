@@ -1,0 +1,574 @@
+<!--kb
+title: "Filling the Idle Window: Pipelined Slice Planning and Copy-Based Plan Capture (P10)"
+date: 2026-07-28
+tags:
+  - agent-orchestration
+  - speculative-execution
+  - least-privilege
+  - claude-code
+  - workflow-machinery
+source:
+  project: bootstrap_agentic_workspace.sh
+  repo: /Users/sugang/projects/personal/bootstrap_agentic_workspace.sh
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Filling the Idle Window: Pipelined Slice Planning and Copy-Based Plan Capture (P10)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.25; }
+    h2 { margin-top: 2.5rem; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: .3rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .9em; }
+    code { background: rgba(128,128,128,.15); padding: .1em .3em; border-radius: 3px; font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #d68; background: #fdf1f4; }
+    .callout.def  { border-left-color: #58a; background: #eef4fb; }
+    .callout h4 { margin: 0 0 .4rem; font-size: .95em; text-transform: uppercase;
+                  letter-spacing: .04em; opacity: .75; }
+    figure { margin: 1.5rem 0; }
+    figcaption { font-size: .88em; opacity: .75; margin-top: .5rem; text-align: center; }
+    .tl { display: flex; flex-direction: column; gap: .45rem; margin: 0; }
+    .tl .row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+    .tl .lbl { flex: 0 0 5.2rem; font-size: .82em; opacity: .8; text-align: right; }
+    .blk { padding: .3rem .55rem; border-radius: 4px; font-size: .8em; white-space: nowrap;
+           border: 1px solid rgba(128,128,128,.4); }
+    .blk.plan { background: #e7f0fb; }
+    .blk.exec { background: #e9f6ea; }
+    .blk.idle { background: #f2f2f2; opacity: .7; border-style: dashed; }
+    .blk.pre  { background: #fdf3e0; }
+    .blk.gate { background: #f7e6f5; }
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1.2rem 0; }
+    th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+    th { background: rgba(128,128,128,.12); }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid rgba(128,128,128,.45); border-radius: 5px; background: transparent; }
+    .q .opt:hover { background: rgba(128,128,128,.1); }
+    .q .opt.correct   { background: #d6f5d6; }
+    .q .opt.incorrect { background: #f7d6d6; }
+    .q .why { margin: .5rem 0 1.4rem; font-size: .95em; padding: .5rem .75rem;
+              background: rgba(128,128,128,.1); border-radius: 4px; }
+    nav ol { line-height: 1.9; }
+  </style>
+</head>
+<body>
+
+<h1>Filling the Idle Window: Pipelined Slice Planning and Copy-Based Plan Capture</h1>
+
+<p><em>What phase P10 changed in the <code>bootstrap_agentic_workspace.sh</code> workflow, and why —
+shipped as workspace <strong>v19</strong> in commits <code>4089004</code> and <code>c94f6e4</code>.</em></p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — the serial loop and the retyped plan</a></li>
+    <li><a href="#intuition">Intuition — prefetching, and why copying beats retyping</a></li>
+    <li><a href="#code">Code — what actually changed</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<h3>What this repository is</h3>
+
+<p><code>bootstrap_agentic_workspace.sh</code> is a single shell script you run inside a project
+directory to install an <em>agentic workspace</em>: a small state machine plus a set of written
+rules that let an AI coding agent do multi-step engineering work without losing the plot between
+sessions. The state machine is one Python file (<code>scripts/workflow.py</code>). The rules are
+markdown — a contract (<code>CLAUDE.md</code>, mirrored byte-for-byte as <code>AGENTS.md</code>)
+and a folder of <em>skills</em> under <code>.claude/skills/</code>.</p>
+
+<div class="callout def">
+  <h4>Vocabulary you need</h4>
+  <p><strong>Phase</strong> — a unit of operator-approved work (e.g. "P10"). <strong>Slice</strong>
+  — one reviewable step inside a phase (<code>P10.S1</code>, <code>P10.S2</code>). Every phase
+  starts with a <code>DECOMP</code> slice that breaks it into middle slices, and ends with a
+  <code>REVIEW</code> slice that validates the whole thing. <strong>Orchestrator</strong> — the
+  main agent session you talk to; it plans, commits, and moves state. <strong>Executor</strong> —
+  a <em>subagent</em> the orchestrator dispatches to actually do a slice's work in its own separate
+  context window.</p>
+</div>
+
+<p>The orchestrator/executor split exists for one reason: <strong>context economy</strong>. If the
+main session did all the implementation itself, its context window would fill with file contents
+and half-finished edits, and its judgment would degrade over a long phase. So the main session
+stays lean — it plans, hands the plan to a subagent, and reads back a short structured verdict.</p>
+
+<h3>Problem 1: the orchestrator sat idle for the entire executor run</h3>
+
+<p>The contract was explicit that the orchestrator must dispatch the executor as a
+<em>background task</em> and then wait for its completion notification "doing nothing else in the
+meantime". That sentence was added deliberately (commit <code>d1767f9</code>) to forbid a specific
+failure: an orchestrator that runs the executor <em>inline</em>, synchronously, in the main
+session — which defeats the whole point of delegating.</p>
+
+<p>But "doing nothing else" is a blunt instrument. It also forbade useful, harmless work. The
+<code>do-whole-phase</code> loop — the skill that drives a phase end to end — was therefore
+strictly serial:</p>
+
+<figure>
+  <div class="tl">
+    <div class="row"><span class="lbl">Slice N</span>
+      <span class="blk plan">plan N</span>
+      <span class="blk gate">operator approves</span>
+      <span class="blk exec">executor N runs</span>
+      <span class="blk idle">orchestrator idle&nbsp;…</span>
+    </div>
+    <div class="row"><span class="lbl">Slice N+1</span>
+      <span class="blk plan">research N+1</span>
+      <span class="blk plan">plan N+1</span>
+      <span class="blk gate">operator approves</span>
+      <span class="blk exec">executor N+1 runs</span>
+    </div>
+  </div>
+  <figcaption>Before P10: research for slice N+1 only started after executor N returned.</figcaption>
+</figure>
+
+<p>The costly part is <em>research</em> — reading the contract, the phase notebook, the relevant
+docs, and the code the next slice will touch, to figure out what the plan must say. And here is the
+observation the operator made that started this phase: <strong>research for slice N+1 does not
+depend on slice N <em>finishing</em>.</strong> Only the final reconciliation does — the part where
+you check what slice N actually changed. So the research was sitting on the critical path for no
+structural reason.</p>
+
+<h3>Problem 2: the approved plan was retyped instead of copied</h3>
+
+<p>The workflow uses Claude Code's <em>plan mode</em>: the agent researches read-only, presents a
+plan, and the operator approves it. The rule then said to write that approved plan
+"verbatim … not a paraphrase or summary" into the slice's <code>plan.md</code>, so the executor
+receives exactly what the operator agreed to.</p>
+
+<p>The catch: <strong>the harness already has that plan on disk.</strong> When plan mode is
+entered, Claude Code writes the plan to a file (under <code>~/.claude/plans/</code>) and names it.
+So the agent was re-emitting, through a <code>Write</code> tool call, a document that already
+existed byte-for-byte a few directories away. As the operator put it: "since we store a plan in two
+place, the later slice plan store can be done with <code>cp</code>."</p>
+
+<div class="callout warn">
+  <h4>Why the retype is a real risk, not just waste</h4>
+  <p>An LLM regenerating a long document from its own context is not a byte-preserving operation.
+  It can subtly reorder, compress, or drop a clause — and nobody notices, because the output still
+  <em>looks</em> like the plan. That retype was the single point in the whole loop where what the
+  operator approved and what the executor receives could silently diverge.</p>
+</div>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The pipelining idea</h3>
+
+<p>This is the oldest trick in computer architecture, applied to an agent loop. A CPU does not wait
+for one instruction to retire before it starts fetching the next; it overlaps stages. Here, the
+"stall" is the executor's run — minutes of wall-clock time during which the orchestrator has
+nothing to do — and the work we want to overlap into it is the <em>read-only research</em> for the
+next slice.</p>
+
+<figure>
+  <div class="tl">
+    <div class="row"><span class="lbl">Slice N</span>
+      <span class="blk plan">plan N</span>
+      <span class="blk gate">operator approves</span>
+      <span class="blk exec">executor N runs</span>
+    </div>
+    <div class="row"><span class="lbl">&nbsp;</span>
+      <span class="lbl">&nbsp;</span><span class="lbl">&nbsp;</span>
+      <span class="blk pre">slice-planner prefetches N+1 (read-only)</span>
+    </div>
+    <div class="row"><span class="lbl">Slice N+1</span>
+      <span class="lbl">&nbsp;</span><span class="lbl">&nbsp;</span><span class="lbl">&nbsp;</span>
+      <span class="blk plan">reconcile</span>
+      <span class="blk gate">operator approves</span>
+      <span class="blk exec">executor N+1</span>
+    </div>
+  </div>
+  <figcaption>After P10: the research happens during the stall; afterwards only a cheap
+  reconciliation remains.</figcaption>
+</figure>
+
+<p>The word doing the heavy lifting is <strong>reconcile</strong>. When executor N returns, the
+orchestrator does not throw away the brief and re-research. It starts from the brief and reads only
+the delta: what slice N actually changed (its reported <code>files_changed</code>), its
+<code>result.md</code>, and the new notes appended to the phase notebook. That is a small read,
+not a full pass.</p>
+
+<h3>What the gate is, and why it did not move</h3>
+
+<p>There is a single human checkpoint in this loop: the operator approves each slice's plan before
+its executor runs. A tempting "optimization" would have been to approve plan N+1 early, while N is
+still running — that would remove the pause entirely.</p>
+
+<div class="callout">
+  <h4>The design constraint that shaped everything</h4>
+  <p><strong>The operator's approval gate does not move.</strong> They still approve plan N+1
+  <em>after</em> seeing slice N's outcome — its result, its verdict, its notes. Only the research
+  shifted off the critical path; the human's information at the moment of decision is exactly what
+  it was before. This is what makes the change a pure latency optimization rather than a quiet
+  weakening of oversight.</p>
+</div>
+
+<h3>Making "read-only" structural instead of aspirational</h3>
+
+<p>A subagent researching a repo <em>while another subagent is editing that same repo</em> is
+obviously dangerous if it can write. You could write a rule — "the prefetch must not modify
+anything" — and hope. P10 did not do that. It gave the new agent a <strong>tool allowlist</strong>
+of exactly three tools:</p>
+
+<pre><code>tools: Read, Glob, Grep</code></pre>
+
+<p>Trace what that removes. No <code>Write</code> or <code>Edit</code>: it cannot touch a file. No
+<code>Bash</code>: it cannot run the workflow engine, cannot run <code>git</code>, cannot run a
+build. No <code>Agent</code>: it cannot dispatch a second executor. The guarantee is enforced by
+the harness at the tool layer, not by the model's willingness to follow prose.</p>
+
+<h3>Torn reads, and the blast-radius rule</h3>
+
+<p>The prefetch reads a working tree that another agent is mutating. A file might be read
+half-edited. There is no lock and no snapshot, so the mitigation is <em>avoidance</em>: the
+orchestrator tells the planner which paths slice N declared it would touch — its
+<strong>blast radius</strong> — and the planner researches around them, labelling anything it must
+read there as "possibly stale".</p>
+
+<div class="callout warn">
+  <h4>Honest about the limit</h4>
+  <p>This is a mitigation, not a guarantee. It was recorded as an accepted trade-off rather than
+  papered over. A related quirk: the phase notebook <code>phase.md</code> is inside <em>every</em>
+  running slice's blast radius, because every executor appends notes to its tail — so it is
+  permanently "readable but stale at the end".</p>
+</div>
+
+<h3>Why copy beats retype</h3>
+
+<p>The second change is smaller and sharper. Instead of asking the model to reproduce the approved
+plan, take the file the harness already wrote and <code>cp</code> it. Byte-exact by construction —
+there is no room for a paraphrase because no text passes through the model at all.</p>
+
+<p>But a copy needs a guard, and here is the subtlety that makes this more than a one-liner:</p>
+
+<div class="callout warn">
+  <h4>The harness reuses one plan file per session</h4>
+  <p>Entering plan mode again <em>overwrites</em> the same file. So two rules are load-bearing:
+  (1) <strong>confirm</strong> the file's opening lines match the plan you just approved — otherwise
+  you may copy an <em>earlier slice's</em> plan, which is worse than a paraphrase; and (2) copy
+  <strong>immediately</strong>, before the next <code>EnterPlanMode</code> clobbers it. The rule
+  also forbids globbing <code>~/.claude/plans/</code> or picking by modification time — use the
+  exact path the harness named for this session.</p>
+</div>
+
+<p>And a fallback, because not every environment has a plan file: Codex has no plan mode, and the
+workflow's unattended <code>auto</code> mode never enters plan mode either. In both cases there is
+nothing on disk to copy, so <code>Write</code> stays — stated explicitly rather than left as an
+unexplained exception.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>P10 changed <strong>no program logic at all</strong>. <code>scripts/workflow.py</code> — the
+state machine — is untouched by both slices. Everything here is machinery <em>prose</em> (the
+contract and the skills), one new agent definition, and installer plumbing. In a workspace whose
+behavior is defined by written rules, editing the rules <em>is</em> the code change.</p>
+
+<h3>1. The new agent: <code>.claude/agents/slice-planner.md</code></h3>
+
+<p>A 59-line file. Its frontmatter is the security boundary:</p>
+
+<pre><code>---
+name: slice-planner
+description: Read-only research prefetch for an upcoming, not-yet-planned slice, run
+  while another slice's executor is still working; returns a compact advisory brief -
+  never a plan, never a file dump, never an implementation. Never writes, never runs
+  commands, never commits.
+tools: Read, Glob, Grep
+model: sonnet
+effort: xhigh
+permissionMode: bypassPermissions
+---</code></pre>
+
+<p>Two choices worth explaining. <code>model: sonnet</code> — a read-and-summarize job does not
+need the most expensive model, and for a hard next slice the orchestrator supplements with its own
+inline reading anyway. <code>permissionMode: bypassPermissions</code> — this looks alarming, but it
+grants nothing here: all three of its tools are already pre-approved in the project's settings. Its
+actual purpose is to stop a <em>background</em> prefetch from silently hanging on a permission
+prompt nobody is watching, which would violate the never-block rule.</p>
+
+<p>The body then establishes what has to be stated in prose because no allowlist can express it:
+that inputs arrive <strong>by path</strong> (with no <code>Bash</code>, the planner cannot run
+<code>python3 scripts/workflow.py next</code> to discover anything — the dispatch prompt must hand
+it the slice id, the folder, the questions, and the exclusions), and that the output is a
+<em>bounded brief</em> — relevant files, patterns to reuse, constraints, open questions, and an
+explicit "not read / possibly stale" list. Never a plan. Never a file dump. Its own words:</p>
+
+<pre><code>- **No recommendation phrased as a decision.** "Two options, trade-off is X" is
+  useful; "we should do X" is not yours to say.
+- **Shallow beats exhaustive.** Answer the asked questions well, stop, and say what
+  you left. A late brief is dropped.</code></pre>
+
+<h3>2. The loop rewrite in <code>do-whole-phase/SKILL.md</code></h3>
+
+<p>The existing dispatch bullet gained two <em>scoped</em> carve-outs. The first amends the
+"doing nothing else" sentence without dissolving it:</p>
+
+<pre><code>… and wait for its completion notification, doing nothing else in the meantime
+**except the read-only `slice-planner` prefetch described in the next bullet** —
+never run it synchronously inline in the main session, never write to the repo or
+move workflow state while it runs, and one **executor** at a time: wait for it to
+return before dispatching the next (the read-only planner is not an executor and
+does not count against that limit).</code></pre>
+
+<p>Notice that the carve-out is <em>narrower than it needed to be</em>: the same sentence now also
+forbids repo writes and workflow-state moves during an executor run. Without that, "except the
+prefetch" could be misread as a licence for arbitrary concurrent work. The second carve-out is the
+parenthetical about "one executor at a time" — the prefetch is a genuinely concurrent dispatch, so
+the constraint had to be restated as one <em>executor</em>, not one <em>agent</em>.</p>
+
+<p>Then a new bullet with six sub-bullets encodes the guardrails. Compressed, the five skip
+conditions are:</p>
+
+<table>
+  <tr><th>Skip when…</th><th>Because</th></tr>
+  <tr><td>current slice is <code>DECOMP</code></td><td>the middle slices do not exist yet — there is no "N+1" to research</td></tr>
+  <tr><td>next slice is <code>REVIEW</code></td><td>the review is never pre-planned; its plan depends on the results</td></tr>
+  <tr><td>next slice is already <code>ready</code></td><td>an operator-approved <code>plan.md</code> already exists</td></tr>
+  <tr><td>phase or any slice is <code>pending</code></td><td>the loop stops for the operator there anyway</td></tr>
+  <tr><td>next slice's files sit inside N's blast radius</td><td>everything worth reading is being rewritten as you read it</td></tr>
+</table>
+
+<p>Plus: <strong>never block</strong> (the executor's return always wins; at most one prefetch in
+flight; never delay <code>finish-slice</code>/<code>validate</code>/commit), <strong>discard on any
+verdict other than <code>done</code></strong> (the world the brief assumed did not happen), and
+<strong>scratchpad only, never a slice folder</strong> — because a slice owns exactly two context
+files and a stale draft sitting in a slice folder could later be misread as an approved plan.</p>
+
+<h3>3. Installer wiring — the three-edit trap</h3>
+
+<p>The distributable <code>bootstrap_agentic_workspace.sh</code> is a build product: an assembler
+(<code>installer/build.py</code>) embeds the live repo files into one self-contained script. Adding
+a new agent file needs <strong>three</strong> edits, and this is the phase's best transferable
+lesson:</p>
+
+<ol>
+  <li><code>installer/build.py</code> → add the path to <code>FIXED_LIVE_FILES</code>, which embeds
+  it into the artifact's payload table. (Skills are globbed from disk;
+  <code>.claude/agents/</code> is enumerated explicitly.)</li>
+  <li><code>installer/main.py</code> → an explicit <code>write_text(".claude/agents/slice-planner.md", …)</code>.
+  The existing agent write is a loop over <code>("low", "mid", "high")</code> — the three executor
+  tiers — and would <em>never</em> emit a fourth file.</li>
+  <li><code>installer/main.py</code> → add the path to <code>MANAGED_FILES</code>, for the
+  fresh-install conflict guard and bookkeeping.</li>
+</ol>
+
+<div class="callout warn">
+  <h4>Why a grep would not have caught the bug</h4>
+  <p>With only edit #1, the agent file <em>is</em> embedded in the artifact — so
+  <code>grep slice-planner bootstrap_agentic_workspace.sh</code> passes — but nothing ever writes
+  it to a target directory. It ships as <strong>dead payload</strong>. The only check that catches
+  this is a real install into a scratch directory, which is exactly why both slices and the review
+  ran one.</p>
+</div>
+
+<h3>4. The copy rule, at every site that persists a plan</h3>
+
+<p>The second slice's work was finding <em>all</em> the places, not rewriting one. The rule now
+reads, in <code>do-next-slice</code> step 2:</p>
+
+<pre><code>After approval, persist the plan: in Claude Code, **copy the harness plan file** —
+the exact path the harness named for this planning session; never glob
+`~/.claude/plans/` and never pick by modification time — to this slice's own
+`plan.md` (e.g. `cp "&lt;the named plan file&gt;" works/phases/active/&lt;P&gt;/slices/&lt;slice_id&gt;/plan.md`),
+after **confirming its opening lines match the plan just approved** (the harness
+reuses one plan file per session, so a skipped step can leave an earlier slice's
+plan sitting there); copy **immediately after approval, before the next
+`EnterPlanMode`**, which overwrites the file. … any slice-local addition (an
+`## Escalation` section, for example) is **appended after** the copy, never a
+rewrite of the copied body.</code></pre>
+
+<p>The same rule landed in six places: both copies of <code>do-next-slice</code> (default branch
+and <code>plan only</code> branch — the two files must stay byte-identical below their
+frontmatter), <code>do-whole-phase</code>'s default loop and <code>plan only</code> branch, and two
+clauses in the contract. <code>do-whole-phase</code>'s <code>auto</code> branch got the opposite
+edit — an explicit note that it <em>stays</em> on <code>Write</code>, since plan mode is never
+entered there, so no file exists to copy.</p>
+
+<p>One small supporting change: <code>.claude/settings.json</code> gained
+<code>"Bash(cp:*)"</code> in its allow list, so the copy does not raise a permission prompt
+immediately after every approval. The justification recorded for widening an allowlist is worth
+copying as a habit — <em>it grants nothing beyond the already-allowed <code>Write</code> tool</em>
+(overwrite a file, no deletion; <code>rm -rf</code> stays denied).</p>
+
+<h3>5. Shipping it as one release</h3>
+
+<p>Both slices are one release: slice 1 bumped <code>WORKSPACE_VERSION</code> 18 → 19 and opened a
+<code>## v19</code> changelog section; slice 2 <em>appended</em> to that same section without a
+second bump. Adopting workspaces run <code>--update</code> and get the new agent file (the update
+path classifies anything under <code>.claude/agents/</code> as machinery, so a brand-new file
+arrives as an addition with no code change needed) plus the merged <code>Bash(cp:*)</code> entry.</p>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<h3>Where this aligns with prevailing practice</h3>
+
+<p><strong>Idle-time speculative planning is an established technique, and P10 independently
+arrived at its standard guardrails.</strong> The research literature calls this exact pattern
+speculative planning during tool-execution stalls: drafting runs concurrently with tool execution
+and "halts immediately upon observation arrival, preventing staleness", with drafts treated as
+"optional guidance rather than mandatory constraints" so speculation cannot derail the real
+reasoning step
+(<a href="https://arxiv.org/html/2605.22154">IdleSpec: Exploiting Idle Time via Speculative Planning for LLM Agents</a>
+— arxiv.org). That is nearly a line-for-line match with P10's "never block on it — the executor's
+completion notification always wins" and "the brief is advisory input to <em>your</em> plan, never
+an approved plan". The same work accepts the same cost model P10 accepted: extra tokens are spent
+during otherwise-wasted time, and wall-clock latency is what improves.</p>
+
+<p><strong>Restricting speculative work to side-effect-free operations is the standard safety
+rule.</strong> Speculative execution frameworks classify tools as "fully speculatable, dry-run
+eligible, or speculation-prohibited", because "anything with side effects (database writes, API
+mutations, financial transactions) must be handled carefully"; and mispredictions are "simply
+discarded, and execution falls back to the standard sequential path", which is why speculation
+"can only help, never hurt accuracy"
+(<a href="https://zylos.ai/research/2026-04-08-speculative-execution-parallel-tool-calling-ai-agents/">Speculative Execution and Parallel Tool Calling, Zylos Research</a>
+— zylos.ai). P10's <code>Read, Glob, Grep</code> allowlist is the strictest version of that rule:
+rather than classifying each action at runtime, it makes the speculative agent
+<em>incapable</em> of a side effect. Its "discard the draft on any verdict other than
+<code>done</code>" is the same fall-back-to-sequential guarantee.</p>
+
+<p><strong>Enforcing read-only via the tool allowlist, not via instructions, is the documented
+Claude Code posture.</strong> The harness itself distinguishes "tools that can't modify state,
+including file reads, text and file-pattern search, code navigation" from capabilities like
+"blanket shell access" and script interpreters, which are removed in lower-supervision modes; the
+underlying principle is that the system should "evaluate the real-world impact of an action,
+rather than just the surface text of the invocation"
+(<a href="https://www.anthropic.com/engineering/claude-code-auto-mode">How we built Claude Code auto mode, Anthropic Engineering</a>
+— anthropic.com). Giving <code>slice-planner</code> exactly the three read-only tools — and no
+<code>Bash</code>, which is precisely the "script interpreter / blanket shell" category — is that
+principle applied directly. The decision record says so in the words that matter: the allowlist,
+not prose, is the enforcement mechanism.</p>
+
+<h3>Where it deliberately diverges</h3>
+
+<p><strong>No runtime conflict detection — just a declared blast radius.</strong> Systems that
+speculate against mutable state usually add versioning, snapshots, or a validation step that
+re-checks the speculative read before committing to it. P10 has none: it asks the orchestrator to
+name the paths slice N declared it would touch and tells the planner to research around them.
+That is legitimate here because the consequence of a stale read is bounded — the worst case is a
+brief that is partly wrong, which the human-approved reconciliation step catches. There is no
+"commit" of speculative results to defend. The phase recorded this honestly as "a mitigation
+rather than a guarantee" instead of overclaiming.</p>
+
+<p><strong>Speculation depth of exactly one, with no adaptive policy.</strong> The literature
+tracks which speculation strategies are paying off and reallocates budget accordingly. P10 fixes
+one prefetch in flight, one slice ahead, with five hard-coded skip conditions and human judgment
+("size it per slice") for the rest. For a loop that runs a handful of times per phase with a human
+in it, a Beta-posterior bandit would be more machinery than the problem deserves.</p>
+
+<p><strong><code>bypassPermissions</code> on the speculative agent.</strong> Read literally this
+is the widest permission mode, which sounds like a divergence from least privilege. It is safe only
+because it composes with an allowlist of three read-only tools — the mode can only bypass prompts
+for tools the agent has, and it has nothing dangerous. It is worth flagging as the one place where
+the design depends on <em>two</em> settings agreeing, rather than on one setting alone.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+  <li><strong>Reconsider <code>effort: xhigh</code> on <code>slice-planner</code>.</strong> Higher
+  effort means longer latency, and this agent lives under a "a late brief is dropped" rule — the
+  setting works directly against the goal. Its original justification ("matches the low tier's
+  effort") went stale when the executor presets were re-cut in v18. Lowering it to
+  <code>medium</code> or <code>high</code> is a one-line change plus a rebuild, and would raise the
+  share of briefs that arrive in time.</li>
+  <li><strong>Decide whether the planner deserves an <code>executors.toml</code> knob.</strong>
+  Because it sits outside <code>EXECUTOR_TIERS</code>, its model and effort are pinned in the agent
+  file: operators cannot tune it, and <code>/update-workspace</code> silently resets a local
+  change with no drift warning from <code>validate</code>. That is a known, deliberate deferral —
+  it should be filed as a tracked follow-up rather than remembered.</li>
+  <li><strong>Measure the actual hit rate before extending the idea.</strong> Nobody yet knows what
+  fraction of briefs arrive in time and survive to influence a plan. A few phases' worth of "brief
+  used / dropped-late / discarded-on-verdict" tallies would tell you whether to tune the effort,
+  widen the prefetch to slice N+2, or drop the whole mechanism for short slices.</li>
+  <li><strong>Keep the user-facing READMEs in step with the machinery.</strong> The review found
+  <code>README.en.md</code> still enumerating only the three executor subagents now that a fourth
+  agent file ships, and the Korean tier table still naming Opus for the mid tier after the v18
+  preset re-cut. Machinery correctness was validated by a real install probe; the prose
+  <em>describing</em> it has no such check, which is a predictable gap worth one small follow-up.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> After P10, when does the operator approve the plan for slice N+1?</p>
+  <button class="opt" data-correct="false">While executor N is still running, so the next dispatch is immediate</button>
+  <button class="opt" data-correct="true">After executor N returns, having seen its result, verdict, and phase notes — unchanged from before</button>
+  <button class="opt" data-correct="false">Never — the prefetched brief is itself the approved plan</button>
+  <button class="opt" data-correct="false">Once per phase, at decomposition, for all slices at once</button>
+  <p class="why" hidden>The gate deliberately did not move. Only the research shifted off the critical path; the human still decides with exactly the same information they had before, which is what keeps this a latency optimization rather than a reduction in oversight.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> What actually prevents the <code>slice-planner</code> agent from writing to the repo or running a workflow command?</p>
+  <button class="opt" data-correct="false">A "Hard rules" section in its prompt telling it never to write</button>
+  <button class="opt" data-correct="true">Its <code>tools: Read, Glob, Grep</code> allowlist — with no Write/Edit/Bash/Agent, those actions are unavailable</button>
+  <button class="opt" data-correct="false">A pre-commit hook that rejects commits made by subagents</button>
+  <button class="opt" data-correct="false">The orchestrator reviewing every action the planner takes before it happens</button>
+  <p class="why" hidden>The prompt does state the rules, but only so the boundary is explicit rather than incidental. The enforcement is the allowlist: no Bash means no workflow commands, no git, no builds; no Agent means it cannot dispatch anyone; no Write/Edit means it cannot touch a slice folder.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Executor N returns <code>escalate</code> instead of <code>done</code>, and a prefetched brief for slice N+1 is sitting in the scratchpad. What happens to the brief?</p>
+  <button class="opt" data-correct="false">It is written into slice N+1's <code>plan.md</code> so the work is not wasted</button>
+  <button class="opt" data-correct="false">It is kept and merged with the escalation findings</button>
+  <button class="opt" data-correct="true">It is discarded — the world it assumed did not happen, so planning restarts from the current tree</button>
+  <button class="opt" data-correct="false">It is promoted to the next slice's brief automatically</button>
+  <p class="why" hidden>Discard on any verdict other than <code>done</code>. On an escalation, slice N did not land as planned, so the brief's assumptions about the tree are unreliable — and writing it into a slice folder is forbidden anyway, since a stale draft could later be misread as an approved plan.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Why must the orchestrator confirm the harness plan file's opening lines before copying it into <code>plan.md</code>?</p>
+  <button class="opt" data-correct="false">To verify the operator has signed the file cryptographically</button>
+  <button class="opt" data-correct="true">Because the harness reuses one plan file per session, so an unconfirmed copy could persist an earlier slice's plan</button>
+  <button class="opt" data-correct="false">To check the file is valid Markdown before the executor reads it</button>
+  <button class="opt" data-correct="false">Because <code>cp</code> would otherwise fail on a file larger than the context window</button>
+  <p class="why" hidden>One plan file per session, overwritten on the next <code>EnterPlanMode</code>. Copying the wrong plan is worse than the paraphrase risk the change set out to remove — which is why the guard, and "copy immediately, before the next EnterPlanMode", are both load-bearing rather than decorative.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A new file <code>.claude/agents/my-agent.md</code> is added to <code>FIXED_LIVE_FILES</code> in <code>installer/build.py</code>, and <code>grep my-agent bootstrap_agentic_workspace.sh</code> returns hits. What is still broken?</p>
+  <button class="opt" data-correct="false">Nothing — being in the payload is what makes it ship</button>
+  <button class="opt" data-correct="true">Nothing ever writes it to a target: the agent write is a loop over the three executor tiers, so an explicit <code>write_text</code> (plus a <code>MANAGED_FILES</code> entry) is still needed</button>
+  <button class="opt" data-correct="false">The file needs a matching <code>.codex/agents/my-agent.toml</code> or the build fails</button>
+  <button class="opt" data-correct="false">The workspace version must be bumped or the payload is stripped at install</button>
+  <p class="why" hidden>This is the dead-payload trap the phase documented. The artifact contains the text — so every grep passes — but the installer's agent write loops over ("low","mid","high") and never emits a fourth file. Only a real install into a scratch directory catches it, which is why the probe is a required check rather than an optional one.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
