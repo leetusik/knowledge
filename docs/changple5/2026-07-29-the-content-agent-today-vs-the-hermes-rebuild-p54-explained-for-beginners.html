@@ -1,0 +1,638 @@
+<!--kb
+title: "The Content Agent Today vs. the Hermes Rebuild (P54), Explained for Beginners"
+date: 2026-07-29
+tags:
+  - content-agent
+  - hermes-agent
+  - llm-agents
+  - agent-memory
+  - p54
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Content Agent Today vs. the Hermes Rebuild (P54), Explained for Beginners</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff; --fg: #1d2129; --muted: #5b6572;
+      --panel: #f5f6f8; --border: #d9dee5;
+      --accent: #2d7a5f; --accent-bg: #eef7f2;
+      --warn: #a15c00; --warn-bg: #fdf3e3;
+      --danger: #a03030; --danger-bg: #fbeeee;
+      --info: #2b5f8f; --info-bg: #edf4fa;
+      --code-bg: #f2f3f5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181d; --fg: #e6e8ec; --muted: #9aa3af;
+        --panel: #1f232b; --border: #333a45;
+        --accent: #6cc1a1; --accent-bg: #1c2b25;
+        --warn: #e0a45c; --warn-bg: #2b2314;
+        --danger: #e08585; --danger-bg: #2d1a1a;
+        --info: #7fb3e0; --info-bg: #172433;
+        --code-bg: #23272f;
+      }
+    }
+    body { max-width: 47rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+                        "Noto Sans KR", sans-serif;
+           line-height: 1.65; background: var(--bg); color: var(--fg); }
+    h1 { font-size: 1.7rem; line-height: 1.3; }
+    h2 { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    h3 { margin-top: 1.8rem; }
+    a { color: var(--info); }
+    nav { background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+          padding: .75rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+    code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px;
+           font-size: .92em; overflow-wrap: anywhere; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg);
+          padding: .75rem .9rem; border-radius: 8px; font-size: .88em; line-height: 1.5; }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+    th, td { border: 1px solid var(--border); padding: .45rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: var(--panel); }
+    .callout { border-left: 4px solid var(--accent); background: var(--accent-bg);
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 6px; }
+    .callout.warn { border-color: var(--warn); background: var(--warn-bg); }
+    .callout.danger { border-color: var(--danger); background: var(--danger-bg); }
+    .callout.info { border-color: var(--info); background: var(--info-bg); }
+    .callout > :first-child { margin-top: 0; } .callout > :last-child { margin-bottom: 0; }
+    figure { margin: 1.5rem 0; }
+    figcaption { font-size: .88em; color: var(--muted); margin-top: .5rem; }
+    .flow { display: flex; flex-direction: column; gap: .35rem; }
+    .flow .box { border: 1.5px solid var(--border); border-radius: 8px; background: var(--panel);
+                 padding: .5rem .8rem; font-size: .9em; }
+    .flow .box b { display: block; }
+    .flow .box small { color: var(--muted); }
+    .flow .arrow { text-align: center; color: var(--muted); font-size: .85em; line-height: 1.2; }
+    .flow .box.hot { border-color: var(--accent); background: var(--accent-bg); }
+    .flow .box.dead { border-color: var(--danger); background: var(--danger-bg); }
+    .stages { display: flex; flex-wrap: wrap; gap: .4rem; align-items: stretch; }
+    .stages .stage { flex: 1 1 8.5rem; border: 1.5px solid var(--accent); background: var(--accent-bg);
+                     border-radius: 8px; padding: .5rem .6rem; font-size: .85em; }
+    .stages .stage b { display: block; margin-bottom: .15rem; }
+    .ledger { border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+              font-size: .9em; margin: 1rem 0; }
+    .ledger .row { display: flex; gap: .8rem; padding: .5rem .8rem; border-top: 1px solid var(--border); }
+    .ledger .row:first-child { border-top: none; }
+    .ledger .tag { flex: 0 0 7.2rem; font-family: ui-monospace, Menlo, monospace; font-size: .85em; }
+    .ledger .row.sup { color: var(--muted); }
+    .ledger .row.app { background: var(--accent-bg); }
+    .q { border: 1px solid var(--border); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem;
+              cursor: pointer; border: 1px solid var(--border); border-radius: 6px;
+              background: var(--panel); color: var(--fg); font: inherit; font-size: .95em; }
+    .q .opt.correct   { background: var(--accent-bg); border-color: var(--accent); }
+    .q .opt.incorrect { background: var(--danger-bg); border-color: var(--danger); }
+    .q .why { margin: .5rem 0 0; font-size: .92em; color: var(--muted); }
+    .src { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>The Content Agent Today vs. the Hermes Rebuild (P54), Explained for Beginners</h1>
+
+  <p><em>This explainer teaches the P54.S1 proposal (2026-07-29): what the Changple content agent
+  is today, why it cannot learn, what Nous Research's Hermes Agent actually provides, and how the
+  proposed v2 wires the two together. Everything here is grounded in the real code — repo paths are
+  from working tree <code>58ffa3aa</code>, and every Hermes claim was verified by reading its source
+  at the pinned tag <code>v2026.7.20</code> (commit <code>3ef6bbd2…</code>). The full proposal with
+  ten operator decisions lives at
+  <code>works/phases/active/P54/slices/P54.S1/result.md</code>.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+
+    <h3>A primer, if you need it: workflows, agents, and how an LLM "remembers"</h3>
+    <p><em>(Skip to the next heading if you already know these terms.)</em></p>
+    <p>A large language model has no memory between calls. Every request starts from a blank slate:
+    whatever you want it to "know" must be placed into the prompt, every single time. Systems built
+    around LLMs therefore fall on a spectrum. At one end are <strong>workflows</strong> — "systems
+    where LLMs and tools are orchestrated through predefined code paths": your Python decides step 1,
+    step 2, step 3, and the model fills in the blanks. At the other end are <strong>agents</strong> —
+    "systems where LLMs dynamically direct their own processes and tool usage." In a workflow the
+    code is the boss; in an agent the model is.</p>
+    <p>When people say an agent "learns," they almost never mean the model's weights change. They
+    mean the <em>system around the model</em> accumulates text — notes, preferences, procedures —
+    and injects it into future prompts. The research literature gives this move a name: Reflexion
+    showed that agents which "verbally reflect on task feedback signals" and keep that reflection in
+    an episodic memory buffer improve dramatically without any fine-tuning. Learning, for an agent,
+    is careful bookkeeping of words.</p>
+
+    <h3>The content agent, and the two defects that started this phase</h3>
+    <p>Changple's <strong>content agent</strong> is an operator-only tool at
+    <code>/operator/miracle-agent</code>. Changple staff use it to draft 미라클 library articles —
+    long-form Korean case-study content like "평상집 양재점 창업 사례" — grounded in the company's
+    Naver Cafe corpus of ~7,000 posts. P30 built it (job-based drafting, an outline gate, publishing);
+    P52 rebuilt its research half so it collects ~100 candidate posts wide, filters them, sorts them
+    into categories, and lets the operator <em>curate</em> the plan — the 구성안 — before a word of
+    the body is written.</p>
+    <p>At the 2026-07-27 client meetup, Changple named two defects. First, <strong>학습 능력
+    부재</strong> — "no ability to learn": "개발자 개입이 없으면 똑같은 지시를 매 콘텐츠마다
+    삽입해야함" (without developer intervention, the same instructions must be inserted into every
+    piece of content). Second, the agent <strong>uses few documents</strong> despite the corpus being
+    large. The operator's chosen answer is P54: rebuild the agent's runtime on <strong>Hermes
+    Agent</strong>, with new input types (KakaoTalk conversation exports, loose photos, content
+    guidelines) and a rule that content is only produced for subjects with a verified total-cost
+    transcript.</p>
+
+    <div class="callout info">
+      <p><strong>What Hermes Agent is (and is not).</strong> Hermes Agent is an MIT-licensed,
+      self-hosted agent <em>daemon</em> from Nous Research (<code>github.com/NousResearch/hermes-agent</code>,
+      v0.19.0 at tag <code>v2026.7.20</code>). It is model-agnostic — it calls Gemini, Claude, or ~50
+      other providers. It is <em>not</em> the "Hermes 3/4" LLM weights from the same company, not
+      Meta's Hermes JavaScript engine, and not any of the SEO clone sites. Its pitch, for our
+      purposes: two curated memory files injected into every session, a <code>SKILL.md</code> skill
+      library, a background "review fork" that decides what is worth remembering, and subagents.</p>
+    </div>
+
+    <p>P54.S1 — the document this explainer is based on — was a research slice: read the v1 code
+    first-hand, read the Hermes source first-hand at the pinned tag, and produce a comparison plus an
+    adoption blueprint. Notably, three of the phase's own starting assumptions did not survive that
+    reading; the biggest is that a feared incompatibility (the "P44 effort gap") turned out not to
+    exist at all. Research that corrects its own premises is research working as intended.</p>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <h3>The amnesiac craftsman</h3>
+    <p>Imagine hiring a genuinely talented writer with total amnesia. Every morning they arrive with
+    no recollection of yesterday. You can leave them one sticky note — that is v1's entire
+    institutional memory, and it is literally <strong>one integer</strong>: the id of a single
+    exemplar article (<code>ContentDraftSettings.reference_content_id</code>, default 19) whose voice
+    and tone the agent imitates. Everything else you told them yesterday — "keep paragraphs to 3–4
+    sentences," "use current job titles, 정수과장 not 정수대리," "stop opening with a 브랜드 소개
+    section" — is gone. So the operator types it again. Every job. That is 학습 능력 부재, and it is
+    not a tuning problem; it is the architecture.</p>
+
+    <h3>The treasure already in the database</h3>
+    <p>Here is the counterintuitive part: <strong>v1 already records the operator's corrections,
+    structurally, and throws none of them away.</strong> Every time the operator edits the proposed
+    outline at the 구성안 gate, the backend saves her version as a <em>new row</em> and marks the
+    agent's proposal "superseded." The lineage is append-only:</p>
+
+    <figure>
+      <div class="ledger">
+        <div class="row"><span class="tag">#1 proposed</span>
+          <span>Agent's outline: 7 sections, "브랜드 소개" first</span></div>
+        <div class="row sup"><span class="tag">#2 superseded</span>
+          <span>Operator deleted 브랜드 소개, merged two 인테리어 sections, rewrote three 소제목</span></div>
+        <div class="row app"><span class="tag">#3 approved</span>
+          <span>The outline the article was actually written from</span></div>
+      </div>
+      <figcaption>The <code>ContentDraftOutline</code> lineage for one job. The diff between the last
+      "proposed" row and the "approved" row <em>is</em> the operator's editorial judgment — already
+      structured as JSON, already timestamped, already durable.</figcaption>
+    </figure>
+
+    <p>The proposal's verified punchline: <strong>nothing reads this.</strong> A grep across the
+    backend shows every <code>ContentDraft*</code> query is scoped to a single job. The corrections
+    are captured and then buried. The learning loop is <em>close</em>, not far — the signal exists;
+    there is simply no reader.</p>
+
+    <h3>The crux: Hermes learns from conversations, but our operator doesn't chat</h3>
+    <p>Hermes's self-improvement works by replaying <em>conversation transcripts</em>: a background
+    review fork reads the recent exchange and decides whether something in it deserves to become a
+    memory entry or a skill. That is a great fit for a chatty assistant. But our operator does not
+    converse with the drafting agent — she fills a form, edits a JSON outline in a purpose-built UI,
+    and clicks approve. A naive integration hands Hermes a transcript that reads, in its entirety,
+    "user: write about 평상집 양재점" — and there is nothing to learn from that.</p>
+
+    <div class="callout">
+      <p><strong>The central design insight of P54.S1:</strong> installing Hermes does not, by
+      itself, fix 학습 능력 부재. The real work is <em>manufacturing a learning signal</em> out of
+      the diff between what the agent proposed and what the operator approved — the data already
+      sitting in Postgres. The proposal estimates this is 70% of the phase's value; the runtime swap
+      is the other 30%.</p>
+    </div>
+
+    <p>Hence the proposed <strong>lesson pipeline</strong> — five stages, with a human gate in the
+    middle:</p>
+
+    <figure>
+      <div class="stages">
+        <div class="stage"><b>1 · Capture</b>Outline diffs, feedback text, manual edits. Deterministic, no LLM. Ships before Hermes.</div>
+        <div class="stage"><b>2 · Distill</b>One cheap model call turns raw observations into a candidate lesson with provenance.</div>
+        <div class="stage"><b>3 · Stage</b>Lesson lands as a backend row, <em>proposed</em>. The operator approves, edits, or rejects it.</div>
+        <div class="stage"><b>4 · Apply</b>Short facts → <code>MEMORY.md</code> (2,200-char budget). Doctrine → a <code>SKILL.md</code>.</div>
+        <div class="stage"><b>5 · Unlearn</b>Any lesson is retirable from the same UI; the next projection removes it.</div>
+      </div>
+      <figcaption>The proposed learning loop. Postgres is the <strong>system of record</strong>;
+      Hermes's <code>~/.hermes</code> files are a <strong>projection</strong>, rebuilt idempotently —
+      the same relationship <code>docs/current/</code> has to <code>docs/versions/</code> in this
+      workspace.</figcaption>
+    </figure>
+
+    <h3>What the operator actually feels</h3>
+    <p>Trace two jobs through both worlds. In v1, job 2 costs exactly what job 1 cost: the same
+    re-typed instructions, the same 브랜드 소개 deletion (for the fourth time), the same "문단이 너무
+    길다" revision round. In v2, job 1's corrections became lessons — so job 2's brief is one
+    sentence, the outline arrives without the unwanted section, and the draft comes back in 3–4
+    sentence paragraphs. Effort falls with every job that teaches something:</p>
+
+    <figure>
+      <svg viewBox="0 0 460 170" role="img" aria-label="Operator effort per job: v1 stays flat, v2 falls"
+           style="max-width:100%; height:auto;">
+        <line x1="40" y1="140" x2="440" y2="140" stroke="currentColor" stroke-width="1" opacity=".5"/>
+        <line x1="40" y1="20"  x2="40"  y2="140" stroke="currentColor" stroke-width="1" opacity=".5"/>
+        <text x="10" y="30"  font-size="11" fill="currentColor" opacity=".7">effort</text>
+        <text x="400" y="158" font-size="11" fill="currentColor" opacity=".7">job #</text>
+        <text x="70"  y="158" font-size="11" fill="currentColor" opacity=".7">1</text>
+        <text x="190" y="158" font-size="11" fill="currentColor" opacity=".7">2</text>
+        <text x="310" y="158" font-size="11" fill="currentColor" opacity=".7">3</text>
+        <polyline points="75,55 195,55 315,55 425,55" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+        <text x="330" y="48" font-size="12" fill="#c0392b">v1: flat</text>
+        <polyline points="75,55 195,85 315,105 425,118" fill="none" stroke="#2d7a5f" stroke-width="2.5"/>
+        <text x="310" y="132" font-size="12" fill="#2d7a5f">v2: falling</text>
+      </svg>
+      <figcaption>The thesis in one picture — and its failure mode: if a <em>wrong</em> lesson gets
+      saved, the green curve runs the other way, because a bad rule now applies to every future job
+      and is invisible in any single output. That is why the loop has an approval gate, provenance on
+      every lesson, and an unlearn button. They are the counterweight, not polish.</figcaption>
+    </figure>
+
+    <div class="callout warn">
+      <p><strong>Why memory being tiny is a feature.</strong> Hermes's <code>MEMORY.md</code> holds
+      2,200 characters — maybe a dozen entries — and refuses writes past the limit until the model
+      consolidates. That sounds restrictive, but it forces prioritization: only the always-relevant
+      facts live there ("직원 닉네임은 최신 직급으로"), while long editorial doctrine goes into
+      skills, which are loaded only when relevant. Bounded memory is what keeps every future prompt
+      from silting up.</p>
+    </div>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+
+    <h3>v1, end to end</h3>
+    <p>The system is three services with one strict seam between each pair:</p>
+
+    <figure>
+      <div class="flow">
+        <div class="box"><b>apps/web — the workspace (10,680 lines)</b>
+          <small><code>operator-miracle-agent-route.tsx</code> (3,355) + four curation-gate files
+          (5,058) · polls the backend every 2.5 s, no SSE</small></div>
+        <div class="arrow">↓ <code>/api/content/admin/miracle-agent/*</code> (admin session auth)</div>
+        <div class="box hot"><b>apps/backend/content — the source of truth (5,342 lines)</b>
+          <small><code>draft_views.py</code> · <code>draft_dispatch.py</code> (Celery, 3 attempts,
+          stale reclaim) · <code>models.py</code>: Job (11 states) / Outline / Message / Version /
+          Decision / Settings · <code>draft_publish.py</code> (atomic swap, never
+          <code>NotionContent.save()</code>)</small></div>
+        <div class="arrow">↓ <code>POST /internal/content/drafts/generate</code> — service token,
+          one request in, one response out, <code>extra="forbid"</code></div>
+        <div class="box"><b>apps/agent/app/content_drafts — a stateless pure function (3,661 lines)</b>
+          <small><code>run_content_draft_pipeline</code> (<code>agent.py:1997</code>) → OUTLINE /
+          WRITE / REVISE · <code>retrieval.py</code> wraps the shared <code>app/retrieval/</code>
+          (2,675 lines, zero diff in P52)</small></div>
+      </div>
+      <figcaption>Django owns the state machine, the retries, and every gate; the agent service is a
+      pure function of one payload. That division is a keep-list asset, not an accident.</figcaption>
+    </figure>
+
+    <p>The heart of it is easy to misread as a state machine. It is not — it is a
+    <strong>three-way branch on the shape of the input payload</strong>:</p>
+
+    <pre><code># apps/agent/app/content_drafts/agent.py:1997 (paraphrased shape)
+if payload.latest_version:      # a version exists → operator left feedback
+    REVISE   # exact find→replace edits; falls back to full rewrite
+elif payload.approved_outline:  # 구성안 approved → write the body
+    WRITE    # rehydrate research_state → one section per category → integrate
+else:                           # fresh job → research and propose
+    OUTLINE  # bounded tool loop (≤8 searches, ≤6 iterations) → filter
+             # → categorize → propose the 구성안</code></pre>
+
+    <p>Everything the agent will ever know about a job is assembled by one function —
+    <code>_build_generation_payload</code> (<code>draft_dispatch.py:426</code>): the brief, the
+    reference profile, the thread messages, attachments, the latest version, the approved outline.
+    All of it is loaded from <em>that job's</em> rows. This is where the amnesia lives: run the same
+    function for a new job and every lesson from the last one is out of scope by construction.</p>
+
+    <h3>Defect one, located: the feedback dead-end</h3>
+    <p>Follow one instruction to its grave. The operator types "문단이 너무 길다. 3~4 문장으로
+    끊어줘" into the thread. <code>draft_views.py:209</code> stores it as a
+    <code>ContentDraftMessage(kind=feedback)</code>; the payload builder serializes it; the REVISE
+    prompt uses it; the revision lands. The job closes. The next job's <code>job.messages</code> is
+    empty — the instruction is gone. Three facts make this structural:</p>
+    <ul>
+      <li>Every <code>ContentDraft*.objects</code> read in the backend is job-scoped (verified by
+      grep — the only cross-job accessors are the settings singleton's).</li>
+      <li>The only cross-job carrier is one integer: <code>reference_content_id</code>
+      (<code>models.py:456-491</code>).</li>
+      <li>The prompts have no seam for operator-authored text: house style is a hardcoded Korean
+      constant, <code>_VOICE_GUIDANCE</code> at <code>prompts.py:58</code>. Changing it is a code
+      change, a build, and a deploy — exactly what the meetup meant by "개발자 개입".</li>
+    </ul>
+    <p>And one absence worth naming: there is <strong>no reject action</strong>.
+    <code>ContentDraftDecision.Action</code> is <code>approve | cancel | approve_outline</code>
+    (<code>models.py:837-841</code>). 반려 exists only as free-text feedback or a cancel — so the
+    moment the operator is most motivated to explain <em>why</em>, the system offers her no
+    structured way to say it. (Adding one is Decision 5 in the proposal.)</p>
+
+    <h3>Defect two, located: the funnel</h3>
+    <p>P52 genuinely fixed the collection half: candidates from every search are pooled with the
+    best rank kept per post, and the pool is trimmed <em>once, after collection</em> — never
+    mid-loop. What remains narrow is further down:</p>
+
+    <table>
+      <tr><th>Stage</th><th>Cap</th><th>Where</th></tr>
+      <tr><td>Searches per job</td><td>8</td><td><code>agent.py:105</code></td></tr>
+      <tr><td>Pooled candidates, trimmed once</td><td>100</td><td><code>agent.py:108</code></td></tr>
+      <tr><td>Categories</td><td>10</td><td><code>curation.py:68</code></td></tr>
+      <tr><td><strong>Posts per category</strong></td><td><strong>10</strong></td>
+          <td><code>curation.py:69</code> — <strong>the binding cap</strong></td></tr>
+    </table>
+
+    <p>Realistically 30–50 posts reach the gate, and <strong>a section is written from at most
+    10</strong>. Beneath the caps sit two quieter narrownesses: only posts the research loop
+    explicitly read contribute full bodies (everything else is title + summary), and corpus images
+    with no <code>generated_alt</code> are <em>silently invisible</em> to the agent
+    (<code>images.py:152-172</code>). Which of these is the felt cause of "적은 양의 자료만 사용" is
+    unmeasured — and <code>agent.py:2183</code> already logs pool → kept → categories → curated
+    counts, so <strong>one production job's log line settles it</strong>.</p>
+
+    <h3>Hermes, verified at the pinned tag</h3>
+    <p>What the S1 slice confirmed by reading the Hermes source (every claim carries a file at
+    commit <code>3ef6bbd2…</code>):</p>
+    <ul>
+      <li><strong>Memory</strong>: <code>MEMORY.md</code> (2,200 chars) + <code>USER.md</code>
+      (1,375 chars), injected as a <em>frozen snapshot at session start</em> — a mid-session write
+      takes effect next session, deliberately, to preserve the provider's prompt cache. No
+      auto-compaction: at the limit, writes fail until the model consolidates. Entries are
+      security-scanned before acceptance (<code>tools/memory_tool.py:88</code>).</li>
+      <li><strong>Skills</strong>: <code>~/.hermes/skills/&lt;category&gt;/&lt;name&gt;/SKILL.md</code>
+      with three-level progressive disclosure — a ~3k-token catalog of names and descriptions, then
+      one skill's body on demand, then its reference files. The same convention this repo already
+      uses under <code>.claude/skills/</code>.</li>
+      <li><strong>The review fork's trigger is two different counters, and it matters enormously
+      here</strong>: memory review counts <em>user turns</em> (default every 10), skill review
+      counts <em>tool iterations within a turn</em> (default every 10). A content-draft job is one
+      long turn with many tool calls — so out of the box <strong>the skill review fires and the
+      memory review never does</strong>. How we shape the message array decides whether memory
+      review ever runs. A design lever, found only by reading
+      (<code>agent/turn_context.py:492-502</code>, <code>agent/turn_finalizer.py:576-582</code>).</li>
+      <li><strong>The curator sting</strong>: the curator (stale after 30 days, archive after 90)
+      only manages skills the <em>background review fork</em> created. Skills pushed in by our
+      backend are treated as user-directed and are never staled, archived, or consolidated —
+      <strong>if we push lessons in explicitly, we own their lifecycle</strong>
+      (<code>features/curator.md:141-160</code>).</li>
+      <li><strong><code>write_approval</code> has no HTTP surface</strong>: staged memory/skill
+      writes land as plain JSON under <code>~/.hermes/pending/</code>, approvable only via slash
+      commands — the API server's route table has no <code>/memory</code>, no <code>/pending</code>
+      (<code>gateway/platforms/api_server.py:1482-1523</code>). Our operator approval gate must
+      read and write those files off the shared volume.</li>
+      <li><strong>API surface</strong>: <code>/v1/chat/completions</code> (stateless, SSE, inline
+      images) is the main path; <code>/v1/runs</code> is <strong>text-only</strong> (it coerces
+      content to <code>str</code>), so the image-carrying draft turn cannot use it. File uploads
+      don't exist — image splitting, OCR, and storage stay on our side.</li>
+      <li><strong>The three corrected premises</strong>: the feared "P44 effort gap" does not exist —
+      Hermes exposes <code>reasoning_effort</code> globally, per-model, and on 15 of its 18 auxiliary
+      slots, on the <em>identical</em> eight-level ladder (<code>none…ultra</code>) that P44's
+      operator store already uses (<code>hermes_cli/config.py:1636-1816</code>). So the question
+      shrank from "survive losing effort control" to "keep one store as the source of truth" —
+      project P44's DB rows into Hermes's <code>config.yaml</code>.</li>
+    </ul>
+
+    <h3>The v2 shape</h3>
+    <p><strong>Sidecar, not library.</strong> The library path was re-examined and fails harder than
+    assumed: the entry points are synchronous plain <code>def</code>s (<code>run_agent.py:6350,
+    6407</code>), the docs say "never share an instance across concurrent calls," the import is a
+    301&nbsp;KB top-level module, and Hermes's own embedded-use guidance is
+    <code>skip_memory=True</code> — disabling the exact feature this phase exists to adopt. So: a
+    <code>hermes</code> compose service on the internal network (no published ports, mandatory
+    <code>API_SERVER_KEY</code>), a persistent <code>hermes_home</code> volume, and
+    <code>apps/agent</code> calling <code>http://hermes:8642/v1/chat/completions</code>. The backend
+    contract does not change — <strong>the backend does not know Hermes exists</strong>.</p>
+
+    <p><strong>The survival map, compressed.</strong> The backend draft path (5,342 lines) survives
+    almost entirely — additive migrations only (a lesson store, optionally a rejection reason and a
+    cost-transcript row). The workspace (10,680 lines) survives and grows at two design-touching
+    points (lesson capture; a learned-knowledge review surface). The agent package is where the work
+    is: the hand-rolled orchestration (~1,400 lines of <code>agent.py</code>) becomes Hermes turns,
+    while ~900 lines of deterministic post-processing survive as helpers, and
+    <code>prompts.py</code>'s nine builders become a compact per-job system message plus
+    <code>SKILL.md</code> doctrine. The 구성안 gate stays a <em>backend</em> concept: Hermes's turn
+    ends by returning an outline; Postgres stores it; the operator's 5,058-line curation UI — the
+    "관리자 개입 강화" the meetup asked for — keeps working unchanged.</p>
+
+    <p>What a lesson looks like once it graduates to a skill — note the Pitfalls line carrying
+    <strong>provenance and a count</strong>, which is what makes a rule auditable rather than
+    mystical:</p>
+
+    <pre><code>---
+name: changple-content-voice
+description: Changple house voice and paragraph rules for 창업 case content
+version: 3.0.0
+---
+# Changple 콘텐츠 어투 · 구성
+## When to Use
+Any 창업 사례 draft or revision for miracle.changple.ai.
+## Procedure
+1. 문단은 3~4 문장. 한 문단에 한 가지 주장.
+2. 비용 관련 수치는 반드시 출처 게시글을 인용 마커로 붙인다.
+## Pitfalls
+- "브랜드 소개" 섹션을 앞에 두지 않는다 — 운영자가 6회 연속 삭제함 (jobs #…)
+## Verification
+각 섹션이 3~4문장 문단으로만 구성되었는지 확인.</code></pre>
+
+    <div class="callout danger">
+      <p><strong>The new risk class.</strong> Today a poisoned Naver Cafe post can damage one job.
+      With a learning loop, a poisoned post that gets distilled into memory reaches <em>every future
+      job</em> — an injection becomes a persistent implant. The proposal's posture: both
+      <code>write_approval</code> gates ON from day one, every lesson carrying provenance, the
+      dangerous toolsets (<code>terminal</code>, <code>browser</code>, <code>execute_code</code>)
+      disabled, the daemon reachable only on the internal network — and, because Postgres is the
+      system of record, a catastrophic Hermes failure costs a re-projection, not the learning.</p>
+    </div>
+  </section>
+
+  <section id="best-practices">
+    <h2>Best practices &amp; next steps</h2>
+
+    <h3>Where the proposal aligns with prevailing practice</h3>
+    <ul>
+      <li><strong>Keep the workflow envelope; add agency only inside it.</strong> Anthropic's
+      guidance is to "find the simplest solution possible, and only increas[e] complexity when
+      needed" — workflows offer predictability for well-defined tasks; agents earn their keep where
+      flexibility is needed
+      (<a href="https://www.anthropic.com/engineering/building-effective-agents">Building Effective
+      Agents</a> — anthropic.com). The proposal follows this exactly: the job state machine, the
+      gates, and the retry ladder stay predefined code paths in Django; only the drafting brain
+      inside one dispatch becomes agentic. It resists the tempting rewrite-everything reading of
+      "rebuild on Hermes."</li>
+      <li><strong>Skills with progressive disclosure are the emerging standard for durable
+      procedural knowledge.</strong> The <code>SKILL.md</code> pattern — metadata always in context,
+      full instructions on demand, resources last — is documented practice
+      (<a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">Equipping
+      agents for the real world with Agent Skills</a> — anthropic.com), Hermes implements the same
+      shape, and this repo already uses it. Putting Changple's editorial doctrine there, rather than
+      in an ever-growing system prompt, is the aligned choice.</li>
+      <li><strong>Learning as curated verbal feedback is a validated mechanism.</strong> Reflexion
+      showed agents improving sharply by keeping verbal reflections in an episodic buffer instead of
+      updating weights (<a href="https://arxiv.org/abs/2303.11366">Shinn et al., 2023</a> —
+      arxiv.org). The proposal's lesson distiller is that move — with a stronger footing, because our
+      "reflection" is grounded in a structural diff (proposed vs. approved outline) rather than the
+      model's self-assessment.</li>
+      <li><strong>The memory split matches the cognitive-architecture framing.</strong> CoALA
+      organizes agents around modular memory components with a structured action space over them
+      (<a href="https://arxiv.org/abs/2309.02427">Sumers et al., 2023</a> — arxiv.org). Hermes's
+      trio maps cleanly: <code>MEMORY.md</code>/<code>USER.md</code> as semantic memory,
+      <code>SKILL.md</code> as procedural, the SQLite session store as episodic — and v1, notably,
+      has none of the three.</li>
+    </ul>
+
+    <h3>Where it deliberately diverges, and why that is defensible here</h3>
+    <ul>
+      <li><strong>The agent runtime's own memory is <em>not</em> the system of record.</strong>
+      Hermes-native practice would let the daemon own its learned state. The proposal instead makes
+      Postgres authoritative and treats <code>~/.hermes</code> as an idempotent projection — because
+      the operator UI cannot reach Hermes's pending-approval files over HTTP (there is no such API),
+      because a 2,200-character memory ceiling cannot hold the lesson corpus, and because a container
+      volume is a fragile home for the only durable asset the phase creates. This is a
+      considered divergence, not ignorance of the native path.</li>
+      <li><strong>Human approval where Hermes defaults to autonomy.</strong> Hermes ships with
+      <code>write_approval</code> off; the proposal turns it on for both memory and skills from day
+      one. In a single-operator system whose failure mode is a silently wrong rule applied to every
+      future article, the approval gate is the mitigation — everything else is defense in depth.</li>
+    </ul>
+
+    <h3>Next steps (as proposed to the operator)</h3>
+    <ol>
+      <li><strong>Read one log line before tuning anything</strong>: run a single production job and
+      read the existing pool→kept→categories→curated counts at <code>agent.py:2183</code> to settle
+      which cap actually causes "few documents used."</li>
+      <li><strong>Build the capture job first</strong> — the deterministic outline-diff recorder.
+      It needs no Hermes, no LLM, and starts accumulating training signal immediately.</li>
+      <li><strong>Run the two spikes before committing</strong>: Korean OCR quality on one real
+      KakaoTalk export, and corpus-as-MCP-tools vs. pre-fetched documents.</li>
+      <li><strong>Stand up the regression gate with the first deploy, not after</strong>: one
+      recorded job replayed end to end, asserting on the config keys, API routes, SSE event names,
+      and pending-file layout that a Hermes upgrade could silently change (the repo is ~2,000
+      commits/week upstream; the pin is SHA <code>3ef6bbd2…</code>).</li>
+    </ol>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+    <p>Five questions. Click an answer to check it.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> Why does simply installing Hermes and enabling its memory <em>not</em>
+      fix 학습 능력 부재?</p>
+      <button class="opt" data-correct="false">Hermes's memory files are too small to store any
+      lessons at all</button>
+      <button class="opt" data-correct="true">Hermes learns by reviewing conversation transcripts,
+      but the operator's highest-signal corrections are structured outline edits made in a UI — a
+      naive integration gives the review fork almost nothing to learn from</button>
+      <button class="opt" data-correct="false">Hermes only supports OpenAI models, so the content
+      roles cannot route to it</button>
+      <button class="opt" data-correct="false">The backend's Celery dispatcher cannot call an
+      external daemon</button>
+      <p class="why" hidden>The review fork replays the conversation. Our "conversation" is one
+      synthetic turn ("write about 평상집 양재점") — the real signal is the proposed-vs-approved
+      구성안 diff in Postgres, which the proposal turns into lessons explicitly. That manufacturing
+      step is estimated at 70% of the phase's value.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> What is the <em>only</em> cross-job memory the v1 content agent has?</p>
+      <button class="opt" data-correct="false">The thread messages of the operator's previous ten
+      jobs</button>
+      <button class="opt" data-correct="false">A YAML file of house-style rules the operator can
+      edit</button>
+      <button class="opt" data-correct="true">A single integer — the id of one reference article
+      whose voice/tone is summarized into each job's prompt</button>
+      <button class="opt" data-correct="false">The superseded outline rows, which are re-read at the
+      start of every new job</button>
+      <p class="why" hidden><code>ContentDraftSettings.reference_content_id</code> (default 19) is
+      it. The outline rows do exist — but nothing reads them across jobs; every
+      <code>ContentDraft*</code> query in the backend is job-scoped. House style is a hardcoded
+      constant (<code>_VOICE_GUIDANCE</code>, <code>prompts.py:58</code>), not an editable file.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> The corpus has ~100 candidates pooled per job, yet a section is written
+      from at most 10 posts. Which cap is the binding one?</p>
+      <button class="opt" data-correct="false"><code>MAX_CANDIDATE_POOL = 100</code> — the pool trim
+      after collection</button>
+      <button class="opt" data-correct="true"><code>MAX_POSTS_PER_CATEGORY = 10</code> — the writer
+      only ever sees the categorized union, and each section is written from its own category</button>
+      <button class="opt" data-correct="false"><code>MAX_RESEARCH_SEARCHES = 8</code> — the search
+      budget per job</button>
+      <button class="opt" data-correct="false">The rerank limit of 40 candidates per search</button>
+      <p class="why" hidden>Realistically 3–5 categories × ≤10 posts = 30–50 posts reach the gate,
+      and each section draws from ≤10 (<code>curation.py:69</code>). Whether this cap or the
+      read-vs-summary gap is the <em>felt</em> cause is unmeasured — which is why the proposal's
+      first next-step is reading the existing funnel log line at <code>agent.py:2183</code>.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> A content-draft job is one long turn with many tool calls. Out of the
+      box, which of Hermes's two self-improvement reviews fires?</p>
+      <button class="opt" data-correct="false">Both — the review fork runs after every turn
+      regardless</button>
+      <button class="opt" data-correct="false">The memory review, because it counts tool
+      iterations</button>
+      <button class="opt" data-correct="true">Only the skill review — it counts tool iterations
+      within a turn, while the memory review counts <em>user turns</em>, and a one-shot job has just
+      one</button>
+      <button class="opt" data-correct="false">Neither — background review is disabled by
+      default</button>
+      <p class="why" hidden>Memory review triggers on user turns (<code>memory.nudge_interval</code>,
+      default 10); skill review on tool iterations (<code>skills.creation_nudge_interval</code>,
+      default 10). The memory counter hydrates from replayed history, so how v2 shapes the message
+      array decides whether memory review ever runs — a design lever found only by reading the code.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Why does the proposal insist both <code>write_approval</code> gates be
+      ON from day one?</p>
+      <button class="opt" data-correct="false">Because Hermes's memory writes would otherwise
+      overload the 2,200-character file immediately</button>
+      <button class="opt" data-correct="false">Because approval is required for the API server to
+      accept requests</button>
+      <button class="opt" data-correct="true">Because a wrong or poisoned lesson silently applies to
+      every future job — harder to notice than one bad draft — so no autonomous write should reach
+      future jobs without a human yes</button>
+      <button class="opt" data-correct="false">Because the curator would otherwise delete
+      operator-authored skills after 30 days</button>
+      <p class="why" hidden>The blast radius changes class: an injection becomes a persistent
+      implant. Approval gates + provenance + an unlearn surface are the counterweight that makes the
+      learning loop safe to close. (The curator, incidentally, never touches pushed skills — that is
+      the separate "curator sting.")</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
