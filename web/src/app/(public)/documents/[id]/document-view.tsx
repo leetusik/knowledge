@@ -4,6 +4,7 @@ import { DOCUMENTS } from "@/content";
 import type { KbDocument } from "@/lib/knowledge/types";
 
 import "./explainer.css";
+import { ExplainerFrame } from "./explainer-frame";
 import { MarkdownBody } from "./markdown-body";
 
 // P19 — the shared document rendering (header + metadata strip + format branch),
@@ -90,18 +91,18 @@ export function DocumentView({ doc, id }: { doc: KbDocument; id: number }) {
           framed doc gets an opaque origin, so its untrusted quiz JS runs but cannot
           read cookies/storage, reach the parent app, or call the API as the user
           (phase P16 pinned decision 1). The `src` is the same-origin BFF relay.
+
+          <ExplainerFrame> is the page's one client island: because the frame is
+          opaque-origin, its height can only travel outward over postMessage, so the
+          relay injects a reporter into the document and the island sizes the frame to
+          it. The frame therefore grows to its content and the PAGE scrolls, instead of
+          the old fixed-height frame scrolling inside a scrolling page. The sandbox
+          attribute is unchanged — the containment contract is untouched.
+
           Markdown docs render XSS-safe via <MarkdownBody> (react-markdown, no
           rehype-raw) exactly as before. */}
       {doc.format === "html" ? (
-        <div className="kb-explainer">
-          <iframe
-            src={`/api/documents/${id}/raw`}
-            sandbox="allow-scripts"
-            title={doc.title}
-            className="kb-explainer__frame"
-            referrerPolicy="no-referrer"
-          />
-        </div>
+        <ExplainerFrame src={`/api/documents/${id}/raw`} title={doc.title} />
       ) : (
         <div className="kb-panel">
           {doc.markdown.trim() === "" ? (

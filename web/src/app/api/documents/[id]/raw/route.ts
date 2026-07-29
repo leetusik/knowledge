@@ -1,4 +1,5 @@
 import { json } from "@/lib/bff";
+import { injectHeightReporter } from "@/lib/explainer-height";
 import { getDocumentRaw } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { openSession, readSessionCookie } from "@/lib/session";
@@ -6,8 +7,16 @@ import { openSession, readSessionCookie } from "@/lib/session";
 // P16.S2 — the BFF raw-HTML relay for an HTML explainer document, and the app's
 // FIRST non-auth route handler. The document viewer's `format === "html"` branch
 // points a sandboxed opaque-origin <iframe> at this same-origin route; the route
-// relays the raw HTML bytes (with the pinned sandbox headers) from knowledge's
-// session-guarded `GET /app/documents/{id}/raw` straight to the browser.
+// relays the raw HTML (with the pinned sandbox headers) from knowledge's
+// session-guarded `GET /app/documents/{id}/raw` to the browser.
+//
+// It relays the document's own bytes VERBATIM but no longer streams them: the body is
+// buffered so a height reporter can be injected (`@/lib/explainer-height`). An opaque
+// origin cannot be measured from outside, so that injected script is the only way the
+// viewer can size the frame to its content and let the PAGE scroll instead of the
+// frame. Injecting here rather than in the `explain` template is deliberate — it fixes
+// every explainer already saved. Explainers are single self-contained files, so
+// buffering them costs nothing.
 //
 // XSS-safety-critical (phase P16 pinned decision 1). Two properties it upholds:
 //   - It is OPTIONAL-IDENTITY (P19). The `(app)` layout's `requireIdentity()` covers
@@ -79,6 +88,11 @@ export async function GET(
     return json(502, { ok: false });
   }
 
-  // 4. Stream the body straight through, re-asserting the pinned sandbox headers.
-  return new Response(upstream.body, { status: 200, headers: RAW_HTML_HEADERS });
+  // 4. Buffer the body, splice in the height reporter, and return it under the pinned
+  //    sandbox headers. The reporter grants the framed document nothing — it only
+  //    posts numbers outward, and the viewer validates the sender and clamps them —
+  //    and the CSP carries no `script-src`, so an inline script is as permitted here
+  //    as the document's own quiz JS already is.
+  const html = injectHeightReporter(await upstream.text());
+  return new Response(html, { status: 200, headers: RAW_HTML_HEADERS });
 }
