@@ -1,33 +1,43 @@
 /*
- * Knowledge Base — HTML explainer render container (P16.S2).
+ * Knowledge Base — HTML explainer render container (P16.S2, resized).
  * --------------------------------------------------------------------------
- * The frame for a `format === "html"` explainer document: a sized bordered card
- * (mirroring `.kb-graph`'s sizing / border / radius / overflow) holding the
- * sandboxed opaque-origin <iframe> that renders the interactive explainer.
+ * The frame for a `format === "html"` explainer document: a bordered card holding
+ * the sandboxed opaque-origin <iframe> that renders the interactive explainer.
  *
- * The framed document is cross-origin (sandbox WITHOUT allow-same-origin — phase
- * P16 pinned decision 1), so the parent cannot measure its content height. The
- * baseline is therefore a generous fixed height with the iframe scrolling
- * internally (phase P16 Open Question 2); an opt-in postMessage height handshake
- * is a later P17 explainer-template enhancement, not required here.
+ * The card no longer pins a viewport-derived height. It used to — the framed document
+ * is cross-origin (sandbox WITHOUT allow-same-origin, phase P16 pinned decision 1), so
+ * the parent cannot measure its content, and the baseline was a fixed height with the
+ * iframe scrolling INTERNALLY. That nested a small scrolling window inside an
+ * already-scrolling page and made explainers hard to read. The height handshake P16
+ * sketched and P17 parked now exists (`@/lib/explainer-height` injects the child
+ * reporter; `explainer-frame.tsx` listens), so the frame grows to its content and the
+ * PAGE scrolls — one document, one scrollbar.
+ *
+ * Until the first height message lands — and permanently, for any document that never
+ * reports one — the frame falls back to exactly the old sizing, so the worst case is
+ * the behaviour this replaced rather than a collapsed frame. `[data-measured]` is set
+ * by the client island once a height is known; the exact height rides as an inline
+ * style, so the fallback rule must not apply then.
  *
  * Reuses `--kb-*` design tokens only — NO new visual design. Co-located with the
- * documents/[id] route, imported by page.tsx.
+ * documents/[id] route, imported by document-view.tsx.
  * --------------------------------------------------------------------------
  */
 .kb-explainer {
   position: relative;
   width: 100%;
-  /* Same sizing as `.kb-graph`: fill the console main below the header, with a
-     floor that keeps it usable on short screens. */
-  height: calc(100dvh - var(--kb-app-topbar-h) - 13rem);
-  min-height: 30rem;
+  height: auto;
   border: 1px solid var(--kb-border);
   border-radius: var(--kb-radius);
   overflow: hidden;
 }
 .kb-explainer__frame {
+  display: block;
   border: 0;
   width: 100%;
-  height: 100%;
+}
+/* Pre-measurement fallback — the former fixed sizing, iframe scrolling internally. */
+.kb-explainer:not([data-measured]) .kb-explainer__frame {
+  height: calc(100dvh - var(--kb-app-topbar-h) - 13rem);
+  min-height: 30rem;
 }

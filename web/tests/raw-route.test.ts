@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as rawGET } from "@/app/api/documents/[id]/raw/route";
+import { HEIGHT_REPORTER_MARKER, injectHeightReporter } from "@/lib/explainer-height";
 import { SESSION_COOKIE, sealSession } from "@/lib/session";
 
 // P16.S2 / P19 — the BFF raw-HTML relay route, driven against a STUBBED knowledge
@@ -10,6 +11,9 @@ import { SESSION_COOKIE, sealSession } from "@/lib/session";
 // OPTIONAL-IDENTITY relay — a valid cookie forwards the bearer (member read), while
 // NO cookie relays TOKENLESS so an anonymous visitor's iframe on a PUBLIC doc loads
 // (a private/nonexistent doc is an indistinguishable upstream 404 either way).
+//
+// The relay now also splices in the frame's height reporter, so the body assertions
+// are "the document's own bytes, intact, plus the reporter" rather than byte equality.
 
 const TOKEN = "0GkQ3vJ8bYd1wZs5RfN7tXcA2eLmPqU9hVjK4oIyB6M";
 const HTML =
@@ -60,8 +64,12 @@ describe("GET /api/documents/[id]/raw — the sandboxed-iframe HTML relay", () =
         headers: expect.objectContaining({ Authorization: `Bearer ${TOKEN}` }),
       }),
     );
-    // The raw HTML streams straight through, script intact.
-    await expect(res.text()).resolves.toBe(HTML);
+    // The document's own bytes relay intact (quiz script included), with the height
+    // reporter spliced in ahead of the closing </body>.
+    const body = await res.text();
+    expect(body).toContain("<h1>Quiz</h1>");
+    expect(body).toContain("<script>1</script>");
+    expect(body).toContain(HEIGHT_REPORTER_MARKER);
     // The pinned sandbox headers, set explicitly (opaque-origin containment).
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(res.headers.get("content-security-policy")).toBe(
@@ -85,7 +93,7 @@ describe("GET /api/documents/[id]/raw — the sandboxed-iframe HTML relay", () =
     const headers = (vi.mocked(fetch).mock.calls[0][1] as RequestInit)
       .headers as Record<string, string>;
     expect(headers).not.toHaveProperty("Authorization");
-    await expect(res.text()).resolves.toBe(HTML);
+    await expect(res.text()).resolves.toContain("<h1>Quiz</h1>");
   });
 
   it("passes an upstream 404 (missing / cross-tenant / private / non-HTML doc) through as 404 — member OR anonymous", async () => {
@@ -104,5 +112,20 @@ describe("GET /api/documents/[id]/raw — the sandboxed-iframe HTML relay", () =
       expect(res.status).toBe(404);
     }
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("injectHeightReporter — the frame's child-side height reporter", () => {
+  it("splices the reporter before the last </body>, leaving the document intact", () => {
+    const out = injectHeightReporter(HTML);
+    expect(out.indexOf(HEIGHT_REPORTER_MARKER)).toBeGreaterThan(out.indexOf("<h1>Quiz</h1>"));
+    expect(out.indexOf(HEIGHT_REPORTER_MARKER)).toBeLessThan(out.indexOf("</body>"));
+    expect(out.replace(/<script>\n\(function \(\)[\s\S]*?<\/script>/, "")).toBe(HTML);
+  });
+
+  it("appends the reporter when the document has no </body>", () => {
+    const out = injectHeightReporter("<h1>bare</h1>");
+    expect(out.startsWith("<h1>bare</h1>")).toBe(true);
+    expect(out).toContain(HEIGHT_REPORTER_MARKER);
   });
 });
