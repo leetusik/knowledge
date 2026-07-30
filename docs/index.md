@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-07-30 · [P14: /blog Becomes a Live Mirror of the Naver Blog](changple_web/2026-07-30-p14-blog-becomes-a-live-mirror-of-the-naver-blog.html) — changple_web
 - 2026-07-29 · [The Content Agent Today vs. the Hermes Rebuild (P54), Explained for Beginners](changple5/2026-07-29-the-content-agent-today-vs-the-hermes-rebuild-p54-explained-for-beginners.html) — changple5
 - 2026-07-29 · [Naver Cafe Ingestion, End to End: Today vs the P53 Reconstruction](changple5/2026-07-29-naver-cafe-ingestion-end-to-end-today-vs-the-p53-reconstruction.html) — changple5
 - 2026-07-28 · [Six Documents to a Hundred: The P52 Content-Agent Curation Gate](changple5/2026-07-28-six-documents-to-a-hundred-the-p52-content-agent-curation-gate.html) — changple5
