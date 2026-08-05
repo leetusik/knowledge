@@ -1,0 +1,33 @@
+{
+  "id": "P21.S1",
+  "phase_id": "P21",
+  "name": "Backend: member DELETE /app/documents/{doc_id}",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 2,
+  "depends_on": [
+    "P21.DECOMP"
+  ],
+  "created_at": "2026-08-05T14:48:43+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
