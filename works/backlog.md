@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P24`
-- Current slice: `P24.DECOMP`
-- Next slice: `P24.REVIEW`
+- Current slice: `P24.S1`
+- Next slice: `P24.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `15`
-- Rebuilt at: `2026-08-05T23:04:38+09:00`
+- Rebuilt at: `2026-08-05T23:12:07+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P21` | `done` | `pass` | Web document deletion | `none` | `works/phases/active/P21` |
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
-| [ ] `P24` | `planned` | `pending` | Upload finish-return timeout | `P24.DECOMP` | `works/phases/active/P24` |
+| [ ] `P24` | `planned` | `pending` | Upload finish-return timeout | `P24.S1` | `works/phases/active/P24` |
 
 ## Phase P21: Web document deletion
 
@@ -53,5 +53,8 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P24.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P24/slices/P24.DECOMP` |
+| [x] `P24.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P24/slices/P24.DECOMP` |
+| [ ] `P24.S1` | `todo` | Fast, bounded write response: git push + embed off the response path | `implementation` | `works/phases/active/P24/slices/P24.S1` |
+| [ ] `P24.S2` | `todo` | Explain skill: honest publish timeout + verify before retry (3 copies) | `implementation` | `works/phases/active/P24/slices/P24.S2` |
+| [ ] `P24.S3` | `todo` | CLI: honest write-timeout reporting on knowledge save | `implementation` | `works/phases/active/P24/slices/P24.S3` |
 | [ ] `P24.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P24/slices/P24.REVIEW` |
