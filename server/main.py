@@ -1,6 +1,7 @@
 """FastAPI read/search surface over the S1 library.
 
-Reads (list/get/by-path, search, tags, projects) are open by default. The bearer
+Reads (list/get/by-path, by-path version history, search, tags, projects) are open
+by default. The bearer
 dependency (``require_bearer``) guards mutating endpoints and is a no-op when
 ``KB_API_TOKEN`` is unset. The hosted box additionally gates the read/search
 surface behind the same bearer by setting ``KB_REQUIRE_READ_AUTH=true`` — then
@@ -202,6 +203,31 @@ def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
     return {k: v for k, v in doc.items() if k not in drop}
 
 
+# A document_versions row's `id` is an internal autoincrement on a DISPOSABLE table
+# (reindex rebuilds every row from the .versions files on disk, so the number is not
+# stable across a rebuild and nothing may key off it) and `tenant_id` is the scoping
+# column — neither leaves the JSON. Version identity is (rel_path, version).
+_VERSION_INTERNAL = {"id", "tenant_id"}
+
+
+def _public_version(row: dict, *, include_body: bool) -> dict:
+    """Project one archived-version row for the /api plane.
+
+    The index shape (``include_body=False``) drops both bodies so a long history
+    stays a light payload; a single-version fetch keeps ``markdown`` and — unlike
+    the document surface, where ``raw_html`` never leaves /api — the archived
+    ``raw_html`` for an html version, since that superseded body is otherwise
+    unreadable by an agent (the file lives under the un-served ``.versions/`` tree).
+    ``raw_html`` is always dropped for a non-html version (it is NULL there).
+    """
+    drop = set(_VERSION_INTERNAL)
+    if not include_body:
+        drop |= {"markdown", "raw_html"}
+    elif row.get("format") != "html":
+        drop.add("raw_html")
+    return {k: v for k, v in row.items() if k not in drop}
+
+
 # --- Tenant routing (S5) --------------------------------------------------
 # Three views of the caller's tenant, derived from the resolved ApiAuthContext:
 #   _tenant_root   -> the content root ON DISK  (docs/ for public; tenants/<id>/ else)
@@ -274,6 +300,65 @@ def list_projects(
     conn=Depends(get_conn),
 ):
     return {"projects": db.list_projects(conn, tenant_id=_tenant_filter(ctx))}
+
+
+# --- Version history reads (P23.S2) ---------------------------------------
+#
+# Declared BEFORE the bare by-path route on purpose: `{rel_path:path}` is greedy,
+# so `/api/documents/by-path/p/2026-01-01-x.md/versions` would otherwise match it
+# with rel_path="p/2026-01-01-x.md/versions" (Starlette matches in declaration
+# order). Both routes gate on the CURRENT document — 404 when it is missing or
+# another tenant's — and then read the archive by its rel_path, because
+# document_versions is identity-keyed by (tenant_id, rel_path, version), never by
+# documents.id. Reads only: no write, and no usage event (F4).
+
+
+@app.get("/api/documents/by-path/{rel_path:path}/versions")
+def list_document_versions(
+    rel_path: str,
+    ctx: ApiAuthContext = Depends(resolve_api_read),
+    conn=Depends(get_conn),
+):
+    """A document's superseded versions, newest first, without their bodies.
+
+    ``{rel_path, current_version, total, versions}``. Only ARCHIVED bodies are
+    listed — the current version is the document itself, so ``current_version``
+    (from ``documents.version``) is what completes the chain: a v3 document
+    answers ``current_version: 3`` with v2 and v1 in ``versions``. An
+    unversioned document answers ``current_version: 1`` and an empty list.
+    """
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
+    rows = db.list_document_versions(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    return {
+        "rel_path": rel_path,
+        "current_version": int(doc.get("version") or 1),
+        "total": len(rows),
+        "versions": [_public_version(r, include_body=False) for r in rows],
+    }
+
+
+@app.get("/api/documents/by-path/{rel_path:path}/versions/{version}")
+def get_document_version(
+    rel_path: str,
+    version: int,
+    ctx: ApiAuthContext = Depends(resolve_api_read),
+    conn=Depends(get_conn),
+):
+    """One superseded version with its body (``markdown``, plus ``raw_html`` for
+    an html version). The CURRENT version is not addressable here — it is the
+    document, so ``GET /api/documents/by-path/{rel_path}`` serves it; asking for
+    it here is a 404, exactly like a version that never existed."""
+    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
+    row = db.get_document_version(conn, rel_path, version, tenant_id=_tenant_filter(ctx))
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail=f"no version {version} of document {rel_path!r}"
+        )
+    return _public_version(row, include_body=True)
 
 
 # Declared before /api/documents/{doc_id} (and doc_id is an int) so the by-path

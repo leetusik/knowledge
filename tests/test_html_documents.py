@@ -170,6 +170,14 @@ def test_html_new_version_keeps_comment_frontmatter_flavor(client):
     assert archived.startswith("<!--kb\n") and "version: 1\n" in archived
     assert archived.index("-->") < archived.index("<!DOCTYPE html>")
 
+    # P23.S2: the /api version fetch carries the archived RAW html (the one place
+    # raw_html leaves the /api plane — a superseded explainer body is otherwise
+    # unreadable, since .versions/ is never served), while the index stays body-less.
+    got = tc.get(f"/api/documents/by-path/{_HTML_REL}/versions/1").json()
+    assert got["format"] == "html" and "<!DOCTYPE html>" in got["raw_html"]
+    idx = tc.get(f"/api/documents/by-path/{_HTML_REL}/versions").json()
+    assert idx["current_version"] == 2 and "raw_html" not in idx["versions"][0]
+
     (root / "data" / "kb.sqlite3").unlink()
     assert reindex.reindex()["versions_indexed"] == 1
     conn = db.connect()

@@ -205,6 +205,41 @@ def test_delete_removes_version_archive(client):
     assert not (root / "docs" / ".versions" / "test-project").exists()
 
 
+def test_version_history_reads(client):
+    """P23.S2 /api reads: a body-less list plus the chain's current version, one
+    archived version WITH its body, and 404s for the current/unknown version."""
+    tc, _ = client
+    tc.post("/api/documents", json=_PAYLOAD)
+    tc.post("/api/documents", json={
+        **_PAYLOAD, "new_version": True, "markdown": "# t\n\nSecond edition.\n",
+    })
+
+    hist = tc.get(f"/api/documents/by-path/{_REL}/versions")
+    assert hist.status_code == 200, hist.text
+    b = hist.json()
+    assert (b["rel_path"], b["current_version"], b["total"]) == (_REL, 2, 1)
+    row = b["versions"][0]
+    assert (row["version"], row["archive_path"]) == (1, _V1_ARCHIVE)
+    assert not {"markdown", "raw_html", "id", "tenant_id"} & set(row)  # index stays light
+
+    one = tc.get(f"/api/documents/by-path/{_REL}/versions/1")
+    assert one.status_code == 200, one.text
+    assert "Body text about testing." in one.json()["markdown"]
+    # The current version is the DOCUMENT, never an archived row -> 404 like an
+    # unknown version or an unknown document (the greedy :path never swallows the suffix).
+    assert tc.get(f"/api/documents/by-path/{_REL}/versions/2").status_code == 404
+    assert tc.get(f"/api/documents/by-path/{_REL}/versions/9").status_code == 404
+    assert tc.get("/api/documents/by-path/test-project/nope.md/versions").status_code == 404
+
+
+def test_version_history_empty_for_unversioned_doc(client):
+    """A never-republished document: v1, no history, no extra call needed."""
+    tc, _ = client
+    tc.post("/api/documents", json=_PAYLOAD)
+    b = tc.get(f"/api/documents/by-path/{_REL}/versions").json()
+    assert (b["current_version"], b["total"], b["versions"]) == (1, 0, [])
+
+
 def test_409_detail_hints_at_versioning(client):
     tc, _ = client
     tc.post("/api/documents", json=_PAYLOAD)
