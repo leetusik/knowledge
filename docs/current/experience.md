@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0012
-created_at: 2026-08-05T15:25:11+09:00
-source: P21.REVIEW
-summary: P21 members can hard-delete a document from the documents list and the read page member branch: two-step inline confirm, permanent-and-no-undo copy, one not-found string for both 404 causes
-previous: v0011_p20_onboarding_ux_honest_hero_curl_one-liner_init_password_prompt_working_save_url_init_web-login_line_d16_cross-project_org-key_reuse_landing_env-var_quickstart_copyable_downloadable_skill
+version: v0013
+created_at: 2026-08-05T15:59:12+09:00
+source: P22.REVIEW
+summary: P22 the in-app graph goes quiet: a title shows only for the selected node and the one hovered node
+previous: v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes
 ---
 
 # Experience
@@ -143,6 +143,10 @@ text like any other document. See *The HTML explainer document (P16)* below.
 
 ### Explore the knowledge map (P6, interaction revised at P6.S1)
 
+_This journey describes the **public mkdocs map** at `/graph/`. The in-app map in the
+authenticated web app was ported from it but **diverges on labels since P22** — see
+*The in-app graph goes quiet* below._
+
 - **Entry:** the Graph top tab or the landing Graph card → `/graph/`.
 - **Arrival (settle-then-mingle):** the map lays itself out with a brief
   force-directed settle (~600ms) and then keeps a **barely-there idle mingle** —
@@ -222,7 +226,7 @@ P12 delivers knowledge's tenant-facing console — a separate authenticated expe
 - **Dashboard.** Four Fraunces stat tiles, a 30-day search trend, a projects table (Open → project detail), a recent-activity feed, and inline create-project.
 - **Project detail.** Project info, a credentials table with a 3-state key status (active / idle / revoked, encoded in form), and per-project usage. **Mint a `vk_` key → it is shown exactly once** in a focus-trapped reveal modal (copy-once, unrecoverable; Escape or Dismiss only — a scrim click won't destroy it); revoke is a terracotta danger action with an inline confirm.
 - **Documents.** Browse newest-first, filter by project, full-text search with highlighted snippets, and read the rendered markdown in a calm on-token reader. **(P21)** a member can also **delete** a document from either surface, behind a two-step inline confirm — the surfaces' one write; see *Deleting a document from the web app* below.
-- **Knowledge graph.** The corpus as a per-tenant force-directed map: settle→mingle motion, drag/pan, wheel/pinch zoom, hover-neighbor-highlight + tooltip, a legend project-lens + tag toggle, and node-tap → an info panel → read the document / filter by tag. (The public mkdocs `/graph/` stays tenant #1's public map; this is the per-tenant in-app view.)
+- **Knowledge graph.** The corpus as a per-tenant force-directed map: settle→mingle motion, drag/pan, wheel/pinch zoom, hover-neighbor-highlight + tooltip, a legend project-lens + tag toggle, and node-tap → an info panel → read the document / filter by tag. (The public mkdocs `/graph/` stays tenant #1's public map; this is the per-tenant in-app view.) **(P22)** titles are **selection-driven** here — see *The in-app graph goes quiet* below.
 - **Free.** Every web-UI feature — dashboard, project detail, documents, graph — is free; nothing is plan-gated. Web-UI search is deliberately unmetered.
 
 Final visual acceptance of the live app (a real browser render of login → surfaces, mint/revoke, search, graph drag/zoom/click-through) is owed to the operator at the **P14 deploy** — the phase could not stand up the live BFF + backend + browser stack; route behavior is covered by the backend `TestClient` suites and the frontend by typecheck/lint/build.
@@ -340,6 +344,35 @@ Until P21 the web app could not remove anything — delete lived only on the mac
 - **Anonymous readers see no delete control at all.** The public read page's anonymous branch is untouched: a signed-out visitor reading a public document has no delete affordance anywhere on the page.
 - **Still free.** The delete is unmetered like every other web-UI feature — a UI click is never billed as an agent event, even though it writes.
 - **Two rough edges, known and accepted.** Deleting the **last row of a page** in a paged view can leave you on an empty page (there is no offset reconciliation — go back a page). And a member reading **another org's public** document sees the Delete button; submitting it returns the not-found copy rather than hiding the button up front, because the page has no signal about which org owns the document and the server deliberately refuses to distinguish "not yours" from "not there".
+
+## The in-app graph goes quiet: labels follow the selection (P22)
+
+The in-app map inherited the public map's "quiet labels A′" ladder, and on a real corpus it
+read as a **wall of titles**: past ~110% zoom every document's title faded in and saturated by
+~135%, and hovering a single node lit up its whole neighborhood's titles. The operator's read
+was blunt — "all graph title shown is kinda sucks. make it possible to see only clicked one."
+P22 makes exactly that change, on the **in-app map only** (member `/graph` and the public
+per-org `/graph/{org}` — one shared canvas component, so both).
+
+- **A title follows your attention, nothing else.** The map is titleless at rest. Click a node
+  and its title appears — and stays while it is selected. Hover (or drag) a node and that node's
+  title appears for as long as you are on it. Nothing else is ever titled: not the neighbors, not
+  the zoom level, not the project lens. Zoom no longer affects titles at all.
+- **Why hover still titles one node.** The pointer tooltip is a **zoomed-way-out** affordance
+  only; at normal reading zoom there is no tooltip, so without the hovered title there would be
+  no way to identify a node without clicking it. The rule is therefore "the selected node and the
+  one node under the pointer" — at most one title at rest, at most two in transit (the selected
+  node keeps its title while you hover a neighbor).
+- **Everything else about the map is unchanged.** Hovering still highlights a node's neighborhood
+  and dims the rest, the selection ring and info panel are unchanged, the legend lens and tag
+  toggle are unchanged, and the low-zoom tooltip is untouched. The one asymmetry worth naming:
+  hover still *undims a whole neighborhood* while titling only the node itself — deliberate, since
+  P22 changed titles only.
+- **The public mkdocs map at `/graph/` is unchanged** and still behaves as *Explore the knowledge
+  map* describes above; only the app's map went quiet.
+- **Owed to the operator.** A browser eyeball on both `/graph` and `/graph/{org}` — including
+  whether the hovered title should stay at all (a strictly "clicked only" map is a one-token
+  change) — see **qa**.
 
 ## Open Questions
 

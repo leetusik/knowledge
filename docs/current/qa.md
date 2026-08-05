@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0011
-created_at: 2026-08-05T15:23:25+09:00
-source: P21.REVIEW
-summary: P21 delete acceptance: documents_client disables the process-global /auth throttle (89-8 to 99-1), web vitest 69, and the review's live no-JS server-action E2E
-previous: v0010_p20_qa_web_copy-button_vitest_61-_66_skills_parity_third_full-file_web-copy_gate_live_clean-env_installer_init_d16_save_prod_e2e
+version: v0012
+created_at: 2026-08-05T16:00:47+09:00
+source: P22.REVIEW
+summary: P22 app-graph label-focus QA mission: the P6 map mission covers the mkdocs surface only
+previous: v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e
 ---
 
 # QA
@@ -166,6 +166,10 @@ reported together; exits non-zero naming every violation.
 
 ### Knowledge map (browser — authoritative, P6, revised at P6.S1)
 
+_Scope: the **public mkdocs map** only. The app's `/graph` renderer forked from it at P22 —
+its labels are selection-driven, so the "quiet labels (A′)" expectation below does **not**
+apply there; use *In-app graph label focus (P22)* instead._
+
 - **Route / entry:** `http://localhost:8765/knowledge/graph/` (Graph top tab or the
   landing Graph card). This is **owed operator QA** — no full browser ran in the build
   harness; a re-review headless-Chrome CDP probe confirmed the *geometry/behavior*
@@ -190,6 +194,31 @@ reported together; exits non-zero naming every violation.
   same-tab reload; a CDN request in the network panel.
 - **Flagged, not a defect:** with `navigation.footer` on, the footer sits just below
   the viewport-height map (a small scroll reveals it).
+
+### In-app graph label focus (browser — authoritative, P22)
+
+- **Route / entry:** the app's `/graph` (member) and `/graph/{org}` (public, project made
+  public). Both render the same `GraphCanvas`, so check one thoroughly and the other for
+  parity. **Owed operator QA** — P22 shipped on typecheck/lint/unit-suite plus a static read
+  of `labelTarget()`; canvas rAF label behavior has no automated coverage and none is planned
+  (a headless CDP probe can confirm geometry, not "does the map feel quiet").
+- **What to check:** an **idle map carries no titles at all**, at any zoom — zoom in past the
+  old ~110%/135% thresholds and nothing should fade in; **click a node → exactly one title**,
+  which persists while selected (Escape/deselect clears it); **hover a node → that node's
+  title**, gone on pointer-out; **hover a neighbor of the selected node → two titles at most**
+  (the hovered one plus the still-selected one) and **never a cluster**; **drag a node →
+  its own title only**; a **tag or ghost node** selected/hovered shows its muted title;
+  with the **legend project lens** on, an excluded node stays titleless even when hovered.
+- **What must be unchanged:** hover still **undims the neighborhood** and dims the rest (node
+  alpha was out of scope), the teal **selection ring** and the **info panel** on click, edge
+  activation + halo, the **low-zoom pointer tooltip** below 0.6× zoom, and reload-restore.
+- **What would feel wrong:** any title appearing for a node you are neither on nor have
+  selected; titles fading in as you zoom (that is the deleted ladder returning); the hovered
+  node's title *not* appearing at normal zoom (there is no tooltip above 0.6×, so the node
+  would be unidentifiable without a click); a hover lighting a whole neighborhood of titles.
+- **The open operator call:** P22 kept a title for the hovered/dragged node on top of the
+  selected one. If the literal "only the clicked one" is wanted, dropping `|| n.id === focus`
+  from `labelTarget()` is the whole change — decide this during the eyeball.
 
 ## Regression Checklist
 

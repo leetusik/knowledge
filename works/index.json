@@ -16,13 +16,13 @@
       "id": "P22",
       "name": "Graph label focus",
       "objective": "Stop painting every doc title on the graph; show a title only for the clicked/selected node (hover tooltip stays), replacing the zoom-ladder behavior that saturates all labels.",
-      "status": "planned",
+      "status": "done",
       "order": 2,
       "path": "works/phases/active/P22",
-      "review_status": "pending",
-      "current_slice": "P22.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 3,
-      "done_slice_count": 2
+      "done_slice_count": 3
     },
     {
       "id": "P23",
@@ -52,5 +52,5 @@
   "deferred_open_count": 15,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-05T15:54:25+09:00"
+  "last_rebuilt_at": "2026-08-05T16:03:02+09:00"
 }

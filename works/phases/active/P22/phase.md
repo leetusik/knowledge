@@ -155,3 +155,47 @@ _One line per durable-truth change; `P22.REVIEW` consolidates these into doc ver
   Review to judge whether `experience` ("Read the map (quiet labels, Strategy A′)", `:154`)
   and `decisions` (the Strategy-A′ label lock, `:333`/`:955`) also need a version for the
   app-surface divergence.
+  - **Consolidated at P22.REVIEW** into **four** versions: `frontend` v0012, `experience`
+    v0013, `decisions` v0019, and `qa` v0012 (the fourth is the review's own call — see the
+    review notes below).
+
+## P22.REVIEW notes (2026-08-05)
+
+**Verdict: `pass`.** Validation run together: `workflow.py validate` (green, before and after
+consolidation), `web` `npm run typecheck` (exit 0), `npm run lint` (exit 0), and `npm test`
+(**10 files / 69 tests**, added by the review as a regression net — it was not in the S1 plan).
+The commit diff (`f82372e`) is exactly the header block + `ladder()` deletion + `labelTarget()`
+rewrite; `grep -rn "ladder" web/src/` leaves only the two new comment mentions.
+
+Durable notes for whoever touches the graph next:
+
+- **`selectedId` is read live inside `labelTarget()`** — it is a `let` in the same engine
+  closure (`:345`), not a React state capture, so the rule reacts to `select()`/`deselect()`
+  without a re-render. Any future refactor that lifts selection into React state must keep the
+  canvas reading a live value.
+- **Correction to `P22.S1/result.md`:** the claim "still at most one at a time" while hovering
+  is wrong. If the selected node sits **inside** the hovered node's neighborhood, `keep` passes
+  it and **two** titles paint (hovered + selected). That is the right behavior — the selection
+  should not lose its title because the pointer moved next door — and the header comment's "at
+  most one **at rest**" is accurate. The consolidated docs state "one at rest, at most two in
+  transit"; the historical `result.md` was left as written.
+- **There is no port-parity gate** between `docs/javascripts/graph.js` and `graph-canvas.tsx`
+  (`site_smoke.py` only asserts the mkdocs wiring; `plugin_parity.py`/`skills_parity.py` do not
+  cover `web/`). Nothing in CI would catch a future "fix" that reinstates the ladder — the
+  DELIBERATE DEVIATION paragraph in the component header is the only guard. Recorded in
+  frontend + ADR D-P22-1.
+- **The intent widening stands, but the operator decides.** The rule is one token wider than
+  "only the clicked one" (the hovered/dragged node also titles), on the verified premise that
+  `updateTooltip()` bails above 0.6× zoom. Rather than leave that call in a phase folder that
+  archives, it is written into the **qa** doc's new manual mission as an explicit open call:
+  drop `|| n.id === focus` for the literal reading, no other edit.
+- **Why `qa` got a version (beyond the Doc impact line).** The qa doc's "Knowledge map" mission
+  is headed P6 but reads as generic; leaving it alone would assert the now-wrong "quiet labels
+  A′ / titles past ~110% zoom" expectation over the app map too. It is now scoped to the mkdocs
+  surface, and a new *In-app graph label focus (P22)* mission carries the owed eyeball (idle map
+  titleless at any zoom; click → one title; hover → one; hovering a selected node's neighbor →
+  two, never a cluster; lens-excluded nodes stay titleless; dimming/ring/panel/tooltip
+  unchanged).
+- **Consciously not done:** no automated coverage for the label rule (canvas + rAF — the mission
+  replaces it, per the workspace's test-minimalism rule), and no phase explainer (run
+  `/explain` for P22 if one is wanted).

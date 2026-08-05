@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0011
-created_at: 2026-08-05T15:24:12+09:00
-source: P21.REVIEW
-summary: P21 documents surfaces gain their first write: shared two-step-confirm delete island on the list and the read page member branch; guarded redirect precedent; cross-route-group island import
-previous: v0010_p20_landing_onboarding_honest_hero_copy_design_round_02_agent_env-var_quickstart_published-skill_sections_copy-control_island_served_skill.md
+version: v0012
+created_at: 2026-08-05T15:58:10+09:00
+source: P22.REVIEW
+summary: P22 GraphCanvas labels go selection-driven: the ported quiet-label ladder and neighborhood reveal are gone
+previous: v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import
 ---
 
 # Frontend
@@ -437,13 +437,15 @@ graph. All web-UI features are free. The app is a session-token client of `/auth
   column, the read page in its member branch only — the documents surfaces' one write; see
   *The documents surfaces' first write* below.
 - **Knowledge graph** (`app/(app)/graph`): `GraphCanvas`, the app's first `"use client"` canvas
-  + rAF component — a faithful port of the ~1130-line zero-dependency `<canvas>` force-sim
+  + rAF component — a port of the ~1130-line zero-dependency `<canvas>` force-sim
   renderer (`docs/javascripts/graph.js`): the deterministic sim and the full interaction model
   (drag/pan, wheel zoom, hover-highlight, legend project-lens + tag toggle, node-tap → panel,
   sessionStorage persistence), reading every colour/geometry token live via `getComputedStyle`
   of the **`--kb-graph-*`** token layer (mapped onto the KB palette for both schemes). The
   critical React work is the `useEffect` teardown (cancel rAF, disconnect observers, remove
   listeners, a `disposed` guard) — the model for any future canvas/rAF client component.
+  **(P22)** the port is no longer faithful in exactly one place — **canvas labels are
+  selection-driven, not laddered** (see *Graph label focus* below).
 
 ### Conventions
 
@@ -699,3 +701,46 @@ P21 gives the documents surfaces their only mutation. Composed entirely from shi
 - **Client seam.** `deleteDocument(token, id)` in `lib/knowledge/app.ts` over `sendJson<void>("/app/documents/${id}", "DELETE", undefined, { token })` — the `revokeCredential` 204 idiom. Session-only: unlike the P19 doc GETs on the same prefix, `token` is required.
 - **Accepted gaps (recorded, in scope).** Deleting the last row of a paged view can revalidate onto an **empty page** — there is no offset reconciliation. And a member reading **another org's public** document sees the delete button and gets the `notFound` copy on submit: no client-side tenant signal exists to hide it by, and the backend is 404-never-403 by design (see **security**).
 - **Validation.** `pnpm vitest run` (10 files / **69** — the new `delete-document.test.ts` covers the client seam only), `pnpm lint`, `pnpm typecheck`, `pnpm build` all green, with `/documents` + `/documents/[id]` still dynamic. `web/` is **not** in the plugin templates (`manifest.json` ships `server`, `tests`, `scripts`, `docs/*` + root files; there is no `web/` under `plugin/templates/kb/`), so a web-only slice mirrors nothing. The action's copy mapping, the two-step confirm, and the redirect were exercised **live** at the P21 review — see **qa** for the no-browser recipe.
+
+## Graph label focus: selection-driven canvas labels (`web/`, P22)
+
+P22 is the first **deliberate behavioral divergence** between the app's `GraphCanvas` and the
+mkdocs renderer it was ported from. One file changed
+(`web/src/app/(app)/graph/graph-canvas.tsx`), one function rewritten, no CSS, no token, no new
+interaction affordance, no Claude Design round.
+
+- **The whole label policy is now three lines** inside `labelTarget(n, keep, focus)`: a node
+  outside the active `keep` map (project lens / focus neighborhood) targets `0`; a node whose
+  id is the **`selectedId`** or the **current `focus`** (`currentFocus()` = dragged id > hovered
+  id > selected id) targets `1`; everything else `0`. Node *type* no longer enters the label
+  decision — a selected/hovered tag or ghost node shows its (muted) label like any other.
+- **What was removed.** `ladder()` — `clamp((displayZoom() - 1.1) / 0.25)`, which faded **every**
+  doc title in past ~110% of fit zoom and saturated by ~135% — is deleted (`labelTarget` was its
+  only caller), and with it the `focus && keep → 1` rule that lit a whole **neighborhood** of
+  titles on hover. Zoom now has **no influence on canvas labels at all**. `displayZoom()`
+  survives for the tooltip and the zoom controls.
+- **What is painted, exactly.** At idle: nothing. With a selection and no hover: exactly one
+  title. On hover/drag: the hovered node's title, plus the selected node's **if the selected node
+  is inside the hovered node's neighborhood** (otherwise the `keep` guard drops it) — so **at most
+  one at rest and at most two transiently**, never a cluster.
+- **Why the hovered node keeps a label** (the deliberate part). The DOM hover tooltip
+  (`updateTooltip()`) is a **low-zoom fallback only** — it bails unless `displayZoom() < 0.6` —
+  so above 0.6× there is no tooltip and a strictly selected-only rule would leave hover with no
+  way to identify a node. The hovered term is one token (`|| n.id === focus`); dropping it yields
+  the literal "clicked node only" reading with no other edit.
+- **Untouched, on purpose.** Node alpha / dimming (`aT` in `stepAlphaLabelView`), `computeKeep()`
+  / `neighborhood()` / `projectKeep()`, halo, selection ring, edge activation, `drawLabel()`, and
+  `updateTooltip()`. P22 changed **label alpha only**; the existing `n.la` easing supplies the
+  fade in/out for free. One consequence worth knowing: hovering still **undims** a whole
+  neighborhood while titling only the hovered node.
+- **Both graph surfaces, one edit.** The member `/graph` page and the public `(public)/graph/[org]`
+  page render this same component, so the new behavior lands on both with no second change.
+- **The mkdocs renderer is unchanged.** `docs/javascripts/graph.js` still carries the Strategy-A′
+  ladder, and *The knowledge map … (P6)* above still describes that surface accurately. The
+  divergence is app-only and is called out in the component's header comment as a **DELIBERATE
+  DEVIATION** so a future reader does not repair it as port drift. There is no automated
+  port-parity gate between the two files (`site_smoke.py` only asserts the mkdocs wiring), so the
+  header comment is the guard.
+- **Validation.** `pnpm typecheck`, `pnpm lint`, `pnpm vitest run` (10 files / 69) green; the
+  label rule itself is covered by static reading, not a test (canvas rAF behavior). An operator
+  browser eyeball is owed — see **qa**.
