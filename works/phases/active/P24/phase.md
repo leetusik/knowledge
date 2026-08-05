@@ -266,3 +266,70 @@ The skill is now honest about a lost response. What S3 (CLI) can reuse verbatim:
   guards against rewriting a file the API already wrote), and reports
   `pushed:false` + `push_pending:true` as "saved and committed, publishing in the
   background" rather than an error.
+
+### Landed in P24.S3 — the CLI's honest write path (what REVIEW should check)
+
+The third client is now honest, and it encodes the same rule as S2 in Python:
+
+- **`client.never_sent(exc)` is the whole distinction.** `ConnectError`,
+  `ConnectTimeout`, `PoolTimeout`, `ProxyError`, `UnsupportedProtocol` prove the
+  request never left the client → the old `error: cannot reach <base_url>` is true
+  and is re-raised untouched to `main()`'s boundary. Every other `httpx.TransportError`
+  (`ReadTimeout` above all, plus `WriteTimeout`/`WriteError`/`RemoteProtocolError`)
+  happened at or after the send → the write may have landed. **Ordering trap:**
+  `ConnectTimeout` subclasses `TimeoutException` and `ConnectError` subclasses
+  `NetworkError`, so any future `except httpx.TimeoutException` written *above* this
+  check would silently swallow the connect case.
+- **Verification compares the body, not just existence** (`knowledge.verify_save`).
+  A plain create over an existing document is a **409 the timed-out caller never saw**,
+  so "something is at that rel_path" is not "my save is at that rel_path". The
+  server stores `_normalize_body` (leading blank lines dropped, one trailing newline,
+  `server/documents.py:419-426`) of exactly what we sent, so `.strip()` on both sides
+  is the only normalization required — a fact worth keeping if that write path ever
+  changes.
+- **The CLI now derives the target rel_path itself** — `knowledge.default_slug` mirrors
+  `documents.slugify` (cap 80 + re-trim + `"untitled"`) and `save_rel_path` mirrors
+  `main.py:636-648`. Soft spot recorded on purpose: the **date** default is the
+  *client's* today, so a clock on the far side of midnight from the server looks the
+  path up one day off. That only ever downgrades to "I could not confirm it", whose
+  message points at `knowledge list`, which has no such blind spot.
+- **S2's no-`url` trap confirmed in code**: the by-path read projection carries no
+  `url` (it is synthesized only on the write responses), so a recovered save prints
+  `saved:`/`id:`/`path:`/`read:` and **omits the `url:` line** rather than guessing one
+  from the site base. Under `--json` a recovered save prints the read-back document
+  verbatim (no `url`/`committed`/`push_pending`), with a stderr `note:` saying exactly
+  which payload it is — the lost 201 is unrecoverable and faking one would be worse.
+- **One verification, zero retries** — same "never loop" rule as the skill. A write
+  still in flight therefore reads as absent; the message says "most likely did not
+  land … a write still in flight would look the same" rather than claiming certainty.
+- **Timeout budget:** the save POST gets `client.WRITE_TIMEOUT = 30` as a **per-call**
+  override (`document_create` only); reads stay on `DEFAULT_TIMEOUT = 15`. Same number
+  and same reasoning as S2's `--max-time 30`: post-S1 the 201 carries no network I/O,
+  so only the upload + the local metering write are variable, and 30 s stays well
+  inside nginx's 120 s `proxy_read_timeout`. The two shipped clients now agree on how
+  long a write may take.
+- `guide.py` (the CLI's agent-readable contract, whose own docstring requires updating
+  it whenever `save` changes) now carries the rule: a timeout on `save` is not a failed
+  save, never re-run one without checking first, and `--json` after a lost reply carries
+  the read-back document.
+- Tests: `cli/tests/test_knowledge.py` §T7, four cases (verified success / genuinely
+  absent / a foreign document at the path / connect failure). `FakeApi` gained
+  `post_raises` (raised *after* the call is recorded — the point is that it was sent)
+  and `absent`. CLI suite **44 passed** (was 40); repo suite unchanged at 83 passed /
+  32 skipped; both parity gates still exit 0 (`cli/` is outside `shipped_dirs`).
+- Not done (deliberate): no change to the other commands' error handling (all reads —
+  re-running one is free), no `--force`/`--verify` flag, no retry/backoff, and no
+  attempt to surface `push_pending` in the text output — `save`'s human rendering has
+  never printed commit/push bookkeeping, so `pushed:false` was already never shown as
+  a failure. `--json` carries it on the normal path.
+
+### Doc impact (running list, continued — consolidated into versions by P24.REVIEW)
+
+- `experience.md` — P24.S3: `knowledge save` no longer reports a lost reply as
+  `cannot reach` — it verifies with `GET /api/documents/by-path/<rel_path>` (comparing
+  the body, since a 409 the caller never saw also leaves a document at the path) and
+  then reports either an honest success (exit 0, `note:` on stderr explaining the lost
+  reply, no `url:` line because the read projection has none) or an honest "may or may
+  not have landed" error naming `knowledge list`/`knowledge read`; it never re-POSTs,
+  only a genuine connect failure still says `cannot reach`, and the save POST now runs
+  on a per-call 30 s `WRITE_TIMEOUT` while reads stay at 15 s.

@@ -135,10 +135,21 @@ knowledge base with no extra setup.
 - **The title** defaults to the body's first `# H1`; override with `--title`.
 - A document already at the same path is a **409**; pass `--overwrite` to replace it,
   or `--slug`/`--date` to save alongside it.
+- **A timeout on `save` is not a failed save.** If the request was sent and the reply
+  never came back, the document may well be written — so the CLI reads the target path
+  back (`GET /api/documents/by-path/…`) and tells you what actually happened: exit 0
+  with a `note:` when the write landed (nothing is re-sent, so there is no duplicate),
+  and a non-zero error that says *may or may not have landed* — plus the
+  `knowledge list`/`knowledge read` command to settle it — when it cannot confirm.
+  Only a genuine connect failure, where nothing left the client, is reported as
+  `cannot reach`. **Never re-run a `save` on a timeout without checking first**: a
+  blind retry is a duplicate, or a new version of a document that was already fine.
 
 `save` prints the new document's `id`, `rel_path`, the direct `url` (a working doc
 page — shareable when the project is public), and a `knowledge read <id>` hint.
-`--json` carries the full 201 payload.
+`--json` carries the full 201 payload — except after a lost reply, where it carries
+the read-back document instead (no `url`/`committed`/`push_pending`), with the `note:`
+on stderr saying so.
 
 ## 5. Read back — search, list, read, projects, usage
 

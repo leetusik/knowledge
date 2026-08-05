@@ -34,19 +34,33 @@ Three of its edges shape this module and are easy to get backwards:
    sentence, not a raw 422 about a value the user never typed. A bad `--limit` or
    `--slug` is a typo, and FastAPI's own 422 already reads fine; those are left to
    the server on purpose.
+
+And one rule that is about *this* client's honesty rather than the server's
+contract (P24.S3): **a transport failure on `save` is not evidence that the save
+failed.** `save` is the only command here that changes anything, so it is the only
+one where "cannot reach the server" can be a lie — the POST may have been delivered,
+the document durably written, and only the reply lost. Every other command is a
+read: re-running one is free and "cannot reach" is always true enough. So `save`
+alone classifies its transport errors (`client.never_sent`) and, when the request
+did go out, asks the read API what actually happened before it reports anything
+(`verify_save`) — the same verify-then-report rule the shipped `/explain` skill got
+in P24.S2. It never re-sends: a blind retry is a duplicate or an unwanted v2.
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
 import sys
 from typing import Any
 
+import httpx
+
 from . import auth, config
-from .client import ApiError, KnowledgeClient
+from .client import ApiError, KnowledgeClient, never_sent
 from .errors import CliError
 
 # server/documents.py:33 — the tag charset (which is also the slug charset).
@@ -60,6 +74,10 @@ _PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 # server/documents.py:61-62 — `2 <= len(tags) <= 5`, on every write.
 MIN_TAGS = 2
 MAX_TAGS = 5
+
+# server/documents.py:37 — `slugify` caps the slug here, then re-trims the dash a
+# mid-word cut can leave behind.
+SLUG_MAX = 80
 
 # `snippet()` wraps hits in these (`server/search.py:50`). Useful in HTML, noise
 # in a terminal.
@@ -306,6 +324,38 @@ def strip_frontmatter(text: str, source: str) -> str:
     return text
 
 
+def default_slug(title: str) -> str:
+    """`documents.slugify` (server/documents.py:40-45), mirrored.
+
+    The slug the **server** derives when a write sends none — so this is how the
+    CLI can name the rel_path a save is about to occupy without asking. Kept a
+    faithful mirror, cap and `"untitled"` fallback included: it is only ever used
+    to look a document up, so a drift here degrades to "I could not confirm your
+    save", never to a wrong answer.
+    """
+
+    slug = _kebab(title)[:SLUG_MAX].rstrip("-")
+    return slug or "untitled"
+
+
+def save_rel_path(
+    *, project: str, title: str, date: str | None, slug: str | None
+) -> str:
+    """Where this save will land: `documents.rel_path`, computed client-side.
+
+    `main.py:636-648` — date defaults to **the server's** today and slug to
+    `slugify(title)`. The date is the one soft spot: a client whose clock is on the
+    far side of midnight from the server computes yesterday's (or tomorrow's) path.
+    That only ever costs a failed lookup, and the "I could not confirm it" message
+    it produces points at `knowledge list`, which has no such blind spot.
+    """
+
+    return (
+        f"{project}/{date or datetime.date.today().isoformat()}"
+        f"-{slug or default_slug(title)}.md"
+    )
+
+
 def derive_title(markdown: str, explicit: str | None) -> str:
     """`--title`, else the body's first H1 — the title *is* the H1, by convention."""
 
@@ -358,6 +408,95 @@ def _doc_line(doc: dict[str, Any]) -> str:
     )
 
 
+# --- the lost reply (P24.S3) --------------------------------------------------
+
+
+def _cause(exc: Exception) -> str:
+    """Name a transport failure. httpx's timeouts often stringify to `''`."""
+
+    detail = str(exc).strip()
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+
+
+def _unconfirmed(cause: Exception, rest: str) -> str:
+    """The one sentence every unresolved-save message has to start with."""
+
+    return (
+        f"the save was sent to the server but no reply came back ({_cause(cause)}), "
+        f"so it may already be saved. {rest}"
+    )
+
+
+def verify_save(
+    client: KnowledgeClient, *, rel_path: str, markdown: str, cause: Exception
+) -> dict[str, Any]:
+    """After a lost reply: ask the read API what actually happened. Never re-send.
+
+    The POST reached the server; only its answer did not. So the truth is on the
+    server, one `GET /api/documents/by-path/<rel_path>` away, and there are exactly
+    four outcomes — one success and three flavors of "do not guess":
+
+    * **the body we sent is there** — the write landed. Honest success, and the
+      caller must NOT re-POST (that is a duplicate, or an unwanted v2 since P23).
+      The comparison is on the body rather than mere existence because a plain
+      create over an existing document is a **409**, which a timed-out caller never
+      saw: "something is at that path" is not "my save is at that path".
+    * **404** — most likely a genuine miss; say so without claiming certainty.
+    * **a different body** — a document is there, but not ours.
+    * **the verification itself fails** — state unknown, which is its own answer.
+
+    `.strip()` on both sides is the only normalization needed: the server stores
+    `_normalize_body` (leading blank lines dropped, exactly one trailing newline,
+    `server/documents.py:419-426`) of what we sent, and nothing else.
+    """
+
+    project = rel_path.split("/", 1)[0]
+    try:
+        doc = api_call(client.document_get_by_path, rel_path)
+    except ApiError as exc:
+        if exc.status == 404:
+            raise CliError(
+                _unconfirmed(
+                    cause,
+                    f"But the API has no document at {rel_path}, so it most likely "
+                    f"did not land — a write still in flight would look the same. "
+                    f"Check with `knowledge list --project {project}`; re-running is "
+                    f"safe once you have seen it is absent.",
+                )
+            ) from None
+        raise CliError(
+            _unconfirmed(
+                cause,
+                f"And the follow-up read of {rel_path} failed too (HTTP "
+                f"{exc.status}), so whether it landed is unknown. Check with "
+                f"`knowledge read {rel_path}` before re-running.",
+            )
+        ) from None
+    except httpx.HTTPError as exc:
+        raise CliError(
+            _unconfirmed(
+                cause,
+                f"And the follow-up read of {rel_path} could not reach the server "
+                f"either ({_cause(exc)}), so whether it landed is unknown. Do not "
+                f"re-run blind: check with `knowledge read {rel_path}` once the "
+                f"server answers again.",
+            )
+        ) from None
+
+    if (doc.get("markdown") or "").strip() != markdown.strip():
+        raise CliError(
+            _unconfirmed(
+                cause,
+                f"But the document at {rel_path} is not the one you just saved, so "
+                f"yours did not land (a plain create over an existing document is a "
+                f"409 you never got to see). Read it with `knowledge read "
+                f"{rel_path}`, then re-run with --overwrite to replace it, or "
+                f"--slug/--date to save alongside it.",
+            )
+        )
+    return doc
+
+
 # --- commands -----------------------------------------------------------------
 
 
@@ -370,6 +509,11 @@ def cmd_save(args: argparse.Namespace) -> int:
 
     The project defaults to this git repo's directory name, which is exactly what
     `/knowledge:explain` uses — so both tools file a repo's notes together.
+
+    The only command here that writes, and so the only one that has to be careful
+    about *not being answered*: if the POST goes out and the reply is lost, the
+    document may be saved, and the CLI verifies that with the read API instead of
+    reporting a disconnect it cannot back up (`verify_save`).
     """
 
     markdown = strip_frontmatter(read_body(args.file), args.file)
@@ -382,6 +526,9 @@ def cmd_save(args: argparse.Namespace) -> int:
         args.project or default_project(), derived=not args.project
     )
 
+    # The lost reply's cause, kept as text: `except ... as exc` unbinds `exc` at the
+    # end of its own block, so the message has to be built before then.
+    lost_reply: str | None = None
     with KnowledgeClient(args.base_url, token=api_token()) as client:
         try:
             payload = api_call(
@@ -399,15 +546,44 @@ def cmd_save(args: argparse.Namespace) -> int:
             if exc.status == 409:
                 raise CliError(_conflict(exc.detail)) from None
             raise
+        except httpx.TransportError as exc:
+            # The split this whole branch exists for. Nothing sent -> `main()`'s
+            # "cannot reach <base_url>" is simply true, and re-raising keeps that
+            # one message exactly as it was. Anything else (a ReadTimeout above
+            # all) means the request DID go out, and the server may have written
+            # the document — so ask it, and never re-POST on a guess.
+            if never_sent(exc):
+                raise
+            rel = save_rel_path(
+                project=project, title=title, date=args.date, slug=args.slug
+            )
+            payload = verify_save(
+                client, rel_path=rel, markdown=markdown, cause=exc
+            )
+            lost_reply = _cause(exc)
+
+    if lost_reply:
+        auth.note(
+            f"the server never answered the save ({lost_reply}), but the document "
+            f"IS there — verified by reading {payload.get('rel_path')} back. Nothing "
+            "was re-sent, so there is no duplicate and no extra version. The write "
+            "is durable; any publishing to the remote is the server's own background "
+            "work and does not need you. What follows is that read-back document, "
+            "not the lost write response, so it carries no `url`, `committed` or "
+            "`push_pending` field."
+        )
 
     if emit(payload, args.json):
         return 0
-    # The 201's `url` is a working direct doc page (mode-aware server-side,
-    # `main.py:592-601`) — shareable with others when the project is public.
     print(f"saved: {payload.get('title')}")
     print(f"  id:   {payload.get('id')}")
     print(f"  path: {payload.get('rel_path')}")
-    print(f"  url:  {payload.get('url')}")
+    # The 201's `url` is a working direct doc page (mode-aware server-side,
+    # `main.py:592-601`) — shareable with others when the project is public. The
+    # by-path read projection has no `url` column (it is synthesized only on the
+    # write responses), so a recovered save prints no url rather than a guessed one.
+    if payload.get("url"):
+        print(f"  url:  {payload.get('url')}")
     print(f"  read: knowledge read {payload.get('id')}")
     return 0
 

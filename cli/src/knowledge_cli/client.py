@@ -43,6 +43,42 @@ USER_AGENT = f"knowledge-cli/{__version__}"
 
 DEFAULT_TIMEOUT = 15
 
+# A **mutating** call gets its own, larger budget. Post-P24.S1 `POST /api/documents`
+# makes no network round-trip before its 201 — the push to origin and the embed run
+# on a background worker — so the only variable left in a write is uploading the body
+# plus a local metering write. 30 s is deep headroom over that and still fails well
+# inside nginx's 120 s `proxy_read_timeout`; it is the same number, for the same
+# reason, as the shipped `/explain` skill's publish `curl --max-time 30` (P24.S2).
+# Reads stay at `DEFAULT_TIMEOUT`: a slow read costs a retry, while a write that times
+# out costs a verification round-trip and the user's confidence in what happened.
+WRITE_TIMEOUT = 30
+
+# Transport failures that **prove the request never left us**: no connection was ever
+# established, so the server cannot have seen it — for a write, "it did not happen" is
+# a fact here, not a guess. Every *other* transport error (`ReadTimeout`,
+# `WriteTimeout`/`WriteError`, `RemoteProtocolError`, …) happened at or after the send,
+# so a mutating call that raises one may well have landed and must be **verified**,
+# never assumed failed. Note `ConnectTimeout` subclasses `TimeoutException` and
+# `ConnectError` subclasses `NetworkError`, so this tuple has to be tested *before*
+# either of those bases — which is exactly what `never_sent()` is for.
+CONNECT_FAILURES = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.PoolTimeout,
+    httpx.ProxyError,
+    httpx.UnsupportedProtocol,
+)
+
+
+def never_sent(exc: BaseException) -> bool:
+    """True when `exc` proves the request never reached the server.
+
+    The one question a caller must answer before it reports a failed **write**:
+    "cannot reach the server" is only honest when nothing was sent.
+    """
+
+    return isinstance(exc, CONNECT_FAILURES)
+
 
 class ApiError(Exception):
     """A non-2xx response.
@@ -291,6 +327,10 @@ class KnowledgeClient:
         `overwrite`. `project` is a free-form name checked only for convention
         (`main.py:396`) and never against the key's bound project, so callers
         should default it from config rather than let it drift.
+
+        The one call here that changes server state, so the one with its own
+        `WRITE_TIMEOUT`: a timeout on a read is a non-event, a timeout on this is
+        an ambiguity someone has to resolve (`knowledge.verify_save`).
         """
 
         body: dict[str, Any] = {
@@ -310,7 +350,9 @@ class KnowledgeClient:
             body["related"] = related
         if co_authored_by is not None:
             body["co_authored_by"] = co_authored_by
-        return self._request("POST", "/api/documents", token=token, json=body)
+        return self._request(
+            "POST", "/api/documents", token=token, json=body, timeout=WRITE_TIMEOUT
+        )
 
     def document_list(
         self,
