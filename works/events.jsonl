@@ -723,3 +723,8 @@
 {"ts": "2026-08-05T23:01:51+09:00", "type": "doc_version_created", "doc": "security", "version": "v0014_p23_version-history_read_surface_inherits_the_doc_read_boundary_archived_html_repeats_the_sandbox_headers_one_bounded_raw_html-on-api_exception_deleting_a_doc_deletes_its_history", "source": "P23.REVIEW"}
 {"ts": "2026-08-05T23:04:38+09:00", "type": "slice_status_changed", "slice": "P23.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-05T23:04:38+09:00", "type": "phase_reviewed", "phase": "P23", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-08-05T23:05:34+09:00", "type": "slice_status_changed", "slice": "P24.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-05T23:09:54+09:00", "type": "slice_created", "phase": "P24", "slice": "P24.S1"}
+{"ts": "2026-08-05T23:09:54+09:00", "type": "slice_created", "phase": "P24", "slice": "P24.S2"}
+{"ts": "2026-08-05T23:09:54+09:00", "type": "slice_created", "phase": "P24", "slice": "P24.S3"}
+{"ts": "2026-08-05T23:12:07+09:00", "type": "slice_status_changed", "slice": "P24.DECOMP", "old_status": "in_progress", "new_status": "done"}
