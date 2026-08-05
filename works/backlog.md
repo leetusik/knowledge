@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P23`
-- Current slice: `P23.S4`
-- Next slice: `P23.REVIEW`
+- Current slice: `P23.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `15`
-- Rebuilt at: `2026-08-05T22:39:51+09:00`
+- Rebuilt at: `2026-08-05T22:46:04+09:00`
 
 ## Active Phases
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|
 | [x] `P21` | `done` | `pass` | Web document deletion | `none` | `works/phases/active/P21` |
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
-| [ ] `P23` | `planned` | `pending` | Document version control | `P23.S4` | `works/phases/active/P23` |
+| [ ] `P23` | `planned` | `pending` | Document version control | `P23.REVIEW` | `works/phases/active/P23` |
 | [ ] `P24` | `planned` | `pending` | Upload finish-return timeout | `P24.DECOMP` | `works/phases/active/P24` |
 
 ## Phase P21: Web document deletion
@@ -46,7 +46,7 @@
 | [x] `P23.S1` | `done` | server: on-disk version archive + schema + version-aware write path | `implementation` | `works/phases/active/P23/slices/P23.S1` |
 | [x] `P23.S2` | `done` | server: version history read API (/api + /app planes) | `implementation` | `works/phases/active/P23/slices/P23.S2` |
 | [x] `P23.S3` | `done` | web: document version history + past-version view | `implementation` | `works/phases/active/P23/slices/P23.S3` |
-| [ ] `P23.S4` | `todo` | /explain skill: read prior version + publish v2 across all skill copies | `implementation` | `works/phases/active/P23/slices/P23.S4` |
+| [x] `P23.S4` | `done` | /explain skill: read prior version + publish v2 across all skill copies | `implementation` | `works/phases/active/P23/slices/P23.S4` |
 | [ ] `P23.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P23/slices/P23.REVIEW` |
 
 ## Phase P24: Upload finish-return timeout

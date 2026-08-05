@@ -327,6 +327,48 @@ Full detail in `slices/P23.S3/result.md`. The durable, cross-slice parts:
   validation (all green: lint, typecheck, 76 tests / 12 files, build with both new routes
   registered, plus `workflow.py validate`).
 
+### S4 notes (/explain skill updated across all four copies) — what the review inherits
+
+Full detail in `slices/P23.S4/result.md`. Prose-only; no code touched.
+
+- **All four copies are in sync, installed one included.** `~/.claude/skills/explain/
+  SKILL.md` was writable, so it was replaced with a **full byte copy** of the new
+  canonical (it had been two edits behind — the `default`-project fallback and the
+  shareable-`url` wording; a patch would have re-forked it). No operator `cp` is
+  outstanding. `scripts/skills_parity.py` is green with no DESCRIPTION warning, and the
+  three repo copies show the identical 85-line diff; `.agents`' own 4-line frontmatter
+  was preserved byte-exactly (its diff starts at line 148).
+- **The F8 fix lives in step 3, not step 5.** The existing-document lookup + prior-body
+  read were placed in the *Research* step, because resolving the target only at save
+  time cannot inform what gets authored. Step 3 now hands step 5 three named values —
+  `PRIOR=none` / `PRIOR_REL_PATH` / `PRIOR_VERSION` — and step 5 turns the latter two
+  into `"new_version": true` + `"rel_path"` in `meta.json`. No top-level step was
+  renumbered, so every "step N" reference in the file (and in any other skill that
+  points at explain) still resolves.
+- **The skill's wording was matched to `server/main.py`, not to these notes.** Two
+  places where the phase notes alone would have produced a wrong sentence: (a) on an
+  **html** document `GET /api/documents/by-path/{rel}` returns `markdown` = the
+  *extracted plain text* — `raw_html` leaves `/api` only on an **archived** version
+  fetch, so "read the prior body" means prose, not the HTML source; (b) the 409 branch
+  is skipped only when a `new_version` write **resolved a target** — a `new_version`
+  write whose resolution missed can still 409 on today's path, so the retry advice had
+  to stay reachable. Any future skill/API doc edit should re-read the projectors
+  (`_public_doc` / `_public_version`) the same way S3 did.
+- **`overwrite` is now demoted, not removed**, in the documented flow: the 409 branch
+  offers `new_version` as the primary retry and describes `overwrite` as
+  no-longer-destructive but "only when the user wants to replace rather than
+  supersede". The ask-the-user-before-retrying gate is unchanged.
+- **Known residual gap for the review (deliberate, out of scope):** the API-unreachable
+  **fallback** (step 6) still writes a new file at today's path and cannot version — it
+  would recreate exactly the duplicate-document bug this phase fixes. The skill now says
+  so out loud and tells the agent to re-publish with `new_version` once the API is back,
+  but closing it for real needs local archive plumbing in the skill (or a CLI flag, F9).
+  Candidate deferred job.
+- **New `curl`s must keep the `curl -sS --max-time 5` prefix** — that is exactly what
+  the skill frontmatter's `allowed-tools: Bash(curl -sS --max-time 5:*)` pre-approves;
+  any future call spelled differently would prompt the user mid-run. URLs with `&` are
+  single-quoted for the same "runs unattended" reason.
+
 ### Validation the slices should run
 
 - `python3 -m pytest` (repo root; `testpaths = ["tests"]`, `pythonpath = ["."]`) — S1/S2.
@@ -399,6 +441,18 @@ _One line per durable-truth change; `P23.REVIEW` consolidates these into doc ver
   identity, unmetered) with `KbDocumentVersion` / `KbDocumentVersionsPage`,
   `KbDocumentListItem` gains `version`, and archive times are labelled "Superseded"
   rather than "Created" — all frontend-only, no server change and no new visual language.
+- (S4) `product.md` (+ a line in `experience.md`): versioned re-publishing is now the
+  `/explain` skill's documented update path — the skill resolves an existing document in
+  the target project before authoring (`GET /api/documents?project=…`, matched on slug /
+  subject), reads what the current version said (`GET /api/documents/by-path/{rel}`, plus
+  the `…/versions` + `…/versions/{n}` routes for older bodies) so a re-explanation builds
+  on it, and publishes with `"new_version": true` + the resolved `rel_path` so a later
+  date supersedes the same document instead of silently creating a second post; the 409
+  branch now offers "publish as the next version" as the primary retry (keeping the
+  ask-the-user gate) with `overwrite` demoted to an explicit replace, the report names the
+  published version and the archived previous one, and the change is mirrored across all
+  four skill copies (canonical, `.agents`, `web/public/SKILL.md`, and the installed
+  `~/.claude` copy) with `scripts/skills_parity.py` green.
 
 ## Open Questions
 

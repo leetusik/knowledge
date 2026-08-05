@@ -150,6 +150,46 @@ says otherwise.
 - **Topic mode:** read the real code, configs, compose files, and scripts that make the
   topic work here, exactly as before — walk the actual implementation.
 
+**Knowledge-base research — is this an update to an existing document?**
+
+The KB versions documents **in place**: re-explaining a topic publishes **v2 of the same
+document**, not a second post. A document's path encodes its ORIGINAL date, so writing
+about the same topic on a later day would otherwise silently create a second, unrelated
+document — check first. Derive `project` and `slug` exactly as step 5 defines them, then
+run one list call (every `curl` in this skill takes
+`-H "Authorization: Bearer <KB_API_TOKEN>"` when `KB_API_TOKEN` from step 2 is non-empty
+and no header when it is empty — both forms are spelled out in step 5):
+
+    curl -sS --max-time 5 '<KB_API_BASE_URL>/api/documents?project=<project>&limit=200'
+
+Look in `items` for an entry whose `slug` matches, or whose `title` is plainly this same
+topic under a different slug. Match on **subject**, not recency: a genuinely different
+subject is a new document even in the same project.
+
+- **No match** → remember `PRIOR=none`; this is a new document.
+- **A match** → remember its `rel_path` and `version` as `PRIOR_REL_PATH` /
+  `PRIOR_VERSION` (step 5 uses both), and read what the current version says, so the new
+  explainer builds on it instead of silently contradicting it:
+
+      curl -sS --max-time 5 '<KB_API_BASE_URL>/api/documents/by-path/<PRIOR_REL_PATH>'
+
+  The `markdown` field is the current body — for an HTML explainer, its extracted plain
+  text, which is what you need to know what was already said (you re-author the page
+  itself from scratch anyway). Only if an **older** body matters, list and fetch the
+  archived ones:
+
+      curl -sS --max-time 5 '<KB_API_BASE_URL>/api/documents/by-path/<PRIOR_REL_PATH>/versions'
+      curl -sS --max-time 5 '<KB_API_BASE_URL>/api/documents/by-path/<PRIOR_REL_PATH>/versions/<n>'
+
+  The list answers `{rel_path, current_version, total, versions}` and holds only the
+  **superseded** bodies, newest first; `total: 0` means there is no older history yet,
+  not an error. The current version is never listed there — the fetch above is it.
+- Any error or unreachable API here is **never fatal**: treat it as `PRIOR=none` and
+  carry on — step 5 still catches a collision with a 409.
+
+Either way, write a **complete, standalone document** (a version is a full replacement,
+not a diff): keep what still holds, correct what changed, add what is new.
+
 **Web research — the "Best practices & next steps" section (default-on):**
 
 This is the one part that reaches *beyond* the codebase: how the implementation compares
@@ -363,6 +403,21 @@ not a literal template to paste:
         "co_authored_by": "<bare attribution>"
       }
 
+- **Updating an existing document (`PRIOR` from step 3)?** Add exactly these two fields
+  to `meta.json` as well — this is what makes the write the next **version** of that
+  document instead of a new post:
+
+      "new_version": true,
+      "rel_path": "<PRIOR_REL_PATH>"
+
+  The API archives the current body, writes yours at the **same** `rel_path`, and
+  answers `version: <PRIOR_VERSION + 1>` alongside `previous_version` and
+  `archived_path`. The document's id, URL, links and graph edges never move — and
+  neither do its original `date` and `slug`, even if the title changed (the response
+  echoes the target's). Keep `project` and `format` identical to the target: changing
+  either is a **422**, never a silent move. If `rel_path` no longer resolves, the API
+  falls back to a plain new document at today's path, so a stale guess still publishes.
+
 - Merge — run exactly this command, spelled exactly this way (the raw HTML rides the
   existing `markdown` field; `"format": "html"` in the payload tells the API to treat it
   as an HTML explainer and write the comment-frontmatter):
@@ -382,12 +437,22 @@ not a literal template to paste:
   and NEVER fall back to a file write on an HTTP error:
   - **201** — the API wrote the file, inserted the Recent bullet, indexed the
     row, and made the scoped commit. Write NO file, do NOT touch
-    `docs/index.md`, run NO git. Record `url`, `committed`, and `commit_error`
-    from `<tmp>/response.json` for step 8.
-  - **409** — duplicate: report the response's `existing_title` and `rel_path`
-    and ASK the user before retrying; on a yes, add `"overwrite": true` to
-    `meta.json`, re-run the merge command, and re-POST (overwrite suppresses a
-    duplicate Recent bullet).
+    `docs/index.md`, run NO git. Record `url`, `version`, `previous_version`,
+    `committed`, and `commit_error` from `<tmp>/response.json` for step 8. On a
+    version bump `version` is the one just published, and no duplicate Recent
+    bullet is added.
+  - **409** — a document already exists at that path. This is the plain-create
+    collision; a `new_version` write that resolved its target never lands here.
+    The detail carries `rel_path`, `existing_title` and — when a real KB
+    document is behind it — its `version` and a `hint`. It is the "same topic
+    again" case, so the primary retry is a **new version**: report the
+    `existing_title` and `rel_path` and ASK the user before retrying; on a yes,
+    add `"new_version": true` and `"rel_path": "<the detail's rel_path>"` to
+    `meta.json`, re-run the merge command, and re-POST. That archives the
+    existing body and publishes yours as the next version, and adds no duplicate
+    Recent bullet. `"overwrite": true` still works and is no longer destructive
+    (it archives the replaced body too), but use it only when the user
+    explicitly wants to replace rather than supersede.
   - **422** — convention violation: if the mistake is in our payload, fix it
     once and re-POST; otherwise report the response detail.
   - **401** — the API requires a bearer token and yours is missing or wrong:
@@ -460,6 +525,9 @@ Only after a transport failure in step 5 (curl exit ≠ 0):
 
 - Note for step 8: the API was down; a later `POST /api/reindex` to
   `<KB_API_BASE_URL>` — or `docker compose up -d` in `<KB_ROOT>` — reconciles the DB.
+  If step 3 found a prior version, say so as well: this fallback writes a NEW file at
+  today's path and cannot bump a version (only the API archives and versions), so the
+  user may want to re-publish it with `new_version` once the API is back.
 
 ## 7. Optional copy in the current project
 
@@ -475,7 +543,10 @@ Tell the user:
 - API path: the document is saved and committed in the KB; view at the `url`
   from the response (the direct doc page; shareable with others when the project
   is public). If `committed` is `false` with a `commit_error`, say the
-  document was saved but the commit failed, and quote the error.
+  document was saved but the commit failed, and quote the error. Say which
+  version this was: `version` from the response — a new document is `v1`; a
+  version bump names the `previous_version` it superseded, whose body is kept
+  (archived), not lost.
 - Fallback path: the absolute file path `<KB_ROOT>/docs/<project>/<date>-<slug>.html`
   from step 6; view at `<KB_SITE_BASE_URL>/<project>/<date>-<slug>.html`; and note the
   API was down — a later `POST /api/reindex` to `<KB_API_BASE_URL>`, or
