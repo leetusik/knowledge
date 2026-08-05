@@ -1,0 +1,11 @@
+{
+  "id": "D22",
+  "title": "Repo-wide prettier drift (51 files at clean HEAD)",
+  "status": "deferred",
+  "source": "P21.REVIEW",
+  "reason": "pnpm format:check fails repo-wide independent of P21; fixing means a repo-wide reformat",
+  "trigger": "Operator decides format:check should become a real gate",
+  "created_at": "2026-08-05T15:28:01+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

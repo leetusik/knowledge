@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0011
-created_at: 2026-07-22T18:32:09+09:00
-source: P20.REVIEW
-summary: P20 onboarding UX: honest hero (curl one-liner + init password prompt + working save url), init web-login line + D16 cross-project org-key reuse, landing env-var quickstart + copyable/downloadable skill
-previous: v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url
+version: v0012
+created_at: 2026-08-05T15:25:11+09:00
+source: P21.REVIEW
+summary: P21 members can hard-delete a document from the documents list and the read page member branch: two-step inline confirm, permanent-and-no-undo copy, one not-found string for both 404 causes
+previous: v0011_p20_onboarding_ux_honest_hero_curl_one-liner_init_password_prompt_working_save_url_init_web-login_line_d16_cross-project_org-key_reuse_landing_env-var_quickstart_copyable_downloadable_skill
 ---
 
 # Experience
@@ -221,7 +221,7 @@ P12 delivers knowledge's tenant-facing console — a separate authenticated expe
 - **Sign in → console.** The signup/login gate is a dark "quiet threshold" (`slate` scheme); on success the tenant lands in the light editorial console — a paper topbar (brand · tenant crumb · email · logout) over a teal-active TOC rail (Dashboard · Documents · Graph, all live at end of P12).
 - **Dashboard.** Four Fraunces stat tiles, a 30-day search trend, a projects table (Open → project detail), a recent-activity feed, and inline create-project.
 - **Project detail.** Project info, a credentials table with a 3-state key status (active / idle / revoked, encoded in form), and per-project usage. **Mint a `vk_` key → it is shown exactly once** in a focus-trapped reveal modal (copy-once, unrecoverable; Escape or Dismiss only — a scrim click won't destroy it); revoke is a terracotta danger action with an inline confirm.
-- **Documents.** Browse newest-first, filter by project, full-text search with highlighted snippets, and read the rendered markdown in a calm on-token reader.
+- **Documents.** Browse newest-first, filter by project, full-text search with highlighted snippets, and read the rendered markdown in a calm on-token reader. **(P21)** a member can also **delete** a document from either surface, behind a two-step inline confirm — the surfaces' one write; see *Deleting a document from the web app* below.
 - **Knowledge graph.** The corpus as a per-tenant force-directed map: settle→mingle motion, drag/pan, wheel/pinch zoom, hover-neighbor-highlight + tooltip, a legend project-lens + tag toggle, and node-tap → an info panel → read the document / filter by tag. (The public mkdocs `/graph/` stays tenant #1's public map; this is the per-tenant in-app view.)
 - **Free.** Every web-UI feature — dashboard, project detail, documents, graph — is free; nothing is plan-gated. Web-UI search is deliberately unmetered.
 
@@ -328,6 +328,18 @@ P20 turns the landing hero's depicted journey into a real, honest on-ramp and ma
 - **The explain skill, published on the landing.** The canonical explain skill is offered **copyable** (Copy fetches the served `/SKILL.md`, never a pasted fork) and **downloadable** (`<a href="/SKILL.md" download>`), with an expandable in-page reader showing the head of the file, and agent-first guidance ("the recommended path is a coding agent following this file"). The REST API stays fully usable by hand.
 
 Shipped and verified live on prod (throwaway account): the clean-env installer runs end to end, `init` prints the web-login line + mints an org key, `init --project other` reuses it (D16 live), and `save` returns a `…/documents/{id}` URL. One depicted-vs-live nuance (not a defect): on prod a brand-new org's `default` project is server-pre-created at signup, so init #1 shows `project: default (already existed)` rather than the hero's `(created)` — the hero copy stays honest for a genuinely new org.
+
+## Deleting a document from the web app (P21)
+
+Until P21 the web app could not remove anything — delete lived only on the machine plane, so a member who wanted a document gone had to reach for an API key or ask the operator. P21 closes that gap with the documents surfaces' first write, composed from the already-designed revoke-key affordance (no new visual design, no Claude Design round).
+
+- **Two places to delete, one behavior.** Each row of the **documents list** carries a trailing **Delete** action, and the **read page** carries one in its member branch beside the back-link and copy-link. Deleting from the list leaves you on the list with the row simply gone; deleting from the read page returns you to `/documents`, because the page you were on no longer exists.
+- **A two-step inline confirm, never a browser dialog.** Clicking Delete swaps the button for **"Delete permanently? This can't be undone."** with *Yes, delete* / *Cancel* — the same pattern as revoking a key. It is rendered inline rather than as a `window.confirm` (unstyleable, and it freezes the whole tab), and the button carries the document's title in its accessible name so a screen-reader user is never guessing which row they are on.
+- **The copy tells the truth about what is lost.** The delete is **hard**: the file, its database row, its search-index entry, and its embeddings all go, and for a public document its shared URL and graph edges break with it. There is **no trash and no undo**, so nothing in the copy hints at recovery.
+- **Failures speak plainly, in one string where the server keeps two cases identical.** A document that is already gone and a document belonging to another org both answer 404 by design, so both read **"That document no longer exists, or it isn't part of your org."** A dead session says so, and anything else falls back to a plain retry message. Deleting the same document twice — a stale tab, a double submit — lands on that not-found line rather than a silent success.
+- **Anonymous readers see no delete control at all.** The public read page's anonymous branch is untouched: a signed-out visitor reading a public document has no delete affordance anywhere on the page.
+- **Still free.** The delete is unmetered like every other web-UI feature — a UI click is never billed as an agent event, even though it writes.
+- **Two rough edges, known and accepted.** Deleting the **last row of a page** in a paged view can leave you on an empty page (there is no offset reconciliation — go back a page). And a member reading **another org's public** document sees the Delete button; submitting it returns the not-found copy rather than hiding the button up front, because the page has no signal about which org owns the document and the server deliberately refuses to distinguish "not yours" from "not there".
 
 ## Open Questions
 

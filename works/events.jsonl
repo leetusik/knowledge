@@ -675,3 +675,14 @@
 {"ts": "2026-08-05T15:02:51+09:00", "type": "slice_status_changed", "slice": "P21.S1", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-05T15:03:34+09:00", "type": "slice_status_changed", "slice": "P21.S2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-08-05T15:11:13+09:00", "type": "slice_status_changed", "slice": "P21.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-08-05T15:11:46+09:00", "type": "slice_status_changed", "slice": "P21.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-05T15:21:18+09:00", "type": "doc_version_created", "doc": "api", "version": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:21:59+09:00", "type": "doc_version_created", "doc": "backend", "version": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:22:44+09:00", "type": "doc_version_created", "doc": "security", "version": "v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:23:25+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:24:12+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:25:11+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:28:01+09:00", "type": "slice_status_changed", "slice": "P21.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-08-05T15:28:01+09:00", "type": "phase_reviewed", "phase": "P21", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-08-05T15:28:01+09:00", "type": "deferred_created", "deferred": "D21", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:28:01+09:00", "type": "deferred_created", "deferred": "D22", "source": "P21.REVIEW"}

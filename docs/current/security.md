@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0012
-created_at: 2026-07-22T15:28:37+09:00
-source: P19.REVIEW
-summary: P19 first anonymous read surface; optional-identity 404-never-403; visibility bridge fail-closed; tokenless BFF relay
-previous: v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401
+version: v0013
+created_at: 2026-08-05T15:22:44+09:00
+source: P21.REVIEW
+summary: P21 member-only web delete boundary: session-only DELETE with no public fallback, 404-never-403, reading a public doc never implies deleting it
+previous: v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay
 ---
 
 # Security
@@ -46,6 +46,7 @@ Use this doc for auth, authorization, secrets, customer data boundaries, and sen
 - **Local / plugin (default):** reads open; writes bearer-guarded when `KB_API_TOKEN` is set; **the API never pushes**. Both P8 flags default **false**, so a set token still guards writes *only* — installing P8's code changes nothing for an existing local or plugin user. This backward-compat property is an explicit invariant and is unit-tested.
 - **Hosted box:** `KB_REQUIRE_READ_AUTH=true` + `KB_GIT_PUSH=true` — every `/api/*` call needs the bearer, and writes publish to `main`.
 - Rotate the token by changing the value and restarting the `api` service.
+- **(P21) The `/app` web plane: session-only, and destructive where it writes.** Every `/app/*` route is session-guarded except the P19 optional-identity public reads. The one mutating route, `DELETE /app/documents/{doc_id}`, is **`require_user` only — it never inherits the public read fallback** (see *Member-only delete on the web plane* below). Any future `/app` write must make the same choice explicitly.
 
 ## Multi-tenant accounts + content isolation (P10)
 
@@ -260,6 +261,19 @@ P19 makes a project's docs + graph readable without a session when the project i
 - **The web boundary is anonymous-tokenless.** The public doc page (`(public)/documents/[id]`) fetches **tokenless** on the anonymous branch (`getDocument(undefined, id)`) and never renders a token-fetched doc to an anonymous visitor; a private/nonexistent miss uniformly **redirects to `/login`**. The optional-identity **raw-HTML relay** (`/api/documents/{id}/raw`) forwards the bearer only when a cookie is present, else relays **tokenless** (`openSession(...) ?? undefined`) — an anonymous browser sends no cookie, so it can never fetch-with-token on the visitor's behalf. The four P16 sandbox headers are **byte-identical** at the backend raw route, the BFF relay, and `next.config`, so no header-layer order resolves permissive; `robots.ts` now allows crawling `/documents` + `/graph` (private/nonexistent still 404 or bounce, leaking nothing).
 - **No new secret / credential / CORS / PII.** Visibility is a boolean-ish `text` column added by `0004` (`projects.visibility`, default `'private'`); no token, credential store, CORS policy, or personal data changes. The toggle (`PATCH /app/projects/{id}`) is session-only and cross-tenant-404.
 - **Recorded gap — no anonymous-read throttle.** The new public doc/`raw`/graph paths have **no per-IP rate limit** (only `/auth/*` is throttled). A future edge or in-process limiter on the anonymous read paths is a deferred follow-up; it does not block the phase.
+
+## Member-only delete on the web plane (P21)
+
+P21 gives the `/app` plane its first **destructive** capability — a session-guarded hard delete of a document — so the surface that P19 opened to anonymous readers now also carries a write. The two are deliberately not symmetric:
+
+- **The read fallback is not inherited by the delete.** `GET /app/documents/{id}` + `/raw` are optional-identity: an anonymous or cross-org caller may read a *public* project's doc. `DELETE /app/documents/{doc_id}` is **`require_user` with a tenant-scoped lookup only** — no `optional_user`, no `_resolve_readable_doc`, no public path. **Reading a document never implies deleting it**, and this asymmetry is the rule to preserve whenever a route is added to this prefix.
+- **404-never-403, as everywhere else on this surface.** Anonymous → generic **401**; a nonexistent id and another tenant's id are **indistinguishable 404s** (`no document with id <id>`), so the route is not an id oracle and a cross-tenant delete is impossible by construction rather than by a check that could be forgotten. There is no 403. Verified live at the P21 review: a member's delete of another org's document returns the not-found copy and the target survives.
+- **Authorization is the query, not a branch.** The worker's only lookup is `db.get_document(conn, doc_id, tenant_id=<caller's tenant>)`; a miss is the 404. There is no "is this mine?" comparison to get wrong, and a forged/tampered id in the browser form buys nothing — the web layer's own zod validation is a cheap rejection, not the boundary.
+- **CSRF: a server action, not a route handler.** The web delete is a Next.js `"use server"` action behind `requireIdentity()`, so it inherits the framework's server-action CSRF protection and the sealed-cookie BFF posture (P12) unchanged — the knowledge bearer is unsealed server-side and never reaches the browser. No new route handler, no new CORS, no new credential or secret.
+- **Open-redirect closed by construction.** The action's post-delete destination arrives as a hidden form input and is validated with a **`z.literal("/documents")`** — a literal, never a free-form string — so a tampered `redirectTo` cannot become an open redirect; a failed parse simply means "stay put".
+- **New destructive authority, unchanged blast radius.** The delete reuses the machine plane's existing `_delete_document`, so it can destroy exactly what a `vk_` key already could: it is a **hard, irreversible** delete (file, DB row, FTS entry, embeddings) with **no trash and no undo**, non-transactional (the file goes first), and for a tenant-#1 member it also updates the public Recent index and produces a real git commit. Deleting a public document breaks its shared URL and its graph edges — both derived and self-healing, and the confirm copy promises no recoverability.
+- **Unmetered on purpose, and that is a boundary choice too.** The route sets no `request.state.usage`. The rejected alternative — calling the metered `DELETE /api/documents/{id}` with the user's session bearer (`resolve_api_write` accepts one) — would have routed the web app through the machine plane's auth resolver, blurring the two planes' trust boundaries, in addition to billing a UI click. Reusing the *logic* rather than the *route* keeps the planes separate.
+- **Recorded, accepted gap.** A member reading **another org's public** document sees the delete control and gets the 404 copy on submit: there is no client-side tenant signal to hide the button by, and 404-never-403 means the server must not tell them why. This is a cosmetic gap, not an authorization one — the delete is refused server-side.
 
 ## Security Checklist
 

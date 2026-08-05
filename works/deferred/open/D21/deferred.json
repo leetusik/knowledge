@@ -1,0 +1,11 @@
+{
+  "id": "D21",
+  "title": "Fix pre-existing format-key failure in test_documents_list_detail_and_project_bridge",
+  "status": "deferred",
+  "source": "P21.REVIEW",
+  "reason": "Pre-existing at HEAD before P21; add format to _LIST_KEYS or drop it from the list projection",
+  "trigger": "Next backend phase touching documents_api or its tests",
+  "created_at": "2026-08-05T15:28:01+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
