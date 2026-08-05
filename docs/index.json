@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0011_p20_frictionless_onboarding_real_curl-installer_hero_honest_init_password_web-login_line_env-var_rest_quickstart_published_explain_skill_on_the_landing_agent-first",
+      "latest": "v0012_p23_versioned_documents_agents_publish_v2_v3_of_the_same_post_instead_of_a_duplicate_web_shows_version_history_explain_resolves_and_supersedes",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -91,11 +91,19 @@
           "source": "P20.REVIEW",
           "summary": "P20 frictionless onboarding: real curl-installer hero, honest init/password + web-login line, env-var REST quickstart + published explain skill on the landing (agent-first)",
           "previous": "v0010_p19_per-project_public_private_visibility_anonymous_public_doc_graph_reads_shareable_direct_doc_links"
+        },
+        {
+          "id": "v0012_p23_versioned_documents_agents_publish_v2_v3_of_the_same_post_instead_of_a_duplicate_web_shows_version_history_explain_resolves_and_supersedes",
+          "path": "docs/versions/product/v0012_p23_versioned_documents_agents_publish_v2_v3_of_the_same_post_instead_of_a_duplicate_web_shows_version_history_explain_resolves_and_supersedes.md",
+          "created_at": "2026-08-05T22:59:55+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 versioned documents: agents publish v2/v3 of the same post instead of a duplicate, web shows version history, explain resolves and supersedes",
+          "previous": "v0011_p20_frictionless_onboarding_real_curl-installer_hero_honest_init_password_web-login_line_env-var_rest_quickstart_published_explain_skill_on_the_landing_agent-first"
         }
       ]
     },
     "experience": {
-      "latest": "v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node",
+      "latest": "v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -201,6 +209,14 @@
           "source": "P22.REVIEW",
           "summary": "P22 the in-app graph goes quiet: a title shows only for the selected node and the one hovered node",
           "previous": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes"
+        },
+        {
+          "id": "v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain",
+          "path": "docs/versions/experience/v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain.md",
+          "created_at": "2026-08-05T22:59:21+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 document version history journey: history panel on a read page, read-only past-version view, and versioned re-publishing through /explain",
+          "previous": "v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node"
         }
       ]
     },
@@ -331,7 +347,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone",
+      "latest": "v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -429,11 +445,19 @@
           "source": "P22.REVIEW",
           "summary": "P22 GraphCanvas labels go selection-driven: the ported quiet-label ladder and neighborhood reveal are gone",
           "previous": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import"
+        },
+        {
+          "id": "v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry",
+          "path": "docs/versions/frontend/v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry.md",
+          "created_at": "2026-08-05T22:58:13+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 document version history panel, read-only past-version view, version-aware BFF raw relay with its own next.config headers entry",
+          "previous": "v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone"
         }
       ]
     },
     "backend": {
-      "latest": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock",
+      "latest": "v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -515,11 +539,19 @@
           "source": "P21.REVIEW",
           "summary": "P21 first mutating /app route: deferred _delete_document import + run_in_threadpool with a worker-owned SQLite connection; UUID is_public bridge; main.py untouched, still one WRITE_LOCK",
           "previous": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url"
+        },
+        {
+          "id": "v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes",
+          "path": "docs/versions/backend/v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes.md",
+          "created_at": "2026-08-05T22:55:29+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 version-aware write path: archive-before-replace inside WRITE_LOCK, target resolution with two identity 422s, reindex rebuilds document_versions, five additive version read routes",
+          "previous": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock"
         }
       ]
     },
     "data": {
-      "latest": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate",
+      "latest": "v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -601,11 +633,19 @@
           "source": "P19.REVIEW",
           "summary": "P19 alembic 0004 projects.visibility text NOT NULL default private; SQLite projects allowlist predicate",
           "previous": "v0009_p18_alembic_0003_projects_unique_tenant_id_name_with_de-dupe_project_credentials.tenant_id_not_null_project_id_nullable_org_keys_carry_project_id_null"
+        },
+        {
+          "id": "v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic",
+          "path": "docs/versions/data/v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic.md",
+          "created_at": "2026-08-05T22:53:41+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 on-disk document version archive .versions/<project>/<date>-<slug>/vNNNN.<ext>, derived documents.version + identity-keyed document_versions, no alembic",
+          "previous": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate"
         }
       ]
     },
     "api": {
-      "latest": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route",
+      "latest": "v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -727,6 +767,14 @@
           "source": "P21.REVIEW",
           "summary": "P21 unmetered member DELETE /app/documents/{doc_id}: session-only, no public fallback, 404-never-403, reuses _delete_document logic not the metered /api route",
           "previous": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url"
+        },
+        {
+          "id": "v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app",
+          "path": "docs/versions/api/v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app.md",
+          "created_at": "2026-08-05T22:56:34+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 versioned publishing: POST /api/documents gains new_version + rel_path and three additive 201 keys, five unmetered version-history read routes on /api and /app",
+          "previous": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route"
         }
       ]
     },
@@ -905,7 +953,7 @@
       ]
     },
     "security": {
-      "latest": "v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it",
+      "latest": "v0014_p23_version-history_read_surface_inherits_the_doc_read_boundary_archived_html_repeats_the_sandbox_headers_one_bounded_raw_html-on-api_exception_deleting_a_doc_deletes_its_history",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -1011,6 +1059,14 @@
           "source": "P21.REVIEW",
           "summary": "P21 member-only web delete boundary: session-only DELETE with no public fallback, 404-never-403, reading a public doc never implies deleting it",
           "previous": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay"
+        },
+        {
+          "id": "v0014_p23_version-history_read_surface_inherits_the_doc_read_boundary_archived_html_repeats_the_sandbox_headers_one_bounded_raw_html-on-api_exception_deleting_a_doc_deletes_its_history",
+          "path": "docs/versions/security/v0014_p23_version-history_read_surface_inherits_the_doc_read_boundary_archived_html_repeats_the_sandbox_headers_one_bounded_raw_html-on-api_exception_deleting_a_doc_deletes_its_history.md",
+          "created_at": "2026-08-05T23:01:51+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 version-history read surface inherits the doc read boundary; archived HTML repeats the sandbox headers; one bounded raw_html-on-api exception; deleting a doc deletes its history",
+          "previous": "v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it"
         }
       ]
     },
@@ -1117,7 +1173,7 @@
       ]
     },
     "decisions": {
-      "latest": "v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map",
+      "latest": "v0020_p23_adrs_version_history_on_disk_because_the_content_db_is_disposable_identity-keyed_derived_tables_overwrite_becomes_non-destructive_identity_immutable_across_a_version_chain",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -1271,9 +1327,17 @@
           "source": "P22.REVIEW",
           "summary": "P22 ADR the app graph deviates from the ported label ladder: selection-driven labels, A-prime scoped to the mkdocs map",
           "previous": "v0018_p20_adrs_curl_installer_over_pypi_d-p13-1_stands_d16_org-key_reuse_across_projects_depict-the-prompt_password_honesty_no_generator_skill-publishing_full-file_parity_gate_third_web_copy_d10_resolved"
+        },
+        {
+          "id": "v0020_p23_adrs_version_history_on_disk_because_the_content_db_is_disposable_identity-keyed_derived_tables_overwrite_becomes_non-destructive_identity_immutable_across_a_version_chain",
+          "path": "docs/versions/decisions/v0020_p23_adrs_version_history_on_disk_because_the_content_db_is_disposable_identity-keyed_derived_tables_overwrite_becomes_non-destructive_identity_immutable_across_a_version_chain.md",
+          "created_at": "2026-08-05T23:00:36+09:00",
+          "source": "P23.REVIEW",
+          "summary": "P23 ADRs: version history on disk because the content DB is disposable; identity-keyed derived tables; overwrite becomes non-destructive; identity immutable across a version chain",
+          "previous": "v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-05T16:01:20+09:00"
+  "last_rebuilt_at": "2026-08-05T23:02:16+09:00"
 }
