@@ -159,6 +159,55 @@ of which is bounded by any timeout.
 - `experience.md` (or wherever the skill/CLI behavior is durable truth) — the honest
   timeout + verify-before-retry rule for clients.
 
+### Landed in P24.S1 — the response contract S2/S3 must describe
+
+The server fix is in. What S2 (`/explain`) and S3 (CLI) can now rely on:
+
+- **`POST /api/documents` does no network I/O before its 201.** Pre-response work is
+  validate → archive → file write → Recent/landing → DB upsert → local `git add` +
+  `git commit`. All local; the response is fast and its latency no longer depends on
+  GitHub or Gemini.
+- **New additive response field: `push_pending: bool`** — present on the `POST
+  /api/documents` 201 **and** on the `DELETE /api/documents/{id}` / `…/by-path/{rel}`
+  200. `true` = "a push to origin/main was queued and runs right after this response".
+  Word it that way in the skill/CLI: *the document is durably saved either way;
+  `push_pending` only says the off-box publish is on its way.*
+- **`pushed` is now always `false`** on those responses when a push was deferred (its
+  documented meaning — "saved, publishes on the next successful push" — is unchanged).
+  **A client must never read `pushed:false` as a failure**, and must not retry on it.
+- **`push_error` no longer appears** in any response (the push has not run yet).
+  Background push failures land in the container log
+  (`[kb-api] publish: push <rel> FAILED: …`), not in the response body.
+- **`commit_sha` is the local (pre-rebase) commit**, no longer the published head.
+- Mechanism: `server/publish.py` — one process-wide FIFO worker thread; the push task
+  re-takes `WRITE_LOCK` (submitted outside it — not reentrant) and every git
+  subprocess is bounded by **`KB_GIT_TIMEOUT_S` (default 60s)**, surfaced as
+  `GitError`. Tests drain it deterministically with `publish.drain()`.
+- Consequence for S2/S3's verify step: a client timeout is now almost certainly
+  *not* the server's write path. The verification (`GET /api/documents/by-path/...`)
+  stays the right move, and a fresh document may legitimately show up with
+  `push_pending`-style publish still in flight — presence in the API is the proof of
+  success, git/site publication is not.
+- Not done here (deliberate): the Gemini embed on the worker has no client timeout
+  (it can delay queued pushes, never a response); push coalescing stays open; the
+  metering middleware's Postgres write still happens between handler return and the
+  body reaching the client (local container, ms).
+
+### Doc impact (running list — consolidated into versions by P24.REVIEW)
+
+- `api.md` — P24.S1: `POST /api/documents` + the DELETE responses gain additive
+  `push_pending: bool`; publish (git push) and the Gemini embed move **after** the
+  response, so `pushed` is now always `false` when a push is deferred, `push_error`
+  never appears, and `commit_sha` is the local pre-rebase commit, not the published
+  head (update §Commit/Push semantics, both response shapes, and the sample body).
+- `backend.md` / `architecture.md` — P24.S1: new `server/publish.py` after-response
+  worker (single FIFO thread; push task re-takes the non-reentrant `WRITE_LOCK`,
+  submitted outside it; drained on shutdown) and `KB_GIT_TIMEOUT_S` (default 60s)
+  bounding every git subprocess in `server/gitops.py`.
+- `operations.md` — P24.S1: `KB_GIT_TIMEOUT_S` is a new env knob; a background push
+  failure now shows up only as a `[kb-api] publish: … FAILED` container log line
+  (never in the API response), and the doc publishes on the next successful push.
+
 ## Open Questions
 
 - Should the background push be **coalesced** (one push per N writes / a debounce) rather

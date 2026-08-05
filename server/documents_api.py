@@ -421,9 +421,10 @@ def _delete_owned_document(doc_id: int, api_ctx: ApiAuthContext) -> bool:
 
     Runs **entirely off the event loop** (``run_in_threadpool``): the delete is
     synchronous, takes ``server/main.py``'s process-wide ``threading`` ``WRITE_LOCK``,
-    and — for a public-root caller — shells out to git (a commit, and a push when
-    ``KB_GIT_PUSH`` is on: seconds of network). Blocking the loop on that would stall
-    every other request.
+    and — for a public-root caller — shells out to git for a local commit (the push,
+    when ``KB_GIT_PUSH`` is on, is queued on the after-response publish worker since
+    P24 and no longer runs here). Blocking the loop on that would stall every other
+    request.
 
     Two consequences shape this function:
 
