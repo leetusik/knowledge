@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0012
-created_at: 2026-08-05T16:00:47+09:00
-source: P22.REVIEW
-summary: P22 app-graph label-focus QA mission: the P6 map mission covers the mkdocs surface only
-previous: v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e
+version: v0013
+created_at: 2026-08-06T00:05:13+09:00
+source: P24.REVIEW
+summary: P24 acceptance: the long-standing gated format-key failure is resolved (115 passed 0 failed) and publish.drain() is the deterministic way to assert an after-response side effect
+previous: v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only
 ---
 
 # QA
@@ -47,9 +47,12 @@ template), `test_dashboard_api.py` updated for the auto-provisioned default proj
 `test_auth.py` adjusted, and `scripts/onboarding_smoke.py` extended with an **org-model
 journey** proven green both against a disposable `postgres:17` and **live against prod**. The
 `0003` migration was validated at the review (clean upgrade + downgrade round-trip + a
-seeded-duplicate de-dupe scenario). One **pre-existing, unrelated** gated failure was
-re-confirmed and flagged (not P18's): `test_documents_api.py::
-test_documents_list_detail_and_project_bridge`. See *Accounts v2 acceptance (P18)* below.
+seeded-duplicate de-dupe scenario). **As of P24 the Postgres-gated suite is fully green —
+115 passed / 0 failed** — so the long-standing `format`-key failure flagged under P18 and P21
+(`test_documents_api.py::test_documents_list_detail_and_project_bridge`) is **resolved and
+retired as a standing item**; the notes below are kept for the history of how it was tracked,
+not as an open defect. P24 also adds the repo's pattern for testing **after-response** work:
+`publish.drain()`. See *Publish-worker acceptance (P24)* below.
 
 ## Test Commands
 
@@ -424,7 +427,7 @@ P18's acceptance is Postgres-gated pytest + CLI unit tests + the extended `onboa
 - **The `0003` migration is validated separately** (gated tests use `create_all`, not alembic, so they don't exercise the real migration): at the review, `alembic upgrade head` applied `0001→0002→0003` cleanly against a fresh Postgres (schema verified: nullable `project_id`, NOT-NULL `tenant_id` FK+indexed, `uq_projects_tenant_id`), a downgrade→re-upgrade round-trip succeeded, and S1 had validated the de-dupe path against a seeded-duplicate scenario.
 - **CLI unit tests.** `cd cli && uv run pytest -q` → **39 passed**. `test_auth.py` was adjusted (not expanded): `"default"` project assertions, a pin that `init` mints via `POST /app/credentials` (org) and **never** the per-project endpoint, and the renamed reuse-gate test `test_init_remints_when_the_configured_project_changes`.
 - **Extended `onboarding_smoke.py` (the committed post-deploy verifier).** Gained a **section-4 org-model journey** run in its own fresh tenant (keeping the tenant-B `documents_created == 1` equalities pristine): one org key → two get-or-create projects with per-named-project usage, revoke → 401, project-bound regression. Proven green against a disposable `postgres:17` tenant-mode stack **and live against prod** (exit 0). `scripts/` is not a plugin `shipped_dir` → no template mirror.
-- **Pre-existing gated failure (NOT P18):** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` fails because the document-list projection carries a `format` key that the test's `_LIST_KEYS` set omits. This is a **P16-era** mismatch — the test was last touched in P12, and `format` entered the list projection in P16 (`server/main.py`), while the suite is Postgres-gated so default CI (no Postgres) never runs it. Confirmed by S1/S2 on clean trees and re-confirmed at the P18 review (no P18 commit touches that test or the projection). **It is a documents/content-plane concern outside P18's accounts scope; recommended as a small deferred job** (either add `format` to `_LIST_KEYS` or drop it from the list projection) — it does not block the P18 objective.
+- **Pre-existing gated failure (NOT P18) — since RESOLVED at P24; kept here as history only.** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` used to fail because the document-list projection carries a `format` key that the test's `_LIST_KEYS` set omits. This is a **P16-era** mismatch — the test was last touched in P12, and `format` entered the list projection in P16 (`server/main.py`), while the suite is Postgres-gated so default CI (no Postgres) never runs it. Confirmed by S1/S2 on clean trees and re-confirmed at the P18 review (no P18 commit touches that test or the projection). **It is a documents/content-plane concern outside P18's accounts scope; recommended as a small deferred job** (either add `format` to `_LIST_KEYS` or drop it from the list projection) — it does not block the P18 objective.
 
 ## P20 onboarding acceptance (curl installer + published skill)
 
@@ -446,8 +449,18 @@ P21's acceptance is the Postgres-gated pytest suite + the web unit/lint/typechec
 - **Web suite.** From `web/`: `pnpm vitest run` → 10 files / **69 tests passed** (the new `web/tests/delete-document.test.ts` adds 1 — a node-env `fetch` stub asserting the `DELETE …/app/documents/42` request shape and the 204 → `undefined` resolve); `pnpm lint`, `pnpm typecheck`, `pnpm build` all clean, with `/documents` + `/documents/[id]` still dynamic. The suite deliberately covers **only the client seam** — the action's status→copy mapping, the two-step confirm, and the redirect are covered by the live exercise below, not by unit tests.
 - **The live E2E, and how to reproduce it without a browser.** The untested pieces were exercised at the review against a real stack (disposable `postgres:17`, uvicorn on `:8766`, the Next **standalone** server — `next start` refuses an `output: standalone` build, so run `node .next/standalone/server.js` after copying `.next/static` into it). The trick that removes the need for a browser driver: the delete island's `<form>` is **fully progressive-enhancement capable**, so its rendered hidden inputs (`$ACTION_REF_n`, `$ACTION_n:0`, `$ACTION_n:1`, `$ACTION_KEY`) can be replayed with `curl -F` against the page URL to invoke the real server action. The session cookie is `Secure`, so curl will not store or resend it — capture the `Set-Cookie` value and pass it with `-H "Cookie: …"`; the BFF also requires an `Origin` header matching `Host` (else 403). Results: **detail delete → 303 `Location: /documents`** with the doc gone from file, DB, and FTS; **list delete → 200 with no `Location`**, the row absent from the revalidated list; **repeat delete → 200 carrying the `notFound` copy**; **cross-tenant delete → the same `notFound` copy**, the target surviving for its owner; **tampered non-integer id → the `invalidRequest` copy**; **unauthenticated action → 303 `Location: /login`**; and `usage_events` still **0** after three successful deletes (unmetered, live).
 - **The `is_public=True` branch is no longer untested.** It needs `KB_OPERATOR_EMAIL` pointing at the caller (so their tenant resolves as tenant #1) and a `KB_ROOT` holding **both** `docs/<rel>` and `tenants/<uuid>/<rel>` for the same document — then the delete tells you which root it chose. At the review it unlinked **`docs/`** and left `tenants/<uuid>/` intact, confirming the UUID-typed `is_public` bridge (a stringified tenant id would have silently taken the wrong branch). Note the route still answers **204** in a non-git root: the helper swallows the commit failure. This branch stays out of pytest — it needs an operator email and a git tree — so re-run it by hand if the bridge is ever touched.
-- **Pre-existing gated failure (still NOT this phase's):** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` — the `format`-key mismatch recorded under *Accounts v2 acceptance (P18)* above. Re-confirmed at the P21 review on the full 100-test run; the remaining **1 failed** is exactly this case. It remains a small deferred job (add `format` to `_LIST_KEYS`, or drop it from the list projection).
+- **Pre-existing gated failure — RESOLVED as of P24, do not re-file it.** `tests/test_documents_api.py::test_documents_list_detail_and_project_bridge` (the `format`-key mismatch first recorded under *Accounts v2 acceptance (P18)*) was still failing at the P21 review's 100-test run. It **passes now**: the P24 review re-ran it in isolation and the full gated suite came back **115 passed / 0 failed**. It was fixed somewhere in P22/P23 rather than by a dedicated slice, which is exactly why a standing "known failure" note is worth re-verifying rather than copying forward — this one outlived its truth by two phases.
 - **Repo-wide prettier drift is real and predates this phase.** `pnpm format:check` fails on **51 files at a clean HEAD**. P21 did not widen or narrow it — every line the phase wrote is prettier-clean, and the three touched files still flagged are flagged only on pre-existing lines. Making `format:check` a real gate means a separate repo-wide reformat; it is a candidate deferred job, not a phase finding.
+
+## Publish-worker acceptance (P24)
+
+P24 moved the git push and the Gemini embed **behind** the write response, which makes the thing under test a *side effect that happens after the assertion point*. All green at the P24 review: repo suite **83 passed / 32 skipped**, Postgres-gated suite **115 passed / 0 failed**, CLI suite **44 passed**, both parity gates PASS.
+
+- **`publish.drain()` is this repo's way to test after-response work — use it instead of `sleep`.** The worker exposes `pending()` / `drain(timeout)` / `last_error()` / `reset_last_error()`; a test submits its write, calls `drain()`, and *then* asserts the side effect (the commit reached `origin/main`, the embedding row exists, `last_error()` is `None`). No polling, no sleeps, no flakes. Never call `drain()` from a request path — a queued push takes `WRITE_LOCK`, so draining while holding it deadlocks.
+- **The ordering guarantee has its own test, and it must stay.** `test_response_does_not_wait_for_a_hanging_push` blocks `gitops.push` on a `threading.Event` and asserts the 201 comes back in under a second. This is the regression test for the *original bug*: if anyone ever moves publish work back in front of the response (or swaps the queue for something whose ordering depends on the middleware stack), this is the test that catches it. A companion case proves `KB_GIT_TIMEOUT_S` actually bounds a wedged git subprocess.
+- **Response-shape assertions moved off `pushed`.** `tests/test_api_push.py` previously asserted `pushed:true` on a successful publish; post-P24 `pushed` is a constant `false`, so the suite asserts the **published head against the post-rebase local head** instead, plus `push_pending` presence. If a test ever needs "did it publish?", the answer is git state after `drain()`, never a response field.
+- **What is still not covered by pytest.** The box's real push credential chain (SSH origin + deploy key) — that is the bring-up assertion in **operations**, deliberately manual. And the worker-side Gemini embed has no client timeout: a stalled embed would block the FIFO queue behind it, which no test simulates (recorded as a deferred job, availability of the off-box backup only).
+- **A live spot-check worth repeating when the read projection changes.** The CLI's timeout recovery compares the *body* it sent against the document it reads back, which only works because `markdown` is in the `by-path` read projection. Verified against a real TestClient at the review — the projection is `created_at, date, format, id, markdown, project, rel_path, related, slug, source_repo, tags, tenant_id, title, updated_at, version`, and notably carries **no `url`** (that is synthesized only on write responses). Both clients correctly omit a URL on the recovered path; a `FakeApi`-only test would not have proven either fact.
 
 ## Known Fragile Areas
 

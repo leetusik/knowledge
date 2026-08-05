@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0016
-created_at: 2026-08-05T22:56:34+09:00
-source: P23.REVIEW
-summary: P23 versioned publishing: POST /api/documents gains new_version + rel_path and three additive 201 keys, five unmetered version-history read routes on /api and /app
-previous: v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route
+version: v0017
+created_at: 2026-08-05T23:58:57+09:00
+source: P24.REVIEW
+summary: P24 write response no longer waits on the network: git push and the Gemini embed run after the 201, additive push_pending, pushed always false when deferred, push_error gone, commit_sha is the local pre-rebase commit
+previous: v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app
 ---
 
 # API
@@ -39,6 +39,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P21 the `/app` plane gains its first *mutating* document route — an unmetered, session-only `DELETE /app/documents/{doc_id}`.** The web app can now hard-delete a document, and it does so **without** the metering the `/api` plane's deletes carry: the new route reuses `server/main.py::_delete_document`'s **logic**, not the metered `/api` route, so a UI click never bills an `EVENT_DOCUMENT_DELETED` and the "every web-UI feature is free" invariant holds even for a write. Unlike the P19 GETs on the same path prefix there is **no public/optional-identity fallback**: the route is `require_user` with a tenant-scoped lookup, so an anonymous caller gets **401** and a missing *or* cross-tenant id is an indistinguishable **404** (404-never-403 — reading a public document never implies deleting it). The frozen `/api/*` contract is untouched, and `server/main.py` was not modified. See *Member document delete (P21)* below.
 
 **As of P23 a document can be re-published as its next version, and its history is readable on both planes — all additive.** `POST /api/documents` gains two optional inputs, `new_version` (bool, default `false`) and `rel_path` (string), and its 201 body gains three always-present keys — `version`, `previous_version`, `archived_path`. A versioned write **keeps the target's `rel_path`** (so `id`, `url`, graph edges and `related` links never move) and archives the body it replaces; `overwrite: true` keeps its status and every existing key but **now archives instead of destroying**. Five new **unmetered** read routes expose the history: `GET /api/documents/by-path/{rel_path}/versions` + `.../versions/{version}` on the agent plane, and `GET /app/documents/{id}/versions`, `.../versions/{version}`, `.../versions/{version}/raw` on the web plane (optional-identity, 404-never-403). Every document read projection already carried the new `documents.version` field. **No existing field's type, status, or route changed** (the 201 gained keys, additively — the P16 `format` precedent); an **unversioned document answers an empty history rather than a 404**, and a corpus that is never re-published behaves exactly as pre-P23. See *Versioned publishing + version history (P23)* below.
+
+**As of P24 the write response no longer waits on the network — publishing moved *behind* the 201, and one additive key describes it.** `POST /api/documents` (and both `DELETE /api/documents/*` routes) used to run two unbounded network stages **between the durable save and the response**: the publish push (`git fetch` → `rebase` → `git push`, two SSH round-trips to GitHub, with no subprocess timeout at all) and the Gemini embed. A client with a short deadline — the shipped `/explain` skill posted with `curl --max-time 5` — therefore saw a transport failure for a write that had **already landed**. Both stages now run on an after-response publish worker, so the pre-response path is entirely local (validate → archive → file write → Recent/landing → DB commit → local `git add`/`git commit`) and the 201's latency no longer depends on GitHub or Gemini. The contract change is **additive**: a new always-present **`push_pending: bool`** ("a push to `origin/main` was queued and runs right after this response") on the 201 and both DELETE 200s. Three consequences for consumers, none of which removes or retypes a field: **`pushed` is now always `false`** when a push was deferred (its documented meaning — "saved; publishes on the next successful push" — is unchanged, and it was never a failure signal), **`push_error` no longer appears in any response** (a failed background push is logged in the container, not returned), and **`commit_sha` is the local, pre-rebase commit** rather than the published head. **A client must never read `pushed:false` as a failure and must never retry on it.** See *Commit/push semantics* and *Operational semantics the client relies on* below.
 
 ## Auth
 
@@ -117,8 +119,8 @@ fallback fires **only** when config resolves a **local** `kb_root` — a remote
 - The `POST /api/documents` write path in reverse (added P4), bearer-guarded, run entirely under `WRITE_LOCK`: remove the `docs/` file (`missing_ok` — a DB row without a file is drift, cleaned without erroring), drop the doc's Recent bullet from `docs/index.md`, delete the DB row (the FTS `AFTER DELETE` trigger and the `document_embeddings` FK `ON DELETE CASCADE` clean up automatically), then a scoped git commit.
 - Resolves the target row first → **404** when absent. The `by-path` route is declared before the `{doc_id}` route (same collision-avoidance as the GET pair).
 - Query: `commit` (default `true`), optional `co_authored_by`. Commit semantics mirror POST exactly — a failed commit surfaces `committed:false` + `commit_error`, never a rollback.
-- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, versions_removed, committed, commit_sha, pushed, commit_error?, push_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone. **(P23)** `versions_removed` reports whether the document had an on-disk version archive to delete — **deleting a document deletes its whole history**, staged in the same scoped commit; the `/app` delete still answers 204 with an empty body.
-- **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box removes the doc from the live self-hosted site (fresh-on-write) and, via the push, from the off-box backup.
+- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, versions_removed, committed, commit_sha, pushed, push_pending, commit_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone. **(P23)** `versions_removed` reports whether the document had an on-disk version archive to delete — **deleting a document deletes its whole history**, staged in the same scoped commit; the `/app` delete still answers 204 with an empty body. **(P24)** `push_pending` is additive and always present; `push_error` no longer appears (see below).
+- **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box removes the doc from the live self-hosted site (fresh-on-write) and, via the push, from the off-box backup. **(P24)** that push, like POST's, runs **after** the response on the publish worker; the delete's own file/DB/commit work is still fully in-request under `WRITE_LOCK`.
 
 ### POST /api/documents
 
@@ -127,16 +129,17 @@ The API-owned write path — one call creates the convention file, the Recent bu
 - Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
 - Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`, **`new_version`** (added P23, default false) and **`rel_path`** (added P23, default null — the version target).
 - **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
-- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, format, version, previous_version, archived_path, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`) — `format` added P16, the three version keys added P23 (`previous_version`/`archived_path` are `null` on a plain create). **`url` is mode-aware (P19):** tenant mode → `<KB_PUBLIC_BASE_URL>/documents/<id>` (the direct doc page, shareable when public); legacy/single-tenant mode → `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/` (the mkdocs shape). The key/type are unchanged.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, format, version, previous_version, archived_path, recent_updated, landing_created, committed, commit_sha, pushed, push_pending}` (+ optional `commit_error`) — `format` added P16, the three version keys added P23, `push_pending` added P24 (and `push_error` retired with it) (`previous_version`/`archived_path` are `null` on a plain create). **`url` is mode-aware (P19):** tenant mode → `<KB_PUBLIC_BASE_URL>/documents/<id>` (the direct doc page, shareable when public); legacy/single-tenant mode → `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/` (the mkdocs shape). The key/type are unchanged.
 - **Auto-landing side effect (P7 / F1):** inside `WRITE_LOCK`, right after writing the doc file, the write path calls `ensure_project_landing(docs_root, project)` — if `docs/<project>/index.md` is **absent** (the first doc of a new project), it writes a minimal landing (H1 = project name + one line, **no frontmatter** so it stays a non-doc) and the response carries `landing_created:true`; the scoped commit then stages a **third** path (`docs/<project>/index.md`) alongside the doc + `docs/index.md`. An existing landing (hand-written or previously auto-created) is **never overwritten** → `landing_created:false`, two-path commit as before. This keeps every project satisfying the per-project `site/<project>/index.html` deploy-gate invariant (mkdocs `navigation.indexes` does not synthesize one). The `/knowledge:explain` skill's file-fallback branch performs the same ensure-landing when the API is unreachable.
 - `KB_PUBLIC_BASE_URL` note (P7): its default `http://localhost:8765` is correct for a default-port local viewer, so the scaffold's `compose.yml` deliberately leaves it unset (see security/decisions). A scaffold on **advanced custom ports** would then report a default-port `url` in the 201 body — a cosmetic mismatch in one informational field only (the write, site build, and viewer are all correct); set `KB_PUBLIC_BASE_URL` to the chosen viewer origin if custom ports are used.
 - **Versioned re-publish (P23).** `new_version: true` republishes an **existing** document as its next version: the target is the explicit `rel_path` when given, else the **newest** document matching `(project, slug)` for the tenant (`date DESC, id DESC`). The current body is archived, the new body is written at the **same `rel_path`** — so `id`, `url`, `rel_path`, graph edges and inbound `related` links all stay put, and the target's original `date`/`slug` win over the request's (the response echoes the target's). **No target found ⇒ an ordinary v1 create**, never a 404, so an agent needs no lookup dance. A resolved target with a different `format` or `project` is a **422** (publish it as a new document instead) — identity is immutable across a version chain. Response: `version` = what was published, `previous_version` + `archived_path` = the body it superseded.
 - **`overwrite: true` now archives the body it replaces (P23)** and bumps the version too (it archives v`N` and publishes v`N+1`, sharing one chain with `new_version`). Status and every pre-P23 response key are unchanged; the legacy destructive path simply stops losing data. Use `overwrite` to *replace*, `new_version` to *supersede*.
 - **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`. **(P23)** the detail additionally carries `version` + a `hint` naming the versioned retry **when an existing DB row backs the conflict** (a disk-only conflict is not versionable and gets no hint); the four pre-P23 keys are untouched, so the CLI's 409 explainer is unaffected. A `new_version` write that **resolved** a target never reaches this branch; one whose resolution missed still can.
 - **422** on any convention validation error (project/tags/slug/date/frontmatter/`related` shape).
-- Commit semantics: a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases.
-- **Publish-on-write (P8), `KB_GIT_PUSH` — default false.** When enabled (the hosted box only), the write path pushes the scoped commit to `origin/main` **inside the same write lock, in-request**: `git fetch origin main` → rebase onto `origin/main` → non-force `git push origin HEAD:main`. **Never `--force`, never `git add -A`** — the box only ever lands its own new-file + Recent-bullet commit on top of the latest remote, so it can never clobber or revert operator work. A rebase conflict aborts cleanly, keeping the local commit.
-- **Push failure semantics mirror commit exactly (best-effort, never a 5xx).** The response always carries `pushed: bool`; `push_error` (string) appears **only** when a push was attempted and failed. A `pushed:false` write still **succeeded** — the doc is written + committed locally and publishes on the **next** successful push. `commit_sha` on a **successful push** is the **final published HEAD** on `main` (the rebase may rewrite the commit, so this — not the pre-push hash — is the authoritative published sha); on `pushed:false` it stays the local commit hash.
+- Commit semantics: the scoped commit is **local and in-request** (fast — no network), and a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases.
+- **Publish-on-write (P8), `KB_GIT_PUSH` — default false.** When enabled (the hosted box only), the scoped commit is published to `origin/main`: `git fetch origin main` → rebase onto `origin/main` → non-force `git push origin HEAD:main`. **Never `--force`, never `git add -A`** — the box only ever lands its own new-file + Recent-bullet commit on top of the latest remote, so it can never clobber or revert operator work. A rebase conflict aborts cleanly, keeping the local commit.
+- **(P24) That push runs *after* the response, not inside the request.** It is queued on a single process-wide FIFO publish worker (`server/publish.py`) and re-takes `WRITE_LOCK` there — so it still never races another write's tree mutation, but it no longer spends the caller's timeout budget. The same is true of the **Gemini embed**, which also moved behind the response. Every git subprocess is bounded by **`KB_GIT_TIMEOUT_S` (default 60 s)**, so a hung SSH round-trip can neither wedge the worker nor hold the write lock forever.
+- **Push failure semantics (best-effort, never a 5xx) — but no longer reported in-band.** The response always carries `pushed: bool` and, since P24, `push_pending: bool`. `push_pending:true` means a push was queued and starts right after this response; `pushed` is then **`false`**, because at the moment the body is written the push has not run. **`push_error` no longer exists in any response** — the response is long gone before the push can fail — and a failed background push surfaces **only** as a `[kb-api] publish: push <rel_path> FAILED: …` line in the container log. A `pushed:false` write still **succeeded**: the doc is written + committed locally and publishes on the **next** successful push. **`commit_sha` is now the local, pre-rebase commit** on every path (the rebase happens after the response, so the API can no longer report the published head); to assert what is actually published, read git state on the box rather than the response (see **operations**).
 - An `overwrite` re-write suppresses the duplicate Recent bullet (`recent_updated:false`).
 
 ## Multi-tenant surfaces: `/auth`, `/app`, and `/api` tenant resolution (P10)
@@ -411,7 +414,8 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
   "landing_created": true,
   "committed": true,
   "commit_sha": "0847f2e9ef6a4c227d35968e75c27ab6f6bf414d",
-  "pushed": false
+  "pushed": false,
+  "push_pending": true
 }
 ```
 
@@ -440,16 +444,25 @@ Field meanings:
   and the API auto-created `docs/<project>/index.md`; `false` otherwise.
 - `committed` — whether the scoped git commit succeeded. `commit_sha` — the commit
   hash (see below); `null` when not committed.
-- `pushed` — **P8 addition.** `true` when the commit was pushed to `origin/main`
-  (box only, `KB_GIT_PUSH=true`); `false` when push is disabled (local/plugin) or a
-  push was attempted and failed.
-- `commit_sha` semantics: on a **successful push** it is the **final published
-  HEAD** on `main` (a fetch+rebase before push may rewrite the commit, so this is
-  the authoritative published hash); on `pushed:false` (disabled or failed) it stays
-  the local commit hash; `null` when `committed:false`.
+- `pushed` — **P8 addition.** Its meaning is unchanged ("was this commit already on
+  `origin/main` when the response was written?"), but **since P24 it is always
+  `false`**: the push runs after the response, so it has not happened yet. It is
+  **not** a failure signal and **must never trigger a retry** — the document is
+  durably saved either way.
+- `push_pending` — **P24 addition**, always present on the 201 and both DELETE 200s.
+  `true` = a push to `origin/main` was **queued** and runs immediately after this
+  response (box only, `KB_GIT_PUSH=true` and the commit succeeded); `false` = no push
+  was queued, because pushing is disabled (local/plugin) or nothing was committed.
+- `commit_sha` semantics — **changed in P24**: it is the **local commit** this request
+  made, *before* the publish worker's fetch+rebase, so it is **no longer necessarily
+  the published head** on `main` (the rebase may rewrite it after the response). `null`
+  when `committed:false`. Consumers that need the published hash must read git state on
+  the box, not this field.
 - `commit_error` (string) — present **only** when a commit was attempted and
-  failed. `push_error` (string) — present **only** when a push was attempted and
-  failed. Neither is a failure of the request: the doc is still written (201).
+  failed; not a failure of the request (the doc is still written, 201). **`push_error`
+  was removed in P24** and appears in no response: the push has not run when the body is
+  written, so a push failure can only be reported in the container log
+  (`[kb-api] publish: … FAILED`).
 
 **409 — duplicate** (target `rel_path` already exists on disk or in the DB and
 `overwrite` is false):
@@ -507,11 +520,25 @@ token"}`.
 - **Publish flow (P9: fresh-on-write, no Pages).** A `201` means the doc is written to
   the box and **live at `url` immediately** — the self-hosted `mkdocs serve` viewer serves it
   off the same clone the instant it is written, with no build/CDN lag (the ~65 s GitHub Pages
-  step is gone; Pages retired). `pushed:true` means the commit also reached `origin/main` as
-  **off-box backup/history**; `pushed:false` **and a `push_error`** means the backup push has not
-  landed yet (it catches up on the **next** successful push) — but the doc is **already live** and
-  the write **succeeded**, so the client should **not** retry the write on `pushed:false`. `/api/*`
-  routing to the API is unchanged (the site serves `/`; the api serves `/api/*` + `/healthz`).
+  step is gone; Pages retired). The push to `origin/main` is **off-box backup/history** only, and
+  **since P24 it happens after the response** — so `pushed` is always `false` and `push_pending:true`
+  just means "the backup push is on its way". Neither is a failure, the doc is **already live**, and
+  the client must **not** retry the write on either. If a background push fails, the accumulated
+  commits catch up on the **next** successful push. `/api/*` routing to the API is unchanged (the
+  site serves `/`; the api serves `/api/*` + `/healthz`).
+- **(P24) The write response contains no network I/O.** Everything before the 201 is local
+  (validate → archive → file write → Recent/landing → DB commit → local git commit), so a write's
+  latency no longer depends on GitHub or Gemini. A client timeout on a write is therefore almost
+  never the write path — and, crucially, **is not evidence the write failed** (see below).
+- **(P24) A transport failure on a write is not proof of failure — verify, never blind-retry.**
+  The document is durably saved before any of the deferred work runs, so a lost response says
+  nothing about whether the write landed. The client rule both shipped clients now implement:
+  ask the API what is at the target `rel_path` (`GET /api/documents/by-path/{rel_path}`) **once**,
+  and only act on the answer — present with your body → an honest success (write nothing, never
+  re-POST); absent or still the old body → the write genuinely missed, so at most **one** informed
+  retry; a *different* document at a plain-create path → that is the 409 you never saw. Note the
+  read projection carries **no `url`** (it is synthesized only on the write responses), so a
+  recovered save reports `rel_path`/`version` rather than inventing a URL. **Never loop.**
 - **Retry / idempotency.** Writes are keyed by `project/date/slug` → `rel_path`. If
   a write times out or fails ambiguously, **re-POSTing the same
   `project`+`date`+`slug` returns 409** (`rel_path` already exists) — treat a

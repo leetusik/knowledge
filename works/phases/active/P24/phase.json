@@ -2,16 +2,16 @@
   "id": "P24",
   "name": "Upload finish-return timeout",
   "objective": "Fix the changple5→knowledge prod upload experience where the document saves but the client reports a disconnect because it never receives the finish response in time — confirm the 5s client timeout vs synchronous git commit/push in POST /api/documents, then make the finish response reliable and its reporting honest.",
-  "status": "in_progress",
+  "status": "done",
   "order": 4,
   "created_at": "2026-08-05T14:25:01+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-08-06T00:08:36+09:00",
   "review": {
-    "status": "changes_requested",
-    "reviewed_at": "2026-08-05T23:51:04+09:00",
+    "status": "pass",
+    "reviewed_at": "2026-08-06T00:08:36+09:00",
     "reviewer": "slice-executor-high",
-    "note": "Validation green (115/115 gated); F1: deploy runbook still prescribes pushed:true/push_error bring-up check that P24 made impossible; plus KB_GIT_TIMEOUT_S undocumented and onboarding_smoke missing push_pending"
+    "note": "F1 closes all three findings (verified against code); six doc versions consolidated; gated 115/115 and CLI 44/44 from first pass stand"
   },
   "paths": {
     "phase_md": "phase.md",

@@ -1,10 +1,10 @@
 ---
 doc_id: operations
-version: v0021
-created_at: 2026-07-22T18:32:15+09:00
-source: P20.REVIEW
-summary: P20 onboarding ship: web/public/install.sh + SKILL.md served live at /install.sh + /SKILL.md (zero infra); operator-gated push + web-deploy cutover verified live; no migration, D11 inert
-previous: v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404
+version: v0022
+created_at: 2026-08-06T00:03:33+09:00
+source: P24.REVIEW
+summary: P24 push runs after the response: new KB_GIT_TIMEOUT_S knob, bring-up asserts push capability from the container log plus git state instead of the retired pushed/push_error fields, publish-on-write flow corrected
+previous: v0021_p20_onboarding_ship_web_public_install.sh_skill.md_served_live_at_install.sh_skill.md_zero_infra_operator-gated_push_web-deploy_cutover_verified_live_no_migration_d11_inert
 ---
 
 # Operations
@@ -27,7 +27,7 @@ Two services over one bind-mounted repo:
 
 - **`kb`** (viewer): image `squidfunk/mkdocs-material:9.7.6` (exact pin), host port **8765**, command `serve --dev-addr=0.0.0.0:8000 --livereload`. `--livereload` is **explicit and load-bearing** — the flag never arms by default in this image, so without it new pages don't appear until restart. `restart: unless-stopped`.
 - **`api`**: `build: .` from `python:3.12-slim` + apt `git` + **`openssh-client`** + **`tzdata`** + uv-installed deps (`uv export --frozen --no-dev --no-emit-project` → `uv pip install --system`); host port **8766**; `KB_ROOT=/repo`, `TZ=Asia/Seoul`; **single uvicorn worker**; `restart: unless-stopped`. `tzdata` is required — without it `TZ=Asia/Seoul` silently falls back to UTC and `date.today()` yields wrong file dates near midnight KST. System-level git identity `kb-api` + `git config --system safe.directory /repo` (system-level so the `/repo` bind mount can't shadow them; without both, commits return `committed:false`).
-- **`openssh-client` is load-bearing and non-obvious (P8.F2).** The apt line uses `--no-install-recommends`, and the `ssh` binary is only a *Recommends* of `git` — so the image shipped **without `ssh`** and the container **could not push over an SSH remote at all**. Because push is best-effort by design, that failed **silently**: every write still returned 201, with `pushed:false` + a `push_error`, and nothing ever reached Pages. It must stay on the apt line. **General rule: a best-effort code path can hide a total infrastructure failure — assert the capability at bring-up** (`docker compose -f compose.prod.yml exec api command -v ssh` → `/usr/bin/ssh`), and make acceptance assert the *capability* (`pushed:true`), never the status code.
+- **`openssh-client` is load-bearing and non-obvious (P8.F2).** The apt line uses `--no-install-recommends`, and the `ssh` binary is only a *Recommends* of `git` — so the image shipped **without `ssh`** and the container **could not push over an SSH remote at all**. Because push is best-effort by design, that failed **silently**: every write still returned 201 (at the time with `pushed:false` + a `push_error`), and nothing ever reached Pages. It must stay on the apt line. **General rule: a best-effort code path can hide a total infrastructure failure — assert the capability at bring-up** (`docker compose -f compose.prod.yml exec api command -v ssh` → `/usr/bin/ssh`), and make acceptance assert the *capability*, never the status code. **(P24) the evidence for that assertion moved**: the push now runs *after* the response, so `pushed` is a constant `false`, `push_error` no longer exists in any response, and the surviving signals are the **container log** (failures only) plus the **clone's git state**. The rule is unchanged — only its instrument. The concrete replacement is in *Bring-up: asserting push capability (P24)* below, and it is kept byte-for-byte in step with `deploy/README.md` §2.
 - **Rebuild quirk on this host**: `docker compose up -d --build` panics in compose's *bake* build path (a compose-v2 bug on this host). Rebuild with **`COMPOSE_BAKE=false docker compose up -d --build`**.
 - **(P10) `postgres:17` service in both compose files.** `compose.yml` adds a local `postgres` (kb/kb/kb defaults, `pg_isready` healthcheck, `pgdata` volume); `compose.prod.yml` adds a durable `knowledge-postgres` (on `changple_shared_network`, `pgdata` volume, password from the box `.env`). The `api` service gains `depends_on: postgres (healthy)` + a `DATABASE_URL` (`postgresql+psycopg://…`). Migrations do **not** run on boot — they are the explicit `alembic upgrade head` step below. Locally `DATABASE_URL` may be left empty to keep accounts dormant (the content plane still works).
 
@@ -40,7 +40,8 @@ Two services over one bind-mounted repo:
 | `KB_PUBLIC_BASE_URL` | no | viewer origin for response `url`s | default `http://localhost:8765` |
 | `KB_API_TOKEN` | no | bearer token for mutating endpoints (and for reads when `KB_REQUIRE_READ_AUTH`) | unset = localhost open |
 | `KB_GIT_COMMIT` | no | enable/skip the write-path commit | default true |
-| `KB_GIT_PUSH` | no | **(P8)** push the scoped commit to `origin/main` → publish-on-write | **default false** — local/plugin never push; the hosted box sets `true` |
+| `KB_GIT_PUSH` | no | **(P8)** push the scoped commit to `origin/main` → publish-on-write | **default false** — local/plugin never push; the hosted box sets `true`. **(P24)** the push runs *after* the response, on the publish worker |
+| `KB_GIT_TIMEOUT_S` | no | **(P24)** wall-clock cap, in seconds, on **every** git subprocess (fetch, rebase, push, add, commit) | **default 60**; unparseable or non-positive falls back to 60, so the cap can never be switched off. Deliberately **left unset** in `compose.prod.yml` (listed there commented-out so the knob is discoverable) — the default is right for the box. Load-bearing: the publish worker holds the write lock while it pushes, so an unbounded hung SSH round-trip would stall every later write |
 | `KB_REQUIRE_READ_AUTH` | no | **(P8)** put reads/search behind the bearer | **default false** — local/plugin reads stay open; the hosted box sets `true` |
 | `KB_STARTUP_REINDEX` | no | run a full reindex on app boot (drift self-heal) | default true; `0/false/no/off` disables (disabled in tests) |
 | `GOOGLE_API_KEY` | no | Gemini credential (preferred) for semantic search | empty = feature off → BM25-only |
@@ -218,11 +219,28 @@ from the host**, which is the property everything else follows from:
 
 ### Publish-on-write flow
 
-With `KB_GIT_PUSH=true`, one `POST /api/documents` does the whole publish, **in-request,
-inside the write lock**: validate → write the `docs/` file → auto-create the project landing
-if this is the project's first doc → Recent bullet → DB row + embedding → **scoped** commit
-(`git add --` on the touched paths only, never `-A`) → `git fetch origin main` → rebase onto
-`origin/main` → **non-force** `git push origin HEAD:main`.
+With `KB_GIT_PUSH=true`, one `POST /api/documents` does the whole publish — but **as of P24 it
+is split by the response**. In-request, inside the write lock (all local, no network): validate →
+write the `docs/` file → auto-create the project landing if this is the project's first doc →
+Recent bullet → DB row → **scoped** commit (`git add --` on the touched paths only, never `-A`).
+**The 201 is then sent.** After it, on the publish worker thread: `git fetch origin main` → rebase
+onto `origin/main` → **non-force** `git push origin HEAD:main`, plus the Gemini embed.
+
+- **(P24) Why it moved, and what an operator sees.** Those two stages are network round-trips
+  (SSH to GitHub, HTTPS to Gemini) whose results never appear in the response, and until P24 they
+  ran *before* it with **no subprocess timeout at all** — so a client with a short deadline (the
+  shipped `/explain` skill used `curl --max-time 5`) timed out on a document that was already
+  saved, committed, and live. Now the response never waits on a remote. Operationally this means
+  **the push's outcome is no longer in the response at all**: `pushed` is always `false`,
+  `push_pending:true` just means "queued", `push_error` is gone, and a failed push appears **only**
+  as `[kb-api] publish: push <rel_path> FAILED: <err>` in the api container log. `commit_sha` in
+  the response is now the **local, pre-rebase** commit, not the published head.
+- **(P24) One background thread, one write lock.** Pushes are serialized on a single FIFO worker
+  that **re-takes the process's write lock** while it rebases, so a wedged `git` would block every
+  later write — which is why `KB_GIT_TIMEOUT_S` (default 60 s) bounds every git subprocess. The
+  queue is in-memory: a container restart drops any not-yet-run push (never a save), and the next
+  successful push publishes everything accumulated. A stalled **embed** blocks the queue behind it
+  until restart — semantic search and the off-box backup lag, writes and the live site do not.
 
 - **Fresh-on-write replaces the ~65 s Pages SLA (P9).** The doc is written into the same
   bind-mounted `/opt/knowledge` tree the `knowledge-site` viewer serves, so it is **publicly
@@ -235,10 +253,54 @@ if this is the project's first doc → Recent bullet → DB row + embedding → 
   never revert operator work — no cron, no webhook, no mirror. The box clone being *behind*
   `origin/main` between writes is normal and self-healing.
 - **Push is best-effort and never fails the write** (mirrors commit): a failed push still
-  returns 201, with `pushed:false` + `push_error`. Post-P9 the doc is **already publicly live**
-  on the box's live-serve regardless of push status — a failed push only delays the **off-box
-  backup**, which catches up on the next successful push. Bring-up must still *assert* the push
-  capability rather than infer it from a 201 (see the `openssh-client` note above).
+  returns 201 — and since P24 it cannot even be reported there. Post-P9 the doc is **already
+  publicly live** on the box's live-serve regardless of push status, so a failed push only delays
+  the **off-box backup**, which catches up on the next successful push. Bring-up must still
+  *assert* the push capability rather than infer it from a 201 — with the P24 instruments below.
+
+### Bring-up: asserting push capability (P24)
+
+**Kept in step with `deploy/README.md` §2 — change both together.** The P8.F2 rule survives P24
+intact ("assert the capability at bring-up, never infer it from a status code"); only the evidence
+changed. The 201 body says nothing about the push any more, so the assertion is now **the api
+container log** (failures only) plus **the clone's own git state** (the positive check):
+
+```bash
+# 2a. Is the push credential usable at all? (SSH origin + deploy key + pinned host key.)
+docker compose -f compose.prod.yml exec api git -C /repo ls-remote origin main
+# expect: one "<sha>\trefs/heads/main" line. A permission-denied / host-key error here
+# means every push WILL fail. Read-only, so it proves authentication, not WRITE access —
+# only a real push proves that, which is what 2b asserts.
+
+# 2b. After the FIRST real write (the E2E acceptance of §5 / P8.S5), assert the push
+#     actually landed. There is no success log line — only failures are logged — so the
+#     two checks below together are the assertion:
+docker compose -f compose.prod.yml logs --since 30m api | grep 'publish:'
+# expect: NO output (grep exits 1 — that is the healthy case). Any line is a failed
+# background task: "[kb-api] publish: push <rel_path> FAILED: <err>" is the push;
+# "embed <rel_path> FAILED" is only the semantic-search embed (search degrades to BM25,
+# publishing is unaffected).
+
+git -C /opt/knowledge rev-list --count origin/main..HEAD
+# expect: 0 — every commit the box has made is published on origin/main.
+# Non-zero = commits are stranded on the box. Fix the credential (2a), then the next
+# write publishes all of them at once; or push them by hand through the container:
+#   docker compose -f compose.prod.yml exec api git -C /repo push origin HEAD:main
+```
+
+Two traps this procedure encodes deliberately:
+
+- **`grep 'publish:'` is a *negative* check.** `server/publish.py` logs from exactly one place —
+  its failure branch — so there is no success line to look for; expecting one would recreate the
+  very "assert something that can never be true" bug P24's review caught in the old runbook.
+- **`origin/main` there is the box clone's remote-tracking ref**, updated by the *container's*
+  push. Do **not** `git fetch` from the host to "refresh" it: the SSH `origin` is the container's
+  credential and the host user has no deploy key.
+
+Also committed as an automated check: `scripts/onboarding_smoke.py`'s frozen-201 key list now
+requires `push_pending` (presence, never the value — `true` on the box, `false` wherever
+`KB_GIT_PUSH` is off), so the post-deploy verifier proves P24's additive contract change actually
+reached the deployment.
 
 ## Automated production deploy: manual-dispatch `Production Deploy` (P9)
 

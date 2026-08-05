@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0014
-created_at: 2026-08-05T22:59:21+09:00
-source: P23.REVIEW
-summary: P23 document version history journey: history panel on a read page, read-only past-version view, and versioned re-publishing through /explain
-previous: v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node
+version: v0015
+created_at: 2026-08-06T00:04:35+09:00
+source: P24.REVIEW
+summary: P24 honest publishing when the reply is lost: explain and knowledge save verify a timed-out write through the read API before reporting, never blind-retry, and read push_pending as saved-and-publishing
+previous: v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain
 ---
 
 # Experience
@@ -386,6 +386,18 @@ Until P23 a knowledge document had exactly one body. Re-explaining the same subj
 - **Public documents share their history.** A public project's document exposes its history to anonymous visitors on the same terms as its body; a private one exposes neither, and every miss is the same "not found" as a document that never existed. Browsing history is free and unmetered like the rest of the web UI.
 - **Deleting a document deletes its history with it.** There is no half-deleted state where old bodies of a removed document remain readable — and, on the public tree, none left behind in git either.
 - **A known gap, stated out loud.** When the API is unreachable the skill's offline fallback still writes a **new** file at today's path and cannot version — the very duplicate this phase fixes. The skill now says so and tells the agent to re-publish with the versioned path once the API is back. Closing it properly needs local archive plumbing (or a CLI flag); it is a candidate deferred job, not a defect of what shipped.
+
+## The reply gets lost: honest publishing after a timeout (P24)
+
+A publish is one HTTP request, so when the reply never arrives the client knows nothing — and both of our clients used to guess, badly. `/explain` treated **any** non-zero `curl` exit as "the API is unreachable" and fell through to writing the document again locally (or reported a failure); `knowledge save` mapped every transport error, including a read timeout on a write the server had already accepted, to `error: cannot reach <base_url>`. Meanwhile the server was spending the caller's whole budget on a git push and an embedding call that happen *after* the document is durably saved. So the reported experience — "the upload itself is successful, but the client says it disconnected" — was the system telling the truth about the response and lying about the outcome.
+
+- **The server side of the fix is invisible and that is the point.** A write's reply no longer waits on anything off-box, so it comes back fast. Publishing to the remote still happens, just afterwards; the response says so with a "publishing in the background" flag. **That flag is never an error and never a reason to retry** — the document is saved, committed, and (on the hosted box) already live at its URL when the reply is written.
+- **A timeout is no longer read as a failure.** Both clients now follow one rule: a transport failure on a *write* is not evidence the write failed. **Ask the API what is at the target path, once, before saying anything.** If the document is there, report an honest success — write nothing, re-post nothing. If it is genuinely absent, say so, and only then retry (`/explain` at most once; the CLI never retries on its own). If even the verification cannot reach the API, *then* the API really is unreachable and the local fallback applies.
+- **Never loop.** One verification, at most one retry — a blind retry after a timeout is how you get a duplicate document or an unwanted v2, which is precisely what P23's versioning made cheap to trigger.
+- **What "I could not confirm it" looks like.** When the CLI cannot prove either outcome it says the save **may or may not** have landed and points at `knowledge list` / `knowledge read` rather than pretending. When it *can* prove the save landed despite the lost reply, it exits successfully with a note explaining what happened — but it does **not** print a document URL, because the read API it verified through does not carry one, and inventing one would be a new small lie in place of the old big one. A recovered save is reported from what was actually observed, never reconstructed.
+- **Longer, but still fail-fast, write budgets.** Both clients now allow a write **30 seconds** (reads stay at 15 in the CLI; `/explain`'s research reads stay at 5). Post-fix the only variable left in a write is uploading a few hundred KB, so 30 s is generous headroom over the realistic worst case while still failing well before the edge's own 120 s ceiling. The two shipped clients deliberately agree on that number.
+- **The local fallback stopped duplicating landed writes.** If `/explain` does fall through to writing the file itself, it first checks whether the API already wrote exactly that document — and if so leaves it alone rather than rewriting the file, touching the index, or committing.
+- **The one thing an operator still cannot see from a client:** whether the background publish to the remote succeeded. That failure is logged on the box only (see **operations** for the bring-up assertion); it never delays a write, never fails one, and self-heals on the next successful push.
 
 ## Open Questions
 
