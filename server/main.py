@@ -36,6 +36,7 @@ from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
 from server import gitops
+from server import publish
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
@@ -74,6 +75,15 @@ async def lifespan(app: FastAPI):
             flush=True,
         )
     yield
+    # Give the after-response publish worker a bounded chance to finish its
+    # queued push/embed work before the process goes away (P24.S1). Best-effort:
+    # anything still pending is dropped, and the doc publishes on the next
+    # successful push — docs/ on disk is canonical either way.
+    if not publish.drain(timeout=10.0):
+        print(
+            f"[kb-api] shutdown: {publish.pending()} publish task(s) still pending",
+            flush=True,
+        )
     # Dispose the async accounts engine if it was ever created. Lazy: when
     # DATABASE_URL is unset the engine never exists and this is a no-op, so the
     # content plane still shuts down cleanly without Postgres.
@@ -149,6 +159,56 @@ app.include_router(graph_api.router)
 # in-process lock is sufficient; never scale to multiple workers. WAL gives reads
 # concurrency regardless.
 WRITE_LOCK = threading.Lock()
+
+
+def _push_task(root: Path):
+    """Build the after-response publish task for one write (P24.S1).
+
+    ``root`` is captured at submit time (never re-read from the env in the
+    worker). The task re-takes ``WRITE_LOCK`` — the rebase mutates the work tree
+    and must not race another write's file write — which is exactly why it is
+    submitted from OUTSIDE the lock (``WRITE_LOCK`` is not reentrant) and why
+    every git subprocess is bounded by ``KB_GIT_TIMEOUT_S``: a wedged network
+    must never hold the process's write lock. A ``GitError`` propagates to the
+    worker, which logs it; the local commit stays and publishes on the next push.
+    """
+
+    def _task() -> None:
+        with WRITE_LOCK:
+            gitops.push(root=root)
+
+    return _task
+
+
+def _embed_task(*, db_file: Path, doc_id: int, title: str, markdown: str):
+    """Build the after-response embed task for one write (P24.S1).
+
+    The Gemini call is a network round-trip whose result never appears in the
+    response, so it belongs behind it. It cannot reuse the request's SQLite
+    connection (closed with the response, and single-thread bound), so it opens
+    its own against the db path captured at submit time. Semantic search is a
+    disposable cache: a failure is logged and the next reindex catches up.
+    """
+
+    def _task() -> None:
+        model = config.embedding_model()
+        vec = embeddings_mod.embed_texts(
+            [embeddings_mod.document_input(title, markdown)], kind="document"
+        )[0]
+        conn = db.connect(db_file)
+        try:
+            db.upsert_embedding(
+                conn,
+                doc_id=doc_id,
+                model=model,
+                content_hash=embeddings_mod.content_hash(model, title, markdown),
+                dims=len(vec),
+                vector=embeddings_mod.pack_vector(vec),
+            )
+        finally:
+            conn.close()
+
+    return _task
 
 
 def get_conn():
@@ -561,8 +621,13 @@ def create_document(
     conn=Depends(get_conn),
 ):
     """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
-    upsert + scoped git commit, all under WRITE_LOCK. docs/ stays canonical — a
-    failed commit never rolls back the file/DB (responds 201, committed:false)."""
+    upsert + scoped LOCAL git commit, all under WRITE_LOCK. docs/ stays canonical — a
+    failed commit never rolls back the file/DB (responds 201, committed:false).
+
+    Nothing in the pre-response path makes a network round-trip (P24.S1): the push
+    to origin/main and the Gemini embed are queued on the publish worker and run
+    after the 201 is written, so a caller's timeout budget only ever covers local
+    work (see step 4b)."""
     # 1. Validate (S1 validators). ConventionError -> 422. Defaults: date=today,
     #    slug=slugify(title).
     try:
@@ -665,7 +730,8 @@ def create_document(
     doc_version = prev_version + 1 if prev_version is not None else 1
 
     # 3. Locked critical section: archive -> file write -> index update -> DB upsert
-    #    -> git. (WRITE_LOCK is NOT reentrant — nothing called in here may retake it.)
+    #    -> LOCAL git add/commit. (WRITE_LOCK is NOT reentrant — nothing called in
+    #    here may retake it, which is why the push is queued outside it in 4b.)
     with WRITE_LOCK:
         # 3a. Archive the body about to be replaced, BEFORE it is overwritten, to
         #     <root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>. `None` when
@@ -753,8 +819,6 @@ def create_document(
         committed = False
         commit_sha = None
         commit_error = None
-        pushed = False
-        push_error = None
         # Git publish is a public-root concern only: non-#1 tenants' content lives
         # under the gitignored tenants/ tree and is never committed/pushed.
         if body.commit and config.git_commit_enabled() and ctx.is_public:
@@ -783,40 +847,35 @@ def create_document(
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
 
-            # 4b. Best-effort publish: push the commit to origin/main when
-            #     KB_GIT_PUSH is enabled (hosted box only; off by default so local
-            #     never pushes). Mirrors the commit's best-effort semantics — a
-            #     failed push never changes the 201; the doc publishes on the next
-            #     successful push. A rebase may rewrite the commit, so the PUBLISHED
-            #     head becomes the authoritative commit_sha on success. Stays inside
-            #     WRITE_LOCK so no concurrent write mutates the tree mid-rebase.
-            if committed and config.git_push_enabled():
-                try:
-                    commit_sha = gitops.push(root=config.kb_root())
-                    pushed = True
-                except gitops.GitError as exc:
-                    push_error = exc.stderr or str(exc)
-
-    # 4b. Best-effort embed of the new doc, OUTSIDE the WRITE_LOCK critical section.
-    #     Semantic search is a disposable cache: any failure (no key, API error) is
-    #     swallowed — the 201 never depends on it, and the next reindex catches up.
+    # 4b. AFTER-RESPONSE publish work (P24.S1). Everything above is durable: the
+    #     file is on disk, the DB transaction is committed, the local commit is
+    #     made. What remains — the push to origin/main (fetch + rebase + push:
+    #     two SSH round-trips) and the Gemini embed — is publish/side-effect work
+    #     whose result never appears in the response, so it must not spend the
+    #     caller's timeout budget. Both are queued on the single publish worker
+    #     (FIFO, serialized) and run after this handler returns; submitting is a
+    #     queue append, and it happens OUTSIDE WRITE_LOCK because the push task
+    #     re-takes that lock (it is not reentrant).
+    #     `pushed` therefore stays false on every path now — it keeps its
+    #     documented "saved, publishes on the next successful push" meaning, and
+    #     `push_pending` says whether that push is already on its way. A failed
+    #     background push is logged (container log), not reported here: the
+    #     response is long gone by then, so `push_error` no longer appears.
+    pushed = False
+    push_pending = False
+    if committed and config.git_push_enabled():
+        push_pending = True
+        publish.submit(f"push {rel}", _push_task(config.kb_root()))
     if config.embeddings_enabled():
-        try:
-            model = config.embedding_model()
-            vec = embeddings_mod.embed_texts(
-                [embeddings_mod.document_input(body.title, stored_markdown)],
-                kind="document",
-            )[0]
-            db.upsert_embedding(
-                conn,
+        publish.submit(
+            f"embed {rel}",
+            _embed_task(
+                db_file=config.db_path(),
                 doc_id=doc_id,
-                model=model,
-                content_hash=embeddings_mod.content_hash(model, body.title, stored_markdown),
-                dims=len(vec),
-                vector=embeddings_mod.pack_vector(vec),
-            )
-        except Exception:  # noqa: BLE001 — best-effort; never affects the 201
-            pass
+                title=body.title,
+                markdown=stored_markdown,
+            ),
+        )
 
     # 5. Response.
     # Mode-aware direct URL. Tenant mode (`ctx.tenant_id is not None`) points at the
@@ -849,13 +908,19 @@ def create_document(
         "recent_updated": recent_updated,
         "landing_created": landing_created,
         "committed": committed,
+        # The LOCAL commit this request made. Since P24 the rebase happens after
+        # the response, so this is no longer necessarily the published (post-
+        # rebase) head — see `push_pending`.
         "commit_sha": commit_sha,
+        # Unchanged meaning ("saved; publishes on the next successful push"), and
+        # now always false when a push was deferred rather than skipped.
         "pushed": pushed,
+        # Additive (P24): a push to origin/main was QUEUED and runs right after
+        # this response. The document is already durably saved either way.
+        "push_pending": push_pending,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
-    if push_error is not None:
-        resp["push_error"] = push_error
     # Meter the created document (best-effort, via the middleware). Attributed to
     # `project` (the write's project name) -> tenant project UUID. Inert in legacy
     # mode (tenant_id None -> the middleware skips).
@@ -885,7 +950,8 @@ def _delete_document(
     the write path: public callers touch docs/ + Recent + git; non-#1 tenants touch
     only their namespaced tenants/<uuid>/ file + DB row. docs/ row deletion is
     missing_ok — a DB row without a file is drift, still cleaned up. A failed
-    commit never rolls back the removal (responds with committed:false)."""
+    commit never rolls back the removal (responds with committed:false). Like the
+    write path, the push runs after the response (P24.S1)."""
     rel = doc["rel_path"]
     root = _tenant_root(ctx)
     with WRITE_LOCK:
@@ -909,8 +975,6 @@ def _delete_document(
         committed = False
         commit_sha = None
         commit_error = None
-        pushed = False
-        push_error = None
         # Git publish is a public-root concern only (see create_document).
         if commit and config.git_commit_enabled() and ctx.is_public:
             try:
@@ -929,15 +993,15 @@ def _delete_document(
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
 
-            # Best-effort publish of the delete commit — same semantics as the POST
-            # path (see create_document 4b): KB_GIT_PUSH-gated, off by default, a
-            # failed push never changes the 200, published head becomes commit_sha.
-            if committed and config.git_push_enabled():
-                try:
-                    commit_sha = gitops.push(root=config.kb_root())
-                    pushed = True
-                except gitops.GitError as exc:
-                    push_error = exc.stderr or str(exc)
+    # After-response publish of the delete commit — same mechanism and semantics
+    # as the POST path (see create_document 4b): KB_GIT_PUSH-gated, off by
+    # default, queued on the publish worker outside WRITE_LOCK (the task retakes
+    # it), never spends the caller's timeout budget.
+    pushed = False
+    push_pending = False
+    if committed and config.git_push_enabled():
+        push_pending = True
+        publish.submit(f"push delete {rel}", _push_task(config.kb_root()))
 
     resp = {
         "deleted": True,
@@ -950,13 +1014,14 @@ def _delete_document(
         # P23: whether this document had an on-disk version archive to remove.
         "versions_removed": versions_removed,
         "committed": committed,
+        # The local delete commit; not necessarily the published head (P24).
         "commit_sha": commit_sha,
         "pushed": pushed,
+        # Additive (P24): the push of this delete commit was queued.
+        "push_pending": push_pending,
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
-    if push_error is not None:
-        resp["push_error"] = push_error
     return resp
 
 

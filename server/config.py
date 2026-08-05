@@ -103,6 +103,25 @@ def git_push_enabled() -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def git_timeout_s() -> float:
+    """Wall-clock cap on EVERY git subprocess (``KB_GIT_TIMEOUT_S``, default 60s).
+
+    Load-bearing since P24: the push (fetch → rebase → push) runs on the
+    after-response publish worker while holding ``WRITE_LOCK``, so an unbounded
+    ``git`` — a hanging SSH connection to GitHub, say — would block every
+    subsequent write in the process. A timeout surfaces as ``GitError`` (the
+    subprocess is killed), which the worker logs; the local commit and the
+    on-disk document are untouched and publish on the next successful push.
+    Unparseable or non-positive values fall back to 60s so the cap is never off.
+    """
+    raw = _env("KB_GIT_TIMEOUT_S", "60")
+    try:
+        value = float(str(raw))
+    except (TypeError, ValueError):
+        return 60.0
+    return value if value > 0 else 60.0
+
+
 def require_read_auth_enabled() -> bool:
     """Whether the read/search surface requires the bearer (hosted box only).
 

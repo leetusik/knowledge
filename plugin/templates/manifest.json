@@ -20,6 +20,7 @@
       "server/embeddings.py",
       "server/gitops.py",
       "server/main.py",
+      "server/publish.py",
       "server/reindex.py",
       "server/search.py",
       "server/accounts/__init__.py",

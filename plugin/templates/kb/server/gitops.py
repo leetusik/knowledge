@@ -9,6 +9,12 @@ deployment; local/plugin deployments never push), via a fetch + rebase-onto-remo
 ``committed: false`` / ``pushed: false`` and keep the on-disk write — a failed
 commit or push never rolls back the file/DB (docs/ stays canonical), and a failed
 push aborts any in-progress rebase so the local commit survives intact.
+
+Every subprocess here is bounded by ``KB_GIT_TIMEOUT_S`` (``config.git_timeout_s``,
+default 60s): a git that exceeds it is killed and surfaces as ``GitError`` like any
+other failure. That cap is load-bearing since P24 — the push runs on the
+after-response publish worker while holding ``WRITE_LOCK``, so an unbounded network
+stage there would wedge every later write in the process.
 """
 from __future__ import annotations
 
@@ -16,9 +22,11 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, Optional
 
+from server import config
+
 
 class GitError(Exception):
-    """A git subprocess failed. Carries the command and its stderr."""
+    """A git subprocess failed (non-zero exit, or exceeded the timeout)."""
 
     def __init__(self, command: list[str], stderr: str):
         self.command = command
@@ -26,9 +34,16 @@ class GitError(Exception):
         super().__init__(f"{' '.join(command)}: {self.stderr}")
 
 
-def _run(args: list[str], *, root) -> subprocess.CompletedProcess:
+def _run(args: list[str], *, root, timeout: Optional[float] = None) -> subprocess.CompletedProcess:
     cmd = ["git", "-C", str(root), *args]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    limit = config.git_timeout_s() if timeout is None else timeout
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=limit)
+    except subprocess.TimeoutExpired as exc:
+        # subprocess.run kills the child before re-raising, so nothing is left
+        # running. Same GitError channel as a non-zero exit: callers already
+        # treat that as "not published, keep the write".
+        raise GitError(cmd, f"timed out after {limit:g}s") from exc
     if proc.returncode != 0:
         # "nothing to commit" and identity/safe.directory failures all land here
         # as a GitError with the reason, never an unhandled crash.
@@ -66,13 +81,18 @@ def push(*, root, remote: str = "origin", branch: str = "main") -> str:
     its scoped commit on top of the operator's work, never clobbers it.
 
     Because a rebase may rewrite the commit, the returned sha is the **final,
-    published** HEAD (the caller uses it as the authoritative ``commit_sha``).
+    published** HEAD. Since P24 this runs on the after-response publish worker,
+    so it is a log/diagnostic value, no longer the response's ``commit_sha``
+    (that is the pre-rebase local commit the request itself made).
 
-    On any step failing (fetch/rebase/push): abort an in-progress rebase so the
-    repo is never left mid-rebase (its own failure is ignored — nothing to abort),
-    then re-raise ``GitError``. The local commit is preserved intact (never
-    ``--force``, never a reset) — the caller keeps it, reports ``push_error``, and
-    the doc publishes on the next successful push.
+    Every step is bounded by ``KB_GIT_TIMEOUT_S`` — a hung fetch/push raises
+    ``GitError`` instead of blocking the worker (and its ``WRITE_LOCK``) forever.
+
+    On any step failing (fetch/rebase/push/timeout): abort an in-progress rebase
+    so the repo is never left mid-rebase (its own failure is ignored — nothing to
+    abort), then re-raise ``GitError``. The local commit is preserved intact
+    (never ``--force``, never a reset) — the caller keeps it and the doc publishes
+    on the next successful push.
     """
     try:
         _run(["fetch", remote, branch], root=root)
@@ -81,11 +101,16 @@ def push(*, root, remote: str = "origin", branch: str = "main") -> str:
     except GitError:
         # Best-effort: leave no rebase-in-progress behind. When there is nothing
         # to abort (e.g. fetch failed before any rebase), this is a harmless no-op
-        # — swallow its own non-zero exit rather than mask the real GitError.
-        subprocess.run(
-            ["git", "-C", str(root), "rebase", "--abort"],
-            capture_output=True,
-            text=True,
-        )
+        # — swallow its own non-zero exit (and its own timeout) rather than mask
+        # the real GitError.
+        try:
+            subprocess.run(
+                ["git", "-C", str(root), "rebase", "--abort"],
+                capture_output=True,
+                text=True,
+                timeout=config.git_timeout_s(),
+            )
+        except subprocess.TimeoutExpired:
+            pass
         raise
     return _run(["rev-parse", "HEAD"], root=root).stdout.strip()
