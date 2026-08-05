@@ -1,0 +1,16 @@
+{
+  "phase_id": "P20",
+  "archived_at": "2026-08-05T14:05:18+09:00",
+  "archive_reason": "phase_review_passed",
+  "review_verdict": "pass",
+  "source_path": "works/phases/active/P20",
+  "archive_path": "works/phases/archived/20260805_140518_P20_frictionless_onboarding_hero_install_env-var_quickstart_skill_on_landing",
+  "slices": [
+    "P20.DECOMP",
+    "P20.S1",
+    "P20.S2",
+    "P20.S3",
+    "P20.S4",
+    "P20.REVIEW"
+  ]
+}
