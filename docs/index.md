@@ -24,7 +24,6 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
-- 2026-07-25 · [The Answer That Cited Nothing: Strict This-Turn Chat Citations (P51)](changple5/2026-07-25-strict-this-turn-citations-p51.html) — changple5
 - 2026-07-25 · [The Miracle Content Agent (P30), Explained — With an Operator's Guide](changple5/2026-07-25-the-miracle-content-agent-p30-explained-with-an-operator-s-guide.html) — changple5
 - 2026-07-25 · [GraphRAG Systems Architecture: Dual-Level Indexing, Traversal Algorithms, and Enterprise Production Patterns](hi2vi/2026-07-25-graphrag-systems-architecture-dual-level-indexing-traversal-algorithms-and-enterprise-production-patterns.md) — hi2vi
 - 2026-07-23 · [Repeated Self-Improvement via Output Indexing in Autonomous AI Agents](hi2vi/2026-07-23-repeated-self-improvement-via-output-indexing-in-autonomous-ai-agents.md) — hi2vi
