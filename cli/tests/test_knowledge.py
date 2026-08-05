@@ -38,6 +38,11 @@ class FakeApi:
 
     def __init__(self, conflict=False):
         self.conflict = conflict
+        # P24.S3: a transport failure to raise INSTEAD of answering the POST — the
+        # request is still recorded first, because the point of the whole branch is
+        # that it *was* sent. `absent` makes the read-back 404 (the save missed).
+        self.post_raises = None
+        self.absent = False
         self.calls = []
 
     def handler(self, request):
@@ -46,6 +51,8 @@ class FakeApi:
         self.calls.append((method, path, request.headers.get("authorization"), body))
 
         if (method, path) == ("POST", "/api/documents"):
+            if self.post_raises is not None:
+                raise self.post_raises
             if self.conflict and not body.get("overwrite"):
                 # main.py:426-430 — the detail is a DICT, not prose.
                 return httpx.Response(409, json={"detail": {
@@ -56,6 +63,8 @@ class FakeApi:
                 }})
             return httpx.Response(201, json={**DOC, "url": "http://site.test/x/", "committed": False})
         if method == "GET" and path.startswith("/api/documents/"):
+            if self.absent:
+                return httpx.Response(404, json={"detail": f"no document at {path}"})
             return httpx.Response(200, json=DOC)
         return httpx.Response(404, text="<html>mkdocs</html>")
 
@@ -260,6 +269,74 @@ def test_no_command_ever_prints_the_key(home, api, repo, tmp_path, capsys, monke
     run("usage")
     out = capsys.readouterr()
     assert VK not in out.out + out.err
+
+
+# --- T7: a lost reply is not a failed save (P24.S3) ---------------------------
+#
+# The write path's one dishonest outcome: the POST is delivered, the document is
+# written, and only the reply is lost — reported until now as "cannot reach". Each
+# test below is one of the four outcomes the CLI must now tell apart.
+
+SAVED_BODY = "# A note\n\nbody\n"  # == DOC["markdown"], so a read-back confirms it
+
+
+def _note(tmp_path, body=SAVED_BODY):
+    path = tmp_path / "note.md"
+    path.write_text(body)
+    return str(path)
+
+
+def _save(path):
+    # --date pins the rel_path the CLI derives (the slug comes from the H1) to DOC's.
+    return run("save", path, "--tag", "a", "--tag", "b", "--date", "2026-07-17")
+
+
+def test_a_lost_reply_is_verified_and_reported_as_the_success_it_is(home, api, repo, tmp_path, capsys):
+    api.post_raises = httpx.ReadTimeout("timed out")
+    assert _save(_note(tmp_path)) == 0
+    out = capsys.readouterr()
+
+    # One POST, one read-back at the derived rel_path — and never a second POST,
+    # which would be a duplicate (or, since P23, an unwanted v2).
+    assert api.paths == [
+        ("POST", "/api/documents"),
+        ("GET", f"/api/documents/by-path/{DOC['rel_path']}"),
+    ]
+    assert f"saved: {DOC['title']}" in out.out
+    assert "url:" not in out.out  # the read projection has no url; never guess one
+    assert "cannot reach" not in out.err  # the lie this slice removes
+    assert "never answered" in out.err and "ReadTimeout" in out.err
+
+
+def test_a_lost_reply_with_nothing_saved_is_an_honest_uncertain_error(home, api, repo, tmp_path, capsys):
+    api.post_raises = httpx.ReadTimeout("timed out")
+    api.absent = True
+    assert _save(_note(tmp_path)) == 1
+    err = capsys.readouterr().err
+
+    assert "cannot reach" not in err
+    assert f"no document at {DOC['rel_path']}" in err
+    assert "knowledge list --project myrepo" in err  # how to check before re-running
+    assert api.paths.count(("POST", "/api/documents")) == 1  # no blind retry
+
+
+def test_a_lost_reply_over_a_document_that_is_not_ours_is_not_a_success(home, api, repo, tmp_path, capsys):
+    """Something is at the path, but not what we sent — the 409 we never saw."""
+
+    api.post_raises = httpx.ReadTimeout("timed out")
+    assert _save(_note(tmp_path, "# A note\n\na different body\n")) == 1
+    err = capsys.readouterr().err
+    assert "not the one you just saved" in err
+    assert "--overwrite" in err
+
+
+def test_a_connect_failure_still_says_cannot_reach(home, api, repo, tmp_path, capsys):
+    """Nothing was sent, so the old message is the true one — and no read-back."""
+
+    api.post_raises = httpx.ConnectError("connection refused")
+    assert _save(_note(tmp_path)) == 1
+    assert "cannot reach http://api.test" in capsys.readouterr().err
+    assert api.paths == [("POST", "/api/documents")]
 
 
 # --- the empty state that reads as a bug --------------------------------------

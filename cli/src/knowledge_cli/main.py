@@ -115,6 +115,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     except httpx.HTTPError as exc:
+        # Only ever reached for a call whose failure really is "we never got an
+        # answer and nothing changed": every command but `save` is a read, and
+        # `save` handles its own send-stage failures first (`knowledge.cmd_save` ->
+        # `verify_save`), re-raising to here only when `client.never_sent` proves the
+        # request never left us. Widening this message back over a mutating call
+        # would re-introduce the P24 lie: "cannot reach" for a document that saved.
         print(f"error: cannot reach {args.base_url}: {exc}", file=sys.stderr)
         return 1
     except config.ConfigError as exc:
