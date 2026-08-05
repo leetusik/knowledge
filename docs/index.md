@@ -24,7 +24,6 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
-- 2026-07-23 · [Characteristics of Korean Hybrid Search: Tokenization Alignment, Dense Models, and Score Fusion Architecture](hi2vi/2026-07-23-characteristics-of-korean-hybrid-search-tokenization-alignment-dense-models-and-score-fusion-architecture.md) — hi2vi
 - 2026-07-22 · [Knowledge by default in bootstrapped workspaces (bootstrap P9)](bootstrap_agentic_workspace.sh/2026-07-22-knowledge-by-default-p9.html) — bootstrap_agentic_workspace.sh
 - 2026-07-22 · [Auto-explain at the phase review (bootstrap P8)](bootstrap_agentic_workspace.sh/2026-07-22-auto-explain-phase-review.html) — bootstrap_agentic_workspace.sh
 - 2026-07-17 · [Implementing Anthropic's Contextual Retrieval Pattern with Prompt Caching](hi2vi/2026-07-17-implementing-anthropic-s-contextual-retrieval-pattern-with-prompt-caching.md) — hi2vi
