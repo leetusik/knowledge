@@ -6,11 +6,13 @@
       "Edit",
       "Write",
       "Glob",
-      "Grep"
+      "Grep",
+      "Bash(cp:*)"
     ],
     "deny": [
       "Bash(git push:*)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)"
     ]
   }
 }
