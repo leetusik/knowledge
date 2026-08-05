@@ -222,6 +222,63 @@ Full detail in `slices/P23.S1/result.md`; the durable, cross-slice parts:
 - **Reindex report gained additive keys** `versions_indexed` / `versions_removed`;
   `indexed`/`removed` still count current documents only.
 
+### S2 notes (version history read API landed) — the contract S3 and S4 code against
+
+Full detail in `slices/P23.S2/result.md`. **Exact shapes, unversioned-safe, all
+unmetered, no write path touched:**
+
+- **Shared envelope** (both planes, identical field names):
+  `{"rel_path": str, "current_version": int, "total": int, "versions": [row, …]}` —
+  `versions` is **superseded bodies only**, newest first (`version DESC`);
+  `current_version` is the live document's `documents.version`, so the full chain is
+  "current_version + the listed archives". An **unversioned document answers
+  `current_version: 1, total: 0, versions: []`, never a 404** — one call is enough to
+  render "no history".
+- **Row shape**: `{rel_path, version, archive_path, title, date, tags[], format,
+  created_at}`; `id`/`tenant_id` never leave either plane. Index rows carry **no
+  bodies**; a single-version fetch adds `markdown`.
+- **`/api` (agent, `resolve_api_read` + `_tenant_filter`)**
+  * `GET /api/documents/by-path/{rel_path}/versions`
+  * `GET /api/documents/by-path/{rel_path}/versions/{version}` → row + `markdown`,
+    **plus `raw_html` when `format == "html"`** — the one place raw HTML leaves the
+    `/api` plane, because a superseded explainer body is otherwise unreadable
+    (`.versions/` is never served). Flagged for the review.
+  * Declared **before** the bare by-path route: `{rel_path:path}` is greedy and
+    Starlette matches in declaration order — any future by-path suffix route must go
+    above it too.
+- **`/app` (web, `optional_user` → `_resolve_readable_doc`, member **or** public-project
+  anonymous; every miss a 404, never a 403)**
+  * `GET /app/documents/{doc_id}/versions`
+  * `GET /app/documents/{doc_id}/versions/{version}` → row + `markdown`, **never
+    `raw_html`** (this plane's raw bytes leave only through a `/raw` route)
+  * `GET /app/documents/{doc_id}/versions/{version}/raw` → the archived HTML body as
+    `text/html; charset=utf-8` with the same four sandbox headers as
+    `GET /app/documents/{id}/raw` (`Content-Security-Policy: sandbox allow-scripts;
+    frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `nosniff`, `no-store`).
+    **S3's BFF raw relay twin must pass those through unchanged.**
+  * The archive is scoped to the **owning document's** `tenant_id`, not the caller's —
+    that is what makes a public document's history anonymously readable without ever
+    crossing tenants.
+- **The current version is never addressable as a version.** `…/versions/<current>` is a
+  plain 404 on both planes; the current body is the document read
+  (`GET /api/documents/by-path/{rel_path}` / `GET /app/documents/{id}`). S3's UI should
+  render "current" from the document it already has and only call the version routes for
+  older entries; S4 reads a prior body from `…/versions/{n}`.
+- **`created_at` on a version row is when it was archived**, not when it was authored
+  (S1's rule) — label it accordingly in the UI.
+- **Test-harness findings for the review (and any later server slice):**
+  * The `/app` suites are Postgres-gated and **silently skip** without a DSN — and **no
+    CI workflow runs pytest at all**, so a plain `pytest` proves nothing about the `/app`
+    plane. To run them for real: `initdb -D <tmp>/pgdata -U kb --auth=trust`;
+    `pg_ctl -D <tmp>/pgdata -o "-p 55432 -k /tmp" -l <tmp>/pg.log start`;
+    `createdb -h /tmp -p 55432 -U kb -w kbtest`; then
+    `KB_TEST_DATABASE_URL="postgresql://kb@/kbtest?host=/tmp&port=55432" pytest`.
+    The **unix-socket** DSN form is required — a `127.0.0.1` DSN dies with
+    `fe_sendauth: no password supplied` despite `trust` in `pg_hba.conf`.
+  * Doing so surfaced a **pre-existing** failure S2 fixed: `test_documents_api._LIST_KEYS`
+    had never gained `format` (html phase) or `version` (P23.S1). With Postgres the whole
+    suite is now **113 passed / 0 failed**; without it, 81 passed / 32 skipped.
+
 ### Validation the slices should run
 
 - `python3 -m pytest` (repo root; `testpaths = ["tests"]`, `pythonpath = ["."]`) — S1/S2.
@@ -269,6 +326,17 @@ _One line per durable-truth change; `P23.REVIEW` consolidates these into doc ver
   `version`/`previous_version`/`archived_path`), `overwrite: true` now archives the body
   it replaces instead of destroying it, the 409 detail gains a versionable hint, and
   deleting a document deletes its archive with it.
+- (S2) `api.md` (+ a line in `backend.md`): version history is now readable on both
+  planes — `/api` gains `GET /api/documents/by-path/{rel_path}/versions` (envelope
+  `{rel_path, current_version, total, versions[]}`, superseded rows `version DESC`,
+  body-less) and `.../versions/{version}` (adds `markdown`, plus `raw_html` for an
+  html version — the one documented exception to "raw_html never leaves /api"), while
+  `/app` gains `GET /app/documents/{id}/versions`, `.../versions/{version}` (markdown
+  only) and `.../versions/{version}/raw` (archived HTML with the same four sandbox
+  headers as the current-document raw route); all five are additive, unmetered, and
+  optional-identity on `/app` (member or public-project anonymous, 404-never-403), the
+  current version is deliberately not addressable as a version, and an unversioned
+  document answers an empty history rather than a 404.
 
 ## Open Questions
 

@@ -20,6 +20,7 @@ from server import db
 # Postgres-gated client fixture + accounts-plane helpers, reused as-is.
 from tests.test_documents_api import (  # noqa: F401
     _project,
+    _seed_version,
     _signup,
     documents_client,
 )
@@ -43,7 +44,9 @@ def _set_public(client, headers, project_id, visibility="public"):
     assert res.status_code == 200, res.text
 
 
-def _seed(tenant_id, project, *, slug, fmt="md", raw_html=None, tags=None, related=None):
+def _seed(
+    tenant_id, project, *, slug, fmt="md", raw_html=None, tags=None, related=None, version=1
+):
     conn = db.connect()
     try:
         return db.upsert_document(
@@ -59,6 +62,7 @@ def _seed(tenant_id, project, *, slug, fmt="md", raw_html=None, tags=None, relat
             related=related or [],
             format=fmt,
             raw_html=raw_html,
+            version=version,
             tenant_id=tenant_id,
         )
     finally:
@@ -141,6 +145,42 @@ def test_public_graph_is_org_scoped(documents_client):
     assert client.get("/app/graph").status_code == 401
     member = client.get("/app/graph", headers=a_headers).json()
     assert {p["name"] for p in member["projects"]} == {"pub", "secret"}
+
+
+def test_anonymous_reads_public_version_history(documents_client):
+    """P23.S2: a public document's history is anonymously readable — the list, one
+    archived version, and an archived HTML version's raw body carrying the very same
+    sandbox headers as the current one; a private document's history is a 404."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"pubver-{uuid4()}@example.com")
+    pub = _project(client, headers, "pub")
+    _project(client, headers, "priv")  # left private
+    _set_public(client, headers, pub)
+
+    pub_id = _seed(tenant, "pub", slug="p", fmt="html", raw_html=_HTML, version=2)
+    priv_id = _seed(tenant, "priv", slug="s")
+    _seed_version(
+        tenant, "pub/2026-01-01-p.html", 1, markdown="old text", fmt="html", raw_html=_HTML
+    )
+
+    page = client.get(f"/app/documents/{pub_id}/versions").json()
+    assert (page["current_version"], page["total"]) == (2, 1)
+    assert "raw_html" not in page["versions"][0]  # bytes leave only via /raw
+    one = client.get(f"/app/documents/{pub_id}/versions/1")
+    assert one.status_code == 200 and one.json()["markdown"] == "old text"
+    assert "raw_html" not in one.json()
+
+    raw = client.get(f"/app/documents/{pub_id}/versions/1/raw")
+    assert raw.status_code == 200 and "SECRET_TOKEN" in raw.text
+    assert raw.headers["content-type"].startswith("text/html")
+    for key, val in _SANDBOX.items():
+        assert raw.headers[key] == val
+
+    # A private document's history, an unknown version and its raw twin: same 404.
+    assert client.get(f"/app/documents/{priv_id}/versions").status_code == 404
+    assert client.get(f"/app/documents/{pub_id}/versions/9").status_code == 404
+    assert client.get(f"/app/documents/{pub_id}/versions/9/raw").status_code == 404
 
 
 def test_visibility_toggle_flips_anonymous_read(documents_client):

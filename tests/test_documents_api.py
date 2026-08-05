@@ -108,6 +108,7 @@ def _seed_doc(
     markdown: str,
     date: str = "2026-01-01",
     tags: list[str] | None = None,
+    version: int = 1,
 ) -> int:
     """Write one document straight into the throwaway SQLite (scoped to tenant_id)."""
 
@@ -124,12 +125,52 @@ def _seed_doc(
             rel_path=f"{project}/{date}-{slug}.md",
             markdown=markdown,
             related=[],
+            version=version,
             tenant_id=tenant_id,
         )
     finally:
         conn.close()
 
 
+def _seed_version(
+    tenant_id: str,
+    rel_path: str,
+    version: int,
+    *,
+    markdown: str,
+    fmt: str = "md",
+    raw_html: str | None = None,
+) -> None:
+    """Archive one superseded version of ``rel_path`` (P23.S2 read-route fixtures).
+
+    Writes the ``document_versions`` row the write path would have written; the
+    ``.versions/<project>/<date>-<slug>/vNNNN.<ext>`` archive file it mirrors is not
+    needed here — these routes read the DB, and reindex is covered elsewhere.
+    """
+
+    conn = db.connect()
+    try:
+        db.upsert_document_version(
+            conn,
+            rel_path=rel_path,
+            version=version,
+            archive_path=f".versions/{rel_path.rsplit('.', 1)[0]}/v{version:04d}.{fmt}",
+            title=f"Version {version}",
+            date="2026-01-01",
+            tags=[],
+            format=fmt,
+            markdown=markdown,
+            raw_html=raw_html,
+            tenant_id=tenant_id,
+        )
+    finally:
+        conn.close()
+
+
+# The exact /app list projection. `format` (html-explainer phase) and `version`
+# (P23.S1) are additive columns that ride along on every read shape — this set is
+# the assertion that nothing INTERNAL (markdown/tags_text/tenant_id/raw_html) ever
+# joins them, so it must be kept in step with the documents table.
 _LIST_KEYS = {
     "id",
     "project",
@@ -140,6 +181,8 @@ _LIST_KEYS = {
     "rel_path",
     "source_repo",
     "related",
+    "format",
+    "version",
     "created_at",
     "updated_at",
 }
@@ -258,6 +301,40 @@ def test_documents_are_unmetered(documents_client):
     assert client.get("/app/search", params={"q": "searchterm"}, headers=headers).status_code == 200
     # Web-UI browse/search records no usage event (unlike the metered /api/search).
     assert _event_count() == before
+
+
+def test_document_version_history(documents_client):
+    """P23.S2 /app reads for a member: body-less list + ``current_version``, one
+    archived version with its markdown, and the 404s (current version, unknown
+    version, unknown doc, another tenant's doc — never a 403)."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"ver-{uuid4()}@example.com")
+    _project(client, headers, "alpha")
+    rel = "alpha/2026-01-01-hist.md"
+    doc = _seed_doc(tenant, "alpha", slug="hist", title="History", markdown="v2 body", version=2)
+    _seed_version(tenant, rel, 1, markdown="v1 body")
+
+    page = client.get(f"/app/documents/{doc}/versions", headers=headers).json()
+    assert (page["rel_path"], page["current_version"], page["total"]) == (rel, 2, 1)
+    row = page["versions"][0]
+    assert row["version"] == 1 and row["archive_path"].endswith("/v0001.md")
+    assert not {"markdown", "raw_html", "id", "tenant_id"} & set(row)
+
+    one = client.get(f"/app/documents/{doc}/versions/1", headers=headers)
+    assert one.status_code == 200, one.text
+    assert one.json()["markdown"] == "v1 body" and "tenant_id" not in one.json()
+
+    # The current version is the document itself, so it is not addressable here.
+    assert client.get(f"/app/documents/{doc}/versions/2", headers=headers).status_code == 404
+    assert client.get("/app/documents/99999999/versions", headers=headers).status_code == 404
+    other_headers, _ = _signup(client, f"vernosee-{uuid4()}@example.com")
+    assert client.get(f"/app/documents/{doc}/versions", headers=other_headers).status_code == 404
+
+    # An unversioned document answers an empty history, never a 404.
+    plain = _seed_doc(tenant, "alpha", slug="plain", title="Plain", markdown="only body")
+    empty = client.get(f"/app/documents/{plain}/versions", headers=headers).json()
+    assert (empty["current_version"], empty["total"], empty["versions"]) == (1, 0, [])
 
 
 def _seeded_file(tmp_path, tenant: str, rel: str):

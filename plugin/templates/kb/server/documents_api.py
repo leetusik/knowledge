@@ -1,7 +1,7 @@
 """Per-tenant documents read + delete — the web app's knowledge-viewer surface (P12.S5).
 
-Five session-guarded, tenant-scoped, **unmetered** ``/app`` routes the web app's
-documents surface codes against — four reads and one delete:
+Eight session-guarded, tenant-scoped, **unmetered** ``/app`` routes the web app's
+documents surface codes against — seven reads and one delete:
 
 * ``GET /app/documents`` — the tenant's documents, newest-first, optional project/tag
   filter + offset pagination → ``{total, items}``.
@@ -10,6 +10,13 @@ documents surface codes against — four reads and one delete:
   since P19.S2: also readable anonymously when it belongs to a public project.
 * ``GET /app/documents/{doc_id}/raw`` — one HTML explainer's raw HTML for the sandboxed
   viewer (same optional-identity rule).
+* ``GET /app/documents/{doc_id}/versions`` — the document's superseded versions,
+  newest first and body-less, plus its ``current_version`` (P23.S2; same
+  optional-identity rule).
+* ``GET /app/documents/{doc_id}/versions/{version}`` — one archived version with its
+  ``markdown`` body.
+* ``GET /app/documents/{doc_id}/versions/{version}/raw`` — an archived HTML version's
+  raw HTML, with the ``/raw`` route's sandbox headers repeated verbatim.
 * ``DELETE /app/documents/{doc_id}`` — hard-delete one of the caller's **own** documents
   (P21.S1): member-only (``require_user``, **no** public fallback), 204 on success.
 * ``GET /app/search`` — full-text/hybrid search over the tenant's documents →
@@ -92,6 +99,23 @@ def _app_doc(doc: dict, *, include_markdown: bool) -> dict:
     if not include_markdown:
         drop.add("markdown")
     return {k: v for k, v in doc.items() if k not in drop}
+
+
+# An archived version row (P23.S2). `id` is an internal autoincrement on a
+# DISPOSABLE table (reindex rebuilds every row from the .versions files on disk,
+# so it is not stable and nothing may key off it), `tenant_id` is the scoping
+# column, and `raw_html` is viewer-only — like the document surface, the raw
+# bytes leave this plane through the /raw route alone, never in JSON.
+_VERSION_DROP = {"id", "tenant_id", "raw_html"}
+
+
+def _app_version(row: dict, *, include_markdown: bool) -> dict:
+    """Project one archived-version row to the /app read shape."""
+
+    drop = set(_VERSION_DROP)
+    if not include_markdown:
+        drop.add("markdown")
+    return {k: v for k, v in row.items() if k not in drop}
 
 
 async def _resolve_project_name(project_id: UUID, ctx: AuthContext) -> str:
@@ -249,6 +273,139 @@ async def get_document_raw(
         raise HTTPException(status_code=404, detail=f"no HTML document with id {doc_id}")
     return Response(
         content=doc["raw_html"],
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Security-Policy": "sandbox allow-scripts; frame-ancestors 'self'",
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+# --- Version history (P23.S2) ---------------------------------------------
+#
+# Three optional-identity reads over a document's archived versions. Each one
+# resolves the CURRENT document first (``_resolve_readable_doc`` — member
+# fast-path, then the public-project fallback; every miss a 404, never a 403),
+# then reads the archive by that document's ``rel_path``: ``document_versions``
+# is identity-keyed by ``(tenant_id, rel_path, version)``, never by
+# ``documents.id``, so an id-keyed route must go through the document row. The
+# archive is scoped to the OWNING document's ``tenant_id`` (not the caller's), so
+# an anonymous reader of a public document sees that document's history and can
+# never reach across tenants. Unmetered like every other /app route (F4): none of
+# them sets ``request.state.usage``.
+
+
+def _archive_tenant(doc: dict) -> str:
+    """The tenant scope for a document's archived rows: the owner's, verbatim.
+
+    Version rows are stamped with the same ``tenant_id`` as the document they
+    belong to (the ``''`` legacy sentinel included), so passing the owner's value
+    through — rather than the caller's, which is absent for an anonymous public
+    read — scopes the read exactly to that document's own history.
+    """
+
+    return str(doc.get("tenant_id") or "")
+
+
+@router.get("/app/documents/{doc_id}/versions")
+async def list_document_versions(
+    doc_id: int,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> dict[str, object]:
+    """One document's superseded versions, newest first, without their bodies.
+
+    ``{rel_path, current_version, total, versions}`` — the same shape the ``/api``
+    plane serves. Only ARCHIVED bodies are listed: the current version *is* the
+    document, so ``current_version`` (``documents.version``, already on the
+    document read) completes the chain — a v3 document answers
+    ``current_version: 3`` with v2 and v1 in ``versions``. An unversioned document
+    answers ``current_version: 1`` and an empty list, so the UI can render "no
+    history" without a second call.
+    """
+
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
+    rows = db.list_document_versions(conn, doc["rel_path"], tenant_id=_archive_tenant(doc))
+    return {
+        "rel_path": doc["rel_path"],
+        "current_version": int(doc.get("version") or 1),
+        "total": len(rows),
+        "versions": [_app_version(r, include_markdown=False) for r in rows],
+    }
+
+
+@router.get("/app/documents/{doc_id}/versions/{version}")
+async def get_document_version(
+    doc_id: int,
+    version: int,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> dict[str, object]:
+    """One superseded version with its ``markdown`` body, for the past-version view.
+
+    The CURRENT version is not addressable here — it is the document itself
+    (``GET /app/documents/{doc_id}``) — so asking for it is an ordinary **404**,
+    exactly like a version that never existed or a document the caller may not
+    read. An html version's readable text is served here too (``markdown`` holds
+    the extracted plain text); its rendered body comes from the ``/raw`` twin
+    below.
+    """
+
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
+    row = (
+        None
+        if doc is None
+        else db.get_document_version(
+            conn, doc["rel_path"], version, tenant_id=_archive_tenant(doc)
+        )
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail=f"no version {version} of document {doc_id}"
+        )
+    return _app_version(row, include_markdown=True)
+
+
+@router.get("/app/documents/{doc_id}/versions/{version}/raw")
+async def get_document_version_raw(
+    doc_id: int,
+    version: int,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> Response:
+    """An archived HTML version's raw HTML — the ``/raw`` route's version-aware twin.
+
+    Identical contract to ``GET /app/documents/{doc_id}/raw``, pointed at an
+    archived body instead of the current one: same optional-identity resolution,
+    and a missing document, an unreadable one, a missing version, a non-HTML
+    version (``format != "html"``) or an empty ``raw_html`` all answer the same
+    indistinguishable **404**. The sandbox headers are repeated verbatim from that
+    route — ``Content-Security-Policy: sandbox allow-scripts; frame-ancestors
+    'self'`` sandboxes the top-level document as well as the iframe,
+    ``X-Frame-Options: SAMEORIGIN`` overrides the global ``DENY`` so only the
+    same-origin app may frame it, ``nosniff`` pins the type and ``no-store`` keeps
+    the bytes uncached — because an archived explainer is exactly as untrusted as
+    the current one. Unmetered (``/app``).
+    """
+
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
+    row = (
+        None
+        if doc is None
+        else db.get_document_version(
+            conn, doc["rel_path"], version, tenant_id=_archive_tenant(doc)
+        )
+    )
+    if row is None or row.get("format") != "html" or not row.get("raw_html"):
+        raise HTTPException(
+            status_code=404, detail=f"no HTML version {version} of document {doc_id}"
+        )
+    return Response(
+        content=row["raw_html"],
         media_type="text/html; charset=utf-8",
         headers={
             "Content-Security-Policy": "sandbox allow-scripts; frame-ancestors 'self'",
