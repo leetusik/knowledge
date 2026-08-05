@@ -93,6 +93,25 @@ so nothing becomes unreachable, but hover-to-identify would be gone.
 (`:1506`), Escape deselects, and selection is restored on remount (`:1631`). P22.S1 needs no
 new interaction — only a new label rule keyed off state that is already there.
 
+### P22.S1 implementation notes (2026-08-05)
+
+- `labelTarget()` rewritten as above; `ladder()` deleted (it had no other caller).
+  `displayZoom()` survives — `updateTooltip()` (`:1148`) and the zoom controls still use it,
+  so nothing else went orphaned. Zoom no longer influences canvas labels at all.
+- The file-header comment block now carries an explicit **"DELIBERATE DEVIATION from the
+  port"** paragraph replacing the "quiet-label ladder" phrase, so the next reader does not
+  mistake the missing ladder for port drift from `docs/javascripts/graph.js`.
+- Untouched exactly as constrained: node alpha `aT` in `stepAlphaLabelView`, `computeKeep()`,
+  `neighborhood()`, halo/ring/edge activation, `drawLabel()`, `updateTooltip()`. The change is
+  label alpha only; `n.la` easing (`EASE_ALPHA`) still gives the fade in/out for free.
+- Interaction subtlety worth knowing: when a node is selected with no hover, `currentFocus()`
+  already returns `selectedId`, so `keep = neighborhood(selectedId)` — the surrounding cluster
+  stays *undimmed* (unchanged P22 behavior) but now only the focused node is *titled*. Hidden
+  nodes never reach the label pass (`frame()` `:971` skips them), so no guard was needed for a
+  selected-then-hidden node.
+- Both graph surfaces (member `/graph`, public `/graph/[org]`) render this one component, so
+  the change lands on both with no second edit.
+
 ## Constraints
 
 - The hover tooltip (`updateTooltip()`) stays exactly as-is.
@@ -105,17 +124,34 @@ new interaction — only a new label rule keyed off state that is already there.
 
 ## Open Questions
 
-- **Does the hovered/dragged node earn its own canvas label, or strictly the selected node
-  only?** P22.S1 decides and records the answer here. Given the finding above (no tooltip
-  above 0.6× zoom), the DECOMP recommendation is: label target 1 for `selectedId` **and** for
-  `currentFocus()` — i.e. the single hovered/dragged node itself, never its neighborhood —
-  and 0 for everything else. That kills the "wall of titles" the operator complained about
-  (at rest, at most one title is painted) while keeping hover-to-identify at normal zoom. If
-  the operator wants the literal reading ("only the clicked one"), drop the focus term — a
-  one-token change — and flag it for operator validation at the review.
+- **RESOLVED (P22.S1, 2026-08-05) — does the hovered/dragged node earn its own canvas label,
+  or strictly the selected node only?** Answer: **the selected node AND the single
+  hovered/dragged node** (`currentFocus()`), never a neighborhood. Implemented rule, the whole
+  of `labelTarget()`:
+
+  ```ts
+  if (keep && !keep[n.id]) return 0;                    // lens/neighborhood-dimmed → no label
+  if (n.id === selectedId || n.id === focus) return 1;  // selected + hovered/dragged only
+  return 0;
+  ```
+
+  Rationale: the tooltip is a low-zoom fallback (`updateTooltip()` bails above 0.6× zoom), so
+  a strictly-literal "selected only" rule would leave hover with no identification at normal
+  zoom. At rest at most one title is painted, which is what the operator asked for.
+  **Operator validation at review:** if the literal reading is wanted ("only the clicked
+  one"), drop the `|| n.id === focus` term — a one-token change, no other edit needed.
 
 ## Doc impact
 
 _One line per durable-truth change; `P22.REVIEW` consolidates these into doc versions._
 
-- (none yet)
+- `frontend` (P22.S1): the **web app** `GraphCanvas` (`app/(app)/graph`, also serving
+  `(public)/graph/[org]`) no longer follows the ported quiet-label ladder (Strategy A′: all
+  doc titles fading in above ~110% fit zoom, hover lighting a whole neighborhood of titles).
+  Labels are now selection-driven — a canvas title paints only for the selected node and the
+  single hovered/dragged node, at most one at rest — a deliberate, documented deviation from
+  the faithful `docs/javascripts/graph.js` port (the mkdocs-site graph itself is unchanged).
+  Node dimming/lens, halo/ring/edge activation and the low-zoom hover tooltip are unchanged.
+  Review to judge whether `experience` ("Read the map (quiet labels, Strategy A′)", `:154`)
+  and `decisions` (the Strategy-A′ label lock, `:333`/`:955`) also need a version for the
+  app-surface divergence.

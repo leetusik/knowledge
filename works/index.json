@@ -20,9 +20,9 @@
       "order": 2,
       "path": "works/phases/active/P22",
       "review_status": "pending",
-      "current_slice": "P22.S1",
+      "current_slice": "P22.REVIEW",
       "slice_count": 3,
-      "done_slice_count": 1
+      "done_slice_count": 2
     },
     {
       "id": "P23",
@@ -52,5 +52,5 @@
   "deferred_open_count": 15,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-05T15:44:01+09:00"
+  "last_rebuilt_at": "2026-08-05T15:54:25+09:00"
 }

@@ -3,14 +3,14 @@
   "phase_id": "P22",
   "name": "Show labels only for the selected node",
   "kind": "feature",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [
     "P22.DECOMP"
   ],
   "created_at": "2026-08-05T15:42:38+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-08-05T15:51:08+09:00",
+  "completed_at": "2026-08-05T15:54:25+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
