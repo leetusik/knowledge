@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `15`
+- Open: `16`
 - Promoted: `4`
 - Dropped: `3`
-- Rebuilt at: `2026-08-05T23:57:00+09:00`
+- Rebuilt at: `2026-08-06T00:08:36+09:00`
 
 ## Open
 
@@ -24,6 +24,7 @@
 | `D20` | `deferred` | Windows install.ps1 (PowerShell curl-installer equivalent) | P20.DECOMP | Windows onboarding demand / operator asks | `works/deferred/open/D20` |
 | `D21` | `deferred` | Fix pre-existing format-key failure in test_documents_list_detail_and_project_bridge | P21.REVIEW | Next backend phase touching documents_api or its tests | `works/deferred/open/D21` |
 | `D22` | `deferred` | Repo-wide prettier drift (51 files at clean HEAD) | P21.REVIEW | Operator decides format:check should become a real gate | `works/deferred/open/D22` |
+| `D23` | `deferred` | Bound the Gemini embed on the publish worker | P24.REVIEW | When adding timeouts/retries to embeddings or touching server/publish.py next | `works/deferred/open/D23` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |

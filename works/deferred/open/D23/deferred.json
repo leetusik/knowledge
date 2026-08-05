@@ -1,0 +1,11 @@
+{
+  "id": "D23",
+  "title": "Bound the Gemini embed on the publish worker",
+  "status": "deferred",
+  "source": "P24.REVIEW",
+  "reason": "A stalled embed blocks the single FIFO publish worker and every queued push behind it until restart; writes stay durable — availability of the off-box backup, not correctness",
+  "trigger": "When adding timeouts/retries to embeddings or touching server/publish.py next",
+  "created_at": "2026-08-06T00:08:36+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

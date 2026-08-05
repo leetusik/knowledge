@@ -103,7 +103,7 @@
       ]
     },
     "experience": {
-      "latest": "v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain",
+      "latest": "v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -217,11 +217,19 @@
           "source": "P23.REVIEW",
           "summary": "P23 document version history journey: history panel on a read page, read-only past-version view, and versioned re-publishing through /explain",
           "previous": "v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node"
+        },
+        {
+          "id": "v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing",
+          "path": "docs/versions/experience/v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing.md",
+          "created_at": "2026-08-06T00:04:35+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 honest publishing when the reply is lost: explain and knowledge save verify a timed-out write through the read API before reporting, never blind-retry, and read push_pending as saved-and-publishing",
+          "previous": "v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain"
         }
       ]
     },
     "architecture": {
-      "latest": "v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler",
+      "latest": "v0016_p24_publish_moves_behind_the_response_a_single_in-process_fifo_worker_thread_runs_push_and_embed_after_the_201_while_re-taking_the_one_write_lock_with_every_git_subprocess_bounded",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -343,6 +351,14 @@
           "source": "P18.REVIEW",
           "summary": "P18 user/org/project (tenant row is the org, no rename); org vs project-bound credential split; write-path get-or-create in an async dep before the sync handler",
           "previous": "v0014_p17_open-core_plugin_template_mirrors_the_multi-tenant_saas_server_dormant-safe_without_database_url_a_second_ci_drift_gate_skills_parity_guards_the_shipped_explain-skill_copies"
+        },
+        {
+          "id": "v0016_p24_publish_moves_behind_the_response_a_single_in-process_fifo_worker_thread_runs_push_and_embed_after_the_201_while_re-taking_the_one_write_lock_with_every_git_subprocess_bounded",
+          "path": "docs/versions/architecture/v0016_p24_publish_moves_behind_the_response_a_single_in-process_fifo_worker_thread_runs_push_and_embed_after_the_201_while_re-taking_the_one_write_lock_with_every_git_subprocess_bounded.md",
+          "created_at": "2026-08-06T00:02:21+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 publish moves behind the response: a single in-process FIFO worker thread runs push and embed after the 201 while re-taking the one write lock, with every git subprocess bounded",
+          "previous": "v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler"
         }
       ]
     },
@@ -457,7 +473,7 @@
       ]
     },
     "backend": {
-      "latest": "v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes",
+      "latest": "v0012_p24_after-response_publish_worker_server_publish.py_fifo_thread_runs_git_push_and_the_gemini_embed_behind_the_201_re-taking_the_non-reentrant_write_lock_with_kb_git_timeout_s_bounding_every_git_subprocess",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -547,6 +563,14 @@
           "source": "P23.REVIEW",
           "summary": "P23 version-aware write path: archive-before-replace inside WRITE_LOCK, target resolution with two identity 422s, reindex rebuilds document_versions, five additive version read routes",
           "previous": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock"
+        },
+        {
+          "id": "v0012_p24_after-response_publish_worker_server_publish.py_fifo_thread_runs_git_push_and_the_gemini_embed_behind_the_201_re-taking_the_non-reentrant_write_lock_with_kb_git_timeout_s_bounding_every_git_subprocess",
+          "path": "docs/versions/backend/v0012_p24_after-response_publish_worker_server_publish.py_fifo_thread_runs_git_push_and_the_gemini_embed_behind_the_201_re-taking_the_non-reentrant_write_lock_with_kb_git_timeout_s_bounding_every_git_subprocess.md",
+          "created_at": "2026-08-06T00:00:33+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 after-response publish worker: server/publish.py FIFO thread runs git push and the Gemini embed behind the 201, re-taking the non-reentrant WRITE_LOCK, with KB_GIT_TIMEOUT_S bounding every git subprocess",
+          "previous": "v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes"
         }
       ]
     },
@@ -645,7 +669,7 @@
       ]
     },
     "api": {
-      "latest": "v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app",
+      "latest": "v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -775,11 +799,19 @@
           "source": "P23.REVIEW",
           "summary": "P23 versioned publishing: POST /api/documents gains new_version + rel_path and three additive 201 keys, five unmetered version-history read routes on /api and /app",
           "previous": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route"
+        },
+        {
+          "id": "v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit",
+          "path": "docs/versions/api/v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit.md",
+          "created_at": "2026-08-05T23:58:57+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 write response no longer waits on the network: git push and the Gemini embed run after the 201, additive push_pending, pushed always false when deferred, push_error gone, commit_sha is the local pre-rebase commit",
+          "previous": "v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app"
         }
       ]
     },
     "operations": {
-      "latest": "v0021_p20_onboarding_ship_web_public_install.sh_skill.md_served_live_at_install.sh_skill.md_zero_infra_operator-gated_push_web-deploy_cutover_verified_live_no_migration_d11_inert",
+      "latest": "v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -949,6 +981,14 @@
           "source": "P20.REVIEW",
           "summary": "P20 onboarding ship: web/public/install.sh + SKILL.md served live at /install.sh + /SKILL.md (zero infra); operator-gated push + web-deploy cutover verified live; no migration, D11 inert",
           "previous": "v0020_p19_public-projects_cutover_additive_0004_no_mint-window_onboarding_smoke_public-link_leg_anonymous_surface_live_401_to_404"
+        },
+        {
+          "id": "v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected",
+          "path": "docs/versions/operations/v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected.md",
+          "created_at": "2026-08-06T00:03:33+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 push runs after the response: new KB_GIT_TIMEOUT_S knob, bring-up asserts push capability from the container log plus git state instead of the retired pushed/push_error fields, publish-on-write flow corrected",
+          "previous": "v0021_p20_onboarding_ship_web_public_install.sh_skill.md_served_live_at_install.sh_skill.md_zero_infra_operator-gated_push_web-deploy_cutover_verified_live_no_migration_d11_inert"
         }
       ]
     },
@@ -1071,7 +1111,7 @@
       ]
     },
     "qa": {
-      "latest": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only",
+      "latest": "v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1169,6 +1209,14 @@
           "source": "P22.REVIEW",
           "summary": "P22 app-graph label-focus QA mission: the P6 map mission covers the mkdocs surface only",
           "previous": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e"
+        },
+        {
+          "id": "v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect",
+          "path": "docs/versions/qa/v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect.md",
+          "created_at": "2026-08-06T00:05:13+09:00",
+          "source": "P24.REVIEW",
+          "summary": "P24 acceptance: the long-standing gated format-key failure is resolved (115 passed 0 failed) and publish.drain() is the deterministic way to assert an after-response side effect",
+          "previous": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only"
         }
       ]
     },
@@ -1339,5 +1387,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-05T23:02:16+09:00"
+  "last_rebuilt_at": "2026-08-06T00:06:12+09:00"
 }

@@ -427,3 +427,42 @@ Durable facts established or confirmed at the review:
   `compose.prod.yml` on purpose) and the fact that `scripts/onboarding_smoke.py`'s
   frozen-201-key list now asserts `push_pending`, so the committed post-deploy verifier
   proves the additive contract change reached prod.
+
+### P24.REVIEW second pass — verdict `pass`, docs consolidated
+
+All three first-pass findings verified closed **against the code**, not just against
+F1's prose: `server/publish.py::_log` has exactly one call site (`_loop`'s `except`,
+`publish.py:66`) so the runbook's "expect NO output" grep is correct and the review's
+own suggested "(success/FAILED)" wording would have been a second unfalsifiable
+instruction; `push_pending` is emitted unconditionally (`server/main.py:865-920`,
+`:1001-1021`) so the smoke script's presence assertion is safe on the box and locally;
+the `KB_GIT_TIMEOUT_S` docs match `server/config.py::git_timeout_s`'s fallback-to-60.
+
+Second-pass validation: repo suite 83 passed / 32 skipped, both parity gates PASS (re-run
+after the doc work), `py_compile` of the smoke script PASS, `validate` PASS, 4th skill
+copy `diff`-clean. The Postgres-gated (115/115) and CLI (44) suites were **not** re-run
+per the plan — F1 touched only `deploy/`, `compose.prod.yml` and a standalone script no
+test imports.
+
+**Six doc versions** consolidate the whole Doc impact list (S1 ×3, S2, S3, the review's
+two, F1's one): `api v0017`, `backend v0012`, `architecture v0016`, `operations v0022`,
+`experience v0015`, `qa v0013`. Per-doc detail is in `slices/P24.REVIEW/result.md`.
+
+Durable facts worth carrying past this phase:
+
+- **`operations.md`'s new *Bring-up: asserting push capability (P24)* section reproduces
+  `deploy/README.md` §2 byte-for-byte, on purpose.** Both files say so. A future change
+  to that procedure must edit both, or doc and runbook drift — which is the failure mode
+  that produced Finding 1 in the first place.
+- **One pre-existing staleness fixed in passing:** `backend.md`'s `gitops` bullet still
+  claimed the module "never pushes" (untrue since P8). Corrected while documenting the
+  subprocess timeouts. A doc line can outlive its truth by many phases.
+- **A standing "known failure" note is a liability unless re-verified.** `qa.md`'s
+  `test_documents_list_detail_and_project_bridge` entry was copied forward through P18
+  and P21 and was already false by P22/P23. Retired in all three places it appeared;
+  the gated suite is 115 passed / 0 failed.
+- **The deferred job from the first pass still stands** (not a fix slice): bound the
+  Gemini embed on the publish worker. A stalled embed blocks the single FIFO queue and
+  therefore every push behind it until restart — availability of the off-box backup,
+  not correctness. It is now recorded as an accepted limit in `backend.md`,
+  `operations.md` and `qa.md`; the orchestrator may `defer-job` it.

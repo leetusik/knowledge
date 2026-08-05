@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P24`
-- Current slice: `P24.REVIEW`
+- Current phase: `none`
+- Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
-- Open deferred jobs: `15`
-- Rebuilt at: `2026-08-05T23:57:00+09:00`
+- Open deferred jobs: `16`
+- Rebuilt at: `2026-08-06T00:08:36+09:00`
 
 ## Active Phases
 
@@ -19,7 +19,7 @@
 | [x] `P21` | `done` | `pass` | Web document deletion | `none` | `works/phases/active/P21` |
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
-| [ ] `P24` | `in_progress` | `changes_requested` | Upload finish-return timeout | `P24.REVIEW` | `works/phases/active/P24` |
+| [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 
 ## Phase P21: Web document deletion
 
@@ -58,4 +58,4 @@
 | [x] `P24.S2` | `done` | Explain skill: honest publish timeout + verify before retry (3 copies) | `implementation` | `works/phases/active/P24/slices/P24.S2` |
 | [x] `P24.S3` | `done` | CLI: honest write-timeout reporting on knowledge save | `implementation` | `works/phases/active/P24/slices/P24.S3` |
 | [x] `P24.F1` | `done` | Operator surfaces: honest push verification after the after-response publish | `fix` | `works/phases/active/P24/slices/P24.F1` |
-| [ ] `P24.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P24/slices/P24.REVIEW` |
+| [x] `P24.REVIEW` | `done` | phase review | `review` | `works/phases/active/P24/slices/P24.REVIEW` |

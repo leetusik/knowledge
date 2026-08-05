@@ -62,3 +62,23 @@
 
 Write `result.md`; append any durable notes to `phase.md`. Return: review_verdict,
 findings, proposed_fix_slices, doc_versions, validation, explain pointer.
+
+## Re-review (after P24.F1)
+
+The first pass returned `changes_requested` with three findings (see the review notes
+in `phase.md` and the first-pass `result.md`); `P24.F1` closed them (docs/comments +
+`onboarding_smoke.py` `push_pending` key — see `../P24.F1/result.md`). This pass:
+
+1. Verify F1 actually closes each finding: `deploy/README.md` §2's new three-command
+   procedure is honest against the code (failure-only log grep — `server/publish.py`
+   logs no success line; `rev-list == 0` positive assertion), `compose.prod.yml`
+   comment + `KB_GIT_TIMEOUT_S` docs, `onboarding_smoke.py` key list.
+2. Re-run the cheap validation (repo pytest, plugin_parity, py_compile of the smoke
+   script, workflow validate). The expensive suites (Postgres-gated, CLI) were green
+   on the first pass and F1 touched nothing they import — re-run them only if you see
+   reason to distrust that.
+3. On pass: consolidate the FULL Doc impact list (including the review's two appended
+   lines and F1's operations.md line — lift README §2 verbatim into `operations.md`
+   so runbook and doc don't drift; retire qa.md's stale "pre-existing gated failure"
+   note per the first-pass finding that the gated suite is now 115/115). Then the
+   fixed explain pointer as before.
