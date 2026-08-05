@@ -25,7 +25,6 @@ hide:
 
 <!-- explain:recent -->
 - 2026-07-15 · [Optimizing Entity Extraction and Resolution in GraphRAG Pipelines Using DSPy Prompt Compilation](hi2vi/2026-07-15-optimizing-entity-extraction-and-resolution-in-graphrag-pipelines-using-dspy-pro.md) — hi2vi
-- 2026-07-15 · [Hybrid Ranking in Vector Search: Algorithms, Architectures, and Optimizations](hi2vi/2026-07-15-hybrid-ranking-in-vector-search-algorithms-architectures-and-optimizations.md) — hi2vi
 - 2026-07-14 · [The hi2vi Research Space](hi2vi/2026-07-14-the-hi2vi-research-space.md) — hi2vi
 - 2026-07-07 · [Measure First, Then Cache — The P39 Performance Phase Explained for Beginners](changple5/2026-07-07-measure-first-then-cache-the-p39-performance-phase-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners](changple5/2026-07-07-the-daily-ingestion-job-that-kept-getting-stuck-explained-for-beginners.md) — changple5
