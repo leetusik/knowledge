@@ -1,68 +1,7 @@
 {
-  "active_phases": [
-    {
-      "id": "P16",
-      "name": "HTML explainer documents end-to-end",
-      "objective": "Make standalone self-contained HTML explainer documents a first-class KB document type: the document API accepts them, the web app renders them safely with their interactivity (quiz JS) working, search indexes their extracted text, and the MCP read path handles them sanely — alongside existing markdown docs.",
-      "status": "done",
-      "order": 1,
-      "path": "works/phases/active/P16",
-      "review_status": "pass",
-      "current_slice": null,
-      "slice_count": 5,
-      "done_slice_count": 5
-    },
-    {
-      "id": "P17",
-      "name": "Explain skill v2: interactive HTML + public multi-user ingestion",
-      "objective": "Upgrade the explain skill (plugin canonical, all copies) to always emit a gist-style self-contained interactive HTML explainer (Background/Intuition/Code/Quiz) for both topic and code-change modes — including a default-on, citation-backed 'Best practices & next steps' section from web research (skipped when the subject has no external comparison surface or offline) — and wire ingestion to the publicly deployed KB so every knowledge user posts explainers to their own tenant with their own key, closing the prod accounts/auth deploy gap as required.",
-      "status": "done",
-      "order": 2,
-      "path": "works/phases/active/P17",
-      "review_status": "pass",
-      "current_slice": null,
-      "slice_count": 8,
-      "done_slice_count": 8
-    },
-    {
-      "id": "P18",
-      "name": "Accounts v2: user/org/project with org-level keys",
-      "objective": "Restructure the accounts plane to an explicit user → org → project model: signup auto-provisions a \"default\" org and \"default\" project; API keys become mintable at org level (making today's de-facto tenant-wide enforcement honest); project resolution is get-or-create by name; knowledge save keeps the repo-basename default with a --project override and \"default\" fallback. Org creation + member invites stay out of scope (deferred).",
-      "status": "done",
-      "order": 3,
-      "path": "works/phases/active/P18",
-      "review_status": "pass",
-      "current_slice": null,
-      "slice_count": 7,
-      "done_slice_count": 7
-    },
-    {
-      "id": "P19",
-      "name": "Public projects & direct doc links",
-      "objective": "Add per-project public/private visibility: public projects' docs and graph are readable by anonymous visitors and other users (the graph exposes only public-project nodes to outsiders), and every save returns a working direct URL to the doc — replacing the legacy mkdocs url field — shareable when the project is public.",
-      "status": "done",
-      "order": 4,
-      "path": "works/phases/active/P19",
-      "review_status": "pass",
-      "current_slice": null,
-      "slice_count": 7,
-      "done_slice_count": 7
-    },
-    {
-      "id": "P20",
-      "name": "Frictionless onboarding: hero, install, env-var quickstart, skill on landing",
-      "objective": "Make the landing hero flow real end to end: fix the broken uv tool install knowledge-cli line (publish to PyPI or switch the copy to the working install form), make the depicted init/password step honest (show the prompt or generate a password), promote the env-var REST setup (KB_API_BASE_URL/KB_API_TOKEN) as the recommended agent path with blockers addressed, and publish the explain skill on the landing page — copyable and downloadable — with agent-first guidance.",
-      "status": "done",
-      "order": 5,
-      "path": "works/phases/active/P20",
-      "review_status": "pass",
-      "current_slice": null,
-      "slice_count": 6,
-      "done_slice_count": 6
-    }
-  ],
+  "active_phases": [],
   "deferred_open_count": 13,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-07-22T18:40:30+09:00"
+  "last_rebuilt_at": "2026-08-05T14:05:20+09:00"
 }

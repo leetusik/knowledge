@@ -1,0 +1,17 @@
+{
+  "phase_id": "P19",
+  "archived_at": "2026-08-05T14:05:18+09:00",
+  "archive_reason": "phase_review_passed",
+  "review_verdict": "pass",
+  "source_path": "works/phases/active/P19",
+  "archive_path": "works/phases/archived/20260805_140518_P19_public_projects_direct_doc_links",
+  "slices": [
+    "P19.DECOMP",
+    "P19.S1",
+    "P19.S2",
+    "P19.S3",
+    "P19.S4",
+    "P19.S5",
+    "P19.REVIEW"
+  ]
+}
