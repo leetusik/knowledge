@@ -35,15 +35,38 @@ read-back — …`, with the `pending` window between them.
 
 ## Shape
 
-- **The design slice:** `--kind co-work --risk high`. Never `low` — nothing here is mechanical.
+- **The design slice:** `--kind co-work --risk high`. Never `low` — that tier is for a one-line edit or docs, and nothing here is either.
 - **A design slice never writes implementation code.** It ends at the landed design + SIGNOFF.
   **Implementation is always its own slice.**
 - **Big design → several design slices**, one per round, each with its own handoff and `pending`, and
   **two phases** (a *design* phase, then an *apply* phase — foundation first, net-new capabilities
-  isolated, a closing consistency sweep last). Otherwise one phase: **design slice → implement slice**.
+  isolated, a closing consistency sweep last). Otherwise one phase: **design slice → build**, cut in two
+  passes (next bullet). Which of the two it is gets decided at `/create-phase` — the `DECOMP` slice's
+  executor may not run `new-phase`, so a split decided later cannot be created from inside decomposition.
+- **A phase that both designs and builds decomposes in TWO passes.** The design decides *what gets
+  built* — features appear and disappear at the gate — so the opening `DECOMP` **must not cut the build
+  slices**; it cannot know them. It creates only what is knowable before the gate: any groundwork slices
+  that run first, the design slice(s), and a **second decomposition slice `P<N>.DECOMP2`**
+  (`--kind decomposition --risk high`) ordered immediately after the **last** design slice. **How many
+  design slices there are is decided here, at the first `DECOMP`** — a design with many items to cover
+  splits into several rounds, one slice each, each with its own handoff and `pending` gate; that count is
+  knowable up front from the inventory, unlike the build slices. What it produces
+  *instead* of build slices is a **build inventory** in `phase.md` — the candidate feature/surface list,
+  **what** to build, not how. That inventory is what the handoff's scope checklist is written from, and
+  the design is free to add to it and cut from it. A design slice keeps ordinary `S<n>` numbering: it is
+  not necessarily the phase's first slice.
+- **`P<N>.DECOMP2` cuts the build slices once the design has landed** — from the landed spec in
+  `phase.md` and the round's `build-prompt.md` — at orders after its own: **backing/backend work first,
+  then the design implementation**, then any fidelity fix. In every other way an ordinary decomposition
+  slice: the orchestrator plans it, `slice-executor-high` executes it, bare folders only, `--risk` set
+  deliberately, breakdown recorded in `phase.md`.
+- **A design-only phase keeps the single pass** — `DECOMP` → design slice(s) → `REVIEW`; there is nothing
+  left to cut. So does the *apply* phase of a two-phase split: its own `DECOMP` already runs after the
+  design landed.
 - **Expect the read-back to re-shape the phase** — it routinely proves the design is bigger than
-  decomposition assumed; cut new slices at fractional orders afterward. **Do not over-plan before the
-  gate:** you do not know what the operator will design.
+  decomposition assumed. In a mixed phase `DECOMP2` **is** that re-shaping, which is why it exists; in a
+  design-only or apply phase — and for anything `DECOMP2` itself missed — cut new slices at fractional
+  orders afterward. **Do not over-plan before the gate:** you do not know what the operator will design.
 - A **design-fidelity fix** slice is part of the normal shape, not a failure.
 
 ## The handoff — say what to design, decide nothing
@@ -78,13 +101,20 @@ good the design is. So spell the contract out in the handoff:
   superseded piecemeal.
 - **Line 1 of every card file, exactly:**
   ```html
-  <!-- @dsCard group="Components" name="Button" subtitle="Primary / secondary / ghost · 3 sizes" viewport="960x600" -->
+  <!-- @dsCard group="P48.S1 · Components" name="Button" subtitle="Primary / secondary / ghost · 3 sizes" viewport="960x600" -->
   ```
   `group` plus the file path are what the pane needs; `name`, `subtitle`, and `viewport` are what make a
   card legible. The `subtitle` is where a card says what it is for.
 - **Name the `group`s** you want as the pane's headings — `Foundations`, `Components`, the app's own
   surfaces, `Landing`, `States`. Grouping is organization, not a design decision: asking for shape is how
   you keep a round reviewable without deciding anything in it.
+- **Prefix every group — and every canvas frame — with the round's slice ID** (`P48.S1 · Components`;
+  frame `P48.S1 · Button states`). Rounds accumulate in one design project, and a bare `Components` is
+  unfindable three rounds later; the slice ID is the round's address, so it goes first in the name.
+- **The round under review sorts to the top.** Require in the handoff that this round's groups lead the
+  pane's group list — a sort-first marker on the group names (e.g. `⏳ P48.S1 · Components`) is the
+  usual means — and that superseded rounds lose the marker: each new handoff names the previous round's
+  groups to demote. The operator must land on the to-review cards on opening the pane, not dig for them.
 - **Ask for a `tokens.css`** the cards link, carrying the round's real values, so the pane compiles the
   foundations from it. **Not your mirror — the palette *is* the design, so Claude Design authors it.**
 - **The definition of done is "the cards appear in the pane,"** not "the files exist."
@@ -168,3 +198,5 @@ feature. Put this rule in the implement slice's `plan.md` **and** the executor's
 - Write implementation code in a design slice.
 - Edit the returned record.
 - Rate a design slice `low`.
+- Pre-plan past the design gate — `DECOMP2` and everything after it is planned from the **landed**
+  design, never before it.
