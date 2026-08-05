@@ -213,3 +213,56 @@ The server fix is in. What S2 (`/explain`) and S3 (CLI) can now rely on:
 - Should the background push be **coalesced** (one push per N writes / a debounce) rather
   than one per write? Not required for the fix; S1 may keep it simple (one per write,
   serialized through the worker) and note the option.
+
+### Landed in P24.S2 — the `/explain` client rule S3 should mirror
+
+The skill is now honest about a lost response. What S3 (CLI) can reuse verbatim:
+
+- **A transport failure on a mutating call is not evidence of failure.** The rule the
+  skill now encodes (its new `§5.1`): after a timeout/transport error on the publish
+  POST, ask the API what is at the target `rel_path`
+  (`GET /api/documents/by-path/<rel_path>`) **before** reporting anything —
+  landed → honest success (write nothing, never re-POST); still the old version or
+  404 → the API is reachable and the write missed → **exactly one** informed re-POST;
+  a different document at a plain-create path → that is the late 409, ask the user;
+  5xx/401 → stop, publish state unknown; the verification GET *itself* failing at the
+  transport layer is the only route into the local fallback. **Never loop: one
+  verification, at most one retry.**
+- **Publish budget raised to `--max-time 30`** for the POST (was 5). Rationale, reusable
+  for the CLI's write timeout: post-S1 the 201 carries no network I/O, so the only
+  variable left is uploading a few hundred KB of HTML plus the local metering write —
+  30 s is large headroom over the realistic worst case and still fails fast on a real
+  outage (nginx's `proxy_read_timeout` is 120 s, deliberately not matched).
+- **`allowed-tools` prefix rule bit us again (P23's lesson):** a new `--max-time` value
+  needs its own entry. The canonical/web frontmatter now carries **both**
+  `Bash(curl -sS --max-time 5:*)` (the step-3 KB-research reads) and
+  `Bash(curl -sS --max-time 30:*)` (the POST + the verification GET). Any future curl
+  must reuse one of those two spellings or add a third entry.
+- **The by-path read projection has no `url` field** (`server/main.py::_public_doc` over
+  the `documents` schema — `url` is synthesized only on the write responses). It carries
+  `id`, `title`, `rel_path`, `version`, `updated_at`. A recovery path must therefore
+  report `rel_path`/`version` (and derive a view URL from the site base), not `url`.
+  Same trap awaits S3 if it verifies a save via the read API.
+- **Step 6 (local fallback) now guards against duplicating a landed write:** if the
+  target file already exists with the just-authored body, the API's write did land —
+  do not rewrite, do not touch `docs/index.md`, do not commit.
+- **Step 8 wording for the new fields:** `pushed:false` + `push_pending:true` = "saved
+  and committed; publishing to the remote in the background" — never a failure, never a
+  retry trigger. `push_error` does not exist in any response any more; background push
+  failures live in the server log only. S3's CLI output should say the same thing.
+- Copies: the skill has **four** — the three parity-gated ones plus the installed
+  `~/.claude/skills/explain/SKILL.md`, which was re-`cp`'d from canonical in this slice
+  (`skills_parity.py` does not see it; it drifts silently if a slice forgets).
+
+### Doc impact (running list, continued — consolidated into versions by P24.REVIEW)
+
+- `experience.md` — P24.S2: the shipped `/explain` client's publish contract changed —
+  the POST now runs with `--max-time 30` (with a matching `allowed-tools` prefix entry
+  beside the existing 5 s one), and a transport failure is no longer read as "API
+  unreachable": the skill verifies with `GET /api/documents/by-path/<rel_path>` before
+  reporting, reports an honest success when the write landed despite the lost response,
+  re-POSTs at most once and only when the verification proves the save missed, falls
+  through to the local fallback only when the verification GET itself fails (and then
+  guards against rewriting a file the API already wrote), and reports
+  `pushed:false` + `push_pending:true` as "saved and committed, publishing in the
+  background" rather than an error.

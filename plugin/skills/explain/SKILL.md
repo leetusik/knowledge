@@ -2,7 +2,7 @@
 name: explain
 description: Research a topic or code change in the current repo/conversation and save a single self-contained interactive HTML explainer — Background, Intuition, Code, a cited "Best practices & next steps" section, and a 5-question quiz — into your own personal knowledge base (the one /knowledge:setup created and configured). Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed) — NOT for ordinary questions that deserve a normal chat answer.
 argument-hint: <topic or change-ref> [here] [research|no-research]
-allowed-tools: Read, Grep, Glob, Write, Bash(curl -sS --max-time 5:*), Bash(python3 -c:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*)
+allowed-tools: Read, Grep, Glob, Write, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*)
 ---
 
 # explain
@@ -426,19 +426,29 @@ not a literal template to paste:
 
 - POST once to `<KB_API_BASE_URL>/api/documents` (the `KB_API_BASE_URL` from step 2).
   When `KB_API_TOKEN` from step 2 is **non-empty**, add the bearer header shown in the
-  second form; when it is empty, use the first form. Spelled exactly this way:
+  second form; when it is empty, use the first form. The **30 s** budget is deliberate:
+  the API now answers *before* it does any network work (the git push and the embedding
+  call moved off the response path), so 30 s comfortably covers uploading a large
+  explainer over a slow link — and the `allowed-tools` frontmatter pre-approves this
+  exact `--max-time 30` prefix, so spell it exactly this way (any other value prompts
+  for permission mid-run):
 
-      curl -sS --max-time 5 -o <tmp>/response.json -w '%{http_code}' --json @<tmp>/payload.json <KB_API_BASE_URL>/api/documents
+      curl -sS --max-time 30 -o <tmp>/response.json -w '%{http_code}' --json @<tmp>/payload.json <KB_API_BASE_URL>/api/documents
 
-      curl -sS --max-time 5 -H "Authorization: Bearer <KB_API_TOKEN>" -o <tmp>/response.json -w '%{http_code}' --json @<tmp>/payload.json <KB_API_BASE_URL>/api/documents
+      curl -sS --max-time 30 -H "Authorization: Bearer <KB_API_TOKEN>" -o <tmp>/response.json -w '%{http_code}' --json @<tmp>/payload.json <KB_API_BASE_URL>/api/documents
 
-- curl exit code ≠ 0 (connection refused, timeout) = the API is unreachable →
-  go to step 6. Exit 0 = the API answered → branch on the printed status code,
-  and NEVER fall back to a file write on an HTTP error:
+- curl exit code ≠ 0 (connection refused, timeout) = **you did not see a response**,
+  which is NOT the same as a failed save. Do not go to step 6 and do not re-POST yet →
+  go to **§5.1** and find out what actually landed. Exit 0 = the API answered → branch
+  on the printed status code, and NEVER fall back to a file write on an HTTP error:
   - **201** — the API wrote the file, inserted the Recent bullet, indexed the
     row, and made the scoped commit. Write NO file, do NOT touch
     `docs/index.md`, run NO git. Record `url`, `version`, `previous_version`,
-    `committed`, and `commit_error` from `<tmp>/response.json` for step 8. On a
+    `committed`, `commit_error`, `pushed` and `push_pending` from
+    `<tmp>/response.json` for step 8. **`pushed: false` with `push_pending: true`
+    is the normal, successful result — never an error and never a reason to
+    retry**: the document is saved and committed locally, and the push to the
+    remote runs in the background right after this response. On a
     version bump `version` is the one just published, and no duplicate Recent
     bullet is added.
   - **409** — a document already exists at that path. This is the plain-create
@@ -460,18 +470,77 @@ not a literal template to paste:
     `~/.config/knowledge-kb/config.json` `api.token`, or the `KB_API_TOKEN` env
     var — re-run `/knowledge:setup` to set it). Do not fall back.
 
+### 5.1 Transport failure on the POST — verify before you report or retry
+
+A non-zero curl exit tells you only that **this client never saw the response**. The
+request may well have been delivered and the document durably saved: the API writes the
+file and the database row *before* it answers. So a timeout is **not** proof of failure,
+and the two obvious reactions are both wrong — reporting "unreachable" lies about a
+published document, and re-POSTing blind creates a duplicate or burns an unwanted extra
+version. **Verify first, exactly once.**
+
+- **The target `rel_path`** is `<PRIOR_REL_PATH>` when this was a `new_version` publish
+  (step 3), otherwise `<project>/<date>-<slug>.html` — the path the API would have
+  written. Ask what is there now (bearer header exactly as in the POST above: include
+  the `-H` form when `KB_API_TOKEN` is non-empty, omit it when empty):
+
+      curl -sS --max-time 30 -o <tmp>/verify.json -w '%{http_code}' '<KB_API_BASE_URL>/api/documents/by-path/<rel_path>'
+
+      curl -sS --max-time 30 -H "Authorization: Bearer <KB_API_TOKEN>" -o <tmp>/verify.json -w '%{http_code}' '<KB_API_BASE_URL>/api/documents/by-path/<rel_path>'
+
+- Branch on that verification:
+  - **200 and it is this publish** — for a plain create (`PRIOR=none`), a 200 whose
+    `title` is the one you just sent is proof (nothing else writes that path); for a
+    `new_version` publish, `version` in `<tmp>/verify.json` is `PRIOR_VERSION + 1`.
+    → **The save LANDED.** Write NO file, run NO git, do NOT re-POST. Go to step 8 and
+    report success from `<tmp>/verify.json` — it carries `id`, `title`, `rel_path` and
+    `version` (this read projection has **no `url`** field; the 201 that carried it was
+    the response you lost) — adding one honest line: the response never arrived, the
+    document is confirmed saved by this follow-up read.
+  - **200 but it is plainly the OLD document** — a `new_version` publish whose `version`
+    is still `PRIOR_VERSION`. The API is reachable and your write did not land → re-run
+    the POST **once**, exactly as spelled above, and branch on its status code as usual.
+    If that single retry also fails at the transport layer, STOP: report that the
+    publish state could not be established, name the `rel_path`, and write nothing (do
+    not attempt a third time).
+  - **200 answering a different document** on a plain create — the path is taken by
+    something else, i.e. the step-5 **409** case arriving late. Do NOT re-POST blind:
+    report the existing title and `rel_path` and ASK the user, exactly as the 409
+    branch says, before publishing over it as a new version.
+  - **404** — nothing at that path. The API is reachable and the save genuinely failed
+    → re-run the POST **once**, same one-retry-then-stop rule as the OLD-document
+    bullet above.
+  - **5xx — or any other status** (e.g. a **401** when reads are token-guarded and the
+    token is wrong): the API answered but could not tell you what happened → STOP,
+    report the status and that the publish state is unknown at `<rel_path>` (for 401,
+    that a valid `KB_API_TOKEN` is needed to check). Do not retry, do not write a file.
+  - **curl exit ≠ 0 on the verification GET too** — the API really is unreachable now.
+    Only then go to step 6, and carry one caveat into the report: the earlier POST may
+    still have landed, so the local fallback checks the file before writing (step 6).
+- Never loop this. One verification GET, at most one re-POST, then report what you know.
+
 ## 6. Fallback — only when the API is unreachable AND a local KB exists
 
-Only after a transport failure in step 5 (curl exit ≠ 0):
+Only after a transport failure in step 5 that **§5.1's verification could not resolve**
+(the verification GET failed at the transport layer too — the API is genuinely
+unreachable). A bare `curl exit ≠ 0` on the POST is never enough to get here.
 
 - If `KB_LOCAL_FALLBACK` from step 2 is **`no`** (the API is remote, or no local
   `KB_ROOT` with `mkdocs.yml` exists) → **STOP**. Report that the document API at
   `<KB_API_BASE_URL>` is unreachable and there is no local knowledge base to write to;
-  write no files and suggest no scaffolding.
+  write no files and suggest no scaffolding. Say the publish state is unverified: the
+  POST may have landed, so check the KB before publishing this again.
 - Only if `KB_LOCAL_FALLBACK` is **`yes`** do by hand, against the resolved
   `<KB_ROOT>`, what the API would have done:
 
-- Write `<KB_ROOT>/docs/<project>/<date>-<slug>.html` with **exactly the leading
+- **Guard first — the POST may have landed before the API went away.** If
+  `<KB_ROOT>/docs/<project>/<date>-<slug>.html` already exists and its body (after the
+  leading `<!--kb …-->` block) is the document you just authored, the API's write did
+  land at exactly that path: do NOT rewrite it, do NOT touch `docs/index.md`, run NO
+  git. Report it as saved (step 8), noting the API is currently unreachable so the DB
+  may need a later `POST /api/reindex`, and stop.
+
+- Otherwise write `<KB_ROOT>/docs/<project>/<date>-<slug>.html` with **exactly the leading
   `<!--kb …-->` comment-frontmatter the API writes for an HTML doc**, then a blank line,
   then the raw HTML body starting at `<!DOCTYPE html>`. The block is an HTML comment (so
   the browser ignores it) carrying the same fields a `reindex` re-derives — title always
@@ -547,6 +616,22 @@ Tell the user:
   version this was: `version` from the response — a new document is `v1`; a
   version bump names the `previous_version` it superseded, whose body is kept
   (archived), not lost.
+- **Publishing state — do not misreport it.** `pushed: false` together with
+  `push_pending: true` is the normal 201: the document is **saved and committed**,
+  and the push to the remote runs in the background just after the response, so the
+  off-box/site copy follows shortly. Say it that way (e.g. "saved and committed;
+  publishing to the remote in the background") — never call it a failure, never
+  "not saved", and never retry the POST because of it. A background push failure
+  never appears in the response body (there is no `push_error` field any more); it
+  lands in the server log and the document publishes on the next successful push.
+- **Recovered path (§5.1)**: when the POST's response was lost but the verification
+  GET proved the document is there, report it as a plain success from
+  `<tmp>/verify.json` — `title`, `rel_path`, `version`, `id`, and the viewable
+  location as `<KB_SITE_BASE_URL>/<rel_path>` (the read projection carries no `url`)
+  — plus one line: the connection dropped before the response arrived, the save is
+  confirmed by a follow-up read, and nothing was written twice. When the verification
+  instead proved the save did not land and the single re-POST succeeded, just report
+  that success normally.
 - Fallback path: the absolute file path `<KB_ROOT>/docs/<project>/<date>-<slug>.html`
   from step 6; view at `<KB_SITE_BASE_URL>/<project>/<date>-<slug>.html`; and note the
   API was down — a later `POST /api/reindex` to `<KB_API_BASE_URL>`, or
