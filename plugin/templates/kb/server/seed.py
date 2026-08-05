@@ -52,7 +52,9 @@ def _discover_projects(docs_root: Path) -> list[str]:
     Mirrors reindex's project derivation exactly (``server.reindex``): a project
     is ``Path(rel).parts[0]`` for every file whose name matches ``_FILENAME_RE``
     (``<YYYY-MM-DD>-<slug>.{md,html}``). Top-level files (``len(parts) == 1`` — e.g.
-    ``index.md``) and reserved chrome dirs (``current``/``versions``) are skipped,
+    ``index.md``) and reserved chrome dirs (``current``/``versions``/``.versions``
+    — the shared ``reindex.RESERVED_DIRS``, so the P23 version archive is skipped
+    here for free and never becomes a "project") are skipped,
     so the seeded ``projects`` names line up with ``documents.project`` from a
     reindex. Today's set: ``bootstrap_agentic_workspace.sh``, ``changple5``,
     ``hi2vi``, ``hi2vi_web``. Note ``bootstrap_agentic_workspace.sh`` keeps its

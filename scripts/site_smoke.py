@@ -52,7 +52,11 @@ CDN_SCRIPT_RE = re.compile(r'<script[^>]+src="https?://')
 # >=1 doc (*.md other than its own index.md). check_built (each project must ship
 # site/<project>/index.html) and check_graph (the doc-count identity) share this
 # ONE rule, so the built-site guard and the graph guard can never drift.
-RESERVED_DOC_DIRS = frozenset({"current", "versions", "stylesheets", "assets", "javascripts"})
+# `.versions` (P23) is the document version archive — superseded bodies, never site
+# content and never a project (it is excluded from the graph the same way).
+RESERVED_DOC_DIRS = frozenset(
+    {".versions", "current", "versions", "stylesheets", "assets", "javascripts"}
+)
 
 
 def discover_projects(root: Path) -> list[str]:

@@ -219,6 +219,55 @@ def test_reindex_reads_related_frontmatter(tmp_path, monkeypatch):
     assert row["related"] == ["proj/2026-07-02-hello-nginx.md"]
 
 
+# --- Version archive (P23) ------------------------------------------------
+_ARCHIVED_V1 = _EXPLAINER.replace("date: 2026-07-02\n", "date: 2026-07-02\nversion: 1\n")
+_ARCHIVE_REL = ".versions/proj/2026-07-02-hello-nginx/v0001.md"
+
+
+def test_reindex_rebuilds_document_versions(tmp_path, monkeypatch):
+    """.versions/ never enters the document walk; it rebuilds document_versions."""
+    docs = _setup(tmp_path, monkeypatch)
+    _write(docs / "proj" / "2026-07-02-hello-nginx.md",
+           _EXPLAINER.replace("date: 2026-07-02\n", "date: 2026-07-02\nversion: 2\n"))
+    _write(docs / _ARCHIVE_REL, _ARCHIVED_V1)
+
+    result = reindex.reindex()
+    assert result["indexed"] == 1  # the archived body is NOT a document
+    assert result["versions_indexed"] == 1 and result["versions_removed"] == 0
+    assert not any(s["rel_path"].startswith(".versions/") for s in result["skipped"])
+
+    conn = db.connect()
+    doc = db.get_document_by_path(conn, "proj/2026-07-02-hello-nginx.md")
+    assert doc["version"] == 2  # re-derived from the current file's frontmatter
+    versions = db.list_document_versions(conn, "proj/2026-07-02-hello-nginx.md")
+    assert [v["version"] for v in versions] == [1]
+    assert versions[0]["archive_path"] == _ARCHIVE_REL
+    assert "Reverse proxy notes." in versions[0]["markdown"]
+    # Archived bodies are never searchable — only the current version is.
+    assert conn.execute(
+        "SELECT COUNT(*) AS n FROM documents_fts WHERE documents_fts MATCH 'nginx'"
+    ).fetchone()["n"] == 1
+    conn.close()
+
+    # The archive file vanishing drops its row (files are canonical).
+    (docs / _ARCHIVE_REL).unlink()
+    result2 = reindex.reindex()
+    assert result2["versions_removed"] == 1
+    conn = db.connect()
+    assert db.list_document_versions(conn, "proj/2026-07-02-hello-nginx.md") == []
+    conn.close()
+
+
+def test_unversioned_corpus_reads_back_as_v1(tmp_path, monkeypatch):
+    """No version: frontmatter, no .versions/ dir -> v1 everywhere, zero version rows."""
+    _setup(tmp_path, monkeypatch)
+    result = reindex.reindex()
+    assert (result["versions_indexed"], result["versions_removed"]) == (0, 0)
+    conn = db.connect()
+    assert db.get_document_by_path(conn, "proj/2026-07-02-hello-nginx.md")["version"] == 1
+    conn.close()
+
+
 def test_startup_reindex_self_heal(tmp_path, monkeypatch):
     """With KB_STARTUP_REINDEX=1, TestClient app runs startup reindex + heals drift."""
     from fastapi.testclient import TestClient

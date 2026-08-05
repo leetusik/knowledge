@@ -12,6 +12,7 @@ import datetime
 import html.parser
 import json
 import re
+import shutil
 from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
@@ -155,6 +156,7 @@ def _frontmatter_inner_lines(
     project: str,
     source_repo: str,
     related: Optional[list[str]] = None,
+    version: Optional[int] = None,
 ) -> list[str]:
     """The YAML field lines shared by the '---' fenced (md) and '<!--kb' comment
     (html) frontmatter serializers — everything BETWEEN the fences. Factored out so
@@ -162,9 +164,15 @@ def _frontmatter_inner_lines(
 
     ``related`` (optional list of rel_paths) is emitted between ``tags`` and
     ``source`` only when non-empty — ``None``/``[]`` emits nothing.
+
+    ``version`` (P23) is emitted directly after ``date`` **only for version >= 2**:
+    a first version carries no ``version:`` field, so an unversioned corpus stays
+    byte-identical to before P23 and ``reindex`` reads a missing field as v1.
     """
     lines = [f"title: {json.dumps(title, ensure_ascii=False)}"]
     lines.append(f"date: {date}")
+    if version is not None and version >= 2:
+        lines.append(f"version: {int(version)}")
     lines.append("tags:")
     for t in tags:
         lines.append(f"  - {t}")
@@ -186,12 +194,16 @@ def serialize_frontmatter(
     project: str,
     source_repo: str,
     related: Optional[list[str]] = None,
+    version: Optional[int] = None,
 ) -> str:
     """Hand-rolled frontmatter block, byte-exact to the docs/ convention.
 
     ``related`` (optional list of rel_paths) is emitted between ``tags`` and
     ``source`` only when non-empty — ``None``/``[]`` emits nothing, so output
     without it stays byte-identical to before S4.
+
+    ``version`` is emitted after ``date`` only for version >= 2 (P23), so a v1
+    document is byte-identical to a pre-P23 one.
 
     Ends with the closing '---\\n'; compose a full document as
     serialize_frontmatter(...) + "\\n" + body.
@@ -203,6 +215,7 @@ def serialize_frontmatter(
         project=project,
         source_repo=source_repo,
         related=related,
+        version=version,
     )
     return "---\n" + "\n".join(inner) + "\n---\n"
 
@@ -215,6 +228,7 @@ def serialize_html_frontmatter(
     project: str,
     source_repo: str,
     related: Optional[list[str]] = None,
+    version: Optional[int] = None,
 ) -> str:
     """The HTML-comment frontmatter block for an explainer ``.html`` doc.
 
@@ -231,6 +245,7 @@ def serialize_html_frontmatter(
         project=project,
         source_repo=source_repo,
         related=related,
+        version=version,
     )
     return "<!--kb\n" + "\n".join(inner) + "\n-->\n"
 
@@ -423,6 +438,7 @@ def write_document_file(
     body: str,
     related: Optional[list[str]] = None,
     fmt: str = "md",
+    version: Optional[int] = None,
 ) -> str:
     """Write ``docs/<rel_path>`` as ``<frontmatter> + "\\n" + body``.
 
@@ -433,6 +449,10 @@ def write_document_file(
     file with the matching parser, so on-disk and DB can't drift on a rebuild. For
     ``html`` that returned body is the raw HTML (``raw_html``); the caller runs it
     through ``extract_html_text`` for the DB ``markdown`` column (the body rule).
+
+    ``version`` (P23) stamps a ``version:`` frontmatter field for version >= 2 so the
+    current file is self-describing; ``None``/1 writes no field (a pre-P23-identical
+    v1 document, which reindex reads back as v1).
     """
     if fmt == "html":
         header = serialize_html_frontmatter(
@@ -442,6 +462,7 @@ def write_document_file(
             project=project,
             source_repo=source_repo or "",
             related=related,
+            version=version,
         )
     else:
         header = serialize_frontmatter(
@@ -451,6 +472,7 @@ def write_document_file(
             project=project,
             source_repo=source_repo or "",
             related=related,
+            version=version,
         )
     content = header + "\n" + _normalize_body(body)
     target = Path(docs_root) / rel_path
@@ -562,3 +584,184 @@ def remove_from_recent_index(docs_root: Union[str, Path], rel_path: str) -> bool
     if removed:
         index_path.write_text(new_text, encoding="utf-8")
     return removed
+
+
+# --- version archive (P23: superseded bodies on disk) ---------------------
+#
+# The current version of a document always stays at its canonical
+# ``<root>/<project>/<date>-<slug>.<ext>`` — a version bump never moves it, so the
+# document's identity (rel_path, numeric id, /documents/{id} URL, graph edges) is
+# stable. Every SUPERSEDED body is copied, before it is replaced, to
+#
+#     <root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>
+#
+# with its own frontmatter flavor preserved and a ``version:`` field stamped in, so
+# each archived file is self-describing and ``reindex`` can re-derive the whole
+# ``document_versions`` table from disk alone (the DB is disposable; disk is
+# canonical). The archive dir is TOP-LEVEL and DOT-PREFIXED on purpose: the three
+# walkers (reindex, graph_hook, site_smoke) all already exclude reserved top-level
+# dirs, and mkdocs never builds dot-prefixed paths.
+
+ARCHIVE_DIR = ".versions"
+
+# 'vNNNN.<ext>' — group(1) the zero-padded version, group(2) the extension.
+_ARCHIVE_FILE_RE = re.compile(r"^v(\d+)\.(md|html)$")
+
+
+def archive_dir_rel_path(rel_path: str) -> str:
+    """``.versions/<project>/<date>-<slug>`` — one dir per document, all versions in it."""
+    p = PurePosixPath(rel_path)
+    return f"{ARCHIVE_DIR}/{p.parent.as_posix()}/{p.stem}"
+
+
+def archive_rel_path(rel_path: str, version: int) -> str:
+    """``.versions/<project>/<date>-<slug>/vNNNN.<ext>`` for one superseded body.
+
+    The extension mirrors the document's own, so a document's format is fixed for
+    the life of its version chain (the write path rejects a format change on a
+    version bump) and an archive file's parser is unambiguous.
+    """
+    ext = PurePosixPath(rel_path).suffix.lstrip(".") or "md"
+    return f"{archive_dir_rel_path(rel_path)}/v{int(version):04d}.{ext}"
+
+
+def parse_archive_rel_path(archive_rel: str) -> Optional[tuple[str, int]]:
+    """Inverse of ``archive_rel_path``: -> ``(document rel_path, version)`` or ``None``.
+
+    ``None`` for anything that is not a well-formed archive path (wrong top dir,
+    wrong depth, a filename that is not ``vNNNN.{md,html}``) — reindex reports those
+    as skipped rather than guessing.
+    """
+    parts = PurePosixPath(archive_rel).parts
+    if len(parts) != 4 or parts[0] != ARCHIVE_DIR:
+        return None
+    m = _ARCHIVE_FILE_RE.match(parts[3])
+    if not m:
+        return None
+    version = int(m.group(1))
+    if version < 1:
+        return None
+    return f"{parts[1]}/{parts[2]}.{m.group(2)}", version
+
+
+def _frontmatter_block_end(lines: list[str]) -> Optional[int]:
+    """Index of the closing delimiter of the leading frontmatter block, or ``None``.
+
+    Flavor-agnostic: the block opens on line 0 with ``---`` (md) or ``<!--kb``
+    (html) and closes at the first matching ``---`` / ``-->``. ``None`` for text
+    with no recognizable leading block.
+    """
+    if not lines:
+        return None
+    opener = lines[0].strip()
+    closer = "---" if opener == "---" else ("-->" if opener == "<!--kb" else None)
+    if closer is None:
+        return None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == closer:
+            return i
+    return None
+
+
+def read_document_version(
+    docs_root: Union[str, Path], rel_path: str
+) -> Optional[int]:
+    """The ``version:`` in a document file's frontmatter — 1 when absent/garbage.
+
+    ``None`` when there is no file at ``rel_path``. Used by the write path to number
+    the archive of a body whose DB row is missing (drift), so a re-published document
+    never overwrites an older archive file: disk alone answers "which version is
+    currently on disk".
+    """
+    path = Path(docs_root) / rel_path
+    if not path.is_file():
+        return None
+    try:
+        lines = path.read_text(encoding="utf-8").split("\n")
+    except (OSError, UnicodeDecodeError):
+        return None
+    end = _frontmatter_block_end(lines)
+    if end is None:
+        return 1
+    for line in lines[1:end]:
+        if line.startswith("version:"):
+            try:
+                value = int(line.split(":", 1)[1].strip())
+            except ValueError:
+                return 1
+            return value if value >= 1 else 1
+    return 1
+
+
+def set_frontmatter_version(text: str, version: int) -> str:
+    """Return ``text`` with ``version: <n>`` present in its leading frontmatter block.
+
+    Flavor-agnostic and byte-preserving: the block is whatever sits between the
+    file's first line (``---`` or ``<!--kb``) and the matching closing line
+    (``---`` / ``-->``); an existing ``version:`` line is replaced in place,
+    otherwise the field is inserted right after ``date:`` (or at the top of the
+    block when there is none). Unknown frontmatter fields and the body are left
+    untouched — an archived version is a faithful copy of what was published, not
+    a re-serialization. Text with no recognizable leading block is returned
+    unchanged (drift; reindex then reports the archive file as skipped).
+    """
+    lines = text.split("\n")
+    end = _frontmatter_block_end(lines)
+    if end is None:
+        return text
+    field = f"version: {int(version)}"
+    for i in range(1, end):
+        if lines[i].startswith("version:"):
+            lines[i] = field
+            return "\n".join(lines)
+    insert_at = 1
+    for i in range(1, end):
+        if lines[i].startswith("date:"):
+            insert_at = i + 1
+            break
+    lines.insert(insert_at, field)
+    return "\n".join(lines)
+
+
+def archive_document_file(
+    *, docs_root: Union[str, Path], rel_path: str, version: int
+) -> Optional[str]:
+    """Copy the CURRENT on-disk body to its version archive. Returns the archive
+    rel_path (relative to the content root), or ``None`` when there is no file to
+    archive (DB-only drift — nothing is lost, so the write proceeds).
+
+    Call this immediately before ``write_document_file`` replaces the body, inside
+    the write lock. An existing archive file at the same version is overwritten —
+    re-archiving the same version is idempotent by construction.
+    """
+    src = Path(docs_root) / rel_path
+    if not src.is_file():
+        return None
+    text = src.read_text(encoding="utf-8")
+    arch_rel = archive_rel_path(rel_path, version)
+    target = Path(docs_root) / arch_rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(set_frontmatter_version(text, version), encoding="utf-8")
+    return arch_rel
+
+
+def remove_archive_dir(docs_root: Union[str, Path], rel_path: str) -> bool:
+    """Delete a document's whole version archive dir; returns whether it existed.
+
+    The delete path's counterpart to ``archive_document_file``: deleting a document
+    deletes its history too, so a removed document leaves no readable body behind on
+    disk (or in the public git tree).
+    """
+    target = Path(docs_root) / archive_dir_rel_path(rel_path)
+    if not target.is_dir():
+        return False
+    shutil.rmtree(target)
+    # Prune the now-possibly-empty parents (<project>/, then .versions/) so deleting
+    # a project's last versioned document leaves no husk behind. rmdir refuses a
+    # non-empty dir, which is exactly the guard wanted — no recursive delete here.
+    for parent in (target.parent, target.parent.parent):
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+    return True

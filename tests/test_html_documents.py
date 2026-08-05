@@ -153,6 +153,32 @@ def test_markdown_doc_stays_additive_format(client):
     assert bad.status_code == 422
 
 
+def test_html_new_version_keeps_comment_frontmatter_flavor(client):
+    """P23: an html version bump archives with `<!--kb` frontmatter + `version:`,
+    and a fresh-DB reindex re-derives the archived version from that file alone."""
+    from server import reindex
+
+    tc, root = client
+    tc.post("/api/documents", json=_HTML_PAYLOAD)
+    r = tc.post("/api/documents", json={
+        **_HTML_PAYLOAD,
+        "new_version": True,
+        "markdown": _HTML_BODY.replace("Background paragraph", "Rewritten paragraph"),
+    })
+    assert r.status_code == 201 and r.json()["version"] == 2
+    archived = (root / "docs" / r.json()["archived_path"]).read_text(encoding="utf-8")
+    assert archived.startswith("<!--kb\n") and "version: 1\n" in archived
+    assert archived.index("-->") < archived.index("<!DOCTYPE html>")
+
+    (root / "data" / "kb.sqlite3").unlink()
+    assert reindex.reindex()["versions_indexed"] == 1
+    conn = db.connect()
+    v1 = db.list_document_versions(conn, _HTML_REL)[0]
+    conn.close()
+    assert v1["format"] == "html" and "Background paragraph" in v1["markdown"]
+    assert "exfiltrate" not in v1["markdown"]  # extracted text, same body rule
+
+
 def test_validate_related_accepts_html():
     from server import documents
 

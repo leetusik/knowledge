@@ -50,7 +50,12 @@ import yaml
 
 # Reserved top-level dirs under docs/ that never contribute graph nodes, and file
 # names that are section landings / meta pages rather than explainer docs.
-_RESERVED_DIRS = {"current", "versions", "stylesheets", "assets", "javascripts"}
+# `.versions` (P23) is the document version archive: superseded bodies keep their
+# full frontmatter — `source: {project: ...}` included — so ONLY this exclusion keeps
+# them from becoming duplicate doc nodes. That would also break the deploy gate:
+# site_smoke.check_graph asserts the doc-node count equals the depth-2 filesystem
+# count. rglob does not skip dot-dirs, so the name must be listed explicitly.
+_RESERVED_DIRS = {".versions", "current", "versions", "stylesheets", "assets", "javascripts"}
 _SKIP_NAMES = {"index.md", "tags.md", "README.md"}
 
 # mkdocs-computed {src_uri: File.url} map, collected in on_files. Module-level so

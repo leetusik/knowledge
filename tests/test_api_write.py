@@ -108,6 +108,110 @@ def test_repeat_409_then_overwrite(client):
     assert "Updated body." in got["markdown"]  # DB row updated
 
 
+# --- Versioned re-publish (P23) -------------------------------------------
+_V1_ARCHIVE = ".versions/test-project/2026-07-02-api-smoke-test/v0001.md"
+
+
+def test_new_version_archives_and_keeps_identity(client):
+    """v2 keeps rel_path/id/date, archives v1 on disk + in document_versions."""
+    tc, root = client
+    first = tc.post("/api/documents", json=_PAYLOAD).json()
+    assert first["version"] == 1 and first["previous_version"] is None
+
+    r = tc.post(
+        "/api/documents",
+        json={
+            **_PAYLOAD,
+            "new_version": True,
+            "date": "2026-08-01",  # ignored: identity (and rel_path) never moves
+            "markdown": "# API Smoke Test: Colons & Quotes\n\nSecond edition.\n",
+        },
+    )
+    assert r.status_code == 201, r.text
+    b = r.json()
+    assert (b["id"], b["rel_path"], b["date"]) == (first["id"], _REL, "2026-07-02")
+    assert (b["version"], b["previous_version"]) == (2, 1)
+    assert b["archived_path"] == _V1_ARCHIVE
+
+    current = (root / "docs" / _REL).read_text(encoding="utf-8")
+    assert "version: 2\n" in current and "Second edition." in current
+    archived = (root / "docs" / _V1_ARCHIVE).read_text(encoding="utf-8")
+    assert "version: 1\n" in archived and "Body text about testing." in archived
+
+    got = tc.get(f"/api/documents/by-path/{_REL}").json()
+    assert got["version"] == 2 and "Second edition." in got["markdown"]
+    # The archived body travels in the same scoped commit.
+    names = set(
+        _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").stdout.split()
+    )
+    assert f"docs/{_V1_ARCHIVE}" in names
+    assert _git(root, "log", "-1", "--pretty=%s").stdout.strip() == (
+        "docs(test-project): update api-smoke-test to v2"
+    )
+
+
+def test_new_version_without_target_creates_v1(client):
+    """No matching (project, slug) -> a plain v1 create, never an error."""
+    tc, _ = client
+    r = tc.post("/api/documents", json={**_PAYLOAD, "new_version": True})
+    assert r.status_code == 201 and r.json()["version"] == 1
+    assert r.json()["archived_path"] is None
+
+
+def test_new_version_by_explicit_rel_path(client):
+    """The agent path (F8): resolve the doc, then POST rel_path + new_version."""
+    tc, _ = client
+    first = tc.post("/api/documents", json=_PAYLOAD).json()
+    r = tc.post("/api/documents", json={
+        **_PAYLOAD,
+        "new_version": True,
+        "rel_path": _REL,
+        "slug": "renamed-slug",   # ignored — the target's rel_path is identity
+        "title": "Retitled",
+        "markdown": "# Retitled\n\nv2 body.\n",
+    })
+    assert r.status_code == 201, r.text
+    assert (r.json()["id"], r.json()["slug"], r.json()["version"]) == (
+        first["id"], "api-smoke-test", 2
+    )
+    # Identity may not change across a version chain.
+    assert tc.post("/api/documents", json={
+        **_PAYLOAD, "new_version": True, "rel_path": _REL, "project": "other-project",
+    }).status_code == 422
+
+
+def test_overwrite_archives_instead_of_destroying(client):
+    """The legacy destructive path now keeps the replaced body (one flagged change)."""
+    tc, root = client
+    tc.post("/api/documents", json=_PAYLOAD)
+    ow = tc.post(
+        "/api/documents",
+        json={**_PAYLOAD, "overwrite": True, "markdown": "# t\n\nUpdated body.\n"},
+    )
+    assert ow.status_code == 201 and ow.json()["version"] == 2
+    archived = (root / "docs" / _V1_ARCHIVE).read_text(encoding="utf-8")
+    assert "Body text about testing." in archived  # the replaced body survives
+
+
+def test_delete_removes_version_archive(client):
+    """Deleting a document deletes its history too — no body left on disk."""
+    tc, root = client
+    doc_id = tc.post("/api/documents", json=_PAYLOAD).json()["id"]
+    tc.post("/api/documents", json={**_PAYLOAD, "new_version": True})
+    assert (root / "docs" / _V1_ARCHIVE).exists()
+
+    r = tc.delete(f"/api/documents/{doc_id}")
+    assert r.status_code == 200 and r.json()["versions_removed"] is True
+    assert not (root / "docs" / ".versions" / "test-project").exists()
+
+
+def test_409_detail_hints_at_versioning(client):
+    tc, _ = client
+    tc.post("/api/documents", json=_PAYLOAD)
+    detail = tc.post("/api/documents", json=_PAYLOAD).json()["detail"]
+    assert detail["version"] == 1 and "new_version" in detail["hint"]
+
+
 def test_commit_false_skips_git(client):
     tc, root = client
     before = _git(root, "rev-list", "--count", "HEAD").stdout.strip()
