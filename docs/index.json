@@ -95,7 +95,7 @@
       ]
     },
     "experience": {
-      "latest": "v0011_p20_onboarding_ux_honest_hero_curl_one-liner_init_password_prompt_working_save_url_init_web-login_line_d16_cross-project_org-key_reuse_landing_env-var_quickstart_copyable_downloadable_skill",
+      "latest": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -185,6 +185,14 @@
           "source": "P20.REVIEW",
           "summary": "P20 onboarding UX: honest hero (curl one-liner + init password prompt + working save url), init web-login line + D16 cross-project org-key reuse, landing env-var quickstart + copyable/downloadable skill",
           "previous": "v0010_p19_public_sharing_visibility_toggle_share_link_anonymous_public_doc_graph_pages_cli_save_prints_a_direct_url"
+        },
+        {
+          "id": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes",
+          "path": "docs/versions/experience/v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes.md",
+          "created_at": "2026-08-05T15:25:11+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 members can hard-delete a document from the documents list and the read page member branch: two-step inline confirm, permanent-and-no-undo copy, one not-found string for both 404 causes",
+          "previous": "v0011_p20_onboarding_ux_honest_hero_curl_one-liner_init_password_prompt_working_save_url_init_web-login_line_d16_cross-project_org-key_reuse_landing_env-var_quickstart_copyable_downloadable_skill"
         }
       ]
     },
@@ -315,7 +323,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0010_p20_landing_onboarding_honest_hero_copy_design_round_02_agent_env-var_quickstart_published-skill_sections_copy-control_island_served_skill.md",
+      "latest": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -397,11 +405,19 @@
           "source": "P20.REVIEW",
           "summary": "P20 landing onboarding: honest hero copy, design round 02, agent env-var quickstart + published-skill sections, copy-control island + served /SKILL.md",
           "previous": "v0009_p19_public_route_group_optional-identity_doc_public_graph_pages_publicshell_visibility_toggle_badges_copy-link_robots"
+        },
+        {
+          "id": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import",
+          "path": "docs/versions/frontend/v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import.md",
+          "created_at": "2026-08-05T15:24:12+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 documents surfaces gain their first write: shared two-step-confirm delete island on the list and the read page member branch; guarded redirect precedent; cross-route-group island import",
+          "previous": "v0010_p20_landing_onboarding_honest_hero_copy_design_round_02_agent_env-var_quickstart_published-skill_sections_copy-control_island_served_skill.md"
         }
       ]
     },
     "backend": {
-      "latest": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url",
+      "latest": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -475,6 +491,14 @@
           "source": "P19.REVIEW",
           "summary": "P19 optional_user dependency; public read resolution + Postgres-to-SQLite visibility bridge; mode-aware save url",
           "previous": "v0008_p18_provision_signup_primitive_resolver_reads_credential_tenant_id_org_keys_project_id_null_get_or_create_project_list_org_credentials_write-path_async_get-or-create_dep"
+        },
+        {
+          "id": "v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock",
+          "path": "docs/versions/backend/v0010_p21_first_mutating_app_route_deferred__delete_document_import_run_in_threadpool_with_a_worker-owned_sqlite_connection_uuid_is_public_bridge_main.py_untouched_still_one_write_lock.md",
+          "created_at": "2026-08-05T15:21:59+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 first mutating /app route: deferred _delete_document import + run_in_threadpool with a worker-owned SQLite connection; UUID is_public bridge; main.py untouched, still one WRITE_LOCK",
+          "previous": "v0009_p19_optional_user_dependency_public_read_resolution_postgres-to-sqlite_visibility_bridge_mode-aware_save_url"
         }
       ]
     },
@@ -565,7 +589,7 @@
       ]
     },
     "api": {
-      "latest": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url",
+      "latest": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -679,6 +703,14 @@
           "source": "P19.REVIEW",
           "summary": "P19 visibility field + PATCH toggle; optional-identity public doc/raw reads; org-scoped public graph; mode-aware 201 url",
           "previous": "v0013_p18_additive_org-level_app_credentials_endpoints_signup_response_gains_project_nullable_serialize_credential_get-or-create_on_post_app_projects_writes_frozen_contract_additive"
+        },
+        {
+          "id": "v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route",
+          "path": "docs/versions/api/v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route.md",
+          "created_at": "2026-08-05T15:21:18+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 unmetered member DELETE /app/documents/{doc_id}: session-only, no public fallback, 404-never-403, reuses _delete_document logic not the metered /api route",
+          "previous": "v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url"
         }
       ]
     },
@@ -857,7 +889,7 @@
       ]
     },
     "security": {
-      "latest": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay",
+      "latest": "v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it",
       "current_path": "docs/current/security.md",
       "versions": [
         {
@@ -955,11 +987,19 @@
           "source": "P19.REVIEW",
           "summary": "P19 first anonymous read surface; optional-identity 404-never-403; visibility bridge fail-closed; tokenless BFF relay",
           "previous": "v0011_p18_org-level_key_authorization_made_honest_one_vk__grants_the_whole_org_no_trust-boundary_shift_enforcement_already_tenant-wide_revoked_org_keys_401"
+        },
+        {
+          "id": "v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it",
+          "path": "docs/versions/security/v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it.md",
+          "created_at": "2026-08-05T15:22:44+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 member-only web delete boundary: session-only DELETE with no public fallback, 404-never-403, reading a public doc never implies deleting it",
+          "previous": "v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay"
         }
       ]
     },
     "qa": {
-      "latest": "v0010_p20_qa_web_copy-button_vitest_61-_66_skills_parity_third_full-file_web-copy_gate_live_clean-env_installer_init_d16_save_prod_e2e",
+      "latest": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1041,6 +1081,14 @@
           "source": "P20.REVIEW",
           "summary": "P20 QA: web copy-button vitest (61->66); skills_parity third full-file web-copy gate; live clean-env installer + init/D16/save prod E2E",
           "previous": "v0009_p18_postgres-gated_org-credentials_provisioning_tests_cli_test_auth_adjusted_onboarding_smoke_org-model_journey_green_local_live_prod_pre-existing_documents_api_format-key_failure_flagged"
+        },
+        {
+          "id": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e",
+          "path": "docs/versions/qa/v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e.md",
+          "created_at": "2026-08-05T15:23:25+09:00",
+          "source": "P21.REVIEW",
+          "summary": "P21 delete acceptance: documents_client disables the process-global /auth throttle (89-8 to 99-1), web vitest 69, and the review's live no-JS server-action E2E",
+          "previous": "v0010_p20_qa_web_copy-button_vitest_61-_66_skills_parity_third_full-file_web-copy_gate_live_clean-env_installer_init_d16_save_prod_e2e"
         }
       ]
     },
@@ -1195,5 +1243,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-05T14:34:01+09:00"
+  "last_rebuilt_at": "2026-08-05T15:25:38+09:00"
 }

@@ -215,6 +215,48 @@ Verified against the code at decomposition time (line numbers as of this commit)
   org's PUBLIC doc sees the delete button and gets the 404 copy on submit (no client-side
   tenant signal exists, and the backend is 404-never-403 by design).
 
+### P21.REVIEW notes (phase reviewed — verdict `pass`)
+
+- **Full-phase validation reproduced S1/S2's numbers exactly**: gated pytest **99 passed / 1
+  failed** (the pre-existing `format`-key case, nothing new), web `vitest` **69 passed**,
+  `lint` / `typecheck` clean, `plugin_parity.py` PASS, `workflow.py validate` PASS.
+- **A live end-to-end WAS practical and was run** — and the technique is reusable, so record it:
+  * `next start` refuses an `output: standalone` build — run `node web/.next/standalone/server.js`
+    after copying `.next/static` into the standalone tree.
+  * The delete island's `<form>` is **fully progressive-enhancement capable**, so its rendered
+    hidden inputs (`$ACTION_REF_n`, `$ACTION_n:0`, `$ACTION_n:1`, `$ACTION_KEY`) can be replayed
+    with `curl -F` against the page URL to invoke the **real** server action — **no browser
+    driver needed** (none is installed in this repo).
+  * The session cookie is `Secure`, so curl will not store or resend it over http: capture the
+    `Set-Cookie` value and pass it with `-H "Cookie: …"`. The BFF also demands an `Origin`
+    header matching `Host` (`assertSameOrigin`), else 403.
+  * The built `.next/server/server-reference-manifest.json` is the fastest way to confirm a
+    server action's registration — P21's single action id is registered against **both**
+    `app/(app)/documents/page` and `app/(public)/documents/[id]/page`, proving the
+    cross-route-group import.
+- **All three checks S2 flagged pass live**, plus three more: detail delete → **303
+  `/documents`** (file + DB row + FTS entry all gone); list delete → **200, no redirect**, row
+  gone, list falls to the empty state; repeat delete → **200 + the `notFound` copy**;
+  cross-tenant delete → `notFound` copy with the target surviving for its owner; tampered
+  non-integer id → `invalidRequest` copy; unauthenticated action → **303 `/login`**.
+  `usage_events` = **0** after three successful deletes (unmetered, measured).
+- **S1's untested `is_public=True` branch is now verified by observation.** With
+  `KB_OPERATOR_EMAIL` pointing at the member and the same doc materialized at *both*
+  `docs/<rel>` and `tenants/<uuid>/<rel>`, the delete unlinked **`docs/`** and left
+  `tenants/<uuid>/` intact — so the UUID-typed bridge picks the public root correctly, and
+  S1's deviation 1 was a real bug fix, not a stylistic preference. Re-run this by hand if the
+  bridge is ever touched (it stays out of pytest: it needs an operator email and a git tree).
+- **Confirmed by inspection**: `server/main.py` is byte-untouched by the phase (empty diff);
+  `WRITE_LOCK = threading.Lock()` exists exactly once in `server/`; `documents_api.py` sets no
+  `request.state.usage`; `document-view.tsx` is not in the phase diff.
+- **Docs consolidated (pass-only, P21 is not parallel-mode)**: six new versions — `api` v0015,
+  `backend` v0010, `security` v0013, `qa` v0011, `frontend` v0011, `experience` v0012 — then
+  `rebuild-docs`. `plugin_parity.py` re-run after the doc writes: still PASS (`docs/*` is a
+  shipped path). No source code was touched by the review.
+- **Two deferred-job candidates, neither a phase finding**: the pre-existing
+  `test_documents_list_detail_and_project_bridge` `format`-key failure, and the repo-wide
+  prettier drift (51 files at a clean HEAD) if `format:check` should become a real gate.
+
 ## Constraints
 
 - `WRITE_LOCK` (`server/main.py:150`) is process-local and load-bearing (single worker); the new
@@ -268,6 +310,11 @@ versions once at `P21.REVIEW` — never per slice._
   and promises no recovery; status-keyed failure copy (`DELETE_DOCUMENT_ERRORS`) with one
   "no longer exists, or isn't part of your org" string covering both 404 causes; anonymous
   readers see no delete control at all.
+- `P21.REVIEW`: **consolidated** — all of the above landed as six new doc versions (`api`
+  v0015, `backend` v0010, `security` v0013, `qa` v0011, `frontend` v0011, `experience` v0012)
+  plus `rebuild-docs`. Nothing on this list is left outstanding; `architecture.md` was
+  anticipated at decomposition only for the extract-a-module path, which S1 did not take
+  (deferred import instead), so it needed no version.
 
 ## Open Questions
 
