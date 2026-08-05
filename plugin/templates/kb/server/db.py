@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS documents (
   related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
   format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' (the on-disk doc format)
   raw_html    TEXT,                          -- raw HTML body for format='html' (the raw viewer route source); NULL for md
+  version     INTEGER NOT NULL DEFAULT 1,    -- current version number (P23); re-derived from the file's `version:` frontmatter, absent = 1
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (tenant_id, rel_path)
@@ -69,6 +70,30 @@ END;
 -- document's vector with it. SQLITE-VEC UPGRADE PATH: swap this table for a
 -- vec0 virtual table keyed on the same doc_id; search.py's cosine ranking is the
 -- only other touch point.
+-- Superseded document bodies (P23). Disposable like the rest of the DB: every row
+-- is re-derived by reindex from the on-disk archive tree
+-- (<root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>), which is the canonical
+-- store for version history. Keyed by document IDENTITY (tenant_id, rel_path,
+-- version) rather than documents.id on purpose — a full rebuild reassigns row ids,
+-- and versions must survive that. Archived versions are deliberately NOT in
+-- documents_fts, never embedded and never graph nodes: only the current version is
+-- searchable.
+CREATE TABLE IF NOT EXISTS document_versions (
+  id           INTEGER PRIMARY KEY,
+  tenant_id    TEXT NOT NULL DEFAULT '',
+  rel_path     TEXT NOT NULL,               -- the CURRENT document's rel_path (identity, stable across versions)
+  version      INTEGER NOT NULL,
+  archive_path TEXT NOT NULL,               -- '.versions/<project>/<date>-<slug>/vNNNN.<ext>' relative to the content root
+  title        TEXT NOT NULL,
+  date         TEXT NOT NULL,
+  tags         TEXT NOT NULL DEFAULT '[]',  -- JSON array
+  format       TEXT NOT NULL DEFAULT 'md',
+  markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions)
+  raw_html     TEXT,                        -- raw HTML body for format='html'; NULL for md
+  created_at   TEXT NOT NULL,               -- when this version was archived
+  UNIQUE (tenant_id, rel_path, version)
+);
+
 CREATE TABLE IF NOT EXISTS document_embeddings (
   doc_id       INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
   model        TEXT NOT NULL,
@@ -107,6 +132,12 @@ def init_db(conn: sqlite3.Connection) -> None:
       (``format`` defaults ``'md'`` so every legacy row stays a markdown doc;
       ``raw_html`` is nullable). Neither is in ``documents_fts`` — the index covers
       the extracted text via the unchanged ``markdown`` column.
+    * **Pre-versioning ``version`` back-fill (P23).** Same idempotent ``ALTER TABLE
+      ... ADD COLUMN`` with ``DEFAULT 1``: every existing document is implicitly v1,
+      so there is no migration and no back-fill job. The new ``document_versions``
+      table needs no migration at all — it is created by ``_SCHEMA``'s
+      ``CREATE TABLE IF NOT EXISTS`` and repopulated from the on-disk archive tree
+      by the next reindex.
     """
     conn.executescript(_SCHEMA)
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
@@ -125,6 +156,8 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE documents ADD COLUMN format TEXT NOT NULL DEFAULT 'md'")
     if "raw_html" not in cols:
         conn.execute("ALTER TABLE documents ADD COLUMN raw_html TEXT")
+    if "version" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
     conn.commit()
 
 
@@ -169,6 +202,7 @@ def upsert_document(
     related: Optional[list[str]] = None,
     format: str = "md",
     raw_html: Optional[str] = None,
+    version: int = 1,
     tenant_id: str = "",
     now: Optional[str] = None,
 ) -> int:
@@ -178,7 +212,10 @@ def upsert_document(
     JSON; ``None`` -> ``[]``. ``format`` (``'md'`` default | ``'html'``) records the
     on-disk doc format and ``raw_html`` (nullable, populated only for HTML docs)
     holds the raw HTML the viewer's raw route serves — both disposable, re-derived
-    by reindex. ``tenant_id`` is the owning tenant's UUID string (``''`` = legacy /
+    by reindex. ``version`` (P23, default 1) is the document's current version
+    number, re-derived from the file's ``version:`` frontmatter; a version bump
+    keeps the same ``(tenant_id, rel_path)`` row (identity is stable across
+    versions), so this UPDATEs in place. ``tenant_id`` is the owning tenant's UUID string (``''`` = legacy /
     tenant-#1 sentinel); it is part of the conflict target so the same ``rel_path``
     can exist once per tenant, and is omitted from the UPDATE set (like
     ``created_at``) since it never changes for a given row. Returns the row id.
@@ -194,8 +231,8 @@ def upsert_document(
         """
         INSERT INTO documents
           (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
-           markdown, related, format, raw_html, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, related, format, raw_html, version, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -208,10 +245,11 @@ def upsert_document(
           related     = excluded.related,
           format      = excluded.format,
           raw_html    = excluded.raw_html,
+          version     = excluded.version,
           updated_at  = excluded.updated_at
         """,
         (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
-         markdown, related_json, format, raw_html, ts, ts),
+         markdown, related_json, format, raw_html, int(version), ts, ts),
     )
     conn.commit()
     row = conn.execute(
@@ -251,6 +289,34 @@ def get_document_by_path(
             "SELECT * FROM documents WHERE rel_path = ?", (rel_path,)
         ).fetchone()
     return _row_to_dict(row)
+
+
+def find_latest_document_by_slug(
+    conn: sqlite3.Connection,
+    project: str,
+    slug: str,
+    tenant_id: Optional[str] = None,
+) -> Optional[dict[str, Any]]:
+    """The NEWEST document matching ``(project, slug)``, or ``None`` (P23).
+
+    The convenience target-resolution for a ``new_version`` publish when the caller
+    does not pass an explicit ``rel_path`` (an agent re-publishing on a later date
+    computes a different rel_path, which is exactly the bug versioning fixes).
+
+    "Newest" is pinned to **``date DESC, id DESC``** — the same ordering
+    ``list_documents`` calls newest-first: the largest convention date wins, and a
+    tie (several documents dated the same day with the same slug, one ``.md`` and
+    one ``.html``, say) is broken by the highest row id, i.e. the most recently
+    indexed/created row. When ``tenant_id`` is set the search is scoped to that
+    tenant, so a version bump can never target another tenant's document.
+    """
+    sql = "SELECT * FROM documents WHERE project = ? AND slug = ?"
+    params: list[Any] = [project, slug]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    sql += " ORDER BY date DESC, id DESC LIMIT 1"
+    return _row_to_dict(conn.execute(sql, params).fetchone())
 
 
 def _filtered(
@@ -397,6 +463,127 @@ def list_projects(
         {"project": r["project"], "count": int(r["count"]), "latest_date": r["latest_date"]}
         for r in rows
     ]
+
+
+# --- Version archive (document_versions) — P23 ----------------------------
+#
+# Every row mirrors one archived file under <root>/.versions/**; the files are
+# canonical and these rows are rebuilt from them by reindex. Keyed by document
+# identity (tenant_id, rel_path, version), never by documents.id.
+
+
+def _version_row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
+    if row is None:
+        return None
+    d = dict(row)
+    try:
+        d["tags"] = json.loads(d.get("tags") or "[]")
+    except (TypeError, json.JSONDecodeError):
+        d["tags"] = []
+    return d
+
+
+def upsert_document_version(
+    conn: sqlite3.Connection,
+    *,
+    rel_path: str,
+    version: int,
+    archive_path: str,
+    title: str,
+    date: str,
+    tags: list[str],
+    markdown: str,
+    format: str = "md",
+    raw_html: Optional[str] = None,
+    tenant_id: str = "",
+    created_at: Optional[str] = None,
+) -> None:
+    """Record one archived version. Idempotent on ``(tenant_id, rel_path, version)``.
+
+    Called twice over a version's life: by the write path when it archives the body
+    it is about to replace, and by every reindex that re-reads the archive file. The
+    upsert is what lets a rebuild re-derive the row without first clearing the table.
+    ``created_at`` is when the version was archived (the write path stamps *now*;
+    reindex re-derives the archive file's mtime, since disk is the only truth after
+    a DB wipe).
+    """
+    conn.execute(
+        """
+        INSERT INTO document_versions
+          (tenant_id, rel_path, version, archive_path, title, date, tags, format,
+           markdown, raw_html, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tenant_id, rel_path, version) DO UPDATE SET
+          archive_path = excluded.archive_path,
+          title        = excluded.title,
+          date         = excluded.date,
+          tags         = excluded.tags,
+          format       = excluded.format,
+          markdown     = excluded.markdown,
+          raw_html     = excluded.raw_html,
+          created_at   = excluded.created_at
+        """,
+        (
+            tenant_id, rel_path, int(version), archive_path, title, date,
+            json.dumps(list(tags), ensure_ascii=False), format, markdown, raw_html,
+            created_at or _now(),
+        ),
+    )
+    conn.commit()
+
+
+def list_document_versions(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
+) -> list[dict[str, Any]]:
+    """A document's archived versions, newest first (``version DESC``).
+
+    Only SUPERSEDED bodies live here — the current version is the document row
+    itself, so this list is the history *behind* it. ``tenant_id`` scopes the read
+    (``None`` = legacy, unscoped). ``markdown``/``raw_html`` are included; callers
+    that only need the index project them away.
+    """
+    sql = "SELECT * FROM document_versions WHERE rel_path = ?"
+    params: list[Any] = [rel_path]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    sql += " ORDER BY version DESC"
+    rows = conn.execute(sql, params).fetchall()
+    return [d for d in (_version_row_to_dict(r) for r in rows) if d is not None]
+
+
+def get_document_version(
+    conn: sqlite3.Connection,
+    rel_path: str,
+    version: int,
+    tenant_id: Optional[str] = None,
+) -> Optional[dict[str, Any]]:
+    """One archived version by ``(rel_path, version)``, tenant-scoped when set."""
+    sql = "SELECT * FROM document_versions WHERE rel_path = ? AND version = ?"
+    params: list[Any] = [rel_path, int(version)]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    return _version_row_to_dict(conn.execute(sql, params).fetchone())
+
+
+def delete_document_versions_by_path(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
+) -> int:
+    """Drop every archived version of a document. Returns rowcount.
+
+    Used by the delete path (deleting a document deletes its history with it) and by
+    reindex's vanished-archive cleanup. Scoped by tenant when set, so it can never
+    cross tenants.
+    """
+    sql = "DELETE FROM document_versions WHERE rel_path = ?"
+    params: list[Any] = [rel_path]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    cur = conn.execute(sql, params)
+    conn.commit()
+    return cur.rowcount
 
 
 # --- Semantic-search embedding cache (document_embeddings) ---------------------

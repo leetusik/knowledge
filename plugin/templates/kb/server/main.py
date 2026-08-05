@@ -384,6 +384,16 @@ class DocumentIn(BaseModel):
     # a bad value gets a free 422 from the Literal. Pydantic v2 forbids by default.
     format: Literal["md", "html"] = "md"
     overwrite: bool = False
+    # Versioned re-publish (P23, additive — both default to today's behavior).
+    # `new_version: true` republishes an EXISTING document as its next version:
+    # the current body is archived under <root>/.versions/ and the new body is
+    # written at the SAME rel_path, so the document's identity (id, URL, graph
+    # edges) never moves. `rel_path` names the target explicitly; without it the
+    # server resolves the newest document matching (project, slug) for the tenant.
+    # No target found ⇒ a plain v1 create (never an error), so an agent needs no
+    # 404 dance.
+    new_version: bool = False
+    rel_path: Optional[str] = None
     commit: bool = True
     co_authored_by: Optional[str] = None
 
@@ -420,6 +430,43 @@ async def ensure_registry_project(
     return record.id
 
 
+def _resolve_version_target(
+    conn,
+    ctx: ApiAuthContext,
+    body: DocumentIn,
+    *,
+    project: str,
+    slug: str,
+) -> Optional[dict]:
+    """The document a ``new_version: true`` write supersedes, or ``None`` (P23).
+
+    Two resolution modes, both tenant-scoped (a version bump can never reach
+    another tenant's document):
+
+    * **Explicit** — ``rel_path`` in the request names the target directly. It is
+      looked up as-is; a miss (no such document) is NOT an error, it simply falls
+      back to a plain v1 create at the request's own computed rel_path, so an agent
+      that guessed wrong still publishes instead of 404ing.
+    * **By identity** — otherwise the NEWEST document matching ``(project, slug)``
+      wins (``db.find_latest_document_by_slug``: ``date DESC, id DESC``). This is
+      the convenience path for an agent re-publishing on a later date, whose
+      computed ``<project>/<today>-<slug>`` would otherwise silently become a new
+      post. Note the slug defaults to ``slugify(title)``: a v2 with a **retitled**
+      document must pass ``slug`` or ``rel_path`` explicitly, or it resolves to no
+      target and creates a new document.
+
+    ``None`` whenever ``new_version`` is not set, so every existing caller keeps
+    today's behavior exactly.
+    """
+
+    if not body.new_version:
+        return None
+    tenant = _tenant_filter(ctx)
+    if body.rel_path:
+        return db.get_document_by_path(conn, body.rel_path, tenant_id=tenant)
+    return db.find_latest_document_by_slug(conn, project, slug, tenant_id=tenant)
+
+
 @app.post("/api/documents", status_code=201)
 def create_document(
     body: DocumentIn,
@@ -449,8 +496,6 @@ def create_document(
         raise HTTPException(status_code=422, detail=str(exc))
 
     rel = documents_mod.rel_path(project, date, slug, fmt=body.format)
-    # Self-reference dropped silently (a doc can't be related to itself).
-    related = [r for r in related if r != rel]
     # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
     source_repo = documents_mod.sanitize_source_repo(body.source_repo)
 
@@ -460,18 +505,106 @@ def create_document(
     root = _tenant_root(ctx)
     tid = _tenant_db_id(ctx)
 
-    # 2. 409 if the target exists on disk OR in the DB (this tenant) and not overwrite.
-    if not body.overwrite:
+    # 1b. Version target (P23). `new_version: true` re-publishes an EXISTING
+    #     document: the target's rel_path — hence its original date and slug — is
+    #     kept, so identity never moves and the request's date/slug are ignored for
+    #     a resolved target (`updated_at` is what moves). A miss falls through to a
+    #     plain v1 create at the computed rel_path.
+    target = _resolve_version_target(conn, ctx, body, project=project, slug=slug)
+    if target is not None:
+        # Neither the format nor the project may change across a version chain: the
+        # rel_path (which encodes both the project dir and the extension) is the
+        # document's identity, and the archive files sit beside it. Both are 422s
+        # rather than silent coercions — the caller wants a NEW document.
+        if (target.get("format") or "md") != body.format:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"cannot change format of {target['rel_path']} "
+                    f"({target.get('format') or 'md'}) to {body.format} in a new "
+                    "version — publish it as a new document instead"
+                ),
+            )
+        if target["project"] != project:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"cannot move {target['rel_path']} from project "
+                    f"{target['project']!r} to {project!r} in a new version — "
+                    "publish it as a new document instead"
+                ),
+            )
+        rel = target["rel_path"]
+        date = target["date"]
+        slug = target["slug"]
+
+    # Self-reference dropped silently (a doc can't be related to itself).
+    related = [r for r in related if r != rel]
+
+    # 2. 409 if the target exists on disk OR in the DB (this tenant) and not
+    #    overwrite. Skipped for a resolved version target: replacing that document
+    #    is the point of the request.
+    if not body.overwrite and target is None:
         existing_row = db.get_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
         if (root / rel).exists() or existing_row is not None:
             detail = {"message": f"document already exists at {rel}", "rel_path": rel}
             if existing_row is not None:
                 detail["id"] = existing_row["id"]
                 detail["existing_title"] = existing_row["title"]
+                # P23 hint: an existing DB row is versionable, so the caller can
+                # re-publish additively instead of reaching for destructive
+                # overwrite. Purely additive to the detail dict — `message`,
+                # `rel_path`, `id` and `existing_title` are unchanged, so the CLI's
+                # 409 explainer keeps working.
+                detail["version"] = existing_row.get("version") or 1
+                detail["hint"] = (
+                    "re-publish as the next version: POST again with "
+                    f'"new_version": true, "rel_path": "{rel}"'
+                )
             raise HTTPException(status_code=409, detail=detail)
 
-    # 3. Locked critical section: file write -> index update -> DB upsert -> git.
+    # 2b. Which body (if any) this write supersedes, and at which version number.
+    #     `target` covers new_version; overwrite supersedes whatever sits at `rel`.
+    #     A file with no DB row (drift) is still archived — its version comes from
+    #     the file's own frontmatter and the next reindex derives the row from the
+    #     archived file, since disk is canonical.
+    superseded = target
+    if superseded is None and body.overwrite:
+        superseded = db.get_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
+    if superseded is not None:
+        prev_version: Optional[int] = int(superseded.get("version") or 1)
+    elif body.overwrite:
+        prev_version = documents_mod.read_document_version(root, rel)
+    else:
+        prev_version = None
+    doc_version = prev_version + 1 if prev_version is not None else 1
+
+    # 3. Locked critical section: archive -> file write -> index update -> DB upsert
+    #    -> git. (WRITE_LOCK is NOT reentrant — nothing called in here may retake it.)
     with WRITE_LOCK:
+        # 3a. Archive the body about to be replaced, BEFORE it is overwritten, to
+        #     <root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>. `None` when
+        #     there is nothing on disk to keep (a fresh create, or a DB row whose
+        #     file vanished).
+        archive_path = None
+        if prev_version is not None:
+            archive_path = documents_mod.archive_document_file(
+                docs_root=root, rel_path=rel, version=prev_version
+            )
+            if archive_path is not None and superseded is not None:
+                db.upsert_document_version(
+                    conn,
+                    rel_path=rel,
+                    version=prev_version,
+                    archive_path=archive_path,
+                    title=superseded["title"],
+                    date=superseded["date"],
+                    tags=superseded.get("tags") or [],
+                    markdown=superseded.get("markdown") or "",
+                    format=superseded.get("format") or "md",
+                    raw_html=superseded.get("raw_html"),
+                    tenant_id=tid,
+                )
         # `stored_body` is the on-disk body minus its frontmatter — the raw markdown
         # for an md doc, the raw HTML for an html doc. The body rule then derives what
         # each plane stores: the DB `markdown` column always holds the readable text
@@ -487,6 +620,7 @@ def create_document(
             body=body.markdown,
             related=related,
             fmt=body.format,
+            version=doc_version,
         )
         if body.format == "html":
             raw_html = stored_body
@@ -525,6 +659,7 @@ def create_document(
             related=related,
             format=body.format,
             raw_html=raw_html,
+            version=doc_version,
             tenant_id=tid,
         )
 
@@ -544,9 +679,18 @@ def create_document(
                     # Only staged when this write created it — keeps the scoped
                     # commit to exactly the paths this write touched.
                     staged.append(f"docs/{project}/index.md")
+                if archive_path is not None:
+                    # The superseded body travels with the repo (public root only),
+                    # so tenant #1's version history is in git too.
+                    staged.append(f"docs/{archive_path}")
                 gitops.add(staged, root=config.kb_root())
+                message = (
+                    f"docs({project}): add {slug}"
+                    if doc_version == 1
+                    else f"docs({project}): update {slug} to v{doc_version}"
+                )
                 commit_sha = gitops.commit(
-                    f"docs({project}): add {slug}",
+                    message,
                     root=config.kb_root(),
                     co_authored_by=body.co_authored_by,
                 )
@@ -610,6 +754,13 @@ def create_document(
         "tags": tags,
         "related": related,
         "format": body.format,
+        # Versioning (P23, additive). `version` is what this write published;
+        # `previous_version`/`archived_path` describe the body it superseded (both
+        # null on a plain create). `date`/`slug` above are the TARGET's on a version
+        # bump, not the request's — the rel_path never moves.
+        "version": doc_version,
+        "previous_version": prev_version,
+        "archived_path": archive_path,
         "recent_updated": recent_updated,
         "landing_created": landing_created,
         "committed": committed,
@@ -654,6 +805,12 @@ def _delete_document(
     root = _tenant_root(ctx)
     with WRITE_LOCK:
         (root / rel).unlink(missing_ok=True)
+        # Deleting a document deletes its history with it (P23): the whole
+        # .versions/<project>/<date>-<slug>/ dir goes, so no readable body of a
+        # deleted document survives on disk (or in the public git tree), and the
+        # derived rows go with it.
+        versions_removed = documents_mod.remove_archive_dir(root, rel)
+        db.delete_document_versions_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
         # Recent index is a public-root concern; non-#1 tenants have none to update.
         if ctx.is_public:
             recent_removed = documents_mod.remove_from_recent_index(root, rel)
@@ -672,9 +829,12 @@ def _delete_document(
         # Git publish is a public-root concern only (see create_document).
         if commit and config.git_commit_enabled() and ctx.is_public:
             try:
-                gitops.add(
-                    [f"docs/{rel}", "docs/index.md"], root=config.kb_root()
-                )
+                staged = [f"docs/{rel}", "docs/index.md"]
+                if versions_removed:
+                    # Stage the removed archive dir so the deletion of the history
+                    # lands in the same scoped commit as the document's.
+                    staged.append(f"docs/{documents_mod.archive_dir_rel_path(rel)}")
+                gitops.add(staged, root=config.kb_root())
                 commit_sha = gitops.commit(
                     f"docs({doc['project']}): remove {doc['slug']}",
                     root=config.kb_root(),
@@ -702,6 +862,8 @@ def _delete_document(
         "project": doc["project"],
         "slug": doc["slug"],
         "recent_removed": recent_removed,
+        # P23: whether this document had an on-disk version archive to remove.
+        "versions_removed": versions_removed,
         "committed": committed,
         "commit_sha": commit_sha,
         "pushed": pushed,

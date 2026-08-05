@@ -174,6 +174,54 @@ The design the middle slices implement:
   lock is **not reentrant** — a helper called from inside it must not re-acquire it (see
   `documents_api._delete_owned_document`'s note).
 
+### S1 notes (server storage + write path landed)
+
+Full detail in `slices/P23.S1/result.md`; the durable, cross-slice parts:
+
+- **S1 decisions later slices depend on.**
+  * Newest-`(project, slug)` = **`ORDER BY date DESC, id DESC LIMIT 1`**, tenant-scoped
+    (`db.find_latest_document_by_slug`) — the same ordering `list_documents` calls
+    newest-first. **F8 caveat for S4:** `slug` defaults to `slugify(title)`, so a
+    *retitled* v2 must send `slug` or `rel_path` or it creates a new document.
+  * **409 detail** keeps its status and every existing key; it gains `version` + `hint`
+    **only when an existing DB row was found** (a disk-only conflict is not versionable).
+    The CLI's 409 explainer (F9) is untouched.
+  * **Identity is immutable across a version chain**: a resolved target with a different
+    `format` *or* a different `project` is a **422**, never a silent coercion. A resolved
+    target's `date`/`slug` also win over the request's (the response echoes the target's).
+  * **`overwrite: true` now bumps the version too** (archives v`N`, publishes v`N+1`) —
+    both write modes share one chain. Status + existing keys unchanged; `version`,
+    `previous_version`, `archived_path` are additive.
+  * **Deleting a document deletes its history** — `_delete_document` removes the whole
+    `.versions/<project>/<date>-<slug>/` dir + rows and stages the removal in the same
+    scoped commit; response gains `versions_removed` (the `/app` delete stays 204).
+  * `document_versions.created_at` = when the body was archived: *now* on the write path,
+    the archive file's **mtime** when reindex re-derives it.
+- **What S2 should call** (already in `server/db.py`, no new storage work needed):
+  `list_document_versions(conn, rel_path, tenant_id=…)` (version DESC, carries
+  `markdown` + `raw_html`) and `get_document_version(conn, rel_path, version,
+  tenant_id=…)`. `document_versions` is **identity-keyed** (`tenant_id, rel_path,
+  version`) — so a route keyed on a doc **id** must first resolve that id to its
+  `rel_path` (`db.get_document`/`_resolve_readable_doc`), then read versions by path.
+- **`version` is already on the read surfaces.** Both projections drop only
+  `tags_text`/`raw_html`/`tenant_id`, so `/api` and `/app` document reads already expose
+  `documents.version` — S3 needs no server change to show "v3".
+- **A v1 file is byte-identical to a pre-P23 one.** `version:` is emitted only for
+  version ≥ 2 (right after `date:`), and `set_frontmatter_version` edits that one line
+  in place rather than re-serializing, so an archived body keeps unknown frontmatter
+  fields and its exact bytes. Do not "normalize" archived files.
+- **Free win discovered:** `server/seed.py` imports `reindex.RESERVED_DIRS`, so adding
+  `.versions` there also kept it out of seed's project discovery — otherwise `.versions`
+  would have been provisioned as a *project* in the accounts registry. Any future walker
+  that reasons about top-level content dirs should import that constant, not re-list it
+  (only `graph_hook`/`site_smoke` can't — they must never import `server/*`).
+- **mkdocs needs no change** (verified upstream): its default file-scanner exclusion is a
+  gitignore spec `['.*', '/templates/']`, so dot-prefixed dirs are skipped at any depth
+  and `docs/.versions/` is never built into the site. The dot prefix in the pinned design
+  is doing real work.
+- **Reindex report gained additive keys** `versions_indexed` / `versions_removed`;
+  `indexed`/`removed` still count current documents only.
+
 ### Validation the slices should run
 
 - `python3 -m pytest` (repo root; `testpaths = ["tests"]`, `pythonpath = ["."]`) — S1/S2.
@@ -209,6 +257,18 @@ _One line per durable-truth change; `P23.REVIEW` consolidates these into doc ver
   `decisions.md` (the "disk is canonical, DB is disposable" consequence for versioning),
   `product.md` (versioned publishing as a product capability). Each slice must still
   append its own concrete note here.
+- (S1) `data.md` + `backend.md` + `api.md`: document version history is now stored
+  on disk at `<root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>` (superseded bodies,
+  self-describing via a `version:` frontmatter field emitted only for v≥2) with the
+  derived `documents.version` column and the identity-keyed `document_versions` table
+  (`UNIQUE(tenant_id, rel_path, version)`, no alembic — content-plane schema stays in
+  `server/db.py`); `reindex` rebuilds that table from disk and excludes `.versions` from
+  the document walk (as do `graph_hook`/`site_smoke`, so archived bodies are never
+  searched, embedded, graphed or published); `POST /api/documents` gains
+  `new_version`/`rel_path` (archive-then-write at an unchanged `rel_path`, response gains
+  `version`/`previous_version`/`archived_path`), `overwrite: true` now archives the body
+  it replaces instead of destroying it, the 409 detail gains a versionable hint, and
+  deleting a document deletes its archive with it.
 
 ## Open Questions
 

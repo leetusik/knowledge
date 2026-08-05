@@ -20,10 +20,31 @@ from server import config, db, documents, embeddings
 # so their whole subtree is excluded from the walk — this keeps reindex output
 # clean: `indexed` counts only real explainers and `skipped[]` stays signal, not
 # noise. See phase.md "Discovered consideration".
-RESERVED_DIRS = {"current", "versions"}
+#
+# `.versions` (documents.ARCHIVE_DIR, P23) joins them for a different reason: its
+# files DO carry explainer frontmatter, so nothing but this exclusion keeps
+# superseded bodies out of `documents`, out of FTS/embeddings and out of the graph.
+# It is walked separately by _walk_versions into the document_versions table.
+# NOTE: Path.rglob does NOT skip dot-dirs — the exclusion must be explicit here and
+# in scripts/graph_hook.py + scripts/site_smoke.py.
+RESERVED_DIRS = {"current", "versions", documents.ARCHIVE_DIR}
 
 # '<YYYY-MM-DD>-<slug>.{md,html}' — group(1) date, group(2) slug, group(3) ext.
 _FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.(md|html)$")
+
+
+def _version_from_meta(meta: dict) -> int:
+    """The doc's version number from its frontmatter — absent/garbage ⇒ 1.
+
+    Pre-P23 files carry no ``version:`` field and are implicitly v1, so there is no
+    migration: the whole corpus reads back as v1 until something bumps it.
+    """
+    raw = meta.get("version")
+    try:
+        value = int(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 1
+    return value if value >= 1 else 1
 
 
 def _index_file(
@@ -108,7 +129,93 @@ def _index_file(
             related=related,
             format=fmt,
             raw_html=raw_html_val,
+            version=_version_from_meta(meta),
             tenant_id=tenant_id,
+        )
+    except sqlite3.Error as exc:
+        return False, f"db error: {exc}"
+    return True, None
+
+
+def _index_version_file(
+    conn: sqlite3.Connection, root: Path, path: Path, arch_rel: str, tenant_id: str
+) -> tuple[bool, Optional[str]]:
+    """Upsert one archived version file into ``document_versions``. (indexed, skip_reason).
+
+    The archive tree is canonical (the DB is disposable), so everything is re-derived
+    from the file: its rel_path + version from the path
+    (``.versions/<project>/<date>-<slug>/vNNNN.<ext>``), its metadata/body from the
+    same frontmatter parsers the current-version walk uses, and ``created_at`` from
+    the file's mtime (when the body was archived — the write path's own timestamp is
+    gone once the DB is wiped). The body rule matches ``_index_file``: ``markdown``
+    always holds readable text, ``raw_html`` only the html flavor's raw body.
+    """
+    parsed = documents.parse_archive_rel_path(arch_rel)
+    if parsed is None:
+        return False, "not a <project>/<date>-<slug>/vNNNN.{md,html} archive path"
+    doc_rel, version = parsed
+    is_html = arch_rel.endswith(".html")
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return False, f"unreadable: {exc}"
+
+    try:
+        if is_html:
+            meta, body = documents.parse_html_frontmatter(text)
+        else:
+            meta, body = documents.parse_frontmatter(text)
+    except documents.FrontmatterError as exc:
+        return False, f"missing/invalid frontmatter: {exc}"
+
+    title = meta.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return False, "missing/invalid frontmatter: no title"
+
+    date_val = meta.get("date")
+    if isinstance(date_val, datetime.date):
+        date_val = date_val.isoformat()
+    date_val = str(date_val) if date_val else ""
+    try:
+        documents.validate_date(date_val)
+    except documents.ConventionError:
+        return False, "missing/invalid frontmatter: bad date"
+
+    raw_tags = meta.get("tags")
+    tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
+
+    body_stripped = body.lstrip("\n")
+    if is_html:
+        markdown_val = documents.extract_html_text(body_stripped)
+        raw_html_val: Optional[str] = body_stripped
+        fmt = "html"
+    else:
+        markdown_val = body_stripped
+        raw_html_val = None
+        fmt = "md"
+
+    try:
+        archived_at = datetime.datetime.fromtimestamp(
+            path.stat().st_mtime
+        ).astimezone().isoformat(timespec="seconds")
+    except OSError:  # pragma: no cover - defensive
+        archived_at = None
+
+    try:
+        db.upsert_document_version(
+            conn,
+            rel_path=doc_rel,
+            version=version,
+            archive_path=arch_rel,
+            title=title,
+            date=date_val,
+            tags=tags,
+            markdown=markdown_val,
+            format=fmt,
+            raw_html=raw_html_val,
+            tenant_id=tenant_id,
+            created_at=archived_at,
         )
     except sqlite3.Error as exc:
         return False, f"db error: {exc}"
@@ -276,6 +383,40 @@ def _walk_root(
     return indexed, skipped
 
 
+def _walk_versions(
+    conn: sqlite3.Connection,
+    root: Path,
+    tenant_id: str,
+    archives_by_tenant: dict[str, set[str]],
+) -> tuple[int, list[dict]]:
+    """Walk one content root's ``.versions/`` archive tree into ``document_versions``.
+
+    The mirror of ``_walk_root`` for superseded bodies: every
+    ``.versions/<project>/<date>-<slug>/vNNNN.{md,html}`` is upserted under
+    ``tenant_id`` and its archive rel_path recorded in ``archives_by_tenant`` for the
+    tenant-scoped vanished-archive cleanup. Malformed entries are reported as skips
+    (same shape as the document walk) rather than guessed at. Archived versions are
+    never FTS-indexed, embedded or graphed — this walk touches only
+    ``document_versions``. Returns (indexed, skipped)."""
+    indexed = 0
+    skipped: list[dict] = []
+    seen = archives_by_tenant.setdefault(tenant_id, set())
+    archive_root = root / documents.ARCHIVE_DIR
+    if not archive_root.is_dir():
+        return indexed, skipped
+    for path in sorted([*archive_root.rglob("*.md"), *archive_root.rglob("*.html")]):
+        if not path.is_file():
+            continue
+        arch_rel = path.relative_to(root).as_posix()
+        ok, reason = _index_version_file(conn, root, path, arch_rel, tenant_id)
+        if ok:
+            seen.add(arch_rel)
+            indexed += 1
+        else:
+            skipped.append({"rel_path": arch_rel, "reason": reason})
+    return indexed, skipped
+
+
 def reindex(
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
@@ -293,7 +434,13 @@ def reindex(
       sibling of ``docs/`` that mkdocs never serves; the ``<uuid>`` dir name IS
       the tenant_id.
 
-    Returns {indexed, removed, skipped:[{rel_path, reason}], embeddings:{...},
+    Each root is walked twice: once for its current documents (``_walk_root``) and
+    once for its ``.versions/`` archive tree (``_walk_versions``), which rebuilds the
+    ``document_versions`` table from the superseded bodies on disk. Version history
+    therefore survives a DB wipe exactly like documents do.
+
+    Returns {indexed, removed, skipped:[{rel_path, reason}], versions_indexed,
+    versions_removed, embeddings:{...},
     duration_ms}. The vanished-row cleanup is tenant-scoped: a row is stale only if
     its ``(tenant_id, rel_path)`` isn't on disk, so one tenant's reindex never
     deletes another tenant's rows. The embedding-sync step (content-hash cached)
@@ -306,15 +453,21 @@ def reindex(
     root = Path(docs_root) if docs_root is not None else config.docs_root()
 
     indexed = 0
+    versions_indexed = 0
     skipped: list[dict] = []
     # rel_paths present on disk, grouped by tenant_id, for the tenant-scoped
     # vanished-row cleanup.
     disk_by_tenant: dict[str, set[str]] = {}
+    # The same, for the .versions/ archive tree -> document_versions.
+    archives_by_tenant: dict[str, set[str]] = {}
 
     # 1. Public root (docs/): tenant #1 in tenant mode, else the '' legacy sentinel.
     public_tid = str(tenant_one_id) if tenant_one_id else ""
     n, s = _walk_root(conn, root, public_tid, disk_by_tenant)
     indexed += n
+    skipped += s
+    n, s = _walk_versions(conn, root, public_tid, archives_by_tenant)
+    versions_indexed += n
     skipped += s
 
     # 2. Namespaced non-published roots: <KB_ROOT>/tenants/<uuid>/. Each dir name
@@ -327,6 +480,9 @@ def reindex(
                 continue
             n, s = _walk_root(conn, tdir, tdir.name, disk_by_tenant)
             indexed += n
+            skipped += s
+            n, s = _walk_versions(conn, tdir, tdir.name, archives_by_tenant)
+            versions_indexed += n
             skipped += s
 
     # Delete DB rows whose file vanished from disk (drift repair), tenant-scoped:
@@ -341,6 +497,23 @@ def reindex(
             db.delete_document_by_path(conn, rel, tenant_id=tid)
             removed += 1
 
+    # Same cleanup for the version archive: a document_versions row whose archive
+    # file is gone from disk is dropped (the files are canonical, the table derived).
+    versions_removed = 0
+    for row in conn.execute(
+        "SELECT tenant_id, rel_path, version, archive_path FROM document_versions"
+    ).fetchall():
+        tid = row["tenant_id"]
+        if row["archive_path"] not in archives_by_tenant.get(tid, set()):
+            conn.execute(
+                "DELETE FROM document_versions "
+                "WHERE tenant_id = ? AND rel_path = ? AND version = ?",
+                (tid, row["rel_path"], row["version"]),
+            )
+            versions_removed += 1
+    if versions_removed:
+        conn.commit()
+
     embeddings_report = _sync_embeddings(conn)
 
     duration_ms = int((time.monotonic() - start) * 1000)
@@ -350,6 +523,11 @@ def reindex(
         "indexed": indexed,
         "removed": removed,
         "skipped": skipped,
+        # Version archive (P23): superseded bodies rebuilt from <root>/.versions/**
+        # into document_versions. Additive keys — `indexed`/`removed` still count
+        # current documents only, so an unversioned corpus reports 0/0 here.
+        "versions_indexed": versions_indexed,
+        "versions_removed": versions_removed,
         "embeddings": embeddings_report,
         "duration_ms": duration_ms,
     }
@@ -383,6 +561,10 @@ def _main() -> int:
         result = reindex()
         print(f"indexed: {result['indexed']}")
         print(f"removed: {result['removed']}")
+        print(
+            f"versions: indexed={result['versions_indexed']} "
+            f"removed={result['versions_removed']}"
+        )
         print(f"skipped: {len(result['skipped'])}")
         for item in result["skipped"]:
             print(f"  - {item['rel_path']}: {item['reason']}")
