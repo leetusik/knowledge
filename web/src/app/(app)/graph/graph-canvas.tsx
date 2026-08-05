@@ -13,10 +13,10 @@ import "./graph.css";
  * (a ~1130-line zero-dependency <canvas> force-sim renderer) into the app's first
  * `"use client"` canvas + rAF component. The proven CORE is intact — the
  * deterministic force sim (FNV-hash seeding, alpha cooling, the tick integrator,
- * collision relax), the draw grammar (DPR scaling, edges/halo/nodes/rings/labels,
- * the quiet-label ladder), and the full interaction model (pointer drag/pan/hover-
- * neighbor-highlight, wheel zoom {passive:false}, Escape, the legend project-lens +
- * tag toggle, zoom buttons, node-tap → info panel). Only the SHELL is adapted:
+ * collision relax), the draw grammar (DPR scaling, edges/halo/nodes/rings/labels),
+ * and the full interaction model (pointer drag/pan/hover-neighbor-highlight, wheel
+ * zoom {passive:false}, Escape, the legend project-lens + tag toggle, zoom buttons,
+ * node-tap → info panel). Only the SHELL is adapted:
  *
  *   - Data rides in as a `data` prop (no fetch); `start(data)` runs in a useEffect.
  *   - Node navigation: the info-panel "Read" link uses `node.url` directly (now the
@@ -27,6 +27,17 @@ import "./graph.css";
  *     listeners, the persist debounce, and a post-unmount guard on document.fonts.
  *   - Colours/geometry are still read LIVE via getComputedStyle of `--kb-graph-*`
  *     (graph-tokens.css) — never a hardcoded hex — so re-theming stays CSS-only.
+ *
+ * DELIBERATE DEVIATION from the port (P22 — label focus): the original's
+ * "quiet-label ladder" is gone. It faded EVERY doc title in once display zoom passed
+ * ~1.35x fit, and lit up a whole neighborhood of titles on hover — the "wall of
+ * titles". `labelTarget()` is now selection-driven: a title targets 1 only for the
+ * SELECTED node and for the single hovered/dragged node (`currentFocus()`), never for
+ * a neighborhood, and 0 otherwise — so at most one title is painted at rest. The
+ * hovered term stays because the DOM tooltip is a low-zoom fallback only
+ * (`updateTooltip()` bails above 0.6x zoom), so it cannot carry hover-to-identify.
+ * Node dimming (`computeKeep`), halo/ring/edge activation, `drawLabel()` and the
+ * tooltip are all untouched; the existing `n.la` easing still does the fade.
  *
  * The overlay shells (legend/zoom/tooltip/panel/empty) render in JSX; the ported
  * engine fills legend/zoom/panel/tooltip imperatively exactly as graph.js does
@@ -845,19 +856,16 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       return null;
     }
 
-    // ── labels (Strategy A′): quiet map + zoom ladder relative to fit ──
-    function ladder(): number {
-      return Math.max(0, Math.min(1, (displayZoom() - 1.1) / 0.25));
-    }
+    // ── labels (P22): selection-driven, never a neighborhood and never a zoom
+    // ladder — only the selected node and the single hovered/dragged node
+    // (`currentFocus()`) carry a title, so at most one label is painted at rest ──
     function labelTarget(
       n: GNode,
       keep: Record<string, boolean> | null,
       focus: string | null,
     ): number {
       if (keep && !keep[n.id]) return 0;
-      if (focus && keep) return 1;
-      if (n.type === "doc") return keep ? 1 : ladder();
-      if (n.type === "missing") return ladder() * 0.9;
+      if (n.id === selectedId || n.id === focus) return 1;
       return 0;
     }
 
