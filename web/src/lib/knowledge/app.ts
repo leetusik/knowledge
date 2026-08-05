@@ -398,6 +398,30 @@ export async function getDocumentRaw(
 }
 
 /**
+ * `DELETE /app/documents/{id}` (bearer) → 204, empty body (P21.S1).
+ *
+ * The `/app` plane's FIRST mutating document route, and the one the web UI uses:
+ * it reuses the machine plane's delete LOGIC (file unlink + DB/FTS/embeddings
+ * removal, plus the Recent index + git commit for a public-root doc) without its
+ * metering, so a UI click is never billed as an agent event.
+ *
+ * SESSION-ONLY — no public/anonymous fallback, unlike the GETs above: `token` is
+ * REQUIRED (401 without it). A missing id AND another tenant's id both answer
+ * **404** (404-never-403 — indistinguishable by design, so one "no longer exists"
+ * copy covers both); a non-integer id is a 422. No other status is produced — a
+ * failed git commit/push is swallowed server-side and still answers 204.
+ *
+ * The delete is HARD and NOT idempotent: a repeat delete of the same id is a 404.
+ *
+ * `sendJson<void>` is the `revokeCredential` idiom — the 204 maps to `undefined`,
+ * so there is nothing to unwrap. `id` is a number, so there is nothing to
+ * URL-escape (mirrors `getDocument`).
+ */
+export async function deleteDocument(token: string, id: number): Promise<void> {
+  await sendJson<void>(`/app/documents/${id}`, "DELETE", undefined, { token });
+}
+
+/**
  * `GET /app/search` (bearer) → 200 `{query, mode, total, limit, offset, results}` —
  * BM25 + recency ranking (fused with the Gemini vector signal when embeddings are
  * enabled → `mode: "hybrid"`), scoped to the caller's tenant. `q` is REQUIRED (a

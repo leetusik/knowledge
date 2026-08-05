@@ -31,9 +31,11 @@ import {
 import type { KbProject } from "@/lib/knowledge/types";
 import { cn } from "@/lib/utils";
 
+import { DeleteDocumentButton } from "./delete-document-button";
+
 // P12.S5 — the per-tenant documents surface: browse (newest-first, optional project
 // filter) + full-text search, the vocky flagship-read-surface analog. A server
-// component throughout with NO client island — the filter bar is a plain
+// component that fetches and renders everything; the filter bar is a plain
 // `<form method="GET">`, so it needs no JS, no `useSearchParams`, no `router.push`.
 // Submitting navigates, which is the semantic we want: each result set is its own
 // shareable URL and browser back is "previous page". Rendered inside the S2/S2R
@@ -42,7 +44,13 @@ import { cn } from "@/lib/utils";
 // TWO ENDPOINTS: `q` present → `searchDocuments` (ranked, with snippets); else →
 // `getDocuments` (newest-first). `listProjects` rides along in parallel for the
 // project-filter options (its UUID values bridge to content-plane names server-side).
-// READ + SEARCH ONLY — writes stay on the `vk_`-keyed `/api/*` machine surface.
+//
+// P21 — the page is no longer island-free: each row carries ONE client island, the
+// two-step-confirm `<DeleteDocumentButton>`, and it is the page's only interactive
+// bit. Its write goes through the `"use server"` `deleteDocumentAction` (the authed-
+// mutation convention) to the unmetered, session-scoped `DELETE /app/documents/{id}`
+// — so this surface still touches nothing on the metered `vk_`-keyed `/api/*` machine
+// plane, and everything else here remains READ + SEARCH.
 export const metadata: Metadata = { title: DOCUMENTS.title };
 
 /** One table row, normalized across the browse + search result shapes. */
@@ -127,6 +135,17 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
             ))}
           </span>
         ),
+    },
+    {
+      key: "action",
+      header: <span className="sr-only">{DOCUMENTS.list.columns.actions}</span>,
+      actions: true,
+      // The row's only interactive element (P21): a client island that arms an
+      // inline confirm before hard-deleting the document. The title is passed for
+      // the action's accessible name — "Delete" alone repeats down the column.
+      cell: (row) => (
+        <DeleteDocumentButton documentId={row.id} documentTitle={row.title} />
+      ),
     },
   ];
 }

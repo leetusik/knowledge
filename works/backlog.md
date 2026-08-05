@@ -6,17 +6,17 @@
 ## Pointer
 
 - Current phase: `P21`
-- Current slice: `P21.S2`
-- Next slice: `P21.REVIEW`
+- Current slice: `P21.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `13`
-- Rebuilt at: `2026-08-05T15:02:51+09:00`
+- Rebuilt at: `2026-08-05T15:11:13+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
-| [ ] `P21` | `planned` | `pending` | Web document deletion | `P21.S2` | `works/phases/active/P21` |
+| [ ] `P21` | `planned` | `pending` | Web document deletion | `P21.REVIEW` | `works/phases/active/P21` |
 | [ ] `P22` | `planned` | `pending` | Graph label focus | `P22.DECOMP` | `works/phases/active/P22` |
 | [ ] `P23` | `planned` | `pending` | Document version control | `P23.DECOMP` | `works/phases/active/P23` |
 | [ ] `P24` | `planned` | `pending` | Upload finish-return timeout | `P24.DECOMP` | `works/phases/active/P24` |
@@ -27,7 +27,7 @@
 |---|---|---|---|---|
 | [x] `P21.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P21/slices/P21.DECOMP` |
 | [x] `P21.S1` | `done` | Backend: member DELETE /app/documents/{doc_id} | `implementation` | `works/phases/active/P21/slices/P21.S1` |
-| [ ] `P21.S2` | `todo` | Web: delete action + confirm UI on documents pages | `implementation` | `works/phases/active/P21/slices/P21.S2` |
+| [x] `P21.S2` | `done` | Web: delete action + confirm UI on documents pages | `implementation` | `works/phases/active/P21/slices/P21.S2` |
 | [ ] `P21.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P21/slices/P21.REVIEW` |
 
 ## Phase P22: Graph label focus
