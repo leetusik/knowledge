@@ -47,7 +47,8 @@ export { PUBLIC_SHELL, SHARE } from "./share";
 export type { PublicShellCopy, ShareCopy } from "./share";
 
 // Documents surface (P12.S5) — browse / search / read the tenant's documents.
-// P21 adds the member delete action + its status-keyed errors.
+// P21 adds the member delete action + its status-keyed errors; P23 adds the version
+// history panel + the past-version view copy (`DOCUMENTS.versions`).
 export { DELETE_DOCUMENT_ERRORS, DOCUMENTS } from "./documents";
 export type { DocumentsCopy } from "./documents";
 

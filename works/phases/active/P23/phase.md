@@ -279,6 +279,54 @@ unmetered, no write path touched:**
     had never gained `format` (html phase) or `version` (P23.S1). With Postgres the whole
     suite is now **113 passed / 0 failed**; without it, 81 passed / 32 skipped.
 
+### S3 notes (web version history landed) — what S4 and the review inherit
+
+Full detail in `slices/P23.S3/result.md`. The durable, cross-slice parts:
+
+- **No server change was needed.** S2's `/app` routes plus `documents.version` on the
+  read shape were exactly the contract S3 coded against. The only "catch-up" was on the
+  web side: `KbDocumentListItem` gained `version: number` because `_DROP` is only
+  `{tags_text, tenant_id, raw_html}`, so `documents.version` had already been on the wire
+  since S1 with the TS type merely lagging. **Verify shapes against the Python projector
+  (`_VERSION_DROP` / `_DROP`), not against these notes** — that is how the S3 audit
+  confirmed the mirror.
+- **The UI surface is:** a history panel on `/documents/{id}` (renders **only** when
+  there is history, so an unversioned corpus is byte-identical to pre-P23), a read-only
+  past-version view at `/documents/{id}/versions/{v}`, and a version-aware BFF raw relay
+  at `/api/documents/{id}/versions/{v}/raw`. The panel's first row is the **live
+  document**, built from the `KbDocument` the page already holds — the current version is
+  never fetched as a version, matching S2's "not addressable" rule.
+- **`web/next.config.ts` needs a per-path headers entry for every framed relay.** The
+  version relay got one; without it the global `X-Frame-Options: DENY` wins and framing
+  fails **at runtime only** — lint, typecheck, test and build are all green either way.
+  Any future raw/framed BFF route must add its entry in the same slice.
+- **`created_at` on a version row is labelled "Superseded", never "Created"** across the
+  panel and the metadata strip (S1/S2's rule made visible). Copy for both surfaces lives
+  in `DOCUMENTS.versions` in `web/src/content/documents.ts`.
+- **Two upstream calls per document page view now** (document + version list), and two on
+  the past-version page (document + version — only the live document knows the current
+  version number). Unmetered `/app` reads, but it is the systemic cost the phase adds;
+  flagged for the review. The version-list read **degrades to "no history"** on any fault
+  rather than throwing, so a history fault never takes down a body that already rendered.
+- **`DataTable` (`web/src/components/ui/data-table.tsx`) carries no `"use client"`** —
+  only `ui/reveal.tsx` does in that folder. That is what lets a server component pass
+  `cell` render **functions** straight in; it is the one runtime-only failure mode this
+  composition could have had, and it is safe today. Do not add a client boundary there
+  without revisiting every server-rendered table.
+- **`Meta` is now exported from `(public)/documents/[id]/document-view.tsx`** — the shared
+  metadata-strip field. Reuse it for any further document-adjacent strip instead of
+  re-inventing one. `document-view.tsx` remains auth-free and unchanged otherwise.
+- **`pnpm format:check` is red repo-wide and pre-existing** (51 files, including ones no
+  P23 slice touched), and **no CI workflow runs any `web/` gate at all** — the real web
+  gates are the four local commands: `pnpm lint`, `pnpm typecheck`, `pnpm test`,
+  `pnpm build`. Don't read a prettier failure as slice-introduced without checking the
+  file list.
+- **Process note:** S3's first executor run was killed after writing all the code but
+  before running any validation or wrap-up. The second run audited the partial tree
+  against `plan.md`, found it complete, changed no source file, and ran the full
+  validation (all green: lint, typecheck, 76 tests / 12 files, build with both new routes
+  registered, plus `workflow.py validate`).
+
 ### Validation the slices should run
 
 - `python3 -m pytest` (repo root; `testpaths = ["tests"]`, `pythonpath = ["."]`) — S1/S2.
@@ -337,6 +385,20 @@ _One line per durable-truth change; `P23.REVIEW` consolidates these into doc ver
   optional-identity on `/app` (member or public-project anonymous, 404-never-403), the
   current version is deliberately not addressable as a version, and an unversioned
   document answers an empty history rather than a 404.
+- (S3) `frontend.md` (+ a line in `experience.md`): the web app now surfaces document
+  version history — the read page `/documents/{id}` gains a `.kb-panel` + `DataTable`
+  history panel (the live document as the chipped "Current" row, superseded rows linking
+  out; hidden entirely when there is no history, so an unversioned corpus renders exactly
+  as before), a new read-only past-version view `/documents/{id}/versions/{v}` (member →
+  `AppShell`, anonymous → `PublicShell` with misses bouncing to `/login`, params
+  validated before any session read, static metadata, markdown inline and an archived
+  HTML body framed), and a version-aware BFF raw relay
+  `/api/documents/{id}/versions/{v}/raw` that re-asserts the four pinned sandbox headers
+  and has a matching `next.config.ts` per-path headers entry; the knowledge client gains
+  `getDocumentVersions` / `getDocumentVersion` / `getDocumentVersionRaw` (optional
+  identity, unmetered) with `KbDocumentVersion` / `KbDocumentVersionsPage`,
+  `KbDocumentListItem` gains `version`, and archive times are labelled "Superseded"
+  rather than "Created" — all frontend-only, no server change and no new visual language.
 
 ## Open Questions
 

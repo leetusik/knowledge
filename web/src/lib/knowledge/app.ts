@@ -7,6 +7,8 @@ import type {
   KbDocument,
   KbDocumentsPage,
   KbDocumentsQuery,
+  KbDocumentVersion,
+  KbDocumentVersionsPage,
   KbGraph,
   KbMintedCredential,
   KbProject,
@@ -419,6 +421,83 @@ export async function getDocumentRaw(
  */
 export async function deleteDocument(token: string, id: number): Promise<void> {
   await sendJson<void>(`/app/documents/${id}`, "DELETE", undefined, { token });
+}
+
+// ── /app/documents/{id}/versions — the document's history (P23.S3) ──────────
+// Three OPTIONAL-IDENTITY reads over a document's archived versions, mirroring the
+// `getDocument` / `getDocumentRaw` signatures exactly (`token: string | undefined`,
+// trailing `signal?`). Upstream each one resolves the CURRENT document first
+// (member fast-path, then the public-project fallback), so a private/nonexistent/
+// cross-tenant id is the same indistinguishable **404** as on the document read —
+// which also means a public document's history is anonymously readable. All three
+// are UNMETERED, like every other `/app` route: browsing versions is free.
+//
+// The CURRENT version is deliberately NOT addressable here (asking for it is a plain
+// 404): it IS the document, so the UI renders "current" from the `KbDocument` it
+// already holds and calls these only for the superseded entries.
+
+/**
+ * `GET /app/documents/{id}/versions` → 200 `{rel_path, current_version, total,
+ * versions}` — the superseded bodies newest-first, WITHOUT their markdown.
+ *
+ * Unversioned-safe: a document that was never re-published answers
+ * `{current_version: 1, total: 0, versions: []}` rather than a 404, so the caller
+ * decides "history or no history" from `total` and never from an error.
+ */
+export async function getDocumentVersions(
+  token: string | undefined,
+  id: number,
+  signal?: AbortSignal,
+): Promise<KbDocumentVersionsPage> {
+  // `id` is a number, so there is nothing to URL-escape (mirrors `getDocument`).
+  return getJson<KbDocumentVersionsPage>(`/app/documents/${id}/versions`, {
+    token,
+    signal,
+  });
+}
+
+/**
+ * `GET /app/documents/{id}/versions/{version}` → 200 one archived version WITH its
+ * `markdown` body (never `raw_html` — this plane's raw bytes leave only through a
+ * `/raw` route; use the relay for an html version's rendered body).
+ *
+ * 404 for a version that never existed, one the caller may not read, AND for the
+ * CURRENT version number (not addressable as a version) — all indistinguishable by
+ * design. A non-integer id/version is a 422.
+ */
+export async function getDocumentVersion(
+  token: string | undefined,
+  id: number,
+  version: number,
+  signal?: AbortSignal,
+): Promise<KbDocumentVersion> {
+  return getJson<KbDocumentVersion>(`/app/documents/${id}/versions/${version}`, {
+    token,
+    signal,
+  });
+}
+
+/**
+ * `GET /app/documents/{id}/versions/{version}/raw` → 200 an ARCHIVED HTML version's
+ * raw bytes as the UNREAD `Response` (the `getRaw` byte-passthrough seam) — the
+ * version-aware twin of `getDocumentRaw`, for the BFF relay that feeds the past-
+ * version view's sandboxed iframe. Only `/api/documents/{id}/versions/{v}/raw`
+ * calls it.
+ *
+ * `ApiError` on a non-2xx; a missing/unreadable document, a missing version, a
+ * NON-HTML version and an empty stored body all answer the same 404, which the
+ * relay maps to a 404. The caller MUST relay or consume the body.
+ */
+export async function getDocumentVersionRaw(
+  token: string | undefined,
+  id: number,
+  version: number,
+  signal?: AbortSignal,
+): Promise<Response> {
+  return getRaw(`/app/documents/${id}/versions/${version}/raw`, {
+    token,
+    signal,
+  });
 }
 
 /**

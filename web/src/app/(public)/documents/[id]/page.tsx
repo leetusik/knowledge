@@ -11,11 +11,12 @@ import { PublicShell } from "@/components/public-shell";
 import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
-import { getDocument } from "@/lib/knowledge/app";
+import { getDocument, getDocumentVersions } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
-import type { KbDocument } from "@/lib/knowledge/types";
+import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
 import { DocumentView } from "./document-view";
+import { VersionHistory } from "./version-history";
 
 // P19 — one document in full, now on the OPTIONAL-IDENTITY public route group
 // (moved out of the `(app)` auth gate; the URL `/documents/{id}` is unchanged). A
@@ -61,6 +62,31 @@ async function loadDocument(
   }
 }
 
+/**
+ * The document's SUPERSEDED versions (P23), newest first — `[]` when it has never
+ * been re-published. Fetched with the same (optional) token as the document, right
+ * after it, so the archive is scoped exactly like the read that just succeeded.
+ *
+ * DEGRADES rather than throws, the one place on this page that does: history is an
+ * ADDITIVE panel beside the document, so a fault reading it must not take down a
+ * document body that already loaded. There is no silent-outage risk in practice —
+ * both calls hit the same upstream, so a real outage fails the document read above
+ * and surfaces there. A 404 here is not even an error: it is what an id the caller
+ * cannot read answers, and that id could not have got this far.
+ */
+async function loadVersions(
+  token: string | undefined,
+  doc: KbDocument,
+): Promise<{ currentVersion: number; versions: KbDocumentVersion[] }> {
+  try {
+    const page = await getDocumentVersions(token, doc.id);
+    return { currentVersion: page.current_version, versions: page.versions };
+  } catch {
+    // No history to show; the document itself still renders in full.
+    return { currentVersion: doc.version, versions: [] };
+  }
+}
+
 export default async function DocumentPage({
   params,
 }: {
@@ -80,6 +106,7 @@ export default async function DocumentPage({
   // ── Member branch — the unchanged authenticated experience. ────────────────
   if (ctx) {
     const doc = await loadDocument(ctx.token, id, notFound);
+    const history = await loadVersions(ctx.token, doc);
     return (
       <AppShell identity={ctx.identity}>
         <article>
@@ -109,6 +136,16 @@ export default async function DocumentPage({
             </div>
           </div>
           <DocumentView doc={doc} id={id} />
+          {/* P23 — the version-history panel, below the body and identical in both
+              branches (it carries no member-only affordance; knowledge scopes the
+              archive to the OWNING document's tenant, so a public doc's history is
+              anonymously readable). Renders nothing when there is no history. */}
+          <VersionHistory
+            id={id}
+            currentVersion={history.currentVersion}
+            currentTitle={doc.title}
+            versions={history.versions}
+          />
         </article>
       </AppShell>
     );
@@ -116,10 +153,17 @@ export default async function DocumentPage({
 
   // ── Anonymous branch — public-only read, no token. A miss bounces to /login. ─
   const doc = await loadDocument(undefined, id, () => redirect("/login"));
+  const history = await loadVersions(undefined, doc);
   return (
     <PublicShell>
       <article>
         <DocumentView doc={doc} id={id} />
+        <VersionHistory
+          id={id}
+          currentVersion={history.currentVersion}
+          currentTitle={doc.title}
+          versions={history.versions}
+        />
       </article>
     </PublicShell>
   );

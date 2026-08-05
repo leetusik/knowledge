@@ -20,8 +20,12 @@ import { MarkdownBody } from "./markdown-body";
 // iframe pointed at the same-origin `/api/documents/{id}/raw` relay (now
 // optional-identity), which re-asserts the pinned sandbox headers.
 
-/** One labeled field in the metadata strip. */
-function Meta({
+/**
+ * One labeled field in the metadata strip. EXPORTED (P23.S3) so the past-version
+ * view renders its own strip in the same vocabulary instead of re-inventing one —
+ * it is presentation only, with no document coupling.
+ */
+export function Meta({
   label,
   children,
   mono,
