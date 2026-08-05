@@ -698,3 +698,9 @@
 {"ts": "2026-08-05T16:00:47+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only", "source": "P22.REVIEW"}
 {"ts": "2026-08-05T16:03:02+09:00", "type": "slice_status_changed", "slice": "P22.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-05T16:03:02+09:00", "type": "phase_reviewed", "phase": "P22", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-08-05T16:06:25+09:00", "type": "slice_status_changed", "slice": "P23.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-05T16:11:57+09:00", "type": "slice_created", "phase": "P23", "slice": "P23.S1"}
+{"ts": "2026-08-05T16:11:57+09:00", "type": "slice_created", "phase": "P23", "slice": "P23.S2"}
+{"ts": "2026-08-05T16:12:01+09:00", "type": "slice_created", "phase": "P23", "slice": "P23.S3"}
+{"ts": "2026-08-05T16:12:01+09:00", "type": "slice_created", "phase": "P23", "slice": "P23.S4"}
+{"ts": "2026-08-05T16:14:49+09:00", "type": "slice_status_changed", "slice": "P23.DECOMP", "old_status": "in_progress", "new_status": "done"}
