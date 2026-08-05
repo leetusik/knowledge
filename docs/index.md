@@ -26,7 +26,6 @@ hide:
 <!-- explain:recent -->
 - 2026-07-07 · [Measure First, Then Cache — The P39 Performance Phase Explained for Beginners](changple5/2026-07-07-measure-first-then-cache-the-p39-performance-phase-explained-for-beginners.md) — changple5
 - 2026-07-07 · [The Daily Ingestion Job That Kept Getting Stuck — Explained for Beginners](changple5/2026-07-07-the-daily-ingestion-job-that-kept-getting-stuck-explained-for-beginners.md) — changple5
-- 2026-07-07 · [The P35 Agent Refactor — Explained for Beginners](changple5/2026-07-07-the-p35-agent-refactor-explained-for-beginners.md) — changple5
 - 2026-07-02 · [The Shared nginx Problem — Explained for Beginners](hi2vi_web/2026-07-02-shared-nginx-explained.md) — hi2vi_web
 
 <div class="kb-sec"><h2>Browse · 둘러보기</h2></div>
