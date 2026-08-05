@@ -75,11 +75,16 @@ import uuid
 import httpx
 
 # Keys the frozen POST /api/documents 201 guarantees (see docs/current/api.md
-# §"Frozen consumer contract (P8)"). commit_error/push_error are optional.
+# §"Frozen consumer contract (P8)"). commit_error is optional. `push_pending`
+# (P24) is the additive field for the after-response publish: it is emitted
+# unconditionally, so its PRESENCE is asserted here (its value is `true` on the
+# box, `false` wherever KB_GIT_PUSH is off) — that is what proves the P24
+# contract change actually reached the deployment. `push_error` no longer exists
+# in any response; a failed background push is logged, not returned.
 FROZEN_201_KEYS = {
     "id", "rel_path", "url", "title", "project", "slug", "date", "tags",
     "related", "recent_updated", "landing_created", "committed", "commit_sha",
-    "pushed",
+    "pushed", "push_pending",
 }
 
 

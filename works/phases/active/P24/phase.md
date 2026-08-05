@@ -388,3 +388,42 @@ Durable facts established or confirmed at the review:
   (`test_documents_list_detail_and_project_bridge`) is resolved — the Postgres-gated
   suite is now **115 passed / 0 failed**; and `publish.drain()` is the repo's
   deterministic way to assert an after-response side effect without sleeps.
+
+### Landed in P24.F1 — the operator surfaces (closes the review's three findings)
+
+- **`server/publish.py` logs failures ONLY.** `_log` is called from exactly one place,
+  `_loop`'s `except` branch (`publish.py:66`) — there is **no success line**. So
+  "grep the log for `publish:`" is a *negative* check (expect no output; `grep` exits
+  1 on the healthy box), and the positive assertion has to come from git state:
+  `git -C /opt/knowledge rev-list --count origin/main..HEAD` == 0. Both are now in
+  `deploy/README.md` §2, together with a pre-write credential probe
+  (`docker compose … exec api git -C /repo ls-remote origin main`) that fails fast on a
+  bad deploy key — read-only, so it proves authentication, **not** write access.
+  Also recorded there: `origin/main` on the box is a remote-tracking ref updated by the
+  *container's* push, and the host must not `git fetch` to refresh it (the SSH origin is
+  the container's credential; the host user has no deploy key).
+- Grep sweep for other now-impossible statements: `push_error` / `pushed` survive
+  outside that paragraph only in `deploy/deploy.sh`'s "unpushed doc commit" comments,
+  which are about stranded *local* commits and remain correct.
+- `KB_GIT_TIMEOUT_S` is now documented in both operator-facing places — a
+  **commented-out** `# KB_GIT_TIMEOUT_S: "60"` in `compose.prod.yml` (deliberately not
+  set: 60 s is the code default, so the resolved config is unchanged — verified with
+  `docker compose config`) and a paragraph in `deploy/README.md` §1.
+- `scripts/onboarding_smoke.py::FROZEN_201_KEYS` now requires `push_pending`
+  (presence, never the value — it is `true` on the box, `false` wherever `KB_GIT_PUSH`
+  is off). Confirmed unconditional emission at `server/main.py:865-920` / `:1001-1021`.
+  No test imports this script, and neither `deploy/` nor `scripts/` is in
+  `shipped_dirs`, so `plugin_parity.py` cannot move (re-checked: PASS).
+
+### Doc impact (running list, continued — added by P24.F1)
+
+- `operations.md` — P24.F1: the replacement bring-up push assertion now exists
+  concretely in `deploy/README.md` §2 and the consolidation should carry it verbatim
+  rather than re-invent it: (1) `exec api git -C /repo ls-remote origin main` as a
+  pre-write credential probe, (2) `logs --since 30m api | grep 'publish:'` expecting
+  **no output** (failures are the only thing logged — there is no success line), (3)
+  `git rev-list --count origin/main..HEAD` == 0 as the positive "everything committed is
+  published" assertion; plus `KB_GIT_TIMEOUT_S` (default 60 s, unset in
+  `compose.prod.yml` on purpose) and the fact that `scripts/onboarding_smoke.py`'s
+  frozen-201-key list now asserts `push_pending`, so the committed post-deploy verifier
+  proves the additive contract change reached prod.
