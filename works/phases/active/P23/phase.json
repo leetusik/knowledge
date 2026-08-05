@@ -2,16 +2,16 @@
   "id": "P23",
   "name": "Document version control",
   "objective": "Add version control to knowledge documents: agents can fetch previous versions and publish v2/v3 of an existing document instead of a new post; server schema/API, web display of version history, and the /explain skill updated across canonical copy, mirrors, and installed copy — all in this repo.",
-  "status": "planned",
+  "status": "done",
   "order": 3,
   "created_at": "2026-08-05T14:25:01+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-08-05T23:04:38+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-08-05T23:04:38+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "Full validation green (113/113 with live Postgres, both parity gates, all web gates, 31-assertion e2e versioning smoke); docs consolidated into 8 versions"
   },
   "paths": {
     "phase_md": "phase.md",

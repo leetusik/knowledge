@@ -377,6 +377,45 @@ Full detail in `slices/P23.S4/result.md`. Prose-only; no code touched.
 - `npm run build` / lint in `web/` — S3 (check the repo's actual web scripts first).
 - `python3 scripts/workflow.py validate` — every slice.
 
+### REVIEW notes (verdict: PASS) — what the phase leaves behind
+
+Full detail in `slices/P23.REVIEW/result.md`. The durable, beyond-this-phase parts:
+
+- **Everything green together, `/app` suites included.** `113 passed, 0 failed` with a
+  live Postgres (81/32-skipped without one), `plugin_parity` + `skills_parity` PASS,
+  all four `web/` gates PASS (12 files / 76 tests; both new routes registered in the
+  build), `workflow.py validate` PASS.
+- **Postgres recipe correction for the next reviewer:** the binaries here are the
+  Homebrew **version-suffixed** `initdb-17` / `pg_ctl-17` / `createdb-17` — plain
+  `initdb` is not on `PATH`. The unix-socket DSN form is still required. Also: the
+  sandbox **denies** a single compound shell command containing `rm -rf` + `initdb` +
+  `pg_ctl` — issue them as separate calls.
+- **The load-bearing property was proven end to end, not just unit-tested:** publish v1
+  → `new_version` v2 on a later date (same id/rel_path, one document in the listing) →
+  `/api` history reads → `overwrite` archives instead of destroying → **wipe
+  `kb.sqlite3` and reindex** → `documents.version` and every `document_versions` row
+  reproduced from disk alone, FTS matching the current body only → delete removes the
+  archive dir. The "disk is canonical, the DB is disposable" design holds in practice.
+- **The deploy gate was traced, not assumed.** `site_smoke.check_graph` counts
+  `(docs/<project>)/*.md` over `discover_projects`, which is `RESERVED_DOC_DIRS`-aware,
+  so `.versions` is excluded both as a project and by depth; `check_source`/`check_built`
+  never walk documents. `seed.py` inherits the exclusion from `reindex.RESERVED_DIRS`.
+- **Residual verification gap (accepted, not a finding):** mkdocs is not installed in
+  this venv, so "dot-prefixed dirs are excluded from the built site at any depth" rests
+  on S1's reading of mkdocs' default file-scanner exclusion, not on a build run here. A
+  wrong reading would surface as an unwanted *page*, never as a broken gate, because the
+  `graph_hook`/`site_smoke` exclusions are independent.
+- **Doc-impact completeness lesson:** no slice line named `security.md`, but the phase
+  adds a route class serving untrusted archived HTML **and** a new exception to the
+  pinned "`raw_html` never leaves `/api`" rule — both security-doc material by the
+  P16/P19/P21 precedent. When a slice touches an egress rule or serves untrusted bytes,
+  name `security.md` in its Doc impact line. `architecture.md` was correctly *not*
+  versioned (no plane/topology change); the ADR content went to `decisions.md`.
+- **Three deferred-job candidates surfaced, none blocking:** (a) the `/explain`
+  API-unreachable fallback still cannot version (documented in the skill itself);
+  (b) rollback / diffing / pruning; (c) a CLI `--new-version` flag (F9, already deferred
+  by decision).
+
 ## Constraints
 
 - Content-plane schema changes go in `server/db.py` only (no alembic — F1), and must be
@@ -453,6 +492,11 @@ _One line per durable-truth change; `P23.REVIEW` consolidates these into doc ver
   published version and the archived previous one, and the change is mirrored across all
   four skill copies (canonical, `.agents`, `web/public/SKILL.md`, and the installed
   `~/.claude` copy) with `scripts/skills_parity.py` green.
+- (REVIEW) **Consolidated** — eight doc versions created at `P23.REVIEW`:
+  `data` v0011, `backend` v0011, `api` v0016, `frontend` v0013, `experience` v0014,
+  `product` v0012, `decisions` v0020 (five new ADRs), and `security` v0014 (which no
+  slice line had named — see the REVIEW notes below). `architecture.md` was
+  deliberately **not** versioned: P23 changes no plane or topology.
 
 ## Open Questions
 

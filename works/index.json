@@ -28,13 +28,13 @@
       "id": "P23",
       "name": "Document version control",
       "objective": "Add version control to knowledge documents: agents can fetch previous versions and publish v2/v3 of an existing document instead of a new post; server schema/API, web display of version history, and the /explain skill updated across canonical copy, mirrors, and installed copy — all in this repo.",
-      "status": "planned",
+      "status": "done",
       "order": 3,
       "path": "works/phases/active/P23",
-      "review_status": "pending",
-      "current_slice": "P23.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 6,
-      "done_slice_count": 5
+      "done_slice_count": 6
     },
     {
       "id": "P24",
@@ -52,5 +52,5 @@
   "deferred_open_count": 15,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-05T22:46:04+09:00"
+  "last_rebuilt_at": "2026-08-05T23:04:38+09:00"
 }

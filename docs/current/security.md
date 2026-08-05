@@ -1,10 +1,10 @@
 ---
 doc_id: security
-version: v0013
-created_at: 2026-08-05T15:22:44+09:00
-source: P21.REVIEW
-summary: P21 member-only web delete boundary: session-only DELETE with no public fallback, 404-never-403, reading a public doc never implies deleting it
-previous: v0012_p19_first_anonymous_read_surface_optional-identity_404-never-403_visibility_bridge_fail-closed_tokenless_bff_relay
+version: v0014
+created_at: 2026-08-05T23:01:51+09:00
+source: P23.REVIEW
+summary: P23 version-history read surface inherits the doc read boundary; archived HTML repeats the sandbox headers; one bounded raw_html-on-api exception; deleting a doc deletes its history
+previous: v0013_p21_member-only_web_delete_boundary_session-only_delete_with_no_public_fallback_404-never-403_reading_a_public_doc_never_implies_deleting_it
 ---
 
 # Security
@@ -274,6 +274,18 @@ P21 gives the `/app` plane its first **destructive** capability — a session-gu
 - **New destructive authority, unchanged blast radius.** The delete reuses the machine plane's existing `_delete_document`, so it can destroy exactly what a `vk_` key already could: it is a **hard, irreversible** delete (file, DB row, FTS entry, embeddings) with **no trash and no undo**, non-transactional (the file goes first), and for a tenant-#1 member it also updates the public Recent index and produces a real git commit. Deleting a public document breaks its shared URL and its graph edges — both derived and self-healing, and the confirm copy promises no recoverability.
 - **Unmetered on purpose, and that is a boundary choice too.** The route sets no `request.state.usage`. The rejected alternative — calling the metered `DELETE /api/documents/{id}` with the user's session bearer (`resolve_api_write` accepts one) — would have routed the web app through the machine plane's auth resolver, blurring the two planes' trust boundaries, in addition to billing a UI click. Reusing the *logic* rather than the *route* keeps the planes separate.
 - **Recorded, accepted gap.** A member reading **another org's public** document sees the delete control and gets the 404 copy on submit: there is no client-side tenant signal to hide the button by, and 404-never-403 means the server must not tell them why. This is a cosmetic gap, not an authorization one — the delete is refused server-side.
+
+## Version history: a wider read surface on the same boundary (P23)
+
+P23 makes superseded document bodies readable through five new routes. The threat-model shift is **narrow by construction** — every route reuses an existing boundary rather than adding one — but three things are worth pinning.
+
+- **The archive inherits the document's read boundary exactly.** Each `/app` version route resolves the **document** first through `_resolve_readable_doc` (member fast-path → public-project fallback), and only then reads the archive by that document's `rel_path`. So a version is readable precisely when its current document is: private stays private, and a missing document, a private one, a missing version and the *current* version number are all the same indistinguishable **404** — never a 403, and never an id oracle. The `/api` routes gate the same way on the tenant-filtered current document.
+- **The archive is scoped to the OWNING document's tenant, not the caller's.** An anonymous reader of a public document has no tenant of their own, so the version lookup carries the document row's `tenant_id`. That is what lets a public document's history be read anonymously **without any cross-tenant read ever becoming expressible** — the scope is derived from the row that already passed the read gate, not from user input.
+- **An archived HTML explainer is exactly as untrusted as a live one.** `GET /app/documents/{id}/versions/{v}/raw` repeats the P16 sandbox headers **verbatim** (`Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`), and the web BFF relay re-asserts them explicitly rather than copying them from upstream — plus a `next.config.ts` per-path entry, without which the global `X-Frame-Options: DENY` would win. The opaque-origin containment of *HTML explainer XSS containment (P16)* applies unchanged; nothing was softened for history.
+- **One bounded exception to a pinned egress rule.** `GET /api/documents/by-path/{rel}/versions/{version}` returns `raw_html` for an html version — the single place raw HTML leaves the `/api` plane, because `.versions/` is served by nothing and a superseded explainer would otherwise be unreadable by an agent. The caller there already holds a tenant-scoped credential, and the `/app` plane keeps the rule intact (its version JSON never carries `raw_html`). Any future widening should be its own decision, not an extension of this one.
+- **Reads only, and unmetered.** None of the five routes writes anything or sets `request.state.usage`; no new usage event type exists. Browsing history moves no counter and is free like the rest of the web UI.
+- **Deleting a document deletes its history — deliberately.** `_delete_document` removes the whole `.versions/<project>/<date>-<slug>/` dir and its rows, staged in the same scoped commit, so a "deleted" document leaves **no readable body behind on disk or in the public git tree** and reindex cannot resurrect it. This is a data-retention property, not an optimization: do not "soften" the delete to keep history.
+- **Publish safety is unchanged.** Archived bodies live under a dot-prefixed reserved dir that mkdocs never builds and the graph never walks, so nothing new reaches the published site. For tenant #1 the archive *is* committed to the public repo — which is correct, since that corpus is already public — while non-#1 tenants' archives stay on-box and gitignored exactly like their documents.
 
 ## Security Checklist
 

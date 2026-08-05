@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0012
-created_at: 2026-08-05T15:58:10+09:00
-source: P22.REVIEW
-summary: P22 GraphCanvas labels go selection-driven: the ported quiet-label ladder and neighborhood reveal are gone
-previous: v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import
+version: v0013
+created_at: 2026-08-05T22:58:13+09:00
+source: P23.REVIEW
+summary: P23 document version history panel, read-only past-version view, version-aware BFF raw relay with its own next.config headers entry
+previous: v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone
 ---
 
 # Frontend
@@ -62,6 +62,8 @@ renamed). See *The Org API keys panel + Workspace→Org copy (`web/`, P18)* belo
 **As of P19 the `web/` app grows a public/private boundary: a `(public)` route group outside the `(app)` auth gate.** A public project's doc renders at the **unchanged** `/documents/{id}` (moved into `(public)`, now an **optional-identity** page — a member gets the app shell, an anonymous visitor a lighter `PublicShell`), and its graph at a new **`/graph/{org}`** page; both compose 1:1 from the existing document-view render and `<GraphCanvas>` (no new visual design, no Claude Design round). A new `optionalIdentity()` guard + a **tokenless** raw-HTML relay let an anonymous visitor read a public doc without ever fetching-with-token; a project-detail **visibility toggle + badge**, a dashboard badge column, and a shared **copy-link** island round out the surface; `robots.ts` now allows `/documents` + `/graph`. See *The public route group + visibility surfaces (`web/`, P19)* below.
 
 **As of P20 the `web/` landing gains an honest hero and two new below-the-hero sections.** The hero terminal copy (`content/marketing/terminals.ts`) is corrected to the working curl one-liner + real `init`/`save` output — a content change inside the already-designed hero (no design round; round 01 untouched). Two new sections came through **design round 02**: an **agent env-var quickstart** (a dark band continuing Connect as one hairline-divided "built for agents" territory, `#agents`) and the **published explain skill** (a sunken band, `#skill`) — a served `/SKILL.md` under the parity gate with Download + Copy + an expandable reader — plus a copy-control client island and the D10 mid-feature ledes. See *The onboarding landing: honest hero + agent quickstart + published skill (`web/`, P20)* below.
+
+**As of P23 the `web/` document surfaces show a document's version history.** `/documents/{id}` gains a `.kb-panel` + `DataTable` **history panel** below the body — the live document as the chipped "Current" row, superseded rows linking out — that renders **only when there is history**, so an unversioned corpus draws byte-identically to pre-P23. A new read-only **past-version view** at `/documents/{id}/versions/{v}` repeats the read page's optional-identity structure, and a **version-aware BFF raw relay** at `/api/documents/{id}/versions/{v}/raw` frames an archived HTML explainer under the same four pinned sandbox headers. Frontend only — no server change, no new component vocabulary, no Claude Design round. See *Document version history + past-version view (`web/`, P23)* below.
 
 ## Stack
 
@@ -744,3 +746,18 @@ interaction affordance, no Claude Design round.
 - **Validation.** `pnpm typecheck`, `pnpm lint`, `pnpm vitest run` (10 files / 69) green; the
   label rule itself is covered by static reading, not a test (canvas rAF behavior). An operator
   browser eyeball is owed — see **qa**.
+
+## Document version history + past-version view (`web/`, P23)
+
+P23 surfaces the server's document version history. **No server change was needed** — the `/app` version routes plus `documents.version` on the read shape were exactly the contract this composed against — and no new visual language was introduced: the panel is the projects-credentials `.kb-panel` + headless `<DataTable>` vocabulary, and the past-version body reuses `MarkdownBody` / `ExplainerFrame`.
+
+- **Types + wrappers (`lib/knowledge/`).** `KbDocumentVersion` / `KbDocumentVersionsPage` mirror `server/documents_api.py::_app_version` verbatim (`_VERSION_DROP = {id, tenant_id, raw_html}`; `markdown` dropped on index rows, kept on a single fetch). `KbDocumentListItem` gained **`version: number`** — the `/app` projections drop only `{tags_text, tenant_id, raw_html}`, so `documents.version` had been on the wire since the server slice and only the TS type lagged. **Verify these shapes against the Python projector, never against prose.** `app.ts` gains `getDocumentVersions` / `getDocumentVersion` / `getDocumentVersionRaw`, signatures copied from `getDocument` / `getDocumentRaw` so the optional-identity shape stays uniform (`token: string | undefined`, trailing `signal?`).
+- **The history panel (`(public)/documents/[id]/version-history.tsx`).** A **server component**, pure presentation, no auth — the identical panel serves the member and anonymous branches, because the archive is scoped to the **owning** document's tenant. Its first row is the **live document**, built from the `KbDocument` the page already holds (chipped `Current`, linking nowhere) — the current version is never fetched as a version, matching the server's "not addressable" rule. It renders `null` when there is no history.
+- **Two upstream calls per document page view now** (document + version list), and two on the past-version page. Both are unmetered `/app` reads, but it is the systemic cost this adds. The version-list read **degrades to "no history" on any fault** rather than throwing — a history fault must never take down a body that already rendered — and there is no silent-outage risk, because both calls hit the same upstream so a real outage fails the document read first.
+- **The past-version view (`(public)/documents/[id]/versions/[v]/page.tsx`).** Repeats the read page's structure: both params coerced and `Number.isSafeInteger`-checked **before any session read** (a malformed segment is the branded 404 for everyone and leaks nothing), `optionalIdentity()`, member → `AppShell` with a back-link, anonymous → `PublicShell` with every miss `redirect("/login")`, and the miss-mapping helper outside the render so `notFound()`/`redirect()` throws are never swallowed. **Static `metadata`**, not `generateMetadata` (the client is `no-store`, so it would buy a second uncached fetch). Read-only: no delete, no copy-link, no rollback.
+- **The BFF raw relay twin (`api/documents/[id]/versions/[v]/raw/route.ts`).** A deliberate structural **copy** of `[id]/raw/route.ts` rather than a shared helper — this is the security-critical seam, and the headers must stay readable in full at each call site. Params validated before the session read, optional identity (tokenless for an anonymous visitor), upstream 404 → 404 / any other fault → 502, buffer + `injectHeightReporter`, and the four pinned `RAW_HTML_HEADERS` re-asserted explicitly rather than copied from upstream.
+- **`next.config.ts` needs a per-path headers entry for every framed relay.** The version relay has one; **without it the global `X-Frame-Options: DENY` wins and framing fails at runtime only** — lint, typecheck, test and build are all green either way. Any future raw/framed BFF route must add its entry in the same slice.
+- **`Meta` is now exported from `(public)/documents/[id]/document-view.tsx`** — the shared metadata-strip field; reuse it for any further document-adjacent strip. `document-view.tsx` is otherwise unchanged and stays auth-free.
+- **`DataTable` (`components/ui/data-table.tsx`) carries no `"use client"`** (only `ui/reveal.tsx` does in that folder), which is what lets a server component pass `cell` render **functions** straight in — the one runtime-only failure mode this composition could have had. Do not add a client boundary there without revisiting every server-rendered table.
+- **Copy as data.** A `DOCUMENTS.versions` group in `content/documents.ts` (panel + past-version copy, functions for the interpolated strings), re-exported through the `@/content` barrel; no inline strings. An archive time is labelled **"Superseded"**, never "Created", on both the panel and the metadata strip.
+- **Validation.** `pnpm lint`, `pnpm typecheck`, `pnpm test` (12 files / **76**), `pnpm build` green with both new routes registered as dynamic. Note two standing environment facts: `pnpm format:check` is **red repo-wide and pre-existing** (51 files, including untouched ones), and **no CI workflow runs any `web/` gate at all** — the real gates are those four local commands.

@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0015
-created_at: 2026-08-05T15:21:18+09:00
-source: P21.REVIEW
-summary: P21 unmetered member DELETE /app/documents/{doc_id}: session-only, no public fallback, 404-never-403, reuses _delete_document logic not the metered /api route
-previous: v0014_p19_visibility_field_patch_toggle_optional-identity_public_doc_raw_reads_org-scoped_public_graph_mode-aware_201_url
+version: v0016
+created_at: 2026-08-05T22:56:34+09:00
+source: P23.REVIEW
+summary: P23 versioned publishing: POST /api/documents gains new_version + rel_path and three additive 201 keys, five unmetered version-history read routes on /api and /app
+previous: v0015_p21_unmetered_member_delete_app_documents_doc_id_session-only_no_public_fallback_404-never-403_reuses__delete_document_logic_not_the_metered_api_route
 ---
 
 # API
@@ -37,6 +37,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P19 the control plane gains per-project visibility and the product's first anonymous read surface — additive to the frozen contract.** Every `/app/projects` response (list, get, the signup `project`) and `/app/dashboard` rollup row gains an additive **`visibility`** field (`"private"` | `"public"`, default private); a new **`PATCH /app/projects/{project_id}`** session-only toggle flips it (404 cross-tenant/missing, 422 invalid). The read routes **`GET /app/documents/{id}` + `.../raw`** become **optional-identity** — a resolved member reads their own tenant's doc exactly as before, an anonymous or cross-org caller reads it **only** when its project is public — and **`GET /app/graph`** gains an **`org={tenant_uuid}`** selector that returns an **org-scoped public graph** (public projects only). Everything private/nonexistent is an indistinguishable **404** on this surface (404-never-403, no 403 anywhere). Separately, the `POST /api/documents` 201 **`url` is now mode-aware** (tenant → the direct doc page, legacy → the mkdocs shape) — a value change to an existing always-present key, so the frozen contract holds additively. See *Public projects + anonymous read surface (P19)* below.
 
 **As of P21 the `/app` plane gains its first *mutating* document route — an unmetered, session-only `DELETE /app/documents/{doc_id}`.** The web app can now hard-delete a document, and it does so **without** the metering the `/api` plane's deletes carry: the new route reuses `server/main.py::_delete_document`'s **logic**, not the metered `/api` route, so a UI click never bills an `EVENT_DOCUMENT_DELETED` and the "every web-UI feature is free" invariant holds even for a write. Unlike the P19 GETs on the same path prefix there is **no public/optional-identity fallback**: the route is `require_user` with a tenant-scoped lookup, so an anonymous caller gets **401** and a missing *or* cross-tenant id is an indistinguishable **404** (404-never-403 — reading a public document never implies deleting it). The frozen `/api/*` contract is untouched, and `server/main.py` was not modified. See *Member document delete (P21)* below.
+
+**As of P23 a document can be re-published as its next version, and its history is readable on both planes — all additive.** `POST /api/documents` gains two optional inputs, `new_version` (bool, default `false`) and `rel_path` (string), and its 201 body gains three always-present keys — `version`, `previous_version`, `archived_path`. A versioned write **keeps the target's `rel_path`** (so `id`, `url`, graph edges and `related` links never move) and archives the body it replaces; `overwrite: true` keeps its status and every existing key but **now archives instead of destroying**. Five new **unmetered** read routes expose the history: `GET /api/documents/by-path/{rel_path}/versions` + `.../versions/{version}` on the agent plane, and `GET /app/documents/{id}/versions`, `.../versions/{version}`, `.../versions/{version}/raw` on the web plane (optional-identity, 404-never-403). Every document read projection already carried the new `documents.version` field. **No existing field's type, status, or route changed** (the 201 gained keys, additively — the P16 `format` precedent); an **unversioned document answers an empty history rather than a 404**, and a corpus that is never re-published behaves exactly as pre-P23. See *Versioned publishing + version history (P23)* below.
 
 ## Auth
 
@@ -80,7 +82,8 @@ fallback fires **only** when config resolves a **local** `kb_root` — a remote
 ### GET /api/documents/{id} and GET /api/documents/by-path/{rel_path:path}
 
 - Output: the single document including `markdown`, `source_repo` (publish-safe basename — see write path), and `related` (still no `tags_text`); 404 when missing.
-- The `by-path` route is declared before the `{id:int}` route so a path never binds to the id route.
+- The `by-path` route is declared before the `{id:int}` route so a path never binds to the id route. **(P23)** the two `by-path/.../versions…` routes are declared before *both*, since `{rel_path:path}` is greedy.
+- **(P23) every document read on both planes carries `version`** (the projectors drop only `tags_text`/`raw_html`/`tenant_id`), so a client can show "v3" without a second call. `markdown` on an html doc is still the extracted plain text; `raw_html` still never appears here.
 
 ### GET /api/tags
 
@@ -114,7 +117,7 @@ fallback fires **only** when config resolves a **local** `kb_root` — a remote
 - The `POST /api/documents` write path in reverse (added P4), bearer-guarded, run entirely under `WRITE_LOCK`: remove the `docs/` file (`missing_ok` — a DB row without a file is drift, cleaned without erroring), drop the doc's Recent bullet from `docs/index.md`, delete the DB row (the FTS `AFTER DELETE` trigger and the `document_embeddings` FK `ON DELETE CASCADE` clean up automatically), then a scoped git commit.
 - Resolves the target row first → **404** when absent. The `by-path` route is declared before the `{doc_id}` route (same collision-avoidance as the GET pair).
 - Query: `commit` (default `true`), optional `co_authored_by`. Commit semantics mirror POST exactly — a failed commit surfaces `committed:false` + `commit_error`, never a rollback.
-- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, committed, commit_sha, pushed, commit_error?, push_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone.
+- Output: `{deleted, id, rel_path, title, project, slug, recent_removed, versions_removed, committed, commit_sha, pushed, commit_error?, push_error?}`. `recent_removed` is `false` (idempotent) when the index or bullet was already gone. **(P23)** `versions_removed` reports whether the document had an on-disk version archive to delete — **deleting a document deletes its whole history**, staged in the same scoped commit; the `/app` delete still answers 204 with an empty body.
 - **DELETE pushes too (P8)**, under the same `KB_GIT_PUSH` flag and the same best-effort semantics as POST — parity for the reverse path, so a deletion on the hosted box removes the doc from the live self-hosted site (fresh-on-write) and, via the push, from the off-box backup.
 
 ### POST /api/documents
@@ -122,12 +125,14 @@ fallback fires **only** when config resolves a **local** `kb_root` — a remote
 The API-owned write path — one call creates the convention file, the Recent bullet, the DB row, and the scoped git commit.
 
 - Required: `title`; `markdown` (body **without** frontmatter, starting at the H1); `project` (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`/`/`); `tags` (2–5, each `^[a-z0-9]+(-[a-z0-9]+)*$`); `source_repo`.
-- Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`.
+- Optional: `date` (default today, KST), `slug` (default `slugify(title)`), `related` (added P4 — list of rel_paths, default `[]`; shape-validated only, dead links tolerated, a self-reference is dropped silently), `overwrite` (default false), `commit` (default true), `co_authored_by`, **`new_version`** (added P23, default false) and **`rel_path`** (added P23, default null — the version target).
 - **`source_repo` is sanitized at write time** (added P4): a local filesystem path collapses to its basename (`/home/<user>/projects/changple5` → `changple5`), a URL passes through unchanged. The stored file, DB row, and API output are always publish-safe, without any skill change.
-- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`). **`url` is mode-aware (P19):** tenant mode → `<KB_PUBLIC_BASE_URL>/documents/<id>` (the direct doc page, shareable when public); legacy/single-tenant mode → `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/` (the mkdocs shape). The key/type are unchanged.
+- Success: **201** `{id, rel_path, url, title, project, slug, date, tags, related, format, version, previous_version, archived_path, recent_updated, landing_created, committed, commit_sha, pushed}` (+ optional `commit_error`/`push_error`) — `format` added P16, the three version keys added P23 (`previous_version`/`archived_path` are `null` on a plain create). **`url` is mode-aware (P19):** tenant mode → `<KB_PUBLIC_BASE_URL>/documents/<id>` (the direct doc page, shareable when public); legacy/single-tenant mode → `<KB_PUBLIC_BASE_URL>/<project>/<date>-<slug>/` (the mkdocs shape). The key/type are unchanged.
 - **Auto-landing side effect (P7 / F1):** inside `WRITE_LOCK`, right after writing the doc file, the write path calls `ensure_project_landing(docs_root, project)` — if `docs/<project>/index.md` is **absent** (the first doc of a new project), it writes a minimal landing (H1 = project name + one line, **no frontmatter** so it stays a non-doc) and the response carries `landing_created:true`; the scoped commit then stages a **third** path (`docs/<project>/index.md`) alongside the doc + `docs/index.md`. An existing landing (hand-written or previously auto-created) is **never overwritten** → `landing_created:false`, two-path commit as before. This keeps every project satisfying the per-project `site/<project>/index.html` deploy-gate invariant (mkdocs `navigation.indexes` does not synthesize one). The `/knowledge:explain` skill's file-fallback branch performs the same ensure-landing when the API is unreachable.
 - `KB_PUBLIC_BASE_URL` note (P7): its default `http://localhost:8765` is correct for a default-port local viewer, so the scaffold's `compose.yml` deliberately leaves it unset (see security/decisions). A scaffold on **advanced custom ports** would then report a default-port `url` in the 201 body — a cosmetic mismatch in one informational field only (the write, site build, and viewer are all correct); set `KB_PUBLIC_BASE_URL` to the chosen viewer origin if custom ports are used.
-- **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`.
+- **Versioned re-publish (P23).** `new_version: true` republishes an **existing** document as its next version: the target is the explicit `rel_path` when given, else the **newest** document matching `(project, slug)` for the tenant (`date DESC, id DESC`). The current body is archived, the new body is written at the **same `rel_path`** — so `id`, `url`, `rel_path`, graph edges and inbound `related` links all stay put, and the target's original `date`/`slug` win over the request's (the response echoes the target's). **No target found ⇒ an ordinary v1 create**, never a 404, so an agent needs no lookup dance. A resolved target with a different `format` or `project` is a **422** (publish it as a new document instead) — identity is immutable across a version chain. Response: `version` = what was published, `previous_version` + `archived_path` = the body it superseded.
+- **`overwrite: true` now archives the body it replaces (P23)** and bumps the version too (it archives v`N` and publishes v`N+1`, sharing one chain with `new_version`). Status and every pre-P23 response key are unchanged; the legacy destructive path simply stops losing data. Use `overwrite` to *replace*, `new_version` to *supersede*.
+- **409** when `rel_path` already exists on disk **or** in the DB and `overwrite` is false — the body names the existing doc: `{message, rel_path, id, existing_title}`. **(P23)** the detail additionally carries `version` + a `hint` naming the versioned retry **when an existing DB row backs the conflict** (a disk-only conflict is not versionable and gets no hint); the four pre-P23 keys are untouched, so the CLI's 409 explainer is unaffected. A `new_version` write that **resolved** a target never reaches this branch; one whose resolution missed still can.
 - **422** on any convention validation error (project/tags/slug/date/frontmatter/`related` shape).
 - Commit semantics: a **failed commit never rolls back** the file/DB → still **201** with `committed:false` + `commit_error`. A deliberate skip (`commit:false` in the request, or `KB_GIT_COMMIT=false`) → `committed:false`, **no** `commit_error`. `commit_sha` is `null` in both non-committed cases.
 - **Publish-on-write (P8), `KB_GIT_PUSH` — default false.** When enabled (the hosted box only), the write path pushes the scoped commit to `origin/main` **inside the same write lock, in-request**: `git fetch origin main` → rebase onto `origin/main` → non-force `git push origin HEAD:main`. **Never `--force`, never `git add -A`** — the box only ever lands its own new-file + Recent-bullet commit on top of the latest remote, so it can never clobber or revert operator work. A rebase conflict aborts cleanly, keeping the local commit.
@@ -248,6 +253,50 @@ P21 adds the first mutating route on the `/app` plane. It is additive — no exi
 - **Identical delete semantics to the `/api` plane**, because it is the same helper: file unlink from the caller's content root, the public Recent-index bullet, the DB row (FTS row via the AFTER DELETE trigger, embeddings via `ON DELETE CASCADE`), then the scoped git commit/push for the public root. It inherits the same **non-transactional ordering** — the file goes first, and a failed commit never restores it — and the same **hard, no-undo, not-idempotent** behavior: a repeat delete of the same id answers 404, not 204.
 - **Session → API context bridge.** `/app` handlers hold an `AuthContext(user, tenant)`; the helper wants an `ApiAuthContext`. The bridge carries the caller's tenant **as a `UUID`** (not a string), `project_id`/`credential_id` `None` (a session has neither), and `is_public` by `resolve_api_write`'s own rule — tenant #1 is the public `docs/` root, every other tenant its namespaced `tenants/<uuid>/` one. That flag decides which root the file is unlinked from and whether the Recent index and git commit run, so it is resolved (an `await`) before the worker thread starts. See **backend** for the threading/import mechanics.
 
+## Versioned publishing + version history (P23)
+
+P23 makes re-publishing additive and exposes a document's superseded bodies on both planes. Everything is additive (verified at the P23 review): two optional request fields, three new always-present 201 keys, five new routes, and two new keys inside the existing 409 detail. No existing field's name, type or status changed and no route moved.
+
+**Write — `POST /api/documents`** (see *POST /api/documents* above for the full field list): `new_version: bool = false` + `rel_path: string | null` in, `version` / `previous_version` / `archived_path` out; `overwrite: true` archives instead of destroying; the 409 detail gains `version` + `hint` when a DB row backs the conflict; a resolved target with a mismatched `format` or `project` is a 422.
+
+**Read — the shared envelope.** Both planes answer the same shape, with the same field names:
+
+```json
+{
+  "rel_path": "hi2vi/2026-07-14-growth-loops.md",
+  "current_version": 3,
+  "total": 2,
+  "versions": [
+    {"rel_path": "hi2vi/2026-07-14-growth-loops.md", "version": 2,
+     "archive_path": ".versions/hi2vi/2026-07-14-growth-loops/v0002.md",
+     "title": "Content Idea: Growth Loops", "date": "2026-07-14",
+     "tags": ["growth", "loops"], "format": "md",
+     "created_at": "2026-08-01T10:22:04+09:00"}
+  ]
+}
+```
+
+- `versions` lists **superseded bodies only**, newest first (`version DESC`); `current_version` (from `documents.version`) is what completes the chain — the full history is "`current_version` + the listed archives". **The current version is deliberately not addressable as a version**: `…/versions/<current>` is a plain 404 on both planes, because the current body *is* the document read. A UI should render "current" from the document it already holds.
+- **An unversioned document answers `current_version: 1, total: 0, versions: []` — never a 404**, so one call is enough to render "no history".
+- Index rows carry **no bodies**. `id` and `tenant_id` never leave either plane (`document_versions.id` is an autoincrement on a table reindex rebuilds — nothing may key off it).
+- **`created_at` on a version row is when the body was archived**, not when it was authored. Label it "Superseded", not "Created".
+- All five routes are **unmetered** — no new usage event type exists, and browsing history never moves a counter.
+
+**`/api` (agent plane, `resolve_api_read` + tenant filter):**
+
+- **`GET /api/documents/by-path/{rel_path:path}/versions`** → the envelope. **404** when the current document is missing or another tenant's.
+- **`GET /api/documents/by-path/{rel_path:path}/versions/{version}`** → the row **plus `markdown`**, plus **`raw_html` when `format == "html"`**. This is the **one documented exception** to "`raw_html` never leaves `/api` JSON": a superseded explainer body is otherwise unreadable by an agent, since `.versions/` is never served and no other route exposes it. The *current* raw HTML is still reachable only through the sandboxed `/app` route. **404** for an unknown document *or* version (including the current one).
+- Both are declared **before** the bare `GET /api/documents/by-path/{rel_path}` — `{rel_path:path}` is greedy and Starlette matches in declaration order, so any future by-path suffix route must be declared above it too.
+
+**`/app` (web plane, optional-identity — member **or** public-project anonymous, every miss an indistinguishable 404, never a 403):**
+
+- **`GET /app/documents/{doc_id}/versions`** → the same envelope; rows drop `raw_html` and `markdown`.
+- **`GET /app/documents/{doc_id}/versions/{version}`** → the row **with `markdown`**, **never `raw_html`** (this plane's raw bytes leave only through a `/raw` route).
+- **`GET /app/documents/{doc_id}/versions/{version}/raw`** → the archived HTML body as `text/html; charset=utf-8` with the same four sandbox headers as `GET /app/documents/{id}/raw` (`Content-Security-Policy: sandbox allow-scripts; frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`) — a superseded explainer is exactly as untrusted as a live one. Missing doc / missing version / non-html version / empty body all answer the same 404.
+- Each route resolves the **document** first (member fast-path → public-project fallback) and then reads the archive by that document's `rel_path`, scoped to the **owning** document's `tenant_id` — not the caller's. That is what makes a public document's history anonymously readable without ever crossing tenants.
+
+**Not in P23** (deliberate): version diffing, a rollback/"make v2 current again" endpoint, version pruning, and a CLI `--new-version` flag. The CLI keeps working untouched because `overwrite` retains its response shape.
+
 ## Frozen consumer contract (P8)
 
 The section below is the **frozen** contract the hi2vi content-agent client (`hi2vi` P15.S4)
@@ -330,9 +379,16 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
   - `slug` (string, default `slugify(title)`; pattern `^[a-z0-9]+(-[a-z0-9]+)*$`)
   - `related` (string[] of rel_paths, default `[]`; shape-validated only, dead
     links tolerated, a self-reference is dropped silently)
-  - `overwrite` (bool, default `false`)
+  - `overwrite` (bool, default `false`) — **since P23 this archives the replaced
+    body instead of destroying it, and bumps the version**; status and every
+    pre-P23 response key are unchanged
   - `commit` (bool, default `true`)
   - `co_authored_by` (string, e.g. `"hi2vi-agent <bot@hi2vi.com>"`)
+  - `new_version` (bool, default `false`, **added P23**) — re-publish an existing
+    document as its next version instead of creating a new one
+  - `rel_path` (string, default `null`, **added P23**) — the explicit version
+    target; without it the newest `(project, slug)` match for the tenant wins, and
+    no match at all is an ordinary v1 create
 
 **201 — created** (all keys always present except the two optional error keys):
 
@@ -347,6 +403,10 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
   "date": "2026-07-14",
   "tags": ["growth", "loops"],
   "related": ["hi2vi/2026-07-10-other.md"],
+  "format": "md",
+  "version": 1,
+  "previous_version": null,
+  "archived_path": null,
   "recent_updated": true,
   "landing_created": true,
   "committed": true,
@@ -366,8 +426,16 @@ Field meanings:
   shape (the dormant template stack still serves mkdocs there, so legacy stays correct). Before P19
   the tenant-mode value was the mkdocs shape (broken for every non-#1 tenant, which is why the CLI hid
   it). The `url` key/type/presence are unchanged — only the value moved (additive-only).
+- `format` — **P16 addition.** `"md" | "html"`.
+- `version` / `previous_version` / `archived_path` — **P23 additions**, always
+  present. `version` is what this write published; `previous_version` and
+  `archived_path` describe the body it superseded (both `null` on a plain create).
+  On a version bump the `date`, `slug` and `rel_path` above are the **target's**,
+  not the request's — the document's path never moves.
 - `recent_updated` — whether the `docs/index.md` Recent bullet was added (`false`
-  on an `overwrite` re-write).
+  on an `overwrite` re-write **or a version bump** — `update_recent_index` already
+  suppresses a duplicate when the `rel_path` is present, so a v2 adds no second
+  bullet).
 - `landing_created` — `true` only when this was the **first** doc of a new project
   and the API auto-created `docs/<project>/index.md`; `false` otherwise.
 - `committed` — whether the scoped git commit succeeded. `commit_sha` — the commit

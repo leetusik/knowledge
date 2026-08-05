@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0013
-created_at: 2026-08-05T15:59:12+09:00
-source: P22.REVIEW
-summary: P22 the in-app graph goes quiet: a title shows only for the selected node and the one hovered node
-previous: v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes
+version: v0014
+created_at: 2026-08-05T22:59:21+09:00
+source: P23.REVIEW
+summary: P23 document version history journey: history panel on a read page, read-only past-version view, and versioned re-publishing through /explain
+previous: v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node
 ---
 
 # Experience
@@ -373,6 +373,19 @@ per-org `/graph/{org}` — one shared canvas component, so both).
 - **Owed to the operator.** A browser eyeball on both `/graph` and `/graph/{org}` — including
   whether the hovered title should stay at all (a strictly "clicked only" map is a one-token
   change) — see **qa**.
+
+## A document gets a second draft: version history (P23)
+
+Until P23 a knowledge document had exactly one body. Re-explaining the same subject on a later day produced a **second post** (the skill derives its path from `project/<today>-<slug>`, so a new date meant a new document), and the only way to replace a body was a destructive `overwrite` that lost the old one. P23 makes re-publishing **additive**: the same document simply gains a v2, v3, …
+
+- **Publishing an update, from the agent's side.** `/explain` now looks for the document **before** it writes: it lists the target project, matches on slug (or a title that is plainly the same subject), and reads what the current version said, so the new explanation builds on the old one rather than starting cold. If it finds one, it publishes with "this is the next version" plus the resolved path — and the document keeps its id, its URL, its place in the graph, and its original date and slug. If it finds nothing, it publishes a normal new document; nothing errors. A re-explanation is always a **full replacement, not a diff** — every version stands alone.
+- **The 409 conversation changed.** When a save collides with an existing document, the skill now offers "publish it as the next version" as the **primary** retry, with the old `overwrite` demoted to "only when you want to *replace* rather than *supersede*" — and `overwrite` is no longer destructive either, since it archives what it replaces. The ask-the-user-before-retrying gate is unchanged: the agent still stops and asks.
+- **Reading history in the web app.** A document page shows a **Version history** panel below the body when — and only when — there is history: the live document as the chipped **Current** row, and each superseded version below it, linking to a read-only page for that older body. A document that was never re-published looks exactly as it did before P23; nothing new appears.
+- **Reading a past version.** The past-version page is deliberately plain and read-only: a banner saying this version has been superseded (and by which one), the metadata strip, and the body — a markdown body inline, an archived HTML explainer framed and interactive exactly like a current one. There is **no rollback, no delete, no copy-link**: you can read history, not rewrite it.
+- **A version's date is when it was superseded, not when it was written** — the surfaces label it "Superseded" for exactly that reason.
+- **Public documents share their history.** A public project's document exposes its history to anonymous visitors on the same terms as its body; a private one exposes neither, and every miss is the same "not found" as a document that never existed. Browsing history is free and unmetered like the rest of the web UI.
+- **Deleting a document deletes its history with it.** There is no half-deleted state where old bodies of a removed document remain readable — and, on the public tree, none left behind in git either.
+- **A known gap, stated out loud.** When the API is unreachable the skill's offline fallback still writes a **new** file at today's path and cannot version — the very duplicate this phase fixes. The skill now says so and tells the agent to re-publish with the versioned path once the API is back. Closing it properly needs local archive plumbing (or a CLI flag); it is a candidate deferred job, not a defect of what shipped.
 
 ## Open Questions
 
