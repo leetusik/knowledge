@@ -47,7 +47,8 @@ export { PUBLIC_SHELL, SHARE } from "./share";
 export type { PublicShellCopy, ShareCopy } from "./share";
 
 // Documents surface (P12.S5) — browse / search / read the tenant's documents.
-export { DOCUMENTS } from "./documents";
+// P21 adds the member delete action + its status-keyed errors.
+export { DELETE_DOCUMENT_ERRORS, DOCUMENTS } from "./documents";
 export type { DocumentsCopy } from "./documents";
 
 // Graph surface (P12.S6) — the in-app knowledge map (page frame + empty state).

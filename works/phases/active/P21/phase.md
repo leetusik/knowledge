@@ -169,6 +169,52 @@ Verified against the code at decomposition time (line numbers as of this commit)
   `KB_OPERATOR_EMAIL` + a git tree; the same helper call is covered on the `/api` plane by
   `tests/test_api_write.py::test_delete_happy_path`.
 
+### P21.S2 notes (web delete action + confirm UI landed)
+
+- **Shipped exactly as planned**: `deleteDocument` in `web/src/lib/knowledge/app.ts`
+  (after `getDocumentRaw`), a `"use server"` `deleteDocumentAction` in the new
+  `web/src/app/(app)/documents/actions.ts`, one shared `"use client"`
+  `delete-document-button.tsx` island used by BOTH surfaces, the list page's 5th
+  `actions: true` column, the detail page's member branch (wrapped in `<div className=
+  "ml-auto">` for trailing placement), `DELETE_DOCUMENT_ERRORS` + `DOCUMENTS.delete` +
+  `DOCUMENTS.list.columns.actions` copy, and one terse `web/tests/delete-document.test.ts`.
+- **Redirect precedent (new in this repo), for anyone copying it:** the post-delete
+  destination arrives as a hidden input and is validated with `z.literal("/documents")` —
+  a literal, never a free-form string, so the input can never become an open redirect —
+  and `redirect()` is called **outside** the try/catch, after both `revalidatePath` calls,
+  because it signals by throwing NEXT_REDIRECT and a `catch` would swallow it. A failed
+  parse means "stay put" (the list page omits the input entirely). Consequence: on the
+  redirecting path the island's success state never renders; only failures return.
+- **Cross-route-group import is legal and now used**: `(public)/documents/[id]/page.tsx`
+  imports the island from `@/app/(app)/documents/delete-document-button`. Route groups
+  affect URLs, not module resolution; `next build` confirms it.
+- **The list page is no longer island-free.** Its header comment ("server component
+  throughout with NO client island", "READ + SEARCH ONLY") was rewritten — it was the
+  page's contract statement and had become false. The detail page's "still READ-ONLY"
+  comment was corrected for the same reason (member branch only).
+- **`web/` is NOT in the plugin templates.** `plugin/templates/manifest.json` ships
+  `server`, `tests`, `scripts`, `docs/*` + root files only, and `plugin/templates/kb/`
+  has no `web/` dir — so web-only slices mirror nothing. (S1's `server/**` + `tests/**`
+  obligation stands for backend slices.) `scripts/plugin_parity.py` re-run: PASS.
+- **Validation measured (from `web/`, pnpm):** `pnpm vitest run` → 10 files / **69 passed**,
+  0 failed; `pnpm lint` clean; `pnpm typecheck` clean; `pnpm build` (Next 16.2.10,
+  Turbopack) succeeds with `/documents` + `/documents/[id]` still dynamic. Repo root:
+  `plugin_parity.py` PASS, `workflow.py validate` PASS.
+- **Pre-existing repo-wide prettier drift**: `pnpm format:check` fails on **51 files at a
+  clean HEAD** (unrelated to this phase). Not repaired here — reformatting would churn
+  files this phase never touched. Every line this slice wrote is prettier-clean; the three
+  files still flagged among my edits are flagged only on pre-existing lines. Candidate for
+  a deferred job if `format:check` should become a real gate.
+- **Not covered by automated tests** (the suite covers the client seam only, per the
+  plan's "keep it terse"): the action's status→copy mapping, the two-step confirm
+  interaction, and the redirect. REVIEW should exercise those live — list delete (row
+  disappears, no navigation), detail delete (lands on `/documents`), and a repeat delete
+  of an already-deleted id (the `notFound` copy — the endpoint is not idempotent).
+- **Accepted gaps, both plan-sanctioned:** deleting the last row of a paged view can
+  revalidate onto an empty page (no offset reconciliation); and a member reading another
+  org's PUBLIC doc sees the delete button and gets the 404 copy on submit (no client-side
+  tenant signal exists, and the backend is 404-never-403 by design).
+
 ## Constraints
 
 - `WRITE_LOCK` (`server/main.py:150`) is process-local and load-bearing (single worker); the new
@@ -207,6 +253,21 @@ versions once at `P21.REVIEW` — never per slice._
   **`qa.md`** (the shared `documents_client` fixture now disables the process-global `/auth`
   throttle, `KB_AUTH_RATE_LIMIT=0` — full gated suite goes 89/8 → 99/1, the remaining failure
   being the already-recorded `format`-key case).
+- `P21.S2`: **`frontend.md`** — the documents surfaces gain their first write: a shared
+  `"use client"` two-step-confirm delete island (`web/src/app/(app)/documents/
+  delete-document-button.tsx`) rendered per row on the list AND once in the read page's
+  member branch, driven by the new `"use server"` `deleteDocumentAction`
+  (`(app)/documents/actions.ts`) over a new `deleteDocument(token, id)` client wrapper;
+  the list page is **no longer island-free / READ + SEARCH ONLY**; new redirect precedent
+  (`z.literal`-validated `redirectTo` hidden input, `redirect()` outside the try/catch,
+  after `revalidatePath("/documents","page")` + `revalidatePath("/documents/[id]","page")`);
+  a `(public)` page may import a client island + server action from the `(app)` group.
+- `P21.S2`: **`experience.md`** — members can hard-delete a document from the documents
+  list (per-row action) and from the read page's member branch (redirects to the list);
+  two-step inline confirm (never `window.confirm`), copy states the delete is permanent
+  and promises no recovery; status-keyed failure copy (`DELETE_DOCUMENT_ERRORS`) with one
+  "no longer exists, or isn't part of your org" string covering both 404 causes; anonymous
+  readers see no delete control at all.
 
 ## Open Questions
 

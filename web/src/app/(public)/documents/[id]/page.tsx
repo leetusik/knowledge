@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ChevronLeft } from "lucide-react";
 
+import { DeleteDocumentButton } from "@/app/(app)/documents/delete-document-button";
 import { AppShell } from "@/components/app-shell";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { PublicShell } from "@/components/public-shell";
@@ -18,11 +19,14 @@ import { DocumentView } from "./document-view";
 
 // P19 — one document in full, now on the OPTIONAL-IDENTITY public route group
 // (moved out of the `(app)` auth gate; the URL `/documents/{id}` is unchanged). A
-// server component throughout; still READ-ONLY (writes stay on the `vk_`-keyed
-// `/api/*` machine surface). It branches on `optionalIdentity()`:
-//   - a signed-in member → the member experience is unchanged: fetched with their
-//     bearer, wrapped in <AppShell> with the back-link (a cross-org member
-//     transparently gets a public doc via knowledge's server-side public fallback);
+// server component; the ONE write it offers is P21's member delete (a client island
+// in the member branch, going through the `"use server"` action to the unmetered
+// `/app` plane — never the metered `vk_`-keyed `/api/*` machine surface). It branches
+// on `optionalIdentity()`:
+//   - a signed-in member → fetched with their bearer, wrapped in <AppShell> with the
+//     back-link, the share copy-link, and the delete control (a cross-org member
+//     transparently gets a public doc via knowledge's server-side public fallback —
+//     and deleting it answers 404, which the island's copy covers);
 //   - an anonymous visitor → fetched TOKENLESS and wrapped in <PublicShell>; a
 //     private/nonexistent doc 404s server-side and we bounce to /login (uniform for
 //     every anonymous miss — no returnTo plumbing, a deferred nicety).
@@ -89,6 +93,20 @@ export default async function DocumentPage({
               {DOCUMENTS.read.backLabel}
             </Link>
             <CopyLinkButton path={`/documents/${id}`} />
+            {/* P21 — the member-only delete, trailing (`ml-auto`) and two-step. It
+                lives ONLY in this branch: the anonymous branch below and the shared
+                `<DocumentView>` stay auth-free. `redirectTo` sends the caller back to
+                the list, because this very URL 404s the moment the delete lands.
+                A member reading ANOTHER org's public doc also sees it and gets the
+                404 copy on submit — there is no client-side tenant signal to hide it
+                by, and the backend answers 404-never-403 by design. */}
+            <div className="ml-auto">
+              <DeleteDocumentButton
+                documentId={id}
+                documentTitle={doc.title}
+                redirectTo="/documents"
+              />
+            </div>
           </div>
           <DocumentView doc={doc} id={id} />
         </article>
