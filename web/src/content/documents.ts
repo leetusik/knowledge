@@ -118,6 +118,67 @@ export const DOCUMENTS = {
     ariaLabelPrefix: "Delete document",
   },
 
+  /**
+   * Version history (P23.S3) — the read page's history panel and the past-version
+   * view at `/documents/{id}/versions/{v}`.
+   *
+   * Two facts the copy must keep straight, because both are counter-intuitive:
+   *   - the CURRENT version is not an archived version (it IS the document), so the
+   *     panel lists the current row from the document itself and links only the
+   *     superseded ones;
+   *   - a version row's `created_at` is when that body was ARCHIVED (i.e. when the
+   *     next version replaced it), not when it was written — hence "Superseded",
+   *     never "Created".
+   */
+  versions: {
+    /** `v3` — the compact version label used in the panel, links and headings. */
+    label: (n: number): string => `v${n}`,
+
+    panel: {
+      heading: "Version history",
+      /** Sub-line under the panel heading; `n` counts the SUPERSEDED versions. */
+      lead: (n: number): string =>
+        `${n === 1 ? "1 earlier version" : `${n} earlier versions`} of this document, newest first.`,
+      columns: {
+        version: "Version",
+        title: "Title",
+        superseded: "Superseded",
+        actions: "Actions",
+      },
+      /** Chip on the row for the live document. */
+      currentLabel: "Current",
+      /** Shown in the Superseded column for the current (still-live) row. */
+      currentDash: "—",
+      /** Per-row link into the past-version view. */
+      viewLabel: "View",
+      /** Accessible name for that link (the label alone is ambiguous per row). */
+      viewAriaPrefix: "View version",
+    },
+
+    read: {
+      /** Static <title> for the past-version view (the SITE template adds the suffix). */
+      title: "Document version",
+      /** Back link to the live document. */
+      backLabel: "Current version",
+      /**
+       * The banner above a past body. Says plainly that this is not what the
+       * document says today, and names the version that is.
+       */
+      notice: (viewing: number, current: number): string =>
+        `You're reading v${viewing} of this document. It was superseded — the current version is v${current}.`,
+      /** Field labels in the past-version metadata strip. */
+      fields: {
+        version: "Version",
+        superseded: "Superseded",
+        date: "Date",
+        tags: "Tags",
+        archive: "Archive",
+      },
+      /** Shown when an archived body is empty. */
+      emptyBody: "This version has no content.",
+    },
+  },
+
   /** The branded not-found (`[id]/not-found.tsx`), on the `.kb-empty` classes. */
   notFound: {
     title: "Document not found",

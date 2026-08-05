@@ -46,6 +46,23 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // P23.S3 — the same exemption for the VERSION-aware relay
+      // (`/api/documents/{id}/versions/{v}/raw`), which the past-version view frames
+      // identically. This entry is NOT optional and nothing in lint/typecheck/test
+      // catches its absence: without it the global `X-Frame-Options: DENY` above
+      // wins for that path and the archived explainer fails to frame at RUNTIME
+      // only. Values are byte-identical to the entry above and to the route
+      // handler's own headers.
+      {
+        source: "/api/documents/:id/versions/:v/raw",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: "sandbox allow-scripts; frame-ancestors 'self'",
+          },
+        ],
+      },
     ];
   },
 };

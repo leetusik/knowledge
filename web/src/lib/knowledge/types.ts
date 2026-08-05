@@ -238,6 +238,17 @@ export interface KbDocumentListItem {
    * docs render byte-identically to before via `<MarkdownBody>`.
    */
   format: "md" | "html";
+  /**
+   * The document's CURRENT version number (P23) — `1` for a document that has never
+   * been re-published, `N` after N-1 version bumps. Additive on every list + detail
+   * projection (an unversioned corpus reads `1` everywhere: the column is
+   * `NOT NULL DEFAULT 1` and pre-P23 rows were back-filled, never migrated).
+   *
+   * The current body IS this document — it is deliberately NOT addressable as a
+   * version — so the full chain is "`version` plus the superseded rows listed by
+   * `GET /app/documents/{id}/versions`" (see `KbDocumentVersionsPage`).
+   */
+  version: number;
   created_at: string;
   updated_at: string;
 }
@@ -304,6 +315,68 @@ export interface KbDocumentsQuery {
   tag?: string;
   limit?: number;
   offset?: number;
+}
+
+// ── /app/documents/{id}/versions shapes (P23.S3) ───────────────────────────
+// Mirror `server/documents_api.py::_app_version` verbatim. That projector drops
+// `id` (an autoincrement on the DISPOSABLE `document_versions` table — reindex
+// rebuilds every row from the `.versions` files on disk, so it is NOT stable and
+// nothing may key off it), `tenant_id`, and `raw_html` (an archived HTML body's
+// bytes leave this plane through the `/raw` twin alone, never in JSON). `markdown`
+// is dropped from index rows and kept on a single-version fetch.
+
+/**
+ * One SUPERSEDED version of a document. The archive is identity-keyed on
+ * `(tenant_id, rel_path, version)` server-side, so a version is addressed by its
+ * document's id plus the number — `GET /app/documents/{id}/versions/{version}`.
+ *
+ * `title`/`date`/`tags`/`format` are the values that body carried WHEN IT WAS
+ * ARCHIVED (a retitled v3 leaves v2's old title here — that is the point of a
+ * history), and `date` stays the document's original publication date because a
+ * version bump never moves `rel_path`.
+ *
+ * `created_at` is when the body was ARCHIVED — i.e. when the version AFTER it was
+ * published — not when it was authored. Label it accordingly; it is not the doc's
+ * `created_at`.
+ *
+ * `archive_path` is the on-disk `.versions/…/vNNNN.<ext>` location, shown as
+ * provenance only: that tree is never served, so it is not a link.
+ */
+export interface KbDocumentVersion {
+  /** The owning document's path — identical for every version in a chain. */
+  rel_path: string;
+  version: number;
+  archive_path: string;
+  title: string;
+  /** `YYYY-MM-DD` — the document's publication date, not the archive time. */
+  date: string;
+  tags: string[];
+  format: "md" | "html";
+  /** ISO-8601. When this body was superseded and archived. */
+  created_at: string;
+  /**
+   * The archived body, present ONLY on a single-version fetch (index rows are
+   * body-less). For an `html` version this is the extracted plain text; the
+   * rendered body comes from the `/raw` twin.
+   */
+  markdown?: string;
+}
+
+/**
+ * `GET /app/documents/{id}/versions` → `{rel_path, current_version, total,
+ * versions}`.
+ *
+ * `versions` lists SUPERSEDED bodies only, newest first (`version DESC`);
+ * `current_version` is the live document's `version`, so the chain is
+ * "`current_version` + `versions`". An UNVERSIONED document answers
+ * `{current_version: 1, total: 0, versions: []}` — never a 404 — so one call is
+ * enough to decide between "no history" and a panel.
+ */
+export interface KbDocumentVersionsPage {
+  rel_path: string;
+  current_version: number;
+  total: number;
+  versions: KbDocumentVersion[];
 }
 
 // ── /app/graph shapes (P12.S6) ─────────────────────────────────────────────
