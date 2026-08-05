@@ -46,10 +46,25 @@ services:
       KB_ROOT: /repo
       TZ: Asia/Seoul
       # Publish-on-write ON (box only). Default is false so local/plugin never
-      # push; the box opts in. After the scoped commit the server fetches +
-      # rebases onto origin/main and pushes (best-effort; a failed push never
-      # fails the request). Requires the deploy key wired below.
+      # push; the box opts in. The scoped commit is made IN-REQUEST; the fetch +
+      # rebase onto origin/main + push then run AFTER the response, on the publish
+      # worker thread (P24, server/publish.py), so a slow or broken remote can
+      # neither delay nor fail the request. Best-effort: a failed push appears
+      # ONLY in this container's log ("[kb-api] publish: push <rel> FAILED: …") —
+      # never in the API response, whose `pushed` is now always false and whose
+      # `push_pending:true` just means "a push was queued". The commits publish on
+      # the next successful push. Requires the deploy key wired below; see
+      # deploy/README.md §2 for the bring-up assertion of this capability.
       KB_GIT_PUSH: "true"
+      # Wall-clock cap in seconds on EVERY git subprocess — fetch, rebase, push,
+      # add, commit (server/config.py::git_timeout_s). LEFT UNSET on purpose:
+      # 60s is the default and is right for this box; listed here so the knob is
+      # discoverable. It is load-bearing since P24 — the publish worker re-takes
+      # the (non-reentrant) write lock while it pushes, so an unbounded hanging
+      # SSH round-trip would stall every later write; a timeout instead kills the
+      # subprocess, logs the FAILED line above, and republishes on the next push.
+      # Unparseable/non-positive values fall back to 60, so the cap is never off.
+      # KB_GIT_TIMEOUT_S: "60"
       # Gate reads/search behind the same bearer on the hosted deployment
       # (local/plugin default is false → reads open). healthz stays open.
       KB_REQUIRE_READ_AUTH: "true"

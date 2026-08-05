@@ -134,6 +134,14 @@ The non-secret box config (`KB_GIT_PUSH=true`, `KB_REQUIRE_READ_AUTH=true`,
 `KB_PUBLIC_BASE_URL`, `TZ`, `KB_ROOT`, `KB_STARTUP_REINDEX=true`) is baked into
 `compose.prod.yml` — do not duplicate it in `.env`.
 
+One more non-secret knob is **not** set there and defaults safely: **`KB_GIT_TIMEOUT_S`**
+(default **60**, seconds) caps *every* git subprocess — fetch, rebase, push, add, commit
+(P24). Since the after-response publish worker holds the write lock while it pushes, this
+cap is what stops a hung SSH round-trip from stalling later writes; a hit surfaces as a
+`[kb-api] publish: … FAILED` log line and the doc republishes on the next push. Leave it
+alone unless the box's link to GitHub is genuinely slow; unparseable or non-positive
+values fall back to 60, so the cap cannot be switched off.
+
 ---
 
 ## 2. Bring-up — build + start the api
@@ -182,11 +190,47 @@ docker run --rm --network changple_shared_network curlimages/curl:latest \
 ```
 
 If `KB_GIT_PUSH=true` but the deploy key / origin / `ssh` binary are
-misconfigured, **writes still succeed** (201) — push is best-effort; the 201 body
-carries `pushed:false` + `push_error`. Fix it, and the next write (or a manual
-`git push`) publishes the accumulated commits. A push failure is **not** a
-bring-up blocker; it means "not yet publishing" — but it is silent, so check
-`pushed:true` on the first write (P8.S5) rather than assuming.
+misconfigured, **writes still succeed** (201) — the push is best-effort and, as of
+**P24**, runs on the after-response publish worker (`server/publish.py`), so it can
+neither delay nor fail the request. Fix it, and the next write (or a manual push)
+publishes the accumulated commits. A push failure is **not** a bring-up blocker; it
+means "not yet publishing" — but it is **silent**, so *assert the capability* here
+rather than assuming it (the P8.F2 rule: assert the capability at bring-up, never
+infer it from a status code).
+
+> **P24 changed the evidence.** The 201 body no longer says anything about the push:
+> `pushed` is now always `false` (the push has not run yet when the response is
+> written), `push_error` never appears, and `push_pending:true` only means "a push was
+> queued". The surviving signals are **the api container log** and **the clone's own
+> git state** — use both.
+
+```bash
+# 2a. Is the push credential usable at all? (SSH origin + deploy key + pinned host key.)
+docker compose -f compose.prod.yml exec api git -C /repo ls-remote origin main
+# expect: one "<sha>\trefs/heads/main" line. A permission-denied / host-key error here
+# means every push WILL fail. Read-only, so it proves authentication, not WRITE access —
+# only a real push proves that, which is what 2b asserts.
+
+# 2b. After the FIRST real write (the E2E acceptance of §5 / P8.S5), assert the push
+#     actually landed. There is no success log line — only failures are logged — so the
+#     two checks below together are the assertion:
+docker compose -f compose.prod.yml logs --since 30m api | grep 'publish:'
+# expect: NO output (grep exits 1 — that is the healthy case). Any line is a failed
+# background task: "[kb-api] publish: push <rel_path> FAILED: <err>" is the push;
+# "embed <rel_path> FAILED" is only the semantic-search embed (search degrades to BM25,
+# publishing is unaffected).
+
+git -C /opt/knowledge rev-list --count origin/main..HEAD
+# expect: 0 — every commit the box has made is published on origin/main.
+# Non-zero = commits are stranded on the box. Fix the credential (2a), then the next
+# write publishes all of them at once; or push them by hand through the container:
+#   docker compose -f compose.prod.yml exec api git -C /repo push origin HEAD:main
+```
+
+> `origin/main` in that `rev-list` is the box clone's **remote-tracking ref**, which the
+> container's own successful push updates. Do **not** `git fetch` from the host to
+> "refresh" it — the SSH `origin` is the *container's* credential and the host user has
+> no deploy key (§1b).
 
 ---
 
