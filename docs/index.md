@@ -24,7 +24,6 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
-- 2026-07-02 · [The Shared nginx Problem — Explained for Beginners](hi2vi_web/2026-07-02-shared-nginx-explained.md) — hi2vi_web
 
 <div class="kb-sec"><h2>Browse · 둘러보기</h2></div>
 
