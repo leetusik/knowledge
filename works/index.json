@@ -40,17 +40,17 @@
       "id": "P24",
       "name": "Upload finish-return timeout",
       "objective": "Fix the changple5→knowledge prod upload experience where the document saves but the client reports a disconnect because it never receives the finish response in time — confirm the 5s client timeout vs synchronous git commit/push in POST /api/documents, then make the finish response reliable and its reporting honest.",
-      "status": "planned",
+      "status": "in_progress",
       "order": 4,
       "path": "works/phases/active/P24",
-      "review_status": "pending",
-      "current_slice": "P24.REVIEW",
-      "slice_count": 5,
+      "review_status": "changes_requested",
+      "current_slice": "P24.F1",
+      "slice_count": 6,
       "done_slice_count": 4
     }
   ],
   "deferred_open_count": 15,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-05T23:40:36+09:00"
+  "last_rebuilt_at": "2026-08-05T23:51:04+09:00"
 }

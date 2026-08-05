@@ -333,3 +333,58 @@ The third client is now honest, and it encodes the same rule as S2 in Python:
   not have landed" error naming `knowledge list`/`knowledge read`; it never re-POSTs,
   only a genuine connect failure still says `cannot reach`, and the save POST now runs
   on a per-call 30 s `WRITE_TIMEOUT` while reads stay at 15 s.
+
+### P24.REVIEW — verdict `changes_requested`, and what the re-review inherits
+
+Full validation is green (table in `slices/P24.REVIEW/result.md`): repo suite 83 passed
+/ 32 skipped, **Postgres-gated suite 115 passed / 0 failed**, CLI 44 passed, both parity
+gates PASS, the fourth (ungated) installed skill copy `diff`-clean, `validate` PASS. The
+objective and all three intent clauses are met, and the flagged behavior changes are
+deliberate, additive, and safe for the external consumers.
+
+Durable facts established or confirmed at the review:
+
+- **`markdown` IS in the by-path read projection** (`_public_doc(..., include_markdown=True)`,
+  `server/main.py:435`) — verified against a live TestClient, not just `FakeApi`, so
+  S3's body-comparison verification is sound in production. The full projection is
+  `created_at, date, format, id, markdown, project, rel_path, related, slug,
+  source_repo, tags, tenant_id, title, updated_at, version` — **no `url`**, confirming
+  S2/S3's trap. Anything verifying a save through this route may compare bodies and
+  must not expect a `url`.
+- **The gated failure recorded in `qa.md` is gone.** `tests/test_documents_api.py::
+  test_documents_list_detail_and_project_bridge` (the `format`-key mismatch, standing
+  since P18 and re-confirmed at the P21 review as "100 passed / 1 failed") now passes;
+  the gated suite is 115/115. That `qa.md` note is stale — retire it in the
+  consolidation.
+- **The one blocking finding: P24 deleted the only in-band push-health signal without
+  replacing the procedure that depends on it.** `pushed` is now a constant `false` and
+  `push_error` is unreachable, so `deploy/README.md:184-189`'s bring-up instruction
+  ("check `pushed:true` on the first write") can never pass, and P8.F2's lesson in
+  `operations.md:30` ("assert the *capability*, never infer it from the status code")
+  has no surviving assertion — a failed background push is now visible **only** as a
+  `[kb-api] publish: … FAILED` container log line. Secondary: `compose.prod.yml:48-51`
+  still describes the push as in-request; `KB_GIT_TIMEOUT_S` is documented nowhere an
+  operator looks; `scripts/onboarding_smoke.py`'s required-key list stops at `pushed`.
+  Proposed fix slice `P24.F1` (kind `fix`, risk `high` only because it spans >1 file;
+  docs/comments only — `deploy/` and `scripts/` are outside `shipped_dirs`, so there is
+  no mirror obligation and `plugin_parity.py` cannot move).
+- **Recommended deferred job (not a fix slice):** bound the Gemini embed on the publish
+  worker. It can no longer delay a response, but a stalled embed blocks the single FIFO
+  worker and therefore every push queued behind it until restart. Writes stay durable
+  and republish on the next successful push, so this is availability of the off-box
+  backup, not correctness.
+- **Doc consolidation was deliberately NOT run** — a `changes_requested` verdict stops
+  before doc work, and P24 is not in parallel mode, so the re-review consolidates here.
+
+### Doc impact (running list, continued — added by P24.REVIEW)
+
+- `operations.md` — P24.REVIEW: the bring-up verification of push capability must be
+  restated. `pushed:true` / `push_error` no longer exist as evidence, so the P8.F2 rule
+  needs its new form (the `[kb-api] publish: … FAILED` container log line, plus
+  `git -C /opt/knowledge rev-list origin/main..HEAD` being empty). Also correct the
+  "Publish-on-write flow" section (~lines 221-240) and the P8.F2 note (line 30), both of
+  which still describe the push as running in-request inside the write lock.
+- `qa.md` — P24.REVIEW: the standing "pre-existing gated failure"
+  (`test_documents_list_detail_and_project_bridge`) is resolved — the Postgres-gated
+  suite is now **115 passed / 0 failed**; and `publish.drain()` is the repo's
+  deterministic way to assert an after-response side effect without sleeps.
