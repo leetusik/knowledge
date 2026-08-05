@@ -1,12 +1,17 @@
-"""Per-tenant documents read + search — the web app's knowledge-viewer surface (P12.S5).
+"""Per-tenant documents read + delete — the web app's knowledge-viewer surface (P12.S5).
 
-Three session-guarded, tenant-scoped, **unmetered** ``/app`` read routes the web app's
-documents surface codes against:
+Five session-guarded, tenant-scoped, **unmetered** ``/app`` routes the web app's
+documents surface codes against — four reads and one delete:
 
 * ``GET /app/documents`` — the tenant's documents, newest-first, optional project/tag
   filter + offset pagination → ``{total, items}``.
 * ``GET /app/documents/{doc_id}`` — one document (with ``markdown``) → 404 when it is
-  missing or belongs to another tenant (cross-tenant ids never leak).
+  missing or belongs to another tenant (cross-tenant ids never leak). Optional-identity
+  since P19.S2: also readable anonymously when it belongs to a public project.
+* ``GET /app/documents/{doc_id}/raw`` — one HTML explainer's raw HTML for the sandboxed
+  viewer (same optional-identity rule).
+* ``DELETE /app/documents/{doc_id}`` — hard-delete one of the caller's **own** documents
+  (P21.S1): member-only (``require_user``, **no** public fallback), 204 on success.
 * ``GET /app/search`` — full-text/hybrid search over the tenant's documents →
   ``{query, mode, total, limit, offset, results}``.
 
@@ -17,7 +22,10 @@ handler via ``request.state.usage`` (recorded by the ``server/main.py`` HTTP
 middleware), and these handlers never set it — so web-UI browsing/search moves no
 usage counter, exactly like the S3 ``/app/dashboard`` precedent. Keeping web browsing
 out of the metered ``searches`` figure is deliberate: that metric stays billable
-agent/API retriever usage, and every web-UI feature is free.
+agent/API retriever usage, and every web-UI feature is free. The P21 delete route
+holds that line too: it reuses ``server/main.py``'s ``_delete_document`` *logic* (where
+no metering lives) rather than the metered ``DELETE /api/documents/{id}`` *route*, so a
+UI click never bills an ``EVENT_DOCUMENT_DELETED``.
 
 **The project UUID -> name bridge.** Documents key off the project *name* string, but
 the web app works in control-plane project **UUIDs**. When ``project`` (a UUID) is
@@ -37,12 +45,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from starlette.concurrency import run_in_threadpool
 
 from server import config
 from server import db
 from server import search as search_mod
 from server.accounts.auth import AuthContext, optional_user, require_user
 from server.accounts.service import get_accounts_service
+from server.api_auth import ApiAuthContext, get_tenant_one_id
 
 router = APIRouter()
 
@@ -247,6 +257,93 @@ async def get_document_raw(
             "Cache-Control": "no-store",
         },
     )
+
+
+def _delete_owned_document(doc_id: int, api_ctx: ApiAuthContext) -> bool:
+    """Look up + hard-delete one document, in a worker thread. ``False`` ⇒ 404.
+
+    Runs **entirely off the event loop** (``run_in_threadpool``): the delete is
+    synchronous, takes ``server/main.py``'s process-wide ``threading`` ``WRITE_LOCK``,
+    and — for a public-root caller — shells out to git (a commit, and a push when
+    ``KB_GIT_PUSH`` is on: seconds of network). Blocking the loop on that would stall
+    every other request.
+
+    Two consequences shape this function:
+
+    * **Its own SQLite connection, opened here.** SQLite forbids using a connection
+      from a thread other than the one that created it, and this module's ``get_conn``
+      dependency deliberately opens its connection on the event-loop thread (see its
+      docstring), so it must not be handed across. The connection is opened and closed
+      inside the worker.
+    * **A deferred import of ``_delete_document``.** ``server/main.py`` imports this
+      module at load to mount the router, so a module-level ``import server.main`` here
+      would be circular. At request time ``main`` is fully loaded, so a function-level
+      import is safe — and it keeps exactly **one** ``WRITE_LOCK`` object in the process
+      (the lock is taken inside ``_delete_document`` itself; this function must not wrap
+      the call in it — it is not reentrant).
+
+    The lookup is tenant-scoped, so another tenant's id is simply a miss (⇒ 404,
+    never 403) and the delete can never cross tenants.
+    """
+
+    from server.main import _delete_document  # deferred: main imports this module.
+
+    conn = db.connect()
+    try:
+        doc = db.get_document(conn, doc_id, tenant_id=str(api_ctx.tenant_id))
+        if doc is None:
+            return False
+        _delete_document(conn, doc, api_ctx, commit=True, co_authored_by=None)
+        return True
+    finally:
+        conn.close()
+
+
+@router.delete("/app/documents/{doc_id}", status_code=204, response_class=Response)
+async def delete_document(
+    doc_id: int,
+    ctx: AuthContext = Depends(require_user),
+) -> Response:
+    """Hard-delete one of the caller's own documents — **204**, unmetered (P21.S1).
+
+    The web app's delete. Member-only and **without** the P19 public fallback the GET
+    routes carry: a document is deletable only through a tenant-scoped lookup, so an
+    anonymous caller gets 401 and another tenant's (or a nonexistent) id is an
+    indistinguishable **404** — reading a public document never implies deleting it.
+
+    Reuses ``server/main.py``'s ``_delete_document`` — file unlink, public Recent-index
+    bullet, DB row (FTS row via the AFTER DELETE trigger, embeddings via
+    ``ON DELETE CASCADE``), then the scoped git commit/push for the public root — so the
+    web plane and the ``/api`` plane delete identically, including the non-transactional
+    ordering (the file goes first; a failed commit never restores it). What it does *not*
+    reuse is the ``/api`` route, which meters ``EVENT_DOCUMENT_DELETED``: this handler
+    never sets ``request.state.usage``, keeping the ``/app`` plane free.
+
+    ``_delete_document`` wants an ``ApiAuthContext``, so the session ``AuthContext`` is
+    bridged to one: the caller's tenant, no project/credential (a session has neither),
+    and ``is_public`` by the same rule ``resolve_api_write`` applies — tenant #1 is the
+    public ``docs/`` root, every other tenant its namespaced ``tenants/<uuid>/`` one.
+    Getting that flag right decides which root the file is unlinked from and whether the
+    Recent index and git commit run, so it is resolved here (an ``await``) before the
+    worker thread starts.
+
+    Success is **204 No Content**: ``_delete_document``'s result dict (commit sha, push
+    state, …) is machine-plane reporting the UI has no use for.
+    """
+
+    tenant_one_id = await get_tenant_one_id()
+    api_ctx = ApiAuthContext(
+        tenant_id=ctx.tenant.id,
+        project_id=None,
+        credential_id=None,
+        # resolve_api_write's rule, minus its legacy branch: the /app plane only exists
+        # when the accounts plane is configured, so tenant_id is never None here.
+        is_public=ctx.tenant.id == tenant_one_id,
+    )
+    deleted = await run_in_threadpool(_delete_owned_document, doc_id, api_ctx)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
+    return Response(status_code=204)
 
 
 @router.get("/app/search")
