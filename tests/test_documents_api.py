@@ -1,5 +1,5 @@
-"""The /app/documents + /app/search read routes (P12.S5): shapes, tenant isolation,
-the project UUID->name bridge, and unmetered-ness.
+"""The /app/documents + /app/search routes: shapes, tenant isolation, the project
+UUID->name bridge, unmetered-ness (P12.S5), and the member delete (P21.S1).
 
 Follows the P12.S3 accounts test pattern (see ``tests/test_dashboard_api.py``): the
 accounts plane is Postgres-only, so this suite runs **only when a disposable Postgres
@@ -66,6 +66,11 @@ def documents_client(tmp_path, monkeypatch):
     # autouse conftest fixture, so no boot reindex touches the real docs/ tree).
     monkeypatch.setenv("KB_DB_PATH", str(tmp_path / "data" / "kb.sqlite3"))
     monkeypatch.setenv("DATABASE_URL", url)
+    # The /auth throttle counts per (IP, path) in a PROCESS-global dict, so every
+    # seed signup in this file (and in the suites that reuse this fixture) shares one
+    # 20-per-15-min window across the whole pytest session — past ~20 the later suites
+    # start 429ing on setup. No pytest test asserts on throttling, so disable it here.
+    monkeypatch.setenv("KB_AUTH_RATE_LIMIT", "0")
     import server.persistence.engine as engine_mod
 
     engine_mod._engine = None
@@ -255,6 +260,61 @@ def test_documents_are_unmetered(documents_client):
     assert _event_count() == before
 
 
+def _seeded_file(tmp_path, tenant: str, rel: str):
+    """Materialize a seeded doc's file under the tenant's own (non-public) root."""
+
+    path = tmp_path / "tenants" / tenant / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("body", encoding="utf-8")
+    return path
+
+
+def test_delete_document_removes_file_row_and_index(documents_client, tmp_path, monkeypatch):
+    client, _ = documents_client
+    # Own KB_ROOT (the file lives on disk) and no operator email -> the caller is not
+    # tenant #1, so the delete stays in tenants/<uuid>/ and never touches docs/ or git.
+    monkeypatch.setenv("KB_ROOT", str(tmp_path))
+    monkeypatch.delenv("KB_OPERATOR_EMAIL", raising=False)
+    headers, tenant = _signup(client, f"del-{uuid4()}@example.com")
+    _project(client, headers, "alpha")
+    doc = _seed_doc(tenant, "alpha", slug="gone", title="Delete me", markdown="deleteterm body")
+    path = _seeded_file(tmp_path, tenant, "alpha/2026-01-01-gone.md")
+
+    assert client.delete(f"/app/documents/{doc}", headers=headers).status_code == 204
+    assert not path.exists()  # file unlinked from the tenant's root
+    assert client.get(f"/app/documents/{doc}", headers=headers).status_code == 404
+    # DB row gone -> the FTS trigger dropped its index row too.
+    assert client.get("/app/search", params={"q": "deleteterm"}, headers=headers).json()["total"] == 0
+
+
+def test_delete_document_tenant_isolation(documents_client):
+    client, _ = documents_client
+    a_headers, _ = _signup(client, f"dela-{uuid4()}@example.com")
+    b_headers, b_tenant = _signup(client, f"delb-{uuid4()}@example.com")
+    b_doc = _seed_doc(b_tenant, "shared", slug="b", title="Tenant B note", markdown="body")
+
+    # No public fallback on delete: another tenant's id is an ordinary 404 (never 403),
+    # and the document survives untouched.
+    assert client.delete(f"/app/documents/{b_doc}", headers=a_headers).status_code == 404
+    assert client.get(f"/app/documents/{b_doc}", headers=b_headers).status_code == 200
+
+
+def test_delete_document_is_unmetered(documents_client, tmp_path, monkeypatch):
+    client, sync_engine = documents_client
+    monkeypatch.setenv("KB_ROOT", str(tmp_path))
+    headers, tenant = _signup(client, f"delmeter-{uuid4()}@example.com")
+    doc = _seed_doc(tenant, "alpha", slug="m", title="Metered?", markdown="body")
+
+    def _event_count() -> int:
+        with sync_engine.connect() as conn:
+            return conn.execute(text("SELECT count(*) FROM usage_events")).scalar_one()
+
+    before = _event_count()
+    assert client.delete(f"/app/documents/{doc}", headers=headers).status_code == 204
+    # Unlike the metered DELETE /api/documents/{id}, the web plane bills nothing.
+    assert _event_count() == before
+
+
 def test_documents_require_auth(documents_client):
     client, _ = documents_client
     # The list + search routes stay session-only -> 401 unauthenticated.
@@ -264,3 +324,5 @@ def test_documents_require_auth(documents_client):
     # public-project docs), so an unauthenticated request for a non-public / missing
     # id is now an indistinguishable 404, not a 401 (404-never-403).
     assert client.get("/app/documents/1").status_code == 404
+    # Delete stays session-only (require_user, no optional-identity fallback) -> 401.
+    assert client.delete("/app/documents/1").status_code == 401

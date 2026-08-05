@@ -131,6 +131,44 @@ Verified against the code at decomposition time (line numbers as of this commit)
   (`test_delete_404`), `:285` (`test_delete_requires_bearer`) — don't duplicate it; the new tests
   cover the `/app` route's own guarantees. Keep the suite terse (Hard Rules).
 
+### P21.S1 notes (backend delete landed)
+
+- **Both delegated decisions went the planned way, and `server/main.py` is untouched.** The
+  function-level `from server.main import _delete_document` inside the worker works cleanly
+  (no extraction, still exactly one `WRITE_LOCK`), and `run_in_threadpool` + a connection
+  opened inside the worker is the shipped shape. **Caveat for anyone reusing this pattern:**
+  `WRITE_LOCK` is taken *inside* `_delete_document` and `threading.Lock` is not reentrant, so
+  the worker must **not** wrap its lookup+call in `with WRITE_LOCK:` (it would self-deadlock).
+  The worker mirrors the `/api` handlers: unlocked lookup, helper takes the lock.
+- **The `ApiAuthContext` bridge must carry a `UUID`, not a string.** `phase.md`'s findings and
+  the S1 plan both wrote `tenant_id=str(ctx.tenant.id)`, but `get_tenant_one_id()` returns a
+  `UUID`, so a stringified tenant id makes `is_public` **always False** — a tenant-#1 member's
+  delete would then hit `tenants/<uuid>/` instead of `docs/` and skip the Recent index + git
+  commit. Shipped as `tenant_id=ctx.tenant.id` (matches the dataclass and `resolve_api_write`).
+- **Endpoint contract for S2:** 204 empty body on success; 401 without a session; 404
+  (`{"detail":"no document with id <id>"}`) for both a missing id and another tenant's id; no
+  other status (a failed git commit/push still answers 204). Not idempotent — a repeat delete
+  is 404.
+- **`server/**` and `tests/**` edits must be byte-mirrored into `plugin/templates/kb/`** —
+  `plugin/templates/manifest.json` ships both dirs and `scripts/plugin_parity.py` (in
+  `plugin-ci.yml`) fails on drift. S1's two files were mirrored; the gate is green. S2 is
+  web-only, so it is unaffected — but REVIEW should re-run `plugin_parity.py`.
+- **Suite health, measured.** Full suite against a disposable `postgres:17`, fresh DB:
+  **99 passed / 1 failed** with S1 in, versus a `git archive HEAD` baseline of
+  **89 passed / 8 failed**. Two causes, both pre-existing:
+  * The one remaining failure is the known `test_documents_list_detail_and_project_bridge`
+    `format`-key case (P16 added `format` to the projector; `docs/current/qa.md:394` records it
+    from the P18 review). Untouched — out of S1's scope, but a candidate for a `P21.F*` fix.
+  * The other 7 were **429s**: `server/auth_api.py::_enforce_rate_limit` counts per (IP, path)
+    in a *process-global* dict, default 20 per 15 min — one window for the whole pytest session,
+    which P19's suite already exceeded. Fixed at the shared fixture (`documents_client` now sets
+    `KB_AUTH_RATE_LIMIT=0`; the limiter early-returns without counting, so it frees the budget
+    for `test_graph_api` / `test_public_read` / `test_html_documents` too). No pytest test
+    asserts on throttling. `tests/conftest.py` was not touched.
+- Untested branch: `is_public=True` (tenant #1 ⇒ `docs/` + Recent index + git commit). Needs
+  `KB_OPERATOR_EMAIL` + a git tree; the same helper call is covered on the `/api` plane by
+  `tests/test_api_write.py::test_delete_happy_path`.
+
 ## Constraints
 
 - `WRITE_LOCK` (`server/main.py:150`) is process-local and load-bearing (single worker); the new
@@ -158,6 +196,17 @@ versions once at `P21.REVIEW` — never per slice._
   `experience.md` (delete action + two-step confirm on the documents surfaces), possibly
   `backend.md` / `architecture.md` if S1 extracts the shared delete path into a new module, and
   `security.md` if the member-only/no-public-fallback boundary is worth stating there.
+- `P21.S1`: **`api.md`** — new unmetered, session-only `DELETE /app/documents/{doc_id}` (204;
+  401 unauthenticated; 404 for missing *and* cross-tenant ids — **no** public fallback, unlike
+  the P19 GETs), reusing `server/main.py::_delete_document`'s logic (not the metered `/api`
+  route) via a deferred import + `run_in_threadpool` with a worker-owned SQLite connection; the
+  `/app` plane's "every web-UI feature is free" invariant is unchanged. Also touches
+  **`backend.md`** (the `/app` plane is no longer read-only — first mutating `/app` document
+  route; `server/main.py` unchanged, still one `WRITE_LOCK`), **`security.md`** (member-only
+  delete boundary: 404-never-403, reading a public doc never implies deleting it), and
+  **`qa.md`** (the shared `documents_client` fixture now disables the process-global `/auth`
+  throttle, `KB_AUTH_RATE_LIMIT=0` — full gated suite goes 89/8 → 99/1, the remaining failure
+  being the already-recorded `format`-key case).
 
 ## Open Questions
 
