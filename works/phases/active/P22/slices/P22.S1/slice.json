@@ -1,0 +1,33 @@
+{
+  "id": "P22.S1",
+  "phase_id": "P22",
+  "name": "Show labels only for the selected node",
+  "kind": "feature",
+  "status": "todo",
+  "order": 10,
+  "depends_on": [
+    "P22.DECOMP"
+  ],
+  "created_at": "2026-08-05T15:42:38+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

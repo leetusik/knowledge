@@ -686,3 +686,6 @@
 {"ts": "2026-08-05T15:28:01+09:00", "type": "phase_reviewed", "phase": "P21", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-08-05T15:28:01+09:00", "type": "deferred_created", "deferred": "D21", "source": "P21.REVIEW"}
 {"ts": "2026-08-05T15:28:01+09:00", "type": "deferred_created", "deferred": "D22", "source": "P21.REVIEW"}
+{"ts": "2026-08-05T15:41:41+09:00", "type": "slice_status_changed", "slice": "P22.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-05T15:42:38+09:00", "type": "slice_created", "phase": "P22", "slice": "P22.S1"}
+{"ts": "2026-08-05T15:44:01+09:00", "type": "slice_status_changed", "slice": "P22.DECOMP", "old_status": "in_progress", "new_status": "done"}

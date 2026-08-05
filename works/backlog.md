@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P22`
-- Current slice: `P22.DECOMP`
+- Current slice: `P22.S1`
 - Next slice: `P22.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `15`
-- Rebuilt at: `2026-08-05T15:28:01+09:00`
+- Rebuilt at: `2026-08-05T15:44:01+09:00`
 
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |
 |---|---|---|---|---|---|
 | [x] `P21` | `done` | `pass` | Web document deletion | `none` | `works/phases/active/P21` |
-| [ ] `P22` | `planned` | `pending` | Graph label focus | `P22.DECOMP` | `works/phases/active/P22` |
+| [ ] `P22` | `planned` | `pending` | Graph label focus | `P22.S1` | `works/phases/active/P22` |
 | [ ] `P23` | `planned` | `pending` | Document version control | `P23.DECOMP` | `works/phases/active/P23` |
 | [ ] `P24` | `planned` | `pending` | Upload finish-return timeout | `P24.DECOMP` | `works/phases/active/P24` |
 
@@ -34,7 +34,8 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P22.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P22/slices/P22.DECOMP` |
+| [x] `P22.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P22/slices/P22.DECOMP` |
+| [ ] `P22.S1` | `todo` | Show labels only for the selected node | `feature` | `works/phases/active/P22/slices/P22.S1` |
 | [ ] `P22.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P22/slices/P22.REVIEW` |
 
 ## Phase P23: Document version control
