@@ -95,7 +95,7 @@
       ]
     },
     "experience": {
-      "latest": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes",
+      "latest": "v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -193,6 +193,14 @@
           "source": "P21.REVIEW",
           "summary": "P21 members can hard-delete a document from the documents list and the read page member branch: two-step inline confirm, permanent-and-no-undo copy, one not-found string for both 404 causes",
           "previous": "v0011_p20_onboarding_ux_honest_hero_curl_one-liner_init_password_prompt_working_save_url_init_web-login_line_d16_cross-project_org-key_reuse_landing_env-var_quickstart_copyable_downloadable_skill"
+        },
+        {
+          "id": "v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node",
+          "path": "docs/versions/experience/v0013_p22_the_in-app_graph_goes_quiet_a_title_shows_only_for_the_selected_node_and_the_one_hovered_node.md",
+          "created_at": "2026-08-05T15:59:12+09:00",
+          "source": "P22.REVIEW",
+          "summary": "P22 the in-app graph goes quiet: a title shows only for the selected node and the one hovered node",
+          "previous": "v0012_p21_members_can_hard-delete_a_document_from_the_documents_list_and_the_read_page_member_branch_two-step_inline_confirm_permanent-and-no-undo_copy_one_not-found_string_for_both_404_causes"
         }
       ]
     },
@@ -323,7 +331,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import",
+      "latest": "v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -413,6 +421,14 @@
           "source": "P21.REVIEW",
           "summary": "P21 documents surfaces gain their first write: shared two-step-confirm delete island on the list and the read page member branch; guarded redirect precedent; cross-route-group island import",
           "previous": "v0010_p20_landing_onboarding_honest_hero_copy_design_round_02_agent_env-var_quickstart_published-skill_sections_copy-control_island_served_skill.md"
+        },
+        {
+          "id": "v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone",
+          "path": "docs/versions/frontend/v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone.md",
+          "created_at": "2026-08-05T15:58:10+09:00",
+          "source": "P22.REVIEW",
+          "summary": "P22 GraphCanvas labels go selection-driven: the ported quiet-label ladder and neighborhood reveal are gone",
+          "previous": "v0011_p21_documents_surfaces_gain_their_first_write_shared_two-step-confirm_delete_island_on_the_list_and_the_read_page_member_branch_guarded_redirect_precedent_cross-route-group_island_import"
         }
       ]
     },
@@ -999,7 +1015,7 @@
       ]
     },
     "qa": {
-      "latest": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e",
+      "latest": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1089,11 +1105,19 @@
           "source": "P21.REVIEW",
           "summary": "P21 delete acceptance: documents_client disables the process-global /auth throttle (89-8 to 99-1), web vitest 69, and the review's live no-JS server-action E2E",
           "previous": "v0010_p20_qa_web_copy-button_vitest_61-_66_skills_parity_third_full-file_web-copy_gate_live_clean-env_installer_init_d16_save_prod_e2e"
+        },
+        {
+          "id": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only",
+          "path": "docs/versions/qa/v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only.md",
+          "created_at": "2026-08-05T16:00:47+09:00",
+          "source": "P22.REVIEW",
+          "summary": "P22 app-graph label-focus QA mission: the P6 map mission covers the mkdocs surface only",
+          "previous": "v0011_p21_delete_acceptance_documents_client_disables_the_process-global_auth_throttle_89-8_to_99-1_web_vitest_69_and_the_review_s_live_no-js_server-action_e2e"
         }
       ]
     },
     "decisions": {
-      "latest": "v0018_p20_adrs_curl_installer_over_pypi_d-p13-1_stands_d16_org-key_reuse_across_projects_depict-the-prompt_password_honesty_no_generator_skill-publishing_full-file_parity_gate_third_web_copy_d10_resolved",
+      "latest": "v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -1239,9 +1263,17 @@
           "source": "P20.REVIEW",
           "summary": "P20 ADRs: curl installer over PyPI (D-P13-1 stands), D16 org-key reuse across projects, depict-the-prompt password honesty (no generator), skill-publishing full-file parity gate (third web copy), D10 resolved",
           "previous": "v0017_p18_no_tenants-_orgs_rename_org-level_keys_additive_get-or-create_unique_tenant_id_name_cli_default_project_retargeted_to_default_no_design_round_for_the_org-keys_surface"
+        },
+        {
+          "id": "v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map",
+          "path": "docs/versions/decisions/v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map.md",
+          "created_at": "2026-08-05T15:59:51+09:00",
+          "source": "P22.REVIEW",
+          "summary": "P22 ADR the app graph deviates from the ported label ladder: selection-driven labels, A-prime scoped to the mkdocs map",
+          "previous": "v0018_p20_adrs_curl_installer_over_pypi_d-p13-1_stands_d16_org-key_reuse_across_projects_depict-the-prompt_password_honesty_no_generator_skill-publishing_full-file_parity_gate_third_web_copy_d10_resolved"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-05T15:25:38+09:00"
+  "last_rebuilt_at": "2026-08-05T16:01:20+09:00"
 }
