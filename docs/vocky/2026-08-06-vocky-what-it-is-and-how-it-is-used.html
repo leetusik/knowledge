@@ -1,0 +1,468 @@
+<!--kb
+title: "Vocky: What It Is and How It Is Used"
+date: 2026-08-06
+tags:
+  - vocky
+  - product-overview
+  - feedback-capture
+  - api-surfaces
+  - onboarding
+source:
+  project: vocky
+  repo: vocky
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocky: What It Is and How It Is Used</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.6; }
+    h1, h2, h3 { line-height: 1.25; }
+    h2 { margin-top: 2.5rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: .3rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: rgba(128,128,128,.12); padding: .75rem; border-radius: 6px;
+           font-size: .9em; }
+    code { background: rgba(128,128,128,.12); padding: .1em .3em; border-radius: 4px;
+           font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid #4a7; background: rgba(74,170,119,.10);
+               padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #c80; background: rgba(204,136,0,.10); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95em; }
+    th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: rgba(128,128,128,.10); }
+    figure { margin: 1.5rem 0; }
+    figcaption { font-size: .9em; opacity: .75; margin-top: .4rem; text-align: center; }
+    svg text { font-family: system-ui, sans-serif; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; border: 1px solid rgba(128,128,128,.4);
+              border-radius: 6px; background: rgba(128,128,128,.06); color: inherit;
+              font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; color: #133; }
+    .q .opt.incorrect { background: #f7d6d6; color: #311; }
+    .q .why { margin: .4rem 0 0 0; font-size: .95em; border-left: 3px solid #4a7; padding-left: .6rem; }
+    nav ol { margin: .3rem 0 0 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Vocky: What It Is and How It Is Used</h1>
+
+  <p><em>First of a four-part series for a new vocky maintainer: (1) the product and its
+  user-facing surfaces — this document; (2) system internals; (3) security, operations, and QA;
+  (4) decisions, history, and the agentic workspace.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+
+    <p>Every product that people actually use generates feedback: someone clicks a thumbs-down,
+    types "결제 단계에서 카드가 거절돼요" into a comment box, or tells an AI assistant that the
+    export flow finally worked. In most systems this signal is scattered — some of it lands in
+    application logs, some in support tickets, most of it nowhere at all. Teams that want to know
+    what customers are asking for, praising, or struggling with end up grepping logs or guessing.</p>
+
+    <p><strong>Vocky is a feedback layer that solves exactly this.</strong> A product's backend
+    sends explicit, human-triggered feedback events to vocky over a single REST call; vocky
+    structures them into one canonical, searchable store; and the team reads them back — in a web
+    dashboard, from a terminal, or through their own admin panel. It is delivered as a
+    <strong>free multi-tenant SaaS</strong>: no paid plans, no billing, no metering. It is live at
+    <code>https://vocky.hi2vi.com</code> (deployed 2026-08-04, phase P12 of the project's history),
+    though the contracts are still early-stage — the product calls itself pre-MVP.</p>
+
+    <h3>Who it is for</h3>
+    <ul>
+      <li><strong>Developers integrating capture</strong> — a backend engineer wiring a
+      like/dislike button, a survey, or a feedback form to <code>POST /api/feedback</code>.</li>
+      <li><strong>Teams reviewing customer voice</strong> — product and operations people
+      searching and reading what came in.</li>
+      <li><strong>Coding agents acting for a user</strong> — an explicit audience since P11.
+      An AI agent can onboard a user, mint credentials, and capture feedback entirely from a
+      terminal, and since P14 <em>agent-recorded feedback</em> (an agent deciding mid-conversation
+      that something a user said is worth keeping) is a first-class, publicly documented flow.</li>
+    </ul>
+
+    <h3>What it deliberately is not</h3>
+    <p>The MVP's restraint is as defining as its features. There is <strong>no automatic
+    classification</strong> (no sentiment enum, no auto-tagging — the user's words are stored
+    verbatim), <strong>no analytics suite</strong> (simple counts and trends only), <strong>no
+    browser-direct ingestion</strong> (capture is a deliberate server-to-server action — a
+    product's backend calls vocky, never the end user's browser), and <strong>no billing</strong>.
+    Review and query surfaces exist but are always <em>scoped and authenticated</em> — there is no
+    public cross-tenant query surface anywhere.</p>
+
+    <h3>The accounts model: user → org → project</h3>
+    <p>A <strong>user</strong> signs up with email + password. Signup lands a usable account in one
+    step: it provisions the user, their <strong>org</strong> (auto-named
+    <code>"&lt;email-local-part&gt;'s workspace"</code>), and a <strong>project</strong> named
+    <code>"default"</code> — nobody starts at zero. An org owns projects; project names are unique
+    per org, and creating a project by an existing name returns the existing one (so "make sure
+    this project exists" is safe to script). The MVP flow is solo-owner: one org per account, no
+    invites or roles yet.</p>
+
+    <div class="callout">
+      <strong>Terminology trap for a maintainer:</strong> "org" is the <em>product-facing</em> word;
+      the implementation still says <code>tenant</code> everywhere — the table is
+      <code>tenants</code>, the API field is <code>tenant_id</code>. They mean the same thing.
+      Nothing was renamed in the P10 accounts rework because the rename would have been a large
+      mechanical change with zero behavior difference. Similarly, capture's <code>user_id</code>
+      field identifies an <em>integrating product's own end user</em>, never a vocky account.
+    </div>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <h3>Two credentials, two planes</h3>
+    <p>The single most important mental model in vocky is the split between its two credentials.
+    Everything else — which surface does what, what the web app may call, why the CLI has one odd
+    command — falls out of this split.</p>
+
+    <table>
+      <tr><th></th><th>Session token</th><th><code>vk_</code> key</th></tr>
+      <tr><td>Minted by</td><td><code>POST /auth/signup</code> / <code>/auth/login</code></td>
+          <td><code>/app/credentials</code> (org scope) or <code>/app/projects/{id}/credentials</code> (project scope)</td></tr>
+      <tr><td>Held by</td><td>a signed-in human (or the CLI's config store)</td>
+          <td>a product backend or agent runtime, as a server-side secret</td></tr>
+      <tr><td>Unlocks</td><td>the <strong>control plane</strong>: <code>/auth/*</code> + <code>/app/*</code> —
+          manage projects and keys, read/search feedback across all your projects, see usage</td>
+          <td>the <strong>data plane</strong>: <code>/api/*</code> + <code>/mcp</code> —
+          capture feedback, and read/manage feedback <em>within the key's scope</em></td></tr>
+      <tr><td>Lifetime</td><td>30 days, revoked on logout</td>
+          <td>until revoked; plaintext shown exactly once at mint, only a hash stored</td></tr>
+    </table>
+
+    <p>A <code>vk_</code> key is itself a choice of scope: a <strong>project key</strong> works for
+    exactly one project (the narrow default), while an <strong>org key</strong> (P10) works across
+    every project in the org, including ones created later — when capturing with it, the caller
+    names the destination project by name (get-or-created; omitted means <code>"default"</code>).
+    Both look identical (<code>vk_…</code>); the way to tell them apart is
+    <code>credential.project_id</code> — a UUID for a project key, <code>null</code> for an org
+    key. The trade-off is stated, not hidden: an org key is more convenient and a bigger secret —
+    revoking it cuts every project at once.</p>
+
+    <div class="callout warn">
+      <strong>A <code>vk_</code> key is not capture-only.</strong> Within its scope it can capture,
+      read, PATCH, and DELETE feedback — there are no per-credential permission scopes yet. This is
+      why the published guidance says: for an agent runtime, or any machine you don't control, mint
+      a <em>project-bound</em> key, never an org key.
+    </div>
+
+    <h3>One store, six doors</h3>
+    <p>Vocky keeps <strong>one canonical feedback store</strong> and one shared capture field set.
+    What differs between surfaces is their <em>role</em> — who stands at each door and what job
+    they came to do:</p>
+
+    <figure>
+      <svg viewBox="0 0 760 420" role="img" aria-label="Diagram of vocky's six surfaces around one canonical feedback store" style="width:100%;height:auto">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+          </marker>
+        </defs>
+        <!-- center store -->
+        <rect x="290" y="165" width="180" height="90" rx="10" fill="#0C7A52" opacity="0.9"/>
+        <text x="380" y="202" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">canonical</text>
+        <text x="380" y="222" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">feedback store</text>
+        <!-- top row: control plane -->
+        <rect x="30" y="20" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="135" y="45" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">/auth/*</text>
+        <text x="135" y="63" text-anchor="middle" font-size="11.5" fill="#888">signup · login · me — public door</text>
+        <rect x="275" y="20" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="380" y="45" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">/app/*  (session token)</text>
+        <text x="380" y="63" text-anchor="middle" font-size="11.5" fill="#888">projects · keys · usage · read+search</text>
+        <rect x="520" y="20" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="625" y="45" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">Admin REST  (own bearer)</text>
+        <text x="625" y="63" text-anchor="middle" font-size="11.5" fill="#888">operator review — API-only, edge-hidden</text>
+        <!-- bottom row: data plane -->
+        <rect x="30" y="336" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="135" y="361" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">/api/*  (vk_ key)</text>
+        <text x="135" y="379" text-anchor="middle" font-size="11.5" fill="#888">capture + scoped end-user self-read</text>
+        <rect x="275" y="336" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="380" y="361" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">/api/project/feedback</text>
+        <text x="380" y="379" text-anchor="middle" font-size="11.5" fill="#888">your admin panel: read · PATCH · DELETE</text>
+        <rect x="520" y="336" width="210" height="64" rx="8" fill="none" stroke="#888"/>
+        <text x="625" y="361" text-anchor="middle" font-size="13" font-weight="700" fill="#0C7A52">/mcp  (vk_ key)</text>
+        <text x="625" y="379" text-anchor="middle" font-size="11.5" fill="#888">agent capture — write-only, 1 tool</text>
+        <!-- arrows -->
+        <line x1="135" y1="84" x2="320" y2="165" stroke="#888" marker-end="url(#arr)"/>
+        <line x1="380" y1="84" x2="380" y2="165" stroke="#888" marker-end="url(#arr)"/>
+        <line x1="625" y1="84" x2="440" y2="165" stroke="#888" marker-end="url(#arr)"/>
+        <line x1="135" y1="336" x2="320" y2="255" stroke="#888" marker-end="url(#arr)"/>
+        <line x1="380" y1="336" x2="380" y2="255" stroke="#888" marker-end="url(#arr)"/>
+        <line x1="625" y1="336" x2="440" y2="255" stroke="#888" marker-end="url(#arr)"/>
+      </svg>
+      <figcaption>Six doors, one store. Top: the account/control plane and the operator surface.
+      Bottom: the <code>vk_</code>-keyed data plane.</figcaption>
+    </figure>
+
+    <ul>
+      <li><strong><code>/auth/*</code></strong> — the public door: signup, login, logout, me.</li>
+      <li><strong><code>/app/*</code></strong> — the session-authed control plane: manage projects
+      and credentials at either scope, read/search feedback across <em>all your projects</em>
+      (Korean-safe substring search), and view usage. Cross-tenant ids answer
+      <strong>404, never 403</strong> — you cannot even probe what exists.</li>
+      <li><strong><code>/api/*</code></strong> — server-to-server capture
+      (<code>POST /api/feedback</code>, plus attachment upload) and a narrowly scoped end-user
+      self-read, gated by a mandatory <code>vk_</code> credential on every request.</li>
+      <li><strong><code>/api/project/feedback</code></strong> ("Feedback API v2") — the
+      external-admin-panel path: with the same <code>vk_</code> key it captures with, a product
+      reads <em>and manages</em> (PATCH review fields, DELETE, operator comments) its own scope's
+      feedback.</li>
+      <li><strong><code>/mcp</code></strong> — the agent-runtime door: a write-only MCP endpoint
+      with exactly one tool, <code>capture_feedback</code>. Same <code>vk_</code> bearer, same
+      store, no read tools (reads stay REST-only).</li>
+      <li><strong>Admin REST</strong> (<code>/admin/api/*</code>) — the self-hosted operator's
+      review/management surface behind its own separate bearer. API-only: its packaged browser UI
+      was deleted in P6, and the production edge 404s the whole <code>/admin</code> prefix.</li>
+    </ul>
+
+    <h3>A capture, end to end (toy data)</h3>
+    <p>Say the checkout team's backend has a project key for project <code>checkout-web</code>, and
+    a real user hits "결제 단계에서 카드가 거절돼요" into the feedback box. The backend POSTs:</p>
+
+    <pre><code>POST /api/feedback
+Authorization: Bearer vk_9f3c…
+
+{
+  "message": "결제 단계에서 카드가 거절돼요",
+  "source": { "product": "checkout-web", "integration": "web-backend" },
+  "feedback_value": 2,
+  "trigger_type": "comment",
+  "recorded_by": "human"
+}</code></pre>
+
+    <p>Vocky answers <code>202 Accepted</code> with a <code>request_id</code> <em>before</em>
+    anything is persisted: capture is asynchronous — accept fast, enqueue, and let a background
+    worker write the record to PostgreSQL. The record becomes queryable moments later. Then any
+    signed-in team member finds it with <code>GET /app/feedback?q=결제</code> (or in the web app's
+    Feedback page, or <code>vocky feedback search 결제</code>) — the search is a case-insensitive
+    substring match that works for Korean, particles and all: <code>결제</code> matches
+    <code>결제를 못 했습니다</code> too.</p>
+
+    <h3>Who recorded this? The <code>recorded_by</code> marker</h3>
+    <p>Since P14, vocky distinguishes <em>agent-recorded</em> feedback (an AI decided the user's
+    words were worth keeping) from <em>human-recorded</em> feedback (a person clicked a button) as
+    first-class provenance, not a naming convention. The rules are precise and worth memorizing:</p>
+    <ul>
+      <li>The vocabulary is closed: <code>"agent"</code> or <code>"human"</code>, nothing else —
+      anything else is rejected, never coerced.</li>
+      <li><strong>Omitting it stores <code>null</code> = <em>unspecified</em> — which is not
+      "human".</strong> Everything captured before the feature also reads back as unspecified;
+      vocky never backfills and never guesses.</li>
+      <li><strong><code>/mcp</code> is the one place it is inferred</strong>: that endpoint is the
+      agent-runtime transport by construction, so an omitted marker is stamped
+      <code>"agent"</code> there. REST and the CLI never infer (the CLI has no marker flag at
+      all). An explicit value always wins on every transport.</li>
+      <li>Every read surface returns it, and every list surface filters on
+      <code>?recorded_by=agent|human</code>. There is deliberately no filter for the
+      <code>null</code> rows.</li>
+    </ul>
+    <p>The companion product decision: there is <strong>no sentiment enum</strong>. The user's own
+    words — <code>답답함</code>, <code>감사</code>, a whole sentence — go in <code>message</code>
+    verbatim; the agent's note about what happened goes in <code>comment</code>. Both are free
+    text, both searchable. Operators hear the actual voice of the customer.</p>
+
+    <h3>The field taxonomy, grouped by responsibility</h3>
+    <p>Capture fields are grouped by the question they answer, not by transport:</p>
+    <table>
+      <tr><th>Group</th><th>Fields</th><th>The question they answer</th></tr>
+      <tr><td>Display &amp; action</td><td><code>message</code> (required), <code>feedback_value</code> (1 like / 2 dislike), <code>comment</code></td><td>What is the feedback?</td></tr>
+      <tr><td>Source identity</td><td><code>source.product</code> (required), <code>source.integration</code></td><td>Which product/integration sent it?</td></tr>
+      <tr><td>Caller identity</td><td><code>user_id</code>, <code>session_id</code></td><td>Whose feedback, which session?</td></tr>
+      <tr><td>Provenance</td><td><code>recorded_by</code></td><td><em>Who recorded it</em> — agent or human?</td></tr>
+      <tr><td>Trigger</td><td><code>trigger_type</code>, <code>trigger_message</code>, <code>trigger_metadata</code></td><td><em>Why did capture happen</em> — which button, survey, workflow?</td></tr>
+      <tr><td>Exact target</td><td><code>target_type</code> (<code>message</code>/<code>conversation</code>/<code>surface</code>), <code>target_id</code>, <code>target_role</code>, <code>target_text</code></td><td>What exactly was reviewed?</td></tr>
+      <tr><td>Review categories</td><td><code>channel</code> (<code>web</code>/<code>mobile</code>/<code>support</code> or null), <code>tags</code></td><td>How do operators slice it?</td></tr>
+      <tr><td>Context</td><td><code>conversation_id</code>, <code>messages</code>, <code>used_context</code></td><td>What surrounded it?</td></tr>
+      <tr><td>Metadata</td><td><code>event_at</code>, <code>source_metadata</code>, <code>attributes</code></td><td>When, and product-specific extras</td></tr>
+    </table>
+    <p>Note the deliberate orthogonality: <code>recorded_by</code> (who recorded) vs
+    <code>trigger_type</code> (why captured) vs <code>target_*</code> (what was reviewed) are three
+    different questions, so an agent relaying a survey response can answer all three. And
+    <code>message</code> is the feedback's own display text — never an implicit pointer to "the
+    latest message"; callers that know the exact reviewed item say so with the target fields.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+
+    <p>Everything above maps onto three user-facing client codebases in the repo (the server
+    internals behind them are the next explainer's subject): the web app in <code>web/</code>, the
+    CLI in <code>src/vocky/cli/</code>, and the published agent skill + installer in
+    <code>skills/vocky-feedback/</code> and <code>web/public/</code>.</p>
+
+    <h3>The web app (<code>web/</code>) — the browser surface</h3>
+    <p>A Next.js 16 / React 19 / TypeScript app (Tailwind v4, pnpm), and vocky's <em>only</em>
+    browser surface (it superseded a packaged operator admin UI, deleted back in P6). Two things
+    define its architecture:</p>
+    <ul>
+      <li><strong>It is a session-token client only.</strong> It talks to <code>/auth/*</code> and
+      <code>/app/*</code> — never the <code>vk_</code>-keyed <code>/api/*</code>. It adds no
+      capability the API doesn't have, and it deliberately carries <strong>no feedback
+      management</strong>: the web app is where a human <em>finds</em> feedback; managing it
+      belongs to a product's own admin panel over <code>/api/project/feedback</code>.</li>
+      <li><strong>The browser never holds the vocky token.</strong> A server-side BFF
+      ("backend-for-frontend") proxy seals the session token into an AES-256-GCM httpOnly cookie
+      (<code>web/src/lib/session.ts</code>); browser JS can never read it, and every vocky call is
+      made server-side (<code>web/src/lib/vocky/</code>).</li>
+    </ul>
+    <p>The route groups tell the story (<code>web/src/app/</code>): <code>(auth)</code> is the
+    unguarded login/signup pair; <code>(app)</code> is guarded once in its layout and holds the
+    three signed-in pages — <code>/dashboard</code> (usage totals, daily trend chart, projects
+    list, and the org-keys panel), <code>/projects/[projectId]</code> (per-project usage,
+    credentials with last-used times, mint/revoke — the mint shows the plaintext
+    <code>vk_</code> key exactly once, with a warning, then only a 12-character prefix stub
+    survives reload), and <code>/feedback</code> (cross-project list/search/detail; attachments
+    download, never render inline). The root <code>/</code> is a public marketing landing that
+    carries the real onboarding: a hero <code>curl | bash</code> install row, a
+    <code>#quickstart</code> section walking the two-variable agent contract, and a
+    <code>#skill</code> pane that renders the served <code>SKILL.md</code> read at request time.</p>
+
+    <h3>The CLI (<code>src/vocky/cli/</code>) — the terminal surface</h3>
+    <p>A Typer app, packaged lean (httpx + typer only; the whole server stack hides behind a
+    <code>pip install "vocky[server]"</code> extra). The command groups mirror the API surfaces
+    one-to-one:</p>
+    <pre><code>vocky signup|login|logout|whoami      →  /auth/*        (session token)
+vocky projects …                      →  /app/projects  (session token)
+vocky keys mint|list|revoke           →  /app/…credentials  (session token; --project picks scope)
+vocky usage                           →  /app/usage     (session token)
+vocky feedback list|search|show       →  /app/feedback  (session token, read-only)
+vocky capture "…" --product X         →  POST /api/feedback   (vk_ key from VOCKY_API_TOKEN)</code></pre>
+    <p>That last line is the deliberate oddity: <code>capture</code> is the CLI's <em>only</em>
+    <code>vk_</code>-keyed command (files <code>capture.py</code> vs the session-token
+    <code>auth.py</code>/<code>projects.py</code>/<code>feedback.py</code>). The two credential
+    planes are structurally prevented from crossing: <code>capture</code> reads its key from the
+    <code>VOCKY_API_TOKEN</code> env var only (no <code>--token</code> flag — argv is
+    world-readable), never sends the stored session token, and the <code>vk_</code> key is never
+    persisted to the config store — so <code>vocky logout</code> can't leave a key behind.</p>
+    <p>The CLI is built agent-first: <code>--password-stdin</code> keeps secrets off argv,
+    <code>--base-url</code> / <code>VOCKY_CONFIG_DIR</code> allow headless, isolated sessions,
+    errors go to stderr with non-zero exit, and <code>keys mint</code> prints the show-once
+    plaintext key as the <strong>strict last line</strong> of output — a parsing contract, so a
+    script can reliably grab it. The full reference is the hand-written
+    <code>docs/cli.md</code>.</p>
+
+    <h3>The agent skill and the installer — onboarding as product</h3>
+    <p><strong>Two environment variables are the whole agent contract:</strong></p>
+    <pre><code>export VOCKY_BASE_URL="https://vocky.hi2vi.com"
+export VOCKY_API_TOKEN="vk_..."</code></pre>
+    <p>(Recommended home: <code>~/.zshenv</code>, never a repo <code>.env</code> — a repo file
+    isn't auto-loaded by coding agents and is one commit away from a leak.) On top of that
+    contract, vocky publishes an end-user agent skill, <code>skills/vocky-feedback/SKILL.md</code>,
+    served byte-identically at <code>/SKILL.md</code> and shown on the landing. It is written to be
+    executed verbatim by an agent: a zero-side-effect verify step (a bare authenticated
+    <code>GET /api/feedback</code> — <code>400</code> means the token worked and only the missing
+    filter was rejected; <code>401</code> means stop, never retry), the field-mapping table from
+    the Intuition section above, three capture paths (CLI → raw REST → <code>/mcp</code>), and a
+    branch-by-branch error table. A CI byte-parity gate (<code>scripts/skill_parity.py</code>)
+    holds the served copy to the canonical file so they can never fork.</p>
+    <p>Distribution is a <code>curl | bash</code> installer (<code>web/public/install.sh</code>,
+    served at <code>/install.sh</code>) rather than PyPI — nothing is published there. The script
+    installs via <code>uv tool install</code> from GitHub <code>main</code>, needs no sudo, and its
+    safety argument is structural: every executable statement lives inside <code>main()</code> and
+    <code>main "$@"</code> is the file's last line, so a download truncated mid-transfer defines a
+    function and hits EOF instead of half-executing.</p>
+
+    <div class="callout">
+      <strong>Maintainer takeaway:</strong> all three clients are <em>pure clients</em>. The web
+      app, the CLI, and the skill add zero backend capability — every one of them rides surfaces
+      that exist independently. That is why the next explainer (system internals) can treat the
+      server as one self-contained story: the six doors above are the complete public contract.
+    </div>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> A capture arrives over REST with no <code>recorded_by</code> field.
+      What does vocky store, and what does it mean?</p>
+      <button class="opt" data-correct="false"><code>"human"</code> — REST is the human-facing transport, so that is the default</button>
+      <button class="opt" data-correct="true"><code>null</code> — <em>unspecified</em>, which is deliberately not the same as "human"</button>
+      <button class="opt" data-correct="false"><code>"agent"</code> — vocky assumes automation for server-to-server calls</button>
+      <button class="opt" data-correct="false">The request is rejected — the marker is required</button>
+      <p class="why" hidden>Omitting the marker stores <code>null</code> = unspecified; vocky never
+      guesses. Only <code>/mcp</code> infers (<code>"agent"</code>), because that endpoint is the
+      agent transport by construction.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> You are handed a credential record and need to know whether its
+      <code>vk_</code> key is project-scoped or org-scoped. What do you look at?</p>
+      <button class="opt" data-correct="false">The key prefix — org keys start with <code>vk_org_</code></button>
+      <button class="opt" data-correct="false">The key length — org keys are longer</button>
+      <button class="opt" data-correct="true"><code>credential.project_id</code> — a UUID means project key, <code>null</code> means org key</button>
+      <button class="opt" data-correct="false">You cannot tell — the scopes are indistinguishable by design</button>
+      <p class="why" hidden>Both kinds look identical as strings (<code>vk_…</code>, deliberately).
+      The scope discriminator is <code>credential.project_id</code>: UUID = project-bound,
+      <code>null</code> = org-wide. The dashboard and <code>vocky keys list</code> label it for you.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> Which statement about the web app is true?</p>
+      <button class="opt" data-correct="false">It calls <code>POST /api/feedback</code> so users can submit feedback from the dashboard</button>
+      <button class="opt" data-correct="true">It is a session-token client of <code>/auth/*</code> + <code>/app/*</code> only, and carries no feedback management</button>
+      <button class="opt" data-correct="false">It stores the vocky session token in browser localStorage</button>
+      <button class="opt" data-correct="false">It lets operators edit and delete feedback records</button>
+      <p class="why" hidden>The web app never touches the <code>vk_</code>-keyed <code>/api/*</code>
+      surface; the browser only talks to the Next.js origin, which seals the token in an httpOnly
+      cookie. Finding feedback is the app's job; managing it belongs to
+      <code>/api/project/feedback</code>.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> What are the only <em>required</em> fields on
+      <code>POST /api/feedback</code>?</p>
+      <button class="opt" data-correct="false"><code>message</code>, <code>source_product</code>, and <code>feedback_value</code></button>
+      <button class="opt" data-correct="true"><code>message</code> and the nested <code>source.product</code></button>
+      <button class="opt" data-correct="false"><code>message</code>, <code>user_id</code>, and <code>recorded_by</code></button>
+      <button class="opt" data-correct="false">Just <code>message</code> — everything else is optional</button>
+      <p class="why" hidden><code>message</code> and <code>source.product</code>, both non-blank.
+      And the nesting matters: <code>source</code> is the only nested object, and a top-level
+      <code>source_product</code> on capture is rejected outright (that flat name exists only on the
+      <em>read</em> path).</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> The "two-variable agent contract" means a coding agent can capture
+      feedback with nothing but…</p>
+      <button class="opt" data-correct="false"><code>VOCKY_BASE_URL</code> and a session token from <code>vocky login</code></button>
+      <button class="opt" data-correct="true"><code>VOCKY_BASE_URL</code> and <code>VOCKY_API_TOKEN</code> carrying a <code>vk_</code> key</button>
+      <button class="opt" data-correct="false">A vocky plugin installed per-repo plus an API key</button>
+      <button class="opt" data-correct="false"><code>VOCKY_CONFIG_DIR</code> and <code>VOCKY_ADMIN_AUTH_TOKEN</code></button>
+      <p class="why" hidden>Two exports — the base URL and the <code>vk_</code> key — are the whole
+      contract: no plugin, no SDK, no config file. <code>VOCKY_API_TOKEN</code> carries the
+      <code>vk_</code> key and only that; it is never the session token, and the two cannot cross.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
