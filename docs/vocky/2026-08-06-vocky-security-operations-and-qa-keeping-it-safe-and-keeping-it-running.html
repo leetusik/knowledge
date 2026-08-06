@@ -1,0 +1,436 @@
+<!--kb
+title: "Vocky Security, Operations, and QA: Keeping It Safe and Keeping It Running"
+date: 2026-08-06
+tags:
+  - vocky
+  - security
+  - operations
+  - deployment
+  - qa
+source:
+  project: vocky
+  repo: vocky
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocky Security, Operations, and QA: Keeping It Safe and Keeping It Running</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.6; }
+    h1, h2, h3 { line-height: 1.25; }
+    h2 { margin-top: 2.5rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: .3rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: rgba(128,128,128,.12); padding: .75rem; border-radius: 6px;
+           font-size: .9em; }
+    code { background: rgba(128,128,128,.12); padding: .1em .3em; border-radius: 4px;
+           font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid #4a7; background: rgba(74,170,119,.10);
+               padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #c80; background: rgba(204,136,0,.10); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95em; }
+    th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: rgba(128,128,128,.10); }
+    figure { margin: 1.5rem 0; }
+    figcaption { font-size: .9em; opacity: .75; margin-top: .4rem; text-align: center; }
+    svg text { font-family: system-ui, sans-serif; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; border: 1px solid rgba(128,128,128,.4);
+              border-radius: 6px; background: rgba(128,128,128,.06); color: inherit;
+              font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; color: #133; }
+    .q .opt.incorrect { background: #f7d6d6; color: #311; }
+    .q .why { margin: .4rem 0 0 0; font-size: .95em; border-left: 3px solid #4a7; padding-left: .6rem; }
+    nav ol { margin: .3rem 0 0 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Vocky Security, Operations, and QA: Keeping It Safe and Keeping It Running</h1>
+
+  <p><em>Third of a four-part series for a new vocky maintainer. Parts 1–2 covered the product
+  and the internals; this part answers three operator questions: who may do what (security), how
+  it runs in the world (operations), and how we know it works (QA). Part 4 covers decisions,
+  history, and the agentic workspace.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+
+    <p>Vocky went live at <code>https://vocky.hi2vi.com</code> on 2026-08-04 (phase P12). That
+    date splits this whole subject in two: everything below used to be <em>authored</em> posture;
+    it is now <em>live</em> posture serving real traffic. Two long-standing gaps were closed at
+    exactly that boundary — admin auth now fails closed, and the public auth surface has a real
+    rate limit — and both closures teach the house style: <strong>prefer fail-closed, versioned,
+    tested controls over external or optional ones.</strong></p>
+
+    <h3>The credential inventory</h3>
+    <p>Everything in vocky's security story is about six secrets. Know what each one is, where it
+    lives, and what losing it costs:</p>
+    <table>
+      <tr><th>Secret</th><th>Lives where</th><th>At rest</th><th>Blast radius if leaked</th></tr>
+      <tr><td>Account password</td><td>the user's head</td><td>argon2id hash only</td><td>one account</td></tr>
+      <tr><td>Session token (30d)</td><td>browser: sealed httpOnly cookie; CLI: <code>~/.config/vocky/config.json</code> (0600)</td><td>sha256 hash only</td><td>one account's control plane</td></tr>
+      <tr><td><code>vk_</code> project key</td><td>a product backend / agent runtime</td><td>sha256 hash + 12-char prefix</td><td>one project — capture, read, PATCH, DELETE</td></tr>
+      <tr><td><code>vk_</code> org key</td><td>same, by explicit choice</td><td>same</td><td><strong>every project in the org, present and future</strong></td></tr>
+      <tr><td><code>VOCKY_ADMIN_AUTH_TOKEN</code></td><td>box <code>.env</code> (api only)</td><td>env var</td><td>all feedback, all tenants (but edge-blocked from the internet)</td></tr>
+      <tr><td><code>SESSION_SECRET</code> / <code>VOCKY_SMTP_PASSWORD</code></td><td>box <code>.env</code> (web only / worker only)</td><td>env var</td><td>every web session / the SMTP account</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <strong>The P14 escalation, stated out loud:</strong> the agent-capture contract is public,
+      so a <code>vk_</code> key now lives <em>inside third-party AI agent runtimes</em> the
+      operator does not control. No code changed — but a <code>vk_</code> key is <strong>not
+      capture-only</strong> (it can read and delete within its scope), and per-credential
+      permission scopes are not implemented. The only mitigation today is scope: <em>mint a
+      project-bound key for an agent runtime, never an org key.</em> The docs say this publicly
+      rather than letting readers assume the key is narrow.
+    </div>
+
+    <h3>What runs where</h3>
+    <p>Production is a five-container Compose project co-tenanting an existing OCI box
+    (<code>opc@140.245.64.173</code>, cloned at <code>/home/opc/vocky</code> — <strong>the path is
+    load-bearing</strong>: the Compose project name, and therefore the data volume names, derive
+    from it). A shared edge nginx (its vhost owned by the separate <code>leetusik/edge</code>
+    repo) is the only ingress; every vocky service is <code>expose:</code>-only, addressed by
+    container name on a shared Docker network. Cloudflare fronts it in Full (Strict) mode.</p>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <h3>The authorization stance in one sentence</h3>
+    <p><strong>Out-of-scope ids answer 404, never 403 — existence is never leaked.</strong> This
+    one rule shows up everywhere: cross-tenant projects, other tenants' credentials, feedback
+    outside a key's scope, even the org-credential surface refusing to acknowledge the caller's
+    <em>own</em> project-bound key (it 404s there byte-identically to a foreign key, so the org
+    surface cannot even probe the project surface's rows). The web app extends it by collapsing
+    vocky's 400 <em>and</em> 404 into one not-found page — distinguishing "malformed" from "not
+    yours" would leak the shape of what exists. Login's twin: unknown email and wrong password
+    return an <em>identical</em> 401, so accounts cannot be enumerated.</p>
+
+    <h3>Fail-closed vs best-effort — a deliberate asymmetry</h3>
+    <p>Two neighbouring behaviors in the same middleware look inconsistent and are not:</p>
+    <ul>
+      <li><strong>Credential scope resolution fails closed</strong> — a DB error answers
+      <code>500 credential scope unavailable</code> and never falls through to a handler.
+      Getting scope wrong is a cross-tenant read.</li>
+      <li><strong>The <code>last_used_at</code> stamp is best-effort</strong> — a stamping failure
+      is logged and swallowed. Failing an otherwise-valid ingest over bookkeeping would be
+      backwards.</li>
+    </ul>
+    <p>The same pattern at deploy time: every box secret interpolates as
+    <code>${VAR:?message}</code>, so a missing value <em>aborts the deploy</em> — because before
+    P12 a blank admin token silently meant nine unauthenticated admin routes on the shared
+    network, and a blank <code>SESSION_SECRET</code> passed the health gate entirely (the
+    healthcheck fetches the static landing, which never reads it). Fail-closed is a lesson paid
+    for, not a preference. And the admin middleware itself now answers <code>503 Admin API is not
+    configured</code> when tokenless — deliberately not a 401, because no credential could
+    succeed.</p>
+
+    <h3>The rate limiter and the invariant it stands on</h3>
+    <p><code>/auth/signup</code> and <code>/auth/login</code> — the only unauthenticated,
+    guessable routes — carry an in-process fixed-window limiter (default 20 requests / 15 min per
+    <code>(client IP, route)</code>), checked as the <em>first statement</em> in each handler,
+    before any body parsing or password work. Four properties matter more than the numbers:</p>
+    <ul>
+      <li><strong>Client IP precedence is <code>X-Real-IP</code> → first <code>X-Forwarded-For</code>
+      → socket peer.</strong> Behind Cloudflare + the shared edge, the socket peer is the edge
+      container — a naive limiter would throttle the whole internet as one client. The flip side:
+      those headers are client-controllable off the edge path, so this is an anti-abuse speed
+      bump, <em>never</em> an authentication boundary.</li>
+      <li><strong>Keyed on IP + route, never the email</strong> — so it leaks no account-existence
+      signal and the generic 401 stays byte-identical.</li>
+      <li><strong>Its state is per-process memory</strong>, which makes
+      "<code>vocky-api</code> stays a single uvicorn worker" a real operational invariant —
+      <code>workers=N</code> would silently divide the limit N ways.</li>
+      <li><strong>Capture has no rate limit at all.</strong> <code>POST /api/feedback</code> and
+      <code>/mcp</code> are unlimited, and the existing per-IP design is exactly wrong for
+      server-to-server traffic (one third party = one IP). A per-credential bucket is deferred
+      real design work, triggered by a second agent product or the first abuse incident.</li>
+    </ul>
+
+    <h3>The deploy lifecycle: image tags, not git reverts</h3>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="Deploy pipeline: tag previous, build, migrate, recreate, health-gate, with rollback by tag flip" style="width:100%;height:auto">
+        <defs>
+          <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+          </marker>
+        </defs>
+        <rect x="15" y="30" width="120" height="52" rx="8" fill="none" stroke="#888"/>
+        <text x="75" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#0C7A52">tag :latest</text>
+        <text x="75" y="69" text-anchor="middle" font-size="11" fill="#888">→ :previous</text>
+        <rect x="165" y="30" width="110" height="52" rx="8" fill="none" stroke="#888"/>
+        <text x="220" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#0C7A52">build</text>
+        <text x="220" y="69" text-anchor="middle" font-size="11" fill="#888">api + worker together</text>
+        <rect x="305" y="30" width="130" height="52" rx="8" fill="#0C7A52" opacity="0.9"/>
+        <text x="370" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">migrate FIRST</text>
+        <text x="370" y="69" text-anchor="middle" font-size="11" fill="#fff">one-off container</text>
+        <rect x="465" y="30" width="120" height="52" rx="8" fill="none" stroke="#888"/>
+        <text x="525" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#0C7A52">recreate</text>
+        <text x="525" y="69" text-anchor="middle" font-size="11" fill="#888">api / worker / web</text>
+        <rect x="615" y="30" width="130" height="52" rx="8" fill="none" stroke="#888"/>
+        <text x="680" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#0C7A52">health gate</text>
+        <text x="680" y="69" text-anchor="middle" font-size="11" fill="#888">2 clean polls, no restarts</text>
+        <line x1="135" y1="56" x2="165" y2="56" stroke="#888" marker-end="url(#arr3)"/>
+        <line x1="275" y1="56" x2="305" y2="56" stroke="#888" marker-end="url(#arr3)"/>
+        <line x1="435" y1="56" x2="465" y2="56" stroke="#888" marker-end="url(#arr3)"/>
+        <line x1="585" y1="56" x2="615" y2="56" stroke="#888" marker-end="url(#arr3)"/>
+        <path d="M 680 82 L 680 140 L 75 140 L 75 82" fill="none" stroke="#c80" stroke-dasharray="5,4" marker-end="url(#arr3)"/>
+        <text x="380" y="132" text-anchor="middle" font-size="12" fill="#c80" font-weight="700">on failure: flip :previous → :latest, up -d --no-build, re-gate (seconds, no rebuild)</text>
+        <text x="380" y="175" text-anchor="middle" font-size="11.5" fill="#888">never `down -v` — postgres-data / redis-data / attachments-data survive every deploy and rollback</text>
+      </svg>
+      <figcaption><code>deploy/deploy.sh</code>'s ordering is load-bearing; rollback is a tag
+      flip, and a schema-incompatible revert is a git-ref <em>redeploy</em>, not a rollback.</figcaption>
+    </figure>
+    <p>Three rules fall out: <strong>migrate before serving</strong> (old-code + new-schema is the
+    only safe overlap — additive, nullable, no-backfill migrations make this free);
+    <strong>the worker reuses the api image</strong> with no build of its own (one build freshens
+    both, so the worker can never run stale persistence code); and <strong>migrations live outside
+    the images</strong> (an explicit, observable deploy step that can fail and roll back on its
+    own).</p>
+
+    <h3>How we know it works: the smoke ladder</h3>
+    <p>QA is a ladder of increasingly real checks, each catching what the rung below cannot:</p>
+    <ol>
+      <li><strong>The suites</strong> — 30 files / 238 tests (Python, against a real Postgres via
+      the two-database contract; fakeredis stands in for Redis) and 10 files / 78 tests (web,
+      vitest in Node, no jsdom — untestable things are extracted into pure helpers). Test files
+      stay small and terse by house rule.</li>
+      <li><strong><code>vocky-smoke</code></strong> — walks the real spine (signup → project → key
+      → capture → poll the read) against a running stack. Its reference payload is the deploy-time
+      guard for the queue serializer's silent field-dropping; every new capture field extends
+      it.</li>
+      <li><strong>CI</strong> — four proven-green jobs: skill byte-parity, installer
+      <code>bash -n</code>, the web gate (lint/typecheck/test/format), and pytest against a
+      Postgres service container. <em>No Python lint or type-check exists anywhere</em> — ruff and
+      mypy are absent by fact, not oversight; ~34 pre-existing findings mean gating ruff needs its
+      own sweep first.</li>
+      <li><strong>Manual-only territory</strong> — live MCP sessions (CI never opens one), email
+      alert delivery (a clean worker log proves acceptance, not delivery), and the
+      <strong>restore drill, which has never been rehearsed</strong> — the single largest
+      remaining operational risk.</li>
+    </ol>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+
+    <h3>Where the security machinery lives</h3>
+    <ul>
+      <li><code>src/vocky/auth.py</code> — both middlewares, the path predicates, the scope
+      resolver and ASGI-scope stash. <code>src/vocky/accounts/security.py</code> — argon2id
+      hashing, <code>secrets.token_urlsafe(32)</code> token generation, <code>sha256_hex</code>.
+      <code>src/vocky/rate_limit.py</code> — the fixed-window limiter (module-global dict, 20k-key
+      prune cap that under-counts rather than over-counts).</li>
+      <li><code>web/src/lib/session.ts</code> — the AES-256-GCM cookie seal
+      (<code>v1.&lt;iv&gt;.&lt;ct&gt;.&lt;tag&gt;</code>, key = sha256 of
+      <code>SESSION_SECRET</code>, fresh IV per seal; <code>openSession</code> returns
+      <code>null</code> for <em>every</em> failure). <code>web/src/lib/bff.ts</code> — the one
+      audited public pipeline: JSON-only 415 → same-origin 403 → per-IP 429 → parse/zod → vocky →
+      seal cookie; upstream <code>detail</code> never echoed.</li>
+      <li><code>/mcp</code> transport security — DNS-rebinding allowlist; a public host must be in
+      <code>VOCKY_MCP_ALLOWED_HOSTS</code> or every call answers <strong>421 Invalid Host header
+      before the key is even examined</strong> (not 401 — retrying with another key cannot fix
+      it). <code>VOCKY_MCP_ALLOWED_ORIGINS</code> stays unset on purpose: non-browser clients send
+      no <code>Origin</code>. Known local-dev gap: the dev compose doesn't forward these vars.</li>
+    </ul>
+
+    <h3>The production files</h3>
+    <table>
+      <tr><th>File</th><th>What it is</th></tr>
+      <tr><td><code>compose.prod.yml</code></td><td>The five services (fixed container names, no host ports, healthcheck-gated), three permanent volumes, per-service env isolation (no <code>env_file:</code> — the api never sees the SMTP password, the web never sees the admin token), four <code>${VAR:?}</code> secrets, log caps on all five services.</td></tr>
+      <tr><td><code>deploy/deploy.sh</code></td><td>The 8-step runbook in the diagram above. <code>COMPOSE_BAKE=false</code>; never <code>down</code>; the migrate step targets the <em>service key</em> <code>api</code>, not the container name.</td></tr>
+      <tr><td><code>deploy/rollback.sh</code></td><td>Verify <code>:previous</code> exists → retag → <code>up -d --no-build</code> → re-gate. Never re-migrates (valid for additive migrations only).</td></tr>
+      <tr><td><code>deploy/backup.sh</code> + <code>restore.md</code> + <code>status.sh</code></td><td>Nightly pg_dump + attachments tar, 14-day retention (Redis deliberately not backed up — it's a queue, not truth); the unrehearsed restore drill; a read-only status snapshot. Authored in P12.S5, <em>not yet applied on the box</em>.</td></tr>
+      <tr><td><code>edge/conf.d/vocky.conf</code> (in <code>leetusik/edge</code>)</td><td>The routing map: BFF prefixes (<code>/api/auth/</code>, <code>/api/app/</code>) beat <code>/api/</code>; <code>/admin/</code> returns 404 at the edge; <code>/mcp</code> is SSE-safe; Cloudflare real-IP restore; HSTS max-age 300 (shared-wildcard caution) + an <em>additive</em> <code>upgrade-insecure-requests</code> CSP. Applied only via that repo's <code>edge-deploy</code> workflow — never scp.</td></tr>
+      <tr><td><code>.github/workflows/</code></td><td><code>ci.yml</code> (4 jobs, push/PR) and <code>deploy-production.yml</code> (manual, main-guarded, ancestor-verified — never yet dispatched; P12 deployed by running <code>deploy.sh</code> on the box).</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <strong>Edge house rules</strong> (violating any breaks every co-tenant site): never
+      <code>default_server</code>; no IPv6 listen; <strong>no <code>limit_req_zone</code></strong>
+      (zone names are global across <code>conf.d/</code>); always restore Cloudflare real IPs;
+      always resolver + variable upstreams. And the <code>proxy_set_header</code> inheritance
+      footgun: headers are hoisted to the server level and <em>no location sets any</em> — a
+      single per-location header silently drops the whole inherited set for that route.
+    </div>
+
+    <h3>The app/edge header split</h3>
+    <p>The app (<code>web/next.config.ts</code>) owns the generic headers and a production-gated,
+    all-<code>'self'</code> CSP — with <code>'unsafe-inline'</code> scripts/styles and no nonce,
+    deliberately: a nonce needs middleware that forces dynamic rendering app-wide. No external
+    origin is allowed at all; adding any third-party script/font/image means editing the CSP
+    string. The app sets no HSTS — that belongs to the edge, whose short max-age reflects the
+    shared-wildcard blast radius. nginx passes app headers through untouched.</p>
+
+    <h3>Running the QA machinery</h3>
+    <pre><code>make test              # Python suite — needs DATABASE_URL + a DIFFERENT TEST_DATABASE_URL
+make smoke             # vocky-smoke against the local stack
+make verify            # smoke, then test
+make external-smoke    # same smoke against VOCKY_EXTERNAL_BASE_URL (signs up a throwaway account!)
+make check-skill-parity
+cd web &amp;&amp; pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm format:check &amp;&amp; pnpm build</code></pre>
+    <p>Traps a new maintainer will hit, in likelihood order: the <strong>two-database
+    contract</strong> (<code>conftest.py</code> raises if <code>TEST_DATABASE_URL</code> equals
+    <code>DATABASE_URL</code>; the suite must run from the repo root because alembic.ini is
+    relative); <strong>local e2e on <code>pnpm dev</code>, never <code>pnpm start</code></strong>
+    (the production build marks the cookie <code>Secure</code>, so plain-http clients silently
+    bounce to login); <strong>origin-less curl POSTs to <code>/api/auth/*</code> get 403 by
+    design</strong> (send <code>Origin: https://vocky.hi2vi.com</code> when probing); a stale
+    local worker image makes captures accept but never appear
+    (<code>docker compose up --build -d worker</code>); and <code>env -u VAR</code> proves nothing
+    about the fail-loud secrets (Compose auto-reads the project <code>.env</code> — test with an
+    explicit <code>--env-file</code>).</p>
+
+    <h3>Two mirror-assertions that bite predictably</h3>
+    <ul>
+      <li><code>web/tests/skill-preview-ssr.test.ts</code> pins <code>SKILL.md</code>'s <em>last
+      section heading</em> — any section added or renumbered in the skill must update that
+      line.</li>
+      <li><code>tests/test_admin_api.py::test_admin_list_feedback_preserves_legacy_channel_filter</code>
+      compares one whole serialized record as an exact dict — <em>every</em> new response field
+      lands on exactly that line. Editing it is not an additivity violation; the snapshot mirrors
+      the serializer, not a client.</li>
+    </ul>
+  </section>
+
+  <section id="best-practices">
+    <h2>Best practices &amp; next steps</h2>
+
+    <p><strong>Where vocky aligns with prevailing practice.</strong> Password storage is
+    textbook: OWASP's first-choice algorithm is Argon2id — "the winner of the 2015 Password
+    Hashing Competition", chosen for balanced resistance to side-channel and GPU attacks — and
+    vocky hashes with argon2id via <code>argon2-cffi</code>
+    (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP
+    Password Storage Cheat Sheet</a> — cheatsheetseries.owasp.org). Session handling also
+    matches the recommendations: OWASP asks for ≥64 bits of CSPRNG entropy in session identifiers
+    (vocky's <code>secrets.token_urlsafe(32)</code> is 256 bits), meaningless token values (opaque
+    tokens, hashed at rest), and <code>HttpOnly</code> + <code>SameSite=Strict</code> +
+    <code>Secure</code> cookies — exactly the sealed-cookie attributes the web app sets
+    (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html">OWASP
+    Session Management Cheat Sheet</a> — cheatsheetseries.owasp.org).</p>
+
+    <p><strong>Where it deliberately diverges.</strong> OWASP recommends idle timeouts
+    (15–30 min for low-risk apps) plus an absolute timeout of hours, enforced server-side
+    (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html">OWASP
+    Session Management Cheat Sheet</a> — cheatsheetseries.owasp.org); vocky issues a flat
+    <strong>30-day</strong> token with no idle timeout, no renewal, and no rotation. For a free
+    product holding product-feedback data, the convenience trade is defensible — but it is a real
+    divergence, worth revisiting if vocky ever holds higher-value data or adds team members with
+    roles. The other honest divergences are documented in-repo: the no-nonce CSP (static
+    generation over strict inline-script control), the per-IP-only rate limiting (wrong shape for
+    server-to-server capture, knowingly deferred), and same-prefix org/project keys (incident-response
+    legibility traded away, recorded with the counter-argument).</p>
+
+    <p><strong>Concrete next steps for a maintainer:</strong></p>
+    <ol>
+      <li><strong>Rehearse the restore drill</strong> (<code>deploy/restore.md</code>) in a quiet
+      window — it is documented, never run, and self-describes as a draft to be corrected by its
+      first real execution. Also apply the P12.S5 backup cron + datastore log-cap
+      <code>--force-recreate</code> on the box if not yet done.</li>
+      <li><strong>Per-credential rate limiting for capture</strong> before a second third-party
+      agent product goes live — the per-IP module cannot serve server-to-server traffic.</li>
+      <li><strong>Off-box backup replication</strong> — today's backups die with the box.</li>
+      <li><strong>A ruff sweep, then gate it</strong> — the prettier precedent (sweep to zero
+      first, then turn on the check) is the proven order; ~34 findings stand between here and a
+      lint gate.</li>
+    </ol>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> A curl probe of <code>/mcp</code> on a fresh self-hosted deployment
+      answers <code>421 Invalid Host header</code>. What is wrong?</p>
+      <button class="opt" data-correct="false">The <code>vk_</code> key is revoked — mint a new one</button>
+      <button class="opt" data-correct="true">The deployment's public hostname is not in <code>VOCKY_MCP_ALLOWED_HOSTS</code> — the key was never even examined</button>
+      <button class="opt" data-correct="false">The MCP container is not running</button>
+      <button class="opt" data-correct="false"><code>VOCKY_MCP_ALLOWED_ORIGINS</code> must be configured for non-browser clients</button>
+      <p class="why" hidden>421 is the DNS-rebinding transport check on the <code>Host</code>
+      header, before auth. A different key cannot fix it. (There is no MCP container — it's an
+      in-process Mount — and <code>_ORIGINS</code> stays unset because non-browser clients send no
+      <code>Origin</code>.)</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> Why must <code>vocky-api</code> stay a single uvicorn worker?</p>
+      <button class="opt" data-correct="false">SQLAlchemy's async engine is not multi-process safe</button>
+      <button class="opt" data-correct="false">The MCP session manager can only run in one process</button>
+      <button class="opt" data-correct="true">The auth rate limiter's state is per-process memory — N workers would silently divide the effective limit into N independent buckets</button>
+      <button class="opt" data-correct="false">The edge nginx can only route to one upstream connection</button>
+      <p class="why" hidden>The limiter is a module-global dict. The invariant is documented in
+      the module docstring and beside <code>uvicorn.run(...)</code>; scaling out requires moving
+      that state (e.g. to Redis) first.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> A deploy's migration step fails. What does <code>deploy.sh</code> do,
+      and what is the rollback unit?</p>
+      <button class="opt" data-correct="false">It reverts the git commit and rebuilds both images</button>
+      <button class="opt" data-correct="true">It flips the <code>:previous</code> image tags back to <code>:latest</code> and recreates without rebuilding — the rollback unit is an image tag</button>
+      <button class="opt" data-correct="false">It runs <code>alembic downgrade -1</code> and restarts</button>
+      <button class="opt" data-correct="false">It runs <code>docker compose down -v</code> and redeploys from scratch</button>
+      <p class="why" hidden>Rollback is a tag flip — seconds, no rebuild, no data movement.
+      <code>rollback.sh</code> never re-migrates (safe for additive migrations only); a
+      schema-incompatible revert is a git-ref redeploy. Nothing ever runs <code>down -v</code> —
+      the three data volumes must survive everything.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> Which statement about vocky's test/QA setup is true?</p>
+      <button class="opt" data-correct="false">CI runs ruff and mypy on every push</button>
+      <button class="opt" data-correct="false">The Python suite mocks out PostgreSQL entirely</button>
+      <button class="opt" data-correct="true">The suite needs a real Postgres with a separate <code>TEST_DATABASE_URL</code>, builds the schema via <code>alembic upgrade head</code>, and uses fakeredis instead of a real Redis</button>
+      <button class="opt" data-correct="false">CI opens a live MCP session to test the transport end to end</button>
+      <p class="why" hidden>The two-database contract is enforced loudly by
+      <code>conftest.py</code>, and the suite exercises the real migration chain. There is no
+      Python lint anywhere, and live MCP capture is manual-only territory.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Why do vocky's box secrets use <code>${VAR:?message}</code>
+      interpolation in <code>compose.prod.yml</code>?</p>
+      <button class="opt" data-correct="false">To encrypt the values at rest in the compose file</button>
+      <button class="opt" data-correct="true">So a missing secret aborts the deploy loudly — a plain <code>${VAR}</code> substitutes an empty string, which once meant unauthenticated admin routes and a blank session secret passing the health gate</button>
+      <button class="opt" data-correct="false">Because Docker requires it for variables marked secret</button>
+      <button class="opt" data-correct="false">To let each container read the shared <code>.env</code> file directly</button>
+      <p class="why" hidden>Fail-loud interpolation is the single enforcement point (deploy.sh
+      deliberately adds no second one). And note the testing trap: <code>env -u VAR</code>
+      false-passes because Compose auto-reads the project <code>.env</code> — verify with an
+      explicit <code>--env-file</code>.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
