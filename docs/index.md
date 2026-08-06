@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-06 · [Vocky System Internals: Architecture, Code Map, Data Model, and Contracts](vocky/2026-08-06-vocky-system-internals-architecture-code-map-data-model-and-contracts.html) — vocky
 - 2026-08-06 · [Vocky: What It Is and How It Is Used](vocky/2026-08-06-vocky-what-it-is-and-how-it-is-used.html) — vocky
 
 <div class="kb-sec"><h2>Browse · 둘러보기</h2></div>
