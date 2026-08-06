@@ -1,0 +1,350 @@
+<!--kb
+title: "Vocky Decisions, History, and the Agentic Workspace: Why It Is This Way and How to Change It"
+date: 2026-08-06
+tags:
+  - vocky
+  - decisions
+  - project-history
+  - agentic-workspace
+  - workflow
+source:
+  project: vocky
+  repo: vocky
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocky Decisions, History, and the Agentic Workspace: Why It Is This Way and How to Change It</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.6; }
+    h1, h2, h3 { line-height: 1.25; }
+    h2 { margin-top: 2.5rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: .3rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: rgba(128,128,128,.12); padding: .75rem; border-radius: 6px;
+           font-size: .9em; }
+    code { background: rgba(128,128,128,.12); padding: .1em .3em; border-radius: 4px;
+           font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid #4a7; background: rgba(74,170,119,.10);
+               padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #c80; background: rgba(204,136,0,.10); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95em; }
+    th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left;
+             vertical-align: top; }
+    th { background: rgba(128,128,128,.10); }
+    .timeline { list-style: none; margin: 1rem 0; padding: 0; }
+    .timeline li { position: relative; padding: 0 0 .9rem 1.6rem; border-left: 3px solid #4a7;
+                   margin-left: .5rem; }
+    .timeline li::before { content: ""; position: absolute; left: -8px; top: .35rem;
+                   width: 13px; height: 13px; border-radius: 50%; background: #0C7A52; }
+    .timeline .ph { font-weight: 700; color: #0C7A52; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; border: 1px solid rgba(128,128,128,.4);
+              border-radius: 6px; background: rgba(128,128,128,.06); color: inherit;
+              font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; color: #133; }
+    .q .opt.incorrect { background: #f7d6d6; color: #311; }
+    .q .why { margin: .4rem 0 0 0; font-size: .95em; border-left: 3px solid #4a7; padding-left: .6rem; }
+    nav ol { margin: .3rem 0 0 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Vocky Decisions, History, and the Agentic Workspace: Why It Is This Way and How to Change It</h1>
+
+  <p><em>Fourth and last of the new-maintainer series. Parts 1–3 explained what vocky is, how it
+  works, and how it is kept safe and running. This part explains why it is the way it is — the
+  decision record and the phase history — and how work on this repo actually happens: the agentic
+  workspace that drives it.</em></p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+
+    <p>Vocky is not just a codebase — it is a codebase plus a <em>memory of why</em>. Two
+    structures carry that memory: <code>docs/current/decisions.md</code>, a numbered record of
+    operator-approved design decisions (<code>D-P2-1</code> … <code>D-P14-3</code>) that "should
+    not be re-litigated without a new decision superseding it", and
+    <code>works/phases/archived/</code>, fourteen archived phases whose names alone tell the
+    product's story. A new maintainer who absorbs these two structures can predict what the
+    codebase will look like before reading it.</p>
+
+    <h3>The phase arc, P1 → P14</h3>
+    <ul class="timeline">
+      <li><span class="ph">P1</span> — relicense; retire the original agent-capture (MCP read tools gone for good).</li>
+      <li><span class="ph">P2</span> — accounts, tenancy, projects core: the pivot to a free multi-tenant SaaS; mandatory per-project <code>vk_</code> auth replaces the static token.</li>
+      <li><span class="ph">P3</span> — Feedback API v2: project-scoped feedback, Korean-safe trigram search, usage monitoring.</li>
+      <li><span class="ph">P4</span> — the web app: tenant dashboard, project pages, BFF + sealed cookie; supersedes the packaged Admin Web UI.</li>
+      <li><span class="ph">P5</span> — the CLI: agent-first onboarding from the terminal; server entry renamed <code>vocky-server</code>.</li>
+      <li><span class="ph">P6</span> — landing page production edges + the complete (then-unexecuted) deploy kit; the old Admin UI physically deleted.</li>
+      <li><span class="ph">P7</span> — agent capture revived as the write-only <code>/mcp</code> surface.</li>
+      <li><span class="ph">P8</span> — the design gate: the deep-emerald brand, decided by the operator with Claude Design.</li>
+      <li><span class="ph">P9</span> — apply the design: the round-01 brand across app + landing.</li>
+      <li><span class="ph">P10</span> — accounts v2: user → org → project, org-level keys, the "default" project at signup — a real trust-boundary widening, landed enforcement-first.</li>
+      <li><span class="ph">P11</span> — frictionless onboarding: the <code>curl | bash</code> installer, the two-env-var agent contract, the published skill.</li>
+      <li><span class="ph">P12</span> — <strong>production launch</strong> (2026-08-04, <code>vocky.hi2vi.com</code>): the P6 kit executed green; admin auth fail-closed; auth rate limit; CI completed.</li>
+      <li><span class="ph">P13</span> — feedback email alerts over SMTP (worker-only, contained).</li>
+      <li><span class="ph">P14</span> — public agent-recorded feedback: the <code>recorded_by</code> marker, the field-mapping contract, the skill grown to 8 steps.</li>
+    </ul>
+
+    <h3>What is genuinely true today (2026-08-06)</h3>
+    <ul>
+      <li><strong>Live:</strong> <code>https://vocky.hi2vi.com</code> serves; the installer and <code>/SKILL.md</code> are real; a signup round-trip was proven at bring-up.</li>
+      <li><strong>Not on PyPI, on purpose:</strong> distribution is the site-served installer; <code>uv publish</code> remains unexercised.</li>
+      <li><strong>Pre-MVP contracts:</strong> early-stage, not long-term-stable commitments.</li>
+      <li><strong>Known stale docs:</strong> <code>product.md</code> and <code>experience.md</code> still carry pre-P12 "not live yet" passages beside the updated live-status text — the docs' own status headers are the tell; trust <code>operations.md</code> for liveness.</li>
+    </ul>
+  </section>
+
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <h3>Reading the decision record: five recurring values</h3>
+    <p>The twenty-odd <code>D-*</code> entries are not random; the same values repeat, and knowing
+    them lets you anticipate what a future decision will say:</p>
+    <ol>
+      <li><strong>Additivity is the bar.</strong> P10's org keys landed <em>enforcement-first and
+      dark</em> — every scope filter rewritten before any org key could be minted, proven by the
+      whole suite passing byte-for-byte (D-P10-3). P14's marker changed no existing client's
+      behavior. A change that would 400 existing callers (like server-enforcing
+      <code>comment</code>) is rejected for exactly that reason (D-P14-3).</li>
+      <li><strong>Orthogonal dimensions get their own columns.</strong> <code>recorded_by</code>
+      (who) was not folded into <code>trigger_type</code> (why) even though that needed zero
+      migration — because an agent recording a survey could then never say both (D-P14-1).</li>
+      <li><strong>Boring, revocable auth.</strong> Opaque DB-backed tokens over JWT/OAuth
+      (D-P2-1); mandatory per-project keys over any shared static token (D-P2-4);
+      404-never-403 everywhere (D-P2-5).</li>
+      <li><strong>Rename nothing that carries no behavior.</strong> <code>tenants</code> was never
+      renamed to <code>orgs</code> (D-P10-1) — "org" is product-facing language only. Mechanical
+      renames are their own slices, never folded into feature phases.</li>
+      <li><strong>Counter-arguments are recorded, not erased.</strong> D-P10-4 keeps one
+      <code>vk_</code> prefix for both key scopes <em>and</em> records honestly that a distinct
+      prefix would have incident-response value. D-P10-5 accepts that optional
+      <code>--project</code> can silently mint a broader key, and says so. When you disagree with
+      a decision, the record usually already contains your argument — and the reason it lost.</li>
+    </ol>
+
+    <div class="callout">
+      <strong>Supersession chains matter:</strong> D-P8-1 supersedes D-P4-3 (the design gate
+      moved and closed); D-P10-3 narrows D-P3-2 (a key's "both, full" authority now spans a
+      chosen scope). P14 supersedes nothing but <em>re-raises</em> D-P3-2 sharply — unscoped keys
+      now live in third-party runtimes. Read the Status header of <code>decisions.md</code> first;
+      it maps these chains.
+    </div>
+
+    <h3>The workspace in one rule</h3>
+    <p><strong>Backlog routes. Slice folder explains. Result summarizes. Docs are versioned
+    durable truth.</strong> Everything else in <code>CLAUDE.md</code>/<code>AGENTS.md</code> (the
+    same file, two names) elaborates that sentence:</p>
+    <ul>
+      <li><strong>Work happens in phases</strong> (<code>P1</code>, <code>P2</code>, …), each
+      decomposed into <strong>slices</strong> (<code>P15.S1</code>, <code>P15.F1</code> for
+      fixes). A phase starts with only <code>DECOMP</code> + <code>REVIEW</code> plus an
+      <code>intent.md</code> capturing the operator's confirmed request verbatim; the
+      <code>DECOMP</code> slice cuts the middle slices; the <code>REVIEW</code> slice validates
+      everything together at the end.</li>
+      <li><strong>An orchestrator/executor split.</strong> The main session (the orchestrator)
+      plans each slice into its <code>plan.md</code>, commits, and owns all state transitions;
+      the actual work is delegated to <code>slice-executor</code> subagent tiers picked by the
+      slice's risk (low risk → mid tier; real code or cross-file work → high tier). The executor
+      writes the slice's <code>result.md</code> and appends durable notes to <code>phase.md</code>
+      (the phase notebook) — but never commits and never moves status. Tier models live in
+      <code>executors.toml</code>, applied by <code>sync-agents</code>.</li>
+      <li><strong>Durable docs are versioned, once per phase.</strong> Slices never edit
+      <code>docs/current/*.md</code> (generated snapshots) and never run
+      <code>doc-new-version</code>; they append one-line "Doc impact" notes to
+      <code>phase.md</code>, and a <em>passing</em> review consolidates them into new files under
+      <code>docs/versions/&lt;doc&gt;/vNNNN_*.md</code>. Old versions are immutable history —
+      never patched. <code>docs/index.json</code> is the trail: eleven doc ids, each a chain of
+      versions with a summary and source phase.</li>
+      <li><strong>Deferred jobs park scope honestly.</strong> Nine are open today
+      (<code>D1</code>–<code>D10</code>, D5 resolved), each with an explicit re-entry
+      <em>trigger</em> — e.g. D9 "per-credential capture rate limiting: before a second
+      third-party agent product goes live", D10 "capture-only key scopes: before recommending
+      vocky keys in runtimes the operator does not control". They never affect slice selection
+      until promoted. The deferred list is effectively the roadmap's risk register — read it.</li>
+      <li><strong>Parallel mode is per-phase, opt-in</strong> — a phase can run on its own
+      branch + git worktree (<code>parallel-start</code>), with merging gated on a quiet point and
+      doc consolidation deferred to post-merge (versions come from one shared index). Slices
+      within a phase always stay sequential.</li>
+    </ul>
+
+    <h3>How to change vocky, concretely</h3>
+    <ol>
+      <li><strong>Small/typo-level:</strong> the fast path — but never for behavior, contracts, or
+      workflow.</li>
+      <li><strong>Standalone request:</strong> focused change + verification; if it alters durable
+      truth, still cut a doc version.</li>
+      <li><strong>Real work:</strong> create a phase (<code>/create-phase</code> captures and
+      confirms intent first — creating a phase never means executing it), then drive it with
+      <code>/do-next-slice</code> or <code>/do-whole-phase</code>. Reviews record verdicts with
+      <code>review-phase</code>; only <code>pass</code> closes the phase; archiving is a separate
+      manual step.</li>
+      <li><strong>Contradicting a <code>D-*</code>:</strong> write a superseding decision in a
+      phase — do not silently drift. The record is the contract with your past self.</li>
+    </ol>
+  </section>
+
+  <section id="code">
+    <h2>Code</h2>
+
+    <h3>The workspace's file anatomy</h3>
+    <pre><code>CLAUDE.md / AGENTS.md        the contract (routing rules; ~33KB — the authority on process)
+scripts/workflow.py          the one engine: python3 scripts/workflow.py &lt;command&gt;
+works/
+  state.json                 the current pointer (stream-scoped in parallel mode)
+  backlog.md, deferred.md    generated dashboards — never hand-edit, never detailed
+  phases/active/P&lt;N&gt;/        phase.json, phase.md (notebook), intent.md,
+    slices/P&lt;N&gt;.S&lt;M&gt;/        slice.json + plan.md + result.md (exactly two context files)
+  phases/archived/           the fourteen finished phases (history — do not deep-read by default)
+  deferred/open/D&lt;N&gt;/        one folder per parked job
+docs/
+  current/*.md               generated snapshots of the newest version — read here
+  versions/&lt;doc&gt;/vNNNN_*.md  immutable version history — append, never patch
+  index.json                 the version trail for all eleven docs
+.claude/skills/              17 command-skills (create-phase, do-whole-phase, review-phase, …)
+.claude/agents/              the slice-executor tiers + qa-agent
+executors.toml               executor model/effort config (applied via sync-agents)</code></pre>
+
+    <h3>The commands you will actually run</h3>
+    <table>
+      <tr><th>Intent</th><th>Command</th></tr>
+      <tr><td>Where am I?</td><td><code>python3 scripts/workflow.py next</code> (plus <code>validate</code> for state integrity)</td></tr>
+      <tr><td>New phase</td><td><code>/create-phase</code> (skill: refine → clarify → confirm intent, then <code>new-phase</code>) — <em>never</em> decompose or implement at creation</td></tr>
+      <tr><td>Execute</td><td><code>/do-next-slice</code> (one slice) or <code>/do-whole-phase</code> (loop to review); default is unattended <code>auto</code>, <code>gate</code> restores per-plan approval</td></tr>
+      <tr><td>Review</td><td><code>review-phase P&lt;N&gt; --verdict pass|changes_requested|blocked</code> — drives both the phase and its REVIEW slice</td></tr>
+      <tr><td>Doc truth changed</td><td><code>doc-new-version --doc &lt;id&gt; --summary "..." --source &lt;slice&gt;</code> then <code>rebuild-docs</code> — at review time (or for standalone changes)</td></tr>
+      <tr><td>Park scope</td><td><code>defer-job --title ... --reason ... --trigger ...</code>; later <code>promote-deferred</code> or <code>drop-deferred</code></td></tr>
+      <tr><td>Archive</td><td><code>rotate-backlog</code> / <code>archive-phase P&lt;N&gt;</code> / <code>archive-all</code> — manual, only after a passing review</td></tr>
+      <tr><td>Parallel phase</td><td><code>parallel-start P&lt;N&gt;</code> at creation time only; lifecycle in the <code>parallel-phase</code> skill</td></tr>
+    </table>
+
+    <h3>Rules with teeth (the ones that bite)</h3>
+    <ul>
+      <li><strong>Never hand-edit</strong> <code>docs/current/*.md</code>, the dashboards, or an
+      old doc version — they are generated or immutable. The engine regenerates; you version.</li>
+      <li><strong>A slice owns exactly two context files</strong> (<code>plan.md</code>,
+      <code>result.md</code>) and never pre-fills another slice's plan. The phase notebook
+      (<code>phase.md</code>) is the cross-slice memory — every slice reads it at start and
+      appends durable findings at end.</li>
+      <li><strong>Visual design is never the coding agent's call.</strong> The
+      <code>design-cowork</code> skill governs: Claude Design + the operator decide; the agent
+      writes a handoff, waits, lands the result as-is, and implements faithfully ("RESPECT THE
+      DESIGN"). P8/P9 and the P11 landing sections all ran this way; P14 deliberately did
+      <em>not</em> build a dashboard filter control because that would be design work.</li>
+      <li><strong>Commit convention:</strong> <code>type(scope): summary</code>, imperative, one
+      commit per completed slice, attributed to the model that did the work. No branches and no
+      pushes unless asked (parallel mode being the documented exception).</li>
+      <li><strong>Keep tests small</strong> — minimal high-value cases; a suite grows only on
+      operator request or clear risk. (Part 3's counts — 238 + 78 — are a snapshot of what earned
+      a test, not a coverage target.)</li>
+      <li><strong>Operator co-work halts everything:</strong> a <code>pending</code> slice or
+      phase stops selection until the operator clears it — that is how validation gates and
+      design gates hand control back to the human.</li>
+    </ul>
+
+    <h3>Where to look when unsure</h3>
+    <table>
+      <tr><th>Question</th><th>Source of truth</th></tr>
+      <tr><td>What did the operator actually ask for?</td><td>the phase's <code>intent.md</code> (verbatim + confirmed refined intent)</td></tr>
+      <tr><td>Why is the code shaped like this?</td><td><code>decisions.md</code>, then the phase's <code>phase.md</code>/<code>result.md</code> in the archive</td></tr>
+      <tr><td>What changed in doc X over time?</td><td><code>docs/index.json</code> + <code>docs/versions/&lt;X&gt;/</code> (each version's frontmatter names its source phase)</td></tr>
+      <tr><td>What was deliberately not built?</td><td><code>works/deferred.md</code> — and each doc's Open Questions section</td></tr>
+      <tr><td>Process itself?</td><td><code>CLAUDE.md</code>/<code>AGENTS.md</code> — the contract outranks habit</td></tr>
+    </table>
+  </section>
+
+  <section id="quiz">
+    <h2>Quiz</h2>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> You want to change behavior that a <code>D-*</code> decision
+      established. What is the correct move?</p>
+      <button class="opt" data-correct="false">Edit decisions.md in place to reflect the new approach</button>
+      <button class="opt" data-correct="true">Make the change in a phase and record a new superseding decision — the old entry stays, marked superseded</button>
+      <button class="opt" data-correct="false">Decisions are permanent; the change cannot be made</button>
+      <button class="opt" data-correct="false">Just implement it — decisions are advisory documentation</button>
+      <p class="why" hidden>Decisions "should not be re-litigated without a new decision
+      superseding it" — supersession is the mechanism (D-P8-1 over D-P4-3 is the worked example),
+      and it lands via a new doc <em>version</em>, never a patch of the old one.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> Why did P10 land its scope-enforcement rewrite <em>before</em> any
+      org key could be minted?</p>
+      <button class="opt" data-correct="false">To keep the migration reversible</button>
+      <button class="opt" data-correct="true">Landing dark was the only moment additivity could be <em>proved</em> — the whole suite passing byte-for-byte with zero assertion edits, a proof unavailable once minting exists</button>
+      <button class="opt" data-correct="false">Because the dashboard panel was not designed yet</button>
+      <button class="opt" data-correct="false">To avoid a breaking change to the CLI's flags</button>
+      <p class="why" hidden>D-P10-3: a NULL-project credential under the old code would have
+      failed open to a global read, so enforcement had to come first — and running the untouched
+      suite against the rewritten enforcement, before the feature existed, is what turned
+      "existing keys are unaffected" from assertion into evidence.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> A slice you are executing discovers that durable truth in
+      <code>architecture.md</code> is now wrong. What does the slice do?</p>
+      <button class="opt" data-correct="false">Edit docs/current/architecture.md directly</button>
+      <button class="opt" data-correct="false">Run doc-new-version immediately and edit the new version file</button>
+      <button class="opt" data-correct="true">Append a one-line "Doc impact" note to phase.md — the phase review consolidates all such notes into new doc versions on a passing verdict</button>
+      <button class="opt" data-correct="false">Open a deferred job to fix the doc later</button>
+      <p class="why" hidden>Doc versioning happens once per phase, at the review.
+      <code>docs/current/</code> is generated (never hand-edited), and implementation slices never
+      run <code>doc-new-version</code> — the review does, so a phase's doc changes land as one
+      coherent set.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> What does an open deferred job (say D9, capture rate limiting) do to
+      day-to-day slice selection?</p>
+      <button class="opt" data-correct="true">Nothing — deferred jobs never affect selection until explicitly promoted into a phase/slice; the trigger says when to revisit</button>
+      <button class="opt" data-correct="false">It blocks any phase touching the same files until resolved</button>
+      <button class="opt" data-correct="false">It is automatically promoted when its trigger condition is met</button>
+      <button class="opt" data-correct="false">It runs as a background slice at low priority</button>
+      <p class="why" hidden>Deferral is honest parking: the job records why it was deferred and
+      the concrete trigger for revisiting (e.g. "before a second third-party agent product goes
+      live"), but a human promotes it — nothing automatic, nothing blocking.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Why was <code>recorded_by</code> made its own column when adding an
+      <code>agent</code> value to <code>trigger_type</code> would have needed no migration?</p>
+      <button class="opt" data-correct="false">Because trigger_type already had too many values</button>
+      <button class="opt" data-correct="false">Because JSONB attributes cannot be indexed</button>
+      <button class="opt" data-correct="true">Because "who recorded it" and "why capture happened" are orthogonal — folding them is lossy: an agent recording a survey could say agent OR survey, never both</button>
+      <button class="opt" data-correct="false">Because the operator required a database CHECK constraint</button>
+      <p class="why" hidden>D-P14-1. The cheapest option was a real contender and was rejected on
+      orthogonality; the record also lists the other rejected shapes (free-text convention,
+      boolean, JSONB key) — a model example of how this repo reasons about schema changes.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
