@@ -363,7 +363,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry",
+      "latest": "v0014_foldable_rail_document_reading-width_cap",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -469,6 +469,14 @@
           "source": "P23.REVIEW",
           "summary": "P23 document version history panel, read-only past-version view, version-aware BFF raw relay with its own next.config headers entry",
           "previous": "v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone"
+        },
+        {
+          "id": "v0014_foldable_rail_document_reading-width_cap",
+          "path": "docs/versions/frontend/v0014_foldable_rail_document_reading-width_cap.md",
+          "created_at": "2026-08-07T00:23:10+09:00",
+          "source": "standalone",
+          "summary": "foldable rail + document reading-width cap",
+          "previous": "v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry"
         }
       ]
     },
@@ -1387,5 +1395,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-06T00:06:12+09:00"
+  "last_rebuilt_at": "2026-08-07T00:24:22+09:00"
 }

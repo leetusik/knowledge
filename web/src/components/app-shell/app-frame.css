@@ -1,0 +1,49 @@
+/*
+ * Knowledge Base — foldable rail (on-token extension).
+ * --------------------------------------------------------------------------
+ * The THIRD on-token extension added where the KB design handback shipped no specimen
+ * (after the `.kb-prose` reader block and the `--kb-graph-*` token layer): the console
+ * rail folds fully away, so a reader gets the whole width. No new token, no new color,
+ * no new motion — a fold is a GRID change and nothing more.
+ *
+ * It lives HERE rather than in `kb-console.css` on purpose: that file is copied verbatim
+ * from `design/canvas/components/console/console.css`, the design round's handback, and
+ * appending to it would falsify its header and forge a decision the round never made.
+ * Same reasoning, same shape as `documents/[id]/prose.css`.
+ *
+ * The state rides as `data-rail` on `.kb-app-layout`, rendered by the SERVER from the
+ * `kb_rail` cookie, so the first paint is already correct. `display: none` — not
+ * `width: 0`, not `visibility` — is deliberate: it removes the rail's links from the tab
+ * order AND the accessibility tree in one move; a hidden-but-focusable rail is the
+ * classic bug here. The rail stays MOUNTED and is hidden by CSS only, so the no-JS floor
+ * is the rail in its default expanded state.
+ *
+ * `[data-rail="collapsed"]` is (0,2,0) against kb-console.css's (0,1,0) base rules and
+ * the compound `.kb-appbtn.kb-railtoggle` beats `.kb-appbtn--sm`, so the cascade resolves
+ * on specificity and import order is irrelevant. Tailwind utilities would LOSE here: the
+ * `.kb-*` layer is unlayered and outranks layered utilities.
+ *
+ * NO transition on `grid-template-columns` — animating a grid track is jank-prone across
+ * engines, and `--kb-ease` is reserved for color/border. Instant is correct and needs no
+ * `prefers-reduced-motion` guard.
+ *
+ * Co-located with the shell, imported by `app-frame.tsx`.
+ * --------------------------------------------------------------------------
+ */
+
+.kb-app-layout[data-rail="collapsed"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.kb-app-layout[data-rail="collapsed"] > .kb-rail {
+  display: none;
+}
+
+/* The topbar fold control — the ghost console button trimmed to an icon square. */
+.kb-appbtn.kb-railtoggle {
+  padding: 0.34rem;
+  color: var(--kb-hint);
+}
+.kb-appbtn.kb-railtoggle:hover {
+  color: var(--kb-ink);
+}

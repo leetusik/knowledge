@@ -87,6 +87,11 @@
   /* ---- Console structure (P12 authenticated app) ---- */
   --kb-app-rail-w: 15rem;
   --kb-app-topbar-h: 3.5rem;
+  /* Reading measure for the document surfaces — wide enough for the metadata strip and
+     an explainer, narrow enough that FOLDING the rail re-centers the column instead of
+     stretching it. At 1440px, main is ~72rem with the rail and ~87rem without, so it
+     engages in both states. Not from the handback; on-token by construction. */
+  --kb-app-read-w: 64rem;
   --kb-status-dot: 0.5rem;
   --kb-status-ring: 1.5px;
   --kb-trend-line-w: 2px;

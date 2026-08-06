@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 import { APP_NAV, APP_SHELL } from "@/content";
 import { cn } from "@/lib/utils";
 
+/** The rail's DOM id — the topbar fold toggle's `aria-controls` target. */
+export const RAIL_ID = "kb-rail";
+
 /**
  * The shell's rail navigation (P12.S2, re-skinned P12.S2R) — the Knowledge Base
  * console `.kb-rail`: a paper column that reads like a table of contents, with a
@@ -22,7 +25,7 @@ export function RailNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="kb-rail">
+    <aside id={RAIL_ID} className="kb-rail">
       <nav aria-label={APP_SHELL.navLabel}>
         <div className="kb-rail__head kb-app-eyebrow">{APP_SHELL.railHeading}</div>
         <ul className="kb-rail__list">
