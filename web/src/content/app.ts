@@ -38,6 +38,14 @@ export const APP_SHELL = {
    */
   workspaceLabel: "Org",
   soonTag: "Soon",
+  /**
+   * The topbar rail-fold control. The accessible NAME is constant and the state rides
+   * on `aria-expanded`; the two `*Title` strings are mouse-only tooltips (`aria-label`
+   * wins the name computation, so `title` never reaches the accessibility tree).
+   */
+  railToggleLabel: "Navigation",
+  railShowTitle: "Show navigation",
+  railHideTitle: "Hide navigation",
   logoutLabel: "Sign out",
   logoutPendingLabel: "Signing out…",
   /** Fallback when a user somehow has no tenant (signup always provisions one). */

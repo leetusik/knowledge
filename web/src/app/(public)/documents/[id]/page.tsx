@@ -109,7 +109,11 @@ export default async function DocumentPage({
     const history = await loadVersions(ctx.token, doc);
     return (
       <AppShell identity={ctx.identity}>
-        <article>
+        {/* Capped to the reading measure and centered, so folding the rail widens the
+            margins symmetrically instead of stretching the column. Identical in both
+            branches — the same URL must read the same signed in or out, and the
+            anonymous <PublicShell> has no rail at all, so it is the wider case. */}
+        <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
           {/* Back-link to the list (still member-gated) + the share copy-link. */}
           <div
             className="flex flex-wrap items-center gap-3"
@@ -156,7 +160,7 @@ export default async function DocumentPage({
   const history = await loadVersions(undefined, doc);
   return (
     <PublicShell>
-      <article>
+      <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
         <DocumentView doc={doc} id={id} />
         <VersionHistory
           id={id}

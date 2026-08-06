@@ -14,6 +14,8 @@
 
 .kb-prose {
   max-width: 46rem;
+  /* Centred inside the now-capped article rather than hugging the panel's left edge. */
+  margin-inline: auto;
   color: var(--kb-ink);
   font-family: var(--kb-font-body);
   font-size: 0.98rem;

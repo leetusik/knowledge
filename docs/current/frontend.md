@@ -1,10 +1,10 @@
 ---
 doc_id: frontend
-version: v0013
-created_at: 2026-08-05T22:58:13+09:00
-source: P23.REVIEW
-summary: P23 document version history panel, read-only past-version view, version-aware BFF raw relay with its own next.config headers entry
-previous: v0012_p22_graphcanvas_labels_go_selection-driven_the_ported_quiet-label_ladder_and_neighborhood_reveal_are_gone
+version: v0014
+created_at: 2026-08-07T00:23:10+09:00
+source: standalone
+summary: foldable rail + document reading-width cap
+previous: v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry
 ---
 
 # Frontend
@@ -420,6 +420,37 @@ graph. All web-UI features are free. The app is a session-token client of `/auth
   languages kept distinct: the flat `.kb-appbtn--*` app chrome (shell + all app pages) and the
   marketing pill `Button` reserved for the P14 public landing. Rail items link only to shipped
   routes; the whole rail (Dashboard · Documents · Graph) is live at end of P12.
+- **The rail folds** (standalone, post-P24). A leading icon button in the topbar collapses the
+  grid to a single column and hides `.kb-rail` with `display: none` — which takes its links out
+  of the tab order *and* the accessibility tree, the one thing a width/visibility trick gets
+  wrong. The preference is a **`kb_rail` cookie** (`Path=/`, `SameSite=Lax`, 1y, **not**
+  httpOnly — the browser writes it), read SERVER-side in `AppShell` so the **first paint already
+  carries the right grid**: no flash, no localStorage, no post-hydration jump. That read adds no
+  dynamic surface — every shell consumer already reads the session cookie. Anything but the exact
+  `collapsed` sentinel (absent, unknown, tampered) resolves to **expanded**, because a hidden
+  rail reached through a value the app never wrote would be a dead end.
+  - **`AppFrame` (`components/app-shell/app-frame.tsx`) — the one stateful frame.** The toggle
+    lives in the topbar and the grid it collapses is the topbar's *sibling*, so a common ancestor
+    must hold the bit. `AppShell` stays a **server** component (now `async`) and hands its topbar
+    contents and the page down as **server-rendered ReactNode slots**, so the identity OBJECT
+    still never crosses the client boundary — only its already-rendered nodes do.
+  - **The cookie IS the state**, read through `useSyncExternalStore` over `document.cookie`
+    (module-scope emitter; cookies fire no events, so the writer notifies). Deliberate, not
+    incidental: a `useState(defaultCollapsed)` mirror seeds once and ignores later props, and a
+    client-side navigation from `(app)` into `(public)/documents/[id]` crosses route groups and
+    **remounts** the frame from a server render that could predate the last toggle — and
+    reconciling that in an effect is exactly what `react-hooks/set-state-in-effect` forbids here.
+    With the jar as the single source there is no mirror to drift. The toggle writes through with
+    **no server action and no `router.refresh()`**: the cookie exists so the *next* server render
+    is right, not to drive this one. The contract (`lib/rail-cookie.ts`) is shared by both sides
+    and unit-tested — that shared module is the only reason writer and reader agree.
+  - **A11y.** A real `<button type="button">` with a **constant** `aria-label` plus
+    `aria-expanded`; flipping both the name and the state would announce "Show navigation,
+    expanded", so the dynamic string is `title` (mouse-only). The toggle sits *outside* the
+    region it hides, so focus is never stranded. The rail stays **mounted** and is hidden by CSS
+    only, keeping the no-JS floor at "rail visible, links working". **No transition** on
+    `grid-template-columns` — animating a grid track is jank-prone, and `--kb-ease` is reserved
+    for color/border.
 - **Dashboard** (`app/(app)/dashboard`): `GET /app/dashboard` + `GET /app/usage` → four
   Fraunces stat tiles, a teal 30-day search TrendChart (a faithful `console-trend.js` geometry
   port, unit-locked), a projects DataTable, a recent-activity feed, and a create-project
@@ -454,10 +485,21 @@ graph. All web-UI features are free. The app is a session-token client of `/auth
 - The app is a session-token client of `/auth/*` + `/app/*` only; the sealed cookie is the
   only place the backend token lives; **no browser-JS token, no backend CORS change, no
   web-side DB.**
-- Two on-token design extensions were added where the KB handback shipped no specimen — the
-  `.kb-prose` reader block (S5) and the `--kb-graph-*` token layer (S6); both compose only on
-  the KB `--kb-*` palette. A future design pass (P14 or a design round) may formalize a reader
-  spec + a graph spec.
+- **Three** on-token design extensions were added where the KB handback shipped no specimen —
+  the `.kb-prose` reader block (S5), the `--kb-graph-*` token layer (S6), and the rail-fold
+  block (`components/app-shell/app-frame.css`, standalone post-P24, which also introduced
+  `--kb-app-read-w`). All compose only on the KB `--kb-*` palette. Each lives in its **own
+  header-flagged, co-located file** — never appended to `kb-console.css`, which is copied
+  verbatim from `design/canvas/components/console/console.css`; that canvas is the *record of a
+  design round*, so editing either it or the file that claims to mirror it would forge a
+  decision the round never made. A future design pass (P14 or a design round) may formalize a
+  reader spec, a graph spec, and a fold affordance, retiring these into the handback.
+- **Document reading measure.** The four `<article>` roots of `/documents/{id}` and
+  `/documents/{id}/versions/{v}` — member *and* anonymous branches of both — are capped at
+  `--kb-app-read-w` (64rem) and centred, so folding the rail widens the margins symmetrically
+  instead of stretching the text. Both branches deliberately: the same URL must read the same
+  signed in or out, and `PublicShell` has no rail at all, so it is the wider case. `.kb-prose`
+  gained `margin-inline: auto` to centre its 46rem column inside the capped panel.
 
 ## The public marketing landing (`web/`, P14)
 

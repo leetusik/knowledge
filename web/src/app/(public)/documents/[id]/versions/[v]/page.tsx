@@ -211,7 +211,10 @@ export default async function DocumentVersionPage({
   if (ctx) {
     return (
       <AppShell identity={ctx.identity}>
-        <article>
+        {/* Capped to the reading measure and centered, so folding the rail widens the
+            margins symmetrically instead of stretching the column. Identical in both
+            branches — the same URL must read the same signed in or out. */}
+        <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
           {/* Back to the live document — the only navigation a past version
               offers. No copy-link and no delete: this is a read-only view of a
               superseded body. */}
@@ -232,7 +235,9 @@ export default async function DocumentVersionPage({
 
   return (
     <PublicShell>
-      <article>{body}</article>
+      <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
+        {body}
+      </article>
     </PublicShell>
   );
 }
