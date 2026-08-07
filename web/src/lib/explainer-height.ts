@@ -24,6 +24,16 @@
  *   - `kb-explainer-anchor` — a "Contents" link's target offset. A content-height
  *     frame has nothing left to scroll, so in-page anchors would otherwise be inert;
  *     the parent scrolls the real page to them instead.
+ *
+ * One travels child-ward:
+ *   - `kb-explainer-request` — "re-send your height". The frame's `src` sits in the
+ *     SSR HTML, so the child can load and post its first height BEFORE the parent
+ *     island hydrates and attaches its listener; since the reporter dedupes
+ *     (`last`), that missed first message would otherwise never be repeated and the
+ *     frame would keep its CSS fallback height forever. The parent therefore asks
+ *     again as soon as it can listen, and the reporter answers with the dedupe
+ *     bypassed. Reproduced under CPU throttling on every article view before this
+ *     existed (P25.F4).
  */
 
 /** Marker the raw-route tests assert on, and a grep handle in a served document. */
@@ -48,6 +58,14 @@ export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
  *     but a document whose content height depends on the VIEWPORT height (a `100vh`
  *     block, `html { height: 100% }`) grows every time the parent applies the number
  *     we sent. The clamp on the parent bounds it; this stops the thrash getting there.
+ *
+ * The `kb-explainer-request` handler is the other half of that dedupe's cost: `last`
+ * makes a height message that nobody was listening for unrecoverable, so a parent that
+ * hydrated late gets one chance to ask again. It resets `last` (never `budget` — a
+ * runaway stays latched) so the answer goes out even though the height has not
+ * changed, and it is the ONLY trigger that bypasses the dedupe; every other one
+ * (load, resize, ResizeObserver, fonts) still needs a real ≥2px change, which is what
+ * keeps a parent→child→parent feedback loop impossible.
  */
 const REPORTER = `
 (function () {
@@ -84,6 +102,13 @@ const REPORTER = `
   }
   window.addEventListener('load', schedule);
   window.addEventListener('resize', schedule);
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent) return;
+    var d = e.data;
+    if (!d || typeof d !== 'object' || d.type !== 'kb-explainer-request') return;
+    last = -1;
+    schedule();
+  });
   if (window.ResizeObserver && document.body) {
     new ResizeObserver(schedule).observe(document.body);
   }

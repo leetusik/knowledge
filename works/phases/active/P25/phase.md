@@ -724,6 +724,81 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   and the Postgres-gated pytest suite **not re-run** because no backend file was touched —
   F1's **125 passed / 83 passed + 42 skipped** stands.
 
+### Landed by P25.F4 (the explainer height handshake — bind these)
+
+- **The reported "iframe scrolls internally on the member view" was a real hydration
+  race, and it REPRODUCED.** Local production build + headless Chrome with
+  `Emulation.setCPUThrottlingRate ≥ 4`: a hard load left `.kb-explainer` with **no**
+  `data-measured`, the frame pinned at the CSS fallback (549px vs the document's
+  9,268px), and a window resize snapped it to full height — the exact symptom and the
+  exact corroboration the plan predicted. At rate 1 it never wedged, which is why this
+  reads as machine-dependent flakiness in the field.
+- **It is NOT member-only.** The anonymous branch, the pretty page and the versions view
+  all wedge identically once the parent island hydrates late. The member branch simply
+  loses the race more often (five client islands vs `PublicShell`'s zero), which is why
+  the anonymous view looked "verified fine". Any future claim that a client-island bug
+  is branch-specific should be re-tested under throttle before it is believed.
+- **The fix is a two-sided `kb-explainer-request` handshake.** Parent
+  (`explainer-frame.tsx`) posts `{type:"kb-explainer-request"}` into
+  `frame.contentWindow` with targetOrigin `"*"` (mandatory — the child is an opaque
+  origin) from **both** sides of the race: on listener attach in the `useEffect` (covers
+  a frame that already loaded) and from the iframe's `onLoad` (covers one that had not).
+  React attaches `onLoad` during the hydration commit, i.e. *before* effects run, so the
+  two triggers together leave no gap. Child (`explainer-height.ts`'s `REPORTER`) answers
+  sender- and shape-checked, resetting **`last` only, never `budget`**.
+- **The request is the ONLY trigger that bypasses the child's dedupe.** Load, resize,
+  ResizeObserver and fonts still need a real ≥2px change, which is what keeps a
+  parent→child→parent feedback loop impossible; `budget` still latches a runaway. Verified
+  live: the parent receives exactly **two** height messages and the applied height is
+  identical at t+4s and t+8s.
+- **Every trust safeguard is verbatim.** `sandbox="allow-scripts"` without
+  `allow-same-origin` (P16 pinned decision 1), the `event.source === frame.contentWindow`
+  identity check (never `event.origin` — it is the literal `"null"` for opaque origins),
+  the shape check and the `[120, 40000]` clamp are all untouched. The outbound request
+  carries no data and reaches one frame's window only. No CSP, relay, route, layout or
+  CSS change — `explainer.css`'s fallback rule is correct as a failure mode, it just
+  stops being reached.
+- **One fix covers every article view by construction** (both raw relays inject the same
+  reporter; all three views render the same `ExplainerFrame`) and that was verified, not
+  assumed: id member, id anonymous (307 → pretty), pretty member, pretty anonymous and
+  the versions view all measure on a hard load at rate 4/10/20 after the fix.
+- **The anchor channel still works** (clicking an in-frame `#` link scrolls the PAGE,
+  `scrollY 0 → 662`) — worth re-checking whenever the reporter is touched, since both
+  messages share one script.
+
+### Gotchas found while doing P25.F4
+
+- **The whole local stack is reproducible in ~5 minutes and is worth it for any
+  client-side bug**: Postgres in docker (`-p 55441:5432`; 55432 and 55439 are taken on
+  this machine) → `alembic upgrade head` → `python -m server.seed` (KB_OPERATOR_EMAIL /
+  _PASSWORD) → `uvicorn server.main:app` with `KB_DB_PATH` in a scratch dir →
+  `npm run build && npm run start`. Use the repo `.venv`.
+- **`POST /api/auth/login` on the web plane 403s without an `Origin` header** (the BFF's
+  CSRF check). That is the one non-obvious step in scripting a member session; the sealed
+  cookie then goes into headless Chrome via CDP `Network.setCookie` (it is `Secure`, but
+  `127.0.0.1` is a trustworthy origin, so it sticks over plain http).
+- **Headless Chrome over CDP needs no dependency**: Node 24 ships a global `WebSocket`,
+  so `fetch http://127.0.0.1:9222/json/new` + a raw WS is enough for
+  `Page.navigate` / `Runtime.evaluate` / `Emulation.setCPUThrottlingRate`. To evaluate
+  INSIDE the sandboxed frame, `Runtime.evaluate` with a `contextId`/`uniqueContextId`
+  fails ("Cannot find context") — the opaque-origin frame is its own target; use
+  `Target.setAutoAttach {flatten:true}` and send to the attached `iframe` session.
+- **Testing a doc's versions view locally needs an archived version**, and creating one
+  writes a file: run the API against a **scratch `KB_ROOT`** holding a copy of
+  `docs/vocky` and POST with `new_version: true, commit: false`. Never point a write test
+  at the repo's own `docs/`.
+- **The injected reporter is testable without jsdom.** `new Function("window",
+  "document", src)` against a ~35-line fake runs it in the node-environment suite; the new
+  `web/tests/explainer-reporter.test.ts` (3 cases) does exactly that, and its re-post case
+  was proved red with `explainer-height.ts` stashed.
+- **Baselines: web 16 files / 88 tests** (was 15 / 85). Route table unchanged, lint +
+  typecheck + build clean, `plugin_parity` PASS trivially. **No `server/**` or `tests/**`
+  file was touched**, so the Postgres-gated pytest suite was not re-run — F1's *125 passed
+  / 83 passed + 42 skipped* stands.
+- **Prettier, again:** `explainer-frame.tsx` is `--check`-dirty at `HEAD` (one
+  pre-existing `matchMedia` line) while `explainer-height.ts` is clean. Check the specific
+  file at `HEAD` before assuming a warning is yours; nothing was reformatted.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -988,9 +1063,38 @@ above are hints, not a substitute.
   document page (reaching it implies a slug). Copy-and-conditional only — no behavior, no
   route and no payload changed.
 
-**NOTE:** the list above this line was closed by the re-review; this `P25.F3` note landed
-after it, so it is **not** covered by `experience` v0016 and needs a new `experience`
-version from whichever review pass closes the F3 round.
+**Actual (P25.F4):**
+
+- `docs/current/frontend.md` — the explainer height handshake gained a **child-ward**
+  message, `kb-explainer-request`. The frame's `src` is in the SSR HTML, so the child can
+  post its one height message before the parent island hydrates, and the child's dedupe
+  (`last`) makes that miss permanent — the frame then keeps `explainer.css`'s fallback
+  height forever (reproduced under CPU throttling on *every* article view, not just the
+  member one). The parent now asks for the height twice — on listener attach and on the
+  iframe's `load`, which between them cover both orderings of the race — and the reporter
+  answers with the dedupe bypassed. **The request is the only trigger that bypasses it**
+  (`last` is reset, `budget` never is), so no feedback loop becomes possible, and every
+  trust safeguard is verbatim: `sandbox="allow-scripts"` without `allow-same-origin`, the
+  `event.source` identity check (never `event.origin` — `"null"` for opaque origins), the
+  shape check and the clamp. targetOrigin `"*"` on the outbound request is mandatory, not
+  laziness: an opaque origin can never be named.
+- `docs/current/qa.md` — web baseline **16 files / 88 tests** (was 15 / 85): a 3-case
+  suite that *executes* the injected reporter against a hand-rolled window/document
+  (`new Function("window","document",src)`, no jsdom dependency in a node-environment
+  suite), pinning report-once/dedupe, the parent-request re-post, and the
+  non-parent-sender rejection; its re-post case was proved red with the reporter stashed.
+  Technique worth keeping: a client-side race like this is reproducible locally in
+  minutes — local prod build + headless Chrome over CDP (Node's global `WebSocket`, no
+  dependency) with `Emulation.setCPUThrottlingRate ≥ 4`, asserting on
+  `.kb-explainer[data-measured]` and the applied frame height; to evaluate inside the
+  sandboxed frame use `Target.setAutoAttach {flatten:true}`, since a `contextId` cannot
+  reach an opaque-origin target. No backend file changed, so the gated pytest suite was
+  not re-run (F1's 125-passed baseline stands).
+
+**NOTE:** the list above this line was closed by the re-review; the `P25.F3` and `P25.F4`
+notes landed after it, so they are **not** covered by `experience` v0016 / `frontend`
+v0015 / `qa` v0014 and need new `experience`, `frontend` and `qa` versions from whichever
+review pass closes the **F3/F4 round**.
 
 **Consolidated by P25.REVIEW (re-review pass, verdict `pass`) — this list is now CLOSED.**
 Nine doc versions were created from the notes above, one per doc, then a single
