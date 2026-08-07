@@ -4,10 +4,10 @@
 
 ## Summary
 
-- Open: `16`
-- Promoted: `4`
+- Open: `15`
+- Promoted: `5`
 - Dropped: `3`
-- Rebuilt at: `2026-08-07T14:33:25+09:00`
+- Rebuilt at: `2026-08-07T14:44:52+09:00`
 
 ## Open
 
@@ -20,7 +20,6 @@
 | `D15` | `deferred` | Fix pre-existing P16-era gated failure: documents list projection format key (test_documents_api) | P18.S1 | next documents-plane slice, or before wiring Postgres-gated tests into CI | `works/deferred/open/D15` |
 | `D17` | `deferred` | Rate-limit the anonymous read surface (public doc/raw/graph) | P19.REVIEW | Before promoting public links to real traffic, or at first sign of scraping/abuse on the anonymous surface | `works/deferred/open/D17` |
 | `D18` | `deferred` | Login returnTo + public tag surface for public-graph tag links | P19.REVIEW | Next web UX slice, or operator/user reports friction on shared links | `works/deferred/open/D18` |
-| `D19` | `deferred` | Org slug vanity URLs for the public graph | P19.REVIEW | Operator wants pretty share URLs, or org management features (D14) land | `works/deferred/open/D19` |
 | `D20` | `deferred` | Windows install.ps1 (PowerShell curl-installer equivalent) | P20.DECOMP | Windows onboarding demand / operator asks | `works/deferred/open/D20` |
 | `D21` | `deferred` | Fix pre-existing format-key failure in test_documents_list_detail_and_project_bridge | P21.REVIEW | Next backend phase touching documents_api or its tests | `works/deferred/open/D21` |
 | `D22` | `deferred` | Repo-wide prettier drift (51 files at clean HEAD) | P21.REVIEW | Operator decides format:check should become a real gate | `works/deferred/open/D22` |
@@ -36,6 +35,7 @@
 |---|---|---|---|---|
 | `D1` | `promoted` | Decide whether works/docs internals appear on the public site | `P4.S5` | `works/deferred/promoted/D1` |
 | `D16` | `promoted` | knowledge init --project other re-mints an org key (reuse-gate relaxation) | `P20.S1` | `works/deferred/promoted/D16` |
+| `D19` | `promoted` | Org slug vanity URLs for the public graph | `P25.S4` | `works/deferred/promoted/D19` |
 | `D2` | `promoted` | Design polish for the Pages site (palette/fonts/logo, optional extra_css) | `P5.S1` | `works/deferred/promoted/D2` |
 | `D9` | `promoted` | plugin/templates/kb drift: P10-P12 SaaS server files unshipped, plugin_parity exits 1 | `P17.S4` | `works/deferred/promoted/D9` |
 

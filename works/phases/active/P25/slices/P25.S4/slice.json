@@ -1,0 +1,34 @@
+{
+  "id": "P25.S4",
+  "phase_id": "P25",
+  "name": "org-slug public graph URL and legacy /graph/{uuid} redirect",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 4,
+  "depends_on": [
+    "P25.S1"
+  ],
+  "created_at": "2026-08-07T14:44:40+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "deferred",
+    "id": "D19",
+    "path": "works/deferred/open/D19"
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
