@@ -1,0 +1,612 @@
+<!--kb
+title: "Knowledge: What It Is and How It Is Used"
+date: 2026-08-08
+tags:
+  - knowledge-base
+  - product-overview
+  - multi-tenant
+  - developer-tools
+  - new-maintainer
+source:
+  project: knowledge
+  repo: knowledge
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge: What It Is and How It Is Used</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.2; }
+    h2 { margin-top: 2.4rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .92em; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; font-size: .93em; }
+    pre code { background: none; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      pre, code { background: #23272e; }
+      .callout { background: #1d2a24 !important; }
+      .aside { background: #2a2620 !important; }
+      .fig { background: #1c1f24 !important; }
+      .door { background: #23272e !important; }
+      .urlbad { background: #2e2321 !important; }
+      .urlgood { background: #1d2a24 !important; }
+      .node { background: #23272e !important; }
+    }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .aside { border-left: 4px solid #c9a227; background: #fdf8e8;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .lede { font-size: 1.06em; }
+    nav[aria-label="Contents"] { border: 1px solid #8883; border-radius: 6px;
+                                 padding: .6rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 .2rem; padding-left: 1.4rem; }
+
+    .fig { background: #fafafa; border: 1px solid #8883; border-radius: 8px;
+           padding: 1rem; margin: 1.4rem 0; }
+    .fig figcaption { font-size: .88em; opacity: .8; margin-top: .7rem; text-align: center; }
+
+    .doors { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+             gap: .6rem; margin-bottom: .8rem; }
+    .door { background: #fff; border: 1px solid #8884; border-radius: 6px; padding: .6rem .7rem; }
+    .door b { display: block; font-size: .95em; }
+    .door span { font-size: .82em; opacity: .82; }
+    .core { text-align: center; border: 2px dashed #4a7; border-radius: 6px;
+            padding: .7rem; font-weight: 600; }
+
+    .tree { list-style: none; padding-left: 0; margin: .2rem 0; }
+    .tree ul { list-style: none; padding-left: 1.4rem; border-left: 2px solid #4a78; margin: .2rem 0; }
+    .tree li { margin: .3rem 0; }
+    .node { display: inline-block; background: #fff; border: 1px solid #8884;
+            border-radius: 5px; padding: .18rem .5rem; font-size: .92em; }
+    .tag { font-size: .78em; opacity: .75; margin-left: .4rem; }
+
+    .urlbad, .urlgood { border-radius: 5px; padding: .5rem .7rem; margin: .4rem 0;
+                        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
+                        overflow-wrap: anywhere; }
+    .urlbad { background: #fdf0ec; border-left: 4px solid #c0664a; }
+    .urlgood { background: #f0f8f4; border-left: 4px solid #4a7; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .93em; margin: 1rem 0; display: block;
+            overflow-x: auto; }
+    th, td { border: 1px solid #8883; padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; }
+    .q .opt:hover { border-color: #4a7; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .9; }
+    .q { margin-bottom: 1.6rem; }
+    .series { font-size: .93em; opacity: .85; }
+  </style>
+</head>
+<body>
+
+<h1>Knowledge: What It Is and How It Is Used</h1>
+
+<p class="series"><strong>Part 1 of a five-part series</strong> for someone taking over the
+<code>knowledge</code> project. This part is the product: what it is, who it serves, and how people
+actually use it. Part 2 is the internals (how a document is written and stored), part 3 the read
+surfaces (the two front ends), part 4 shipping and running it, part 5 why it is built this way and
+how to change it. Read them in order — each assumes the one before.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p class="lede">Start with the problem, because everything else in this system is downstream of it.
+The project's own product doc states it in one line:</p>
+
+<blockquote><p>Knowledge is scattered across conversations and repos, with no durable, browsable,
+searchable home.</p></blockquote>
+
+<p>That sentence is worth unpacking, because the word <em>conversations</em> is doing real work.
+When you solve something hard with a coding agent — why two nginx configs were fighting each other,
+why a cache only earned its keep after being measured, how a prompt-injection defense actually
+works — the understanding exists for about an hour. It lives in a chat transcript that nobody will
+ever scroll back through, and in a diff whose commit message says <code>fix: nginx routing</code>.
+The code survives. The <em>explanation</em> evaporates.</p>
+
+<p><strong>Knowledge</strong> is the machine that catches those explanations before they evaporate.
+The pitch is small and specific: when you finish something non-trivial, you type one command, a
+coding agent reads the <em>real</em> code (not its memory of it) and writes a beginner-friendly
+explainer, and that explainer is filed somewhere durable, browsable, and searchable. The library
+grows as a side effect of working.</p>
+
+<h3>What a "document" is here</h3>
+
+<p>A knowledge document is not a wiki page and not a README. Since <strong>P16</strong> it is a
+<em>self-contained interactive HTML explainer</em>: one HTML file with its CSS and JavaScript
+inlined, containing a fixed set of sections — Background, Intuition, Code, an optional cited
+"Best practices &amp; next steps", and a five-question multiple-choice quiz that actually works when
+you click it. As of <strong>P17</strong> that is the only output format; the older markdown house
+style was retired. The page you are reading right now is one of these documents.</p>
+
+<div class="callout">
+<p><strong>Jargon, defined once.</strong> <em>Phase</em> and <em>slice</em> appear throughout this
+series. This repo is developed with an agentic workspace harness: a <strong>phase</strong> is a
+grouped unit of work (P1, P2, … P26), and a <strong>slice</strong> is one concrete unit inside it.
+"P19 added public projects" means "the nineteenth phase of work delivered that". Part 5 explains
+the harness itself; until then, read <code>P<em>n</em></code> as a timestamp with a story attached.</p>
+</div>
+
+<h3>How it grew — and why that matters to you</h3>
+
+<p>A new maintainer needs to know that this system was not designed all at once. It started as one
+person's <code>docs/</code> tree browsed through a MkDocs site, and each phase widened it. The shape
+you inherit is the accumulated result:</p>
+
+<table>
+<thead><tr><th>Phase</th><th>What it added</th><th>Why it changed the product's identity</th></tr></thead>
+<tbody>
+<tr><td>P2–P6</td><td>Document API, public site, hybrid search, the visual design system, the interactive knowledge graph</td><td>A personal library with real retrieval</td></tr>
+<tr><td><strong>P7</strong></td><td>Packaged as an installable Claude Code <strong>plugin</strong></td><td>Reach stops being "the operator's machine" — anyone can run their own</td></tr>
+<tr><td><strong>P10–P12</strong></td><td>Multi-tenant accounts plane + an authenticated <strong>web app</strong></td><td>It becomes a hosted, multi-user product with a human UI</td></tr>
+<tr><td><strong>P13</strong></td><td>A standalone <code>knowledge</code> <strong>CLI</strong></td><td>You can live entirely in a terminal; agents can drive it unattended</td></tr>
+<tr><td><strong>P15</strong></td><td>An <strong>MCP retrieval service</strong> over HTTP</td><td>The first agent-to-agent surface: "search as a service"</td></tr>
+<tr><td><strong>P16–P17</strong></td><td>The interactive HTML explainer as a first-class type; public multi-user ingestion</td><td>One output format everywhere; strangers can write into their own tenants</td></tr>
+<tr><td><strong>P18–P25</strong></td><td>orgs and org-level keys, public/private projects, versioned documents, pretty share URLs</td><td>The sharing and ownership story gets finished</td></tr>
+</tbody>
+</table>
+
+<p>Two facts about the current state that you should hold onto, because they shape every decision
+in parts 2–5. First, it is <strong>live</strong>: <code>https://knowledge.hi2vi.com</code> runs the
+multi-tenant version in production. Second, <strong>every web-UI feature is free</strong> and
+nothing is plan-gated — the one intended monetizable surface was always agent retrieval, and
+billing for it still is not built. When you read the code and wonder where the paywall is, there
+isn't one.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>One corpus, four doors</h3>
+
+<p>The single most useful mental model for this product is this: there is <strong>one body of
+documents</strong>, and there are <strong>four different doors into it</strong>, each built for a
+different kind of visitor. Newcomers usually assume the four surfaces are four features. They are
+not. They are four <em>roles</em>, and knowing which role you are looking at explains most of the
+design decisions you will meet later.</p>
+
+<figure class="fig">
+  <div class="doors">
+    <div class="door"><b>Plugin</b><span>Claude Code · writes<br><code>/knowledge:explain</code></span></div>
+    <div class="door"><b>CLI</b><span>terminal · writes + reads<br><code>knowledge save</code></span></div>
+    <div class="door"><b>Web app</b><span>browser · reads + manages<br>the free human UI</span></div>
+    <div class="door"><b>MCP service</b><span>other agents · reads<br><code>search</code> / <code>fetch_document</code></span></div>
+  </div>
+  <div class="core">one corpus — your org's documents</div>
+  <figcaption>Four doors, one corpus. Three of them are clients of the same HTTP API; only the
+  plugin can also hand out a whole copy of the system.</figcaption>
+</figure>
+
+<p>Take them one at a time:</p>
+
+<ul>
+<li><strong>The plugin</strong> (P7) is the write door, and the odd one out. It ships two skills:
+<code>/knowledge:explain</code>, which researches and files an explainer, and
+<code>/knowledge:setup</code>, which wires you to a knowledge base. Setup has two modes —
+<em>Connect</em> (the zero-infra default: sign up on the hosted service, paste one key, done) and
+<em>Scaffold</em> (stand up your own self-hosted copy: site, API, graph, publishing workflow). That
+second mode is why the plugin is not merely a client: it hands out a working copy of the backend.
+Part 4 covers the machinery that keeps that copy honest.</li>
+
+<li><strong>The CLI</strong> (P13) is for someone who lives in a terminal — and, more importantly,
+for the coding agent driving that terminal. It is deliberately <em>agent-first</em>: a one-shot
+<code>knowledge init</code> runs signup → project → key → config → verify unattended, passwords never
+pass through <code>argv</code>, and every command takes <code>--json</code> with a documented
+exit-code contract. It adds no backend capability; it is a pure client of surfaces that already
+existed.</li>
+
+<li><strong>The web app</strong> (P12, deployed P14) is the primary <em>human</em> surface: sign in,
+a dashboard, project pages, browse/search/read documents, an in-app knowledge graph. All free.</li>
+
+<li><strong>The MCP service</strong> (P15) is the newest idea and the one people miss. It exposes
+retrieval to <em>any</em> AI agent as two tools — <code>search</code> and
+<code>fetch_document</code> — over the standard Model Context Protocol. Its first consumer is real:
+hi2vi's customer-service bot grounds its answers on hi2vi's knowledge through it. That is the
+"search as a service" surface, and it is the thing that was always meant to be paid for.</li>
+</ul>
+
+<div class="callout">
+<p><strong>The load-bearing consequence.</strong> Three of the four doors are clients of one HTTP
+API, so a change to that API is a change to three products at once. The API is deliberately
+<strong>frozen</strong> for exactly this reason (part 2), and the MCP tool contract is
+independently pinned at <strong>v1</strong> with additive-only evolution, because an external
+consumer pins to it.</p>
+</div>
+
+<h3>Who owns what: user → org → project → document</h3>
+
+<p>The second model you need is ownership, restructured at <strong>P18</strong> into a plain
+four-level chain. Concretely, follow one imaginary user:</p>
+
+<figure class="fig">
+<ul class="tree">
+  <li><span class="node">user — dana@example.com</span><span class="tag">signs up once</span>
+    <ul>
+      <li><span class="node">org — "default"</span><span class="tag">auto-created at signup · holds the <code>vk_</code> key</span>
+        <ul>
+          <li><span class="node">project — "default"</span><span class="tag">auto-created · private</span></li>
+          <li><span class="node">project — "payments-api"</span><span class="tag">get-or-created on first save</span>
+            <ul>
+              <li><span class="node">document — "Why our retries were doubling charges"</span><span class="tag">v1 → v2 …</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+<figcaption>Dana never created an org or a project. Signup made both; the third one appeared the
+first time an explainer named it.</figcaption>
+</figure>
+
+<p>Three properties of that chain do most of the work, and each one removes a step a user would
+otherwise have to perform:</p>
+
+<ol>
+<li><strong>Signup auto-provisions a default org and a default project.</strong> There is no empty
+state where you must create something before you can save.</li>
+<li><strong>Projects are get-or-create by name.</strong> Saving to a project that does not exist
+creates it. No client flow — web, CLI, or skill — has a "create a project" step. When an agent runs
+<code>/knowledge:explain</code> inside a repo, the project name is simply the repo's directory name,
+so your corpus partitions itself along the repos you actually work in.</li>
+<li><strong>One org-level key serves every repo.</strong> A <code>vk_</code> key is mintable at org
+level and grants the whole org. This was mostly an act of honesty: enforcement had <em>always</em>
+been org-wide, and a key's project binding only ever drove usage attribution.</li>
+</ol>
+
+<div class="aside">
+<p><strong>A naming trap you will hit within an hour of reading the code.</strong> The product says
+"org" everywhere — chrome, CLI output, skills. Internally, the database table is still called
+<code>tenants</code>, and the code says <code>tenant_id</code>. <strong>The tenant row <em>is</em>
+the org.</strong> The rename was deliberately not done: it would be a large diff with zero behavior
+change. Read <code>tenant</code> as <code>org</code> and you will never be confused again.</p>
+</div>
+
+<h3>Private by default, public on purpose</h3>
+
+<p>Until P19 there was no visibility concept at all. Now every project carries a flag, and
+<strong>private is the default</strong> — including for projects that were implicitly
+get-or-created, which is the case that would otherwise leak. Flipping a project to public opens
+both its documents <em>and</em> its slice of the knowledge graph to anonymous visitors.</p>
+
+<p>The rule that governs every miss is worth memorizing, because you will see it enforced in the
+code of parts 2 and 4: <strong>404-never-403</strong>. Private, nonexistent, and malformed all
+answer the same "not found". A private document never reveals that it exists. The graph follows the
+same discipline — to an outsider, private nodes are <em>absent</em>, not dimmed.</p>
+
+<h3>What a shared link looks like</h3>
+
+<p>P19 made sharing possible. <strong>P25</strong> made the resulting link presentable — and this
+is a good example of how this project reasons, so it is worth walking through.</p>
+
+<p>The old share link was the document's row id from the content-plane SQLite database:</p>
+
+<div class="urlbad">https://knowledge.hi2vi.com/documents/25</div>
+
+<p>Two things are wrong with that, and only one of them is cosmetic. The cosmetic problem is that
+it tells a reader nothing. The <em>structural</em> problem is that the number is a rowid in a
+database the system considers <strong>disposable</strong> — a full reindex re-derives every row
+from the files on disk, and there is no promise the number survives. Building a permanent public
+link out of a disposable identifier is a bug waiting for a maintenance window.</p>
+
+<p>So P25 gave each org a durable, globally unique <em>slug</em> — stored in the accounts plane,
+which is <em>not</em> disposable — and built readable URLs on it:</p>
+
+<div class="urlgood">https://knowledge.hi2vi.com/@hi2vi/payments-api/why-our-retries-were-doubling-charges</div>
+<div class="urlgood">https://knowledge.hi2vi.com/@hi2vi/graph</div>
+
+<p>Notice what is <em>not</em> in that URL: a date. The pretty path is deliberately dateless and
+means <em>"the newest document under this title"</em> — the natural reading of a shared link. If you
+need to address one exact row, or one exact past version, the id URL is still there and always
+resolves. Old links never break; an anonymous visitor on an id URL is temporarily forwarded to the
+pretty one, while a signed-in member stays put because the id page carries member-only controls.</p>
+
+<div class="callout">
+<p><strong>The subtlety that makes the promise real.</strong> A document advertises a pretty URL
+only when that URL <em>resolves back to it</em>. If a later document reuses the same project and
+title-slug, the older one quietly stops advertising and keeps its id link — because the alternative
+is forwarding a reader who followed an old link to <em>different content</em>. "No link breaks" is
+being applied to what the link <em>shows</em>, not just to its HTTP status.</p>
+</div>
+
+<h3>Explaining the same thing twice</h3>
+
+<p>The last product idea is versioning (<strong>P23</strong>), and it exists because of a specific
+bug. A document's path encodes the date it was created, and the explain skill derives that date from
+<em>today</em>. So re-explaining a subject a month later silently produced a <em>second, unrelated
+post</em> rather than an update.</p>
+
+<figure class="fig">
+<pre><code>Day 1   /explain the retry bug     →  document #25, v1   payments-api/2026-06-01-why-our-retries…
+Day 30  /explain the retry bug     →  ❌ before P23: document #61, v1  (a duplicate at a new date)
+                                   →  ✅ after  P23: document #25, v2  (same id, same URL, same date+slug;
+                                                                        v1 archived and still readable)</code></pre>
+<figcaption>A re-explanation is a full replacement of the body, not a diff — but the document's
+identity, links, and graph edges never move.</figcaption>
+</figure>
+
+<p>The skill now looks for the document <em>before</em> it writes: it lists the target project,
+matches on subject, and reads what the current version said so the new explanation builds on the old
+one instead of starting cold. Two design choices keep this quiet rather than noisy: only the
+<strong>current</strong> version is searchable, embedded, and on the graph — history is deliberately
+invisible to search — and there is <strong>no rollback and no editing</strong>. You can read history;
+you cannot rewrite it.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Everything above is visible in real files. This section walks the artifacts a user actually
+touches — the two skills, the CLI, the MCP contract — treating them as the product surface. The
+internals behind them (the write path, the storage model, the schema) are part 2's job.</p>
+
+<h3>The write door: <code>plugin/skills/explain/SKILL.md</code></h3>
+
+<p>The explain skill is a ~640-line markdown file that instructs a coding agent, step by step. It is
+worth understanding as a <em>product spec</em>, because it is the closest thing the project has to
+one. Its eight steps: resolve the topic and mode, resolve the KB config, research read-only, write
+the document, save it via the API, handle transport failure, optionally copy into the project, and
+report.</p>
+
+<p>Two of those steps carry most of the product meaning. <strong>Mode resolution</strong> is where
+the skill decides whether you asked about a <em>topic</em> ("explain the retry logic") or a
+<em>change</em> ("explain what we just shipped"):</p>
+
+<pre><code>- **Change mode** — the arguments name or point at a code change: a diff, a branch,
+  a PR, a commit or commit range, a phase, or a phrase like "what we just changed".
+- **Topic mode** — anything else: the arguments name a concept, tool, subsystem, or
+  file to explain.
+
+Both modes produce the **same document**, with the same four content sections.
+Only the lens differs.</code></pre>
+
+<p>That is a real product decision, not an implementation detail: one output format everywhere means
+a reader never has to learn two document shapes.</p>
+
+<p>The second is <strong>the research gate</strong>. The "Best practices &amp; next steps" section is
+default-on, and every claim in it must carry a source link plus the bare domain <em>as plain text</em>:</p>
+
+<pre><code>&lt;p&gt;Request-scoped connection pooling is standard practice for this
+(&lt;a href="https://www.postgresql.org/docs/current/runtime-config-connection.html"&gt;PostgreSQL
+docs&lt;/a&gt; — postgresql.org).&lt;/p&gt;</code></pre>
+
+<p>Why repeat the domain in text when it is already in the <code>href</code>? Because the search
+index and the MCP surface store the document's <em>extracted text</em>, and an attribute is not text.
+A bare "source" link would lose its provenance the moment an agent fetched the document. This is the
+first of many places where you will find a decision shaped by the fact that documents are read by
+machines as often as by people.</p>
+
+<div class="aside">
+<p><strong>Where the section goes when research is skipped.</strong> If the subject is purely
+internal — a private repo's own architecture, say — the gate skips web research, and then the
+section <em>and its table-of-contents entry are simply absent</em>. The document carries no "skipped"
+note; the chat report explains instead. That is why this explainer has four sections, not five.</p>
+</div>
+
+<h3>The setup door: Connect vs Scaffold</h3>
+
+<p><code>/knowledge:setup</code> is the fork in the road for a new user, and the plugin's README
+states the two modes plainly:</p>
+
+<pre><code>**Connect** (the zero-infra default): sign up at the hosted KB, mint one ingest key,
+paste it, and your explainers post to your own tenant — no server to run, one key
+serves every repo.
+
+**Scaffold** (full control): stand up your own self-hosted KB from scratch — a MkDocs
+Material site, a FastAPI + SQLite document API, an interactive knowledge graph, and a
+GitHub Pages publishing workflow.</code></pre>
+
+<p>Connect mode is what made public multi-user ingestion real at P17: a stranger installs the
+plugin, signs up in a browser, pastes one key, and their explainers land in <em>their</em> tenant.
+Note the security shape — email and password never reach the agent; only the minted key does.</p>
+
+<p>Both modes converge on one file, and it is the seam the whole client story hangs from:</p>
+
+<pre><code>~/.config/knowledge-kb/config.json     # mode 0600
+{
+  "kb_root": "/path/to/a/local/checkout",     # optional — absent in a remote-only config
+  "api":  { "base_url": "https://knowledge.hi2vi.com", "token": "vk_…" },
+  "site": { "base_url": "https://knowledge.hi2vi.com" }
+}</code></pre>
+
+<p>The CLI's <code>knowledge init</code> writes exactly this file, and the explain skill reads it.
+That is the entire integration between the two: run <code>init</code> once and the plugin starts
+posting to the hosted service with <strong>zero plugin change</strong>. Environment variables
+(<code>KB_API_BASE_URL</code>, <code>KB_API_TOKEN</code>) override it per key, which is the path the
+landing page recommends for coding agents generally.</p>
+
+<h3>The terminal door: the CLI's agent contract</h3>
+
+<p>The CLI's own README states the two-token model and the agent protocol compactly:</p>
+
+<pre><code>`init` is idempotent — re-run it any time; it logs in, reuses your project, and keeps
+your key. Passwords never go through `argv`: use `--password-stdin`,
+`$KNOWLEDGE_PASSWORD`, or an interactive prompt. Your `vk_` API key is show-once and
+the CLI stores it for you — it is never printed. Everything except `usage` keeps
+working after the 30-day session expires; only `usage` needs `knowledge login`.</code></pre>
+
+<p>Two tokens, two lifetimes: a 30-day <em>session</em> for account operations, and a
+non-expiring <code>vk_</code> <em>API key</em> for content operations. Log out and
+<code>save</code>/<code>search</code>/<code>list</code>/<code>read</code> keep working while
+<code>usage</code> reports the session expired. That asymmetry is visible from the terminal on
+purpose — it teaches the model rather than hiding it.</p>
+
+<p>For agents, the contract is deliberately blunt:</p>
+
+<pre><code>Every command also takes `--json` to print the server's payload verbatim; errors go to
+stderr with a non-zero exit, never as JSON, so an agent branches on the exit code.</code></pre>
+
+<p>Errors are never a JSON envelope. That means stdout is always "valid JSON or nothing", which is a
+far easier promise for a program to consume than "JSON, but sometimes it's an error object with a
+different shape". And <code>knowledge guide</code> prints the whole machine-readable lifecycle
+contract — bundled in the wheel, so it works offline and is versioned with the code.</p>
+
+<h3>The agent door: <code>mcp-server/CONTRACT.md</code></h3>
+
+<p>The MCP service is the only surface with a <em>frozen, versioned, externally-pinned</em> contract,
+because a consumer outside this repo depends on it. Its own document says so in the first paragraph:</p>
+
+<pre><code>External agents (the first consumer is hi2vi's OpenClaw CS bot) **pin to this
+document**: the transport, endpoint, auth header, tool names, and input/output schemas
+below are the contract. Changes are **additive-only** within v1.</code></pre>
+
+<p>The two tools are exactly what an agent needs and nothing more — <code>search(query, project?,
+limit=5)</code> returning ranked hits, and <code>fetch_document(id | rel_path)</code> returning one
+document's text. Three details in that contract are the product decisions worth carrying forward:</p>
+
+<ul>
+<li><strong>The bearer is forwarded verbatim upstream.</strong> "No auth logic lives in this
+service." The MCP server is a thin proxy; the existing tenant resolver does the scoping. One less
+place for an authorization bug to live.</li>
+<li><strong>A key sees the whole org's corpus, not one project.</strong> The optional
+<code>project</code> parameter <em>narrows</em>; it does not define the scope. This is the same
+org-wide enforcement the P18 key change made honest.</li>
+<li><strong>An HTML explainer is served to agents as extracted text.</strong> For a
+<code>format: "html"</code> document, the <code>markdown</code> field carries the readable text, not
+the raw HTML — so an agent consuming the corpus never has to parse a page. Consumers are told to
+tolerate a missing <code>format</code> field and treat it as <code>"md"</code>, which is what
+additive-only evolution looks like in practice.</li>
+</ul>
+
+<p>One honest wart, recorded rather than hidden: every hit's <code>url</code> field is currently
+<code>""</code>, because no document carries a public citation origin yet. The contract explicitly
+tells consumers to treat an empty <code>url</code> as "no citation link, not an error", and points at
+the deferred job that will populate it. Populating a field is additive, so the contract stays v1.</p>
+
+<h3>What a save actually returns</h3>
+
+<p>Finally, the moment where all four doors meet: publishing. A successful write answers
+<strong>201</strong> with the document's id, its version, and a URL you can share — and, since
+<strong>P24</strong>, with two flags whose meaning trips up everyone the first time:</p>
+
+<pre><code>"pushed": false, "push_pending": true     ← this is the NORMAL success</code></pre>
+
+<p>It reads like a failure and is not. The API deliberately answers <em>before</em> doing any
+network work: the document is already written, indexed, and committed when you get the reply, and
+the push to the remote runs in the background just after. Reporting that as "not saved", or
+retrying because of it, is the single most likely mistake a client can make here — which is why the
+skill spells out the correct sentence to say ("saved and committed; publishing in the background")
+and forbids the retry.</p>
+
+<p>The same phase fixed the mirror-image mistake. If the reply never arrives at all, a client used
+to assume the write failed — but the write is durable <em>before</em> the response is sent, so a
+timeout proves nothing. Both clients now follow one rule: <strong>ask the API what is at the target
+path, once, before saying anything</strong>. Verify, then at most one retry, then stop. Never loop.</p>
+
+<div class="callout">
+<p><strong>This document is its own example.</strong> The explainer you are reading was written by
+<code>/knowledge:explain</code> and published through that exact write path, into project
+<code>knowledge</code> — which is to say, into the repository that implements the system it
+describes. Part 2 walks that path line by line and says what that self-reference costs.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A user runs <code>/knowledge:explain</code> inside a repo called
+  <code>payments-api</code>, but has never created a project by that name. What happens?</p>
+  <button class="opt" data-correct="false">The save fails with a 404 until the project is created in the web app</button>
+  <button class="opt" data-correct="false">The document is filed under the org's <code>default</code> project instead</button>
+  <button class="opt" data-correct="true">The project is created on the spot and the document is filed under it, privately</button>
+  <button class="opt" data-correct="false">The agent is prompted to pick an existing project before it can save</button>
+  <p class="why" hidden>Projects are <em>get-or-create by name</em> (P18) — no client flow has a
+  "create a project" step. The skill sends the repo's directory name as the project, and a project
+  that does not exist is created. It is private by default (P19), including when implicitly
+  created — that default is exactly what stops an implicit project from leaking.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Why was the org <em>slug</em> stored in the accounts plane rather than
+  alongside the documents?</p>
+  <button class="opt" data-correct="false">Because the accounts plane is faster to query for URL resolution</button>
+  <button class="opt" data-correct="true">Because the document store is treated as disposable and re-derived by a reindex, so a permanent public identity cannot live there</button>
+  <button class="opt" data-correct="false">Because slugs are per-user data and documents are per-org data</button>
+  <button class="opt" data-correct="false">Because the content plane has no free column and a migration was too expensive</button>
+  <p class="why" hidden>The content-plane rows — including document ids — are a <em>disposable
+  projection</em> that a full reindex re-derives from the files on disk. That is precisely why
+  <code>/documents/25</code> was a poor permanent share link, and why the org's public identity had
+  to live in the durable accounts plane.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> An agent saves a document and gets back <code>201</code> with
+  <code>"pushed": false, "push_pending": true</code>. What is the correct response?</p>
+  <button class="opt" data-correct="false">Retry the POST, since the push clearly failed</button>
+  <button class="opt" data-correct="false">Report the save as failed and fall back to writing the file locally</button>
+  <button class="opt" data-correct="true">Report success — the document is saved and committed, and the push runs in the background</button>
+  <button class="opt" data-correct="false">Poll the API until <code>pushed</code> flips to <code>true</code></button>
+  <p class="why" hidden>This is the normal 201. Since P24 the API answers <em>before</em> doing
+  off-box network work, so the document is already written, indexed, and committed when the reply
+  arrives; the remote push follows in the background. Retrying is the specific mistake that produces
+  a duplicate document or an unwanted extra version.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> A document that <em>could</em> be reached at
+  <code>/@acme/api/rate-limiting</code> instead keeps advertising only its
+  <code>/documents/{id}</code> link. What is the most likely reason?</p>
+  <button class="opt" data-correct="false">Its project is still private, so no pretty URL is generated</button>
+  <button class="opt" data-correct="false">Pretty URLs only apply to documents created after P25</button>
+  <button class="opt" data-correct="true">A newer document reuses the same project and title-slug, so the pretty URL no longer resolves back to this one</button>
+  <button class="opt" data-correct="false">The org has changed its slug, and old slugs are never re-advertised</button>
+  <p class="why" hidden>The pretty path is dateless and means "the newest document under this
+  title". A document only advertises a pretty URL when that URL resolves back to <em>it</em>;
+  otherwise a reader following the link would land on different content. So the superseded document
+  quietly keeps its permanent id link. (A private project is a decent guess, but then there would be
+  nothing public to share at all.)</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Which statement about the four surfaces is true?</p>
+  <button class="opt" data-correct="false">All four are clients of the same HTTP API and none can operate independently</button>
+  <button class="opt" data-correct="false">The MCP service implements its own retrieval so agents get better ranking than the web app</button>
+  <button class="opt" data-correct="true">The MCP service is a thin proxy that forwards the bearer verbatim and reimplements no retrieval, while the plugin can additionally scaffold a whole self-hosted copy</button>
+  <button class="opt" data-correct="false">The CLI and the plugin keep separate configuration, so a user must onboard twice</button>
+  <p class="why" hidden>The MCP service is explicitly "a thin proxy over the frozen search and
+  single-document reads; it reimplements no retrieval" and forwards the bearer upstream, where the
+  existing tenant resolver scopes the corpus. The plugin is the exception to "just a client": its
+  Scaffold mode stands up an entire self-hosted KB. And the CLI and plugin deliberately share one
+  config file, so <code>knowledge init</code> onboards both at once.</p>
+</div>
+
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-08 · [Knowledge: What It Is and How It Is Used](knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html) — knowledge
 - 2026-08-06 · [Vocky Decisions, History, and the Agentic Workspace: Why It Is This Way and How to Change It](vocky/2026-08-06-vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to.html) — vocky
 - 2026-08-06 · [Vocky Security, Operations, and QA: Keeping It Safe and Keeping It Running](vocky/2026-08-06-vocky-security-operations-and-qa-keeping-it-safe-and-keeping-it-running.html) — vocky
 - 2026-08-06 · [Vocky System Internals: Architecture, Code Map, Data Model, and Contracts](vocky/2026-08-06-vocky-system-internals-architecture-code-map-data-model-and-contracts.html) — vocky
