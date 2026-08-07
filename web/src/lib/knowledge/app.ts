@@ -374,6 +374,44 @@ export async function getDocument(
 }
 
 /**
+ * `GET /app/orgs/{org}/{project}/{slug}` → 200 the SAME projected document WITH
+ * `markdown` that `getDocument` returns — the P25 slug resolver, which addresses a
+ * document by its DURABLE parts (org slug + project name + doc slug) instead of the
+ * disposable `documents.id` rowid.
+ *
+ * `org` is the **BARE** org slug — no `@`. The `@` prefix is a web-plane routing
+ * convention that marks the public namespace in the URL (`/@{org}/{project}/{slug}`);
+ * the caller strips it before calling. `project` is matched EXACTLY (case-sensitive);
+ * the dateless doc slug resolves to the NEWEST document under it (`date DESC, id
+ * DESC`), so a re-publish moves the pretty URL's target by design.
+ *
+ * OPTIONAL-IDENTITY, exactly like `getDocument`: with a bearer the backend serves the
+ * member fast-path (the owner reads their own private doc through the pretty URL —
+ * the save URL is handed out before a project is ever made public), tokenless it
+ * serves only public-project docs.
+ *
+ * EVERY miss is one indistinguishable **404** with a constant detail — unknown org
+ * slug, malformed/reserved org slug, unknown project, unknown doc slug, a private
+ * project, and a legacy-mode deployment all look identical (404-never-403: existence
+ * never leaks). The page maps 404/400 to the branded not-found.
+ *
+ * The response carries `id`, so the `/versions*` and `/raw` reads above stay id-keyed
+ * and unchanged — the pretty page just passes the resolved id to them.
+ */
+export async function resolveDocument(
+  token: string | undefined,
+  org: string,
+  project: string,
+  slug: string,
+  signal?: AbortSignal,
+): Promise<KbDocument> {
+  // All three segments are caller-supplied path data — escape each one (a slash or
+  // `..` in any of them must never restructure the upstream path).
+  const path = `/app/orgs/${encodeURIComponent(org)}/${encodeURIComponent(project)}/${encodeURIComponent(slug)}`;
+  return getJson<KbDocument>(path, { token, signal });
+}
+
+/**
  * `GET /app/documents/{id}/raw` (bearer) → 200 the raw HTML bytes of an HTML
  * explainer doc as `text/html`, returned as the UNREAD `Response` (the
  * `client.ts::getRaw` byte-passthrough seam) for the BFF relay route to stream

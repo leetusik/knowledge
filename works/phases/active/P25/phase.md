@@ -381,6 +381,73 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
 - New gated baselines: **123 passed** with Postgres (was 119), **83 passed / 40
   skipped** without (was 83/36).
 
+### Landed by P25.S3 (bind these — S4/S5 build on them)
+
+- **Q1 is CLOSED: a root-level `[org]/[project]/[slug]` shadows nothing.** Verified
+  twice. (a) `.next/routes-manifest.json` after the build: every static route is tried
+  before any dynamic one, and among the dynamic routes the new one sorts **last**
+  (`/api/documents/[id]/raw`, `/api/documents/[id]/versions/[v]/raw`, `/documents/[id]`,
+  `/documents/[id]/versions/[v]`, `/graph/[org]`, `/projects/[projectId]`, **then**
+  `/[org]/[project]/[slug]`) — Next compiles full-path regexes and orders
+  more-static-prefix first. (b) A live `next start` probe of nine URLs with the backend
+  down, where only the new page's copy identifies it: `/documents/25`,
+  `/documents/25/versions/1`, `/api/documents/25/raw`, `/graph/abc`, `/dashboard`,
+  `/projects/9`, `/login` all reached their own routes. **No rewrite, no
+  `middleware.ts`, no `next.config.ts` change** — D1's fallback was not needed.
+- **The pretty route is now the catch-all for EVERY unmatched 3-segment URL.** Anything
+  a later slice adds at three segments must carry a static prefix to win, and a second
+  all-dynamic 3-segment route would race this one. S4's `/@{org}/graph` is 2 segments —
+  no collision.
+- **The `@` guard is load-bearing, not cosmetic**, precisely because of the point above:
+  `page.tsx` rejects an `org` segment that does not start with `@` (plus a bare `@` and
+  empty project/slug) **before** `optionalIdentity()` and before any upstream call, so
+  junk URLs never fire a backend request. The `@` is stripped before calling the
+  resolver, which takes the bare slug.
+- **`resolveDocument(token, org, project, slug, signal?)`** in
+  `web/src/lib/knowledge/app.ts` is the one BFF seam for the resolver — token-first,
+  `import "server-only"`, every segment `encodeURIComponent`-escaped independently,
+  `ApiError` rethrown. S4/S5 must not hand-build `/app/orgs/...` anywhere else.
+- **The legacy redirect is anonymous-only and one-way.** `(public)/documents/[id]`'s
+  anonymous branch does `redirect(doc.canonical_path)` (**307**, not 308 — D3 leaves
+  slugs mutable) when the key is non-null, and serves exactly as today when it is null.
+  The pretty page **never** redirects back to an id URL, so there is no loop; a
+  pretty-URL miss is a plain `notFound()` on both branches (no `/login` bounce — the
+  resolver's 404 already collapses private/unknown, so a bounce would leak nothing and
+  only add friction on a share surface). S4's `/graph/{uuid}` redirect should follow the
+  same shape.
+- **Metadata stays STATIC** (`export const metadata`, no `generateMetadata`): the
+  knowledge client is `cache: "no-store"`, so `generateMetadata` would double the
+  upstream fetch on every render. Per-doc SEO titles are the out-of-scope SEO expansion.
+  S4/S5 should keep this rule.
+- **The pretty page renders no `CopyLinkButton` and no `DeleteDocumentButton`** — S5
+  owns share affordances wholesale, and delete stays on the id URL. So a member on a
+  pretty URL currently has fewer affordances than on the id URL: deliberate, and S5's
+  call to change.
+- **Version links stay id-keyed** (`/documents/{id}/versions/{v}`), fed from the
+  resolver's `id`. There is no pretty form for a specific version and none is planned —
+  that is exactly the exact-row addressing D2 keeps.
+- **New copy block `DOCUMENTS.publicNotFound`** (`web/src/content/documents.ts`) backs
+  the co-located `not-found.tsx`, whose CTA links to `/` rather than the member-gated
+  `/documents` — the share surface's visitors are mostly anonymous strangers.
+
+### Gotchas found while doing S3
+
+- **`web/src/lib/knowledge/app.ts`, `document-view.tsx` and `explainer-frame.tsx` are
+  already `prettier --check`-dirty on `main`** (verified by stashing). `npm run lint`
+  (eslint) is the real gate and passes; do **not** run `prettier --write` across those
+  files in a slice, or the diff drowns in unrelated churn. Format only what you add.
+- **A malformed percent-escape in a URL segment throws `URIError`** and would 500 an
+  anonymous share surface; the page decodes through a `safeDecode` that returns the raw
+  segment instead, so it 404s like every other miss. Worth copying in S4.
+- **A local `npm run build` + `next start` probe is cheap and decisive** for routing
+  questions even with no backend running: a non-404 `ApiError` is rethrown (500), so
+  "reached the right route" is distinguishable from "fell through to the catch-all" by
+  which page's copy appears in the body.
+- Web test baseline moves from **13 files / 79 tests** to **14 / 83**. No `server/**` or
+  `tests/**` file was touched, so the Postgres-gated pytest suite is untouched by S3 and
+  was not re-run (S2's 123-passed baseline stands); `plugin_parity` still PASSes because
+  `web/` is not a shipped dir.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -462,6 +529,44 @@ above are hints, not a substitute.
   fixture isolates `KB_DB_PATH` but **not `KB_ROOT`**, so write-path tests must use a
   `KB_ROOT`-isolating fixture (`org_client`) or they write into the repo's real `docs/`
   tree.
+
+**Actual (P25.S3):**
+
+- `docs/current/frontend.md` — the public route map gains
+  `(public)/[org]/[project]/[slug]` = `/@{org}/{project}/{doc-slug}`, the pretty
+  document URL. Same member/anonymous branch split as `(public)/documents/[id]`
+  (`optionalIdentity()` → `<AppShell>` with the back-link, or `<PublicShell>`), rendering
+  the same `<DocumentView>` + `<VersionHistory>`. Two facts a reader must know: it is the
+  **catch-all for every unmatched 3-segment URL** (Next orders static routes before
+  dynamic ones and sorts this all-dynamic route last — verified against the built
+  `routes-manifest.json`, so nothing existing is shadowed and **no rewrite/middleware was
+  needed**), and consequently the **`@`-prefix guard runs before the session read and
+  before any upstream call**. `resolveDocument()` in `web/src/lib/knowledge/app.ts` is the
+  one BFF seam for `GET /app/orgs/{org}/{project}/{slug}`; it strips the `@` (the backend
+  takes the bare slug) and escapes each segment. Version links stay id-keyed. Metadata is
+  static (`export const metadata`) because the knowledge client is `cache: "no-store"` and
+  `generateMetadata` would double the upstream fetch.
+- `docs/current/experience.md` — old links now *upgrade themselves* on the public
+  surface: an **anonymous** visitor on `/documents/{id}` is **307**-redirected to
+  `canonical_path` when the owning tenant has an org slug, while a signed-in **member**
+  stays on the id URL (it carries the member-only affordances). Temporary, not permanent,
+  because org slugs are mutable — a 308 would be cached past a slug change. The redirect
+  is **one-way** (the pretty page never bounces back to an id URL, so no loop), and a
+  slug-less tenant sees byte-identical behavior to before: nothing that worked stops
+  working. A pretty-URL miss is the branded not-found on both branches — no `/login`
+  bounce, since the resolver's single 404 already collapses private/unknown/malformed —
+  and its co-located `not-found.tsx` sends the visitor to `/` rather than the
+  member-gated `/documents`, because a shared link's audience is mostly anonymous
+  strangers. The pretty page deliberately carries **no** copy-link and **no** delete in
+  this slice.
+- `docs/current/qa.md` — the web vitest baseline moves to **14 files / 83 tests** (was
+  13 / 79): a 4-case `resolve-document` suite covering the exact upstream URL,
+  per-segment escaping, the tokenless (anonymous) call sending no `Authorization`, and a
+  404 surfacing as `ApiError`. Also worth recording as a technique: **Next route
+  precedence is verifiable locally without a backend** — `npm run build` +
+  `.next/routes-manifest.json` for the order, then a `next start` probe where each route
+  is identified by its own branded copy (a non-404 upstream error is rethrown, so a 500
+  from the *right* page is a positive signal).
 
 ## Constraints
 
