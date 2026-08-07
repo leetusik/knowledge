@@ -361,6 +361,30 @@ explicitly declined by the operator.
 - Five phases (P21–P25) are `done` but still in `works/phases/active/` awaiting a `rotate-backlog`.
   S5 should describe the archive rule rather than assume `active/` means in-flight.
 
+### Cross-slice notes from the knowledge slices
+
+- **S1 (done):** explainer published — "Knowledge: What It Is and How It Is Used", **KB doc id 29
+  v1**, `knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html`, 25,242 chars of
+  extracted text. Research section **skipped-by-judgment** (product shape of a private repo — no
+  external comparison surface), so the document has four sections and no `#best-practices` ToC
+  entry. One run sufficed for the merged grouping.
+  - **The first save behaved exactly as predicted:** `landing_created: true` +
+    `recent_updated: true` — `docs/knowledge/index.md` and the Recent bullet were created by the
+    API, and the project folder now exists.
+  - **The org slug is `leetusik`**; the 201 returned the pretty URL
+    `/@leetusik/knowledge/<doc-slug>` with no id-URL fallback.
+  - **Project `knowledge` is private (the P19 default), so the series is not publicly readable.**
+    Anonymous: id URL → **307** (proving a `canonical_path` was emitted), pretty URL → **404**
+    (404-never-403 on a private project). Correct default behaviour, **not** a defect. Making the
+    series public is an **operator decision** — flip the project to public from its project page —
+    and is deliberately *not* required by the confirmed intent, so the loop did not stop for it.
+    Worth putting to the operator at `P26.REVIEW`.
+  - **For S3:** `canonical_path` is `null` on the `by-path` read projection even though the pretty
+    URL resolves — consistent with the recorded P25 scope note, but S3 owns the public routes and
+    should glance at it.
+  - **For S2:** S1 states the self-reference (this series is written by the write path into the repo
+    that implements it) and defers the mechanism. S2 owns that payoff — do not leave it unwritten.
+
 ## Constraints
 
 1. **`knowledge` slices are run INLINE by the orchestrator, never dispatched.** `/explain` is a

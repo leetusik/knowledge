@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P26`
-- Current slice: `P26.S1`
-- Next slice: `P26.S2`
+- Current slice: `P26.S2`
+- Next slice: `P26.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `16`
-- Rebuilt at: `2026-08-08T04:14:34+09:00`
+- Rebuilt at: `2026-08-08T04:20:56+09:00`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
-| [ ] `P26` | `planned` | `pending` | New-maintainer knowledge base | `P26.S1` | `works/phases/active/P26` |
+| [ ] `P26` | `planned` | `pending` | New-maintainer knowledge base | `P26.S2` | `works/phases/active/P26` |
 
 ## Phase P21: Web document deletion
 
@@ -83,7 +83,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P26.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P26/slices/P26.DECOMP` |
-| [ ] `P26.S1` | `todo` | Knowledge: what it is and how it is used | `knowledge` | `works/phases/active/P26/slices/P26.S1` |
+| [x] `P26.S1` | `done` | Knowledge: what it is and how it is used | `knowledge` | `works/phases/active/P26/slices/P26.S1` |
 | [ ] `P26.S2` | `todo` | Knowledge: system internals - content plane, write path, contracts | `knowledge` | `works/phases/active/P26/slices/P26.S2` |
 | [ ] `P26.S3` | `todo` | Knowledge: the read surfaces - two front ends | `knowledge` | `works/phases/active/P26/slices/P26.S3` |
 | [ ] `P26.S4` | `todo` | Knowledge: shipping and running it - distribution, deploy, security, QA | `knowledge` | `works/phases/active/P26/slices/P26.S4` |
