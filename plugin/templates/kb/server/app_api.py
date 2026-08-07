@@ -11,7 +11,9 @@ or an org-level key (``/app/credentials``, ``project_id NULL`` — one key autho
 every project in the org); either way the plaintext ``vk_`` value is returned once
 (on create) and never persisted or re-exposed — only its sha256 hash and a short
 display prefix are stored. Projects are get-or-create by name (``POST /app/projects``
-is idempotent on the tenant's ``UNIQUE(tenant_id, name)``).
+is idempotent on the tenant's ``UNIQUE(tenant_id, name)``). ``PATCH /app/tenant``
+claims the caller's tenant's public **org slug** (the ``{org}`` of a pretty share
+URL) — 422 on a malformed/reserved value, 409 when another tenant holds it.
 
 Ported from vocky ``app_api.py`` (Starlette → FastAPI): body binding and path
 params are FastAPI-native (malformed UUID / blank name → standard **422**, not
@@ -30,7 +32,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from server.accounts.auth import AuthContext, require_user
 from server.accounts.security import generate_opaque_token, sha256_hex
-from server.accounts.service import get_accounts_service
+from server.accounts.service import DuplicateOrgSlugError, get_accounts_service
+from server.accounts.slugs import InvalidOrgSlugError, normalize_org_slug
 from server.accounts.types import CreateProject, CreateProjectCredential
 from server.auth_api import serialize_tenant
 
@@ -68,6 +71,29 @@ class SetProjectVisibilityInput(BaseModel):
     """Visibility-toggle request body. Any other value gets a free 422 from the Literal."""
 
     visibility: Literal["private", "public"]
+
+
+class SetTenantSlugInput(BaseModel):
+    """Org-slug request body, validated against the shared rules in ``accounts.slugs``.
+
+    The validator normalizes (trim + lowercase) and rejects a malformed or reserved
+    slug by re-raising as a ``ValueError``, which FastAPI renders as a standard 422
+    whose message cites the constraint — so the rule is stated in exactly one place
+    and the endpoint never has to restate it.
+    """
+
+    # The 200-char outer bound is a cheap body guard only (the real 2-40 length rule
+    # lives in ``normalize_org_slug``, so an over-long-but-plausible slug still gets
+    # the constraint-citing message rather than a bare pydantic length error).
+    slug: str = Field(max_length=200)
+
+    @field_validator("slug")
+    @classmethod
+    def _normalize_slug(cls, value: str) -> str:
+        try:
+            return normalize_org_slug(value)
+        except InvalidOrgSlugError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 def serialize_project(record) -> dict[str, object]:
@@ -122,6 +148,36 @@ async def get_tenant(ctx: AuthContext = Depends(require_user)) -> dict[str, obje
     """Return the authenticated caller's active tenant."""
 
     return {"tenant": serialize_tenant(ctx.tenant)}
+
+
+@router.patch("/app/tenant")
+async def set_tenant_slug(
+    payload: SetTenantSlugInput,
+    ctx: AuthContext = Depends(require_user),
+) -> dict[str, object]:
+    """Claim the caller's tenant's public org slug; returns the updated tenant.
+
+    Session-only (``require_user``), and scoped implicitly to the caller's own
+    tenant — there is no tenant id in the path, so no cross-tenant surface exists.
+    A malformed or reserved slug is a **422** from ``SetTenantSlugInput`` (message
+    citing the constraint) before any DB work; a slug already held by another tenant
+    is a **409** from the translated ``UNIQUE`` violation, never a 500. Re-claiming
+    the tenant's own current slug succeeds unchanged.
+    """
+
+    try:
+        updated = await get_accounts_service().set_tenant_slug(
+            ctx.tenant.id, payload.slug
+        )
+    except InvalidOrgSlugError as exc:  # defense in depth; the body validator ran first
+        raise HTTPException(status_code=422, detail=str(exc))
+    except DuplicateOrgSlugError:
+        raise HTTPException(
+            status_code=409, detail="that org slug is already taken"
+        )
+    if updated is None:  # the session's own tenant vanished mid-request
+        raise HTTPException(status_code=404, detail="tenant not found")
+    return {"tenant": serialize_tenant(updated)}
 
 
 @router.get("/app/projects")

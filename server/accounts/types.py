@@ -32,10 +32,16 @@ class UserRecord:
 
 @dataclass(slots=True, kw_only=True)
 class TenantRecord:
-    """Stored tenant."""
+    """Stored tenant.
+
+    ``slug`` is the tenant's public URL identity, or ``None`` when it has never
+    claimed one (in which case it simply has no pretty URL and keeps today's
+    id/uuid links). Always lowercase — see ``server.accounts.slugs``.
+    """
 
     id: UUID
     name: str
+    slug: str | None
     created_at: datetime
 
 

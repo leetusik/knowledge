@@ -97,6 +97,32 @@ class AccountsRepository:
         model = await self._session.get(TenantModel, tenant_id)
         return self._to_tenant_record(model) if model is not None else None
 
+    async def get_tenant_by_slug(self, slug: str) -> TenantRecord | None:
+        """Return one tenant by its public slug, or None when unclaimed.
+
+        Exact match on the stored (lowercase) form — the caller normalizes.
+        """
+
+        statement = select(TenantModel).where(TenantModel.slug == slug)
+        model = (await self._session.execute(statement)).scalar_one_or_none()
+        return self._to_tenant_record(model) if model is not None else None
+
+    async def set_tenant_slug(self, tenant_id: UUID, slug: str) -> TenantRecord | None:
+        """Set a tenant's public ``slug`` by id; None when the tenant is missing.
+
+        Load-mutate-flush-refresh (the ``set_project_visibility`` idiom); the service
+        owns the transaction, so this never commits. A ``UNIQUE`` violation surfaces
+        as an ``IntegrityError`` on flush for the service to translate.
+        """
+
+        model = await self._session.get(TenantModel, tenant_id)
+        if model is None:
+            return None
+        model.slug = slug
+        await self._session.flush()
+        await self._session.refresh(model)
+        return self._to_tenant_record(model)
+
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
         """Return the tenants a user is a member of, oldest-first."""
 
@@ -346,6 +372,7 @@ class AccountsRepository:
         return TenantRecord(
             id=model.id,
             name=model.name,
+            slug=model.slug,
             created_at=model.created_at,
         )
 

@@ -256,6 +256,68 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   yet at decomposition time and `validate` checks dependency existence. The orchestrator
   may add `P25.S4` to S5's `depends_on` after promoting D19.
 
+### Landed by P25.S1 (bind these — later slices build on them)
+
+- **`server/accounts/slugs.py` is the one place the org-slug rules live.** It exports
+  `normalize_org_slug()` (trim + lowercase, then validate — raises
+  `InvalidOrgSlugError`), `is_valid_org_slug()`, `ORG_SLUG_PATTERN`,
+  `ORG_SLUG_MIN/MAX_LENGTH`, `RESERVED_ORG_SLUGS` (38 words) and
+  `ORG_SLUG_CONSTRAINT` (the human string every 422 cites). Also re-exported from
+  `server.accounts`. **S2/S4 must not re-derive the charset** — import it.
+- **Slugs are stored lowercase and matched exactly.** Mixed case in, lowercase
+  stored: `Hi2Vi` and `hi2vi` are the same slug and collide. So an S3/S4 URL segment
+  should be normalized (via `normalize_org_slug`) before lookup, not compared raw.
+- **`AccountsService.get_tenant_by_slug(slug)` is the resolver primitive for S2/S4**
+  and is deliberately forgiving-then-silent: it normalizes first and returns `None`
+  (no DB round trip) for anything malformed/reserved rather than raising. That is
+  what lets an unknown org slug be the *same* indistinguishable 404 as a private
+  project — 404-never-403 comes for free if you just treat `None` as "not found".
+- **`AccountsService.set_tenant_slug(tenant_id, slug)`** validates before opening a
+  session and raises the new **`DuplicateOrgSlugError`** (an `AccountsPersistenceError`
+  subclass) on the `UNIQUE` violation — 409, never a 500. Re-setting a tenant's own
+  current slug is a no-op success, not a conflict.
+- **`serialize_tenant` (`server/auth_api.py`) now emits `"slug"` (nullable).** One
+  edit covers signup, login, `/auth/me` **and** `GET /app/tenant`, so S5's dashboard
+  field can read the current slug straight off the session tenant with no new call.
+- **`PATCH /app/tenant`** is the write surface: `{"slug": "..."}` → 200 `{tenant}`,
+  422 malformed/reserved (message cites the constraint), 409 taken. It takes **no
+  tenant id in the path** — it is implicitly scoped to the caller's own tenant, so
+  S5's server action just posts the body.
+- **`documents.id` note stands:** nothing here keys off it. `tenants.slug` is
+  Postgres-side and survives a full content reindex, which is the whole point.
+
+### Gotchas found while doing S1 (they will bite S2–S5)
+
+- **Plugin template parity is a CI gate this phase must honor on every backend
+  slice.** `server/**` and `tests/**` are `shipped_dirs` in
+  `plugin/templates/manifest.json`; `scripts/plugin_parity.py`
+  (`.github/workflows/plugin-ci.yml`) fails on any file in the repo but not in
+  `plugin/templates/kb/`, and byte-compares the rest. So **every** `server/` or
+  `tests/` edit must be copied to `plugin/templates/kb/<same path>`, and a **new**
+  file must additionally be added to the manifest's `files.identical` list. `web/` is
+  **not** shipped, so S3/S5's web-only work mirrors nothing. Precedent: P19.S1's
+  commit has exactly this doubled file list and no `plugin.json` bump.
+- **`tenants.slug` is GLOBALLY unique — unlike every other assertion in the gated
+  suites, which are tenant-scoped.** A test that claims a hardcoded slug passes once
+  and then 409s forever after against a re-used database. Generate the slug per run
+  (`f"org-{uuid4().hex[:10]}"`). I hit this exactly.
+- **The `/auth` throttle is process-global across the whole pytest session** (per
+  (IP, path), default 20 / 15 min), so adding seed signups to one suite can push a
+  *later* suite into 429s. `test_documents_api.py`'s fixture already sets
+  `KB_AUTH_RATE_LIMIT=0`; S1 added the same line to `test_accounts_provisioning.py`'s
+  `accounts_client`. Any new gated suite should do the same.
+- **How to actually run the gated suite** (it silently skips otherwise, so a green
+  local run can prove nothing): `docker run -d --rm --name kb-pg -e
+  POSTGRES_PASSWORD=kb -e POSTGRES_USER=kb -e POSTGRES_DB=kb -p 55439:5432
+  postgres:17`, then `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb
+  .venv/bin/python -m pytest -q`. Note **55432 was already in use** on this machine.
+  Use the repo `.venv` (`.venv/bin/python`) — the system `python3` has no sqlalchemy.
+  Baseline after S1: **119 passed** with Postgres, **83 passed / 36 skipped** without.
+- Migrations are **not** shipped in the plugin payload (`alembic/` is not a
+  `shipped_dir`), so `0005` needed no mirror. It was verified for real:
+  `upgrade head` on a fresh DB, then `downgrade 0004_project_visibility`, then
+  `upgrade head` again — all clean.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -270,6 +332,33 @@ _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a 
 
 Implementation slices append the **actual** notes here as they land; the expectations
 above are hints, not a substitute.
+
+**Actual (P25.S1):**
+
+- `docs/current/api.md` — new `PATCH /app/tenant` (session-guarded, body
+  `{"slug"}` → 200 tenant / 422 malformed-or-reserved with the constraint cited /
+  409 already taken), and the additive nullable `slug` key on the canonical tenant
+  shape, which appears on `POST /auth/signup`, `POST /auth/login`, `GET /auth/me`
+  and `GET /app/tenant` at once.
+- `docs/current/data.md` — `tenants.slug` (`Text NULL UNIQUE`, alembic
+  `0005_tenant_slug` ← `0004_project_visibility`): the durable public org identity,
+  added with **no backfill** and **no DB `CHECK`** (charset/length/reserved-word
+  validation is app-layer in `server/accounts/slugs.py`, per the `0004` precedent);
+  NULL means "no pretty URL yet", and Postgres's distinct-NULLs rule lets any number
+  of tenants stay slug-less.
+- `docs/current/backend.md` — the accounts layer gained `server/accounts/slugs.py`
+  (the single source of the org-slug rules), `get_tenant_by_slug` /
+  `set_tenant_slug` on the repository + service, and `DuplicateOrgSlugError`
+  (`UNIQUE` → 409, never a 500). `get_tenant_by_slug` returns `None` for a malformed
+  slug instead of raising, so the anonymous surface's 404-never-403 rule holds
+  without caller-side special-casing.
+- `docs/current/architecture.md` — why the public identity lives in the Postgres
+  accounts plane and not the disposable SQLite content plane: a shared link must
+  survive a full reindex, and `documents.id` does not.
+- `docs/current/qa.md` — the gated suite is now **119 passed** with Postgres (83
+  passed / 36 skipped without); the recipe for standing one up, and the rule that a
+  test claiming an org slug must generate it per run because `tenants.slug` is
+  globally unique.
 
 ## Constraints
 
