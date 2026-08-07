@@ -1,0 +1,659 @@
+<!--kb
+title: "Knowledge System Internals: The Content Plane, the Write Path, and the Contracts"
+date: 2026-08-08
+tags:
+  - internals
+  - write-path
+  - sqlite
+  - architecture
+  - new-maintainer
+source:
+  project: knowledge
+  repo: knowledge
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge System Internals: The Content Plane, the Write Path, and the Contracts</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.2; }
+    h2 { margin-top: 2.4rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .9em; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; font-size: .93em; }
+    pre code { background: none; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      pre, code { background: #23272e; }
+      .callout { background: #1d2a24 !important; }
+      .aside { background: #2a2620 !important; }
+      .fig { background: #1c1f24 !important; }
+      .box { background: #23272e !important; }
+      .lockband { background: #2a2620 !important; }
+      .afterband { background: #1d2a24 !important; }
+    }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .aside { border-left: 4px solid #c9a227; background: #fdf8e8;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .lede { font-size: 1.06em; }
+    nav[aria-label="Contents"] { border: 1px solid #8883; border-radius: 6px;
+                                 padding: .6rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 .2rem; padding-left: 1.4rem; }
+
+    .fig { background: #fafafa; border: 1px solid #8883; border-radius: 8px;
+           padding: 1rem; margin: 1.4rem 0; }
+    .fig figcaption { font-size: .88em; opacity: .8; margin-top: .7rem; text-align: center; }
+
+    .planes { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .7rem; }
+    .box { background: #fff; border: 1px solid #8884; border-radius: 6px; padding: .7rem .8rem; }
+    .box b { display: block; margin-bottom: .25rem; }
+    .box span { font-size: .86em; opacity: .85; }
+
+    .steps { list-style: none; padding-left: 0; margin: 0; counter-reset: s; }
+    .steps li { position: relative; padding: .32rem 0 .32rem 2.2rem; counter-increment: s; font-size: .95em; }
+    .steps li::before { content: counter(s); position: absolute; left: 0; top: .3rem;
+      width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #4a7; color: #fff;
+      display: grid; place-items: center; font-size: .8em; font-weight: 700; }
+    .lockband { background: #fdf8e8; border-left: 4px solid #c9a227; border-radius: 4px;
+                padding: .5rem .7rem; margin: .5rem 0; }
+    .afterband { background: #f0f8f4; border-left: 4px solid #4a7; border-radius: 4px;
+                 padding: .5rem .7rem; margin: .5rem 0; }
+    .bandlabel { font-size: .8em; text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
+    .respline { text-align: center; font-weight: 700; margin: .7rem 0; color: #0f6f66; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1rem 0;
+            display: block; overflow-x: auto; }
+    th, td { border: 1px solid #8883; padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; }
+    .q .opt:hover { border-color: #4a7; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .9; }
+    .q { margin-bottom: 1.6rem; }
+    .series { font-size: .93em; opacity: .85; }
+  </style>
+</head>
+<body>
+
+<h1>Knowledge System Internals: The Content Plane, the Write Path, and the Contracts</h1>
+
+<p class="series"><strong>Part 2 of a five-part series</strong> for a new maintainer of the
+<code>knowledge</code> project. Part 1 described the product — four surfaces, one corpus, and a set
+of promises about ownership, sharing, and versioning. This part is the engine room: where a document
+actually lives, exactly what happens when one is written, and which contracts you may extend but
+must not break. Part 3 covers the two front ends, part 4 shipping and running it, part 5 the
+decision record.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p class="lede">Physically, this is a small system. One FastAPI process, one SQLite file, one
+Postgres database, a git repository, and — in production — two more containers for the web app and
+the MCP service. What makes it interesting is not its size but one decision made early and honored
+everywhere since. Everything below is downstream of it.</p>
+
+<h3>The two planes</h3>
+
+<p>The FastAPI process runs <strong>two planes at once</strong>, and knowing which one you are
+looking at is the first skill to acquire:</p>
+
+<figure class="fig">
+  <div class="planes">
+    <div class="box"><b>Content plane</b><span>SQLite (<code>data/kb.sqlite3</code>), FTS5, WAL ·
+    <strong>synchronous</strong> · <strong>disposable</strong> — rebuilt from <code>docs/</code>.
+    Holds documents, the search index, embeddings, version rows.</span></div>
+    <div class="box"><b>Accounts control plane</b><span>Postgres 17 via async SQLAlchemy + psycopg3,
+    migrated by Alembic · <strong>asynchronous</strong> · <strong>durable</strong>. Holds users,
+    orgs (<code>tenants</code>), projects, credentials, sessions, usage events, and the org slug.</span></div>
+  </div>
+  <figcaption>Two planes, one process, one uvicorn worker. They meet only at narrow, deliberate
+  seams — and the async plane never touches the content plane's write lock.</figcaption>
+</figure>
+
+<p>The accounts plane is <strong>lazy and dormant</strong>: with <code>DATABASE_URL</code> unset the
+async engine is never created, and <code>/api/*</code> behaves byte-for-byte like the pre-multi-tenant
+single-token deployment. That dormancy is not a nicety — it is what makes the open-core self-host
+story work at all. A person who scaffolds their own copy gets a single-tenant knowledge base out of
+the same code that runs the multi-tenant service, because one environment variable is unset.</p>
+
+<h3>Two deployments, one codebase</h3>
+
+<p>There is no hosted fork and no "prod mode". The entire difference between what runs on your laptop
+and what runs at <code>knowledge.hi2vi.com</code> is <strong>two flags, both defaulting off</strong>:</p>
+
+<table>
+<thead><tr><th></th><th>Local / plugin (default)</th><th>Hosted</th></tr></thead>
+<tbody>
+<tr><td>Reads and search</td><td>open</td><td>bearer required (<code>KB_REQUIRE_READ_AUTH=true</code>)</td></tr>
+<tr><td>After the scoped commit</td><td><strong>never pushes</strong></td><td>fetch → rebase → non-force push (<code>KB_GIT_PUSH=true</code>)</td></tr>
+<tr><td>Repo it writes to</td><td>your working tree (bind mount)</td><td>its own clone on the box</td></tr>
+</tbody>
+</table>
+
+<p>Read that table as a compatibility contract rather than a configuration list. Every existing local
+user gets the old behavior <em>by doing nothing</em>, and a hosted-only capability can never leak into
+a local install by accident. It also means the hosted write path is a <strong>publish path</strong>: a
+single <code>POST /api/documents</code> carries a document from JSON all the way to a publicly readable
+page — file, landing page, index bullet, database row, commit, embedding, push — with no cron, no
+queue service, and no operator action.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The one idea: disk is canonical, the database is a projection</h3>
+
+<p>Here is the decision everything hangs from. <strong>The files under <code>docs/</code> are the
+truth. SQLite is a cache you are allowed to delete.</strong></p>
+
+<p>That sounds like a slogan until you try it. Do this on a running system and nothing is lost:</p>
+
+<figure class="fig">
+<pre><code>$ rm data/kb.sqlite3          # delete the entire content database
+$ docker compose restart api  # boot runs a full reindex()
+
+[kb-api] startup reindex: indexed=41 removed=0 skipped=0 versions_indexed=6 …</code></pre>
+<figcaption>The database is re-derived from the files. Nothing was backed up, and nothing was
+restored — because nothing durable was in there to begin with.</figcaption>
+</figure>
+
+<p>To make that true, every column in the <code>documents</code> table must be recoverable
+<em>from the file alone</em>. Follow one document through the rebuild and you can see how each field
+is re-derived:</p>
+
+<table>
+<thead><tr><th>Column</th><th>Where reindex gets it back</th></tr></thead>
+<tbody>
+<tr><td><code>title</code>, <code>date</code>, <code>tags</code>, <code>related</code></td><td>the file's frontmatter block</td></tr>
+<tr><td><code>rel_path</code>, <code>project</code>, <code>slug</code></td><td>the file's path — <code>&lt;project&gt;/&lt;date&gt;-&lt;slug&gt;.&lt;ext&gt;</code></td></tr>
+<tr><td><code>format</code>, <code>raw_html</code></td><td>the file's extension and its bytes</td></tr>
+<tr><td><code>tenant_id</code></td><td>the <em>content root</em> the file sits in: <code>docs/</code> → tenant #1, <code>tenants/&lt;uuid&gt;/</code> → that uuid</td></tr>
+<tr><td><code>version</code></td><td>the <code>version:</code> frontmatter line — <strong>absent means 1</strong></td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<p><strong>Notice the fourth row.</strong> Tenant isolation is encoded <em>in the file path</em>, not
+only in the database. That is not redundancy; it is a requirement. A <code>tenant_id</code> that lived
+only in SQLite would be wiped on the next boot, and cross-tenant isolation would quietly evaporate
+along with it. The multi-tenancy survives a full database rebuild because the filesystem layout
+carries it.</p>
+</div>
+
+<h3>Three consequences you will meet constantly</h3>
+
+<p>Once "the DB is disposable" is real, a chain of otherwise-puzzling decisions becomes obvious:</p>
+
+<ol>
+<li><strong><code>documents.id</code> is not a durable identity.</strong> It is a rowid that a rebuild
+may reassign. That is precisely why <code>/documents/25</code> was a poor permanent share link, and
+why an org's public slug had to be added to <em>Postgres</em>. A public URL is now composed only of
+parts that survive a reindex: the org slug (durable plane) plus the project name and doc slug (which
+are already the content plane's durable identity, <code>rel_path</code>).</li>
+
+<li><strong>Version history had to live on disk too.</strong> Superseded bodies are archived as
+<em>files</em> under <code>.versions/</code>; the <code>document_versions</code> table is a projection
+of them. The invariant is stated bluntly in the backend doc: a version-history feature that stored
+bodies only in SQLite would be silently erased by the next boot reindex — <em>never build one</em>.</li>
+
+<li><strong><code>reindex</code> is a repair tool, not a migration.</strong> Manual edits, a
+git reset, an offline fallback write — anything that changes files behind the API's back is fixed by
+re-deriving. This is why a failed git commit never rolls back the file or the row: the files are
+canonical, and reconciliation is always available.</li>
+</ol>
+
+<h3>The second idea: exactly one writer</h3>
+
+<p>The content plane is guarded by a single in-process lock, and the API must run
+<strong>one uvicorn worker</strong>. Never scale workers — the lock is in-process, so a second worker
+would not see it. SQLite's WAL mode gives you concurrent <em>readers</em> for free, which is the half
+of concurrency this workload actually needs.</p>
+
+<h3>Where the response goes: the write path timeline</h3>
+
+<p>Now the piece that repays careful reading. A write used to do network work <em>before</em>
+answering. Since P24 the response sits in the middle of the sequence, and that boundary is
+load-bearing:</p>
+
+<figure class="fig">
+  <div class="bandlabel">in-request · under the write lock · entirely local</div>
+  <div class="lockband">
+    <ol class="steps">
+      <li>validate the convention inputs</li>
+      <li>archive the current body (only on a versioned re-publish)</li>
+      <li>write <code>docs/&lt;project&gt;/&lt;date&gt;-&lt;slug&gt;.&lt;ext&gt;</code> with byte-exact frontmatter</li>
+      <li>create the project landing page if this is the project's first document</li>
+      <li>insert the Recent bullet in <code>docs/index.md</code></li>
+      <li>upsert the database row — <strong>the document is durably saved here</strong></li>
+      <li>a <em>scoped</em> git commit — stage only the touched paths, never <code>-A</code></li>
+    </ol>
+  </div>
+  <p class="respline">↓ &nbsp; 201 goes out here &nbsp; ↓</p>
+  <div class="bandlabel">after the response · on the publish worker · the only network work</div>
+  <div class="afterband">
+    <ol class="steps" start="8">
+      <li>push: fetch → rebase onto <code>origin/main</code> → non-force push</li>
+      <li>embed the document with Gemini for semantic search</li>
+    </ol>
+  </div>
+  <figcaption>Everything the caller waits for is local disk plus SQLite. Every remote round-trip
+  sits behind the response.</figcaption>
+</figure>
+
+<p>Why this matters is best seen through the bug it fixed. Before the split, steps 8 and 9 ran
+<em>inside</em> the request — two SSH round-trips to GitHub and an HTTPS call to Gemini, with (until
+that phase) no subprocess timeout at all. A client posting with a short deadline would see a
+transport failure for a document that was <strong>already written, committed, and live</strong>:</p>
+
+<figure class="fig">
+<pre><code>before:  [validate → write → DB → commit → git push (slow) → embed (slow)] → 201
+         client gives up here ─────────────^  … but the document is already saved
+
+after:   [validate → write → DB → commit] → 201 → [push, embed on a worker thread]
+         client sees success ──────────────^</code></pre>
+<figcaption>The system was telling the truth about the response and lying about the outcome.</figcaption>
+</figure>
+
+<p>Two rules fall out of that, and both are contracts every client must honor. First,
+<code>push_pending: true</code> with <code>pushed: false</code> is the <strong>normal success</strong>
+— never an error, never a reason to retry. Second, and more subtly: <strong>a lost or timed-out write
+response is not evidence of failure</strong>. The correct reaction is to read the document back once
+and find out what actually happened, then at most one retry. Blind retrying is how you create a
+duplicate — or, now that versioning exists, an unwanted v2.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>The module map first, then the paths that carry the teaching. Everything lives under
+<code>server/</code>, one file per concern:</p>
+
+<table>
+<thead><tr><th>Module</th><th>Job</th></tr></thead>
+<tbody>
+<tr><td><code>config.py</code></td><td>env read <em>at call time</em>, never cached at import — which is what lets tests retarget per call</td></tr>
+<tr><td><code>db.py</code></td><td>SQLite: schema, idempotent DDL, upserts, queries, the embedding cache</td></tr>
+<tr><td><code>documents.py</code></td><td>the conventions: slugify, validators, frontmatter serializers, the archive primitives</td></tr>
+<tr><td><code>main.py</code></td><td>the FastAPI app, the write lock, and the write/delete paths</td></tr>
+<tr><td><code>search.py</code></td><td>BM25 + recency + vector fusion</td></tr>
+<tr><td><code>embeddings.py</code></td><td>the <em>only</em> module that talks to Gemini</td></tr>
+<tr><td><code>gitops.py</code></td><td>every git subprocess, all time-bounded</td></tr>
+<tr><td><code>publish.py</code></td><td>the after-response worker</td></tr>
+<tr><td><code>reindex.py</code></td><td>re-derive the database from files</td></tr>
+<tr><td><code>api_auth.py</code></td><td>the two-mode bearer resolver (legacy vs tenant)</td></tr>
+<tr><td><code>accounts/</code>, <code>persistence/</code>, <code>usage/</code></td><td>the async Postgres plane, layered types → repository → service</td></tr>
+</tbody>
+</table>
+
+<h3>One rule makes HTML a document type</h3>
+
+<p>Adding interactive HTML explainers could have meant a parallel pipeline. It did not, because of a
+single rule applied identically in two places — the write path and reindex:</p>
+
+<pre><code>body = the on-disk content minus its frontmatter block
+
+md    →  markdown = body                      raw_html = NULL   format = 'md'
+html  →  markdown = extract_html_text(body)   raw_html = body   format = 'html'</code></pre>
+
+<p>Because both call sites apply the same rule to the same normalized string, a fresh-database
+reindex reproduces the write path's row <em>byte for byte</em>. And because the <code>markdown</code>
+column always holds readable text, FTS5, <code>snippet()</code>, and the embedding input all keep
+working unchanged — the search machinery never learns that HTML exists.</p>
+
+<p><code>extract_html_text</code> is a stdlib <code>html.parser</code> subclass that drops
+<code>script</code>, <code>style</code>, <code>template</code>, and <code>noscript</code> content —
+no new dependency, and no chance of indexing an explainer's CSS. The raw bytes live in
+<code>raw_html</code>, which is dropped from every JSON projection: it is served only by the
+dedicated raw route, never leaked into an ordinary document read.</p>
+
+<p>The metadata rides in a leading HTML comment so the browser ignores it:</p>
+
+<pre><code>&lt;!--kb
+title: "Knowledge System Internals: The Content Plane, the Write Path, and the Contracts"
+date: 2026-08-08
+tags:
+  - internals
+source:
+  project: knowledge
+  repo: knowledge
+--&gt;
+
+&lt;!DOCTYPE html&gt;
+…</code></pre>
+
+<h3>The write lock, and what may not happen inside it</h3>
+
+<p>There is <strong>exactly one</strong> <code>WRITE_LOCK</code> object in the process, defined only
+in <code>server/main.py</code>. It is a plain <code>threading.Lock</code>, which means it is
+<em>not reentrant</em> — and that single fact generates several rules that look arbitrary until you
+know it:</p>
+
+<ul>
+<li>The web app's member-delete route reaches the shared delete helper through a
+<strong>function-level import</strong> rather than an extraction, specifically so there is still one
+lock object, and it must <em>not</em> wrap its own lookup in the lock — the helper takes it.</li>
+<li>A publish task <strong>re-takes the same lock</strong> (a rebase mutates the working tree), so
+tasks are always submitted from <em>outside</em> the critical section. Submitting while holding it
+would self-deadlock the moment the worker ran.</li>
+<li>The async accounts plane never touches the lock at all. When a write needs Postgres — to
+get-or-create the project row, or to resolve the org slug for the response URL — that work runs in an
+<strong>async FastAPI dependency in front of</strong> the synchronous handler. That seam is how a
+Postgres write can precede a SQLite critical section in a handler that cannot <code>await</code>.</li>
+</ul>
+
+<h3>The publish worker: a queue, deliberately</h3>
+
+<p><code>server/publish.py</code> is about 120 lines and its docstring is the design document. The
+worker is one daemon thread started lazily on first submit, and <code>submit</code> does exactly one
+thing:</p>
+
+<pre><code>def submit(name: str, task: Callable[[], None]) -&gt; None:
+    """Queue ``task`` to run after the response. Returns immediately.
+
+    Never raises: enqueuing is the only work done on the request thread.
+    """
+    global _PENDING
+    _ensure_worker()
+    with _COND:
+        _PENDING += 1
+    _QUEUE.put((name, task))</code></pre>
+
+<p>The loop catches <code>BaseException</code> so the worker can never die, logs the failure, and
+keeps going. Note what is <em>absent</em>: any way for a failure to reach the caller. The response is
+long gone by then, so a failed push is logged to the container log — which is the operator's
+surface — and the document republishes on the next successful push.</p>
+
+<p>The docstring also records why this is not Starlette's <code>BackgroundTasks</code>:</p>
+
+<blockquote><p>Starlette <code>BackgroundTasks</code> would also run after the handler, but ordering
+against the <code>BaseHTTPMiddleware</code> metering in the stack is subtle — a queue makes "the
+response never waits" a property of the code, not of the ASGI stack.</p></blockquote>
+
+<p>That is a good instinct to internalize: when you are fixing a bug caused by a subtle ordering
+guarantee, do not fix it with a different subtle ordering guarantee.</p>
+
+<h3>Bounded git is what makes the lock-holding worker safe</h3>
+
+<p><code>gitops.py</code> is small and strict. <code>add</code> stages <em>only the touched paths</em>
+and never <code>-A</code>. <code>push</code> is <code>fetch</code> → <code>rebase</code> →
+<strong>non-force</strong> push, aborting any in-progress rebase on failure so the local commit is
+always preserved. Fetch-and-rebase-before-push is both the safety mechanism and the freshness
+mechanism: the box lands on top of the latest remote at every write, so it can neither clobber
+operator work nor drift stale.</p>
+
+<p>Every subprocess runs with <code>timeout=config.git_timeout_s()</code> (<code>KB_GIT_TIMEOUT_S</code>,
+default 60s; an unparseable or non-positive value falls back to 60, so the cap cannot be switched
+off). Without it a hanging SSH connection would hold the process's only write lock forever — which
+would be <em>worse</em> than the timeout bug the worker was introduced to fix.</p>
+
+<h3>Search: three signals, two fusions</h3>
+
+<p><code>search.py</code> re-ranks the full match set in Python rather than in SQL. The pipeline:</p>
+
+<pre><code>RRF_K = 60
+HALF_LIFE_DAYS = 90
+RECENCY_WEIGHT = 0.5
+# bm25 column weights (title, tags_text, markdown) = 8.0 / 4.0 / 1.0
+
+keyword score = bm25 + RECENCY_WEIGHT * exp(-age_days * ln2 / HALF_LIFE_DAYS)
+final         = RRF over [keyword ordering, vector cosine ordering]</code></pre>
+
+<p>Two details worth carrying. First, CJK searchability is achieved <strong>at the query layer</strong>:
+<code>build_match_query</code> prefix-expands Hangul/CJK/Kana tokens to <code>"tok"*</code>, so the
+FTS5 tokenizer never had to change — and changing it would mean rebuilding the index. Second, the
+degradation path is real: with no Gemini key, or when the query fails to embed, <code>mode</code> is
+<code>"bm25"</code> and behavior is exactly the pre-vector implementation. Semantic search is an
+enhancement, never a dependency.</p>
+
+<h3>Versioning: the archive is the truth</h3>
+
+<p>A re-publish archives the body it is about to replace, then writes the new one at the
+<strong>same</strong> <code>rel_path</code>:</p>
+
+<pre><code>ARCHIVE_DIR = ".versions"
+
+docs/knowledge/2026-08-08-example.html                    ← current body, version: 3
+docs/.versions/knowledge/2026-08-08-example/v0001.html    ← superseded
+docs/.versions/knowledge/2026-08-08-example/v0002.html    ← superseded</code></pre>
+
+<p>Three choices here are worth understanding rather than rediscovering:</p>
+
+<ul>
+<li><code>set_frontmatter_version</code> edits the <code>version:</code> line <em>in place</em> rather
+than re-serializing the file, so an archived body is a faithful copy — unknown frontmatter fields and
+the exact bytes survive.</li>
+<li>The <code>version:</code> line is emitted <strong>only for version ≥ 2</strong>. A v1 file is
+therefore byte-identical to a pre-versioning file, which is what makes "no <code>version:</code> means
+v1" a real no-migration story rather than a backfill job.</li>
+<li><code>document_versions</code> is keyed <code>UNIQUE(tenant_id, rel_path, version)</code> and has
+<strong>no foreign key</strong> to <code>documents</code>. A rebuild reassigns <code>documents.id</code>,
+and a legacy drop-and-recreate path would cascade the history away. Keying on the same identity the
+documents table is unique on makes the archive index survive both — at the cost that any id-keyed
+route must resolve the document to its <code>rel_path</code> first.</li>
+</ul>
+
+<p>Identity is immutable across a chain: a resolved target whose <code>project</code> or
+<code>format</code> differs from the request is a <strong>422</strong>, never a silent coercion — the
+<code>rel_path</code> encodes both the project directory and the extension. Conversely a miss is
+<em>not</em> an error: if the target cannot be resolved, the write falls through to an ordinary v1
+create, so an agent that guessed wrong still publishes.</p>
+
+<h3>Contracts you may extend but must not break</h3>
+
+<p>Three surfaces are pinned, for different reasons:</p>
+
+<ul>
+<li><strong><code>/api/*</code> is frozen.</strong> External consumers code against it. Additive
+fields are fine; changing a status, a key, or a shape is not.</li>
+<li><strong>The MCP tool contract is v1 and additive-only.</strong> The service is a thin proxy that
+forwards the caller's bearer <em>verbatim</em> upstream, so it inherits corpus scoping with no auth
+code of its own — and it changed no <code>server/</code> code to exist.</li>
+<li><strong>The <code>knowledge-kb</code> config file has two independent implementations</strong> —
+the CLI's <code>config.py</code> and the inline resolver inside the explain skill — which
+<em>cannot</em> be merged (the skill must work with the CLI uninstalled, and vice versa). Drift is the
+standing risk. Change one, change the other.</li>
+</ul>
+
+<p>The newest addition shows the house style for adding a field safely. The pretty
+<code>canonical_path</code> is emitted at the <strong>two detail call sites</strong> and deliberately
+<em>not</em> inside the shared list projector — injecting it there would add a Postgres lookup per row
+on every list page. It carries a <strong>round-trip guard</strong>: the pretty path is handed out only
+when resolving it lands back on <em>this</em> row. And the composer checks the org slug first on
+purpose, so a deployment with no slug claimed short-circuits before touching SQLite at all. One
+assembly site, one place the rule can be violated, one place to guard it.</p>
+
+<div class="callout">
+<p><strong>The self-reference, paid off.</strong> This document travelled the exact path above. The
+explain skill POSTed it to <code>knowledge.hi2vi.com</code>; the hosted API wrote
+<code>docs/knowledge/2026-08-08-knowledge-system-internals.html</code> into <em>its own clone of this
+repository</em>, indexed it, committed it, answered 201, and then pushed to <code>origin/main</code>
+on the publish worker. The practical consequence for anyone doing this kind of work here: while a
+phase writes explainers about the repo, the hosted service is committing to that same repo's
+<code>main</code> from another machine — so local work must <code>git pull --rebase</code> between
+saves, or the two histories diverge. The system documents itself, and the documentation is a write
+against the system.</p>
+</div>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<p>Three of the decisions above have well-established external counterparts, and it is worth knowing
+which way each one leans.</p>
+
+<h3>Where it aligns with prevailing practice</h3>
+
+<p><strong>The single-writer rule is SQLite's own guarantee, not a self-imposed limit.</strong> The
+official documentation is explicit that WAL mode permits exactly one writer while readers proceed
+concurrently: "since there is only one WAL file, there can only be one writer at a time", and
+"writers and readers can run at the same time"
+(<a href="https://www.sqlite.org/wal.html">SQLite WAL documentation</a> — sqlite.org). So the
+in-process lock is not fighting the database; it is making the database's real constraint explicit at
+the application layer, where it can be reasoned about — and it is what buys the read concurrency this
+read-heavy corpus actually needs.</p>
+
+<p><strong>The RRF constant is the standard default, used as intended.</strong> Reciprocal Rank
+Fusion combines several ranked lists without tuning weights, scoring each document as
+<code>Σ 1/(k + rank)</code> with a default rank constant of <strong>60</strong> — exactly the
+<code>RRF_K = 60</code> in <code>search.py</code>
+(<a href="https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion">Elasticsearch
+reciprocal rank fusion reference</a> — elastic.co), which traces the method to Cormack et al.'s 2009
+SIGIR paper. Fusing rank positions rather than raw scores is the whole point: BM25 scores and cosine
+similarities are not on comparable scales, and RRF sidesteps that without a normalization step to get
+wrong.</p>
+
+<h3>Where it deliberately diverges</h3>
+
+<p><strong>An in-process queue instead of a task queue.</strong> FastAPI's own guidance draws the line
+by process boundary: use <code>BackgroundTasks</code> when "you need to access variables and objects
+from the same FastAPI app, or you need to perform small background tasks", and reach for something
+like Celery when you "need to perform heavy background computation and you don't necessarily need it
+to be run by the same process… they tend to require more complex configurations, a message/job queue
+manager, like RabbitMQ or Redis"
+(<a href="https://fastapi.tiangolo.com/tutorial/background-tasks/">FastAPI background tasks
+documentation</a> — fastapi.tiangolo.com).</p>
+
+<p>This system lands on the same side of that line but takes a third option — a hand-rolled thread and
+<code>queue.Queue</code> rather than <code>BackgroundTasks</code> — because the work
+<em>must</em> stay in-process (it takes the process's write lock and mutates the process's working
+tree), and because it wanted "the response never waits" to be a property of the code rather than of
+the ASGI middleware stack. That is a defensible divergence, and the cost is stated honestly in the
+code: the queue is in-memory, so a crash before it drains loses the <em>push</em> — never the save —
+and the next successful push republishes everything accumulated.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+<li><strong>Bound the Gemini embed the way git is bounded.</strong> Every git subprocess has a
+timeout precisely because the worker holds the write lock; the worker-side embed has no client
+timeout, so a stalled embed blocks the single FIFO worker and every push queued behind it until
+restart. This is already recorded as a deferred job — it is the clearest remaining gap in the P24
+design, and the fix mirrors an existing pattern rather than inventing one.</li>
+
+<li><strong>Reconcile the publish queue at boot.</strong> Today an unpushed commit waits for the next
+write to carry it. A startup check for "local <code>main</code> ahead of <code>origin/main</code> →
+submit a push" would close the crash window without adding a broker, and it fits the existing
+self-healing philosophy that already gives <code>reindex</code> its startup run.</li>
+
+<li><strong>Consume the <code>sqlite-vec</code> seam when the corpus outgrows the Python cosine
+loop.</strong> Every vector is keyed by <code>doc_id</code> specifically so this stays a local change
+to two modules; the fusion, the signals, and the mode logic are untouched by it. Do it when a search
+gets slow, not before — the current loop is honest about being a loop.</li>
+
+<li><strong>Populate the citation <code>url</code> field.</strong> Every MCP search hit currently
+returns <code>url: ""</code> because no document carries a public origin, and consumers are told to
+treat that as "no citation link". Now that pretty share URLs exist and resolve, the ingredients for a
+real public origin are present — and populating an existing optional field is additive, so the v1
+contract holds.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> You are adding a feature that records who last <em>read</em> each document.
+  Storing it as a new column on the SQLite <code>documents</code> table is a bad idea. Why?</p>
+  <button class="opt" data-correct="false">SQLite cannot add columns to an existing table without a full rebuild</button>
+  <button class="opt" data-correct="true">The content database is a projection of the files — anything not re-derivable from disk is lost on the next reindex</button>
+  <button class="opt" data-correct="false">The FTS5 trigger trio would need updating, which is a breaking change</button>
+  <button class="opt" data-correct="false">Read tracking belongs to the usage plane, which forbids new columns</button>
+  <p class="why" hidden>Reindex rebuilds every row from the files on disk, so a column with no
+  file-derived source is silently wiped on the next boot. This is the same trap the version-history
+  design had to avoid: bodies live in <code>.versions/</code> files and the table is derived from
+  them. Durable-but-not-file-derived data belongs in the Postgres accounts plane instead.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> A publish task must be submitted from outside the write lock. What goes
+  wrong if you submit while holding it?</p>
+  <button class="opt" data-correct="false">The task runs before the response, reintroducing the timeout bug</button>
+  <button class="opt" data-correct="false">The queue rejects the submission and the push is silently dropped</button>
+  <button class="opt" data-correct="true">The task re-takes the same non-reentrant lock, so it deadlocks as soon as the worker runs it</button>
+  <button class="opt" data-correct="false">Two workers start, and concurrent rebases corrupt the working tree</button>
+  <p class="why" hidden>The push task takes <code>WRITE_LOCK</code> itself because a rebase mutates
+  the working tree, and <code>threading.Lock</code> is not reentrant. Submitting is only a queue
+  append and never blocks — the deadlock happens later, on the worker thread, which is what makes it
+  an easy mistake to ship.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> An agent re-publishes a markdown document as HTML, passing the existing
+  document's <code>rel_path</code> as the version target. What does the API do?</p>
+  <button class="opt" data-correct="false">Archives the old body and writes the HTML at the same path, changing the extension</button>
+  <button class="opt" data-correct="true">Answers 422 — a version chain cannot change a document's format or project</button>
+  <button class="opt" data-correct="false">Silently creates a second document and returns 201 with a new id</button>
+  <button class="opt" data-correct="false">Answers 409, since a document already exists at that path</button>
+  <button class="opt" data-correct="false">Converts the HTML to extracted text and stores it as markdown</button>
+  <p class="why" hidden>Identity is immutable across a version chain, and the 422 says so explicitly
+  ("publish it as a new document instead"). The reason is structural: <code>rel_path</code> encodes
+  both the project directory and the file extension, and the archive directory sits beside it — so a
+  format change is not the same document by any definition the storage layer recognizes.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Why is <code>canonical_path</code> emitted at the two detail read sites
+  rather than inside the shared projector both the detail and list routes use?</p>
+  <button class="opt" data-correct="false">The list route serves anonymous callers, who must never see a pretty URL</button>
+  <button class="opt" data-correct="true">Emitting it in the shared projector would add a per-row Postgres lookup to every list page</button>
+  <button class="opt" data-correct="false">The shared projector runs before authentication, so the org is not known yet</button>
+  <button class="opt" data-correct="false">Because list responses are cached and a slug change would serve stale URLs</button>
+  <p class="why" hidden>Cost. The projector is shared with the list route, so putting the emitter
+  there would mean an accounts-plane round trip per row. The related optimization is in the composer
+  itself: it checks the org slug first, so a deployment that has claimed no slug short-circuits
+  without even the SQLite round-trip guard.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> An operator sets <code>DATABASE_URL</code> to nothing and restarts. What
+  happens?</p>
+  <button class="opt" data-correct="false">The process fails to boot, since the accounts tables are required</button>
+  <button class="opt" data-correct="false">It boots but every <code>/api/*</code> request answers 401 with no way to authenticate</button>
+  <button class="opt" data-correct="true">The accounts engine is never created and <code>/api/*</code> behaves as the single-tenant, single-token deployment</button>
+  <button class="opt" data-correct="false">The content plane switches to Postgres and SQLite is retired</button>
+  <p class="why" hidden>The accounts plane is a lazy singleton: unset <code>DATABASE_URL</code> means
+  no engine is ever created and the content plane behaves byte-for-byte like the pre-multi-tenant
+  deployment, gated by a legacy regression suite. This dormancy is what makes the open-core scaffold
+  possible — a self-hoster runs the same code as the SaaS with one variable unset.</p>
+</div>
+
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
