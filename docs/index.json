@@ -111,7 +111,7 @@
       ]
     },
     "experience": {
-      "latest": "v0016_p25_the_shared_link_becomes_readable_and_durable_claim_an_org_slug_in_the_dashboard_org_pretty_pages_old_links_307-forward_and_a_superseded_duplicate_keeps_its_id_link",
+      "latest": "v0017_p25.f3_the_silent_id-url_fallback_gets_a_voice_an_unclaimed-org-name_hint_beside_the_member_copy_affordances_linking_to_the_dashboard_public_url_panel",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -241,6 +241,14 @@
           "source": "P25.REVIEW",
           "summary": "P25 the shared link becomes readable and durable: claim an org slug in the dashboard, /@org pretty pages, old links 307-forward, and a superseded duplicate keeps its id link",
           "previous": "v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing"
+        },
+        {
+          "id": "v0017_p25.f3_the_silent_id-url_fallback_gets_a_voice_an_unclaimed-org-name_hint_beside_the_member_copy_affordances_linking_to_the_dashboard_public_url_panel",
+          "path": "docs/versions/experience/v0017_p25.f3_the_silent_id-url_fallback_gets_a_voice_an_unclaimed-org-name_hint_beside_the_member_copy_affordances_linking_to_the_dashboard_public_url_panel.md",
+          "created_at": "2026-08-07T17:50:26+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25.F3 the silent id-URL fallback gets a voice: an unclaimed-org-name hint beside the member copy affordances, linking to the dashboard Public URL panel",
+          "previous": "v0016_p25_the_shared_link_becomes_readable_and_durable_claim_an_org_slug_in_the_dashboard_org_pretty_pages_old_links_307-forward_and_a_superseded_duplicate_keeps_its_id_link"
         }
       ]
     },
@@ -387,7 +395,7 @@
       ]
     },
     "frontend": {
-      "latest": "v0015_p25_pretty_public_routes_org_project_slug_org_graph_the_resolvedocument_bff_seam_legacy_307_redirects_and_the_dashboard_public_url_panel",
+      "latest": "v0016_p25.f4_the_explainer_height_handshake_documented_in_full_and_made_hydration-race-proof_a_child-ward_kb-explainer-request_re-post_plus_the_f3_share_hint_conditions",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -509,6 +517,14 @@
           "source": "P25.REVIEW",
           "summary": "P25 pretty public routes (/@org/project/slug, /@org/graph), the resolveDocument BFF seam, legacy 307 redirects, and the dashboard Public URL panel",
           "previous": "v0014_foldable_rail_document_reading-width_cap"
+        },
+        {
+          "id": "v0016_p25.f4_the_explainer_height_handshake_documented_in_full_and_made_hydration-race-proof_a_child-ward_kb-explainer-request_re-post_plus_the_f3_share_hint_conditions",
+          "path": "docs/versions/frontend/v0016_p25.f4_the_explainer_height_handshake_documented_in_full_and_made_hydration-race-proof_a_child-ward_kb-explainer-request_re-post_plus_the_f3_share_hint_conditions.md",
+          "created_at": "2026-08-07T17:51:28+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25.F4 the explainer height handshake documented in full and made hydration-race-proof: a child-ward kb-explainer-request re-post, plus the F3 share hint conditions",
+          "previous": "v0015_p25_pretty_public_routes_org_project_slug_org_graph_the_resolvedocument_bff_seam_legacy_307_redirects_and_the_dashboard_public_url_panel"
         }
       ]
     },
@@ -1175,7 +1191,7 @@
       ]
     },
     "qa": {
-      "latest": "v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation",
+      "latest": "v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1289,6 +1305,14 @@
           "source": "P25.REVIEW",
           "summary": "P25 gated baseline 125 passed / 83+42 skipped, web 15 files 85 tests, the globally-unique-slug and route-precedence probe techniques, and 0005 migration validation",
           "previous": "v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect"
+        },
+        {
+          "id": "v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom",
+          "path": "docs/versions/qa/v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom.md",
+          "created_at": "2026-08-07T17:52:43+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25.F3/F4 web baseline 16 files 88 tests, the CDP CPU-throttle repro recipe for client-island hydration races, and running an injected script without jsdom",
+          "previous": "v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation"
         }
       ]
     },
@@ -1467,5 +1491,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-07T16:06:36+09:00"
+  "last_rebuilt_at": "2026-08-07T17:53:26+09:00"
 }

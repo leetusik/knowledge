@@ -2,16 +2,16 @@
   "id": "P25",
   "name": "Pretty public share URLs",
   "objective": "Human-readable, durable slug-based public URLs for shared documents and the public graph (org slug + project + doc slug), replacing numeric-ID/UUID links while keeping old links working",
-  "status": "in_progress",
+  "status": "done",
   "order": 5,
   "created_at": "2026-08-07T14:33:25+09:00",
   "started_at": "2026-08-07T17:19:40+09:00",
-  "completed_at": "2026-08-07T16:09:19+09:00",
+  "completed_at": "2026-08-07T17:56:02+09:00",
   "review": {
     "status": "pass",
-    "reviewed_at": "2026-08-07T16:09:19+09:00",
+    "reviewed_at": "2026-08-07T17:56:02+09:00",
     "reviewer": "slice-executor-high",
-    "note": "Re-review after F1/F2: both findings closed and pinned by regression tests; full consolidated validation green on final HEAD (gated 125 passed x2, ungated 83/42, web 15/85, parity, alembic round-trip, route probe); nine durable docs consolidated."
+    "note": "Third round (F3 share-UX hint + F4 explainer height handshake): both fixes verified independently, consolidated validation green (gated 125, web 16/88, parity, route order stable); experience v0017, frontend v0016, qa v0015 consolidated. One doc gap closed en route (the height handshake was previously undocumented)."
   },
   "paths": {
     "phase_md": "phase.md",

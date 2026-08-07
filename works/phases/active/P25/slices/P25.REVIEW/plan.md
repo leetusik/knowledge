@@ -55,3 +55,14 @@ The first review pass (its findings and evidence are in the existing `result.md`
 - **F2 (minor, Finding 2)**: `DASHBOARD.orgSlug.hint` now warns that changing a claimed slug breaks shared links. See `P25.F2/result.md`.
 
 Re-review focus: verify both findings are actually closed (the F1 guard semantics against the Finding-1 transcript scenario; the F2 copy), re-run the consolidated validation with the updated baselines, and re-judge. On `pass`, do the doc consolidation as specified above, incorporating the first pass's Doc-impact audit: the **Actual (P25.F1/F2)** blocks are now part of the list; `decisions.md` gets D1–D4 + Q2/Q3/Q4 from `phase.md` § "Design decisions settled here" (no Actual note exists for it); give `product.md` its P25 paragraph (the audit judged it owed one).
+
+---
+
+## Third round (F3 + F4, after the production cutover)
+
+The second pass PASSED and consolidated nine doc versions. The phase then shipped to production, and operator feedback produced two more fix slices, both now `done`:
+
+- **F3 — unclaimed-slug share UX**: live diagnosis showed no org slug claimed on prod, so every share affordance silently fell back to the legacy URL and read as broken. The member share surfaces (document read view with a `canonical_path === null` ownership proxy — the plan's own-tenant premise was wrong, cross-org public reads exist; and the member graph header) now show a dashboard-linked claim-your-URL hint when the viewer's tenant has no slug. See `P25.F3/result.md`.
+- **F4 — explainer height hydration race**: the sandboxed explainer posts its height before React hydrates the listener and the reporter's dedupe made the miss permanent — the frame stayed at its CSS fallback and scrolled internally (reproduced under CPU throttle on ALL article views, not just the member branch). Fixed with a parent→child `kb-explainer-request` re-post handshake; verified at 1/4/10/20x throttle across id/pretty/anonymous/versions views. New web baseline: **16 files / 88 tests**. See `P25.F4/result.md`.
+
+This review pass: read the existing `result.md` (second pass) then OVERWRITE it. Verify both fixes (code + the new `explainer-reporter` tests + the recorded repro evidence), re-run the consolidated validation (gated pytest baseline 125 passed — F3/F4 touched no backend, so a single gated run suffices this round; web 16/88 expected), and re-judge. On `pass`, consolidate ONLY the F3/F4-round Doc impact notes (the `phase.md` list marks the earlier rounds CLOSED): new versions of `experience` (F3's hint), `frontend` and `qa` (F4's handshake + baselines). Do not re-version docs already covered by the second pass unless a real gap is found.
