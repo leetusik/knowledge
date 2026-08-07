@@ -168,7 +168,7 @@ export const DASHBOARD = {
     lead: "The name your org goes by in public links. Claim one and shared documents get a readable URL like /@your-org/project/doc-name instead of a numeric id.",
     /** Accessible name for the input (visually carried by the heading). */
     label: "Org slug",
-    hint: "2–40 characters: lowercase letters, numbers and single hyphens.",
+    hint: "2–40 characters: lowercase letters, numbers and single hyphens. Changing an already-claimed name breaks links you've already shared.",
     placeholder: "e.g. hi2vi",
     submitLabel: "Save",
     submitPendingLabel: "Saving…",
