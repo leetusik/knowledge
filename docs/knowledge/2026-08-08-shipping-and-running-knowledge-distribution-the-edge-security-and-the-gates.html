@@ -1,0 +1,499 @@
+<!--kb
+title: "Shipping and Running Knowledge: Distribution, the Edge, Security, and the Gates"
+date: 2026-08-08
+tags:
+  - operations
+  - security
+  - plugin-distribution
+  - nginx
+  - new-maintainer
+source:
+  project: knowledge
+  repo: knowledge
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipping and Running Knowledge: Distribution, the Edge, Security, and the Gates</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.2; }
+    h2 { margin-top: 2.4rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .89em; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; font-size: .93em; }
+    pre code { background: none; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      pre, code { background: #23272e; }
+      .callout { background: #1d2a24 !important; }
+      .aside { background: #2a2620 !important; }
+      .danger { background: #2e2321 !important; }
+      .fig { background: #1c1f24 !important; }
+      .box { background: #23272e !important; }
+    }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .aside { border-left: 4px solid #c9a227; background: #fdf8e8;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .danger { border-left: 4px solid #c0664a; background: #fdf0ec;
+              padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .lede { font-size: 1.06em; }
+    nav[aria-label="Contents"] { border: 1px solid #8883; border-radius: 6px;
+                                 padding: .6rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 .2rem; padding-left: 1.4rem; }
+
+    .fig { background: #fafafa; border: 1px solid #8883; border-radius: 8px;
+           padding: 1rem; margin: 1.4rem 0; }
+    .fig figcaption { font-size: .88em; opacity: .8; margin-top: .7rem; text-align: center; }
+
+    .box { background: #fff; border: 1px solid #8884; border-radius: 6px;
+           padding: .55rem .7rem; margin: .4rem 0; font-size: .92em; }
+    .box b { display: block; }
+
+    .flow { display: grid; gap: .35rem; }
+    .flow .row { display: grid; grid-template-columns: 10.5rem 1fr; gap: .6rem; align-items: start;
+                 font-size: .92em; }
+    .flow .k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em;
+               opacity: .9; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1rem 0;
+            display: block; overflow-x: auto; }
+    th, td { border: 1px solid #8883; padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; }
+    .q .opt:hover { border-color: #4a7; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .9; }
+    .q { margin-bottom: 1.6rem; }
+    .series { font-size: .93em; opacity: .85; }
+  </style>
+</head>
+<body>
+
+<h1>Shipping and Running Knowledge: Distribution, the Edge, Security, and the Gates</h1>
+
+<p class="series"><strong>Part 4 of a five-part series</strong> for a new maintainer of the
+<code>knowledge</code> project. Part 1 was the product, part 2 the internals, part 3 the read
+surfaces. This part is one argument in four movements: how the software reaches users, how it is
+defended, how it runs in production, and how anyone knows it works. Part 5 closes the series with the
+decision record and the workspace that produced it.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p class="lede">This project ships in an unusual way: it does not just run a service, it
+<strong>hands out a copy of itself</strong>. That single fact organizes everything in this
+document — the distribution machinery exists to make the copy trustworthy, and the production
+machinery exists to make the running service trustworthy, and they are different problems.</p>
+
+<h3>Four channels, one repository</h3>
+
+<table>
+<thead><tr><th>Channel</th><th>What actually ships</th></tr></thead>
+<tbody>
+<tr><td><strong>The plugin</strong></td><td>A marketplace manifest plus an isolated payload: two skills and a complete, renderable copy of the server</td></tr>
+<tr><td><strong>The CLI</strong></td><td>A separate package installed straight from git — no PyPI, no npm, no brew — wrapped by a served <code>curl … | bash</code> installer</td></tr>
+<tr><td><strong>The hosted service</strong></td><td>Three containers behind a shared nginx edge, deployed by a manual-dispatch GitHub Action</td></tr>
+<tr><td><strong>The landing page</strong></td><td>The canonical explain skill itself, served at <code>/SKILL.md</code> as a byte-identical copy</td></tr>
+</tbody>
+</table>
+
+<h3>How the threat model actually grew</h3>
+
+<p>Security here is not a fixed posture; it is a record of a threat model widening step by step, and
+reading it that way is how you know which rules are load-bearing:</p>
+
+<div class="box"><b>At first: a personal knowledge base.</b> Modest threat model — no customer data.
+The concern was <em>hygiene</em>: nothing on the public site should leak the author's local
+filesystem paths.</div>
+<div class="box"><b>Then it became installable.</b> Two new boundaries appeared at once: a
+<strong>payload-isolation</strong> rule (nothing personal may ship) and a config model that keeps a
+hosted version possible.</div>
+<div class="box"><b>Then it went on the public internet, holding a write-capable git
+credential.</b> The corpus was already public, so the exposure is about <strong>abuse and write
+authority</strong>, not content secrecy.</div>
+<div class="box"><b>Then it grew accounts.</b> The largest shift: real multi-tenant data, emails, and
+passwords. Everything about hashing, token storage, and cross-tenant isolation dates from here.</div>
+<div class="box"><b>Then a document could contain executable untrusted code</b> — an HTML explainer
+with live JS — which part 3 covered as a mechanism and this part treats as a posture.</div>
+<div class="box"><b>Then reads went anonymous.</b> The first unauthenticated read path, built
+fail-closed at every layer.</div>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>Distribution: one line of configuration doing all the work</h3>
+
+<p>A Claude Code plugin's <code>source</code> directory is copied <strong>whole</strong> into every
+installer's cache. That is the entire security model of plugin distribution, and it makes one line
+the most consequential configuration in the repository:</p>
+
+<pre><code>// .claude-plugin/marketplace.json
+{ "name": "knowledge", "source": "./plugin" }</code></pre>
+
+<p>Had that read <code>"./"</code>, every person who installed the plugin would receive the
+operator's <code>docs/</code> corpus, the <code>works/</code> workflow state, the <code>data/</code>
+database, the <code>.env</code>, and the tokens in it. Pointing at <code>plugin/</code> ships only the
+templated knowledge base and the two user-facing skills. Nothing else about the packaging matters as
+much as this.</p>
+
+<h3>The scaffold is a snapshot, and the snapshot is guarded</h3>
+
+<p>Now the harder question: how do you hand someone a copy of a server that keeps evolving, without
+the copy quietly becoming a fork?</p>
+
+<p>The answer is a <strong>byte-parity snapshot</strong>. The shipped tree under
+<code>plugin/templates/kb/</code> mirrors the repo path-for-path, declared by one manifest in three
+file classes:</p>
+
+<figure class="fig">
+  <div class="flow">
+    <div class="row"><span class="k">identical</span><span>byte-copied — the whole <code>server/</code> tree, the tests, <code>Dockerfile</code>, <code>uv.lock</code></span></div>
+    <div class="row"><span class="k">parameterized</span><span>rendered through <code>{{KB_*}}</code> placeholders — site name, ports, timezone, database URL</span></div>
+    <div class="row"><span class="k">template-only</span><span>generic replacements — a starter landing page, one seed explainer</span></div>
+  </div>
+  <figcaption>One manifest, three classes, and — critically — <strong>one renderer</strong> shared by
+  two consumers.</figcaption>
+</figure>
+
+<p>That shared renderer is the whole trick. The setup skill uses it to scaffold a user's KB; the CI
+parity guard uses it to re-render the templates <em>with the operator's real parameters</em> and
+byte-compare the result against the live repo. If a file drifts on either side, CI fails. There is no
+second source of truth, and no human is asked to remember to sync anything.</p>
+
+<div class="callout">
+<p><strong>Mirror, don't narrow.</strong> When the server grew a multi-tenant accounts plane, the
+scaffold could have shipped a trimmed-down single-tenant variant. That would have meant two code
+paths forever. Instead the template ships the <em>whole</em> server, and single-tenant behavior is
+achieved by <strong>one render token</strong>: the operator's render supplies a real database URL
+(so parity matches byte-for-byte), while a scaffold render supplies an empty one → the variable is
+unset in the container → the accounts plane never wakes up. A configuration value, not a code
+branch — which is exactly why part 2's "dormant accounts plane" mattered.</p>
+</div>
+
+<h3>The production shape, and the one thing that is not container state</h3>
+
+<p>Production is three containers — the API, Postgres, and the Next app — with <strong>no published
+host ports</strong>, reachable only by an nginx edge over a shared Docker network. The API works from
+its <em>own clone</em> of the repository rather than a mounted working tree, because it commits and
+pushes and therefore needs a real remote and a credential.</p>
+
+<p>The piece worth slowing down for is the edge. Its config files are <strong>read-only bind mounts
+from the host</strong>, which makes them declarative host state rather than container state. Changing
+the routing is a host file drop plus a reload — gated on <code>nginx -t</code> inside the running
+container, then a graceful reload, <strong>never a recreate</strong> (a recreate would drop the
+network attachment).</p>
+
+<p>That property solved a long-standing fragility: because the vhost is a host file on a read-only
+mount, a <em>co-tenant's</em> deploy on the same box can no longer wipe this site's routing. An older
+explainer in this very knowledge base describes the previous regime — and the operations doc says
+plainly to read it as history, not as an operating manual. Documentation ages; that is a maintenance
+fact, not a failure.</p>
+
+<h3>404-never-403: one rule, everywhere</h3>
+
+<p>The single most repeated security rule in this codebase is that a resource you may not see is
+<strong>indistinguishable from one that does not exist</strong>. Private, cross-org, malformed, and
+genuinely-missing all answer the same 404. There is no 403 anywhere on these surfaces.</p>
+
+<p>The reason is that a 403 is an <em>affirmative statement that something exists</em>. On a public
+share surface that is a real leak: an attacker enumerating slugs learns which orgs and projects are
+real. Notice how far the discipline extends — the slug lookup helper normalizes its input and returns
+"not found" for anything malformed or reserved <em>with no database round trip at all</em>, so the
+uniform 404 falls out for free rather than being remembered at each call site.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<h3>Three parity gates, and why there are three</h3>
+
+<pre><code>scripts/plugin_parity.py   → the shipped scaffold vs. the repo (whole tree)
+scripts/skills_parity.py   → the explain-skill copies vs. the canonical one
+scripts/site_smoke.py      → the built site's load-bearing invariants</code></pre>
+
+<p>The second exists because the first does not cover it: the template guard checks
+<code>plugin/templates/kb/</code> and never looks at <code>plugin/skills/</code>. So a second guard
+byte-compares the skill copies — including the one served on the landing page at
+<code>/SKILL.md</code>, which is checked as a <strong>full-file</strong> identical copy, frontmatter
+included. That copy is what the landing's "Copy" button fetches, so a fork would be simultaneously a
+CI failure and a live content divergence.</p>
+
+<p><code>site_smoke.py</code> is a different kind of gate. It asserts a fixed list of named
+invariants rather than running <code>mkdocs build --strict</code>, and the reasoning is worth
+adopting elsewhere: <code>--strict</code> turns any build warning into a hard failure, which would
+block a future zero-config page add on warning-level noise. Named invariants fail on the things that
+actually matter and stay quiet about the rest.</p>
+
+<h3>The edge's footguns, in order of how badly they bite</h3>
+
+<div class="danger">
+<p><strong>1. Setting one <code>proxy_set_header</code> in a location drops the entire inherited
+set.</strong> This is documented nginx behavior, not a quirk (see the citation below). The vhost
+therefore hoists its shared proxy headers to <em>server</em> level so both locations inherit them —
+and the moment someone adds a single header inside a location, every other header silently
+disappears from that location.</p>
+</div>
+
+<div class="danger">
+<p><strong>2. A duplicate <code>limit_req_zone</code> name breaks the whole edge.</strong> The
+<code>conf.d/</code> tree is tested and reloaded <em>as a unit</em> and zone names are global across
+it, so a duplicate is a hard <code>nginx -t</code> failure that blocks the reload for <em>every
+site on the box</em>. This vhost declares none — and it is why the auth rate limit was implemented in
+the application rather than at the edge.</p>
+</div>
+
+<div class="danger">
+<p><strong>3. Never add an IPv6 <code>listen [::]</code>.</strong> No sibling config listens on v6,
+so adding one would silently make this vhost the <em>default server for all v6 traffic</em> on the
+box. Same family of hazard as <code>default_server</code>, which the catch-all config owns.</p>
+</div>
+
+<p>Routing itself is ordinary until it is not. Both upstreams are referenced through
+<code>set $var</code> names with Docker-DNS re-resolution, so the proxy survives either container
+being recreated. And one route is a regex specifically to beat prefix matching — the raw-HTML
+explainer path must reach the Next BFF rather than the API, and a plain prefix would lose to
+<code>/api/</code>.</p>
+
+<h3>Deploy ordering is not arbitrary</h3>
+
+<pre><code>build  →  migrate  →  recreate + gate the api  →  then web and mcp</code></pre>
+
+<p>Migrations run <strong>inside the container</strong> — <code>alembic upgrade head</code> — because
+Postgres publishes no host port, so there is no way to reach it from the host at all. And the API is
+recreated and health-gated before the web and MCP services come up, because both are its clients:
+bringing them up against a not-yet-migrated backend would produce a window of confusing 5xx.</p>
+
+<h3>Secrets: two credentials that must never be conflated</h3>
+
+<table>
+<thead><tr><th></th><th>Push deploy key</th><th>Deploy runner key</th></tr></thead>
+<tbody>
+<tr><td>Direction</td><td>container → GitHub</td><td>GitHub Actions → the box</td></tr>
+<tr><td>Lives in</td><td>the box, and only the box</td><td>a GitHub Actions secret</td></tr>
+<tr><td>Blast radius</td><td>push to one repo</td><td>shell on the box</td></tr>
+</tbody>
+</table>
+
+<p>They are deliberately separate ed25519 keys so either can be revoked without touching the other.
+The house rule is that secrets are <strong>box-born and never transit</strong>, and the runner key is
+the one acknowledged exception — its private half must reach GitHub — so it is minted in a
+<code>umask 077</code> temporary directory, piped once into the secret store, and shredded. Naming
+the exception is what keeps the rule meaningful.</p>
+
+<p>The deploy Action is <code>workflow_dispatch</code>-only and branch-guarded, which matters more
+than it first appears: the API pushes to <code>main</code> on every write, so an automatic
+push-triggered deploy would let <em>publishing a document</em> redeploy production.</p>
+
+<h3>The gate map — and what it honestly cannot cover</h3>
+
+<table>
+<thead><tr><th>Layer</th><th>Gate</th></tr></thead>
+<tbody>
+<tr><td>Backend</td><td><code>uv run pytest -q</code> — the API and store, including a legacy-mode regression suite that pins single-tenant behavior byte-for-byte</td></tr>
+<tr><td>CLI</td><td><code>cd cli &amp;&amp; uv run pytest -q</code>, plus an end-to-end smoke against a live stack</td></tr>
+<tr><td>Web</td><td>lint, typecheck, build, and Vitest over the pure modules</td></tr>
+<tr><td>Site</td><td>a pinned-image build plus <code>site_smoke.py</code>'s named invariants</td></tr>
+<tr><td>Packaging</td><td>the two parity guards, plus plugin manifest validation</td></tr>
+<tr><td>Workspace</td><td><code>python3 scripts/workflow.py validate</code></td></tr>
+</tbody>
+</table>
+
+<p>What no gate covers is recorded rather than glossed. There is <strong>no browser or jsdom
+tooling</strong> in the repo, so a handful of items are explicitly owed to the operator's eyes: that
+the quiz actually runs in a real browser, that a direct visit to a raw explainer URL is
+sandbox-stripped, and how the graph <em>feels</em> in both color schemes. Calling these operator
+residuals rather than pretending they are covered is the honest move — but the list grows.</p>
+
+<div class="aside">
+<p><strong>The most instructive failure class in the whole repo: silent publishing.</strong>
+Everything the push path needs — the <code>ssh</code> binary, the deploy key, the remote URL, network
+egress — fails <em>without a loud signal</em>. Writes keep answering 201 while nothing publishes.
+There is no unit test that can see it; the only guards are an end-to-end assertion and a bring-up
+capability check. Since the publish moved behind the response, this got quieter still: a failed push
+appears only as one line in the container log. When you are looking for the riskiest thing in a
+system, look for the failure that produces a success.</p>
+</div>
+
+<p>Two more fragilities deserve memorizing because both have already caused real drift. The
+<strong>parity gates are CI-only</strong> — a slice that skips them locally ships drift, and that
+happened twice in one phase. And the <strong>config resolver has two independent
+implementations</strong> — one in the CLI, one inline in the explain skill — which cannot be merged,
+because each must work without the other installed. Anyone editing either side must edit both.</p>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<h3>Where it aligns with prevailing practice</h3>
+
+<p><strong>Password hashing is the current first-choice recommendation.</strong> OWASP's guidance is
+to "use Argon2id with a minimum configuration of 19 MiB of memory, an iteration count of 2, and 1
+degree of parallelism", noting that Argon2id won the 2015 Password Hashing Competition and "provides
+a balanced approach to resisting both side-channel and GPU-based attacks"
+(<a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP
+Password Storage Cheat Sheet</a> — cheatsheetseries.owasp.org). This codebase uses argon2id, stores
+session and API tokens only as sha256 digests with the raw value returned exactly once, and keeps
+login responses byte-identical for unknown-email and wrong-password. Verifying the configured memory
+and iteration parameters against those minimums is a worthwhile five-minute audit.</p>
+
+<p><strong>The header-inheritance footgun is documented behavior, and the vhost is built around
+it.</strong> The nginx documentation states the rule exactly: these directives "are inherited from
+the previous configuration level if and only if there are no <code>proxy_set_header</code> directives
+defined on the current level"
+(<a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html">nginx
+<code>ngx_http_proxy_module</code> reference</a> — nginx.org). Hoisting the shared headers to server
+level is the correct response, and the repo's warning is the official semantics restated as an
+operational rule. That is what good operational documentation looks like: not a discovery, but a
+platform behavior written down where the person who will trip over it is standing.</p>
+
+<h3>Where it deliberately diverges</h3>
+
+<p><strong>No package registry.</strong> The CLI installs from a git URL rather than PyPI, with a
+served shell installer as the friendly path. This gives up discoverability and version pinning
+through a registry in exchange for zero release ceremony and no account to maintain — a reasonable
+trade for a solo-operated project, and it is recorded as a deliberate decision rather than an
+oversight. The mitigation already exists (the installer bootstraps the package manager, so the
+one-liner works on a clean machine); the residual cost is that upgrades are a re-run rather than a
+version bump.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+<li><strong>Rate-limit the anonymous read surface.</strong> This is the one <em>unchecked</em> box on
+the project's own security checklist. The pre-existing rationale for having no throttle ("every call
+is bearer-gated, one known consumer") stopped being true when anonymous document, raw, and graph
+reads shipped. They leak nothing — the 404-never-403 discipline and the fail-closed visibility bridge
+hold — but they are open to volume. Reuse the in-process per-IP limiter already built for the auth
+grant rather than an edge zone, since a duplicate zone name would break the whole edge.</li>
+
+<li><strong>Run the parity gates before the commit, not after the push.</strong> Both guards are
+CI-only, and drift has shipped twice because of it. A pre-commit hook or a single
+<code>make check</code> that runs both takes minutes to add and removes an entire recurring failure
+mode — and the repo already has a <code>Makefile</code> to hang it on.</li>
+
+<li><strong>Give the silent-publish class a loud signal.</strong> A failed background push is one
+line in a container log that nobody reads. Since a failed push means the off-box backup is falling
+behind, a periodic check comparing the local head against the remote — surfaced anywhere a human
+looks — would convert a silent failure into a visible one. This pairs naturally with the boot-time
+push reconciliation suggested in part 2.</li>
+
+<li><strong>Add one headless-browser check to CI.</strong> The operator-residual list is growing
+because there is no browser tooling, yet the repo has already demonstrated the technique — a
+CPU-throttled devtools-protocol probe caught a hydration race that no unit test could see. One
+smoke-level check that loads a real explainer and asserts the quiz is interactive would retire
+several residuals permanently.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Why is the plugin's payload kept in a <code>plugin/</code> subdirectory
+  rather than shipping from the repository root?</p>
+  <button class="opt" data-correct="false">Because Claude Code requires a plugin manifest at a non-root path</button>
+  <button class="opt" data-correct="true">Because a plugin's source directory is copied whole into every installer's cache — a root source would ship the operator's corpus, workflow state, database, and tokens</button>
+  <button class="opt" data-correct="false">To keep the repository's own tests from running in installers' environments</button>
+  <button class="opt" data-correct="false">Because the marketplace manifest cannot reference the directory that contains it</button>
+  <p class="why" hidden>Payload isolation is the load-bearing boundary of the whole distribution
+  story. The <code>source: "./plugin"</code> line is what keeps <code>docs/</code>,
+  <code>works/</code>, <code>data/</code>, and <code>.env</code> out of every installer's cache. It
+  is arguably the single most consequential line of configuration in the repo.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> The shipped scaffold contains the full multi-tenant server, yet a scaffolded
+  KB runs single-tenant. How?</p>
+  <button class="opt" data-correct="false">The renderer strips the accounts modules during scaffold rendering</button>
+  <button class="opt" data-correct="false">A runtime feature flag disables the accounts routes</button>
+  <button class="opt" data-correct="true">One render token produces an empty database URL, so the environment variable is unset and the accounts plane never initializes</button>
+  <button class="opt" data-correct="false">The scaffold ships a different compose file that omits the Postgres service</button>
+  <p class="why" hidden>Mirror, don't narrow. Shipping a trimmed variant would mean two code paths
+  forever, so the template carries the whole server and dormancy comes from a configuration value:
+  an empty rendered database URL leaves the variable unset, and the lazily-created accounts engine is
+  never created. The scaffold does still start an unused Postgres container — a benign, recorded
+  consequence.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> You add <code>proxy_set_header X-Request-Id $request_id;</code> inside one
+  <code>location</code> block of the vhost. What happens?</p>
+  <button class="opt" data-correct="false">Nothing else changes — the new header is merged with the inherited ones</button>
+  <button class="opt" data-correct="true">Every header inherited from the server level is dropped for that location, because inheritance applies only when the level defines none of its own</button>
+  <button class="opt" data-correct="false"><code>nginx -t</code> fails, because headers may only be set at server level</button>
+  <button class="opt" data-correct="false">The header is set for all locations, since <code>proxy_set_header</code> is global</button>
+  <p class="why" hidden>This is documented nginx behavior: the directives are inherited from the
+  previous level <em>if and only if</em> there are no <code>proxy_set_header</code> directives on the
+  current level. Defining one replaces the whole inherited set rather than adding to it — which is
+  exactly why this vhost hoists its shared headers to server level and warns about it.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Why is the production deploy restricted to manual dispatch rather than
+  running on every push to <code>main</code>?</p>
+  <button class="opt" data-correct="false">Because GitHub Actions cannot reach the box without an interactive approval</button>
+  <button class="opt" data-correct="true">Because the API pushes to <code>main</code> on every document write, so a push trigger would let publishing a document redeploy production</button>
+  <button class="opt" data-correct="false">Because migrations must be run by hand before any deploy</button>
+  <button class="opt" data-correct="false">To avoid consuming Actions minutes on documentation-only commits</button>
+  <p class="why" hidden>Publish-on-write means the running service is itself a committer to
+  <code>main</code>. With a push trigger, every saved explainer would kick off a production deploy —
+  an unbounded feedback loop between the content path and the deployment path. The dispatch-only
+  guard is what keeps those two worlds separate.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A document saves successfully and returns 201, but nothing appears in the
+  GitHub repository for days. Which characteristic of this failure makes it the most dangerous class
+  in the system?</p>
+  <button class="opt" data-correct="false">It corrupts the local database, requiring a full reindex to recover</button>
+  <button class="opt" data-correct="false">It causes writes to fail intermittently, making it hard to reproduce</button>
+  <button class="opt" data-correct="true">It produces a successful-looking result — writes keep returning 201 while the publish silently fails, and no unit test can observe it</button>
+  <button class="opt" data-correct="false">It only occurs under concurrent writes, so it cannot be tested deterministically</button>
+  <p class="why" hidden>Everything the push path depends on — the ssh binary, the deploy key, the
+  remote URL, network egress — fails without a loud signal, and since the publish moved behind the
+  response it is not even visible to the client. The save itself is genuinely durable, so nothing is
+  lost; what is lost is the off-box backup, quietly. A failure that produces a success is always
+  worth more attention than one that produces an error.</p>
+</div>
+
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
