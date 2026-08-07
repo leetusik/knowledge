@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P25`
+- Current slice: `P25.DECOMP`
+- Next slice: `P25.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `16`
-- Rebuilt at: `2026-08-06T00:08:36+09:00`
+- Rebuilt at: `2026-08-07T14:33:25+09:00`
 
 ## Active Phases
 
@@ -20,6 +20,7 @@
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
+| [ ] `P25` | `planned` | `pending` | Pretty public share URLs | `P25.DECOMP` | `works/phases/active/P25` |
 
 ## Phase P21: Web document deletion
 
@@ -59,3 +60,10 @@
 | [x] `P24.S3` | `done` | CLI: honest write-timeout reporting on knowledge save | `implementation` | `works/phases/active/P24/slices/P24.S3` |
 | [x] `P24.F1` | `done` | Operator surfaces: honest push verification after the after-response publish | `fix` | `works/phases/active/P24/slices/P24.F1` |
 | [x] `P24.REVIEW` | `done` | phase review | `review` | `works/phases/active/P24/slices/P24.REVIEW` |
+
+## Phase P25: Pretty public share URLs
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P25.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P25/slices/P25.DECOMP` |
+| [ ] `P25.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P25/slices/P25.REVIEW` |

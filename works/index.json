@@ -47,10 +47,22 @@
       "current_slice": null,
       "slice_count": 6,
       "done_slice_count": 6
+    },
+    {
+      "id": "P25",
+      "name": "Pretty public share URLs",
+      "objective": "Human-readable, durable slug-based public URLs for shared documents and the public graph (org slug + project + doc slug), replacing numeric-ID/UUID links while keeping old links working",
+      "status": "planned",
+      "order": 5,
+      "path": "works/phases/active/P25",
+      "review_status": "pending",
+      "current_slice": "P25.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 16,
   "deferred_promoted_count": 4,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-06T00:08:36+09:00"
+  "last_rebuilt_at": "2026-08-07T14:33:25+09:00"
 }
