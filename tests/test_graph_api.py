@@ -131,6 +131,25 @@ def test_graph_tenant_isolation(documents_client):
     assert _by_id(graph["nodes"], "tag:a-only") is not None
 
 
+def test_member_addressing_own_org_uuid_keeps_member_path(documents_client):
+    """P25.S4 guard: ``?org=`` is now a ``str`` (UUID *or* org slug), and the member
+    fast-path compares the RESOLVED tenant id. A member passing their own tenant
+    UUID must still get the whole-corpus member view — the public path would 404
+    here, since this tenant has no public project at all."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"gown-{uuid4()}@example.com")
+    _project(client, headers, "priv")  # never made public
+    _seed(tenant, "priv", slug="p", title="Private note", tags=["p-only"])
+
+    res = client.get("/app/graph", params={"org": tenant}, headers=headers)
+    assert res.status_code == 200, res.text
+    graph = res.json()
+    assert [n["title"] for n in graph["nodes"] if n["type"] == "doc"] == ["Private note"]
+    # ...and the same org is a 404 for everyone else (no public projects).
+    assert client.get("/app/graph", params={"org": tenant}).status_code == 404
+
+
 def test_graph_is_unmetered(documents_client):
     client, sync_engine = documents_client
     from sqlalchemy import text

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { GraphCanvas } from "@/app/(app)/graph/graph-canvas";
 import { PublicShell } from "@/components/public-shell";
@@ -20,9 +20,19 @@ import type { KbGraph } from "@/lib/knowledge/types";
 // A malformed org id short-circuits to the branded not-found (never a /login bounce —
 // the graph surface has no member-only affordance to gate behind login). A node's
 // `url` is `/documents/{id}`, which resolves to the optional-identity doc page.
+//
+// P25.S4 — this route is now the LEGACY form and forwards: once the org has claimed a
+// slug, the response carries `canonical_path` and the visitor is 307-redirected to the
+// pretty `/@{org}/graph`. Unlike the document page's redirect this fires on BOTH
+// identity branches — this page has no member-only affordance to preserve, so a member
+// loses nothing by landing on the pretty URL. Temporary (307), not permanent, because
+// org slugs are mutable: a 308 would be cached past a slug change. One-way — the pretty
+// page never bounces back, so there is no loop — and a slug-less org (`canonical_path`
+// null, and legacy mode) keeps being served here exactly as before: no link breaks.
 export const metadata: Metadata = { title: GRAPH.title };
 
-// The org selector is a tenant UUID (an org slug is the deferred vanity-URL nicety).
+// The org selector on THIS route is a tenant UUID; the slug form lives at
+// `/@{org}/graph` (the backend's `?org=` accepts either).
 const ORG_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -56,6 +66,10 @@ export default async function PublicGraphPage({
 
   const ctx = await optionalIdentity();
   const graph = await loadGraph(ctx?.token, org);
+
+  // The org has a pretty URL — forward to it (307, top level, outside any try so the
+  // redirect's own throw is never swallowed). `null` ⇒ serve as today.
+  if (graph.canonical_path) redirect(graph.canonical_path);
 
   return (
     <PublicShell>

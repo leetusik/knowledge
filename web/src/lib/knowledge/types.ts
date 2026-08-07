@@ -441,4 +441,11 @@ export interface KbGraph {
   edges: KbGraphEdge[];
   /** True when the corpus exceeded the node cap and the newest docs were graphed. */
   truncated?: boolean;
+  /**
+   * P25.S4 — the org's PRETTY public graph path (`/@{org-slug}/graph`), or `null`
+   * when the org has claimed no slug (and in legacy mode). Built once in the
+   * backend and only consumed here: the legacy `/graph/{uuid}` page forwards to
+   * it, and nothing in TypeScript re-derives it.
+   */
+  canonical_path: string | null;
 }
