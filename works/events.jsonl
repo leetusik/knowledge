@@ -804,3 +804,12 @@
 {"ts": "2026-08-07T17:52:43+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom", "source": "P25.REVIEW"}
 {"ts": "2026-08-07T17:56:02+09:00", "type": "slice_status_changed", "slice": "P25.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-07T17:56:02+09:00", "type": "phase_reviewed", "phase": "P25", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-08-08T03:51:34+09:00", "type": "phase_created", "phase": "P26"}
+{"ts": "2026-08-08T04:06:17+09:00", "type": "slice_status_changed", "slice": "P26.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-08T04:10:15+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S1"}
+{"ts": "2026-08-08T04:10:15+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S2"}
+{"ts": "2026-08-08T04:10:15+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S3"}
+{"ts": "2026-08-08T04:10:15+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S4"}
+{"ts": "2026-08-08T04:10:15+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S5"}
+{"ts": "2026-08-08T04:10:16+09:00", "type": "slice_created", "phase": "P26", "slice": "P26.S6"}
+{"ts": "2026-08-08T04:14:34+09:00", "type": "slice_status_changed", "slice": "P26.DECOMP", "old_status": "in_progress", "new_status": "done"}

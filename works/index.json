@@ -59,10 +59,22 @@
       "current_slice": null,
       "slice_count": 11,
       "done_slice_count": 11
+    },
+    {
+      "id": "P26",
+      "name": "New-maintainer knowledge base",
+      "objective": "Give a new maintainer full understanding of the knowledge product through a short series of /explain explainers saved to the KB itself (DECOMP surveys docs/current and the codebase and cuts 4-5 substantial knowledge slices), plus a light audit of README.md at the end.",
+      "status": "planned",
+      "order": 6,
+      "path": "works/phases/active/P26",
+      "review_status": "pending",
+      "current_slice": "P26.S1",
+      "slice_count": 8,
+      "done_slice_count": 1
     }
   ],
   "deferred_open_count": 16,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-07T17:56:02+09:00"
+  "last_rebuilt_at": "2026-08-08T04:14:34+09:00"
 }
