@@ -318,6 +318,69 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   `upgrade head` on a fresh DB, then `downgrade 0004_project_visibility`, then
   `upgrade head` again — all clean.
 
+### Landed by P25.S2 (bind these — S3/S4/S5 build on them)
+
+- **`GET /app/orgs/{org}/{project}/{slug}` is the resolver, and it takes the BARE
+  slug** (no `@`). The `@` is a web-plane convention: S3's BFF strips it before
+  calling, and should still reject an `[org]` segment that does not start with `@`
+  (an un-prefixed URL is not our namespace). Project is matched **exactly**
+  (case-sensitive — Q2's default); doc slug resolves newest-first via
+  `find_latest_document_by_slug`. The response is the ordinary detail projection, so
+  it carries `id` and `/versions*` + `/raw` stay id-keyed and unchanged.
+- **Every resolver miss is one constant 404 detail** (`"no document at that path"`,
+  `documents_api._no_such_path()`) — legacy mode, unknown/malformed/reserved org
+  slug, unknown project, unknown doc slug and a private project are literally
+  indistinguishable. It deliberately does **not** match the id route's detail
+  (`f"no document with id {doc_id}"`), which cannot exist on a route that never sees
+  an id; what the 404-never-403 constraint protects is that misses on the *same*
+  surface look alike, and a test asserts exactly that.
+- **`_is_publicly_readable(doc)` (`server/documents_api.py`) is now the single
+  public-read gate**, extracted from `_resolve_readable_doc`. Anything that needs
+  "may a non-owner see this row?" — including S4's graph work if it grows one —
+  must call it, never re-derive the legacy-mode / registry-less-owner / visibility
+  triple.
+- **`canonical_path` is on the DETAIL shape only** (`GET /app/documents/{id}` and the
+  resolver), injected at those two call sites and deliberately **not** inside
+  `_app_doc` — that projector is shared with the LIST route, and injecting there
+  would add a per-row Postgres lookup to every list page. So **`GET /app/documents`
+  list rows have no `canonical_path`**; a web surface that wants a pretty link from a
+  list must fetch the detail or fall back to `/documents/{id}`.
+- **`canonical_path` is `null` until the operator claims a slug** (S5's dashboard
+  field is what sets it). Every consumer therefore needs the `/documents/{id}`
+  fallback — including S3's legacy redirect, which must serve as today when the key
+  is null rather than redirect.
+- **The member detail read stays Postgres-free.** `_document_canonical_path` reads
+  the slug straight off `AuthContext.tenant` when the caller owns the row; only the
+  anonymous/cross-org branch pays a `get_tenant` lookup (on top of the visibility
+  gate it already paid — so that path is now **two** round trips). If that ever
+  matters, the fix is to have `_resolve_readable_doc` hand back the owner tenant, not
+  to cache in the web layer.
+- **The 201 save `url` is pretty whenever the writing tenant has a slug** —
+  `{origin}/@{slug}/{project}/{doc-slug}`, built by the new async dependency
+  `server/main.py::resolve_org_slug` (the `ensure_registry_project` pattern: the
+  handler is sync under `WRITE_LOCK` and cannot await). Slug-less ⇒ unchanged
+  `/documents/{id}`; legacy ⇒ untouched mkdocs shape. On a `new_version` bump the
+  URL uses the **target's** project/slug, so a document's pretty URL never moves
+  across a version chain.
+- **`KbDocument.canonical_path: string | null` exists in
+  `web/src/lib/knowledge/types.ts`** already (detail only, not
+  `KbDocumentListItem`) — S3 does not need to add it, only to consume it. Do not
+  re-derive the pretty URL in TypeScript.
+
+### Gotchas found while doing S2
+
+- **`tests/test_public_read.py`'s `documents_client` fixture sets `KB_DB_PATH` but
+  NOT `KB_ROOT`.** A `POST /api/documents` under it would write real files into the
+  repo's own `docs/` tree and take the git commit path. Only `test_org_credentials.py`'s
+  `org_client` (and `test_api_write.py`) isolate `KB_ROOT` to a `tmp_path` — so any
+  future **write-path** test belongs there, not in the public-read suite. That is why
+  S2's 201-URL case sits in `test_org_credentials.py`.
+- S1's globally-unique-slug warning is real and bit nothing this time only because
+  every new test generates `org-{uuid4().hex[:10]}` per call (`_set_slug` in
+  `test_public_read.py`). Both gated runs against the *same* database passed.
+- New gated baselines: **123 passed** with Postgres (was 119), **83 passed / 40
+  skipped** without (was 83/36).
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -359,6 +422,46 @@ above are hints, not a substitute.
   passed / 36 skipped without); the recipe for standing one up, and the rule that a
   test claiming an org slug must generate it per run because `tenants.slug` is
   globally unique.
+
+**Actual (P25.S2):**
+
+- `docs/current/api.md` — (a) the new read route `GET /app/orgs/{org}/{project}/{slug}`:
+  optional-identity, **bare** org slug (no `@`), exact project match, newest doc under
+  the slug, member fast-path then the public-visibility gate, and **one constant 404
+  detail for every miss** (unknown/malformed/reserved org, unknown project, unknown doc
+  slug, private project, legacy mode) so nonexistent and forbidden stay
+  indistinguishable; the response is the normal detail projection, so `id` is present
+  and `/versions*` + `/raw` remain id-keyed. (b) the additive nullable
+  **`canonical_path`** (`/@{org}/{project}/{slug}`) on the **detail** reads only — `GET
+  /app/documents/{id}` and the resolver — explicitly **not** on `GET /app/documents`
+  list rows, and `null` whenever the owner tenant has no slug or the deployment is in
+  legacy mode. (c) the changed `POST /api/documents` 201 `url`: pretty
+  (`{origin}/@{slug}/{project}/{doc-slug}`) once the writing tenant has an org slug,
+  `{origin}/documents/{id}` when it has none, and the legacy mkdocs shape unchanged in
+  single-tenant mode — pretty regardless of the project's visibility, and built from the
+  **version target's** project/slug on a `new_version` bump so the URL never moves
+  across a version chain.
+- `docs/current/backend.md` — the P19 public-read gate is now the named predicate
+  `_is_publicly_readable(doc)` in `server/documents_api.py` (legacy-mode guard →
+  registry-less-owner guard → owner project's `visibility == "public"`), shared by
+  `_resolve_readable_doc` and the slug resolver so there is one trust boundary rather
+  than two kept in sync. `canonical_path` is injected at the two detail call sites and
+  never inside the shared `_app_doc` projector (which the list route also uses), and
+  `_document_canonical_path` reads the owner slug off `AuthContext.tenant` on the member
+  path — keeping a member's detail read Postgres-free, while the anonymous path pays one
+  `get_tenant` lookup on top of the visibility gate. `server/main.py::resolve_org_slug`
+  is a new async FastAPI dependency following the `ensure_registry_project` precedent:
+  it feeds Postgres-resolved state into the **sync** `create_document` handler, which
+  holds `WRITE_LOCK` and cannot await.
+- `docs/current/frontend.md` — `KbDocument` (the detail shape) gained
+  `canonical_path: string | null`; `KbDocumentListItem` deliberately did not. The pretty
+  URL is assembled **once, in the backend** — the web plane consumes `canonical_path` and
+  never re-derives it in TypeScript, and falls back to `/documents/{id}` when it is null.
+- `docs/current/qa.md` — gated baseline moves to **123 passed** with Postgres (**83
+  passed / 40 skipped** without). Also: the public-read suite's `documents_client`
+  fixture isolates `KB_DB_PATH` but **not `KB_ROOT`**, so write-path tests must use a
+  `KB_ROOT`-isolating fixture (`org_client`) or they write into the repo's real `docs/`
+  tree.
 
 ## Constraints
 

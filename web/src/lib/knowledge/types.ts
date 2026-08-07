@@ -257,6 +257,18 @@ export interface KbDocumentListItem {
 export interface KbDocument extends KbDocumentListItem {
   /** The document body WITHOUT frontmatter (starts at the H1). */
   markdown: string;
+  /**
+   * The document's pretty, durable public path (P25) — `/@{org}/{project}/{slug}`,
+   * or `null` when the owner tenant has not claimed an org slug (`tenants.slug` is
+   * nullable with no backfill). Additive, and on the DETAIL shape only: the list
+   * projection (`KbDocumentListItem`) does not carry it, because resolving it costs
+   * a tenant lookup the backend refuses to pay per row.
+   *
+   * The backend builds this **once** so nothing on the web plane ever assembles a
+   * pretty URL itself. Consumers fall back to `/documents/{id}` when it is `null` —
+   * that URL keeps working forever either way.
+   */
+  canonical_path: string | null;
 }
 
 /** `GET /app/documents` → `{total, items}` (offset-paged; `total` is the full count). */
