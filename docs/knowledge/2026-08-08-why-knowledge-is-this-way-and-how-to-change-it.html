@@ -1,0 +1,471 @@
+<!--kb
+title: "Why Knowledge Is This Way, and How to Change It"
+date: 2026-08-08
+tags:
+  - decision-record
+  - agentic-workspace
+  - adr
+  - process
+  - new-maintainer
+source:
+  project: knowledge
+  repo: knowledge
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Why Knowledge Is This Way, and How to Change It</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.2; }
+    h2 { margin-top: 2.4rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .89em; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; font-size: .93em; }
+    pre code { background: none; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      pre, code { background: #23272e; }
+      .callout { background: #1d2a24 !important; }
+      .aside { background: #2a2620 !important; }
+      .fig { background: #1c1f24 !important; }
+      .adr { background: #23272e !important; }
+      .stage { background: #23272e !important; }
+    }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .aside { border-left: 4px solid #c9a227; background: #fdf8e8;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .lede { font-size: 1.06em; }
+    nav[aria-label="Contents"] { border: 1px solid #8883; border-radius: 6px;
+                                 padding: .6rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 .2rem; padding-left: 1.4rem; }
+
+    .fig { background: #fafafa; border: 1px solid #8883; border-radius: 8px;
+           padding: 1rem; margin: 1.4rem 0; }
+    .fig figcaption { font-size: .88em; opacity: .8; margin-top: .7rem; text-align: center; }
+
+    .adr { background: #fff; border: 1px solid #8884; border-radius: 6px;
+           padding: .6rem .8rem; margin: .5rem 0; font-size: .92em; }
+    .adr .t { font-weight: 700; display: block; margin-bottom: .3rem; }
+    .adr .r { display: block; margin: .18rem 0; }
+    .adr .r b { font-weight: 600; }
+
+    .pipe { display: grid; gap: .3rem; }
+    .stage { background: #fff; border: 1px solid #8884; border-left: 4px solid #4a7;
+             border-radius: 5px; padding: .45rem .7rem; font-size: .92em; }
+    .stage b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1rem 0;
+            display: block; overflow-x: auto; }
+    th, td { border: 1px solid #8883; padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; }
+    .q .opt:hover { border-color: #4a7; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .9; }
+    .q { margin-bottom: 1.6rem; }
+    .series { font-size: .93em; opacity: .85; }
+  </style>
+</head>
+<body>
+
+<h1>Why Knowledge Is This Way, and How to Change It</h1>
+
+<p class="series"><strong>Part 5 of five — the last</strong> in a series for a new maintainer of the
+<code>knowledge</code> project. Parts 1–4 described a system: the product, the internals, the read
+surfaces, and how it ships and runs. This part explains the reasoning that produced all of it, and
+hands you the machinery for making the next change.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p class="lede">This part has two halves, and the second explains why the first exists.</p>
+
+<p>The first half is the <strong>decision record</strong>: 1,230 lines in
+<code>docs/current/decisions.md</code>, spanning twenty-five phases of work, each entry naming what
+was chosen, what was rejected, and what the choice cost. The second half is the
+<strong>agentic workspace</strong> — the phase/slice machinery this repository is developed with.</p>
+
+<p>The connection is the interesting part, and it is easy to miss. A decision log usually decays,
+because writing one is a separate act of discipline that competes with shipping. Here it does not
+decay, because <strong>durable documentation is versioned once per phase, at the phase review</strong>
+— a required step, not a good intention. Individual slices never write a doc version; they leave a
+one-line "doc impact" note, and the review consolidates those notes into new versions. So
+<code>decisions.md</code> is not a file someone remembered to update. It is an artifact the process
+forces into existence.</p>
+
+<p>That is worth stating plainly, because it changes how you should read every other document in
+this series: the durable docs are trustworthy not because someone was diligent, but because there is
+no clean way to finish a phase without producing them.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>A decision log's value is in the road not taken</h3>
+
+<p>The naive reading of a decision record is "here is what we do". That information is already in the
+code. What the code cannot tell you is <em>what we considered and rejected</em>, and
+<em>what this choice cost us</em> — and those are exactly the two things a maintainer needs before
+changing anything, because a change usually amounts to re-litigating an old rejection.</p>
+
+<p>So read these entries backwards: alternatives first, consequences second, decision last. Here are
+five that still shape daily work, in that shape:</p>
+
+<div class="adr">
+  <span class="t">Disk is canonical; the database is disposable</span>
+  <span class="r"><b>Rejected:</b> treating SQLite as the store of record.</span>
+  <span class="r"><b>Cost:</b> every durable fact must be recoverable from a file. Version history had
+  to become an on-disk archive; tenant identity had to be encoded in the path; a public share URL
+  could not be built from a row id.</span>
+</div>
+
+<div class="adr">
+  <span class="t">Mirror the server into the open-core template; do not narrow what ships</span>
+  <span class="r"><b>Rejected:</b> excluding the multi-tenant modules from the scaffold, which would
+  have made the parity guard pass immediately.</span>
+  <span class="r"><b>Cost:</b> a scaffolded knowledge base boots an unused Postgres container, and
+  every future change under <code>server/</code> re-opens parity and must be mirrored again. Bought:
+  one server, not two — and a self-hoster who can opt into multi-tenancy by setting one variable.</span>
+</div>
+
+<div class="adr">
+  <span class="t">No package registry — install the CLI from a git URL</span>
+  <span class="r"><b>Rejected:</b> publishing to PyPI, npm, or brew.</span>
+  <span class="r"><b>Cost:</b> no registry discoverability and no version-pinned upgrades; upgrading
+  is a re-run of the installer. Bought: zero release ceremony and no account to maintain. The entry
+  is explicit that PyPI "stays a later, separate call" — a deferral, not a rejection on the
+  merits.</span>
+</div>
+
+<div class="adr">
+  <span class="t">One pinned, un-revokable master bearer</span>
+  <span class="r"><b>Rejected:</b> migrating the existing consumer to a normal key (a client change
+  the intent forbade), and making the master a real revokable database credential.</span>
+  <span class="r"><b>Cost:</b> a documented exception that cannot be revoked from the accounts store.
+  Bought: a frozen public contract kept working through the entire multi-tenant migration with
+  <em>zero</em> consumer changes. It fails closed — unresolvable, never silently accepted — when
+  misconfigured.</span>
+</div>
+
+<div class="adr">
+  <span class="t">The agent does not design; it integrates</span>
+  <span class="r"><b>Rejected:</b> keeping the perfectly serviceable design system the agent had
+  already written.</span>
+  <span class="r"><b>Cost:</b> a full-surface stylesheet rebuild, and a hard dependency on the
+  operator's design work landing. Bought: the visual language is operator-owned rather than agent
+  taste — which is why part 3 found a stylesheet section marked <em>never hand-tune it</em>.</span>
+</div>
+
+<h3>Two decisions the earlier parts deliberately deferred to here</h3>
+
+<p>Part 2 named a seam it would not justify: the <code>knowledge-kb</code> config file has
+<strong>two independent implementations</strong> — one in the CLI, one inlined into the explain skill
+— which cannot be merged, because each must work with the other uninstalled. The skill is the
+open-core self-host path; the CLI is the hosted path. Neither may depend on the other's presence.</p>
+
+<p>So two implementations of one contract is the <em>correct</em> answer, and the cost is paid
+honestly: drift is a permanent standing risk, mitigated only by a test that pins the documented
+behavior — validated against the skill's actual resolver across a twenty-scenario matrix. The rule
+that follows is the kind a maintainer needs on a card: <strong>anyone editing either side must edit
+both.</strong></p>
+
+<p>Part 3 named the other: a design round's record is <strong>read-only provenance</strong>. When the
+app needed three treatments the design handback had no specimen for, each went into its own
+header-flagged file rather than being appended to the file that mirrors the canvas. Editing that file
+would forge a decision the design round never made. The quarantine is not tidiness; it is a
+truthfulness constraint about who decided what.</p>
+
+<h3>The honest inventory</h3>
+
+<p>A maintainer needs the real state, not the marketing one:</p>
+
+<table>
+<thead><tr><th>True today</th><th>Not built</th></tr></thead>
+<tbody>
+<tr><td>Live and multi-tenant, with an accounts plane, public sharing, versioned documents, and pretty share URLs</td><td><strong>Monetization</strong> — the retrieval surface exists, the billing does not</td></tr>
+<tr><td>Four distribution channels, all working</td><td><strong>Org creation and member invites</strong> — one user, one org, still</td></tr>
+<tr><td>An MCP retrieval service with a pinned v1 contract and a real external consumer</td><td><strong>Rate limiting on the anonymous read surface</strong> — the one unchecked box on the security checklist</td></tr>
+<tr><td>Sixteen deferred jobs, each with a written trigger for when to revisit it</td><td>Two known pre-existing test failures, both recorded rather than hidden</td></tr>
+</tbody>
+</table>
+
+<p>The deferred-job list deserves a note of its own. Each entry carries not just a reason but a
+<strong>trigger</strong> — "next time the deploy machinery changes", "before promoting public links to
+real traffic", "when the operator decides to introduce the paid plan". A backlog of good intentions
+rots; a backlog of <em>conditions</em> can be evaluated. When you touch an area, check whether you
+just tripped somebody's trigger.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>The "code" of this part is the machinery. Everything runs through one script:</p>
+
+<pre><code>python3 scripts/workflow.py &lt;command&gt;</code></pre>
+
+<h3>The unit of work</h3>
+
+<p>A <strong>phase</strong> is a grouped unit of work; a <strong>slice</strong> is one concrete unit
+inside it. A new phase begins with exactly two slices and grows a middle:</p>
+
+<figure class="fig">
+  <div class="pipe">
+    <div class="stage"><b>P26.DECOMP</b> — survey the ground, cut the middle slices, record the
+    breakdown and constraints in the phase notebook</div>
+    <div class="stage"><b>P26.S1 … P26.Sn</b> — the actual work, one slice at a time, each with a plan
+    written before it and a result written after</div>
+    <div class="stage"><b>P26.REVIEW</b> — validate everything together, judge against the intent, and
+    consolidate the phase's doc-impact notes into new versions</div>
+  </div>
+  <figcaption>Only the review versions the durable docs. That single rule is what keeps
+  <code>docs/current/</code> honest.</figcaption>
+</figure>
+
+<p>Each phase folder holds an <code>intent.md</code> carrying the operator's request
+<strong>verbatim</strong> alongside the confirmed, refined interpretation and any clarifying
+questions that were resolved. The verbatim text is immutable. When a later slice is unsure what was
+actually asked, that file — not anyone's memory of the conversation — is the source of truth.</p>
+
+<h3>Orchestrator and executor</h3>
+
+<p>Work is split between two roles. The <strong>orchestrator</strong> plans each slice, moves the
+workflow state, commits, and talks to the operator. A dispatched <strong>executor</strong> does the
+slice's job in its own context, writes the result, and returns a verdict — but never commits and
+never changes a status. The point is context economy: the orchestrator stays lean because it never
+loads the details of the work it delegates.</p>
+
+<p>The tier is chosen by the slice's risk, which makes risk the phase's main cost lever. There is a
+deliberate exception worth knowing, because this very series depended on it: a slice whose work needs
+a <em>user-level</em> tool the executors do not have must be run inline by the orchestrator instead.
+That is why writing these explainers could not be delegated.</p>
+
+<h3>Two states people misread</h3>
+
+<div class="callout">
+<p><strong><code>active/</code> does not mean in flight.</strong> A passing review marks a phase
+<code>done</code> but leaves it in <code>works/phases/active/</code>. Archiving is a separate, manual
+step. Five phases are sitting there right now, all finished. If you infer "active means in progress"
+you will badly misjudge the state of the project.</p>
+</div>
+
+<div class="aside">
+<p><strong><code>pending</code> is not <code>blocked</code>.</strong> <code>pending</code> means
+"waiting on the operator" — a validation only a human can do, or an action only they can perform. It
+halts selection entirely: nothing may start, finish, or advance past it. <code>blocked</code> means an
+impediment the agent cannot resolve. Conflating them either strands work that a person could unstick
+in a minute, or silently rolls past a gate that existed for a reason.</p>
+</div>
+
+<h3>How to change something</h3>
+
+<p>The practical close. Say you want to add rate limiting to the anonymous read surface — the
+outstanding item from part 4:</p>
+
+<pre><code>1. Capture intent.   Refine the request, ask about anything ambiguous, confirm it,
+                     then create the phase — its intent.md holds the verbatim ask.
+
+2. Decompose.        The DECOMP slice surveys the ground and cuts the middle slices,
+                     setting each one's risk deliberately.
+
+3. Work the slices.  One at a time: plan → execute → result → commit. A slice that
+                     changes durable truth leaves a one-line doc-impact note.
+
+4. Review.           Validate every slice together, judge against the intent, and
+                     consolidate the doc-impact notes:
+
+                     doc-new-version --doc security --summary "..." --source P27.REVIEW
+                     rebuild-docs
+
+5. Archive later.    A passing review does not archive. Do that deliberately, when the
+                     phase is genuinely finished with.</code></pre>
+
+<p>Never patch a file under <code>docs/versions/</code>, and never hand-edit
+<code>docs/current/*.md</code> — the latter is generated from the former. Both rules exist so that the
+history of a claim is recoverable, which is the same instinct that produced the on-disk document
+version archive in part 2. This project keeps its history in the same shape everywhere.</p>
+
+<div class="callout">
+<p><strong>Closing the loop.</strong> Part 2 noted that these explainers travel the write path into
+the repository they describe. There is one more turn: the series you are finishing was itself a
+phase in the workspace just described — cut into five slices by a decomposition slice, each with a
+plan written before and a result after, with an <code>intent.md</code> recording what the operator
+actually asked for. The process documented here is the process that produced the documentation. If
+you want to know whether it works, you are holding the evidence.</p>
+</div>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<h3>Where it aligns with prevailing practice</h3>
+
+<p><strong>The decision log is a decision log in the established sense.</strong> An architectural
+decision record "captures a single AD and its rationale … along with its trade-offs and
+consequences", and "the collection of ADRs created and maintained in a project constitute its
+decision log" (<a href="https://adr.github.io/">Architectural Decision Records</a> —
+adr.github.io). The widely-used Michael Nygard template, per the same site's template catalogue
+(<a href="https://adr.github.io/adr-templates/">ADR templates</a> — adr.github.io), carries five
+components: <em>Title, Status, Context, Decision, Consequences</em>.</p>
+
+<p>Every entry in <code>decisions.md</code> carries all five — and adds two more that are worth
+keeping:</p>
+
+<ul>
+<li><strong>Alternatives considered.</strong> Nygard's <em>Context</em> holds the forces; naming the
+rejected options as their own field makes the road not taken retrievable rather than inferred. This
+is the field that makes the log useful to someone contemplating a change.</li>
+<li><strong>Source.</strong> A pointer back to the slice and result file that produced the decision.
+This is traceability the workspace gives away for free — every decision can be walked back to the
+work that occasioned it, and the phase intent behind that.</li>
+</ul>
+
+<h3>Where it deliberately diverges</h3>
+
+<p>Standard ADR practice puts <strong>one decision per immutable file</strong>, numbered, with
+superseded records left in place and marked. This project instead keeps <em>one appended log</em>
+inside a <em>versioned document</em>, with the version history living beside it under
+<code>docs/versions/decisions/</code>.</p>
+
+<p>The trade is real in both directions. Given up: a stable per-decision URL, and the ability to see
+one decision's own revision history at a glance. Gained: decisions version in lockstep with the ten
+other documentation tracks they constrain, so a phase's consequences land across
+<code>architecture</code>, <code>security</code>, and <code>decisions</code> in one consolidated act
+rather than three that can drift apart. Since the review is what forces all of them, a per-file scheme
+would have needed its own separate discipline — which is precisely the discipline that decays.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+<li><strong>Archive the finished phases.</strong> Five completed phases sit in <code>active/</code>
+awaiting a rotate, which makes the directory listing a misleading first impression for exactly the
+audience this series is written for. It is one command, and it is the cheapest accuracy improvement
+available.</li>
+
+<li><strong>Sweep the deferred triggers periodically, not just opportunistically.</strong> Sixteen
+open jobs each carry a written condition for revisiting them, and at least two have plausibly already
+fired (the anonymous-read limiter's "before promoting public links to real traffic", and the embed
+bound's "when touching the publish worker next"). A scheduled read of the trigger column turns a
+backlog into a queue.</li>
+
+<li><strong>Retire the stale executor-tier file.</strong> The agent definitions still include a third
+tier the contract no longer describes — harmless drift, but the workspace's whole claim is that its
+written state is trustworthy, and a maintainer reading three tiers where two exist is exactly the
+failure that claim is supposed to prevent.</li>
+
+<li><strong>Give the two-implementation config seam a shared conformance fixture.</strong> The
+standing drift risk between the CLI resolver and the skill's inline resolver is currently guarded by
+one side's tests. A checked-in table of input scenarios and expected resolutions — read by the CLI
+test and executable against the skill's heredoc — would make the twenty-scenario validation
+repeatable rather than a one-time verification recorded in prose.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Why does <code>docs/current/*.md</code> stay accurate rather than decaying
+  like most project documentation?</p>
+  <button class="opt" data-correct="false">A CI job fails when a source file changes without a matching doc edit</button>
+  <button class="opt" data-correct="true">Doc versioning is a required step of the phase review, and slices leave doc-impact notes the review must consolidate</button>
+  <button class="opt" data-correct="false">The docs are generated automatically from code comments and schemas</button>
+  <button class="opt" data-correct="false">Each slice writes its own doc version immediately after making a change</button>
+  <p class="why" hidden>The discipline is structural, not aspirational. Individual slices never run
+  the versioning command — they leave a one-line doc-impact note — and the review consolidates those
+  notes into new versions. There is no clean way to finish a phase without producing them, which is
+  what makes the durable docs trustworthy.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> You find a phase marked <code>done</code> sitting in
+  <code>works/phases/active/</code>. What does that tell you?</p>
+  <button class="opt" data-correct="false">The review passed but a fix slice is still outstanding</button>
+  <button class="opt" data-correct="false">The archive step failed and the state is inconsistent</button>
+  <button class="opt" data-correct="true">Nothing is wrong — a passing review marks a phase done but never archives it; archiving is a separate manual step</button>
+  <button class="opt" data-correct="false">The phase is done but its docs have not been versioned yet</button>
+  <p class="why" hidden><code>active/</code> means "not yet archived", not "in flight". Five finished
+  phases are sitting there right now. Reading the directory as a list of in-progress work would badly
+  misrepresent the state of the project — which is why it is worth archiving them.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The config resolver has two independent implementations that cannot be
+  merged. Why is that the correct design rather than duplication to be cleaned up?</p>
+  <button class="opt" data-correct="false">The two are written in different languages, so sharing is impossible</button>
+  <button class="opt" data-correct="true">Each must work with the other uninstalled — the skill is the self-host path and the CLI is the hosted path, so neither may depend on the other's presence</button>
+  <button class="opt" data-correct="false">Merging them would break the plugin's byte-parity guard</button>
+  <button class="opt" data-correct="false">The implementations resolve deliberately different precedence orders</button>
+  <button class="opt" data-correct="false">One is a temporary shim scheduled for removal</button>
+  <p class="why" hidden>The skill must resolve config for someone who never installs the CLI, and the
+  CLI must work for someone who never installs the plugin. Two implementations of one contract is the
+  right answer; the cost — permanent drift risk — is paid honestly with a pinned test and the rule
+  that editing either side means editing both.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> A slice reaches a point where only the operator can verify something. What
+  status should it take?</p>
+  <button class="opt" data-correct="true"><code>pending</code> — waiting on the operator; it halts selection until they clear it</button>
+  <button class="opt" data-correct="false"><code>blocked</code> — the slice cannot proceed</button>
+  <button class="opt" data-correct="false"><code>in_review</code> — the work is done and awaiting judgment</button>
+  <button class="opt" data-correct="false"><code>changes_requested</code> — feedback is required before continuing</button>
+  <p class="why" hidden><code>pending</code> means "waiting on the operator" and is deliberately
+  distinct from <code>blocked</code>, which means an impediment the agent cannot resolve on its own.
+  A pending item stops the loop entirely — nothing may start, finish, or advance past it — and clears
+  only when the operator says so.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Compared with the standard Nygard ADR template, what do this project's
+  decision entries add?</p>
+  <button class="opt" data-correct="false">A severity rating and an owner</button>
+  <button class="opt" data-correct="true">An explicit "alternatives considered" field and a "source" pointer back to the slice that produced the decision</button>
+  <button class="opt" data-correct="false">A review date and an expiry</button>
+  <button class="opt" data-correct="false">Nothing — the entries follow the five-component template exactly</button>
+  <p class="why" hidden>The Nygard template carries Title, Status, Context, Decision, and
+  Consequences; every entry here has all five plus those two. "Alternatives considered" makes the
+  road not taken retrievable instead of inferred — the single most useful field for anyone
+  contemplating a change — and "Source" gives traceability back to the work that occasioned the
+  decision.</p>
+</div>
+
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

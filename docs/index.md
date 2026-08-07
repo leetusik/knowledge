@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-08 · [Why Knowledge Is This Way, and How to Change It](knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html) — knowledge
 - 2026-08-08 · [Shipping and Running Knowledge: Distribution, the Edge, Security, and the Gates](knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html) — knowledge
 - 2026-08-08 · [Knowledge's Read Surfaces: Two Front Ends, One Corpus](knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html) — knowledge
 - 2026-08-08 · [Knowledge System Internals: The Content Plane, the Write Path, and the Contracts](knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html) — knowledge
