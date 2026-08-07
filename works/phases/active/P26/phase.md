@@ -413,6 +413,36 @@ explicitly declined by the operator.
     cannot be merged, drift is the standing risk) is named in S2 as a contract; the *why we accepted
     two implementations* telling is a decision-record item S5 owns.
 
+- **S3 (done):** explainer published — "Knowledge's Read Surfaces: Two Front Ends, One Corpus",
+  **KB doc id 31 v1**, `knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html`,
+  22,047 chars. One run sufficed (841 doc lines, but one subject).
+  - **Research: `included`** — two MDN pages opened (`developer.mozilla.org`): the `<iframe>`
+    reference's verbatim warning that `allow-scripts` **plus** `allow-same-origin` lets the framed
+    document strip its own sandbox, and the `postMessage` page's "always specify an exact target
+    origin, not `*`". The second produced the document's best section: a **justified divergence** —
+    the repo's `targetOrigin: "*"` is correct because an opaque origin has no nameable value, the
+    message carries no data, it targets one `contentWindow`, and MDN's companion rule (verify the
+    sender) *is* honored via `event.source`, since `event.origin` is the literal `"null"`.
+  - **S1's `canonical_path` question is RESOLVED — nothing broken.** `grep -n canonical_path
+    server/*.py` finds it only in `documents_api.py` (the `/app` plane's two **detail** reads) and
+    `graph_api.py`; `main.py` (`/api`) has none. Two stacked causes: P25 was **additive to `/app`
+    only** because `/api/*` is the frozen consumer contract, and even on `/app` it rides detail reads
+    rather than the shared list projector (to avoid a per-row accounts lookup). The 201's pretty
+    `url` is built at a **third** site (`main.py`'s `resolve_org_slug` dependency), which is why a
+    save reports a pretty URL that the by-path read appears not to know about. Written into the
+    explainer as a callout and a quiz question. **No code change proposed or made.**
+  - **The MkDocs viewer is simultaneously dead code and product** — retired from production at P14,
+    shipped verbatim to every self-hoster by the plugin. The likeliest maintenance mistake in this
+    area is "cleaning up" files a plugin user depends on; proposed as a next step to name that status
+    in one place.
+  - **For S4:** the browser-QA residuals cluster in this area (quiz rendering, graph feel in both
+    schemes, the direct raw-URL sandbox strip) — all owed to the operator because the repo has no
+    browser/jsdom tooling. S3 lists them; **S4 owns the gate map** and should say what is
+    machine-verified vs. an operator residual.
+  - **For S5:** the design-provenance discipline (locked `extra.css` §1, `kb-console.css` copied
+    verbatim, three quarantined on-token extensions instead of edits to the canvas) is stated here as
+    a *practice*; the ADR behind it — why a design round's record must not be retro-edited — is S5's.
+
 ## Constraints
 
 1. **`knowledge` slices are run INLINE by the orchestrator, never dispatched.** `/explain` is a
