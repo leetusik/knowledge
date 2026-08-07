@@ -9,7 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { PublicShell } from "@/components/public-shell";
 import { appButtonClass } from "@/components/ui";
-import { DOCUMENTS } from "@/content";
+import { DOCUMENTS, SHARE } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
 import { getDocument, getDocumentVersions } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
@@ -130,6 +130,28 @@ export default async function DocumentPage({
                 `canonical_path`. `null` (no org slug claimed) falls back to the id
                 URL, which keeps working forever. */}
             <CopyLinkButton path={doc.canonical_path ?? `/documents/${id}`} />
+            {/* P25.F3 — say WHY the button just handed out an id URL. Shown only
+                when the viewer's OWN org has claimed no slug (`tenant.slug === null`,
+                free off the session identity), so the fallback stops being silent.
+                The extra `canonical_path === null` clause is an ownership proxy: a
+                cross-org member reading another org's public doc gets that org's
+                pretty path here, and telling them to claim a name would be noise.
+                A slug that IS claimed never shows this — a `null` path then means
+                the doc is a superseded duplicate (P25.F1) whose id URL is correct
+                and permanent, not something the operator can fix. */}
+            {ctx.identity.tenant?.slug == null &&
+            doc.canonical_path === null ? (
+              <span className="text-[0.8rem] text-[var(--kb-hint)]">
+                {SHARE.claimHint.prefix}
+                <Link
+                  href={SHARE.claimHint.href}
+                  className="text-[var(--kb-accent-strong)] underline underline-offset-2"
+                >
+                  {SHARE.claimHint.linkLabel}
+                </Link>
+                {SHARE.claimHint.suffix}
+              </span>
+            ) : null}
             {/* P21 — the member-only delete, trailing (`ml-auto`) and two-step. It
                 lives ONLY in this branch: the anonymous branch below and the shared
                 `<DocumentView>` stay auth-free. `redirectTo` sends the caller back to

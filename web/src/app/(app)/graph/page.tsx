@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { CopyLinkButton } from "@/components/copy-link-button";
-import { GRAPH } from "@/content";
+import { GRAPH, SHARE } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
 import { getGraph } from "@/lib/knowledge/app";
 
@@ -49,7 +50,26 @@ export default async function GraphPage() {
           <p className="kb-app-sub">{GRAPH.sub}</p>
         </div>
         {orgId ? (
-          <CopyLinkButton path={graph.canonical_path ?? `/graph/${orgId}`} />
+          <div className="flex flex-col items-end gap-1.5">
+            <CopyLinkButton path={graph.canonical_path ?? `/graph/${orgId}`} />
+            {/* P25.F3 — the same unclaimed-slug hint the document read view carries:
+                when this org has claimed no slug the button hands out the UUID URL,
+                and nothing else on the page says that a readable one is one dashboard
+                field away. This surface is always the viewer's OWN org, so the session
+                tenant's slug is the whole condition — no ownership proxy needed. */}
+            {identity.tenant?.slug == null ? (
+              <span className="max-w-[18rem] text-right text-[0.8rem] text-[var(--kb-hint)]">
+                {SHARE.claimHint.prefix}
+                <Link
+                  href={SHARE.claimHint.href}
+                  className="text-[var(--kb-accent-strong)] underline underline-offset-2"
+                >
+                  {SHARE.claimHint.linkLabel}
+                </Link>
+                {SHARE.claimHint.suffix}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
