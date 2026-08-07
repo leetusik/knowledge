@@ -57,24 +57,31 @@
 #      non-zero, and recover by fix-forward (merge a corrected commit to main and
 #      re-dispatch — the reconcile picks it up). There is NO rollback.sh.
 #
-# Lifecycle:
+# Lifecycle (reordered in the P25 deploy fix — migrate + api first, web/mcp after):
 #   1. preflight (git/docker/compose v2; compose file, .git, .env present)
 #   2. reconcile the box clone on `main` inside a one-shot api-service container (§E)
-#   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web + mcp; recreates
-#      web/mcp on image change, but NOT the bind-mounted api)
+#   3. COMPOSE_BAKE=false docker compose build   (builds api + web + mcp images; touches
+#      NO containers — starting them comes later, after the schema is migrated)
+#   3a. ensure postgres is up + healthy (it is the migration's only runtime dependency)
 #   3b. apply alembic migrations (`alembic upgrade head`) in a one-shot api-service
-#      container, AFTER the reconcile (so alembic/ carries the new revisions) and BEFORE
-#      the api force-recreate (so new code never boots against an old schema — the P25
+#      container, AFTER the reconcile (so alembic/ carries the new revisions, via the
+#      bind mount) and BEFORE any app container starts on new code (the P25
 #      `tenants.slug` incident: the api's lifespan SELECTs new columns, so an unmigrated
 #      recreate crash-loops and takes the api DOWN). Fails closed: a migration error
 #      aborts the deploy while the OLD api keeps serving the old schema. Migrations
 #      still never run on app boot; this automates the previously-manual documented
 #      deploy step. Additive-only migrations keep the old-code+new-schema overlap safe
 #      (the 0003 mint-window remains the documented exception shape).
-#   4. force-recreate the bind-mounted api (up -d --force-recreate --no-deps api) so it runs
-#      the reconciled code, not the stale uvicorn (the S5/P17 split-deploy fix)
-#   5. health-gate knowledge-api + knowledge-web + knowledge-mcp (docker inspect Health.Status),
-#      then self-assert the api's StartedAt postdates this deploy run (freshness trap)
+#   4. force-recreate the bind-mounted api (up -d --force-recreate --no-deps api) so it
+#      runs the reconciled code, not the stale uvicorn (the S5/P17 split-deploy fix),
+#      and health-gate it IMMEDIATELY. Doing the api before web/mcp matters twice over:
+#      web/mcp declare `depends_on: api healthy`, so (a) a crash-looping api left behind
+#      by a failed deploy would make a plain `up` die on the dependency check before
+#      anything runs (the P25 second incident), and (b) recreating the api first means
+#      the later web/mcp `up` finds a healthy dependency.
+#   5. docker compose up -d (recreates web/mcp onto the freshly built images), then
+#      health-gate knowledge-web + knowledge-mcp and self-assert the api's StartedAt
+#      postdates this deploy run (freshness trap)
 #   6. on failure: capture ps + logs (into $REMOTE_ARTIFACT_DIR if set), die non-zero
 #      with a fix-forward message; NO rollback.
 #
@@ -313,27 +320,32 @@ if ! dc run --rm -T --no-deps \
     die "reconcile failed (see [reconcile] output above). The box clone was NOT moved backwards and NO rollback was performed. Fix forward: merge a corrected commit to origin/main and re-dispatch — the reconcile picks it up. If 'docker compose run' refused because the api service pins 'container_name: knowledge-api', apply the documented fallback (add 'image: knowledge-api:latest' to the api service + use 'docker run', see this script's header); S5 confirms the run path live."
 fi
 
-# --- 2. build the app images + recreate web/mcp ------------------------------
-# Builds the api + web + mcp images. Compose recreates a container only when its image or
-# config changed: `web` serves the rebuilt Next standalone bundle and `mcp` ships its own
-# self-contained image, so both recreate on a code push. The `api` does NOT — it runs
-# server/ from the BIND MOUNT (.:/repo), so a code-only push changes neither its image nor
-# its config and this plain `up` leaves the running uvicorn on stale code; step 2b
-# force-recreates it explicitly. `postgres` comes up as the api's healthy-dependency.
-log "building images + recreating web/mcp (COMPOSE_BAKE=false docker compose up -d --build)"
-dc up -d --build --remove-orphans
+# --- 2. build the app images (containers untouched) --------------------------
+# Builds the api + web + mcp images WITHOUT starting or recreating any container —
+# `up` for web/mcp deliberately happens LAST (step 5). The old flow's `up -d --build`
+# here died on a crash-looping api left behind by a failed deploy (web/mcp declare
+# `depends_on: api healthy`), and it started new-code web against an unmigrated schema.
+log "building images (COMPOSE_BAKE=false docker compose build)"
+dc build
 
-# --- 2a. apply alembic migrations (one-shot api-service container) -----------
-# AFTER the reconcile+build (alembic/ now carries the new revisions, postgres is up as
-# the api's healthy dependency) and BEFORE the api force-recreate, so new code never
-# boots against an old schema (the P25 `tenants.slug` incident: the api lifespan SELECTs
-# new columns, so an unmigrated recreate crash-loops with the health-gate down). A
-# one-shot container is used instead of `exec` because it needs no running api — it
-# works even when the live api is already crash-looping (fix-forward recovery). Reuses
-# the api service env (DATABASE_URL with the psycopg scheme — the bare postgresql://
-# form would select the absent psycopg2 driver, see docs data track) and the `.:/repo`
-# mount. Fails CLOSED: on migration error the deploy dies here and the old api keeps
-# serving the old schema untouched. Migrations still never run on app boot.
+# --- 2a. ensure postgres is up + healthy (the migration's only dependency) ----
+# On a steady-state box this is a no-op (postgres is durable, `restart:
+# unless-stopped`); on a first deploy it creates the service. Never gated by the api.
+log "ensuring postgres is up (docker compose up -d postgres)"
+dc up -d postgres
+wait_healthy postgres knowledge-postgres || die "postgres did not become healthy — cannot migrate; deploy aborted before any app container was touched."
+
+# --- 2b. apply alembic migrations (one-shot api-service container) -----------
+# AFTER the reconcile+build (alembic/ carries the new revisions via the `.:/repo` bind
+# mount, the api image is fresh) and BEFORE any app container starts on new code (the
+# P25 `tenants.slug` incident: the api lifespan SELECTs new columns, so an unmigrated
+# recreate crash-loops with the health-gate down). A one-shot container is used instead
+# of `exec` because it needs no running api — it works even when the live api is
+# already crash-looping (fix-forward recovery). Reuses the api service env
+# (DATABASE_URL with the psycopg scheme — the bare postgresql:// form would select the
+# absent psycopg2 driver, see docs data track). Fails CLOSED: on migration error the
+# deploy dies here and the old api keeps serving the old schema untouched. Migrations
+# still never run on app boot.
 log "applying alembic migrations (one-shot container '$MIGRATE_CONTAINER' reusing the api service)"
 if ! dc run --rm -T --no-deps \
         --name "$MIGRATE_CONTAINER" \
@@ -342,29 +354,42 @@ if ! dc run --rm -T --no-deps \
     die "alembic upgrade head FAILED — deploy aborted BEFORE the api force-recreate, so the running api still serves the old schema and NO rollback is needed. Inspect the alembic output above, fix forward (merge a corrected migration to origin/main), and re-dispatch."
 fi
 
-# --- 2b. force-recreate the bind-mounted api ---------------------------------
+# --- 3. force-recreate the bind-mounted api and gate it ------------------------
 # The api runs server/ from the BIND MOUNT — a code-only push changes neither its image
-# nor its config, so the plain `up` above never recreates it and the running uvicorn keeps
-# stale code (the S5/P17 split-deploy incident). Recreate it unconditionally; `--no-deps`
-# leaves the already-running postgres untouched.
+# nor its config, so a plain `up` never recreates it and the running uvicorn keeps
+# stale code (the S5/P17 split-deploy incident). Recreate it unconditionally;
+# `--no-deps` leaves the already-verified postgres untouched. Gating the api HERE —
+# before web/mcp are touched — both proves the migrate+recreate worked and guarantees
+# step 5's dependency check finds a healthy api (a crash-looping api is replaced, not
+# tripped over — the P25 second incident).
 log "force-recreating the api (bind-mounted code — plain up won't recreate it)"
 dc up -d --force-recreate --no-deps api
+if ! wait_healthy api knowledge-api; then
+    capture_artifacts
+    die "knowledge-api did not become healthy after the migrate + force-recreate. NO rollback performed (§F v1). web/mcp were NOT touched this run. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch. Inspect: docker compose -f $COMPOSE_FILE logs api${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
+fi
 
-# --- 3. health-gate the app services (api + web + mcp) -----------------------
+# --- 4. bring up web/mcp on the freshly built images --------------------------
+# Compose recreates a container only when its image or config changed: `web` serves the
+# rebuilt Next standalone bundle and `mcp` ships its own self-contained image, so both
+# recreate on a code push. Their `depends_on: api healthy` is satisfied by step 3.
+log "recreating web/mcp on the new images (docker compose up -d)"
+dc up -d --remove-orphans
+
+# --- 5. health-gate web + mcp -------------------------------------------------
 gate_ok=1
-wait_healthy api knowledge-api || gate_ok=0
 wait_healthy knowledge-web knowledge-web || gate_ok=0
 wait_healthy mcp knowledge-mcp || gate_ok=0
 
 if (( gate_ok )); then
     log "all three services healthy — knowledge-api + knowledge-web + knowledge-mcp are live"
-    # Post-gate freshness self-assert: prove step 2b's force-recreate actually landed a
+    # Post-gate freshness self-assert: prove step 3's force-recreate actually landed a
     # NEW uvicorn, not the pre-existing stale one (the S5/P17 split-deploy trap).
     assert_api_fresh
 else
-    # --- 4. on failure: capture + fix-forward, NO rollback (§F v1) ------------
+    # --- 6. on failure: capture + fix-forward, NO rollback (§F v1) ------------
     capture_artifacts
-    die "health-gate FAILED for knowledge-api and/or knowledge-web and/or knowledge-mcp. NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs api web mcp${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
+    die "health-gate FAILED for knowledge-web and/or knowledge-mcp (the api is healthy — it gated in step 3). NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs web mcp${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
 fi
 
 log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000, mcp at knowledge-mcp:9000; edge re-apply is S3)."
