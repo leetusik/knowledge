@@ -888,6 +888,13 @@ above are hints, not a substitute.
   newest ⇒ the path, resolver ⇒ the newest id"; `test_org_credentials.py` additionally
   pins the backdated 201 `url` falling back to `/documents/{id}`.
 
+**Actual (P25.F2):**
+
+- `docs/current/experience.md` — the dashboard's Public URL panel hint now names the
+  cost of Q3's mutability inline: `DASHBOARD.orgSlug.hint` (`web/src/content/dashboard.ts`)
+  gained one clause warning that changing an already-claimed slug breaks links already
+  shared, next to the existing charset rule. Copy-only; no behavior changed.
+
 ## Constraints
 
 - **Backend before web.** S1 → S2 → (S3, S4) → S5. No web slice may invent the pretty
