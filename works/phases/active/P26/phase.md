@@ -385,6 +385,34 @@ explicitly declined by the operator.
   - **For S2:** S1 states the self-reference (this series is written by the write path into the repo
     that implements it) and defers the mechanism. S2 owns that payoff — do not leave it unwritten.
 
+- **S2 (done):** explainer published — "Knowledge System Internals: The Content Plane, the Write
+  Path, and the Contracts", **KB doc id 30 v1**,
+  `knowledge/2026-08-08-knowledge-system-internals-…-and-the-contracts.html`, 26,037 chars extracted.
+  One run sufficed for the merged grouping (four doc tracks + the `server/` tree).
+  - **Research section: `included`** — the first in this series. The gate was applied, not skipped by
+    reflex: RRF rank fusion, SQLite's single-writer model, and in-process background work vs a task
+    queue all have documented prevailing practice. Three pages opened and cited with bare domains in
+    plain text: `sqlite.org` (WAL single-writer/concurrent-reader), `elastic.co` (the RRF formula and
+    the default rank constant 60, matching `RRF_K = 60`), `fastapi.tiangolo.com` (the
+    in-process-vs-Celery boundary). Two earlier fetches failed (`dl.acm.org` 403; `sqlite.org` without
+    `www`) and were replaced rather than cited unread — no retry loop.
+  - **Verified that citation provenance survives text extraction:** all three domains appear in the
+    server-extracted text, so FTS and the MCP surface keep them. This is exactly what the skill's
+    "link plus the bare domain" rule exists for, confirmed working end to end.
+  - **The self-reference is paid off** (S1's handoff discharged): the Code section walks this
+    document's own path through the write path into this repo, and states the `git pull --rebase`
+    consequence. **S3–S5 need not repeat it.**
+  - **Spine for the series:** framing disk-canonical / DB-disposable as *the* opening idea made three
+    separate decisions fall out as consequences (disposable rowid → the P25 slug's home in Postgres;
+    version bodies as files; `reindex` as a repair tool). Later slices should lean on it rather than
+    re-derive it.
+  - **For S4:** deliberately left there — `KB_GIT_PUSH` as a *deployment* flag with its edge/secret
+    story, and the publish worker's operator surface (failures reach only the container log, so the
+    box's positive assertion is git state, not a log grep).
+  - **For S5:** the two-implementations config seam (CLI resolver vs the skill's inline resolver —
+    cannot be merged, drift is the standing risk) is named in S2 as a contract; the *why we accepted
+    two implementations* telling is a decision-record item S5 owns.
+
 ## Constraints
 
 1. **`knowledge` slices are run INLINE by the orchestrator, never dispatched.** `/explain` is a
