@@ -83,7 +83,10 @@ services:
       # `postgres` service below by container name over the shared network. The
       # password is the SECRET POSTGRES_PASSWORD from the box's gitignored `.env`
       # (never committed); user/db are the literals `kb`. Migrations run
-      # explicitly on deploy: `docker compose exec api alembic upgrade head`.
+      # explicitly on deploy — deploy/deploy.sh step 3b runs `alembic upgrade
+      # head` in a one-shot api-service container before the api force-recreate
+      # (never on app boot; manual form: `docker compose run --rm --no-deps
+      # api alembic upgrade head`).
       DATABASE_URL: postgresql+psycopg://kb:${POSTGRES_PASSWORD}@knowledge-postgres:5432/kb
       # Pins the legacy KB_API_TOKEN master bearer to tenant #1 in tenant mode:
       # the operator's SIGNUP email (must match the user seeded in S6). The live

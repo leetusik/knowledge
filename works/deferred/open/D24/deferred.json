@@ -1,0 +1,11 @@
+{
+  "id": "D24",
+  "title": "Version durable docs for the automated alembic step in deploy.sh (operations/data/decisions still say manual)",
+  "status": "deferred",
+  "source": "P25.REVIEW",
+  "reason": "Hotfix after the P25 deploy failure: deploy.sh step 3b now runs alembic upgrade head in a one-shot api-service container before the api force-recreate. docs/current/operations.md, data.md, and decisions.md still document the migration as a manual on-box step — durable-doc drift that needs consolidation into new versions.",
+  "trigger": "Next phase review (fold into its Doc impact consolidation), or the next deploy-machinery phase",
+  "created_at": "2026-08-07T16:42:40+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

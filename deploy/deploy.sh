@@ -62,6 +62,15 @@
 #   2. reconcile the box clone on `main` inside a one-shot api-service container (§E)
 #   3. COMPOSE_BAKE=false docker compose up -d --build   (builds api + web + mcp; recreates
 #      web/mcp on image change, but NOT the bind-mounted api)
+#   3b. apply alembic migrations (`alembic upgrade head`) in a one-shot api-service
+#      container, AFTER the reconcile (so alembic/ carries the new revisions) and BEFORE
+#      the api force-recreate (so new code never boots against an old schema — the P25
+#      `tenants.slug` incident: the api's lifespan SELECTs new columns, so an unmigrated
+#      recreate crash-loops and takes the api DOWN). Fails closed: a migration error
+#      aborts the deploy while the OLD api keeps serving the old schema. Migrations
+#      still never run on app boot; this automates the previously-manual documented
+#      deploy step. Additive-only migrations keep the old-code+new-schema overlap safe
+#      (the 0003 mint-window remains the documented exception shape).
 #   4. force-recreate the bind-mounted api (up -d --force-recreate --no-deps api) so it runs
 #      the reconciled code, not the stale uvicorn (the S5/P17 split-deploy fix)
 #   5. health-gate knowledge-api + knowledge-web + knowledge-mcp (docker inspect Health.Status),
@@ -93,6 +102,7 @@ HEALTH_INTERVAL="${HEALTH_INTERVAL:-5}"         # seconds between health polls
 LOCK_TRIES="${LOCK_TRIES:-6}"                   # .git/index.lock waits before refusing (concurrency)
 LOCK_INTERVAL="${LOCK_INTERVAL:-3}"             # seconds between index.lock checks (a write is ~6s)
 RECONCILE_CONTAINER="knowledge-reconcile-$$"    # unique ephemeral name (never clashes with knowledge-api)
+MIGRATE_CONTAINER="knowledge-migrate-$$"        # ditto, for the one-shot alembic step (3b)
 
 # COMPOSE_BAKE=false avoids the `docker compose build` bake-path panic seen on this
 # host's Compose version (P8/hi2vi: compose/build_bake.go slice-bounds — a CLI bug).
@@ -312,6 +322,25 @@ fi
 # force-recreates it explicitly. `postgres` comes up as the api's healthy-dependency.
 log "building images + recreating web/mcp (COMPOSE_BAKE=false docker compose up -d --build)"
 dc up -d --build --remove-orphans
+
+# --- 2a. apply alembic migrations (one-shot api-service container) -----------
+# AFTER the reconcile+build (alembic/ now carries the new revisions, postgres is up as
+# the api's healthy dependency) and BEFORE the api force-recreate, so new code never
+# boots against an old schema (the P25 `tenants.slug` incident: the api lifespan SELECTs
+# new columns, so an unmigrated recreate crash-loops with the health-gate down). A
+# one-shot container is used instead of `exec` because it needs no running api — it
+# works even when the live api is already crash-looping (fix-forward recovery). Reuses
+# the api service env (DATABASE_URL with the psycopg scheme — the bare postgresql://
+# form would select the absent psycopg2 driver, see docs data track) and the `.:/repo`
+# mount. Fails CLOSED: on migration error the deploy dies here and the old api keeps
+# serving the old schema untouched. Migrations still never run on app boot.
+log "applying alembic migrations (one-shot container '$MIGRATE_CONTAINER' reusing the api service)"
+if ! dc run --rm -T --no-deps \
+        --name "$MIGRATE_CONTAINER" \
+        --entrypoint sh \
+        api -c 'cd /repo && alembic upgrade head'; then
+    die "alembic upgrade head FAILED — deploy aborted BEFORE the api force-recreate, so the running api still serves the old schema and NO rollback is needed. Inspect the alembic output above, fix forward (merge a corrected migration to origin/main), and re-dispatch."
+fi
 
 # --- 2b. force-recreate the bind-mounted api ---------------------------------
 # The api runs server/ from the BIND MOUNT — a code-only push changes neither its image
