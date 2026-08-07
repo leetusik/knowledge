@@ -443,6 +443,36 @@ explicitly declined by the operator.
     verbatim, three quarantined on-token extensions instead of edits to the canvas) is stated here as
     a *practice*; the ADR behind it — why a design round's record must not be retro-edited — is S5's.
 
+- **S4 (done):** explainer published — "Shipping and Running Knowledge: Distribution, the Edge,
+  Security, and the Gates", **KB doc id 32 v1**, 20,566 chars.
+  - **The §Open Questions "is S4 too much for one run?" is ANSWERED: one run sufficed to produce a
+    coherent explainer, but its coverage is deliberately SELECTIVE — stated out loud, not glossed.**
+    S4 has the largest source grouping in the cut yet produced the *shortest* document
+    (S1 25,242 · S2 26,037 · S3 22,047 · **S4 20,566**). Real depth went to payload isolation,
+    template-sync + the dormancy token, the three edge footguns, deploy ordering, the two-credentials
+    split, 404-never-403, the gate map, and the silent-publish failure class. **Recorded gaps** (thin
+    or absent): the QA manual missions in detail, the usage-metering plane's security posture,
+    per-tenant usage isolation, CLI credential-hygiene specifics, and the P10/P18/P19/P20 cutover
+    histories.
+  - **Recommendation: do NOT re-split.** A new-maintainer series is meant to read end to end, and a
+    sixth document buys completeness at the cost of usability; §Constraints 9 also caps the series at
+    five absent an operator ask. The right home for the gaps, if wanted, is a **later targeted
+    explainer** (e.g. "Knowledge's credential and usage planes"), not a re-cut of this phase.
+    **Flagged for `P26.REVIEW` and the operator.**
+  - **Research: `included`** — `cheatsheetseries.owasp.org` (Argon2id as first choice + its minimum
+    parameters, which produced an actionable audit suggestion rather than a compliment) and
+    `nginx.org` (the `proxy_set_header` inheritance rule, which states the repo's footgun
+    **verbatim** — the repo's warning is documented platform semantics, not a discovery).
+  - **S3's handoff discharged:** the gate map is an explicit per-layer table followed by the honest
+    statement of what no gate covers (the browser-QA residuals) and why (no browser/jsdom tooling).
+  - **Structural finding worth reusing:** the security story reads best as a *widening threat model*
+    (personal KB → installable → public internet with a write credential → accounts and PII →
+    executable untrusted documents → anonymous reads), because each rule then reads as a response to
+    a specific expansion. A flat checklist cannot teach that.
+  - **For S5:** three decisions are named here as facts and are S5's to justify — **no PyPI publish**,
+    the **pinned un-revokable master bearer** as a deliberate concession, and **mirror-don't-narrow**
+    for the open-core template. S4 says what they are; S5 owns why and what they cost.
+
 ## Constraints
 
 1. **`knowledge` slices are run INLINE by the orchestrator, never dispatched.** `/explain` is a
