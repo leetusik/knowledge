@@ -610,11 +610,75 @@ explicitly declined by the operator.
     `cli/README.md`, `plugin/README.md`) plus live `curl` checks — never Python `urllib`, per
     constraint 3. `git diff --stat` confirms the blast radius is exactly one file, `README.md`.
 
+### Cross-slice notes from `P26.REVIEW`
+
+- **Verdict: `pass`.** All seven slices validated together; the phase delivers the confirmed intent.
+  Full evidence in `slices/P26.REVIEW/result.md`.
+- **The series is verified real, not just reported.** `GET /api/documents?project=knowledge&limit=50`
+  → `total: 5`, ids **29–33**, all `version: 1`, `format: html`; extracted-text lengths match every
+  `result.md` figure **to the character** (25,242 · 26,037 · 22,047 · 20,566 · 17,730). Section order
+  holds in all five (Background → Intuition → Code → [Best practices] → Quiz, 5 quiz questions each),
+  doc 29 legitimately has no best-practices section or ToC entry (research `skipped-by-judgment`), and
+  every cited domain survives text extraction — 30: `sqlite.org` `elastic.co` `fastapi.tiangolo.com`;
+  31: `developer.mozilla.org`; 32: `cheatsheetseries.owasp.org` `nginx.org`; 33: `adr.github.io`.
+  The five HTML files are genuinely self-contained (0 external scripts, 0 external stylesheets, one
+  inline quiz `<script>` each).
+- **It reads as a series, with substantive handoffs** — each part names its position ("Part *n* of a
+  five-part series"), recaps what the previous one established, and points at the next. 31 opens
+  exactly where 30 stopped ("a document on disk and a row in SQLite"); 33 explains why 1–4 exist.
+- **Blast radius confirmed: `README.md` is the only source file in the entire phase.** No
+  `docs/current/*.md`, no `docs/versions/`, no `docs/index.json` change anywhere. The five
+  `docs(knowledge):` commits are authored by **`kb-api <kb-api@localhost>`** — the hosted API's own
+  commits pulled in by rebase, and they sit *below* the decomposition commit in the log, which is what
+  `git pull --rebase` between explainer slices is supposed to look like. §Constraints 2 honored; the
+  histories never diverged.
+- **The README audit's factual claims were re-derived from source, not taken on S6's word** — the
+  edge map (`deploy/knowledge.conf`), `KB_GIT_PUSH: "true"` (`compose.prod.yml:58`), hybrid search
+  (`server/search.py`, `RRF_K = 60`), the unconditional `DATABASE_URL` (`compose.yml:40`),
+  `get_tenant_one_id()`'s early `None` (`server/api_auth.py:88`), and `scripts/graph_hook.py` +
+  the `kb` service still being wired. One extra check worth recording: the README's
+  `docker compose exec api alembic upgrade head` **is** the exact form `compose.yml`'s own comment
+  prescribes, and the `Dockerfile` installs deps `--system` (no venv), so `alembic` is on PATH
+  without `uv run` — the command as printed works.
+- **S4's "do not re-split" recommendation: agreed, without reservation.** The 4–5 target in
+  `intent.md` exists precisely to prevent the over-split vocky's first pass made; S4's enumerated gaps
+  (usage metering, per-tenant usage isolation, CLI credential hygiene, the P10/P18/P19/P20 cutover
+  histories) are peripheral to "full internal understanding"; and S4 being the *shortest* document
+  while carrying the *largest* grouping reads as evidence of selection, not exhaustion. The right home
+  for the gaps is one later targeted explainer, not a re-cut of P26.
+- **S6's 118 lines: still an audit, not a rewrite.** Six sections survive in order with unchanged
+  headings, the lede and the whole "Agentic workflow" section are untouched, and every insertion maps
+  to a pre-recorded staleness item — most of the growth is content the intent itself called *missing*
+  (web app, MCP, pretty share URLs, P20 CLI on-ramps), which can only be fixed by adding lines.
+- **Series accuracy spot-checks all held**, including the two most falsifiable: `canonical_path`
+  appears only in `documents_api.py` + `graph_api.py` and never in `main.py` (S3's resolution was
+  right), and the in-repo comment at `web/src/app/(public)/documents/[id]/explainer-frame.tsx:61`
+  independently states that `targetOrigin: "*"` is mandatory rather than lazy (S3's justified
+  divergence was not invented).
+- **Minor, pre-existing, not a P26 defect:** `phase.json.status` is still `planned` with
+  `started_at: null` although every slice is done — P21–P24 show the identical pattern and all reached
+  `done` via `review-phase`. `validate` passes.
+- **Deliberately not fixed, surfaced instead:** `docs/current/operations.md:32` ("Locally
+  `DATABASE_URL` may be left empty") is stale against `compose.yml:40`. This is drift the phase
+  *observed*, not drift it *created*, so it is not the review's to consolidate. Operator's call
+  whether it becomes a deferred job or a future doc pass.
+
 ## Doc impact
 
 _Running list — one line per durable-truth change; `P26.REVIEW` consolidates these into doc versions._
 
 - `P26.DECOMP`: none (planning only).
+- `P26.S1`: **none** — by construction; the output is KB content (doc 29), not this repo's durable
+  doc tracks.
+- `P26.S2`: **none** — by construction (doc 30).
+- `P26.S3`: **none** — by construction (doc 31).
+- `P26.S4`: **none** — by construction (doc 32).
+- `P26.S5`: **none** — by construction (doc 33).
 - `P26.S6`: **none.** The README audit pulled the file up to what `docs/current/product.md` and
   `operations.md` already state correctly; no drift was found in the durable docs. `README.md` is
   not under `docs/` and is not a `doc-new-version` candidate regardless.
+- `P26.REVIEW`: **list verified complete and correct — no doc versions created.** `git log --stat`
+  over the whole phase shows no change to any `docs/current/*.md`, any `docs/versions/` file, or
+  `docs/index.json`. (The `S1`–`S5` lines above were appended by the review: each slice declared
+  "none — by construction" in its own `result.md` but had no line here. Bookkeeping completion only;
+  no conclusion changed.)
