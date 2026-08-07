@@ -52,17 +52,17 @@
       "id": "P25",
       "name": "Pretty public share URLs",
       "objective": "Human-readable, durable slug-based public URLs for shared documents and the public graph (org slug + project + doc slug), replacing numeric-ID/UUID links while keeping old links working",
-      "status": "planned",
+      "status": "in_progress",
       "order": 5,
       "path": "works/phases/active/P25",
-      "review_status": "pending",
-      "current_slice": "P25.REVIEW",
-      "slice_count": 7,
+      "review_status": "changes_requested",
+      "current_slice": "P25.F1",
+      "slice_count": 9,
       "done_slice_count": 6
     }
   ],
   "deferred_open_count": 15,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-08-07T15:34:33+09:00"
+  "last_rebuilt_at": "2026-08-07T15:44:36+09:00"
 }
