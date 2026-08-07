@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P26`
+- Current slice: `P26.S1`
+- Next slice: `P26.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `16`
-- Rebuilt at: `2026-08-07T17:56:02+09:00`
+- Rebuilt at: `2026-08-08T04:14:34+09:00`
 
 ## Active Phases
 
@@ -21,6 +21,7 @@
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
+| [ ] `P26` | `planned` | `pending` | New-maintainer knowledge base | `P26.S1` | `works/phases/active/P26` |
 
 ## Phase P21: Web document deletion
 
@@ -76,3 +77,16 @@
 | [x] `P25.F3` | `done` | unclaimed-slug share UX: surface claim-your-URL state instead of silently copying the legacy URL | `fix` | `works/phases/active/P25/slices/P25.F3` |
 | [x] `P25.F4` | `done` | member document view: consolidate explainer scroll (iframe height handshake vs AppShell layout) | `fix` | `works/phases/active/P25/slices/P25.F4` |
 | [x] `P25.REVIEW` | `done` | phase review | `review` | `works/phases/active/P25/slices/P25.REVIEW` |
+
+## Phase P26: New-maintainer knowledge base
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [x] `P26.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P26/slices/P26.DECOMP` |
+| [ ] `P26.S1` | `todo` | Knowledge: what it is and how it is used | `knowledge` | `works/phases/active/P26/slices/P26.S1` |
+| [ ] `P26.S2` | `todo` | Knowledge: system internals - content plane, write path, contracts | `knowledge` | `works/phases/active/P26/slices/P26.S2` |
+| [ ] `P26.S3` | `todo` | Knowledge: the read surfaces - two front ends | `knowledge` | `works/phases/active/P26/slices/P26.S3` |
+| [ ] `P26.S4` | `todo` | Knowledge: shipping and running it - distribution, deploy, security, QA | `knowledge` | `works/phases/active/P26/slices/P26.S4` |
+| [ ] `P26.S5` | `todo` | Knowledge: why it is this way, and how to change it | `knowledge` | `works/phases/active/P26/slices/P26.S5` |
+| [ ] `P26.S6` | `todo` | Audit and refresh README.md | `implementation` | `works/phases/active/P26/slices/P26.S6` |
+| [ ] `P26.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P26/slices/P26.REVIEW` |
