@@ -751,3 +751,4 @@
 {"ts": "2026-08-06T00:08:36+09:00", "type": "phase_reviewed", "phase": "P24", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-08-06T00:08:36+09:00", "type": "deferred_created", "deferred": "D23", "source": "P24.REVIEW"}
 {"ts": "2026-08-07T00:23:10+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0014_foldable_rail_document_reading-width_cap", "source": "standalone"}
+{"ts": "2026-08-07T14:33:25+09:00", "type": "phase_created", "phase": "P25"}
