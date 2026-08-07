@@ -497,6 +497,61 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
 - Web baseline unchanged at **14 files / 83 tests** — no web tests were added (there are
   no web graph tests today and the "tests stay small" rule wins).
 
+### Landed by P25.S5 (bind these — REVIEW builds on them)
+
+- **`KbTenant.slug: string | null` is on the canonical tenant shape** (required key,
+  nullable value), so `identity.tenant?.slug` is available on every authed page with
+  **no extra call** — signup, login, `/auth/me` and `GET /app/tenant` all carry it.
+  Adding it as required forced one line into `tests/knowledge-auth.test.ts`'s typed
+  `TENANT` literal (`slug: null`, the honest pre-claim state).
+- **`setTenantSlug(token, slug)` (`web/src/lib/knowledge/app.ts`) is the ONE web seam
+  for `PATCH /app/tenant`.** It normalizes nothing itself; the caller sends the
+  trimmed+lowercased value and the backend stays authoritative. No GET twin exists on
+  purpose — `serialize_tenant` already answers the slug through `/auth/me`.
+- **The member graph header copies `graph.canonical_path`, NOT a locally composed
+  path** (plan deviation, settled by phase.md's "build it once in the backend" note +
+  S4's own hand-off). Fallback `/graph/{orgId}` unchanged.
+- **The dashboard panel is the ONE place on the web plane that composes a pretty
+  path** (`/@{slug}/graph`, for display + copy), because the dashboard fetches no
+  payload carrying a `canonical_path` and adding a `/app/graph` call for one string
+  would cost more than it saves. Anywhere else, consume `canonical_path`.
+- **Copy-link now rides three surfaces**: `(public)/documents/[id]` member branch
+  (`doc.canonical_path ?? /documents/{id}`), `(app)/graph` header, and — new — the S3
+  pretty page's **member branch** (S3's deliberate affordance gap, now closed). All
+  three keep the id/UUID fallback, so a slug-less org sees exactly today's behavior.
+- **Anonymous branches stay button-free** on both document routes (unchanged
+  convention: a visitor already has the URL in the address bar).
+- **`SET_ORG_SLUG_ERRORS` gives 409 its own key** (`taken`) rather than folding it into
+  `generic`: `tenants.slug` is globally unique, so a collision is the likeliest real
+  failure and the only one with an obvious user fix. The ~38-word reserved list is
+  **not** mirrored client-side (it would drift) — a reserved slug passes the zod
+  schema and returns as the mapped 422, whose copy cites the rule, never knowledge's
+  `detail`.
+- **This is how tenant #1 gets its slug:** the operator claims it in the dashboard's
+  Public URL panel after deploy. No backfill, no derived default, no hardcoded value
+  anywhere in the stack — and until it is claimed, every `canonical_path` in the
+  product is `null` and every surface renders its pre-P25 fallback.
+
+### Gotchas found while doing S5
+
+- **`revalidatePath("/dashboard", "page")` is enough to refresh the slug everywhere**
+  on that page: `requireIdentity()` re-reads `/auth/me` with `cache: "no-store"`, so
+  the panel's pretty-URL line appears without a manual reload. No client state to sync.
+- **Four of the files this slice touched were ALREADY `prettier --check`-dirty at
+  HEAD** — `web/src/content/dashboard.ts`, `web/src/app/(app)/dashboard/page.tsx`,
+  `web/tests/knowledge-auth.test.ts`, plus S3's known `web/src/lib/knowledge/app.ts`.
+  Verified per-file with `git show HEAD:<f> | npx prettier --check --stdin-filepath`.
+  S3's rule stands and is now measurably wider than S3 thought: **never** run
+  `prettier --write` across an existing web file in a slice; match the local style of
+  the neighbouring lines instead (Tailwind class order included) and let `npm run lint`
+  be the gate. Both NEW files in this slice are prettier-clean.
+- **Web baseline moves to 15 files / 85 tests** (was 14 / 83). No backend file was
+  touched, so the gated pytest suite was not re-run: S4's **124 passed** with Postgres
+  (**83 / 41 skipped** without) stands, and `plugin_parity` PASSes trivially because
+  `web/` is not a shipped dir.
+- **`npm run build` left the route table byte-identical** — this slice adds no route,
+  so S3/S4's precedence findings need no re-verification.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -650,6 +705,46 @@ above are hints, not a substitute.
   passed / 41 skipped** without). Technique note: a Next 500 body still embeds the
   segment's not-found flight payload, so a route-precedence probe can only discriminate
   by branded copy on 404 responses — read the status code for everything else.
+
+**Actual (P25.S5):**
+
+- `docs/current/frontend.md` — `KbTenant` gained `slug: string | null` (the canonical
+  tenant shape, so `identity.tenant.slug` is on every authed page for free — no extra
+  call), and `setTenantSlug()` in `web/src/lib/knowledge/app.ts` is the single web seam
+  for `PATCH /app/tenant` (no GET twin: `/auth/me` already answers the slug). New client
+  island `web/src/app/(app)/dashboard/org-slug-form.tsx` + `setOrgSlugAction` in the
+  dashboard's `actions.ts`, on the established `visibility-toggle` server-action idiom
+  (`useActionState` → action → `revalidatePath("/dashboard", "page")`, initial state in
+  the island because a `"use server"` module may export only async functions). The rule
+  the whole phase turns on is now visible in the web code: **pretty URLs are consumed,
+  not composed** — the copy-link surfaces read `canonical_path` (documents, graph) and
+  the dashboard panel is the ONE deliberate exception, composing `/@{slug}/graph` for
+  display because no payload on that page carries it.
+- `docs/current/experience.md` — sharing is now first-class in three places, and this is
+  the slice where the org slug becomes real: the dashboard's **Public URL** panel is how
+  a tenant claims one (operator-set, after deploy — **no backfill, no derived default,
+  no hardcoded value**), always visible and prefilled rather than hidden behind a
+  disclosure because slugs are mutable and the current value is the point; it shows the
+  resulting `/@{slug}/graph` with a copy button once claimed, and "no public URL yet"
+  before that. Copy-link now hands out the pretty path on the document read view, the
+  member graph header, and — new — the pretty document page's member branch (the
+  affordance gap S3 flagged), each falling back to the id/UUID URL when no slug exists,
+  so a slug-less org sees byte-identical behavior to before. Anonymous branches stay
+  button-free. The save-error copy gives **409 its own message** ("that URL name is
+  already taken") because slugs are globally unique and a collision is the likeliest
+  failure with an obvious user fix; malformed/reserved values share one 422 message that
+  cites the rule rather than echoing the backend's `detail`.
+- `docs/current/qa.md` — the web vitest baseline moves to **15 files / 85 tests** (was
+  14 / 83): a 2-case `set-tenant-slug` suite pinning the exact `PATCH /app/tenant` call
+  (URL, method, `{slug}` body, bearer, `no-store`, `{tenant}` unwrap) and the 409 →
+  `ApiError` mapping the action branches on. No backend file changed, so the
+  Postgres-gated suite was not re-run (S4's 124-passed baseline stands) and
+  `plugin_parity` PASSes trivially. Technique note worth keeping: several `web/` files
+  are already `prettier --check`-dirty on `main` (`content/dashboard.ts`,
+  `dashboard/page.tsx`, `tests/knowledge-auth.test.ts`, `lib/knowledge/app.ts`) — check
+  a file's HEAD state with `git show HEAD:<f> | npx prettier --check --stdin-filepath`
+  before assuming a warning is yours, and never `prettier --write` an existing web file
+  inside a slice.
 
 ## Constraints
 

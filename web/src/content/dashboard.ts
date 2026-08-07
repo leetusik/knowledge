@@ -51,6 +51,30 @@ export const REVOKE_ORG_CREDENTIAL_ERRORS = {
   generic: "Could not revoke the key. Please try again.",
 } as const;
 
+/**
+ * Status-keyed set-ORG-SLUG error copy (P25.S5) — the dashboard's public-URL field.
+ *
+ * **409 gets its OWN key** rather than falling into `generic`: `tenants.slug` is
+ * GLOBALLY unique, so "someone else already has that name" is the single most likely
+ * real failure, and it is the one the user can act on ("pick another"). Folding it
+ * into a generic retry message would send them round the same loop forever.
+ * `invalid` cites the rule (charset + length) because knowledge's 422 detail is a
+ * server-side string this copy deliberately never mirrors.
+ */
+export const SET_ORG_SLUG_ERRORS = {
+  /** Client-side rejection, or knowledge's 400/422 (malformed OR a reserved word). */
+  invalid:
+    "Use 2–40 characters: lowercase letters, numbers and single hyphens. Some common words are reserved.",
+  /** 401 — the session died mid-request; the next navigation bounces to /login. */
+  sessionExpired: "Your session has expired. Sign in again to continue.",
+  /** 409 — another org already holds that slug. Slugs are globally unique. */
+  taken: "That URL name is already taken. Try another one.",
+  /** 404 — the session's own org vanished between render and submit. */
+  notFound: "Your org could not be found. Reload the page and try again.",
+  /** 5xx / network / anything else. */
+  generic: "Could not save your public URL. Please try again.",
+} as const;
+
 export const DASHBOARD = {
   /** Document <title> (the SITE template appends " · knowledge"). */
   title: "Dashboard",
@@ -129,6 +153,29 @@ export const DASHBOARD = {
     submitLabel: "Create",
     submitPendingLabel: "Creating…",
     cancelLabel: "Cancel",
+  },
+
+  /**
+   * Public URL panel (P25.S5) — the org slug, the `{org}` of every pretty share URL.
+   * The field is ALWAYS VISIBLE (not a disclosure like the key/project forms): slugs
+   * are mutable and the current value is the thing the operator most wants to see.
+   * This panel is how a tenant gets its slug at all — there is no backfill and no
+   * derived default anywhere in the stack.
+   */
+  orgSlug: {
+    heading: "Public URL",
+    /** Explains what claiming a slug buys, once, above the field. */
+    lead: "The name your org goes by in public links. Claim one and shared documents get a readable URL like /@your-org/project/doc-name instead of a numeric id.",
+    /** Accessible name for the input (visually carried by the heading). */
+    label: "Org slug",
+    hint: "2–40 characters: lowercase letters, numbers and single hyphens.",
+    placeholder: "e.g. hi2vi",
+    submitLabel: "Save",
+    submitPendingLabel: "Saving…",
+    /** Mono eyebrow beside the resulting pretty graph URL. */
+    graphUrlLabel: "Public graph",
+    /** Shown in place of that URL while no slug is claimed. */
+    empty: "No public URL yet. Shared links keep using ids until you claim one.",
   },
 
   /**

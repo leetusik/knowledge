@@ -16,6 +16,9 @@ const USER: KbUser = {
 const TENANT: KbTenant = {
   id: "9a8b7c6d-1111-4e5f-9a0b-2c3d4e5f6a7b",
   name: "owner's workspace",
+  // P25 — the org slug rides on every tenant payload; `null` is the pre-claim state
+  // (nullable, no backfill), which is what a fresh signup answers.
+  slug: null,
   created_at: "2026-07-16T00:00:00+00:00",
 };
 const TOKEN = "0GkQ3vJ8bYd1wZs5RfN7tXcA2eLmPqU9hVjK4oIyB6M";

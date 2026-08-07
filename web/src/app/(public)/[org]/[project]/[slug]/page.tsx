@@ -7,6 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import { DocumentView } from "@/app/(public)/documents/[id]/document-view";
 import { VersionHistory } from "@/app/(public)/documents/[id]/version-history";
 import { AppShell } from "@/components/app-shell";
+import { CopyLinkButton } from "@/components/copy-link-button";
 import { PublicShell } from "@/components/public-shell";
 import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
@@ -39,8 +40,10 @@ import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 // already collapses private/unknown/malformed into one indistinguishable answer, so a
 // login bounce would leak nothing and only add friction on a share surface.
 //
-// Member-only affordances that live on the id page (delete) stay there; the share
-// affordances (copy-link) are P25.S5's job wholesale, so neither is rendered here.
+// Member-only affordances that live on the id page (delete) stay there. The share
+// copy-link is rendered here as of P25.S5 — this is the shareable URL, so it is the
+// natural place to copy it from — on the MEMBER branch only, matching the id page (an
+// anonymous visitor is already looking at the link).
 //
 // The <title> is STATIC copy, not the document title: the knowledge client is
 // `cache: "no-store"`, so `generateMetadata` would cost a second uncached upstream
@@ -148,6 +151,15 @@ export default async function PrettyDocumentPage({
               <ChevronLeft size={15} aria-hidden />
               {DOCUMENTS.read.backLabel}
             </Link>
+            {/* P25.S5 — the share affordance the S3 page deliberately left out. This
+                IS the shareable URL, so it should be the easiest place to share
+                from. `canonical_path` is what the backend built (identical to the
+                path in the address bar, since the document was resolved through it);
+                the id fallback is defensive only. Member branch ONLY, matching the id
+                page's convention — an anonymous visitor already has the URL. */}
+            <CopyLinkButton
+              path={doc.canonical_path ?? `/documents/${doc.id}`}
+            />
           </div>
           <DocumentView doc={doc} id={doc.id} />
           {/* Version history stays id-keyed: its links point at
