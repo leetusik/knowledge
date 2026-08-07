@@ -448,6 +448,55 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   was not re-run (S2's 123-passed baseline stands); `plugin_parity` still PASSes because
   `web/` is not a shipped dir.
 
+### Landed by P25.S4 (bind these — S5/REVIEW build on them)
+
+- **`GET /app/graph?org=` takes a tenant UUID *or* an org slug**, resolved
+  **UUID-parse-first** (a canonical UUID is charset-legal as a slug, so the reverse
+  order would send every UUID through a needless lookup) with
+  `get_tenant_by_slug` as the fallback — malformed, reserved and unclaimed slugs all
+  collapse into the pre-existing single `404 "graph not found"`. **A malformed
+  `?org=` therefore 404s where it used to 422** (no test asserted the 422): on an
+  anonymous surface a 422 confirms "not even a well-formed org identifier", and one
+  indistinguishable 404 leaks less.
+- **The legacy-mode guard runs BEFORE any slug lookup** — with no `DATABASE_URL` a
+  non-UUID `org` is a plain 404 and the accounts service is never touched. Keep that
+  ordering if this handler is ever refactored.
+- **The member fast-path now compares RESOLVED tenant UUIDs** (`ctx.tenant.id ==
+  org_id`), so a member addressing their own org **by slug** still gets the
+  whole-corpus member view. Two tests pin it, one per identity form.
+- **The graph response carries the additive nullable `canonical_path`**
+  (`/@{slug}/graph`), built by `graph_api._graph_canonical_path` — the twin of
+  `documents_api._canonical_path`. Member path reads the slug off `ctx.tenant` (free);
+  the public path reuses the `TenantRecord` the slug lookup already loaded and pays one
+  `get_tenant` read only when the org arrived as a UUID. **S5's member copy-link can
+  read this straight off the existing `getGraph` response — no `KbTenant.slug`
+  plumbing, no second call.**
+- **`/@{org}/graph` (`web/src/app/(public)/[org]/graph/`) accepts the `@`-prefixed slug
+  strictly** — no UUID form. It clones S3 wholesale: `safeDecode`, the `@` guard before
+  `optionalIdentity()` and before any upstream call, the ApiError-404→`notFound()`
+  mapping outside the component, static `export const metadata`, and a co-located
+  `not-found.tsx` reusing the existing `GRAPH.notFound` copy (no new content keys).
+- **The legacy `/graph/{uuid}` redirect fires on BOTH identity branches** (307,
+  one-way, top level outside any `try`) — unlike the document page's anonymous-only
+  redirect, because this surface has no member-only affordance to preserve. A
+  `canonical_path` of `null` (slug-less org, legacy mode) serves exactly as today.
+- **Route precedence re-verified** (manifest + a live `next start` probe): `/graph/[org]`
+  sorts **before** `/[org]/graph`, so `/graph/{anything}` — even `/graph/graph` — keeps
+  hitting the legacy route, and `/documents/graph` still hits `/documents/[id]`. The
+  3-segment pretty doc route remains last.
+
+### Gotchas found while doing S4
+
+- **A Next 500 body still embeds the segment's not-found flight payload**, so a route
+  probe that greps for branded copy only discriminates on **404s** — use the status code
+  for the rest. (S3's probe technique otherwise holds and is still worth the five
+  minutes.)
+- New gated baselines: **124 passed** with Postgres (was 123), **83 passed / 41
+  skipped** without (was 83/40). Both gated runs were executed against the **same**
+  database to re-check the globally-unique-slug hazard.
+- Web baseline unchanged at **14 files / 83 tests** — no web tests were added (there are
+  no web graph tests today and the "tests stay small" rule wins).
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -567,6 +616,40 @@ above are hints, not a substitute.
   `.next/routes-manifest.json` for the order, then a `next start` probe where each route
   is identified by its own branded copy (a non-404 upstream error is rethrown, so a 500
   from the *right* page is a positive signal).
+
+**Actual (P25.S4):**
+
+- `docs/current/api.md` — `GET /app/graph`'s `?org=` selector now accepts a **tenant
+  UUID or an org slug** (parsed as a UUID first, then resolved via `get_tenant_by_slug`),
+  and the member fast-path compares the **resolved** tenant id, so a member addressing
+  their own org by slug still gets the whole-corpus view. An unknown, unclaimed, reserved
+  or malformed org is one indistinguishable `404 "graph not found"` — which means a
+  **malformed `?org=` now 404s where it used to 422**, deliberately, on an anonymous
+  surface. The response gains the additive nullable **`canonical_path`**
+  (`/@{org-slug}/graph`, `null` for a slug-less tenant and in legacy mode) alongside
+  `truncated`; the old "carries no org echo" note is retired, since echoing the pretty
+  path of the org the caller explicitly named leaks nothing. Legacy mode still never
+  touches the accounts plane: the `DATABASE_URL` guard precedes the slug lookup.
+- `docs/current/frontend.md` — the public route map gains `(public)/[org]/graph` =
+  `/@{org}/graph`, a **two**-segment route that does not collide with the three-segment
+  pretty document route; `/graph/[org]` still sorts before it in the built manifest, so
+  `/graph/{uuid}` and `/documents/{id}` keep winning. It clones the S3 idioms verbatim
+  (`safeDecode`, the `@`-prefix guard before the session read and before any upstream
+  call, the 404→`notFound()` mapping outside the component, static `export const
+  metadata`, a co-located `not-found.tsx`) and accepts the `@`-prefixed slug **strictly**
+  — a UUID belongs on the legacy route. `KbGraph` gained `canonical_path: string | null`;
+  as with documents, the pretty URL is assembled once in the backend and never re-derived
+  in TypeScript.
+- `docs/current/experience.md` — the public graph now has a human-readable share URL, and
+  `/graph/{uuid}` **307**-forwards to it once the org has claimed a slug. Unlike the
+  document redirect this fires for **members too**: the graph surface carries no
+  member-only affordance to preserve, so nobody loses anything by landing on the pretty
+  URL. Temporary (slugs are mutable), one-way (the pretty page never bounces back), and a
+  slug-less org keeps being served at the UUID URL exactly as before — no link breaks.
+- `docs/current/qa.md` — gated baseline moves to **124 passed** with Postgres (**83
+  passed / 41 skipped** without). Technique note: a Next 500 body still embeds the
+  segment's not-found flight payload, so a route-precedence probe can only discriminate
+  by branded copy on 404 responses — read the status code for everything else.
 
 ## Constraints
 

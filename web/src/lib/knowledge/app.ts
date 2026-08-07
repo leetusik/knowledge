@@ -570,11 +570,17 @@ export async function searchDocuments(
  *   - BARE (`options.org` omitted, member bearer) — the in-app per-tenant map: the
  *     caller's whole corpus. `token` required in practice for this path (401 if
  *     absent), which is how the logged-in `/graph` page still calls it.
- *   - `?org={tenant_uuid}` — the OPTIONAL-IDENTITY public view: only that org's
- *     public-project nodes/edges/tag-hubs. `token` is `string | undefined` here — a
- *     member viewing their own org gets the full map, an anonymous or cross-org
- *     caller gets the public subset, and an org with no public projects (or a
- *     nonexistent org) is a **404** (no existence leak).
+ *   - `?org={tenant_uuid | org_slug}` — the OPTIONAL-IDENTITY public view: only that
+ *     org's public-project nodes/edges/tag-hubs. `token` is `string | undefined`
+ *     here — a member viewing their own org gets the full map, an anonymous or
+ *     cross-org caller gets the public subset, and an org with no public projects
+ *     (or a nonexistent org) is a **404** (no existence leak).
+ *
+ * P25.S4: the selector accepts the **bare org slug** (no `@` — the prefix is a
+ * web-plane routing marker) as well as a tenant UUID; the backend parses a UUID
+ * first and falls back to a slug lookup, and an unknown/malformed/reserved slug is
+ * the same indistinguishable **404**. The response carries the nullable
+ * `canonical_path` (`/@{slug}/graph`) — consume it, never re-derive it.
  *
  * `org` is appended via `encodeURIComponent`; no `org` keeps the path BARE (no `?`),
  * byte-compatible with the pre-P19 logged-in call. A doc node's `url` is the read

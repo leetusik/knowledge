@@ -150,6 +150,9 @@ def test_public_graph_is_org_scoped(documents_client):
     assert secret_rel not in node_ids
     assert "tag:hidden" not in node_ids and "tag:shown" in node_ids
     assert [p["name"] for p in graph["projects"]] == ["pub"]
+    # P25.S4: no org slug claimed yet ⇒ the additive key is present and null, so
+    # the legacy /graph/{uuid} page serves exactly as today.
+    assert graph["canonical_path"] is None
 
     # A nonexistent org and an org with zero public projects both → 404 (no leak).
     assert client.get("/app/graph", params={"org": str(uuid4())}).status_code == 404
@@ -159,6 +162,28 @@ def test_public_graph_is_org_scoped(documents_client):
     assert client.get("/app/graph").status_code == 401
     member = client.get("/app/graph", headers=a_headers).json()
     assert {p["name"] for p in member["projects"]} == {"pub", "secret"}
+
+    # ── P25.S4: ?org= also accepts the org SLUG ──────────────────────────────
+    org = _set_slug(client, a_headers)
+    by_slug = client.get("/app/graph", params={"org": org})
+    assert by_slug.status_code == 200, by_slug.text
+    assert {n["id"] for n in by_slug.json()["nodes"]} == node_ids
+    assert by_slug.json()["canonical_path"] == f"/@{org}/graph"
+    # The UUID form now reports the same pretty path (one org, one canonical URL).
+    assert client.get("/app/graph", params={"org": a_tenant}).json()[
+        "canonical_path"
+    ] == f"/@{org}/graph"
+
+    # An unclaimed, a reserved and a malformed slug are ONE indistinguishable 404 —
+    # never a 422, so the anonymous surface leaks no charset information.
+    for bad in [f"org-{uuid4().hex[:10]}", "dashboard", "NOT A SLUG"]:
+        assert client.get("/app/graph", params={"org": bad}).status_code == 404
+
+    # A member addressing their OWN org by slug still gets the member whole-corpus
+    # path (the fast-path compares RESOLVED tenant ids, not raw strings).
+    mine = client.get("/app/graph", params={"org": org}, headers=a_headers).json()
+    assert {p["name"] for p in mine["projects"]} == {"pub", "secret"}
+    assert mine["canonical_path"] == f"/@{org}/graph"
 
 
 def test_anonymous_reads_public_version_history(documents_client):
