@@ -1,0 +1,543 @@
+<!--kb
+title: "Knowledge's Read Surfaces: Two Front Ends, One Corpus"
+date: 2026-08-08
+tags:
+  - frontend
+  - iframe-sandbox
+  - nextjs
+  - design-system
+  - new-maintainer
+source:
+  project: knowledge
+  repo: knowledge
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge's Read Surfaces: Two Front Ends, One Corpus</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           line-height: 1.65; }
+    h1 { line-height: 1.2; }
+    h2 { margin-top: 2.4rem; }
+    h3 { margin-top: 1.8rem; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; padding: .75rem; border-radius: 6px; font-size: .9em; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; font-size: .93em; }
+    pre code { background: none; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      pre, code { background: #23272e; }
+      .callout { background: #1d2a24 !important; }
+      .aside { background: #2a2620 !important; }
+      .fig { background: #1c1f24 !important; }
+      .box { background: #23272e !important; }
+      .outer { background: #23272e !important; }
+      .inner { background: #2e2321 !important; }
+    }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .aside { border-left: 4px solid #c9a227; background: #fdf8e8;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .lede { font-size: 1.06em; }
+    nav[aria-label="Contents"] { border: 1px solid #8883; border-radius: 6px;
+                                 padding: .6rem 1rem; margin: 1.5rem 0; }
+    nav ol { margin: .4rem 0 .2rem; padding-left: 1.4rem; }
+
+    .fig { background: #fafafa; border: 1px solid #8883; border-radius: 8px;
+           padding: 1rem; margin: 1.4rem 0; }
+    .fig figcaption { font-size: .88em; opacity: .8; margin-top: .7rem; text-align: center; }
+
+    .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .7rem; }
+    .box { background: #fff; border: 1px solid #8884; border-radius: 6px; padding: .7rem .8rem; }
+    .box b { display: block; margin-bottom: .25rem; }
+    .box span { font-size: .86em; opacity: .85; }
+
+    .outer { background: #fff; border: 2px solid #4a7; border-radius: 8px; padding: .8rem; }
+    .outer > .lbl { font-size: .8em; text-transform: uppercase; letter-spacing: .04em;
+                    opacity: .75; margin-bottom: .5rem; }
+    .inner { background: #fdf0ec; border: 2px dashed #c0664a; border-radius: 6px;
+             padding: .7rem; margin-top: .6rem; }
+    .inner .lbl { font-size: .8em; text-transform: uppercase; letter-spacing: .04em;
+                  opacity: .75; margin-bottom: .35rem; }
+    .denied { font-size: .88em; margin: .3rem 0 0; }
+    .denied li { margin: .12rem 0; }
+
+    .msg { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84em;
+           margin: .25rem 0; }
+    .arrow { color: #0f6f66; font-weight: 700; }
+
+    table { border-collapse: collapse; width: 100%; font-size: .92em; margin: 1rem 0;
+            display: block; overflow-x: auto; }
+    th, td { border: 1px solid #8883; padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit;
+              border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; }
+    .q .opt:hover { border-color: #4a7; }
+    .q .opt.correct   { background: #d6f5d6; color: #123; }
+    .q .opt.incorrect { background: #f7d6d6; color: #123; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .9; }
+    .q { margin-bottom: 1.6rem; }
+    .series { font-size: .93em; opacity: .85; }
+  </style>
+</head>
+<body>
+
+<h1>Knowledge's Read Surfaces: Two Front Ends, One Corpus</h1>
+
+<p class="series"><strong>Part 3 of a five-part series</strong> for a new maintainer of the
+<code>knowledge</code> project. Part 1 was the product; part 2 was the engine room, ending with a
+document on disk and a row in SQLite. This part is everything between that and a human's eyes. Part 4
+covers shipping and running it; part 5 the decision record.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p class="lede">The first surprise waiting for a new maintainer is that this project has
+<strong>two front ends</strong>, built years and philosophies apart — and that the older one was
+retired from production but is still very much in the repository, doing a different job now.</p>
+
+<figure class="fig">
+  <div class="two">
+    <div class="box"><b>The MkDocs viewer</b><span>The original public library. A hand-authored
+    design system in <code>docs/stylesheets/extra.css</code>, browser-only lunr search, and a
+    vendored no-CDN canvas graph fed by a build-time <code>graph.json</code>. <strong>Retired from
+    production at P14</strong> — it survives as a local tool and as the scaffold the plugin ships to
+    self-hosters.</span></div>
+    <div class="box"><b>The Next.js app (<code>web/</code>)</b><span>The current product surface.
+    Next 16 / React 19 / TypeScript / Tailwind v4, four route groups, a sealed-cookie BFF, the public
+    <code>/@{org}</code> namespace, and the sandboxed explainer render.</span></div>
+  </div>
+  <figcaption>Same corpus, two readers. Knowing which one you are looking at is the whole trick to
+  navigating <code>frontend.md</code>.</figcaption>
+</figure>
+
+<p>This matters practically. If you open <code>docs/javascripts/graph.js</code> — 1,100 lines of
+zero-dependency canvas force simulation — and assume it is dead code, you will be wrong twice: it is
+the renderer the Next app's <code>GraphCanvas</code> was ported <em>from</em>, and it is shipped
+verbatim to every person who runs <code>/knowledge:setup</code> in scaffold mode. The MkDocs stack is
+not legacy. It is the open-core product.</p>
+
+<h3>The visual language is not the agent's</h3>
+
+<p>One provenance fact, stated early because it changes how you should treat these files. The "calm
+editorial library" design system — warm ivory paper, a single deep-teal accent, Fraunces serif
+display over Source Sans 3 — came from the operator's Claude Design project, and was integrated
+rather than invented. Section 1 of <code>extra.css</code> carries an explicit instruction:</p>
+
+<blockquote><p>§1 Color tokens (Target 1, LOCKED — verbatim) … <strong>This section is locked — never
+hand-tune it.</strong></p></blockquote>
+
+<p>The same discipline holds in the app: <code>kb-console.css</code> is copied verbatim from the
+design canvas, and the three places where the app needed something the handback had no specimen for
+— a prose reader block, a graph token layer, a rail-fold treatment — each live in their own
+header-flagged, co-located file rather than being appended to it. The reasoning is worth
+internalizing: the canvas is *the record of a design round*, so editing it would forge a decision
+that round never made.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The public site never calls the API — and that is load-bearing</h3>
+
+<p>Your instinct on meeting a documentation site next to a search API is that one calls the other.
+Here it never does. The MkDocs site's search is lunr running <strong>in the browser</strong> over a
+static index, and its knowledge graph is a static <code>graph.json</code> emitted at build time. It
+has no backend at all.</p>
+
+<p>That is not laziness; it is what buys a specific architectural property. Because the viewer never
+calls the API, the two services can cohabit one domain behind simple path routing with
+<strong>no CORS</strong> and no runtime coupling between them. The moment the site fetched from
+<code>/api/</code>, the API would need a browser client story — CORS, preflights, and a token in the
+page. The decoupling is what keeps that door shut.</p>
+
+<h3>The sealed-cookie BFF: the browser never holds a token</h3>
+
+<p>So how does the authenticated app read the API without becoming that browser client? By not being
+one. The browser talks <strong>only</strong> to the Next.js origin; the Next <em>server</em> talks to
+the backend, server-to-server, with a bearer:</p>
+
+<figure class="fig">
+<pre><code>browser  ──(httpOnly sealed cookie)──▶  Next.js server  ──(Authorization: Bearer)──▶  FastAPI
+   ▲                                          │
+   └──────────── HTML / JSON ─────────────────┘
+
+the session token is sealed into an AES-256-GCM httpOnly cookie
+→ never readable by browser JS, never sent to the backend by the browser</code></pre>
+<figcaption>The backend's only client is still a server. That is why it needs no CORS middleware, no
+cookie middleware, and no web-side database.</figcaption>
+</figure>
+
+<p>The pattern has a name — a backend-for-frontend — and the payoff here is that a pre-existing
+invariant ("the API has no browser client by design") survived the arrival of a browser app
+completely intact.</p>
+
+<h3>The central trick: rendering untrusted HTML that still runs</h3>
+
+<p>Now the hardest problem this front end solves, and the reason S3 deserves its own document.</p>
+
+<p>A knowledge document can be a self-contained interactive HTML explainer — with a quiz that has to
+actually work when you click it. So the app must render <strong>untrusted HTML with live
+JavaScript</strong>, inside a page that holds a signed-in session. The obvious move is to sanitize
+the HTML and inline it. That was considered and rejected, because sanitizing strips the
+<code>&lt;script&gt;</code> and the quiz dies — the feature is gone.</p>
+
+<p>The solution is to run the script but take away everything it could abuse:</p>
+
+<figure class="fig">
+  <div class="outer">
+    <div class="lbl">the app page — your session lives here</div>
+    <p style="margin:.2rem 0;font-size:.92em">document title, metadata, delete button, version
+    history — all normal app chrome</p>
+    <div class="inner">
+      <div class="lbl">&lt;iframe sandbox="allow-scripts"&gt; — opaque origin</div>
+      <p style="margin:.2rem 0;font-size:.92em"><strong>the explainer's own HTML + CSS + quiz JS —
+      runs freely</strong></p>
+      <ul class="denied">
+        <li>✗ <code>document.cookie</code> — no session</li>
+        <li>✗ <code>localStorage</code> / <code>sessionStorage</code> / IndexedDB</li>
+        <li>✗ <code>window.parent</code> DOM access — blocked by same-origin policy</li>
+        <li>✗ a credentialed <code>fetch</code> to the API — no CORS to allow it</li>
+        <li>✗ forms, popups, top-level navigation</li>
+      </ul>
+    </div>
+  </div>
+  <figcaption><code>allow-scripts</code> is what keeps the quiz alive. Omitting
+  <code>allow-same-origin</code> is what makes everything in the list impossible.</figcaption>
+</figure>
+
+<p>The key insight is that <code>sandbox</code> is a <em>subtractive</em> attribute: an empty
+<code>sandbox</code> denies everything, and each token adds one capability back. Adding
+<code>allow-scripts</code> alone gives the document script execution and nothing else. Its origin is
+a special value that fails every same-origin check — which is exactly the property being bought.</p>
+
+<div class="callout">
+<p><strong>The one combination that would undo it all.</strong> Adding
+<code>allow-same-origin</code> beside <code>allow-scripts</code>, for a same-origin document, lets
+the framed page reach up and remove the sandbox attribute from itself — leaving you no safer than
+having no sandbox at all. That is why the pin is written as an absolute in this codebase:
+<em>never <code>allow-same-origin</code></em>. See the citation in the next section.</p>
+</div>
+
+<h3>The consequence nobody anticipates: you cannot measure it</h3>
+
+<p>Opacity cuts both ways. Because the parent cannot touch the framed document's DOM, it cannot ask
+how tall the content is — so an iframe would either scroll internally (two nested scrollbars, an
+unpleasant read) or be a fixed guess. The frame has to <em>volunteer</em> its height:</p>
+
+<figure class="fig">
+  <p class="msg">child &nbsp;<span class="arrow">──▶</span>&nbsp; parent &nbsp; <code>kb-explainer-height</code> &nbsp;— "I am 4,820px tall"</p>
+  <p class="msg">child &nbsp;<span class="arrow">──▶</span>&nbsp; parent &nbsp; <code>kb-explainer-anchor</code> &nbsp;— "a Contents link points at offset 1,240"</p>
+  <p class="msg">parent <span class="arrow">──▶</span>&nbsp; child &nbsp;&nbsp; <code>kb-explainer-request</code> — "re-send your height"</p>
+  <figcaption>Three messages over <code>postMessage</code>. The frame is content-sized, so the
+  <em>page</em> scrolls and the frame never does — which is why an in-document anchor link has to be
+  handed outward too: there is nothing left inside to scroll.</figcaption>
+</figure>
+
+<p>The third message exists because of a race worth studying, since the same shape will bite anywhere
+a client island listens for a message an already-loaded resource may have sent. The frame's
+<code>src</code> is in the server-rendered HTML, so the child can load and post its height
+<em>before</em> the parent island hydrates and attaches its listener. And because the child dedupes —
+re-posting only on a real change — that missed first message was never repeated. The frame kept its
+fallback height forever, until some unrelated window resize happened to un-wedge it.</p>
+
+<div class="aside">
+<p><strong>The debugging lesson recorded in the repo is better than the fix.</strong> The bug looked
+branch-specific: the signed-in view broke, the anonymous view seemed fine. It was not — the member
+branch just loses the race more often, because it hydrates five client islands while the public shell
+hydrates zero. It only became deterministic under CPU throttling. The note left behind reads:
+<em>never conclude a client-island bug is branch-specific without re-testing under throttle.</em></p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<h3>Four route groups</h3>
+
+<p>The app's shape is legible from its directory listing:</p>
+
+<pre><code>web/src/app/
+  (auth)/{login,signup}            dark "quiet threshold" gate
+  (app)/{dashboard,documents,projects/[projectId],graph}
+                                   the light console — session required
+  (marketing)/page.tsx             the public landing at /
+  (public)/                        optional identity: same URL, two branches
+    documents/[id]                 · member: app shell + delete + copy-link
+                                   · anonymous: lighter public shell
+    documents/[id]/versions/[v]    read-only past version
+    [org]/[project]/[slug]         /@{org}/{project}/{doc-slug}
+    [org]/graph                    /@{org}/graph
+  api/{auth,documents}             the BFF route handlers</code></pre>
+
+<p>The <code>(public)</code> group is the interesting one: those pages take an <em>optional</em>
+identity and render two different branches from one URL. The same link must work for the person who
+wrote the document and for the stranger they sent it to.</p>
+
+<h3>The raw relay: five headers, pinned three times</h3>
+
+<p>The iframe's <code>src</code> points at a same-origin BFF route rather than at the backend, and
+that route is the app's first non-auth route handler — so it <strong>self-guards</strong>, because the
+<code>(app)</code> layout guard does not cover <code>/api/*</code>. It validates the id before
+touching a session, reads the sealed cookie, relays the upstream bytes, and sets five headers
+<strong>explicitly — never copied from upstream</strong>:</p>
+
+<pre><code>Content-Type:             text/html; charset=utf-8
+Content-Security-Policy:  sandbox allow-scripts; frame-ancestors 'self'
+X-Frame-Options:          SAMEORIGIN
+X-Content-Type-Options:   nosniff
+Cache-Control:            no-store</code></pre>
+
+<p>The CSP <code>sandbox</code> directive is defense in depth: it applies to the top-level document
+too, so someone who navigates <em>directly</em> to the raw bytes is privilege-stripped exactly like
+the framed copy. And since the app's global header is <code>X-Frame-Options: DENY</code>, this one
+path is exempted to <code>SAMEORIGIN</code> — with the <em>identical</em> values asserted at three
+layers (the backend route, the BFF relay, and the Next config), so no header-precedence rule can
+resolve to a wrong value.</p>
+
+<h3>The height handshake, both sides</h3>
+
+<p>The child-side reporter is source text in <code>lib/explainer-height.ts</code>, and the detail
+that makes it maintainable is where it gets injected: <strong>by the BFF raw routes at serve
+time</strong>, not authored into the explainer template. That single choice fixes every explainer
+already saved and leaves the three byte-parity-guarded copies of the skill file untouched.</p>
+
+<p>The safeguards on the parent side are worth reading literally, because two of them look wrong
+until you know why:</p>
+
+<ul>
+<li><strong><code>targetOrigin: "*"</code> is mandatory, not laziness.</strong> An opaque origin can
+never be named by a concrete origin string, so there is no value to put there. Nothing leaks: the
+request message carries no data and is delivered to one specific frame's window.</li>
+<li><strong>Identity is checked with <code>event.source</code>, never
+<code>event.origin</code></strong> — for an opaque origin, <code>event.origin</code> is the literal
+string <code>"null"</code>, which is useless as an identity. Comparing
+<code>event.source === frame.contentWindow</code> is the check that actually means something.</li>
+<li>The height is <strong>clamped to [120, 40000]</strong> and shape-checked, and the re-send request
+is the only trigger that bypasses the child's dedupe — it resets the "last height" but never the
+budget, so a runaway document stays latched and a parent→child→parent feedback loop is impossible.</li>
+<li>The child measures <code>body</code>'s box, never <code>documentElement.scrollHeight</code>
+(which is floored by the frame's own height and would ratchet upward forever), and debounces with
+<code>setTimeout</code> — <strong>never <code>requestAnimationFrame</code></strong>, which Chrome does
+not run in an opaque-origin frame at all.</li>
+</ul>
+
+<h3>The <code>/@{org}</code> namespace, and one guard that is load-bearing</h3>
+
+<p>P25's pretty URLs are two new routes under a root-level dynamic <code>[org]</code> segment. Next
+compiles full-path regexes and sorts static before dynamic, so nothing existing is shadowed — verified
+against the built route manifest and by a live probe. But the consequence is sharp, and recorded:</p>
+
+<blockquote><p>the pretty doc route is the catch-all for every unmatched 3-segment URL.</p></blockquote>
+
+<p>Which is precisely why both pages reject an <code>org</code> segment that does not start with
+<code>@</code> — <em>before</em> resolving identity and before any upstream call. Without that guard,
+every junk three-segment URL on the internet would fire a backend request. The <code>@</code> is a
+web-plane convention only: it is stripped before calling the backend, which takes the bare slug.</p>
+
+<p>The other rule to absorb here is one line long: <strong>pretty URLs are consumed, never
+composed.</strong> The detail shapes carry <code>canonical_path</code>; the web plane reads it and
+never re-derives a pretty path in TypeScript. There is exactly one deliberate exception — the
+dashboard panel composes <code>/@{slug}/graph</code> for display, because that page loads no payload
+carrying one.</p>
+
+<div class="aside">
+<p><strong>A field-placement detail that will confuse you once.</strong> <code>canonical_path</code>
+lives on the <code>/app</code> plane's <em>detail</em> reads and on the graph response — and nowhere
+else. It is absent from list projections (adding it there would mean an accounts-plane lookup per
+row) and absent from the <code>/api</code> plane entirely, because that contract is frozen and P25
+was additive to <code>/app</code> only. So a document read back through <code>/api/documents/by-path/…</code>
+shows no <code>canonical_path</code> even while its pretty URL resolves perfectly. Nothing is broken;
+you are looking at the wrong plane.</p>
+</div>
+
+<h3>Two small things that teach the house style</h3>
+
+<p><strong>The graph went quiet.</strong> Both maps share one canvas component, but since P22 the
+in-app map's labels are <em>selection-driven</em>: titleless at rest, one title for the selected node,
+one for the node under the pointer, and zoom no longer affects labels at all. The public MkDocs map
+still uses the older zoom-ladder behavior. The operator's report was blunt — a wall of titles — and
+the fix deliberately changed titles only, leaving the neighborhood-dimming on hover untouched even
+though that leaves a visible asymmetry.</p>
+
+<p><strong>The rail folds without a flash.</strong> The collapsed/expanded preference is a plain
+cookie read <em>server-side</em>, so the first paint already has the right grid — no localStorage, no
+post-hydration jump. The cookie <em>is</em> the state, read through
+<code>useSyncExternalStore</code> rather than mirrored into <code>useState</code>, because a client
+navigation across route groups remounts the frame from a server render that could predate the last
+toggle. And the rail is hidden with <code>display: none</code> specifically so its links leave the tab
+order and the accessibility tree — the one thing a width or visibility trick gets wrong.</p>
+</section>
+
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<h3>Where it aligns with prevailing practice</h3>
+
+<p><strong>The sandbox pin matches the platform's own guidance exactly.</strong> MDN warns, for a
+same-origin embedded document, that it is "strongly discouraged to use both <code>allow-scripts</code>
+and <code>allow-same-origin</code>, as that lets the embedded document remove the
+<code>sandbox</code> attribute — making it no more secure than not using the <code>sandbox</code>
+attribute at all", and that without <code>allow-same-origin</code> "the resource is treated as being
+from a special origin that always fails the same-origin policy"
+(<a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe">MDN
+<code>&lt;iframe&gt;</code> reference</a> — developer.mozilla.org). The repo's absolute — never
+<code>allow-same-origin</code> — is that warning turned into a rule, and the CSP <code>sandbox</code>
+directive on the raw response extends the same protection to a direct visit.</p>
+
+<h3>Where it deliberately diverges — and why the divergence is right</h3>
+
+<p><strong><code>postMessage</code> with <code>targetOrigin: "*"</code>.</strong> MDN is emphatic
+about this: "Always specify an exact target origin, not <code>*</code>, when you use
+<code>postMessage</code> to dispatch data to other windows. A malicious site can change the location
+of the window without your knowledge, and therefore it can intercept the data sent using
+<code>postMessage</code>" (<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage">MDN
+<code>Window.postMessage()</code></a> — developer.mozilla.org).</p>
+
+<p>This code uses <code>"*"</code> anyway, and is right to. The advice assumes the recipient
+<em>has</em> a nameable origin; an opaque origin has none, so there is no exact value to supply. The
+two conditions that make the warning bite are both absent: the message carries <strong>no
+data</strong> (it is the four-character request "re-send your height"), and it is delivered into one
+specific frame's <code>contentWindow</code>, not broadcast. The same MDN page's other instruction —
+"always verify the sender's identity using the <code>origin</code> and possibly <code>source</code>
+properties" — <em>is</em> honored, and honored in the only way available here: by
+<code>source</code>, since <code>origin</code> is the useless literal string <code>"null"</code>.
+That is the shape of a good divergence: the rule's purpose is satisfied, by a different mechanism,
+because the rule's assumption does not hold.</p>
+
+<h3>Concrete next steps</h3>
+
+<ol>
+<li><strong>Add a backend ownership field for the share surfaces.</strong> The unclaimed-slug hint on
+the document page needs to know whether the viewer owns the document, and today it infers that from
+"this document advertises no pretty path" — a proxy that is right in the misleading cases and wrong on
+another org's name-less document. The repo already states the conclusion:
+<em>if a future slice needs exact ownership on a share surface, add a backend field — do not infer it
+in TypeScript.</em> That is a small, contained addition.</li>
+
+<li><strong>Close the loop on the browser-QA residuals.</strong> Several items are honestly recorded
+as owed to the operator's eyes rather than machine-verified: that the quiz actually runs in a real
+browser, the graph's feel in both color schemes, and whether the hovered-node title should exist at
+all. There is no browser or jsdom tooling in the repo, which is why these accumulate. A single
+headless-browser check in CI — the codebase already demonstrates the technique with a CPU-throttled
+probe — would convert a growing list of residuals into assertions.</li>
+
+<li><strong>Decide the MkDocs viewer's future explicitly.</strong> It is retired from production but
+shipped to every self-hoster, which means its design system and graph renderer are simultaneously
+dead code and product. Naming that status in one place — rather than leaving a reader to infer it from
+a P14 note — would prevent the likeliest maintenance mistake, which is "cleaning up" files that a
+plugin user depends on.</li>
+
+<li><strong>Give the reader and graph blocks a design round when one is due.</strong> Three on-token
+extensions (the prose reader, the graph token layer, the rail fold) exist because the design handback
+had no specimen for them, and each is quarantined in its own file precisely so a future design pass
+can formalize and retire them. That deferral is deliberate and correctly structured; it is worth
+doing rather than letting the quarantine become permanent.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Why does the explainer iframe use <code>sandbox="allow-scripts"</code>
+  without <code>allow-same-origin</code>, rather than sanitizing the HTML before inlining it?</p>
+  <button class="opt" data-correct="false">Sanitizing is too slow to run on every document read</button>
+  <button class="opt" data-correct="true">Sanitizing would strip the script and kill the quiz; the sandbox lets it run while denying it the session, storage, and the parent DOM</button>
+  <button class="opt" data-correct="false">The HTML is trusted, so sanitizing would be redundant</button>
+  <button class="opt" data-correct="false">An iframe is required to render a full document with its own &lt;head&gt;</button>
+  <p class="why" hidden>The feature <em>is</em> the interactivity — an explainer's quiz has to work —
+  so sanitize-and-inline was explicitly ruled out. The sandbox keeps script execution while the
+  missing <code>allow-same-origin</code> gives the document an origin that fails every same-origin
+  check, so it cannot reach cookies, storage, or the parent.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> The parent island verifies incoming height messages with
+  <code>event.source === frame.contentWindow</code> rather than checking <code>event.origin</code>.
+  Why?</p>
+  <button class="opt" data-correct="false">Because <code>event.origin</code> is only populated for cross-document messages</button>
+  <button class="opt" data-correct="true">For an opaque origin, <code>event.origin</code> is the literal string "null", which identifies nothing</button>
+  <button class="opt" data-correct="false">Because the origin check would fail during hydration</button>
+  <button class="opt" data-correct="false">Because <code>event.source</code> is faster to compare than a string</button>
+  <p class="why" hidden>The sandboxed document has no nameable origin, so <code>event.origin</code>
+  arrives as <code>"null"</code> — every such frame reports the same thing. The window identity check
+  is the only one that distinguishes <em>this</em> frame. It is also why the outbound
+  <code>targetOrigin</code> must be <code>"*"</code>: there is no concrete origin to name.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> A document read back through <code>GET /api/documents/by-path/…</code> shows
+  <code>canonical_path: null</code>, yet its pretty <code>/@org/project/slug</code> URL resolves fine.
+  What is going on?</p>
+  <button class="opt" data-correct="false">The round-trip guard rejected it because a newer document shares the slug</button>
+  <button class="opt" data-correct="false">The org has not claimed a slug, and the pretty URL is being served by a redirect</button>
+  <button class="opt" data-correct="true">The field is an additive <code>/app</code>-plane addition; the frozen <code>/api</code> contract never gained it</button>
+  <button class="opt" data-correct="false">List projections drop the field, and by-path is a list projection</button>
+  <p class="why" hidden><code>canonical_path</code> is emitted only at the <code>/app</code> plane's
+  detail reads and on the graph response. The <code>/api</code> surface is frozen for external
+  consumers, so P25 added nothing to it. The round-trip guard and the list-projection omission are
+  both real, but neither explains a working pretty URL — you are simply reading the wrong plane.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> You want to add a page at <code>/settings/billing/history</code>. What must
+  you know first?</p>
+  <button class="opt" data-correct="false">Nothing — static routes are matched after dynamic ones, so it will work</button>
+  <button class="opt" data-correct="true">The pretty doc route is the catch-all for unmatched 3-segment URLs, so any new 3-segment route needs a static prefix to win</button>
+  <button class="opt" data-correct="false">Route order must be declared manually in <code>next.config.ts</code></button>
+  <button class="opt" data-correct="false">A <code>middleware.ts</code> rewrite is required for any route added after P25</button>
+  <p class="why" hidden>Next sorts static routes before dynamic ones, so a fully static path is safe
+  — but the recorded consequence is that <code>/[org]/[project]/[slug]</code> sorts last and catches
+  every otherwise-unmatched three-segment URL. A <em>second</em> all-dynamic three-segment route would
+  race it. No middleware or config change was needed for P25, and none should be needed now.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A client-island bug reproduces on the signed-in document view but appears
+  fine on the anonymous one. What does this codebase's experience suggest?</p>
+  <button class="opt" data-correct="false">The anonymous branch renders server-side only, so client bugs cannot occur there</button>
+  <button class="opt" data-correct="true">It is probably a race that both branches have — the member branch hydrates more islands and loses it more often; re-test under CPU throttling before concluding it is branch-specific</button>
+  <button class="opt" data-correct="false">The public shell uses a different frame component, so the two branches genuinely differ</button>
+  <button class="opt" data-correct="false">Session-dependent code paths are the usual cause and should be audited first</button>
+  <p class="why" hidden>This is exactly the P25.F4 story. The height-handshake race existed on
+  <em>every</em> article view; the member branch hydrates five client islands against the public
+  shell's zero, so it simply lost the race more often. It only became deterministic under
+  <code>Emulation.setCPUThrottlingRate ≥ 4</code> — hence the recorded lesson.</p>
+</div>
+
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

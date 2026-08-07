@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-08 · [Knowledge's Read Surfaces: Two Front Ends, One Corpus](knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html) — knowledge
 - 2026-08-08 · [Knowledge System Internals: The Content Plane, the Write Path, and the Contracts](knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html) — knowledge
 - 2026-08-08 · [Knowledge: What It Is and How It Is Used](knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html) — knowledge
 - 2026-08-06 · [Vocky Decisions, History, and the Agentic Workspace: Why It Is This Way and How to Change It](vocky/2026-08-06-vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to.html) — vocky
