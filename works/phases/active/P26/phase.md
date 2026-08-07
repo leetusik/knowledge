@@ -420,5 +420,3 @@ explicitly declined by the operator.
 _Running list — one line per durable-truth change; `P26.REVIEW` consolidates these into doc versions._
 
 - `P26.DECOMP`: none (planning only).
-</content>
-</invoke>
