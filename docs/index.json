@@ -1,7 +1,7 @@
 {
   "docs": {
     "product": {
-      "latest": "v0012_p23_versioned_documents_agents_publish_v2_v3_of_the_same_post_instead_of_a_duplicate_web_shows_version_history_explain_resolves_and_supersedes",
+      "latest": "v0013_p25_pretty_public_share_urls_durable_org_slug_org_project_doc-slug_document_and_org_graph_links_old_links_keep_working",
       "current_path": "docs/current/product.md",
       "versions": [
         {
@@ -99,11 +99,19 @@
           "source": "P23.REVIEW",
           "summary": "P23 versioned documents: agents publish v2/v3 of the same post instead of a duplicate, web shows version history, explain resolves and supersedes",
           "previous": "v0011_p20_frictionless_onboarding_real_curl-installer_hero_honest_init_password_web-login_line_env-var_rest_quickstart_published_explain_skill_on_the_landing_agent-first"
+        },
+        {
+          "id": "v0013_p25_pretty_public_share_urls_durable_org_slug_org_project_doc-slug_document_and_org_graph_links_old_links_keep_working",
+          "path": "docs/versions/product/v0013_p25_pretty_public_share_urls_durable_org_slug_org_project_doc-slug_document_and_org_graph_links_old_links_keep_working.md",
+          "created_at": "2026-08-07T15:58:16+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 pretty public share URLs: durable org slug, /@{org}/{project}/{doc-slug} document and /@{org}/graph links, old links keep working",
+          "previous": "v0012_p23_versioned_documents_agents_publish_v2_v3_of_the_same_post_instead_of_a_duplicate_web_shows_version_history_explain_resolves_and_supersedes"
         }
       ]
     },
     "experience": {
-      "latest": "v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing",
+      "latest": "v0016_p25_the_shared_link_becomes_readable_and_durable_claim_an_org_slug_in_the_dashboard_org_pretty_pages_old_links_307-forward_and_a_superseded_duplicate_keeps_its_id_link",
       "current_path": "docs/current/experience.md",
       "versions": [
         {
@@ -225,11 +233,19 @@
           "source": "P24.REVIEW",
           "summary": "P24 honest publishing when the reply is lost: explain and knowledge save verify a timed-out write through the read API before reporting, never blind-retry, and read push_pending as saved-and-publishing",
           "previous": "v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain"
+        },
+        {
+          "id": "v0016_p25_the_shared_link_becomes_readable_and_durable_claim_an_org_slug_in_the_dashboard_org_pretty_pages_old_links_307-forward_and_a_superseded_duplicate_keeps_its_id_link",
+          "path": "docs/versions/experience/v0016_p25_the_shared_link_becomes_readable_and_durable_claim_an_org_slug_in_the_dashboard_org_pretty_pages_old_links_307-forward_and_a_superseded_duplicate_keeps_its_id_link.md",
+          "created_at": "2026-08-07T16:03:20+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 the shared link becomes readable and durable: claim an org slug in the dashboard, /@org pretty pages, old links 307-forward, and a superseded duplicate keeps its id link",
+          "previous": "v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing"
         }
       ]
     },
     "architecture": {
-      "latest": "v0016_p24_publish_moves_behind_the_response_a_single_in-process_fifo_worker_thread_runs_push_and_embed_after_the_201_while_re-taking_the_one_write_lock_with_every_git_subprocess_bounded",
+      "latest": "v0017_p25_durable_public_identity_the_org_slug_lives_in_the_postgres_accounts_plane_so_a_shared_url_survives_a_full_content_reindex",
       "current_path": "docs/current/architecture.md",
       "versions": [
         {
@@ -359,11 +375,19 @@
           "source": "P24.REVIEW",
           "summary": "P24 publish moves behind the response: a single in-process FIFO worker thread runs push and embed after the 201 while re-taking the one write lock, with every git subprocess bounded",
           "previous": "v0015_p18_user_org_project_tenant_row_is_the_org_no_rename_org_vs_project-bound_credential_split_write-path_get-or-create_in_an_async_dep_before_the_sync_handler"
+        },
+        {
+          "id": "v0017_p25_durable_public_identity_the_org_slug_lives_in_the_postgres_accounts_plane_so_a_shared_url_survives_a_full_content_reindex",
+          "path": "docs/versions/architecture/v0017_p25_durable_public_identity_the_org_slug_lives_in_the_postgres_accounts_plane_so_a_shared_url_survives_a_full_content_reindex.md",
+          "created_at": "2026-08-07T16:00:52+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 durable public identity: the org slug lives in the Postgres accounts plane so a shared URL survives a full content reindex",
+          "previous": "v0016_p24_publish_moves_behind_the_response_a_single_in-process_fifo_worker_thread_runs_push_and_embed_after_the_201_while_re-taking_the_one_write_lock_with_every_git_subprocess_bounded"
         }
       ]
     },
     "frontend": {
-      "latest": "v0014_foldable_rail_document_reading-width_cap",
+      "latest": "v0015_p25_pretty_public_routes_org_project_slug_org_graph_the_resolvedocument_bff_seam_legacy_307_redirects_and_the_dashboard_public_url_panel",
       "current_path": "docs/current/frontend.md",
       "versions": [
         {
@@ -477,11 +501,19 @@
           "source": "standalone",
           "summary": "foldable rail + document reading-width cap",
           "previous": "v0013_p23_document_version_history_panel_read-only_past-version_view_version-aware_bff_raw_relay_with_its_own_next.config_headers_entry"
+        },
+        {
+          "id": "v0015_p25_pretty_public_routes_org_project_slug_org_graph_the_resolvedocument_bff_seam_legacy_307_redirects_and_the_dashboard_public_url_panel",
+          "path": "docs/versions/frontend/v0015_p25_pretty_public_routes_org_project_slug_org_graph_the_resolvedocument_bff_seam_legacy_307_redirects_and_the_dashboard_public_url_panel.md",
+          "created_at": "2026-08-07T16:02:17+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 pretty public routes (/@org/project/slug, /@org/graph), the resolveDocument BFF seam, legacy 307 redirects, and the dashboard Public URL panel",
+          "previous": "v0014_foldable_rail_document_reading-width_cap"
         }
       ]
     },
     "backend": {
-      "latest": "v0012_p24_after-response_publish_worker_server_publish.py_fifo_thread_runs_git_push_and_the_gemini_embed_behind_the_201_re-taking_the_non-reentrant_write_lock_with_kb_git_timeout_s_bounding_every_git_subprocess",
+      "latest": "v0013_p25_org_slug_rules_module_the_slug_resolver_on_the_shared_public-read_gate_and_the_round-trip-guarded_canonical_path_emitter",
       "current_path": "docs/current/backend.md",
       "versions": [
         {
@@ -579,11 +611,19 @@
           "source": "P24.REVIEW",
           "summary": "P24 after-response publish worker: server/publish.py FIFO thread runs git push and the Gemini embed behind the 201, re-taking the non-reentrant WRITE_LOCK, with KB_GIT_TIMEOUT_S bounding every git subprocess",
           "previous": "v0011_p23_version-aware_write_path_archive-before-replace_inside_write_lock_target_resolution_with_two_identity_422s_reindex_rebuilds_document_versions_five_additive_version_read_routes"
+        },
+        {
+          "id": "v0013_p25_org_slug_rules_module_the_slug_resolver_on_the_shared_public-read_gate_and_the_round-trip-guarded_canonical_path_emitter",
+          "path": "docs/versions/backend/v0013_p25_org_slug_rules_module_the_slug_resolver_on_the_shared_public-read_gate_and_the_round-trip-guarded_canonical_path_emitter.md",
+          "created_at": "2026-08-07T16:00:52+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 org slug rules module, the slug resolver on the shared public-read gate, and the round-trip-guarded canonical_path emitter",
+          "previous": "v0012_p24_after-response_publish_worker_server_publish.py_fifo_thread_runs_git_push_and_the_gemini_embed_behind_the_201_re-taking_the_non-reentrant_write_lock_with_kb_git_timeout_s_bounding_every_git_subprocess"
         }
       ]
     },
     "data": {
-      "latest": "v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic",
+      "latest": "v0012_p25_alembic_0005_tenant_slug_tenants.slug_text_null_unique_as_the_durable_public_org_identity_no_backfill_app-layer_validation",
       "current_path": "docs/current/data.md",
       "versions": [
         {
@@ -673,11 +713,19 @@
           "source": "P23.REVIEW",
           "summary": "P23 on-disk document version archive .versions/<project>/<date>-<slug>/vNNNN.<ext>, derived documents.version + identity-keyed document_versions, no alembic",
           "previous": "v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate"
+        },
+        {
+          "id": "v0012_p25_alembic_0005_tenant_slug_tenants.slug_text_null_unique_as_the_durable_public_org_identity_no_backfill_app-layer_validation",
+          "path": "docs/versions/data/v0012_p25_alembic_0005_tenant_slug_tenants.slug_text_null_unique_as_the_durable_public_org_identity_no_backfill_app-layer_validation.md",
+          "created_at": "2026-08-07T16:00:04+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 alembic 0005_tenant_slug: tenants.slug text NULL UNIQUE as the durable public org identity, no backfill, app-layer validation",
+          "previous": "v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic"
         }
       ]
     },
     "api": {
-      "latest": "v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit",
+      "latest": "v0018_p25_pretty_share_urls_patch_app_tenant_get_app_orgs_org_project_slug_resolver_additive_canonical_path_round-trip_guarded_and_tenant_slug_org-slug_org_on_the_graph_pretty_201_save_url",
       "current_path": "docs/current/api.md",
       "versions": [
         {
@@ -815,6 +863,14 @@
           "source": "P24.REVIEW",
           "summary": "P24 write response no longer waits on the network: git push and the Gemini embed run after the 201, additive push_pending, pushed always false when deferred, push_error gone, commit_sha is the local pre-rebase commit",
           "previous": "v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app"
+        },
+        {
+          "id": "v0018_p25_pretty_share_urls_patch_app_tenant_get_app_orgs_org_project_slug_resolver_additive_canonical_path_round-trip_guarded_and_tenant_slug_org-slug_org_on_the_graph_pretty_201_save_url",
+          "path": "docs/versions/api/v0018_p25_pretty_share_urls_patch_app_tenant_get_app_orgs_org_project_slug_resolver_additive_canonical_path_round-trip_guarded_and_tenant_slug_org-slug_org_on_the_graph_pretty_201_save_url.md",
+          "created_at": "2026-08-07T15:58:57+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 pretty share URLs: PATCH /app/tenant, GET /app/orgs/{org}/{project}/{slug} resolver, additive canonical_path (round-trip guarded) and tenant slug, org-slug ?org= on the graph, pretty 201 save url",
+          "previous": "v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit"
         }
       ]
     },
@@ -1119,7 +1175,7 @@
       ]
     },
     "qa": {
-      "latest": "v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect",
+      "latest": "v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1225,11 +1281,19 @@
           "source": "P24.REVIEW",
           "summary": "P24 acceptance: the long-standing gated format-key failure is resolved (115 passed 0 failed) and publish.drain() is the deterministic way to assert an after-response side effect",
           "previous": "v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only"
+        },
+        {
+          "id": "v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation",
+          "path": "docs/versions/qa/v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation.md",
+          "created_at": "2026-08-07T16:04:35+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 gated baseline 125 passed / 83+42 skipped, web 15 files 85 tests, the globally-unique-slug and route-precedence probe techniques, and 0005 migration validation",
+          "previous": "v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect"
         }
       ]
     },
     "decisions": {
-      "latest": "v0020_p23_adrs_version_history_on_disk_because_the_content_db_is_disposable_identity-keyed_derived_tables_overwrite_becomes_non-destructive_identity_immutable_across_a_version_chain",
+      "latest": "v0021_p25_adrs_org_url_shape_dateless_newest-wins_doc_slug_with_a_round-trip_guard_operator-set_nullable_org_slug_and_307_redirect-vs-dual-serve_for_old_links",
       "current_path": "docs/current/decisions.md",
       "versions": [
         {
@@ -1391,9 +1455,17 @@
           "source": "P23.REVIEW",
           "summary": "P23 ADRs: version history on disk because the content DB is disposable; identity-keyed derived tables; overwrite becomes non-destructive; identity immutable across a version chain",
           "previous": "v0019_p22_adr_the_app_graph_deviates_from_the_ported_label_ladder_selection-driven_labels_a-prime_scoped_to_the_mkdocs_map"
+        },
+        {
+          "id": "v0021_p25_adrs_org_url_shape_dateless_newest-wins_doc_slug_with_a_round-trip_guard_operator-set_nullable_org_slug_and_307_redirect-vs-dual-serve_for_old_links",
+          "path": "docs/versions/decisions/v0021_p25_adrs_org_url_shape_dateless_newest-wins_doc_slug_with_a_round-trip_guard_operator-set_nullable_org_slug_and_307_redirect-vs-dual-serve_for_old_links.md",
+          "created_at": "2026-08-07T16:05:29+09:00",
+          "source": "P25.REVIEW",
+          "summary": "P25 ADRs: /@org URL shape, dateless newest-wins doc slug with a round-trip guard, operator-set nullable org slug, and 307 redirect-vs-dual-serve for old links",
+          "previous": "v0020_p23_adrs_version_history_on_disk_because_the_content_db_is_disposable_identity-keyed_derived_tables_overwrite_becomes_non-destructive_identity_immutable_across_a_version_chain"
         }
       ]
     }
   },
-  "last_rebuilt_at": "2026-08-07T14:44:52+09:00"
+  "last_rebuilt_at": "2026-08-07T16:06:36+09:00"
 }

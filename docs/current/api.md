@@ -1,10 +1,10 @@
 ---
 doc_id: api
-version: v0017
-created_at: 2026-08-05T23:58:57+09:00
-source: P24.REVIEW
-summary: P24 write response no longer waits on the network: git push and the Gemini embed run after the 201, additive push_pending, pushed always false when deferred, push_error gone, commit_sha is the local pre-rebase commit
-previous: v0016_p23_versioned_publishing_post_api_documents_gains_new_version_rel_path_and_three_additive_201_keys_five_unmetered_version-history_read_routes_on_api_and_app
+version: v0018
+created_at: 2026-08-07T15:58:57+09:00
+source: P25.REVIEW
+summary: P25 pretty share URLs: PATCH /app/tenant, GET /app/orgs/{org}/{project}/{slug} resolver, additive canonical_path (round-trip guarded) and tenant slug, org-slug ?org= on the graph, pretty 201 save url
+previous: v0017_p24_write_response_no_longer_waits_on_the_network_git_push_and_the_gemini_embed_run_after_the_201_additive_push_pending_pushed_always_false_when_deferred_push_error_gone_commit_sha_is_the_local_pre-rebase_commit
 ---
 
 # API
@@ -41,6 +41,8 @@ Stable and validated. The Track 2 FastAPI service implements the read, search, r
 **As of P23 a document can be re-published as its next version, and its history is readable on both planes — all additive.** `POST /api/documents` gains two optional inputs, `new_version` (bool, default `false`) and `rel_path` (string), and its 201 body gains three always-present keys — `version`, `previous_version`, `archived_path`. A versioned write **keeps the target's `rel_path`** (so `id`, `url`, graph edges and `related` links never move) and archives the body it replaces; `overwrite: true` keeps its status and every existing key but **now archives instead of destroying**. Five new **unmetered** read routes expose the history: `GET /api/documents/by-path/{rel_path}/versions` + `.../versions/{version}` on the agent plane, and `GET /app/documents/{id}/versions`, `.../versions/{version}`, `.../versions/{version}/raw` on the web plane (optional-identity, 404-never-403). Every document read projection already carried the new `documents.version` field. **No existing field's type, status, or route changed** (the 201 gained keys, additively — the P16 `format` precedent); an **unversioned document answers an empty history rather than a 404**, and a corpus that is never re-published behaves exactly as pre-P23. See *Versioned publishing + version history (P23)* below.
 
 **As of P24 the write response no longer waits on the network — publishing moved *behind* the 201, and one additive key describes it.** `POST /api/documents` (and both `DELETE /api/documents/*` routes) used to run two unbounded network stages **between the durable save and the response**: the publish push (`git fetch` → `rebase` → `git push`, two SSH round-trips to GitHub, with no subprocess timeout at all) and the Gemini embed. A client with a short deadline — the shipped `/explain` skill posted with `curl --max-time 5` — therefore saw a transport failure for a write that had **already landed**. Both stages now run on an after-response publish worker, so the pre-response path is entirely local (validate → archive → file write → Recent/landing → DB commit → local `git add`/`git commit`) and the 201's latency no longer depends on GitHub or Gemini. The contract change is **additive**: a new always-present **`push_pending: bool`** ("a push to `origin/main` was queued and runs right after this response") on the 201 and both DELETE 200s. Three consequences for consumers, none of which removes or retypes a field: **`pushed` is now always `false`** when a push was deferred (its documented meaning — "saved; publishes on the next successful push" — is unchanged, and it was never a failure signal), **`push_error` no longer appears in any response** (a failed background push is logged in the container, not returned), and **`commit_sha` is the local, pre-rebase commit** rather than the published head. **A client must never read `pushed:false` as a failure and must never retry on it.** See *Commit/push semantics* and *Operational semantics the client relies on* below.
+
+**As of P25 a tenant has a public org slug, documents are addressable by it, and every detail read says what a document's pretty URL is — all additive.** The canonical tenant shape (`POST /auth/signup`, `POST /auth/login`, `GET /auth/me`, `GET /app/tenant`) gains an additive nullable **`slug`**, and a new session-guarded **`PATCH /app/tenant`** claims it (422 malformed/reserved, 409 taken). A new optional-identity read route **`GET /app/orgs/{org}/{project}/{slug}`** resolves a document by (org slug, project, doc slug) with the same trust semantics and the same 404-never-403 rule as the P19 anonymous reads. Both **detail** reads (`GET /app/documents/{id}` and the resolver) gain an additive nullable **`canonical_path`** — `/@{org}/{project}/{doc-slug}` — which is `null` for a slug-less owner, in legacy mode, **and for a document whose dateless pretty path resolves to a newer duplicate** (the round-trip rule: *a non-null `canonical_path` always resolves back to the document that advertised it*). `GET /app/graph`'s `org=` selector now accepts an **org slug or a tenant UUID** and its response gains the same additive nullable `canonical_path` (`/@{org}/graph`). The `POST /api/documents` 201 **`url`** becomes pretty when the writing tenant has a slug and the path round-trips. No existing field's name, type, status, or route changed. See *Pretty share URLs: org slug, slug resolver, and `canonical_path` (P25)* below.
 
 ## Auth
 
@@ -299,6 +301,38 @@ P23 makes re-publishing additive and exposes a document's superseded bodies on b
 - Each route resolves the **document** first (member fast-path → public-project fallback) and then reads the archive by that document's `rel_path`, scoped to the **owning** document's `tenant_id` — not the caller's. That is what makes a public document's history anonymously readable without ever crossing tenants.
 
 **Not in P23** (deliberate): version diffing, a rollback/"make v2 current again" endpoint, version pruning, and a CLI `--new-version` flag. The CLI keeps working untouched because `overwrite` retains its response shape.
+
+## Pretty share URLs: org slug, slug resolver, and `canonical_path` (P25)
+
+P25 gives a tenant a durable public identity and makes public documents and the public graph addressable by it. Everything is additive to the frozen `/api/* + /auth/* + /app/*` contract: two new fields, two new routes, one widened query param, and a value change on the always-present 201 `url`.
+
+**The org slug (`tenants.slug`).**
+
+- **Additive nullable `slug` on the canonical tenant shape.** `serialize_tenant` (`server/auth_api.py`) emits `"slug"`, so it appears at once on `POST /auth/signup`, `POST /auth/login`, `GET /auth/me` and `GET /app/tenant`. `null` = "no pretty URL yet"; there is **no backfill and no derived default**.
+- **New route — `PATCH /app/tenant`.** Session-guarded (`require_user`), **no tenant id in the path** (implicitly the caller's own tenant), body `{"slug": "..."}`. **200** `{tenant}` with the new slug · **422** malformed **or reserved**, the message citing the constraint · **409** already taken (the `UNIQUE` violation is mapped, never a 500). Re-setting a tenant's own current slug is a **no-op success**, not a conflict.
+- **Rules, in one place** (`server/accounts/slugs.py`, re-exported from `server.accounts`): charset `^[a-z0-9]+(-[a-z0-9]+)*$`, 2–40 chars, **lowercased on write** (so `Hi2Vi` and `hi2vi` are the same slug and collide), plus a 38-word reserved list (`api`, `app`, `auth`, `admin`, `login`, `dashboard`, `documents`, `graph`, `projects`, `search`, `settings`, `_next`, `docs`, … ). Validation is **app-layer**, matching the `projects.visibility` precedent — there is no DB `CHECK`. Never re-derive the charset elsewhere; import the module.
+
+**New route — `GET /app/orgs/{org}/{project}/{slug}`** (the resolver).
+
+- **Optional-identity**, exactly like the P19 detail reads: member fast-path → legacy-mode guard → the owning project's `visibility == "public"` gate (the extracted `_is_publicly_readable` predicate, shared with `GET /app/documents/{id}` so there is one trust boundary, not two).
+- `org` is the **bare** slug — **no `@`** (the `@` is a web-plane convention the BFF strips). `project` is matched **exactly** (case-sensitive). The doc slug resolves **newest-first** (`find_latest_document_by_slug`: `date DESC, id DESC`), i.e. the address means *"the newest document under this title"*; there is no dated form.
+- **Every miss is one constant 404** — `{"detail": "no document at that path"}` — for an unknown, malformed or reserved org slug, an unknown project, an unknown doc slug, a **private** project, and legacy mode alike. Nonexistent and forbidden are indistinguishable (404-never-403). It deliberately does not reuse the id route's `f"no document with id {id}"` detail, which cannot exist on a route that never sees an id; what the rule protects is that misses on the **same** surface look alike.
+- The response is the ordinary **detail projection**, so it carries `id` — which is why `/app/documents/{id}/versions*` and `.../raw` stay id-keyed and completely unchanged.
+
+**Additive nullable `canonical_path` on the DETAIL reads.**
+
+- Present on `GET /app/documents/{id}` and on the resolver — **not** on `GET /app/documents` list rows (injecting it into the shared projector would add a per-row Postgres lookup to every list page). A web surface that wants a pretty link from a list must fetch the detail or fall back to `/documents/{id}`.
+- Value: `/@{org-slug}/{project}/{doc-slug}`. **`null`** when the owner has claimed no slug, in legacy mode, for a registry-less owner — **and when the path does not round-trip** (below).
+- **The round-trip rule (P25.F1).** Because the path is dateless, only the **newest** row under a `(project, slug)` pair owns it. `GET /app/documents/{id}` emits the path only when `find_latest_document_by_slug(project, slug, owner)` returns *that same row*; a superseded duplicate answers `null` — the same `null` every slug-less tenant gets, so no consumer contract changes. The invariant to code against: **a non-null `canonical_path` always resolves back to the document that advertised it.** Duplicates are reachable in ordinary use (a re-publish **without** `new_version` computes a different `rel_path`, since the date is part of it, and inserts a second row). The **resolver's own** `canonical_path` is unconditional — it resolved *through* the slug, so it is newest-wins by construction.
+
+**`GET /app/graph` — `org=` widened, plus its own `canonical_path`.**
+
+- `org=` now accepts a **tenant UUID or an org slug**, parsed **UUID-first** (a canonical UUID is charset-legal as a slug) with `get_tenant_by_slug` as the fallback. Unknown, unclaimed, reserved and malformed values all collapse into the pre-existing single **404 `{"detail":"graph not found"}`** — so a **malformed `org=` now 404s where it used to 422**, deliberately: on an anonymous surface one indistinguishable 404 leaks less than a 422 confirming "not even a well-formed org identifier".
+- The **member fast-path compares the resolved tenant id**, so a member addressing their own org *by slug* still gets the whole-corpus member view.
+- The response gains the additive nullable **`canonical_path`** (`/@{org-slug}/graph`, `null` for a slug-less tenant and in legacy mode) alongside `truncated`. The P19 note that this response "carries no org echo" is retired — echoing the pretty path of the org the caller explicitly named leaks nothing.
+- **Legacy mode still never touches the accounts plane:** the `DATABASE_URL` guard precedes any slug lookup.
+
+**`POST /api/documents` — the 201 `url` is pretty when it can be.** In tenant mode with a claimed org slug the always-present `url` becomes `{KB_PUBLIC_BASE_URL}/@{slug}/{project}/{doc-slug}`, carrying the **same round-trip guard** — so a **backdated** publish under an existing slug falls back to `{origin}/documents/{id}`. A slug-less tenant keeps `{origin}/documents/{id}` exactly as P19 left it, and legacy/single-tenant mode keeps the unchanged mkdocs shape. On a `new_version` bump the URL uses the **target's** project/slug, so a document's pretty URL never moves across a version chain. The URL is pretty regardless of the project's **visibility** (the resolver is optional-identity, so it resolves for the author either way) — it is shareable only once the project is public, exactly like `/documents/{id}` today.
 
 ## Frozen consumer contract (P8)
 

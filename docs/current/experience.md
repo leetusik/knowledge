@@ -1,10 +1,10 @@
 ---
 doc_id: experience
-version: v0015
-created_at: 2026-08-06T00:04:35+09:00
-source: P24.REVIEW
-summary: P24 honest publishing when the reply is lost: explain and knowledge save verify a timed-out write through the read API before reporting, never blind-retry, and read push_pending as saved-and-publishing
-previous: v0014_p23_document_version_history_journey_history_panel_on_a_read_page_read-only_past-version_view_and_versioned_re-publishing_through_explain
+version: v0016
+created_at: 2026-08-07T16:03:20+09:00
+source: P25.REVIEW
+summary: P25 the shared link becomes readable and durable: claim an org slug in the dashboard, /@org pretty pages, old links 307-forward, and a superseded duplicate keeps its id link
+previous: v0015_p24_honest_publishing_when_the_reply_is_lost_explain_and_knowledge_save_verify_a_timed-out_write_through_the_read_api_before_reporting_never_blind-retry_and_read_push_pending_as_saved-and-publishing
 ---
 
 # Experience
@@ -56,6 +56,8 @@ text like any other document. See *The HTML explainer document (P16)* below.
 **As of P19 a project can be made public, and a saved doc is directly shareable.** On a project page a member flips a **Make public / Make private** toggle (with a Public/Private badge, mirrored as a column on the dashboard projects table); once public, the project's docs and its knowledge graph become readable by **anonymous visitors** at their normal URLs (`/documents/{id}` and `/graph/{org}`), and a **copy-link** affordance shares the direct doc URL. From the terminal, `knowledge save` now prints the working direct `url` (previously hidden because the old mkdocs link 404'd). A private/nonexistent doc an anonymous visitor tries to open bounces to `/login`; a public one just renders, minus the app rail. See *Public sharing: toggle, share link, and anonymous pages (P19)* below.
 
 **As of P20 the landing hero's onboarding journey is real and honest, and the landing is the easiest on-ramp for coding agents.** The hero terminal now shows a working `curl …/install.sh | bash` install, a real `init` password prompt, and a `knowledge save` that returns a working direct doc URL; `knowledge init` prints a `web login: …/login (same email + password)` line and, per D16, an `init --project other` **reuses** the org key across projects. Below the hero, an **agent env-var quickstart** promotes the plain-REST path (`KB_API_BASE_URL`/`KB_API_TOKEN` → any agent saves) with its real blockers, and the **explain skill is published** on the landing — copyable + downloadable — with agent-first guidance. See *Frictionless onboarding: real hero, env-var quickstart, published skill (P20)* below.
+
+**As of P25 a shared link is readable, durable, and never quietly changes what it shows.** An org claims a **public URL name** in the dashboard's new **Public URL** panel, after which a public document reads at `/@{org}/{project}/{doc-slug}` and the public graph at `/@{org}/graph` — in place of the disposable `/documents/25` rowid and the `/graph/{uuid}` tenant UUID. Old links keep working and, for an anonymous visitor, **307**-forward to the pretty URL; copy-link on every surface, and the URL an agent gets back on save, hand out the pretty path. An org that has not claimed a name sees byte-identical pre-P25 behavior. See *Pretty share URLs: claiming a public name (P25)* below.
 
 ## Visual language — "calm editorial library"
 
@@ -398,6 +400,19 @@ A publish is one HTTP request, so when the reply never arrives the client knows 
 - **Longer, but still fail-fast, write budgets.** Both clients now allow a write **30 seconds** (reads stay at 15 in the CLI; `/explain`'s research reads stay at 5). Post-fix the only variable left in a write is uploading a few hundred KB, so 30 s is generous headroom over the realistic worst case while still failing well before the edge's own 120 s ceiling. The two shipped clients deliberately agree on that number.
 - **The local fallback stopped duplicating landed writes.** If `/explain` does fall through to writing the file itself, it first checks whether the API already wrote exactly that document — and if so leaves it alone rather than rewriting the file, touching the index, or committing.
 - **The one thing an operator still cannot see from a client:** whether the background publish to the remote succeeded. That failure is logged on the box only (see **operations** for the bring-up assertion); it never delays a write, never fails one, and self-heals on the next successful push.
+
+## Pretty share URLs: claiming a public name (P25)
+
+P19 made sharing possible; P25 makes the link presentable — and honest about what it points at. Composed entirely from already-designed pieces (no new visual design, no Claude Design round).
+
+- **Claim the org's public name.** The dashboard gains a **Public URL** panel. The field is **always visible and prefilled** rather than hidden behind a disclosure — the current value *is* the point, and the name is changeable. Once claimed it shows the resulting `/@{slug}/graph` with a copy button; before that it says "no public URL yet". This is how the very first org gets its name: **the operator sets it through the UI after deploy — no backfill, no derived default, no hardcoded value anywhere in the stack.** Until it is claimed, every surface renders its pre-P25 fallback.
+- **The hint names the one cost.** Changing an already-claimed name **breaks links that were already shared under the old one** (there is no name history and no old-name redirect), so the field's hint says exactly that, next to the charset rule. It is the single place in the product where the phase's "no link breaks" promise can be broken by a person, and it is labelled.
+- **Save errors are specific where it helps.** A name already taken gets **its own message** ("that URL name is already taken") because names are globally unique and a collision is the likeliest real failure with an obvious fix; malformed and reserved values share one message that **cites the rule** rather than echoing the backend's raw detail.
+- **Old links upgrade themselves — one way, temporarily.** An **anonymous** visitor on `/documents/{id}` is forwarded to the pretty URL when one exists, while a signed-in **member** stays on the id URL, which carries the member-only affordances (back-link, delete). `/graph/{uuid}` forwards on **both** branches — that surface has no member-only affordance to lose. The forwards are **temporary** (names are changeable, so a permanent redirect would be cached past a change) and never bounce back, so there is no loop. A name-less org keeps being served at the old URL exactly as before: nothing that worked stops working.
+- **A missed pretty URL is a branded not-found, not a login bounce** — on both branches, with its call-to-action pointing at `/` rather than the member-gated `/documents`, because a shared link's audience is mostly anonymous strangers. Private, nonexistent and malformed all look identical, so nothing leaks.
+- **"No link breaks" now covers *content identity*, not just the HTTP status (P25.F1).** The pretty URL is dateless — it means "the newest document under this title". So if a later document re-uses the same project and title-slug, the **older** document simply stops advertising a pretty URL: the anonymous visitor stays on the id link and copy-link hands out the id URL, rather than either one forwarding a reader to a *different* document. An already-shared link can never silently change what it shows.
+- **Copy-link rides three surfaces** — the id document page, the pretty document page, and the member graph header — each falling back to the old id/UUID URL when no name is claimed. Anonymous branches stay button-free: a visitor already has the URL in the address bar.
+- **Recorded edge, not a defect.** A member who lands on `/@{slug}/graph` (via the both-branches forward) sees their **whole-corpus member view** inside the public shell — their own session, their own data, no leak — which means the operator cannot preview what the public sees from the very URL the dashboard tells them to share. A candidate for a later slice.
 
 ## Open Questions
 

@@ -44,3 +44,14 @@ Expected docs: `api`, `data`, `backend`, `architecture`, `frontend`, `experience
 ## Return
 
 `result.md` in this slice's folder + a structured verdict: `review_verdict: pass | changes_requested | blocked`, numbered findings (with proposed fix slices on a non-pass), the validation evidence table, `doc_versions` created (on pass), and the fixed pointer `explain: not written — run /explain for this phase`. Never commit; never transition slice/phase status (the orchestrator records the verdict with `review-phase`).
+
+---
+
+## Re-review addendum (after `changes_requested`, F1 + F2 landed)
+
+The first review pass (its findings and evidence are in the existing `result.md` — read it, then **overwrite** it with this pass's result) returned `changes_requested` with two findings; both fix slices are now `done`:
+
+- **F1 (blocking, Finding 1)**: round-trip guard — `canonical_path` and the 201 save URL are emitted only when the dateless path resolves back to the same row. See `P25.F1/result.md`; new gated baselines: **125 passed** (Postgres) / **83 passed + 42 skipped** (no DSN); negative-control verified.
+- **F2 (minor, Finding 2)**: `DASHBOARD.orgSlug.hint` now warns that changing a claimed slug breaks shared links. See `P25.F2/result.md`.
+
+Re-review focus: verify both findings are actually closed (the F1 guard semantics against the Finding-1 transcript scenario; the F2 copy), re-run the consolidated validation with the updated baselines, and re-judge. On `pass`, do the doc consolidation as specified above, incorporating the first pass's Doc-impact audit: the **Actual (P25.F1/F2)** blocks are now part of the list; `decisions.md` gets D1–D4 + Q2/Q3/Q4 from `phase.md` § "Design decisions settled here" (no Actual note exists for it); give `product.md` its P25 paragraph (the audit judged it owed one).

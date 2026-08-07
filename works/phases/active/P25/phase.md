@@ -648,6 +648,35 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
 - Postgres recipe unchanged from S1 (`docker run … -p 55439:5432 postgres:17`, repo
   `.venv`); 55432 is still occupied on this machine.
 
+### Found by P25.REVIEW (re-review pass — verdict `pass`)
+
+- **Both first-pass findings are CLOSED, verified independently of the fix slices' claims.**
+  Finding 1: the guard in `documents_api._owns_its_canonical_path` + `main.py` step 5 is
+  semantically right (tenant-scoped by the **document's own** owner, composed slug-first so a
+  slug-less deployment pays no SQLite read), and the Finding-1 transcript scenario is now the
+  regression test `test_superseded_duplicate_slug_has_no_canonical_path` — two rows under one
+  `(project, slug)` at two dates, asserted on **both** identity branches, plus the resolver
+  landing on the newest. Finding 2: `DASHBOARD.orgSlug.hint` now carries the mutability
+  warning. A review may not edit source, so F1's negative control was **not** repeated —
+  reading the guard + running the two pinned tests is the review-side proof.
+- **Phase-level validation re-confirmed on final HEAD:** gated pytest **125 passed** twice
+  against the same database, ungated **83 / 42 skipped**, web **15 files / 85 tests**, lint +
+  typecheck + build clean, both parity scripts PASS, `alembic` fresh `0001→0005` on a
+  dropped-and-recreated schema plus a `0005 → 0004 → 0005` round-trip, `workflow validate`
+  passed. The live `next start` probe reproduced S3's and S4's route-precedence evidence
+  exactly, and the built manifest is byte-identical to the first pass — as expected, since F1
+  is backend-only and F2 is one copy string.
+- **The doc consolidation covered NINE docs, not eight.** `product.md` was added per the
+  first pass's audit (P19's visibility work reached it, and "shared documents have readable,
+  durable URLs" is product-visible truth), and `decisions.md` was consolidated from
+  § "Design decisions settled here" since no slice ever appended an Actual note for it —
+  D1–D4 plus Q2/Q3/Q4, with **D2 written as an amended decision** carrying the P25.F1
+  round-trip guard and the empirical finding that forced it, rather than as a separate ADR.
+- **The member-previews-the-public-graph edge is now recorded in `experience.md`** as a
+  known edge (a member landing on `/@{slug}/graph` sees their whole-corpus member view, so
+  the operator cannot preview what a stranger sees from the URL the dashboard tells them to
+  share). Still not a P25 finding; still a candidate for a later slice.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -894,6 +923,17 @@ above are hints, not a substitute.
   cost of Q3's mutability inline: `DASHBOARD.orgSlug.hint` (`web/src/content/dashboard.ts`)
   gained one clause warning that changing an already-claimed slug breaks links already
   shared, next to the existing charset rule. Copy-only; no behavior changed.
+
+
+**Consolidated by P25.REVIEW (re-review pass, verdict `pass`) — this list is now CLOSED.**
+Nine doc versions were created from the notes above, one per doc, then a single
+`rebuild-docs`: `product` v0013, `api` v0018, `data` v0012, `backend` v0013,
+`architecture` v0017, `frontend` v0015, `experience` v0016, `qa` v0014, `decisions` v0021.
+The three gaps the first pass flagged are all closed: `decisions.md` was consolidated from
+§ "Design decisions settled here" (D1–D4 + Q2/Q3/Q4, with D2 carrying the F1 amendment),
+`product.md` got its P25 paragraph, and the F1/F2 round-trip + hint notes landed in `api`,
+`experience`, `backend` and `qa`. See `slices/P25.REVIEW/result.md` § 4 for the per-doc
+inventory.
 
 ## Constraints
 

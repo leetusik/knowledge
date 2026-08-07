@@ -1,51 +1,43 @@
-# Result — P25.REVIEW: phase review of "Pretty public share URLs"
+# Result — P25.REVIEW (re-review pass): phase review of "Pretty public share URLs"
 
-**Verdict: `changes_requested`.** The phase is very nearly done and its architecture is
-sound: every stated constraint holds except one, which no single slice was positioned to
-see. All consolidated validation passes (nothing is red). The blocking issue is a
-**cross-slice interaction** between S2's dateless `canonical_path` and S3's legacy
-`/documents/{id}` redirect: when two documents share `(project, doc-slug)` at different
-dates, an old shared id-link now silently serves a **different document**. Two findings
-below, with proposed fix slices.
+**Verdict: `pass`.** Both findings from the first pass are closed — verified in the code and
+by the regression tests that pin them, not by taking the fix slices' word for it. The full
+consolidated validation was re-run on final HEAD against the updated baselines and is
+green throughout. The phase's nine durable-doc areas were consolidated into nine new doc
+versions (this phase is **not** in parallel mode, so consolidation belongs here).
 
-Per the review contract, validation and judgment were completed in full first, and
-**no doc consolidation was performed** (`doc-new-version` is pass-only). The phase's
-"Doc impact" list was audited instead — see § 5 — so the eventual consolidation has an
-accurate inventory.
+This file **replaces** the first pass's `changes_requested` result; that pass's findings,
+evidence and Doc-impact audit are summarized in § 2 and carried forward into § 4.
 
 ---
 
 ## 1. Consolidated validation — all green
 
-Disposable `postgres:17` on host port 55439 (`docker run … -p 55439:5432`, per S1's
-recipe; 55432 is occupied on this machine), torn down afterwards. Repo `.venv` throughout
-(the system `python3` has no sqlalchemy).
+Disposable `postgres:17` on host port 55439 (`docker run … -p 55439:5432`, per S1's recipe;
+55432 is occupied on this machine), torn down afterwards. Repo `.venv` throughout (the
+system `python3` has no sqlalchemy).
 
 | # | Command | Result |
 |---|---|---|
-| 1 | `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q` (**run 1**) | **124 passed** — matches the S4 baseline; the gated suite **RAN**, it did not skip |
-| 2 | same command, **run 2** against the *same* database | **124 passed** — globally-unique-slug re-runnability confirmed |
-| 3 | `.venv/bin/python -m pytest -q` (no DSN) | **83 passed / 41 skipped** — clean skip path, matches baseline |
-| 4 | `cd web && npm run lint` | passed (eslint, no output) |
-| 5 | `cd web && npm run typecheck` | passed (`tsc --noEmit`) |
-| 6 | `cd web && npm run build` | passed — both new routes present, ordering unchanged (§ 1.1) |
-| 7 | `cd web && npm run test` | **15 files / 85 tests passed** — matches the S5 baseline |
-| 8 | `.venv/bin/python scripts/plugin_parity.py` | **PASS** |
-| 9 | `.venv/bin/python scripts/skills_parity.py` | **PASS** |
-| 10 | `alembic upgrade head` on a **dropped-and-recreated** schema | 0001 → 0005 clean; `\d tenants` shows `slug text` (nullable) + `uq_tenants_slug UNIQUE` |
-| 11 | `alembic downgrade 0004_project_visibility` → `\d tenants` → `upgrade head` | clean round-trip; column + constraint disappear and come back |
-| 12 | `python3 scripts/workflow.py validate` | **Workflow validation passed** |
-| 13 | live `next start` route probe on final HEAD, 14 URLs | no shadowing (§ 1.2) |
-
-**Migration note for the record:** `alembic/env.py` requires the `postgresql+psycopg://`
-scheme (a bare `postgresql://` picks the absent `psycopg2` driver and raises
-`ModuleNotFoundError`). Not a defect — worth writing down because the *test* harness
-accepts the bare form, so the two DSNs are not interchangeable.
+| 1 | `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q` (**run 1**) | **125 passed** — matches the P25.F1 baseline; the gated suite **RAN**, it did not skip |
+| 2 | same command, **run 2** against the *same* database | **125 passed** — globally-unique-slug re-runnability confirmed |
+| 3 | `.venv/bin/python -m pytest -q` (no DSN) | **83 passed / 42 skipped** — clean skip path, matches baseline |
+| 4 | targeted: `test_public_read.py::test_superseded_duplicate_slug_has_no_canonical_path` + `test_org_credentials.py::test_save_url_is_pretty_once_the_tenant_has_an_org_slug` | **2 passed** — the two Finding-1 guards |
+| 5 | `cd web && npm run lint` | passed (eslint, no output) |
+| 6 | `cd web && npm run typecheck` | passed (`tsc --noEmit`) |
+| 7 | `cd web && npm run build` | passed — both new routes present, ordering unchanged (§ 1.1) |
+| 8 | `cd web && npm run test` | **15 files / 85 tests passed** — matches the S5/F2 baseline |
+| 9 | `.venv/bin/python scripts/plugin_parity.py` | **PASS** |
+| 10 | `.venv/bin/python scripts/skills_parity.py` | **PASS** |
+| 11 | `alembic upgrade head` on a **dropped-and-recreated** schema (`postgresql+psycopg://`) | `0001 → 0005` clean; `\d tenants` shows `slug text` (nullable) + `uq_tenants_slug UNIQUE` |
+| 12 | `alembic downgrade 0004_project_visibility` → `\d tenants` → `upgrade head` | clean round-trip: 0 slug references after the downgrade, 2 (column + constraint) after the re-upgrade |
+| 13 | live `next start` route probe on final HEAD, 11 URLs | no shadowing; identical to the first pass (§ 1.2) |
+| 14 | `python3 scripts/workflow.py validate` | **Workflow validation passed** (re-run after the doc consolidation too) |
 
 ### 1.1 Route precedence — re-verified on final HEAD
 
-Built `routes-manifest.json` (manifest order *is* match order; all 14 static routes are
-tried before any dynamic one):
+Dynamic-route order read out of the built `.next/routes-manifest.json` (manifest order *is*
+match order; all static routes precede every dynamic one):
 
 ```
 /api/documents/[id]/raw
@@ -58,210 +50,177 @@ tried before any dynamic one):
 /[org]/[project]/[slug]       ^/([^/]+?)/([^/]+?)/([^/]+?)$  ← still LAST
 ```
 
-### 1.2 Live probe (`next start -p 3137`, backend deliberately down)
+Byte-identical to the first pass — as expected, since F1 is backend-only and F2 is a copy
+string.
 
-A non-404 `ApiError` is rethrown by design, so **500 = "reached the right route"**; the
-404s were discriminated by which page's branded copy rendered.
+### 1.2 Live probe (`next start -p 3141`, backend deliberately down)
+
+A non-404 `ApiError` is rethrown by design, so **500 = "reached the right route"**; the 404s
+were discriminated by which page's branded copy rendered.
 
 | URL | status | reached |
 |---|---|---|
 | `/documents/25`, `/documents/25/versions/1` | 500 | the id / past-version pages |
 | `/api/documents/25/raw` | 502 | the BFF relay handler |
-| `/graph/{uuid}` | 500 | the legacy graph page |
 | `/graph/abc` | 404 | legacy page's UUID guard — *"No public graph here"* |
 | `/@hi2vi/graph` | 500 | **the new pretty graph page** (guard passed) |
 | `/foo/graph` | 404 | **new graph page's `@` guard** — *"No public graph here"* |
 | `/@hi2vi/kb/hello` | 500 | **the new pretty document page** |
 | `/foo/bar/baz` | 404 | **pretty doc page's `@` guard** — *"Document not found"* |
 | `/documents/graph` | 404 | `/documents/[id]` — *"Document not found"*, not the catch-all |
-| `/dashboard`, `/projects/9`, `/graph` | 307 | the `(app)` auth gate |
+| `/dashboard` | 307 | the `(app)` auth gate |
 | `/login` | 200 | the login page |
-
-Every row reproduces S3's and S4's recorded evidence on the *final* HEAD, so S5's
-"route table byte-identical" claim holds.
 
 ### 1.3 End-to-end smoke — what I did instead
 
-I did **not** stand up the full compose stack. Per the plan's allowance I stood on
-(a) the 124-test gated API suite, which exercises the resolver, `canonical_path` on both
-detail reads, the pretty 201 save URL, the graph slug selector and every 404-never-403
-case against a real Postgres; (b) the live `next start` route probe above, re-run on
-final HEAD; and (c) **a targeted API-level probe of my own** (§ 2, Finding 1) that
-required exactly the disposable Postgres already running. The only behavior left
-un-exercised end-to-end is the two `redirect()` calls themselves, each of which is a
-literal `if (x) redirect(x)` on a value the gated suite already pins.
+Same judgment call as the first pass, which the plan permits: no full compose stack. I stood
+on (a) the 125-test gated API suite, which exercises the resolver, `canonical_path` on both
+detail reads **including the round-trip guard on both the member and anonymous branches**,
+the pretty and backdated 201 save URLs, the graph slug selector and every 404-never-403 case
+against a real Postgres; (b) the live `next start` route probe above on final HEAD; (c) the
+alembic round-trip on the same disposable Postgres. The only behavior left un-exercised
+end-to-end is the two `redirect()` calls themselves, each a literal `if (x) redirect(x)` on a
+value the gated suite pins.
 
 ---
 
-## 2. Findings
+## 2. Findings from the first pass — both CLOSED
 
-### Finding 1 — BLOCKING. An old `/documents/{id}` share link can now silently serve a **different document**
+### Finding 1 (BLOCKING) — an old `/documents/{id}` share link could 307 to a *different* document — **CLOSED by P25.F1**
 
-**Constraint violated:** *"No link may break … A slug-less tenant must see today's
-behavior exactly"* (phase.md § Constraints) and intent.md's *"Old links keep working"*.
-The link does not 404, so it passes the letter of "redirecting is allowed, 404ing is
-not" — but it delivers different content than it did before P25, which is the failure
-mode the constraint exists to prevent.
+Verified three ways, independently of `P25.F1/result.md`:
 
-**Mechanism (a genuine cross-slice interaction — neither slice is wrong alone):**
+1. **The guard exists and its semantics are right.** `server/documents_api.py` splits the
+   emitter into `_owner_org_slug(doc, ctx)` and `_owns_its_canonical_path(conn, doc)` — the
+   latter calls `db.find_latest_document_by_slug(conn, doc["project"], doc["slug"],
+   tenant_id=<owner>)` and returns `latest is not None and latest["id"] == doc["id"]`.
+   `_document_canonical_path(conn, doc, ctx)` composes them **slug-first**, so a slug-less
+   deployment short-circuits before the SQLite read. Tenant scoping uses the **document's
+   own** `tenant_id`, which is the right owner on the anonymous/cross-org branch too.
+2. **The same guard is on the 201 save URL** (`server/main.py`, step 5), scoped with
+   `_tenant_filter(ctx)` to match, with `canonical or f"{origin}/documents/{doc_id}"` as the
+   fallback — so a backdated publish gets the id URL.
+3. **The Finding-1 transcript scenario is now a test.**
+   `test_superseded_duplicate_slug_has_no_canonical_path` seeds `pub/notes` at `2026-01-01`
+   and `2026-06-01`, asserts `old ⇒ canonical_path is None` and `new ⇒ the path` on **both**
+   the member and the anonymous branch, and then asserts the resolver returns the *newest*
+   id with that same path. That is precisely the transcript that produced the finding
+   (ids 13/14 both advertising one path), inverted into a guard. It passes (§ 1, row 4);
+   F1 recorded a negative control (server files stashed ⇒ both cases red, then restored),
+   which I did not repeat because a review may not edit source.
 
-- S2's `canonical_path` is **dateless** by D2: `/@{org}/{project}/{doc-slug}`.
-- D2 accepted that the *pretty* URL means "the newest document under this title".
-- S3 then made the **anonymous** `/documents/{id}` branch `redirect(doc.canonical_path)`.
-- Composing the two redirects an **exact-row** address onto a **newest-wins** address.
+The resolver route deliberately has no guard — it resolved *through* the slug, so the check
+would be a tautology there. Correct, and now stated in its docstring.
 
-Duplicate `(project, slug)` rows at different dates are reachable in ordinary use: a
-publish **without** `new_version: true` computes a different `rel_path` (the date is part
-of it), so step 2 of `create_document` finds no collision and inserts a second row.
-`server/db.py::find_latest_document_by_slug`'s own docstring names this the situation
-"versioning fixes" — i.e. it is the pre-existing, unguarded path, and recurring slugs
-(`meeting-notes`, `weekly-update`) are natural in a knowledge base.
+**Zero web changes were needed, as predicted:** `null` is a state every consumer already
+handles (the S3 anonymous redirect, S5's three copy-link surfaces, the dashboard), because
+that is the slug-less contract. Superseded duplicates simply join it.
 
-**Empirically confirmed** (throwaway probe against the gated harness, in the session
-scratchpad — not added to the repo):
+### Finding 2 (minor) — the dashboard let a claimed slug be changed with no warning — **CLOSED by P25.F2**
+
+`web/src/content/dashboard.ts` line 171 now reads:
 
 ```
-seed notes/meeting-notes @ 2026-01-01  -> id 13
-seed notes/meeting-notes @ 2026-06-01  -> id 14
-
-GET /app/documents/13  -> 200  canonical_path=/@org-…/notes/meeting-notes  title="… 2026-01-01"
-GET /app/documents/14  -> 200  canonical_path=/@org-…/notes/meeting-notes  title="… 2026-06-01"
-GET /app/orgs/org-…/notes/meeting-notes -> 200  id=14  title="… 2026-06-01"
+hint: "2–40 characters: lowercase letters, numbers and single hyphens. Changing an already-claimed name breaks links you've already shared.",
 ```
 
-Both ids advertise the **same** pretty path, and that path resolves to id 14.
+One string, one file, matching the surrounding copy's tone. It names exactly the cost Q3
+accepted, at the one place in the product where the phase's "no link breaks" promise can be
+broken by a person.
 
-**User-visible consequences (all new in P25):**
+### Non-findings re-confirmed (unchanged from the first pass)
 
-1. An anonymous visitor on the previously-shared `/documents/13` is **307**'d to
-   `/@org/notes/meeting-notes` and reads document **14**. Before P25 they read 13.
-2. The member copy-link on `/documents/13` (S5) copies a URL for document 14.
-3. The 201 save `url` (S2) for a backdated publish points at whichever row is newest.
-
-Not a security issue — both documents are the same tenant's and pass the same visibility
-gate — but it is a correctness regression on precisely the sharing surface this phase
-exists to improve.
-
-**Proposed fix — `P25.F1`** (implementation, `risk: high`, backend + one gated test):
-emit `canonical_path` only when the pretty path **round-trips to this same row**. In
-`server/documents_api.py::_document_canonical_path`, after resolving the owner slug,
-check `db.find_latest_document_by_slug(conn, doc["project"], doc["slug"],
-tenant_id=<owner>)["id"] == doc["id"]` and answer `None` otherwise — one cheap SQLite
-read on the connection already in hand. A `None` needs **no web change at all**: S3's
-redirect, S5's three copy-link surfaces and the dashboard already fall back correctly,
-which is exactly the slug-less contract. The resolver route (`resolve_document_by_slug`)
-is unaffected — it resolved *through* the slug, so its answer is correct by construction.
-Consider the same guard for `server/main.py::resolve_org_slug`'s 201 URL. Add one gated
-case pinning "older duplicate ⇒ `canonical_path is null`, newest ⇒ the pretty path".
-
-*(Alternative, if the operator prefers the durable-URL story over exactness: keep the
-behavior and make it explicit in `experience.md`. I recommend the fix — a share link that
-quietly changes what it shows is worse than one that stays on an id URL.)*
-
-### Finding 2 — Minor. The dashboard lets the operator change a claimed slug with no warning that it breaks previously shared links
-
-Q3 decided slugs are **mutable with no slug-history redirects**, explicitly accepting
-that "changing a slug breaks previously shared links". S5 shipped the field
-**always visible and prefilled** — correct for the claim case, but it makes an
-irreversible link-breaking edit a one-keystroke action. `DASHBOARD.orgSlug.hint`
-("2–40 characters: lowercase letters, numbers and single hyphens.") says nothing about
-it, and the phase's headline promise to the operator is "no link breaks". This is the
-one place in the product where that promise can be broken, and it is unlabelled.
-
-**Proposed fix — `P25.F2`** (implementation, `risk: low`): extend the existing
-`DASHBOARD.orgSlug.hint` string in `web/src/content/dashboard.ts` to note that changing
-a claimed slug breaks links already shared under the old one. Copy-only, one file, one
-line — the `mid` tier.
-
-### Non-findings (checked, deliberately not raised)
-
-- **404-never-403 holds on every new anonymous surface.** The resolver's six miss paths
-  raise one constant `_no_such_path()` detail (asserted by a test); `?org=` collapses
-  malformed/reserved/unclaimed into the pre-existing `404 "graph not found"`; both new
-  pages' `@` guards `notFound()` before the session read and before any upstream call.
-  S2's deviation (its own 404 string rather than the id route's `f"no document with id
-  {doc_id}"`) is right — that literal cannot exist on a route that never sees an id, and
-  the constraint protects indistinguishability *within* a surface.
-- **Nothing durable keys off `documents.id`.** `_canonical_path` is built from
-  `doc["project"]` / `doc["slug"]` plus the Postgres slug. Version links stay id-keyed by
-  design (D2's exact-row addressing), and `/versions*` + `/raw` are untouched.
-- **Slug-less tenants see today's behavior exactly.** Every consumer falls back:
-  `canonical_path` null ⇒ no redirect on either route, id/UUID copy-links, the pre-P25
-  201 URL, legacy mode never touches the accounts plane (both guards verified to run
-  before any slug lookup).
-- **No redirect loop.** Both pretty pages are terminal — neither ever redirects back.
-- **No open redirect.** Both `redirect()` arguments are server-built root-relative paths
-  over validated charsets.
-- **Reserved list matches the constraint exactly** — 38 words, no additions, no
-  omissions, verified by diffing `RESERVED_ORG_SLUGS` against phase.md's list.
-- **Q4 (pretty 201 URL even for a private project) is fine.** It is parity with today's
-  `/documents/{id}`, which is equally unshareable while the project is private.
-- **The member read stays Postgres-free** (`_document_canonical_path` reads
-  `ctx.tenant.slug`); only the anonymous/cross-org branch pays the second round trip S2
-  flagged. Acceptable at this scale, and S2 already named the right fix if it ever bites.
-- **S5's deviations are correct.** Reading `graph.canonical_path` instead of composing
-  from `identity.tenant.slug` obeys phase.md's binding "build it once in the backend"
-  rule; the dashboard panel's local composition is the one justified exception (that page
-  loads no payload carrying a `canonical_path`).
-- **A member landing on `/@{slug}/graph`** (via the both-branches legacy redirect) sees
-  their whole corpus inside `PublicShell`. Not a leak — their own session, their own data
-  — but it means the operator cannot preview what the public sees from that URL. Noted
-  for a future slice, not raised as a finding.
+404-never-403 on every new anonymous surface; nothing durable keys off `documents.id`;
+slug-less tenants see byte-identical pre-P25 behavior; no redirect loop; no open redirect
+(both `redirect()` arguments are server-built root-relative paths over validated charsets);
+the reserved list is exactly the 38 words the constraint names (`len(RESERVED_ORG_SLUGS)`
+= 38, and `ORG_SLUG_CONSTRAINT` cites the rule); Q4's pretty-201-for-a-private-project is
+parity with today's `/documents/{id}`; the member detail read stays Postgres-free (F1 added
+no accounts-plane call — its read is content-plane only); S5's two deviations are correct
+(the graph header consumes `graph.canonical_path`; the dashboard's local composition is the
+one justified exception). The recorded non-finding stands: a member landing on
+`/@{slug}/graph` sees their whole-corpus member view inside `PublicShell` — their own
+session, their own data, no leak — so the operator cannot preview what the public sees from
+the URL the dashboard tells them to share. A candidate for a later slice, not a P25 defect;
+it is now written into `experience.md` as a recorded edge.
 
 ---
 
 ## 3. Judgment against intent
 
-Every bullet of `intent.md`'s confirmed intent landed: the durable Postgres org slug
-(S1), slug-addressed documents (S2/S3), the slug-addressed public graph subsuming D19
-(S4), old links redirecting rather than breaking (S3/S4 — subject to Finding 1), and
-share affordances handing out the pretty URL (S5). Nothing out-of-scope was built: no
-per-document visibility, no share tokens, no sitemap/SEO change; `robots.ts`,
-`sitemap.ts`, the `next.config.ts` header exemptions and `deploy/knowledge.conf` are all
-untouched. Backend-before-web ordering was honored, plugin-template parity was maintained
-on every backend slice, and the migration is a pure additive round-trippable revision.
+Every bullet of `intent.md`'s confirmed intent landed: the durable Postgres org slug (S1),
+slug-addressed documents (S2/S3), the slug-addressed public graph subsuming **D19** (S4),
+old links redirecting rather than breaking (S3/S4, now correct in content as well as in
+status thanks to F1), and share affordances handing out the pretty URL (S5). The four
+constraints that mattered most all hold:
 
-The architecture is the right one — one backend-built `canonical_path` consumed
-everywhere, one extracted `_is_publicly_readable` trust boundary, one `slugs.py` rule
-module. Finding 1 is a semantic gap in that architecture, not a flaw in it.
+- **No link breaks** — `/documents/{id}` and `/graph/{uuid}` still resolve on both identity
+  branches, for slugged and slug-less tenants; redirects are 307 and one-way; and after F1
+  the constraint covers *content identity*, not just the HTTP status.
+- **404-never-403** — one constant detail across all six resolver miss paths, the graph's
+  single `"graph not found"`, and both pages' `@` guards firing before any session read.
+- **Nothing durable keys off `documents.id`** — the pretty path is built from
+  `(tenant slug, project, doc slug)`; version links stay id-keyed by design (D2's exact-row
+  addressing).
+- **Slug-less tenants see today's behavior exactly** — every consumer falls back, and the
+  migration is a nullable add with no backfill.
 
-## 4. Verdict
+Nothing out of scope was built: no per-document visibility, no share tokens, no sitemap/SEO
+change; `robots.ts`, `sitemap.ts`, the `next.config.ts` header exemptions and
+`deploy/knowledge.conf` are untouched. Backend-before-web ordering was honored, plugin
+template parity was maintained on every backend slice, and the migration is a pure additive
+round-trippable revision. The architecture is the right one — one backend-built
+`canonical_path` consumed everywhere, one extracted `_is_publicly_readable` trust boundary,
+one `slugs.py` rules module — and F1 closed the one semantic gap in it without changing its
+shape.
 
-`changes_requested` — Finding 1 blocks; Finding 2 is a one-line copy fix worth taking in
-the same pass. Proposed slices:
+---
 
-| Slice | Name | Kind | Risk | Order |
-|---|---|---|---|---|
-| `P25.F1` | canonical_path only when the pretty path resolves back to the same document | implementation | high | 6 |
-| `P25.F2` | dashboard slug hint: warn that changing a claimed slug breaks shared links | implementation | low | 7 |
+## 4. Doc consolidation — nine versions created
 
-## 5. Doc consolidation — NOT performed (pass-only), list audited
+This phase carries **no `execution` block** in `phase.json`, so it is not in parallel mode
+and consolidation happens here. Worked through `phase.md` § "Doc impact" (the **Actual**
+blocks for S1–S5 + F1 + F2), plus the two gaps the first pass's audit flagged:
+`decisions.md` (which had no Actual note — consolidated from § "Design decisions settled
+here": D1–D4 plus Q2/Q3/Q4) and `product.md` (judged to owe a P25 paragraph, as P19's
+visibility work reached it). One `doc-new-version` per doc, then a single `rebuild-docs`.
 
-No `doc-new-version` was run and `docs/` is untouched. This phase is **not** in parallel
-mode (`phase.json` carries no `execution` block), so consolidation belongs to the *next*
-review pass. The "Doc impact" list was audited so that pass has a complete inventory:
+| Doc | New version | What it captures |
+|---|---|---|
+| `product` | `v0013` | Status sentence + a *Pretty public share URLs (P25)* section: claiming an org name, the two pretty address shapes, no-link-breaks (including content identity), share affordances, the slug-change cost, out-of-scope, D19 settled |
+| `api` | `v0018` | Status paragraph + a full *Pretty share URLs* section: `slug` on the tenant shape, `PATCH /app/tenant` (422/409), the resolver route + its one constant 404, `canonical_path` on the detail reads only **with the round-trip rule and its invariant**, `?org=` widened (and the deliberate 422→404), the graph's `canonical_path`, the guarded pretty 201 `url` |
+| `data` | `v0012` | Status paragraph, a *Tenant slug control-plane schema (P25)* section (`text NULL UNIQUE`, no backfill, no DB CHECK, **global** uniqueness, why this plane), and the `0005_tenant_slug` migration entry incl. the `postgresql+psycopg://` DSN note |
+| `backend` | `v0013` | Status sentence + an *Org slug + slug-addressed public reads (P25)* section: `slugs.py`, the forgiving-then-silent `get_tenant_by_slug`, `DuplicateOrgSlugError`, the extracted `_is_publicly_readable`, the emitter split + slug-first ordering, why the resolver has no guard, `resolve_org_slug` and the safe-direction race note |
+| `architecture` | `v0017` | Status sentence + a *Durable public identity: what a shared URL may be made of (P25)* section — the rule that a public URL is composed of durable parts only, why the slug lives in Postgres, composed-once-in-the-backend, trust boundary unchanged |
+| `frontend` | `v0015` | Status paragraph + a *Pretty public share URLs: the `/@{org}` route namespace* section: the two routes, verified precedence + the catch-all consequence, the load-bearing `@` guard + `safeDecode`, the `resolveDocument` seam, consume-never-compose (with the dashboard exception), 307 redirects, static metadata, the Public URL panel, the 409-gets-its-own-copy rule, the prettier hazard |
+| `experience` | `v0016` | Status paragraph + a *Pretty share URLs: claiming a public name (P25)* section: the always-visible prefilled panel, the mutability warning, error copy, one-way temporary forwards, branded not-found, **"no link breaks" now covers content identity**, the three copy-link surfaces, the member-previews-graph recorded edge |
+| `qa` | `v0014` | Status update to the new baselines + a *Pretty share URL acceptance (P25)* section: the globally-unique-slug hazard and the run-twice rule, the gated-suite recipe, the two-DSN-forms trap, the route-precedence probe technique (500 = right route; only 404s discriminate on copy), the round-trip regression test + its negative control + the one-line reproducer, the `KB_ROOT` fixture hazard, the process-global `/auth` throttle, the `0005` validation, the no-CI-for-`web/` + prettier facts |
+| `decisions` | `v0021` | Status sentence + five new ADR entries: the `/@{org}` namespace (D1), the dateless newest-wins address **and its P25.F1 round-trip amendment** (D2, written as an amended decision with the empirical finding as context), nullable/operator-set/mutable slugs with no history (D3 + Q3), redirect-vs-dual-serve at 307 (D4), and the two smaller resolutions (Q2 exact project match, Q4 pretty-201-for-private) |
 
-- **Covered by "Actual" blocks:** `api` (S1/S2/S4), `data` (S1), `backend` (S1/S2),
-  `architecture` (S1), `frontend` (S2/S3/S4/S5), `experience` (S3/S4/S5), `qa`
-  (S1/S2/S3/S4/S5). Accurate against the code as landed.
-- **Gap:** `decisions.md` has only the leftover "(expected)" hint — no slice appended an
-  "Actual" note for it. D1–D4 are fully written up in phase.md § "Design decisions
-  settled here" and must be consolidated from there; Q2/Q3/Q4's resolutions belong with
-  them.
-- **Judgment call for the consolidating pass:** `product.md` was not on anyone's list.
-  "Shared documents have readable, durable URLs" is arguably product-visible truth
-  (P19's visibility work reached `product.md`); worth a short paragraph.
-- **After Finding 1 is fixed**, the `api` / `experience` notes need a sentence on the
-  round-trip rule (`canonical_path` is null for a superseded duplicate slug), and `qa`
-  needs the new gated baseline (125).
+`python3 scripts/workflow.py rebuild-docs` was run once at the end; `docs/current/*.md` and
+`docs/index.json` are regenerated, never hand-edited. `validate` passed afterwards.
+
+---
+
+## 5. Verdict
+
+**`pass`.** Both findings closed, all validation green on final HEAD, intent fully met, docs
+consolidated.
+
+`explain: not written — run /explain for this phase` (the review writes no phase explainer).
 
 ## 6. Deviations from `plan.md`
 
-1. **The full compose end-to-end smoke was not run** — the plan makes it a judgment call
-   and permits standing on the gated suite plus recorded live-probe evidence. I did that
-   and added my own live route probe on final HEAD plus a targeted API probe (§ 1.3).
-2. **A throwaway probe test was written and run** (session scratchpad only, never added
-   to the repo, deleted afterwards) to confirm Finding 1 empirically rather than assert
-   it from reading. The review wrote no repo source code.
-3. **Step 5 (doc consolidation) was skipped entirely**, as the contract requires on a
-   non-pass verdict. Audited instead (§ 5).
+1. **The full compose end-to-end smoke was not run** — the plan makes it a judgment call and
+   permits standing on the gated suite plus recorded live-probe evidence. I did that and
+   added my own live route probe and alembic round-trip on final HEAD (§ 1.3).
+2. **No negative control was re-run for the F1 guard.** F1 recorded one (both new cases red
+   with the two server files stashed, then restored); repeating it would require editing
+   source, which a review slice may not do. I verified the guard by reading the code and by
+   running the two tests that pin the exact Finding-1 scenario.
+3. **Nine docs were versioned, not the eight the plan's "expected" list named** — the ninth
+   is `product.md`, which the plan's re-review addendum explicitly asked the consolidating
+   pass to give a P25 paragraph.
+4. No source code was edited on this slice; the only repo writes are `docs/versions/*`,
+   the regenerated `docs/current/*` + `docs/index.json`, this `result.md`, and the
+   `phase.md` notes.

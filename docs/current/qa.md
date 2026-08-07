@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0013
-created_at: 2026-08-06T00:05:13+09:00
-source: P24.REVIEW
-summary: P24 acceptance: the long-standing gated format-key failure is resolved (115 passed 0 failed) and publish.drain() is the deterministic way to assert an after-response side effect
-previous: v0012_p22_app-graph_label-focus_qa_mission_the_p6_map_mission_covers_the_mkdocs_surface_only
+version: v0014
+created_at: 2026-08-07T16:04:35+09:00
+source: P25.REVIEW
+summary: P25 gated baseline 125 passed / 83+42 skipped, web 15 files 85 tests, the globally-unique-slug and route-precedence probe techniques, and 0005 migration validation
+previous: v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect
 ---
 
 # QA
@@ -52,7 +52,13 @@ seeded-duplicate de-dupe scenario). **As of P24 the Postgres-gated suite is full
 (`test_documents_api.py::test_documents_list_detail_and_project_bridge`) is **resolved and
 retired as a standing item**; the notes below are kept for the history of how it was tracked,
 not as an open defect. P24 also adds the repo's pattern for testing **after-response** work:
-`publish.drain()`. See *Publish-worker acceptance (P24)* below.
+`publish.drain()`. See *Publish-worker acceptance (P24)* below. **As of P25 the
+Postgres-gated suite is 125 passed** (**83 passed / 42 skipped** without a DSN) and the web
+vitest suite is **15 files / 85 tests**; the phase also contributes two reusable techniques —
+**Next route precedence is verifiable locally with no backend running** (the built
+`routes-manifest.json` plus a `next start` probe), and **a globally-unique column makes a test
+un-re-runnable** unless its value is generated per run. See *Pretty share URL acceptance (P25)*
+below.
 
 ## Test Commands
 
@@ -461,6 +467,20 @@ P24 moved the git push and the Gemini embed **behind** the write response, which
 - **Response-shape assertions moved off `pushed`.** `tests/test_api_push.py` previously asserted `pushed:true` on a successful publish; post-P24 `pushed` is a constant `false`, so the suite asserts the **published head against the post-rebase local head** instead, plus `push_pending` presence. If a test ever needs "did it publish?", the answer is git state after `drain()`, never a response field.
 - **What is still not covered by pytest.** The box's real push credential chain (SSH origin + deploy key) — that is the bring-up assertion in **operations**, deliberately manual. And the worker-side Gemini embed has no client timeout: a stalled embed would block the FIFO queue behind it, which no test simulates (recorded as a deferred job, availability of the off-box backup only).
 - **A live spot-check worth repeating when the read projection changes.** The CLI's timeout recovery compares the *body* it sent against the document it reads back, which only works because `markdown` is in the `by-path` read projection. Verified against a real TestClient at the review — the projection is `created_at, date, format, id, markdown, project, rel_path, related, slug, source_repo, tags, tenant_id, title, updated_at, version`, and notably carries **no `url`** (that is synthesized only on write responses). Both clients correctly omit a URL on the recovered path; a `FakeApi`-only test would not have proven either fact.
+
+## Pretty share URL acceptance (P25)
+
+P25 spans both planes (a Postgres column + two backend routes + two Next routes + copy), so its acceptance is the ordinary gates plus two techniques worth keeping. All green at the P25 re-review: gated pytest **125 passed** (twice, against the *same* database), ungated **83 passed / 42 skipped**, web **15 files / 85 tests**, lint + typecheck + build clean, both parity scripts PASS, the `0005` migration round-tripped, `workflow validate` passed.
+
+- **`tenants.slug` is GLOBALLY unique — unlike every other assertion in the gated suites, which are tenant-scoped.** A test that claims a hardcoded slug passes once and then **409s forever** against a re-used database. Every slug-claiming test generates its value per run (`f"org-{uuid4().hex[:10]}"`), and the phase's standing check is to **run the gated suite twice against the same container** — a green second run is the only proof of re-runnability. Do this for any future globally-unique column.
+- **How to actually run the gated suite** (it silently skips otherwise, so a green local run can prove nothing): `docker run -d --rm --name kb-pg -e POSTGRES_PASSWORD=kb -e POSTGRES_USER=kb -e POSTGRES_DB=kb -p 55439:5432 postgres:17`, then `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q`. Use the repo `.venv` — the system `python3` has no sqlalchemy. **Every `result.md` must state whether the gated suite ran or skipped.**
+- **The two DSN forms are not interchangeable.** `alembic/env.py` needs `postgresql+psycopg://`; a bare `postgresql://` selects the absent `psycopg2` driver and raises `ModuleNotFoundError`, while the *test* harness (`KB_TEST_DATABASE_URL`) accepts the bare form. A migration check that "fails" this way is a driver typo, not a broken revision.
+- **Next route precedence is verifiable locally without a backend — cheap and decisive.** `npm run build`, read the order out of `.next/routes-manifest.json` (manifest order *is* match order; every static route is tried before any dynamic one), then `next start` and probe URLs with the API down. A non-404 upstream error is rethrown, so **500 = "reached the right route"** and only **404s** can be discriminated by which page's branded copy rendered (a Next 500 body still embeds the segment's not-found flight payload, so grepping copy on a 500 proves nothing). This is how the root-level `[org]` segment was proven to shadow nothing — re-run it whenever a route is added.
+- **The round-trip guard has a real regression test, proved by negative control.** `test_public_read.py::test_superseded_duplicate_slug_has_no_canonical_path` seeds **two rows under one `(project, slug)` at two dates** (`_seed(..., date=…)`) and pins "older ⇒ `canonical_path` null, newest ⇒ the path, resolver ⇒ the newest id" on **both** the member and the anonymous branch; `test_org_credentials.py` additionally pins the **backdated** 201 `url` falling back to `/documents/{id}`. Both were proved to fail with the two server files stashed, then restored — they are guards, not tautologies. The reproducer is a one-line request change: POST the same title/project with an explicit older `date` and no `new_version`.
+- **Fixture hazard: the public-read suite isolates `KB_DB_PATH` but NOT `KB_ROOT`.** A `POST /api/documents` under `test_public_read.py::documents_client` would write real files into the repo's own `docs/` tree and take the git commit path. **Write-path** cases belong in `test_org_credentials.py` (or `test_api_write.py`), whose fixtures isolate `KB_ROOT` to a `tmp_path` — which is why the 201-URL cases live there.
+- **The `/auth` throttle is process-global across the whole pytest session** (per (IP, path), default 20 / 15 min), so adding seed signups to one suite can push a *later* suite into 429s. Any new gated suite sets `KB_AUTH_RATE_LIMIT=0` in its client fixture, as `test_documents_api.py` and `test_accounts_provisioning.py` do.
+- **`0005_tenant_slug` was validated for real, not read**: `alembic upgrade head` on a dropped-and-recreated schema (`0001 → 0005`), `\d tenants` showing `slug text` nullable + `uq_tenants_slug`, then `downgrade 0004_project_visibility` → column and constraint gone → `upgrade head` → both back.
+- **`web/` has no CI gate** (a standing fact since P23): the real gates are the four local commands `npm run lint` / `typecheck` / `build` / `test`. `prettier --check` is **red repo-wide and pre-existing** — several files are dirty at HEAD (`lib/knowledge/app.ts`, `content/dashboard.ts`, `(app)/dashboard/page.tsx`, `tests/knowledge-auth.test.ts`, `document-view.tsx`, `explainer-frame.tsx`), so check a file's HEAD state with `git show HEAD:<f> | npx prettier --check --stdin-filepath` before assuming a warning is yours, and never `prettier --write` an existing web file inside a slice.
 
 ## Known Fragile Areas
 

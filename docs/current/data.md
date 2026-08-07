@@ -1,10 +1,10 @@
 ---
 doc_id: data
-version: v0011
-created_at: 2026-08-05T22:53:41+09:00
-source: P23.REVIEW
-summary: P23 on-disk document version archive .versions/<project>/<date>-<slug>/vNNNN.<ext>, derived documents.version + identity-keyed document_versions, no alembic
-previous: v0010_p19_alembic_0004_projects.visibility_text_not_null_default_private_sqlite_projects_allowlist_predicate
+version: v0012
+created_at: 2026-08-07T16:00:04+09:00
+source: P25.REVIEW
+summary: P25 alembic 0005_tenant_slug: tenants.slug text NULL UNIQUE as the durable public org identity, no backfill, app-layer validation
+previous: v0011_p23_on-disk_document_version_archive_.versions_project_date_-_slug_vnnnn._ext_derived_documents.version_identity-keyed_document_versions_no_alembic
 ---
 
 # Data
@@ -26,6 +26,8 @@ P6 adds a **second, independent data surface for Track 1**: a build-time `graph.
 **P19** adds **per-project visibility** to the Postgres control plane via the **fourth Alembic migration `0004_project_visibility`** (`down_revision="0003_org_level_credentials"`) — a single additive column `projects.visibility text NOT NULL DEFAULT 'private'`. The **disposable SQLite content plane is unchanged** (no new column, no migration); visibility is bridged into reads at query time via a new project-**name** allowlist predicate on the existing `documents` reads. See *Project visibility control-plane schema (P19)* below.
 
 **P23** adds **document version history** — the first durable content-plane state that is *not* one file per document. Superseded document bodies are archived **on disk** under a reserved top-level `.versions/` dir in the same content root, the `documents` table gains a derived `version` column, and a new **disposable** `document_versions` table is rebuilt from that archive tree by reindex. **The Postgres control plane is untouched — no Alembic migration** (the content plane has none; see *Migrations*). See *Document version archive (P23)* below.
+
+**P25** adds the **durable public identity of an org** to the Postgres control plane via the **fifth Alembic migration `0005_tenant_slug`** (`down_revision="0004_project_visibility"`) — a single additive column `tenants.slug text NULL UNIQUE`. It is the one part of a pretty share URL that must survive a full content reindex, which is exactly why it lives here and not in the disposable SQLite plane. The **content plane is unchanged** (no new column, no migration): the other two segments of the URL — project name and doc slug — are already inside the content plane's durable identity `rel_path = "<project>/<date>-<slug>.<ext>"`. See *Tenant slug control-plane schema (P25)* below.
 
 ## Storage
 
@@ -118,6 +120,15 @@ P19 adds one additive column to the `projects` table (migration `0004_project_vi
 - **`ProjectRecord.visibility` / `serialize_project`** carry it up through the accounts layer; `CreateProject.visibility` defaults `"private"`, so signup / `provision_signup` / `get_or_create_project` keep making private rows untouched (implicitly created projects are private by default). See **backend**.
 - **The visibility bridge is query-layer, not schema (SQLite content plane).** SQLite `documents` rows carry only the project **name string** (no visibility column, no FK). Each anonymous read resolves the owner's set of public-project **names** from the small Postgres `projects` table and passes it as an allowlist predicate into the existing SQLite reads: `server/db.py`'s `_filtered`/`list_documents`/`count_documents` gained an optional `projects: Sequence[str] | None` → `documents.project IN (?,…)`. Default `None` leaves every existing caller byte-identical; an **empty** list is `WHERE … 0` (**fail-closed** — matches nothing). No SQLite schema change and no reindex — the toggle takes effect instantly. See **backend**/**security**.
 
+### Tenant slug control-plane schema (P25) — `tenants.slug`
+
+P25 adds one additive column to the `tenants` table (migration `0005_tenant_slug`); nothing else in the seven-table set changes, and the disposable SQLite content plane is untouched.
+
+- **`tenants` gains `slug` `text NULL UNIQUE`** (constraint `uq_tenants_slug`) — the org's durable public identity, the `{org}` in `/@{org}/{project}/{doc-slug}` and `/@{org}/graph`. **Nullable with no backfill and no derived default:** a tenant without a slug simply has no pretty URL yet and keeps every pre-P25 link and behavior, so the migration is a pure add with **zero behavior change** and no mint-window. Postgres's distinct-NULLs rule lets any number of tenants stay slug-less under the `UNIQUE`. The ORM mirrors it (`TenantModel.slug`, `unique=True`, nullable), so `Base.metadata.create_all` (the Postgres-gated tests) yields a schema byte-equal to the migration. `0005`'s downgrade drops the column.
+- **No DB `CHECK`** — charset (`^[a-z0-9]+(-[a-z0-9]+)*$`), 2–40 length and the 38-word reserved list are validated **app-layer** in `server/accounts/slugs.py`, matching the `projects.visibility` (`0004`) and `usage_events.event_type` precedent. Values are **lowercased on write**, so the `UNIQUE` is effectively case-insensitive: `Hi2Vi` and `hi2vi` collide.
+- **Uniqueness here is GLOBAL, unlike every other constraint in this schema**, which is tenant-scoped. The `UNIQUE` violation is mapped to a clean 409 (`DuplicateOrgSlugError`), never a 500 — and any test that claims a slug must generate it per run, or it passes once and 409s forever against a re-used database.
+- **Why this plane.** A shared URL must outlive a full content reindex. `documents.id` is a disposable SQLite rowid re-derived by reindex, so nothing durable may key off it; the pretty URL is composed only of durable parts — this Postgres slug plus the project name and doc slug that already live inside the content plane's durable identity `rel_path`. See **architecture**.
+
 ## Indexes / Search
 
 - BM25 keyword search via `documents_fts`, fused in Python with an exp-decay recency signal (P4).
@@ -138,6 +149,7 @@ P19 adds one additive column to the `projects` table (migration `0004_project_vi
 - **(P11) Second migration `0002_usage_events`** (`down_revision="0001_accounts_tenancy"`) — a hand-written Alembic revision creating `usage_events` + its two composite indexes, with constraint names matching the model (`pk_usage_events`, `fk_usage_events_tenant_id_tenants` CASCADE, `fk_usage_events_project_id_projects` SET NULL — no autogenerate drift). `alembic upgrade head` now applies **both** `0001` and `0002` in order (verified live against `postgres:17` at the P11 review).
 - **(P18) Third migration `0003_org_level_credentials`** (`down_revision="0002_usage_events"`) — the org-level-credentials + unique-project-names change (de-dupe → `UNIQUE(tenant_id,name)` → `project_credentials.tenant_id` add/backfill/NOT-NULL/FK/index → `project_id` nullable; see *Accounts v2 control-plane schema (P18)* above). `alembic upgrade head` now applies `0001`+`0002`+`0003` in order; validated against a disposable `postgres:17` at the P18 review (clean upgrade + downgrade round-trip + a seeded-duplicate de-dupe scenario). It is a **manual** deploy step (never on boot) and is the actual de-dupe run on prod — `alembic/` stays repo-only (not shipped in the plugin template).
 - **(P19) Fourth migration `0004_project_visibility`** (`down_revision="0003_org_level_credentials"`) — a single additive `op.add_column("projects", visibility text NOT NULL server_default 'private')` (downgrade `op.drop_column`). `alembic upgrade head` now applies `0001`+`0002`+`0003`+`0004` in order; validated against a disposable `postgres:17` at the P19 review (clean `0001→0004` upgrade + a `0004→0003` downgrade→re-upgrade round-trip, column verified `text NOT NULL DEFAULT 'private'`). A **manual** deploy step; unlike `0003` it carries **no mint-window** (the constant server DEFAULT makes the old-code+new-schema overlap fully safe). Root-only; not mirrored to the plugin template.
+- **(P25) Fifth migration `0005_tenant_slug`** (`down_revision="0004_project_visibility"`) — a single additive `op.add_column("tenants", slug text NULL)` plus the `uq_tenants_slug` unique constraint (downgrade drops both). `alembic upgrade head` now applies `0001`+`0002`+`0003`+`0004`+`0005` in order; validated against a disposable `postgres:17` at the P25 review (clean `0001→0005` upgrade on a dropped-and-recreated schema, then a `0005→0004` downgrade→re-upgrade round-trip, with the column + constraint verified to disappear and come back). A **manual** deploy step with **no mint-window** (nullable, no backfill; pre-P25 code neither reads nor writes it). Root-only; `alembic/` is not shipped in the plugin template. **Operational note:** `alembic/env.py` needs the `postgresql+psycopg://` scheme — a bare `postgresql://` DSN selects the absent `psycopg2` driver and fails with `ModuleNotFoundError`, while the *test* harness (`KB_TEST_DATABASE_URL`) accepts the bare form, so the two DSNs are **not** interchangeable.
 - **(P23)** `init_db` adds `documents.version INTEGER NOT NULL DEFAULT 1` the same way (PRAGMA-guarded `ALTER TABLE ADD COLUMN`, the `related`/`format`/`raw_html` precedent) and creates the new `document_versions` table in `_SCHEMA`; a reindex then back-fills both from the on-disk files. **No Alembic / Postgres change** — the content plane has no Alembic (the four migrations cover only the accounts/control plane), so a content-plane schema change is idempotent DDL in `server/db.py`, never a migration.
 - Rule: the SQLite DB is disposable and rebuilt from `docs/`/`tenants/` — schema changes are applied via new idempotent DDL (or a disposable drop-and-recreate) + a reindex. The Postgres accounts schema is durable and migrated explicitly with Alembic.
 
