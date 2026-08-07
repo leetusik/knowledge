@@ -799,6 +799,41 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   pre-existing `matchMedia` line) while `explainer-height.ts` is clean. Check the specific
   file at `HEAD` before assuming a warning is yours; nothing was reformatted.
 
+### Found by P25.REVIEW (third pass — F3 + F4, verdict `pass`)
+
+- **Both post-cutover fixes verified in the code, not from their `result.md`.** F3: `SHARE.claimHint`
+  is copy-as-data, and the two conditions are exactly right — `identity.tenant?.slug == null` on the
+  graph header (always the viewer's own org) and `ctx.identity.tenant?.slug == null &&
+  doc.canonical_path === null` on the document page's member branch, which is the ownership proxy
+  the deviation describes. The claimed-slug and anonymous branches are untouched. F4: the parent
+  posts `kb-explainer-request` from **both** sides of the race (after `addEventListener` in the
+  effect, and from the iframe's `onLoad`, which React attaches during the hydration commit — i.e.
+  before effects), and the child's handler is sender- + shape-checked and resets `last` only. Both
+  orderings are covered and neither leaves a gap: if the effect's request lands on the still-blank
+  `about:blank` window, `onLoad` fires later; if the child's script has not parsed when the request
+  arrives, the child's own load post reaches an already-attached parent listener.
+- **F4's "one fix covers every article view" is true structurally, not just empirically.** Both raw
+  relays (`api/documents/[id]/raw`, `.../versions/[v]/raw`) call the same `injectHeightReporter`,
+  and `ExplainerFrame` is rendered by `document-view.tsx` (shared by the id page and the pretty
+  page) and by the versions page — three call sites, one component, one reporter.
+- **A REAL DOC GAP was found and closed here: the height handshake had never been documented.**
+  It landed in an out-of-workflow commit (`1d59d6b`, "size the explainer iframe to its content"),
+  so `frontend.md` still claimed "no `postMessage` height handshake" (a P16 statement) while the
+  product had one. The F3/F4 consolidation therefore adds a full *The explainer height handshake
+  (`web/`)* section — all three messages, the opaque-origin constraints, the measurement rules —
+  and marks the stale P16 bullet superseded. Worth remembering: **a fix committed outside the
+  slice workflow leaves no Doc-impact note, so its truth never reaches the docs.**
+- **Phase-level validation re-confirmed on final HEAD** (gated pytest re-run even though no backend
+  file changed, to prove the baseline rather than assume it): **125 passed** with Postgres, **83
+  passed / 42 skipped** without, web **16 files / 88 tests**, lint + typecheck + build clean, both
+  parity scripts PASS, built dynamic-route order byte-identical to the second pass, `workflow
+  validate` passed.
+- **Residual (recorded, not a finding):** on the document read view a cross-org member viewing
+  *another* org's slug-less public doc still sees the claim hint, where claiming their own name
+  cannot make that particular link pretty. Closing it needs a backend ownership field on the
+  document read shape — do not infer ownership in TypeScript. Now written into `experience.md`
+  as a known edge alongside the member-previews-the-public-graph one.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -1095,6 +1130,17 @@ above are hints, not a substitute.
 notes landed after it, so they are **not** covered by `experience` v0016 / `frontend`
 v0015 / `qa` v0014 and need new `experience`, `frontend` and `qa` versions from whichever
 review pass closes the **F3/F4 round**.
+
+**Consolidated by P25.REVIEW (third pass, F3/F4 round, verdict `pass`) — this round is now
+CLOSED.** Three doc versions, one per doc, then a single `rebuild-docs`: `experience` v0017
+(the claim hint, its three quiet-keeping rules, and the cross-org residual edge),
+`frontend` v0016 (a new *The explainer height handshake (`web/`)* section documenting all
+three messages — the gap described above — plus the F3 hint conditions, the superseded P16
+fixed-height bullet, and the 16/88 baseline) and `qa` v0015 (the new baselines, the CDP
+CPU-throttle repro recipe with its three traps, the no-jsdom injected-script test shape, and
+the sharpened prettier rule). No other doc was re-versioned: the second pass's nine versions
+still describe the backend, data, API, product, architecture and decision truth unchanged —
+F3 and F4 touched `web/` only.
 
 **Consolidated by P25.REVIEW (re-review pass, verdict `pass`) — this list is now CLOSED.**
 Nine doc versions were created from the notes above, one per doc, then a single

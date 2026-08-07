@@ -1,43 +1,43 @@
-# Result — P25.REVIEW (re-review pass): phase review of "Pretty public share URLs"
+# Result — P25.REVIEW (third pass, F3 + F4): phase review of "Pretty public share URLs"
 
-**Verdict: `pass`.** Both findings from the first pass are closed — verified in the code and
-by the regression tests that pin them, not by taking the fix slices' word for it. The full
-consolidated validation was re-run on final HEAD against the updated baselines and is
-green throughout. The phase's nine durable-doc areas were consolidated into nine new doc
-versions (this phase is **not** in parallel mode, so consolidation belongs here).
+**Verdict: `pass`.** Both post-cutover fixes are real and correct — verified by reading the
+code and running the tests that pin them, not by taking the fix slices' word for it. The
+consolidated validation was re-run on final HEAD (including the gated pytest suite, even
+though no backend file changed) and is green throughout. The F3/F4 round's Doc-impact notes
+were consolidated into **three** new doc versions (`experience` v0017, `frontend` v0016,
+`qa` v0015); the second pass's nine versions stand untouched, since both fixes are `web/`-only.
 
-This file **replaces** the first pass's `changes_requested` result; that pass's findings,
-evidence and Doc-impact audit are summarized in § 2 and carried forward into § 4.
+This file **replaces** the second pass's result. That pass's evidence is preserved in
+`phase.md` (§ *Found by P25.REVIEW (re-review pass)* and the closed Doc-impact block), and
+§ 5 below records its consolidation inventory in one line so nothing is lost.
 
 ---
 
-## 1. Consolidated validation — all green
+## 1. Consolidated validation on final HEAD (`f5a7017`) — all green
 
-Disposable `postgres:17` on host port 55439 (`docker run … -p 55439:5432`, per S1's recipe;
-55432 is occupied on this machine), torn down afterwards. Repo `.venv` throughout (the
-system `python3` has no sqlalchemy).
+Disposable `postgres:17` on host port 55439 (`docker run … -p 55439:5432`, S1's recipe;
+55432 is occupied on this machine), torn down afterwards. Repo `.venv` throughout.
 
 | # | Command | Result |
 |---|---|---|
-| 1 | `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q` (**run 1**) | **125 passed** — matches the P25.F1 baseline; the gated suite **RAN**, it did not skip |
-| 2 | same command, **run 2** against the *same* database | **125 passed** — globally-unique-slug re-runnability confirmed |
-| 3 | `.venv/bin/python -m pytest -q` (no DSN) | **83 passed / 42 skipped** — clean skip path, matches baseline |
-| 4 | targeted: `test_public_read.py::test_superseded_duplicate_slug_has_no_canonical_path` + `test_org_credentials.py::test_save_url_is_pretty_once_the_tenant_has_an_org_slug` | **2 passed** — the two Finding-1 guards |
-| 5 | `cd web && npm run lint` | passed (eslint, no output) |
-| 6 | `cd web && npm run typecheck` | passed (`tsc --noEmit`) |
-| 7 | `cd web && npm run build` | passed — both new routes present, ordering unchanged (§ 1.1) |
-| 8 | `cd web && npm run test` | **15 files / 85 tests passed** — matches the S5/F2 baseline |
-| 9 | `.venv/bin/python scripts/plugin_parity.py` | **PASS** |
-| 10 | `.venv/bin/python scripts/skills_parity.py` | **PASS** |
-| 11 | `alembic upgrade head` on a **dropped-and-recreated** schema (`postgresql+psycopg://`) | `0001 → 0005` clean; `\d tenants` shows `slug text` (nullable) + `uq_tenants_slug UNIQUE` |
-| 12 | `alembic downgrade 0004_project_visibility` → `\d tenants` → `upgrade head` | clean round-trip: 0 slug references after the downgrade, 2 (column + constraint) after the re-upgrade |
-| 13 | live `next start` route probe on final HEAD, 11 URLs | no shadowing; identical to the first pass (§ 1.2) |
-| 14 | `python3 scripts/workflow.py validate` | **Workflow validation passed** (re-run after the doc consolidation too) |
+| 1 | `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q` | **125 passed** — the F1 baseline; the gated suite **RAN**, it did not skip |
+| 2 | `.venv/bin/python -m pytest -q` (no DSN) | **83 passed / 42 skipped** — clean skip path, matches baseline |
+| 3 | `cd web && npm run lint` | passed (eslint, no output) |
+| 4 | `cd web && npm run typecheck` | passed (`tsc --noEmit`) |
+| 5 | `cd web && npm run build` | passed — both new routes present, dynamic-route order byte-identical to the second pass (§ 1.1) |
+| 6 | `cd web && npm run test` | **16 files / 88 tests passed** — the expected F4 baseline (was 15 / 85) |
+| 7 | `.venv/bin/python scripts/plugin_parity.py` | **PASS** |
+| 8 | `.venv/bin/python scripts/skills_parity.py` | **PASS** |
+| 9 | `python3 scripts/workflow.py validate` | **Workflow validation passed** (re-run after the doc consolidation too) |
 
-### 1.1 Route precedence — re-verified on final HEAD
+**One gated pytest run this round, deliberately** — the plan's own instruction, and it is
+sound: `git show --stat` on both commits confirms neither touched `server/**`, `tests/**`,
+`alembic/**` or `plugin/**` (F3: three `web/src` files + works notes; F4: two `web/src`
+files + one new `web/tests` file + works notes). The double gated run exists to prove
+globally-unique-slug re-runnability, which no `web/`-only change can affect; the alembic
+round-trip likewise needs no third repetition (`0005` is untouched since F1).
 
-Dynamic-route order read out of the built `.next/routes-manifest.json` (manifest order *is*
-match order; all static routes precede every dynamic one):
+### 1.1 Route precedence — unchanged, read out of the built manifest
 
 ```
 /api/documents/[id]/raw
@@ -50,177 +50,159 @@ match order; all static routes precede every dynamic one):
 /[org]/[project]/[slug]       ^/([^/]+?)/([^/]+?)/([^/]+?)$  ← still LAST
 ```
 
-Byte-identical to the first pass — as expected, since F1 is backend-only and F2 is a copy
-string.
-
-### 1.2 Live probe (`next start -p 3141`, backend deliberately down)
-
-A non-404 `ApiError` is rethrown by design, so **500 = "reached the right route"**; the 404s
-were discriminated by which page's branded copy rendered.
-
-| URL | status | reached |
-|---|---|---|
-| `/documents/25`, `/documents/25/versions/1` | 500 | the id / past-version pages |
-| `/api/documents/25/raw` | 502 | the BFF relay handler |
-| `/graph/abc` | 404 | legacy page's UUID guard — *"No public graph here"* |
-| `/@hi2vi/graph` | 500 | **the new pretty graph page** (guard passed) |
-| `/foo/graph` | 404 | **new graph page's `@` guard** — *"No public graph here"* |
-| `/@hi2vi/kb/hello` | 500 | **the new pretty document page** |
-| `/foo/bar/baz` | 404 | **pretty doc page's `@` guard** — *"Document not found"* |
-| `/documents/graph` | 404 | `/documents/[id]` — *"Document not found"*, not the catch-all |
-| `/dashboard` | 307 | the `(app)` auth gate |
-| `/login` | 200 | the login page |
-
-### 1.3 End-to-end smoke — what I did instead
-
-Same judgment call as the first pass, which the plan permits: no full compose stack. I stood
-on (a) the 125-test gated API suite, which exercises the resolver, `canonical_path` on both
-detail reads **including the round-trip guard on both the member and anonymous branches**,
-the pretty and backdated 201 save URLs, the graph slug selector and every 404-never-403 case
-against a real Postgres; (b) the live `next start` route probe above on final HEAD; (c) the
-alembic round-trip on the same disposable Postgres. The only behavior left un-exercised
-end-to-end is the two `redirect()` calls themselves, each a literal `if (x) redirect(x)` on a
-value the gated suite pins.
+Byte-identical to both earlier passes — expected, since neither fix adds or moves a route.
+No `next start` probe was repeated this round: with the manifest identical and no routing
+code touched, it would re-derive a fact already established twice.
 
 ---
 
-## 2. Findings from the first pass — both CLOSED
+## 2. The two fixes — both verified independently
 
-### Finding 1 (BLOCKING) — an old `/documents/{id}` share link could 307 to a *different* document — **CLOSED by P25.F1**
+### P25.F3 — the unclaimed-slug share hint: **correct**
 
-Verified three ways, independently of `P25.F1/result.md`:
+- **Copy is data.** `SHARE.claimHint` in `web/src/content/share.ts` (`prefix` / `linkLabel` /
+  `suffix` / `href`), split because the middle is an inline `<Link href="/dashboard">`. No
+  string is inlined in either page. Convention held.
+- **The graph header's condition is `identity.tenant?.slug == null`**, inside the pre-existing
+  `orgId ? … : null` guard — that surface is always the viewer's own org, so no proxy is
+  needed and a tenant-less session is untouched. The button still copies
+  `graph.canonical_path ?? /graph/{orgId}`; the fix is purely additive.
+- **The document page's condition is `ctx.identity.tenant?.slug == null && doc.canonical_path
+  === null`**, on the member branch only. The second clause is the plan deviation F3 declared,
+  and it is the *right* call: the plan asserted this branch is own-tenant by construction, and
+  it is not — `_resolve_readable_doc`'s public-project fallback lets a cross-org member read
+  another org's public doc here, and `KbDocument` carries no `tenant_id` to test. The proxy
+  excludes the genuinely misleading case (another org's doc that *does* have a pretty path).
+- **The three quiet-keeping rules hold**, which is what makes this a hint rather than noise:
+  shown only to someone who can act (the viewer's own slug, never the document's), never once
+  a slug is claimed (a `null` path under a claimed slug is the F1 superseded case — nothing to
+  fix), never on an anonymous branch. The pretty document page carries no hint: reaching that
+  route means a slug resolved, so the condition is unsatisfiable there — checked in the file.
+- **No CSS, no new component**: `--kb-hint` + `--kb-accent-strong` with
+  `underline underline-offset-2`, the treatment `version-history.tsx` already uses, so it
+  themes automatically. Nothing here is a design decision, so the `design-cowork` gate does
+  not apply — agreed with F3's own reading.
+- **Residual edge, recorded not filed:** a cross-org member on *another* slug-less org's
+  public doc still sees the hint, where claiming their own name cannot make that link pretty.
+  The sentence stays true of their own links, the case needs two orgs and a slug-less peer,
+  and closing it requires a new backend ownership field. Recorded in `experience.md` v0017
+  and `phase.md`; not a finding.
 
-1. **The guard exists and its semantics are right.** `server/documents_api.py` splits the
-   emitter into `_owner_org_slug(doc, ctx)` and `_owns_its_canonical_path(conn, doc)` — the
-   latter calls `db.find_latest_document_by_slug(conn, doc["project"], doc["slug"],
-   tenant_id=<owner>)` and returns `latest is not None and latest["id"] == doc["id"]`.
-   `_document_canonical_path(conn, doc, ctx)` composes them **slug-first**, so a slug-less
-   deployment short-circuits before the SQLite read. Tenant scoping uses the **document's
-   own** `tenant_id`, which is the right owner on the anonymous/cross-org branch too.
-2. **The same guard is on the 201 save URL** (`server/main.py`, step 5), scoped with
-   `_tenant_filter(ctx)` to match, with `canonical or f"{origin}/documents/{doc_id}"` as the
-   fallback — so a backdated publish gets the id URL.
-3. **The Finding-1 transcript scenario is now a test.**
-   `test_superseded_duplicate_slug_has_no_canonical_path` seeds `pub/notes` at `2026-01-01`
-   and `2026-06-01`, asserts `old ⇒ canonical_path is None` and `new ⇒ the path` on **both**
-   the member and the anonymous branch, and then asserts the resolver returns the *newest*
-   id with that same path. That is precisely the transcript that produced the finding
-   (ids 13/14 both advertising one path), inverted into a guard. It passes (§ 1, row 4);
-   F1 recorded a negative control (server files stashed ⇒ both cases red, then restored),
-   which I did not repeat because a review may not edit source.
+### P25.F4 — the explainer height handshake: **correct, and the fix is complete on both sides**
 
-The resolver route deliberately has no guard — it resolved *through* the slug, so the check
-would be a tautology there. Correct, and now stated in its docstring.
-
-**Zero web changes were needed, as predicted:** `null` is a state every consumer already
-handles (the S3 anonymous redirect, S5's three copy-link surfaces, the dashboard), because
-that is the slug-less contract. Superseded duplicates simply join it.
-
-### Finding 2 (minor) — the dashboard let a claimed slug be changed with no warning — **CLOSED by P25.F2**
-
-`web/src/content/dashboard.ts` line 171 now reads:
-
-```
-hint: "2–40 characters: lowercase letters, numbers and single hyphens. Changing an already-claimed name breaks links you've already shared.",
-```
-
-One string, one file, matching the surrounding copy's tone. It names exactly the cost Q3
-accepted, at the one place in the product where the phase's "no link breaks" promise can be
-broken by a person.
-
-### Non-findings re-confirmed (unchanged from the first pass)
-
-404-never-403 on every new anonymous surface; nothing durable keys off `documents.id`;
-slug-less tenants see byte-identical pre-P25 behavior; no redirect loop; no open redirect
-(both `redirect()` arguments are server-built root-relative paths over validated charsets);
-the reserved list is exactly the 38 words the constraint names (`len(RESERVED_ORG_SLUGS)`
-= 38, and `ORG_SLUG_CONSTRAINT` cites the rule); Q4's pretty-201-for-a-private-project is
-parity with today's `/documents/{id}`; the member detail read stays Postgres-free (F1 added
-no accounts-plane call — its read is content-plane only); S5's two deviations are correct
-(the graph header consumes `graph.canonical_path`; the dashboard's local composition is the
-one justified exception). The recorded non-finding stands: a member landing on
-`/@{slug}/graph` sees their whole-corpus member view inside `PublicShell` — their own
-session, their own data, no leak — so the operator cannot preview what the public sees from
-the URL the dashboard tells them to share. A candidate for a later slice, not a P25 defect;
-it is now written into `experience.md` as a recorded edge.
-
----
-
-## 3. Judgment against intent
-
-Every bullet of `intent.md`'s confirmed intent landed: the durable Postgres org slug (S1),
-slug-addressed documents (S2/S3), the slug-addressed public graph subsuming **D19** (S4),
-old links redirecting rather than breaking (S3/S4, now correct in content as well as in
-status thanks to F1), and share affordances handing out the pretty URL (S5). The four
-constraints that mattered most all hold:
-
-- **No link breaks** — `/documents/{id}` and `/graph/{uuid}` still resolve on both identity
-  branches, for slugged and slug-less tenants; redirects are 307 and one-way; and after F1
-  the constraint covers *content identity*, not just the HTTP status.
-- **404-never-403** — one constant detail across all six resolver miss paths, the graph's
-  single `"graph not found"`, and both pages' `@` guards firing before any session read.
-- **Nothing durable keys off `documents.id`** — the pretty path is built from
-  `(tenant slug, project, doc slug)`; version links stay id-keyed by design (D2's exact-row
-  addressing).
-- **Slug-less tenants see today's behavior exactly** — every consumer falls back, and the
-  migration is a nullable add with no backfill.
-
-Nothing out of scope was built: no per-document visibility, no share tokens, no sitemap/SEO
-change; `robots.ts`, `sitemap.ts`, the `next.config.ts` header exemptions and
-`deploy/knowledge.conf` are untouched. Backend-before-web ordering was honored, plugin
-template parity was maintained on every backend slice, and the migration is a pure additive
-round-trippable revision. The architecture is the right one — one backend-built
-`canonical_path` consumed everywhere, one extracted `_is_publicly_readable` trust boundary,
-one `slugs.py` rules module — and F1 closed the one semantic gap in it without changing its
-shape.
+- **The race is real and the diagnosis matches the code.** The frame's `src` is in the SSR
+  HTML, the child posts its height once, and the reporter's `last` dedupe makes a missed first
+  message permanent — so the frame keeps `explainer.css`'s fallback height and scrolls
+  internally. F4 reproduced it deterministically under `Emulation.setCPUThrottlingRate ≥ 4`
+  (549px vs 9,268px, `data-measured` absent, un-wedged by a resize) on **every** article view.
+- **Both orderings of the race are covered, with no gap** — I traced this rather than assume
+  it. The parent posts `kb-explainer-request` (a) in the `useEffect`, immediately *after*
+  `addEventListener("message", …)`, and (b) from the iframe's `onLoad`. If the frame already
+  loaded before hydration, (a) reaches it and `onLoad` will not fire again; if it had not,
+  (a) lands on the blank initial window and is lost, but (b) fires later — and React attaches
+  `onLoad` during the hydration commit, before effects run, so it cannot be missed. If the
+  child's script has not parsed when a request arrives, the child's own load-time post reaches
+  a parent listener that is by then attached. Every path ends in a measured frame.
+- **The dedupe bypass is exactly one trigger, and it cannot loop.** The child's handler
+  ignores anything whose `e.source !== window.parent` or whose shape is wrong, then resets
+  **`last` only, never `budget`** — a runaway document stays latched, and load/resize/
+  `ResizeObserver`/fonts still require a real ≥2px change. F4's live instrumentation (exactly
+  two height messages; identical applied height at t+4s and t+8s) corroborates the reading.
+- **Every trust safeguard is verbatim**, checked line by line against the diff:
+  `sandbox="allow-scripts"` without `allow-same-origin` (P16 pinned decision 1), the
+  `event.source === frame.contentWindow` identity check (never `event.origin` — `"null"` for
+  an opaque origin), the shape check, the clamp, `referrerPolicy="no-referrer"`. The outbound
+  request carries no data and reaches one frame's window; `targetOrigin: "*"` is forced by the
+  opaque origin, not laziness. No CSP, relay, route, header, layout or CSS change.
+- **"One fix covers every article view" is structurally true, not just empirically.** Both raw
+  relays call the same `injectHeightReporter` (`api/documents/[id]/raw:96`,
+  `.../versions/[v]/raw:83`), and `ExplainerFrame` has three call sites through one component:
+  `document-view.tsx` (shared by the id page and the pretty page) and the versions page.
+- **The new test is a real guard.** `web/tests/explainer-reporter.test.ts` *executes* the
+  injected reporter via `new Function("window","document",src)` against a hand-rolled
+  window/document — no jsdom added to a node-environment suite — and pins report-once/dedupe,
+  the parent-request re-post, and rejection of a non-parent sender or malformed payload. F4
+  recorded a negative control (case 2 red with `explainer-height.ts` stashed, then restored);
+  a review may not edit source, so I verified by reading the handler and running the suite.
 
 ---
 
-## 4. Doc consolidation — nine versions created
+## 3. Judgment against intent — unchanged, and now honest in production
 
-This phase carries **no `execution` block** in `phase.json`, so it is not in parallel mode
-and consolidation happens here. Worked through `phase.md` § "Doc impact" (the **Actual**
-blocks for S1–S5 + F1 + F2), plus the two gaps the first pass's audit flagged:
-`decisions.md` (which had no Actual note — consolidated from § "Design decisions settled
-here": D1–D4 plus Q2/Q3/Q4) and `product.md` (judged to owe a P25 paragraph, as P19's
-visibility work reached it). One `doc-new-version` per doc, then a single `rebuild-docs`.
+`intent.md`'s confirmed intent was already fully met at the second pass (durable Postgres org
+slug; slug-addressed documents and public graph, subsuming D19; old links redirecting rather
+than breaking; share affordances handing out the pretty URL). Neither F3 nor F4 changes any
+of that — they close the gap between what the phase built and what the operator actually
+experienced on the live site:
+
+- F3 answers the one thing the phase's design did not: **before a name is claimed, the whole
+  feature is invisible and looks broken.** The fix is the smallest honest one — say so, once,
+  to the person who can claim it. No behavior, route or payload changed.
+- F4 fixes a pre-existing defect the cutover *surfaced* rather than caused (the handshake
+  predates P25). It is in scope for this phase's review because it landed as a P25 fix slice
+  and because P25's own pretty page renders the same frame.
+
+The four load-bearing constraints are untouched by this round and still hold: **no link
+breaks** (no redirect or path logic changed), **404-never-403** (no new anonymous surface, no
+new upstream call — the hint is conditional static copy on a member branch only), **nothing
+durable keys off `documents.id`**, and **slug-less tenants see today's behavior** — with the
+one deliberate, visible amendment that a slug-less tenant's *members* now see a sentence
+telling them why. Nothing out of scope was built: `robots.ts`, `sitemap.ts`, the
+`next.config.ts` header exemptions and `deploy/knowledge.conf` remain untouched, and no
+backend file changed in either fix.
+
+---
+
+## 4. A real doc gap found and closed
+
+`frontend.md` still carried P16's statement that there is **no `postMessage` height
+handshake** — while the product has had one since `1d59d6b` ("size the explainer iframe to
+its content"), a fix committed **outside the slice workflow**, which therefore left no
+Doc-impact note and never reached the docs. Documenting F4's child-ward message on top of an
+undocumented channel would have been incoherent, so the `frontend` version documents the
+whole handshake and marks the stale P16 bullet superseded. Recorded in `phase.md` as a
+standing lesson: an out-of-workflow fix leaves no Doc-impact note, so its truth never lands.
+
+## 5. Doc consolidation — three versions (this phase is NOT in parallel mode)
+
+`phase.json` carries no `execution` block, so consolidation belongs here. Only the **F3/F4
+round** was consolidated: `phase.md`'s Doc-impact list marks everything above it CLOSED by the
+second pass (`product` v0013, `api` v0018, `data` v0012, `backend` v0013, `architecture`
+v0017, `frontend` v0015, `experience` v0016, `qa` v0014, `decisions` v0021 — inventory
+preserved there). I re-checked the earlier docs for a gap this round would need to reopen and
+found none: both fixes are `web/`-only, so the API, data, backend, architecture, product and
+decisions truth is unchanged.
 
 | Doc | New version | What it captures |
 |---|---|---|
-| `product` | `v0013` | Status sentence + a *Pretty public share URLs (P25)* section: claiming an org name, the two pretty address shapes, no-link-breaks (including content identity), share affordances, the slug-change cost, out-of-scope, D19 settled |
-| `api` | `v0018` | Status paragraph + a full *Pretty share URLs* section: `slug` on the tenant shape, `PATCH /app/tenant` (422/409), the resolver route + its one constant 404, `canonical_path` on the detail reads only **with the round-trip rule and its invariant**, `?org=` widened (and the deliberate 422→404), the graph's `canonical_path`, the guarded pretty 201 `url` |
-| `data` | `v0012` | Status paragraph, a *Tenant slug control-plane schema (P25)* section (`text NULL UNIQUE`, no backfill, no DB CHECK, **global** uniqueness, why this plane), and the `0005_tenant_slug` migration entry incl. the `postgresql+psycopg://` DSN note |
-| `backend` | `v0013` | Status sentence + an *Org slug + slug-addressed public reads (P25)* section: `slugs.py`, the forgiving-then-silent `get_tenant_by_slug`, `DuplicateOrgSlugError`, the extracted `_is_publicly_readable`, the emitter split + slug-first ordering, why the resolver has no guard, `resolve_org_slug` and the safe-direction race note |
-| `architecture` | `v0017` | Status sentence + a *Durable public identity: what a shared URL may be made of (P25)* section — the rule that a public URL is composed of durable parts only, why the slug lives in Postgres, composed-once-in-the-backend, trust boundary unchanged |
-| `frontend` | `v0015` | Status paragraph + a *Pretty public share URLs: the `/@{org}` route namespace* section: the two routes, verified precedence + the catch-all consequence, the load-bearing `@` guard + `safeDecode`, the `resolveDocument` seam, consume-never-compose (with the dashboard exception), 307 redirects, static metadata, the Public URL panel, the 409-gets-its-own-copy rule, the prettier hazard |
-| `experience` | `v0016` | Status paragraph + a *Pretty share URLs: claiming a public name (P25)* section: the always-visible prefilled panel, the mutability warning, error copy, one-way temporary forwards, branded not-found, **"no link breaks" now covers content identity**, the three copy-link surfaces, the member-previews-graph recorded edge |
-| `qa` | `v0014` | Status update to the new baselines + a *Pretty share URL acceptance (P25)* section: the globally-unique-slug hazard and the run-twice rule, the gated-suite recipe, the two-DSN-forms trap, the route-precedence probe technique (500 = right route; only 404s discriminate on copy), the round-trip regression test + its negative control + the one-line reproducer, the `KB_ROOT` fixture hazard, the process-global `/auth` throttle, the `0005` validation, the no-CI-for-`web/` + prettier facts |
-| `decisions` | `v0021` | Status sentence + five new ADR entries: the `/@{org}` namespace (D1), the dateless newest-wins address **and its P25.F1 round-trip amendment** (D2, written as an amended decision with the empirical finding as context), nullable/operator-set/mutable slugs with no history (D3 + Q3), redirect-vs-dual-serve at 307 (D4), and the two smaller resolutions (Q2 exact project match, Q4 pretty-201-for-private) |
+| `experience` | **v0017** | The claim hint as an experience fact: what it says, where it appears (member document read view + member graph header), and the three rules that keep it quiet (only the person who can act; never once a name is claimed — the F1 superseded case; never anonymous). Status paragraph amended: an unclaimed org no longer sees *byte-identical* pre-P25 behavior, and that is deliberate. Adds the cross-org residual edge as a recorded edge beside the member-previews-the-graph one. |
+| `frontend` | **v0016** | A new **The explainer height handshake (`web/`)** section — the previously undocumented channel: all three messages, injection-by-relay rationale, the F4 hydration race and the two-sided fix, why `targetOrigin:"*"` is mandatory, why the request is the only dedupe bypass, the verbatim trust safeguards, and the child's measurement rules (body box, no rAF). Marks the stale P16 fixed-height bullet superseded. Adds the F3 hint conditions incl. the ownership-proxy rule ("add a backend field, do not infer in TypeScript"), and moves the validation baseline to 16 / 88. |
+| `qa` | **v0015** | Status + P25 acceptance updated to the post-cutover re-run (gated 125, ungated 83/42, web **16 files / 88 tests**). Three new techniques: the CDP CPU-throttle repro recipe with its three traps (`Origin`-less login 403, `contextId` cannot reach an opaque-origin frame, scratch `KB_ROOT` for a versions test); "do not believe a client-island bug is branch-specific without re-testing under throttle"; and executing an injected script under vitest without jsdom. Sharpens the prettier rule with F3's counter-example (check the *specific* file — three touched files were clean). |
 
-`python3 scripts/workflow.py rebuild-docs` was run once at the end; `docs/current/*.md` and
-`docs/index.json` are regenerated, never hand-edited. `validate` passed afterwards.
+`python3 scripts/workflow.py rebuild-docs` was run **once** at the end; `docs/current/*.md`
+and `docs/index.json` are regenerated, never hand-edited. `validate` passed afterwards.
 
 ---
 
-## 5. Verdict
+## 6. Verdict
 
-**`pass`.** Both findings closed, all validation green on final HEAD, intent fully met, docs
-consolidated.
+**`pass`.** Both post-cutover fixes verified correct and complete, all validation green on
+final HEAD, intent still fully met, the F3/F4 doc round consolidated (plus one genuine
+pre-existing doc gap closed).
 
 `explain: not written — run /explain for this phase` (the review writes no phase explainer).
 
-## 6. Deviations from `plan.md`
+## 7. Deviations from `plan.md`
 
-1. **The full compose end-to-end smoke was not run** — the plan makes it a judgment call and
-   permits standing on the gated suite plus recorded live-probe evidence. I did that and
-   added my own live route probe and alembic round-trip on final HEAD (§ 1.3).
-2. **No negative control was re-run for the F1 guard.** F1 recorded one (both new cases red
-   with the two server files stashed, then restored); repeating it would require editing
-   source, which a review slice may not do. I verified the guard by reading the code and by
-   running the two tests that pin the exact Finding-1 scenario.
-3. **Nine docs were versioned, not the eight the plan's "expected" list named** — the ninth
-   is `product.md`, which the plan's re-review addendum explicitly asked the consolidating
-   pass to give a P25 paragraph.
-4. No source code was edited on this slice; the only repo writes are `docs/versions/*`,
-   the regenerated `docs/current/*` + `docs/index.json`, this `result.md`, and the
-   `phase.md` notes.
+1. **One gated pytest run, not two, and no alembic round-trip or `next start` probe** — the
+   plan's third-round instruction, justified above (§ 1): both commits are `web/`-only, so the
+   re-runnability and migration properties those repetitions prove cannot have changed. The
+   built route manifest was still read and compared.
+2. **F4's negative control was not repeated** — it requires stashing source, which a review
+   slice may not do. Verified instead by reading the handler and running the suite.
+3. **The `frontend` version documents more than the F3/F4 notes asked**, because documenting
+   the new child-ward message on top of a channel the docs denied existed would have been
+   incoherent (§ 4). This is the "unless you find a real gap" carve-out in the plan.
+4. No source code was edited on this slice. The only repo writes are the three new files under
+   `docs/versions/`, the regenerated `docs/current/*` + `docs/index.json`, this `result.md`,
+   and the `phase.md` notes.

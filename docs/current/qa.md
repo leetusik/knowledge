@@ -1,10 +1,10 @@
 ---
 doc_id: qa
-version: v0014
-created_at: 2026-08-07T16:04:35+09:00
+version: v0015
+created_at: 2026-08-07T17:52:43+09:00
 source: P25.REVIEW
-summary: P25 gated baseline 125 passed / 83+42 skipped, web 15 files 85 tests, the globally-unique-slug and route-precedence probe techniques, and 0005 migration validation
-previous: v0013_p24_acceptance_the_long-standing_gated_format-key_failure_is_resolved_115_passed_0_failed_and_publish.drain_is_the_deterministic_way_to_assert_an_after-response_side_effect
+summary: P25.F3/F4 web baseline 16 files 88 tests, the CDP CPU-throttle repro recipe for client-island hydration races, and running an injected script without jsdom
+previous: v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation
 ---
 
 # QA
@@ -54,11 +54,13 @@ retired as a standing item**; the notes below are kept for the history of how it
 not as an open defect. P24 also adds the repo's pattern for testing **after-response** work:
 `publish.drain()`. See *Publish-worker acceptance (P24)* below. **As of P25 the
 Postgres-gated suite is 125 passed** (**83 passed / 42 skipped** without a DSN) and the web
-vitest suite is **15 files / 85 tests**; the phase also contributes two reusable techniques —
-**Next route precedence is verifiable locally with no backend running** (the built
-`routes-manifest.json` plus a `next start` probe), and **a globally-unique column makes a test
-un-re-runnable** unless its value is generated per run. See *Pretty share URL acceptance (P25)*
-below.
+vitest suite is **16 files / 88 tests** (15 / 85 before the post-cutover P25.F4 fix); the phase
+also contributes four reusable techniques — **Next route precedence is verifiable locally with
+no backend running** (the built `routes-manifest.json` plus a `next start` probe), **a
+globally-unique column makes a test un-re-runnable** unless its value is generated per run,
+**a client-island hydration race is reproducible in minutes** with a local production build
+plus headless Chrome under CPU throttling, and **an injected script can be executed under
+vitest without jsdom**. See *Pretty share URL acceptance (P25)* below.
 
 ## Test Commands
 
@@ -470,7 +472,7 @@ P24 moved the git push and the Gemini embed **behind** the write response, which
 
 ## Pretty share URL acceptance (P25)
 
-P25 spans both planes (a Postgres column + two backend routes + two Next routes + copy), so its acceptance is the ordinary gates plus two techniques worth keeping. All green at the P25 re-review: gated pytest **125 passed** (twice, against the *same* database), ungated **83 passed / 42 skipped**, web **15 files / 85 tests**, lint + typecheck + build clean, both parity scripts PASS, the `0005` migration round-tripped, `workflow validate` passed.
+P25 spans both planes (a Postgres column + two backend routes + two Next routes + copy), so its acceptance is the ordinary gates plus two techniques worth keeping. All green at the P25 re-review: gated pytest **125 passed** (twice, against the *same* database), ungated **83 passed / 42 skipped**, web **15 files / 85 tests**, lint + typecheck + build clean, both parity scripts PASS, the `0005` migration round-tripped, `workflow validate` passed. Re-confirmed after the production cutover and the two follow-up fixes (P25.F3, P25.F4), which touched **no** backend file: gated **125 passed**, ungated **83 / 42 skipped**, web **16 files / 88 tests**, lint + typecheck + build clean, both parity scripts PASS, the built dynamic-route order byte-identical, `workflow validate` passed.
 
 - **`tenants.slug` is GLOBALLY unique — unlike every other assertion in the gated suites, which are tenant-scoped.** A test that claims a hardcoded slug passes once and then **409s forever** against a re-used database. Every slug-claiming test generates its value per run (`f"org-{uuid4().hex[:10]}"`), and the phase's standing check is to **run the gated suite twice against the same container** — a green second run is the only proof of re-runnability. Do this for any future globally-unique column.
 - **How to actually run the gated suite** (it silently skips otherwise, so a green local run can prove nothing): `docker run -d --rm --name kb-pg -e POSTGRES_PASSWORD=kb -e POSTGRES_USER=kb -e POSTGRES_DB=kb -p 55439:5432 postgres:17`, then `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55439/kb .venv/bin/python -m pytest -q`. Use the repo `.venv` — the system `python3` has no sqlalchemy. **Every `result.md` must state whether the gated suite ran or skipped.**
@@ -480,7 +482,10 @@ P25 spans both planes (a Postgres column + two backend routes + two Next routes 
 - **Fixture hazard: the public-read suite isolates `KB_DB_PATH` but NOT `KB_ROOT`.** A `POST /api/documents` under `test_public_read.py::documents_client` would write real files into the repo's own `docs/` tree and take the git commit path. **Write-path** cases belong in `test_org_credentials.py` (or `test_api_write.py`), whose fixtures isolate `KB_ROOT` to a `tmp_path` — which is why the 201-URL cases live there.
 - **The `/auth` throttle is process-global across the whole pytest session** (per (IP, path), default 20 / 15 min), so adding seed signups to one suite can push a *later* suite into 429s. Any new gated suite sets `KB_AUTH_RATE_LIMIT=0` in its client fixture, as `test_documents_api.py` and `test_accounts_provisioning.py` do.
 - **`0005_tenant_slug` was validated for real, not read**: `alembic upgrade head` on a dropped-and-recreated schema (`0001 → 0005`), `\d tenants` showing `slug text` nullable + `uq_tenants_slug`, then `downgrade 0004_project_visibility` → column and constraint gone → `upgrade head` → both back.
-- **`web/` has no CI gate** (a standing fact since P23): the real gates are the four local commands `npm run lint` / `typecheck` / `build` / `test`. `prettier --check` is **red repo-wide and pre-existing** — several files are dirty at HEAD (`lib/knowledge/app.ts`, `content/dashboard.ts`, `(app)/dashboard/page.tsx`, `tests/knowledge-auth.test.ts`, `document-view.tsx`, `explainer-frame.tsx`), so check a file's HEAD state with `git show HEAD:<f> | npx prettier --check --stdin-filepath` before assuming a warning is yours, and never `prettier --write` an existing web file inside a slice.
+- **A client-side hydration race IS reproducible locally, in minutes — reproduce it before you "fix" it (P25.F4).** Recipe: Postgres in docker → `alembic upgrade head` → `python -m server.seed` → `uvicorn server.main:app` with `KB_DB_PATH` in a scratch dir → `npm run build && npm run start`, then drive headless Chrome over CDP from a ~50-line Node script (Node 24 ships a global `WebSocket`, so **no dependency**) and turn the race on with `Emulation.setCPUThrottlingRate ≥ 4`. Assert on a DOM fact, not a screenshot (here `.kb-explainer[data-measured]` plus the frame's applied height), and corroborate the diagnosis with the un-wedger (a `setDeviceMetricsOverride` resize). Three traps worth remembering: `POST /api/auth/login` on the web plane **403s without an `Origin` header** (the BFF's CSRF check) and the sealed cookie then goes in via `Network.setCookie`; a `Runtime.evaluate` **cannot reach an opaque-origin frame by `contextId`** — use `Target.setAutoAttach {flatten:true}` and talk to the iframe's own session; and testing a versions view needs an archived version, so point the API at a **scratch `KB_ROOT`** and POST with `new_version: true, commit: false` rather than writing into the repo's `docs/`.
+- **Do not believe "this bug is branch-specific" without re-testing under throttle.** The explainer height race was reported (and initially researched) as member-only; under throttle it reproduced on **every** article view — id member, id anonymous via the 307, pretty member, pretty anonymous, and the versions view. The member branch just loses the race more often (five client islands vs `PublicShell`'s zero).
+- **An injected script can be executed under vitest with no jsdom dependency.** `web/tests/explainer-reporter.test.ts` runs the reporter source with `new Function("window", "document", src)` against a ~35-line hand-rolled window/document, in the repo's node-environment suite. Three cases: report-once-then-dedupe, the parent-request re-post (the fix), and rejection of a non-parent sender / malformed payload. The middle case was **proved red** with `explainer-height.ts` stashed. Use this shape for any other string-injected script; a rendering test for conditional static copy (P25.F3) is still not worth it — the repo has no rendering-test convention.
+- **`web/` has no CI gate** (a standing fact since P23): the real gates are the four local commands `npm run lint` / `typecheck` / `build` / `test`. `prettier --check` is **red repo-wide and pre-existing** — several files are dirty at HEAD (`lib/knowledge/app.ts`, `content/dashboard.ts`, `(app)/dashboard/page.tsx`, `tests/knowledge-auth.test.ts`, `document-view.tsx`, `explainer-frame.tsx`), so check a file's HEAD state with `git show HEAD:<f> | npx prettier --check --stdin-filepath` before assuming a warning is yours, and never `prettier --write` an existing web file inside a slice. **The dirty-at-HEAD set is not the whole `web/` tree, though** (P25.F3 touched three files that were all clean): check the *specific* file — `npx prettier <f> > /tmp/x && diff -u <f> /tmp/x` shows whether the only complaint is your own new lines, and if so hand-apply prettier's wrap so the file stays clean rather than leaving fresh drift behind.
 
 ## Known Fragile Areas
 

@@ -5,12 +5,12 @@
 
 ## Pointer
 
-- Current phase: `P25`
+- Current phase: `none`
 - Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `16`
-- Rebuilt at: `2026-08-07T17:47:09+09:00`
+- Rebuilt at: `2026-08-07T17:56:02+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
-| [ ] `P25` | `in_progress` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
+| [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 
 ## Phase P21: Web document deletion
 

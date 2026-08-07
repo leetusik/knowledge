@@ -798,3 +798,9 @@
 {"ts": "2026-08-07T17:26:22+09:00", "type": "slice_status_changed", "slice": "P25.F3", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-07T17:27:00+09:00", "type": "slice_status_changed", "slice": "P25.F4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-08-07T17:47:09+09:00", "type": "slice_status_changed", "slice": "P25.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-08-07T17:47:29+09:00", "type": "slice_status_changed", "slice": "P25.REVIEW", "old_status": "done", "new_status": "in_progress"}
+{"ts": "2026-08-07T17:50:26+09:00", "type": "doc_version_created", "doc": "experience", "version": "v0017_p25.f3_the_silent_id-url_fallback_gets_a_voice_an_unclaimed-org-name_hint_beside_the_member_copy_affordances_linking_to_the_dashboard_public_url_panel", "source": "P25.REVIEW"}
+{"ts": "2026-08-07T17:51:28+09:00", "type": "doc_version_created", "doc": "frontend", "version": "v0016_p25.f4_the_explainer_height_handshake_documented_in_full_and_made_hydration-race-proof_a_child-ward_kb-explainer-request_re-post_plus_the_f3_share_hint_conditions", "source": "P25.REVIEW"}
+{"ts": "2026-08-07T17:52:43+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom", "source": "P25.REVIEW"}
+{"ts": "2026-08-07T17:56:02+09:00", "type": "slice_status_changed", "slice": "P25.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-08-07T17:56:02+09:00", "type": "phase_reviewed", "phase": "P25", "verdict": "pass", "reviewer": "slice-executor-high"}
