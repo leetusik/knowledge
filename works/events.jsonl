@@ -759,3 +759,5 @@
 {"ts": "2026-08-07T14:41:29+09:00", "type": "slice_created", "phase": "P25", "slice": "P25.S5"}
 {"ts": "2026-08-07T14:44:39+09:00", "type": "slice_status_changed", "slice": "P25.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-07T14:44:40+09:00", "type": "deferred_promoted", "deferred": "D19", "phase": "P25", "slice": "P25.S4"}
+{"ts": "2026-08-07T14:45:28+09:00", "type": "slice_status_changed", "slice": "P25.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-08-07T14:56:27+09:00", "type": "slice_status_changed", "slice": "P25.S1", "old_status": "in_progress", "new_status": "done"}

@@ -193,11 +193,17 @@ def serialize_user(record: UserRecord) -> dict[str, object]:
 
 
 def serialize_tenant(record: TenantRecord) -> dict[str, object]:
-    """Serialize a tenant for a response."""
+    """Serialize a tenant for a response.
+
+    The canonical tenant shape — signup, login, ``/auth/me`` and ``/app/tenant`` all
+    go through here, so the additive ``slug`` (``None`` until the tenant claims one)
+    appears on every one of them at once.
+    """
 
     return {
         "id": str(record.id),
         "name": record.name,
+        "slug": record.slug,
         "created_at": record.created_at.isoformat(),
     }
 

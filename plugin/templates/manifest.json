@@ -27,6 +27,7 @@
       "server/accounts/auth.py",
       "server/accounts/repository.py",
       "server/accounts/security.py",
+      "server/accounts/slugs.py",
       "server/accounts/service.py",
       "server/accounts/types.py",
       "server/api_auth.py",

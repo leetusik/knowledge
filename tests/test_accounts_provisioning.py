@@ -56,6 +56,10 @@ def accounts_client(tmp_path, monkeypatch):
 
     monkeypatch.setenv("KB_DB_PATH", str(tmp_path / "data" / "kb.sqlite3"))
     monkeypatch.setenv("DATABASE_URL", url)
+    # The /auth throttle counts per (IP, path) in a PROCESS-global dict shared by every
+    # suite in the session, so seed signups here eat into the later suites' budget. No
+    # pytest test asserts on throttling — disable it (same call as ``documents_client``).
+    monkeypatch.setenv("KB_AUTH_RATE_LIMIT", "0")
     import server.persistence.engine as engine_mod
 
     engine_mod._engine = None
@@ -179,3 +183,71 @@ def test_patch_visibility_invalid_value_is_422(accounts_client):
         headers=headers,
     )
     assert res.status_code == 422, res.text
+
+
+# -- org slug (P25.S1) ------------------------------------------------------
+# The tenant's durable public identity: nullable until claimed, unique, lowercase,
+# and guarded by the shared charset + reserved-word rules in server.accounts.slugs.
+
+
+def test_tenant_slug_starts_null_and_round_trips(accounts_client):
+    """A fresh tenant has slug None; PATCH claims it and GET /app/tenant reads it back."""
+
+    client, _sync = accounts_client
+    body = _signup(client)
+    assert body["tenant"]["slug"] is None
+    headers = {"Authorization": f"Bearer {body['token']}"}
+
+    # Slugs are globally UNIQUE, so the claimed value must be uuid-unique or a re-run
+    # against a re-used database would 409 on the row the previous run left behind.
+    slug = f"org-{uuid4().hex[:10]}"
+
+    # Mixed case + surrounding whitespace normalize to the stored lowercase form.
+    res = client.patch(
+        "/app/tenant", json={"slug": f"  {slug.upper()}  "}, headers=headers
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["tenant"]["slug"] == slug
+
+    read = client.get("/app/tenant", headers=headers)
+    assert read.status_code == 200, read.text
+    assert read.json()["tenant"]["slug"] == slug
+
+
+def test_tenant_slug_reserved_is_422(accounts_client):
+    """A reserved word is rejected 422 and nothing is written."""
+
+    client, _sync = accounts_client
+    headers = {"Authorization": f"Bearer {_signup(client)['token']}"}
+
+    res = client.patch("/app/tenant", json={"slug": "dashboard"}, headers=headers)
+    assert res.status_code == 422, res.text
+    assert client.get("/app/tenant", headers=headers).json()["tenant"]["slug"] is None
+
+
+def test_tenant_slug_malformed_is_422(accounts_client):
+    """Bad charset, bad hyphenation, and too-short all fail the shared rules."""
+
+    client, _sync = accounts_client
+    headers = {"Authorization": f"Bearer {_signup(client)['token']}"}
+
+    for bad in ("Not Valid", "-lead", "trail-", "double--hyphen", "a", "under_score"):
+        res = client.patch("/app/tenant", json={"slug": bad}, headers=headers)
+        assert res.status_code == 422, f"{bad!r} -> {res.status_code}: {res.text}"
+
+
+def test_tenant_slug_duplicate_across_tenants_is_409(accounts_client):
+    """A slug held by another tenant is a clean 409, and re-claiming your own is fine."""
+
+    client, _sync = accounts_client
+    first = {"Authorization": f"Bearer {_signup(client)['token']}"}
+    second = {"Authorization": f"Bearer {_signup(client)['token']}"}
+    slug = f"org-{uuid4().hex[:10]}"
+
+    assert client.patch("/app/tenant", json={"slug": slug}, headers=first).status_code == 200
+    # Case-insensitive: the normalized form is what collides.
+    taken = client.patch("/app/tenant", json={"slug": slug.upper()}, headers=second)
+    assert taken.status_code == 409, taken.text
+    # Idempotent for the holder, and the loser still has no slug.
+    assert client.patch("/app/tenant", json={"slug": slug}, headers=first).status_code == 200
+    assert client.get("/app/tenant", headers=second).json()["tenant"]["slug"] is None

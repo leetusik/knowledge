@@ -40,12 +40,21 @@ class UserModel(Base):
 
 
 class TenantModel(Base):
-    """Tenant (workspace). Ownership lives in ``tenant_members``, not here."""
+    """Tenant (workspace). Ownership lives in ``tenant_members``, not here.
+
+    ``slug`` is the tenant's durable **public** identity (the ``{org}`` of a pretty
+    share URL). Nullable with no backfill: a tenant without one simply has no pretty
+    URL yet and keeps today's links working. ``UNIQUE`` (Postgres allows many NULLs,
+    so slug-less tenants never collide). Charset/reserved-word validation is
+    app-layer in ``server.accounts.slugs`` — no DB ``CHECK``, matching the
+    ``projects.visibility`` / ``usage_events.event_type`` convention.
+    """
 
     __tablename__ = "tenants"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    slug: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

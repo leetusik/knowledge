@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P25`
-- Current slice: `P25.S1`
-- Next slice: `P25.S2`
+- Current slice: `P25.S2`
+- Next slice: `P25.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `15`
-- Rebuilt at: `2026-08-07T14:44:52+09:00`
+- Rebuilt at: `2026-08-07T14:56:27+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
-| [ ] `P25` | `planned` | `pending` | Pretty public share URLs | `P25.S1` | `works/phases/active/P25` |
+| [ ] `P25` | `planned` | `pending` | Pretty public share URLs | `P25.S2` | `works/phases/active/P25` |
 
 ## Phase P21: Web document deletion
 
@@ -66,7 +66,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P25.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P25/slices/P25.DECOMP` |
-| [ ] `P25.S1` | `todo` | org slug: postgres column, validation, and the /app/tenant set surface | `implementation` | `works/phases/active/P25/slices/P25.S1` |
+| [x] `P25.S1` | `done` | org slug: postgres column, validation, and the /app/tenant set surface | `implementation` | `works/phases/active/P25/slices/P25.S1` |
 | [ ] `P25.S2` | `todo` | slug-based public document resolver and canonical share path | `implementation` | `works/phases/active/P25/slices/P25.S2` |
 | [ ] `P25.S3` | `todo` | web pretty document route and legacy /documents/{id} redirect | `implementation` | `works/phases/active/P25/slices/P25.S3` |
 | [ ] `P25.S4` | `todo` | org-slug public graph URL and legacy /graph/{uuid} redirect | `implementation` | `works/phases/active/P25/slices/P25.S4` |

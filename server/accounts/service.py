@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from server.accounts.repository import AccountsRepository
+from server.accounts.slugs import InvalidOrgSlugError, normalize_org_slug
 from server.accounts.types import (
     AuthTokenRecord,
     CreateAuthToken,
@@ -45,6 +46,15 @@ class DuplicateEmailError(AccountsPersistenceError):
     """Raised when creating a user whose email is already registered.
 
     Lets the signup handler return a clean 409 rather than a generic 500.
+    """
+
+
+class DuplicateOrgSlugError(AccountsPersistenceError):
+    """Raised when the requested org slug is already claimed by another tenant.
+
+    The ``UNIQUE(tenants.slug)`` violation, translated — so the slug endpoint
+    answers a clean 409 rather than a generic 500 (the ``get_or_create_project``
+    ``IntegrityError`` precedent).
     """
 
 
@@ -175,6 +185,60 @@ class AccountsService:
             except SQLAlchemyError as exc:
                 await session.rollback()
                 raise AccountsReadError("failed to read tenant") from exc
+
+    async def get_tenant_by_slug(self, slug: str) -> TenantRecord | None:
+        """Return one tenant by its public org slug, or None when there is no match.
+
+        The public-URL resolution primitive: an anonymous caller's URL segment comes
+        in raw, so the value is normalized first and anything that could never be a
+        stored slug (bad charset, wrong length, reserved) short-circuits to ``None``
+        **without a DB round trip**. Returning ``None`` rather than raising is
+        deliberate — every miss on the anonymous surface must be an indistinguishable
+        404, so "malformed" and "unclaimed" have to look identical to callers.
+        """
+
+        try:
+            normalized = normalize_org_slug(slug)
+        except InvalidOrgSlugError:
+            return None
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                return await repository.get_tenant_by_slug(normalized)
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsReadError("failed to read tenant") from exc
+
+    async def set_tenant_slug(self, tenant_id: UUID, slug: str) -> TenantRecord | None:
+        """Claim ``slug`` as a tenant's public identity; None when the tenant is missing.
+
+        Validates before writing (``InvalidOrgSlugError`` on a malformed or reserved
+        slug — raised before any session is opened), stores the normalized lowercase
+        form, and translates the ``UNIQUE`` violation into ``DuplicateOrgSlugError``
+        so a taken slug is a 409 and never a 500. Re-setting a tenant's own current
+        slug is a no-op update, not a conflict.
+        """
+
+        normalized = normalize_org_slug(slug)
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                record = await repository.set_tenant_slug(tenant_id, normalized)
+                await session.commit()
+            except IntegrityError as exc:
+                # ``tenants`` has exactly one unique constraint (uq_tenants_slug), so
+                # any integrity violation here is another tenant holding this slug.
+                await session.rollback()
+                raise DuplicateOrgSlugError(
+                    f"the org slug {normalized!r} is already taken"
+                ) from exc
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsPersistenceError("failed to set tenant slug") from exc
+
+        return record
 
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
         """Return the tenants a user is a member of, oldest-first."""
