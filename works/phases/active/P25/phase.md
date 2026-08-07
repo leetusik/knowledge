@@ -552,9 +552,70 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
 - **`npm run build` left the route table byte-identical** — this slice adds no route,
   so S3/S4's precedence findings need no re-verification.
 
+### Found by P25.REVIEW (bind these — the fix slices build on them)
+
+- **THE PHASE'S ONE REAL GAP: a dateless `canonical_path` composed with an exact-row
+  id redirect can serve the WRONG document.** S2's `canonical_path` is dateless (D2:
+  "newest under this title"), and S3 then redirects the anonymous `/documents/{id}`
+  branch onto it. When two rows share `(project, doc-slug)` at different dates, an old
+  shared id-link 307s to a **different document** — and S5's copy-link on the id page
+  hands out that same wrong URL. Neither slice is wrong alone; the composition is.
+  **Confirmed empirically**, not inferred: seeding `notes/meeting-notes` at `2026-01-01`
+  (id 13) and `2026-06-01` (id 14) makes `GET /app/documents/13` and `/14` advertise the
+  *same* `canonical_path`, and the resolver lands on 14.
+- **Duplicate `(project, slug)` rows are reachable in ordinary use.** A publish
+  **without** `new_version: true` computes a different `rel_path` (the date is in it), so
+  `create_document`'s step-2 collision check finds nothing and inserts a second row.
+  `db.find_latest_document_by_slug`'s own docstring calls this "exactly the bug
+  versioning fixes" — i.e. it is the pre-existing unguarded path, and recurring slugs
+  (`meeting-notes`, `weekly-update`) are natural in a knowledge base.
+- **The fix shape (P25.F1): make `canonical_path` round-trip.** Emit it only when
+  `find_latest_document_by_slug(project, slug, tenant)` returns *this* row — one cheap
+  SQLite read on the connection already in hand, inside
+  `documents_api._document_canonical_path`. A `None` needs **zero web changes**: the
+  redirect, the three copy-link surfaces and the dashboard already fall back, which is
+  precisely the slug-less contract. The **resolver route is unaffected** — it resolved
+  *through* the slug, so its `canonical_path` is correct by construction. Same guard is
+  worth applying to `main.py::resolve_org_slug`'s 201 URL.
+- **Q3's mutability has an unlabelled UI edge (P25.F2).** The dashboard's slug field is
+  always visible and prefilled, so changing a claimed slug — which Q3 accepted *breaks
+  previously shared links* — is a one-keystroke action, and `DASHBOARD.orgSlug.hint`
+  never says so. Copy-only fix in `web/src/content/dashboard.ts`.
+- **`alembic/env.py` needs the `postgresql+psycopg://` scheme.** A bare
+  `postgresql://` DSN selects the absent `psycopg2` driver and raises
+  `ModuleNotFoundError`. The *test* harness (`KB_TEST_DATABASE_URL`) accepts the bare
+  form, so the two DSNs are **not** interchangeable — a migration check that "fails" this
+  way is a driver typo, not a broken revision.
+- **Phase-level validation re-confirmed on final HEAD** (not just per-slice): gated
+  pytest **124 passed** twice against the same database, ungated **83 / 41 skipped**,
+  web **15 files / 85 tests**, lint + typecheck + build clean, both parity scripts PASS,
+  `alembic` fresh-upgrade and `0005 → 0004 → 0005` round-trip clean, `workflow validate`
+  passed. The live `next start` probe reproduced S3's and S4's route-precedence evidence
+  exactly, so S5's "route table byte-identical" claim holds.
+- **A member landing on `/@{slug}/graph`** (via the both-branches legacy redirect) gets
+  the whole-corpus member view inside `PublicShell`. Not a leak — own session, own data —
+  but the operator therefore **cannot preview what the public sees** from the URL the
+  dashboard tells them to share. Deliberately not raised as a P25 finding; a candidate
+  for a later slice.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
+
+**Audited by P25.REVIEW (verdict `changes_requested` ⇒ NOTHING consolidated yet).** The
+list below is accurate against the code as landed, with three gaps the eventual
+consolidating pass must close:
+
+- **`decisions.md` has no "Actual" note** — only the leftover "(expected)" hint. D1–D4
+  live in § "Design decisions settled here" above and must be consolidated from there,
+  together with Q2 (exact project match), Q3 (mutable slugs, no history) and Q4 (pretty
+  201 URL even for a private project).
+- **`product.md` is on nobody's list** — "shared documents have readable, durable URLs"
+  is arguably product-visible truth (P19's visibility work reached `product.md`). A
+  judgment call for the consolidating pass, not a finding.
+- **After P25.F1 lands**, `api` + `experience` need the round-trip rule
+  (`canonical_path` is null for a superseded duplicate slug) and `qa` needs the new
+  gated baseline.
 
 - (expected) `docs/current/api.md` — new slug resolver route, `PATCH /app/tenant`, the
   additive `canonical_path` / tenant `slug` fields, and the changed 201 save `url`.
