@@ -18,6 +18,22 @@ export interface KbUser {
 export interface KbTenant {
   id: string;
   name: string;
+  /**
+   * P25 — the org's public SLUG (`tenants.slug`), i.e. the `{org}` of every pretty
+   * share URL (`/@{slug}/{project}/{doc-slug}`, `/@{slug}/graph`). `null` until the
+   * operator claims one from the dashboard: the column is nullable with **no
+   * backfill**, so a slug-less org keeps today's id/UUID links and nothing breaks.
+   *
+   * Additive on the CANONICAL tenant shape, so signup, login, `GET /auth/me` and
+   * `GET /app/tenant` all carry it at once — the dashboard reads it straight off the
+   * session identity with no extra call. Claimed via `setTenantSlug`
+   * (`PATCH /app/tenant`); stored lowercase and GLOBALLY unique.
+   *
+   * It is the INPUT to the pretty URL, not the URL: a payload that already carries a
+   * `canonical_path` (documents, the graph) is always preferred over composing one
+   * here — the backend assembles those once.
+   */
+  slug: string | null;
   created_at: string;
 }
 

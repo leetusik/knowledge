@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CopyLinkButton } from "@/components/copy-link-button";
 import {
   appButtonClass,
   Badge,
@@ -24,6 +25,7 @@ import type {
 
 import { CreateProjectForm } from "./create-project-form";
 import { MintOrgKeyForm } from "./mint-org-key-form";
+import { OrgSlugForm } from "./org-slug-form";
 import { RevokeOrgKeyButton } from "./revoke-org-key-button";
 
 // P12.S3 — the tenant dashboard: the post-login home and the app's first real data
@@ -213,6 +215,13 @@ function activityBody(event: KbActivityEvent) {
 export default async function DashboardPage() {
   const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
+  // P25 — the org's public slug, straight off the session identity (`serialize_tenant`
+  // carries it, so this costs no extra call). `null` until the operator claims one in
+  // the Public URL panel below; the pretty graph path is composed here because the
+  // dashboard fetches no graph payload to read a `canonical_path` from, and it is the
+  // ONLY place on the web plane that composes one (see phase.md P25.S5 notes).
+  const orgSlug = identity.tenant?.slug ?? null;
+  const publicGraphPath = orgSlug ? `/@${orgSlug}/graph` : null;
 
   const [usage, dashboard, orgCredentials] = await Promise.all([
     getUsage(token),
@@ -326,6 +335,49 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Public URL (P25.S5) — the org slug, structurally a twin of the org-keys
+          panel (heading + lead left, form right). This is how a tenant gets a public
+          identity at all: the operator claims it here after deploy, and every pretty
+          share URL in the product follows from it. Below the form, the resulting
+          public graph URL with a copy button once a slug exists. */}
+      <section
+        className="kb-panel"
+        style={{ marginTop: "var(--kb-space-md)" }}
+        aria-labelledby="org-slug-head"
+      >
+        <div className="mb-[0.9rem] flex items-start justify-between gap-4">
+          <div>
+            <h2
+              id="org-slug-head"
+              className="kb-app-h2"
+              style={{ fontSize: "1.05rem" }}
+            >
+              {DASHBOARD.orgSlug.heading}
+            </h2>
+            <p className="mt-[0.3rem] text-[0.85rem] text-[var(--kb-secondary)]">
+              {DASHBOARD.orgSlug.lead}
+            </p>
+          </div>
+          <OrgSlugForm defaultValue={orgSlug ?? ""} />
+        </div>
+
+        {publicGraphPath ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+              {DASHBOARD.orgSlug.graphUrlLabel}
+            </span>
+            <code className="text-[0.85rem] text-[var(--kb-ink)] [font-family:var(--kb-font-mono)]">
+              {publicGraphPath}
+            </code>
+            <CopyLinkButton path={publicGraphPath} />
+          </div>
+        ) : (
+          <p className="text-[0.85rem] text-[var(--kb-secondary)]">
+            {DASHBOARD.orgSlug.empty}
+          </p>
+        )}
+      </section>
 
       {/* Org API keys — a full-width panel below the projects/activity grid. The
           panel head carries the "New key" disclosure; the table lists metadata only

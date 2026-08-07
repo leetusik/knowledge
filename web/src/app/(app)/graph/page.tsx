@@ -32,7 +32,12 @@ export default async function GraphPage() {
   return (
     <>
       {/* .mainhead — eyebrow + Fraunces title + sub, with the P19 share copy-link
-          (the public graph URL `/graph/{org}`) when the caller has a tenant. */}
+          when the caller has a tenant. P25.S5: it hands out the PRETTY public graph
+          URL (`/@{org-slug}/graph`) whenever the org has claimed a slug — read
+          straight off this page's existing `/app/graph` response as `canonical_path`
+          (the backend builds it once; the member path gets it for free off the
+          session tenant), never re-derived here. A slug-less org falls back to the
+          UUID URL `/graph/{org}`, which keeps working forever. */}
       <div className="mb-[1.3rem] flex items-start justify-between gap-4">
         <div>
           <div className="kb-app-eyebrow">
@@ -43,7 +48,9 @@ export default async function GraphPage() {
           </h1>
           <p className="kb-app-sub">{GRAPH.sub}</p>
         </div>
-        {orgId ? <CopyLinkButton path={`/graph/${orgId}`} /> : null}
+        {orgId ? (
+          <CopyLinkButton path={graph.canonical_path ?? `/graph/${orgId}`} />
+        ) : null}
       </div>
 
       <GraphCanvas data={graph} />

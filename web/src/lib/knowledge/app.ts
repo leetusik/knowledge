@@ -14,6 +14,7 @@ import type {
   KbProject,
   KbProjectUsage,
   KbSearchPage,
+  KbTenant,
   KbUsage,
 } from "./types";
 
@@ -27,6 +28,47 @@ import type {
 // all `require_user`-guarded, so an unauthenticated call is never meaningful. Errors
 // surface as `ApiError` carrying the STATUS — callers branch on that, never on
 // knowledge's `detail` text.
+
+/** The `GET`/`PATCH /app/tenant` envelope. */
+interface RawTenantResponse {
+  tenant: KbTenant;
+}
+
+/**
+ * `PATCH /app/tenant` (bearer) `{slug}` → 200 `{tenant}` — the P25 org-slug claim,
+ * the one write that gives a tenant its public identity (and therefore its pretty
+ * share URLs). Session-only on the backend and implicitly scoped to the CALLER'S OWN
+ * tenant: there is no tenant id in the path, so no cross-tenant surface exists.
+ *
+ * Send the slug NORMALIZED the way knowledge normalizes it (trimmed + lowercased) —
+ * the backend does it too and stays authoritative, but pre-normalizing keeps the
+ * value the caller sees identical to the one that gets stored.
+ *
+ * Statuses the caller must branch on (never on `detail` text):
+ *   - **422** — malformed (charset `^[a-z0-9]+(-[a-z0-9]+)*$`, 2–40 chars) or a
+ *     RESERVED word (`server/accounts/slugs.py` holds the single list);
+ *   - **409** — another tenant already holds it (`tenants.slug` is GLOBALLY unique;
+ *     the backend translates the `UNIQUE` violation, so this is never a 500).
+ *     Re-claiming the tenant's own current slug is a no-op success, not a conflict;
+ *   - **404** — the session's own tenant vanished mid-request;
+ *   - **401** — the session died mid-request.
+ *
+ * There is no GET twin here on purpose: `serialize_tenant` is the canonical tenant
+ * shape, so `GET /auth/me` (which every authed page already makes) carries the
+ * current slug on `identity.tenant.slug`.
+ */
+export async function setTenantSlug(
+  token: string,
+  slug: string,
+): Promise<KbTenant> {
+  const raw = await sendJson<RawTenantResponse>(
+    "/app/tenant",
+    "PATCH",
+    { slug },
+    { token },
+  );
+  return raw.tenant;
+}
 
 /** The `GET /app/projects` envelope. */
 interface RawProjectsResponse {

@@ -123,7 +123,13 @@ export default async function DocumentPage({
               <ChevronLeft size={15} aria-hidden />
               {DOCUMENTS.read.backLabel}
             </Link>
-            <CopyLinkButton path={`/documents/${id}`} />
+            {/* P25.S5 — share the PRETTY URL when the document has one. The member
+                stays on the id URL (the anonymous redirect above is anonymous-only),
+                but what they hand to someone else is the durable
+                `/@{org}/{project}/{slug}` path the backend built once as
+                `canonical_path`. `null` (no org slug claimed) falls back to the id
+                URL, which keeps working forever. */}
+            <CopyLinkButton path={doc.canonical_path ?? `/documents/${id}`} />
             {/* P21 — the member-only delete, trailing (`ml-auto`) and two-step. It
                 lives ONLY in this branch: the anonymous branch below and the shared
                 `<DocumentView>` stay auth-free. `redirectTo` sends the caller back to

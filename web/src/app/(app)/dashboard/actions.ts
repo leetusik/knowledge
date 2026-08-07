@@ -7,12 +7,14 @@ import {
   CREATE_PROJECT_ERRORS,
   MINT_ORG_CREDENTIAL_ERRORS,
   REVOKE_ORG_CREDENTIAL_ERRORS,
+  SET_ORG_SLUG_ERRORS,
 } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
 import {
   createOrgCredential,
   createProject,
   revokeOrgCredential,
+  setTenantSlug,
 } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 
@@ -221,6 +223,89 @@ export async function revokeOrgCredentialAction(
       }
     }
     return { error: REVOKE_ORG_CREDENTIAL_ERRORS.generic };
+  }
+
+  revalidatePath("/dashboard", "page");
+  return { error: null, ok: Date.now() };
+}
+
+// ── Org slug / public URL (P25.S5) ──────────────────────────────────────────
+// The ONE way a tenant ever gets its public identity: the operator claims it here,
+// after deploy. There is no backfill, no derived-from-name default and no hardcoded
+// value anywhere in the stack — a slug-less org simply keeps its id/UUID links.
+
+/**
+ * Mirrors knowledge's org-slug rule (`server/accounts/slugs.py`) CLIENT-SIDE so the
+ * common typo is caught without a round-trip: `^[a-z0-9]+(-[a-z0-9]+)*$`, 2–40 chars.
+ * The value is trimmed + lowercased before parsing, exactly as `normalize_org_slug`
+ * does server-side, so what the user sees is what gets stored.
+ *
+ * knowledge stays AUTHORITATIVE: the ~38-word RESERVED list lives there alone and is
+ * deliberately NOT duplicated here (it would drift), so a reserved slug passes this
+ * schema and comes back as the 422 mapped below. Its copy cites the rule rather than
+ * knowledge's `detail` text.
+ */
+const orgSlugSchema = z
+  .string()
+  .min(2)
+  .max(40)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+
+export interface SetOrgSlugState {
+  /** Display copy for a failure, or `null` on success / first render. */
+  error: string | null;
+  /** Bumped on each success (the island needs no reset — the field keeps its value). */
+  ok?: number;
+}
+
+/**
+ * `useActionState` action: normalize + validate → `PATCH /app/tenant` → revalidate.
+ *
+ * Failures map by HTTP STATUS, never by knowledge's `detail` text:
+ * 400/422 → `invalid` (malformed OR reserved — indistinguishable to the user, and the
+ * copy states the rule), 401 → `sessionExpired`, 404 → `notFound` (the caller's own
+ * tenant vanished mid-request), and **409 → `taken`, its own key**: `tenants.slug` is
+ * globally unique, so a collision is the likeliest real failure and the only one with
+ * an obvious user fix.
+ *
+ * On success `revalidatePath` re-renders the dashboard, whose `requireIdentity()`
+ * re-reads `/auth/me` (`cache: "no-store"`) — so the panel's pretty-URL line and every
+ * `canonical_path` on the app appear without a manual reload.
+ */
+export async function setOrgSlugAction(
+  _prevState: SetOrgSlugState,
+  formData: FormData,
+): Promise<SetOrgSlugState> {
+  const raw = formData.get("slug");
+  // Trim + lowercase FIRST (knowledge's own normalization order), then validate.
+  const candidate = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  const parsed = orgSlugSchema.safeParse(candidate);
+  if (!parsed.success) {
+    return { error: SET_ORG_SLUG_ERRORS.invalid };
+  }
+
+  // OUTSIDE the try on purpose: `requireIdentity()` signals "no session" by calling
+  // `redirect()`, which works by THROWING a control-flow error Next must see.
+  const { token } = await requireIdentity();
+
+  try {
+    await setTenantSlug(token, parsed.data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 400 || error.status === 422) {
+        return { error: SET_ORG_SLUG_ERRORS.invalid };
+      }
+      if (error.status === 401) {
+        return { error: SET_ORG_SLUG_ERRORS.sessionExpired };
+      }
+      if (error.status === 404) {
+        return { error: SET_ORG_SLUG_ERRORS.notFound };
+      }
+      if (error.status === 409) {
+        return { error: SET_ORG_SLUG_ERRORS.taken };
+      }
+    }
+    return { error: SET_ORG_SLUG_ERRORS.generic };
   }
 
   revalidatePath("/dashboard", "page");
