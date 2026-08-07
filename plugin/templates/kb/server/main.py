@@ -914,11 +914,22 @@ def create_document(
     # is optional-identity, so it resolves for the author either way, and consulting
     # visibility here would buy a lookup for nothing — a private doc's URL is
     # shareable only once the project is public, exactly like `/documents/{id}`.
+    #
+    # P25.F1: the pretty path is dateless ("the newest document under this title"),
+    # so hand it back only when it ROUND-TRIPS to the row we just wrote. A backdated
+    # publish under an existing slug (no `new_version`) inserts an older duplicate
+    # whose pretty path belongs to the newer row — returning it would point the
+    # author at a DIFFERENT document. One SQLite read on the connection already in
+    # hand, the same primitive the resolver route uses; no accounts-plane work.
     if ctx.tenant_id is not None:
+        canonical = None
         if org_slug:
-            url = f"{config.public_base_url()}/@{org_slug}/{project}/{slug}"
-        else:
-            url = f"{config.public_base_url()}/documents/{doc_id}"
+            latest = db.find_latest_document_by_slug(
+                conn, project, slug, tenant_id=_tenant_filter(ctx)
+            )
+            if latest is not None and latest["id"] == doc_id:
+                canonical = f"{config.public_base_url()}/@{org_slug}/{project}/{slug}"
+        url = canonical or f"{config.public_base_url()}/documents/{doc_id}"
     else:
         url = f"{config.public_base_url()}/{project}/{date}-{slug}/"
     resp = {

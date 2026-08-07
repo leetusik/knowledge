@@ -6,11 +6,11 @@
 ## Pointer
 
 - Current phase: `P25`
-- Current slice: `P25.F1`
-- Next slice: `P25.F2`
+- Current slice: `P25.F2`
+- Next slice: `P25.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `15`
-- Rebuilt at: `2026-08-07T15:44:36+09:00`
+- Rebuilt at: `2026-08-07T15:53:22+09:00`
 
 ## Active Phases
 
@@ -20,7 +20,7 @@
 | [x] `P22` | `done` | `pass` | Graph label focus | `none` | `works/phases/active/P22` |
 | [x] `P23` | `done` | `pass` | Document version control | `none` | `works/phases/active/P23` |
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
-| [ ] `P25` | `in_progress` | `changes_requested` | Pretty public share URLs | `P25.F1` | `works/phases/active/P25` |
+| [ ] `P25` | `in_progress` | `changes_requested` | Pretty public share URLs | `P25.F2` | `works/phases/active/P25` |
 
 ## Phase P21: Web document deletion
 
@@ -71,6 +71,6 @@
 | [x] `P25.S3` | `done` | web pretty document route and legacy /documents/{id} redirect | `implementation` | `works/phases/active/P25/slices/P25.S3` |
 | [x] `P25.S4` | `done` | org-slug public graph URL and legacy /graph/{uuid} redirect | `implementation` | `works/phases/active/P25/slices/P25.S4` |
 | [x] `P25.S5` | `done` | share affordances: copy-link, save URL, and the org-slug settings field | `implementation` | `works/phases/active/P25/slices/P25.S5` |
-| [ ] `P25.F1` | `todo` | canonical_path round-trip guard: emit only when the slug resolves back to the same row | `fix` | `works/phases/active/P25/slices/P25.F1` |
+| [x] `P25.F1` | `done` | canonical_path round-trip guard: emit only when the slug resolves back to the same row | `fix` | `works/phases/active/P25/slices/P25.F1` |
 | [ ] `P25.F2` | `todo` | dashboard org-slug hint: changing a claimed slug breaks previously shared links | `fix` | `works/phases/active/P25/slices/P25.F2` |
 | [ ] `P25.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P25/slices/P25.REVIEW` |

@@ -144,6 +144,18 @@ def test_save_url_is_pretty_once_the_tenant_has_an_org_slug(org_client):
     # Built from the DURABLE parts (org slug + project + doc slug), never the row id.
     assert saved["url"].endswith(f"/@{slug}/gamma/{saved['slug']}")
 
+    # P25.F1: a BACKDATED publish under the same slug (no `new_version`) inserts an
+    # older duplicate, and the dateless pretty path belongs to the newer row — so
+    # this write falls back to its own id URL rather than pointing the author at a
+    # different document.
+    older = org_client.post(
+        "/api/documents", json={**payload, "date": "2020-01-01"}, headers=key
+    )
+    assert older.status_code == 201, older.text
+    backdated = older.json()
+    assert backdated["id"] != saved["id"] and backdated["slug"] == saved["slug"]
+    assert backdated["url"].endswith(f"/documents/{backdated['id']}")
+
 
 def test_project_bound_key_still_writes(org_client):
     """Regression: a project-bound vk_ key keeps authorizing writes unchanged."""

@@ -59,19 +59,32 @@ def _set_slug(client, headers) -> str:
 
 
 def _seed(
-    tenant_id, project, *, slug, fmt="md", raw_html=None, tags=None, related=None, version=1
+    tenant_id,
+    project,
+    *,
+    slug,
+    fmt="md",
+    raw_html=None,
+    tags=None,
+    related=None,
+    version=1,
+    date="2026-01-01",
 ):
+    """Seed one document row. ``date`` is part of the rel_path identity, so two
+    calls with the same ``(project, slug)`` and different dates make two rows —
+    exactly the duplicate the dateless pretty path has to disambiguate."""
+
     conn = db.connect()
     try:
         return db.upsert_document(
             conn,
             project=project,
             slug=slug,
-            date="2026-01-01",
+            date=date,
             title=f"Doc {slug}",
             tags=tags or [],
             source_repo="acme/repo",
-            rel_path=f"{project}/2026-01-01-{slug}.{'html' if fmt == 'html' else 'md'}",
+            rel_path=f"{project}/{date}-{slug}.{'html' if fmt == 'html' else 'md'}",
             markdown="body text",
             related=related or [],
             format=fmt,
@@ -298,6 +311,43 @@ def test_document_detail_carries_canonical_path(documents_client):
     member = client.get(f"/app/documents/{doc_id}", headers=headers)
     assert member.json()["canonical_path"] == expected
     assert client.get(f"/app/documents/{doc_id}").json()["canonical_path"] == expected
+
+
+def test_superseded_duplicate_slug_has_no_canonical_path(documents_client):
+    """P25.F1: the dateless pretty path belongs to the NEWEST row under
+    `(project, slug)`, so an older duplicate must advertise `canonical_path: null`
+    rather than a path that resolves to a different document — otherwise an already
+    shared `/documents/{id}` link would redirect to the wrong doc."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"dup-{uuid4()}@example.com")
+    org = _set_slug(client, headers)
+    pub = _project(client, headers, "pub")
+    _set_public(client, headers, pub)
+
+    old_id = _seed(tenant, "pub", slug="notes", date="2026-01-01")
+    new_id = _seed(tenant, "pub", slug="notes", date="2026-06-01")
+    assert old_id != new_id  # a re-publish on another date really is a second row
+
+    expected = f"/@{org}/pub/notes"
+    # Only the newest row owns the path — member and anonymous branches must agree.
+    for hdrs in ({}, headers):
+        assert client.get(f"/app/documents/{old_id}", headers=hdrs).json()[
+            "canonical_path"
+        ] is None
+        assert (
+            client.get(f"/app/documents/{new_id}", headers=hdrs).json()[
+                "canonical_path"
+            ]
+            == expected
+        )
+
+    # ...and that path does resolve to the newest row, whose own canonical_path is
+    # unconditional (the resolver is newest-wins by construction).
+    hit = client.get(f"/app/orgs/{org}/pub/notes")
+    assert hit.status_code == 200, hit.text
+    assert hit.json()["id"] == new_id
+    assert hit.json()["canonical_path"] == expected
 
 
 def test_visibility_toggle_flips_anonymous_read(documents_client):

@@ -598,6 +598,56 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   dashboard tells them to share. Deliberately not raised as a P25 finding; a candidate
   for a later slice.
 
+### Landed by P25.F1 (closes REVIEW Finding 1 — bind these)
+
+- **`canonical_path` is now a ROUND-TRIP claim, not a composition.** The id detail read
+  emits the pretty path only when `find_latest_document_by_slug(project, slug, owner)`
+  returns *this* row; a superseded duplicate answers `null`. So the invariant a reader can
+  rely on is: **if a document advertises a `canonical_path`, that path resolves back to
+  it.** The dateless URL (D2) is unchanged — it still means "newest under this title" —
+  what changed is that only the row that *owns* the meaning is allowed to hand it out.
+- **Zero web changes were needed, exactly as the review predicted.** `null` is a state
+  every consumer already handles (the S3 anonymous redirect, S5's three copy-link
+  surfaces, the dashboard) because a slug-less tenant produces it. Superseded duplicates
+  now simply join the slug-less contract. No `web/**` file was touched by this slice.
+- **The emitter split in two:** `_owner_org_slug(doc, ctx)` (who owns it, and does the
+  owner have a slug — free on the member path, one Postgres read otherwise) and
+  `_owns_its_canonical_path(conn, doc)` (does the path round-trip — one SQLite read).
+  `_document_canonical_path(conn, doc, ctx)` composes them **slug-first on purpose**: the
+  common slug-less deployment (tenant #1 today) short-circuits with *no* SQLite read at
+  all, so the guard costs nothing until a slug is claimed. It also takes `conn` now —
+  any future caller must pass the request connection.
+- **The member path is still Postgres-free.** The guard is content-plane only
+  (`server/db.py`, the connection already in hand); no accounts-plane call was added
+  anywhere, and the anonymous branch's round-trip count is unchanged at two.
+- **The resolver route (`GET /app/orgs/...`) deliberately has NO guard** — it resolved
+  *through* the slug, so the check would be a tautology there. Its `canonical_path` stays
+  unconditionally set. Same reasoning applies to any future newest-wins address.
+- **The 201 save `url` carries the same guard** (`server/main.py`, step 5), scoped with
+  `_tenant_filter(ctx)` so it matches the emitter's tenant scoping. A backdated publish
+  under an existing slug now returns `{origin}/documents/{id}`. The read happens on the
+  handler's own connection after `upsert_document` has committed, and outside
+  `WRITE_LOCK` — a race that inserts a newer duplicate in between can only downgrade the
+  answer to the id URL, which is the safe direction.
+- **`tests/test_public_read.py::_seed` gained a `date=` keyword** (default unchanged at
+  `2026-01-01`, and the `rel_path` now interpolates it). That is what makes two rows under
+  one `(project, slug)` seedable — reuse it rather than hand-rolling a second seeder.
+- **Both new assertions were proved to fail without the fix** (the two server files were
+  stashed and the two tests re-run: both red, then restored). They are genuine regression
+  guards, not tautologies.
+
+### Gotchas found while doing P25.F1
+
+- **A backdated publish is the reproducer, and it is a one-line request change**: POST the
+  same title/project with an explicit older `date` and no `new_version` → a second row.
+  That is the whole bug surface, and it is now pinned in `test_org_credentials.py` (the
+  write path, `KB_ROOT`-isolated) and `test_public_read.py` (the read path).
+- **New baselines: 125 passed with Postgres (was 124), 83 passed / 42 skipped without**
+  (was 83 / 41). Two gated runs against the same database, plus a third after a
+  post-edit re-mirror — all green, so the globally-unique-slug hazard stays clear.
+- Postgres recipe unchanged from S1 (`docker run … -p 55439:5432 postgres:17`, repo
+  `.venv`); 55432 is still occupied on this machine.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -806,6 +856,37 @@ above are hints, not a substitute.
   a file's HEAD state with `git show HEAD:<f> | npx prettier --check --stdin-filepath`
   before assuming a warning is yours, and never `prettier --write` an existing web file
   inside a slice.
+
+**Actual (P25.F1):**
+
+- `docs/current/api.md` — `canonical_path` on `GET /app/documents/{id}` is now emitted
+  **only when the pretty path round-trips back to that same row**. Because the path is
+  dateless ("the newest document under this title"), a document that shares
+  `(project, slug)` with a **newer** one is superseded and answers `null` — the same null
+  every slug-less tenant gets, so no consumer contract changes. The invariant to document:
+  *a non-null `canonical_path` always resolves back to the document that advertised it.*
+  `GET /app/orgs/{org}/{project}/{slug}`'s own `canonical_path` stays unconditionally set
+  (it resolved through the slug, so it is newest-wins by construction). The `POST
+  /api/documents` 201 `url` carries the identical guard: pretty only when the just-written
+  row is what the slug resolves to, otherwise `{origin}/documents/{id}` — so a **backdated**
+  publish under an existing slug gets the id URL.
+- `docs/current/experience.md` — an old `/documents/{id}` share link can never silently
+  change what it shows. If a later document re-uses the same project + doc slug on a newer
+  date, the older document simply stops advertising a pretty URL: the anonymous visitor
+  stays on the id link (no redirect) and the copy-link hands out the id URL, rather than
+  forwarding either to a different document. "No link may break" now covers *content
+  identity*, not just the HTTP status.
+- `docs/current/backend.md` — `documents_api._document_canonical_path(conn, doc, ctx)`
+  splits into "who owns it / has it a slug" (`_owner_org_slug`, free on the member path)
+  and "does the path round-trip" (`_owns_its_canonical_path`, one `find_latest_document_
+  by_slug` read on the request connection), evaluated **slug-first** so a slug-less
+  deployment pays no extra read at all. The guard is content-plane only — the member
+  detail read stays Postgres-free and no accounts-plane call was added.
+- `docs/current/qa.md` — gated baseline moves to **125 passed** with Postgres (**83 passed
+  / 42 skipped** without). The new case seeds two rows under one `(project, slug)` at two
+  dates (`_seed(..., date=…)` in `tests/test_public_read.py`) and pins "older ⇒ null,
+  newest ⇒ the path, resolver ⇒ the newest id"; `test_org_credentials.py` additionally
+  pins the backdated 201 `url` falling back to `/documents/{id}`.
 
 ## Constraints
 

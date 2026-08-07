@@ -51,7 +51,9 @@ not), plus ``markdown`` on the list. Search result items already exclude
 ``markdown``/``tenant_id`` (``server/search.py::_finalize``), so they pass through
 unchanged. The two DETAIL reads additionally carry ``canonical_path`` (P25.S2) —
 injected at their call sites, never inside the shared projector, so the list route
-never pays the tenant lookup it costs.
+never pays the tenant lookup it costs. On the **id** read it is emitted only when
+the dateless pretty path round-trips back to that same row (P25.F1), so a superseded
+duplicate slug answers ``null`` rather than pointing at a different document.
 """
 
 from __future__ import annotations
@@ -244,8 +246,34 @@ def _canonical_path(org_slug: str | None, doc: dict) -> str | None:
     return f"/@{org_slug}/{doc['project']}/{doc['slug']}"
 
 
-async def _document_canonical_path(doc: dict, ctx: AuthContext | None) -> str | None:
-    """Resolve ``doc``'s canonical path for this caller — free on the member path.
+def _owns_its_canonical_path(conn, doc: dict) -> bool:
+    """Does the pretty path resolve back to **this** row? (P25.F1 round-trip guard)
+
+    The pretty path is dateless by D2 — it means "the newest document under this
+    title" — so when two rows share ``(project, slug)`` at different dates only the
+    newest one owns it. Duplicates are reachable in ordinary use: a re-publish
+    *without* ``new_version`` computes a different ``rel_path`` (the date is part of
+    it) and inserts a second row.
+
+    Advertising the path on an older duplicate would compose a **newest-wins**
+    address onto an **exact-row** one: an already-shared ``/documents/{id}`` link
+    would 307 to a *different* document, and the copy-link on that page would hand
+    the same wrong URL out. So the emitter re-resolves through
+    ``find_latest_document_by_slug`` — the very primitive the resolver route uses,
+    which makes this check *the* resolution — and answers ``False`` unless the row
+    that comes back is this one. One cheap SQLite read on the connection already in
+    hand; the accounts plane is not touched, so the member path stays Postgres-free.
+    """
+
+    owner = str(doc.get("tenant_id") or "")
+    latest = db.find_latest_document_by_slug(
+        conn, doc["project"], doc["slug"], tenant_id=owner or None
+    )
+    return latest is not None and latest["id"] == doc["id"]
+
+
+async def _owner_org_slug(doc: dict, ctx: AuthContext | None) -> str | None:
+    """The owning tenant's org slug, or ``None`` — free on the member path.
 
     The owner's slug is already loaded on ``AuthContext.tenant`` when the caller IS
     the owner, so a member's detail read stays **Postgres-free**, exactly as
@@ -257,7 +285,7 @@ async def _document_canonical_path(doc: dict, ctx: AuthContext | None) -> str | 
 
     owner = str(doc.get("tenant_id") or "")
     if ctx is not None and owner == str(ctx.tenant.id):
-        return _canonical_path(ctx.tenant.slug, doc)
+        return ctx.tenant.slug
     if config.database_url() is None or not owner:
         return None
     try:
@@ -265,7 +293,28 @@ async def _document_canonical_path(doc: dict, ctx: AuthContext | None) -> str | 
     except (ValueError, TypeError):
         return None
     tenant = await get_accounts_service().get_tenant(owner_uuid)
-    return None if tenant is None else _canonical_path(tenant.slug, doc)
+    return None if tenant is None else tenant.slug
+
+
+async def _document_canonical_path(
+    conn, doc: dict, ctx: AuthContext | None
+) -> str | None:
+    """Resolve ``doc``'s canonical path for this caller, or ``None``.
+
+    Two conditions, in this order: the owner must have claimed an org slug, and the
+    resulting path must **round-trip to this same row** (P25.F1). The slug check
+    comes first because it is free on the member path and decides the common
+    slug-less case with no SQLite read at all.
+
+    A ``None`` needs no consumer change: the legacy ``/documents/{id}`` redirect and
+    every copy-link surface already fall back to the id URL when the key is null —
+    which is precisely the slug-less contract, now shared by superseded duplicates.
+    """
+
+    org_slug = await _owner_org_slug(doc, ctx)
+    if not org_slug or not _owns_its_canonical_path(conn, doc):
+        return None
+    return _canonical_path(org_slug, doc)
 
 
 @router.get("/app/documents")
@@ -321,7 +370,10 @@ async def get_document(
     Carries the additive ``canonical_path`` (P25.S2): the document's pretty
     ``/@{org}/{project}/{slug}`` URL, or ``null`` when the owner tenant has no org
     slug (or in legacy mode). Built here, once, in the backend — no consumer
-    assembles a pretty URL itself.
+    assembles a pretty URL itself. It is also ``null`` when this row is a
+    **superseded duplicate** of its own ``(project, slug)`` — the dateless path
+    belongs to the newest row, so advertising it here would silently redirect this
+    id to a different document (P25.F1's round-trip guard).
     """
 
     doc = await _resolve_readable_doc(conn, doc_id, ctx)
@@ -329,7 +381,7 @@ async def get_document(
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
     return {
         **_app_doc(doc, include_markdown=True),
-        "canonical_path": await _document_canonical_path(doc, ctx),
+        "canonical_path": await _document_canonical_path(conn, doc, ctx),
     }
 
 
@@ -361,7 +413,10 @@ async def resolve_document_by_slug(
 
     The response is the ordinary detail projection, so it carries ``id`` and the
     ``/versions*`` + ``/raw`` reads stay id-keyed and untouched. ``canonical_path``
-    is always non-null here: resolution came *through* the slug.
+    is always non-null here: resolution came *through* the slug, so this row IS what
+    the path resolves to — the P25.F1 round-trip guard the id route needs would be a
+    tautology here (this route is newest-wins by definition) and is deliberately not
+    applied.
     """
 
     if config.database_url() is None:
