@@ -44,6 +44,20 @@ def _set_public(client, headers, project_id, visibility="public"):
     assert res.status_code == 200, res.text
 
 
+def _set_slug(client, headers) -> str:
+    """Claim a fresh org slug for the caller's tenant and return it.
+
+    The slug is generated per call because ``tenants.slug`` is **globally** unique —
+    unlike every other assertion in these suites, which is tenant-scoped. A
+    hardcoded slug passes once and then 409s forever against a re-used database.
+    """
+
+    slug = f"org-{uuid4().hex[:10]}"
+    res = client.patch("/app/tenant", json={"slug": slug}, headers=headers)
+    assert res.status_code == 200, res.text
+    return slug
+
+
 def _seed(
     tenant_id, project, *, slug, fmt="md", raw_html=None, tags=None, related=None, version=1
 ):
@@ -181,6 +195,84 @@ def test_anonymous_reads_public_version_history(documents_client):
     assert client.get(f"/app/documents/{priv_id}/versions").status_code == 404
     assert client.get(f"/app/documents/{pub_id}/versions/9").status_code == 404
     assert client.get(f"/app/documents/{pub_id}/versions/9/raw").status_code == 404
+
+
+def test_slug_resolver_serves_public_and_hides_everything_else(documents_client):
+    """P25.S2: `/app/orgs/{org}/{project}/{slug}` resolves a public doc anonymously,
+    and an unknown org, an unknown doc slug and a private project are all the SAME
+    404 — nonexistent and forbidden stay indistinguishable."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"res-{uuid4()}@example.com")
+    org = _set_slug(client, headers)
+    pub = _project(client, headers, "pub")
+    _project(client, headers, "priv")  # left private
+    _set_public(client, headers, pub)
+
+    pub_id = _seed(tenant, "pub", slug="p")
+    _seed(tenant, "priv", slug="s")
+
+    hit = client.get(f"/app/orgs/{org}/pub/p")
+    assert hit.status_code == 200, hit.text
+    body = hit.json()
+    # Carries the row id (so /versions* and /raw stay id-keyed), the body, and the
+    # pretty path — but never the internal scoping column.
+    assert body["id"] == pub_id and body["markdown"] == "body text"
+    assert body["canonical_path"] == f"/@{org}/pub/p"
+    assert "tenant_id" not in body
+
+    misses = [
+        client.get(f"/app/orgs/{org}/priv/s"),  # private project
+        client.get(f"/app/orgs/{org}/pub/nope"),  # unknown doc slug
+        client.get(f"/app/orgs/{org}/nosuch/p"),  # unknown project
+        client.get(f"/app/orgs/org-{uuid4().hex[:10]}/pub/p"),  # unclaimed org slug
+        client.get("/app/orgs/NOT A SLUG/pub/p"),  # malformed org slug
+        client.get("/app/orgs/dashboard/pub/p"),  # reserved org slug
+    ]
+    assert [m.status_code for m in misses] == [404] * 6
+    assert len({m.json()["detail"] for m in misses}) == 1  # one identical detail
+
+
+def test_member_resolves_own_private_doc_by_slug(documents_client):
+    """The resolver's member fast-path: the owner reads their own doc through the
+    pretty URL whatever its project's visibility (the URL is handed out at save
+    time, before the project is ever made public)."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"resmem-{uuid4()}@example.com")
+    org = _set_slug(client, headers)
+    _project(client, headers, "priv")  # left private
+    doc_id = _seed(tenant, "priv", slug="s")
+
+    mine = client.get(f"/app/orgs/{org}/priv/s", headers=headers)
+    assert mine.status_code == 200, mine.text
+    assert mine.json()["id"] == doc_id
+    # ...and it stays invisible to everyone else.
+    assert client.get(f"/app/orgs/{org}/priv/s").status_code == 404
+
+
+def test_document_detail_carries_canonical_path(documents_client):
+    """P25.S2: `GET /app/documents/{id}` gains the additive `canonical_path` — the
+    pretty path once the owner has an org slug, `null` before that (a slug-less
+    tenant keeps exactly today's behavior)."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"canon-{uuid4()}@example.com")
+    pub = _project(client, headers, "pub")
+    _set_public(client, headers, pub)
+    doc_id = _seed(tenant, "pub", slug="p")
+
+    # No slug claimed yet: additive key present, null — for the member AND anonymously.
+    assert client.get(f"/app/documents/{doc_id}", headers=headers).json()["canonical_path"] is None
+    assert client.get(f"/app/documents/{doc_id}").json()["canonical_path"] is None
+
+    org = _set_slug(client, headers)
+    expected = f"/@{org}/pub/p"
+    # Member path reads the slug off the session tenant; the anonymous path looks the
+    # owner up. Both must agree.
+    member = client.get(f"/app/documents/{doc_id}", headers=headers)
+    assert member.json()["canonical_path"] == expected
+    assert client.get(f"/app/documents/{doc_id}").json()["canonical_path"] == expected
 
 
 def test_visibility_toggle_flips_anonymous_read(documents_client):

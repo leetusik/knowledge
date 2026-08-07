@@ -1,13 +1,18 @@
 """Per-tenant documents read + delete — the web app's knowledge-viewer surface (P12.S5).
 
-Eight session-guarded, tenant-scoped, **unmetered** ``/app`` routes the web app's
-documents surface codes against — seven reads and one delete:
+Nine session-guarded, tenant-scoped, **unmetered** ``/app`` routes the web app's
+documents surface codes against — eight reads and one delete:
 
 * ``GET /app/documents`` — the tenant's documents, newest-first, optional project/tag
   filter + offset pagination → ``{total, items}``.
 * ``GET /app/documents/{doc_id}`` — one document (with ``markdown``) → 404 when it is
   missing or belongs to another tenant (cross-tenant ids never leak). Optional-identity
   since P19.S2: also readable anonymously when it belongs to a public project.
+* ``GET /app/orgs/{org}/{project}/{slug}`` — the same document, addressed by its
+  DURABLE public identity instead of the disposable row id (P25.S2): the Postgres
+  org slug, the project name, and the doc slug. Same optional-identity trust gate,
+  same indistinguishable 404 for every miss. Backs the pretty share URL
+  ``/@{org}/{project}/{slug}``.
 * ``GET /app/documents/{doc_id}/raw`` — one HTML explainer's raw HTML for the sandboxed
   viewer (same optional-identity rule).
 * ``GET /app/documents/{doc_id}/versions`` — the document's superseded versions,
@@ -44,7 +49,9 @@ The ``/app`` projector drops the internal ``tags_text`` FTS denormalization AND 
 ``tenant_id`` scoping column (the ``/api`` projector leaks ``tenant_id``; this one must
 not), plus ``markdown`` on the list. Search result items already exclude
 ``markdown``/``tenant_id`` (``server/search.py::_finalize``), so they pass through
-unchanged.
+unchanged. The two DETAIL reads additionally carry ``canonical_path`` (P25.S2) —
+injected at their call sites, never inside the shared projector, so the list route
+never pays the tenant lookup it costs.
 """
 
 from __future__ import annotations
@@ -134,6 +141,38 @@ async def _resolve_project_name(project_id: UUID, ctx: AuthContext) -> str:
     return project.name
 
 
+async def _is_publicly_readable(doc: dict) -> bool:
+    """Whether ``doc`` may be served to a caller who is **not** its owner (P19 gate).
+
+    The public half of the trust boundary, extracted from ``_resolve_readable_doc``
+    (P25.S2) so the slug resolver lands on the *same* predicate instead of
+    re-deriving it. Three ordered guards, every one of them a plain ``False`` (the
+    caller renders an indistinguishable 404 — never a 403):
+
+    * **Legacy-mode guard** — ``DATABASE_URL`` unset ⇒ ``False`` before touching the
+      (absent) accounts service, so the single-tenant template stack never 500s and
+      never exposes a public path.
+    * **Registry-less owner** — an empty/legacy ``''`` sentinel or an unparseable
+      UUID ⇒ ``False``; such rows are never public.
+    * **Visibility** — the owner tenant's project (resolved by *name*) must exist and
+      be ``visibility == "public"``.
+
+    Costs one Postgres round trip, so callers must keep it off the member fast-path.
+    """
+
+    if config.database_url() is None:
+        return False  # legacy/template mode: no accounts registry ⇒ never public.
+    owner = doc.get("tenant_id")
+    if not owner:
+        return False  # '' legacy sentinel / NULL: registry-less rows are never public.
+    try:
+        owner_uuid = UUID(str(owner))
+    except (ValueError, TypeError):
+        return False
+    project = await get_accounts_service().get_project_by_name(owner_uuid, doc["project"])
+    return project is not None and project.visibility == "public"
+
+
 async def _resolve_readable_doc(
     conn, doc_id: int, ctx: AuthContext | None
 ) -> dict | None:
@@ -146,15 +185,9 @@ async def _resolve_readable_doc(
        before — member behavior is **byte-preserved**, including legacy ``''``-row
        semantics — and the accounts service is never consulted.
     2. **Public path** (no ``ctx``, or a scoped miss — which covers anonymous *and*
-       cross-org callers). An unscoped lookup gated by the owner project's
-       visibility:
-       * **Legacy-mode guard** — ``DATABASE_URL`` unset ⇒ ``None`` before touching
-         the (absent) accounts service, so the single-tenant template stack never
-         500s and never exposes a public path.
-       * missing row ⇒ ``None``; a registry-less owner (empty/legacy ``''`` sentinel
-         or an unparseable UUID) ⇒ ``None`` (such rows are never public).
-       * the owner tenant's project (resolved by name) must exist **and** be
-         ``visibility == "public"`` — otherwise ``None``.
+       cross-org callers). An unscoped lookup gated by ``_is_publicly_readable``
+       (legacy-mode guard, registry-less-owner guard, then the owner project's
+       ``visibility == "public"``); a missing row ⇒ ``None`` too.
 
     Every miss returns ``None`` so the caller renders an indistinguishable 404:
     private and nonexistent look identical (404-never-403), and no private doc or
@@ -173,17 +206,66 @@ async def _resolve_readable_doc(
     doc = db.get_document(conn, doc_id)
     if doc is None:
         return None
-    owner = doc.get("tenant_id")
-    if not owner:
-        return None  # '' legacy sentinel / NULL: registry-less rows are never public.
+    return doc if await _is_publicly_readable(doc) else None
+
+
+# --- Canonical (pretty) share path (P25.S2) --------------------------------
+#
+# ``/@{org-slug}/{project}/{doc-slug}`` — the document's durable public URL,
+# assembled from the Postgres org slug plus the two content-plane parts of the
+# document's rel_path identity. Nothing here keys off ``documents.id`` (a
+# disposable SQLite rowid). It is emitted on the DETAIL shape only — deliberately
+# NOT inside ``_app_doc``, which is a pass-through key filter the LIST route uses
+# too, and injecting it there would add a per-row Postgres lookup to every list.
+
+
+# The ONE 404 every miss on the slug resolver raises. A single constant detail
+# (echoing nothing back) is what makes "no such org", "no such project", "no such
+# document" and "that project is private" literally indistinguishable — the id
+# route's own detail embeds the requested id, so it cannot be shared verbatim.
+_NO_SUCH_PATH_DETAIL = "no document at that path"
+
+
+def _no_such_path() -> HTTPException:
+    """A fresh 404 with the resolver's single, constant detail (404-never-403)."""
+
+    return HTTPException(status_code=404, detail=_NO_SUCH_PATH_DETAIL)
+
+
+def _canonical_path(org_slug: str | None, doc: dict) -> str | None:
+    """The document's pretty public path, or ``None`` when the owner has no slug.
+
+    A slug-less tenant simply has no pretty URL yet (``tenants.slug`` is nullable
+    with no backfill), and every consumer falls back to ``/documents/{id}``.
+    """
+
+    if not org_slug:
+        return None
+    return f"/@{org_slug}/{doc['project']}/{doc['slug']}"
+
+
+async def _document_canonical_path(doc: dict, ctx: AuthContext | None) -> str | None:
+    """Resolve ``doc``'s canonical path for this caller — free on the member path.
+
+    The owner's slug is already loaded on ``AuthContext.tenant`` when the caller IS
+    the owner, so a member's detail read stays **Postgres-free**, exactly as
+    ``_resolve_readable_doc``'s member fast-path is today. Only the anonymous /
+    cross-org path pays a tenant lookup — that branch already makes a Postgres call
+    for the visibility gate. Legacy mode, a registry-less owner and a slug-less
+    owner all answer ``None``.
+    """
+
+    owner = str(doc.get("tenant_id") or "")
+    if ctx is not None and owner == str(ctx.tenant.id):
+        return _canonical_path(ctx.tenant.slug, doc)
+    if config.database_url() is None or not owner:
+        return None
     try:
-        owner_uuid = UUID(str(owner))
+        owner_uuid = UUID(owner)
     except (ValueError, TypeError):
         return None
-    project = await get_accounts_service().get_project_by_name(owner_uuid, doc["project"])
-    if project is None or project.visibility != "public":
-        return None
-    return doc
+    tenant = await get_accounts_service().get_tenant(owner_uuid)
+    return None if tenant is None else _canonical_path(tenant.slug, doc)
 
 
 @router.get("/app/documents")
@@ -235,12 +317,68 @@ async def get_document(
     the document only when it belongs to a **public** project (``_resolve_readable_doc``).
     A missing id, another tenant's *private* id, and a nonexistent id are all
     indistinguishable **404**s (404-never-403; private/nonexistent never leak).
+
+    Carries the additive ``canonical_path`` (P25.S2): the document's pretty
+    ``/@{org}/{project}/{slug}`` URL, or ``null`` when the owner tenant has no org
+    slug (or in legacy mode). Built here, once, in the backend — no consumer
+    assembles a pretty URL itself.
     """
 
     doc = await _resolve_readable_doc(conn, doc_id, ctx)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
-    return _app_doc(doc, include_markdown=True)
+    return {
+        **_app_doc(doc, include_markdown=True),
+        "canonical_path": await _document_canonical_path(doc, ctx),
+    }
+
+
+@router.get("/app/orgs/{org}/{project}/{slug}")
+async def resolve_document_by_slug(
+    org: str,
+    project: str,
+    slug: str,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> dict[str, object]:
+    """One document by its DURABLE public identity: org slug + project + doc slug.
+
+    The backend half of the pretty share URL ``/@{org}/{project}/{slug}`` (P25.S2).
+    The ``@`` is a web-plane convention: this route takes the **bare** slug, and the
+    BFF strips the prefix before calling. Resolution is Postgres org slug → tenant →
+    ``db.find_latest_document_by_slug`` (``date DESC, id DESC``, tenant-scoped), so
+    a dateless pretty URL means "the newest document under this title" and nothing
+    durable keys off the disposable ``documents.id``.
+
+    Same trust semantics as ``GET /app/documents/{doc_id}``, reached by the same
+    predicate rather than a re-derivation: legacy-mode guard first, then a member
+    fast-path (a caller who owns the tenant reads it whatever its visibility), then
+    ``_is_publicly_readable``. **Every** miss — legacy mode, an unknown/malformed/
+    reserved org slug (``get_tenant_by_slug`` normalizes and answers ``None`` with
+    no DB round trip), a project or doc slug that does not exist, a private project
+    — raises the one identical 404, so nonexistent and forbidden stay
+    indistinguishable (404-never-403).
+
+    The response is the ordinary detail projection, so it carries ``id`` and the
+    ``/versions*`` + ``/raw`` reads stay id-keyed and untouched. ``canonical_path``
+    is always non-null here: resolution came *through* the slug.
+    """
+
+    if config.database_url() is None:
+        raise _no_such_path()  # legacy/template: no accounts registry, no orgs.
+    tenant = await get_accounts_service().get_tenant_by_slug(org)
+    if tenant is None:
+        raise _no_such_path()
+    doc = db.find_latest_document_by_slug(conn, project, slug, tenant_id=str(tenant.id))
+    if doc is None:
+        raise _no_such_path()
+    is_member = ctx is not None and ctx.tenant.id == tenant.id
+    if not is_member and not await _is_publicly_readable(doc):
+        raise _no_such_path()
+    return {
+        **_app_doc(doc, include_markdown=True),
+        "canonical_path": _canonical_path(tenant.slug, doc),
+    }
 
 
 @router.get("/app/documents/{doc_id}/raw")

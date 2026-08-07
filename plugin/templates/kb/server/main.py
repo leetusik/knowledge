@@ -575,6 +575,27 @@ async def ensure_registry_project(
     return record.id
 
 
+async def resolve_org_slug(
+    ctx: ApiAuthContext = Depends(resolve_api_write),
+) -> str | None:
+    """The writing tenant's public org slug, or ``None``. Feeds the 201 save ``url``.
+
+    An **async** dependency for the same reason ``ensure_registry_project`` is one:
+    ``create_document`` is sync (it holds ``WRITE_LOCK`` over a sqlite critical
+    section) and cannot ``await`` Postgres, yet the response URL needs the accounts
+    plane. FastAPI caches ``resolve_api_write`` per request, so this adds one
+    read — not a second auth resolution — and runs before the handler.
+
+    ``None`` in legacy/single-tenant mode (no Postgres at all) and for a tenant that
+    has not claimed a slug yet — both keep exactly today's URL (P25.S2).
+    """
+
+    if ctx.tenant_id is None:
+        return None
+    tenant = await get_accounts_service().get_tenant(ctx.tenant_id)
+    return None if tenant is None else tenant.slug
+
+
 def _resolve_version_target(
     conn,
     ctx: ApiAuthContext,
@@ -618,6 +639,7 @@ def create_document(
     request: Request,
     ctx: ApiAuthContext = Depends(resolve_api_write),
     registry_project_id: UUID | None = Depends(ensure_registry_project),
+    org_slug: str | None = Depends(resolve_org_slug),
     conn=Depends(get_conn),
 ):
     """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
@@ -879,12 +901,24 @@ def create_document(
 
     # 5. Response.
     # Mode-aware direct URL. Tenant mode (`ctx.tenant_id is not None`) points at the
-    # web app's direct doc page (`KB_PUBLIC_BASE_URL` is the app origin on prod);
-    # shareable when the project is public. Legacy/single-tenant mode keeps the
-    # mkdocs site URL, which still exists in the dormant template stack. Branch on
+    # web app's doc page (`KB_PUBLIC_BASE_URL` is the app origin on prod); shareable
+    # when the project is public. Legacy/single-tenant mode keeps the mkdocs site
+    # URL, which still exists in the dormant template stack. Branch on
     # `ctx.tenant_id`, never `is_public` — tenant #1's mkdocs URL is equally broken.
+    #
+    # P25.S2: a tenant that has claimed an org slug gets the PRETTY, durable URL
+    # `/@{org}/{project}/{slug}` — built from `project`/`slug` (which, on a version
+    # bump, are the TARGET's, so the pretty URL never moves either) and never from
+    # the disposable `doc_id`. A slug-less tenant keeps `/documents/{id}` exactly as
+    # before. The URL is pretty regardless of the project's visibility: the resolver
+    # is optional-identity, so it resolves for the author either way, and consulting
+    # visibility here would buy a lookup for nothing — a private doc's URL is
+    # shareable only once the project is public, exactly like `/documents/{id}`.
     if ctx.tenant_id is not None:
-        url = f"{config.public_base_url()}/documents/{doc_id}"
+        if org_slug:
+            url = f"{config.public_base_url()}/@{org_slug}/{project}/{slug}"
+        else:
+            url = f"{config.public_base_url()}/documents/{doc_id}"
     else:
         url = f"{config.public_base_url()}/{project}/{date}-{slug}/"
     resp = {

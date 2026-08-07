@@ -116,6 +116,35 @@ def test_org_key_mints_authorizes_write_and_get_or_creates_project(org_client):
     assert "default" in names and "alpha" in names  # get-or-create landed the row
 
 
+def test_save_url_is_pretty_once_the_tenant_has_an_org_slug(org_client):
+    """P25.S2: the 201 save `url` becomes `/@{org}/{project}/{slug}` once the writing
+    tenant has claimed an org slug, and stays `/documents/{id}` before that.
+
+    The slug is generated per run — ``tenants.slug`` is GLOBALLY unique, so a
+    hardcoded one passes once and then 409s against a re-used database.
+    """
+
+    session = {"Authorization": f"Bearer {_signup(org_client)['token']}"}
+    mint = org_client.post("/app/credentials", headers=session)
+    key = {"Authorization": f"Bearer {mint.json()['key']}"}
+
+    # No slug yet → today's id URL, unchanged.
+    first = org_client.post("/api/documents", json=_doc_payload("gamma"), headers=key)
+    assert first.status_code == 201, first.text
+    assert first.json()["url"].endswith(f"/documents/{first.json()['id']}")
+
+    slug = f"org-{uuid4().hex[:10]}"
+    claim = org_client.patch("/app/tenant", json={"slug": slug}, headers=session)
+    assert claim.status_code == 200, claim.text
+
+    payload = {**_doc_payload("gamma"), "title": "Pretty Save URL"}
+    second = org_client.post("/api/documents", json=payload, headers=key)
+    assert second.status_code == 201, second.text
+    saved = second.json()
+    # Built from the DURABLE parts (org slug + project + doc slug), never the row id.
+    assert saved["url"].endswith(f"/@{slug}/gamma/{saved['slug']}")
+
+
 def test_project_bound_key_still_writes(org_client):
     """Regression: a project-bound vk_ key keeps authorizing writes unchanged."""
 
