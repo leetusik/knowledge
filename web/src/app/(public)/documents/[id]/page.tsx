@@ -157,6 +157,20 @@ export default async function DocumentPage({
 
   // ── Anonymous branch — public-only read, no token. A miss bounces to /login. ─
   const doc = await loadDocument(undefined, id, () => redirect("/login"));
+  // P25.S3 — an anonymous visitor who followed an old id link is sent on to the
+  // PRETTY URL when the document has one (`canonical_path`, built once in the backend
+  // from durable parts; `null` until the owning tenant claims an org slug, and then
+  // this page just serves as it always has — no link ever breaks).
+  //
+  // Anonymous ONLY: a signed-in member keeps the id URL, which carries the
+  // member-only affordances (delete) the pretty page deliberately does not have, and
+  // the intent explicitly allows internal navigation to stay id-keyed.
+  //
+  // TEMPORARY (307 via `redirect()`), never permanent: org slugs are mutable in this
+  // phase, and a 308 would be cached by browsers past a slug change. One-way only —
+  // the pretty page never redirects back here, so there is no loop.
+  // Top level, outside any try: `redirect()` signals by throwing.
+  if (doc.canonical_path) redirect(doc.canonical_path);
   const history = await loadVersions(undefined, doc);
   return (
     <PublicShell>

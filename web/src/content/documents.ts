@@ -187,6 +187,25 @@ export const DOCUMENTS = {
   },
 
   /**
+   * The PRETTY-URL not-found (P25.S3 —
+   * `(public)/[org]/[project]/[slug]/not-found.tsx`). A separate block from
+   * `notFound` above because that surface is reached by id and its CTA points at the
+   * member-gated `/documents` list; this one is the public share surface, so most
+   * visitors are anonymous strangers and the CTA must go somewhere they can actually
+   * go — the marketing home.
+   *
+   * The copy stays deliberately vague about WHY: the resolver answers one
+   * indistinguishable 404 for an unknown org slug, an unknown project, an unknown doc
+   * slug and a private project alike (404-never-403), so naming a cause here would
+   * either be a guess or a leak.
+   */
+  publicNotFound: {
+    title: "Document not found",
+    sub: "This link doesn't point at a shared document. It may have moved, been unshared, or never existed.",
+    homeLabel: "Go to knowledge",
+  },
+
+  /**
    * The list-level not-found (`not-found.tsx`) — reached only when a hand-crafted
    * `?project=` filter doesn't resolve to one of the tenant's projects (404/400).
    */
