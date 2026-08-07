@@ -46,6 +46,27 @@ function parseMessage(data: unknown): ExplainerMessage | null {
   return null;
 }
 
+/**
+ * Ask the framed document to re-send its height.
+ *
+ * The frame's `src` is in the SSR HTML, so the child can load and post its first
+ * height message before this island hydrates and attaches the listener below — and
+ * the child dedupes (it only re-posts when the height CHANGES), so a missed first
+ * message latches: the frame keeps its CSS fallback height until something moves it,
+ * which is why a window resize used to be the only way to un-wedge it. This request
+ * makes the handshake deterministic, and it is fired from both sides of the race:
+ * on listener attach (covers a frame that already finished loading) and on the
+ * iframe's `load` (covers one that had not).
+ *
+ * `"*"` as targetOrigin is mandatory, not laziness: the framed document has an
+ * OPAQUE origin (`sandbox="allow-scripts"` without `allow-same-origin`), so no
+ * concrete origin string can ever match it. Nothing leaks — the message is delivered
+ * to this one frame's window only, and it carries no data.
+ */
+function requestHeight(frame: HTMLIFrameElement | null) {
+  frame?.contentWindow?.postMessage({ type: "kb-explainer-request" }, "*");
+}
+
 export function ExplainerFrame({ src, title }: { src: string; title: string }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   // `null` until the first height message: the frame keeps its CSS fallback height
@@ -83,6 +104,9 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
     }
 
     window.addEventListener("message", onMessage);
+    // Now that we can hear an answer, ask — the frame may have loaded (and posted
+    // its only height message) long before this island hydrated.
+    requestHeight(frameRef.current);
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
@@ -99,6 +123,7 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
         className="kb-explainer__frame"
         referrerPolicy="no-referrer"
         style={height === null ? undefined : { height: `${height}px` }}
+        onLoad={(event) => requestHeight(event.currentTarget)}
       />
     </div>
   );
