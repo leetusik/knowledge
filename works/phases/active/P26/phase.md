@@ -473,6 +473,30 @@ explicitly declined by the operator.
     the **pinned un-revokable master bearer** as a deliberate concession, and **mirror-don't-narrow**
     for the open-core template. S4 says what they are; S5 owns why and what they cost.
 
+- **S5 (done):** explainer published — "Why Knowledge Is This Way, and How to Change It",
+  **KB doc id 33 v1**, 17,730 chars. **The five-explainer series is complete: KB docs 29 → 30 → 31 →
+  32 → 33 in reading order** (verified: `GET /api/documents?project=knowledge` → `total: 5`, all v1).
+  - **Research: `included`** — two `adr.github.io` pages: the definitions of an ADR and a decision
+    log, and the Nygard template's five components. Produced a real comparison: every entry in
+    `decisions.md` carries all five **plus two** — an explicit *Alternatives considered* field (making
+    the road not taken retrievable rather than inferred) and a *Source* pointer back to the producing
+    slice. **Divergence:** standard practice is one immutable numbered file per decision; this project
+    keeps one appended log inside a versioned track — giving up a stable per-decision URL, gaining
+    lockstep versioning with the ten tracks those decisions constrain.
+  - **All three inherited debts discharged.** S2's two-implementations config seam (why two
+    unmergeable resolvers is *correct*, and its permanent drift cost), S3's design-provenance rule
+    (framed as a truthfulness constraint about who decided what, not tidiness), and S4's three
+    decisions — no PyPI, the pinned master bearer, mirror-don't-narrow — each told in the
+    alternatives-and-cost shape with what it *bought*.
+  - **The joining idea:** the decision record exists *because* of the workspace — doc versioning is a
+    required step of the phase review, so `decisions.md` is an artifact the process forces into
+    existence rather than a file someone remembered to update.
+  - **Accuracy note honored:** the explainer describes **two** executor tiers, not three; the stale
+    `slice-executor-low` file is raised as a proposed next step instead of being described or fixed.
+  - **For `P26.REVIEW`:** four actionable next steps proposed — archive the five finished phases,
+    sweep the deferred triggers (**D17** and **D23** have plausibly already fired), retire the stale
+    executor-tier file, and give the config seam a shared conformance fixture.
+
 ## Constraints
 
 1. **`knowledge` slices are run INLINE by the orchestrator, never dispatched.** `/explain` is a
