@@ -677,6 +677,53 @@ to work: every redirect path has a "serve as today" fallback when no slug exists
   the operator cannot preview what a stranger sees from the URL the dashboard tells them to
   share). Still not a P25 finding; still a candidate for a later slice.
 
+### Landed by P25.F3 (the unclaimed-slug hint — bind these)
+
+- **The silent fallback is now labelled, and only for the person who can fix it.**
+  `SHARE.claimHint` (`web/src/content/share.ts`) renders as one sentence — "This link uses
+  an id until you **claim a public URL name**." — beside the copy affordance on the
+  document read view's member branch and in the member graph header, linking to
+  `/dashboard`. Split into `prefix` / `linkLabel` / `suffix` / `href` because the middle
+  part is an inline `<Link>`; every character still lives in the content module.
+- **The condition is the VIEWER's own `tenant.slug`, never `canonical_path` alone.** That
+  is what keeps the P25.F1 superseded-duplicate case hint-free: a claimed slug with a
+  `null` path means the id URL is correct and permanent for that row, and there is nothing
+  for the operator to do. `identity.tenant?.slug` is free off the session on both surfaces
+  (S5's `KbTenant.slug`), so the hint costs no call.
+- **The document page needs a second clause, because the member branch is NOT own-tenant
+  only.** `_resolve_readable_doc`'s public-project fallback means a cross-org member does
+  reach another org's public doc at `/documents/{id}` (the page's own header comment says
+  so — the plan's "own-tenant by construction" assumption is wrong). The web plane has no
+  ownership signal (`KbDocument` carries no `tenant_id`), so the page also requires
+  `doc.canonical_path === null`, which excludes the misleading case (another org's doc that
+  *does* have a pretty path). **If a future slice wants exact ownership on a share surface,
+  it needs a new backend field — do not try to infer it in TypeScript.**
+- **Anonymous branches stay hint-free and button-free**, unchanged: a visitor can claim
+  nothing and already has the URL in the address bar. The pretty document page carries no
+  hint either — reaching that route means a slug resolved, so the condition is
+  unsatisfiable there.
+- **No CSS and no component were added.** The hint reuses `--kb-hint` +
+  `--kb-accent-strong` with `underline underline-offset-2`, the exact treatment
+  `version-history.tsx` already uses for inline links, so it themes automatically. The
+  graph header wraps its button in a `flex-col items-end` column (hint under the button,
+  right-aligned, `max-w-[18rem]`) rather than in-line, because that header is a
+  `justify-between` title/action bar.
+
+### Gotchas found while doing P25.F3
+
+- **The prettier rule now has a counter-example: two of the three touched files were
+  prettier-CLEAN at HEAD** (`content/share.ts`, `(app)/graph/page.tsx`, and
+  `(public)/documents/[id]/page.tsx` — all three clean). S3/S5's "never `prettier --write`
+  an existing web file" still stands, but the right move is to check the *specific* file:
+  `npx prettier <f> > /tmp/x && diff -u <f> /tmp/x` shows whether the only complaint is
+  your own new lines, and if so it is worth hand-applying prettier's wrap so the file stays
+  clean. Did exactly that for one 81-column JSX condition.
+- **Baselines unchanged across the board**: web **15 files / 85 tests** (no test added —
+  conditional rendering of static copy, and the repo has no rendering-test convention), the
+  built route table byte-identical, `plugin_parity` PASS trivially (`web/` is not shipped),
+  and the Postgres-gated pytest suite **not re-run** because no backend file was touched —
+  F1's **125 passed / 83 passed + 42 skipped** stands.
+
 ## Doc impact
 
 _Running list; the `P25.REVIEW` slice consolidates these into doc versions on a pass._
@@ -924,6 +971,26 @@ above are hints, not a substitute.
   gained one clause warning that changing an already-claimed slug breaks links already
   shared, next to the existing charset rule. Copy-only; no behavior changed.
 
+
+**Actual (P25.F3):**
+
+- `docs/current/experience.md` — the share affordances now explain their own fallback: on
+  the document read view's **member** branch and in the **member graph header**, a viewer
+  whose own org has claimed no slug sees a one-sentence hint beside the copy button ("This
+  link uses an id until you *claim a public URL name*", linking to the dashboard's Public
+  URL panel), so the correct-but-silent id/UUID fallback stops reading as a broken feature.
+  It keys off the **viewer's own** `tenant.slug`, so a claimed slug never shows it — which
+  is what keeps the P25.F1 superseded-duplicate case (claimed slug, `null`
+  `canonical_path`) hint-free, since that row's id URL is correct and permanent. The
+  document page additionally requires `canonical_path === null`, because a cross-org member
+  can reach another org's public doc there and that org's pretty path is already correct.
+  Anonymous branches are unchanged (still no copy button, no hint), and so is the pretty
+  document page (reaching it implies a slug). Copy-and-conditional only — no behavior, no
+  route and no payload changed.
+
+**NOTE:** the list above this line was closed by the re-review; this `P25.F3` note landed
+after it, so it is **not** covered by `experience` v0016 and needs a new `experience`
+version from whichever review pass closes the F3 round.
 
 **Consolidated by P25.REVIEW (re-review pass, verdict `pass`) — this list is now CLOSED.**
 Nine doc versions were created from the notes above, one per doc, then a single

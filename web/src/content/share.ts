@@ -23,6 +23,27 @@ export const SHARE = {
   copiedLabel: "Link copied",
   /** Clipboard denied (insecure origin / permissions) — the URL is still selectable. */
   failedLabel: "Copy failed",
+  /**
+   * P25.F3 — the unclaimed-slug hint shown BESIDE a copy affordance when the
+   * signed-in viewer's own org has not claimed a slug yet (`tenant.slug === null`),
+   * so the button is correctly handing out the id/UUID fallback. Without it the
+   * fallback is silent and reads as "the pretty-URL feature is broken".
+   *
+   * Split into three parts because the middle one is an inline `<Link>` to the
+   * dashboard's Public URL panel — the page composes them, but every character stays
+   * here per the copy-as-data convention. ONE short sentence, deliberately: this is a
+   * minor affordance, not a callout. Shown only on MEMBER branches (an anonymous
+   * visitor cannot claim anything and already has the URL in the address bar), and
+   * never when a slug IS claimed — a `null` `canonical_path` then means the document
+   * is a superseded duplicate (P25.F1), whose id URL is correct and permanent.
+   */
+  claimHint: {
+    prefix: "This link uses an id until you ",
+    linkLabel: "claim a public URL name",
+    suffix: ".",
+    /** The dashboard's Public URL panel is where a slug is claimed. */
+    href: "/dashboard",
+  },
 } as const;
 
 export type PublicShellCopy = typeof PUBLIC_SHELL;
