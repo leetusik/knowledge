@@ -551,8 +551,70 @@ explicitly declined by the operator.
   external practice is genuinely being compared (vocky's S2/S3 included it). Leave the call to each run
   and record which way it went.
 
+- **S6 (done):** `README.md` audited and fixed (84 → 118 lines), all six sections kept in order.
+  All eleven pre-recorded items addressed:
+  - **Item 1 (headline links) fixed** — re-verified live: `/graph/` → 308 → `/graph` → 307 →
+    `/login` (sign-in wall, confirmed byte-for-byte as recorded) and `/` → 200 marketing landing
+    (not a library index). The headline now points at `https://knowledge.hi2vi.com` (the product,
+    described honestly as "sign in to browse") plus the **public** `/@leetusik/graph` (verified
+    200, unauthenticated, renders a real `.kb-graph` mount) — a working anonymous entry point,
+    unlike the old broken pair.
+  - **Item 3 (web app) and item 5 (MCP) added** — a new short paragraph after the lede introduces
+    all four distribution surfaces (web app, plugin, CLI, MCP) so a first-time reader gets the
+    whole shape immediately; the web app and MCP are also named again in "How it's built" →
+    Publish path.
+  - **Item 4 (pretty share URLs) added** — a new "Pretty share links" bullet in "How it's built".
+  - **Item 6 (CLI on-ramps) added** — the curl installer (verified live 200) replaces the bare
+    `uv tool install` as the primary CLI install line (the `uv` form is kept as the "also usable
+    directly" canonical channel); the env-var agent quickstart (`KB_API_BASE_URL` + `KB_API_TOKEN`,
+    names confirmed against `web/src/content/marketing/content.ts`'s locked snippets) and the
+    published `/SKILL.md` (verified live 200) are both new. The `knowledge init` line was already
+    correct against `cli/README.md` — untouched.
+  - **Item 2 (publish-path topology) fixed** — the retired P9 mkdocs-at-root description is
+    replaced with the real three-upstream edge (api / web / mcp, cross-checked against
+    `deploy/knowledge.conf` and `compose.prod.yml`); *fresh-on-write* is restated rather than
+    deleted, as the plan asked.
+  - **Item 7 (search + doc format) fixed** — "FTS5 full-text search" corrected to the real hybrid
+    (BM25 + recency decay + Gemini cosine, RRF-fused), and the HTML-explainer document type is
+    named.
+  - **Item 8 (push claim) fixed** — "Nothing publishes until I push" is now scoped: the hosted box
+    pushes every write itself (`KB_GIT_PUSH=true`); locally/plugin nothing pushes until the
+    operator does.
+  - **Item 9 (knowledge-map bullet) fixed** — now names *both* graphs and which is which: the
+    hosted app's live in-app graph (linked) vs. the **local** MkDocs site's still-live static
+    `graph_hook.py` build (self-hosters/plugin scaffold only) — confirmed `scripts/graph_hook.py`
+    and the `kb` service in `compose.yml` are both still present and wired, i.e. this is not dead
+    code, just not what production serves.
+  - **Item 10 (restore claim) fixed, with a code-read finding.** `compose.yml` now
+    unconditionally sets `DATABASE_URL` (unlike the "may be left empty" operations.md note), so a
+    plain `docker compose up -d` restore *does* start Postgres/tenant mode. Traced
+    `get_tenant_one_id()` (`server/api_auth.py`): with `KB_OPERATOR_EMAIL` unset (the local
+    compose default), it returns `None` before touching Postgres at all — so the P10 cutover's
+    documented crash-loop deadlock does **not** apply to a bare local restore, and the content
+    plane still self-heals exactly as the old README claimed. The README now says so precisely:
+    restore is still one command for browsing/searching; the accounts plane (signup/login) stays
+    unmigrated/empty until an explicit `alembic upgrade head`. No code change — this was read-only
+    verification, and the finding is now in the README text itself, not left as a gap.
+  - **Item 11 (still-plausible claims) cross-checked, left alone where correct.** Plugin install
+    lines, the Python/Docker/GitHub requirement list, and the "11 tracks" line all matched
+    `docs/current/product.md` / `operations.md` and `plugin/README.md` verbatim — untouched except
+    one small accurate addition (Connect vs. Scaffold mode, since Connect needs none of the listed
+    requirements and the old text implied all installs need them).
+  - **The doc-impact call, decided explicitly: NO durable-truth change.** Every correction in
+    `README.md` pulls it up to what `docs/current/product.md` and `operations.md` *already* state
+    correctly — no drift was found *in the durable docs themselves* during this audit. `README.md`
+    is not under `docs/`, so this is not eligible for `doc-new-version` regardless. See the Doc
+    impact line below.
+  - **No code changes.** All verification was read-only (`grep`/`Read` of `server/*.py`,
+    `compose.yml`, `compose.prod.yml`, `deploy/knowledge.conf`, `Dockerfile`, `Makefile`,
+    `cli/README.md`, `plugin/README.md`) plus live `curl` checks — never Python `urllib`, per
+    constraint 3. `git diff --stat` confirms the blast radius is exactly one file, `README.md`.
+
 ## Doc impact
 
 _Running list — one line per durable-truth change; `P26.REVIEW` consolidates these into doc versions._
 
 - `P26.DECOMP`: none (planning only).
+- `P26.S6`: **none.** The README audit pulled the file up to what `docs/current/product.md` and
+  `operations.md` already state correctly; no drift was found in the durable docs. `README.md` is
+  not under `docs/` and is not a `doc-new-version` candidate regardless.
