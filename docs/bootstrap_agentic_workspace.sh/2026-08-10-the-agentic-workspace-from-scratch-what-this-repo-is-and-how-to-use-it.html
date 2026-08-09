@@ -1,0 +1,977 @@
+<!--kb
+title: "The Agentic Workspace, From Scratch: What This Repo Is and How to Use It"
+date: 2026-08-10
+tags:
+  - agentic-workspace
+  - onboarding
+  - phase-slice-workflow
+  - coding-agents
+  - context-engineering
+source:
+  project: bootstrap_agentic_workspace.sh
+  repo: bootstrap_agentic_workspace.sh
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Agentic Workspace, From Scratch: What This Repo Is and How to Use It</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #1b1d21;
+      --muted: #5c6270;
+      --line: #d9dce3;
+      --accent: #2f6f5e;
+      --accent-soft: #eaf4f0;
+      --warn-soft: #fdf3e3;
+      --warn-line: #d99a2b;
+      --code-bg: #f5f6f8;
+      --card: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e3e5ea;
+        --muted: #9aa1b0;
+        --line: #363a45;
+        --accent: #6fc0a6;
+        --accent-soft: #17231f;
+        --warn-soft: #2a2216;
+        --warn-line: #b8862a;
+        --code-bg: #1b1e24;
+        --card: #15181d;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      max-width: 47rem;
+      margin: 2.5rem auto 6rem;
+      padding: 0 1.15rem;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      line-height: 1.68;
+      color: var(--ink);
+      font-size: 1.02rem;
+    }
+    h1 { font-size: 2rem; line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.02em; }
+    h2 {
+      font-size: 1.42rem; margin: 3rem 0 .9rem; letter-spacing: -.015em;
+      padding-bottom: .35rem; border-bottom: 1px solid var(--line);
+    }
+    h3 { font-size: 1.1rem; margin: 2rem 0 .5rem; }
+    h4 { font-size: 1rem; margin: 1.4rem 0 .35rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: .8rem; }
+    p { margin: 0 0 1rem; }
+    .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+    a { color: var(--accent); }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .89em;
+      background: var(--code-bg);
+      padding: .1em .34em;
+      border-radius: 4px;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: .85rem 1rem;
+      border-radius: 8px;
+      font-size: .84rem;
+      line-height: 1.55;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    pre code { background: none; padding: 0; font-size: 1em; }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: .8rem 1.05rem;
+      margin: 1.4rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout .label {
+      display: block; font-size: .72rem; text-transform: uppercase;
+      letter-spacing: .09em; color: var(--accent); font-weight: 700; margin-bottom: .3rem;
+    }
+    .callout.warn { border-left-color: var(--warn-line); background: var(--warn-soft); }
+    .callout.warn .label { color: var(--warn-line); }
+    nav.toc {
+      border: 1px solid var(--line); border-radius: 8px;
+      padding: 1rem 1.2rem .9rem; margin: 0 0 2.5rem; background: var(--card);
+    }
+    nav.toc strong { display: block; font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: .5rem; }
+    nav.toc ol { margin: 0; padding-left: 1.2rem; }
+    nav.toc li { margin: .18rem 0; }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1.2rem 0; }
+    .tablewrap { overflow-x: auto; }
+    th, td { border: 1px solid var(--line); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+    th { background: var(--code-bg); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+    figure { margin: 1.6rem 0; }
+    figcaption { font-size: .84rem; color: var(--muted); margin-top: .5rem; text-align: center; }
+    .diagram {
+      border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem;
+      background: var(--card); overflow-x: auto;
+    }
+    .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .5rem; }
+    .node {
+      flex: 1 1 7rem; min-width: 6.5rem; border: 1px solid var(--line); border-radius: 6px;
+      padding: .5rem .6rem; font-size: .82rem; background: var(--code-bg);
+    }
+    .node .n-id { font-family: ui-monospace, Menlo, monospace; font-weight: 700; display: block; font-size: .8rem; }
+    .node .n-sub { color: var(--muted); font-size: .76rem; }
+    .node.decomp { border-color: var(--accent); background: var(--accent-soft); }
+    .node.review { border-color: var(--warn-line); background: var(--warn-soft); }
+    .arrow { align-self: center; color: var(--muted); font-size: 1.1rem; padding: 0 .1rem; }
+    .lane { display: flex; gap: .6rem; align-items: flex-start; margin: .55rem 0; flex-wrap: wrap; }
+    .lane .lane-label {
+      flex: 0 0 8.5rem; font-size: .78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); padding-top: .45rem;
+    }
+    .lane .lane-body { flex: 1 1 14rem; }
+    .filetree { font-size: .84rem; }
+    .q { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1.05rem; margin: 1.1rem 0; background: var(--card); }
+    .q > p:first-child { margin-bottom: .6rem; }
+    .q .opt {
+      display: block; width: 100%; text-align: left; margin: .32rem 0;
+      padding: .55rem .8rem; cursor: pointer; font: inherit; font-size: .93rem;
+      border: 1px solid var(--line); border-radius: 6px; background: var(--code-bg); color: inherit;
+    }
+    .q .opt:hover { border-color: var(--accent); }
+    .q .opt.correct { background: #d6f0e4; border-color: #3d9b73; color: #10331f; }
+    .q .opt.incorrect { background: #f6dcdc; border-color: #b96b6b; color: #3b1414; }
+    .q .why {
+      margin: .6rem 0 0; font-size: .9rem; color: var(--muted);
+      border-left: 3px solid var(--accent); padding-left: .7rem;
+    }
+    .footnote { font-size: .85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+  <h1>The Agentic Workspace, From Scratch</h1>
+  <p class="lede">What <code>bootstrap_agentic_workspace.sh</code> is, the problem it solves, and how to actually use it — written for someone opening this repo for the first time.</p>
+
+  <nav class="toc" aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background — why this exists</a></li>
+      <li><a href="#intuition">Intuition — phases, slices, and the four artifacts</a></li>
+      <li><a href="#code">Code — what's actually in the repo</a></li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <section id="background">
+    <h2>Background</h2>
+
+    <h3>The beginner's version: what is a "coding agent"?</h3>
+    <p>
+      If you already work with Claude Code or Codex daily, skip ahead to
+      <a href="#the-problem">The problem this repo solves</a> — this subsection is groundwork.
+    </p>
+    <p>
+      A <strong>coding agent</strong> is a large language model wired up to tools: it can read your
+      files, edit them, run shell commands, and loop on the results. You describe what you want in
+      English; it reads, writes, runs tests, reads the failures, and tries again. <em>Claude Code</em>
+      and <em>Codex</em> — the two tools this repo targets — are command-line agents you point at a
+      directory and talk to.
+    </p>
+    <p>
+      Every model has a <strong>context window</strong>: a hard limit on how much text it can hold in
+      mind at once — your instructions, the files it read, the command output, its own reasoning. It
+      is finite. On a long task you will hit the ceiling, and when you do the tool performs
+      <strong>compaction</strong>: it summarizes the conversation so far and restarts from that
+      summary. Anthropic's engineering write-up defines it exactly this way — "taking a conversation
+      nearing the context window limit, summarizing its contents, and reinitiating a new context
+      window with the summary"
+      (<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective
+      context engineering for AI agents</a> — anthropic.com).
+    </p>
+
+    <div class="callout">
+      <span class="label">Key concept — compaction is lossy</span>
+      <p>
+        Summarizing is not free. Whatever the summary omits is <em>gone</em>. A decision you made
+        forty minutes ago — "we settled on option B because option A breaks the migration" — can
+        silently evaporate, and the agent will happily reintroduce option A an hour later, with
+        total confidence. This single fact explains almost every design choice in this repo.
+      </p>
+    </div>
+
+    <h3 id="the-problem">The problem this repo solves</h3>
+    <p>
+      Agents are extremely capable at the scale of one file and one hour. They degrade at the scale
+      of one project and one week, in four recognizable ways:
+    </p>
+    <ul>
+      <li><strong>They forget.</strong> Context compacts; earlier decisions vanish.</li>
+      <li><strong>They redo work.</strong> Having forgotten, they solve the same problem twice — often differently the second time.</li>
+      <li><strong>They sprawl.</strong> Mid-task they notice something interesting and chase it, and now the diff touches nine files instead of one.</li>
+      <li><strong>They disagree with each other.</strong> Point three sessions — or two different tools — at one repo and you get three sets of conventions.</li>
+    </ul>
+    <p>
+      The instinctive fix is a better prompt. That does not scale, because a prompt lives inside the
+      thing that keeps getting truncated. The fix that <em>does</em> scale is to move the important
+      state <strong>out of the conversation and onto disk</strong>, in files with a fixed shape that
+      any agent, in any session, in any tool, can read on the way in and append to on the way out.
+    </p>
+    <p>
+      That is what <code>bootstrap_agentic_workspace.sh</code> is: one dependency-light shell script
+      that turns an empty directory into a structured home for agent-driven work. Its own README puts
+      the goal plainly — make agents "<em>decompose the work, remember what they learn, and prove it
+      before moving on</em>."
+    </p>
+
+    <h3>Who does what: the operator and the agent</h3>
+    <p>
+      One piece of vocabulary you will meet everywhere in this repo. <strong>You are the
+      operator.</strong> You state intent, answer clarifying questions, review results, and decide
+      when things are done. <strong>The agent types the commands.</strong> Every
+      <code>python3 scripts/workflow.py …</code> invocation, every git commit, every validation run
+      is the agent's job, not yours.
+    </p>
+    <p>
+      There is exactly one command you might ever type yourself — the one-time bootstrap. After that
+      you drive the whole system in plain language and slash commands.
+    </p>
+
+    <figure>
+      <div class="diagram">
+        <div class="lane">
+          <div class="lane-label">Operator (you)</div>
+          <div class="lane-body"><code>/create-phase Add refund support</code> → answers a clarifying question → confirms → later reviews the result</div>
+        </div>
+        <div class="lane">
+          <div class="lane-label">Agent</div>
+          <div class="lane-body">runs <code>workflow.py new-phase …</code>, plans each step, dispatches workers, writes the notes, commits at each boundary</div>
+        </div>
+        <div class="lane">
+          <div class="lane-label">Disk</div>
+          <div class="lane-body"><code>works/</code> state machine · <code>docs/</code> versioned truth · git history</div>
+        </div>
+      </div>
+      <figcaption>Three layers. The operator supplies judgment; the agent supplies typing; the disk supplies memory.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <p>
+      The whole system collapses into one sentence, which the contract file states verbatim:
+    </p>
+
+    <div class="callout">
+      <span class="label">The contract, in one line</span>
+      <p><strong>Backlog routes. Slice folder explains. Result summarizes. Docs are versioned durable truth.</strong></p>
+    </div>
+
+    <p>Four clauses, four different jobs, four different places on disk. Let's unpack them with a concrete example.</p>
+
+    <h3>Phases and slices</h3>
+    <p>
+      Work is organized into two levels, and only two.
+    </p>
+    <ul>
+      <li>A <strong>phase</strong> (<code>P1</code>, <code>P2</code>, …) is a unit of work with an objective. Think: one feature, one refactor, one investigation.</li>
+      <li>A <strong>slice</strong> (<code>P1.S1</code>, <code>P1.S2</code>, …) is one ordered step inside a phase. Think: one commit's worth of work.</li>
+    </ul>
+    <p>
+      Here is the part that surprises people. When you create a phase, you do <strong>not</strong>
+      get a list of steps. You get exactly two slices:
+    </p>
+
+    <figure>
+      <div class="diagram">
+        <div class="flow">
+          <div class="node decomp"><span class="n-id">P4.DECOMP</span><span class="n-sub">decide the steps</span></div>
+          <span class="arrow">→</span>
+          <div class="node review"><span class="n-id">P4.REVIEW</span><span class="n-sub">judge the result</span></div>
+        </div>
+      </div>
+      <figcaption>A brand-new phase, immediately after <code>new-phase</code>. Planning has not happened yet — that <em>is</em> the first slice's job.</figcaption>
+    </figure>
+
+    <p>
+      Say you ask for <em>"add refund support to the billing module."</em> The agent captures your
+      intent, creates phase <code>P4</code>, and stops. Later, when you tell it to execute, the
+      <code>DECOMP</code> slice runs and cuts the middle slices — and only then does the shape of the
+      work exist:
+    </p>
+
+    <figure>
+      <div class="diagram">
+        <div class="flow">
+          <div class="node decomp"><span class="n-id">P4.DECOMP</span><span class="n-sub">order 0 · done</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="n-id">P4.S1</span><span class="n-sub">order 10 · refund data model</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="n-id">P4.S2</span><span class="n-sub">order 20 · refund API endpoint</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="n-id">P4.S3</span><span class="n-sub">order 30 · gateway integration</span></div>
+          <span class="arrow">→</span>
+          <div class="node review"><span class="n-id">P4.REVIEW</span><span class="n-sub">order 9999</span></div>
+        </div>
+      </div>
+      <figcaption>After decomposition. Slices are selected strictly by their <code>order</code> field — <code>REVIEW</code> sits at 9999 so it is always last.</figcaption>
+    </figure>
+
+    <p>
+      Why force planning to be its own step with its own artifact? Because a task you cannot slice is
+      a task you do not yet understand. Making decomposition a first-class, recorded step means the
+      agent has to demonstrate understanding <em>before</em> it is allowed to touch code.
+    </p>
+
+    <h3>Every slice owns exactly two files</h3>
+    <p>
+      A slice folder is deliberately spartan. Two markdown files, and neither has a template:
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>File</th><th>Written by</th><th>When</th><th>Contains</th></tr></thead>
+        <tbody>
+          <tr><td><code>plan.md</code></td><td>the orchestrator</td><td>before any work</td><td>what this slice will do and why</td></tr>
+          <tr><td><code>result.md</code></td><td>the executor</td><td>when the slice finishes</td><td>what actually happened, including deviations</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      "Plan before, result after" is the proof-of-work mechanism. A slice that skipped its plan is
+      visible; a slice whose result contradicts its plan is visible; both survive compaction, because
+      they are files, not conversation.
+    </p>
+
+    <h3>The phase notebook: memory that flows forward</h3>
+    <p>
+      The single most important file for the "agents forget" problem is <code>phase.md</code>, the
+      <strong>phase notebook</strong>. Every slice in the phase reads it on the way in and appends
+      durable findings to it on the way out.
+    </p>
+
+    <figure>
+      <div class="diagram">
+        <svg viewBox="0 0 600 190" width="100%" height="190" role="img" aria-label="Diagram: each slice reads the phase notebook and appends findings back to it">
+          <defs>
+            <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L7,3 L0,6 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55">
+            <path d="M90,60 L90,88" marker-end="url(#ar)"/>
+            <path d="M130,88 L130,60" marker-end="url(#ar)"/>
+            <path d="M270,60 L270,88" marker-end="url(#ar)"/>
+            <path d="M310,88 L310,60" marker-end="url(#ar)"/>
+            <path d="M450,60 L450,88" marker-end="url(#ar)"/>
+            <path d="M490,88 L490,60" marker-end="url(#ar)"/>
+          </g>
+          <rect x="20" y="20" width="180" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="110" y="45" text-anchor="middle" font-size="13" fill="currentColor" font-family="ui-monospace, Menlo, monospace">P4.S1</text>
+          <rect x="200" y="20" width="180" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="290" y="45" text-anchor="middle" font-size="13" fill="currentColor" font-family="ui-monospace, Menlo, monospace">P4.S2</text>
+          <rect x="380" y="20" width="180" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="470" y="45" text-anchor="middle" font-size="13" fill="currentColor" font-family="ui-monospace, Menlo, monospace">P4.S3</text>
+
+          <rect x="20" y="90" width="540" height="46" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <text x="290" y="112" text-anchor="middle" font-size="13" fill="currentColor" font-family="ui-monospace, Menlo, monospace">phase.md — the phase notebook</text>
+          <text x="290" y="128" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".7">decomposition · settled decisions · findings · constraints · doc impact</text>
+
+          <text x="70" y="82" font-size="9.5" fill="currentColor" opacity=".75">read</text>
+          <text x="136" y="82" font-size="9.5" fill="currentColor" opacity=".75">append</text>
+          <text x="250" y="82" font-size="9.5" fill="currentColor" opacity=".75">read</text>
+          <text x="316" y="82" font-size="9.5" fill="currentColor" opacity=".75">append</text>
+          <text x="430" y="82" font-size="9.5" fill="currentColor" opacity=".75">read</text>
+          <text x="496" y="82" font-size="9.5" fill="currentColor" opacity=".75">append</text>
+
+          <text x="290" y="168" text-anchor="middle" font-size="11" fill="currentColor" opacity=".8">S3 starts already knowing what S1 discovered — even in a brand-new session, even in a different tool.</text>
+        </svg>
+      </div>
+      <figcaption>The notebook is the phase's shared memory. It is why compaction between S1 and S3 costs you nothing important.</figcaption>
+    </figure>
+
+    <p>
+      A real excerpt from this repo's own <code>P12/phase.md</code> shows the kind of thing that goes
+      in — a decision, recorded once, that six later slices could then quote instead of re-deriving:
+    </p>
+    <pre><code>The ordering follows the dependency chain: schema before lifecycle before merge before
+visibility before CI before contract before README. Nothing downstream can name a field or a
+command that S1/S2 have not defined yet, so the two design decisions that everything else quotes
+(field names, command names) are settled first.</code></pre>
+
+    <h3>The orchestrator / executor split</h3>
+    <p>
+      Here is the second big idea. The agent you are talking to does not, itself, write the code.
+    </p>
+    <p>
+      The main session is the <strong>orchestrator</strong>. It plans, moves state, commits, and
+      talks to you. For each slice it dispatches a <strong>subagent</strong> — a
+      <code>slice-executor</code> — which runs in its own separate context window, does the slice's
+      work, writes <code>result.md</code>, appends its notes to <code>phase.md</code>, and returns a
+      short structured verdict.
+    </p>
+
+    <figure>
+      <div class="diagram">
+        <div class="lane">
+          <div class="lane-label">Orchestrator</div>
+          <div class="lane-body">plans the slice → writes <code>plan.md</code> → dispatches → <em>waits</em> → reads the verdict → <code>validate</code> → <code>finish-slice</code> → commit</div>
+        </div>
+        <div class="lane">
+          <div class="lane-label">Executor</div>
+          <div class="lane-body">reads <code>plan.md</code> + <code>phase.md</code> + the code → implements → validates → writes <code>result.md</code> → returns <code>done</code> / <code>needs_operator</code> / <code>blocked</code> / <code>escalate</code></div>
+        </div>
+      </div>
+      <figcaption>Two roles, two context windows. All the file-reading noise stays in the executor's window; only the verdict crosses back.</figcaption>
+    </figure>
+
+    <div class="callout">
+      <span class="label">Why bother splitting?</span>
+      <p>
+        Context economy. Implementing a slice means reading a dozen files and running tests —
+        thousands of tokens of noise the orchestrator will never need again. Doing that in a separate
+        window and returning a paragraph keeps the orchestrator lean, so it can supervise a
+        ten-slice phase without ever compacting.
+      </p>
+      <p>
+        The split is also a permissions boundary: the executor <strong>never commits</strong> and
+        <strong>never changes slice or phase status</strong>. Only the orchestrator moves state. One
+        writer, no races.
+      </p>
+    </div>
+
+    <h3>Two tiers, one cost lever</h3>
+    <p>
+      There are two executor tiers, and which one runs is decided by the slice's <code>risk</code>
+      field — set deliberately during decomposition:
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Tier</th><th>Default model</th><th>Gets</th></tr></thead>
+        <tbody>
+          <tr><td><code>slice-executor-mid</code></td><td>sonnet @ high effort</td><td><code>risk: low</code> only — a one-line or few-line edit, or docs</td></tr>
+          <tr><td><code>slice-executor-high</code></td><td>opus @ high effort</td><td>decomposition, the review, and essentially all real code writing — every cross-file change without exception</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Only an exact <code>low</code> routes down; anything unset or unrecognized lands on the
+      thorough tier. And the routing is one-way-safe: if the mid tier discovers a slice is bigger
+      than advertised, it returns <strong><code>escalate</code></strong> with its findings instead of
+      guessing. The orchestrator appends those findings to <code>plan.md</code> and re-dispatches to
+      the high tier. So a mis-rated slice costs you one wasted attempt, never a bad result.
+    </p>
+
+    <h3>The gates: nothing is done because you said so</h3>
+    <p>Two statuses exist specifically to stop the machine, and they mean different things:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Status</th><th>Shown as</th><th>Means</th><th>Cleared by</th></tr></thead>
+        <tbody>
+          <tr><td><code>pending</code></td><td><code>[~]</code></td><td>waiting on <em>you</em> — validate something, or run something only you can run</td><td>you, explicitly</td></tr>
+          <tr><td><code>blocked</code></td><td><code>[ ]</code></td><td>a real impediment the agent cannot resolve itself</td><td>resolving the impediment</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      And a phase does not close on the agent's say-so. It closes on a <strong>phase review</strong>:
+      the <code>REVIEW</code> slice runs in a fresh context that never edits source, checks the whole
+      phase against its objective, and returns one of three verdicts — <code>pass</code>,
+      <code>changes_requested</code>, or <code>blocked</code>. Only <code>pass</code> marks the phase
+      done and lets the durable docs be versioned.
+    </p>
+
+    <h3>Docs: append-only, never edited</h3>
+    <p>
+      The fourth clause. Long-lived truth — architecture, decisions, API shape — lives in
+      <code>docs/</code>, and it is <strong>versioned, not edited</strong>. You never patch an old
+      version; you cut a new one, and it records which slice produced it.
+    </p>
+    <pre><code>docs/versions/decisions/v0026_drop_the_low_executor_tier….md   ← immutable
+docs/versions/decisions/v0027_opt-in_phase-level_parallelism….md ← immutable
+docs/versions/decisions/v0028_flip_the_execution-mode_default….md ← immutable, latest
+                       ↓ generated
+docs/current/decisions.md                                        ← never hand-edit</code></pre>
+    <p>
+      So <em>what we decided and why</em> is always recoverable, and
+      <code>docs/current/*.md</code> — the snapshot agents actually read first — is a build product,
+      regenerated from the index.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="code">
+    <h2>Code</h2>
+
+    <p>Now the real thing. Here is what is actually on disk in this repo and what each part does.</p>
+
+    <h3>What the bootstrap script creates</h3>
+    <p>
+      <code>bootstrap_agentic_workspace.sh</code> is a single self-contained POSIX-sh file at the
+      repo root (about 466 KB — it carries every skill, subagent, and template inline). You run it
+      once against an empty directory:
+    </p>
+    <pre><code>mkdir my-project &amp;&amp; cd my-project
+sh /path/to/bootstrap_agentic_workspace.sh . \
+  --name "My Project" \
+  --summary "What this project is, in one sentence."</code></pre>
+    <p>Two other entry points matter once you have a project already:</p>
+    <ul>
+      <li><code>--into-existing</code> — non-destructive <em>retrofit</em> into a repo that already has code. It adds only what is missing and never clobbers your work.</li>
+      <li><code>--update</code> (with <code>--dry-run</code> to preview) — pull newer machinery into an adopted workspace. It overwrites the engine, skills, and contract, but preserves all of <code>works/</code> except templates and all of <code>docs/</code>.</li>
+    </ul>
+    <p>The result is this layout:</p>
+    <pre class="filetree"><code>.
+├── CLAUDE.md / AGENTS.md          # the contract — byte-equal twins, one per tool
+├── scripts/workflow.py            # the one manager that owns all state
+├── executors.toml                 # which model runs which tier
+├── docs/
+│   ├── current/*.md               # generated snapshots (11 categories) — never hand-edit
+│   ├── versions/&lt;doc&gt;/vNNNN_*.md  # append-only history
+│   └── index.json                 # maps each doc to its latest version
+├── works/
+│   ├── state.json                 # THE pointer: what runs next
+│   ├── backlog.md / deferred.md   # generated dashboards
+│   ├── index.json                 # generated
+│   ├── events.jsonl               # append-only event log
+│   └── phases/
+│       ├── active/&lt;P&gt;/            # phase.json, phase.md, intent.md, slices/&lt;id&gt;/
+│       └── archived/              # finished phases
+├── .claude/
+│   ├── skills/                    # slash commands (17 on disk here)
+│   ├── agents/                    # slice-executor-mid.md, slice-executor-high.md
+│   └── settings.json              # pre-approves workflow.py; denies force-push &amp; rm -rf
+├── .agents/skills/                # the same skills mirrored for Codex (16 — no do-whole-phase)
+└── .codex/                        # Codex subagents + project config</code></pre>
+
+    <div class="callout warn">
+      <span class="label">A detail worth knowing early</span>
+      <p>
+        <code>.claude/settings.json</code> pre-approves <code>Bash(python3 scripts/workflow.py:*)</code>,
+        so workflow commands run without a permission prompt every time — and explicitly denies
+        <code>git push --force</code> and <code>rm -rf</code>. That is why the loop feels smooth
+        without being unguarded.
+      </p>
+    </div>
+
+    <h3><code>scripts/workflow.py</code> — the one manager</h3>
+    <p>
+      Roughly 1,900 lines of dependency-free Python. Every state change in the workspace goes through
+      it — which is exactly why any agent, or CI, or you, can drive the workspace identically. It
+      opens by declaring the entire state space as plain sets:
+    </p>
+    <pre><code>DOC_TYPES = {"product", "experience", "architecture", "frontend", "backend", "data",
+             "api", "operations", "security", "qa", "decisions"}
+PHASE_STATUSES = {"planned", "in_progress", "in_review", "pending", "blocked", "done"}
+SLICE_STATUSES = {"todo", "ready", "in_progress", "in_review", "changes_requested",
+                  "pending", "blocked", "done"}
+REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}</code></pre>
+    <p>The commands you will see most:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>next</code></td><td>print the current / next slice for this stream</td></tr>
+          <tr><td><code>new-phase --phase P4 --name … --objective …</code></td><td>create a phase — seeds <code>DECOMP</code> + <code>REVIEW</code> only</td></tr>
+          <tr><td><code>new-slice --phase P4 --slice P4.S1 --name …</code></td><td>add a slice (<code>--kind</code>, <code>--risk</code>, <code>--order</code>)</td></tr>
+          <tr><td><code>start-slice</code> / <code>finish-slice</code></td><td>move a slice through its lifecycle</td></tr>
+          <tr><td><code>set-slice-status P4.S1 pending</code></td><td>hand off to the operator</td></tr>
+          <tr><td><code>review-phase P4 --verdict pass</code></td><td>record the review; drives both phase and <code>REVIEW</code> slice</td></tr>
+          <tr><td><code>doc-new-version --doc backend --summary … --source P4.REVIEW</code></td><td>cut a new durable doc version</td></tr>
+          <tr><td><code>defer-job --title … --reason … --trigger …</code></td><td>park a distraction outside the backlog</td></tr>
+          <tr><td><code>validate</code></td><td>check workspace integrity</td></tr>
+          <tr><td><code>sync-agents</code></td><td>apply <code>executors.toml</code> to the subagent files</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>How "what runs next" is computed</h4>
+    <p>
+      This is the routing clause, and it is about fifteen lines. There is no scheduler and no
+      dependency solver — just <em>first phase that isn't done, first slice in it that isn't done</em>:
+    </p>
+    <pre><code>def resolve_current(phases: list) -&gt; tuple:
+    for phase in phases:
+        if phase.get("status") == "done":
+            continue
+        current_phase = phase["id"]
+        if phase.get("status") in ("blocked", "pending"):
+            return current_phase, None, None
+        open_slices = [s for s in phase["slices"] if s.get("status") != "done"]
+        if open_slices:
+            return current_phase, open_slices[0]["id"], open_slices[1]["id"] if len(open_slices) &gt; 1 else None
+        return current_phase, None, None
+    return None, None, None</code></pre>
+    <p>
+      Note the second branch: a <code>blocked</code> or <code>pending</code> phase returns
+      <em>no slice</em>. That is how the operator gate physically halts the machine — there is
+      nothing for the loop to pick up. <code>depends_on</code> exists on slices but is advisory;
+      <code>validate</code> only checks that the referenced ids exist. Ordering is the real
+      mechanism, and <code>--order</code> accepts fractions (<code>--order 4.5</code>) so you can
+      wedge a slice between two neighbors without renumbering anything.
+    </p>
+
+    <h4>Generated files are derived, never authored</h4>
+    <p>
+      <code>rebuild_index_and_state()</code> walks the phase folders and rewrites
+      <code>state.json</code>, <code>index.json</code>, <code>backlog.md</code>, and
+      <code>deferred.md</code> from scratch. Every state-changing command calls it. So the dashboards
+      can never drift from reality — and they are declared as such in the engine:
+    </p>
+    <pre><code>GENERATED_FILES = ("works/state.json", "works/index.json", "works/backlog.md",
+                   "works/deferred.md", "docs/current/*.md")</code></pre>
+    <p>Here is what <code>works/state.json</code> looks like in this repo right now — idle, everything archived or done:</p>
+    <pre><code>{
+  "current_phase": null,
+  "current_slice": null,
+  "next_slice": null,
+  "waiting_on_operator": null,
+  "mode": "idle",
+  "updated_at": "2026-08-04T00:27:55+09:00"
+}</code></pre>
+
+    <h4>What <code>new-phase</code> actually writes</h4>
+    <p>
+      The clearest demonstration that planning is deferred. The function writes
+      <code>phase.json</code>, a skeleton <code>phase.md</code>, an <code>intent.md</code> from the
+      template — and then creates precisely two slices:
+    </p>
+    <pre><code>create_slice(phase_id, f"{phase_id}.DECOMP", "decompose phase",
+             "decomposition", 0, "high", source={"type": "new_phase", "id": phase_id})
+create_slice(phase_id, f"{phase_id}.REVIEW", "phase review",
+             "review", 9999, "high", source={"type": "new_phase", "id": phase_id})</code></pre>
+    <p>
+      Note the orders: <code>0</code> and <code>9999</code>. Middle slices get auto-assigned in steps
+      of ten (<code>_auto_order</code> takes <code>max + 10</code>, ignoring the review slice), so
+      <code>REVIEW</code> stays pinned at the end no matter how many slices get added.
+    </p>
+
+    <h4>Real state files</h4>
+    <p>A slice is a folder with a <code>slice.json</code> and its two markdown files. Trimmed from this repo:</p>
+    <pre><code>{
+  "id": "P12.S4",
+  "phase_id": "P12",
+  "name": "Cross-stream status view",
+  "kind": "implementation",
+  "status": "done",
+  "order": 40,
+  "depends_on": [],
+  "risk": "high",
+  "paths": { "plan": "plan.md", "result": "result.md" },
+  "archive": { "archived": false, "archived_at": null, "archive_path": null }
+}</code></pre>
+    <p>And the phase's review block, which is what a <code>pass</code> verdict writes:</p>
+    <pre><code>"review": {
+  "status": "pass",
+  "reviewed_at": "2026-08-04T00:27:46+09:00",
+  "reviewer": "slice-executor-high",
+  "note": "Re-review after P12.F1: finding 1 closed at engine level … Docs consolidated:
+           architecture v0003, operations v0021, decisions v0027 …"
+}</code></pre>
+    <p>
+      That phase also shows the naming scheme for repair work: <code>P12.F1</code> is a
+      <strong>fix slice</strong> (<code>kind: "fix"</code>, order 80) — created because the first
+      review returned <code>changes_requested</code>. The phase reopened, the fix ran, the review
+      ran again, and only then did it pass. That loop is the system working as designed.
+    </p>
+
+    <h3>The skills — how you actually drive it</h3>
+    <p>
+      Everything above is also packaged as <strong>Agent Skills</strong>: slash commands in Claude
+      Code (<code>/do-next-slice</code>), <code>$do-next-slice</code> in Codex. Seventeen live in
+      <code>.claude/skills/</code>; sixteen are mirrored in <code>.agents/skills/</code> —
+      <code>do-whole-phase</code> is Claude Code only, because it needs plan mode.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Skill</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/create-phase</code></td><td>capture intent, create the phase, <strong>stop</strong> — no decomposition, no code</td></tr>
+          <tr><td><code>/do-next-slice</code></td><td>complete exactly one slice, then stop</td></tr>
+          <tr><td><code>/do-whole-phase</code></td><td>run the phase end-to-end including its review <em>(Claude Code only)</em></td></tr>
+          <tr><td><code>/review-phase</code></td><td>review and record a verdict</td></tr>
+          <tr><td><code>/defer-job</code></td><td>park an idea outside the backlog</td></tr>
+          <tr><td><code>/commit</code></td><td>group pending changes into conventional commits</td></tr>
+          <tr><td><code>/parallel-phase</code></td><td>run a phase on its own branch + worktree, then integrate it back</td></tr>
+          <tr><td><code>/retrofit</code> · <code>/update-workspace</code></td><td>adopt into an existing repo · pull newer machinery</td></tr>
+          <tr><td><code>/explain</code></td><td>write an interactive explainer to your knowledge base (this document was produced by it)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      These are <strong>explicit-invocation only</strong> — the skill files carry
+      <code>disable-model-invocation: true</code>, so an agent will not fire them on its own. They
+      are your interface, not the agent's initiative. The one deliberate exception is
+      <code>design-cowork</code>, a guide that <em>is</em> model-invocable and fires whenever work
+      touches product visual design.
+    </p>
+
+    <h4>Execution modes</h4>
+    <p>Both execution skills accept a mode word, and the default matters:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Invocation</th><th>Behavior</th></tr></thead>
+        <tbody>
+          <tr><td><code>/do-whole-phase</code> <em>(default: <code>auto</code>)</em></td><td>plan inline → dispatch → repeat, with <strong>no plan-approval pauses</strong>. The safety halts still stop it.</td></tr>
+          <tr><td><code>/do-whole-phase gate</code></td><td>you approve each slice's readied plan before its executor runs</td></tr>
+          <tr><td><code>/do-whole-phase plan only</code></td><td>produce approved plans without executing; slices become <code>ready</code> (<code>[r]</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Even in <code>auto</code>, four things still stop the loop cold: a <code>pending</code> status,
+      a <code>needs_operator</code> verdict, a <code>blocked</code> verdict, and a failed return from
+      the top-tier executor. Speed is waived; safety is not.
+    </p>
+
+    <h3><code>executors.toml</code> — the cost dial</h3>
+    <p>
+      This is the file to know if you care about spend. Two presets ship, selected by one top-level
+      <code>mode</code> line, with per-tier overrides available:
+    </p>
+    <pre><code>EXECUTOR_PRESETS = {
+    "flex": {
+        "mid":  {"model": "sonnet", "effort": "xhigh", …},
+        "high": {"model": "opus",   "effort": "xhigh", …},
+    },
+    "economy": {                                   # the default
+        "mid":  {"model": "sonnet", "effort": "high", …},
+        "high": {"model": "opus",   "effort": "high", …},
+    },
+}</code></pre>
+    <p>
+      Edit the file, then have the agent run <code>python3 scripts/workflow.py sync-agents</code>,
+      which writes the values into the four subagent definition files. The installer seeds this file
+      once and updates never overwrite it — it is yours.
+    </p>
+
+    <h3>Two things you will meet later</h3>
+    <p>
+      <strong>Parallel phases.</strong> By default everything runs on one branch, one phase at a
+      time. A <code>planned</code> phase can opt into <em>parallel mode</em>: its own branch, its own
+      git worktree, its own agent session, while the default stream keeps working the phase in front
+      of it. The unit of parallelism is the <strong>phase</strong> — slices inside one phase stay
+      strictly sequential. Selection becomes stream-scoped, generated dashboards are
+      <em>regenerated rather than merged</em>, and doc versioning is deferred to a serialized
+      post-merge step (because version numbers come from one shared index). Ignore all of this until
+      you have two genuinely independent phases.
+    </p>
+    <p>
+      <strong>The installer is a build product.</strong> In this upstream repo,
+      <code>bootstrap_agentic_workspace.sh</code> is assembled by <code>installer/build.py</code>
+      from the live repo files — the real <code>workflow.py</code>, the real skills, the real
+      contract. Its own docstring states the payoff: "editing a live skill/agent/contract file +
+      rebuilding is the whole workflow — no heredoc mirroring." A tracked pre-commit hook enforces
+      <code>installer/build.py --check</code>, so the committed artifact can never drift from source.
+      (This only applies here, in the upstream repo — a workspace you scaffold has no
+      <code>installer/</code>.)
+    </p>
+
+    <h3>Your first fifteen minutes</h3>
+    <ol>
+      <li>Scaffold or retrofit the workspace (the one command you type yourself).</li>
+      <li>Open the directory in Claude Code or Codex.</li>
+      <li>Say <code>/create-phase &lt;your first task&gt;</code> — or just <em>"make a phase for X."</em> Expect to be asked a clarifying question; answer it. The agent creates the phase and <strong>stops</strong>.</li>
+      <li>Read the phase's <code>intent.md</code>. This is the confirmed record of what you asked; if it is wrong, fix it now, not later.</li>
+      <li>Run <code>/do-next-slice</code>. That executes <code>DECOMP</code> — you get the slice breakdown, not code. Read it. This is your real review point.</li>
+      <li>Continue with <code>/do-next-slice</code> per step, or <code>/do-whole-phase</code> to run to the review.</li>
+      <li>When you feel the urge to expand scope mid-phase, don't — say "defer that." It lands in <code>works/deferred/</code> and changes nothing until you promote it.</li>
+    </ol>
+    <p>
+      Ask <em>"where are we?"</em> at any point; the agent runs <code>next</code> and reads
+      <code>works/backlog.md</code>, the generated dashboard whose status boxes are
+      <code>[x]</code> done, <code>[~]</code> pending on you, <code>[r]</code> plan approved, and
+      <code>[ ]</code> open.
+    </p>
+
+    <div class="callout">
+      <span class="label">This repo runs on itself</span>
+      <p>
+        Every example in this document is real. The <code>works/</code> and <code>docs/</code> trees
+        here are the project dogfooding its own system: twelve phases, the last of which
+        (<code>P12</code>, opt-in parallel execution) went through seven implementation slices, a
+        <code>changes_requested</code> review, a fix slice, and a passing re-review. Its README was
+        itself written as a phase.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="best-practices">
+    <h2>Best practices &amp; next steps</h2>
+
+    <p>
+      How does this compare to how the wider ecosystem solves the same problems? Three places it
+      lines up squarely with prevailing practice, two where it deliberately doesn't, and a few things
+      worth doing next.
+    </p>
+
+    <h3>Where it aligns</h3>
+    <p>
+      <strong>Externalizing memory into files is the recommended technique, not a quirk.</strong>
+      Anthropic's context-engineering guidance names three approaches for long-horizon agent work,
+      and this workspace implements all three. It calls the second one "structured note-taking, or
+      agentic memory … where the agent regularly writes notes persisted to memory outside of the
+      context window" — which is precisely what <code>phase.md</code> is. It names the third as
+      sub-agent architecture: "rather than one agent attempting to maintain state across an entire
+      project, specialized sub-agents can handle focused tasks with clean context windows," with
+      sub-agents returning condensed summaries while detailed contexts stay isolated
+      (<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective
+      context engineering for AI agents</a> — anthropic.com). That is the orchestrator/executor split
+      exactly, verdict-return and all.
+    </p>
+    <p>
+      The subagent mechanism this repo leans on is a first-class Claude Code feature with the same
+      stated rationale: each subagent "runs in its own context window with a custom system prompt,
+      specific tool access, and independent permissions," and the documented benefits include
+      preserving context, enforcing constraints by limiting tools, and controlling costs "by routing
+      tasks to faster, cheaper models"
+      (<a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents</a> —
+      code.claude.com). The <code>mid</code>/<code>high</code> tiering driven by <code>risk</code> is
+      that cost-routing advice, made mechanical.
+    </p>
+    <p>
+      <strong>Phased artifacts before code is an established methodology.</strong> GitHub's Spec Kit
+      formalizes spec-driven development as four sequential stages — Spec, Plan, Tasks, Implement —
+      where "each phase produces a Markdown artifact that feeds into the next stage," giving agents
+      "structured context instead of ad-hoc prompts"
+      (<a href="https://github.github.com/spec-kit/">Spec Kit documentation</a> — github.github.com).
+      Map it across and the correspondence is close: <code>intent.md</code> is the spec,
+      <code>DECOMP</code> is plan-plus-tasks, the slices are implement, and the phase review is the
+      validation checkpoint Spec Kit describes.
+    </p>
+    <p>
+      <strong>A root instruction file for agents is now a real convention.</strong>
+      <code>AGENTS.md</code> is described as "a README for agents: a dedicated, predictable place to
+      provide the context and instructions to help AI coding agents work on your project," is "used
+      by over 60k open-source projects," is read by 30+ tools including Claude Code, Copilot, Cursor,
+      and Codex, and is now maintained under the Linux Foundation's Agentic AI Foundation
+      (<a href="https://agents.md/">AGENTS.md</a> — agents.md). Shipping <code>CLAUDE.md</code> and
+      <code>AGENTS.md</code> as byte-equal twins is the standard-compliant move.
+    </p>
+
+    <h3>Where it deliberately diverges</h3>
+    <p>
+      <strong>The contract is big — very big.</strong> The <code>AGENTS.md</code> guidance is for a
+      file holding "the minimal, human-authored context" an agent needs: build commands, style,
+      testing, boundaries (<a href="https://agents.md/">agents.md</a>). This repo's contract is about
+      33 KB of dense prose covering orchestration modes, escalation ladders, parallel-stream rules,
+      and design handoff protocol. That is a defensible trade — it is a <em>routing contract</em>, not
+      a style guide, and it is read at the start of every session precisely so the rules survive
+      compaction — but it is a real cost paid on every single session, and it cuts against the
+      "keep it minimal" grain. Worth watching as it grows.
+    </p>
+    <p>
+      <strong>All state is git-tracked JSON and Markdown, not a database.</strong> No server, no
+      daemon, no <code>node_modules</code>: <code>python3 &gt;= 3.8</code> and a POSIX shell. The
+      benefit is enormous — state is diffable, reviewable in a PR, and survives any tool. The cost is
+      that concurrent writers need explicit machinery, which is exactly why parallel mode needed a
+      whole phase to build (branch + worktree per stream, regenerate-don't-merge for generated files,
+      and serialized post-merge doc versioning because version numbers come from one shared index).
+      For a single operator this is unambiguously the right call; for a large team writing
+      simultaneously it is the first thing that would strain.
+    </p>
+
+    <h3>Next steps</h3>
+    <ol>
+      <li>
+        <strong>Run one small real phase end-to-end before judging any of it.</strong> Pick something
+        genuinely small, use <code>/do-next-slice</code> rather than <code>/do-whole-phase</code>,
+        and read <code>plan.md</code> and <code>result.md</code> at each step. The value of the
+        artifacts is not obvious until you have watched them catch a drift.
+      </li>
+      <li>
+        <strong>Set <code>risk</code> honestly during decomposition.</strong> It is the phase's main
+        cost lever: only a one-line-or-few-line edit or a docs change belongs at <code>low</code>.
+        Over-marking <code>low</code> just burns an escalation round-trip; under-marking costs opus
+        tokens on a typo fix. If your bill matters more than latency, try
+        <code>mode = "economy"</code> (already the default) and confirm with
+        <code>sync-agents</code>.
+      </li>
+      <li>
+        <strong>Adopt the deferred-job habit deliberately.</strong> It is the least flashy feature
+        and the one that most changes outcomes, because scope creep is the dominant failure mode of
+        agent sessions. Say "defer that" out loud the first ten times until it is reflex.
+      </li>
+      <li>
+        <strong>Read <code>docs/current/decisions.md</code> before proposing changes to the
+        machinery.</strong> Twenty-nine versions of recorded decisions mean most "obvious"
+        improvements have already been argued — including several that were tried and reversed.
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="quiz">
+    <h2>Quiz</h2>
+    <p>Five questions. Click an option to check it.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> You run <code>/create-phase Add refund support to billing</code>. Immediately afterwards, what exists?</p>
+      <button class="opt" data-correct="false">A phase with a full slice breakdown, ready to execute</button>
+      <button class="opt" data-correct="true">A phase containing exactly two slices — <code>DECOMP</code> and <code>REVIEW</code> — plus <code>intent.md</code></button>
+      <button class="opt" data-correct="false">A phase plus the first slice's code, since the agent starts eagerly</button>
+      <button class="opt" data-correct="false">Nothing on disk yet — the phase is created when you first run <code>/do-next-slice</code></button>
+      <p class="why" hidden>Creating a phase and executing it are separate steps on purpose. <code>new_phase</code> writes <code>phase.json</code>, <code>phase.md</code>, and <code>intent.md</code>, then calls <code>create_slice</code> exactly twice — <code>DECOMP</code> at order 0 and <code>REVIEW</code> at order 9999. Deciding the middle slices is <code>DECOMP</code>'s own job, later.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> A slice's executor finishes and returns <code>done</code>. What does the orchestrator do next?</p>
+      <button class="opt" data-correct="false">Re-runs the slice's tests itself to independently confirm the work</button>
+      <button class="opt" data-correct="false">Immediately cuts a new durable doc version for anything the slice changed</button>
+      <button class="opt" data-correct="true">Trusts the verdict, runs <code>validate</code> for state integrity only, marks the slice done, and commits</button>
+      <button class="opt" data-correct="false">Marks the phase <code>done</code>, since its last slice succeeded</button>
+      <p class="why" hidden>The orchestrator trusts a <code>done</code> verdict and runs only <code>validate</code> — state integrity, not the slice's tests. Behavioral validation is consolidated into the phase review, which checks every slice at once; doc versioning also waits for a passing review.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> What is the practical difference between <code>pending</code> and <code>blocked</code>?</p>
+      <button class="opt" data-correct="false">None — they are aliases; <code>pending</code> is just the older spelling</button>
+      <button class="opt" data-correct="true"><code>pending</code> means the operator must do something and only they can clear it; <code>blocked</code> is an impediment the agent cannot resolve itself</button>
+      <button class="opt" data-correct="false"><code>pending</code> applies to slices and <code>blocked</code> applies to phases</button>
+      <button class="opt" data-correct="false"><code>blocked</code> pauses the loop; <code>pending</code> lets it continue on the next slice</button>
+      <p class="why" hidden>Both halt selection, but they mean different things and clear differently. <code>pending</code> (<code>[~]</code>) is "waiting on the operator" — you clear it back to <code>in_progress</code>. <code>blocked</code> is a genuine impediment. In <code>resolve_current</code>, a phase in either state returns no slice at all, which is how the halt is enforced mechanically.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> A slice was rated <code>risk: low</code>, so it went to <code>slice-executor-mid</code> — but it turns out to need a change across four files. What happens?</p>
+      <button class="opt" data-correct="false">The mid executor does its best and returns <code>done</code> anyway</button>
+      <button class="opt" data-correct="false">The slice is marked <code>blocked</code> and waits for the operator to re-rate it</button>
+      <button class="opt" data-correct="true">It returns <code>escalate</code>; the orchestrator appends the findings to <code>plan.md</code> and re-dispatches to <code>slice-executor-high</code></button>
+      <button class="opt" data-correct="false">The mid executor spawns a high-tier executor itself to finish the job</button>
+      <p class="why" hidden>The mid tier escalates rather than guessing. The orchestrator adds an <code>## Escalation</code> section to the slice's <code>plan.md</code> and re-dispatches to the high tier — at most once per slice, and never downward. Note the executor cannot spawn anything or move status; only the orchestrator dispatches and transitions.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> A slice changes something that belongs in the durable architecture doc. What is the correct handling?</p>
+      <button class="opt" data-correct="false">Edit <code>docs/current/architecture.md</code> directly — it is the current truth</button>
+      <button class="opt" data-correct="false">Patch the newest file under <code>docs/versions/architecture/</code> in place</button>
+      <button class="opt" data-correct="false">Run <code>doc-new-version</code> right away, inside the slice</button>
+      <button class="opt" data-correct="true">Append a one-line "Doc impact" note to <code>phase.md</code>; the review consolidates it into a new version — only if the review passes</button>
+      <p class="why" hidden>Docs are versioned once per phase, at the review. Implementation and fix slices only record a "Doc impact" note in <code>phase.md</code>. <code>docs/current/*.md</code> is a generated snapshot (never hand-edited), and files under <code>docs/versions/</code> are immutable — you cut a new version rather than patching an old one. A non-passing review stops before consolidation entirely.</p>
+    </div>
+  </section>
+
+  <p class="footnote">
+    Grounded in the repo at commit <code>2544954</code> — <code>CLAUDE.md</code>,
+    <code>scripts/workflow.py</code>, <code>README.en.md</code>, <code>executors.toml</code>,
+    <code>.claude/skills/</code>, and the real <code>works/</code> and <code>docs/</code> trees.
+  </p>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-10 · [The Agentic Workspace, From Scratch: What This Repo Is and How to Use It](bootstrap_agentic_workspace.sh/2026-08-10-the-agentic-workspace-from-scratch-what-this-repo-is-and-how-to-use-it.html) — bootstrap_agentic_workspace.sh
 - 2026-08-08 · [Why Knowledge Is This Way, and How to Change It](knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html) — knowledge
 - 2026-08-08 · [Shipping and Running Knowledge: Distribution, the Edge, Security, and the Gates](knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html) — knowledge
 - 2026-08-08 · [Knowledge's Read Surfaces: Two Front Ends, One Corpus](knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html) — knowledge
