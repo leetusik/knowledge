@@ -5,6 +5,8 @@
 *Start there — an interactive map of everything in this library. No sign-up
 needed; click any node to read that explainer.*
 
+[![Interactive knowledge graph of this library](.github/knowledge-graph.png)](https://knowledge.hi2vi.com/@leetusik/graph)
+
 **Live site → <https://knowledge.hi2vi.com>** — the hosted product; sign in to
 browse your own library, or jump straight to the public
 [knowledge map](https://knowledge.hi2vi.com/@leetusik/graph) above.
