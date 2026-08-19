@@ -1,8 +1,13 @@
 # Knowledge Base
 
+### 🗺️ [**Explore my knowledge graph → knowledge.hi2vi.com/@leetusik/graph**](https://knowledge.hi2vi.com/@leetusik/graph)
+
+*Start there — an interactive map of everything in this library. No sign-up
+needed; click any node to read that explainer.*
+
 **Live site → <https://knowledge.hi2vi.com>** — the hosted product; sign in to
 browse your own library, or jump straight to the public
-[knowledge map](https://knowledge.hi2vi.com/@leetusik/graph).
+[knowledge map](https://knowledge.hi2vi.com/@leetusik/graph) above.
 
 Technical explainers written from real project work. When I solve something
 non-trivial, a coding agent (Claude Code / Codex) researches the actual code
