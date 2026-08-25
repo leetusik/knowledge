@@ -1,0 +1,1571 @@
+<!--kb
+title: "A chat turn end to end: the LangChain agent, streaming, cancel, and replay"
+date: 2026-08-26
+tags:
+  - changple5
+  - langchain-agent
+  - sse-streaming
+  - durable-runs
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A chat turn end to end: the LangChain agent, streaming, cancel, and replay</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.guest { background: #fdf6e6; border-color: #f0d9a0; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem 1fr; gap: .6rem; align-items: center; margin: .3rem 0; font-size: .85rem; }
+  .lane .who { font-weight: 650; color: #14324f; text-align: right; font-size: .82rem; }
+  .bar { height: 1.35rem; border-radius: 4px; position: relative; background: #e8ecf1; }
+  .bar span { position: absolute; top: 0; bottom: 0; border-radius: 4px; font-size: .7rem; color: #fff;
+              display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .er { display: grid; gap: .55rem; }
+  .er-t { background: #fff; border: 1px solid #d9dee5; border-radius: 7px; padding: .5rem .7rem; font-size: .82rem; }
+  .er-t b { display: block; font-family: ui-monospace, Menlo, monospace; font-size: .84rem; color: #14324f; }
+  .small { font-size: .88rem; color: #57606a; }
+  .frames { font-size: .82rem; }
+  .frames .ev { color: #1a6b45; font-weight: 650; }
+  .frames .cm { color: #8b96a2; }
+  .ladder { display: grid; gap: .35rem; }
+  .rung {
+    display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start;
+    background: #fff; border: 1px solid #e3e7ec; border-left: 4px solid #3d6fd8;
+    border-radius: 6px; padding: .5rem .7rem; font-size: .87rem;
+  }
+  .rung .n { font-weight: 700; color: #3d6fd8; text-align: center; }
+  .rung.stop { border-left-color: #d05a5a; }
+  .rung.write { border-left-color: #2f9e6e; }
+  .loopfig { display: grid; grid-template-columns: 1fr; gap: .5rem; justify-items: center; }
+  .budget { display: flex; gap: .3rem; justify-content: center; margin: .4rem 0; }
+  .slot {
+    width: 2.1rem; height: 2.1rem; border-radius: 6px; border: 1px solid #d9dee5;
+    display: flex; align-items: center; justify-content: center; font-size: .78rem;
+    background: #f6f8fa; color: #57606a;
+  }
+  .slot.used { background: #e3ecfb; border-color: #b9cdf3; color: #24457f; font-weight: 650; }
+  .slot.free { background: #fff; border-style: dashed; }
+</style>
+</head>
+<body>
+
+<h1>A chat turn end to end: the LangChain agent, streaming, cancel, and replay</h1>
+<p class="subtitle">Explainer #5 of the changple5 builder's curriculum, and the centrepiece of Part B.
+One <code>POST</code>, one answer &mdash; and the roughly nine seconds in between, where a LangChain
+agent runs with three budgeted search tools, its tokens become Server-Sent Events, and the whole run
+keeps going even if the person who asked closes the tab.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>Explainer #4,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">Conversations
+as the system of record</a>, ended on a deliberately unsatisfying note. It established where a
+conversation lives (Django, in the <code>backend</code> schema), who is allowed to write into it (the
+serializer's <code>create()</code> ladder, under a row lock), and the order in which a turn's two rows
+land: <strong>the user's message is written <em>before</em> the model runs</strong>, and the
+assistant's message is written <em>from inside</em> the streaming generator, once the answer is
+final. Between those two writes it drew a single arrow labelled &ldquo;the agent runs&rdquo;.</p>
+
+<p>This page is that arrow. By the end you should be able to open
+<code>apps/agent/app/api/routes/chat.py</code> (2,266 lines) and
+<code>apps/agent/app/chat/agent.py</code> (2,856 lines) and read them top to bottom knowing why every
+guard, every flag and every <code>finally</code> block is there &mdash; because each one is the scar
+of a specific thing that went wrong in production.</p>
+
+<div class="skip">
+<p class="tag">Skip if you know it</p>
+<p><strong>Five pieces of vocabulary</strong>, defined once so the rest of the page can move fast. If
+you already know what an agent loop, a tool call, SSE, an async generator and a checkpointer are, jump
+to <a href="#the-turn">the turn itself</a>.</p>
+
+<p><strong>1. An LLM &ldquo;agent&rdquo; is a loop, not a model.</strong> A plain chat completion is
+one round trip: you send messages, you get text. An <em>agent</em> is that call placed inside a loop
+with a list of <em>tools</em>. The model is told &ldquo;here are functions you may call&rdquo;; instead
+of answering it may emit a <em>tool call</em> &mdash; a structured request like
+<code>search_changple_documents(query="치킨집 창업 비용")</code>. The runtime executes that Python
+function, appends its return value to the conversation as a <code>ToolMessage</code>, and calls the
+model again with the longer message list. The loop ends when the model finally answers with text
+instead of a tool call. Everything the model &ldquo;knows&rdquo; about your database, it knows because
+a tool put it into that message list on this turn.</p>
+
+<p><strong>2. LangChain and LangGraph.</strong> LangChain is the library that wraps model providers
+behind one interface (<code>init_chat_model</code>) and turns Python functions into tool schemas (the
+<code>@tool</code> decorator). LangGraph is its state-machine runtime: it runs the loop above as a
+graph whose nodes are &ldquo;call the model&rdquo; and &ldquo;run the tools&rdquo;, and it carries a
+typed <em>state</em> object between them. changple5 uses <code>create_agent</code>, LangChain's
+prebuilt version of that graph.</p>
+
+<p><strong>3. A checkpointer</strong> is LangGraph's persistence for that state. Give the graph a
+<code>thread_id</code> and a checkpointer, and after every step it writes the state to storage, so a
+later run on the same thread resumes from where the last one stopped. changple5 uses
+<code>AsyncPostgresSaver</code> &mdash; the same Postgres, in the <code>agent</code> schema.</p>
+
+<p><strong>4. Server-Sent Events (SSE)</strong> is the simplest way for a server to push a sequence of
+messages down one long-lived HTTP response. The response never &ldquo;finishes&rdquo; until the server
+is done; its body is a plain-text stream of <code>event:</code> / <code>data:</code> pairs separated by
+blank lines, and the browser's built-in <code>EventSource</code>-style parser fires a callback per
+frame. It is one-directional (server to client) and rides ordinary HTTP, which is why it beats
+WebSockets for &ldquo;stream me an answer&rdquo;.</p>
+
+<p><strong>5. An async generator</strong> is a Python function containing <code>yield</code> inside
+<code>async def</code>. It produces values lazily: the caller asks for the next one, the function runs
+until the next <code>yield</code>, and freezes there. FastAPI's <code>StreamingResponse</code> takes
+one of these and writes each yielded string to the socket. Two properties matter enormously later: a
+generator that is never asked for another value simply <em>stops running</em>, and when it is thrown
+away Python raises <code>GeneratorExit</code> inside it &mdash; which runs its <code>finally</code>
+blocks, and only those.</p>
+</div>
+
+<h3 id="the-turn">What one turn is, concretely</h3>
+
+<p>The browser sends exactly one request per turn:</p>
+
+<pre>POST /agent-api/chat/stream
+Authorization: Bearer &lt;the user's access JWT&gt;
+Content-Type: application/json
+
+{
+  "conversation_nonce": "7f3c1e02-9d44-4a1b-b0d2-5c8e6a71f004",
+  "message": "치킨집 창업할 때 초기 비용이 대충 얼마나 드나요?",
+  "message_idempotency_key": "b41d77aa-2f0e-4d59-9c3f-1e2a55d90c11",
+  "selected_content_ids": []
+}</pre>
+
+<p>and gets back a <code>200</code> whose body arrives over the next several seconds as a stream of
+frames. That single endpoint is the whole live chat surface: it handles a first-party user, an
+anonymous trial guest, default chat and 컨설팅 mode, a fresh turn and a duplicate of a finished one.
+All the branching happens inside.</p>
+
+<p>Four facts from the earlier explainers are load-bearing here, and this page cites rather than
+re-derives them:</p>
+
+<ul>
+<li><strong>The endpoint and the frame vocabulary</strong> (<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>):
+the agent's entire public surface is 17 routes under <code>/agent-api</code>; the streaming one is
+<code>POST /agent-api/chat/stream</code>, and a default turn emits <code>message_start</code>,
+<code>status</code>, <code>keepalive</code>, <code>message_delta</code>, <code>message_end</code> and
+<code>done</code>, as <code>text/event-stream</code> with <code>Cache-Control: no-cache</code> and
+<code>X-Accel-Buffering: no</code>.</li>
+<li><strong>Credential forwarding</strong> (<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3</a>): for a
+first-party turn the agent forwards <em>the caller's own bearer JWT</em> to Django rather than a
+service token, so the backend &mdash; not this route &mdash; decides which sessions it may reach. A
+trial guest's <code>X-Guest-Token</code> is forwarded the same way.</li>
+<li><strong>The per-turn thinking level</strong> (#3): <code>chat/user_thinking_level.py</code> does
+its own <code>SELECT tier, chat_thinking_level FROM "backend"."accounts_user"</code> over the one-way
+read bridge, per turn, with no cache &mdash; because a per-user value inside a process-wide snapshot
+would leak across users.</li>
+<li><strong>The write order and the two 409s</strong> (#4): user row pre-stream, assistant row inside
+the generator; assistant idempotency keys are <code>uuid5</code>-derived on both sides; and the
+browser's 409 for &ldquo;you sent again before the last answer settled&rdquo; has <em>two</em>
+producers &mdash; a pre-stream check in this route, and a Django 400 that this route re-classifies by
+sniffing its detail text.</li>
+</ul>
+
+<div class="note">
+<p><strong>Scope.</strong> This page owns the agent loop, the tool-call budget, and the
+streaming / cancel / replay machinery. It names the three retrieval tools as <em>surfaces</em> &mdash;
+signature, what the model gets back, what they write into state &mdash; and stops at the door: what
+happens <em>inside</em> them (query planning, embeddings, reranking, eligibility) is explainer #7.
+The rolling window, compaction and the recall tool are #6. 컨설팅 mode is #10. The injection guard,
+the session lockdown and the trial caps are #11.</p>
+</div>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>Idea 1: a turn is guards, then a generator &mdash; and the seam between them is a one-way door</h3>
+
+<p>The single most useful thing to understand about <code>chat.py</code> is why it is shaped the way
+it is, and the answer is a property of HTTP: <strong>a status code can only be sent before the body
+starts.</strong> Once the server has written <code>200 OK</code> and
+<code>Content-Type: text/event-stream</code>, there is no way to go back and say
+<code>409 Conflict</code>. The browser is already reading frames.</p>
+
+<p>So the route splits in two around that door:</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node user"><b>Before the door</b><span class="m">chat_stream()</span>
+      Everything that can refuse. Answers with a real HTTP status: 400, 403, 404, 409, 429, 503.
+      Nothing has been streamed yet, so failing is cheap and honest.</div>
+    <div class="arrow">&rarr;</div>
+    <div class="node svc"><b>The door</b><span class="m">_sse_streaming_response(...)</span>
+      Returns 200 + <code>text/event-stream</code>. From here on the status code is fixed.</div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>After the door</b><span class="m">iter_chat_stream()</span>
+      Everything that can go wrong now must be expressed <em>inside</em> the stream: a
+      <code>status</code> frame with <code>phase: "error"</code>, a <code>done</code> frame with
+      <code>status: "error"</code>, and a persisted fallback message so the conversation is not
+      left broken.</div>
+  </div>
+</div>
+<figcaption>Figure 1 &mdash; the one-way door. The route function is a wall of guards; the generator
+is a wall of <code>try</code>/<code>except</code>. They are two different error vocabularies for the
+same failures, and which one you get depends only on <em>when</em> the failure happened.</figcaption>
+</figure>
+
+<p>This is why the same condition can look completely different to the client. A conversation that is
+already awaiting an assistant reply is a clean <code>409</code> if we notice before the door; a Gemini
+timeout ten seconds later is a <code>200</code> whose final frame says
+<code>{"status":"error"}</code> &mdash; plus a persisted &ldquo;죄송합니다&hellip;&rdquo; message, so
+the conversation still alternates user/assistant and the next turn is not blocked.</p>
+
+<h3>Idea 2: the answer is a transcript of small frames</h3>
+
+<p>Here is a real-shaped transcript of one grounded turn &mdash; the toy request from the Background,
+answered in about nine seconds with one document search. Frame names and payload keys are exactly
+what the code emits; the prose is abbreviated.</p>
+
+<figure>
+<div class="fig-box">
+<pre class="frames"><span class="cm">t=0.02s  the run is registered and the stream opens</span>
+<span class="ev">event: message_start</span>
+data: {"run_id":"3a9c...","conversation_nonce":"7f3c...","message_idempotency_key":"b41d..."}
+
+<span class="cm">t=0.03s  first phase</span>
+<span class="ev">event: status</span>
+data: {"run_id":"3a9c...","phase":"preparing","message":"답변을 준비하고 있습니다."}
+
+<span class="cm">t=1.40s  the model decided to call search_changple_documents</span>
+<span class="ev">event: status</span>
+data: {"run_id":"3a9c...","phase":"searching","message":"관련 자료를 찾고 있습니다."}
+
+<span class="cm">t=3.10s  a quiet gap while retrieval + reranking run</span>
+<span class="ev">event: keepalive</span>
+data: {}
+
+<span class="cm">t=4.05s  the model starts writing; one frame per visible chunk</span>
+<span class="ev">event: message_delta</span>
+data: {"delta":"치킨집 창업 초기 비용은"}
+
+<span class="ev">event: message_delta</span>
+data: {"delta":" 크게 세 덩어리로 나뉩니다"}
+
+<span class="cm">... many more deltas ...</span>
+
+<span class="cm">t=8.60s  generation done; now the assistant row is written to Django</span>
+<span class="ev">event: status</span>
+data: {"run_id":"3a9c...","phase":"finalizing","message":"답변을 마무리하고 있습니다."}
+
+<span class="cm">t=9.05s  the persisted message, echoed back whole, with its citations</span>
+<span class="ev">event: message_end</span>
+data: {"run_id":"3a9c...","content":"치킨집 창업 초기 비용은 ... [1]","citations":[{"post_id":56007,"title":"치킨 프랜차이즈 실제 정산표","source_url":"https://cafe.naver.com/...","position":1}],"inline_previews":[{"post_id":56007,"title":"...","source_url":"...","thumbnail_url":"..."}]}
+
+<span class="ev">event: done</span>
+data: {"run_id":"3a9c...","status":"complete"}</pre>
+</div>
+<figcaption>Figure 2 &mdash; one turn's frames. Six event names carry the whole live chat product.</figcaption>
+</figure>
+
+<p>Three things are worth noticing immediately, because each one is a decision:</p>
+
+<ul>
+<li><strong><code>message_end</code> repeats the entire answer</strong>, even though the client just
+received it delta by delta. That is not redundancy: the deltas are what the <em>model</em> produced,
+while <code>message_end</code> carries what Django actually <em>stored</em>, along with the citation
+list and the preview card. The client renders the stored version, so a reload shows byte-identical
+text.</li>
+<li><strong><code>status</code> frames are emitted at most once each.</strong> A turn that searches
+four times still shows one <code>searching</code> beat &mdash; a set of already-emitted phases guards
+them.</li>
+<li><strong><code>keepalive</code> exists purely so nothing in the middle gives up.</strong> Its
+payload is the empty object, and the comment in <code>sse.py</code> explains why it is not an SSE
+comment line: a comment-only frame would be silently dropped by the browser's parser and would never
+reset the client's stall watchdog.</li>
+</ul>
+
+<h3>Idea 3: who owns the work &mdash; the durability trick</h3>
+
+<p>The naive way to build the above is: the HTTP request drives the generator, the generator drives
+the model. It works, and it has one ugly property. If the user navigates away at second three, the
+socket closes, Starlette throws the generator away, the model call is abandoned &mdash; and the
+conversation is left with a user message and no assistant message. Django's alternation rule then
+refuses the <em>next</em> turn too, so a single navigate-away can wedge a conversation.</p>
+
+<p>changple5's answer (the <code>durable_runs.py</code> module, 144 lines) is to invert the
+ownership. The generation runs as a detached <code>asyncio.Task</code> owned by the server process,
+pushing its frames into an in-memory queue; the HTTP request merely <em>relays</em> whatever is on
+that queue. Closing the tab cancels the relay. It does not touch the task.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="lane"><span class="who">browser</span>
+    <div class="bar"><span style="left:0%;width:33%;background:#3d6fd8">connected &mdash; relaying frames</span><span style="left:33%;width:67%;background:#c9ced6;color:#57606a">tab closed</span></div></div>
+  <div class="lane"><span class="who">request handler</span>
+    <div class="bar"><span style="left:0%;width:33%;background:#5b86e5">iter_durable_chat_stream</span><span style="left:33%;width:67%;background:#eef1f5;color:#8b96a2">cancelled</span></div></div>
+  <div class="lane"><span class="who">durable task</span>
+    <div class="bar"><span style="left:0%;width:100%;background:#2f9e6e">iter_chat_stream(AlwaysConnectedRequest()) &mdash; runs to completion</span></div></div>
+  <div class="lane"><span class="who">Postgres</span>
+    <div class="bar"><span style="left:0%;width:4%;background:#8a63d2">user row</span><span style="left:92%;width:8%;background:#8a63d2">asst row</span></div></div>
+  <div class="lane"><span class="who">&nbsp;</span>
+    <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#57606a">
+      <span>t=0s</span><span>t=3s &mdash; disconnect</span><span>t=9s &mdash; answer persisted</span>
+    </div></div>
+</div>
+<figcaption>Figure 3 &mdash; a client disconnect at t=3s. Generation and persistence carry on; the
+row that lands at t=9s is the real answer, not a fallback. When the user comes back, the finished
+turn is simply <em>there</em> in the conversation history.</figcaption>
+</figure>
+
+<p>The trick that makes this work is almost funny in its simplicity. The generator is full of lines
+like <code>if await request.is_disconnected(): return</code> &mdash; the escape hatches from the old
+design. Rather than delete them, the durable path passes in a fake request:</p>
+
+<pre>class AlwaysConnectedRequest:
+    async def is_disconnected(self) -&gt; bool:
+        return False</pre>
+
+<p>Every escape hatch is now unreachable, so the generator always runs to the end, so the real
+assistant message is always written. The module's own docstring calls this
+<strong>&ldquo;single writer by construction&rdquo;</strong>: because the abandonment paths cannot
+fire, the emergency finalizer that used to write a fallback message can never race with the task that
+writes the real one.</p>
+
+<h3>Idea 4: exactly one assistant row, no matter how it ends</h3>
+
+<p>A turn can end five ways: it completes, the user presses 멈추기, the model or a dependency fails,
+the process is shut down mid-answer, or the client vanishes. Every one of those paths ends with
+<em>exactly one</em> assistant message in the conversation &mdash; because all of them write through
+the same <code>uuid5</code> keys from explainer #4:</p>
+
+<table>
+<thead><tr><th>How the turn ended</th><th>What is written</th><th>Idempotency key <code>kind</code></th></tr></thead>
+<tbody>
+<tr><td>Normal completion</td><td>The model's answer + citations</td><td><code>assistant</code></td></tr>
+<tr><td>Cancelled (멈추기)</td><td>&ldquo;답변 생성을 중단했습니다&hellip;&rdquo;</td><td><code>assistant-cancelled</code></td></tr>
+<tr><td>Failure mid-turn</td><td>&ldquo;죄송합니다&hellip; 다시 시도해 주세요.&rdquo;</td><td><code>assistant-fallback</code></td></tr>
+<tr><td>Client vanished, non-durable path</td><td>The same fallback, from the <code>finally</code> block</td><td><code>assistant-fallback</code></td></tr>
+<tr><td>Nothing landed at all</td><td>The frontend later calls <code>POST /chat/failures/close</code></td><td><code>assistant-fallback</code></td></tr>
+</tbody>
+</table>
+
+<p>Because the key is derived from <code>(conversation_nonce, the client's message key, kind)</code>,
+two racing writers of the same kind collide on the database's unique constraint and the loser simply
+reads back the winner's row (a <code>200</code> instead of a <code>201</code>). Correctness does not
+depend on the racers agreeing about who should write &mdash; only on them agreeing about the key.</p>
+
+<h3>Idea 5: cancel is a flag, replay is a re-read</h3>
+
+<p>Two more shapes, both deliberately unglamorous.</p>
+
+<p><strong>Cancel is cooperative.</strong> 멈추기 does <em>not</em> kill a task. It is a separate tiny
+HTTP request, <code>POST /agent-api/chat/runs/{run_id}/cancel</code>, that sets
+<code>cancel_requested = 1</code> on a Redis hash, and returns. The generator polls that flag at every
+natural pause &mdash; between agent events, between delta chunks &mdash; and when it sees the flag it
+raises its own <code>ChatRunCancelled</code>, persists the cancellation message and emits a
+<code>done</code> frame with <code>status: "cancelled"</code>. Cancellation is thus a
+<em>message</em> in the conversation, not an absence of one. This is exactly why it works across the
+durable split: the cancelling request and the running task share nothing except one Redis key.</p>
+
+<p><strong>Replay is not a re-run.</strong> If the browser re-sends a turn it already completed &mdash;
+a flaky network, a double submit &mdash; the same <code>message_idempotency_key</code> arrives again.
+The user write comes back <code>created: false</code>, which tells the route &ldquo;this exact message
+already exists&rdquo;. If the conversation's last message is an assistant reply, the whole turn is
+already finished, so the route streams the <em>stored</em> answer back out of the database in
+80-character chunks, through the same frame vocabulary, and never calls the model at all. Same frames,
+no tokens spent, no second row.</p>
+
+<div class="callout">
+<p><strong>The four ideas in one line each.</strong> Guards before the door, frames after it. The
+answer is a transcript. The server owns the run, the request only relays it. And every ending writes
+exactly one row, keyed so that duplicates are free.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Six stops, in the order the turn itself takes them: the route and its guards, the generator and
+its frames, the agent, durability, cancel and replay, and a closing note on why any of this needs a
+second Python process at all.</p>
+
+<h3>1. The route: <code>apps/agent/app/api/routes/chat.py</code></h3>
+
+<h4>The request body: <code>ChatStreamRequest</code> (<code>:204</code>)</h4>
+
+<p>A pydantic model with <code>extra="forbid"</code> &mdash; an unknown key is a
+<code>422</code>, not a silent ignore. Six fields:</p>
+
+<pre>conversation_nonce: UUID            <span class="cm"># which conversation (the public id from #4)</span>
+message: StrictStr | None           <span class="cm"># the user's text</span>
+message_idempotency_key: UUID       <span class="cm"># the client's key for THIS user message</span>
+selected_content_ids: list[StrictInt]  <span class="cm"># attached 미라클 콘텐츠, first-party only</span>
+resume_value: dict | None           <span class="cm"># 컨설팅 probe answers (#10)</span>
+consulting_action: "start_round" | None</pre>
+
+<p>Three validators enforce the rules a type cannot: exactly one of <code>message</code> /
+<code>resume_value</code> (<code>_validate_message_or_resume</code>), a non-blank message,
+positive and duplicate-free content ids, and a long normalizer for <code>resume_value</code>. That
+last one is worth a glance even though 컨설팅 is #10's subject: it does not merely validate, it
+<strong>rebuilds</strong> the dict, keeping only <code>answers</code> / <code>finish</code> /
+<code>note</code>. An unknown key is rejected outright rather than passed through &mdash; which is
+exactly the trap to remember if you ever add a field to the resume payload and wonder why the agent
+never sees it.</p>
+
+<h4><code>chat_stream</code> (<code>:1852</code>): the guard ladder</h4>
+
+<p>This is the &ldquo;before the door&rdquo; half of Figure 1, and it reads as one long descent. Each
+rung either refuses or falls through, and the <em>order</em> of the rungs is argued in the comments,
+because several of them could technically fire on the same request and the operator cares which
+reason the user is shown.</p>
+
+<div class="ladder">
+<div class="rung"><span class="n">0</span><div><b>Resolve the caller.</b> <code>Depends(require_chat_caller_context)</code> yields exactly one of: a user bearer JWT (carries <code>user_id</code> + the token itself), an <code>X-Guest-Token</code> trial guest (carries <code>guest_id</code>), or the dormant changple_web BFF service token. Presenting two is refused by the dependency itself (#3).</div></div>
+<div class="rung"><span class="n">1</span><div><b>Fetch the conversation.</b> <code>fetch_conversation_detail</code> (<code>:1877</code>) &mdash; the first backend round trip, carrying <em>the caller's own credential</em>. A conversation this caller does not own comes back 404 from Django and is re-raised as 404 here. Everything below reads from the returned detail; there is no second fetch.</div></div>
+<div class="rung stop"><span class="n">2</span><div><b>Retired mode.</b> <code>agent_type == "diagnosis"</code> &rarr; unconditional 403. No fall-through to default chat.</div></div>
+<div class="rung stop"><span class="n">3</span><div><b>Ineligible guest.</b> The BFF service-token guest is refused outright: it is one shared secret with no per-caller identity. The trial guest is additionally limited to <code>agent_type == "default"</code> and may not attach selected content.</div></div>
+<div class="rung stop"><span class="n">4</span><div><b>Mode/payload coherence.</b> <code>consulting_action</code> and <code>resume_value</code> are only valid on a 컨설팅 session; <code>selected_content_ids</code> is invalid on one.</div></div>
+<div class="rung stop"><span class="n">5</span><div><b>Session lockdown</b> (#11). If the injection guard has locked this conversation server-side, refuse with 409 <em>before any write or model call</em>, so a locked session cannot be continued to layer a multi-turn attack. Django's write serializer re-checks under the row lock as a race-safe backstop.</div></div>
+<div class="rung stop"><span class="n">6</span><div><b>Trial exhausted</b> (#11). Deliberately <em>after</em> the security guards, so a locked conversation still reports as locked; and deliberately <em>before</em> the rate limiter, so a spent trial always surfaces as the 403 product state (&ldquo;sign in to continue&rdquo;) and never as a 429.</div></div>
+<div class="rung stop"><span class="n">7</span><div><b>The pre-stream turn conflict.</b> <code>if not is_resume and conversation_detail.last_message_role == "user"</code> &rarr; 409. This is the first of explainer #4's two 409 producers: the previous turn never finished, so its user message is still the tail.</div></div>
+<div class="rung stop"><span class="n">8</span><div><b>Guest rate limits</b> &mdash; <code>_enforce_guest_rate_limits</code> (<code>:544</code>), guests only: a daily spend breaker plus per-guest / per-session / per-IP turn caps. A tripped cap is 429 <code>guest_rate_limited</code>; a limiter that <em>cannot decide</em> is 503 <code>guest_limits_unavailable</code> &mdash; it fails <strong>closed</strong>, because with the BFF gone there is no other chokepoint in front of a public LLM surface.</div></div>
+<div class="rung write"><span class="n">9</span><div><b>Register the run.</b> <code>run_id = uuid4()</code>, then <code>run_registry.register_run(...)</code> writes a Redis hash and the per-(identity, conversation) active-run index. From here on, every failure path must call <code>_cleanup_run_safely</code> &mdash; and every one of them does.</div></div>
+<div class="rung write"><span class="n">10</span><div><b>Resolve attachments.</b> <code>fetch_selected_content_context</code> (<code>:2103</code>), only when <code>selected_content_ids</code> is non-empty.</div></div>
+<div class="rung write"><span class="n">11</span><div><b>Write the user message</b> (<code>:2128</code>) &mdash; the pre-stream write from #4, with the client's idempotency key. Eight <code>except</code> clauses map Django's refusals onto HTTP: 401 / 403-with-code / 404 / 409 / 503. This is where the <em>second</em> 409 producer lives: a Django <code>400</code> whose detail matches <code>_payload_indicates_turn_conflict</code> (<code>:448</code>) becomes a 409; any other 400 degrades to 503.</div></div>
+<div class="rung"><span class="n">12</span><div><b>Choose the stream.</b> A finished duplicate &rarr; <code>iter_replayed_chat_stream</code>. A 컨설팅 turn &rarr; <code>iter_consulting_stream</code> (#10). Otherwise assemble the context and hand <code>iter_chat_stream</code> to the durable manager. Return <code>_sse_streaming_response(...)</code> &mdash; the door.</div></div>
+</div>
+
+<div class="warn">
+<p><strong>The fragile coupling worth carrying with you.</strong> Rung 11's 409 is produced by
+matching prose: <code>_payload_indicates_turn_conflict</code> lowercases Django's error detail and
+tests <code>"alternate" in detail or "awaiting a finalized assistant reply" in detail</code>. Django
+gets there because <code>ConversationSession.validate_next_message_role</code> raises a plain
+<code>ValueError</code>, which DRF renders as a 400. So editing the wording of that
+<code>ValueError</code> &mdash; a copy change, in a different app, in a different repository
+directory &mdash; would silently reclassify every turn conflict as &ldquo;the service is
+down&rdquo;.</p>
+</div>
+
+<h4>The three sibling routes</h4>
+
+<p><code>chat/stream</code> is not alone. Three much smaller routes exist entirely to let a client
+recover from the fact that a turn outlives a page:</p>
+
+<table>
+<thead><tr><th>Route</th><th>Line</th><th>What it is for</th><th>Who calls it</th></tr></thead>
+<tbody>
+<tr>
+<td><code>POST /chat/runs/{run_id}/cancel</code></td><td><code>:1635</code></td>
+<td>Sets the cancel flag on the run's Redis hash, for its owner only. Answers <code>cancelling</code> or <code>cancelled</code>; 404 for a run this identity does not own (indistinguishable from a nonexistent run, so a guessed <code>run_id</code> leaks nothing); 409 if the run already finished.</td>
+<td>The 멈추기 button.</td>
+</tr>
+<tr>
+<td><code>GET /chat/conversations/{nonce}/run-status</code></td><td><code>:1687</code></td>
+<td>&ldquo;Is a run live on this conversation right now?&rdquo; Returns <code>{active:false}</code> or the run's <code>run_id</code>, <code>status</code>, <code>cancel_requested</code> and <code>streamed_any_delta</code>.</td>
+<td>The web client on reload, to tell a live turn from a dead one (the <code>syncing</code> state).</td>
+</tr>
+<tr>
+<td><code>POST /chat/failures/close</code></td><td><code>:1733</code></td>
+<td>Explainer #4's assistant-failure closure. Checks that the tail really is a lone <code>user</code> message <em>and</em> that no run is active, then asks Django to write the fallback assistant row so the conversation alternates again.</td>
+<td>The web client when it finds a stranded turn &mdash; and it is the only repair a trial guest has, since <code>retract-tail</code> is owner-JWT only.</td>
+</tr>
+</tbody>
+</table>
+
+<p>All three resolve their caller through <code>_require_turn_control_identity</code>
+(<code>:1606</code>), which reuses the same single guest-verification path as the stream route and
+refuses the BFF guest identically. Ownership is enforced in the registry, not in the route: a foreign
+run reads back as <code>None</code>.</p>
+
+<h3>2. The generator: <code>iter_chat_stream</code> (<code>:1215</code>)</h3>
+
+<p>Its docstring states the two things the rest of the function assumes:</p>
+
+<pre>"""Stream one default-chat turn.
+
+P68.S1: the turn is either first-party (`access_token` + `user_id`) or an
+anonymous trial (`guest_token`, `user_id is None`). Every backend write below
+carries whichever credential opened the turn, so the backend keeps enforcing
+the guest's `guest_id` scope on each write, not just on the pre-stream fetch.
+
+P68.F3: `is_guest_trial` is carried explicitly (the caller already computed
+it from the verified guest context) so the agent can pin an anonymous turn's
+reasoning effort without inferring the posture from a missing `user_id`.
+"""</pre>
+
+<p>Four local variables carry the whole state machine:
+<code>emitted_status_phases</code> (a set, so each <code>status</code> phase is emitted once),
+<code>streamed_any_delta</code> (did the user see <em>any</em> prose? &mdash; it decides whether a
+late failure can still substitute a clean fallback message or must admit the error),
+<code>completion</code>, and <code>run_terminalized</code> (has this run already been marked
+complete/cancelled/error? &mdash; the <code>finally</code> block reads it).</p>
+
+<p>The body, in order:</p>
+
+<ol>
+<li><strong><code>message_start</code></strong> &mdash; run id, conversation nonce, and the client's
+idempotency key echoed back, so the client can match the stream to the message it sent.</li>
+
+<li><strong><code>_advance_run_phase(..., phase="preparing")</code></strong> (<code>:821</code>).
+This helper does two things at once, and that pairing is the point: it writes the phase into the
+<em>Redis run record</em> and returns the SSE <code>status</code> frame to emit. The record is what a
+reconnecting client reads from <code>run-status</code>; the frame is what a connected client sees. One
+call keeps them from drifting. <code>_maybe_status_frame</code> (<code>:800</code>) returns
+<code>None</code> if that phase was already emitted.</li>
+
+<li><strong>The compaction wait</strong> &mdash; if a rolling compaction is in flight for this
+conversation, emit one <code>compacting</code> beat, wait up to ~10 seconds, re-read the summary, and
+put the run record back on <code>preparing</code>. The mechanics are explainer #6's; what matters here
+is <em>why the wait lives inside the generator</em>, which the comment states plainly: the spinner is
+an SSE frame, and frames only exist here.</li>
+
+<li><strong>The agent run.</strong>
+<pre>async for event in run_chat_agent_stream(
+        settings=settings, assembled_context=assembled_context,
+        run_id=run_id, conversation_nonce=conversation_nonce,
+        user_id=user_id, message_idempotency_key=message_idempotency_key,
+        is_guest_trial=is_guest_trial):
+    if await request.is_disconnected():
+        return
+    if await _is_cancel_requested(run_registry, run_id=run_id):
+        raise ChatRunCancelled()
+    if isinstance(event, ChatAgentStatusEvent):   <span class="cm"># -&gt; a status frame</span>
+        ...
+    if isinstance(event, ChatAgentStreamDelta):   <span class="cm"># -&gt; a message_delta frame</span>
+        ...
+    completion = event                            <span class="cm"># the final ChatAgentCompletion</span></pre>
+The agent yields a union of three dataclasses and this loop is the translator: status events become
+<code>status</code> frames, deltas become <code>message_delta</code> frames, and the single
+<code>ChatAgentCompletion</code> falls through to the variable. Note the two checks at the top of every
+iteration &mdash; <strong>this is where a cancel is noticed</strong>, and where a disconnect used to
+end a turn before durability made that branch unreachable.</li>
+
+<li><strong>Finalize and persist.</strong> A <code>finalizing</code> phase, then
+<code>write_conversation_message(role="assistant", ...)</code> with the derived idempotency key, the
+citations, and &mdash; if the injection guard fired &mdash; the
+<code>{"message_type": "security_lockdown"}</code> metadata that makes Django lock the session in the
+same transaction.</li>
+
+<li><strong>Schedule compaction, mark the run complete, emit the tail.</strong>
+<code>hydrate_inline_preview_cards</code> runs one small query for a preview card,
+<code>_format_message_end_frame</code> builds <code>message_end</code> <em>from the persisted
+message</em>, and <code>done</code> closes the stream.</li>
+</ol>
+
+<h4>What happens when it goes wrong &mdash; the two <code>except</code> arms</h4>
+
+<p><code>except ChatRunCancelled</code> hands off to <code>_emit_cancelled_generated_stream</code>
+(<code>:971</code>): persist the cancellation message, mark the run <code>cancelled</code>, emit a
+<code>cancelled</code> status frame, and &mdash; only if nothing had streamed yet &mdash; a
+<code>message_end</code> carrying the cancellation text, so a turn stopped before its first token still
+renders as a message rather than an empty bubble. Then <code>done</code> with
+<code>status: "cancelled"</code>.</p>
+
+<p><code>except Exception</code> (<code>:1419</code>) is the interesting one, because it branches on
+<code>streamed_any_delta</code>:</p>
+
+<table>
+<thead><tr><th>Situation</th><th>What the user sees</th><th>Run status</th></tr></thead>
+<tbody>
+<tr><td>Failed before any prose, fallback message persisted</td><td>The fallback text, streamed as a normal answer via <code>_emit_completed_message</code>, then <code>done: complete</code></td><td><code>complete</code></td></tr>
+<tr><td>Failed before any prose, and even the fallback write failed</td><td><code>status: error</code> + <code>done: error</code></td><td><code>error</code></td></tr>
+<tr><td>Failed <em>after</em> prose had streamed</td><td>Half an answer, then <code>status: error</code> + <code>done: error</code>; a fallback row is still persisted so the transcript alternates</td><td><code>error</code></td></tr>
+</tbody>
+</table>
+
+<p>The first row is the humane case: nothing was shown yet, so the turn can be presented as a
+complete-but-apologetic answer instead of a red error. The third cannot pretend &mdash; the user
+already saw text.</p>
+
+<p>Both arms also call <code>report_agent_error</code> and consult
+<code>_degraded_close_detail</code> (<code>:389</code>), which maps the exception <em>type</em> to
+dependency-specific Korean copy: a Redis registry failure, a backend failure and a Gemini/timeout
+failure each say something different, behind the <code>enable_degraded_mode_messaging</code>
+kill-switch. <code>_is_gemini_error</code> (<code>:376</code>) walks the
+<code>__cause__</code>/<code>__context__</code> chain looking for a <code>google.*</code> module,
+because the real error is usually wrapped several layers deep.</p>
+
+<h4>SSE plumbing: <code>apps/agent/app/chat/sse.py</code> (232 lines)</h4>
+
+<p><code>format_sse_frame</code> (<code>:115</code>) is three lines and defines the wire format:</p>
+
+<pre>def format_sse_frame(event_name: str, payload: dict[str, object]) -&gt; str:
+    payload_json = json.dumps(payload, separators=(",", ":"))
+    return f"event: {event_name}\ndata: {payload_json}\n\n"</pre>
+
+<p><code>with_sse_keepalive</code> (<code>:50</code>) wraps any frame generator and interleaves a
+liveness frame during silence. Its loop is a small piece of async craft worth reading closely:</p>
+
+<pre>advance = asyncio.ensure_future(_anext_or_done(iterator))
+done, _pending = await asyncio.wait({advance}, timeout=interval_seconds)
+if not done:
+    yield keepalive_frame   <span class="cm"># the pending read SURVIVES - re-awaited next loop</span>
+    continue</pre>
+
+<p><code>asyncio.wait</code> with a timeout does not cancel the pending task, so the in-flight read of
+the next real frame is preserved across any number of keepalives &mdash; no frame is lost or
+duplicated. The interval is <strong>15 seconds</strong>, chosen to sit below the client's 20-second
+idle watchdog and well below nginx's 60-second default <code>proxy_read_timeout</code>. And its
+<code>finally</code> block explicitly <code>aclose()</code>s the wrapped generator, because a wrapper
+that swallowed <code>GeneratorExit</code> would prevent the inner generator's <code>finally</code>
+from running &mdash; which is where the emergency finalizer lives.</p>
+
+<p><code>_sse_streaming_response</code> (<code>:319</code>) is the door itself:</p>
+
+<pre>return StreamingResponse(
+    with_sse_keepalive(source),
+    media_type="text/event-stream",
+    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+)</pre>
+
+<p><code>X-Accel-Buffering: no</code> is a request to nginx: <em>do not buffer this response</em>.
+Without it a proxy may hold frames until its buffer fills, and the user watches a spinner while the
+answer sits in nginx's memory. Explainer #1 showed the other half of that handshake &mdash;
+<code>proxy_buffering off</code> in the <code>/agent-api/</code> location block, with
+<code>proxy_read_timeout 3600s</code> so a long turn is never cut. Both halves must be right;
+either alone is not enough.</p>
+
+<h3>3. The agent: <code>apps/agent/app/chat/agent.py</code></h3>
+
+<p>2,856 lines, and about two thirds of them are prompt strings and tool bodies. The spine is short.
+Walk it in five moves: what gets built, what state it carries, what the tools do to that state, how
+the answer is extracted, and how the whole thing is driven.</p>
+
+<h4>Building the agent: <code>open_chat_agent</code> (<code>:2030</code>)</h4>
+
+<pre>async with open_chat_checkpointer(settings) as checkpointer:
+    yield ChatAgentRuntime(
+        agent=create_agent(
+            model=model,
+            tools=tools,
+            middleware=[ChatAgentMiddleware()],
+            state_schema=ChatAgentState,
+            context_schema=ChatAgentContext,
+            checkpointer=checkpointer,
+            name="changple_chat_agent",
+        ),
+        checkpointer=checkpointer,
+    )</pre>
+
+<p>An async context manager, entered <strong>once per turn</strong>. The model comes from
+<code>_build_chat_model</code> (<code>:1975</code>), which is where explainer #2's live operator
+config lands on the hot path: the model id and the thinking level are resolved from the
+<code>operators_llmroleconfig</code> table through the read bridge, with an env fallback, and
+<code>temperature=0.0</code> plus a native request timeout are applied at construction &mdash; the
+comment explains that a LangGraph runtime's per-call invocations cannot be wrapped from here, so the
+timeout has to be baked into the model object.</p>
+
+<p>The tool list, in registration order (that order is asserted by tests, so it is not incidental):</p>
+
+<ol>
+<li><code>search_changple_documents</code> &mdash; the naver cafe corpus</li>
+<li><code>search_changple_author_posts</code> &mdash; posts by a named Changple author</li>
+<li><code>search_changple_contents</code> &mdash; published 미라클 콘텐츠</li>
+<li><code>security_check</code> &mdash; the injection guard's model-facing half (#11)</li>
+<li><code>search_conversation_history</code> &mdash; recall inside this conversation (#6)</li>
+<li><code>search_cited_documents</code> &mdash; re-materialize documents this session already cited (#6)</li>
+<li><code>record_user_feedback</code> &mdash; <em>conditionally</em>, only when the Vocky bridge is configured (#19)</li>
+</ol>
+
+<h4>The state: <code>ChatAgentState</code> (<code>:491</code>) and its reducers</h4>
+
+<p>LangGraph's state is not a plain dict you overwrite. Each field may declare a
+<strong>reducer</strong>: a function <code>(existing, update) -&gt; merged</code> that decides how a
+node's output combines with what is already there. The default reducer is &ldquo;last write
+wins&rdquo;; the interesting fields here declare their own with
+<code>Annotated[T, reducer]</code>.</p>
+
+<p>Concretely, with toy values. Suppose the model calls <code>search_changple_documents</code> twice.
+Each call returns a <code>Command(update={...})</code> containing
+<code>"retrieval_call_count": 1</code> &mdash; not the new total, just <em>its own</em> contribution:</p>
+
+<pre>def _merge_retrieval_call_count(existing, update):        <span class="cm"># :444</span>
+    if update is not None and update &lt; 0:
+        return 0                                          <span class="cm"># the reset sentinel</span>
+    return int(existing or 0) + int(update or 0)
+
+merge(0, 1)   -&gt; 1     <span class="cm"># first search</span>
+merge(1, 1)   -&gt; 2     <span class="cm"># second search</span>
+merge(2, -1)  -&gt; 0     <span class="cm"># RETRIEVAL_CALL_COUNT_RESET, at the top of the next turn</span></pre>
+
+<p>So the counter is an accumulator that no tool ever has to read-modify-write, and a single negative
+value zeroes it. The document map works the same way, keyed by post id:</p>
+
+<pre>def _merge_retrieved_documents_by_post_id(existing, update):   <span class="cm"># :453</span>
+    if update and RETRIEVED_DOCUMENTS_RESET_KEY in update:
+        return {k: v for k, v in update.items() if k != RETRIEVED_DOCUMENTS_RESET_KEY}
+    merged = dict(existing or {})
+    merged.update(update or {})
+    return merged
+
+merge({}, {"56007": {...}})                     -&gt; {"56007": ...}
+merge({"56007": ...}, {"51993": {...}})         -&gt; {"56007": ..., "51993": ...}
+merge({"56007": ...}, {})                       -&gt; {"56007": ...}   <span class="cm"># a failed call keeps earlier hits</span>
+merge({"56007": ...}, {"__reset_retrieved_documents__": {}})  -&gt; {}</pre>
+
+<p><code>_merge_retrieved_content_by_id</code> (<code>:469</code>) is the identical shape for the
+parallel published-content channel &mdash; a sibling map, deliberately not a widening of the first,
+because a <code>content_id</code> must never reach anything keyed on <code>post_id</code>.</p>
+
+<div class="callout">
+<p><strong>Why reducers matter for correctness here.</strong> These two maps are the turn's
+<em>ground truth</em>: at the end, a citation is honoured only if its id is a key in one of them
+(see the finalizer below). Because the reducers merge rather than replace, an error in the fourth
+search cannot erase the evidence gathered by the first three &mdash; and because a reset is a
+<em>sentinel value</em> rather than an absent key, starting a fresh turn provably clears the previous
+turn's evidence even if the checkpoint delete was skipped.</p>
+</div>
+
+<p>The other state fields are per-turn booleans with a single reader each:
+<code>security_locked</code> (the guard fired &mdash; the route rides a lockdown marker on the write),
+<code>feedback_capture_attempted</code>, <code>session_recall_used</code>,
+<code>cited_retrieval_used</code>. All three of the latter exist to <em>exempt</em> a turn from a
+grounding gate, and all three are reset to <code>False</code> on every turn.</p>
+
+<h4>The context: <code>ChatAgentContext</code> (<code>:557</code>)</h4>
+
+<p>State is what the graph mutates; <strong>context</strong> is what it is handed and never changes:</p>
+
+<pre>@dataclass(frozen=True, slots=True)
+class ChatAgentContext:
+    settings: Settings
+    run_id: UUID
+    conversation_nonce: UUID
+    user_id: int
+    message_idempotency_key: UUID
+    assembled_context: AssembledChatContext</pre>
+
+<p>Tools reach it as <code>runtime.context</code> &mdash; which is how a tool body gets at
+<code>settings</code> (for a database connection) without a global, and how the recall tool reads this
+conversation's messages without a query.</p>
+
+<h4>The middleware: <code>ChatAgentMiddleware</code> (<code>:994</code>)</h4>
+
+<p>LangChain middleware installs hooks around the graph's steps. This one installs exactly three, and
+they are worth naming because they are the only places changple5 gets between LangGraph and the
+model:</p>
+
+<table>
+<thead><tr><th>Hook</th><th>When it runs</th><th>What it does here</th></tr></thead>
+<tbody>
+<tr><td><code>awrap_model_call</code></td><td>Around every model invocation</td>
+<td>Builds the system prompt <em>from the current state</em> and injects it via
+<code>request.override(system_message=...)</code>. The prompt is therefore rebuilt on every step of the
+loop, not once per turn.</td></tr>
+<tr><td><code>awrap_tool_call</code></td><td>Around every tool execution</td>
+<td>Catches any exception a tool leaks and re-raises it as <code>ChatAgentToolError</code>, so an
+unexpected tool crash becomes one recognizable failure type for the generator's
+<code>except</code>.</td></tr>
+<tr><td><code>aafter_model</code></td><td>After the model responds, before tools run</td>
+<td><code>return apply_security_guard_after_model(state, runtime)</code> &mdash; the injection guard's
+hard-reject hook, declared <code>@hook_config(can_jump_to=["end"])</code> so it can terminate the graph
+immediately. On a normal turn it is a trivial tool-call scan returning <code>None</code>. Explainer
+#11 owns it; here, just know that <em>this</em> is where it lives.</td></tr>
+</tbody>
+</table>
+
+<h4>The system prompt and the cache prefix rule</h4>
+
+<p><code>build_chat_agent_system_prompt</code> (<code>:934</code>) forwards to
+<code>build_default_chat_system_prompt</code> in <code>app/prompts.py:37</code>: a long Korean
+rulebook (범위 / 보안 / 검색 / 인용 / &hellip;) with the tool names interpolated in, and two dynamic
+sections &mdash; <code>[Conversation summary]</code> and <code>[Current selected content]</code>
+&mdash; at the very end. The file carries an unusually emphatic comment about that layout:</p>
+
+<pre># P39.S5 (D9 lever 1) - PREFIX STABILITY IS CACHE-LOAD-BEARING. The large
+# static rulebook below (scope/security/search/citation/... sections) is the
+# prompt PREFIX; only `[Conversation summary]` + `[Current selected content]`
+# at the very end are dynamic. Gemini implicit context caching keys on that
+# verbatim, turn-stable prefix, so any edit that injects a per-turn/dynamic
+# value ABOVE those two trailing sections (or reorders the static block)
+# silently defeats the ~75% cached-input discount on every chat turn.</pre>
+
+<p>Implicit context caching means the provider recognises that the beginning of your prompt is
+byte-identical to a recent one and charges a fraction of the price for that prefix. It is worth real
+money on a chat product, and it is invisible when you break it. This constraint explains a design
+choice further down that would otherwise look odd &mdash; see the budget, next.</p>
+
+<p>The history the model sees is rebuilt from Django on every turn:
+<code>_build_chat_agent_history_messages</code> (<code>:716</code>) turns backend messages into plain
+<code>HumanMessage</code>/<code>AIMessage</code> pairs, and <code>_resolve_rolling_window</code>
+(<code>:730</code>) decides how far back to go. <strong>Explainer #6 owns that window.</strong> One
+consequence belongs here, though, because it constrains the tools: the rebuild emits Human and AI
+messages <em>only</em> &mdash; never a <code>ToolMessage</code>. So the model provably cannot see any
+previous turn's retrieved document bodies or their post ids. A prior turn's citations survive only as
+an id-free reference like <code>(이전 답변 참고: 창플 카페 "치킨 프랜차이즈 실제 정산표")</code>,
+built by <code>_format_message_context</code> (<code>:657</code>). Citations are strictly this-turn,
+by construction rather than by instruction.</p>
+
+<h4>The four-call budget &mdash; and where it is announced</h4>
+
+<p>One constant governs how much searching a turn may do:</p>
+
+<pre>MAX_CHAT_RETRIEVAL_CALLS = 4        <span class="cm"># agent.py:129</span></pre>
+
+<p>and it is <strong>shared by all three retrieval tools</strong>. Not four naver searches plus four
+content searches &mdash; four searches, period. Each of the three reads
+<code>state["retrieval_call_count"]</code> at the top, refuses with a
+<code>limit_exhausted</code> tool result once it is at 4, and contributes <code>1</code> on a
+successful call.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="loopfig">
+    <div class="flow">
+      <div class="node user"><b>model</b><span class="m">gemini-3-flash-preview</span>reads the tool result, decides: search again, or answer</div>
+      <div class="arrow">&#8646;</div>
+      <div class="node"><b>tools node</b><span class="m">3 retrieval + 3 helpers</span>runs the Python function, appends a <code>ToolMessage</code>, merges its <code>Command</code> into state</div>
+    </div>
+    <div class="budget">
+      <div class="slot used">1</div><div class="slot used">2</div><div class="slot free">3</div><div class="slot free">4</div>
+    </div>
+    <div class="small">two searches used, two remaining &mdash; and the model is told so, inside the
+    tool result it just received</div>
+  </div>
+</div>
+<figcaption>Figure 4 &mdash; the agent loop and its budget. The counter lives in graph state; the
+<em>report</em> of the counter lives in the tool message.</figcaption>
+</figure>
+
+<p>That last point is the interesting design decision. The remaining budget is not in the system
+prompt. It is appended to the body of every successful tool result, by
+<code>_chat_search_budget_guidance</code> (<code>:336</code>):</p>
+
+<pre>"Search budget for this turn: 2 of 4 searches used, 2 remaining. Spend the
+remaining searches on the aspects of the user's question these documents do not
+cover yet; leaving budget unused produces a shallower answer. Stop early only
+when the question is genuinely single-aspect and the returned documents already
+cover it."</pre>
+
+<p>Two reasons, both stated in its docstring. First, <strong>timing</strong>: the model decides
+whether to search again immediately after reading a tool result, so that is the moment the number has
+to be in front of it. Second, and decisively, <strong>the cache</strong>: a per-turn value in the
+system prompt would change the prompt prefix on every single turn and defeat Gemini's implicit
+caching. Tool results are already dynamic, so they cost nothing to vary. A pricing constraint chose
+the architecture.</p>
+
+<p>The guidance strings (<code>:170&ndash;:401</code>) are a whole subsystem in themselves &mdash;
+five or six variants per tool, one per outcome (<code>ok</code>, <code>empty_results</code>,
+<code>limit_exhausted</code>, <code>unavailable</code>, <code>invalid_query</code>), each written to
+close a specific failure of model behaviour: do not invent post ids, do not retry a blank query, do
+not conclude &ldquo;Changple has nothing on this&rdquo; from an empty <em>content</em> search, do not
+mention embeddings or backend errors to the user. This is what prompt engineering looks like once it
+has been through production: not clever phrasing, but an exhaustive case analysis attached to the
+exact place the model will read it.</p>
+
+<div class="note">
+<p><strong>Two tools are deliberately budget-exempt.</strong> <code>search_conversation_history</code>
+(recall inside this conversation) and <code>search_cited_documents</code> (re-fetch what this session
+already cited) never write <code>retrieval_call_count</code> at all &mdash; and, as both files say in
+a comment, <em>&ldquo;that omission is the entire budget exemption, and it is pinned by a test.&rdquo;</em>
+Neither touches the corpus, so neither costs a search; a follow-up about known material can run beside
+a fresh search in the same turn. Explainer #6 covers both.</p>
+</div>
+
+<h4>The three retrieval tools, as surfaces</h4>
+
+<p>All three have the same shape, so learn it once:</p>
+
+<pre>@tool(name_or_callable=CHAT_AGENT_RETRIEVAL_TOOL_NAME)
+def search_changple_documents(query: str,
+                              runtime: ToolRuntime[ChatAgentContext]) -&gt; Command:
+    """Search Changple knowledge-base documents for the current question.
+
+    One search is not final. After each result, compare the returned documents
+    against the user's full question. ... Use at most 4 calls; ...
+    """</pre>
+
+<p>The <strong>docstring is the API</strong>: LangChain sends it to the model as the tool's
+description, so it is written for the model, not for you. The <strong>return type is a
+<code>Command</code></strong>, not a string &mdash; a LangGraph object that carries both the
+<code>ToolMessage</code> the model will read <em>and</em> the state update the reducers will merge:</p>
+
+<pre>return Command(update={
+    "retrieval_call_count": 1,
+    "retrieved_documents_by_post_id": {"56007": {...}, "51993": {...}},
+    "retrieved_content_by_id": {},
+    "messages": [tool_message],
+})</pre>
+
+<p>The tool message itself is JSON built by <code>_build_chat_retrieval_tool_message</code>
+(<code>:1293</code>) &mdash; <code>{"status", "query", "retrieval_guidance", "results", ...}</code>
+&mdash; so what the model sees is a small structured document plus the guidance paragraph. And
+<code>_stream_chat_retrieval_status</code> (<code>:1330</code>) is how a tool reaches the user's
+screen at all:</p>
+
+<pre>def _stream_chat_retrieval_status(runtime) -&gt; None:
+    stream_writer = getattr(runtime, "stream_writer", None)
+    if not callable(stream_writer):
+        return
+    stream_writer({"type": "status", "phase": "searching",
+                   "message": "관련 자료를 찾고 있습니다."})</pre>
+
+<p>LangGraph's <code>stream_writer</code> emits a <em>custom</em> stream event; the driver picks it up,
+<code>_build_status_event</code> (<code>:2527</code>) validates it into a
+<code>ChatAgentStatusEvent</code>, and <code>iter_chat_stream</code> turns that into the
+<code>searching</code> SSE frame you saw in Figure 2. That is the entire path from &ldquo;a tool
+started running&rdquo; to &ldquo;the spinner says 관련 자료를 찾고 있습니다&rdquo;.</p>
+
+<table>
+<thead><tr><th>Tool</th><th>Line</th><th>Arguments</th><th>What comes back to the model</th></tr></thead>
+<tbody>
+<tr><td><code>search_changple_documents</code></td><td><code>:1345</code></td><td><code>query</code></td>
+<td><code>results</code>: ranked naver cafe documents with bodies; plus a <code>content_results</code> block when the same call's published-content arm matched (it rides the <em>same</em> budget unit).</td></tr>
+<tr><td><code>search_changple_author_posts</code></td><td><code>:1541</code></td><td><code>author_query</code>, <code>query</code></td>
+<td><code>author_post_ids</code> (written by the resolved person) kept distinct from <code>related_post_ids</code> &mdash; the guidance is emphatic that related posts do not prove identity.</td></tr>
+<tr><td><code>search_changple_contents</code></td><td><code>:1803</code></td><td><code>query</code></td>
+<td>Published 미라클 콘텐츠 only, in <code>content_results</code>, with matched <em>excerpts</em> rather than whole bodies, cited as <code>[content:&lt;id&gt;]</code>.</td></tr>
+</tbody>
+</table>
+
+<p>What happens inside &mdash; query planning, the pgvector search, reranking, the eligibility and
+brand predicates &mdash; is <strong>explainer #7</strong>. Two implementation details do belong here,
+though, because they are budget semantics rather than retrieval:</p>
+
+<ul>
+<li><strong>Per-call result width is operator-tunable at runtime.</strong> There is deliberately no
+module constant: <code>resolve_chat_max_tool_results(settings)</code> reads the operators
+<code>ChatRetrievalConfig</code> singleton once per call (explainer #2's TTL-snapshot pattern), with a
+default of 6.</li>
+<li><strong>A retrieval outage burns the whole budget on purpose.</strong> On
+<code>RetrievalEmbeddingError</code> / <code>RetrievalRerankError</code> the tool returns
+<code>"retrieval_call_count": MAX_CHAT_RETRIEVAL_CALLS - current_count</code> &mdash; jumping the
+counter straight to 4 &mdash; so a model facing a dead retrieval stack cannot burn three more round
+trips discovering the same outage.</li>
+</ul>
+
+<h4>Extracting the answer: <code>extract_chat_agent_completion</code> (<code>:2377</code>)</h4>
+
+<p>When the graph finishes, the final state holds a message list. This function turns it into the
+<code>ChatAgentCompletion</code> the route persists, and most of its work is <em>citation
+enforcement</em>. The valid id sets are computed straight from state:</p>
+
+<pre>valid_post_ids    = {int(k) for k in state["retrieved_documents_by_post_id"] if k != RESET}
+valid_content_ids = {int(k) for k in state["retrieved_content_by_id"]        if k != RESET}</pre>
+
+<p>Then, in order: bare-id markers like <code>[56007]</code> are normalized into real markers (so a
+raw id can never reach the user as plain text); <code>render_citation_markers</code> rewrites
+<code>[post:56007]</code> into the visible <code>[1]</code> and records the reference &mdash; but
+<strong>only for ids in the valid sets</strong>, collecting the rest into
+<code>filtered_citation_post_ids</code> and logging a <code>WARNING</code> (the file calls that log
+&ldquo;the early-warning instrument for the whole <em>model cites documents this turn never
+retrieved</em> defect class&rdquo;); unmatched visible markers are stripped; and a leaked prior-turn
+reference annotation is stripped defensively. What comes out is the final text plus two sibling
+citation tuples carrying positions from one merged <code>[k]</code> numbering space.</p>
+
+<h4>Three grounding gates, and the buffering trick that makes them possible</h4>
+
+<p>Retrieval is <em>model-elective</em> &mdash; nothing forces the model to search. So three separate
+failure modes exist, each with its own gate, each replacing the answer with the same fixed refusal
+(<code>NO_DOCUMENT_DEFAULT_CHAT_RESPONSE</code>, <code>:148</code>) and deleting the checkpoint thread
+so the bad text is not carried forward:</p>
+
+<table>
+<thead><tr><th>Gate</th><th>Line</th><th>Fires when</th><th>The hole it closes</th></tr></thead>
+<tbody>
+<tr><td><code>_should_use_no_document_default_chat_response</code></td><td><code>:2188</code></td>
+<td>Retrieval ran this turn (<code>count &gt; 0</code>) and returned <em>nothing</em> in either corpus</td>
+<td>&ldquo;Searched, found nothing, advised anyway.&rdquo;</td></tr>
+<tr><td><code>_should_use_ungrounded_memory_fallback</code></td><td><code>:2245</code></td>
+<td><code>count == 0</code>, no citations, and the answer is at least <code>UNGROUNDED_ANSWER_MIN_CHARS</code> (400) characters</td>
+<td>&ldquo;Never searched at all&rdquo; &mdash; a parametric-memory leak. Short greetings fall below the bar; the security refusal, a feedback turn, a recall turn and a cited-arm turn are explicitly exempt.</td></tr>
+<tr><td><code>_should_use_filtered_citation_fallback</code></td><td><code>:2329</code></td>
+<td>At least one marker was filtered <em>and</em> no citation survived</td>
+<td>The gap between the other two: retrieval ran and returned documents, but the model cited only ids the map does not hold. No length bar &mdash; an answer that cites only ids it was never given is ungrounded at any length.</td></tr>
+</tbody>
+</table>
+
+<p>A gate can only replace an answer the user has not already read &mdash; which is what
+<code>_should_buffer_default_chat_delta</code> (<code>:2203</code>) is for. It decides, per delta,
+whether to stream immediately or hold the text back:</p>
+
+<pre>if state is None:                       return True   <span class="cm"># nothing known yet - hold</span>
+if _has_current_turn_grounding(state):  return False  <span class="cm"># grounded - stream live</span>
+if not _attempted_current_turn_retrieval(state): return True   <span class="cm"># zero-retrieval - hold</span>
+return True                                           <span class="cm"># searched but empty - hold</span></pre>
+
+<p>So a <strong>grounded</strong> turn streams token by token, as a chat should; an
+<strong>ungrounded</strong> turn is buffered in memory, and if a gate fires the buffer is simply
+discarded &mdash; the user never sees a word of the ungrounded answer. If no gate fires, the buffer is
+flushed at the end and the reply lands in one lump. That is a real, visible product trade-off (a
+short zero-retrieval reply appears all at once instead of typing itself out) and the comments record
+it as accepted deliberately. Note the honest exception, also in a comment: the third gate can fire on
+a turn whose deltas <em>did</em> stream, so that answer is replaced at finalize after the user already
+read it.</p>
+
+<h4>Checkpoints: <code>sync_chat_agent_checkpoint</code> (<code>:2545</code>) and
+<code>checkpointing.py</code></h4>
+
+<p><code>open_chat_checkpointer</code> (all 26 lines of <code>chat/checkpointing.py</code>) opens a
+LangGraph <code>AsyncPostgresSaver</code> over <code>build_checkpoint_conninfo(settings)</code>. That
+conninfo is the one place in the whole agent that pins a <code>search_path</code>
+(<code>-c search_path=agent,public</code>) &mdash; explainer #2's exception to the
+&ldquo;always qualify table names&rdquo; rule, needed because LangGraph's own SQL is unqualified. The
+saver's tables are created once at bootstrap (<code>app/db/bootstrap.py:115</code> calls
+<code>setup_chat_checkpointer</code>), and they live in the <code>agent</code> schema &mdash; a schema
+Django cannot read at all.</p>
+
+<p>And then the punchline: on a default chat turn, <strong>the checkpoint is deleted and rebuilt every
+single time</strong>.</p>
+
+<pre>await runtime.checkpointer.adelete_thread(str(conversation_nonce))
+if assembled_context.verbatim_messages:
+    checkpoint_state = await asyncio.to_thread(
+        build_chat_agent_checkpoint_state, assembled_context, settings=settings)
+    await runtime.agent.aupdate_state(config, checkpoint_state)</pre>
+
+<p>The docstring explains why the older, cleverer behaviour was removed: the thread used to be reused
+whenever a <em>predicted</em> post-turn fingerprint matched the stored one &mdash; and a reused thread
+keeps every prior turn's <code>ToolMessage</code>, i.e. full document bodies with their post ids, in
+the model's context. Under the operator's strict this-turn citation rule, that context must not exist.
+So the reuse was deleted and the rebuild made unconditional.</p>
+
+<p>Which leaves a fair question: <strong>what is the checkpointer still for?</strong> Within a single
+turn, it is what carries state across the loop's steps &mdash; the merged document map, the call
+counter, the growing message list &mdash; and what the reducers write through. Across turns, on the
+default path, nothing: Django is the memory. <code>chat/fingerprints.py</code>
+(<code>build_backend_history_fingerprint</code>, <code>:33</code> &mdash; a sorted, normalized
+<code>sha256</code> of the history) survives as the shared helper that 컨설팅 still uses to notice
+backend drift, and the state schema's own comment records the removal: <em>&ldquo;no
+<code>backend_history_fingerprint</code>. The chat thread is now rebuilt from backend history on EVERY
+turn, so there is nothing left to compare against.&rdquo;</em></p>
+
+<div class="warn">
+<p><strong>Two stores, two jobs.</strong> Django's <code>conversations</code> tables hold the
+<em>conversation</em>: user and assistant messages, citations, titles, ownership &mdash; the durable
+record the product reads. LangGraph's checkpoint tables hold the <em>run</em>: the message list the
+model is currently working with, including tool calls and tool results, plus this turn's retrieval
+state. The first outlives the turn; the second is torn down at the start of the next one.</p>
+</div>
+
+<h4>Driving it all: <code>run_chat_agent_stream</code> (<code>:2791</code>)</h4>
+
+<p>The public entry point, and it does four things before delegating:</p>
+
+<ol>
+<li><code>await ensure_llm_config_fresh(settings)</code> &mdash; warm the operator LLM-config snapshot
+<em>off the event loop</em>, so the streaming turn never does that blocking read inline.</li>
+<li><code>detect_missing_product_feature_request(...)</code> &mdash; a short-circuit: if the user asked
+chat to do something it structurally cannot (upload a file, generate a share link), yield a canned
+completion and return without running the agent at all.</li>
+<li><code>fetch_user_thinking_level_async(settings, user_id)</code> &mdash; explainer #3's per-turn,
+never-cached read of <code>tier, chat_thinking_level</code> over the read bridge, wrapped in
+<code>asyncio.to_thread</code>. It never raises: a missing user, an unknown value, or a Pro-only level
+held by a non-paid user all resolve to <code>None</code>, meaning &ldquo;no override&rdquo;.</li>
+<li>If the turn is an anonymous trial, clamp that value to
+<code>GUEST_TRIAL_THINKING_LEVEL</code> unconditionally &mdash; the trial is not upgradeable.</li>
+</ol>
+
+<p>Then it calls <code>_run_default_chat_agent_stream</code> (<code>:2593</code>), which opens the
+agent, syncs the checkpoint, and consumes LangGraph's stream in three modes at once:</p>
+
+<pre>async for chunk in runtime.agent.astream(
+        build_chat_agent_turn_input_state(assembled_context),
+        config=config, context=ChatAgentContext(...),
+        stream_mode=["messages", "values", "custom"], version="v2"):</pre>
+
+<table>
+<thead><tr><th>Mode</th><th>Carries</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td><code>messages</code></td><td>Token chunks from the model</td>
+<td>Pushed through <code>CitationMarkerStreamParser</code> (so a half-written <code>[post:5</code> is
+never shown), then either streamed as a delta or buffered. Also where the final chunk's
+<code>usage_metadata</code> is captured for <code>log_llm_usage</code> &mdash; including the
+cache-read slice that reveals whether the prompt-prefix cache hit.</td></tr>
+<tr><td><code>values</code></td><td>The full state after each step</td>
+<td>Kept as <code>latest_state</code> (the gates read it), and used to keep the citation parser's valid
+id sets current mid-stream.</td></tr>
+<tr><td><code>custom</code></td><td>Whatever a tool wrote with <code>stream_writer</code></td>
+<td>The <code>searching</code> status event.</td></tr>
+</tbody>
+</table>
+
+<p>Two small helpers earn their keep here. <code>_message_chunk_text</code> (<code>:2086</code>)
+returns <code>""</code> for a chunk that is a tool-call fragment rather than prose &mdash; without it,
+the model's JSON tool arguments would stream into the user's answer. And
+<code>hydrate_inline_preview_cards</code> in <code>chat/previews.py</code> (<code>:149</code>) runs
+after the answer is persisted: when a reply cites <em>exactly one</em> document (that
+<code>len(...) != 1: return ()</code> guard is the whole policy) it fetches a thumbnail from
+<code>documents_documentsource</code> over the read bridge, off the loop, and swallows every failure
+&mdash; a missing preview must never cost a turn.</p>
+
+<h3>4. Durability: <code>apps/agent/app/chat/durable_runs.py</code></h3>
+
+<p>144 lines, and the highest ratio of consequence to code in the agent. Read it whole; here is what
+each of its four pieces does.</p>
+
+<p><strong><code>AlwaysConnectedRequest</code></strong> &mdash; the two-line shim from Idea 3. Its
+docstring is the design note:</p>
+
+<pre>"""Request shim whose ``is_disconnected`` is permanently ``False``.
+
+Driving ``iter_chat_stream`` with this is what makes a durable run durable:
+every early ``return`` in that generator (and its emit helpers) is guarded by
+``request.is_disconnected()``, so an always-connected request means generation
+always runs to completion, the real ``kind="assistant"`` answer is always
+persisted, and the abandoned-stream finalizer never fires (single writer by
+construction). Structurally satisfies ``chat.DisconnectAwareRequest``.
+"""</pre>
+
+<p>Note <em>structurally</em>: the generator's parameter is typed as a
+<code>Protocol</code> (<code>chat.py:196</code>, one method), so a real Starlette
+<code>Request</code> and this two-line class are interchangeable with no inheritance and no
+<code>if durable:</code> branching inside the generator. The behaviour switch is a
+<em>value</em>.</p>
+
+<p><strong><code>DurableChatRun</code></strong> (<code>:27</code>) &mdash; a run's handle:
+<code>run_id</code>, an <code>asyncio.Queue[str | None]</code> of frames, and the
+<code>asyncio.Task</code>. A <code>None</code> on the queue is the end-of-stream sentinel.</p>
+
+<p><strong><code>DurableChatRunManager</code></strong> (<code>:41</code>) &mdash; one per process,
+created in <code>create_app()</code>. <code>start</code> (<code>:61</code>) schedules the work:</p>
+
+<pre>queue: asyncio.Queue[str | None] = asyncio.Queue()
+task = asyncio.create_task(self._capture(run_id=run_id, source_factory=..., queue=queue))
+run = DurableChatRun(run_id=run_id, queue=queue, task=task)
+self._runs[run_id] = run
+return run</pre>
+
+<p>Three details, all deliberate. The manager keeps a <em>strong reference</em> in
+<code>self._runs</code> &mdash; asyncio only holds weak references to tasks, so a fire-and-forget task
+can be garbage collected mid-flight. <code>asyncio.create_task</code> copies the current
+<code>contextvars</code> context, so explainer #2's request-id travels into the background task and its
+error reports stay correlated. And the run removes itself from the dict in <code>_capture</code>'s
+<code>finally</code> (<code>:82</code>), which also puts the <code>None</code> sentinel on the queue so
+any relaying request is unblocked even if the source blew up.</p>
+
+<p><code>drain(timeout)</code> (<code>:104</code>) is the shutdown half. Explainer #1 noted that the
+agent's lifespan teardown is ordered on purpose; this is the first step of it:</p>
+
+<pre>durable_manager.drain(timeout=settings.durable_run_shutdown_drain_seconds)   <span class="cm"># default 10s</span>
+await aclose_backend_http_client()      <span class="cm"># the runs need this to persist their answers</span>
+await aclose_retrieval_cache()
+await chat_run_registry.aclose()        <span class="cm"># ... and this to mark themselves complete</span></pre>
+
+<p>Draining <em>before</em> closing the HTTP client and the Redis registry is what keeps a deploy from
+stranding a <code>user</code> tail: an in-flight run gets up to ten seconds to finish writing its real
+answer through tools that are still open.</p>
+
+<p><strong><code>iter_durable_chat_stream</code></strong> (<code>:128</code>) is the relay, and it is
+five lines:</p>
+
+<pre>while True:
+    frame = await durable_run.queue.get()
+    if frame is None:
+        return
+    yield frame</pre>
+
+<p>It reads the queue. It does not own the task, does not cancel it, and knows nothing about the
+conversation. If the client disconnects, Starlette cancels <em>this</em> generator; the task keeps
+going and keeps filling the queue that nobody is draining. When the run ends, the manager drops its
+reference and the queue is garbage.</p>
+
+<h4>What the durable path replaced &mdash; and whether the old path is still reachable</h4>
+
+<p><code>chat.py:692&ndash;800</code> still contains the previous design's emergency machinery, and it
+is worth understanding because it teaches a genuine async trap.</p>
+
+<p>Both stream generators end in the same <code>finally</code>:</p>
+
+<pre>finally:
+    if not run_terminalized:
+        await _run_abandoned_stream_finalizer(
+            _finalize_abandoned_generated_stream(...), context="Generated chat stream")</pre>
+
+<p>&ldquo;If we got here without having marked this run finished, the client abandoned us mid-turn:
+persist a fallback (or a cancellation) message and mark the run terminal, so the conversation is not
+left broken.&rdquo; The problem is <em>where</em> that runs. A client disconnect makes Starlette throw
+the generator away, raising <code>GeneratorExit</code> inside it; the surrounding task is being
+cancelled. A plain <code>await</code> in that <code>finally</code> is therefore awaiting inside a
+dying task &mdash; the first suspension point raises <code>CancelledError</code> and the backend write
+never happens. That was a real, shipped bug.</p>
+
+<p>The repair is <code>_run_abandoned_stream_finalizer</code> (<code>:780</code>):</p>
+
+<pre>task = asyncio.create_task(finalizer)      <span class="cm"># a NEW task - not the dying one</span>
+try:
+    await asyncio.shield(task)             <span class="cm"># cancelling us does not cancel it</span>
+except asyncio.CancelledError:
+    task.add_done_callback(lambda t: _log_abandoned_stream_task_result(t, context=context))
+    raise                                  <span class="cm"># we die; the write completes and logs itself</span></pre>
+
+<p><code>asyncio.shield</code> lets the cancellation propagate to the awaiting coroutine while leaving
+the shielded task alive. The write finishes on its own, and its result is logged by a callback because
+by then nobody is left to await it.</p>
+
+<div class="callout">
+<p><strong>So: is that path still live?</strong> Two different answers, and the difference is exactly
+what the durable design bought.</p>
+<ul>
+<li><strong>For a generated turn &mdash; no, it is a fallback.</strong> With
+<code>enable_durable_runs</code> on (its default; <code>config.py:382</code>), the generator is driven
+by <code>AlwaysConnectedRequest</code> and every early <code>return</code> is unreachable, while the
+normal and error paths all set <code>run_terminalized = True</code>. So
+<code>_finalize_abandoned_generated_stream</code> can only fire when the kill-switch is flipped off
+(<code>chat.py:2237</code> keeps the in-request path for exactly that) or when the durable task itself
+is torn down &mdash; a drain that times out at shutdown. It is kept, correct and cold.</li>
+<li><strong>For a replayed turn &mdash; yes, live.</strong> <code>iter_replayed_chat_stream</code> is
+handed the <em>real</em> request, never the shim, so a client that disconnects halfway through a replay
+still lands in <code>_finalize_abandoned_replay_stream</code> (<code>:744</code>), which marks the run
+<code>complete</code> or <code>cancelled</code>. It has no message to write &mdash; the assistant row
+already exists &mdash; so it only tidies the registry. The 컨설팅 stream is driven by the real request
+too (#10).</li>
+</ul>
+</div>
+
+<h3>5. Cancel and replay</h3>
+
+<h4>The registry: <code>apps/agent/app/chat/run_registry.py</code> (526 lines)</h4>
+
+<p>A run's live state is not in the database and not in process memory &mdash; it is a Redis hash on
+<strong>db/0</strong> (explainer #1's map: Celery plus the agent's registries), under
+<code>agent:chat:run:&lt;run_id&gt;</code>, with a one-hour TTL while active and five minutes once
+terminal. <code>ChatRunRecord</code> (<code>:57</code>) is what it parses back to:</p>
+
+<pre>run_id, user_id | None, guest_id | None, conversation_nonce,
+message_idempotency_key, status, cancel_requested, streamed_any_delta</pre>
+
+<p><code>status</code> is one of ten values (<code>:32</code>) &mdash; <code>registered</code>,
+<code>preparing</code>, <code>compacting</code>, <code>searching</code>, <code>finalizing</code>,
+<code>cancelling</code>, <code>complete</code>, <code>cancelled</code>, <code>error</code>, plus
+<code>probing</code> / <code>generating_report</code> for 컨설팅. Three of them are terminal, which is
+all <code>is_terminal</code> means.</p>
+
+<p>Beside the hash, <code>register_run</code> (<code>:134</code>) writes an <strong>active-run
+index</strong>: <code>agent:chat:run:active:&lt;scope&gt;:&lt;nonce&gt; &rarr; run_id</code>, where the
+scope is the user id, or <code>guest:&lt;guest_id&gt;</code> for a trial. That is what makes
+<code>find_active_run</code> (<code>:282</code>) an O(1) lookup for &ldquo;is something running on this
+conversation?&rdquo; &mdash; the question the reload path asks. If the index is stale it falls back to
+<code>_scan_for_active_run</code> (<code>:469</code>), repairs the index, and re-checks ownership
+against the record itself, so a stale index can never hand a caller someone else's run.</p>
+
+<p><code>mark_status</code> (<code>:206</code>) writes the status, adjusts the TTL, and refreshes or
+deletes the index depending on whether the run just went terminal.
+<code>request_cancel</code> (<code>:239</code>) is the whole cancellation mechanism:</p>
+
+<pre>current = await self.get_run(run_id)
+if current is None or not _record_matches_owner(current, user_id=..., guest_id=...):
+    return None                     <span class="cm"># -&gt; the route answers an opaque 404</span>
+if current.status in ("cancelled", "complete", "error"):
+    return current                  <span class="cm"># already over</span>
+updated = await self._update_fields(run_id,
+    {"cancel_requested": "1", "status": "cancelling"}, ttl_seconds=...)</pre>
+
+<p>Two field writes. No signal, no task handle, no cross-process messaging &mdash; which is precisely
+why it survives the durable split, where the cancelling HTTP request and the running task share
+nothing but Redis.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node user"><b>1. 멈추기</b><span class="m">POST /chat/runs/&lt;id&gt;/cancel</span>a second, ordinary HTTP request</div>
+    <div class="arrow">&rarr;</div>
+    <div class="node svc"><b>2. Redis db/0</b><span class="m">cancel_requested = 1<br>status = cancelling</span>two fields on a hash; the route returns immediately</div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>3. the generator polls</b><span class="m">_is_cancel_requested (:641)</span>between agent events &mdash; raises <code>ChatRunCancelled</code></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node write" style="background:#eefaf3;border-color:#a8dfc4"><b>4. a real message</b><span class="m">_persist_cancelled_assistant_message (:941)</span>&ldquo;답변 생성을 중단했습니다&hellip;&rdquo; + <code>done: cancelled</code></div>
+  </div>
+</div>
+<figcaption>Figure 5 &mdash; cancelling a turn. Nothing is killed; a flag is set and the generator
+agrees to stop at its next checkpoint.</figcaption>
+</figure>
+
+<p>The polling points are worth memorising, because they define how <em>fast</em> a cancel takes
+effect: right after the <code>preparing</code> phase, after the compaction wait, once per event from
+the agent stream, and once more after the loop before the assistant write. A cancel that arrives while
+a single long model call is in flight is therefore not noticed until that call yields its next chunk
+&mdash; cooperative cancellation, with the latency that implies. In the replay generator the polling is
+per 80-character chunk.</p>
+
+<p>One consequence that catches people: a cancelled turn <em>spends</em> the turn. The user message is
+already written, a cancellation assistant message is written, and for a trial guest that counts against
+the two-turn cap. That is the intended product behaviour, not an oversight.</p>
+
+<h4>Replay: <code>iter_replayed_chat_stream</code> (<code>:1072</code>)</h4>
+
+<p>The route reaches it through one condition (<code>:2222</code>):</p>
+
+<pre>if not user_write_result.created and conversation_detail.messages:
+    last_message = conversation_detail.messages[-1]
+    if last_message.role == "assistant":
+        return _sse_streaming_response(iter_replayed_chat_stream(...))</pre>
+
+<p>Read it as two facts joined. <code>created is False</code> means Django recognised this exact
+<code>message_idempotency_key</code> and returned the existing row (<code>200</code>, not
+<code>201</code>) &mdash; so this user message was already sent. And the conversation detail fetched
+<em>before</em> the write ends in an assistant message &mdash; so the turn it belonged to already
+finished. Together: replay the stored answer.</p>
+
+<p>The generator then reproduces the full frame vocabulary from database rows:
+<code>message_start</code>, <code>preparing</code>, <code>finalizing</code>, then
+<code>_chunk_text_for_streaming</code> (<code>:347</code>) slices the stored content into 80-character
+<code>message_delta</code> frames, then <code>_hydrate_replay_inline_previews</code>
+(<code>:1061</code>) re-fetches the preview card and <code>message_end</code> + <code>done</code> close
+it. From the client's point of view it is indistinguishable from a live turn &mdash; deliberately, so
+the rendering code has one path. No model is called, no row is written, and the cancel flag is still
+polled between chunks.</p>
+
+<div class="note">
+<p><strong>The timing distinction that decides which path a duplicate takes.</strong> Re-POST
+<em>after</em> the turn finished &rarr; replay (200, the stored answer). Re-POST <em>while</em> the
+turn is still running &rarr; the conversation's last message is still the <code>user</code> row, so
+guard rung 7 fires first and the answer is <code>409</code>. The client is expected to call
+<code>run-status</code> in that case and re-attach to the state it reports, rather than sending
+again.</p>
+</div>
+
+<h3>6. Why any of this needs a second Python process</h3>
+
+<p>Explainer #1 measured the honest answer, and this page is where it pays off. Django runs under
+<code>gunicorn config.wsgi:application --workers 3</code>: synchronous workers, one request occupying
+one worker for its whole lifetime. The agent runs as a single <code>uvicorn</code> process on an
+asyncio event loop.</p>
+
+<p>Now count what one chat turn needs. It holds an HTTP response open for five to sixty seconds while
+mostly waiting on a network socket. It keeps a detached background task alive after that response is
+gone, and an in-memory queue between the two. It runs a bounded wait on another conversation's
+background compaction. Under gunicorn's sync model, a hundred concurrent chat turns would need a
+hundred workers, each idle almost all of the time; and the durable task has nowhere to live, because a
+sync worker is not a place where anything continues to run after the response.</p>
+
+<p>The split is therefore about <strong>concurrency model</strong>, not language performance. Django
+does short, transactional, CPU-and-database work where a worker per request is exactly right. The
+agent does long, IO-bound, streaming work where an event loop is exactly right.</p>
+
+<p>And the file states the limit of its own design honestly. From the manager's docstring:</p>
+
+<pre>In-process is sufficient today (single Uvicorn process): cross-process live
+re-attach is out of scope, and return-after-finish is covered by the existing
+DB-replay duplicate-POST path. A future multi-replica scale-out would swap this
+queue for a Redis-backed sidecar.</pre>
+
+<p>The queue is in <em>this</em> process's memory. Run two replicas behind a load balancer and a
+client that reconnects may land on the replica that is not running its turn: the run record is in
+Redis and visible, but the frames are not. That is why <code>run-status</code> plus the DB replay
+exist &mdash; they are the cross-process story, and they are enough because after the turn finishes,
+the answer is in Postgres, which every replica can read. Scaling out live re-attach would mean putting
+the frame queue in Redis too.</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions on the machinery above. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A user asks a question, then closes the tab four seconds later while the
+  answer is still being generated. With <code>enable_durable_runs</code> at its default, what ends up
+  in the conversation?</p>
+  <button class="opt" data-correct="false">Nothing new &mdash; the model call is abandoned when the socket closes, and the lone user message is repaired later by <code>POST /chat/failures/close</code>.</button>
+  <button class="opt" data-correct="false">The fallback message &ldquo;죄송합니다&hellip;&rdquo;, written by the abandoned-stream finalizer in the generator's <code>finally</code> block.</button>
+  <button class="opt" data-correct="true">The real, complete assistant answer with its citations &mdash; generation runs to the end as a detached task and persists normally.</button>
+  <button class="opt" data-correct="false">The real answer, but without citations, because the citation rendering happens in the request that disconnected.</button>
+  <p class="why" hidden>The durable path hands <code>iter_chat_stream</code> an
+  <code>AlwaysConnectedRequest</code> whose <code>is_disconnected()</code> is permanently
+  <code>False</code>, so every disconnect-guarded early <code>return</code> is unreachable and the
+  generator runs to completion inside a task the server owns. The HTTP request was only relaying frames
+  off a queue; cancelling it touches nothing. The finalizer in the <code>finally</code> block is
+  therefore cold on this path &mdash; &ldquo;single writer by construction&rdquo; &mdash; and the first
+  option describes the pre-durability behaviour that this design replaced.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Where is the model told how many of its four searches remain, and why
+  <em>there</em>?</p>
+  <button class="opt" data-correct="false">In the system prompt, rebuilt on every model call by <code>awrap_model_call</code>, because that is the only text guaranteed to be in context.</button>
+  <button class="opt" data-correct="true">Appended to the body of each successful tool result, because that is where the model decides whether to search again &mdash; and because a per-turn number in the system prompt would break Gemini's implicit prefix caching.</button>
+  <button class="opt" data-correct="false">Nowhere &mdash; the budget is enforced silently by the tools, and the model simply gets a <code>limit_exhausted</code> result once it is spent.</button>
+  <button class="opt" data-correct="false">In the <code>status</code> SSE frame, which the model reads back through the LangGraph custom stream.</button>
+  <p class="why" hidden><code>_chat_search_budget_guidance</code> writes &ldquo;Search budget for this
+  turn: 2 of 4 searches used, 2 remaining&hellip;&rdquo; into the ok-path guidance of all three retrieval
+  tools. Its docstring gives both reasons, and the second is a cost constraint shaping an architecture:
+  the static rulebook in <code>app/prompts.py</code> is the cached prompt prefix, so injecting anything
+  per-turn above the two trailing dynamic sections would defeat the discount on every chat turn. (The
+  <code>limit_exhausted</code> result does exist &mdash; but it is the wall, not the warning.)</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The browser re-sends a turn with a <code>message_idempotency_key</code> it
+  already used. What decides between a replay and a 409?</p>
+  <button class="opt" data-correct="false">The run registry: if a run with that idempotency key is still in Redis it is a 409, otherwise the stored answer is replayed.</button>
+  <button class="opt" data-correct="true">Whether the conversation's last message is an assistant reply. If the earlier turn finished, the stored answer is streamed back from the database; if it is still running, the tail is the user row and the pre-stream conflict guard answers 409.</button>
+  <button class="opt" data-correct="false">The <code>created</code> flag alone &mdash; a duplicate user write always replays, and the 409 only happens on a genuinely new message.</button>
+  <button class="opt" data-correct="false">A <code>Retry-After</code> negotiation: the first duplicate is a 409, and the client's retry after the run finishes is replayed.</button>
+  <p class="why" hidden>Two facts are joined. <code>created is False</code> from the user write says
+  &ldquo;this exact message already exists&rdquo;, and the conversation detail fetched before the write
+  says whether that turn <em>finished</em>. Only when the last message is an <code>assistant</code> row
+  does the route stream <code>iter_replayed_chat_stream</code> &mdash; the stored text in 80-character
+  chunks, no model call, no new row. If the turn is still in flight the tail is the user message, so the
+  <code>last_message_role == "user"</code> guard fires earlier in the ladder and answers 409; the client
+  is expected to call <code>run-status</code> and re-attach instead.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The user presses 멈추기 during a long answer. Which component actually turns
+  that click into something the conversation records?</p>
+  <button class="opt" data-correct="false"><code>DurableChatRunManager</code>, which cancels the run's <code>asyncio.Task</code>; the task's <code>finally</code> writes the cancellation message.</button>
+  <button class="opt" data-correct="false">The cancel route itself &mdash; it writes the &ldquo;답변 생성을 중단했습니다&rdquo; message to Django and then marks the run cancelled.</button>
+  <button class="opt" data-correct="true">The streaming generator: the cancel route only sets <code>cancel_requested = 1</code> in Redis; the generator polls that flag, raises <code>ChatRunCancelled</code>, and its handler persists the cancellation message and emits <code>done: cancelled</code>.</button>
+  <button class="opt" data-correct="false">The LangGraph checkpointer, which rolls the thread back to the last checkpoint and emits a cancellation event.</button>
+  <p class="why" hidden>Cancellation is cooperative and entirely mediated by two Redis fields.
+  <code>request_cancel</code> sets <code>cancel_requested</code> and <code>status = "cancelling"</code>
+  for the run's owner and returns; the generator checks <code>_is_cancel_requested</code> at each of its
+  polling points (after <code>preparing</code>, after the compaction wait, per agent event, and once
+  before the assistant write) and raises its own exception, which
+  <code>_emit_cancelled_generated_stream</code> turns into a persisted
+  <code>assistant-cancelled</code> message plus the closing frames. Nothing is killed &mdash; which is
+  exactly why it works across the durable split, where the cancelling request and the running task share
+  nothing but that key.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> On a default chat turn, what does the LangGraph Postgres checkpointer hold
+  that Django does not?</p>
+  <button class="opt" data-correct="false">The long-term conversation memory &mdash; Django stores only the latest turn, and the checkpointer keeps the full history the model sees.</button>
+  <button class="opt" data-correct="false">Nothing at all; the checkpointer is vestigial on the chat path and is only kept because 컨설팅 still uses it.</button>
+  <button class="opt" data-correct="true">The in-flight run: the model's working message list including tool calls and tool results, plus this turn's retrieval counter and document maps &mdash; all of it deleted and rebuilt from Django's history at the start of the next turn.</button>
+  <button class="opt" data-correct="false">The user's per-turn thinking level and model id, cached across turns so the operator config is not re-read every time.</button>
+  <p class="why" hidden>Two stores, two jobs. Django holds the conversation &mdash; user and assistant
+  messages, citations, ownership &mdash; and is the memory across turns.
+  <code>sync_chat_agent_checkpoint</code> unconditionally calls
+  <code>adelete_thread</code> and rebuilds the thread from that history on every turn, precisely because
+  a reused thread keeps prior turns' <code>ToolMessage</code>s, i.e. document bodies with their post
+  ids, in the model's context &mdash; the supply route for citing documents this turn never retrieved.
+  So the checkpointer carries the run's state <em>within</em> a turn (that is what the reducers write
+  through) and nothing across turns. The thinking level and model id are read fresh per turn, never
+  cached per user.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Files walked on this page:</strong>
+<span class="files"><code>apps/agent/app/api/routes/chat.py</code>,
+<code>apps/agent/app/chat/agent.py</code>, <code>apps/agent/app/chat/sse.py</code>,
+<code>apps/agent/app/chat/durable_runs.py</code>, <code>apps/agent/app/chat/run_registry.py</code>,
+<code>apps/agent/app/chat/checkpointing.py</code>, <code>apps/agent/app/chat/fingerprints.py</code>,
+<code>apps/agent/app/chat/previews.py</code>,
+<code>apps/agent/app/chat/user_thinking_level.py</code>, <code>apps/agent/app/prompts.py</code>,
+<code>apps/agent/app/main.py</code>, <code>apps/agent/app/config.py</code>,
+<code>apps/agent/app/db/connection.py</code>; the tool surfaces in
+<code>apps/agent/app/chat/cited_retrieval_tool.py</code> and
+<code>apps/agent/app/chat/session_search_tool.py</code>.</span></p>
+
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4
+Conversations as the system of record: models, the API, and the agent write-back loop</a>. Next is
+#6, chat context &mdash; the rolling window, compaction, budgets and recall &mdash; which explains the
+one thing this page kept deferring: exactly which slice of a long conversation the model is handed, and
+what happens to the rest of it. After that, #7 opens the retrieval tools this page only knocked
+on.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
