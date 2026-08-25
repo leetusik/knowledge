@@ -1,0 +1,1334 @@
+<!--kb
+title: "Retrieval: the RAG read path from query plan to ranked citations"
+date: 2026-08-26
+tags:
+  - changple5
+  - rag
+  - retrieval
+  - pgvector
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retrieval: the RAG read path from query plan to ranked citations</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  td.num, th.num { text-align: right; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem 1fr; gap: .6rem; align-items: center; margin: .3rem 0; font-size: .85rem; }
+  .lane .who { font-weight: 650; color: #14324f; text-align: right; font-size: .82rem; }
+  .bar { height: 1.35rem; border-radius: 4px; position: relative; background: #e8ecf1; }
+  .bar span { position: absolute; top: 0; bottom: 0; border-radius: 4px; font-size: .7rem; color: #fff;
+              display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .small { font-size: .88rem; color: #57606a; }
+  .ladder { display: grid; gap: .35rem; }
+  .rung {
+    display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start;
+    background: #fff; border: 1px solid #e3e7ec; border-left: 4px solid #3d6fd8;
+    border-radius: 6px; padding: .5rem .7rem; font-size: .87rem;
+  }
+  .rung .n { font-weight: 700; color: #3d6fd8; text-align: center; }
+  .rung.stop { border-left-color: #d05a5a; }
+  .rung.write { border-left-color: #2f9e6e; }
+  .legend { display: flex; flex-wrap: wrap; gap: .9rem; font-size: .78rem; color: #57606a; margin-top: .5rem; }
+  .legend i { display: inline-block; width: .85rem; height: .85rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; border: 1px solid #d9dee5; }
+  .layers { display: grid; gap: .5rem; }
+  .layer { border: 1px solid #e3e7ec; border-radius: 7px; padding: .6rem .8rem; background: #fff; font-size: .87rem; }
+  .layer b { display: block; color: #14324f; }
+  .layer.l1 { border-left: 5px solid #3d6fd8; }
+  .layer.l2 { border-left: 5px solid #d99a17; }
+  .layer.l3 { border-left: 5px solid #2f9e6e; }
+  .layer.l4 { border-left: 5px solid #7a4fc0; }
+  .kv { font-size: .87rem; }
+  .kv b { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; color: #14324f; }
+  .funnel { display: grid; gap: .3rem; justify-items: center; }
+  .step {
+    border: 1px solid #d9dee5; border-radius: 6px; padding: .42rem .7rem; font-size: .84rem;
+    background: #f6f8fa; text-align: center; line-height: 1.35;
+  }
+  .step b { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; color: #14324f; }
+  .step.w1 { width: 100%; } .step.w2 { width: 82%; } .step.w3 { width: 64%; }
+  .step.w4 { width: 46%; } .step.w5 { width: 30%; background:#d9f5e3; border-color:#86d3a6; }
+  .down { color: #8b96a2; font-size: .95rem; line-height: 1; }
+  .scorebar { height: 1.05rem; background: #3d6fd8; border-radius: 3px; display: inline-block; vertical-align: -2px; }
+  .scorebar.boost { background: #d99a17; }
+</style>
+</head>
+<body>
+
+<h1>Retrieval: the RAG read path from query plan to ranked citations</h1>
+<p class="subtitle">Explainer #7 of the changple5 builder&rsquo;s curriculum, Part B. Explainers #5 and
+#6 kept calling <code>search_changple_documents</code> a &ldquo;tool surface&rdquo; and promised to open
+it later. This is later. Between the model emitting
+<code>search_changple_documents("치킨집 창업 비용")</code> and the model receiving a handful of citable
+창플 카페 posts, roughly a dozen modules run: a query planner, two SQL arms over a read-only bridge into
+another app&rsquo;s database, a materialized eligibility boolean, a live brand policy, rank fusion, a
+recency boost, a second language model whose only job is reordering, a five-minute Redis cache, and a
+body fetch deliberately postponed to the very end.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<h3>What &ldquo;RAG&rdquo; means in this application, concretely</h3>
+
+<p><strong>Retrieval-augmented generation</strong> (RAG) is the pattern where, instead of hoping a
+language model already knows something, you <em>look it up first</em> and paste what you found into the
+model&rsquo;s prompt for this one request. The model is a very good reader and a very unreliable
+librarian; RAG makes it read rather than remember. In changple5 the shape is exactly that and nothing
+more exotic: a 창플 member asks &ldquo;치킨집 창업 비용이 얼마나 드나요?&rdquo;, the agent runs a search
+over the 창플 카페 archive, and the top few posts &mdash; title, author, date, summary and full body text
+&mdash; are handed to Gemini inside a tool result. The answer the user reads is written by Gemini
+<em>from those posts</em>, and every <code>[post:2841]</code> marker in it points at one of them.</p>
+
+<p>That last clause is the product rule the whole pipeline exists to serve, and explainers
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5</a> and
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/06-chat-context-and-memory">#6</a> already
+established it: <strong>a document is citable only if THIS turn retrieved it.</strong> Prior turns&rsquo;
+tool results are deleted from the model&rsquo;s context, and a citation marker for a document that is not
+in this turn&rsquo;s retrieved map is stripped before the user sees the answer. So retrieval is not a
+convenience layer &mdash; it is the <em>only</em> supply of citable material, once per turn, and the
+quality of an answer is bounded by what this pipeline returns.</p>
+
+<div class="skip">
+<p><span class="tag">Skip if you know it</span> Five facts this page builds on, all from earlier
+explainers. <strong>(1)</strong> Two apps share one Postgres over a <em>one-way read bridge</em>: Django
+owns the <code>backend</code> schema, the FastAPI agent owns <code>agent</code> and holds
+<code>SELECT</code>-only rights on <code>backend</code> (#1, #2). <strong>(2)</strong> The agent&rsquo;s
+connection pins no <code>search_path</code>, so every cross-schema table name is written out in full
+(#2). <strong>(3)</strong> Redis is split by logical database: db/0 registries and rate limits, db/1 the
+Django cache, <strong>db/2 the agent&rsquo;s retrieval cache</strong> (#1). <strong>(4)</strong> Some
+config is <em>live</em>: a 30-second snapshot read out of operator-owned tables across the bridge, never
+a redeploy (#2). <strong>(5)</strong> A chat turn may call retrieval tools at most
+<code>MAX_CHAT_RETRIEVAL_CALLS = 4</code> times, and each call returns at most
+<code>resolve_chat_max_tool_results(...)</code> documents (#5).</p>
+</div>
+
+<h3>The corpus &mdash; or rather, the two corpora</h3>
+
+<p>Retrieval here reads two completely different bodies of text, and keeping them apart is a recurring
+theme of this page.</p>
+
+<div class="layers">
+  <div class="layer l1"><b>1. 창플 카페 posts &mdash; the naver corpus</b>
+  Scraped Naver cafe articles, owned by Django in the <code>backend</code> schema:
+  <code>documents_documentsource</code> (one row per post, keyed by <code>post_id</code>, carrying
+  title, author, board <code>category</code>, <code>published_at</code>, the body text, an LLM-written
+  <code>summary</code> and <code>keywords</code>), plus <code>documents_documentsourcestatus</code>,
+  <code>documents_author</code>, <code>documents_board</code>, <code>documents_brand</code> and
+  <code>documents_branch</code>. Explainer #8 covers how a post gets scraped, enriched and judged;
+  here it is simply <em>there</em>.</div>
+
+  <div class="layer l2"><b>2. The agent&rsquo;s index over that corpus</b>
+  In the <code>agent</code> schema, written by the indexing pipeline of explainer #9:
+  <code>document_index_artifacts</code> (<code>post_id</code> primary key, one
+  <code>summary_embedding vector</code>, one <code>keyword_terms text[]</code>) and
+  <code>document_chunk_artifacts</code> (per-chunk <code>halfvec(3072)</code> embeddings with an HNSW
+  index). These are <em>derived</em> data: delete them and the posts survive, but nothing is findable.</div>
+
+  <div class="layer l3"><b>3. 미라클 콘텐츠 &mdash; the published-content corpus</b>
+  <code>backend.content_notioncontent</code>: first-party guides the operator writes and publishes
+  (explainer #12), with their own chunk index <code>agent.content_chunk_artifacts</code>. A different
+  row spine entirely: <strong>no <code>post_id</code></strong>, no author, no Naver URL. A content
+  citation links to <code>/content/&lt;id&gt;</code>, not to a cafe post.</div>
+
+  <div class="layer l4"><b>4. The session&rsquo;s own citation ledger</b>
+  Not a corpus but a <em>set of ids</em> the current conversation has already cited (#6). It has its own
+  retrieval arm, because &ldquo;아까 그 자료 다시&rdquo; must not depend on the search finding the same
+  post twice.</div>
+</div>
+
+<p>Two corpora with two id spaces is the single most consequential design fact in this package. A
+<code>content_id</code> that leaks into a <code>post_id</code>-keyed structure is not a type error &mdash;
+it is a <em>citation pointing at the wrong document</em>, rendered confidently to a paying user. You will
+see the code go to unusual lengths to make that impossible.</p>
+
+<h3>Where retrieval sits, and who calls it</h3>
+
+<p>Everything on this page lives in <code>apps/agent/app/retrieval/</code> &mdash; about 4,800 lines
+across twelve modules &mdash; plus one HTTP route module. It is called from six places, and it is worth
+seeing the list early, because &ldquo;one pipeline, several callers with different widths&rdquo; explains
+several otherwise-odd design choices:</p>
+
+<table>
+<tr><th>Caller</th><th>Entry point</th><th>Shape</th></tr>
+<tr><td>일반 대화 chat tool <code>search_changple_documents</code></td><td><code>build_ranked_retrieval_result</code></td><td>default widths, published contents ON</td></tr>
+<tr><td>컨설팅 mode (#10)</td><td>same</td><td>default widths</td></tr>
+<tr><td>Author tool <code>search_changple_author_posts</code></td><td><code>build_author_post_retrieval_result</code></td><td>author-scoped, wraps the chokepoint</td></tr>
+<tr><td>Content tool <code>search_changple_contents</code></td><td><code>build_content_retrieval_result</code></td><td>content corpus only, no rerank</td></tr>
+<tr><td>&ldquo;아까 그 자료&rdquo; <code>search_cited_documents</code></td><td><code>build_cited_retrieval_result</code></td><td>by id, budget-exempt</td></tr>
+<tr><td>The content agent (#15)</td><td><code>build_ranked_retrieval_result</code></td><td>much wider: 64/64/24/40 + chunk arm</td></tr>
+<tr><td>GPTs / integrations, operator bench (#17)</td><td><code>POST /agent-api/v1/retrieve</code>, <code>/retrieval/explain</code></td><td>HTTP, API-key or service token</td></tr>
+</table>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>Two ways to find a post, and why you want both</h3>
+
+<p>Suppose the archive holds 6,900 posts and the question is <em>치킨집 창업 비용</em>. There are two
+honest ways to find the relevant ones, and each fails in a way the other does not.</p>
+
+<p><strong>Keyword matching</strong> asks: which posts carry these words? It is exact, cheap and
+explainable &mdash; and it is blind to vocabulary. A post that says 프랜차이즈 가맹비 and 인테리어 견적
+never mentions 비용, so it does not match, even though it is precisely the answer.</p>
+
+<p><strong>Vector matching</strong> asks: which posts <em>mean</em> something close to this? Every post
+is turned once, at index time, into a list of 3,072 numbers &mdash; an <strong>embedding</strong> &mdash;
+positioned so that texts about similar things land near each other. The question is embedded the same
+way at query time, and the database returns the nearest posts by <strong>cosine distance</strong> (0 =
+same direction, 1 = unrelated, 2 = opposite). Vocabulary stops mattering. What breaks instead is
+precision on rare literal tokens: ask for a specific brand name or a specific 지점 and semantic
+nearness will happily hand you the whole genre.</p>
+
+<p>Running both and merging is called <strong>hybrid retrieval</strong>, and it is what
+<code>build_hybrid_candidate_result</code> does. The merge is deliberately <em>rank</em>-based rather
+than score-based: a keyword hit-count and a cosine distance are not comparable numbers, but &ldquo;#1 in
+its own arm&rdquo; and &ldquo;#3 in its own arm&rdquo; are. Then, because a rank-merged list is still
+only a guess about relevance, a small fast language model reads the top sixteen and reorders them.</p>
+
+<figure>
+<div class="fig-box">
+<div class="stack">
+  <div class="flow">
+    <div class="node user"><b>Tool call</b><span class="m">search_changple_documents("치킨집 창업 비용")</span></div>
+    <span class="arrow">&#8594;</span>
+    <div class="node"><b>1. Query plan</b><span class="m">query_planning.py</span>3 variants, 3 terms, 3 phrases</div>
+    <span class="arrow">&#8594;</span>
+    <div class="node svc"><b>2a. Embed</b><span class="m">embeddings.py + db/2</span>3 &times; gemini-embedding-2</div>
+  </div>
+  <div class="flow">
+    <div class="node"><b>3a. Lexical SQL</b><span class="m">list_lexical_candidates</span>keyword_terms overlap &rarr; &le;32</div>
+    <div class="node"><b>3b. Vector SQL</b><span class="m">list_vector_candidates</span>3 &times; ANN &rarr; merge &rarr; &le;32</div>
+    <div class="node"><b>3c. Content arm</b><span class="m">list_content_chunk_candidates</span>parallel channel, &le;3</div>
+  </div>
+  <div class="flow">
+    <div class="node"><b>4. Fusion</b><span class="m">build_fused_retrieval_candidates</span>&Sigma; 1/rank, keyed by post_id</div>
+    <span class="arrow">&#8594;</span>
+    <div class="node"><b>5. Recency boost</b><span class="m">+0.2 &rarr; 0, half-life 30d</span></div>
+    <span class="arrow">&#8594;</span>
+    <div class="node svc"><b>6. Rerank</b><span class="m">GeminiRetrievalReranker</span>top 16, structured output</div>
+  </div>
+  <div class="flow">
+    <div class="node"><b>7. RankedRetrievalResult</b><span class="m">cached in Redis db/2, 300 s</span></div>
+    <span class="arrow">&#8594;</span>
+    <div class="node"><b>8. Select</b><span class="m">prefer-uncited, &le;6</span></div>
+    <span class="arrow">&#8594;</span>
+    <div class="node deny"><b>9. Hydrate bodies</b><span class="m">hydrate_document_bodies</span>winners only</div>
+  </div>
+</div>
+</div>
+<figcaption>Figure 1 &mdash; the whole read path for one tool call. Rows 1&ndash;3 gather candidates,
+row 4&ndash;6 order them, row 7&ndash;9 turn the order into a tool payload. Steps 2a and 3c are the only
+two that talk to a remote service; step 9 is the only one that reads post <em>bodies</em>.</figcaption>
+</figure>
+
+<h3>The funnel: recall first, precision last</h3>
+
+<p>The numbers matter as much as the boxes. Each stage is cheap where the set is wide and expensive
+where it is narrow &mdash; which is the whole trick of a retrieval pipeline.</p>
+
+<figure>
+<div class="fig-box">
+<div class="funnel">
+  <div class="step w1">~6,900 eligible posts in the archive <b>&mdash; SQL gates only</b></div>
+  <div class="down">&#9660;</div>
+  <div class="step w2">32 lexical + 32 vector candidates <b>&mdash; two SQL statements</b></div>
+  <div class="down">&#9660;</div>
+  <div class="step w3">~50 distinct posts fused by <code>post_id</code> <b>&mdash; pure arithmetic</b></div>
+  <div class="down">&#9660;</div>
+  <div class="step w4">16 candidates re-read by a language model <b>&mdash; one flash-lite call</b></div>
+  <div class="down">&#9660;</div>
+  <div class="step w5">6 documents, bodies loaded <b>&mdash; one final SQL</b></div>
+</div>
+</div>
+<figcaption>Figure 2 &mdash; the default (chat) widths. The content agent runs the same funnel at
+64&nbsp;/&nbsp;64&nbsp;/&nbsp;40. Every number here is a named constant, and all of them ride in the
+cache key.</figcaption>
+</figure>
+
+<h3>What the model is <em>allowed</em> to see: one boolean and one join</h3>
+
+<p>Not every post in the archive may be cited. A post whose author left the cafe, whose board is
+출석체크, whose text was never enriched, or which the operator excluded by hand, must not surface. That
+judgement is genuinely complicated &mdash; a dozen reason codes, an operator-editable rank policy, a date
+floor (explainer #8) &mdash; and the crucial design decision is that <strong>retrieval does not make
+it</strong>. The backend evaluates everything and writes the answer into one materialized column,
+<code>documents_documentsource.reference_eligible</code>. Every retrieval statement then reads a single
+boolean: <code>ds.reference_eligible = TRUE</code>.</p>
+
+<p>There is exactly one exception, and its reason is instructive. The operator can switch a
+<strong>brand</strong> (or one 지점 of it) out of retrieval, and that switch has to be
+<em>instantly reversible</em> &mdash; flip it back and the posts return on the next query, with no sweep
+and no re-index. A materialized column cannot do that, so the brand policy stays a live
+<code>LEFT JOIN</code> plus a predicate, spliced into every retrieval statement at query time. Two
+mechanisms, chosen by how fast a change must take effect:</p>
+
+<table>
+<tr><th></th><th>Everything else</th><th>Brand / branch toggle</th></tr>
+<tr><td>Where it is decided</td><td>Backend eligibility engine (#8)</td><td>The retrieval SQL itself</td></tr>
+<tr><td>How retrieval reads it</td><td><code>ds.reference_eligible = TRUE</code></td><td><code>LEFT JOIN</code> + <code>reference_enabled</code></td></tr>
+<tr><td>Cost of a change</td><td>A sweep, sometimes a re-index</td><td>Zero &mdash; next query</td></tr>
+<tr><td>Effect on the index</td><td>May stop being indexed</td><td>Never de-indexed; hidden only</td></tr>
+</table>
+
+<h3>Why a cache, and why five minutes</h3>
+
+<p>One uncached tool call costs up to three remote embedding calls, three or four SQL round trips and
+one language-model rerank &mdash; on the critical path of a streaming answer the user is watching. Yet
+the inputs are all <em>corpus-global</em>: the same normalized question, at the same widths, under the
+same models and the same brand policy, must give every user the same result. So the entire ranked
+result is stored in Redis db/2 under a hash of exactly those inputs, for 300 seconds. The corpus
+changes roughly daily; a five-minute window is invisible. Nothing user-specific ever enters that key
+&mdash; which is precisely why the by-id &ldquo;cited&rdquo; arm, whose input <em>is</em> session state,
+is kept out of that namespace entirely.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<h3>1. The chokepoint</h3>
+
+<p>Everything on the naver path funnels through one function,
+<code>apps/agent/app/retrieval/ranking.py:495</code>, and its docstring says so in as many words:</p>
+
+<pre><code>def build_ranked_retrieval_result(
+    query: str,
+    *,
+    settings: Settings | None = None,
+    query_embedding_client: GeminiQueryEmbeddingClient | None = None,
+    reranker: RetrievalReranker | None = None,
+    lexical_limit: int = DEFAULT_LEXICAL_CANDIDATE_LIMIT,        # 32
+    vector_limit: int = DEFAULT_VECTOR_CANDIDATE_LIMIT,          # 32
+    vector_per_variant_limit: int = DEFAULT_VECTOR_PER_VARIANT_LIMIT,  # 12
+    rerank_limit: int = DEFAULT_RERANK_CANDIDATE_LIMIT,          # 16
+    author_name: str | None = None,
+    enforce_brand_policy: bool = True,
+    chunk_mode: ChunkMode = ChunkMode.OFF,
+    chunk_limit: int = 0,
+    content_mode: ContentMode = ContentMode.OFF,
+    content_limit: int = 0,
+) -&gt; RankedRetrievalResult:
+    """The one retrieval chokepoint (chunk-proposal §2, principle 5).
+    ...
+    per-call keyword arguments with the *current* behaviour as the
+    default, so every existing caller keeps calling with defaults and keeps
+    getting byte-identical results."""</code></pre>
+
+<p>That comment is the package&rsquo;s governing convention, and it is worth naming because it recurs
+four times in the file&rsquo;s history. When a new arm or a new corpus arrives, it does <strong>not</strong>
+become a new pipeline or a new default; it becomes a keyword argument whose default is the old
+behaviour, plus two more components in the cache key. Concretely, today:</p>
+
+<table>
+<tr><th>Opt-in</th><th>Values</th><th>Who opts in</th></tr>
+<tr><td><code>chunk_mode</code></td><td><code>OFF</code> / <code>SUPPLEMENT</code> / <code>PRIMARY</code></td><td>Only <code>content_drafts/retrieval.py</code>, at <code>SUPPLEMENT</code> with <code>chunk_limit=24</code>. <code>PRIMARY</code> is implemented, tested and used by nobody.</td></tr>
+<tr><td><code>content_mode</code></td><td><code>OFF</code> / <code>ON</code></td><td>The chat tool and 컨설팅, at <code>content_limit = MAX_CHAT_CONTENT_RESULTS = 3</code>. The content agent and the public/operator routes stay out permanently &mdash; a published content must never become research material for the machine that writes published contents.</td></tr>
+<tr><td><code>author_name</code></td><td>a resolved author</td><td><code>author_posts.py</code> only.</td></tr>
+<tr><td><code>enforce_brand_policy</code></td><td><code>True</code> / <code>False</code></td><td><code>False</code> is reachable <em>only</em> from the operator bench&rsquo;s own request model &mdash; structurally unreachable from the public one.</td></tr>
+</table>
+
+<p>Both mode enums are <code>str</code> subclasses (<code>class ChunkMode(str, Enum)</code>) for one
+concrete reason stated in their docstrings: the value drops straight into the ranked cache key without a
+conversion step.</p>
+
+<h3>2. Query planning</h3>
+
+<p><code>query_planning.py</code> is 166 lines of pure text handling &mdash; no I/O, no model, no
+database. It turns one string into a <code>RetrievalQueryPlan</code>:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class RetrievalQueryPlan:
+    raw_query: str          # exactly what the caller passed
+    normalized_query: str   # whitespace collapsed, trimmed
+    lexical_terms: tuple[str, ...]    # deduped casefolded tokens
+    lexical_phrases: tuple[str, ...]  # full query, then 3-grams, then 2-grams (max 10)
+    query_variants: tuple[str, ...]   # what actually gets embedded (max 3)</code></pre>
+
+<p>Four steps: collapse whitespace and reject a blank query; split on spaces, strip
+<em>surrounding</em> punctuation (Unicode category <code>P*</code>) from each token and casefold it;
+build phrases as the normalized query followed by every 3-token then 2-token window, stopping at
+<code>_MAX_LEXICAL_PHRASES = 10</code>; and build variants as the normalized query plus the shorter
+phrases, stopping at <code>_MAX_QUERY_VARIANTS = 3</code>. Run on the toy query, that is:</p>
+
+<figure>
+<div class="fig-box">
+<div class="kv">
+<p><b>raw_query</b> &nbsp;<code>"치킨집 창업 비용"</code></p>
+<p><b>normalized_query</b> &nbsp;<code>"치킨집 창업 비용"</code></p>
+<p><b>lexical_terms</b> &nbsp;<code>("치킨집", "창업", "비용")</code></p>
+<p><b>lexical_phrases</b> &nbsp;<code>("치킨집 창업 비용", "치킨집 창업", "창업 비용")</code></p>
+<p><b>query_variants</b> &nbsp;<code>("치킨집 창업 비용", "치킨집 창업", "창업 비용")</code> &mdash; three embeddings</p>
+</div>
+</div>
+<figcaption>Figure 3 &mdash; the plan for <code>치킨집 창업 비용</code>, as produced by
+<code>build_retrieval_query_plan</code>.</figcaption>
+</figure>
+
+<p>The variants are the recall lever on the vector arm: rather than embedding one long question, the
+pipeline embeds the whole thing <em>and</em> its two most informative sub-phrases, runs a separate
+nearest-neighbour query for each, and keeps each post&rsquo;s best distance. A post that is only
+&ldquo;about 창업 비용&rdquo; and says nothing about 치킨집 can still enter the pool through variant 3.</p>
+
+<div class="warn">
+<p><span class="tag">A real limitation, visible in the plan</span> Tokenization is
+whitespace-plus-punctuation only &mdash; it does <strong>not</strong> strip Korean particles. Ask
+&ldquo;치킨집 창업 비용은 얼마인가요?&rdquo; and <code>lexical_terms</code> becomes
+<code>("치킨집", "창업", "비용은", "얼마인가요")</code>: the term <code>비용은</code> will never
+equal the indexed keyword <code>비용</code>, so that token contributes nothing to the lexical arm. The
+vector arm is unaffected (it reads meaning, not tokens), and the phrase windows still produce useful
+variants, so the failure is a quiet loss of lexical precision rather than an empty result. Note the
+contrast with <code>apps/agent/app/chat/_author_query.py</code>, which <em>does</em> carry a
+<code>_KOREAN_NAME_SUFFIXES</code> stripper &mdash; because for a person&rsquo;s name, getting
+&ldquo;창수님&rdquo; to match &ldquo;창수&rdquo; is the whole job.</p>
+</div>
+
+<h3>3. Candidates over the read bridge</h3>
+
+<p><code>candidates.py</code> is the big module (1,653 lines). It opens with the tables it reaches
+across the bridge, every one of them schema-qualified by hand because the agent&rsquo;s connection pins
+no <code>search_path</code> (#2):</p>
+
+<pre><code>BACKEND_SCHEMA_NAME = "backend"
+DOCUMENT_SOURCE_TABLE        = qualify_table_name(BACKEND_SCHEMA_NAME, "documents_documentsource")
+DOCUMENT_SOURCE_STATUS_TABLE = qualify_table_name(BACKEND_SCHEMA_NAME, "documents_documentsourcestatus")
+AUTHOR_TABLE                 = qualify_table_name(BACKEND_SCHEMA_NAME, "documents_author")
+CONTENT_TABLE                = qualify_table_name(BACKEND_SCHEMA_NAME, "content_notioncontent")
+
+DEFAULT_LEXICAL_CANDIDATE_LIMIT    = 32
+DEFAULT_VECTOR_CANDIDATE_LIMIT     = 32
+DEFAULT_VECTOR_PER_VARIANT_LIMIT   = 12
+_ELIGIBLE_DOCUMENT_STATUS          = "SAVED"
+_REFERENCE_ELIGIBLE_SQL            = "ds.reference_eligible = TRUE"
+_READABLE_CONTENT_SQL = (
+    "cn.html_path &lt;&gt; '' AND cn.has_body = TRUE AND cn.published_at IS NOT NULL"
+)</code></pre>
+
+<p>This is the read bridge of explainer #1 in daily use: the agent <code>SELECT</code>s from four of
+Django&rsquo;s tables and joins them against its own index tables, in one statement, with no HTTP call
+and no serialization in between. It is also why the bridge&rsquo;s <code>ALTER DEFAULT PRIVILEGES</code>
+grant matters &mdash; a table added by a future Django migration is readable here without anyone
+remembering to grant it.</p>
+
+<h4>The four gates, restated in every statement</h4>
+
+<p>Five statements in this package (three query-driven builders plus two in <code>author_posts.py</code>)
+carry the identical <code>WHERE</code> spine:</p>
+
+<pre><code>INNER JOIN {DOCUMENT_SOURCE_STATUS_TABLE} AS dss
+    ON dss.post_id = ds.post_id AND dss.status = %s      -- 'SAVED'
+{brand_policy_join}
+WHERE ds.ingested = TRUE
+    AND ds.reference_eligible = TRUE
+    {brand_policy_clause}
+    {author_filter_clause}</code></pre>
+
+<p>Restating it is not duplication-by-accident; the module comment explains why. The chunk table
+<code>agent.document_chunk_artifacts</code> <em>has no eligibility, date or brand column of its own</em>,
+so any gate omitted from the chunk statement would make the chunk index a bypass around it &mdash; a
+brand-disabled post&rsquo;s chunks surfacing where its summary vector cannot. Four gates, four different
+owners:</p>
+
+<ul>
+<li><code>dss.status = 'SAVED'</code> &mdash; the scrape landed and was stored (indexing state).</li>
+<li><code>ds.ingested = TRUE</code> &mdash; the row has been handed to the indexer (indexing state).</li>
+<li><code>ds.reference_eligible = TRUE</code> &mdash; <strong>the</strong> eligibility predicate,
+materialized by the backend engine. Since P53.S4 it also absorbs what used to be an
+<code>AllowedAuthor</code> inner join and a per-query retrieval-policy CTE with the operator&rsquo;s date
+floor. Retrieval reads one boolean and re-derives nothing.</li>
+<li>the brand policy &mdash; live, below.</li>
+</ul>
+
+<h4>The brand policy: SQL as a shared definition</h4>
+
+<p><code>brand_policy.py</code> exports the filter as two strings and a fingerprint:</p>
+
+<pre><code>BRAND_POLICY_JOIN_SQL = (
+    "LEFT JOIN backend.documents_brand AS bp_brand  ON bp_brand.id  = ds.brand_id\n"
+    "LEFT JOIN backend.documents_branch AS bp_branch ON bp_branch.id = ds.branch_id"
+)
+BRAND_POLICY_PREDICATE_SQL = (
+    "(ds.brand_id IS NULL OR bp_brand.reference_enabled)"
+    " AND (ds.branch_id IS NULL OR bp_branch.reference_enabled)"
+)
+
+def build_brand_policy_sql(enforce: bool) -&gt; tuple[str, str]:
+    if not enforce:
+        return ("", "")          # byte-identical to the pre-P53.S8 statement
+    return (BRAND_POLICY_JOIN_SQL, f"AND {BRAND_POLICY_PREDICATE_SQL}")</code></pre>
+
+<p>Three details repay attention. The joins are <code>LEFT</code> and the predicate short-circuits on
+<code>NULL</code>, so <strong>unclassified is retrievable by default</strong> &mdash; an unclassified post
+can never silently vanish because nobody has labelled it yet. The fragment is <em>parameter-free</em> on
+purpose: the lexical builder&rsquo;s positional parameter list is order-sensitive around a conditional
+author clause, and a predicate carrying a bound value would have to be spliced at exactly the right
+index. And <code>BRAND_POLICY_PREDICATE_SQL</code> is a plain literal with the aliases inlined rather
+than an f-string, because a backend test lifts that exact string out of this file with <code>ast</code>
+and executes it against real Postgres rows &mdash; which is how the two apps&rsquo; twin definitions get
+an execution-level proof instead of a shape assertion.</p>
+
+<p>The Django side keeps a matching, deliberately <em>observational</em> reason code. From
+<code>apps/backend/documents/eligibility.py</code>:</p>
+
+<pre><code>#: Brand/branch reference toggle is off. **Retrieval-side only** -- never indexed
+#: away, so a toggle flip is instantly reversible.
+BRAND_FILTERED: Final = "brand_filtered"
+
+#: Codes that gate retrieval only and must never gate enrichment or indexing.
+RETRIEVAL_ONLY_REASON_CODES: Final[frozenset[str]] = frozenset({BRAND_FILTERED})</code></pre>
+
+<p>Nothing in the agent reads that code &mdash; it exists for the operator&rsquo;s &ldquo;why is this post
+not retrievable?&rdquo; readout &mdash; which is exactly why an un-swept row is never <em>wrongly</em>
+filtered. Contrast <code>MANUAL_EXCLUDED</code> in the same file: the operator excluding one post by hand
+flips <code>reference_eligible</code> itself, needs no agent-side predicate, and is sticky.</p>
+
+<h4>The lexical arm is not full-text search</h4>
+
+<p>This is the most commonly mis-assumed part of the pipeline, so read the statement rather than the
+name. There is no <code>tsvector</code>, no <code>ILIKE</code>, no trigram index. The lexical arm is a
+<strong>set-overlap query against an array column</strong>:</p>
+
+<pre><code>WITH retrieval_inputs AS (
+    SELECT %s::text[] AS lexical_terms,
+           %s::text[] AS lexical_phrases,
+           %s::text[] AS lexical_matches
+)
+SELECT ds.post_id, ds.title, ..., matched.matched_terms, matched.matched_phrases
+FROM agent.document_index_artifacts AS dia
+CROSS JOIN retrieval_inputs AS inputs
+INNER JOIN backend.documents_documentsource AS ds ON ds.post_id = dia.post_id
+INNER JOIN backend.documents_documentsourcestatus AS dss
+        ON dss.post_id = ds.post_id AND dss.status = %s
+{brand_policy_join}
+CROSS JOIN LATERAL (
+    SELECT ARRAY(SELECT term   FROM unnest(inputs.lexical_terms)   AS term
+                 WHERE term   = ANY(dia.keyword_terms)) AS matched_terms,
+           ARRAY(SELECT phrase FROM unnest(inputs.lexical_phrases) AS phrase
+                 WHERE phrase = ANY(dia.keyword_terms)) AS matched_phrases
+) AS matched
+WHERE ds.ingested = TRUE
+  AND ds.reference_eligible = TRUE
+  {brand_policy_clause}
+  {author_filter_clause}
+  AND dia.keyword_terms &amp;&amp; inputs.lexical_matches
+  AND (cardinality(matched.matched_terms) &gt; 0
+       OR cardinality(matched.matched_phrases) &gt; 0)
+ORDER BY (cardinality(matched.matched_phrases) * 3
+          + cardinality(matched.matched_terms)) DESC,
+         cardinality(matched.matched_phrases) DESC,
+         cardinality(matched.matched_terms) DESC,
+         ds.published_at DESC NULLS LAST,
+         ds.post_id DESC
+LIMIT %s</code></pre>
+
+<p>The corpus side of the comparison is <code>dia.keyword_terms</code>, a <code>text[]</code> written at
+index time by the enrichment model &mdash; the handful of terms an LLM decided this post is <em>about</em>
+(explainer #9). Both sides are normalized identically (<code>normalize_keyword_terms</code> in
+<code>indexing/storage.py</code> collapses whitespace, casefolds and dedupes; the query planner does the
+same to the query), so <code>&amp;&amp;</code> and <code>= ANY(...)</code> are exact string equality over
+two small sets. The <code>&amp;&amp;</code> overlap in the <code>WHERE</code> is the fast pre-filter; the
+<code>LATERAL</code> block recomputes <em>which</em> terms and phrases matched so the result can carry
+them, and the score is:</p>
+
+<pre><code>lexical_score = (phrase_hit_count * 3) + term_hit_count</code></pre>
+
+<p>&mdash; computed twice, identically: once in SQL for the <code>ORDER BY</code>, once in Python in
+<code>_lexical_candidate_from_row</code> for the reported field. Phrases are weighted 3&times; because a
+matching two- or three-word phrase is far stronger evidence than the same words scattered. And note
+what this design buys and costs: it is exact, explainable and index-cheap, and it can only ever find
+posts whose <em>summarizer</em> chose the same words the user did.</p>
+
+<h4>The vector arm, per variant</h4>
+
+<pre><code>SELECT ds.post_id, ..., (dia.summary_embedding &lt;=&gt; %s::vector) AS distance
+FROM agent.document_index_artifacts AS dia
+INNER JOIN backend.documents_documentsource AS ds ON ds.post_id = dia.post_id
+INNER JOIN backend.documents_documentsourcestatus AS dss
+        ON dss.post_id = ds.post_id AND dss.status = %s
+{brand_policy_join}
+WHERE ds.ingested = TRUE AND ds.reference_eligible = TRUE
+  {brand_policy_clause} {author_filter_clause}
+ORDER BY distance ASC, ds.published_at DESC NULLS LAST, ds.post_id DESC
+LIMIT %s                                  -- per_variant_limit = 12</code></pre>
+
+<p><code>&lt;=&gt;</code> is pgvector&rsquo;s <strong>cosine distance</strong> operator. The statement runs
+once per query variant (so at most three times), each with its own embedding and its own
+<code>LIMIT 12</code>; results are merged in Python by <code>post_id</code>, keeping the
+<strong>minimum</strong> distance and unioning the variants that found it
+(<code>_merge_query_variants</code>), then sorted by <code>_vector_sort_key</code> &mdash; distance, then
+recency, then id descending, a total order so ties are deterministic &mdash; and truncated to 32.</p>
+
+<div class="note">
+<p><span class="tag">Two column types, one embedding</span> The summary column is a
+<strong>dimension-less</strong> <code>vector</code> (<code>indexing/storage.py:136</code>) with
+<em>no ANN index at all</em> &mdash; on a corpus of a few thousand rows an exact scan per variant is
+fine, and the width assertion is client-side because there is no schema constraint to lean on. The two
+chunk tables are <code>halfvec(3072)</code> with an HNSW index built as
+<code>USING hnsw (embedding halfvec_cosine_ops)</code>, which is why the chunk statements must cast the
+bind explicitly to <code>%s::halfvec(3072)</code> &mdash; a mismatched cast silently loses the index.
+Both index sides and the query are embedded with the <em>same</em> model, so an extra arm costs an extra
+ANN query, never an extra embedding call.</p>
+</div>
+
+<h4>Embedding the variants: one client, one request per text</h4>
+
+<p><code>embeddings.py</code> is small and strict. <code>GeminiQueryEmbeddingClient.from_settings</code>
+resolves <code>settings.gemini_embedding_model</code>, whose default is the GA
+<code>gemini-embedding-2</code> at 3,072 dimensions; the request timeout is delivered through
+<code>request_options</code> because <code>GoogleGenerativeAIEmbeddings</code> accepts no
+<code>timeout</code> kwarg, and retries are owned by the shared <code>call_with_retry</code>. Every
+failure becomes one type, <code>RetrievalEmbeddingError</code>.</p>
+
+<p>The architecture record (<code>docs/current/architecture.md</code>, &sect;&ldquo;One embedding posture
+across all four clients&rdquo;) explains why every embedding client in the repo now issues exactly one
+provider request per text: a multi-text <code>embed_documents</code> call on these models returns
+<em>one</em> embedding regardless of how many texts were sent, which silently broke a full-corpus
+indexing pass. The same record carries the warning that matters most for retrieval: a model switch is a
+<em>silent degradation</em>, not an error. <code>gemini-embedding-2-preview</code> and
+<code>gemini-embedding-2</code> are distinct vector spaces of the same width, so <code>&lt;=&gt;</code>
+compares them without complaint and simply returns worse neighbours. The only component that notices is
+the ranked cache, because the model id is in its key.</p>
+
+<p>The fan-out in <code>build_hybrid_candidate_result</code> is worth reading for its comment as much as
+its code:</p>
+
+<pre><code>with ThreadPoolExecutor(max_workers=len(query_variants)) as executor:
+    embedding_futures = [
+        executor.submit(_embed_query_variant, cache=cache, client=...,
+                        variant=query_variant, model=embedding_model)
+        for query_variant in query_variants
+    ]
+    lexical_candidates = store.list_lexical_candidates(...)   # on THIS thread
+    variant_embeddings = [future.result() for future in embedding_futures]</code></pre>
+
+<p>The remote embedding calls run on worker threads while the lexical SQL runs on the connection-owning
+thread, so the two independent latencies overlap and the single psycopg connection is never touched
+concurrently. The ordering is deliberate and documented: submitting the embeddings, then running lexical
+<em>before</em> reading any future, keeps a lexical database error ahead of any embedding error; reading
+futures in index order keeps the first variant&rsquo;s error first &mdash; exactly matching the serial
+loop this replaced. Behaviour preservation down to which exception surfaces.</p>
+
+<p>Each worker runs <code>_embed_query_variant</code>, which is the embedding cache in three lines: look
+in db/2 under <code>(variant text, model)</code>, embed on a miss, back-fill. A miss that raises still
+raises at <code>future.result()</code> in index order, so the cache is invisible to error handling.</p>
+
+<h4>The chunk arm and the content arm</h4>
+
+<p>Two optional arms hang off the same connection and the same variant embeddings.</p>
+
+<p>The <strong>chunk arm</strong> (<code>list_chunk_vector_candidates</code>) queries per-chunk
+embeddings instead of one whole-post summary vector, so a long post that only mentions the topic in one
+section can still be found. It returns chunk-level rows;
+<code>collapse_chunk_hits_to_posts</code> turns them back into documents &mdash; one candidate per post,
+distance = the minimum over its matched chunks, carrying the best <code>CHUNK_EVIDENCE_LIMIT = 2</code>
+chunks as evidence. Then <code>_fuse_chunk_arm</code> merges it into the summary arm, and the
+<code>SUPPLEMENT</code> semantics are strictly append-only: a post the summary arm already found keeps
+its own distance, its own variants and its own position and gains only the chunk evidence; a post only
+the chunk arm found is appended after every summary hit. That is what makes &ldquo;post-level recall is
+a strict superset of the OFF behaviour&rdquo; a property of the code rather than a hope.</p>
+
+<p>The <strong>content arm</strong> (<code>list_content_chunk_candidates</code>) is a fourth builder, not
+a fourth mode, because it queries a different corpus: it joins <code>backend.content_notioncontent</code>
+and its gate is <em>only</em> <code>_READABLE_CONTENT_SQL</code>. The naver gates have no content-side
+analogue &mdash; these are first-party guides, not scraped posts by ranked members. And the gate is
+restated in the arm for the same structural reason as everywhere else: the chunk table carries none of
+its own, and the index lags while the query does not. Unpublish a content with the Celery worker stopped
+and it leaves retrieval <em>instantly</em>, while its chunk rows survive until the queued de-index task
+runs. <code>author_name</code> is deliberately not even a parameter here (a published content has no
+author column).</p>
+
+<p>What the content arm must never do is enter the naver channel, and the code says so at the call
+site:</p>
+
+<pre><code># P41.S8: ... What it deliberately does NOT do is touch `vector_candidates`:
+# these are content ids, and everything downstream of this function -- fusion,
+# the recency boost, the reranker, `retrieved_documents_by_post_id`,
+# `hydrate_document_bodies`, the citation markers -- is keyed on `post_id`.
+# A content id in any of them is a citation pointing at the wrong document.</code></pre>
+
+<p>So <code>content_candidates</code> is a separate field on the result, ordered by <strong>raw
+distance</strong>, bypassing fusion, the recency boost and the reranker entirely &mdash; not because
+those would be bad for contents, but because every one of them speaks <code>post_id</code>, and making
+them work would mean giving a content a <code>post_id</code>. <code>collapse_content_matches</code> is
+mechanically the mirror of the chunk collapse (best chunk wins, variants merged, up to
+<code>CONTENT_CHUNK_EVIDENCE_LIMIT = 2</code> spans as evidence).</p>
+
+<h3>4. Fusion, the recency boost, and the reranker</h3>
+
+<h4>Fusion is reciprocal-rank fusion with k = 0</h4>
+
+<p>Read <code>build_fused_retrieval_candidates</code> (<code>ranking.py:304</code>) with
+<code>_rank_score</code> (<code>:220</code>) and the arithmetic is three lines:</p>
+
+<pre><code>def _rank_score(rank: int | None) -&gt; float:
+    if rank is None:
+        return 0.0
+    return 1.0 / rank
+
+# lexical pass, ranks 1..N:
+fused_by_post_id[post_id] = FusedRetrievalCandidate(..., fusion_score=_rank_score(lexical_rank))
+
+# vector pass, ranks 1..M -- a post already seen ADDS its vector contribution:
+fusion_score=existing_candidate.fusion_score + _rank_score(vector_rank)</code></pre>
+
+<p>This is <strong>reciprocal-rank fusion</strong>: score a document by the sum of the reciprocals of
+its ranks in each arm. The textbook form is <code>1/(k + rank)</code> with <code>k = 60</code> to damp
+the top; here <code>k = 0</code>, so the head is much steeper &mdash; rank 1 is worth 1.0, rank 2 is
+worth 0.5, rank 5 is worth 0.2, rank 32 is worth 0.031. Being first in <em>one</em> arm outranks being
+third in <em>both</em> (1.0 vs 0.667). Say what the code does, not what the name suggests: this is RRF
+with an unusually aggressive top weighting, which is defensible when a second-stage reranker is going to
+re-read the head anyway.</p>
+
+<p>Only the naver arms are fused, and the fusion key is <code>post_id</code>, so a post found by both
+arms appears exactly once with both ranks recorded.</p>
+
+<h4>The recency boost</h4>
+
+<pre><code>RECENCY_BOOST_MAX = 0.2
+RECENCY_BOOST_HALF_LIFE_DAYS = 30.0
+
+def _calculate_recency_boost(published_at, *, newest_published_at) -&gt; float:
+    if published_at is None or newest_published_at is None:
+        return 0.0
+    age_days = max(0.0, (newest_published_at - published_at).total_seconds()) / 86_400.0
+    recency_score = 1.0 / (1.0 + (age_days / RECENCY_BOOST_HALF_LIFE_DAYS))
+    return RECENCY_BOOST_MAX * recency_score</code></pre>
+
+<p><code>_apply_recency_boosts</code> takes the newest <code>published_at</code> <em>in this pool</em>
+(not &ldquo;now&rdquo;) as the zero point, so the boost is relative to the freshest thing the query
+actually found, and sets <code>ranking_score = fusion_score + recency_boost</code>. Despite the name,
+&ldquo;half-life 30 days&rdquo; is a hyperbolic decay, not an exponential one:</p>
+
+<table>
+<tr><th class="num">Age vs newest</th><th class="num">Boost</th><th>Roughly equivalent to&hellip;</th></tr>
+<tr><td class="num">0 d</td><td class="num">0.2000</td><td>being rank 5 in one arm</td></tr>
+<tr><td class="num">15 d</td><td class="num">0.1333</td><td>rank 7.5</td></tr>
+<tr><td class="num">30 d</td><td class="num">0.1000</td><td>rank 10</td></tr>
+<tr><td class="num">90 d</td><td class="num">0.0500</td><td>rank 20</td></tr>
+<tr><td class="num">365 d</td><td class="num">0.0152</td><td>rank 66 &mdash; i.e. nothing</td></tr>
+</table>
+
+<p>So the boost is a tie-breaker at the tail and a mild nudge in the middle; it can never lift a
+weak match past a strong one. Here is the whole fusion stage on a toy pool &mdash; lexical returned
+<code>[3120, 2841, 3377, 2015]</code>, vector returned <code>[2841, 3510, 3120, 1774]</code>, and the
+newest post in the pool (3510) was published on the query date:</p>
+
+<figure>
+<div class="fig-box">
+<table>
+<tr><th>post_id</th><th class="num">lex rank</th><th class="num">vec rank</th><th class="num">fusion</th><th class="num">age</th><th class="num">boost</th><th class="num">ranking_score</th></tr>
+<tr><td>2841</td><td class="num">2</td><td class="num">1</td><td class="num">1.5000</td><td class="num">60 d</td><td class="num">0.0667</td><td class="num"><span class="scorebar" style="width:6.6rem"></span> 1.5667</td></tr>
+<tr><td>3120</td><td class="num">1</td><td class="num">3</td><td class="num">1.3333</td><td class="num">271 d</td><td class="num">0.0199</td><td class="num"><span class="scorebar" style="width:5.7rem"></span> 1.3533</td></tr>
+<tr><td>3510</td><td class="num">&mdash;</td><td class="num">2</td><td class="num">0.5000</td><td class="num">0 d</td><td class="num">0.2000</td><td class="num"><span class="scorebar" style="width:2.1rem"></span><span class="scorebar boost" style="width:.85rem"></span> 0.7000</td></tr>
+<tr><td>3377</td><td class="num">3</td><td class="num">&mdash;</td><td class="num">0.3333</td><td class="num">15 d</td><td class="num">0.1333</td><td class="num"><span class="scorebar" style="width:1.4rem"></span><span class="scorebar boost" style="width:.55rem"></span> 0.4667</td></tr>
+<tr><td>2015</td><td class="num">4</td><td class="num">&mdash;</td><td class="num">0.2500</td><td class="num">830 d</td><td class="num">0.0070</td><td class="num">0.2570</td></tr>
+<tr><td>1774</td><td class="num">&mdash;</td><td class="num">4</td><td class="num">0.2500</td><td class="num">1061 d</td><td class="num">0.0055</td><td class="num">0.2555</td></tr>
+</table>
+</div>
+<figcaption>Figure 4 &mdash; fusion (blue) plus recency boost (amber) for a six-post pool. 2841 wins on
+agreement between the arms. The boost decides only the last two rows, whose fusion scores are
+identical.</figcaption>
+</figure>
+
+<p>Ties beyond the score are broken by <code>_fused_candidate_sort_key</code>, whose second element is
+<code>-int(lexical_candidate is not None and vector_candidate is not None)</code> &mdash; <strong>found by
+both arms wins</strong> &mdash; then better lexical rank, then better vector rank, then newer, then higher
+post id. A missing rank sorts as <code>_MISSING_RANK_SORT_VALUE = 1_000_000</code>.</p>
+
+<h4>The reranker: a small model that only reorders</h4>
+
+<p><code>build_reranked_retrieval_candidates</code> takes the top <code>rerank_limit = 16</code> fused
+candidates, renders each as a plain text block (<code>format_rerank_candidate_block</code>: post_id,
+title, category, author, both date fields, summary, keyword_terms &mdash; <em>never</em> the body), and
+asks Gemini for an ordering. The prompt (<code>prompts.py:348</code>) is Korean and short:</p>
+
+<pre><code>당신은 검색 후보 문서를 질문 관련성 기준으로 다시 정렬하는 어시스턴트입니다.
+...
+규칙:
+- 제공된 후보 문서만 사용하세요.
+- 가장 관련성 높은 문서부터 낮은 문서 순서로 정렬하세요.
+- 질문 관련성이 비슷한 후보끼리는 `published_at`이 더 최신인 문서를 조금 더 우선하세요.
+- 최신이라는 이유만으로 질문 관련성이 낮은 문서를 관련성 높은 문서보다 앞세우지 마세요.
+- 반드시 후보 문서의 `post_id`만 반환하세요.
+- 중복 `post_id`는 반환하지 마세요.
+- 질문에 거의 관련이 없는 후보는 생략해도 됩니다.</code></pre>
+
+<p>The output is constrained by structured output &mdash; <code>_GeminiRetrievalRerankSchema</code>, a
+single <code>post_ids: list[int]</code> field &mdash; so the response is a list of integers, not prose to
+be parsed. The model is <em>live-configurable</em> exactly like every other role (#2):
+<code>resolve_role_model(role=ROLE_RETRIEVAL_RERANK, settings_attr="gemini_retrieval_rerank_model",
+default="gemini-3.1-flash-lite")</code> plus <code>resolve_role_thinking_level(...)</code>, with
+<code>temperature=0.0</code> and native retries off (<code>max_retries=1</code>) so the shared
+<code>call_with_retry</code> owns 429 handling.</p>
+
+<p>Because a language model can drop, duplicate or invent ids, its answer is <em>merged</em>, never
+trusted:</p>
+
+<pre><code>def _merge_reranked_post_ids(reranked_post_ids, *, candidate_pool):
+    allowed_post_ids = {c.metadata.post_id for c in candidate_pool}
+    ordered_post_ids = []
+    for post_id in reranked_post_ids:                  # 1. model order first
+        if isinstance(post_id, bool) or not isinstance(post_id, int):
+            continue                                   #    non-ints dropped
+        if post_id in seen_post_ids or post_id not in allowed_post_ids:
+            continue                                   #    dupes + inventions dropped
+        ordered_post_ids.append(post_id)
+    if not ordered_post_ids:
+        raise RetrievalRerankError("Retrieval reranking returned no valid candidate ids.")
+    for candidate in candidate_pool:                   # 2. everything it dropped,
+        if candidate.metadata.post_id not in seen_post_ids:
+            ordered_post_ids.append(candidate.metadata.post_id)   # in fusion order
+    return tuple(ordered_post_ids)</code></pre>
+
+<p>So an invented id vanishes, a duplicate is kept once at its first position, and a candidate the model
+omitted is <em>appended</em> in fusion order rather than lost &mdash; the pool is invariant, only its
+order is the model&rsquo;s. Two shortcuts sit above this: an empty pool returns <code>()</code> and a
+single candidate is returned as rank 1 <strong>without any model call at all</strong>.</p>
+
+<div class="warn">
+<p><span class="tag">Failure mode &mdash; no fallback to fused order</span> Everything that can go wrong
+in this stage becomes one exception, <code>RetrievalRerankError</code>: the reranker failing to
+initialize, the API call raising, malformed structured output, or a response containing
+<em>no valid ids at all</em>. There is <strong>no</strong> internal fallback to fusion order.
+<code>build_ranked_retrieval_result</code> does not catch it, so the error propagates to the caller, and
+each caller degrades in its own way: the public HTTP routes answer <strong>503</strong>
+&ldquo;Retrieval is temporarily unavailable&rdquo;; the chat tool returns
+<code>status: "unavailable"</code> and &mdash; per #5 &mdash; <em>burns the whole remaining search
+budget</em> (<code>retrieval_call_count: MAX_CHAT_RETRIEVAL_CALLS - current_count</code>), so a
+reranker outage costs the turn all four searches, not one. Worse, because the published-content channel
+rides on the same result object, an empty rerank response takes the contents with it even when the
+content arm had the right answer and the naver arms legitimately had nothing. The backend record
+carries two candidate fixes (treat an empty rerank as &ldquo;no reordering&rdquo; and fall back to
+fusion order; or catch it inside the chokepoint when the content mode is on) and notes that choosing
+one is an operator decision, because it changes naver-side behaviour.</p>
+</div>
+
+<p>The stage&rsquo;s output is <code>RankedRetrievalResult</code>, which deliberately keeps
+<em>every</em> intermediate list &mdash; <code>query_plan</code>, <code>lexical_candidates</code>,
+<code>vector_candidates</code>, <code>fused_candidates</code>, <code>reranked_candidates</code>,
+<code>content_candidates</code>, plus an observational <code>cache_hit</code> flag. That is what makes
+the operator explain endpoint possible without a second run.</p>
+
+<h3>5. The cache on Redis db/2</h3>
+
+<p><code>cache.py</code> holds two layers, both keyed only on <em>corpus-global public</em> inputs and
+never on user data:</p>
+
+<pre><code>RETRIEVAL_CACHE_DB         = 2
+RETRIEVAL_CACHE_KEY_PREFIX = "agent:cache:"
+_RANKED_KEY_PREFIX         = "agent:cache:retrieval:"
+_EMBEDDING_KEY_PREFIX      = "agent:cache:embedding:"
+_RANKED_SCHEMA_VERSION     = 3
+_DEFAULT_TTL_SECONDS       = 300</code></pre>
+
+<p>The ranked key is a SHA-256 over thirteen components joined by <code>\x1f</code>, and the list is
+worth memorising because it is the answer to &ldquo;why did I not get a fresh result?&rdquo;:</p>
+
+<ol>
+<li><code>normalized_query</code> &mdash; <em>not</em> the raw query, so two callers whose questions
+differ only in whitespace share an entry;</li>
+<li><code>author_name</code> (or empty);</li>
+<li>the four widths: <code>lexical_limit</code>, <code>vector_limit</code>,
+<code>vector_per_variant_limit</code>, <code>rerank_limit</code>;</li>
+<li><code>embedding_model</code> &mdash; env-pinned, never operator-editable;</li>
+<li><code>rerank_model</code> &mdash; the <em>resolved</em> one, so an operator model change invalidates
+the cache for free instead of silently serving results ranked by the old model;</li>
+<li><code>brand_policy_fingerprint</code>;</li>
+<li><code>chunk_mode</code> + <code>chunk_limit</code>, <code>content_mode</code> +
+<code>content_limit</code>.</li>
+</ol>
+
+<p>The last two pairs are <strong>required keyword-only</strong> arguments of
+<code>build_ranked_key</code>, so a caller who forgets one gets a <code>TypeError</code> rather than a
+silent cross-mode collision, and <code>resolve_chunk_limit</code>/<code>resolve_content_limit</code>
+zero the width whenever the mode is <code>OFF</code> so a stray limit cannot fragment the key.
+<code>_RANKED_SCHEMA_VERSION</code> went 2&nbsp;&rarr;&nbsp;3 when the blob gained the content channel:
+a v2 blob decoded under v3 would be a result with no contents, so stale blobs simply read as a miss.</p>
+
+<p>The brand fingerprint (<code>resolve_brand_policy_fingerprint</code>) deserves its own note. The
+predicate is applied at query time, so without the toggle state in the key a flip would be invisible for
+the whole TTL. But reading the toggle tables <em>per query</em> would add a round trip to the hot path,
+so the module keeps a process-wide snapshot on the same 30-second TTL as the other live-config readers
+(#2), digests only the <em>disabled</em> ids (<code>sha256("brands:12,19|branches:7")[:16]</code> &mdash;
+the common case is &ldquo;none disabled&rdquo;, a stable digest of an empty list), and fails open to the
+last known value or the literal sentinel <code>"unknown"</code>. A flip changes the fingerprint, old
+entries go cold, nothing is invalidated by hand.</p>
+
+<p>Two guards decide whether the cache is consulted at all:</p>
+
+<pre><code>cache = (
+    resolve_retrieval_cache(current_settings)
+    if query_embedding_client is None and reranker is None
+    else None
+)</code></pre>
+
+<p>An <em>injected</em> embedding client or reranker disables it, because a hit could return a result the
+caller-supplied model would have computed differently (this pairing occurs only in tests). And
+<code>resolve_retrieval_cache</code> gates on <code>settings.retrieval_cache_enabled</code> with a
+<code>getattr</code> default of <code>False</code>, so offline unit tests with a
+<code>SimpleNamespace</code> settings object never reach for a real Redis client.</p>
+
+<p>Every Redis operation is wrapped: on <code>RedisError</code>, a read is a miss and a write is a no-op.
+Redis being down never breaks retrieval &mdash; it only un-caches it. On a hit the stored blob is
+restored and only <code>raw_query</code> is patched back (it is the one field that legitimately differs
+between callers sharing a normalized query), then <code>cache_hit=True</code> is stamped &mdash;
+deliberately <em>not</em> serialized into the blob, since a stored result is by definition a build-path
+result.</p>
+
+<figure>
+<div class="fig-box">
+<div class="lane"><span class="who">t = 0 s</span><div class="bar"><span style="left:0;width:16%;background:#3d6fd8">plan</span><span style="left:17%;width:26%;background:#7a4fc0">3 &times; embed</span><span style="left:44%;width:22%;background:#2f9e6e">2 SQL</span><span style="left:67%;width:33%;background:#d99a17">rerank LLM</span></div></div>
+<div class="lane"><span class="who">t = 40 s</span><div class="bar"><span style="left:0;width:16%;background:#3d6fd8">plan</span><span style="left:17%;width:8%;background:#8b96a2">GET</span></div></div>
+<div class="lane"><span class="who">t = 6 min</span><div class="bar"><span style="left:0;width:16%;background:#3d6fd8">plan</span><span style="left:17%;width:26%;background:#7a4fc0">3 &times; embed*</span><span style="left:44%;width:22%;background:#2f9e6e">2 SQL</span><span style="left:67%;width:33%;background:#d99a17">rerank LLM</span></div></div>
+<div class="legend">
+  <span><i style="background:#3d6fd8"></i>pure Python</span>
+  <span><i style="background:#7a4fc0"></i>remote embedding</span>
+  <span><i style="background:#2f9e6e"></i>Postgres</span>
+  <span><i style="background:#d99a17"></i>remote LLM</span>
+  <span><i style="background:#8b96a2"></i>Redis</span>
+</div>
+</div>
+<figcaption>Figure 5 &mdash; the same question asked three times. The second is a ranked-cache hit and
+skips everything. The third is past the 300 s TTL and rebuilds &mdash; but the embeddings marked *
+may still be db/2 hits, since the embedding layer is keyed separately and shared with the content and
+cited arms.</figcaption>
+</figure>
+
+<p>The cache singleton is built lazily (<code>get_retrieval_cache</code>) because the retrieval pipeline
+runs in synchronous worker threads with no access to <code>app.state</code>, and it is closed in
+<code>main.py</code>&rsquo;s lifespan via <code>aclose_retrieval_cache()</code> &mdash; third in the
+shutdown order of explainer #1. Note it is a <em>synchronous</em> <code>redis.Redis</code>, matching the
+synchronous pipeline, unlike the async registries.</p>
+
+<h3>6. After ranking: selection, hydration, consumption</h3>
+
+<p>Notice what the pipeline has <em>not</em> done so far: it has never read a post&rsquo;s body. Every
+stage &mdash; lexical, vector, fusion, rerank &mdash; works from title, author, dates, summary and
+keyword terms. Bodies arrive last, in <code>document_bodies.py</code>:</p>
+
+<pre><code>_BODY_FIELDS = ("text_with_image_replacement", "content", "raw_text")
+
+SELECT post_id, text_with_image_replacement, content, raw_text
+FROM backend.documents_documentsource
+WHERE post_id = ANY(%s)</code></pre>
+
+<p>&mdash; first non-blank field wins, a post with no usable text is logged and dropped, and
+<code>hydrate_document_bodies</code> wraps the whole thing so a hydration failure degrades to
+&ldquo;no bodies&rdquo; rather than failing the turn. The ordering is a real cost decision: hydrating 32
+candidates would mean pulling tens of thousands of characters out of Postgres to throw away 26 of them.
+The chat tool hydrates <em>after</em> selection, so a default turn reads six bodies:</p>
+
+<pre><code>documents = [_serialize_retrieved_document(candidate)
+             for candidate in _select_prefer_uncited(
+                 retrieval_result.reranked_candidates,
+                 limit=max_tool_results, ...)]        # &lt;= 6
+...
+contents_by_post_id = _hydrate_chat_document_contents(
+    settings=runtime.context.settings,
+    post_ids=[document["post_id"] for document in documents],
+)</code></pre>
+
+<p>It is also a <strong>security</strong> ordering, and <code>cited_search.py</code> states the rule
+outright: <em>gate, then hydrate.</em> <code>hydrate_document_bodies</code> applies no predicate of its
+own &mdash; it is a plain <code>post_id = ANY(...)</code> body read &mdash; so hydrating first and
+filtering afterwards would mean reading bodies the caller may not see.</p>
+
+<p>The per-call width is not a constant: <code>resolve_chat_max_tool_results(settings)</code> is read
+once per call from the operator singleton (#2), clamped to <code>[1, 16]</code>, defaulting to
+<strong>6</strong>. The ceiling of 16 is not arbitrary &mdash; it is
+<code>DEFAULT_RERANK_CANDIDATE_LIMIT</code>, the pool the slice is taken from, so a larger cap could not
+add a document.</p>
+
+<p><code>operator_metadata.py</code> is the one other post-ranking read: a post-hoc lookup of board
+label, brand and branch for the ids the pipeline already returned, run only for the operator bench.
+It is a separate statement rather than extra <code>SELECT</code> columns for two stated reasons &mdash;
+the brand joins are emitted only when the policy is enforced, and the bench&rsquo;s comparison mode runs
+with the policy off; and nothing on the shared hot path changes, so a bug here can only affect the
+console. It re-uses <code>BRAND_POLICY_JOIN_SQL</code> verbatim rather than writing a second definition,
+and falls back to the scrape-time <code>ds.category</code> when a post has no linked board row.</p>
+
+<h3>7. The three sibling arms</h3>
+
+<p>Three more entry points exist beside the chokepoint. All three follow one packaging convention
+&mdash; own module, own frozen result dataclass, own error type, direct
+<code>HybridCandidateStore</code> calls inside one <code>connect_agent_db</code> scope &mdash; rather
+than becoming another mode on <code>build_ranked_retrieval_result</code>.</p>
+
+<h4>Content-only search &mdash; <code>content_search.py</code></h4>
+
+<p>Backs the <code>search_changple_contents</code> tool. It runs exactly four steps &mdash; plan,
+embed per variant, <code>list_content_chunk_candidates</code>, <code>collapse_content_matches</code>
+&mdash; and deliberately does <em>not</em> run the lexical arm, the summary-vector arm, the naver chunk
+arm, fusion, the reranker, the brand policy, any author scope, or the ranked cache. Each of those
+absences is pinned by an executed-SQL or never-constructed test assertion, because &ldquo;it happens not
+to call the reranker today&rdquo; is exactly the property that decays. Its default width is
+<code>DEFAULT_CONTENT_SEARCH_RESULT_LIMIT = 5</code>, deliberately wider than the
+<code>MAX_CHAT_CONTENT_RESULTS = 3</code> supplement: the supplement rides along uninvited on a naver
+search, while a call here means the caller asked for contents and nothing else. No result cache, for a
+reasoned rather than lazy reason: the ranked cache&rsquo;s advertised saving is mostly the rerank call,
+which this path never makes &mdash; and the embeddings it does make are still db/2 hits, sharing keys
+with the naver path.</p>
+
+<h4>Author posts &mdash; <code>author_posts.py</code> + <code>chat/_author_query.py</code></h4>
+
+<p>&ldquo;창수님이 배달앱에 대해 뭐라고 썼나요?&rdquo; needs two things the main path cannot do: resolve
+a fuzzy human name to a real author, and combine <em>relevant</em> with <em>recent</em>.</p>
+
+<p><strong>Resolution</strong> starts from the roster: <code>list_active_authors</code> returns every
+<code>documents_author</code> nickname owning at least one indexed, reference-eligible, brand-permitted
+document. Deriving the roster from the materialized flag rather than a separate allowlist means the rank
+vocabulary lives in one place, on the backend &mdash; and including the brand policy is load-bearing
+rather than cosmetic: without it the picker would offer an author every one of whose posts is
+brand-filtered, and the recent-posts query would then return nothing for them. Then
+<code>resolve_author</code> tries three strategies in order, on whitespace-stripped casefolded text:
+exact match; <em>containment</em> (either direction) resolved by <code>_select_unique_containing_author</code>,
+which picks the candidate whose length is closest to the query and <strong>returns
+<code>None</code> on a tie</strong> rather than guessing; and finally
+<code>_select_confident_fuzzy_author</code>, a <code>difflib.SequenceMatcher</code> ratio that must
+reach <code>DEFAULT_AUTHOR_FUZZY_MATCH_THRESHOLD = 0.88</code> <em>and</em> strictly beat the runner-up.
+Ambiguity resolves to &ldquo;no author&rdquo;, never to a wrong one.</p>
+
+<p><strong>Query building</strong> is <code>_build_author_related_retrieval_query</code>: the author
+query plus the topic, plus &mdash; only when their Korean person-terms actually overlap &mdash; the
+user&rsquo;s current message and up to
+<code>MAX_CHAT_AUTHOR_RELATED_HISTORY_MESSAGES = 2</code> earlier user turns that mention the same
+person, deduped and truncated to <code>MAX_CHAT_AUTHOR_RELATED_QUERY_CHARS = 480</code>. That is what
+lets a follow-up like &ldquo;그분 다른 글은?&rdquo; still carry the topic from two turns ago. Its
+tokenizer strips the Korean particle suffixes listed in <code>_KOREAN_NAME_SUFFIXES</code>
+(은/는/이/가/님/께서/에게&hellip;) and drops role words like 대표/팀장 as stop terms.</p>
+
+<p><strong>The result</strong> is <code>build_author_post_retrieval_result</code>: on one connection,
+resolve the author and fetch their most recent eligible posts; then, if a topic was given, call the
+chokepoint with <code>author_name=</code> so the full hybrid pipeline runs <em>scoped to that
+author</em>; then <code>_merge_author_posts</code> lays query-related posts first, recent posts second,
+deduping and stopping at the limit &mdash; and reports which ids came from which list, so the tool can
+tell the model &ldquo;these are about your topic, these are just their latest&rdquo;.</p>
+
+<h4>The cited arm &mdash; <code>cited_search.py</code></h4>
+
+<p>Backs <code>search_cited_documents</code>, the &ldquo;아까 그 자료&rdquo; tool. Its candidate set is
+not the corpus but the session&rsquo;s own citation ledger (#6), so it runs
+<code>list_documents_by_post_ids</code> / <code>list_content_chunks_by_content_ids</code> instead of the
+query-driven builders. The query is only an <em>ordering</em> signal, which is why it embeds
+<strong>one</strong> variant rather than three &mdash; and that variant is byte-identical to
+<code>query_variants[0]</code>, so it shares the db/2 embedding key with the fresh arm and costs no
+round trip on a turn where both run.</p>
+
+<p>Two properties make it more than a convenience. First, <strong>eligibility is re-checked, never
+assumed</strong>: <code>list_documents_by_post_ids</code> carries the same four gates as the
+query-driven builders, so a document retracted, de-ingested or brand-toggled off since it was cited
+simply does not come back &mdash; it lands in <code>missing_post_ids</code>, which the caller must read
+as &ldquo;not available to cite this turn&rdquo;, never as &ldquo;deleted&rdquo;. Second, it is
+<strong>budget-exempt</strong>, and #6 showed the exemption is structural: the tool returns a
+<code>Command</code> whose update simply omits <code>retrieval_call_count</code>. The justification is
+that re-fetching what the session already cited widens nothing &mdash; the candidate set is a subset of
+what earlier turns already paid for &mdash; so charging for it would only push the model toward
+re-searching the whole corpus instead.</p>
+
+<p>The content-side by-id fetch has one structural difference worth stealing: its cap is
+<em>per content</em>, via <code>ROW_NUMBER() OVER (PARTITION BY content_id ORDER BY distance)</code>,
+not a plain <code>LIMIT</code>. A by-id call promises &ldquo;the ids you named, if they are still
+readable&rdquo;, so one long content whose chunks own the top of the distance order must not push a
+different requested content out of the result.</p>
+
+<h4>The rate limiter &mdash; <code>rate_limit.py</code></h4>
+
+<p><code>RetrievalRateLimiter</code> is fixed-window counting on Redis <strong>db/0</strong> (not the
+db/2 cache), with two windows &mdash; <code>retrieval_integration_requests_per_minute = 120</code> and
+<code>retrieval_integration_requests_per_hour = 2000</code>. It applies to <em>public integration
+traffic only</em>: a caller authenticated by <code>X-Agent-Api-Key</code>. First-party user JWT traffic
+is exempt at the route layer, and the operator bench is exempt too (a single operator behind an admin
+gate, where a <code>Retry-After</code> banner would only mislead). The scope is a SHA-256 of the
+integration <em>name</em>, never the key value, so rotating the <code>gpt-actions</code> key keeps the
+same quota without putting a secret in a Redis key name. A <code>RedisError</code> during the check
+fails <strong>open</strong>.</p>
+
+<h3>8. The HTTP surface</h3>
+
+<p><code>apps/agent/app/api/routes/retrieval.py</code> exposes three of the agent&rsquo;s seventeen
+routes (#1), all <code>POST</code>, all mounted under <code>/agent-api</code>:</p>
+
+<table>
+<tr><th>Route</th><th>Auth</th><th>Returns</th></tr>
+<tr><td><code>/agent-api/v1/retrieve</code></td><td><code>X-Agent-Api-Key</code> integration key, or a user JWT</td><td><code>{results: [...]}</code> &mdash; the reranked list only</td></tr>
+<tr><td><code>/agent-api/retrieval/explain</code></td><td>same</td><td>results <strong>+ <code>diagnostics</code></strong> (every intermediate list)</td></tr>
+<tr><td><code>/agent-api/retrieval/operator/explain</code></td><td><code>X-Agent-Service-Token</code> (#2)</td><td>results with board/brand/branch, diagnostics, <code>cache_hit</code>, <code>elapsed_ms</code></td></tr>
+</table>
+
+<p>The operator route carries its own request model rather than extending the public one, and the
+comment says why: the <code>enforce_brand_policy</code> flag must be <em>structurally unreachable</em>
+from the public surface. Its widths never come from the client either &mdash; only a profile name does,
+resolved against a fixed table:</p>
+
+<pre><code>RETRIEVAL_PROFILE_LIMITS = {
+    "shared":  {"lexical_limit": 32, "vector_limit": 32,
+                "vector_per_variant_limit": 12, "rerank_limit": 16},
+    "content": {"lexical_limit": 64, "vector_limit": 64,
+                "vector_per_variant_limit": 24, "rerank_limit": 40},
+}</code></pre>
+
+<p>&mdash; the two real caller profiles, so the bench reproduces what chat or the content agent actually
+runs. Its chain is <code>web &rarr; Django (operator gate) &rarr; agent (service token)</code>, because
+the agent has no concept of an operator; the backend consumer is
+<code>apps/backend/documents/retrieval_bench.py</code> (explainer #17).</p>
+
+<p><code>diagnostics</code> is the whole pipeline made visible, and reading it fluently is the practical
+payoff of this page. Trimmed to two candidates per list:</p>
+
+<pre><code>{
+  "results": [
+    {"rank": 1, "post_id": 2841, "title": "치킨 프랜차이즈 창업, 초기비용 정리",
+     "author": "창수", "published_at": "2026-06-11T00:00:00Z",
+     "source_url": "https://cafe.naver.com/cjdckddus/2841",
+     "summary": "가맹비, 인테리어, 보증금까지 ...", "keyword_terms": ["치킨집", "창업", "가맹비"]},
+    {"rank": 2, "post_id": 3510, "...": "..."}
+  ],
+  "diagnostics": {
+    "query_plan": {
+      "raw_query": "치킨집 창업 비용",
+      "normalized_query": "치킨집 창업 비용",
+      "lexical_terms": ["치킨집", "창업", "비용"],
+      "lexical_phrases": ["치킨집 창업 비용", "치킨집 창업", "창업 비용"],
+      "query_variants": ["치킨집 창업 비용", "치킨집 창업", "창업 비용"]
+    },
+    "lexical_candidates": [
+      {"post_id": 3120, "lexical_score": 5, "phrase_hit_count": 1, "term_hit_count": 2,
+       "matched_phrases": ["창업 비용"], "matched_terms": ["치킨집", "창업"], "...": "..."},
+      {"post_id": 2841, "lexical_score": 3, "phrase_hit_count": 0, "term_hit_count": 3, "...": "..."}
+    ],
+    "vector_candidates": [
+      {"post_id": 2841, "distance": 0.2871,
+       "matched_query_variants": ["치킨집 창업 비용", "치킨집 창업"], "...": "..."},
+      {"post_id": 3510, "distance": 0.3344, "matched_query_variants": ["창업 비용"], "...": "..."}
+    ],
+    "fused_candidates": [
+      {"post_id": 2841, "lexical_rank": 2, "vector_rank": 1, "fusion_score": 1.5, "...": "..."},
+      {"post_id": 3120, "lexical_rank": 1, "vector_rank": 3, "fusion_score": 1.3333, "...": "..."}
+    ],
+    "reranked_candidates": [
+      {"post_id": 2841, "rerank_rank": 1, "...": "..."},
+      {"post_id": 3510, "rerank_rank": 2, "...": "..."}
+    ]
+  }
+}</code></pre>
+
+<p>Read it as a set of differences. If a post you expected is missing from <em>every</em> list, it failed
+a gate &mdash; check <code>reference_eligible</code> and the brand toggle, not the ranking. If it is in
+<code>lexical_candidates</code> but not <code>vector_candidates</code>, the wording matched but the
+meaning did not (or its summary embedding is stale). If it is in <code>fused_candidates</code> but far
+down <code>reranked_candidates</code>, a language model read its summary and disagreed with you. And if
+<code>matched_terms</code> is empty while <code>matched_phrases</code> is not, you are looking at a
+phrase hit worth 3 points.</p>
+
+<div class="callout">
+<p><span class="tag">The question this page promised to answer</span> <strong>&ldquo;Why did post N not
+show up?&rdquo;</strong> has exactly six possible answers, in the order to check them: (1) it is not
+<code>SAVED</code> or not <code>ingested</code> &mdash; it never reached the index; (2)
+<code>reference_eligible = FALSE</code> &mdash; the backend engine judged it out (#8 has the reason
+codes); (3) its brand or branch is toggled off &mdash; live, reversible, invisible in the index; (4) it
+lost the lexical arm (its <code>keyword_terms</code> do not contain your words) <em>and</em> the vector
+arm (its summary embedding is not among the 12 nearest for any variant); (5) it made the pool but fell
+below rank 16 after fusion + recency, so the reranker never saw it; (6) it was reranked below the
+per-call width, which defaults to 6. Only (4)&ndash;(6) are ranking questions. The
+<code>explain</code> endpoint tells you which one you are in.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p class="small">Five questions on the read path. Click an option to check it.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> At query time, which single thing decides whether a 창플 카페 post is eligible to
+  be retrieved at all &mdash; and where is it computed?</p>
+  <button class="opt" data-correct="false">A per-query CTE in <code>candidates.py</code> that joins the author allowlist and applies the operator&rsquo;s date floor</button>
+  <button class="opt" data-correct="true">The materialized boolean column <code>documents_documentsource.reference_eligible</code>, computed by the backend eligibility engine and merely read by every retrieval statement</button>
+  <button class="opt" data-correct="false">The <code>eligibility_reasons</code> array &mdash; retrieval excludes any post whose reasons list is non-empty</button>
+  <button class="opt" data-correct="false">The presence of a row in <code>agent.document_index_artifacts</code>; if a post is indexed it is eligible</button>
+  <p class="why" hidden>P53.S4 folded the author join and the retrieval-policy date CTE into one column. Retrieval reads <code>ds.reference_eligible = TRUE</code> and re-derives nothing; <code>eligibility_reasons</code> is the operator&rsquo;s readout, and the agent never reads it. The index-artifact join is required too, but it is indexing state, not eligibility.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Why does the ranked cache key include a 16-character hash of the disabled
+  brand/branch ids?</p>
+  <button class="opt" data-correct="false">To avoid joining the brand tables on every query &mdash; the fingerprint replaces the SQL predicate</button>
+  <button class="opt" data-correct="true">Because the brand filter is applied at query time, so without the toggle state in the key a flip would keep serving results filtered under the old policy for the whole 300 s TTL</button>
+  <button class="opt" data-correct="false">To let the operator bench compare policy-on and policy-off runs in a single request</button>
+  <button class="opt" data-correct="false">To detect that the brand tables changed and trigger a corpus re-index</button>
+  <p class="why" hidden>The predicate stays live SQL &mdash; that is what makes a flip instantly reversible. The fingerprint exists purely so a flip changes the cache key: old entries go cold and nothing needs explicit invalidation. It is read once per 30 s TTL window, not per query, and fails open.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The Gemini reranker call raises. What does the pipeline do?</p>
+  <button class="opt" data-correct="false">Falls back to fusion order inside <code>build_reranked_retrieval_candidates</code> and returns a complete result</button>
+  <button class="opt" data-correct="false">Retries the rerank with a smaller candidate pool, then falls back to raw vector distance</button>
+  <button class="opt" data-correct="true">Raises <code>RetrievalRerankError</code> out of the chokepoint &mdash; the HTTP routes answer 503, and the chat tool reports <code>unavailable</code> and burns the whole remaining search budget</button>
+  <button class="opt" data-correct="false">Returns the fused candidates with <code>rerank_rank = None</code> so the caller can decide</button>
+  <p class="why" hidden>There is no internal fallback. Initialization failure, an API error, malformed structured output, and a response containing no valid ids all become one <code>RetrievalRerankError</code> that propagates. Because the content channel rides on the same result object, it is lost too &mdash; a recorded issue with two candidate fixes, unresolved because either changes naver-side behaviour.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Why are post bodies loaded only <em>after</em> ranking and selection?</p>
+  <button class="opt" data-correct="false">Because the body column lives in the <code>agent</code> schema and the agent cannot join it in one statement</button>
+  <button class="opt" data-correct="true">For cost and for safety: ranking never needs body text, so hydrating 32 candidates would pull tens of thousands of characters to discard most of them &mdash; and because <code>hydrate_document_bodies</code> applies no predicate of its own, hydrating before the eligibility gate would read bodies the caller may not see</button>
+  <button class="opt" data-correct="false">Because bodies are fetched from Django over HTTP and the call is too slow to run before ranking</button>
+  <button class="opt" data-correct="false">Because the reranker needs the body text and it is fetched inside the rerank prompt builder</button>
+  <p class="why" hidden>Every ranking stage works from title, author, dates, summary and keyword terms; the rerank prompt block deliberately excludes the body. <code>document_bodies.py</code> is a plain <code>post_id = ANY(...)</code> read with no gates, which is why <code>cited_search.py</code> states the rule as &ldquo;gate, then hydrate&rdquo;.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A user asks &ldquo;아까 그 자료 다시 보여줘&rdquo; and the model calls
+  <code>search_cited_documents</code>. Which statement about that arm is true?</p>
+  <button class="opt" data-correct="false">It reads the ranked cache under a session-scoped key, so repeat requests within 5 minutes are free</button>
+  <button class="opt" data-correct="true">It is exempt from the 4-call budget &mdash; structurally, by omitting <code>retrieval_call_count</code> from its <code>Command</code> update &mdash; and it re-checks eligibility on every id rather than trusting the ledger</button>
+  <button class="opt" data-correct="false">It skips eligibility checks because the documents were already approved when they were first cited</button>
+  <button class="opt" data-correct="false">It embeds all three query variants so the ordering matches the fresh arm exactly</button>
+  <p class="why" hidden>The candidate set is the ledger&rsquo;s ids, a subset of what earlier turns already paid for, so charging budget would only push the model toward re-searching the corpus. It deliberately stays out of the ranked cache (a session-scoped dimension would destroy the hit rate on the hottest path), embeds exactly one variant &mdash; the normalized query, sharing the db/2 embedding key with the fresh arm &mdash; and re-applies the four gates, so a document brand-toggled off since it was cited comes back in <code>missing_post_ids</code>.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Files walked on this page:</strong>
+<span class="files"><code>apps/agent/app/retrieval/query_planning.py</code>,
+<code>candidates.py</code>, <code>ranking.py</code>, <code>cache.py</code>,
+<code>embeddings.py</code>, <code>brand_policy.py</code>, <code>content_search.py</code>,
+<code>cited_search.py</code>, <code>author_posts.py</code>, <code>document_bodies.py</code>,
+<code>operator_metadata.py</code>, <code>rate_limit.py</code>;
+<code>apps/agent/app/api/routes/retrieval.py</code>,
+<code>apps/agent/app/chat/_author_query.py</code>, <code>apps/agent/app/chat/agent.py</code>,
+<code>apps/agent/app/chat/retrieval_config.py</code>, <code>apps/agent/app/prompts.py</code>,
+<code>apps/agent/app/config.py</code>, <code>apps/agent/app/indexing/storage.py</code>,
+<code>chunk_storage.py</code>, <code>content_chunk_storage.py</code>,
+<code>apps/agent/app/content_drafts/retrieval.py</code>;
+<code>apps/backend/documents/eligibility.py</code>, <code>rank_policy.py</code>,
+<code>apps/backend/operators/models.py</code>.</span></p>
+
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/06-chat-context-and-memory">#6 Chat context:
+rolling windows, compaction, budgets, and recall</a>. This page is the read path; #8 (ingestion) and #9
+(indexing and embeddings) are the write path that fills
+<code>reference_eligible</code>, <code>keyword_terms</code> and every embedding used here, #11 covers
+the citation-grounding gate, #12 the published-content library, and #17 the operator bench that consumes
+<code>/retrieval/operator/explain</code>. Earlier in Part B:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5 A chat turn end to
+end</a>; the read bridge and the Redis map are in
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a> and
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-26 · [Retrieval: the RAG read path from query plan to ranked citations](changple5/2026-08-26-07-retrieval-read-path.html) — changple5
 - 2026-08-26 · [Chat context: rolling windows, compaction, budgets, and recall](changple5/2026-08-26-06-chat-context-and-memory.html) — changple5
 - 2026-08-26 · [A chat turn end to end: the LangChain agent, streaming, cancel, and replay](changple5/2026-08-26-05-chat-turn-end-to-end.html) — changple5
 - 2026-08-26 · [Conversations as the system of record: models, the API, and the agent write-back loop](changple5/2026-08-26-04-conversations-system-of-record.html) — changple5
