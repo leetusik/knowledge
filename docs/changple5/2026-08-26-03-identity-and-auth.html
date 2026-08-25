@@ -1,0 +1,1595 @@
+<!--kb
+title: "Identity and auth: Naver and Google login, JWTs, guests, and entitlements"
+date: 2026-08-26
+tags:
+  - changple5
+  - auth
+  - jwt
+  - oauth
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identity and auth: Naver and Google login, JWTs, guests, and entitlements</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.guest { background: #fdf6e6; border-color: #f0d9a0; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem 1fr; gap: .6rem; align-items: center; margin: .3rem 0; font-size: .85rem; }
+  .lane .who { font-weight: 650; color: #14324f; text-align: right; font-size: .82rem; }
+  .bar { height: 1.35rem; border-radius: 4px; position: relative; background: #e8ecf1; }
+  .bar span { position: absolute; top: 0; bottom: 0; border-radius: 4px; font-size: .7rem; color: #fff;
+              display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+</style>
+</head>
+<body>
+
+<h1>Identity and auth: Naver and Google login, JWTs, guests, and entitlements</h1>
+<p class="subtitle">Explainer #3 of the changple5 builder's curriculum, and the last of Part A.
+How a visitor becomes a principal the system can name — and what that name is allowed to do.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>The previous explainer,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2 Configuration
+and boundaries: settings, schema pinning, shared secrets, and live operator config</a>, ended on the
+two shared secrets. It established who trusts whom with which string:
+<code>JWT_SHARED_SECRET</code>, minted-in-Django and verified-in-the-agent, and
+<code>AGENT_BACKEND_SHARED_TOKEN</code>, a static service token carried in both directions. It also
+showed the exact header builders the agent uses when it calls back into Django
+(<code>apps/agent/app/chat/backend.py:516&ndash;540</code>) and left one thing unexplained: where those
+credentials come from in the first place, and what each one actually says about the human at the other
+end.</p>
+
+<p>That is this page. It is about <em>identity</em> — the mechanics by which a person sitting in front
+of a browser turns into something the code can name, check and refuse.</p>
+
+<h3>Two words that are constantly confused</h3>
+
+<p><strong>Authentication</strong> asks <em>who are you?</em> and its answer is a name: user 4021, or
+guest <code>b1f0&hellip;</code>, or "the agent service". <strong>Authorization</strong> asks
+<em>may you do this?</em> and its answer is yes or no. They are separate steps, they fail with
+different HTTP status codes (<code>401</code> versus <code>403</code>), and in this codebase they are
+deliberately separated in a way worth naming up front: the token proves <em>who</em>, and the database
+row decides <em>what</em>. Never the other way round. Half of this page is about why.</p>
+
+<div class="skip">
+<span class="tag">Skip this box if you already know it</span>
+<p>A <strong>credential</strong> is whatever a caller presents to prove an identity — a password, a
+cookie, a token in a header. A <strong>principal</strong> is the identity itself, as the server
+understands it after checking the credential. A <strong>claim</strong> is one statement inside a
+token: "<code>user_id</code> is 4021", "this expires at 10:31". Claims are asserted by whoever signed
+the token; they are only as trustworthy as that signature.</p>
+</div>
+
+<div class="skip">
+<span class="tag">Skip this box if you already know it — JWT recap</span>
+<p>Explainer #2 introduced the <strong>JWT</strong> (JSON Web Token): a small JSON payload plus a
+signature, written as three base64url chunks joined by dots. changple5 signs with
+<strong>HS256</strong>, an HMAC keyed by a shared secret — so anyone holding the secret can both
+create and verify a token. Two properties matter everywhere below. First, a JWT is
+<strong>signed, not encrypted</strong>: anybody can read the payload, they simply cannot change it
+without the secret. Second, verification is <strong>local and offline</strong> — you need the secret
+and a clock, not a database. That is exactly why the FastAPI agent can accept a caller Django
+authenticated, without ever asking Django.</p>
+</div>
+
+<div class="skip">
+<span class="tag">Skip this box if you already know it — OAuth in one paragraph</span>
+<p><strong>OAuth 2.0</strong> is the "log in with X" protocol. Rather than typing a Naver password
+into changple5 — which would then have it — the browser is sent to Naver, Naver authenticates the
+person and asks their permission, and Naver redirects back with a short single-use
+<strong>authorization code</strong>. The backend then swaps that code, server-to-server and using its
+own client secret, for an <strong>access token</strong>, which it uses once to read the person's
+profile. The whole point is that the code travels through the untrusted browser while the client
+secret and the resulting token never do. The <code>state</code> parameter is the protocol's slot for
+tying the trip back to the request that started it.</p>
+</div>
+
+<h3>What is actually being protected</h3>
+
+<p>changple5 is a Korean startup-consulting product: a 미라클 chat agent grounded in a private
+Naver-cafe corpus, a 컨설팅 multi-round consultation that ends in a 구성안 report, a content library, a
+창업가 MBTI quiz, and a Pro subscription. Almost none of that is public. A conversation belongs to
+exactly one account; a 구성안 report is a paid-tier artifact; the operator console must be reachable
+only by staff. So the identity layer is load-bearing product machinery, not paperwork.</p>
+
+<p>And it has an unusual shape, because the product has <strong>three</strong> distinct ways in and
+one of them has no account at all:</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node user"><b>Social OAuth</b>Naver or Google.<span class="m">accounts/social.py</span></div>
+    <div class="node user"><b>Email + password</b>signup, verify, reset.<span class="m">accounts/views.py</span></div>
+    <div class="node guest"><b>Anonymous trial</b>no row at all.<span class="m">accounts/guest_tokens.py</span></div>
+  </div>
+</div>
+<figcaption>Three ways in. The first two end in a <code>User</code> row; the third deliberately does not.</figcaption>
+</figure>
+
+<p>By the end of this page you should be able to pick any <code>Authorization: Bearer &hellip;</code>
+or <code>X-Guest-Token: &hellip;</code> header out of a network log and follow it back to the exact
+lines of code that minted it, the code that verifies it, and the code that decides what it is
+permitted to do.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>Three shapes of caller, only one of which is a row</h3>
+
+<p>Django's own mental model is that <code>request.user</code> is a row in the user table. changple5
+widens that on purpose. After authentication, <code>request.user</code> is one of three things:</p>
+
+<figure>
+<div class="fig-box">
+  <div class="stack">
+    <div class="flow">
+      <div class="node user"><b>User</b>A real row in <code>accounts_user</code>. Has an id, an email, a
+      <code>tier</code>, preferences, history.<span class="m">Authorization: Bearer &lt;access JWT&gt;</span></div>
+      <div class="node guest"><b>GuestPrincipal</b>No row anywhere. Carries one thing: a random
+      <code>guest_id</code>. Exists only as long as its token does.<span class="m">X-Guest-Token: &lt;guest JWT&gt;</span></div>
+      <div class="node svc"><b>AgentServicePrincipal</b>Not a person at all — the other half of the
+      system calling in.<span class="m">X-Agent-Service-Token: &lt;shared secret&gt;</span></div>
+    </div>
+  </div>
+</div>
+<figcaption>The three principal shapes. All three satisfy DRF's <code>IsAuthenticated</code>; only the
+first has a database identity.</figcaption>
+</figure>
+
+<p>The two rowless principals are frozen dataclasses that simply declare
+<code>is_authenticated = True</code> and <code>is_anonymous = False</code>. That is the whole trick:
+Django REST Framework never asks whether <code>request.user</code> is a model instance, only whether
+it claims to be authenticated. So a guest can hold a real, scoped, refusable identity without costing
+a row, an index entry or a cleanup job.</p>
+
+<div class="callout">
+<p><strong>The key idea of the whole page.</strong> A credential answers <em>who</em>, and nothing
+else. Every question of the form <em>may this caller do X?</em> is answered from the database, at the
+moment of the request. The tokens below carry a <code>tier</code> claim — and no rule anywhere is
+allowed to read it.</p>
+</div>
+
+<h3>What is inside the token you are carrying right now</h3>
+
+<p>Log into changple5 and your browser is handed two tokens. Base64-decoded, the payloads look like
+this (real claim names, toy values):</p>
+
+<pre><code>ACCESS TOKEN                        REFRESH TOKEN
+{                                   {
+  "token_type": "access",             "token_type": "refresh",
+  "exp": 1787051460,   // +30 min     "exp": 1789639860,   // +30 days
+  "iat": 1787049660,                  "iat": 1787049660,
+  "jti": "9f3c1e4a...",               "jti": "1c77b0d2...",
+  "user_id": 4021,                    "user_id": 4021,
+  "tier": "free"                      "tier": "free"
+}                                   }</code></pre>
+
+<p>Six claims, and they divide cleanly by job. <code>token_type</code> separates the two so one can
+never be used where the other belongs. <code>exp</code> is the expiry, in seconds since 1970.
+<code>jti</code> ("JWT ID") is a unique id for this specific token, which is what makes revocation
+possible — you cannot un-sign a token, but you can write its <code>jti</code> onto a blacklist and
+refuse it later. <code>user_id</code> is the identity. And <code>tier</code> is the odd one out: a
+convenience copy of a database column, put there so a reader can colour a badge without a round
+trip.</p>
+
+<h3>The 30-day sliding session</h3>
+
+<p>Why two tokens? Because two properties are wanted at once and one token cannot have both. The
+access token is sent on every request, so it should be short-lived: if it leaks, the window is small.
+But nobody wants to log in every thirty minutes. So the long-lived refresh token is kept aside and
+used only against one endpoint, whose only job is to hand out a fresh pair.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="lane">
+    <div class="who">access token</div>
+    <div class="bar">
+      <span style="left:0;width:8%;background:#3d6fd8">30m</span>
+      <span style="left:9%;width:8%;background:#3d6fd8">30m</span>
+      <span style="left:18%;width:8%;background:#3d6fd8">30m</span>
+      <span style="left:27%;width:8%;background:#5b86e0">30m</span>
+      <span style="left:36%;width:8%;background:#5b86e0">30m</span>
+      <span style="left:45%;width:8%;background:#89a9ea">&hellip;</span>
+    </div>
+  </div>
+  <div class="lane">
+    <div class="who">refresh token</div>
+    <div class="bar">
+      <span style="left:0;width:31%;background:#2f9e6e">issued &rarr; rotated on first use</span>
+      <span style="left:32%;width:31%;background:#3fae7e">rotated again</span>
+      <span style="left:64%;width:36%;background:#57bd90">&hellip; up to 30 days from the LAST rotation</span>
+    </div>
+  </div>
+  <div class="lane">
+    <div class="who">DB tier</div>
+    <div class="bar">
+      <span style="left:0;width:40%;background:#9aa4b2">free</span>
+      <span style="left:40%;width:60%;background:#d99a17">pro &nbsp;(payment lands here)</span>
+    </div>
+  </div>
+</div>
+<figcaption>Rotation makes the session slide: each refresh resets the 30-day clock, so an active user
+never logs out. Note the third lane — the database tier changes mid-flight, and the tokens above it
+do not.</figcaption>
+</figure>
+
+<p>changple5 turns on <em>rotation</em>: every use of a refresh token returns a brand-new refresh
+token and blacklists the old one. That has two consequences. A returning visitor stays logged in
+indefinitely, because the 30 days are counted from the most recent rotation, not from the original
+login. And a stolen refresh token has a self-destruct property: the moment either the thief or the
+real user rotates it, the other one's copy is on the blacklist and dead.</p>
+
+<h3>Why the <code>tier</code> claim must not be trusted</h3>
+
+<p>Look again at the third lane of the diagram. A user pays for Pro at minute 40. The database column
+flips immediately. The access token in their browser still says <code>"tier": "free"</code> and will
+keep saying so until it expires and a refresh rotates a new pair into place. If any server-side rule
+consulted the claim, that user would be told "Pro only" while holding a receipt.</p>
+
+<p>The reverse case is worse. A user cancels, or a payment reverses; the database says
+<code>free</code> but their unexpired token still says <code>pro</code>. A rule reading the claim
+would hand out paid features to an unpaid account for the remainder of the token's life. So the rule
+in this codebase is absolute and mechanical:</p>
+
+<div class="callout">
+<p><strong>The <code>tier</code> claim is a presentation hint, and only the browser reads it.</strong>
+Every enforcement point — the backend views, the agent's per-turn reader — re-reads
+<code>tier</code> from the database row. Below, we check that claim by grepping the whole repository
+for consumers, and find exactly one: the front end's badge.</p>
+</div>
+
+<h3>An identity with no row</h3>
+
+<p>The anonymous trial is the most interesting design in this layer. A first-time visitor should be
+able to type a question and get a real answer before being asked to sign in. That means the server has
+to be able to say "this is the same anonymous person as a minute ago" — enough to scope their
+conversation to them, and to stop them from consuming the free trial a thousand times — without
+creating an account.</p>
+
+<p>The obvious solutions are all bad. A shared anonymous account merges every stranger's chat into one
+history. A row per visitor fills the user table with garbage that then has to be swept. A cookie of
+random bytes has to be looked up somewhere, which is a table again. changple5's answer is to notice
+that a signed token <em>is</em> a storage mechanism: mint a JWT whose payload is a fresh random
+<code>guest_id</code> and an expiry, and the token itself becomes the identity record. The server
+stores nothing; it re-derives everything from the signature on each request.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node"><b>1. Mint</b>Browser asks for a trial credential. No auth.<span class="m">POST /api/auth/guest-token</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node guest"><b>2. Token</b><code>guest_id</code> = fresh uuid, 12h expiry. Zero rows written.<span class="m">token_type: "guest"</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>3. Use</b>Conversations are stamped with that <code>guest_id</code> and only readable through it.<span class="m">X-Guest-Token</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node deny"><b>4. Bound</b>3 trial conversations per <code>guest_id</code>, counted from the rows.<span class="m">429 guest_trial_quota_exhausted</span></div>
+  </div>
+</div>
+<figcaption>The anonymous trial. The credential is the identity, and it expires by itself.</figcaption>
+</figure>
+
+<p>The cost of a stateless identity is that it cannot be revoked one at a time — there is nothing to
+delete. The mitigations are visible in the design: a short 12-hour life, and a quota that is counted
+from the conversation <em>rows</em> carrying that <code>guest_id</code> rather than from a cache, so
+it survives a Redis flush. We will see both below.</p>
+
+<h3>The map</h3>
+
+<p>One last picture before the code. Six headers arrive at two services; here is what verifies
+each.</p>
+
+<figure>
+<div class="fig-box">
+<svg viewBox="0 0 700 320" width="100%" height="auto" role="img" aria-label="Which service verifies which credential">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#8b96a2"></polygon>
+    </marker>
+  </defs>
+  <rect x="8" y="14" width="150" height="290" rx="8" fill="#fff" stroke="#d9dee5"></rect>
+  <text x="83" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#14324f">Browser</text>
+
+  <rect x="24" y="52" width="118" height="40" rx="6" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="83" y="70" text-anchor="middle" font-size="10.5" fill="#1f2328">Authorization:</text>
+  <text x="83" y="84" text-anchor="middle" font-size="10.5" fill="#1f2328">Bearer (access)</text>
+
+  <rect x="24" y="104" width="118" height="40" rx="6" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="83" y="122" text-anchor="middle" font-size="10.5" fill="#1f2328">refresh token</text>
+  <text x="83" y="136" text-anchor="middle" font-size="10.5" fill="#1f2328">(body, /auth/refresh)</text>
+
+  <rect x="24" y="156" width="118" height="40" rx="6" fill="#fdf6e6" stroke="#f0d9a0"></rect>
+  <text x="83" y="174" text-anchor="middle" font-size="10.5" fill="#1f2328">X-Guest-Token</text>
+  <text x="83" y="188" text-anchor="middle" font-size="10.5" fill="#1f2328">(guest JWT)</text>
+
+  <rect x="24" y="208" width="118" height="40" rx="6" fill="#f2f4f7" stroke="#d9dee5"></rect>
+  <text x="83" y="226" text-anchor="middle" font-size="10.5" fill="#1f2328">email + password</text>
+  <text x="83" y="240" text-anchor="middle" font-size="10.5" fill="#1f2328">(body, /auth/token)</text>
+
+  <rect x="24" y="260" width="118" height="32" rx="6" fill="#f2f4f7" stroke="#d9dee5"></rect>
+  <text x="83" y="280" text-anchor="middle" font-size="10.5" fill="#1f2328">code + state (OAuth)</text>
+
+  <rect x="290" y="30" width="180" height="120" rx="8" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="380" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#14324f">Django &mdash; /api/</text>
+  <text x="380" y="72" text-anchor="middle" font-size="11" fill="#3c4551">MINTS every credential</text>
+  <text x="380" y="90" text-anchor="middle" font-size="10.5" fill="#3c4551">SimpleJWT · guest_tokens.py</text>
+  <text x="380" y="108" text-anchor="middle" font-size="10.5" fill="#3c4551">social.py · email_tokens.py</text>
+  <text x="380" y="128" text-anchor="middle" font-size="10.5" fill="#3c4551">owns accounts_user (the truth)</text>
+
+  <rect x="290" y="180" width="180" height="110" rx="8" fill="#f3eefd" stroke="#cfc0ef"></rect>
+  <text x="380" y="202" text-anchor="middle" font-size="13" font-weight="700" fill="#14324f">FastAPI agent</text>
+  <text x="380" y="220" text-anchor="middle" font-size="11" fill="#3c4551">/agent-api/</text>
+  <text x="380" y="240" text-anchor="middle" font-size="10.5" fill="#3c4551">VERIFIES, never mints</text>
+  <text x="380" y="258" text-anchor="middle" font-size="10.5" fill="#3c4551">jwt.decode(jwt_shared_secret)</text>
+  <text x="380" y="276" text-anchor="middle" font-size="10.5" fill="#3c4551">api/dependencies.py</text>
+
+  <rect x="530" y="90" width="160" height="140" rx="8" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="610" y="112" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14324f">Providers</text>
+  <text x="610" y="134" text-anchor="middle" font-size="10.5" fill="#3c4551">nid.naver.com</text>
+  <text x="610" y="152" text-anchor="middle" font-size="10.5" fill="#3c4551">accounts.google.com</text>
+  <text x="610" y="178" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14324f">SMTP</text>
+  <text x="610" y="198" text-anchor="middle" font-size="10.5" fill="#3c4551">verification mail</text>
+  <text x="610" y="214" text-anchor="middle" font-size="10.5" fill="#3c4551">reset mail</text>
+
+  <line x1="158" y1="90" x2="286" y2="90" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <line x1="158" y1="176" x2="286" y2="215" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <line x1="158" y1="250" x2="286" y2="120" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <line x1="470" y1="120" x2="526" y2="140" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <line x1="470" y1="140" x2="526" y2="190" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <line x1="380" y1="176" x2="380" y2="152" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#ah)"></line>
+  <text x="392" y="168" font-size="9.5" fill="#57606a">agent &rarr; Django: forwards the caller's own credential</text>
+</svg>
+</div>
+<figcaption>Django mints; the agent only verifies. Nothing the agent does requires asking Django who
+somebody is — it holds the same HS256 secret and checks the signature itself.</figcaption>
+</figure>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Everything below lives in two places: <code>apps/backend/accounts/</code> (about 5,300 lines
+excluding tests — small for what it does) and one file on the agent side,
+<code>apps/agent/app/api/dependencies.py</code>. We will walk them in the order a person actually
+meets them: the model, then the three ways in, then the token pair they all converge on, then how the
+agent recognises the result, and finally what any of it entitles you to.</p>
+
+<h3>1. The principal model</h3>
+
+<p><code>apps/backend/accounts/models.py:11</code> defines the user. It subclasses Django's
+<code>AbstractUser</code> — inheriting <code>password</code>, <code>is_staff</code>,
+<code>is_superuser</code>, <code>last_login</code> and the permissions plumbing — and then changes the
+identity field:</p>
+
+<pre><code># apps/backend/accounts/models.py
+class User(TimeStampedModel, AbstractUser):
+    username = models.CharField(max_length=150, unique=True,
+        help_text="Internal field used for authentication only.", editable=False)
+    email = models.EmailField("email address", unique=True)</code></pre>
+
+<p>Django insists on a unique <code>username</code>; changple5 does not want one, so it keeps the
+column, marks it <code>editable=False</code>, and synthesises a value in <code>save()</code>
+(<code>models.py:118</code>): a social account becomes <code>naver_&lt;social_id&gt;</code>, anything
+else falls back to <code>id_&lt;pk&gt;</code> after the first save. The same method lowercases the
+email on every write, which is what makes <code>Bob@X.com</code> and <code>bob@x.com</code> the same
+login. The <em>real</em> identity is <code>email</code>, unique and case-folded.</p>
+
+<p>The columns that matter later:</p>
+
+<table>
+<thead><tr><th>Column</th><th>What it is for</th></tr></thead>
+<tbody>
+<tr><td><code>user_type</code></td><td><code>"admin"</code> or <code>"social"</code>. A superuser is force-promoted to <code>admin</code> on save.</td></tr>
+<tr><td><code>tier</code></td><td><code>free</code> / <code>pro</code> (<code>Tier</code> text choices). Its help text is the policy in one line: "DB-authoritative; propagated to JWT as a hint claim only."</td></tr>
+<tr><td><code>provider</code> + <code>social_id</code></td><td>How this account joined: <code>""</code> (admin), <code>"email"</code>, <code>"naver"</code>, <code>"google"</code>, plus the provider's own id for the last two.</td></tr>
+<tr><td><code>email_verified_at</code></td><td>Null until an email/password account clicks its verification link. Social accounts leave it null forever, by design — the provider already verified.</td></tr>
+<tr><td><code>naver_access_token</code></td><td>Naver's own access token, kept for exactly one purpose (§2).</td></tr>
+<tr><td><code>chat_thinking_level</code></td><td>A per-user model-effort preference whose help text shouts <em>"NEVER read this column directly"</em> (§7).</td></tr>
+<tr><td><code>information</code></td><td>A JSON blob holding the raw provider profile as last seen.</td></tr>
+</tbody>
+</table>
+
+<p>One constraint is worth reading closely:</p>
+
+<pre><code>constraints = [
+    models.UniqueConstraint(
+        fields=("provider", "social_id"),
+        condition=~models.Q(provider="") &amp; ~models.Q(social_id=""),
+        name="accounts_user_provider_social_id_unique",
+    ),
+]</code></pre>
+
+<p>A <em>partial</em> unique index: the pair must be unique, but only for rows where both values are
+non-empty. Without the condition, every admin and every email account (both blank on both columns)
+would collide with each other. This is the database-level statement of "one Naver identity, one
+row".</p>
+
+<p>The second model in the file, <code>OperatorUserAuditLog</code> (<code>models.py:156</code>),
+records what staff did to accounts — create an admin, update a user, reset a password — with the
+operator, the target, and a <code>changed_fields</code> list, and explicitly <em>no values</em>. It is
+a small, deliberate piece of governance: you can tell that a password was reset without the log
+containing anything sensitive.</p>
+
+<h4>The authenticator chain</h4>
+
+<p>Django REST Framework runs a list of authenticator classes in order until one returns a principal.
+The project-wide default (<code>config/settings.py:551</code>) is a single entry:</p>
+
+<pre><code>REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    ...
+}</code></pre>
+
+<p>Views that must also accept anonymous callers opt into a longer chain, and its ordering is a real
+constraint, spelled out at <code>apps/backend/conversations/views.py:139</code>:</p>
+
+<pre><code># JWT is tried first so first-party callers are unaffected. Order matters:
+# GuestTokenAuthentication returns None when its header is absent (so the chain
+# continues), while AgentServiceTokenAuthentication RAISES on a missing header
+# and must therefore stay last.
+GUEST_CAPABLE_AUTHENTICATION_CLASSES = [
+    JWTAuthentication,
+    GuestTokenAuthentication,
+    AgentServiceTokenAuthentication,
+]</code></pre>
+
+<div class="warn">
+<p><strong>A subtle DRF rule that shapes two designs.</strong> An authenticator returning
+<code>None</code> means "not my credential, keep going"; raising <code>AuthenticationFailed</code>
+ends the chain with a 401. <code>AgentServiceTokenAuthentication</code>
+(<code>ingestion/authentication.py:30</code>) raises when its header is missing, so it can only ever
+be last. And this is precisely why the guest credential travels in its own
+<code>X-Guest-Token</code> header rather than in <code>Authorization</code>: SimpleJWT's
+<code>JWTAuthentication</code> <em>raises</em> on a bearer token that is not an access token, which
+would kill the chain before the guest authenticator ever ran. The header choice is not cosmetic —
+it is what lets the two credential families coexist on one view.</p>
+</div>
+
+<p>The service principal itself is four lines
+(<code>apps/backend/ingestion/authentication.py:16</code>) and the comparison is constant-time:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class AgentServicePrincipal:
+    service_name: str = "agent-indexing"
+    is_authenticated: bool = True
+    is_anonymous: bool = False
+
+# ... and in authenticate():
+if not hmac.compare_digest(provided_token, configured_token):
+    raise AuthenticationFailed("Invalid authentication credentials.")</code></pre>
+
+<p><code>compare_digest</code> instead of <code>==</code> takes the same time whether the strings
+differ in the first byte or the last, so an attacker cannot learn the secret one character at a time
+by measuring response latency. You will see the identical call on the agent side. That token is
+explainer #2's subject; this page only notes it as the third shape of caller.</p>
+
+<h3>2. Way in #1 &mdash; social OAuth (Naver and Google)</h3>
+
+<p>This is how most real users arrive. The implementation is a small class hierarchy:
+<code>accounts/social.py</code> holds a provider-agnostic core, and <code>naver.py</code> /
+<code>google.py</code> subclass it. Its module docstring states the split exactly:</p>
+
+<pre><code>"""Provider-agnostic social OAuth core.
+...
+The shared core owns the signed-state make/verify, the JSON request helper (GET, plus
+POST form-encoded for token exchanges like Google's), and the upsert/link
+policy. Provider-specific concerns -- token exchange, profile fetch, and the
+raw-profile -&gt; user-field mapping -- stay as subclass hooks so each provider's
+behavior is explicit and independently testable."""</code></pre>
+
+<p>The round trip, with toy data:</p>
+
+<figure>
+<div class="fig-box">
+<svg viewBox="0 0 700 500" width="100%" height="auto" role="img" aria-label="OAuth sequence diagram">
+  <defs>
+    <marker id="sa" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#3d6fd8"></polygon>
+    </marker>
+    <marker id="sb" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#2f9e6e"></polygon>
+    </marker>
+  </defs>
+
+  <rect x="18" y="10" width="150" height="30" rx="6" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="93" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">Browser (web app)</text>
+  <rect x="255" y="10" width="180" height="30" rx="6" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="345" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">Django /api/auth/naver/</text>
+  <rect x="520" y="10" width="160" height="30" rx="6" fill="#f3eefd" stroke="#cfc0ef"></rect>
+  <text x="600" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">nid.naver.com</text>
+
+  <line x1="93" y1="44" x2="93" y2="490" stroke="#c9d0d8" stroke-width="1.2" stroke-dasharray="4 4"></line>
+  <line x1="345" y1="44" x2="345" y2="490" stroke="#c9d0d8" stroke-width="1.2" stroke-dasharray="4 4"></line>
+  <line x1="600" y1="44" x2="600" y2="490" stroke="#c9d0d8" stroke-width="1.2" stroke-dasharray="4 4"></line>
+
+  <text x="98" y="66" font-size="10.5" fill="#1f2328">1. GET /login-url</text>
+  <line x1="93" y1="72" x2="341" y2="72" stroke="#3d6fd8" stroke-width="1.4" marker-end="url(#sa)"></line>
+
+  <text x="98" y="98" font-size="10.5" fill="#1f2328">2. { authorization_url, state: "eyJwcm92aWRlciI6&hellip;:1uP4xQ:hmac" }</text>
+  <line x1="341" y1="104" x2="97" y2="104" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sb)"></line>
+
+  <text x="150" y="130" font-size="10.5" fill="#1f2328">3. redirect: /authorize?client_id=&hellip;&amp;state=&lt;that string&gt;</text>
+  <line x1="93" y1="136" x2="596" y2="136" stroke="#3d6fd8" stroke-width="1.4" marker-end="url(#sa)"></line>
+
+  <rect x="500" y="146" width="185" height="34" rx="5" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="592" y="167" text-anchor="middle" font-size="10" fill="#3c4551">user logs in &amp; consents</text>
+
+  <text x="150" y="204" font-size="10.5" fill="#1f2328">4. redirect back: ?code=xJ7&hellip;&amp;state=&lt;echoed&gt;</text>
+  <line x1="596" y1="210" x2="97" y2="210" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sb)"></line>
+
+  <text x="98" y="236" font-size="10.5" fill="#1f2328">5. POST /callback  { code, state }</text>
+  <line x1="93" y1="242" x2="341" y2="242" stroke="#3d6fd8" stroke-width="1.4" marker-end="url(#sa)"></line>
+
+  <rect x="252" y="252" width="190" height="34" rx="5" fill="#eefaf3" stroke="#a8ddc3"></rect>
+  <text x="347" y="266" text-anchor="middle" font-size="9.5" fill="#14324f">6. _validate_state: signature,</text>
+  <text x="347" y="279" text-anchor="middle" font-size="9.5" fill="#14324f">age &lt; 600s, provider == "naver"</text>
+
+  <text x="352" y="308" font-size="10.5" fill="#1f2328">7. POST /oauth2.0/token (client_id + secret + code)</text>
+  <line x1="345" y1="314" x2="596" y2="314" stroke="#3d6fd8" stroke-width="1.4" marker-end="url(#sa)"></line>
+  <text x="352" y="336" font-size="10.5" fill="#1f2328">&nbsp; &nbsp; &rarr; { "access_token": "AAAAO&hellip;" }</text>
+  <line x1="596" y1="342" x2="349" y2="342" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sb)"></line>
+
+  <text x="352" y="368" font-size="10.5" fill="#1f2328">8. GET /v1/nid/me  (Bearer AAAAO&hellip;)</text>
+  <line x1="345" y1="374" x2="596" y2="374" stroke="#3d6fd8" stroke-width="1.4" marker-end="url(#sa)"></line>
+  <text x="352" y="396" font-size="10.5" fill="#1f2328">&nbsp; &nbsp; &rarr; { resultcode: "00", response: { id: "9f2c", email, name, mobile } }</text>
+  <line x1="596" y1="402" x2="349" y2="402" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sb)"></line>
+
+  <rect x="252" y="412" width="190" height="34" rx="5" fill="#eefaf3" stroke="#a8ddc3"></rect>
+  <text x="347" y="426" text-anchor="middle" font-size="9.5" fill="#14324f">9. _upsert_user &rarr; accounts_user</text>
+  <text x="347" y="439" text-anchor="middle" font-size="9.5" fill="#14324f">(provider="naver", social_id="9f2c")</text>
+
+  <text x="98" y="470" font-size="10.5" fill="#1f2328">10. { "access": "eyJhbGci&hellip;", "refresh": "eyJhbGci&hellip;" }</text>
+  <line x1="341" y1="476" x2="97" y2="476" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sb)"></line>
+</svg>
+</div>
+<figcaption>The Naver round trip. Google is the same shape; only steps 7 and 8 differ in mechanics.</figcaption>
+</figure>
+
+<h4>The signed <code>state</code></h4>
+
+<p>Step 2's opaque string is built by <code>build_login_url</code>
+(<code>social.py:104</code>) and it is not random noise — it is a signed payload:</p>
+
+<pre><code>state = signing.dumps(
+    {"provider": self.provider, "nonce": secrets.token_urlsafe(24)},
+    salt=self.state_salt,
+)</code></pre>
+
+<p><code>django.core.signing.dumps</code> serialises that dict, stamps it with a timestamp, and
+appends an HMAC keyed by Django's <code>SECRET_KEY</code> mixed with the given <em>salt</em> (a
+per-purpose string; here <code>"accounts.naver-oauth-state"</code> from
+<code>naver.py:22</code> versus <code>"accounts.google-oauth-state"</code> in
+<code>google.py:20</code>). The verification side, <code>_validate_state</code>
+(<code>social.py:173</code>), is the mirror image:</p>
+
+<pre><code>payload = signing.loads(state, salt=self.state_salt, max_age=self.state_max_age)
+...
+if not isinstance(payload, dict) or payload.get("provider") != self.provider:
+    raise self.error_state(f"Invalid {self.display_name} state.")</code></pre>
+
+<p>So a callback's state must be a string this backend signed, under this provider's salt, less than
+<code>state_max_age</code> = 600 seconds ago, and naming this provider. Two of those checks are
+belt-and-braces against the same mistake: a Naver state replayed at the Google callback fails on the
+salt <em>and</em> on the <code>provider</code> field. Note what is <em>not</em> involved: no session,
+no cookie, no server-side table of outstanding states. Freshness comes from the embedded timestamp,
+uniqueness from the nonce — a stateless design that costs nothing to scale and that the login flow
+otherwise had no reason to keep state for.</p>
+
+<h4>The upsert, and the conflict it refuses</h4>
+
+<p>Steps 7&ndash;8 are the subclass hooks. <code>NaverOAuthService._exchange_code_for_token</code>
+(<code>naver.py:96</code>) does a GET with a query string, because that is what Naver's endpoint
+wants; <code>GoogleOAuthService._exchange_code_for_token</code> (<code>google.py:80</code>) does a
+form-encoded POST that must also repeat <code>redirect_uri</code>, because that is what the OAuth
+spec and Google want. Then each <code>_profile_fields</code> maps a raw provider payload to the same
+six keys, which is where the providers' differences get normalised away:</p>
+
+<table>
+<thead><tr><th></th><th>Naver</th><th>Google</th></tr></thead>
+<tbody>
+<tr><td>identity claim</td><td><code>id</code> (inside <code>response</code>)</td><td><code>sub</code> (OIDC)</td></tr>
+<tr><td>profile endpoint</td><td><code>openapi.naver.com/v1/nid/me</code>, checked for <code>resultcode == "00"</code></td><td><code>openidconnect.googleapis.com/v1/userinfo</code></td></tr>
+<tr><td>extra guard</td><td>&mdash;</td><td>rejects the login outright unless <code>email_verified</code> is truthy (<code>google.py:105</code>)</td></tr>
+<tr><td>phone number</td><td><code>mobile</code>, stored</td><td>not supplied &rarr; <code>None</code>, meaning <em>leave any stored value alone</em></td></tr>
+<tr><td>provider token kept?</td><td>yes, <code>provider_token_field = "naver_access_token"</code></td><td>no, <code>= None</code></td></tr>
+<tr><td>authorize extras</td><td>&mdash;</td><td><code>scope = "openid email profile"</code></td></tr>
+</tbody>
+</table>
+
+<p>That <code>mobile: None</code> convention is a nice detail: <code>""</code> and <code>None</code>
+are made to mean different things, so a Google login can never blank out a phone number that a Naver
+login previously supplied. The upsert respects it literally — <code>if mobile is not None:</code>.</p>
+
+<p><code>_upsert_user</code> (<code>social.py:263</code>) is wrapped in
+<code>@transaction.atomic</code> and reaches for rows with <code>select_for_update()</code>, which
+takes a row lock so two simultaneous callbacks for the same person cannot both decide to create the
+account. Its logic is a small decision tree:</p>
+
+<pre><code>user = User.objects.select_for_update().filter(
+    provider=self.provider, social_id=social_id).first()
+
+if user is None:                                  # unknown (provider, social_id)
+    user = User.objects.select_for_update().filter(email=email).first()
+    if user is None:
+        user = User.objects.create_user(...)      # brand new account
+        created = True
+    else:
+        self._guard_link_conflict(user=user, social_id=social_id)
+elif User.objects.select_for_update().filter(email=email)
+        .exclude(pk=user.pk).exists():            # known identity, email now
+    raise self.error_conflict(...)                # belongs to someone else</code></pre>
+
+<p>The interesting branch is the middle one: the provider identity is new, but that email address
+already has an account. changple5's answer is a hard refusal, never a silent merge.
+<code>_guard_link_conflict</code> (<code>social.py:324</code>) refuses three ways, each with a
+machine-readable <code>conflict_provider</code> so the web UI can say which door to use:</p>
+
+<pre><code>if user.provider and user.provider != self.provider:
+    raise self.error_conflict("이미 다른 소셜 계정에 연결된 이메일입니다.",
+                              conflict_provider=user.provider)
+...
+# A blank-provider, non-admin account with a usable password is an
+# email/password signup (P24.S2). Adopting it as a social identity would
+# clobber its password via set_unusable_password() below -- reject with a
+# hard conflict instead.
+if (not user.provider and user.user_type != "admin"
+        and user.has_usable_password()):
+    raise self.error_conflict("이미 이메일과 비밀번호로 가입된 이메일입니다.",
+                              conflict_provider="email")</code></pre>
+
+<div class="callout">
+<p><strong>One email = at most one account, enforced as a 409.</strong> Auto-linking on a matching
+email is a classic account-takeover route: if a provider ever hands out an unverified address, the
+attacker inherits an existing account. Here the third guard exists for a different and equally real
+reason, and the comment says it plainly — the upsert ends with
+<code>user.set_unusable_password()</code>, so adopting a password account as a social identity would
+silently destroy its password.</p>
+</div>
+
+<p>The views are thin by comparison, and their job is mapping exceptions to status codes.
+<code>NaverCallbackView</code> (<code>views.py:383</code>) catches five error types and returns
+<code>503</code> for "not configured", <code>400</code> for a bad state, <code>409</code> plus the
+<code>conflict_provider</code> for a link conflict, <code>400</code> for a provider rejection and
+<code>502</code> for a provider outage — each with Korean copy built from the service's
+<code>display_name_ko</code> (네이버 / 구글). <code>GoogleCallbackView</code>
+(<code>views.py:453</code>) is the same block with the other class names. Both end identically:</p>
+
+<pre><code>return Response(build_refresh_token_pair(user))</code></pre>
+
+<p>which is where the three ways in converge. Routes are registered in
+<code>accounts/urls.py:48&ndash;63</code> under the <code>/api/auth/</code> prefix.</p>
+
+<h4>Why the Naver token is kept</h4>
+
+<p>Notice that the provider access token, once obtained, is used exactly once during login — to fetch
+the profile — and that Naver's is then <em>stored</em> while Google's is thrown away. The reason is account deletion.
+<code>AuthWithdrawView</code> (<code>views.py:155</code>) must not merely delete the local row; for
+Naver it also has to tell Naver that this app's grant is finished:</p>
+
+<pre><code>if user.provider == NaverOAuthService.provider and user.social_id:
+    disconnect_outcome = "failed"
+    access_token = (user.naver_access_token or "").strip()
+    if access_token:
+        try:
+            service.disconnect(access_token=access_token)   # grant_type=delete
+        except (...):
+            disconnect_outcome = "failed"
+        else:
+            disconnect_outcome = "revoked"
+user.delete()</code></pre>
+
+<p><code>NaverOAuthService.disconnect</code> (<code>naver.py:74</code>) calls the token endpoint with
+<code>grant_type=delete</code>. Two design choices are visible: the deletion happens
+<strong>regardless</strong> of whether the disconnect worked — a user asking to leave always leaves —
+and the outcome is reported honestly to the client as <code>revoked</code> / <code>not_linked</code> /
+<code>failed</code> rather than being swallowed. Google needs none of this
+(<code>google.py:59</code>): "No Google token is persisted; withdraw deletes the row and the app grant
+stays user-revocable in Google account settings."</p>
+
+<h3>3. Way in #2 &mdash; email and password</h3>
+
+<p>The second door is a conventional signup, and its interesting parts are all about what happens
+between the account existing and the account being usable.</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node"><b>POST /register</b>creates the row, <code>email_verified_at</code> NULL<span class="m">views.py:503</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>Celery task</b>signed link, mailed. Failures swallowed.<span class="m">tasks.py send_verification_email</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>POST /verify-email</b>stamps the column, returns a token pair<span class="m">views.py:552</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node user"><b>Logged in</b>no second login step<span class="m">build_refresh_token_pair</span></div>
+  </div>
+</div>
+<figcaption>Signup. The verification click is also the first login.</figcaption>
+</figure>
+
+<p><code>EmailRegisterView</code> (<code>views.py:503</code>) validates with
+<code>EmailRegisterSerializer</code> — which lowercases the email, runs Django's password validators
+and translates their failures into Korean by error <em>code</em>
+(<code>serializers.py:41</code>), and normalises the phone number to bare digits matching
+<code>01\d{8,9}</code> — then checks for an existing account and refuses with the same
+<code>409 + conflict_provider</code> vocabulary the OAuth path uses. The account is created with
+<code>provider="email"</code> and the mail is queued:</p>
+
+<pre><code>def _enqueue_verification_email(user_id: int) -&gt; None:
+    """Fire the verification mail without ever blocking/failing the response.
+
+    A broker outage (or any enqueue error) is logged and swallowed: the mail is
+    best-effort and the resend endpoint is the recovery path, so an enqueue
+    problem must never fail signup or resend."""
+    try:
+        from .tasks import send_verification_email
+        send_verification_email.delay(user_id)
+    except Exception:
+        logger.exception("failed to enqueue verification email for user %s", user_id)</code></pre>
+
+<p><code>.delay()</code> hands the job to Celery, a background worker system, and returns
+immediately; the HTTP response does not wait for SMTP. Celery, the queue and the dispatch pattern are
+explainer #16's subject. Note the two layers of "never fail the request": the enqueue is wrapped here,
+and the task itself (<code>accounts/tasks.py</code>) returns
+<code>{"status": "error"}</code> rather than raising, so no mail problem can crash a worker either.</p>
+
+<h4>Stateless email tokens, and the trick that makes a reset link single-use</h4>
+
+<p>There is no token table. <code>accounts/email_tokens.py</code> signs a payload, exactly like the
+OAuth state, with a distinct salt, purpose tag and lifetime per flow:</p>
+
+<table>
+<thead><tr><th></th><th>Verification</th><th>Password reset</th></tr></thead>
+<tbody>
+<tr><td>salt</td><td><code>accounts.email-verification</code></td><td><code>accounts.password-reset</code></td></tr>
+<tr><td>purpose</td><td><code>email-verification</code></td><td><code>password-reset</code></td></tr>
+<tr><td>max age</td><td>3 days</td><td>1 hour</td></tr>
+<tr><td>extra claim</td><td>&mdash;</td><td><code>fp</code>: a password-hash fingerprint</td></tr>
+</tbody>
+</table>
+
+<p>Separate salts mean a verification token can never be replayed at the reset endpoint even before
+the purpose check runs. But statelessness has an obvious problem: if the server remembers nothing,
+what stops a reset link from being used twice, or from still working a week after the password
+changed? The answer is 11 lines:</p>
+
+<pre><code>def password_hash_fingerprint(password_hash: str) -&gt; str:
+    """Short, non-reversible fingerprint of a user's stored password hash.
+
+    Embedding this in a reset token and re-checking it at confirm makes the
+    token effectively single-use: once ``set_password`` rewrites the hash (on a
+    successful reset, or any other password change) the fingerprint no longer
+    matches and every outstanding token is rejected. This is the stateless
+    equivalent of Django's PasswordResetTokenGenerator state-binding -- no table."""
+    return hashlib.sha256((password_hash or "").encode("utf-8")).hexdigest()[:16]</code></pre>
+
+<div class="callout">
+<p><strong>Bind the token to state that the action itself changes.</strong> The token carries a digest
+of the current password hash. Completing the reset rewrites that hash, so the digest in every
+outstanding token — including the one just used — stops matching. One-time use, invalidation of all
+older links, and invalidation on any unrelated password change, all as a side effect of the operation
+itself. It costs one <code>sha256</code> and no storage.</p>
+</div>
+
+<p>The check lives in <code>_resolve_reset_token_user</code> (<code>views.py:642</code>), which is
+shared by the preflight and the confirm endpoint so they can never disagree:</p>
+
+<pre><code>user = User.objects.filter(pk=payload.get("user_id"), provider="email").first()
+if (user is None
+        or user.email != payload.get("email")
+        or payload.get("fp") != password_hash_fingerprint(user.password)):
+    return None, Response({"detail": _RESET_TOKEN_INVALID_DETAIL,
+                           "code": "token_invalid"}, status=400)</code></pre>
+
+<p>Three independent kill switches: the account is gone, the email changed since the token was minted,
+or the password moved. The same email re-check appears in <code>EmailVerifyView</code>
+(<code>views.py:581</code>) — <em>"A later email change invalidates outstanding tokens"</em>.</p>
+
+<h4>The four password-reset endpoints, and why one of them is read-only</h4>
+
+<p><code>urls.py</code> registers three reset routes plus the resend:
+<code>request-password-reset</code>, <code>validate-reset-token</code>,
+<code>confirm-password-reset</code>. The middle one (<code>views.py:679</code>) exists purely for user
+experience: it lets the reset page render a dead-link state on load, before showing a form the user
+would fill in for nothing. Its docstring is explicit that it "never sets a password or consumes the
+token" — which is only safe <em>because</em> consumption is a side effect of the hash changing rather
+than a flag the server flips.</p>
+
+<p>Two anti-enumeration behaviours run through the whole family. <code>RequestPasswordResetView</code>
+and <code>ResendVerificationView</code> return the same cheerful 200 whether or not the address
+exists, so the endpoint cannot be used to test whether someone is a member. And
+<code>EmailTokenObtainPairSerializer</code> (<code>serializers.py:183</code>) overrides SimpleJWT's
+failure copy with one message for both wrong-password and no-such-account:</p>
+
+<pre><code>default_error_messages = {
+    "no_active_account": "이메일 또는 비밀번호가 올바르지 않습니다.",
+}</code></pre>
+
+<p>That same serializer holds the verification gate, and its placement is deliberate:</p>
+
+<pre><code># Gate applies ONLY to provider="email" accounts (social/admin leave
+# email_verified_at null by design). Runs after the password check
+# succeeds, so it never reveals whether an unverified email exists to a
+# wrong-password attempt -- those still get the generic failure upstream.
+if self.user.provider == "email" and self.user.email_verified_at is None:
+    raise AuthenticationFailed(
+        "이메일 인증이 필요합니다. 가입 시 받은 인증 메일을 확인해 주세요.",
+        "email_not_verified")</code></pre>
+
+<p>Checking verification <em>after</em> the password is what keeps the distinct
+<code>email_not_verified</code> code — which the front end needs, to offer a "resend" button — from
+becoming an oracle. You only learn that an unverified account exists if you already proved you know
+its password.</p>
+
+<div class="warn">
+<p><strong>The dead-end that is deliberately avoided.</strong> <code>ConfirmPasswordResetView</code>
+(<code>views.py:699</code>) also stamps <code>email_verified_at</code> if it was null, with the
+reasoning in a comment: completing a reset via the emailed link already proves inbox ownership, and
+without this a user could successfully reset their password and still be refused at login as
+unverified.</p>
+</div>
+
+<p>Finally, password login itself. Django resolves credentials through a list of authentication
+backends; <code>settings.py:546</code> puts a custom one first:</p>
+
+<pre><code>AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailAuthBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]</code></pre>
+
+<p><code>EmailAuthBackend</code> (<code>backends.py:9</code>) looks the account up by email — or by
+<code>username</code> when the identifier has no <code>@</code> and the account is an admin — and then
+refuses anything that is neither an admin nor <code>provider == "email"</code>. Social accounts fail
+here for a structural reason rather than a policy one: the OAuth upsert calls
+<code>set_unusable_password()</code>, which stores a hash that no input can ever match. A Naver user
+has no password to guess.</p>
+
+<h3>4. The token pair every door opens onto</h3>
+
+<p>Three ways in, one exit. <code>build_refresh_token_pair</code>
+(<code>serializers.py:348</code>) is six lines and is called by the Naver callback, the Google
+callback, email verification and password-reset confirm alike:</p>
+
+<pre><code>def build_refresh_token_pair(user) -&gt; dict[str, str]:
+    refresh = stamp_tier_claim(RefreshToken.for_user(user), user)
+    return {"access": str(refresh.access_token), "refresh": str(refresh)}</code></pre>
+
+<p>The policy behind those tokens is one settings block (<code>config/settings.py:577</code>):</p>
+
+<pre><code>SIMPLE_JWT: dict[str, object] = {
+    # 30-day sliding session: refresh rotates on every visit (ROTATE_REFRESH_TOKENS),
+    # so any user returning within 30 days stays logged in until explicit logout.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ALGORITHM": "HS256",
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ROTATE_REFRESH_TOKENS": True,
+    "SIGNING_KEY": JWT_SHARED_SECRET,
+}</code></pre>
+
+<p>Every line is load-bearing. <code>SIGNING_KEY</code> is <em>not</em> Django's
+<code>SECRET_KEY</code> — it is the separate <code>JWT_SHARED_SECRET</code> from explainer #2, the one
+value both apps are given, which is the entire reason the agent can verify these tokens.
+<code>ROTATE_REFRESH_TOKENS</code> plus <code>BLACKLIST_AFTER_ROTATION</code> require the
+<code>rest_framework_simplejwt.token_blacklist</code> app (installed at <code>settings.py:78</code>):
+rotation writes the old token's <code>jti</code> to a table, which is why revocation works at all in
+an otherwise stateless scheme. Three views expose the lifecycle, each a two-line subclass over a
+SimpleJWT base (<code>views.py:137&ndash;153</code>):</p>
+
+<table>
+<thead><tr><th>Route</th><th>View</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>POST /api/auth/token</code></td><td><code>AuthTokenView</code></td><td>Email + password &rarr; a fresh pair.</td></tr>
+<tr><td><code>POST /api/auth/refresh</code></td><td><code>AuthRefreshView</code></td><td>Refresh token &rarr; rotated pair; the old one is blacklisted.</td></tr>
+<tr><td><code>POST /api/auth/logout</code></td><td><code>AuthLogoutView</code></td><td>Blacklists the submitted refresh token. The access token lives out its 30 minutes.</td></tr>
+</tbody>
+</table>
+
+<div class="warn">
+<p><strong>Logout does not instantly kill an access token</strong>, and nothing in this design could
+make it. A stateless signature has no revocation channel; the blacklist only covers the refresh
+token, and the ability to <em>continue</em> the session is what actually ends. The 30-minute access
+lifetime is the size of that window, and choosing it is exactly the trade this architecture makes:
+short enough to bound the damage, long enough that most requests need no round trip.</p>
+</div>
+
+<h4>The <code>tier</code> claim and the one place it is re-read</h4>
+
+<p><code>accounts/tokens.py</code> is 61 lines and mostly docstring — the docstring is the design
+document:</p>
+
+<pre><code>"""Shared JWT `tier` claim helpers (P27 D1).
+
+`tier` is a DB-authoritative hint claim: every user-issued token pair carries
+it so the agent (and any other JWT consumer) can read it without a round trip,
+but nothing gates on it in P27 -- see `entitlements.py` for the actual
+resolution seam. The claim is stamped on the refresh token; SimpleJWT's
+`RefreshToken.access_token` copies all claims outside `no_copy_claims` onto
+the derived access token, so stamping the refresh before deriving `access`
+covers both token types from a single call site.
+
+Refresh **rotation** must never simply carry the incoming token's `tier`
+forward -- it has to re-read `user.tier` from the database so a tier change
+takes effect on the user's very next refresh."""</code></pre>
+
+<p>Two mechanisms in one file. <code>stamp_tier_claim</code> is a one-liner
+(<code>token["tier"] = user.tier</code>) that is called on the <em>refresh</em> token only, and rides
+onto the access token for free because SimpleJWT copies claims when deriving one from the other. And
+<code>restamp_tier_on_refresh</code> handles rotation:</p>
+
+<pre><code>access = AccessToken(data["access"])
+user_id = access.payload.get(api_settings.USER_ID_CLAIM)
+user = get_user_model().objects.get(**{api_settings.USER_ID_FIELD: user_id})
+
+stamp_tier_claim(access, user)
+data["access"] = str(access)
+
+if "refresh" in data:
+    refresh = RefreshToken(data["refresh"])
+    stamp_tier_claim(refresh, user)
+    data["refresh"] = str(refresh)</code></pre>
+
+<p>Read that carefully: it takes the <em>user id</em> out of the freshly issued access token and hits
+the database for the current tier, rather than copying the value forward from the token that was
+presented. Doing it via the outgoing access token also avoids re-decoding — and therefore
+re-blacklist-checking — the incoming refresh token, which the caller
+(<code>RefreshTokenRotationSerializer</code>, <code>serializers.py:316</code>) has already processed.
+The practical consequence for the product: <strong>a subscription change reaches every JWT consumer on
+the user's next refresh, and not before</strong> — up to 30 minutes.</p>
+
+<p>Which raises the obvious question: who suffers from that lag? Grep the repository for consumers of
+the claim and the answer is <em>nobody on the server</em>. Every <code>"tier"</code> string in Python
+is either the model, the stamping helper, the <code>/auth/me</code> serializer field or billing
+writing the column. The one live reader is the browser, and its own comment is candid
+(<code>apps/web/src/lib/auth-client.ts:44</code>):</p>
+
+<pre><code>// Paid tier (P27). Re-stamped from DB on `/auth/refresh` rotation only, so it
+// can trail the DB by up to a rotation cycle -- consumers treat `tier === "pro"`
+// as a hint ...</code></pre>
+
+<p>A badge that is briefly stale is a cosmetic bug. A <em>gate</em> that is briefly stale is a
+security or revenue bug. The architecture puts the claim firmly in the first category — and §7 shows
+where the real decisions are made instead.</p>
+
+<h3>5. Way in #3 &mdash; the anonymous trial</h3>
+
+<p><code>accounts/guest_tokens.py</code> is 170 lines, a third of it explaining why the design is what
+it is. Its opening states the constraint that forced a new credential into existence:</p>
+
+<pre><code>"""The P68 anonymous trial needs a credential a *browser* may hold. The only
+anonymous credential that existed before was the agent service token
+(`X-Agent-Service-Token` == ``AGENT_BACKEND_SHARED_TOKEN``), which is the
+internal API's shared secret and can therefore never be shipped to a client."""</code></pre>
+
+<p>The mint endpoint (<code>views.py:322</code>) is as small as it sounds — no authentication, no
+row:</p>
+
+<pre><code>class GuestTrialTokenView(APIView):
+    authentication_classes: list[type] = []
+    permission_classes = [AllowAny]
+    throttle_classes = [GuestMintScopedRateThrottle]
+    throttle_scope = "guest-token-mint"
+
+    def post(self, request: Request) -&gt; Response:
+        del request
+        token, guest_id, expires_at = issue_guest_token()
+        return Response({"guest_token": token, "guest_id": str(guest_id),
+                         "expires_at": expires_at.isoformat(),
+                         "expires_in": int(guest_token_ttl().total_seconds())}, status=201)</code></pre>
+
+<p>and <code>issue_guest_token</code> (<code>guest_tokens.py:85</code>) builds the payload by hand
+with PyJWT rather than through SimpleJWT, because it is deliberately <em>not</em> a SimpleJWT
+token:</p>
+
+<pre><code>payload = {
+    "token_type": GUEST_TOKEN_TYPE,          # "guest"
+    "guest_id": str(resolved_guest_id),      # uuid4
+    "iat": int(resolved_issued_at.timestamp()),
+    "exp": int(expires_at.timestamp()),      # +12h by default
+    # Not checked anywhere yet: the seam P68.S3/P68.S4 need to revoke a
+    # single guest credential (adoption burn / abuse) without a new claim.
+    "jti": uuid.uuid4().hex,
+}
+token = jwt.encode(payload, str(settings.JWT_SHARED_SECRET),
+                   algorithm=GUEST_TOKEN_ALGORITHM)   # HS256</code></pre>
+
+<div class="callout">
+<p><strong>Same secret, disjoint claim set.</strong> A guest token is signed with the very same
+<code>JWT_SHARED_SECRET</code> as an access token — but it carries <code>token_type: "guest"</code> and
+a <code>guest_id</code>, and <strong>never</strong> a <code>user_id</code>. Since SimpleJWT's access
+verification requires <code>token_type == "access"</code> and the agent's user verification requires
+<code>user_id</code>, neither credential can ever be mistaken for the other. Reusing the key while
+making the payloads structurally incompatible is how one secret safely serves two credential
+families.</p>
+</div>
+
+<p>Verification (<code>decode_guest_token</code>, <code>guest_tokens.py:111</code>) checks the
+signature with a required-claims list, then adds two checks a library cannot make for you:</p>
+
+<pre><code>if claims.get("token_type") != GUEST_TOKEN_TYPE:
+    raise GuestTokenError("Token is not a guest token.")
+
+# Defense in depth: a guest credential must never resolve to a user
+# principal, so a token carrying a user_id is refused outright rather than
+# silently treated as anonymous.
+if "user_id" in claims:
+    raise GuestTokenError("Guest tokens must not carry a user_id claim.")</code></pre>
+
+<p>and returns the principal, a frozen dataclass carrying the only thing that scopes it
+(<code>guest_tokens.py:63</code>):</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class GuestPrincipal:
+    guest_id: uuid.UUID
+    expires_at: datetime
+    is_authenticated: bool = True
+    is_anonymous: bool = False</code></pre>
+
+<p><code>GuestTokenAuthentication</code> (<code>guest_tokens.py:147</code>) wraps that for DRF, and —
+per §1 — returns <code>None</code> when the header is absent so the chain continues. From there,
+<code>guest_id</code> is the identity everything is scoped by:
+<code>conversations.querysets.guest_trial_conversation_session_queryset</code> filters every lookup to
+it, so one guest can never read another's session.</p>
+
+<h4>What bounds a free trial</h4>
+
+<p>An identity anyone can mint for free is an identity anyone can mint a million of.
+<code>accounts/guest_limits.py</code> is the answer, and it is precise about which control is
+load-bearing:</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node"><b>Per-IP mint throttle</b>20/hour, DRF <code>ScopedRateThrottle</code>. Bounds how many <code>guest_id</code>s one browser can hold.<span class="m">fails CLOSED &rarr; 503</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node deny"><b>Per-guest_id quota</b>3 conversations. Counted from the rows themselves.<span class="m">PRIMARY &rarr; 429</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>Per-IP create cap</b>20/hour, best-effort. A counter outage is logged and skipped.<span class="m">SECONDARY &rarr; 429</span></div>
+  </div>
+</div>
+<figcaption>Three caps on the anonymous surface, with three different failure postures.</figcaption>
+</figure>
+
+<p>The docstring explains why the middle one carries the weight:</p>
+
+<pre><code>"""**Why the per-guest quota is the load-bearing control.** The operator ruled
+(2026-08-11) that the two-assistant-turn cap is per *conversation*; a guest may
+start fresh trials. So the only thing bounding what one browser gets for free is
+this quota -- and the mint throttle is what bounds how many `guest_id`s that
+browser can hold.
+
+**The quota counts rows, not cache entries.** ``ConversationSession.guest_id`` is
+indexed, and a guest credential lives at most ``GUEST_TRIAL_TOKEN_TTL_SECONDS``
+(12h), so "sessions carrying this guest_id" *is* the per-credential lifetime
+count. That makes the primary control immune to a cache flush or a Redis outage,
+and needs no new state."""</code></pre>
+
+<p>The per-IP caps use a fixed-window counter on the shared Django cache, which explainer #1
+established is <strong>Redis logical database 1</strong> (Celery's broker lives in db/0 and the
+agent's retrieval cache in db/2, precisely so that a Django <code>cache.clear()</code> —
+a <code>FLUSHDB</code> — cannot wipe either):</p>
+
+<pre><code>def incr_fixed_window(key: str, *, ttl_seconds: int) -&gt; int:
+    """Fixed-window counter on the shared Django cache (Redis db/1).
+
+    ``incr`` never extends the TTL, so the window really is fixed. Raises
+    whatever the cache backend raises -- each caller decides whether its cap is
+    primary (fail closed) or best-effort (log and skip)."""
+    try:
+        cache.add(key, 0, ttl_seconds)
+        return int(cache.incr(key))
+    except ValueError:
+        cache.set(key, 1, ttl_seconds)   # key expired between add() and incr()
+        return 1</code></pre>
+
+<p>That one function is used with two opposite failure postures, and the choice is argued in each
+place. The mint throttle fails <strong>closed</strong> — "minting is the doorway to the whole trial
+surface", so an unreachable counter yields <code>503 guest_limits_unavailable</code> rather than
+unlimited credentials (<code>GuestMintScopedRateThrottle</code>, <code>guest_limits.py:212</code>).
+The per-IP creation cap fails <strong>open</strong> — it is a secondary dimension over a forgeable
+value, and the row-counted quota behind it is unaffected, so an outage is logged and skipped
+(<code>enforce_guest_trial_creation_limits</code>, <code>guest_limits.py:169</code>, called from
+<code>conversations/views.py:255</code>).</p>
+
+<p>IP handling deserves its own note, because the file is unusually honest about it:</p>
+
+<pre><code>"""**IP is best-effort, deliberately.** Prod is Cloudflare -&gt; a standalone edge nginx
+(out of this repo) -&gt; app, so whether ``X-Forwarded-For`` holds the real client
+address is an ops/edge decision, and a direct caller can forge it. IP therefore
+only ever backs up an identity-keyed control, is sha256-scoped before it becomes
+a cache key, and an unresolvable IP **skips** the per-IP cap instead of
+collapsing every such caller into one shared bucket."""</code></pre>
+
+<p>Hashing the address before it becomes a cache key (<code>guest_scope</code>,
+<code>guest_limits.py:114</code>) means the counters and the refusal logs correlate one abuser's
+requests without ever storing a visitor's address. The refusals themselves speak a small vocabulary
+the client keys on — never on prose:</p>
+
+<table>
+<thead><tr><th>code</th><th>status</th><th>meaning</th></tr></thead>
+<tbody>
+<tr><td><code>guest_trial_quota_exhausted</code></td><td>429</td><td>this browser has started its allowance of trial conversations</td></tr>
+<tr><td><code>guest_rate_limited</code></td><td>429</td><td>a rate cap tripped (mint per IP, create per IP)</td></tr>
+<tr><td><code>guest_limits_unavailable</code></td><td>503</td><td>fail closed: the counter behind a <em>primary</em> control is unreachable</td></tr>
+</tbody>
+</table>
+
+<p>The numbers are settings, all with defaults that read as policy
+(<code>settings.py:504&ndash;542</code>): <code>GUEST_TRIAL_TOKEN_TTL_SECONDS</code> 12 hours,
+<code>GUEST_TRIAL_SESSIONS_PER_GUEST</code> 3, <code>GUEST_TRIAL_SESSIONS_PER_IP_HOURLY</code> 20,
+<code>GUEST_TOKEN_MINT_THROTTLE_RATE</code> <code>"20/hour"</code>, and
+<code>GUEST_TRIAL_SESSION_RETENTION_DAYS</code> 7 for unadopted trial sessions. The 12-hour TTL has a
+stated reason worth repeating, because it shows the trial and the OAuth flow were designed together:
+"long enough for a real trial plus the OAuth round trip &hellip; short enough that it never becomes a
+durable anonymous identity".</p>
+
+<div class="note">
+<p><strong>Two neighbouring subjects belong to other explainers.</strong> The cap on how many
+assistant turns a trial conversation may have lives on the agent side
+(<code>apps/agent/app/chat/guest_trial.py</code>) with the rest of the safety machinery — explainer
+#11. And what happens when a guest signs in and their trial conversation follows them into the
+account — <code>conversations/guest_adoption.py</code> — is explainer #4.</p>
+</div>
+
+<h3>6. How the agent recognises the same principal</h3>
+
+<p>Everything so far was Django. Now the same browser opens a chat stream at
+<code>POST /agent-api/chat/stream</code>, which is FastAPI — a different framework, a different
+process, a different database role. It gets the identical <code>Authorization</code> header, and it
+resolves it in <code>apps/agent/app/api/dependencies.py</code> without asking Django anything.</p>
+
+<p>The core is <code>_build_user_context</code> (<code>dependencies.py:124</code>):</p>
+
+<pre><code>claims = jwt.decode(
+    credentials.credentials,
+    request.app.state.settings.jwt_shared_secret,
+    algorithms=["HS256"],
+    options={"require": REQUIRED_ACCESS_TOKEN_CLAIMS},   # ("exp", "token_type", "user_id")
+)
+if claims.get("token_type") != "access":
+    raise unauthorized("Invalid authentication credentials.")
+
+return AgentUserContext(
+    user_id=_parse_user_id(claims, unauthorized=unauthorized),
+    access_token=credentials.credentials,
+    claims=dict(claims),
+)</code></pre>
+
+<p>Three details repay attention. <code>algorithms=["HS256"]</code> is pinned rather than read from
+the token's own header — accepting the token's stated algorithm is the classic JWT vulnerability, in
+which an attacker submits <code>alg: none</code> or downgrades an RS256 token to HS256 and signs it
+with the public key. Requiring <code>exp</code> is likewise explicit, because a JWT library that is
+handed a token with no expiry claim will happily accept one that never expires. And
+<code>_parse_user_id</code> (<code>dependencies.py:102</code>) refuses a boolean before accepting an
+int, because in Python <code>isinstance(True, int)</code> is <code>True</code> and
+<code>user_id: true</code> would otherwise become user 1.</p>
+
+<p>Note also what is kept: <code>access_token=credentials.credentials</code>. The agent holds on to
+the caller's raw token — the next section is why.</p>
+
+<p>Chat has three possible credentials and demands exactly one
+(<code>require_chat_caller_context</code>, <code>dependencies.py:347</code>):</p>
+
+<pre><code>presented = [c for c in (credentials, service_token, guest_token) if c is not None]
+if len(presented) &gt; 1:
+    raise _bearer_unauthorized("Provide exactly one authentication mechanism.")</code></pre>
+
+<p>Refusing ambiguity outright, rather than picking a winner by precedence, removes a whole class of
+confusion bugs where a caller presents two credentials and the server's choice is a surprise. The
+guest branch, <code>_build_guest_trial_context</code> (<code>dependencies.py:306</code>), mirrors the
+backend's verification — different framework, same three checks, and its docstring names the
+invariant:</p>
+
+<pre><code>"""Deliberately NOT `_build_user_context`: that one requires a `user_id` claim
+and would resolve a user principal. A guest token resolves to an identity
+(`guest_id`) and nothing else -- it can never become a user."""</code></pre>
+
+<p>A fourth entry point exists for the retrieval API:
+<code>require_retrieval_caller_context</code> (<code>dependencies.py:188</code>) accepts either a user
+bearer JWT or an <code>X-Agent-Api-Key</code> matched against a configured key map with
+<code>compare_digest</code> — the seam for external integrations reading the corpus without being a
+person.</p>
+
+<h4>The point of the whole arrangement</h4>
+
+<p>The agent authenticates locally, so a chat turn costs zero identity round trips. But it does need
+to write the conversation back into Django's tables, and at that moment it faces a choice: use its own
+service token, or carry the caller's credential. Explainer #2 established the answer at
+<code>apps/agent/app/chat/backend.py:516&ndash;540</code>, where three header builders sit side by
+side and <code>_conversation_request_headers</code> picks one:</p>
+
+<pre><code>"""Pick the caller credential for a conversation detail/message call.
+
+* first-party turn -&gt; the user access token (bearer);
+* P68 anonymous trial turn -&gt; the caller's own guest token, FORWARDED as-is.
+  The agent does not substitute the service token here on purpose: the
+  backend then scopes the lookup to that token's `guest_id`, so cross-guest
+  isolation is enforced at the backend chokepoint rather than trusted to the
+  agent;
+* dormant changple_web BFF guest turn -&gt; the service token."""</code></pre>
+
+<div class="callout">
+<p><strong>Authorization stays at the service that owns the data.</strong> The agent could open any
+conversation with its service token; instead it re-presents the caller's own credential, so Django's
+ownership rules run exactly as they would for a direct request. The route's own comment in
+<code>chat.py</code> puts it best: <em>"the backend — not this route — decides which sessions it may
+reach."</em> Verifying a token locally is a performance decision; forwarding it is a security
+decision, and the two are independent.</p>
+</div>
+
+<h3>7. Entitlements &mdash; what the name is allowed to do</h3>
+
+<p>We arrive at authorization. <code>accounts/entitlements.py</code> is 132 lines and its core is
+almost anticlimactic:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class Entitlements:
+    tier: str
+    is_paid: bool
+
+
+def get_entitlements(user: Any) -&gt; Entitlements:
+    """Resolve a user's current entitlements from their DB-authoritative tier.
+
+    No caching, no JWT claim involved -- always reads `user.tier` fresh."""
+    tier = getattr(user, "tier", User.Tier.FREE)
+    return Entitlements(tier=tier, is_paid=tier == User.Tier.PRO)</code></pre>
+
+<p>That is the seam. Not because the mapping is complex today — it is one comparison — but because
+having <em>one</em> named function that every paid-feature check calls means the day a second paid
+tier or a one-off purchase arrives, there is a single place to change and a single grep target. The
+module says so: <em>"Grep target for later phases: <code>get_entitlements</code>."</em> It is also
+where the "no caching, no JWT claim" rule is stated in code rather than in a comment somewhere
+else.</p>
+
+<h4>The read-side gate</h4>
+
+<p>The one substantial policy in the file is the chat thinking-level gate, and it is a good example of
+a general problem. A Pro user picks the <code>high</code> effort level, which is stored in
+<code>User.chat_thinking_level</code>. Later they cancel. What should happen to the stored value?</p>
+
+<p>Clearing it on downgrade sounds right and is a trap: subscriptions end in many ways — explicit
+cancel, expiry, a failed renewal, a refund, an operator edit — and every one of those paths would have
+to remember to clear the column. Miss one and a free user keeps a paid feature, silently. So
+changple5 inverts it: the column is never cleared, and the gate lives on <em>every read</em>.</p>
+
+<pre><code>PRO_ONLY_THINKING_LEVELS: tuple[str, ...] = ("high",)
+
+def resolve_effective_chat_thinking_level(user: Any) -&gt; str | None:
+    """THE ONLY READER of `User.chat_thinking_level`. The stored value is never
+    cleared on a tier downgrade (there are more downgrade sites than a hook can
+    cover), so the gate lives here on the read side instead: a Pro-only level
+    held by a non-paid user resolves to `None` -- i.e. unset, fall through to
+    the operator/env ladder -- while the stored value survives for a later
+    re-subscribe."""
+    level = getattr(user, "chat_thinking_level", None) or None
+    if level is None:
+        return None
+    if level in PRO_ONLY_THINKING_LEVELS and not get_entitlements(user).is_paid:
+        return None
+    return level</code></pre>
+
+<div class="callout">
+<p><strong>Gate on read, not on write.</strong> One chokepoint that every reader must pass beats
+<em>n</em> cleanup hooks that every future downgrade path must remember. It fails safe by default, and
+it preserves the user's preference so that resubscribing restores their setting instead of silently
+resetting it. The declaration "THE ONLY READER" is enforceable by grep, which is what makes the claim
+maintainable.</p>
+</div>
+
+<p>The resolved value is the top rung of a ladder; <code>resolve_service_default_chat_thinking_level</code>
+(<code>entitlements.py:86</code>) supplies the rest:</p>
+
+<figure>
+<div class="fig-box">
+  <div class="flow">
+    <div class="node user"><b>1. User override</b><code>User.chat_thinking_level</code>, through the gate<span class="m">entitlements.py:53</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>2. Operator store</b><code>LLMRoleConfig</code> row for the <code>chat</code> role<span class="m">editable live, no deploy</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>3. Env</b><code>GEMINI_CHAT_THINKING_LEVEL</code><span class="m">settings.py</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node"><b>4. Code default</b>registry default, <code>"high"</code><span class="m">always concrete</span></div>
+  </div>
+</div>
+<figcaption>The thinking-level ladder. Rungs 2&ndash;4 are explainer #2's live-operator-config
+pattern; rung 1 is this page's.</figcaption>
+</figure>
+
+<p>Its docstring notes the same never-fail posture used by every config read in the codebase: a
+<code>DatabaseError</code> is logged and treated as an absent row, and the function never returns
+<code>None</code> because the UI would have nothing to show.</p>
+
+<h4>Where a decision is actually made, on both sides of the bridge</h4>
+
+<p><code>ChatPreferencesView</code> (<code>views.py:208</code>) is <code>get_entitlements</code>'s
+first production caller, and its docstring is a small lesson in HTTP semantics:</p>
+
+<pre><code>"""The gate is in the view body on purpose, not in a permission class: it is
+**value-dependent** (a free user setting ``medium`` is legitimate; only a
+``PRO_ONLY_THINKING_LEVELS`` member is refused), and a permission class runs
+before the payload is known. Order is validate -&gt; authorize, so an unknown
+value is a **400** and a locked level on a non-paid tier is a **403** -- an
+authorization refusal is not a validation error.
+
+``request.user`` is the DB row loaded by JWT authentication, so the tier read
+here is DB-authoritative; the JWT ``tier`` claim is a presentation hint only
+and is never consulted."""</code></pre>
+
+<p>And the same rule holds on the agent side, where there is no <code>request.user</code> at all. When
+a chat turn needs the user's effort level, <code>apps/agent/app/chat/user_thinking_level.py</code>
+does a per-turn point read across the read bridge:</p>
+
+<pre><code>SELECT tier, chat_thinking_level FROM "backend"."accounts_user" WHERE id = %s
+...
+if level in PRO_ONLY_THINKING_LEVELS and tier not in PAID_TIERS:
+    ...  # -&gt; None</code></pre>
+
+<p>It holds the bearer token that already contains a <code>tier</code> claim, and it queries the
+database anyway. Its docstring explains both halves: the gate is re-applied here as "defense in
+depth", with the backend named as the source of truth; and there is emphatically no cache, because
+<code>llm_config.py</code>'s snapshot is process-wide and keyed by role, so a per-user value placed in
+it would leak one user's setting to every user that worker serves.</p>
+
+<h4>The rest of the account surface</h4>
+
+<table>
+<thead><tr><th>Route</th><th>Where</th><th>One line</th></tr></thead>
+<tbody>
+<tr><td><code>GET /api/auth/me</code></td><td><code>views.py:192</code></td><td>The session user. Its serializer sets <code>read_only_fields = fields</code>, making the endpoint structurally write-proof, and it carries the <em>effective</em> thinking level plus the resolved service default so the composer can render correctly on first paint with no extra fetch.</td></tr>
+<tr><td><code>GET/PATCH /api/auth/chat-preferences</code></td><td><code>views.py:208</code></td><td>The write leg for that preference; both verbs return the identical payload, a subset of <code>/auth/me</code>'s keys so the response folds straight into the cached session user.</td></tr>
+<tr><td><code>GET/POST /api/auth/pro-unlock-sheet</code></td><td><code>views.py:256</code></td><td>A server-side "already shown" flag for the Pro unlock sheet. Its docstring argues at length why a <code>localStorage</code> flag was forbidden — it would re-show on every new device.</td></tr>
+<tr><td><code>GET /api/auth/usage</code></td><td><code>views.py:306</code> + <code>usage.py</code></td><td>Four counts (conversations, content views, completed 컨설팅 reports, MBTI submissions). Its rule: <em>never substitute a zero for a failure</em> — a zeroed tile is indistinguishable from a new account, so a query error must 5xx.</td></tr>
+<tr><td><code>POST /api/auth/withdraw</code></td><td><code>views.py:155</code></td><td>Delete the account, best-effort Naver disconnect first (§2).</td></tr>
+</tbody>
+</table>
+
+<p>And the last link in the chain: nothing on this page ever <em>sets</em> <code>tier</code>. That is
+billing's job — a Toss subscription lifecycle from checkout through webhook, renewal and
+reconciliation, which writes the column and lets everything above resolve differently on the next
+read. It is explainer #18.</p>
+
+<div class="note">
+<p><strong>Where the tokens live between requests.</strong> Outside the scope of this page, but worth
+one line so the loop closes: the browser keeps the pair in <code>localStorage</code> under
+<code>changple.web.auth.tokens</code> (<code>apps/web/src/lib/auth-storage.ts:10</code>), with a
+separate key for an operator session, and mirrors only a <em>presence</em> bit into a cookie so the
+server can render the first frame without guessing whether anyone is signed in.</p>
+</div>
+
+<h3>Files walked</h3>
+<p class="files">Backend <code>apps/backend/accounts/</code>: <code>models.py</code>,
+<code>managers.py</code>, <code>backends.py</code>, <code>social.py</code>, <code>naver.py</code>,
+<code>google.py</code>, <code>tokens.py</code>, <code>guest_tokens.py</code>,
+<code>guest_limits.py</code>, <code>entitlements.py</code>, <code>email_tokens.py</code>,
+<code>views.py</code>, <code>serializers.py</code>, <code>urls.py</code>, <code>usage.py</code>,
+<code>tasks.py</code>, <code>_auth_helpers.py</code>. Also
+<code>apps/backend/ingestion/authentication.py</code>,
+<code>apps/backend/conversations/views.py</code> (authenticator chain and the guest create cap), and
+<code>apps/backend/config/settings.py</code> (<code>SIMPLE_JWT</code>, DRF defaults, the guest-trial
+block). Agent: <code>apps/agent/app/api/dependencies.py</code>,
+<code>apps/agent/app/chat/user_thinking_level.py</code>, <code>apps/agent/app/chat/backend.py</code>
+(header builders). Front end, for one detail each:
+<code>apps/web/src/lib/auth-client.ts</code>, <code>apps/web/src/lib/auth-storage.ts</code>.</p>
+
+<div class="warn">
+<p><strong>One thing to know about <code>_auth_helpers.py</code>.</strong> Despite sitting in the
+application package next to production modules, it is a <em>test</em> helper — it holds
+<code>NAVER_TEST_SETTINGS</code>, <code>build_signed_naver_state()</code>,
+<code>issue_refresh_token(user)</code> and a wrapper around the
+<code>delete_naver_linked_account</code> management command, and it is imported only by the three
+<code>test_auth_*.py</code> modules. If you are tracing a real request, nothing in it is on your
+path.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A user pays for Pro at 10:00. Their access token was issued at 09:45 and still
+  carries <code>"tier": "free"</code> until it expires at 10:15. Why does no paid feature refuse them
+  in the meantime?</p>
+  <button class="opt" data-correct="false">The payment webhook force-rotates every outstanding token for that user, so the claim is corrected immediately.</button>
+  <button class="opt" data-correct="true">No server-side rule reads the claim at all — every gate resolves the tier from the <code>accounts_user</code> row, including the agent, which queries the column over the read bridge.</button>
+  <button class="opt" data-correct="false">The access-token lifetime is short enough that the gap is not worth handling.</button>
+  <button class="opt" data-correct="false">The agent asks Django's <code>/auth/me</code> at the start of each turn and prefers that answer to the claim.</button>
+  <p class="why" hidden>The claim is a presentation hint for the browser's badge and nothing else —
+  <code>tokens.py</code> says so, and grepping the repository finds no server-side consumer.
+  <code>get_entitlements</code> reads <code>user.tier</code> fresh, and the agent's
+  <code>user_thinking_level.py</code> does its own <code>SELECT tier, chat_thinking_level</code> per
+  turn rather than trusting the token it is holding. <code>restamp_tier_on_refresh</code> exists to
+  keep the hint honest, not to make anything correct.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> There is no table of password-reset tokens anywhere. What actually stops a
+  reset link from working a second time?</p>
+  <button class="opt" data-correct="false">The 1-hour <code>max_age</code> in the signed payload, which the confirm endpoint shortens to zero after use.</button>
+  <button class="opt" data-correct="false">The <code>jti</code> claim is written to the SimpleJWT blacklist table when the reset completes.</button>
+  <button class="opt" data-correct="true">The token embeds a digest of the account's current password hash; completing the reset rewrites that hash, so the digest no longer matches.</button>
+  <button class="opt" data-correct="false">Nothing does — the link genuinely stays usable for its full hour, which is why the window is short.</button>
+  <p class="why" hidden><code>password_hash_fingerprint</code> (<code>email_tokens.py:105</code>) is a
+  truncated sha256 of <code>user.password</code>, carried in the token as <code>fp</code> and
+  re-checked in <code>_resolve_reset_token_user</code>. Binding the token to state that the action
+  itself mutates gives single use, invalidation of every older link, and invalidation on any unrelated
+  password change — with no storage at all.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> A guest token is signed with the very same <code>JWT_SHARED_SECRET</code> as a
+  user access token. Why can it never be used as one?</p>
+  <button class="opt" data-correct="false">It is signed with a different algorithm, so SimpleJWT's HS256 verification rejects it.</button>
+  <button class="opt" data-correct="true">Its claim set is disjoint by construction: <code>token_type</code> is <code>"guest"</code> and there is no <code>user_id</code>, and both verifiers require the opposite of exactly those two claims.</button>
+  <button class="opt" data-correct="false">The mint endpoint records each <code>guest_id</code> in a table that user authentication checks against.</button>
+  <button class="opt" data-correct="false">It is sent in <code>X-Guest-Token</code>, and the framework will not read a credential from a header it was not configured for.</button>
+  <p class="why" hidden>Access verification requires <code>token_type == "access"</code> and a
+  <code>user_id</code>; guest verification requires <code>token_type == "guest"</code>, a
+  <code>guest_id</code>, and explicitly refuses any token carrying a <code>user_id</code>. The
+  separate header solves a different problem — SimpleJWT <em>raises</em> on a non-access bearer token,
+  which would end the authenticator chain before the guest authenticator could run.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> A first-party chat turn hits <code>POST /agent-api/chat/stream</code> and the
+  agent then needs to persist the messages into Django's tables. Which credential does it use for that
+  write-back, and why?</p>
+  <button class="opt" data-correct="false">Its <code>X-Agent-Service-Token</code>, because the write is an internal service-to-service call.</button>
+  <button class="opt" data-correct="false">None — it writes the rows itself across the read bridge in SQL.</button>
+  <button class="opt" data-correct="true">The caller's own access token, re-presented as a bearer header, so Django's ownership rules decide which session may be touched.</button>
+  <button class="opt" data-correct="false">A freshly minted token for that <code>user_id</code>, signed with the shared secret it already holds.</button>
+  <p class="why" hidden><code>_conversation_request_headers</code> picks the caller's own credential —
+  the bearer JWT for a first-party turn, the guest token forwarded as-is for a trial turn — and keeps
+  the service token for calls with no human caller, such as the indexing hand-off. Verifying locally
+  is a performance decision; forwarding is a security one. The bridge is also
+  <code>SELECT</code>-only, so option two is impossible.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Redis becomes unreachable. What happens to
+  <code>POST /api/auth/guest-token</code> and to an existing guest starting a new trial
+  conversation?</p>
+  <button class="opt" data-correct="false">Both are refused with <code>503 guest_limits_unavailable</code>: any unreachable counter fails closed.</button>
+  <button class="opt" data-correct="false">Both proceed uncapped; the counters are best-effort everywhere and availability wins.</button>
+  <button class="opt" data-correct="true">Minting is refused with 503, while the create path skips its per-IP cap and still enforces the 3-per-<code>guest_id</code> quota, which is counted from the conversation rows.</button>
+  <button class="opt" data-correct="false">Minting proceeds, since a guest token needs no state, and the create path is refused because its quota cannot be read.</button>
+  <p class="why" hidden>The two caps have deliberately opposite postures.
+  <code>GuestMintScopedRateThrottle</code> fails closed — minting is the doorway to the whole trial
+  surface, so unlimited credentials are worse than a refusal. The per-IP creation cap is a secondary
+  dimension over a forgeable value, so an outage there is logged and skipped; the load-bearing control
+  is the per-<code>guest_id</code> quota, which reads rows rather than cache entries and is therefore
+  immune to the outage.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2
+Configuration and boundaries: settings, schema pinning, shared secrets, and live operator
+config</a>. This page closes Part A. Next is #4, conversations as the system of record — the models,
+the API and the agent's write-back loop, which picks up exactly where §6 above stopped: with the agent
+holding the caller's own credential and calling back into Django.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-26 · [Identity and auth: Naver and Google login, JWTs, guests, and entitlements](changple5/2026-08-26-03-identity-and-auth.html) — changple5
 - 2026-08-26 · [Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config](changple5/2026-08-26-02-configuration-and-boundaries.html) — changple5
 - 2026-08-26 · [Big picture: three apps, one Postgres, one Redis, and how a request travels](changple5/2026-08-26-01-big-picture.html) — changple5
 - 2026-08-10 · [The Agentic Workspace, From Scratch: What This Repo Is and How to Use It](bootstrap_agentic_workspace.sh/2026-08-10-the-agentic-workspace-from-scratch-what-this-repo-is-and-how-to-use-it.html) — bootstrap_agentic_workspace.sh
