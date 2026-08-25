@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-26 · [Conversations as the system of record: models, the API, and the agent write-back loop](changple5/2026-08-26-04-conversations-system-of-record.html) — changple5
 - 2026-08-26 · [Identity and auth: Naver and Google login, JWTs, guests, and entitlements](changple5/2026-08-26-03-identity-and-auth.html) — changple5
 - 2026-08-26 · [Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config](changple5/2026-08-26-02-configuration-and-boundaries.html) — changple5
 - 2026-08-26 · [Big picture: three apps, one Postgres, one Redis, and how a request travels](changple5/2026-08-26-01-big-picture.html) — changple5

@@ -1,0 +1,1577 @@
+<!--kb
+title: "Conversations as the system of record: models, the API, and the agent write-back loop"
+date: 2026-08-26
+tags:
+  - changple5
+  - conversations
+  - django-models
+  - agent-backend-loop
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversations as the system of record: models, the API, and the agent write-back loop</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.guest { background: #fdf6e6; border-color: #f0d9a0; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem 1fr; gap: .6rem; align-items: center; margin: .3rem 0; font-size: .85rem; }
+  .lane .who { font-weight: 650; color: #14324f; text-align: right; font-size: .82rem; }
+  .bar { height: 1.35rem; border-radius: 4px; position: relative; background: #e8ecf1; }
+  .bar span { position: absolute; top: 0; bottom: 0; border-radius: 4px; font-size: .7rem; color: #fff;
+              display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .er { display: grid; gap: .55rem; }
+  .er-t { background: #fff; border: 1px solid #d9dee5; border-radius: 7px; padding: .5rem .7rem; font-size: .82rem; }
+  .er-t b { display: block; font-family: ui-monospace, Menlo, monospace; font-size: .84rem; color: #14324f; }
+  .small { font-size: .88rem; color: #57606a; }
+</style>
+</head>
+<body>
+
+<h1>Conversations as the system of record: models, the API, and the agent write-back loop</h1>
+<p class="subtitle">Explainer #4 of the changple5 builder's curriculum, and the first of Part B &mdash;
+the chat product. Where a conversation actually lives, who is allowed to write into it, and why the
+agent that generates the answers owns none of it.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>Part A of this curriculum built up the shape of the system. Explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a> showed three
+applications &mdash; the Next.js front end, the Django backend behind <code>/api/</code>, the FastAPI
+agent behind <code>/agent-api/</code> &mdash; sharing one Postgres database split into two schemas
+with a deliberate one-way read bridge, and one Redis split into three logical databases.
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>
+taught how configuration resolves and where the two trust boundaries sit. The previous explainer,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3 Identity and auth:
+Naver and Google login, JWTs, guests, and entitlements</a>, finished the job: it followed a human
+from a browser to a <em>principal</em> the code can name &mdash; a <code>User</code> row, a
+<code>GuestPrincipal</code>, or the agent service itself &mdash; and ended on the observation that
+when the agent calls back into Django on a first-party turn, it forwards <strong>the caller's own
+bearer token</strong> rather than its service token.</p>
+
+<p>This page picks that sentence up and asks the obvious follow-on question: calls back into Django
+<em>to do what?</em></p>
+
+<p>The answer is the subject of Part B, and it starts here. When you type a message into the 미라클
+chat and an answer streams back, something has to remember it. Reload the page and the conversation
+is still there; open it tomorrow and it is still there, with its citations, its generated title, and
+its position in your history rail. That memory is not in the agent. It is in a Django app called
+<code>conversations</code>, and this page is about that app and the loop that writes into it.</p>
+
+<div class="callout">
+<span class="tag">The one idea on this page</span>
+<p>The Django <code>conversations</code> app is the <strong>system of record</strong> for chat: the
+single authoritative place a conversation exists. The FastAPI agent holds <em>no</em> durable chat
+state. Before a turn it <strong>reads</strong> the conversation from Django over HTTP; after a turn
+it <strong>writes</strong> the finalized user and assistant messages back over HTTP. Everything the
+agent keeps in between is scratch that can be thrown away.</p>
+</div>
+
+<p>"System of record" is worth defining, because it is a claim about <em>authority</em> and not about
+storage. Plenty of components hold a copy of a conversation: your browser renders one, the agent
+assembles one in memory to feed the model, LangGraph keeps a checkpoint of one. Exactly one of them
+is allowed to be <em>right</em> when they disagree, and that one is the Postgres rows behind
+<code>conversations</code>. Every other copy is a cache, a projection, or a draft.</p>
+
+<h3>Why the agent owns no chat state</h3>
+
+<p>This is a design decision, not an accident, and three separate pressures push the same way.</p>
+
+<p><strong>Streams die.</strong> A chat turn is a long-lived HTTP response &mdash; the model produces
+text for ten, thirty, sometimes ninety seconds. The user closes the tab, the phone drops off wifi,
+the container gets redeployed mid-answer. If the conversation lived in the agent's memory, every one
+of those events would be data loss. Because the agent's only durable act is an HTTP write to Django,
+a dead stream costs at most an unfinished answer &mdash; and even that has a documented repair path
+(§4.3 below). Explainer #5 covers the streaming machinery itself; the point <em>here</em> is that the
+persistence design is what makes it possible to be casual about a dying stream.</p>
+
+<p><strong>Authorization belongs next to the data.</strong> Explainer #3 ended on a comment in the
+agent's own chat route: "the backend &mdash; not this route &mdash; decides which sessions it may
+reach." If the agent held sessions itself, it would also have to decide who may read them, and that
+decision would then exist in two codebases that could drift apart. Instead the agent forwards the
+caller's credential and lets Django's queryset scoping answer the question exactly once, in one
+place. You will see that chokepoint in §3.2.</p>
+
+<p><strong>Invariants need a single writer.</strong> A conversation is not a bag of rows; it obeys
+rules. It starts with a user message. Roles alternate. A citation's <code>[3]</code> marker must
+point at something. A retried request must not duplicate a message. Rules like these survive only if
+there is exactly one piece of code that can violate them &mdash; and in changple5 that is a single
+Django model method, <code>append_finalized_message</code>, which every path funnels through.</p>
+
+<div class="skip">
+<span class="tag">Skip this box if you know Django's ORM</span>
+<p>A Django <strong>model</strong> is a Python class that maps to one SQL table; each class attribute
+is a column. A <strong>ForeignKey</strong> is a link to another table's row, with an
+<code>on_delete</code> policy saying what happens when the target disappears
+(<code>CASCADE</code> deletes the dependent rows, <code>SET_NULL</code> keeps them and nulls the
+link). A <strong>QuerySet</strong> (<code>Model.objects.filter(...)</code>) is a lazy description of
+a query &mdash; nothing runs until you iterate it &mdash; which is why this codebase passes querysets
+around as reusable security scopes. <code>queryset.update(...)</code> issues one SQL
+<code>UPDATE</code> without loading or saving the object; <code>obj.save()</code> writes the whole
+row and fires Django's automatic timestamp fields. That difference turns out to matter (§1.3). A
+<strong>migration</strong> is a versioned file describing a schema change. Finally,
+<code>with transaction.atomic():</code> opens a database transaction &mdash; everything inside
+commits together or not at all &mdash; and <code>.select_for_update()</code> takes a row lock
+(SQL <code>SELECT &hellip; FOR UPDATE</code>) so a concurrent request must wait rather than interleave.</p>
+</div>
+
+<div class="skip">
+<span class="tag">Skip this box if you know what idempotency means</span>
+<p>An operation is <strong>idempotent</strong> when doing it twice has the same effect as doing it
+once. "Set the title to X" is idempotent; "append a message" is emphatically not. The usual fix is an
+<strong>idempotency key</strong>: the client invents a unique id for the <em>intent</em>, sends it
+with the request, and the server records it. If the same key arrives again, the server returns the
+result it already produced instead of doing the work twice. This matters on any unreliable network,
+because a client that never saw a response cannot tell "the write failed" from "the write succeeded
+and the response was lost". changple5 uses this pattern in three places on this page, and the keys are
+<em>derived</em> rather than random, which is a small trick worth watching for.</p>
+</div>
+
+<div class="skip">
+<span class="tag">Skip this box if you know the HTTP status codes</span>
+<p>Five statuses do most of the talking below. <strong>200 OK</strong> &mdash; here, sometimes
+meaning "this exact write already existed". <strong>201 Created</strong> &mdash; a new row was
+written. <strong>400 Bad Request</strong> &mdash; the payload was malformed or broke a validation
+rule. <strong>403 Forbidden</strong> &mdash; you are authenticated but this is refused as policy.
+<strong>404 Not Found</strong> &mdash; used here also to mean "not yours", deliberately, so that
+probing for someone else's conversation tells you nothing. <strong>409 Conflict</strong> &mdash; the
+request is fine but the current state of the resource cannot accept it. The 409 is the one this app
+is famous for, and §2.1 explains exactly what produces it.</p>
+</div>
+
+<h3>The size of the thing</h3>
+
+<p>For calibration: <code>apps/backend/conversations/</code> is about 6,900 non-test lines &mdash;
+small next to the content pipeline (Part C), large enough that it has real structure.
+<code>models.py</code> is 908 lines, <code>serializers.py</code> 1,449, <code>views.py</code> 895,
+plus a dozen focused modules (guest adoption, guest retention, title generation, querysets,
+snapshots, the consulting lifecycle). On the agent side the client that talks to it,
+<code>apps/agent/app/chat/backend.py</code>, is 1,556 lines &mdash; large for an HTTP client, and §6
+explains what all of it is doing.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<p>Before any code, here is the whole idea in three pictures: what a conversation <em>is</em> as
+rows, the one rule those rows must obey, and the loop that puts them there.</p>
+
+<h3>1. A conversation is five tables</h3>
+
+<p>One <strong>session</strong> owns many <strong>messages</strong>; a message owns three small kinds
+of reference row. Nothing else. Everything the product shows you &mdash; the history rail, the
+share link, the pinned star, the <code>[1]</code> markers under an answer &mdash; is a column or a
+row in this shape.</p>
+
+<figure>
+<div class="fig-box">
+<svg viewBox="0 0 700 430" width="100%" height="auto" role="img" aria-label="Entity relationship diagram of the conversations tables">
+  <defs>
+    <marker id="er-ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#8b96a2"></polygon>
+    </marker>
+  </defs>
+
+  <rect x="185" y="10" width="330" height="112" rx="8" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="350" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#14324f">ConversationSession</text>
+  <text x="350" y="50" text-anchor="middle" font-size="10.5" fill="#3c4551">nonce (public id) · user OR guest_id</text>
+  <text x="350" y="66" text-anchor="middle" font-size="10.5" fill="#3c4551">agent_type · title · pinned_at</text>
+  <text x="350" y="82" text-anchor="middle" font-size="10.5" fill="#3c4551">share_token · deleted_at · locked_at</text>
+  <text x="350" y="98" text-anchor="middle" font-size="10.5" fill="#3c4551">rolling_summary + watermark</text>
+  <text x="350" y="114" text-anchor="middle" font-size="9.5" fill="#57606a">models.py:101</text>
+
+  <rect x="185" y="168" width="330" height="98" rx="8" fill="#f3eefd" stroke="#cfc0ef"></rect>
+  <text x="350" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#14324f">ConversationMessage</text>
+  <text x="350" y="208" text-anchor="middle" font-size="10.5" fill="#3c4551">role: user | assistant · content</text>
+  <text x="350" y="224" text-anchor="middle" font-size="10.5" fill="#3c4551">public_id · idempotency_key</text>
+  <text x="350" y="240" text-anchor="middle" font-size="10.5" fill="#3c4551">metadata (JSON) · created_at</text>
+  <text x="350" y="258" text-anchor="middle" font-size="9.5" fill="#57606a">models.py:508</text>
+
+  <line x1="350" y1="122" x2="350" y2="164" stroke="#8b96a2" stroke-width="1.5" marker-end="url(#er-ah)"></line>
+  <text x="360" y="148" font-size="10" fill="#57606a">1 &rarr; N &nbsp;(CASCADE)</text>
+
+  <rect x="8" y="312" width="215" height="98" rx="8" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="115" y="332" text-anchor="middle" font-size="11.5" font-weight="700" fill="#14324f">SelectedContent</text>
+  <text x="115" y="349" text-anchor="middle" font-size="10" fill="#3c4551">what the USER attached</text>
+  <text x="115" y="365" text-anchor="middle" font-size="10" fill="#3c4551">&rarr; NotionContent</text>
+  <text x="115" y="383" text-anchor="middle" font-size="10" fill="#3c4551">user messages only</text>
+  <text x="115" y="401" text-anchor="middle" font-size="9.5" fill="#57606a">models.py:565</text>
+
+  <rect x="242" y="312" width="215" height="98" rx="8" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="350" y="332" text-anchor="middle" font-size="11.5" font-weight="700" fill="#14324f">CitedDocument</text>
+  <text x="350" y="349" text-anchor="middle" font-size="10" fill="#3c4551">naver 카페 post the</text>
+  <text x="350" y="365" text-anchor="middle" font-size="10" fill="#3c4551">ANSWER cited &rarr; source_url</text>
+  <text x="350" y="383" text-anchor="middle" font-size="10" fill="#3c4551">assistant messages only</text>
+  <text x="350" y="401" text-anchor="middle" font-size="9.5" fill="#57606a">models.py:614</text>
+
+  <rect x="477" y="312" width="215" height="98" rx="8" fill="#f6f8fa" stroke="#d9dee5"></rect>
+  <text x="584" y="332" text-anchor="middle" font-size="11.5" font-weight="700" fill="#14324f">CitedContent</text>
+  <text x="584" y="349" text-anchor="middle" font-size="10" fill="#3c4551">published 미라클 content</text>
+  <text x="584" y="365" text-anchor="middle" font-size="10" fill="#3c4551">the ANSWER cited &rarr; /content/&lt;id&gt;</text>
+  <text x="584" y="383" text-anchor="middle" font-size="10" fill="#3c4551">assistant messages only</text>
+  <text x="584" y="401" text-anchor="middle" font-size="9.5" fill="#57606a">models.py:668</text>
+
+  <line x1="300" y1="266" x2="140" y2="308" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#er-ah)"></line>
+  <line x1="350" y1="266" x2="350" y2="308" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#er-ah)"></line>
+  <line x1="400" y1="266" x2="560" y2="308" stroke="#8b96a2" stroke-width="1.4" marker-end="url(#er-ah)"></line>
+  <text x="350" y="292" text-anchor="middle" font-size="10" fill="#57606a">0 &rarr; N each, all CASCADE</text>
+</svg>
+</div>
+<figcaption>The five tables of a conversation. The consulting tables (<code>models.py:736&ndash;908</code>)
+hang off the same session and belong to explainer #10.</figcaption>
+</figure>
+
+<p>Made concrete: one session, three messages, one citation. (Ids shortened for readability; the real
+ones are full UUIDs.)</p>
+
+<p class="small"><strong><code>conversations_conversationsession</code></strong></p>
+<table>
+<tr><th>id</th><th>user_id</th><th>guest_id</th><th>agent_type</th><th>nonce</th><th>title</th><th>updated_at</th></tr>
+<tr><td>1042</td><td>4021</td><td>NULL</td><td>default</td><td><code>7c1e&hellip;</code></td><td>배달앱 수수료 줄이는 법</td><td>2026-08-26 09:41:12Z</td></tr>
+</table>
+
+<p class="small"><strong><code>conversations_conversationmessage</code></strong></p>
+<table>
+<tr><th>id</th><th>session_id</th><th>role</th><th>content</th><th>public_id</th><th>idempotency_key</th><th>created_at</th></tr>
+<tr><td>9301</td><td>1042</td><td>user</td><td>배달앱 수수료가 너무 비싼데 어떻게 줄이죠?</td><td><code>a1b2&hellip;</code></td><td><code>e5f6&hellip;</code></td><td>09:40:58Z</td></tr>
+<tr><td>9302</td><td>1042</td><td>assistant</td><td>수수료 구조를 먼저 나눠 보면 &hellip; [1] &hellip;</td><td><code>c3d4&hellip;</code></td><td><code>77a0&hellip;</code></td><td>09:41:12Z</td></tr>
+<tr><td>9303</td><td>1042</td><td>user</td><td>배민 말고 쿠팡이츠는요?</td><td><code>b8e1&hellip;</code></td><td><code>31cc&hellip;</code></td><td>09:42:30Z</td></tr>
+</table>
+
+<p class="small"><strong><code>conversations_conversationmessagecited&shy;document</code></strong></p>
+<table>
+<tr><th>id</th><th>message_id</th><th>document_source_id</th><th>position</th><th>document_post_id_snapshot</th><th>document_title_snapshot</th></tr>
+<tr><td>551</td><td>9302</td><td>8817</td><td>1</td><td>2418</td><td>배달 플랫폼 수수료 정리 2026</td></tr>
+</table>
+
+<div class="note">
+<p>Notice the <code>_snapshot</code> columns. The row keeps a live link to the source document
+<em>and</em> a frozen copy of its title and URL. If the source post is later removed from the corpus,
+the foreign key goes null but the citation the user already saw still renders with the text it had at
+the time. This "live link plus frozen copy" pattern repeats in all three reference tables and is one
+of the small design habits worth stealing.</p>
+</div>
+
+<h3>2. The one rule: a conversation alternates</h3>
+
+<p>A chat transcript is not an arbitrary list of rows. It must start with a user message, and after
+that the roles must strictly alternate. That is the invariant, and almost every conflict this app
+reports is that invariant refusing something.</p>
+
+<figure>
+<div class="fig-box">
+<div class="flow">
+  <div class="node"><b>(empty)</b><span class="m">no messages</span></div>
+  <div class="arrow">&rarr;</div>
+  <div class="node user"><b>user</b><span class="m">may append: assistant</span></div>
+  <div class="arrow">&rarr;</div>
+  <div class="node svc"><b>assistant</b><span class="m">may append: user</span></div>
+  <div class="arrow">&#8630;</div>
+</div>
+<div class="stack" style="margin-top:.8rem">
+  <div class="node deny"><b>Refused from (empty):</b><span class="m">role=assistant &rarr; "Conversation sessions must start with a user message."</span></div>
+  <div class="node deny"><b>Refused from any state:</b><span class="m">the same role twice &rarr; "Conversation messages must alternate between user and assistant roles."</span></div>
+</div>
+</div>
+<figcaption>The whole state machine, as implemented by
+<code>ConversationSession.validate_next_message_role</code> (<code>models.py:336</code>).</figcaption>
+</figure>
+
+<p>The subtlety is <em>which</em> message counts as "the current state". It is the last message
+ordered by <code>(created_at DESC, id DESC)</code> &mdash; not a counter, not the last row inserted,
+not a flag on the session. §2.1 shows why that ordering is chosen with care, and §3.5 shows what
+happens when a turn dies and leaves a lone user message as the tail: the conversation is stuck in the
+"may append: assistant" state, and something has to get it out.</p>
+
+<h3>3. The write-back loop</h3>
+
+<p>Now the loop itself &mdash; the thing this page's title promises. One default chat turn, drawn
+honestly, with the credential riding each arrow named.</p>
+
+<figure>
+<div class="fig-box">
+<svg viewBox="0 0 700 500" width="100%" height="auto" role="img" aria-label="Sequence diagram of one chat turn and its write-back">
+  <defs>
+    <marker id="sq-ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#6b7684"></polygon>
+    </marker>
+  </defs>
+
+  <rect x="8" y="10" width="120" height="30" rx="6" fill="#eef3fd" stroke="#b9cdf3"></rect>
+  <text x="68" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">Browser</text>
+  <rect x="200" y="10" width="140" height="30" rx="6" fill="#f3eefd" stroke="#cfc0ef"></rect>
+  <text x="270" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">FastAPI agent</text>
+  <rect x="420" y="10" width="140" height="30" rx="6" fill="#eefaf3" stroke="#a8dcc3"></rect>
+  <text x="490" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">Django /api/</text>
+  <rect x="600" y="10" width="92" height="30" rx="6" fill="#fdf6e6" stroke="#f0d9a0"></rect>
+  <text x="646" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#14324f">LLM</text>
+
+  <line x1="68" y1="42" x2="68" y2="480" stroke="#d9dee5" stroke-width="1.2"></line>
+  <line x1="270" y1="42" x2="270" y2="480" stroke="#d9dee5" stroke-width="1.2"></line>
+  <line x1="490" y1="42" x2="490" y2="480" stroke="#d9dee5" stroke-width="1.2"></line>
+  <line x1="646" y1="42" x2="646" y2="480" stroke="#d9dee5" stroke-width="1.2"></line>
+
+  <line x1="68" y1="72" x2="264" y2="72" stroke="#6b7684" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="72" y="66" font-size="10" fill="#1f2328">1. POST /agent-api/chat/stream</text>
+  <text x="72" y="86" font-size="9.5" fill="#57606a">Authorization: Bearer &lt;access JWT&gt;  (or X-Guest-Token)</text>
+
+  <line x1="270" y1="118" x2="484" y2="118" stroke="#6b7684" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="276" y="112" font-size="10" fill="#1f2328">2. GET /api/conversations/&lt;nonce&gt;</text>
+  <text x="276" y="132" font-size="9.5" fill="#57606a">the CALLER'S OWN credential, forwarded</text>
+  <line x1="484" y1="152" x2="276" y2="152" stroke="#6b7684" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#sq-ah)"></line>
+  <text x="290" y="146" font-size="9.5" fill="#57606a">200: transcript + citations + is_locked + summary state</text>
+
+  <line x1="270" y1="192" x2="484" y2="192" stroke="#6b7684" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="276" y="186" font-size="10" fill="#1f2328">3. POST &hellip;/messages  role=user</text>
+  <text x="276" y="206" font-size="9.5" fill="#57606a">idempotency_key = the client's own key &mdash; BEFORE any model call</text>
+
+  <line x1="270" y1="248" x2="640" y2="248" stroke="#6b7684" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="300" y="242" font-size="10" fill="#1f2328">4. generate (tools, retrieval, tokens)</text>
+  <line x1="270" y1="278" x2="74" y2="278" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="80" y="272" font-size="10" fill="#1f2328">5. SSE message_delta &hellip; (streaming, explainer #5)</text>
+
+  <line x1="270" y1="330" x2="484" y2="330" stroke="#6b7684" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="276" y="324" font-size="10" fill="#1f2328">6. POST &hellip;/messages  role=assistant</text>
+  <text x="276" y="344" font-size="9.5" fill="#57606a">idempotency_key = uuid5(nonce, client key, "assistant") + citations</text>
+
+  <line x1="484" y1="372" x2="276" y2="372" stroke="#6b7684" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#sq-ah)"></line>
+  <text x="292" y="366" font-size="9.5" fill="#57606a">201 created (or 200: this write already existed)</text>
+
+  <line x1="270" y1="404" x2="74" y2="404" stroke="#2f9e6e" stroke-width="1.4" marker-end="url(#sq-ah)"></line>
+  <text x="80" y="398" font-size="10" fill="#1f2328">7. SSE message_end, done</text>
+
+  <rect x="200" y="428" width="440" height="46" rx="6" fill="#fdeeee" stroke="#f0bcbc"></rect>
+  <text x="420" y="446" text-anchor="middle" font-size="10" fill="#1f2328">FAILURE BRANCH &mdash; step 6 never happens (crash, disconnect, model error):</text>
+  <text x="420" y="463" text-anchor="middle" font-size="10" fill="#1f2328">POST /api/conversations/internal/&lt;nonce&gt;/assistant-failure-closure &mdash; X-Agent-Service-Token</text>
+</svg>
+</div>
+<figcaption>One default turn. Steps 2, 3 and 6 are the write-back loop; step 5 is explainer #5's
+subject and is drawn here only so the ordering is honest.</figcaption>
+</figure>
+
+<p>Three things in that picture deserve to be said out loud, because each one is a decision.</p>
+
+<p><strong>The user's message is persisted before the model runs</strong> (step 3, before step 4).
+That is what makes the transcript survive a crash during generation &mdash; but it is also why a
+crashed turn leaves a dangling user message with no reply, which the alternation rule then refuses to
+build on. The failure-closure endpoint exists precisely to clean that up.</p>
+
+<p><strong>The agent forwards the caller's own credential</strong> on steps 2, 3 and 6, and only uses
+its service token on the internal failure-closure endpoint. So a bug in the agent's session-picking
+logic cannot leak someone else's conversation: Django scopes every lookup to whatever the presented
+credential owns. Contrast the failure closure, which <em>must</em> use the service token (there is no
+live request to borrow a credential from) &mdash; and therefore has to name its target's owner in the
+request <em>body</em>, which Django then re-verifies. Identity as payload, never as authority.</p>
+
+<p><strong>Every write carries an idempotency key</strong>, and only the user message's key comes
+from the client. The assistant message's key is <em>derived</em> from it &mdash;
+<code>uuid5(namespace, "&lt;nonce&gt;:&lt;client key&gt;:assistant")</code> &mdash; so the same turn
+retried, replayed, or resumed always computes the same key and can only ever produce one assistant
+row. That is a nice trick: you get idempotency without either side storing a table of keys.</p>
+
+<div class="warn">
+<p><strong>Where the famous 409 comes from.</strong> Two different places produce
+<em>"Conversation is awaiting a finalized assistant reply."</em> &mdash; and only one of them is a
+409 on the wire. (a) The agent checks before streaming: if the fetched transcript's last message is
+already a user message, it refuses with 409 (<code>routes/chat.py:2007</code>). (b) If that check is
+raced past, Django's alternation guard rejects the write &mdash; as a <strong>400</strong>, because
+it is a DRF validation error. The agent then <em>sniffs the returned detail text</em> for the word
+"alternate" (<code>_payload_indicates_turn_conflict</code>, <code>routes/chat.py:448</code>) and
+re-maps that specific 400 into a 409 for the browser; any other 400 degrades to a 503. So the status
+code the browser sees is a translation, not the backend's own. §2.1 and §6.4 walk both halves.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Six stops, in the order the data flows: the tables, the two invariants that guard them, the HTTP
+surface, guest sessions, titles, and finally the agent's client. Every path below is relative to the
+repository root, and every line number was read from the files as they stand today &mdash; if one has
+drifted by a few lines, the symbol name is the durable part.</p>
+
+<h3>&sect;1 &mdash; The tables: <code>apps/backend/conversations/models.py</code> (908 lines)</h3>
+
+<h4>1.1 <code>AgentType</code> (<code>:78</code>) &mdash; what kind of conversation this is</h4>
+
+<pre>class AgentType(models.TextChoices):
+    DEFAULT = "default", "Default"
+    CONSULTING = "consulting", "Consulting"
+    DIAGNOSIS = "diagnosis", "Diagnosis"</pre>
+
+<p>Three modes, and they are not equal citizens. <strong><code>default</code></strong> is the ordinary
+미라클 chat &mdash; ask, get a cited answer &mdash; and is the only mode an anonymous trial visitor may
+use. <strong><code>consulting</code></strong> is 컨설팅 mode: a planned multi-round consultation that
+probes you with questions and ends in a 구성안 report; it has four extra tables and its own agent, and
+it is explainer #10. <strong><code>diagnosis</code></strong> is a tombstone. It was the guest funnel
+brokered by the changple_web site; it was retired (deferred job D49) and creating one is now rejected
+unconditionally in the serializer, but the enum member and the historic rows are deliberately kept.
+That is worth pausing on: because <code>agent_type</code> is a plain <code>CharField</code> rather than
+a database enum, retiring a mode required <em>no migration at all</em> &mdash; just a validation rule.
+Old rows keep their value and stay readable.</p>
+
+<h4>1.2 <code>ConversationSession</code> (<code>:101</code>) &mdash; the conversation itself</h4>
+
+<table>
+<tr><th>Field</th><th>What it holds</th></tr>
+<tr><td><code>user</code> (FK, nullable)</td><td>The owner. <strong>Null means anonymous.</strong></td></tr>
+<tr><td><code>guest_id</code> (UUID, nullable, indexed)</td><td>The anonymous trial identity that created it &mdash; the <code>guest_id</code> claim from explainer #3's guest token. It is the <em>only</em> thing binding an anonymous session to one browser.</td></tr>
+<tr><td><code>agent_type</code></td><td>One of the three above.</td></tr>
+<tr><td><code>nonce</code> (UUID, unique, not editable)</td><td>The <strong>public id</strong>. Every URL, in the API and in the browser's address bar, uses this &mdash; never the integer primary key.</td></tr>
+<tr><td><code>title</code> (&le; 30 chars, nullable)</td><td>The generated Korean title in the history rail. Null until a background task writes it (&sect;5).</td></tr>
+<tr><td><code>pinned_at</code></td><td>Non-null = pinned to the top of the rail.</td></tr>
+<tr><td><code>share_token</code> (UUID, unique, nullable) + <code>shared_at</code></td><td>A <em>separate</em> public token for the read-only share link. Sharing does not expose the nonce.</td></tr>
+<tr><td><code>deleted_at</code></td><td>Soft delete: the row stays, every owner queryset filters it out.</td></tr>
+<tr><td><code>locked_at</code></td><td>Set when the prompt-injection guard fires; the session then refuses further user turns. Explainer #11.</td></tr>
+<tr><td><code>rolling_summary</code>, <code>summarized_through_message_id</code>, <code>summarized_through_created_at</code></td><td>Durable state for the context-window compaction. Explainer #6.</td></tr>
+</table>
+
+<div class="callout">
+<span class="tag">Ownership, precisely</span>
+<p>A session belongs to <strong>at most one</strong> of two things. A first-party session has
+<code>user</code> set and <code>guest_id</code> null. A P68 anonymous trial has <code>user</code> null
+and <code>guest_id</code> set. (The dormant diagnosis rows have <em>neither</em>.) There is no
+constraint expressing this &mdash; it is upheld by the create serializer, and every read path is
+written as a queryset that filters on the shape it expects rather than trusting the row.</p>
+</div>
+
+<p>Two ordinary-looking lines in <code>Meta</code> shape the whole product:</p>
+
+<pre>class Meta:
+    ordering = ("-updated_at", "-id")
+    indexes = [models.Index(fields=("user", "updated_at"), name="convsess_user_updated_idx")]</pre>
+
+<p>Default ordering is most-recently-touched first &mdash; that <em>is</em> the history rail &mdash;
+and the composite index is exactly the query the rail runs ("this user's sessions, newest first").
+Keep <code>updated_at</code> in mind; it is about to become load-bearing.</p>
+
+<h4>1.3 The mutators, and one very deliberate <code>.update()</code></h4>
+
+<p>The session's state changes go through small named methods rather than ad-hoc field assignment:
+<code>lock()</code> (<code>:247</code>), <code>soft_delete()</code> (<code>:292</code>),
+<code>enable_pinning</code> / <code>disable_pinning</code>, <code>enable_sharing</code> /
+<code>disable_sharing</code>, <code>record_rolling_summary</code>, and the read helper
+<code>has_finalized_assistant_reply()</code> (<code>:289</code>). They share a shape worth copying:</p>
+
+<pre>def lock(self) -&gt; None:
+    if self.locked_at is not None:
+        return
+
+    locked_at = timezone.now()
+    type(self).objects.filter(pk=self.pk, locked_at__isnull=True).update(
+        locked_at=locked_at,
+    )
+    self.locked_at = locked_at</pre>
+
+<p>Idempotent (a second call returns early) and race-safe without a lock: the condition
+<code>locked_at__isnull=True</code> lives inside the SQL <code>WHERE</code>, so two concurrent
+lockers cannot both win. Then the in-memory object is updated to match, so the caller sees a
+consistent object. <code>soft_delete</code> is the same shape.</p>
+
+<p>But look at why <code>record_rolling_summary</code> uses <code>.update()</code> rather than
+<code>.save()</code> &mdash; the comment is one of the more instructive in the codebase:</p>
+
+<pre>"""Persist the rolling summary + its watermark (P61.S1).
+
+`QuerySet.update()` rather than `.save()` is deliberate: `updated_at` is
+`auto_now` and the owner's history rail orders by `-updated_at`, so a
+`.save()` here would float the session to the top of the rail for a
+background compaction job the user never triggered.
+"""</pre>
+
+<p>Django's <code>auto_now</code> timestamp fires on <code>save()</code> and not on
+<code>update()</code>. Because the rail is sorted by <code>updated_at</code>, "touching" a row is a
+user-visible act &mdash; an old conversation would jump to the top of your list because a background
+job summarised it. A one-word choice of ORM method is a product decision.</p>
+
+<h4>1.4 <code>ConversationMessage</code> (<code>:508</code>) &mdash; and the constraint that makes retries safe</h4>
+
+<p>Fields: <code>session</code> (FK, <code>CASCADE</code>), <code>role</code>
+(<code>user</code>/<code>assistant</code>, indexed), <code>content</code> (text),
+<code>public_id</code> (unique UUID &mdash; the id the API exposes, never the primary key),
+<code>idempotency_key</code> (UUID), and <code>metadata</code> (JSON). The JSON blob is small but
+important: <code>metadata.message_type</code> is how a message announces that it is something other
+than a plain answer &mdash; <code>security_lockdown</code>, <code>diagnosis_report</code>, a consulting
+beat &mdash; and several rules downstream key on its mere presence.</p>
+
+<pre>class Meta:
+    ordering = ("created_at", "id")
+    indexes = [
+        models.Index(fields=("session", "created_at"), name="convmsg_session_created_idx"),
+    ]
+    constraints = [
+        models.UniqueConstraint(
+            fields=("session", "idempotency_key"),
+            name="convmsg_session_idem_unique",
+        ),
+    ]</pre>
+
+<p>That <code>UniqueConstraint</code> is the floor under the entire idempotency story: even if every
+application check were bypassed, Postgres itself would refuse a second message with the same key in
+the same session. Note also the ordering &mdash; <code>(created_at, id)</code>, with <code>id</code>
+as the tiebreaker. Two rows written inside the same transaction can share a timestamp to the
+microsecond; without the tiebreaker their order would be undefined, and "the last message" would be a
+coin flip. The alternation check reads this ordering in reverse.</p>
+
+<h4>1.5 The three reference tables, and one shared numbering space</h4>
+
+<p>All three (<code>:565</code>, <code>:614</code>, <code>:668</code>) have the same skeleton: a
+<code>CASCADE</code> FK to the message, a nullable <code>SET_NULL</code> FK to the live row, a
+<code>position</code>, and <code>*_snapshot</code> columns frozen at write time, with unique
+constraints on <code>(message, position)</code> and <code>(message, &lt;the id&gt;_snapshot)</code>.
+They differ in what they mean:</p>
+
+<ul>
+<li><strong><code>ConversationMessageSelectedContent</code></strong> &mdash; content the <em>user</em>
+attached to their question. User messages only.</li>
+<li><strong><code>ConversationMessageCitedDocument</code></strong> &mdash; a 네이버 카페 post the
+<em>answer</em> cited. Assistant messages only; carries an external <code>source_url</code>.</li>
+<li><strong><code>ConversationMessageCitedContent</code></strong> &mdash; a published 미라클 content
+the answer cited. Assistant messages only; has no URL because it links internally to
+<code>/content/&lt;id&gt;</code>.</li>
+</ul>
+
+<p>The last two are siblings rather than one widened table, and the docstring says why: they validate
+against different corpora (<code>DocumentSource</code> versus <code>NotionContent</code>) and describe
+different destinations. But the reader sees a single numbered list &mdash; <code>[1]</code>,
+<code>[2]</code>, <code>[3]</code> &mdash; so their <code>position</code> values are drawn from
+<strong>one merged numbering space</strong>. No database constraint can enforce disjointness
+<em>across</em> two tables, so a single function does:</p>
+
+<pre>def normalize_cited_content_references(cited_content, *, cited_document_count):
+    """Validate the merged citation layout (P41.S9).
+
+    Returns ``(content_references, document_positions)``: the ``(content_id,
+    position)`` pairs in position order, and the positions the cited DOCUMENTS
+    take -- the complement slots, in the order the documents were given.
+    """</pre>
+
+<p>Only the content half carries explicit positions over the wire; the documents silently take
+whatever slots are left, in order. When nothing but 네이버 documents is cited &mdash; the common case
+&mdash; the complement is just <code>1..n</code>, i.e. byte-identical to how it behaved before content
+citations existed. Extending a format without changing its old shape is the whole art of the thing.</p>
+
+<p>Finally, <code>models.py:736&ndash;908</code> holds three more models &mdash;
+<code>ConsultingReport</code>, <code>ConsultingRound</code>, <code>ConsultingFollowUpRequest</code>
+&mdash; hanging off the same session. They are 컨설팅 mode's state machine and belong entirely to
+explainer #10; nothing on this page touches them.</p>
+
+<h3>&sect;2 &mdash; The two invariants, from source</h3>
+
+<h4>2.1 <code>validate_next_message_role</code> (<code>models.py:336</code>)</h4>
+
+<pre>def validate_next_message_role(self, *, role: str) -&gt; None:
+    if role not in ConversationMessage.Role.values:
+        raise ValueError(f"Unsupported conversation message role: {role}")
+
+    last_message = self.messages.order_by("-created_at", "-id").only("role").first()
+    if last_message is None:
+        if role != ConversationMessage.Role.USER:
+            raise ValueError(
+                "Conversation sessions must start with a user message."
+            )
+        return
+
+    if last_message.role == role:
+        raise ValueError(
+            "Conversation messages must alternate between user and assistant roles."
+        )</pre>
+
+<p>Eleven lines. Three things about them.</p>
+
+<p><strong>The judgement is made on the last row, not on a counter or a flag.</strong> There is no
+<code>last_role</code> column that could drift out of sync with the messages; the state is derived
+from the data every time. The cost is one indexed query per write; the benefit is that the state can
+never be wrong.</p>
+
+<p><strong>The ordering is <code>(-created_at, -id)</code></strong> &mdash; the exact reverse of the
+message <code>Meta.ordering</code>. Same tiebreaker, same result: even for rows written in the same
+transaction with identical timestamps, "the last message" is a single well-defined row.</p>
+
+<p><strong>It raises <code>ValueError</code>, not an HTTP exception.</strong> The model layer knows
+nothing about HTTP. Callers translate: the write serializer turns it into a DRF
+<code>ValidationError</code> (a <strong>400</strong>), which the agent then translates again into the
+409 the browser sees (&sect;6.4). Three layers, three vocabularies, and the confusion this can cause
+is real &mdash; a debugging session that greps for "409" in Django will find nothing.</p>
+
+<div class="note">
+<p><strong>A note for the debugger.</strong> Because the check is "last message by
+<code>(created_at, id)</code>", a conversation whose tail is a lone user message can accept exactly
+one thing: an assistant message. That is the state a crashed generation leaves behind, and it is why
+this app has an entire endpoint (&sect;3.4) whose only job is to write an honest apology so the
+transcript can move forward.</p>
+</div>
+
+<h4>2.2 <code>append_finalized_message</code> (<code>models.py:353</code>) &mdash; the single writer</h4>
+
+<p>Every message in the database arrives through this method. It is worth reading as five phases.</p>
+
+<p><strong>Phase 1 &mdash; content and role rules.</strong> Empty (or whitespace-only) content is
+refused. <code>validate_next_message_role</code> is called. Then three symmetric checks:
+selected content is user-only; cited documents are assistant-only; cited content is assistant-only.
+A message may carry neither, either, or &mdash; across a conversation &mdash; both kinds of citation.</p>
+
+<p><strong>Phase 2 &mdash; the layout.</strong> Duplicate ids are refused
+(<code>_require_distinct_ids</code>), then <code>normalize_cited_content_references</code> computes
+the merged positions and the documents' complement slots.</p>
+
+<p><strong>Phase 3 &mdash; existence.</strong> Every referenced content and document is loaded with
+<code>in_bulk</code>, and anything missing is a hard <code>ValueError</code>:</p>
+
+<pre># P41.S9: mirror the document check above -- an unknown content id is a
+# hard error, never a silently dropped citation, because the marker the
+# user already saw would then point at nothing.</pre>
+
+<p>That is the rule behind the rule. The answer text already contains <code>[2]</code>; a citation
+list that quietly dropped entry 2 would render a marker pointing at nothing. Better to fail the whole
+write.</p>
+
+<p><strong>Phase 4 &mdash; one transaction.</strong> The message row and all three kinds of reference
+row are created inside a single <code>transaction.atomic()</code> block, the side tables via
+<code>bulk_create</code>. A message with half its citations cannot exist, not even briefly.</p>
+
+<p><strong>Phase 5 &mdash; touch the parent.</strong></p>
+
+<pre>updated_at = timezone.now()
+type(self).objects.filter(pk=self.pk).update(updated_at=updated_at)
+self.updated_at = updated_at</pre>
+
+<p>Explicit, inside the same transaction &mdash; because this is exactly the case where floating the
+session to the top of the history rail <em>is</em> correct: a human just said something.</p>
+
+<div class="callout">
+<span class="tag">What "finalized" means</span>
+<p>The word appears in the method name, in the model's <code>help_text</code>, and in the
+serializers. A <strong>finalized</strong> message is a settled, durable fact: this is what was said.
+Streaming deltas, in-flight tool calls, the LangGraph checkpoint of a half-finished turn &mdash; none
+of that is finalized and none of it is in these tables. The agent accumulates the answer in memory,
+and only when the model has produced its final text does one row appear. So a conversation in
+Postgres is always a clean alternating transcript, never a partial one. (Cancelled and failed turns
+still write a row &mdash; a short fixed apology &mdash; precisely so that the invariant holds; see
+&sect;3.4 and &sect;6.3.)</p>
+</div>
+
+<h3>&sect;3 &mdash; The HTTP surface: <code>urls.py</code>, <code>views.py</code>, <code>serializers.py</code></h3>
+
+<p><code>config/urls.py:14</code> mounts the whole app at <code>api/</code>. The routes fall into four
+families, and which family a route is in <em>is</em> its security model.</p>
+
+<table>
+<tr><th>Family</th><th>Route</th><th>Who may call it</th></tr>
+<tr><td rowspan="4">Public, guest-capable</td><td><code>GET/POST /api/conversations</code></td><td>JWT, guest token, or service token &mdash; but <code>GET</code> (the history rail) refuses anonymous principals outright</td></tr>
+<tr><td><code>GET/DELETE /api/conversations/&lt;nonce&gt;</code></td><td>same; <code>DELETE</code> (soft delete) is owner-only</td></tr>
+<tr><td><code>POST /api/conversations/&lt;nonce&gt;/messages</code></td><td>same &mdash; this is the write-back target</td></tr>
+<tr><td><code>POST /api/conversations/&lt;nonce&gt;/adopt</code></td><td>a logged-in user, presenting a guest token as <em>proof</em></td></tr>
+<tr><td rowspan="4">Public, owner-only</td><td><code>POST /api/conversations/&lt;nonce&gt;/messages/retract-tail</code></td><td>owner JWT</td></tr>
+<tr><td><code>POST/DELETE /api/conversations/&lt;nonce&gt;/share</code></td><td>owner JWT</td></tr>
+<tr><td><code>POST/DELETE /api/conversations/&lt;nonce&gt;/pin</code></td><td>owner JWT</td></tr>
+<tr><td><code>GET /api/conversations/&lt;nonce&gt;/reports/&lt;id&gt;</code> (+ <code>/download</code>, <code>/follow-up</code>)</td><td>owner JWT &mdash; 컨설팅, explainer #10</td></tr>
+<tr><td>Public, no auth</td><td><code>GET /api/conversations/shared/&lt;share_token&gt;</code></td><td>anybody holding the share token</td></tr>
+<tr><td rowspan="4">Internal &mdash; agent only</td><td><code>POST /api/conversations/internal/&lt;nonce&gt;/assistant-failure-closure</code></td><td rowspan="4"><code>X-Agent-Service-Token</code> only (<code>authentication_classes = [AgentServiceTokenAuthentication]</code>)</td></tr>
+<tr><td><code>POST /api/conversations/internal/&lt;nonce&gt;/rolling-summary</code></td></tr>
+<tr><td><code>&hellip;/internal/&lt;nonce&gt;/consulting-rounds</code> (+ <code>pending-probe</code>, <code>answers</code>, <code>cancel</code>)</td></tr>
+<tr><td><code>&hellip;/internal/&lt;nonce&gt;/reports</code> (+ <code>&lt;id&gt;/complete</code>, <code>&lt;id&gt;/error</code>)</td></tr>
+<tr><td>Admin</td><td><code>/api/conversations/admin/&hellip;</code> &mdash; analytics, session list/detail, consulting reports, 상담신청</td><td><code>IsAuthenticated, IsOperatorUser</code> &mdash; explainer #17</td></tr>
+</table>
+
+<div class="callout">
+<span class="tag">The <code>internal/</code> convention</span>
+<p>An <code>internal/</code> segment in the path means: the agent calls this, with the shared service
+token, and no browser ever should. It is a naming convention, not a mechanism &mdash; the mechanism is
+the authenticator class on the view &mdash; but having the convention visible in the URL makes an
+accidental exposure obvious in nginx logs, in route listings and in code review. Note what lives here:
+the failure closure, the rolling-summary write, and the consulting lifecycle mutations. All of them
+are things the agent decides on its own behalf, where there is no user request to borrow a credential
+from.</p>
+</div>
+
+<h4>3.1 Who may call what: the authenticator chain</h4>
+
+<pre>GUEST_CAPABLE_AUTHENTICATION_CLASSES = [
+    JWTAuthentication,
+    GuestTokenAuthentication,
+    AgentServiceTokenAuthentication,
+]</pre>
+
+<p><code>views.py:139</code>, and explainer #3 explained why this order is forced rather than
+stylistic: SimpleJWT's authenticator <em>raises</em> on a bearer token that is not an access token
+instead of returning <code>None</code>, so guests get their own header; and the service-token
+authenticator raises when its header is missing, so it must be last. Any new guest-capable surface
+must reuse this constant, never re-spell it.</p>
+
+<p>Authentication answers <em>who</em>; two small helpers just below answer <em>what</em>:</p>
+
+<pre>def is_anonymous_principal(user) -&gt; bool:
+    """True for either anonymous credential (guest trial or BFF service token)."""
+    return isinstance(user, (GuestPrincipal, AgentServicePrincipal))
+
+
+def conversation_lookup_queryset(request):
+    """Scope a by-nonce conversation lookup to the caller's allowed sessions."""
+    if isinstance(request.user, GuestPrincipal):
+        return guest_trial_conversation_session_queryset(guest_id=request.user.guest_id)
+    if isinstance(request.user, AgentServicePrincipal):
+        return guest_conversation_session_queryset()
+    return owner_conversation_session_queryset(user=request.user)</pre>
+
+<h4>3.2 The chokepoint: <code>querysets.py</code></h4>
+
+<p>This is the most security-relevant file in the app, and it is thirty lines of filters
+(<code>:60&ndash;104</code>):</p>
+
+<pre>def owner_conversation_session_queryset(*, user):
+    return ConversationSession.objects.filter(user=user, deleted_at__isnull=True)
+
+
+def guest_conversation_session_queryset():           # the dormant BFF funnel
+    return ConversationSession.objects.filter(
+        user__isnull=True, agent_type=AgentType.DIAGNOSIS, deleted_at__isnull=True,
+    )
+
+
+def guest_trial_conversation_session_queryset(*, guest_id):   # P68 anonymous trial
+    if guest_id is None:
+        return ConversationSession.objects.none()
+    return ConversationSession.objects.filter(
+        user__isnull=True,
+        guest_id=guest_id,
+        agent_type=AgentType.DEFAULT,
+        deleted_at__isnull=True,
+    )</pre>
+
+<p>Read those as sentences. A logged-in user reaches sessions they own that are not deleted &mdash;
+full stop; there is no "and also check the owner afterwards". A trial guest reaches sessions that have
+<em>no</em> owner <strong>and</strong> carry their own <code>guest_id</code> <strong>and</strong> are
+default mode. The service token reaches only ownerless diagnosis rows.</p>
+
+<p>Because these are querysets, a view cannot forget the check: the lookup <em>is</em> the filter. A
+nonce that belongs to someone else does not produce a 403, it produces a plain
+<strong>404</strong> &mdash; the row simply is not in your queryset. That is deliberate, and it means
+guessing nonces tells an attacker nothing. <code>OwnedConversationLookupMixin</code>
+(<code>views.py:113</code>) packages the pattern for the owner-only views.</p>
+
+<p>One decision recorded in the docstrings deserves highlighting: when the anonymous trial was built,
+the obvious shortcut would have been to widen the existing service-token queryset to cover trial
+sessions. The code refused, and says why &mdash; the service token is <em>one shared secret with no
+per-caller identity</em>, so widening it would hand a single credential access to every trial
+conversation on the platform. Instead the trial got its own guest-token-scoped queryset, where the
+per-browser <code>guest_id</code> does the isolating.</p>
+
+<h4>3.3 The write contract: <code>ConversationMessageCreateView</code> (<code>views.py:392</code>) and
+<code>ConversationMessageWriteSerializer</code> (<code>serializers.py:447</code>)</h4>
+
+<p>The view is thin by design: resolve the session through the scoped queryset, hand the body to the
+serializer, and choose the status code from a flag the serializer set.</p>
+
+<pre>def post(self, request, *args, **kwargs):
+    session = self.get_object()
+    serializer = self.get_serializer(
+        data=request.data,
+        context={**self.get_serializer_context(), "session": session},
+    )
+    serializer.is_valid(raise_exception=True)
+    message = serializer.save()
+    output_serializer = ConversationHistoryDetailMessageSerializer(message)
+    response_status = (
+        status.HTTP_201_CREATED
+        if getattr(serializer, "created", True)
+        else status.HTTP_200_OK
+    )
+    return Response(output_serializer.data, status=response_status)</pre>
+
+<p><strong>201 means "I wrote it"; 200 means "this exact write already existed".</strong> The caller
+gets the message either way, so a retry is invisible to the user &mdash; and distinguishable to a
+developer reading logs. That single line is the entire externally visible surface of idempotency.</p>
+
+<p>The request body:</p>
+
+<table>
+<tr><th>Field</th><th>Type</th><th>Rules</th></tr>
+<tr><td><code>role</code></td><td>choice</td><td><code>user</code> or <code>assistant</code></td></tr>
+<tr><td><code>content</code></td><td>string</td><td>accepted blank by the field, then rejected if it is only whitespace</td></tr>
+<tr><td><code>idempotency_key</code></td><td>UUID</td><td><strong>required</strong> &mdash; there is no "just write it" mode</td></tr>
+<tr><td><code>selected_content_ids</code></td><td>list of int</td><td>user role only; must be distinct; every id must exist</td></tr>
+<tr><td><code>cited_document_post_ids</code></td><td>list of int</td><td>assistant role only; distinct; every <code>post_id</code> must exist</td></tr>
+<tr><td><code>cited_content</code></td><td>list of <code>{content_id, position}</code></td><td>assistant role only; positions validated against the merged layout</td></tr>
+<tr><td><code>metadata</code></td><td>object</td><td>free-form; <code>message_type</code> is the meaningful key</td></tr>
+</table>
+
+<p>The validation is deliberately doubled: <code>validate()</code> re-checks the same rules the model
+enforces, and for the merged citation layout it literally calls the model's own helper:</p>
+
+<pre># P41.S9: the merged-layout rules (distinct ids, distinct positions,
+# every position inside 1..total) live in one place -- the model
+# helper the writer itself uses -- so the API and the model can never
+# disagree about what a valid citation layout is.</pre>
+
+<p>Why validate twice at all? Because the two layers answer different questions. The serializer's job
+is to give a client a <em>useful 400</em> with a per-field error; the model's job is to be
+unbypassable. Sharing the helper keeps them from drifting.</p>
+
+<p>Then <code>create()</code>, which is the real subject. It is a ladder, and the <em>order of the
+rungs</em> is the design:</p>
+
+<pre>with transaction.atomic():
+    locked_session = ConversationSession.objects.select_for_update().get(pk=session.pk)
+
+    # 1. idempotency: has this exact key already been written here?
+    existing_message = (... filter(session=locked_session,
+                                   idempotency_key=validated_data["idempotency_key"]).first())
+    if existing_message is not None:
+        if self._payload_matches_existing(existing_message, validated_data):
+            self.created = False
+            return existing_message          # -&gt; 200
+        raise ConversationIdempotencyConflict()   # -&gt; 409: same key, different payload
+
+    # 2. security lockdown (P26) -- USER writes only
+    if locked_session.is_locked and validated_data["role"] == Role.USER:
+        raise ConversationSessionLockedConflict()
+
+    # 3. anonymous trial turn cap (P68) -- USER writes only
+    if validated_data["role"] == Role.USER and guest_trial_is_exhausted(locked_session):
+        raise ConversationGuestTrialExhausted()
+
+    # 4. alternation
+    self._validate_turn_order(session=locked_session, role=validated_data["role"])
+
+    # 5. the write itself
+    message = locked_session.append_finalized_message(...)
+
+    # 6. an assistant lockdown message locks the session, same transaction
+    if role == ASSISTANT and metadata.get("message_type") == SECURITY_LOCKDOWN_MESSAGE_TYPE:
+        locked_session.lock()
+
+    # 7. first assistant reply on an untitled session -&gt; queue title generation
+    if self._should_queue_title_generation(...):
+        queue_session_title_generation_on_commit(locked_session.pk)</pre>
+
+<p>Everything happens under <code>select_for_update()</code> &mdash; a row lock on the session &mdash;
+so two concurrent writes to the same conversation serialise rather than interleave. And each rung's
+position is argued for in the comments:</p>
+
+<ul>
+<li><strong>Idempotency is first</strong>, so that replaying an already-persisted message returns it
+even if the session has since been locked or the trial has been spent. A retry of something that
+already happened must never turn into a refusal.</li>
+<li><strong>The lockdown and trial guards check <code>USER</code> writes only</strong>, so that the
+lockdown's own assistant message &mdash; and the fallback/cancelled writes that close a broken turn
+&mdash; can still land. Guard the input, never the bookkeeping.</li>
+<li><strong>Alternation is checked last</strong>, on the locked row, immediately before the write.</li>
+</ul>
+
+<p>Notice how "same key, different payload" is treated: not as a silent overwrite, and not as a
+success, but as a <strong>409</strong>. Idempotency means "this exact request again", and
+<code>_payload_matches_existing</code> compares role, content, selected ids, cited document ids, cited
+content pairs <em>and</em> metadata before agreeing that it is the same request.</p>
+
+<p>The conflict vocabulary itself lives at the top of the file (<code>serializers.py:53&ndash;122</code>):</p>
+
+<table>
+<tr><th>Exception</th><th>Status</th><th>Code</th><th>Means</th></tr>
+<tr><td><code>ConversationIdempotencyConflict</code></td><td>409</td><td><code>idempotency_conflict</code></td><td>that key exists here with a different body</td></tr>
+<tr><td><code>ConversationSessionLockedConflict</code></td><td>409</td><td><code>conversation_locked</code></td><td>the injection guard locked this session</td></tr>
+<tr><td><code>ConversationGuestTrialExhausted</code></td><td><strong>403</strong></td><td><code>guest_trial_exhausted</code></td><td>the trial's two turns are spent &mdash; a product state, not an error</td></tr>
+<tr><td><code>ConversationAssistantFailureClosureConflict</code></td><td>409</td><td><code>assistant_failure_closure_conflict</code></td><td>this turn already has a settled reply</td></tr>
+<tr><td><code>ConversationRetractTailConflict</code></td><td>409</td><td>5 distinct codes</td><td>the tail is not what the client thinks</td></tr>
+</table>
+
+<p>The trial wall is a 403 and not a 429 on purpose &mdash; the code comment calls it out: the wall is
+a <em>product state</em> leading to a login CTA, not a rate limit. And every refusal carries a
+machine-readable <code>code</code> alongside the human <code>detail</code>, because clients must never
+branch on prose. Explainer #11 owns the lockdown and the trial caps themselves.</p>
+
+<h4>3.4 Closing a turn that died: <code>ConversationAssistantFailureClosureView</code> (<code>views.py:370</code>)</h4>
+
+<p>Recall the stuck state: a user message was persisted, generation then failed, and the transcript's
+tail is a lone user row. The owner could repair it with retract-tail &mdash; but an anonymous trial
+guest cannot, because that route is owner-JWT only. The docstring states the consequence plainly:</p>
+
+<pre>"""Close a turn whose assistant reply never landed (agent-internal).
+
+Without this a guest turn that died before its assistant row was written
+would strand the trial behind the role-alternation guard forever: the guest
+cannot retract the tail either (that route is owner-JWT only), so every
+later send would 409.
+"""</pre>
+
+<p>So the agent calls <code>POST /api/conversations/internal/&lt;nonce&gt;/assistant-failure-closure</code>
+with the service token, and names its target's owner in the body: exactly one of
+<code>owner_user_id</code> or <code>guest_id</code>. Django then re-scopes the row to that owner
+(reusing the very same trial queryset from &sect;3.2) so a guest identity can never close a
+first-party conversation. <strong>The transport credential authenticates the agent; the identity in
+the body is data that Django verifies.</strong> That distinction is worth internalising &mdash; it is
+how you safely let a trusted service act on behalf of many users without giving it the power to act
+as any of them.</p>
+
+<p>Its idempotency key is not sent at all &mdash; it is <em>computed on both sides</em> from the turn
+being closed:</p>
+
+<pre>def build_assistant_failure_closure_idempotency_key(*, conversation_nonce,
+                                                    user_message_idempotency_key):
+    return uuid.uuid5(
+        _ASSISTANT_FAILURE_IDEMPOTENCY_NAMESPACE,
+        f"{conversation_nonce}:{user_message_idempotency_key}:assistant-fallback",
+    )</pre>
+
+<p><code>uuid5</code> is a deterministic hash-based UUID: same inputs, same UUID, forever, on any
+machine. Two closure attempts for the same dangling turn therefore collide on the message table's
+unique constraint by construction. The view answers 201 if it wrote one and 200 if the identical
+closure already existed.</p>
+
+<h4>3.5 Undoing a turn: <code>ConversationMessageRetractTailView</code> (<code>views.py:422</code>)</h4>
+
+<p>The owner-facing repair path. When you press "edit" on your last question, or retry a failed
+answer, the redesigned chat does not mutate anything: it <strong>settles the turn, retracts the
+trailing pair, and streams a fresh one</strong>. The front end drives exactly that sequence &mdash;
+see <code>apps/web/src/components/scaffold/session-feedback.ts</code>, which builds the retract target
+from the transcript and calls the route before opening a new stream.</p>
+
+<p>The request names the pair it expects to delete, by public id:</p>
+
+<pre>class ConversationRetractTailSerializer(StrictSerializer):
+    user_message_id = serializers.UUIDField()
+    assistant_message_id = serializers.UUIDField()</pre>
+
+<p>That is the whole safety design. Under a row lock, the view reads the actual last two messages and
+refuses unless they are exactly that <code>[user, assistant]</code> pair. A replayed request, or a
+second tab acting on a stale view, finds a different tail and gets a 409 &mdash; it can never delete
+the <em>previous</em> turn. Five distinct refusals, each with its own code, and the front end has a
+matching union type for them:</p>
+
+<table>
+<tr><th>Code</th><th>Meaning</th></tr>
+<tr><td><code>tail_too_short</code></td><td>fewer than two messages &mdash; nothing to retract</td></tr>
+<tr><td><code>assistant_pending</code></td><td>the tail is a bare user message; the answer has not settled yet</td></tr>
+<tr><td><code>tail_mismatch</code></td><td>the current pair is not the one the client loaded</td></tr>
+<tr><td><code>non_default_turn</code></td><td>either message carries a <code>metadata.message_type</code> &mdash; a consulting beat, a lockdown notice, a diagnosis report</td></tr>
+<tr><td><code>consulting_round_active</code></td><td>a 컨설팅 round owns the tail, even if no marker is on it yet</td></tr>
+</table>
+
+<p>A locked session is refused with the shared <code>ConversationSessionLockedConflict</code> instead,
+so the client's existing lock handling fires unchanged. The delete itself is a genuine hard delete
+&mdash; the only one in this app &mdash; and the citation rows CASCADE away with it. One consequence
+the docstring records honestly: retracting the only turn transiently drops the conversation out of the
+history rail, because the rail filters on "has at least one assistant reply", until the replacement
+turn completes.</p>
+
+<h4>3.6 What a read looks like: <code>ConversationHistoryDetailSerializer</code> (<code>serializers.py:964</code>)</h4>
+
+<p><code>GET /api/conversations/&lt;nonce&gt;</code> is the single read the agent makes before every
+turn, so its shape matters:</p>
+
+<pre>{
+  "nonce": "7c1e0f2a-...",
+  "title": "배달앱 수수료 줄이는 법",
+  "agent_type": "default",
+  "is_pinned": false,  "pinned_at": null,
+  "is_shared": false,  "share_token": null,  "shared_at": null,
+  "is_locked": false,  "locked_at": null,
+  "created_at": "2026-08-26T09:40:58Z",
+  "updated_at": "2026-08-26T09:41:12Z",
+  "rolling_summary": null,
+  "summarized_through_message_id": null,
+  "summarized_through_created_at": null,
+  "messages": [
+    { "id": "a1b2...", "role": "user",
+      "content": "배달앱 수수료가 너무 비싼데 어떻게 줄이죠?",
+      "metadata": {}, "created_at": "2026-08-26T09:40:58Z",
+      "selected_content": [], "cited_documents": [], "cited_content": [] },
+    { "id": "c3d4...", "role": "assistant",
+      "content": "수수료 구조를 먼저 나눠 보면 ... [1] ...",
+      "metadata": {}, "created_at": "2026-08-26T09:41:12Z",
+      "selected_content": [],
+      "cited_documents": [ { "post_id": 2418, "position": 1,
+                             "title": "배달 플랫폼 수수료 정리 2026",
+                             "source_url": "https://cafe.naver.com/..." } ],
+      "cited_content": [] }
+  ],
+  "consulting_lifecycle": { ... }
+}</pre>
+
+<p>Message <code>id</code> is the <code>public_id</code>, never the primary key. The whole payload is
+read-only (<code>read_only_fields = fields</code>). The view prefetches all three reference tables in
+transcript order (<code>conversation_detail_message_queryset</code>, <code>views.py:281</code>) so
+rendering a hundred-message conversation stays a handful of queries rather than three hundred.</p>
+
+<p>And note what is bundled in: <code>is_locked</code> for the agent's pre-stream guard, and the three
+<code>rolling_summary</code> fields so the agent can cut its context window without a second round
+trip. This response is designed for the agent's needs as much as the browser's &mdash; one read, then
+everything the turn needs is in hand.</p>
+
+<h3>&sect;4 &mdash; The life of an anonymous conversation</h3>
+
+<p>Explainer #3 covered how a visitor gets a guest credential and what caps it carries. Here is what
+happens to the <em>conversation</em> that credential creates: it is born ownerless, it may be adopted
+by a real account, and if it is not, it is eventually deleted.</p>
+
+<h4>4.1 Adoption: <code>guest_adoption.py:122</code></h4>
+
+<p>The conversion moment. A visitor chats anonymously, hits the two-turn wall, signs in with Naver
+&mdash; and the conversation they were already having becomes theirs. Same nonce, same transcript, no
+cap. Because the OAuth exchange happens client-side there is no server-side session hook to hang this
+on, so adoption is an explicit authenticated call the client makes right after the tokens land:
+<code>POST /api/conversations/&lt;nonce&gt;/adopt</code>, with the user's new JWT
+<strong>and</strong> the old guest token in <code>X-Guest-Token</code>.</p>
+
+<p>The whole mechanism is one conditional UPDATE:</p>
+
+<pre>claimed = ConversationSession.objects.filter(
+    nonce=nonce,
+    user__isnull=True,
+    guest_id=guest_id,
+    agent_type=AgentType.DEFAULT,
+    deleted_at__isnull=True,
+).update(user=user, updated_at=timezone.now())
+
+if claimed:
+    ...   # adopted
+# else: maybe the caller already owns it (idempotent retry), else refuse</pre>
+
+<p>Three properties, each earned by a specific part of that filter.</p>
+
+<p><strong>Proof-bound.</strong> <code>guest_id=guest_id</code> comes from the guest token in the
+header, so having a login is not enough: an attacker who somehow learned a nonce still cannot take
+someone else's trial. The guest token's 12-hour lifetime is what makes "present it again after the
+OAuth round trip" workable.</p>
+
+<p><strong>One-shot, atomically.</strong> <code>user__isnull=True</code> is inside the
+<code>WHERE</code>, so the database serialises concurrent adopters: exactly one call updates a row,
+the loser updates zero and falls through. There is no read-then-write window to race. Re-adopting a
+session you already own is a 200 no-op, because the OAuth return path can legitimately fire twice.</p>
+
+<p><strong>Non-enumerable.</strong> Unknown nonce, wrong guest proof, owned by somebody else,
+consulting mode, soft-deleted &mdash; <em>all five</em> answer with one opaque
+<code>guest_adoption_not_available</code> 404. Only "you presented no usable guest credential"
+(<code>guest_adoption_proof_invalid</code>, 400) is distinct, because that one is actionable in the
+UI. Uniform refusals are how you keep an endpoint from becoming an oracle.</p>
+
+<div class="note">
+<p>Two design notes the module records, both instructive. First, the guest token carries a
+<code>jti</code> (a token id) that <em>could</em> be burned on adoption &mdash; and deliberately is
+not, because the turn cap is per conversation, so one browser may hold several trials and should be
+able to adopt all of them with the credential it has. One-shot-ness belongs to the session, not the
+token. Second, <code>guest_id</code> is <strong>kept</strong> after adoption rather than cleared: once
+<code>user</code> is set, every guest surface (which requires <code>user IS NULL</code>) stops
+matching, so the stamp is inert as a credential and valuable as an audit trail &mdash; the only record
+that this conversation began anonymously, and the join key for "did this guest convert?".</p>
+</div>
+
+<h4>4.2 Retention: <code>guest_retention.py:96</code></h4>
+
+<p>Anonymous rows have no owner to delete them, so a daily Celery beat job at 03:00 hard-deletes them
+past their window &mdash; two families, two windows:</p>
+
+<table>
+<tr><th>Family</th><th>Matched by</th><th>Window</th></tr>
+<tr><td>guest diagnosis (the dormant BFF funnel)</td><td><code>user IS NULL</code>, <code>agent_type=diagnosis</code></td><td><code>GUEST_SESSION_RETENTION_DAYS</code> &mdash; 30 days</td></tr>
+<tr><td>anonymous trial</td><td><code>user IS NULL</code>, <code>guest_id</code> set, <code>agent_type=default</code></td><td><code>GUEST_TRIAL_SESSION_RETENTION_DAYS</code> &mdash; <strong>7 days</strong></td></tr>
+</table>
+
+<p>Messages and citation rows disappear with the session through <code>CASCADE</code>. Both queries
+require <code>user IS NULL</code>, which is what makes the sentence "an adopted trial is never
+purged" true <em>by construction</em> rather than by an extra check. Seven days is generous for
+something that is at most two turns with a 12-hour credential; the job exists mostly so a visitor who
+comes back the same day, or logs in on another device, still finds the conversation. The task is
+<code>conversations.purge_expired_guest_sessions</code> in <code>tasks.py</code>; the beat schedule
+that drives it belongs to explainer #16.</p>
+
+<h4>4.3 Diagnosis snapshots: <code>snapshots.py:13</code></h4>
+
+<p>One paragraph, because the feature is retired. When the changple_web site ran its 무료 AI 진단
+funnel, a visitor could submit a 상담신청 off the back of a generated report.
+<code>resolve_guest_diagnosis_snapshot</code> resolves a guest nonce through the hard-scoped diagnosis
+queryset and freezes the latest assistant message carrying
+<code>metadata.message_type == "diagnosis_report"</code> &mdash; its text plus a copy of its cited
+documents &mdash; so the consultation record stays readable even after the conversation is purged. Note
+that it reads the <em>snapshot columns</em> on the citation rows, never the live
+<code>DocumentSource</code>: a durable business record must not change because the corpus did. That is
+the same instinct as &sect;1.5, applied one layer out.</p>
+
+<h3>&sect;5 &mdash; Titles: <code>title_generation.py</code></h3>
+
+<p>A small, complete feature that shows how this codebase does background work &mdash; and it starts
+back in the write serializer:</p>
+
+<pre>def _should_queue_title_generation(self, *, session, message) -&gt; bool:
+    if message.role != ConversationMessage.Role.ASSISTANT:
+        return False
+    if session.title:
+        return False
+    return not ConversationMessage.objects.filter(
+        session=session, role=ConversationMessage.Role.ASSISTANT,
+    ).exclude(pk=message.pk).exists()</pre>
+
+<p>"The first assistant reply in a session that has no title yet." When that is true, the serializer
+calls <code>queue_session_title_generation_on_commit(session.pk)</code>
+(<code>dispatcher.py:12</code>), which wraps <code>transaction.on_commit</code> around a
+<code>send_task("conversations.generate_session_title")</code>.</p>
+
+<div class="callout">
+<span class="tag">Dispatch-after-commit, in one sentence</span>
+<p>The task is queued <strong>after</strong> the database transaction commits, not during it &mdash;
+because a Celery worker is a different process that will read the database itself, and if it started
+while the transaction was still open it would look for a row that does not exist yet. Explainer #16
+owns this pattern; every place in changple5 that dispatches background work uses it, and this is the
+first one you have seen.</p>
+</div>
+
+<p>The task calls <code>generate_and_store_session_title</code> (<code>:212</code>), which is written
+to be safely re-runnable: missing session &rarr; <code>{"status": "missing"}</code>; title already
+present &rarr; <code>skipped</code>; no complete exchange yet &rarr; <code>skipped</code>; no API key
+&rarr; <code>skipped</code>; the model failed &rarr; <code>failed</code>. It never raises and never
+retries &mdash; a missing title is cosmetic, and the next assistant write will not re-queue it
+because a conversation only gets one first reply. (An untitled session simply shows its first message
+as a preview.)</p>
+
+<p><code>get_first_completed_exchange</code> (<code>:167</code>) fetches the first user message and the
+first assistant message and does one non-obvious check:</p>
+
+<pre>if (first_assistant_message.created_at, first_assistant_message.id) &lt; (
+    first_user_message.created_at, first_user_message.id
+):
+    return None</pre>
+
+<p>If the assistant row somehow predates the user row, there is no coherent "first exchange" to
+summarise, so it declines rather than inventing a title from a scrambled pair. Then
+<code>strip_visible_citation_markers</code> (<code>:160</code>) removes the <code>[1]</code>
+<code>[2]</code> markers from the answer &mdash; but only when the message actually has cited-document
+rows, so a bracketed number that is genuinely part of the prose survives.</p>
+
+<p>The model call is <code>GeminiConversationTitleModel</code> (<code>:44</code>): Gemini
+(<code>gemini-3.1-flash-lite</code> by default, overridable live by the operator console through
+<code>resolve_role_config(ROLE_CONVERSATION_TITLE, ...)</code> &mdash; the live-config pattern from
+explainer #2), <code>temperature=0.0</code>, and <strong>structured output</strong> against a
+one-field Pydantic schema:</p>
+
+<pre>class _GeminiConversationTitleSchema(BaseModel):
+    title: str = Field(description="30자 이내의 짧은 한국어 채팅 제목.")</pre>
+
+<p>Asking for a typed object rather than a string is the reliable way to get a title back instead of
+"Sure! Here's a title for your conversation:". The prompt (<code>:121</code>) is Korean, sees only the
+first exchange, and bans quote marks, emoji, and lazily generic titles like 대화 or 질문. Even so, the
+output is normalised defensively &mdash; whitespace collapsed, decorative punctuation stripped, a
+leading "제목:" removed, then truncated to 30 characters &mdash; because a model that has been asked
+nicely is not a model that has been constrained.</p>
+
+<p>The write is one more conditional UPDATE:</p>
+
+<pre>updated_count = ConversationSession.objects.filter(pk=session_id).filter(
+    Q(title__isnull=True) | Q(title="")
+).update(title=title)</pre>
+
+<p>Zero rows updated means somebody else won the race, and the function reports
+<code>skipped / title_exists</code>. You have now seen this same "put the precondition in the WHERE
+clause" move four times on this page &mdash; <code>lock()</code>, adoption, retract-tail's
+expected-pair check, and here. It is the house style for concurrency in this codebase, and it is a
+good one: no locks, no read-modify-write windows, and the database arbitrates.</p>
+
+<h3>&sect;6 &mdash; The other side of the loop: <code>apps/agent/app/chat/backend.py</code> (1,556 lines)</h3>
+
+<p>Everything so far was Django. Now cross the boundary. This one module is the agent's entire view of
+the conversation store: fifteen typed shapes, a dozen normalisers, and nine network operations. It is
+worth understanding as a specimen of "how to call another service you also own".</p>
+
+<h4>6.1 One HTTP client for the whole process (<code>:83</code>, <code>:91</code>)</h4>
+
+<pre>_backend_http_client: httpx.AsyncClient | None = None
+
+
+def get_backend_http_client() -&gt; httpx.AsyncClient:
+    """Return the shared, lazily-built backend HTTP client (app-lifetime)."""
+    global _backend_http_client
+    if _backend_http_client is None:
+        _backend_http_client = httpx.AsyncClient()
+    return _backend_http_client</pre>
+
+<p>This replaced a fresh <code>httpx.AsyncClient</code> per request. The win is the connection pool:
+TCP handshakes and keep-alive are reused instead of paid on every call, which matters when a single
+chat turn makes three or four round trips. Explainer #1 noted that the agent's FastAPI lifespan opens
+six Redis registries eagerly but only <em>closes</em> this client and the retrieval cache &mdash; this
+is that lazily-built client, and <code>aclose_backend_http_client()</code> is what the lifespan
+<code>finally</code> calls, after draining durable runs (because those persist answers through these
+same helpers). The comment is emphatic that no request or stream path may ever close it.</p>
+
+<p>Each call site still passes its own <code>timeout=</code> per request (default 10 s), so sharing
+the client changed pooling and nothing else.</p>
+
+<h4>6.2 Two type systems, on purpose (<code>:104&ndash;330</code>)</h4>
+
+<p>Every payload exists twice. A frozen <code>@dataclass(slots=True)</code> is what the rest of the
+agent passes around; a private Pydantic <code>BaseModel</code> ending in <code>Payload</code> is what
+the JSON is validated into first. For example <code>BackendConversationDetail</code>
+(<code>:187</code>) is mirrored by <code>_BackendConversationDetailPayload</code>
+(<code>:300</code>):</p>
+
+<pre>class _BackendConversationDetailPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    nonce: UUID
+    messages: list[_BackendConversationMessagePayload]
+    agent_type: str = "default"
+    consulting_lifecycle: _BackendConsultingLifecyclePayload | None = None
+    is_locked: bool = False
+    rolling_summary: str | None = None
+    summarized_through_message_id: UUID | None = None
+    summarized_through_created_at: datetime | None = None</pre>
+
+<p>Why validate JSON that came from your own backend? Three reasons, and they generalise to any
+service-to-service call.</p>
+
+<p><strong>They deploy separately.</strong> Django and the agent are different containers, and one can
+be a version ahead of the other. <code>extra="ignore"</code> plus defaults on every added field is a
+forward-compatibility contract: a newer Django emitting a field the agent has never heard of is
+harmless, and an older Django omitting one gives a safe default.</p>
+
+<p><strong>Parsing is where types begin.</strong> After
+<code>model_validate</code>, <code>nonce</code> is a real <code>UUID</code> and
+<code>created_at</code> is a real <code>datetime</code> &mdash; not strings that <em>look</em> like
+them. Downstream code compares and sorts on them without re-parsing or guessing formats.</p>
+
+<p><strong>A malformed payload becomes one named failure.</strong> Anything that does not validate is
+turned into <code>BackendConversationUnavailableError</code>, which the route already knows how to
+render as a 503, instead of an <code>AttributeError</code> surfacing from somewhere deep in the chat
+loop.</p>
+
+<p>There is also a nice paranoid check after validation: if the returned <code>nonce</code> does not
+equal the one requested, the call fails. Not because Django is expected to be confused &mdash; because
+a mixed-up conversation is exactly the class of bug you want to die loudly.</p>
+
+<p>The dataclass/payload split also lets the boundary be deliberately lossy in one direction: the
+message builder is called with <code>include_metadata=False</code> on <em>write</em> responses (the
+agent already knows what it just sent) and with metadata on <em>read</em>, where the lockdown guard
+needs <code>metadata.message_type</code>.</p>
+
+<h4>6.3 The four operations of a default turn</h4>
+
+<p>Explainer #2 established the header builders &mdash;
+<code>_build_headers</code> (<code>:516</code>, a bearer JWT), <code>_build_service_headers</code>
+(<code>:524</code>), <code>_build_guest_headers</code> (<code>:532</code>), all splatting
+<code>_correlation_headers()</code> (<code>:505</code>) &mdash; and the picker that chooses among them:</p>
+
+<pre>def _conversation_request_headers(*, access_token, service_token, guest_token=None):
+    """Pick the caller credential for a conversation detail/message call.
+
+    * first-party turn -&gt; the user access token (bearer);
+    * P68 anonymous trial turn -&gt; the caller's own guest token, FORWARDED as-is.
+      The agent does not substitute the service token here on purpose: the
+      backend then scopes the lookup to that token's `guest_id`, so cross-guest
+      isolation is enforced at the backend chokepoint rather than trusted to the
+      agent;
+    * dormant changple_web BFF guest turn -&gt; the service token.
+    """</pre>
+
+<p>With that settled, here is what a default turn actually calls, in order:</p>
+
+<table>
+<tr><th>#</th><th>Function</th><th>Wire call</th><th>Credential</th></tr>
+<tr><td>1</td><td><code>fetch_conversation_detail</code> (<code>:716</code>)</td><td><code>GET /api/conversations/&lt;nonce&gt;</code></td><td>the caller's own</td></tr>
+<tr><td>2</td><td><code>fetch_selected_content_context</code> (<code>:842</code>)</td><td><code>POST /api/content/selection-context</code></td><td>bearer JWT (first party only)</td></tr>
+<tr><td>3</td><td><code>write_conversation_message</code> (<code>:915</code>)</td><td><code>POST /api/conversations/&lt;nonce&gt;/messages</code> &mdash; role <code>user</code></td><td>the caller's own</td></tr>
+<tr><td>4</td><td><code>write_conversation_message</code> again</td><td>same route &mdash; role <code>assistant</code>, with citations</td><td>the caller's own</td></tr>
+<tr><td>&mdash;</td><td><code>close_assistant_failure</code> (<code>:1048</code>)</td><td><code>POST &hellip;/internal/&lt;nonce&gt;/assistant-failure-closure</code></td><td><strong>service token</strong></td></tr>
+</table>
+
+<p>Step 2 fetches the full text of any 미라클 contents the user attached to the question, and it too
+has a paranoid post-check: if the returned ids are not exactly the ids requested, in order, the call
+fails. Step 3 happens in the route before streaming begins
+(<code>routes/chat.py:2128</code>); step 4 happens inside the streaming generator once the model has
+produced its final text (<code>routes/chat.py:1378</code>), carrying
+<code>cited_document_post_ids</code>, <code>cited_content</code>, and &mdash; if the injection guard
+tripped &mdash; the <code>security_lockdown</code> metadata marker that makes Django lock the session
+in the same transaction.</p>
+
+<p>Two sibling writes exist for the unhappy paths, both in <code>routes/chat.py</code>:
+<code>_persist_fallback_assistant_message</code> (a fixed "답변을 마무리하지 못했습니다" apology) and
+<code>_persist_cancelled_assistant_message</code> ("답변 생성을 중단했습니다"). They use the same
+<code>uuid5</code> key derivation with a different <code>kind</code> string, and both swallow every
+exception and return <code>None</code>: a failed apology must not turn one broken turn into a broken
+request. If even that fails, the turn is left dangling &mdash; and &sect;3.4's closure endpoint is the
+net under the net.</p>
+
+<h4>6.4 The error taxonomy: <code>backend_errors.py</code> (239 lines)</h4>
+
+<p>Every operation gets its own family of exceptions, and the mapping from HTTP status to exception is
+mechanical. For the conversation write (<code>backend.py:981&ndash;1030</code>):</p>
+
+<table>
+<tr><th>Status from Django</th><th>Raised by the agent</th><th>What the browser eventually sees</th></tr>
+<tr><td>400</td><td><code>BackendConversationWriteValidationError</code> (carries the payload)</td><td><strong>409</strong> if the detail mentions "alternate", otherwise 503</td></tr>
+<tr><td>401</td><td><code>BackendConversationWriteUnauthorizedError</code></td><td>401</td></tr>
+<tr><td>403</td><td><code>BackendConversationWriteForbiddenError</code> (carries the payload)</td><td>403, with the backend's own <code>{code, detail}</code> passed straight through</td></tr>
+<tr><td>404</td><td><code>BackendConversationWriteNotFoundError</code></td><td>404</td></tr>
+<tr><td>409</td><td><code>BackendConversationWriteConflictError</code> (carries the payload)</td><td>409</td></tr>
+<tr><td>&ge; 500, or anything unexpected, or a malformed body, or a transport failure</td><td><code>BackendConversationWriteUnavailableError</code></td><td>503</td></tr>
+</table>
+
+<p>Notice the shape: the <em>refusal</em> families (validation, forbidden, conflict) carry the backend's
+parsed payload so the reason code can survive the trip, while the <em>availability</em> families carry
+only a message, because there is nothing useful to forward. And the 400-to-409 translation is the
+mechanism behind the callout in the Intuition section:</p>
+
+<pre>except BackendConversationWriteValidationError as error:
+    await _cleanup_run_safely(run_registry, run_id=run_id)
+    if _payload_indicates_turn_conflict(error.payload):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=TURN_CONFLICT_DETAIL) from error
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=CHAT_UNAVAILABLE_DETAIL) from error</pre>
+
+<p>&hellip; where the predicate is, honestly, a string sniff:</p>
+
+<pre>def _payload_indicates_turn_conflict(payload: object) -&gt; bool:
+    detail = _extract_error_detail(payload, "").lower()
+    return "alternate" in detail or "awaiting a finalized assistant reply" in detail</pre>
+
+<p>It is worth being clear-eyed about this one. It works, and the alternative &mdash; a machine
+readable code on the model layer's <code>ValueError</code> &mdash; would be sturdier. If you ever
+change the wording of that message in <code>models.py</code>, this predicate must change with it. It
+is the sort of coupling that is invisible until it bites, and now you know it is there.</p>
+
+<h4>6.5 What this module also holds, and where it is taught</h4>
+
+<p>The rest of <code>backend.py</code> belongs to later explainers, named here only so you know where
+they live: <code>write_rolling_summary</code> (<code>:1178</code>) persists the compacted context
+window (explainer #6, with <code>applied: false</code> as a documented <em>success</em>);
+<code>fetch_consulting_report</code> (<code>:777</code>) and the five consulting mutations
+(<code>:1376&ndash;1486</code>) drive 컨설팅 mode (explainer #10). And this page has deliberately said
+nothing about how the answer is <em>generated</em> or <em>streamed</em> &mdash; the SSE frames, cancel,
+replay, the durable-run registry and the abandoned-stream finalizer are explainer #5's subject. The
+one thing to carry forward is that the write-back is designed to survive the client vanishing: the
+persistence contract holds whether or not anybody is still listening.</p>
+
+<div class="callout">
+<span class="tag">The page in one paragraph</span>
+<p>A conversation is five Postgres tables owned by Django. One method,
+<code>append_finalized_message</code>, is the only way a message gets in, and it enforces alternation,
+citation integrity and atomicity for everybody. Access is decided by querysets that encode "yours" as
+a filter, so an unauthorised nonce is a 404 rather than a leak. The agent keeps no chat state: it
+reads the transcript with the caller's own credential, writes the user message before generating,
+writes the assistant message after, and reaches for its service token only on the internal endpoints
+where there is no user to speak for. Every write carries an idempotency key &mdash; the client's for
+the question, a <code>uuid5</code> derivation of it for everything else &mdash; so retries are free
+and duplicates are impossible.</p>
+</div>
+
+<p class="files"><strong>Files walked for this explainer:</strong>
+<code>apps/backend/conversations/</code>: <code>models.py</code>, <code>views.py</code>,
+<code>serializers.py</code>, <code>urls.py</code>, <code>querysets.py</code>,
+<code>guest_adoption.py</code>, <code>guest_retention.py</code>, <code>guest_trial.py</code>,
+<code>snapshots.py</code>, <code>title_generation.py</code>, <code>dispatcher.py</code>,
+<code>tasks.py</code>, <code>rolling_summary.py</code>, <code>admin_views.py</code>;
+<code>apps/backend/config/urls.py</code>;
+<code>apps/agent/app/chat/backend.py</code>, <code>apps/agent/app/chat/backend_errors.py</code>,
+<code>apps/agent/app/chat/agent.py</code> (idempotency-key derivation),
+<code>apps/agent/app/api/routes/chat.py</code>;
+<code>apps/web/src/components/scaffold/session-feedback.ts</code> (the retract-tail caller).</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions. Click an answer to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A client sends a user message into a conversation whose last message is
+  already a user message, bypassing the agent's pre-stream check. What status does
+  <em>Django</em> answer with, and what does the browser end up seeing?</p>
+  <button class="opt" data-correct="false">Django answers 409 <code>conversation_locked</code>, and the agent passes it through unchanged.</button>
+  <button class="opt" data-correct="true">Django answers <strong>400</strong> (a DRF validation error from <code>validate_next_message_role</code>), and the agent re-maps that specific 400 to 409 after matching "alternate" in the detail text.</button>
+  <button class="opt" data-correct="false">Django answers 409 <code>idempotency_conflict</code>, because the alternation guard is implemented as an idempotency check.</button>
+  <button class="opt" data-correct="false">Django answers 422, and the agent converts every 4xx from the write into a 409.</button>
+  <p class="why" hidden><code>append_finalized_message</code> raises a plain
+  <code>ValueError</code>; the serializer's <code>_validate_turn_order</code> converts it into a DRF
+  <code>ValidationError</code>, which DRF renders as 400. The 409 the browser sees is manufactured in
+  the agent by <code>_payload_indicates_turn_conflict</code> (<code>routes/chat.py:448</code>) &mdash;
+  a string match on the detail. Any other 400 from that write degrades to 503.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> On a first-party chat turn, why does the agent forward the user's own bearer
+  JWT to Django instead of using the <code>AGENT_BACKEND_SHARED_TOKEN</code> service token it already
+  holds?</p>
+  <button class="opt" data-correct="false">Because the service token is only valid for outbound Django &rarr; agent calls, not the other direction.</button>
+  <button class="opt" data-correct="false">Because Django needs the JWT's <code>tier</code> claim to decide whether the user may write a message.</button>
+  <button class="opt" data-correct="true">So that "which conversations may this caller reach?" is answered once, by Django's scoped querysets, instead of being duplicated in (and trustable to) the agent.</button>
+  <button class="opt" data-correct="false">Because the shared service token is rotated too often to be usable on a per-turn path.</button>
+  <p class="why" hidden>The agent's own comment says it: "the backend &mdash; not this route &mdash;
+  decides which sessions it may reach." Forwarding the caller's credential means
+  <code>conversation_lookup_queryset</code> is the single authorization chokepoint, so an agent bug
+  cannot reach a conversation the caller could not. (The service token <em>is</em> used both
+  directions &mdash; just not here &mdash; and <code>tier</code> gates nothing server-side, as
+  explainer #3 measured.)</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> A network blip makes the agent retry the assistant write for the same turn.
+  What stops a duplicate assistant message, and what does the retry receive?</p>
+  <button class="opt" data-correct="false">Nothing structural &mdash; the agent keeps an in-memory set of keys it has already sent, and skips the retry.</button>
+  <button class="opt" data-correct="false">The alternation rule: the tail is already an assistant message, so the second write is refused with 409 and the agent treats that as success.</button>
+  <button class="opt" data-correct="true">The idempotency key is <code>uuid5</code>-derived from the nonce and the client's key, so the retry computes the identical key; the serializer finds the existing row, confirms the payload matches, and answers <strong>200</strong> with that message.</button>
+  <button class="opt" data-correct="false">The unique constraint on <code>(session, idempotency_key)</code> raises an <code>IntegrityError</code>, which DRF renders as a 409 that the agent ignores.</button>
+  <p class="why" hidden>Determinism is the point: <code>uuid5(namespace,
+  "&lt;nonce&gt;:&lt;client key&gt;:assistant")</code> is the same UUID on every attempt, so neither
+  side has to store a key table. The serializer's first rung finds the row, compares the payload
+  field by field, and returns it with <code>created = False</code> &rarr; 200. The database
+  constraint is the backstop underneath, not the mechanism. (If the payload had <em>differed</em>,
+  that would be a 409 <code>idempotency_conflict</code>.)</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Which of these is reachable only with the <code>X-Agent-Service-Token</code>,
+  and why does it need to be?</p>
+  <button class="opt" data-correct="false"><code>POST /api/conversations/&lt;nonce&gt;/messages</code> &mdash; only the agent ever writes messages, so only it may call this.</button>
+  <button class="opt" data-correct="true"><code>POST /api/conversations/internal/&lt;nonce&gt;/assistant-failure-closure</code> &mdash; it runs when a turn has already died, so there is no live request whose credential could be borrowed.</button>
+  <button class="opt" data-correct="false"><code>POST /api/conversations/&lt;nonce&gt;/adopt</code> &mdash; adoption changes ownership, which is too sensitive for a user credential.</button>
+  <button class="opt" data-correct="false"><code>GET /api/conversations/shared/&lt;share_token&gt;</code> &mdash; the share token is issued to the agent, not to the browser.</button>
+  <p class="why" hidden>The <code>internal/</code> family (failure closure, rolling summary,
+  consulting-round and report mutations) is service-token-only. The failure closure is the clearest
+  case: it fires <em>after</em> the turn collapsed, so it must name its target's owner in the request
+  body &mdash; exactly one of <code>owner_user_id</code> or <code>guest_id</code> &mdash; which Django
+  then re-scopes through the same querysets. Identity as payload, verified; never as authority. The
+  message route, by contrast, is guest-capable and normally called with the caller's own credential;
+  <code>/adopt</code> requires a user JWT; the shared transcript needs no auth at all.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> An anonymous visitor's trial conversation is adopted after they sign in with
+  Naver. What actually changes on the row, and what follows from it?</p>
+  <button class="opt" data-correct="false"><code>guest_id</code> is cleared and <code>user</code> is set; the guest token's <code>jti</code> is burned so it can never adopt again.</button>
+  <button class="opt" data-correct="false">A new session is created under the user and the messages are copied across; the anonymous row is soft-deleted.</button>
+  <button class="opt" data-correct="true">Only <code>user</code> is set (by a conditional <code>UPDATE &hellip; WHERE user IS NULL</code>); <code>guest_id</code> is kept as an audit trail, and because every guest-side query requires <code>user IS NULL</code>, the turn cap and the 7-day purge both stop applying automatically.</button>
+  <button class="opt" data-correct="false">The row is left alone and an <code>adopted_by</code> row is written to a join table, so the conversation can be shared between the guest and the user.</button>
+  <p class="why" hidden>Same row, same nonce, same transcript &mdash; one column changes. The
+  <code>user IS NULL</code> predicate inside the <code>WHERE</code> is what makes concurrent adoption
+  race-safe without a lock. Keeping <code>guest_id</code> costs nothing (every guest surface filters
+  on <code>user IS NULL</code>, so it is inert as a credential) and buys the only record that the
+  conversation began as a trial. And because <code>is_guest_trial_session</code> and the retention
+  purge both require <code>user IS NULL</code>, adoption lifts the cap and the expiry with no extra
+  bookkeeping. The <code>jti</code> seam is deliberately <em>not</em> burned &mdash; one browser may
+  hold several trials and should be able to adopt them all.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3 Identity and auth:
+Naver and Google login, JWTs, guests, and entitlements</a>. This page opens Part B, the chat product.
+Next is #5, a chat turn end to end &mdash; the LangChain agent, the retrieval tools, SSE streaming,
+cancel and replay &mdash; which fills in step 4 of the sequence diagram above, the one this page
+deliberately drew as a single arrow.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
