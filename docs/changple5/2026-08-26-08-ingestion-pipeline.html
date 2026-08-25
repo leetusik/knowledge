@@ -1,0 +1,1724 @@
+<!--kb
+title: "Ingestion: how Naver cafe posts become an eligible corpus"
+date: 2026-08-26
+tags:
+  - changple5
+  - ingestion
+  - scraper
+  - eligibility
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingestion: how Naver cafe posts become an eligible corpus</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  td.num, th.num { text-align: right; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .node.ok { background: #eefaf3; border-color: #a8dcc2; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .small { font-size: .88rem; color: #57606a; }
+  .ladder { display: grid; gap: .35rem; }
+  .rung {
+    display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start;
+    background: #fff; border: 1px solid #e3e7ec; border-left: 4px solid #3d6fd8;
+    border-radius: 6px; padding: .5rem .7rem; font-size: .87rem;
+  }
+  .rung .n { font-weight: 700; color: #3d6fd8; text-align: center; }
+  .rung.stop { border-left-color: #d05a5a; }
+  .rung.write { border-left-color: #2f9e6e; }
+  .rung.obs { border-left-color: #d99a17; }
+  .legend { display: flex; flex-wrap: wrap; gap: .9rem; font-size: .78rem; color: #57606a; margin-top: .5rem; }
+  .legend i { display: inline-block; width: .85rem; height: .85rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; border: 1px solid #d9dee5; }
+  .layers { display: grid; gap: .5rem; }
+  .layer { border: 1px solid #e3e7ec; border-radius: 7px; padding: .6rem .8rem; background: #fff; font-size: .87rem; }
+  .layer b { display: block; color: #14324f; }
+  .layer.l1 { border-left: 5px solid #3d6fd8; }
+  .layer.l2 { border-left: 5px solid #d99a17; }
+  .layer.l3 { border-left: 5px solid #2f9e6e; }
+  .layer.l4 { border-left: 5px solid #7a4fc0; }
+  .kv { font-size: .87rem; }
+  .kv b { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; color: #14324f; }
+  .down { color: #8b96a2; font-size: .95rem; line-height: 1; text-align: center; }
+  .erow { display: grid; grid-template-columns: 9.5rem 1fr; gap: .55rem; align-items: start; font-size: .86rem; margin: .3rem 0; }
+  .erow .ent { font-weight: 650; color: #14324f; font-family: ui-monospace, Menlo, monospace; font-size: .8rem; text-align: right; }
+  .sm { display: grid; gap: .38rem; }
+  .smrow { display: grid; grid-template-columns: 8.5rem 1.1rem 1fr; gap: .5rem; align-items: center; font-size: .85rem; }
+  .smbox { background: #f6f8fa; border: 1px solid #d9dee5; border-radius: 6px; padding: .4rem .6rem; text-align: center; font-weight: 650; color: #14324f; font-size: .82rem; }
+  .smbox.done { background: #eefaf3; border-color: #a8dcc2; }
+  .smbox.att { background: #fdeeee; border-color: #f0bcbc; }
+  .smnote { color: #57606a; font-size: .81rem; }
+</style>
+</head>
+<body>
+
+<h1>Ingestion: how Naver cafe posts become an eligible corpus</h1>
+<p class="subtitle">Explainer #8 of the changple5 builder&rsquo;s curriculum, Part B &mdash; the first of
+the two write-path pages. Explainer #7 walked the read path and took two things as given: a boolean
+column called <code>reference_eligible</code> that every retrieval statement filters on, and an array
+called <code>keyword_terms</code> that the entire lexical arm matches against. Neither falls from the
+sky. Both are produced by a machine that logs into a Naver cafe with a real browser, pages ~840 listing
+screens, fetches articles one at a time on a politeness timer, spends money on two different Gemini
+passes, and then &mdash; in exactly one function &mdash; decides whether the result may ever be quoted
+to a user.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<h3>The corpus, and who owns it</h3>
+
+<p>미라클 &mdash; the product this codebase is &mdash; answers questions about starting and running a
+small food business in Korea. It does not answer them from the model&rsquo;s memory. It answers them by
+quoting posts from <strong>창플</strong>, a Naver cafe: a members-only community forum that the operator
+has run for years and that now holds roughly 42,000 articles written by its members. When 미라클 tells a
+user &ldquo;a 치킨집 in that neighbourhood typically opens for around this much&rdquo;, that sentence is
+supposed to be traceable to a specific post that a specific 창플 member actually wrote.</p>
+
+<p>That makes the cafe the product&rsquo;s <em>supply side</em>, and it creates an awkwardness worth
+naming up front: <strong>the corpus is ours, the platform is not.</strong> Naver Cafe offers no export,
+no bulk API for owners, no webhook when a post is written or moved or deleted. There is no
+&ldquo;download my community&rdquo; button. Everything this page describes exists because the only way
+to get the corpus out is to log in as a member and read it, post by post, the way a person would &mdash;
+and then keep doing that forever, because members keep writing.</p>
+
+<p>Two more properties of the source shape everything downstream:</p>
+
+<ul>
+  <li><strong>Not every post belongs in an answer.</strong> A 출석체크 (daily attendance check-in)
+  board is 100% noise. A 가입인사 (introduce-yourself) board is 100% noise. A post by a brand-new
+  member carries none of the authority a post by a 파트너회원 does. The cafe is a community, not a
+  knowledge base, and something has to draw the line.</li>
+  <li><strong>Posts are mostly pictures.</strong> A large share of 창플 posts are KakaoTalk screenshots,
+  photos of a shop, or a menu board with the numbers on it. The text a language model can read is
+  frequently not in the post at all &mdash; it is <em>in the image</em>.</li>
+</ul>
+
+<p>So the write path has four jobs, and the rest of this page is those four jobs in order:
+<strong>collect</strong> the posts, <strong>persist</strong> them as rows, <strong>enrich</strong> them
+into something searchable (a summary, keywords, and alt text for every image), and
+<strong>judge</strong> whether each one is allowed to be quoted. Explainer #9 picks up where this one
+stops and turns the judged, enriched rows into pgvector chunks.</p>
+
+<div class="skip">
+<p><span class="tag">Skip if you know it</span> This page assumes four things from earlier explainers,
+and re-derives none of them: the repo runs <strong>two Python apps over one Postgres</strong> (a Django
+backend owning schema <code>backend</code>, a FastAPI agent owning schema <code>agent</code>) with a
+<strong>one-way read grant</strong> so the agent can <code>SELECT</code> from Django&rsquo;s tables but
+never write them (<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>);
+background work runs on <strong>Celery over Redis db/0</strong>, dispatched after commit
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>, taught properly in
+#16); LLM model ids and thinking levels are <strong>live operator config read from a database
+table</strong>, not env vars
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>); and
+retrieval reads <code>ds.reference_eligible = TRUE</code> plus a live brand-policy join
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a>).</p>
+</div>
+
+<h3>Why the whole design collapses into one sentence</h3>
+
+<p>Before this subsystem was rebuilt, the question &ldquo;may this post be quoted?&rdquo; was answered
+independently at <strong>13 different sites in two languages</strong> &mdash; six Django ORM
+<code>Exists</code> filters, five raw-SQL joins inside the agent, and two enrichment cost gates &mdash;
+with a minimum-length rule asserted at nine more. As <code>docs/current/architecture.md</code> puts it,
+those thirteen answers &ldquo;agreed only by coincidence, and nothing re-asked the question when a rule
+changed.&rdquo; The concrete symptom was a hole nobody could see: forty posts sat in the database
+waiting to be enriched that no trigger would ever fire for, because the rule that would have selected
+them had changed after they were stored.</p>
+
+<div class="callout">
+<p><strong>The architectural ruling, stated once.</strong> There is now exactly
+<em>one</em> function that decides eligibility (<code>evaluate_source</code> in
+<code>apps/backend/documents/eligibility_engine.py</code>), its answer is
+<strong>materialized</strong> onto a column, and every other consumer &mdash; backend querysets, agent
+SQL, operator screens, cost gates &mdash; <em>reads that column</em>. A rule change is therefore a
+<strong>sweep</strong> (re-run the function over a scope of rows), never a re-scrape and never a
+re-derivation. Hold on to this: it explains at least half the code below.</p>
+</div>
+
+<h3>The entities</h3>
+
+<p>All of them live in <code>apps/backend/documents/models.py</code>. Nine tables matter for this page;
+here they are with the one thing about each that is easy to get wrong.</p>
+
+<div class="fig-box">
+<div class="erow"><span class="ent">Author<br><span class="small">:35</span></span>
+<span>A cafe <em>member</em>. Identity is <code>member_key</code> (Naver&rsquo;s
+<code>writer.memberKey</code>), <strong>never the nickname</strong> &mdash; a rename keeps the key, and
+historical posts keep rendering the old nickname forever. Carries <code>current_rank</code>,
+<code>is_banned</code>, <code>legacy_allowlisted</code>, and a <code>nickname_history</code> list.</span></div>
+
+<div class="erow"><span class="ent">MemberRankPolicy<br><span class="small">:126</span></span>
+<span>One row per cafe rank (카페매니저, 파트너회원, 참여회원, &hellip;) with a
+<code>reference_enabled</code> switch. <strong>Absence is ineligible</strong>: a rank the cafe invents
+tomorrow has no row and is therefore not citable until the operator says so.</span></div>
+
+<div class="erow"><span class="ent">Board<br><span class="small">:172</span></span>
+<span>A cafe board, keyed on <code>menu_id</code>, never the name (two stored names had already drifted
+off the live list, and one live board is literally named &ldquo;.&rdquo;). <strong>Two independent
+switches:</strong> <code>collect_enabled</code> steers the <em>scraper</em>;
+<code>index_enabled</code> steers <em>eligibility</em>. Turning one off does not turn the other off.</span></div>
+
+<div class="erow"><span class="ent">Brand / Branch<br><span class="small">:230 / :366</span></span>
+<span>A 창플 franchise brand (섬집, 평상집, &hellip;) and its outlets (병점점, 양재점). Unlike Author and
+Board there is <strong>no external id</strong> &mdash; a brand is an operator-curated concept, so
+identity is the autopk plus a unique name. Both carry <code>reference_enabled</code>; brand-off
+overrides branch-on.</span></div>
+
+<div class="erow"><span class="ent">DocumentSource<br><span class="small">:442</span></span>
+<span>The post itself. The big one &mdash; walked field-group by field-group just below.</span></div>
+
+<div class="erow"><span class="ent">DocumentSourceStatus<br><span class="small">:718</span></span>
+<span>A <em>separate</em> row per <code>post_id</code> holding <code>SAVED</code> /
+<code>DELETED</code> / <code>ERROR</code>. Separate because it outlives the post: a deleted post keeps
+its status row, which is why this table has more rows than the corpus (23,502 rows for 20,726 SAVED +
+2,776 DELETED on dev).</span></div>
+
+<div class="erow"><span class="ent">AllowedAuthor<br><span class="small">:748</span></span>
+<span>The <strong>retired</strong> author allowlist, a name-keyed table from before
+<code>Author</code> existed. Its survivors live on as the <code>Author.legacy_allowlisted</code>
+flag; the table is history, not policy.</span></div>
+
+<div class="erow"><span class="ent">DocumentRetrievalPolicy<br><span class="small">:779</span></span>
+<span>A <strong>singleton</strong> row (<code>singleton_key = "default"</code>) holding two
+operator knobs: <code>published_on_or_after</code> (a date floor; <code>NULL</code> = no date gate,
+which is the live setting) and <code>bot_min_content_length</code> (a length floor; <code>0</code> = no
+floor, also the live setting). Both knobs are currently <em>off</em>, and are kept so the operator can
+re-impose one.</span></div>
+
+<div class="erow"><span class="ent">DocumentBrandVerdict<br><span class="small">:851</span></span>
+<span>One row per <em>(post, brand)</em> pair, doing two jobs at once:
+<code>matched=True</code> rows <em>are</em> the multi-brand links; <code>matched=False</code> rows are
+the <strong>settled negative</strong> &mdash; &ldquo;we already checked, it is not about this
+brand&rdquo; &mdash; so a re-run never pays the LLM for that pair again.</span></div>
+<figcaption>Figure 1 &mdash; the nine tables of the supply side, and the one trap in each.</figcaption>
+</div>
+
+<h3><code>DocumentSource</code>, by field group</h3>
+
+<p>Ninety-odd lines of model definition, but it falls cleanly into five groups. Reading them as groups
+is the difference between &ldquo;a big table&rdquo; and &ldquo;a pipeline with its state written
+down&rdquo;.</p>
+
+<table>
+<tr><th>Group</th><th>Fields</th><th>Written by</th></tr>
+<tr>
+  <td><strong>Raw capture</strong></td>
+  <td><code>post_id</code> (unique), <code>title</code>, <code>category</code>,
+  <code>author</code>, <code>published_at</code> + <code>published_at_text</code>,
+  <code>source_url</code>, <code>raw_text</code>, <code>text_with_image_replacement</code>,
+  <code>image_urls</code>, <code>content_segments</code></td>
+  <td>The scrape persist step. <code>category</code> and <code>author</code> are point-in-time
+  <em>display</em> strings, deliberately kept beside the FKs below.</td>
+</tr>
+<tr>
+  <td><strong>Enrichment outputs</strong></td>
+  <td><code>summary</code>, <code>keywords</code>, plus the legacy <code>notation</code> /
+  <code>possible_questions</code></td>
+  <td>The text-enrichment stage. <code>keywords</code> is the field explainer #7&rsquo;s entire lexical
+  arm ultimately matches against.</td>
+</tr>
+<tr>
+  <td><strong>Entity FKs</strong></td>
+  <td><code>author_entity</code> &rarr; Author, <code>board</code> &rarr; Board (both
+  <code>SET_NULL</code>)</td>
+  <td>Entity resolution, at the same persist step. <code>NULL</code> is &ldquo;no decision&rdquo;, not
+  &ldquo;denied&rdquo;.</td>
+</tr>
+<tr>
+  <td><strong>Brand assignment</strong></td>
+  <td><code>brand</code>, <code>branch</code>, <code>brand_assignment_source</code>
+  (<code>auto</code>/<code>manual</code>), <code>brand_assignment_suspect</code>,
+  <code>brand_assigned_at/_by</code>, and the deprecated <code>brand_classified_at</code></td>
+  <td>The brand classifier, or an operator. <code>brand_assignment_source</code> exists as its own
+  column precisely so a manual <em>clear</em> (brand <code>NULL</code> + <code>manual</code>) is as
+  sticky as a manual attach.</td>
+</tr>
+<tr>
+  <td><strong>Manual kill switch</strong></td>
+  <td><code>manual_excluded</code> (:641), <code>manual_excluded_at/_by</code></td>
+  <td>One module only (<code>documents/manual_exclusion.py</code>). Sticky: no sweep, classifier or
+  rule change ever clears it.</td>
+</tr>
+<tr>
+  <td><strong>The eligibility triple</strong></td>
+  <td><code>reference_eligible</code> (:672), <code>eligibility_reasons</code> (:679),
+  <code>eligibility_evaluated_at</code> (:688)</td>
+  <td>The eligibility engine, and nothing else. This is the materialized answer the whole system
+  reads.</td>
+</tr>
+</table>
+
+<div class="warn">
+<p><strong>Doc drift, worth knowing since you will read the model file.</strong>
+<code>reference_eligible</code>&rsquo;s <code>help_text</code> still says the flag is &ldquo;NOT yet
+consumed by any candidate or retrieval query.&rdquo; That was true the day the column was added and has
+been false ever since: it is now the primary predicate of every retrieval statement in the agent and of
+all three candidate querysets in <code>ingestion/index_candidates.py</code>. The code is the authority;
+this particular help string is a fossil.</p>
+</div>
+
+<p>Two indexes on the table say what it is actually for: <code>docsource_category_idx</code> on the
+display category, and <code>docsource_eligible_idx</code> on the pair
+<code>(reference_eligible, ingested)</code> &mdash; because that pair <em>is</em> the question every
+candidate query and every agent join asks.</p>
+
+<h3>One toy post, carried through the whole page</h3>
+
+<div class="fig-box">
+<pre>DocumentSource(post_id=41234)
+  title        "치킨집 창업 비용 정리 (2026년 기준)"
+  category     "창업 이야기"              &lt;- display string
+  board        Board(menu_id=15,  index_enabled=True)
+  author       "김사장"                   &lt;- display string
+  author_entity Author(member_key="abc123", current_rank="파트너회원", is_banned=False)
+  published_at 2026-03-11 14:22+09:00
+  raw_text     "요즘 치킨집 차리려면...\n[IMAGE_1]\n권리금은..."
+  text_with_image_replacement
+               "요즘 치킨집 차리려면...\n[IMAGE_1:주방 설비 견적서 사진]\n권리금은..."
+  image_urls   [{"image_index": 1, "placeholder": "IMAGE_1",
+                 "url": "https://cafeptthumb.../x.jpg",
+                 "generated_alt": "주방 설비 견적서 사진"}]
+  summary      "치킨집 창업 시 필요한 초기 비용을 항목별로 정리한 글. 권리금과..."
+  keywords     ["치킨집", "창업", "비용", "권리금", "인테리어"]
+  brand        NULL          branch NULL
+  manual_excluded  False
+  reference_eligible      True
+  eligibility_reasons     ["eligible"]
+  eligibility_evaluated_at 2026-03-11 14:31+09:00
+
+DocumentSourceStatus(post_id=41234, status="SAVED")</pre>
+<figcaption>Figure 2 &mdash; post 41234, fully processed. Everything below is the story of how each of
+those lines got written.</figcaption>
+</div>
+
+<p>Notice the relationship between <code>raw_text</code> and
+<code>text_with_image_replacement</code>. They are the same body, but the second one has had
+<code>[IMAGE_1]</code> rewritten into <code>[IMAGE_1:주방 설비 견적서 사진]</code>. That convention
+&mdash; a square-bracketed placeholder that grows a colon and a Korean description &mdash; is how the
+picture-heavy corpus becomes readable text, and the regex that recognises both forms
+(<code>_PLACEHOLDER_WITH_ALT_RE</code>, <code>execution.py:48</code>) turns up in three separate places
+for three separate reasons. We will meet all three.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The pipeline in one picture</h3>
+
+<div class="fig-box">
+<div class="flow">
+  <div class="node user"><b>1. Enumerate</b><span class="m">enumeration.py</span>page the board
+  listings; harvest ids, member keys and ranks</div>
+  <div class="arrow">&rarr;</div>
+  <div class="node"><b>2. Fetch</b><span class="m">scraper.py</span>one article API call per post,
+  on a politeness timer</div>
+  <div class="arrow">&rarr;</div>
+  <div class="node"><b>3. Persist</b><span class="m">execution.py</span>upsert the row, resolve Author
+  and Board, stamp SAVED</div>
+</div>
+<div class="down">&darr;</div>
+<div class="flow">
+  <div class="node svc"><b>4a. Image alt</b><span class="m">image_alt.py</span>Gemini describes each
+  picture &rarr; <code>[IMAGE_n:&hellip;]</code></div>
+  <div class="arrow">&rarr;</div>
+  <div class="node svc"><b>4b. Text enrich</b><span class="m">text_enrichment.py</span>Gemini writes a
+  summary + &le;10 keywords</div>
+  <div class="arrow">&rarr;</div>
+  <div class="node ok"><b>5. Judge</b><span class="m">eligibility_engine.py</span>one function, a set of
+  reason codes, one boolean</div>
+</div>
+<div class="down">&darr;</div>
+<div class="flow">
+  <div class="node"><b>6. Hand off</b><span class="m">agent_indexing.py</span><code>POST
+  /agent-api/indexing/runs</code> &mdash; explainer #9 starts here</div>
+</div>
+<div class="legend">
+  <span><i style="background:#eef3fd"></i>listing reads (cheap)</span>
+  <span><i style="background:#f6f8fa"></i>article reads (paced)</span>
+  <span><i style="background:#f3eefd"></i>LLM calls (₩)</span>
+  <span><i style="background:#eefaf3"></i>pure computation</span>
+</div>
+<figcaption>Figure 3 &mdash; six steps. Steps 4a/4b are the only ones that cost money, which is why step
+5 gets consulted <em>before</em> them as well as after.</figcaption>
+</div>
+
+<h3>Two ideas that explain most of the design</h3>
+
+<h4>&ldquo;Collect everything, filter late&rdquo;</h4>
+
+<p>The naive design filters at the scraper: don&rsquo;t even store a 출석체크 post. This codebase does
+the opposite &mdash; it stores nearly everything it can read and decides afterwards. Two reasons, both
+practical:</p>
+
+<ul>
+  <li><strong>A row is nearly free; a re-scrape is not.</strong> Storing a post costs a few kilobytes.
+  Re-fetching 42,000 posts costs ~2.9 seconds each on the politeness timer, i.e. about 34 hours. If the
+  filter lives in the scraper, every rule change is a 34-hour job. If it lives in a column, every rule
+  change is a 3.5-second sweep.</li>
+  <li><strong>A reason code is more useful than absence.</strong> When the operator asks &ldquo;why is
+  this post not showing up in search?&rdquo;, <code>eligibility_reasons = ["board_blocked",
+  "rank_ineligible"]</code> is an answer. A post that was never stored is not.</li>
+</ul>
+
+<h4>Reason codes are a <em>set</em>, not a scalar</h4>
+
+<p>This is the single most consequential small decision in the subsystem. A 출석체크 post written by a
+참여회원 is genuinely <strong>both</strong> board-blocked <strong>and</strong> rank-ineligible.
+Collapsing that to one &ldquo;primary reason&rdquo; would make the diagnostic lie, and it would make
+the pipeline queues wrong. So <code>evaluate_source</code> never short-circuits: every gate runs, every
+failure is recorded, and the result is <code>sorted(set(...))</code>.</p>
+
+<p>The payoff is that <em>different consumers ask different questions of the same stamp</em>:</p>
+
+<div class="layers">
+  <div class="layer l1"><b>Retrieval and the corpus counts</b> ask for the boolean:
+  <code>reference_eligible = TRUE</code>. Is this post quotable right now?</div>
+  <div class="layer l2"><b>The enrichment pipeline</b> asks about the <em>codes</em>: is
+  <code>eligibility_reasons</code> a <strong>subset</strong> of
+  <code>{unenriched, enrichment_failed}</code>? That means &ldquo;the only thing wrong with this post is
+  that nobody has enriched it yet&rdquo; &mdash; i.e. spending money on it will actually help. Asking
+  for <code>reference_eligible</code> here would be circular and would never converge: unenriched posts
+  are by definition not eligible.</div>
+  <div class="layer l3"><b>The operator&rsquo;s diagnostic screen</b> asks for the whole set, plus the
+  timestamp of the last change.</div>
+</div>
+
+<h3>Two gates, two mechanisms &mdash; and why they must not be merged</h3>
+
+<p>Almost everything the engine decides is a <strong>stored answer</strong>, which means it lags a rule
+change by one sweep, and the sweep runs on Celery, so it is asynchronous. Two gates deliberately break
+that pattern in opposite directions:</p>
+
+<table>
+<tr><th>Gate</th><th>Mechanism</th><th>Why</th></tr>
+<tr>
+  <td><code>brand_filtered</code><br>(brand/branch toggle)</td>
+  <td><strong>Live SQL at read time.</strong> The stamped code is <em>observational only</em> &mdash;
+  it is in <code>RETRIEVAL_ONLY_REASON_CODES</code>, so it never enters the blocking set and never flips
+  <code>reference_eligible</code>. The real filter is a <code>LEFT JOIN</code> predicate on the toggle
+  tables, spliced into every retrieval statement in the agent.</td>
+  <td>A brand toggle must be instantly reversible with no sweep and no re-index. An un-swept row is
+  therefore never <em>wrongly filtered</em> &mdash; only described stalely on the operator&rsquo;s
+  screen.</td>
+</tr>
+<tr>
+  <td><code>manual_excluded</code><br>(per-post kill switch)</td>
+  <td><strong>Synchronous write.</strong> A blocking code, written and re-judged in the
+  <em>same transaction</em> as the operator&rsquo;s click.</td>
+  <td>It has no live-SQL twin, and &ldquo;a kill switch that takes effect after the next Celery hop is
+  not a kill switch.&rdquo; One document is one <code>SELECT</code> plus at most one
+  <code>UPDATE</code> &mdash; cheaper than the dispatch would have been.</td>
+</tr>
+</table>
+
+<p>Everything else &mdash; a board toggle, an author ban, a rank rule, the policy singleton, a post
+moving between boards &mdash; is the ordinary asynchronous path: change the rule, enqueue a scoped
+sweep, and the answer lands a moment later. Add up to 300 more seconds for the agent&rsquo;s ranked
+retrieval cache (explainer #7) and you have the honest end-to-end latency of an operator toggle.</p>
+
+<h3>Where the money goes</h3>
+
+<p>Two Gemini passes run per post, and image alt is by far the more expensive one because a post can
+carry a hundred images. It also runs <em>first</em>, which is why the cost gate had to be installed at
+both stages rather than just at the text stage: on one measured run the missing image-alt gate paid for
+5,890 posts that the very next stage would refuse &mdash; about ₩3,355 and 4.2 hours of wall clock,
+spent on 출석체크 posts and banned authors.</p>
+
+<div class="callout">
+<p><strong>The cost gate is the eligibility engine wearing a different hat.</strong>
+<code>enrichment_blocking_reasons(source)</code> asks: <em>&ldquo;would this post be eligible once
+enriched?&rdquo;</em> &mdash; i.e. every blocking code except the enrichment codes themselves. Non-empty
+means &ldquo;do not spend money here&rdquo;. It is the same <code>evaluate_source</code> call with two
+codes filtered out, which is exactly the point: there is still only one definition.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<h3>1. Collecting &mdash; the scraper</h3>
+
+<p><code>apps/backend/ingestion/scraper.py</code> is 1,879 lines, and you should not read most of them.
+Its shape is what matters: a context manager that owns a Playwright browser, a persisted login session,
+two interchangeable transports, a politeness timer and a circuit breaker.</p>
+
+<h4>The cafe, as constants</h4>
+
+<pre>CAFE_SHORT_NAME = "cjdckddus"
+CAFE_ID = "29268355"
+
+ARTICLE_API_URL_TEMPLATE = (
+    f"https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/{CAFE_ID}"
+    "/articles/{post_id}?query=&amp;useCafeId=true&amp;requestFrom=A"
+)
+BOARD_LIST_API_URL_TEMPLATE = (
+    f"https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/{CAFE_ID}"
+    "/menus/{menu_id}/articles?page={page}&amp;pageSize={page_size}"
+    "&amp;sortBy=TIME&amp;viewType=L"
+)
+SIDE_MENU_API_URL = (
+    f"https://apis.naver.com/cafe-web/cafe2/SideMenuList?cafeId={CAFE_ID}"
+)
+WHOLE_CAFE_MENU_ID = 0</pre>
+
+<p>Three endpoints, and each has exactly one job. The <strong>article</strong> endpoint returns one
+post&rsquo;s <code>contentHtml</code> plus its metadata. The <strong>board-list</strong> endpoint
+returns 50 article stubs per page &mdash; and crucially, each stub already carries
+<code>menuId</code>, <code>memberKey</code>, <code>memberLevelName</code> and
+<code>writeDateTimestamp</code>, so boards, authors and ranks can be resolved <em>before</em> a single
+article fetch is spent. The <strong>side-menu</strong> endpoint is the only authoritative source of
+board <em>names</em>; the listing envelope carries none. <code>menu_id = 0</code> means &ldquo;the whole
+cafe&rdquo; and, importantly, <strong>includes boards whose collection is switched off</strong>.</p>
+
+<h4>Two transports</h4>
+
+<p>The scraper can read a post two ways, and the choice is a setting
+(<code>SCRAPER_TRANSPORT</code>, default <code>"api"</code>):</p>
+
+<table>
+<tr><th></th><th><code>API_TRANSPORT</code> (default)</th><th><code>DOM_TRANSPORT</code></th></tr>
+<tr><td><strong>How</strong></td>
+  <td>A Playwright <code>APIRequestContext</code> issues one JSON GET, then the returned
+  <code>contentHtml</code> is injected into a reused, network-blocked local page and walked by the
+  <em>unchanged</em> extraction script.</td>
+  <td>A real page load of the cafe article, then the same extraction script against the live DOM.</td></tr>
+<tr><td><strong>Cost</strong></td><td>0.22&ndash;0.32 s, one HTTP request.</td>
+  <td>2&ndash;4 s, a page load plus dozens of subresources.</td></tr>
+<tr><td><strong>Used when</strong></td><td>Always, first.</td>
+  <td>Three cases: the operator pins <code>SCRAPER_TRANSPORT=dom</code>; the API answers with a
+  malformed envelope or no <code>contentHtml</code> (measured at ~1.7% of one batch, concentrated in
+  the pre-2019 id region); or API latest-post discovery throws.</td></tr>
+</table>
+
+<p>The reason this swap was safe is worth internalising as a general lesson:
+<strong>only the transport changed, not the extraction.</strong> The same JavaScript walks the same
+<code>.se-main-container</code> markup either way &mdash; byte-identical extraction was proven on five
+posts before the change landed. The fallback is per-post, not per-run: <code>extract_post</code>
+(<code>:742</code>) tries the API, and on any exception that is not a circuit-breaker trip logs a
+warning, records a systemic failure, and falls through to <code>_extract_post_dom</code>.</p>
+
+<h4>The session, the timer and the breaker</h4>
+
+<p>Naver requires a logged-in member to read the cafe, so the scraper logs in with a real browser and
+persists the resulting cookie jar to <code>SCRAPER_STORAGE_STATE_PATH</code> &mdash; in the container,
+a mounted <code>scraper_state</code> volume. On the next run it restores that state instead of logging
+in again. Three failure behaviours around it are deliberate:</p>
+
+<ul>
+  <li><strong>Pacing, not transport, sets the wall clock.</strong> <code>_pace()</code>
+  (<code>:803</code>) sleeps before <em>every</em> live request:
+  <code>SCRAPER_REQUEST_DELAY_SECONDS</code> (2.0) plus up to
+  <code>SCRAPER_REQUEST_JITTER_SECONDS</code> (1.0) of jitter &rarr; ~2.9 s measured per post. The API
+  made the fetch 10&times; faster and the run barely faster, on purpose.</li>
+  <li><strong>Three consecutive 401s trigger exactly one re-login.</strong>
+  <code>UNAUTHORIZED_REAUTH_STREAK = 3</code>. A single 401 is ordinary data (a rank-gated post the
+  session may not read) and becomes the per-post outcome <code>restricted</code>. A streak that
+  <em>survives</em> a fresh login is a soft-block signature and is counted as systemic.</li>
+  <li><strong>A circuit breaker, counting only systemic failures.</strong> After
+  <code>SCRAPER_CONSECUTIVE_FAILURE_LIMIT</code> (5) consecutive systemic failures &mdash; transport
+  errors, malformed envelopes, extraction failures, a continued 401 streak &mdash;
+  <code>ScraperCircuitOpenError</code> is raised, which fails the whole job with an alert rather than
+  burning thousands of requests against a block. Per-post outcomes never count toward it.</li>
+</ul>
+
+<div class="note">
+<p><strong>One deliberate exception to a hard rule.</strong> The scraper&rsquo;s contract is
+&ldquo;outcomes cross this boundary as sentinel dicts (<code>skip_reason</code>), never as
+exceptions&rdquo; &mdash; <code>deleted_or_missing</code>, <code>restricted</code>,
+<code>parse_error</code> are all just dictionaries. <code>ScraperCircuitOpenError</code> is the single
+exception, and its docstring says why: it must stop the <em>job</em>, not the post, so the untouched
+items stay recoverable by an ordinary retry.</p>
+</div>
+
+<h4>Enumeration: what is the run even supposed to fetch?</h4>
+
+<p><code>enumerate_collectable_post_ids</code> (<code>enumeration.py:97</code>) answers that for the
+full-collection preset by page-walking the listings of every <code>collect_enabled</code> board.
+The alternative &mdash; walking ids 1..latest &mdash; was measured and rejected: it would spend ~14,000
+article fetches on ids that never existed and ~23,600 more on boards the operator excluded, while the
+listings hand back the same id set in ~370 requests. Page size is <code>ENUMERATION_PAGE_SIZE = 50</code>
+(the cafe&rsquo;s own default) and there is a <code>MAX_PAGES_PER_BOARD = 2000</code> backstop that only
+ever trips on a non-terminating endpoint.</p>
+
+<p>The side harvest is nearly free and turns out to be the whole point:</p>
+
+<pre>fresh = 0
+for item in items:
+    ...
+    board_ids.add(post_id); post_ids.add(post_id); fresh += 1
+    _harvest_author(item, resolved_author_keys)   # member_key + rank, no article fetch
+
+if fresh == 0:
+    break                       # a non-paginating endpoint would loop forever
+if listing.get("has_next") is False:
+    break
+page += 1</pre>
+
+<p>Every listing item carries the author&rsquo;s member key and current rank, so the whole active
+membership lands on <code>Author</code> rows <em>before</em> the run fetches a single article. That is
+what turned 4,009 documents stamped <code>author_unknown</code> into decided ones. Per-author sweeps are
+suppressed during the walk (<code>resolve_author_entity(record, enqueue_sweep=False)</code>) and
+<strong>one</strong> full-corpus sweep is enqueued at the end &mdash; thousands of scoped sweeps would
+say the same thing far more expensively.</p>
+
+<div class="warn">
+<p><strong>A partially enumerated set is corruption, not degradation.</strong> The enumerated id set
+<em>is</em> the run&rsquo;s scope, so any board error aborts the entire pass. There is exactly one
+carve-out (and it is narrow by construction): if the caller passes the <code>BoardSyncOutcome</code>
+of the board sync that ran moments earlier, then a board whose listing fails <em>and</em> which that
+snapshot shows is gone from the live menu is a deleted board, not a failing one &mdash; it is switched
+off, alerted, and contributes zero ids. Absence is read from the snapshot only, never from the
+exception, and never by re-calling the endpoint.</p>
+</div>
+
+<h4>Two more listing-only walks</h4>
+
+<p>Both exist because the cafe changes underneath us, and both cost zero article fetches and zero LLM
+calls:</p>
+
+<ul>
+  <li><strong><code>sync_boards</code></strong> (<code>board_sync.py:127</code>) fetches the live side
+  menu and diffs it against the <code>Board</code> table, applying three operator-confirmed postures:
+  <em>added</em> &rarr; create with both switches ON and alert (so a noise board gets switched off
+  quickly); <em>removed</em> &rarr; <code>collect_enabled=False</code> and alert, leaving posts and
+  their retrievability untouched (only <code>index_enabled</code> feeds <code>board_blocked</code>, so
+  no sweep is needed); <em>surviving</em> &rarr; refresh name/type/hidden, never the operator
+  switches. Alerts here are sent <strong>unthrottled</strong> &mdash; a board appearing or disappearing
+  is rare and consequential, and the default 6-hour window would swallow the second of two adds.</li>
+  <li><strong><code>walk_membership</code></strong> (<code>membership_walk.py:221</code>) pages
+  <code>menuId=0</code> &mdash; the whole cafe, ~840 pages, ~40 minutes &mdash; to answer &ldquo;which
+  board does each post live in <em>now</em>?&rdquo; A post the operator moves between boards changes
+  nothing about its content, yet before this walk the only way to notice was a full re-scrape: 42k
+  article fetches and an LLM bill. Three wire-format rules are pinned by a live probe and none is
+  optional: <code>pageSize</code> stays 50 (100 is accepted and silently mis-served, returning 15
+  items); the <code>menuId=0</code> envelope has <strong>no <code>hasNext</code> key</strong>, so the
+  page budget comes from <code>total_article_count</code> with empty items as the real terminator; and
+  an all-duplicate page is <em>normal</em>, not the end, because the listing is TIME-sorted and shifts
+  under the walk as members post.</li>
+</ul>
+
+<p>The walk repairs by intersection only &mdash; a post it observes with no <code>DocumentSource</code>
+row is simply not this machine&rsquo;s business, and rows are never created here. A departure (a stored
+row nobody observed) is <em>reported, never applied</em>: nulling the FK would destroy the last record
+of where the post lived. And because a board change flips <code>board_blocked</code>, the moved posts
+get one scoped sweep &mdash; carefully guarded:</p>
+
+<pre>moved_post_ids = outcome.moved_post_ids
+if moved_post_ids and not dry_run:
+    # Guarded: `enqueue_eligibility_sweep(post_ids=[])` drops the scope
+    # and sweeps the whole corpus.
+    enqueue_eligibility_sweep(post_ids=moved_post_ids)</pre>
+
+<p>That comment is a real trap in this codebase, and it recurs: <code>enqueue_eligibility_sweep</code>
+builds its kwargs with <code>if post_ids:</code>, so an <em>empty list</em> is falsy, the scope key is
+never added, and the sweep silently widens to all 20,000+ rows.</p>
+
+<h4>Entity resolution</h4>
+
+<p><code>entity_resolution.py</code> is small and holds the two identity rules the rest of the system
+depends on.</p>
+
+<p><code>resolve_board</code> (<code>:44</code>): identity is <code>menu.id</code>. An unseen board is
+created with both switches ON; an existing row only ever gets its display <code>name</code> refreshed,
+because <strong>operator switches are never overwritten by a scrape</strong>. A record with no menu id
+(the DOM fallback) leaves the FK exactly as it is rather than nulling it.</p>
+
+<p><code>resolve_author_entity</code> (<code>:70</code>) is a three-step ladder: a known
+<code>member_key</code> wins outright; an unknown key first tries to <em>claim</em> a key-less legacy
+row carrying the same nickname (that is how the backfilled rows acquire identity); only then is a new
+<code>Author</code> created. Nickname-only records (the DOM fallback again) resolve by nickname alone. A
+nickname change appends to <code>nickname_history</code> rather than overwriting. And the last few lines
+are the ones that matter for eligibility:</p>
+
+<pre>rank_changed = bool(rank) and author.current_rank != rank
+...
+if rank_changed and enqueue_sweep:
+    # Rank renders as the member's *current* rank on every post they ever
+    # wrote, so a rank change re-decides eligibility for their whole back
+    # catalogue -- not just the post being scraped right now.
+    enqueue_eligibility_sweep(author_ids=[author.pk])</pre>
+
+<p>This is the sweep trigger that fires from the <em>middle of a scrape</em>. A member promoted from
+참여회원 to 파트너회원 makes hundreds of their old posts newly quotable, and the system learns that the
+moment it re-reads any one of their posts.</p>
+
+<div class="warn">
+<p><strong>The rank-spelling trap.</strong> The two endpoints spell staff ranks differently: the article
+API says <code>카페매니저</code>, the board listing says <code>매니저</code>; the article API says
+<code>카페스탭</code>, the listing says <code>카페 스탭</code>. <code>normalize_member_rank</code>
+(<code>documents/eligibility.py</code>) removes whitespace outright and then maps the two listing-only
+aliases onto the canonical spellings, and <code>build_entity_record_from_listing_item</code> applies it
+<em>before</em> the resolver ever sees the record &mdash; writing a listing spelling straight into
+<code>Author.current_rank</code> would silently fail rank gating for the entire cafe staff. Unknown
+ranks pass through unchanged so a new cafe rank is visible in the data rather than silently rewritten.</p>
+</div>
+
+<h3>2. Persisting &mdash; a job runs</h3>
+
+<p>All actual work is an <strong>IngestionJob</strong> with a list of <strong>IngestionJobItems</strong>,
+one per post. The job carries a type, a status, a JSON <code>parameters</code> blob, and an optional FK
+to whichever <em>run</em> owns it; the item carries a post id, a status, and a JSON
+<code>payload</code> that is the honest record of what happened to that one post.</p>
+
+<pre>IngestionJob.JobType  = scheduled_incremental | range_rescan
+                      | image_alt_enrichment  | text_enrichment | index_handoff
+IngestionJob.Status   = pending | queued | running
+                      | succeeded | partial | failed | cancelled
+IngestionJobItem.Status = pending | queued | running
+                      | succeeded | skipped | failed | cancelled</pre>
+
+<p>Note <code>partial</code>. <code>_finalize_job_status</code> counts the terminal items: any
+<code>FAILED</code> item with at least one non-failed sibling makes the job <code>partial</code>; all
+failures make it <code>failed</code>; zero items counts as <code>succeeded</code>. That three-way split
+is what lets a run distinguish &ldquo;retry these eleven posts&rdquo; from &ldquo;something is
+broken&rdquo;.</p>
+
+<p>The call chain for a scrape job is short and worth memorising:</p>
+
+<div class="ladder">
+  <div class="rung"><span class="n">1</span><span><code>execute_ingestion_job(job_id)</code>
+  (<code>execution.py:61</code>) &mdash; marks the job RUNNING, branches on
+  <code>job_type</code>, and wraps everything in a try/except that <strong>alerts first</strong> and
+  marks the job failed second. The comment says why: everything below touches the ORM, which is exactly
+  what is broken when a leaked Playwright event loop has poisoned this worker child.</span></div>
+  <div class="rung"><span class="n">2</span><span><code>_execute_scrape_job(job_id)</code>
+  (<code>:99</code>) &mdash; opens <em>one</em> <code>build_naver_cafe_scraper()</code> context for the
+  whole job (one browser, one login) and, for a scheduled incremental with no items yet, discovers the
+  latest post id and materialises the items.</span></div>
+  <div class="rung"><span class="n">3</span><span><code>_run_job_items(job_id, processor)</code>
+  (<code>:154</code>) &mdash; iterates item ids in <code>(post_id, id)</code> order, checking the cancel
+  flag before <em>each</em> item so a cancel takes effect within one post.</span></div>
+  <div class="rung"><span class="n">4</span><span><code>_process_scrape_job_item</code>
+  (<code>:166</code>) &mdash; skips already-terminal items, honours the
+  <code>force_update</code> parameter, calls <code>scraper.extract_post(post_id)</code>, then hands the
+  record to the persist step.</span></div>
+  <div class="rung write"><span class="n">5</span><span><code>_apply_scrape_record</code>
+  (<code>:528</code>) &mdash; a two-line dispatcher: a record carrying <code>skip_reason</code> goes to
+  <code>_apply_skip_record</code>, everything else to <code>_apply_success_record</code>
+  (<code>:539</code>), which is where the writing happens.</span></div>
+</div>
+
+<h4>What <code>_apply_success_record</code> writes, and the two things it protects</h4>
+
+<pre>with transaction.atomic():
+    extraction_changed = _source_extraction_changed(existing, defaults)
+    source, created = DocumentSource.objects.update_or_create(
+        post_id=post_id, defaults=defaults,
+    )
+    if created or extraction_changed:
+        DocumentSource.objects.filter(pk=source.pk).update(
+            ingested=False, summary="", keywords=None,
+            possible_questions=None, notation=None,
+        )
+        source.refresh_from_db()
+    DocumentSourceStatus.objects.update_or_create(
+        post_id=post_id,
+        defaults={"status": DocumentSourceStatus.Status.SAVED, "error_message": ""},
+    )
+
+# Scrape-persist is the other natural per-document evaluation moment: board,
+# author entity, rank, date and body all land here. Runs inside the same
+# request but outside the transaction above so a sweep failure can never
+# roll back a successfully scraped post.
+evaluate_and_store(source)</pre>
+
+<p>Two protections are encoded there, and both are about not re-spending money.</p>
+
+<p><strong>(a) Entity resolution is deliberately outside the change comparison.</strong>
+<code>resolve_author_entity</code> and <code>resolve_board</code> run before the transaction and put
+their results into <code>defaults</code>, but <code>_source_extraction_changed</code> (<code>:922</code>)
+compares only content-bearing fields: title, author string, timestamps, url,
+<code>raw_text</code>, the alt-stripped replacement text, canonicalised image urls, and
+<code>content_segments</code>. The entity FKs, the rank and <code>category</code> are explicitly
+excluded. The inline comment spells out the stake: <code>category</code> is the board&rsquo;s display
+name, &ldquo;the cafe&rsquo;s shelf label, not the post&rsquo;s content&rdquo;, so a board rename or a
+post moved between boards would otherwise blank every affected post&rsquo;s enrichment and re-buy it.
+The field is still <em>stored</em> &mdash; only the change detector stops looking at it.</p>
+
+<p><strong>(b) Generated alt text survives a re-scrape.</strong> A fresh scrape returns bare
+<code>[IMAGE_1]</code> placeholders; the stored row may already have
+<code>[IMAGE_1:주방 설비 견적서 사진]</code>, which cost a vision call.
+<code>_merge_preserved_generated_alts</code> re-attaches each <code>generated_alt</code> by URL and
+<code>_apply_preserved_generated_alts</code> rewrites the placeholders back into the fresh text. And
+for the change comparison, <code>_strip_generated_alt_markup</code> reduces both sides to bare
+<code>[IMAGE_n]</code> using that same <code>_PLACEHOLDER_WITH_ALT_RE</code> &mdash; so the alt text we
+just re-attached cannot itself register as &ldquo;the content changed&rdquo;. Three uses of one regex,
+all pulling in the same direction.</p>
+
+<div class="note">
+<p><strong>Date parsing is transport-shaped.</strong> <code>_resolve_published_at</code> prefers the
+API&rsquo;s <code>writeDate</code> epoch-ms integer (so the API path never parses a string at all) and
+falls back to the DOM path&rsquo;s <code>%Y.%m.%d. %H:%M</code> parser, whose format has been unchanged
+since 2018. Both land in <code>Asia/Seoul</code>. A post whose date resolves to <code>None</code> is not
+dropped &mdash; it is stored and stamped <code>date_unparsed</code>, per &ldquo;collect everything,
+filter late&rdquo;.</p>
+</div>
+
+<h4>Cancelling</h4>
+
+<p><code>job_control.py</code> holds the status vocabulary as named sets &mdash;
+<code>CANCELLABLE_JOB_STATUSES</code> (<code>:21</code>) through
+<code>NON_TERMINAL_ITEM_STATUSES</code> (<code>:40</code>) &mdash; and
+<code>cancel_job_locally</code> (<code>:97</code>) is two bulk <code>.update()</code> calls: the job to
+<code>CANCELLED</code>, and every non-terminal item to <code>CANCELLED</code>. Local, because the
+provider-side batch (below) has to be cancelled separately and asynchronously.</p>
+
+<h3>3. Enriching &mdash; two Gemini passes, two execution modes</h3>
+
+<h4>Pass A: image alt text</h4>
+
+<p><code>ImageAltTextEnricher</code> (<code>image_alt.py:119</code>) walks a post&rsquo;s
+<code>image_urls</code>, asks Gemini to describe each picture in one factual Korean line, and rewrites
+<code>[IMAGE_n]</code> into <code>[IMAGE_n:&lt;description&gt;]</code> in
+<code>text_with_image_replacement</code>. Four details are load-bearing:</p>
+
+<ul>
+  <li><strong>The per-post cap is a knob, not a rule.</strong>
+  <code>get_max_alt_images_per_post()</code> (<code>:36</code>) reads
+  <code>IMAGE_ALT_MAX_IMAGES_PER_POST</code>, default <strong>100</strong>, where <code>0</code> means
+  unlimited. It is a guard rail against a pathological post (the observed maximum is 202 images on one
+  post), not a lever: exactly 1 of 6,942 stored posts exceeded it. Image <em>URLs</em> were never
+  capped &mdash; this bounds alt-text spend only.</li>
+  <li><strong>A per-job URL cache.</strong> The enricher holds
+  <code>self.cache: dict[str, str]</code>, seeded from any <code>generated_alt</code> already on the
+  row, so the same image URL appearing in ten posts of one job costs one vision call.</li>
+  <li><strong>The sentinel.</strong> When an image cannot be read, the alt becomes exactly
+  <code>이미지 내용 식별 어려움</code> (&ldquo;image content hard to identify&rdquo;) &mdash; and the
+  prompt instructs the model to answer with that same string when the picture is illegible, so the
+  machine failure and the model&rsquo;s own &ldquo;I can&rsquo;t tell&rdquo; produce identical
+  text.</li>
+  <li><strong>The download-failure taxonomy is three-way</strong>, and the middle case is subtle.
+  A <em>definitive</em> unavailability (404/410/empty/bad content type) applies the sentinel
+  <strong>and caches it</strong>. A <em>non-definitive</em> <code>URLError</code> &mdash; a dead host,
+  DNS gone, or a plain timeout, all indistinguishable at this layer &mdash; applies the same sentinel
+  <strong>without caching</strong>, because the cache lives for a whole 500-post job and a transient
+  blip must not permanently stamp every other post sharing that URL. An <em>unknown</em> exception
+  still fails the image.</li>
+</ul>
+
+<p>Alt text is also sanitised before it is ever written:
+<code>sanitize_alt_text</code> (<code>:370</code>) trims quotes, collapses whitespace and &mdash; the
+important bit &mdash; rewrites <code>[</code> and <code>]</code> into parentheses. A model that emitted
+a bracket would otherwise inject a fake placeholder into the body text and corrupt the very convention
+being written.</p>
+
+<h4>Pass B: summary and keywords</h4>
+
+<p><code>text_enrichment.py</code> asks for a structured object:</p>
+
+<pre>class _GeminiTextEnrichmentSchema(BaseModel):        # :68
+    summary:  str       = Field(description="한국어 본문 요약. 사실 중심, 지정된 길이 이내.")
+    keywords: list[str] = Field(description="본문 핵심 키워드 목록. 최대 10개.")</pre>
+
+<p>One knob, <code>TEXT_ENRICHMENT_SUMMARY_MAX_CHARS</code> (default <strong>500</strong>), does two
+jobs at once &mdash; it is the summary length cap <em>and</em> the short-post skip threshold, which
+gives the stage two paths:</p>
+
+<ul>
+  <li><strong>Body &le; 500 chars</strong> &rarr; the normalised body <em>is</em> the summary, verbatim,
+  and the model call narrows to a keywords-only schema (<code>_GeminiKeywordsSchema</code>). Item
+  payload records <code>summary_mode: "body"</code>.</li>
+  <li><strong>Body &gt; 500 chars</strong> &rarr; a proportional target, stated in the prompt:
+  <code>resolve_summary_target_chars</code> = <code>clamp(round(0.25 &times; body), 150, 500)</code>.
+  Longer post, longer summary. Payload records <code>summary_mode: "generated"</code>.</li>
+</ul>
+
+<p>Worked values for the generated path (computed by running the clamp): a 800-character body asks
+for <strong>200</strong>, 2,000 asks for <strong>500</strong>, and everything from ~2,000 characters
+upward also asks for 500 &mdash; so in practice the &ldquo;proportional&rdquo; band is only really
+proportional between about 600 and 2,000 characters, and the cap takes over above that.</p>
+
+<p>And <code>MAX_KEYWORDS = 10</code>, enforced in Python by
+<code>normalize_string_list(..., max_items=MAX_KEYWORDS)</code> rather than trusted from the model.</p>
+
+<div class="callout">
+<p><strong>This is where explainer #7&rsquo;s lexical arm actually comes from.</strong> Retrieval&rsquo;s
+&ldquo;keyword&rdquo; arm is not full-text search: no <code>tsvector</code>, no <code>ILIKE</code>, no
+trigram. It is <strong>exact set equality</strong> between the query&rsquo;s tokens and the indexed
+<code>keyword_terms</code> array &mdash; which is this Gemini call&rsquo;s <code>keywords</code> output,
+casefolded and whitespace-collapsed by <code>normalize_keyword_terms</code>. So <em>lexical recall is
+entirely a function of the words this summariser happened to choose.</em> If the model writes
+<code>비용</code>, a user asking about <code>비용</code> can match lexically; if it writes
+<code>초기비용</code> instead, that query has only the vector arm left. (And since query planning does
+not strip Korean particles, a user typing <code>비용은</code> misses <code>비용</code> anyway &mdash;
+see #7.)</p>
+</div>
+
+<p>One invariant guards the whole thing, enforced in <code>build_body_summary_result</code>:
+<strong>summary and keywords must both be non-empty on success</strong>, or the function raises. An
+empty either would stamp <code>unenriched</code> and silently drop the post out of retrieval, so the
+short path refuses to pretend it succeeded.</p>
+
+<h4>Where the model ids come from &mdash; at run time, every time</h4>
+
+<p>Both enrichers resolve their model the same way, and it is <em>not</em> a constant:</p>
+
+<pre>model_name, thinking_level = resolve_role_config(
+    ROLE_TEXT_ENRICHMENT,                        # or ROLE_IMAGE_ALT
+    settings_attr="GEMINI_TEXT_ENRICHMENT_MODEL",
+    default_model=DEFAULT_TEXT_ENRICHMENT_MODEL, # "gemini-3.1-flash-lite"
+)</pre>
+
+<p><code>resolve_role_config</code> (<code>operators/llm_runtime.py</code>) reads one row from the
+operator&rsquo;s <code>LLMRoleConfig</code> table and falls back
+<strong>DB &rarr; Django setting &rarr; <code>DEFAULT_*</code> constant</strong>. Unlike the
+agent&rsquo;s equivalent it keeps <em>no cache and no TTL</em>, deliberately: each builder is called
+once per Celery job, so a single ORM read already gives per-job liveness and a cache would only add
+staleness. A <code>DatabaseError</code> (including the unapplied-migration case) is logged once and
+treated as an absent row &mdash; a config read must never fail a Celery task. There is no per-role
+thinking-level env var, so an unset or out-of-vocabulary stored level means &ldquo;send no thinking
+kwarg at all&rdquo;.</p>
+
+<p>Practical consequence for anyone deploying this: <strong>the operator can change the enrichment model
+from a web form with no redeploy</strong> &mdash; but the Celery workers must be running the current
+image, or those three roles silently keep whatever they were built with.</p>
+
+<h4>Direct vs batch, and the actual decision rule</h4>
+
+<p>Both enrichment stages have two implementations. <em>Direct</em> means one synchronous LLM call per
+post inside the job loop. <em>Batch</em> means the Gemini <strong>Batch API</strong>: you upload a JSONL
+file where each line is one request, the provider runs it asynchronously with no latency guarantee, and
+you download a JSONL of results later. It exists for exactly one reason &mdash; <strong>cost</strong>
+(batch inference is materially cheaper than synchronous inference) &mdash; and it is the right trade for
+a nightly job that nobody is waiting on.</p>
+
+<p><code>resolve_enrichment_execution_mode</code> (<code>job_control.py:57</code>) is the rule:</p>
+
+<pre>explicit_mode = parameters.get("enrichment_execution_mode")
+if explicit_mode == DIRECT: return DIRECT
+if explicit_mode == BATCH:  return BATCH
+if parameters.get("trigger_mode") == AUTOMATIC_SCHEDULE_TRIGGER_MODE: return BATCH
+return BATCH                                  # the fall-through default</pre>
+
+<p>Read against the callers, that resolves to a simple picture:</p>
+
+<table>
+<tr><th>Run type</th><th>Mode</th><th>Set where</th></tr>
+<tr><td>Daily automatic run</td><td><strong>batch</strong></td>
+  <td>Nothing explicit; falls through the <code>trigger_mode</code> branch. This is the only routine
+  batch user.</td></tr>
+<tr><td>Automatic run, retry after 3 same-mode failures</td><td><strong>direct</strong></td>
+  <td><code>_create_stage_job_locked(direct_mode=True)</code> &mdash; the fallback.</td></tr>
+<tr><td>Manual incremental run</td><td>direct</td><td>Explicit <code>set_enrichment_execution_mode</code>.</td></tr>
+<tr><td>Reprocess run</td><td>direct</td><td>Explicit.</td></tr>
+<tr><td>Full backfill run</td><td><code>run.enrichment_execution_mode or direct</code></td>
+  <td>A per-run column on <code>IngestionBackfillRun</code>; <code>NULL</code> keeps the legacy
+  direct behaviour.</td></tr>
+</table>
+
+<p class="small">(The <code>trigger_mode</code> branch and the final <code>return</code> now produce the
+same value, so the branch is informative rather than load-bearing &mdash; but it documents the intent,
+and a future change to the fall-through would need it.)</p>
+
+<h4>The batch path, end to end</h4>
+
+<p>Four functions in <code>batch_execution.py</code>, plus two tables:</p>
+
+<div class="ladder">
+  <div class="rung"><span class="n">1</span><span><code>submit_provider_enrichment_job</code>
+  (<code>:118</code>) resolves the model once for the whole job, builds one
+  <code>PreparedProviderRequest</code> per item (running <em>all</em> the same skip and cost gates the
+  direct path runs), chunks them by <code>MAX_BATCH_REQUESTS = 250</code> and
+  <code>MAX_BATCH_BYTES = 10 MiB</code>, uploads each chunk as JSONL, creates the provider batch, and
+  dispatches the first poll.</span></div>
+  <div class="rung"><span class="n">2</span><span><code>poll_provider_enrichment_job</code>
+  (<code>:173</code>) re-asks the provider for each non-terminal batch, and re-dispatches itself with
+  <code>countdown=BATCH_POLL_INTERVAL_SECONDS</code> (30) until every batch is terminal. Terminal means
+  one of five states: <code>SUCCEEDED</code>, <code>FAILED</code>, <code>CANCELLED</code>,
+  <code>EXPIRED</code>, <code>PARTIALLY_SUCCEEDED</code>.</span></div>
+  <div class="rung"><span class="n">3</span><span><code>_capture_terminal_provider_batch</code>
+  (<code>:886</code>) downloads the output file and walks it line by line, matching each line back to a
+  request by <code>request_key</code>. It is written defensively: invalid JSON lines are skipped,
+  unknown or duplicate keys are ignored, a line carrying <code>error</code> stores an error, a line with
+  no text output stores an error &mdash; and, crucially, any request key that <em>never appeared in the
+  output at all</em> is explicitly stored as an error rather than left hanging.</span></div>
+  <div class="rung write"><span class="n">4</span><span><code>_finalize_ready_provider_items</code>
+  (<code>:999</code>) is the apply step, and its guard is the whole idempotency story: an item is
+  finalised only when <em>every</em> one of its provider requests has a result or an error, and each
+  request is stamped <code>applied_at</code> exactly once.</span></div>
+</div>
+
+<p><code>IngestionProviderBatch</code> (<code>models.py:842</code>) is one uploaded file &rarr; one
+provider job, carrying <code>external_batch_name</code>, <code>state</code>,
+<code>output_file_name</code> and the model used. <code>IngestionProviderRequest</code>
+(<code>:956</code>) is the mapping row: one per (batch line &harr; job item), carrying
+<code>request_key</code>, the raw <code>provider_result</code> / <code>provider_error</code> snapshots
+and <code>applied_at</code>. Together they are why a worker can die mid-batch and the next poll picks up
+exactly where it left off.</p>
+
+<h4>The seam: the moment a post becomes enriched</h4>
+
+<p>Both paths converge on the same four lines &mdash; here in the direct path
+(<code>execution.py:493-506</code>), mirrored verbatim in the batch finaliser
+(<code>batch_execution.py:1094</code>):</p>
+
+<pre>DocumentSource.objects.filter(pk=source.pk).update(
+    summary=enrichment.summary, keywords=enrichment.keywords,
+)
+# Enrichment is an eligibility input, and `.update()` above bypasses any
+# model-level hook, so re-evaluate here: this is what turns a freshly
+# enriched post into an index candidate.
+source.refresh_from_db()
+evaluate_and_store(source)
+trigger_brand_match_for_post(source)</pre>
+
+<p>Three things happen in order and each depends on the one before. The write is a bulk
+<code>.update()</code> (fast, and it bypasses <code>auto_now</code>), which is precisely why the
+re-evaluation must be explicit. <code>evaluate_and_store</code> clears <code>unenriched</code> and,
+if nothing else was blocking, flips <code>reference_eligible</code> to <code>TRUE</code> &mdash; the
+post is now an index candidate. And <code>trigger_brand_match_for_post</code> can only run now, because
+a post with no summary is a candidate for no brand: the brand classifier reads title + summary.</p>
+
+<h4>The fingerprint</h4>
+
+<p><code>build_source_fingerprint(summary, keyword_terms)</code> (<code>fingerprints.py:36</code>) is a
+sha256 over canonical JSON of exactly those two values &mdash; whitespace-collapsed summary, and
+keywords casefolded, collapsed and de-duplicated in order. It dedupes <em>embedding work</em>: if a
+re-enrichment produces the same summary and the same keyword set, the index layer knows there is nothing
+to re-embed. The agent keeps a byte-identical twin of this function in
+<code>apps/agent/app/indexing/storage.py</code> so both sides compute the same hash &mdash; explainer #9
+picks that up.</p>
+
+<h3>4. Judging &mdash; the eligibility engine</h3>
+
+<p>707 lines in <code>apps/backend/documents/eligibility_engine.py</code>, and the centre of the whole
+subsystem. Its module docstring is unusually worth reading in full; the design in three parts is:
+<strong>a policy loaded once per sweep</strong>, <strong>a pure function per document</strong>, and
+<strong>an idempotent write-back</strong>.</p>
+
+<h4>The policy</h4>
+
+<pre>@dataclass(frozen=True, slots=True)
+class EligibilityPolicy:                       # :101
+    published_on_or_after: datetime | None
+    bot_min_content_length: int
+    eligible_ranks: frozenset[str]</pre>
+
+<p><code>EligibilityPolicy.load()</code> takes all three <strong>once</strong>, so every document in a
+sweep is judged against the same answer &mdash; a rank rule that changed halfway through a 20,000-row
+walk would otherwise produce an incoherent corpus. The rank set comes from
+<code>rank_policy.load_eligible_ranks()</code>, which reads the <code>MemberRankPolicy</code> table and
+falls back to the code constant <code>ELIGIBLE_MEMBER_RANKS</code> only when the table is
+<em>entirely empty</em>. That distinction is deliberate: turning every rank off must mean every rank is
+off, not &ldquo;fall back to the defaults&rdquo;.</p>
+
+<h4><code>evaluate_source</code>, gate by gate</h4>
+
+<p>The function (<code>:167</code>) is one pass over nine gates, and its defining property is that
+<strong>it never short-circuits</strong>. Every gate runs, every failure joins a set.</p>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">1</span><span><b>Manual override.</b>
+  <code>source.manual_excluded</code> &rarr; <code>manual_excluded</code>. Evaluated
+  <em>alongside</em> the others rather than short-circuiting them, so a post that is both manually
+  excluded and board-blocked keeps saying so.</span></div>
+  <div class="rung stop"><span class="n">2</span><span><b>Board.</b>
+  <code>board is not None and not board.index_enabled</code> &rarr; <code>board_blocked</code>. A
+  <code>NULL</code> board FK does <em>not</em> block: 301 legacy rows had drifted off the live board
+  list and self-heal at re-scrape. <strong>Absence is not a decision.</strong></span></div>
+  <div class="rung stop"><span class="n">3</span><span><b>Author</b> (<code>_author_reasons</code>).
+  No author &rarr; <code>author_unknown</code>. Banned &rarr; <code>author_banned</code> (overrides
+  everything). Rank in the eligible set &rarr; pass. Non-empty rank not in the set &rarr;
+  <code>rank_ineligible</code>. Empty rank but <code>legacy_allowlisted</code> &rarr; pass (the
+  transition rule for backfilled rows). Otherwise <code>author_unknown</code>.</span></div>
+  <div class="rung obs"><span class="n">4</span><span><b>Brand / branch</b>
+  (<code>_is_brand_filtered</code>) &rarr; <code>brand_filtered</code>. <strong>Observational
+  only</strong> &mdash; retrieval-only, never blocking. Brand-off overrides branch-on; a
+  <code>NULL</code> brand never blocks.</span></div>
+  <div class="rung stop"><span class="n">5</span><span><b>Source status.</b>
+  <code>DELETED</code> &rarr; <code>deleted</code>; anything else that is not <code>SAVED</code>
+  (<code>ERROR</code>, or no status row at all) &rarr; <code>restricted</code> &mdash; the
+  taxonomy&rsquo;s name for &ldquo;stored, but the source is not readable or confirmed&rdquo;, which is
+  exactly the shape of the scraper&rsquo;s rank-gated 401.</span></div>
+  <div class="rung stop"><span class="n">6</span><span><b>Publication date.</b>
+  <code>published_at is None</code> &rarr; <code>date_unparsed</code>; older than the policy date &rarr;
+  <code>date_before_policy</code>. Two distinct codes because they are two distinct problems &mdash; and
+  the live policy date is <code>NULL</code>, so the second never fires today.</span></div>
+  <div class="rung stop"><span class="n">7</span><span><b>Length floor.</b> Only when the floor is
+  <code>&gt; 0</code>: <code>normalized_content_length(text_with_image_replacement) &lt;= floor</code>
+  &rarr; <code>below_length_floor</code>. Note <code>&lt;=</code>, not <code>&lt;</code>. The live floor
+  is 0, so this gate is currently off.</span></div>
+  <div class="rung stop"><span class="n">8</span><span><b>Enrichment.</b> No non-blank summary
+  <em>or</em> no non-empty keyword list &rarr; <code>unenriched</code>.</span></div>
+  <div class="rung stop"><span class="n">9</span><span><b>Nothing to enrich, ever.</b> No summary
+  <em>and</em> no body text in any of the three body fields <em>and</em> no images &rarr;
+  <code>no_body_text</code>. Evaluated last because it is the <em>answer</em> to a post that would
+  otherwise sit in <code>unenriched</code> forever.</span></div>
+</div>
+
+<pre>blocking = {code for code in reasons if code not in RETRIEVAL_ONLY_REASON_CODES}
+if not blocking:
+    reasons.add(ELIGIBLE)
+return EligibilityEvaluation(reference_eligible=not blocking,
+                             reasons=tuple(sorted(reasons)))</pre>
+
+<div class="callout">
+<p><strong><code>no_body_text</code> is the one code that exists to <em>end</em> a wait.</strong> An
+empty 영상 or 프리뷰 post has no text for the summariser and no image for the alt leg, so waiting can
+never change it. It is stamped <em>in addition to</em> <code>unenriched</code> (the codes are a set), and
+that is the whole mechanism: the pair <code>{unenriched, no_body_text}</code> is no longer a subset of
+<code>{unenriched, enrichment_failed}</code>, so the post silently drops out of the reprocess queue
+instead of being retried forever. It also self-heals in both directions &mdash; any body text, any
+summary or any image clears it at the next evaluation. And it needs no SQL twin, because it can never be
+a row&rsquo;s <em>only</em> code.</p>
+</div>
+
+<p>The vocabulary itself lives in <code>documents/eligibility.py</code> &mdash; deliberately a
+constants-only module with no evaluation logic. Seventeen codes are defined; the engine stamps twelve;
+three (<code>enrichment_failed</code>, <code>never_existed</code>, <code>blind</code>) are
+<strong>reserved</strong>, because the pipeline genuinely cannot distinguish those states today and
+inventing them would be a lie. The operator&rsquo;s aggregate screens therefore report
+<code>null</code> for those, never <code>0</code>: a fake zero would read as &ldquo;measured,
+none&rdquo;, which is the one thing a coverage surface must never say.</p>
+
+<h4>A worked example: post 90001 fails two gates at once</h4>
+
+<div class="fig-box">
+<pre>DocumentSource(post_id=90001)
+  title   "오늘도 출석합니다!"
+  board   Board(menu_id=7, name="출석체크", index_enabled=False)
+  author_entity Author(current_rank="참여회원", is_banned=False)
+  published_at  2026-02-02 08:01+09:00
+  summary ""      keywords None      image_urls []
+  raw_text "출석~"
+
+evaluate_source(post 90001)
+  gate 1 manual_excluded  False       -> (nothing)
+  gate 2 board            index off   -> board_blocked
+  gate 3 author           참여회원 not in eligible_ranks -> rank_ineligible
+  gate 4 brand            NULL        -> (nothing)
+  gate 5 status           SAVED       -> (nothing)
+  gate 6 date             parsed, no policy date -> (nothing)
+  gate 7 length floor     floor is 0  -> gate disabled
+  gate 8 enrichment       no summary, no keywords -> unenriched
+  gate 9 no_body_text     has body text ("출석~")  -> (nothing)
+
+  blocking = {board_blocked, rank_ineligible, unenriched}
+  => reference_eligible = False
+     eligibility_reasons = ["board_blocked", "rank_ineligible", "unenriched"]</pre>
+<figcaption>Figure 4 &mdash; three codes, and none of them is &ldquo;the&rdquo; reason.</figcaption>
+</div>
+
+<p>Now watch the two derived querysets read that same row differently:</p>
+
+<ul>
+  <li><code>build_reference_eligible_queryset()</code> (<code>:628</code>) &mdash;
+  <code>reference_eligible=True, manual_excluded=False</code>. Post 90001 is out. <em>Why the redundant
+  second clause?</em> Because <code>manual_excluded</code> is already one of the stamped codes, so the
+  filter is redundant the moment the row has been re-evaluated &mdash; and it is there anyway because a
+  kill switch may not depend on a sweep having run.</li>
+  <li><code>build_enrichment_candidate_queryset()</code> (<code>:649</code>) &mdash;
+  <code>reference_eligible=False</code> AND <code>eligibility_reasons</code> contained by
+  <code>{enrichment_failed, unenriched}</code> (PostgreSQL <code>jsonb &lt;@ jsonb</code>), excluding the
+  empty list. Post 90001 has three codes, so it is <strong>not</strong> a candidate: enriching it would
+  change nothing, because the board and the rank would still block it. That single containment test is
+  what closes the &ldquo;forty orphaned candidates&rdquo; hole.</li>
+</ul>
+
+<h4>The ₩ gate</h4>
+
+<pre>def enrichment_blocking_reasons(source, *, policy=None) -&gt; tuple[str, ...]:   # :270
+    evaluation = evaluate_source(source, policy=policy)
+    return tuple(code for code in evaluation.blocking_reasons
+                 if code not in ENRICHMENT_PENDING_REASON_CODES)</pre>
+
+<p>&ldquo;Would this post be eligible <em>once enriched</em>?&rdquo; &mdash; every blocking code except
+<code>unenriched</code> and <code>enrichment_failed</code>. Non-empty means don&rsquo;t spend. It is
+called at exactly the four places money is spent (direct image alt, direct text, batch image alt, batch
+text), and the resulting skip payload is honest about it:
+<code>{"reason": "eligibility_blocked", "eligibility_reasons": [...]}</code>.</p>
+
+<h4>The write-back, and why it is fingerprint-guarded</h4>
+
+<pre>def store_evaluation(source, evaluation) -&gt; bool:                    # :497
+    reasons = list(evaluation.reasons)
+    unchanged = (
+        source.reference_eligible == evaluation.reference_eligible
+        and list(source.eligibility_reasons or []) == reasons
+        and source.eligibility_evaluated_at is not None
+    )
+    if unchanged:
+        return False
+    DocumentSource.objects.filter(pk=source.pk).update(
+        reference_eligible=evaluation.reference_eligible,
+        eligibility_reasons=reasons,
+        eligibility_evaluated_at=timezone.now(),
+    )
+    ...
+    return True</pre>
+
+<p>A no-op sweep writes <strong>nothing</strong>. That matters for two reasons. Mechanically, a sweep
+that touched 20,000 rows every time would churn <code>updated_at</code> across the corpus and make the
+operator&rsquo;s &ldquo;recently changed&rdquo; views meaningless. Semantically &mdash; and this is the
+better reason &mdash; <code>eligibility_evaluated_at</code> means <em>&ldquo;when the answer last
+changed&rdquo;</em>, not &ldquo;when we last looked&rdquo;. The operator&rsquo;s coverage tab renders it
+as <strong>마지막 판정</strong> (&ldquo;last verdict&rdquo;), and a verdict that has not changed has not
+been re-made. The third condition (<code>eligibility_evaluated_at is not None</code>) is what makes a
+never-stamped row always write once, even if its computed answer happens to match the column
+defaults.</p>
+
+<h4>The sweep</h4>
+
+<pre>def sweep_eligibility(*, post_ids=None, author_ids=None, board_ids=None,
+                      brand_ids=None, branch_ids=None, ranks=None) -&gt; dict[str, int]:  # :545</pre>
+
+<p>Scopes are <strong>additive filters, not a union</strong>: passing several narrows, passing none
+sweeps the whole corpus. The body loads the policy once, builds a
+<code>select_related("author_entity", "board", "brand", "branch")</code> queryset, and walks it in
+batches of <code>_SWEEP_BATCH_SIZE = 500</code> via <code>.iterator()</code>. Each batch pre-fetches the
+<code>DocumentSourceStatus</code> rows for its posts in one query &mdash; passing
+<code>source_status=</code> explicitly is what keeps the sweep from paying a status query per document
+&mdash; and applies its writes inside one <code>transaction.atomic()</code>. It returns
+<code>{"evaluated": n, "changed": n, "eligible": n}</code>.</p>
+
+<p><strong>Measured:</strong> a full sweep over 20,726 rows runs in <strong>3.5 s</strong>; a
+rank-scoped sweep touched 1,319 documents in 0.6 s. That number is the reason the whole
+&ldquo;materialize and sweep&rdquo; design is affordable in the first place.</p>
+
+<p><code>ranks</code> deserves a note: a rank toggle affects every document whose author currently
+carries that rank, and there can be thousands. Naming the <em>rank</em> keeps the Celery payload one
+string instead of an author-id list.</p>
+
+<h4>Every trigger, in one table</h4>
+
+<p><code>enqueue_eligibility_sweep(...)</code> (<code>:668</code>) is the dispatcher: it builds kwargs,
+then queues <code>documents.sweep_eligibility</code> inside <code>transaction.on_commit</code>, wrapped
+in a <code>try/except</code> that only <em>logs</em> a broker failure. Both halves are deliberate &mdash;
+on-commit so an operator flipping a switch does not wait on a corpus walk, and fail-soft because the
+sweep is idempotent and re-runnable from a management command, so a broker hiccup degrades to
+&ldquo;stale until the next sweep&rdquo; and never to a failed request.</p>
+
+<table>
+<tr><th>Event</th><th>Scope</th><th>Where</th></tr>
+<tr><td>Retrieval policy saved (date floor / length floor)</td><td>whole corpus</td>
+  <td><code>documents/views.py:327</code></td></tr>
+<tr><td>Author banned / unbanned (single or bulk)</td><td><code>author_ids</code></td>
+  <td><code>views.py:601</code>, <code>:643</code></td></tr>
+<tr><td>Rank <code>reference_enabled</code> toggled</td><td><code>ranks</code></td>
+  <td><code>views.py:689</code> &rarr; <code>rank_policy.set_rank_reference_enabled:93</code></td></tr>
+<tr><td>Board <code>index_enabled</code> toggled</td><td><code>board_ids</code></td>
+  <td><code>views.py:789</code> &mdash; and <em>only</em> <code>index_enabled</code>;
+  <code>collect_enabled</code> steers the scraper and feeds no code</td></tr>
+<tr><td>Brand / Branch saved with a flipped toggle</td><td><code>brand_ids</code> /
+  <code>branch_ids</code></td><td><code>documents/signals.py:92</code>, <code>:99</code></td></tr>
+<tr><td>Brand / Branch deleted</td><td><code>post_ids</code> (captured in
+  <code>pre_delete</code>)</td><td><code>signals.py:222</code> + <code>:237</code></td></tr>
+<tr><td>Author rank change observed at scrape-persist</td><td><code>author_ids</code></td>
+  <td><code>entity_resolution.py:156</code></td></tr>
+<tr><td>Listing enumeration finished (rank harvest)</td><td>whole corpus, once</td>
+  <td><code>enumeration.py:238</code></td></tr>
+<tr><td>Posts moved between boards by the membership walk</td><td><code>post_ids</code></td>
+  <td><code>membership_walk.py:455</code></td></tr>
+<tr><td>Brand verification changed primary assignments</td><td><code>post_ids</code></td>
+  <td><code>brand_verification.py:521</code></td></tr>
+<tr><td>Operator attach / detach / move brand</td><td><code>post_ids</code></td>
+  <td><code>brand_curation.py:618</code></td></tr>
+<tr><td>Post enriched, or scrape persisted</td><td><em>synchronous</em>, this row only</td>
+  <td><code>evaluate_and_store</code> at <code>execution.py:503</code>, <code>:605</code>,
+  <code>batch_execution.py:1094</code></td></tr>
+<tr><td>Operator flips 검색 노출 off</td><td><em>synchronous</em>, same transaction</td>
+  <td><code>documents/manual_exclusion.py</code></td></tr>
+<tr><td>Operator runs the hammer</td><td>anything</td>
+  <td><code>manage.py sweep_document_eligibility</code></td></tr>
+</table>
+
+<div class="warn">
+<p><strong>The signal caveat, stated in the module and worth repeating:</strong>
+<code>QuerySet.update()</code> fires <em>no</em> Django signal. A future bulk-toggle or bulk-rename
+endpoint on Brand/Branch would silently skip both the sweep and the pattern-revision bump. No such path
+exists today, and the board bulk paths already call <code>enqueue_eligibility_sweep</code>
+themselves.</p>
+</div>
+
+<h4>Brand assignment, in one paragraph each</h4>
+
+<p><strong>Automatic</strong> (<code>documents/brand_verification.py</code>, entry point
+<code>verify_brand(brand, post_ids, ...)</code> at <code>:687</code>): a per-brand Gemini prompt asking
+one narrow question &mdash; <em>&ldquo;이 게시글이 섬집에 관한 글인가? 그렇다면 어느 지점인가?&rdquo;</em>
+&mdash; over a closed world of exactly one brand plus its branches. Every answer is re-resolved in
+Python against that brand&rsquo;s own branches, so the model can never invent an entity. Each judged
+pair writes a <code>DocumentBrandVerdict</code> stamped with the <code>brand_revision</code> the
+candidate search ran at, which is the entire incrementality mechanism: a pass re-opens only pairs whose
+stored revision is behind the brand&rsquo;s current <code>pattern_revision</code>. Fail-soft per batch
+&mdash; a failed batch writes nothing, so the same pairs are still stale next time.</p>
+
+<p><strong>Manual</strong> (<code>documents/brand_curation.py</code>): the operator&rsquo;s
+attach / detach / move / confirm surface, with per-id outcomes rather than silent partial success, and
+the sticky-manual rule &mdash; a manual <em>clear</em> is a decision, and
+<code>brand_assignment_source = "manual"</code> keeps the classifier off that post permanently. The
+operator console side is explainer #17.</p>
+
+<h3>5. Orchestrating &mdash; runs, schedules, recovery</h3>
+
+<p>A <em>job</em> does one stage for one set of posts. A <em>run</em> is the campaign that strings the
+stages together, and there are five of them &mdash; deliberately five models rather than one with
+nullable columns, because their shapes genuinely differ.</p>
+
+<table>
+<tr><th>Run model</th><th>What it is for</th><th>Stages</th></tr>
+<tr><td><code>IngestionBackfillRun</code> <span class="small">:11</span></td>
+  <td>The big one: collect the entire cafe (or the 2024+ slice). Freezes a sparse id set once and works
+  it in batches with a checkpoint. Has a batch-boundary <strong>pause</strong>.</td>
+  <td>scrape &rarr; image_alt &rarr; text_enrichment &rarr; indexing &rarr; (manual_index) &rarr;
+  completed</td></tr>
+<tr><td><code>IngestionAutomaticRun</code> <span class="small">:173</span></td>
+  <td>The nightly catch-up. <code>local_date</code> is <strong>unique</strong>, so there is at most one
+  per calendar day by construction.</td>
+  <td>scrape &rarr; image_alt &rarr; text_enrichment &rarr; indexing &rarr; completed</td></tr>
+<tr><td><code>IngestionManualIncrementalRun</code> <span class="small">:261</span></td>
+  <td>The same pipeline, started by an operator on demand rather than by the clock.</td>
+  <td>same five</td></tr>
+<tr><td><code>IngestionReprocessRun</code> <span class="small">:350</span></td>
+  <td>&ldquo;Enrich whatever is still waiting&rdquo; &mdash; its scope <em>is</em>
+  <code>build_enrichment_candidate_queryset()</code>. No scrape stage at all.</td>
+  <td>text_enrichment &rarr; indexing &rarr; completed</td></tr>
+<tr><td><code>IngestionSoftResyncRun</code> <span class="small">:447</span></td>
+  <td>Soft 재수집: board sync + membership walk + a chunk-index handoff. ~40 minutes, zero article
+  fetches, zero LLM calls.</td>
+  <td>no stage field &mdash; one pass, then handoff</td></tr>
+</table>
+
+<div class="note">
+<p><strong>Why soft resync is not a sixth backfill preset.</strong> Its own docstring answers this: the
+backfill model describes a staged pipeline with batch cursors, a frozen id scope and schedule-pause
+bookkeeping, and soft mode has none of it. Modelling it as a preset would mean carrying five nullable
+columns that must never be read. It also succeeds at <em>handoff-accepted</em>, not at chunk-run
+completion &mdash; a full reconciling chunk run measured 7 h 29 m against a 6-hour registry TTL, so it
+can never be polled to a terminal state, and holding the ingestion lock across it would wedge the cafe
+for hours over an idempotent agent-side pass.</p>
+</div>
+
+<h4>The automatic-run stage machine</h4>
+
+<p><code>advance_automatic_run(run_id, triggering_job_id=None)</code>
+(<code>automatic_runs.py:122</code>) is the whole driver, and it is a single
+<code>transaction.atomic()</code> around a <code>select_for_update()</code> on the run row. Every path
+out of it is a guard:</p>
+
+<div class="fig-box">
+<div class="sm">
+  <div class="smrow"><span class="smbox">scrape</span><span class="arrow">&rarr;</span>
+    <span class="smnote">job SUCCEEDED &rarr; freeze <code>start_post_id</code>/<code>end_post_id</code>
+    from the job&rsquo;s items, create the IMAGE_ALT job. <b>Zero items &rarr; jump straight to
+    SUCCEEDED.</b></span></div>
+  <div class="smrow"><span class="smbox">image_alt</span><span class="arrow">&rarr;</span>
+    <span class="smnote">job SUCCEEDED &rarr; create the TEXT_ENRICHMENT job over the same id
+    range.</span></div>
+  <div class="smrow"><span class="smbox">text_enrichment</span><span class="arrow">&rarr;</span>
+    <span class="smnote">job SUCCEEDED &rarr; clear <code>active_job</code>/<code>agent_run_id</code>
+    and enter <code>indexing</code>. From here there is no IngestionJob &mdash; the agent owns the
+    work.</span></div>
+  <div class="smrow"><span class="smbox">indexing</span><span class="arrow">&rarr;</span>
+    <span class="smnote"><code>start_automatic_run_indexing</code> lists the pending candidates and
+    <code>POST</code>s them to the agent; <code>poll_automatic_run_indexing</code> re-dispatches itself
+    every <code>AGENT_INDEXING_POLL_INTERVAL_SECONDS = 30</code>. <b>No pending candidates &rarr;
+    SUCCEEDED with no agent call at all.</b></span></div>
+  <div class="smrow"><span class="smbox done">completed</span><span class="arrow"></span>
+    <span class="smnote">status SUCCEEDED. Terminal, and every entry point returns immediately once the
+    run is SUCCEEDED.</span></div>
+  <div class="smrow"><span class="smbox att">needs_attention</span><span class="arrow"></span>
+    <span class="smnote">reachable from any stage when the linked job ends non-successfully and the
+    retry ladder is exhausted. Fires an alert on commit.</span></div>
+</div>
+<figcaption>Figure 5 &mdash; the automatic run. Guards not drawn: a stale
+<code>triggering_job_id</code> returns <code>ignored_stale_trigger</code>; a still-running job returns
+<code>job_still_running</code>; an <code>indexing</code> stage with no active job schedules an indexing
+recovery on commit.</figcaption>
+</div>
+
+<p>The retry ladder for the two enrichment stages
+(<code>_queue_automatic_retry_locked</code>) is the interesting part, because it is where batch mode
+earns its keep and then gives up:</p>
+
+<ol>
+  <li>Only <em>retryable</em> failures qualify. If <strong>any</strong> failed item carries a
+  non-retryable reason (<code>source_missing</code>, <code>source_not_saved</code>,
+  <code>no_images</code>, <code>content_too_short</code>), no retry is queued at all &mdash; those are
+  facts about the post, not transient errors.</li>
+  <li>Retry the <em>same mode</em> over just the failed post ids, up to
+  <code>SAME_MODE_RETRY_LIMIT = 3</code> attempts.</li>
+  <li>Then fall back <strong>once</strong> to <code>direct_mode=True</code> &mdash; if the Gemini Batch
+  API is what is unhealthy, synchronous calls may still work.</li>
+  <li>Otherwise: <code>needs_attention</code> + alert.</li>
+</ol>
+
+<p>Indexing has its own smaller ladder: <code>INDEXING_RETRY_LIMIT = 3</code> attempts,
+<code>INDEXING_RETRY_DELAY_SECONDS = 300</code> apart.</p>
+
+<h4>The schedule</h4>
+
+<p><code>evaluate_scheduled_incremental_schedule()</code> (<code>schedules.py:83</code>) is what Celery
+beat calls. It takes a <code>select_for_update()</code> on the singleton
+<code>IngestionSchedule</code> row and then walks a ladder of reasons not to run, each returning a named
+status the operator console renders:</p>
+
+<pre>disabled                          -> the schedule is switched off
+already_processed                 -> last_processed_local_date == today (local)
+not_due                           -> local_now &lt; today&#39;s due time
+skipped_automatic_run_active      -> a run is still going
+skipped_automatic_run_needs_attention
+skipped_soft_resync_run_active
+... otherwise: create today's IngestionAutomaticRun and dispatch it</pre>
+
+<p>Everything is computed in the schedule&rsquo;s own IANA timezone and converted to UTC at the edges,
+so &ldquo;03:00 daily&rdquo; means 03:00 in Seoul across DST boundaries elsewhere.
+<code>compute_next_run_at</code> (<code>:55</code>) is the read-only twin that answers &ldquo;when
+next?&rdquo; for the console.</p>
+
+<p>Two self-healing paths run before the blocker checks, and both alert when they fire, because a
+recovery path firing means an earlier failure went silent:</p>
+
+<ul>
+  <li><strong>Stale blockers.</strong> A <code>scheduled_incremental</code> job stuck non-terminal for
+  more than <code>STALE_SCHEDULED_SCRAPE_JOB_AFTER = 24 h</code> is force-failed &mdash; otherwise one
+  dead worker would block the daily schedule forever.</li>
+  <li><strong>Terminal-failed automatic runs</strong> whose scrape job failed with zero items are
+  cleared.</li>
+</ul>
+
+<h4>Worker-boot recovery</h4>
+
+<p><code>recover_startup_state()</code> (<code>recovery.py:85</code>) runs when a worker starts, and
+re-dispatches whatever was in flight when the last one died: provider-batch polls for batch jobs that
+have live batches, initialization for <code>INITIALIZING</code> backfills, advances for runs whose
+active job has since gone terminal, and indexing starts/polls. It is the general
+&ldquo;dispatch-after-commit means a lost task is possible, so re-derive from the database&rdquo;
+pattern, which explainer #16 owns properly.</p>
+
+<p>One rule in it is worth quoting because it is a design principle in miniature:</p>
+
+<pre>#: Worker-boot recovery must never touch a paused run. Every queryset below is
+#: a positive status allow-list that already leaves `paused` out, but the
+#: exclusion is spelled out anyway: a redeploy silently un-pausing an
+#: operator-stopped run would be the worst failure this module can have, and a
+#: future widening of one of those allow-lists must not be able to cause it by
+#: accident.
+_RECOVERY_EXCLUDED_RUN_STATUSES = {IngestionBackfillRun.Status.PAUSED}</pre>
+
+<p>A redundant guard, added on purpose, with the reason written next to it. The soft-resync set
+(<code>_SOFT_RESYNC_RECOVERY_EXCLUDED_STATUSES</code>) does the same thing for the same reason &mdash;
+re-touching a finished or judged run would mean re-firing a 40-minute cafe sweep behind the
+operator&rsquo;s back.</p>
+
+<h4>The Celery surface</h4>
+
+<p><code>ingestion/tasks.py</code> is a file of thin <code>@shared_task</code> wrappers and nothing
+else. Its docstring states the contract: <em>keep the task-name strings byte-stable &mdash; they are
+the Celery routing contract.</em></p>
+
+<table>
+<tr><th>Owner</th><th>Task names</th></tr>
+<tr><td>Any job</td><td><code>ingestion.run_job</code>,
+  <code>ingestion.poll_provider_batches</code></td></tr>
+<tr><td>Schedule (beat)</td><td><code>ingestion.evaluate_scheduled_incremental_schedule</code></td></tr>
+<tr><td>Backfill run</td><td><code>ingestion.initialize_backfill_run</code>,
+  <code>ingestion.advance_backfill_run</code>, <code>ingestion.start_backfill_run_indexing</code>,
+  <code>ingestion.poll_backfill_run_indexing</code></td></tr>
+<tr><td>Automatic run</td><td><code>ingestion.advance_automatic_run</code>,
+  <code>ingestion.start_automatic_run_indexing</code>,
+  <code>ingestion.poll_automatic_run_indexing</code></td></tr>
+<tr><td>Manual incremental run</td><td><code>ingestion.advance_manual_incremental_run</code>,
+  <code>ingestion.start_manual_incremental_run_indexing</code>,
+  <code>ingestion.poll_manual_incremental_run_indexing</code></td></tr>
+<tr><td>Reprocess run</td><td><code>ingestion.advance_reprocess_run</code>,
+  <code>ingestion.start_reprocess_run_indexing</code>,
+  <code>ingestion.poll_reprocess_run_indexing</code></td></tr>
+<tr><td>Soft resync run</td><td><code>ingestion.execute_soft_resync_run</code>,
+  <code>ingestion.poll_soft_resync_chunk_status</code></td></tr>
+<tr><td>Recovery</td><td><code>ingestion.recover_jobs</code></td></tr>
+<tr><td><em>documents app</em></td><td><code>documents.sweep_eligibility</code>,
+  <code>documents.classify_brands</code>, <code>documents.run_brand_classification</code>,
+  <code>documents.verify_stale_brand</code>, <code>documents.verify_document_brands</code></td></tr>
+</table>
+
+<p>Note the shape: <strong>every run type has the same three verbs</strong> &mdash;
+<code>advance_*</code>, <code>start_*_indexing</code>, <code>poll_*_indexing</code>. Learn one and you
+have learned four. Note also what is <em>not</em> on a beat schedule: none of the five
+<code>documents.*</code> tasks is periodic. Brand reclassification has a start button, a stop button and
+a progress band; a periodic schedule would restart what the operator just stopped, and the incremental
+work is event-driven by construction.</p>
+
+<p>Finally, <code>build_ingestion_monitoring_summary</code> (<code>monitoring.py:36</code>) is the
+read-only projection the operator console renders: job counts by status and by type, scraper health
+(active / latest / latest-successful / latest-failed scrape job), the schedule row, the latest automatic
+and backfill runs, period insights and the ten most recent failures. It computes nothing new &mdash;
+explainer #17 covers the console itself.</p>
+
+<h3>Where this page stops</h3>
+
+<p>The last thing a run does with a post is hand it to the agent:</p>
+
+<pre>def create_agent_indexing_run(*, post_ids, automatic_run_id=None,
+                              trigger="automatic_schedule",
+                              manual_incremental_run_id=None):
+    payload = {"post_ids": post_ids, "trigger": trigger,
+               "bot_min_content_length": get_bot_min_content_length()}
+    ...
+    response = _request_agent_indexing(
+        method="POST", path="/agent-api/indexing/runs", payload=payload)</pre>
+
+<p>That is <code>ingestion/agent_indexing.py</code>, a plain <code>urllib</code> client authenticating
+with the static <code>X-Agent-Service-Token</code> header (there is no user to impersonate here &mdash;
+see explainer #2 for the two shared secrets). <code>start_automatic_run_indexing</code> calls it;
+<code>poll_automatic_run_indexing</code> polls <code>GET /agent-api/indexing/runs/&lt;id&gt;</code> every
+30 s. Its siblings are <code>ingestion/index_handoff.py</code> (the fingerprint-guarded
+<code>ingested</code> write-back) and <code>ingestion/agent_chunk_indexing.py</code>.</p>
+
+<p>Everything on the other side of that <code>POST</code> &mdash; chunking, embeddings,
+<code>agent.document_index_artifacts</code>, <code>agent.document_chunk_artifacts</code>, the
+<code>halfvec(3072)</code> HNSW indexes, and how <code>keyword_terms</code> physically arrives in the
+table that explainer #7&rsquo;s lexical arm queries &mdash; is <strong>explainer #9</strong>.</p>
+
+<div class="callout">
+<p><strong>The one-sentence version of this page.</strong> A paced browser session turns a Naver cafe
+into <code>DocumentSource</code> rows; two Gemini passes turn those rows into a summary, keywords and
+described images; and one function &mdash; <code>evaluate_source</code> &mdash; turns all of that into a
+set of reason codes and a single boolean that the entire rest of the system, in both apps, simply
+reads.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A post is currently <code>reference_eligible = TRUE</code>. The operator turns
+  off the <code>index_enabled</code> switch on its board. Which single function decides that the post is
+  now blocked, and what does every other consumer &mdash; the agent&rsquo;s retrieval SQL, the operator
+  counts, the enrichment cost gate &mdash; actually read?</p>
+  <button class="opt" data-correct="false">Each consumer re-derives the predicate itself; the board
+  toggle is checked inline at every read site.</button>
+  <button class="opt" data-correct="true"><code>evaluate_source</code> in
+  <code>documents/eligibility_engine.py</code> decides it; every consumer reads the materialized
+  <code>DocumentSource.reference_eligible</code> column (and, for pipeline candidacy, the
+  <code>eligibility_reasons</code> codes) that a sweep wrote.</button>
+  <button class="opt" data-correct="false">A Django model signal on <code>Board</code> rewrites each
+  affected row&rsquo;s <code>ingested</code> flag, and consumers read that.</button>
+  <button class="opt" data-correct="false">The agent re-computes eligibility in SQL by joining
+  <code>documents_board</code> live, the same way it handles the brand policy.</button>
+  <p class="why" hidden>One definition, materialized. The board toggle enqueues a scoped
+  <code>sweep_eligibility(board_ids=[...])</code>; the sweep re-runs <code>evaluate_source</code> and
+  stamps <code>reference_eligible</code> + <code>eligibility_reasons</code>. Everything else reads the
+  stamp. The live-SQL treatment is the deliberate exception for <em>brand/branch</em> only.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Why does <code>build_enrichment_candidate_queryset()</code> select on the
+  <em>reason codes</em> (<code>eligibility_reasons ⊆ {unenriched, enrichment_failed}</code>) instead of
+  simply asking for <code>reference_eligible = TRUE</code> rows that lack a summary?</p>
+  <button class="opt" data-correct="false">Because <code>jsonb &lt;@ jsonb</code> containment is faster
+  than a boolean index lookup on PostgreSQL.</button>
+  <button class="opt" data-correct="true">Because an unenriched post is by definition <em>not</em>
+  eligible, so asking for eligible rows there would be circular and never converge &mdash; and the
+  subset test additionally guarantees enrichment is the <em>only</em> thing still blocking, so the money
+  will actually help.</button>
+  <button class="opt" data-correct="false">Because <code>reference_eligible</code> is only written by
+  the agent, and the backend cannot trust it.</button>
+  <button class="opt" data-correct="false">Because the reason codes are updated synchronously while the
+  boolean is updated asynchronously by the sweep.</button>
+  <p class="why" hidden>The engine&rsquo;s own docstring makes both points. Circularity is the first;
+  the second is the cost argument &mdash; a post carrying <code>{board_blocked, rank_ineligible,
+  unenriched}</code> is not a candidate, because enriching it would change nothing.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The operator toggles a cafe rank (say 코어회원) from citable to not-citable in
+  the authors tab. What happens, and roughly how long until search stops returning those members&rsquo;
+  posts?</p>
+  <button class="opt" data-correct="false">The rank row is updated and the change is immediate: the
+  agent joins <code>documents_memberrankpolicy</code> live on every retrieval query.</button>
+  <button class="opt" data-correct="false">Nothing until the next nightly automatic run re-scrapes and
+  re-enriches the affected posts.</button>
+  <button class="opt" data-correct="true"><code>set_rank_reference_enabled</code> writes the row and
+  <code>enqueue_eligibility_sweep(ranks=[rank])</code> queues
+  <code>documents.sweep_eligibility</code> after commit; the sweep re-stamps every document whose author
+  carries that rank (seconds), and the agent&rsquo;s 300-second ranked-retrieval cache can add up to
+  five more minutes.</button>
+  <button class="opt" data-correct="false">The rank row is updated and a full corpus sweep runs inline
+  in the request, so the operator waits ~3.5 s and the change is then complete.</button>
+  <p class="why" hidden>Rank is a <em>stored</em> gate, not a live one &mdash; and the sweep is
+  deliberately asynchronous so the operator&rsquo;s request returns immediately. Every operator count is
+  &ldquo;as of the last sweep&rdquo;, plus up to 300 s of retrieval cache.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Explainer #7 established that the lexical retrieval arm is exact set equality
+  against an indexed <code>keyword_terms</code> array. Which output of the ingestion pipeline is that
+  array, and what follows for recall?</p>
+  <button class="opt" data-correct="false">The scraper&rsquo;s extracted <code>raw_text</code>,
+  tokenised on whitespace at index time.</button>
+  <button class="opt" data-correct="false">The post&rsquo;s <code>title</code> plus its
+  <code>category</code>, normalised into a term list.</button>
+  <button class="opt" data-correct="true">The <code>keywords</code> list that the text-enrichment Gemini
+  call produced (max 10, normalised by <code>normalize_keyword_terms</code>) &mdash; so lexical recall
+  is entirely a function of which words that summariser happened to choose.</button>
+  <button class="opt" data-correct="false">The <code>[IMAGE_n:…]</code> alt texts, which are the only
+  guaranteed-Korean text on an image-heavy post.</button>
+  <p class="why" hidden>There is no <code>tsvector</code>, no stemming and no trigram anywhere in the
+  path, so an indexed keyword either matches a query token exactly or contributes nothing. A word the
+  summariser did not pick is invisible to the lexical arm, and only the vector arm can rescue it.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Under what circumstances does the scraper actually use the
+  <code>DOM_TRANSPORT</code> Playwright page-load path?</p>
+  <button class="opt" data-correct="false">On every post: the API is used only to discover which post
+  ids exist, and the DOM path always does the extraction.</button>
+  <button class="opt" data-correct="true">Three cases &mdash; the operator pins
+  <code>SCRAPER_TRANSPORT=dom</code>; the article API returns a malformed envelope or no
+  <code>contentHtml</code> (notably across part of the pre-2019 id region, ~1.7% of one measured batch);
+  or API latest-post discovery throws. It is a per-post fallback, not a per-run switch.</button>
+  <button class="opt" data-correct="false">Whenever the API answers 401, since a restricted post can
+  still be rendered in a logged-in browser page.</button>
+  <button class="opt" data-correct="false">Only when the circuit breaker has opened, as the last attempt
+  before failing the job.</button>
+  <p class="why" hidden><code>extract_post</code> tries <code>_extract_post_api</code> first and, on any
+  exception that is not <code>ScraperCircuitOpenError</code>, logs a warning, records a systemic failure
+  and falls through to <code>_extract_post_dom</code> for that one post. A 401 is the opposite case: it
+  is per-post <em>data</em> and becomes the <code>restricted</code> skip outcome.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Files walked on this page:</strong>
+<span class="files"><code>apps/backend/ingestion/scraper.py</code>,
+<code>enumeration.py</code>, <code>board_sync.py</code>, <code>membership_walk.py</code>,
+<code>entity_resolution.py</code>, <code>execution.py</code>, <code>job_control.py</code>,
+<code>models.py</code>, <code>text_enrichment.py</code>, <code>image_alt.py</code>,
+<code>batch_execution.py</code>, <code>gemini_batch.py</code>, <code>fingerprints.py</code>,
+<code>index_candidates.py</code>, <code>automatic_runs.py</code>, <code>schedules.py</code>,
+<code>recovery.py</code>, <code>tasks.py</code>, <code>monitoring.py</code>,
+<code>agent_indexing.py</code>, <code>index_handoff.py</code>;
+<code>apps/backend/documents/eligibility_engine.py</code>, <code>eligibility.py</code>,
+<code>rank_policy.py</code>, <code>models.py</code>, <code>signals.py</code>,
+<code>manual_exclusion.py</code>, <code>tasks.py</code>, <code>views.py</code>,
+<code>brand_verification.py</code>, <code>brand_curation.py</code>;
+<code>apps/backend/operators/llm_runtime.py</code>,
+<code>apps/backend/config/settings.py</code>.</span></p>
+
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7 Retrieval: the RAG
+read path from query plan to ranked citations</a>. This page is the first half of the write path that
+fills everything #7 reads; #9 (indexing and embeddings) is the second half and starts at the
+<code>POST /agent-api/indexing/runs</code> above. The two-schema layout, the read grant and Celery are
+in <a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>; settings resolution,
+the shared secrets and live operator LLM config are in
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>. Later:
+#16 covers Celery and dispatch-after-commit properly, and #17 the operator console that drives every run
+and toggle named here.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
