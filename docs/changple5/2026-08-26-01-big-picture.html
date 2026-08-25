@@ -1,0 +1,1117 @@
+<!--kb
+title: "Big picture: three apps, one Postgres, one Redis, and how a request travels"
+date: 2026-08-26
+tags:
+  - changple5
+  - architecture
+  - docker-compose
+  - postgres
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Big picture: three apps, one Postgres, one Redis, and how a request travels</title>
+<style>
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 2rem 1.1rem 5rem;
+    background: #ffffff;
+    color: #1c1c1e;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68;
+    font-size: 17px;
+  }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h2 {
+    font-size: 1.35rem; margin: 3rem 0 .9rem; padding-top: 1.1rem;
+    border-top: 1px solid #e6e6ea; letter-spacing: -.01em;
+  }
+  h3 { font-size: 1.08rem; margin: 2rem 0 .5rem; }
+  h4 { font-size: .97rem; margin: 1.4rem 0 .35rem; color: #3a3a3f; }
+  p, li { color: #1c1c1e; }
+  .lede { color: #55555c; font-size: 1.04rem; margin: 0 0 1.6rem; }
+  a { color: #1d5fbf; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .88em; background: #f2f2f5; color: #23232a;
+    padding: .08em .32em; border-radius: 4px;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f7f7f9; color: #23232a; border: 1px solid #e6e6ea;
+    padding: .8rem .9rem; border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .82rem; line-height: 1.55; margin: 1rem 0;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .filename {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .78rem; color: #6a6a72; margin: 1.3rem 0 -.6rem;
+    text-transform: none; letter-spacing: .01em;
+  }
+  .callout {
+    border-left: 4px solid #3f9a6d; background: #f1f8f4; color: #1c1c1e;
+    padding: .8rem 1rem; margin: 1.4rem 0; border-radius: 0 6px 6px 0;
+  }
+  .callout.warn { border-left-color: #cc8a2a; background: #fdf6ec; }
+  .callout.def  { border-left-color: #4a6fbf; background: #eef2fb; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase; color: #3f9a6d;
+    margin-bottom: .25rem;
+  }
+  .callout.warn .tag { color: #b3760f; }
+  .callout.def .tag { color: #4a6fbf; }
+  nav.toc {
+    background: #f7f7f9; border: 1px solid #e6e6ea; border-radius: 8px;
+    padding: .8rem 1rem .9rem; margin: 1.8rem 0 2.4rem;
+  }
+  nav.toc strong { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: #6a6a72; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .15rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .88rem; }
+  th, td { border: 1px solid #e6e6ea; padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f2f5; font-weight: 600; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .82rem; color: #6a6a72; margin-top: .5rem; text-align: center; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+  /* hop diagrams */
+  .hops { display: flex; flex-direction: column; gap: 0; margin: 1.2rem 0; }
+  .hop {
+    display: flex; gap: .75rem; align-items: flex-start;
+    padding: .55rem .7rem; border: 1px solid #e6e6ea; border-radius: 8px;
+    background: #fbfbfc;
+  }
+  .hop .n {
+    flex: 0 0 1.55rem; height: 1.55rem; border-radius: 50%;
+    background: #23232a; color: #fff; font-size: .78rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: .1rem;
+  }
+  .hop .body { flex: 1 1 auto; font-size: .9rem; }
+  .hop .who {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8rem; font-weight: 700; color: #1d5fbf; display: block;
+  }
+  .arrow { text-align: center; color: #b0b0b8; font-size: 1rem; line-height: 1.1; margin: .2rem 0; }
+  .hop.agent .n { background: #7a3fa8; }
+  .hop.agent .who { color: #7a3fa8; }
+  .hop.db .n { background: #2f7d5d; }
+  .hop.db .who { color: #2f7d5d; }
+
+  .pillrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0 1.2rem; }
+  .pill {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .76rem; background: #f2f2f5; border: 1px solid #e2e2e8;
+    border-radius: 999px; padding: .2rem .6rem; color: #3a3a3f;
+  }
+
+  ul.next { list-style: none; padding-left: 0; }
+  ul.next li {
+    border-left: 3px solid #e2e2e8; padding: .18rem 0 .18rem .75rem;
+    margin: .3rem 0; font-size: .93rem;
+  }
+  ul.next li b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; color: #6a6a72; }
+
+  /* quiz */
+  .q { border: 1px solid #e6e6ea; border-radius: 8px; padding: .9rem 1rem; margin: 1.1rem 0; background: #fbfbfc; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .35rem 0;
+    padding: .5rem .75rem; cursor: pointer; font: inherit; font-size: .92rem;
+    background: #fff; color: #1c1c1e; border: 1px solid #dcdce2; border-radius: 6px;
+  }
+  .q .opt:hover { border-color: #b6b6c0; }
+  .q .opt:focus-visible { outline: 2px solid #1d5fbf; outline-offset: 1px; }
+  .q .opt.correct { background: #dff3e3; border-color: #7cc394; }
+  .q .opt.incorrect { background: #fbe0e0; border-color: #e09a9a; }
+  .q .why { margin: .6rem 0 0; font-size: .9rem; color: #3a3a3f; background: #f2f2f5; padding: .55rem .7rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; padding-top: 1.1rem; border-top: 1px solid #e6e6ea; font-size: .85rem; color: #6a6a72; }
+</style>
+</head>
+<body>
+
+<h1>Big picture: three apps, one Postgres, one Redis, and how a request travels</h1>
+<p class="lede">Explainer 1 of the changple5 builder's curriculum. By the end you should be able to
+draw this system from memory: which processes exist, where each one lives, what talks to what over
+which channel, and the exact hops a browser request makes for a page, for an API call, and for a
+streaming chat turn.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>changple5 is the codebase behind <b>미라클</b>, the product served at
+<code>miracle.changple.ai</code>: a Korean-language assistant for 창업가 (founders, mostly in
+외식업 and services) that answers questions by citing a corpus of real Naver cafe posts and
+published articles, plus a content library and an operator console that keep that corpus fed.</p>
+
+<p>What makes it a <i>system</i> rather than a program is that it is not one process. It is three
+application processes, two background processes, and two pieces of shared infrastructure, all
+started together by Docker Compose. If you built this by vibecoding, this is very likely the layer
+you never had to look at — and it is the layer every later explainer assumes. So we start here.</p>
+
+<div class="callout def">
+  <span class="tag">Skip if you know this</span>
+  <p>Five words that will recur constantly. If they are already familiar, jump to
+  <a href="#the-cast">the cast</a>.</p>
+  <p><b>Container</b> — one process plus its filesystem, isolated from the host. <b>Compose
+  service</b> — one entry in <code>compose.yaml</code> describing how to build and run a container.
+  Compose gives every service a DNS name equal to its service name, so
+  <code>http://django_backend:8000</code> resolves <i>inside</i> the stack and nowhere else.</p>
+  <p><b>Reverse proxy</b> — a server that sits in front of several backends and forwards each
+  incoming request to one of them based on the URL. It is why a browser sees one origin
+  (<code>miracle.changple.ai</code>) even though three different programs answer.</p>
+  <p><b>Schema</b> (in PostgreSQL) — a namespace inside a single database, like a folder for
+  tables. Two schemas in one database means one connection string, one backup, one
+  <code>pg_dump</code>, but two disjoint sets of tables.</p>
+  <p><b>SSE</b> (Server-Sent Events) — a long-lived HTTP response the server keeps writing to, one
+  small <code>event:</code> / <code>data:</code> frame at a time, until it closes. It is how chat
+  answers appear token by token instead of all at once.</p>
+  <p><b>WSGI / ASGI</b> — the two Python web-server calling conventions. WSGI is synchronous (one
+  request per worker at a time); ASGI is asynchronous and can hold thousands of idle connections
+  open. Which one a service uses decides whether it can stream.</p>
+</div>
+
+<h3 id="the-cast">The cast: eight containers in dev, seven in production</h3>
+
+<p>The local stack (<code>compose.yaml</code>) defines <b>eight</b> services. Production
+(<code>compose.prod.yml</code>) defines <b>seven</b> — the difference is the front door, and it is
+the single most misunderstood fact about this system, so it gets its own section below.</p>
+
+<table>
+  <thead><tr><th>Service</th><th>What it is</th><th>Port</th><th>Command (dev &rarr; prod)</th></tr></thead>
+  <tbody>
+    <tr><td><code>nextjs_frontend</code></td><td>Next.js — the UI the operator and users see</td><td>3000</td><td><code>next start</code> (production bundle in both)</td></tr>
+    <tr><td><code>django_backend</code></td><td>Django REST — the <b>system of record</b>: users, sessions, messages, content, billing, operator console</td><td>8000</td><td><code>migrate</code> then <code>runserver</code> &rarr; <code>gunicorn config.wsgi:application</code></td></tr>
+    <tr><td><code>fastapi_agent</code></td><td>FastAPI — the <b>LLM/RAG side</b>: chat turns, retrieval, indexing, content drafting</td><td>8001</td><td><code>python -m app.db.bootstrap</code> then <code>uvicorn app.main:app</code></td></tr>
+    <tr><td><code>celery_worker</code></td><td>Background task executor, same image as the backend</td><td>—</td><td><code>celery -A config worker</code> (prod adds <code>--concurrency=2</code>)</td></tr>
+    <tr><td><code>celery_beat</code></td><td>Scheduler: emits periodic tasks, executes none</td><td>—</td><td><code>celery -A config beat</code></td></tr>
+    <tr><td><code>postgres_db</code></td><td>One PostgreSQL 17 with the <code>pgvector</code> extension</td><td>5432</td><td>image default + first-boot init script</td></tr>
+    <tr><td><code>redis</code></td><td>One Redis 7, partitioned into three logical databases</td><td>6379</td><td><code>redis-server --appendonly yes</code></td></tr>
+    <tr><td><code>nginx</code></td><td>The <b>dev</b> front door on <code>:80</code></td><td>80</td><td><b>dev only — absent from <code>compose.prod.yml</code></b></td></tr>
+  </tbody>
+</table>
+
+<p>Three of those run the <i>same image</i>: <code>django_backend</code>,
+<code>celery_worker</code> and <code>celery_beat</code> are all built from
+<code>./apps/backend</code>. They differ only in the command they run and therefore in what they
+do. That is worth internalising early — a great many "why did my change not take effect?"
+incidents in this repo are a deploy that rebuilt the backend but not the two Celery roles.</p>
+
+<h3>The front door, and why production is different</h3>
+
+<p>In dev, <code>infra/nginx/nginx.conf</code> is a real reverse proxy running as the compose
+service <code>nginx</code>, publishing host port 80. Everything the operator's browser does goes
+through it.</p>
+
+<p>In production, <b>changple5 owns no front door at all</b>. <code>compose.prod.yml</code> defines
+only the seven app/infra services, publishes <b>no host ports</b> (every service is
+<code>expose:</code>-only), and joins an <i>external</i> Docker network called
+<code>changple_shared_network</code>. Host ports 80 and 443, TLS termination, and the routing of
+<code>miracle.changple.ai</code> into these containers all belong to a <b>separate compose project
+called <code>edge</code></b> (<code>edge-nginx</code>, living at <code>/home/opc/edge</code> on the
+production host), with Cloudflare in front of that.</p>
+
+<div class="callout warn">
+  <span class="tag">The trap</span>
+  <p>The repo still contains <code>infra/nginx/nginx.prod.conf</code>. It is <b>not</b> mounted by
+  anything and editing it changes nothing in production — it survives as a route-model and rollback
+  artifact and now carries a banner saying so. This is not trivia: a past phase planned real
+  front-door work as edits to that file, validated with <code>nginx -t</code>, and got a green
+  check on a dead file. When you need to change production routing, gzip, or caching, the work is
+  in the <code>edge</code> project (or in the Cloudflare dashboard), not here.</p>
+  <p>Source: <code>docs/current/operations.md</code>, sections <i>Nginx — dev is in this repo,
+  production is not</i> and <i>Production Environment</i>.</p>
+</div>
+
+<p>What this means practically: the dev nginx config is still worth reading closely, because its
+routing contract is the contract the production edge must also satisfy — in particular the
+streaming block, which we come to next.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>One origin, three prefixes</h3>
+
+<p>Here is the whole system on one picture. Read it as: a browser only ever talks to <i>one</i>
+origin; the front door splits traffic by URL prefix; behind that, two Python apps share one
+database and one Redis.</p>
+
+<figure>
+<svg viewBox="0 0 720 430" role="img" aria-label="System topology: browser to front door, then to Next.js, Django and FastAPI, which share Postgres and Redis">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a8a94"></path>
+    </marker>
+  </defs>
+  <rect x="270" y="8" width="180" height="42" rx="8" fill="#eef2fb" stroke="#4a6fbf"></rect>
+  <text x="360" y="27" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#23232a">Browser</text>
+  <text x="360" y="42" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#55555c">miracle.changple.ai</text>
+
+  <line x1="360" y1="50" x2="360" y2="76" stroke="#8a8a94" stroke-width="1.4" marker-end="url(#ar)"></line>
+
+  <rect x="220" y="78" width="280" height="52" rx="8" fill="#fdf6ec" stroke="#cc8a2a"></rect>
+  <text x="360" y="97" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#23232a">Front door (reverse proxy)</text>
+  <text x="360" y="112" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">dev: compose service nginx &#183; prod: the separate edge project</text>
+  <text x="360" y="124" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">splits on URL prefix</text>
+
+  <line x1="140" y1="130" x2="140" y2="176" stroke="#8a8a94" stroke-width="1.4" marker-end="url(#ar)"></line>
+  <line x1="360" y1="130" x2="360" y2="176" stroke="#8a8a94" stroke-width="1.4" marker-end="url(#ar)"></line>
+  <line x1="585" y1="130" x2="585" y2="176" stroke="#8a8a94" stroke-width="1.4" marker-end="url(#ar)"></line>
+  <path d="M 300 130 L 160 176" stroke="#8a8a94" stroke-width="1.4" fill="none" marker-end="url(#ar)"></path>
+  <path d="M 420 130 L 565 176" stroke="#8a8a94" stroke-width="1.4" fill="none" marker-end="url(#ar)"></path>
+
+  <text x="118" y="152" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#3a3a3f">/</text>
+  <text x="338" y="152" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#3a3a3f">/api/</text>
+  <text x="617" y="152" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#3a3a3f">/agent-api/</text>
+
+  <rect x="55" y="178" width="170" height="56" rx="8" fill="#f7f7f9" stroke="#b6b6c0"></rect>
+  <text x="140" y="198" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#23232a">nextjs_frontend</text>
+  <text x="140" y="213" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">Next.js &#183; :3000</text>
+  <text x="140" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">the UI</text>
+
+  <rect x="275" y="178" width="170" height="56" rx="8" fill="#eef2fb" stroke="#4a6fbf"></rect>
+  <text x="360" y="198" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#1d5fbf">django_backend</text>
+  <text x="360" y="213" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">Django REST &#183; :8000</text>
+  <text x="360" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">system of record</text>
+
+  <rect x="500" y="178" width="170" height="56" rx="8" fill="#f5eefb" stroke="#7a3fa8"></rect>
+  <text x="585" y="198" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#7a3fa8">fastapi_agent</text>
+  <text x="585" y="213" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">FastAPI &#183; :8001</text>
+  <text x="585" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">LLM &#183; RAG &#183; streaming</text>
+
+  <path d="M 500 206 L 447 206" stroke="#7a3fa8" stroke-width="1.4" fill="none" marker-end="url(#ar)" stroke-dasharray="4 3"></path>
+  <text x="473" y="170" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#7a3fa8">HTTP write-back</text>
+
+  <rect x="275" y="252" width="170" height="46" rx="8" fill="#f7f7f9" stroke="#b6b6c0"></rect>
+  <text x="360" y="271" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#23232a">celery_worker</text>
+  <text x="360" y="286" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">+ celery_beat (scheduler)</text>
+  <line x1="360" y1="234" x2="360" y2="250" stroke="#8a8a94" stroke-width="1.2" stroke-dasharray="3 3"></line>
+  <text x="452" y="270" font-family="system-ui, sans-serif" font-size="9" fill="#6a6a72">same image</text>
+  <text x="452" y="282" font-family="system-ui, sans-serif" font-size="9" fill="#6a6a72">as the backend</text>
+
+  <rect x="80" y="330" width="250" height="72" rx="8" fill="#f1f8f4" stroke="#3f9a6d"></rect>
+  <text x="205" y="351" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#2f7d5d">postgres_db (pgvector)</text>
+  <text x="205" y="368" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3a3a3f">schema &#8220;backend&#8221; &#8212; Django owns</text>
+  <text x="205" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3a3a3f">schema &#8220;agent&#8221; &#8212; the agent owns</text>
+  <text x="205" y="396" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#2f7d5d">agent may READ backend, never write</text>
+
+  <rect x="390" y="330" width="250" height="72" rx="8" fill="#f1f8f4" stroke="#3f9a6d"></rect>
+  <text x="515" y="351" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="700" fill="#2f7d5d">redis</text>
+  <text x="515" y="368" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3a3a3f">db/0 Celery + agent registries</text>
+  <text x="515" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3a3a3f">db/1 Django cache</text>
+  <text x="515" y="396" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3a3a3f">db/2 agent retrieval cache</text>
+
+  <line x1="330" y1="240" x2="250" y2="328" stroke="#8a8a94" stroke-width="1.2" fill="none"></line>
+  <line x1="390" y1="240" x2="470" y2="328" stroke="#8a8a94" stroke-width="1.2" fill="none"></line>
+  <line x1="560" y1="238" x2="300" y2="330" stroke="#8a8a94" stroke-width="1.2" fill="none"></line>
+  <line x1="600" y1="238" x2="540" y2="328" stroke="#8a8a94" stroke-width="1.2" fill="none"></line>
+</svg>
+<figcaption>The whole stack. Solid lines are direct connections; the dashed purple arrow is the
+agent writing conversation turns back into Django over HTTP.</figcaption>
+</figure>
+
+<p>Three prefixes, decided once, in the front door:</p>
+
+<table>
+  <thead><tr><th>Prefix</th><th>Goes to</th><th>Read timeout</th><th>Buffering</th></tr></thead>
+  <tbody>
+    <tr><td><code>/agent-api/</code></td><td><code>fastapi_agent:8001</code></td><td><b>3600s</b></td><td><b>off</b> (streaming)</td></tr>
+    <tr><td><code>/api/</code></td><td><code>django_backend:8000</code></td><td>300s</td><td>default</td></tr>
+    <tr><td><code>/</code></td><td><code>nextjs_frontend:3000</code></td><td>300s</td><td>default</td></tr>
+    <tr><td><code>= /healthz</code></td><td>answered inline by nginx</td><td>—</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <span class="tag">Why this shape matters</span>
+  <p>Those two columns on the right are not tuning knobs, they are the reason chat works. A proxy
+  that <i>buffers</i> a response waits for it to finish before forwarding — which for a
+  token-by-token SSE stream means the user sees nothing for thirty seconds and then everything at
+  once. And a 300-second read timeout would cut a long consulting turn mid-answer. So
+  <code>/agent-api/</code> gets <code>proxy_buffering off</code> and a one-hour read timeout, and
+  every other prefix does not. Whichever machine plays front door in production must satisfy the
+  same contract.</p>
+</div>
+
+<h3>One database, two schemas, one door between them</h3>
+
+<p>There is exactly one PostgreSQL database (<code>changple</code>) and exactly one Redis. But each
+is partitioned, and the partitioning is a security boundary, not a filing convention.</p>
+
+<figure>
+<svg viewBox="0 0 700 250" role="img" aria-label="One Postgres database with two schemas and a one-way read grant from the agent role into the backend schema">
+  <rect x="30" y="20" width="640" height="210" rx="10" fill="#fbfbfc" stroke="#b6b6c0"></rect>
+  <text x="48" y="43" font-family="ui-monospace, monospace" font-size="11" fill="#6a6a72">database: changple &#183; extension: vector</text>
+
+  <rect x="55" y="58" width="270" height="150" rx="8" fill="#eef2fb" stroke="#4a6fbf"></rect>
+  <text x="190" y="80" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12" font-weight="700" fill="#1d5fbf">schema "backend"</text>
+  <text x="190" y="97" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">owner: django_user (LOGIN CREATEDB)</text>
+  <text x="190" y="122" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">accounts_user &#183; conversations_*</text>
+  <text x="190" y="139" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">documents_* &#183; content_* &#183; billing_*</text>
+  <text x="190" y="156" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">operators_* &#183; ingestion_* &#183; mbti_*</text>
+  <text x="190" y="180" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">every Django migration lands here</text>
+
+  <rect x="395" y="58" width="250" height="150" rx="8" fill="#f5eefb" stroke="#7a3fa8"></rect>
+  <text x="520" y="80" text-anchor="middle" font-family="ui-monospace, monospace" font-size="12" font-weight="700" fill="#7a3fa8">schema "agent"</text>
+  <text x="520" y="97" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">owner: fastapi_user (LOGIN)</text>
+  <text x="520" y="122" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">vector index tables (pgvector)</text>
+  <text x="520" y="139" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">post chunks &#183; content chunks</text>
+  <text x="520" y="156" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#23232a">LangGraph checkpoints</text>
+  <text x="520" y="180" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#55555c">created by app.db.bootstrap at start</text>
+
+  <path d="M 393 128 L 330 128" stroke="#2f7d5d" stroke-width="2" fill="none" marker-end="url(#ar)"></path>
+  <text x="362" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#2f7d5d">SELECT</text>
+  <text x="362" y="147" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#2f7d5d">only</text>
+</svg>
+<figcaption>The read bridge is one-way. The agent role can <code>SELECT</code> from the backend
+schema; the Django role is granted nothing at all on the agent schema.</figcaption>
+</figure>
+
+<p>The consequence you will feel constantly in later explainers: <b>the agent can read
+operator-managed configuration and document metadata straight out of Django's tables, but it can
+never write there.</b> Anything the agent needs to persist — a conversation message, a rolling
+summary, a consulting report — it sends back to Django over HTTP, through Django's own validation.
+That is a deliberate design choice: there is exactly one program that may mutate the system of
+record, so its invariants (message alternation, entitlement checks, idempotency) cannot be
+bypassed.</p>
+
+<p>Redis is partitioned the same way, by logical database number:</p>
+
+<div class="pillrow">
+  <span class="pill">db/0 — Celery broker + results, and the agent's run / rate-limit / indexing registries</span>
+  <span class="pill">db/1 — Django cache (KEY_PREFIX "backend")</span>
+  <span class="pill">db/2 — the agent's retrieval and embedding cache (prefix agent:cache:)</span>
+</div>
+
+<p>The reason is blunt and worth remembering: <code>cache.clear()</code> in Django issues a Redis
+<code>FLUSHDB</code>. Because the Django cache lives alone on db/1, that command can never wipe the
+Celery queue or the agent's in-flight run registry. Partitioning by logical db turns a footgun into
+a no-op.</p>
+
+<h3>Trace A — a page load of <code>/</code></h3>
+
+<p>Toy request: the operator opens <code>https://miracle.changple.ai/</code>.</p>
+
+<div class="hops">
+  <div class="hop"><div class="n">1</div><div class="body"><span class="who">browser</span>
+    <code>GET /</code> with cookies. One TLS connection, one origin.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">2</div><div class="body"><span class="who">front door</span>
+    Path does not start with <code>/api/</code> or <code>/agent-api/</code>, so the catch-all
+    <code>location /</code> wins &rarr; <code>nextjs_frontend:3000</code>.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">3</div><div class="body"><span class="who">nextjs_frontend</span>
+    Renders the landing page. Its server components may fetch from Django directly — the landing
+    hero reads the operator-saved 첫 화면 문구 server-side so it never flashes default copy. The
+    base URL for that server-side call is <code>WEB_BACKEND_PROXY_TARGET</code>, pinned in compose
+    to <code>http://django-backend:8000</code>.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop db"><div class="n">4</div><div class="body"><span class="who">django_backend</span>
+    Answers that server-side fetch from the <code>backend</code> schema; HTML goes back up the
+    chain.</div></div>
+</div>
+
+<div class="callout warn">
+  <span class="tag">Two real bugs hide in step 3</span>
+  <p>First, the hostname is the <b>hyphenated alias</b> <code>django-backend</code>, not the
+  underscore service name. Django checks the request's <code>Host</code> header against
+  <code>ALLOWED_HOSTS</code>, which carries <code>django-backend</code> but not
+  <code>django_backend</code> — so the underscore form resolves on the network and then answers
+  <code>400 DisallowedHost</code>, and the landing silently renders fallback copy while looking
+  perfectly fine.</p>
+  <p>Second, the value is written literally in <code>compose.prod.yml</code> instead of being
+  interpolated from the environment, because the env file carries a
+  <code>WEB_BACKEND_PROXY_TARGET=http://127.0.0.1:8000</code> line meant for direct
+  <code>pnpm dev</code> runs — and inside the Next container, <code>127.0.0.1</code> is the Next
+  server itself.</p>
+</div>
+
+<h3>Trace B — an API call: <code>GET /api/conversations/&lt;nonce&gt;</code></h3>
+
+<p>Toy request: the browser, holding an access-token JWT, asks for one conversation whose public
+identifier (a UUID the code calls a <i>nonce</i>) is
+<code>9b1f2c34-7e55-4a0d-8c31-2f6b0a91d7e4</code>.</p>
+
+<div class="hops">
+  <div class="hop"><div class="n">1</div><div class="body"><span class="who">browser</span>
+    <code>GET /api/conversations/9b1f2c34-…</code> with
+    <code>Authorization: Bearer &lt;access JWT&gt;</code>. The browser uses a <i>relative</i> base
+    URL — the front-end config defaults <code>backendBaseUrl</code> to the string
+    <code>/api</code> — so the call is same-origin and no CORS is involved.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">2</div><div class="body"><span class="who">front door</span>
+    Prefix <code>/api/</code> &rarr; <code>django_backend:8000</code>, 300-second read
+    timeout.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">3</div><div class="body"><span class="who">django_backend</span>
+    <code>config/urls.py</code> matches <code>path("api/", include("conversations.urls"))</code>,
+    which routes <code>conversations/&lt;uuid:nonce&gt;</code> to
+    <code>ConversationHistoryDetailView</code>. Authentication turns the JWT into a user; the view
+    scopes the query to that user.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop db"><div class="n">4</div><div class="body"><span class="who">postgres_db</span>
+    The connection was opened with <code>options=-c search_path=backend</code>, so the unqualified
+    table names in the ORM resolve inside the <code>backend</code> schema and nowhere
+    else.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">5</div><div class="body"><span class="who">back up</span>
+    A serializer renders JSON; the same three hops in reverse.</div></div>
+</div>
+
+<p>Everything under <code>/api/</code> is Django, and <code>config/urls.py</code> is the complete
+map of which prefix belongs to which Django app. It is twenty-four lines long and worth memorising
+— we quote it in full in the Code section.</p>
+
+<h3>Trace C — a streaming chat turn: <code>POST /agent-api/chat/stream</code></h3>
+
+<p>This is the trace that explains why the system has two Python apps at all. Toy request: a
+logged-in user types <b>"배달 수수료 줄이는 방법 알려줘"</b> into an existing conversation.</p>
+
+<div class="hops">
+  <div class="hop"><div class="n">1</div><div class="body"><span class="who">browser</span>
+    <code>POST /agent-api/chat/stream</code> with the same bearer JWT and a JSON body carrying
+    <code>conversation_nonce</code> and the user's message.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop"><div class="n">2</div><div class="body"><span class="who">front door</span>
+    Prefix <code>/agent-api/</code> &rarr; <code>fastapi_agent:8001</code>, with
+    <code>proxy_buffering off</code>, <code>proxy_request_buffering off</code>,
+    <code>X-Accel-Buffering: no</code> and <code>proxy_read_timeout 3600s</code>. Nothing is held
+    back; frames flow as they are produced.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop agent"><div class="n">3</div><div class="body"><span class="who">fastapi_agent</span>
+    <code>require_chat_caller_context</code> verifies the JWT locally with
+    <code>JWT_SHARED_SECRET</code> — no call to Django. It accepts exactly one of three
+    credentials: a user bearer JWT, an <code>X-Guest-Token</code> (anonymous trial), or an
+    <code>X-Agent-Service-Token</code>.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop agent"><div class="n">4</div><div class="body"><span class="who">fastapi_agent &rarr; django_backend</span>
+    Over HTTP, <code>fetch_conversation_detail</code> loads the conversation — <b>forwarding the
+    caller's own credential</b>, not a service token. The route's own comment says why: "the
+    backend — not this route — decides which sessions it may reach."</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop agent"><div class="n">5</div><div class="body"><span class="who">fastapi_agent</span>
+    Runs the LangChain agent loop: retrieval tools search the pgvector tables in the
+    <code>agent</code> schema, the model streams tokens back, and each one becomes an SSE
+    frame.</div></div>
+  <div class="arrow">&darr;</div>
+  <div class="hop agent"><div class="n">6</div><div class="body"><span class="who">fastapi_agent &rarr; django_backend</span>
+    When the answer is complete, <code>write_conversation_message</code> POSTs it to
+    <code>/api/conversations/&lt;nonce&gt;/messages</code> with an <code>idempotency_key</code>, so
+    the turn is persisted in the system of record — by Django, through Django's
+    rules.</div></div>
+</div>
+
+<p>What the browser actually receives is a single HTTP response of type
+<code>text/event-stream</code> that stays open for the length of the answer, carrying frames like
+these (toy data, real frame shapes):</p>
+
+<pre><code>event: message_start
+data: {"run_id":"4c0e…","conversation_nonce":"9b1f2c34…","message_idempotency_key":"7a2…"}
+
+event: status
+data: {"run_id":"4c0e…","phase":"preparing","message":"…"}
+
+event: status
+data: {"run_id":"4c0e…","phase":"searching","message":"…"}
+
+event: keepalive
+data: {}
+
+event: message_delta
+data: {"delta":"배달 수수료를 "}
+
+event: message_delta
+data: {"delta":"줄이는 방법은 "}
+
+event: message_end
+data: {"run_id":"4c0e…","content":"배달 수수료를 줄이는 방법은 …","citations":[{"post_id":2418,…}]}
+
+event: done
+data: {"run_id":"4c0e…","status":"complete"}</code></pre>
+
+<div class="callout">
+  <span class="tag">Note the keepalive</span>
+  <p>Retrieval and a slow first token can leave a multi-second silence in the middle of a stream.
+  An idle SSE connection looks dead to an intermediary proxy and to the client's own stall
+  watchdog, so the agent interleaves <code>event: keepalive</code> frames through
+  <code>with_sse_keepalive</code>. The trailing <code>data: {}</code> is not decoration — a browser
+  SSE parser will not surface an event with no data line.</p>
+</div>
+
+<h3>The two trust boundaries</h3>
+
+<p>Two secrets appear everywhere in this repo, and they do different jobs:</p>
+
+<table>
+  <thead><tr><th>Secret</th><th>Shape</th><th>Who mints / who checks</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>JWT_SHARED_SECRET</code></td>
+      <td>HS256 signing key</td>
+      <td>Django <b>mints</b> user access tokens and guest tokens; the agent <b>verifies</b> them
+      offline with the same key. No network round-trip per request — which is exactly why a
+      rotation must land on both apps at once.</td>
+    </tr>
+    <tr>
+      <td><code>AGENT_BACKEND_SHARED_TOKEN</code></td>
+      <td>Static shared string, sent as <code>X-Agent-Service-Token</code></td>
+      <td>Used for service-to-service calls in both directions (backend &rarr; agent indexing
+      endpoints; agent &rarr; backend internal conversation endpoints). Compared with
+      <code>compare_digest</code>, never <code>==</code>, to avoid a timing side channel.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Explainer 2 owns these in full — how settings are resolved, how the schemas are pinned, and how
+operator-editable configuration is read live across the read bridge.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Now the same story, in the actual files. Nothing below is paraphrase — read each quote against
+the file next to you.</p>
+
+<h3>1. <code>compose.yaml</code> — the dev stack</h3>
+
+<p>Eight services. The five application services carry <code>profiles: ["stack"]</code>, so a bare
+<code>docker compose up</code> starts only <code>postgres_db</code> and <code>redis</code> (handy
+when you run Django on the host); <code>--profile stack</code> brings up the whole routed stack.
+The operator's actual command is <code>make stack-up</code>.</p>
+
+<p>Startup order is not left to luck — every app service declares
+<code>depends_on … condition: service_healthy</code> against a real healthcheck:</p>
+
+<p class="filename">compose.yaml — fastapi_agent</p>
+<pre><code>    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys, urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8001/agent-api/health', timeout=5); sys.exit(0 if response.status == 200 else 1)",
+        ]</code></pre>
+
+<p>Four named volumes carry the state that must outlive a container:</p>
+
+<ul>
+  <li><code>pg_data</code> — the PostgreSQL data directory.</li>
+  <li><code>redis_data</code> — the Redis append-only file.</li>
+  <li><code>backend_media</code> — uploaded and generated media, mounted into the backend, the
+  worker <i>and</i> beat at <code>/workspace/media/backend</code>.</li>
+  <li><code>scraper_state</code> — the persisted Naver login session used by the ingestion
+  scraper.</li>
+</ul>
+
+<p>All services join one bridge network, <code>app_network</code>, and address each other by
+service name through Docker's embedded DNS.</p>
+
+<div class="callout warn">
+  <span class="tag">Volume gotcha</span>
+  <p><code>backend_media</code> is a Docker volume, not a host bind mount. Copying files into the
+  host's <code>media/backend/</code> directory does <b>nothing</b> that the containers can see —
+  you must <code>docker cp</code> into the volume.</p>
+</div>
+
+<h3>2. <code>compose.prod.yml</code> — the delta</h3>
+
+<p>Same seven app/infra services, minus <code>nginx</code>. The differences worth knowing:</p>
+
+<ul>
+  <li><b>Serving mode.</b> The backend runs
+  <code>migrate --noinput &amp;&amp; exec gunicorn config.wsgi:application --bind 0.0.0.0:8000
+  --workers ${GUNICORN_WORKERS:-3}</code>. Migrations therefore apply on container start, not as a
+  separate deploy step.</li>
+  <li><b>No host ports.</b> Every service is <code>expose:</code>-only.</li>
+  <li><b>Two networks.</b> <code>nextjs_frontend</code>, <code>django_backend</code> and
+  <code>fastapi_agent</code> also join <code>changple_shared_network</code>, declared
+  <code>external: true</code> — it must already exist on the host. This is how the separate
+  <code>edge</code> front door (and the co-hosted <code>changple_web</code> app) reach these
+  containers by service name without going back out through Cloudflare.</li>
+  <li><b>Required env is enforced.</b> Dev uses <code>${VAR:-default}</code>; production uses
+  <code>${VAR:?VAR is required}</code>, so a missing secret fails the deploy loudly instead of
+  silently defaulting.</li>
+  <li><b>Env is passed by YAML anchors</b>, <code>&amp;backend_env</code> and
+  <code>&amp;agent_env</code>, merged into each service with <code>&lt;&lt;: *backend_env</code>.
+  There is no <code>env_file:</code> at all — which means <b>a variable that is not listed in this
+  file reaches no container</b>, however carefully you set it in <code>.prod.env</code>. That exact
+  gap has bitten this repo repeatedly; the file's comments are a museum of it.</li>
+  <li><code>celery_worker</code> adds <code>--concurrency=2</code>, because the production box is a
+  shared 4-core VM that also runs another site's SSR.</li>
+</ul>
+
+<h3>3. <code>infra/nginx/nginx.conf</code> — the dev front door, in full</h3>
+
+<p>This file is short enough to read entirely, and every line earns its place.</p>
+
+<p class="filename">infra/nginx/nginx.conf (abridged only where repetitive)</p>
+<pre><code>resolver 127.0.0.11 ipv6=off valid=10s;
+resolver_timeout 5s;
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    client_max_body_size 500m;
+
+    set $nextjs_frontend_upstream http://nextjs_frontend:3000;
+    set $django_backend_upstream http://django_backend:8000;
+    set $fastapi_agent_upstream http://fastapi_agent:8001;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /agent-api/ {
+        proxy_pass $fastapi_agent_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+        proxy_read_timeout 3600s;
+        add_header X-Accel-Buffering no;
+    }
+
+    location /api/ {
+        proxy_pass $django_backend_upstream;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+    }
+
+    location / {
+        proxy_pass $nextjs_frontend_upstream;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+    }
+}</code></pre>
+
+<p>Two details that look like style but are not:</p>
+
+<p><code>resolver 127.0.0.11</code> is Docker's embedded DNS server, and the upstreams are written
+as <code>set $var</code> variables rather than literal hostnames. When an nginx
+<code>proxy_pass</code> target contains a variable, nginx resolves it <i>at request time</i>
+through that resolver instead of once at startup. The practical effect: restarting
+<code>fastapi_agent</code> (new container, new IP) does not require restarting nginx.</p>
+
+<p><code>client_max_body_size 500m</code> is global, and it is the ceiling on uploads through the
+dev front door. Production's ceiling is whatever the <code>edge</code> project and Cloudflare
+enforce — which is a different number, in a different repo.</p>
+
+<h3>4. <code>infra/postgres/init/00-bootstrap.sh</code> — the two schemas and the bridge</h3>
+
+<p>This script runs <b>once</b>, on the very first boot of an empty <code>pg_data</code> volume
+(that is the contract of <code>/docker-entrypoint-initdb.d</code>). It is written as a
+<code>psql</code> heredoc using <code>SELECT format(…)</code> plus <code>\gexec</code> — a standard
+trick, because PostgreSQL has no <code>CREATE ROLE IF NOT EXISTS</code>: you build the DDL as a
+string and execute the result.</p>
+
+<p>It does five things.</p>
+
+<p><b>(a) Turns on pgvector</b> — <code>CREATE EXTENSION IF NOT EXISTS vector;</code>. This is what
+makes similarity search possible at all; the agent's index tables use it.</p>
+
+<p><b>(b) Creates two login roles</b>, asymmetrically:</p>
+<pre><code>'CREATE ROLE %I LOGIN CREATEDB PASSWORD %L'   -- django_user
+'CREATE ROLE %I LOGIN PASSWORD %L'            -- fastapi_user</code></pre>
+<p>Only the Django role gets <code>CREATEDB</code>, and only for one reason: Django's test runner
+creates and drops a throwaway test database.</p>
+
+<p><b>(c) Closes the default door</b> — <code>REVOKE CREATE ON SCHEMA public FROM PUBLIC;</code>.
+Without this, any role could create tables in <code>public</code>, and the whole isolation story
+would be advisory.</p>
+
+<p><b>(d) Creates one schema per app, owned by that app's role</b>, and pins each role's default
+<code>search_path</code> so an unqualified <code>SELECT</code> lands in its own schema:</p>
+<pre><code>'CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION %I'      -- backend / django_user
+'CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION %I'      -- agent   / fastapi_user
+'ALTER ROLE %I IN DATABASE %I SET search_path TO %I, public'</code></pre>
+
+<p><b>(e) Opens the one-way read bridge.</b> These are the exact three statements — there is no
+mirror-image grant anywhere in the file:</p>
+<pre><code>SELECT format(
+  'GRANT USAGE ON SCHEMA %I TO %I',
+  :'django_schema',
+  :'fastapi_user'
+);
+\gexec
+
+SELECT format(
+  'GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I',
+  :'django_schema',
+  :'fastapi_user'
+);
+\gexec
+
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT ON TABLES TO %I',
+  :'django_user',
+  :'django_schema',
+  :'fastapi_user'
+);
+\gexec</code></pre>
+
+<p>The third statement is the subtle one. <code>GRANT SELECT ON ALL TABLES</code> applies only to
+tables that exist <i>right now</i>; a table created by a later Django migration would be
+invisible to the agent. <code>ALTER DEFAULT PRIVILEGES</code> makes the grant apply to every future
+table <code>django_user</code> creates in that schema. Without it, the read bridge would silently
+rot with each migration.</p>
+
+<h4>Where the pinning is enforced in application code</h4>
+
+<p>The role default above is a safety net; both apps also pin explicitly.</p>
+
+<p class="filename">apps/backend/config/settings.py</p>
+<pre><code>DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        …
+        "OPTIONS": {
+            "options": f"-c search_path={DATABASE_SCHEMA}",
+        },
+    }
+}</code></pre>
+
+<p><code>apps/backend/core/db.py</code> adds <code>ensure_backend_schema</code>, connected to
+Django's <code>connection_created</code> signal in <code>core/apps.py</code>: on every fresh
+connection it creates the schema if missing and re-issues <code>SET search_path</code>. On the
+agent side, <code>apps/agent/app/db/connection.py</code> takes the belt-and-braces route — it
+schema-qualifies table names explicitly (<code>qualify_table_name</code>), builds an explicit
+<code>-c search_path=&lt;schema&gt;,public</code> conninfo for the LangGraph checkpointer, and calls
+<code>register_vector(connection)</code> on every connection, a per-connection side effect without
+which <code>vector</code> columns do not round-trip. Explainer 2 walks all of this properly.</p>
+
+<h3>5. <code>apps/agent/app/main.py</code> — how the agent process comes up</h3>
+
+<p>124 lines, and they tell you the shape of the whole service.</p>
+
+<p><b><code>create_app()</code> (line 103)</b> builds the FastAPI app with
+<code>docs_url=None, redoc_url=None, openapi_url=None</code> — the interactive docs are deliberately
+off, because this service is reachable from the public front door. It attaches
+<code>RequestIDMiddleware</code> (correlation IDs, explainer 2) and then the one line that defines
+the service's entire URL space:</p>
+
+<p class="filename">apps/agent/app/main.py:120</p>
+<pre><code>    app.include_router(api_router, prefix="/agent-api")</code></pre>
+
+<p>That prefix is why the nginx rule works and why the agent's own health endpoint is
+<code>/agent-api/health</code> rather than <code>/health</code>. The router it mounts is assembled
+in <code>apps/agent/app/api/routes/__init__.py</code> from eight modules:</p>
+
+<div class="pillrow">
+  <span class="pill">chat</span><span class="pill">retrieval</span><span class="pill">indexing</span>
+  <span class="pill">chunk_indexing</span><span class="pill">content_chunk_indexing</span>
+  <span class="pill">content_drafts</span><span class="pill">consulting_reports</span>
+  <span class="pill">health</span>
+</div>
+
+<p>Eight modules, and only seventeen routes in total. That is the agent's entire public surface —
+worth appreciating, because nearly all of its ~36,000 lines sit behind those seventeen doors.</p>
+
+<p><b>The <code>lifespan</code> (line 42)</b> is FastAPI's startup/shutdown hook: everything before
+<code>yield</code> runs once at boot, everything after runs once at shutdown. On the way up it
+builds six Redis-backed registries onto <code>app.state</code> — the chat run registry, the guest
+rate limiter, the retrieval rate limiter, and three indexing run registries (documents, post
+chunks, content chunks). On the way down, the order is deliberate and commented:</p>
+
+<p class="filename">apps/agent/app/main.py:63-80</p>
+<pre><code>    try:
+        yield
+    finally:
+        # Let in-flight durable runs finish (and persist their real answers) before
+        # the Redis registry they write through is closed, so a graceful deploy
+        # does not strand a `user` tail.
+        durable_manager = getattr(app.state, "durable_chat_run_manager", None)
+        if durable_manager is not None:
+            await durable_manager.drain(
+                timeout=app.state.settings.durable_run_shutdown_drain_seconds
+            )
+        # P39.S4: shared backend httpx client -- closed only after the
+        # durable-run drain above, since a draining run still calls the
+        # `chat/backend.py` helpers to persist its real answer.
+        await aclose_backend_http_client()
+        # P39.S5: close the lazily-built retrieval/read cache (db/2) if any
+        # retrieval touched it during this process's lifetime.
+        await aclose_retrieval_cache()</code></pre>
+
+<p>Read that as a small lesson in shutdown ordering. A chat turn that is mid-flight when a deploy
+starts still needs two things: an HTTP client to POST its answer to Django, and a Redis registry to
+record that it finished. So the drain happens first, the HTTP client closes second, and the
+registries close last. Reverse any two of those and a deploy strands a conversation with a user
+message and no answer.</p>
+
+<p>Note also what is <i>not</i> opened at startup: the HTTP client to Django and the db/2 retrieval
+cache are both built lazily on first use (see <code>get_backend_http_client</code> in
+<code>apps/agent/app/chat/backend.py</code>) and merely closed here. And there is no database
+connection pool — the agent opens short-lived <code>psycopg</code> connections per unit of work.
+The schema tables themselves are created before uvicorn even starts, by the container command
+<code>python -m app.db.bootstrap &amp;&amp; exec uvicorn app.main:app</code>.</p>
+
+<h3>6. <code>apps/agent/app/api/routes/health.py</code> — health vs readiness</h3>
+
+<p>A tiny file that teaches a distinction worth having:</p>
+
+<pre><code>@router.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok", "service": "agent"}</code></pre>
+
+<p><code>/agent-api/health</code> is <b>liveness</b>: it answers "this process is running" and
+touches nothing else. That is precisely what a container healthcheck should ask — if it depended on
+Postgres, a database blip would make Docker kill and restart a perfectly healthy agent.</p>
+
+<p><code>/agent-api/ready</code> is <b>readiness</b>: it pings the Redis chat-run registry
+<i>and</i> fetches Django's <code>/api/health</code> with a hard 2-second timeout, then answers
+<code>200</code> with <code>{"redis": "ok", "backend": "ok"}</code> or <code>503</code> naming the
+unavailable dependency. The comment states the design rule: "a slow backend should degrade
+readiness (503) rather than hang the probe."</p>
+
+<p>Django has the mirror pair at <code>/api/health</code> and <code>/api/ready</code>, wired in
+<code>apps/backend/core/urls.py</code>. Both compose files use the <i>liveness</i> endpoint for
+their healthchecks.</p>
+
+<h3>7. <code>apps/backend/config/urls.py</code> — the whole Django surface</h3>
+
+<p>Every URL under <code>/api/</code>, in one file:</p>
+
+<p class="filename">apps/backend/config/urls.py</p>
+<pre><code>urlpatterns = [
+    path("api/", include("core.urls")),
+    path("api/auth/", include("accounts.urls")),
+    path("api/billing/", include("billing.urls")),
+    path("api/content/", include("content.urls")),
+    path("api/", include("feedback.urls")),
+    path("api/", include("conversations.urls")),
+    path("api/consultation-requests/", include("consultations.urls")),
+    path("api/mbti/", include("mbti.urls")),
+    path(
+        "api/client-errors/report",
+        WebClientErrorReportView.as_view(),
+        name="api-client-errors-report",
+    ),
+    path(
+        "api/admin",
+        RedirectView.as_view(pattern_name="api-admin-overview", permanent=False),
+        name="api-admin-root-exact",
+    ),
+    path("api/admin/", include("operators.urls")),
+    path("api/documents", DocumentSourceListView.as_view(), name="api-documents-list"),
+    path("api/documents/ingestion/", include("ingestion.urls")),
+    path("api/documents/", include("documents.urls")),
+    path("api/django-admin/", admin.site.urls),
+]</code></pre>
+
+<p>Twelve Django apps, and the mapping is not always the obvious one — three details to note:</p>
+
+<ul>
+  <li><code>accounts</code> lives at <code>api/auth/</code> and <code>operators</code> lives at
+  <code>api/admin/</code>. The URL prefix and the app name differ, so grepping for a URL will not
+  always find the app.</li>
+  <li>Three apps (<code>core</code>, <code>feedback</code>, <code>conversations</code>) are
+  included at the bare <code>api/</code> prefix and namespace themselves internally — which is why
+  the conversations endpoints read <code>api/conversations/…</code>.</li>
+  <li><code>api/admin/</code> (the product's own operator console API) and
+  <code>api/django-admin/</code> (Django's built-in admin site) are two different things. Do not
+  confuse them.</li>
+</ul>
+
+<h3>8. <code>asgi.py</code> vs <code>wsgi.py</code> — which one actually serves</h3>
+
+<p>Both files exist, both are the Django defaults, and only one is used:
+<code>compose.prod.yml</code> runs <code>gunicorn config.wsgi:application</code>, and dev runs
+<code>manage.py runserver</code>. Nothing in the repo references <code>config.asgi</code> at all.</p>
+
+<p>So Django here is <b>synchronous</b>, served by three sync gunicorn workers, each handling
+exactly one request at a time. That is a perfectly reasonable choice for CRUD over Postgres — and
+it is also the structural reason the streaming half of the product lives in a separate FastAPI
+process. Holding hundreds of minute-long SSE connections open on sync workers would consume the
+whole pool; on uvicorn's async event loop it costs almost nothing. The two-app split is not
+fashion, it is a concurrency-model split.</p>
+
+<h3>Where to go next</h3>
+
+<p>This page was a map. Each of the following explainers opens one of the boxes; when you hit a
+subsystem here that you want to understand properly, that is the one to read. (URLs come with each
+page as it is published; the final reading guide collects them all in order.)</p>
+
+<h4>Part A — the shape of the system</h4>
+<ul class="next">
+  <li><b>02</b> Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config</li>
+  <li><b>03</b> Identity and auth: Naver and Google login, JWTs, guests, and entitlements</li>
+</ul>
+<h4>Part B — the chat product</h4>
+<ul class="next">
+  <li><b>04</b> Conversations as the system of record: models, the API, and the agent write-back loop</li>
+  <li><b>05</b> A chat turn end to end: the LangChain agent, streaming, cancel, and replay</li>
+  <li><b>06</b> Chat context: rolling windows, compaction, budgets, and recall</li>
+  <li><b>07</b> Retrieval: the RAG read path from query plan to ranked citations</li>
+  <li><b>08</b> Ingestion: how Naver cafe posts become an eligible corpus</li>
+  <li><b>09</b> Indexing and embeddings: from documents to pgvector chunks</li>
+  <li><b>10</b> 컨설팅 mode: the planned multi-round consultation and its 구성안 report</li>
+  <li><b>11</b> Safety and grounding: the injection guard, session lockdown, the citation gate, and trial caps</li>
+</ul>
+<h4>Part C — the content side</h4>
+<ul class="next">
+  <li><b>12</b> The content library: models, the single publish seam, media derivatives, and the Notion mirror</li>
+  <li><b>13</b> Content agent I: KakaoTalk intake and scaffolding a draft</li>
+  <li><b>14</b> Content agent II: architect, build, edit, publish</li>
+  <li><b>15</b> Content agent III: the agent-side drafting service and its live progress</li>
+</ul>
+<h4>Part D — running it</h4>
+<ul class="next">
+  <li><b>16</b> Running it: Celery, dispatch-after-commit, alerts, and the production topology</li>
+  <li><b>17</b> The operator console backend and live LLM runtime config</li>
+  <li><b>18</b> Billing: the Toss subscription lifecycle from checkout to reconciliation</li>
+  <li><b>19</b> Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge</li>
+  <li><b>20</b> Reading guide: the whole curriculum in order</li>
+</ul>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A change to the production nginx routing is needed: the streaming timeout
+  must go from one hour to two. Where do you make it?</p>
+  <button class="opt" data-correct="false">In <code>infra/nginx/nginx.conf</code>, then redeploy changple5</button>
+  <button class="opt" data-correct="false">In <code>infra/nginx/nginx.prod.conf</code>, validating with <code>nginx -t</code></button>
+  <button class="opt" data-correct="true">In the separate <code>edge</code> compose project, which is not in this repo</button>
+  <button class="opt" data-correct="false">In <code>compose.prod.yml</code>, on the <code>nginx</code> service</button>
+  <p class="why" hidden>Production's front door is the standalone <code>edge</code> project
+  (<code>edge-nginx</code>, <code>/home/opc/edge</code>); <code>compose.prod.yml</code> has no
+  <code>nginx</code> service at all. <code>infra/nginx/nginx.conf</code> is the live <i>dev</i>
+  front door, and <code>nginx.prod.conf</code> is an unmounted rollback artifact — editing it and
+  getting a green <code>nginx -t</code> proves nothing about production.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> The agent has finished generating an answer and must persist it. What does
+  it actually do?</p>
+  <button class="opt" data-correct="false">INSERTs into the <code>backend</code> schema, since it already has a Postgres connection</button>
+  <button class="opt" data-correct="true">POSTs the message to Django's <code>/api/conversations/&lt;nonce&gt;/messages</code> over HTTP</button>
+  <button class="opt" data-correct="false">Writes it to Redis db/0 for <code>celery_worker</code> to flush into Postgres later</button>
+  <button class="opt" data-correct="false">Stores it only in its own <code>agent</code> schema; Django reads it from there on demand</button>
+  <p class="why" hidden>The read bridge is one-way: <code>fastapi_user</code> is granted
+  <code>USAGE</code> + <code>SELECT</code> on the <code>backend</code> schema and nothing more, so
+  an INSERT is impossible by construction. Persistence goes through
+  <code>write_conversation_message</code> in <code>apps/agent/app/chat/backend.py</code>, which
+  POSTs to Django with an <code>idempotency_key</code> — so exactly one program mutates the system
+  of record, enforcing its own invariants.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Why does the bootstrap script run <code>ALTER DEFAULT PRIVILEGES FOR ROLE
+  django_user IN SCHEMA backend GRANT SELECT ON TABLES TO fastapi_user</code> in addition to
+  <code>GRANT SELECT ON ALL TABLES</code>?</p>
+  <button class="opt" data-correct="false">It is redundant belt-and-braces; either statement alone would do</button>
+  <button class="opt" data-correct="true">Because <code>ON ALL TABLES</code> only covers tables that exist at that moment — tables created by later migrations would be unreadable</button>
+  <button class="opt" data-correct="false">Because it also grants INSERT and UPDATE on future tables</button>
+  <button class="opt" data-correct="false">Because Django's test-database role needs it to run migrations</button>
+  <p class="why" hidden><code>GRANT … ON ALL TABLES IN SCHEMA</code> is a one-shot expansion over
+  the tables present when it runs. <code>ALTER DEFAULT PRIVILEGES</code> attaches the grant to
+  everything <code>django_user</code> creates in that schema from then on. Without it the read
+  bridge would silently rot: each new Django migration would add a table the agent cannot see.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Redis holds the Celery queue, the Django cache and the agent's retrieval
+  cache. Why are they on logical databases 0, 1 and 2 rather than sharing one?</p>
+  <button class="opt" data-correct="false">Separate logical databases give each workload its own memory limit</button>
+  <button class="opt" data-correct="false">Redis cannot mix key types in one database</button>
+  <button class="opt" data-correct="true">So that Django's <code>cache.clear()</code> — a <code>FLUSHDB</code> — can only ever wipe db/1, never the Celery queue or the agent's in-flight run registry</button>
+  <button class="opt" data-correct="false">Because Celery requires database 0 and refuses to start on any other</button>
+  <p class="why" hidden>Straight from the policy comment in <code>settings.py</code>: logical
+  databases partition the single Redis instance "so no app can ever flush another's keyspace."
+  <code>cache.clear()</code> issues <code>FLUSHDB</code> against db/1 alone. Logical databases
+  share the instance's memory — they are a namespace boundary, not a resource limit — and Celery is
+  perfectly happy on any db number.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Chat streams live in FastAPI while CRUD lives in Django. Which statement
+  best explains the split, given how each is served?</p>
+  <button class="opt" data-correct="false">FastAPI is faster than Django per request, so the hot path was moved there</button>
+  <button class="opt" data-correct="true">Django is served by three <i>sync</i> gunicorn workers (<code>config.wsgi</code>), each handling one request at a time, so long-lived SSE connections would exhaust the pool; uvicorn's async loop holds them almost for free</button>
+  <button class="opt" data-correct="false">Django cannot produce <code>text/event-stream</code> responses</button>
+  <button class="opt" data-correct="false">Because the LLM libraries are Python 3.13-only and the backend image is older</button>
+  <p class="why" hidden>The deciding factor is the concurrency model. <code>compose.prod.yml</code>
+  runs <code>gunicorn config.wsgi:application --workers 3</code> — sync workers, one request each,
+  so a handful of minute-long streams would block the whole backend. The agent runs
+  <code>uvicorn app.main:app</code> on an async event loop, where an idle open connection costs
+  almost nothing. (Django <i>can</i> stream via ASGI — but <code>config/asgi.py</code> is
+  referenced nowhere in this repo.)</p>
+</div>
+</section>
+
+<footer>
+  <p><b>Files walked for this page:</b> <code>compose.yaml</code>, <code>compose.prod.yml</code>,
+  <code>infra/nginx/nginx.conf</code>, <code>infra/nginx/nginx.prod.conf</code> (existence only),
+  <code>infra/postgres/init/00-bootstrap.sh</code>, <code>apps/agent/app/main.py</code>,
+  <code>apps/agent/app/api/routes/__init__.py</code>,
+  <code>apps/agent/app/api/routes/health.py</code>,
+  <code>apps/agent/app/api/routes/chat.py</code>, <code>apps/agent/app/chat/sse.py</code>,
+  <code>apps/agent/app/chat/backend.py</code>, <code>apps/agent/app/api/dependencies.py</code>,
+  <code>apps/agent/app/db/connection.py</code>, <code>apps/agent/app/db/bootstrap.py</code>,
+  <code>apps/agent/app/retrieval/cache.py</code>, <code>apps/agent/app/config.py</code>,
+  <code>apps/backend/config/urls.py</code>, <code>apps/backend/config/settings.py</code>,
+  <code>apps/backend/config/asgi.py</code>, <code>apps/backend/config/wsgi.py</code>,
+  <code>apps/backend/core/urls.py</code>, <code>apps/backend/core/db.py</code>,
+  <code>apps/backend/core/apps.py</code>, <code>apps/backend/conversations/urls.py</code>,
+  <code>apps/web/next.config.ts</code>, <code>apps/web/src/lib/runtime-config.ts</code>,
+  <code>apps/backend/Dockerfile</code>, <code>apps/agent/Dockerfile</code>, and
+  <code>docs/current/architecture.md</code> / <code>docs/current/operations.md</code> for
+  orientation.</p>
+  <p><b>Previous explainer:</b> none — this is the first page of the curriculum.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
