@@ -1,0 +1,1253 @@
+<!--kb
+title: "Chat context: rolling windows, compaction, budgets, and recall"
+date: 2026-08-26
+tags:
+  - changple5
+  - chat-context
+  - rolling-window
+  - compaction
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat context: rolling windows, compaction, budgets, and recall</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem 1fr; gap: .6rem; align-items: center; margin: .3rem 0; font-size: .85rem; }
+  .lane .who { font-weight: 650; color: #14324f; text-align: right; font-size: .82rem; }
+  .bar { height: 1.35rem; border-radius: 4px; position: relative; background: #e8ecf1; }
+  .bar span { position: absolute; top: 0; bottom: 0; border-radius: 4px; font-size: .7rem; color: #fff;
+              display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .small { font-size: .88rem; color: #57606a; }
+  .ladder { display: grid; gap: .35rem; }
+  .rung {
+    display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start;
+    background: #fff; border: 1px solid #e3e7ec; border-left: 4px solid #3d6fd8;
+    border-radius: 6px; padding: .5rem .7rem; font-size: .87rem;
+  }
+  .rung .n { font-weight: 700; color: #3d6fd8; text-align: center; }
+  .rung.stop { border-left-color: #d05a5a; }
+  .rung.write { border-left-color: #2f9e6e; }
+  .strip { display: flex; flex-wrap: wrap; gap: .22rem; margin: .45rem 0 .2rem; }
+  .cell {
+    width: 2.05rem; height: 2.05rem; border-radius: 5px; border: 1px solid #d9dee5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .72rem; font-family: ui-monospace, Menlo, monospace; background: #f6f8fa; color: #3c4551;
+  }
+  .cell.raw { background: #eef3fd; border-color: #b9cdf3; color: #24457f; }
+  .cell.gone { background: #efe6f7; border-color: #cfc0ef; color: #5b3d8a; }
+  .cell.wmk { background: #7a4fc0; border-color: #5b3d8a; color: #fff; font-weight: 700; }
+  .cell.turn { background: #d9f5e3; border-color: #86d3a6; color: #14532d; }
+  .cell.sum {
+    width: auto; padding: 0 .6rem; background: #f3eefd; border-color: #cfc0ef; color: #5b3d8a;
+    font-weight: 650; font-size: .74rem;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: .9rem; font-size: .78rem; color: #57606a; margin-top: .5rem; }
+  .legend i { display: inline-block; width: .85rem; height: .85rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; border: 1px solid #d9dee5; }
+  .layers { display: grid; gap: .5rem; }
+  .layer { border: 1px solid #e3e7ec; border-radius: 7px; padding: .6rem .8rem; background: #fff; font-size: .87rem; }
+  .layer b { display: block; color: #14324f; }
+  .layer.l1 { border-left: 5px solid #3d6fd8; }
+  .layer.l2 { border-left: 5px solid #d99a17; }
+  .layer.l3 { border-left: 5px solid #2f9e6e; }
+  .kv { font-size: .87rem; }
+  .kv b { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; color: #14324f; }
+</style>
+</head>
+<body>
+
+<h1>Chat context: rolling windows, compaction, budgets, and recall</h1>
+<p class="subtitle">Explainer #6 of the changple5 builder&rsquo;s curriculum, Part B. A conversation can
+run for hours; a language model is handed a fixed slab of text and charged by the character. This is the
+machinery that decides, on every single turn, which slice of a long 미라클 chat the model reads
+verbatim, which part it reads only as a paragraph of Korean prose &mdash; and how the model can still go
+find the rest when the user says &ldquo;아까 그거&rdquo;.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>Explainer #5,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">A chat turn end to
+end</a>, followed one <code>POST /agent-api/chat/stream</code> from the guard ladder through the
+LangChain agent, the Server-Sent Events, cancellation and replay. It walked past one door without
+opening it. Every turn rebuilds the model&rsquo;s thread from the conversation Django stores &mdash;
+and the page said only &ldquo;#6 explains which messages actually go in&rdquo;. This is that page.</p>
+
+<p>The question sounds trivial and is not. A 미라클 session is a normal chat: the user asks about
+평상집 창업, the assistant answers with citations from the 창플 카페 corpus, they go back and forth
+about 임대료 and 인건비, and forty minutes later they are on message ninety. What exactly does the
+model see on message ninety?</p>
+
+<h3>Tokens, and why &ldquo;just send everything&rdquo; stops working</h3>
+
+<p>A <strong>token</strong> is the unit a language model reads and bills in &mdash; roughly a short
+word or a word-piece in English, and roughly <em>one character</em> in Korean. Every turn is a fresh,
+stateless call: the model remembers nothing between requests, so whatever it needs to know must be
+re-sent in that request. This is worth saying plainly because it is the root of everything below:
+<strong>a chat model has no memory. The application re-sends the conversation on every turn, and
+&ldquo;memory&rdquo; is a name for whatever the application chooses to re-send.</strong></p>
+
+<p>Re-sending everything has two costs, and only one of them is money.</p>
+
+<ul>
+  <li><strong>Price and latency grow with the transcript.</strong> Ninety messages of Korean prose
+  is on the order of tens of thousands of tokens, paid on <em>every</em> turn, plus the time to
+  transmit and process them before the first word of the answer comes back.</li>
+  <li><strong>Attention degrades.</strong> A model given a very long context reliably attends to its
+  beginning and its end and gets vaguer about the middle. A transcript that keeps growing does not
+  just get more expensive; past a point it gets <em>worse</em> at the thing it was supposed to
+  help with.</li>
+</ul>
+
+<p>So every serious chat application eventually needs a policy for what to drop. changple5&rsquo;s
+policy has a name in the code &mdash; the <strong>rolling window</strong> &mdash; and this page is
+about how it is computed, where it is stored, who moves it, and what escape hatches exist when the
+model needs something the window has dropped.</p>
+
+<h3>What changple5 did before, and why it was replaced</h3>
+
+<p>The pre-P61 posture was the obvious first thing to build, and it is worth understanding because
+its three weaknesses shaped the design that replaced it:</p>
+
+<ol>
+  <li><strong>Load the whole conversation, every turn.</strong> The route fetched the full history
+  from Django and handed it all to the agent.</li>
+  <li><strong>Summarize only when a token budget tripped.</strong> A 200,000-token estimate was
+  computed per turn; if the context blew past it, an LLM call summarized the older part of the
+  history <em>right there, on the user&rsquo;s turn</em>, and the newest six messages were kept
+  verbatim.</li>
+  <li><strong>Persist nothing.</strong> The summary was a local variable. The next turn threw it away
+  and, if the budget tripped again, paid for the same summary again.</li>
+</ol>
+
+<p>Three things are wrong with that. The trigger is a <em>token estimate</em>, which is invisible to
+the product and impossible to reason about (&ldquo;how many turns until this gets summarized?&rdquo;
+has no answer). The summarization runs <em>on the critical path</em>, so the unlucky turn that
+crosses the line pays an extra blocking model call before its answer starts. And because nothing is
+persisted, that cost recurs, and every recomputation is a fresh chance for the summary to come out
+different from the one the previous turn used.</p>
+
+<p>P61 replaced it with the scheme this page teaches: a <strong>message-count window</strong>
+(predictable), compacted by a <strong>background task after the turn</strong> (off the critical
+path), whose result is <strong>persisted on the session row</strong> (paid once, stable across
+turns). The token budget survives underneath it as a second-line safety valve, because a message
+count cannot see a single pathological 40,000-character message.</p>
+
+<div class="skip">
+<p><span class="tag">Skip if you know it</span> <strong>Facts from earlier explainers this page
+builds on.</strong> Each is established, not re-derived here:</p>
+<ul>
+<li><a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4</a>
+&mdash; <strong>Django owns the conversation.</strong> Messages live in
+<code>conversations_conversationmessage</code>; the agent reads and writes them over HTTP. The
+pre-turn detail <code>GET</code> already carries each message&rsquo;s <code>id</code> +
+<code>created_at</code> <em>and</em> the session&rsquo;s three rolling-summary fields, so nothing on
+this page needs a second round trip.</li>
+<li><a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5</a>
+&mdash; <strong>the checkpointer holds the run, Django holds the conversation.</strong> Every turn
+deletes the LangGraph thread and rebuilds it from backend history, emitting Human/AI messages only.
+A prior turn&rsquo;s documents therefore survive as an id-free annotation, never as a tool result.</li>
+<li>#5 &mdash; <strong>the system prompt is a cached prefix.</strong> The static Korean rulebook sits
+at the front so Gemini can cache it; only two slots at the tail change per turn. One of those slots is
+the rolling summary, which is why it lands where it lands.</li>
+<li>#5 &mdash; <strong>two chat tools are budget-exempt</strong> (<code>search_conversation_history</code>
+and <code>search_cited_documents</code>) while the three retrieval tools share a 4-call budget; and a
+turn that arrives while a compaction is running emits a <code>compacting</code> status frame.</li>
+<li><a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>
+&mdash; <strong>model ids are live operator config</strong>, read from the operators table through a
+30-second cached snapshot. The compaction summarizer is one of those roles.</li>
+</ul>
+</div>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>A pane that slides, and a bookmark that never moves backwards</h3>
+
+<p>Picture the conversation as a strip of message cards laid left to right, oldest first. The scheme
+has exactly two moving parts:</p>
+
+<ul>
+  <li>a <strong>bookmark</strong> &mdash; the code calls it the <em>watermark</em> &mdash; that marks
+  the last message already folded into prose;</li>
+  <li>one paragraph of Korean prose &mdash; the <strong>rolling summary</strong> &mdash; covering
+  everything to the left of the bookmark.</li>
+</ul>
+
+<p>What the model is handed each turn is: <em>the summary, then every message to the right of the
+bookmark, verbatim.</em> That is the whole read rule. Everything else in this page is about how the
+bookmark moves.</p>
+
+<p>It moves in fixed steps, on a fixed trigger. The two numbers are
+<code>ROLLING_WINDOW_MESSAGE_LIMIT = 20</code> and <code>ROLLING_EVICTION_BATCH_SIZE = 10</code>:
+<strong>when the number of messages to the right of the bookmark reaches 20, the oldest 10 of them are
+folded into the summary and the bookmark jumps forward over them.</strong> The window is therefore
+never wider than 19 verbatim messages in steady state, and never narrower than 10.</p>
+
+<figure>
+<div class="fig-box">
+<p class="small"><strong>Before</strong> &mdash; turn 10 has just finished, so the session holds 20
+messages and there has never been a compaction. Everything is verbatim; there is no summary yet.</p>
+<div class="strip">
+<div class="cell raw">1</div><div class="cell raw">2</div><div class="cell raw">3</div><div class="cell raw">4</div><div class="cell raw">5</div><div class="cell raw">6</div><div class="cell raw">7</div><div class="cell raw">8</div><div class="cell raw">9</div><div class="cell raw">10</div><div class="cell raw">11</div><div class="cell raw">12</div><div class="cell raw">13</div><div class="cell raw">14</div><div class="cell raw">15</div><div class="cell raw">16</div><div class="cell raw">17</div><div class="cell raw">18</div><div class="cell turn">19</div><div class="cell turn">20</div>
+</div>
+<p class="small" style="margin-top:1.2rem"><strong>After</strong> &mdash; the background task fires
+once the assistant message is safely written: 20 &ge; 20, so messages 1&ndash;10 are merged into a
+summary and the bookmark lands <em>on message 10</em>. Ten raws are left.</p>
+<div class="strip">
+<div class="cell sum">rolling_summary &mdash; covers 1&ndash;10</div><div class="cell wmk">10</div><div class="cell raw">11</div><div class="cell raw">12</div><div class="cell raw">13</div><div class="cell raw">14</div><div class="cell raw">15</div><div class="cell raw">16</div><div class="cell raw">17</div><div class="cell raw">18</div><div class="cell raw">19</div><div class="cell raw">20</div>
+</div>
+<div class="legend">
+  <span><i style="background:#eef3fd;border-color:#b9cdf3"></i>verbatim in the model&rsquo;s context</span>
+  <span><i style="background:#d9f5e3;border-color:#86d3a6"></i>this turn&rsquo;s own pair</span>
+  <span><i style="background:#7a4fc0;border-color:#5b3d8a"></i>the watermark message</span>
+  <span><i style="background:#f3eefd;border-color:#cfc0ef"></i>summarized away</span>
+</div>
+</div>
+<figcaption>Figure 1 &mdash; the first boundary. The strip is the session; the purple cell is the
+persisted watermark; the blue cells are what the model reads word for word.</figcaption>
+</figure>
+
+<p>Odd-numbered messages are the user&rsquo;s, even-numbered ones the assistant&rsquo;s &mdash;
+the backend enforces strict user/assistant alternation (#4). That is why the bookmark landing on
+message 10 is a happy accident worth noticing: the seam falls between a completed turn and the next
+one, never through the middle of a question-and-answer pair.</p>
+
+<h3>Why the bookmark is an identity and not a count</h3>
+
+<p>The lazy implementation stores &ldquo;the first 10 messages are summarized&rdquo; &mdash; a number.
+It is wrong here, and the code says so in a comment. changple5 has <strong>retract-tail</strong>
+(#4): the owner of a conversation can delete the last <code>[user, assistant]</code> pair to redo a
+bad turn. Deleting two rows from the end silently shifts every count-based boundary. The stored
+watermark is therefore a message <em>identity</em>: the pair
+<code>(created_at, id)</code> of the last summarized message, compared as a tuple. Since it is
+compared rather than dereferenced, it keeps working even if that very message is later retracted
+&mdash; a deleted row still has a position in the ordering.</p>
+
+<div class="callout">
+<p><strong>The idea in one line.</strong> Store <em>where you got to</em>, not <em>how many you
+did</em>. A position expressed as a count is invalidated by any edit before it; a position expressed
+as an identity is not.</p>
+</div>
+
+<h3>Merge, never re-summarize</h3>
+
+<p>When the bookmark moves a second time, the system does <strong>not</strong> re-read messages 1&ndash;20
+and write a fresh summary. It hands the model the <em>previous summary</em> plus the <em>10 newly
+evicted messages</em> and asks for one merged summary. This matters for three reasons:</p>
+
+<ul>
+  <li><strong>Cost is constant per boundary.</strong> Summarizing message 1 again on every boundary
+  would make a long conversation quadratically expensive.</li>
+  <li><strong>The old text is already gone.</strong> After the first merge, messages 1&ndash;10 exist
+  in the database but nothing re-reads them; the summary is the only representation the model will
+  ever see of them again.</li>
+  <li><strong>It degrades gracefully.</strong> With no previous summary the same prompt is a plain
+  &ldquo;summarize these messages&rdquo;, so the first boundary and the tenth run the same code
+  path.</li>
+</ul>
+
+<p>The trade is honest and worth stating: a merged summary is a summary of a summary of a summary.
+Detail decays with distance, deliberately. The recall tool below exists precisely because
+sometimes the user wants a detail that decayed.</p>
+
+<h3>Reading the window at any moment</h3>
+
+<p>Given the two numbers, you can predict the state of any session. The only input is <em>how many
+messages sit to the right of the bookmark</em>:</p>
+
+<table>
+<tr><th>Session state</th><th>Raws after the watermark</th><th>What the model gets</th><th>Compaction due?</th></tr>
+<tr><td>12 messages, never compacted</td><td>12</td><td>no summary + 12 verbatim</td><td>no (12 &lt; 20)</td></tr>
+<tr><td>20 messages, never compacted</td><td>20</td><td>no summary + 20 verbatim</td><td><strong>yes</strong> &rarr; evict 1&ndash;10</td></tr>
+<tr><td>23 messages, watermark on #10</td><td>13 (#11&ndash;#23)</td><td>summary of 1&ndash;10 + 13 verbatim</td><td>no (13 &lt; 20)</td></tr>
+<tr><td>30 messages, watermark on #10</td><td>20 (#11&ndash;#30)</td><td>summary of 1&ndash;10 + 20 verbatim</td><td><strong>yes</strong> &rarr; evict 11&ndash;20, bookmark to #20</td></tr>
+<tr><td>41 messages, watermark on #10 (a job was lost)</td><td>31</td><td>summary of 1&ndash;10 + 31 verbatim</td><td><strong>yes</strong> &rarr; evict 20 in one pass, bookmark to #30</td></tr>
+</table>
+
+<p>Two rows deserve a note. The third row&rsquo;s odd message count is not a typo: a turn writes the
+user&rsquo;s message <em>before</em> the model runs (#4), so a session sitting mid-turn genuinely has
+an odd number of stored rows. And the last row is the one that makes this design cheap to operate: an
+over-wide window is <strong>legal</strong>. Nothing is broken while 31 raws are in flight; the next
+compaction simply evicts two batches instead of one and catches up in a single pass.</p>
+
+<h3>Three layers, not one mechanism</h3>
+
+<p>It is easy to conflate the three things this page covers. They answer different questions and fire
+at different times:</p>
+
+<figure>
+<div class="fig-box">
+<div class="layers">
+  <div class="layer l1"><b>1. The rolling window &mdash; a message-count rule</b>
+  Runs on every turn (pure arithmetic, no I/O). Decides which messages are verbatim. Moved by a
+  background task after the turn. Predictable: you can count it on your fingers.</div>
+  <div class="layer l2"><b>2. The 200k token budget &mdash; a second-line valve</b>
+  Runs on every turn, on the <em>already windowed</em> context. Catches what a message count
+  cannot see: one enormous pasted message. Trips rarely; when it does, it summarizes inline, on the
+  turn, and keeps only the newest 6 messages.</div>
+  <div class="layer l3"><b>3. Recall &mdash; a tool the model may call</b>
+  Runs only if the model asks. Searches the <em>whole</em> session, including everything the window
+  dropped. Zero I/O, no LLM, costs nothing against the search budget.</div>
+</div>
+</div>
+<figcaption>Figure 2 &mdash; the three layers of context control, in the order they engage.</figcaption>
+</figure>
+
+<div class="note">
+<p><strong>The design point to hold on to.</strong> The window and the recall tool
+<em>disagree about visibility on purpose.</em> The window decides what the model reads by default,
+and it is aggressive because most turns do not need message 3. The tool exists so that the rare turn
+that <em>does</em> need message 3 can go get it &mdash; on demand, scrubbed and capped, instead of
+paying for the whole prefix on every turn just in case.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Six stops, in the order the machinery engages on a real turn: the arithmetic, where the summary
+lives, the task that writes it, the token budget beneath it, the recall tool beside it, and finally
+what all of this does to citations.</p>
+
+<h3>1. The arithmetic &mdash; <code>apps/agent/app/chat/rolling_window.py</code></h3>
+
+<p>195 lines, zero I/O, no settings, no LLM, no database. Everything in it is a function of &ldquo;the
+ordered messages&rdquo; plus &ldquo;the watermark&rdquo;. It is its own module because <em>two</em>
+callers need the same answer and must never disagree: the read half that builds the model&rsquo;s
+context, and the write half that decides what to compact. Its docstring defines the vocabulary the
+rest of the codebase uses:</p>
+
+<pre><code>*watermark* &mdash; the last message covered by the persisted rolling summary,
+identified by ``(created_at, id)`` (never a count: retract-tail deletes trailing
+message pairs, so any count desyncs &mdash; P61 F1). Comparisons are on the tuple, so
+a watermark whose row has since been deleted still orders correctly.
+
+*post-watermark raws* &mdash; the messages the model still sees verbatim.</code></pre>
+
+<p>The two constants, and the frozen dataclass that carries the bookmark:</p>
+
+<pre><code>ROLLING_WINDOW_MESSAGE_LIMIT = 20     # rolling_window.py:40
+ROLLING_EVICTION_BATCH_SIZE  = 10     # :44
+
+@dataclass(frozen=True, slots=True)   # :47
+class RollingSummaryWatermark:
+    message_id: UUID | None = None
+    created_at: datetime | None = None</code></pre>
+
+<h4>The read half: <code>select_post_watermark_messages</code> (:88)</h4>
+
+<p>Given the full history and a watermark, return everything strictly after it. The comparison is on
+a tuple, built by <code>_order_key</code> (:79), which pairs the timestamp with the id as a string so
+two messages written in the same millisecond still have a total order:</p>
+
+<pre><code>watermark_key = _order_key(watermark.created_at, watermark.message_id)
+return tuple(
+    message
+    for message in ordered_messages
+    if _order_key(message.created_at, message.id) &gt; watermark_key
+)</code></pre>
+
+<p>Two fallbacks keep the function <em>total</em> &mdash; it has no failure mode that raises. A
+watermark with no timestamp (or a history whose rows predate the identity widening) is located by id
+instead; a watermark that cannot be resolved at all returns <em>every</em> message. That last choice
+is the interesting one, and it is the safe direction: an unresolvable bookmark means the model gets
+too much history, never too little. Silently dropping messages the model has no summary for would be
+the real bug.</p>
+
+<h4>Never split a turn: <code>_snap_to_turn_boundary</code> (:126)</h4>
+
+<pre><code>while (
+    evict_count &gt; 0
+    and post_watermark_messages[evict_count - 1].role != "assistant"
+):
+    evict_count -= 1</code></pre>
+
+<p>The seam between &ldquo;summarized&rdquo; and &ldquo;verbatim&rdquo; must not fall between a user
+question and its answer &mdash; that would leave the model an orphan answer whose question exists only
+as a clause in a summary. Because the backend alternation is user-first, the 10th, 20th and 30th
+message are always assistant halves, so in a well-formed history this loop is a no-op. It is
+<em>asserted rather than trusted</em>, and the snap goes <strong>backwards</strong> (evict 9 instead
+of 10): snapping forwards could leave fewer than 10 raws in the window.</p>
+
+<h4>The write half: <code>plan_rolling_compaction</code> (:147)</h4>
+
+<p>This is the whole decision, and it is eight lines of arithmetic:</p>
+
+<pre><code>post_watermark_messages = select_post_watermark_messages(messages, watermark=watermark)
+if len(post_watermark_messages) &lt; window_limit:
+    return None                       # nothing due
+
+evict_count = 0
+remaining = len(post_watermark_messages)
+while remaining &gt;= window_limit:      # catch-up: expand by whole batches
+    evict_count += eviction_batch_size
+    remaining   -= eviction_batch_size
+
+evict_count = _snap_to_turn_boundary(post_watermark_messages, evict_count)
+if evict_count &lt; 1:
+    return None</code></pre>
+
+<p>Trace it on the two interesting inputs:</p>
+
+<table>
+<tr><th>Post-watermark raws</th><th>Loop</th><th>Evicted</th><th>Retained</th><th>New watermark</th></tr>
+<tr><td>20 (the normal boundary)</td><td>20&nbsp;&ge;&nbsp;20 &rarr; evict 10, remaining 10; 10&nbsp;&lt;&nbsp;20 stop</td><td>10</td><td>10</td><td>the 10th raw</td></tr>
+<tr><td>31 (a job was lost)</td><td>31&nbsp;&ge;&nbsp;20 &rarr; evict 10, remaining 21; 21&nbsp;&ge;&nbsp;20 &rarr; evict 20, remaining 11; stop</td><td><strong>20</strong></td><td>11</td><td>the 20th raw</td></tr>
+</table>
+
+<p>The loop is the entire recovery story for a lost background job. There is no retry queue anywhere
+in this subsystem; instead, the eviction slice <em>expands</em> until the remainder is back under the
+window, so one task run clears every missed boundary at the cost of one model call rather than one
+per boundary.</p>
+
+<p>The returned <code>RollingCompactionPlan</code> carries the evicted slice, the retained slice, and
+the new watermark &mdash; which is always <em>the last evicted message&rsquo;s</em> identity. If that
+message has no id, the plan is <code>None</code>: nothing persistable, so leave the bookmark where it
+is and let the next turn re-trigger. That refusal-to-guess appears at every layer of this
+subsystem.</p>
+
+<h3>2. Where the summary lives, and how a turn reads it</h3>
+
+<h4>Three columns on the session row</h4>
+
+<p><code>apps/backend/conversations/models.py:188&ndash;213</code> adds exactly three nullable fields
+to <code>ConversationSession</code> &mdash; and the <code>help_text</code> on the middle one is the
+design decision written into the schema:</p>
+
+<pre><code>rolling_summary                 = models.TextField(null=True, blank=True)
+summarized_through_message_id   = models.UUIDField(null=True, blank=True)
+    # "public_id of the last message folded into `rolling_summary`.
+    #  A message identity, NOT a foreign key -- the row may later be
+    #  retracted, and the watermark must survive that."
+summarized_through_created_at   = models.DateTimeField(null=True, blank=True)</code></pre>
+
+<p>A <code>ForeignKey</code> would have been the reflexive choice and would have been actively wrong:
+a foreign key with <code>on_delete</code> either forbids the retraction or nulls the watermark out.
+A bare UUID plus its timestamp is a <em>coordinate</em>, and coordinates survive deletions.</p>
+
+<h4>The write, and a subtle product bug it avoids</h4>
+
+<p><code>ConversationSession.record_rolling_summary</code> (<code>models.py:264</code>) writes through
+a queryset <code>.update()</code> instead of <code>.save()</code>, and the docstring explains
+why:</p>
+
+<pre><code>`QuerySet.update()` rather than `.save()` is deliberate: `updated_at` is
+`auto_now` and the owner's history rail orders by `-updated_at`, so a
+`.save()` here would float the session to the top of the rail for a
+background compaction job the user never triggered.</code></pre>
+
+<p>This is the kind of detail that only shows up in production: a correct-looking write that would
+have made old conversations mysteriously jump to the top of the sidebar minutes after the user closed
+them. Compare with <code>append_finalized_message</code>, which touches <code>updated_at</code>
+<em>on purpose</em> &mdash; there the float is the desired behaviour.</p>
+
+<h4>The internal endpoint: <code>rolling_summary.py</code></h4>
+
+<p>The agent cannot write Django&rsquo;s tables (<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>: the bridge grants <code>SELECT</code> only), so
+the summary lands through an HTTP endpoint reserved for the agent:</p>
+
+<pre><code>POST /api/conversations/internal/&lt;uuid:nonce&gt;/rolling-summary   # urls.py:71
+     authentication_classes = [AgentServiceTokenAuthentication]   # views.py:868
+     body: {owner_user_id, summary, summarized_through_message_id}</code></pre>
+
+<p>All the logic is in <code>apps/backend/conversations/rolling_summary.py</code>
+(<code>apply_rolling_summary</code>, :38), inside one transaction holding
+<code>select_for_update()</code> on the session. It refuses three things and accepts everything
+else:</p>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">A</span><span>A session that is not the owner&rsquo;s, or is soft-deleted &rarr; <strong>404</strong>. The scope <em>is</em> the lookup (#4).</span></div>
+  <div class="rung stop"><span class="n">B</span><span>A non-default session &rarr; <strong>409</strong> <code>not_default_session</code>. 컨설팅 owns its own lifecycle and is out of scope by construction.</span></div>
+  <div class="rung stop"><span class="n">C</span><span>A watermark message that does not belong to this conversation &rarr; <strong>409</strong> <code>unknown_watermark_message</code>. This is the retract-tail race: the tail was deleted while the summarizer was thinking, so the summary describes text that no longer exists. Refuse it.</span></div>
+  <div class="rung"><span class="n">D</span><span>A watermark that does not <em>strictly advance</em> the stored one &rarr; <strong>200</strong> with <code>applied: false</code>. Not an error: a late or duplicate job, whose work is simply redundant.</span></div>
+  <div class="rung write"><span class="n">E</span><span>Otherwise &rarr; <code>record_rolling_summary</code> inside the same transaction.</span></div>
+</div>
+
+<p>Rung C is also why the payload deliberately does <em>not</em> carry
+<code>summarized_through_created_at</code>. The backend looks it up from the message row itself:</p>
+
+<pre><code>The watermark's ``created_at`` is resolved server-side from the message row
+rather than taken from the payload: the backend owns message ordering, and
+requiring the row to still exist means a compaction whose tail was retracted
+mid-flight is refused instead of persisting a summary of retracted text.</code></pre>
+
+<p>Rung D is the concurrency rule in one comparison, <code>rolling_summary.py:87</code>:</p>
+
+<pre><code>applied = (
+    session.summarized_through_created_at is None
+    or watermark.created_at &gt; session.summarized_through_created_at
+)</code></pre>
+
+<p>Two racing compaction jobs cannot corrupt each other, because the row lock plus this strict
+advance means a summary can only ever be stored together with a watermark that is further along than
+the one it replaces. The loser is told <code>applied: false</code> and simply stops. The
+agent-side caller mirrors that in its own result type,
+<code>backend.py</code>&rsquo;s <code>BackendRollingSummaryWriteResult</code>:
+<em>&ldquo;<code>applied=False</code> is a <strong>success</strong> &hellip; The caller logs it and
+moves on &mdash; never a retry.&rdquo;</em></p>
+
+<h4>The read half, and the surprising shape the summary takes</h4>
+
+<p>On the agent side the three fields ride through <code>AssembledChatContext</code>
+(<code>chat/context.py:29</code>), copied straight off the conversation detail. Then
+<code>_resolve_rolling_window</code> (<code>chat/agent.py:730</code>) turns them into the pair the
+rest of the code wants:</p>
+
+<pre><code>persisted_summary = (assembled_context.rolling_summary or "").strip() or None
+if persisted_summary is None:
+    return None, assembled_context.verbatim_messages      # nothing compacted yet
+
+watermark = RollingSummaryWatermark(
+    message_id=assembled_context.summarized_through_message_id,
+    created_at=assembled_context.summarized_through_created_at,
+)
+return persisted_summary, select_post_watermark_messages(
+    assembled_context.verbatim_messages, watermark=watermark
+)</code></pre>
+
+<p>Note what does <em>not</em> happen: the summary is never recomputed. It is injected exactly as
+persisted &mdash; &ldquo;that is the whole point of persisting it&rdquo;, says the docstring.</p>
+
+<p>Now the part worth pausing on. <strong>The summary does not become a message.</strong> Follow it
+through <code>build_chat_agent_checkpoint_state</code> (<code>agent.py:883</code>): it is written to
+a LangGraph state channel called <code>conversation_summary</code>, and the only thing that ever reads
+that channel is the system-prompt builder, <code>build_chat_agent_system_prompt</code> (:934), which
+drops it into a named slot at the very end of the prompt (<code>prompts.py:288</code>):</p>
+
+<pre><code>[Conversation summary]
+{conversation_summary}
+
+[Current selected content]
+{selected_content_block}</code></pre>
+
+<p>So the model&rsquo;s context for a compacted session is: <em>one system message ending in the
+summary</em>, then Human/AI messages for the raws, then this turn&rsquo;s question. The summary is
+framed as instruction-side background, not as something anyone said. Two consequences fall out:</p>
+
+<ul>
+  <li>Because the middleware rebuilds the system prompt from state on <em>every</em> model step
+  (#5), a summary refreshed mid-turn is picked up without touching the message list.</li>
+  <li>Those two slots sit at the <strong>tail</strong> of the prompt because everything before them is
+  the static Korean rulebook that Gemini caches as a prefix. Putting a per-turn value earlier would
+  invalidate that cache on every chat turn &mdash; the constraint #5 flagged, and this is the code
+  that lives inside it.</li>
+</ul>
+
+<p>When the messages are absent entirely (a compacted session whose raws are all gone), the function
+short-circuits and returns summary-only. Otherwise the windowed messages go through
+<code>_build_chat_agent_history_messages</code> (:716), which emits <code>HumanMessage</code> /
+<code>AIMessage</code> and nothing else &mdash; the P51 guarantee from #5 that a prior turn can carry
+no tool output, no document body and no post id.</p>
+
+<h3>3. The compaction task &mdash; <code>apps/agent/app/chat/rolling_compaction.py</code></h3>
+
+<p>460 lines that never appear on a user&rsquo;s critical path except for one Redis <code>GET</code>.
+Its docstring names three disciplines, and every function in the file is one of them applied
+somewhere:</p>
+
+<div class="ladder">
+  <div class="rung"><span class="n">1</span><span><strong>Nothing on the critical path.</strong> The pre-check is arithmetic over data the turn already has in memory. A turn that does not cross a boundary pays a list comprehension.</span></div>
+  <div class="rung"><span class="n">2</span><span><strong>Genuinely detached.</strong> A client stop cancels the request task, and anything awaited in a stream generator&rsquo;s <code>finally</code> dies with it. The compaction task is created on the loop and held by a module-level strong reference, never awaited by the stream.</span></div>
+  <div class="rung"><span class="n">3</span><span><strong>Never raises, never retries.</strong> Transport, LLM, Redis, a refused write &mdash; every failure family is caught and logged. A lost job leaves the watermark where it was and the next turn re-triggers. No queue, no retry bookkeeping, no dead letter.</span></div>
+</div>
+
+<h4>The trigger, and where it sits</h4>
+
+<p>There is exactly one call site, in the default-chat stream generator, <em>after</em> the assistant
+message is durably persisted (<code>api/routes/chat.py:1541</code>). Its comment is worth reading as
+a specification:</p>
+
+<pre><code># P61.S3: the turn's assistant message is durably persisted at this
+# point, so the post-turn message count is final. This is the ONLY
+# compaction trigger ... it never raises, never awaits backend work here,
+# and deliberately does NOT fire on the failure/fallback paths above --
+# a failed turn simply leaves the watermark for the next one.
+if user_id is not None:
+    schedule_rolling_compaction(...)</code></pre>
+
+<p>The <code>user_id is not None</code> guard skips anonymous trial turns (a guest is capped at two
+assistant turns, orders of magnitude below the boundary, and compaction is owner-scoped by its
+endpoint contract). <code>schedule_rolling_compaction</code> (:427) then does the cheap check and, if
+it passes, spawns the task:</p>
+
+<pre><code>task = loop.create_task(run_rolling_compaction(...))
+_BACKGROUND_COMPACTION_TASKS.add(task)                 # module-level strong ref
+task.add_done_callback(_BACKGROUND_COMPACTION_TASKS.discard)</code></pre>
+
+<p>That two-line strong-reference dance is not decoration. <code>asyncio</code> keeps only a weak
+reference to a task; a bare <code>create_task(...)</code> whose result nobody stores can be garbage
+collected before it ever runs. The <code>error_reporting</code> module established the pattern in this
+codebase &mdash; explainer #16 teaches background work in general.</p>
+
+<p>The pre-check itself, <code>is_rolling_compaction_due</code> (:232), has one subtlety encoded in a
+constant:</p>
+
+<pre><code>_CURRENT_TURN_MESSAGE_COUNT = 2   # :75
+
+return (len(post_watermark_messages) + _CURRENT_TURN_MESSAGE_COUNT) &gt;= window_limit</code></pre>
+
+<p>The context was assembled from a detail fetched <em>before</em> this turn&rsquo;s user message was
+written, so the post-turn count is &ldquo;what we fetched, plus our own pair&rdquo;. And the check is
+deliberately optimistic: it decides only whether the task is worth starting. The authoritative
+decision is made again inside the task against freshly fetched data.</p>
+
+<h4>Re-fetch, don&rsquo;t reconstruct</h4>
+
+<p><code>run_rolling_compaction</code> (:341) begins by fetching the conversation detail again. The
+docstring argues the alternative down explicitly: reconstructing the post-turn history by appending
+two ids to the stale in-memory list would be free, but it would &ldquo;silently compact retracted or
+already-summarized text whenever it guessed wrong&rdquo;. The re-fetch costs the user nothing (it is
+off the critical path) and is authoritative &mdash; it sees a watermark another worker just advanced
+and a tail another request just retracted.</p>
+
+<p>One credential detail lives here, and it is a nice example of a boundary being narrower than it
+looks: the task re-fetches with <strong>the turn&rsquo;s own bearer JWT</strong>, not the service
+token, because the backend hard-scopes service-token conversation reads to guest sessions. It then
+<em>writes</em> with the service token, because the internal endpoint takes no user identity beyond
+the <code>owner_user_id</code> field. One task, two different credentials, each the minimum for its
+call.</p>
+
+<h4>One boundary at a time: <code>_compact_once</code> (:292)</h4>
+
+<pre><code>plan = plan_rolling_compaction(messages, watermark=watermark)
+if plan is None:
+    return None
+
+# The merge is a BLOCKING sync Gemini call; running it inline would freeze
+# every other stream on this worker.
+summary = await asyncio.to_thread(
+    build_rolling_merged_history_summary,
+    previous_summary=previous_summary,
+    evicted_messages=plan.evicted_messages,
+    settings=settings,
+)
+result = await write_rolling_summary(...)</code></pre>
+
+<p>The <code>asyncio.to_thread</code> is mandatory, not stylistic. The agent is a single async process
+serving every concurrent chat (#1); a synchronous network call made directly on the event loop
+freezes <em>all</em> of them for its duration. The loop around <code>_compact_once</code> is capped at
+<code>MAX_ROLLING_COMPACTION_PASSES = 3</code> &mdash; and normally runs exactly once, because the
+planner&rsquo;s expanding slice already cleared every missed boundary. The cap only bounds a
+pathological re-plan, where each extra pass would cost another model call.</p>
+
+<h4>The summarizer &mdash; <code>chat/compaction.py</code></h4>
+
+<p><code>GeminiChatHistoryCompactor</code> (:64) is a small, ordinary structured-output client, and
+the ordinariness is the point:</p>
+
+<ul>
+  <li><strong>Structured output.</strong> <code>with_structured_output(_GeminiChatHistoryCompactionSchema, include_raw=True)</code>
+  &mdash; a one-field pydantic model whose <code>Field(description=...)</code> is Korean and tells the
+  model what a good summary preserves: goals, constraints, decisions already made, open questions,
+  relevant selected content and cited documents.</li>
+  <li><strong>Live-configurable model and thinking level.</strong> <code>from_settings</code> resolves
+  <code>resolve_role_model(..., role=ROLE_CHAT_HISTORY_COMPACTION, default="gemini-3.1-flash-lite")</code>
+  and <code>resolve_role_thinking_level(...)</code> &mdash; the operator-editable rows from #2. The
+  role is registered as <code>chat_history_compaction</code> / 채팅 히스토리 압축 in
+  <code>operators/llm_roles.py:122</code>, so the model behind compaction can be changed in the
+  console with no redeploy.</li>
+  <li><strong>Retries are owned elsewhere.</strong> <code>max_retries=1</code> on the client, with
+  <code>call_with_retry</code> as the single 429 authority.</li>
+</ul>
+
+<p>What gets sent is built by <code>serialize_older_history_messages</code> (:187) &mdash; a flat
+<code>[Message n] / role / content</code> rendering, with selected-content titles and cited documents
+appended per message, and <em>visible citation markers stripped</em> from any message that carried
+citations. And the merge itself, <code>build_rolling_merged_history_summary</code> (:253), is a
+two-branch prompt in <code>prompts.py:295</code>. With a previous summary the Korean rule is
+explicit:</p>
+
+<pre><code>- 아래에는 지금까지의 대화를 정리한 `이전 요약`과, 그 이후에 오간
+  `추가 대화 기록`이 함께 주어집니다.
+- 둘을 하나의 요약으로 합치세요. 이전 요약에만 있는 내용도 여전히
+  유효하면 빠뜨리지 말고, 추가 기록이 그 내용을 바꿨으면 최신 내용을
+  따르세요.</code></pre>
+
+<p>&mdash; merge the two into one, keep what is still true, prefer the newer where they conflict.
+Without a previous summary the same function degrades to a plain &ldquo;summarize this older
+history&rdquo;. One code path, two boundaries.</p>
+
+<h4>The Redis flag, and the turn that arrives mid-compaction</h4>
+
+<p>Compaction takes a model call &mdash; a second or two, sometimes more. A user who fires the next
+question immediately would otherwise be answered from a context that is about to be replaced. The fix
+is one key:</p>
+
+<pre><code>COMPACTION_IN_FLIGHT_KEY_PREFIX = "agent:chat:compaction"   # run_registry.py:22
+COMPACTION_IN_FLIGHT_TTL_SECONDS = 180                      # :30
+    # a crash ceiling, not a deadline: the task clears the key in a `finally`,
+    # so this only matters when the worker dies mid-compaction.</code></pre>
+
+<p>A <em>separate</em> prefix from <code>agent:chat:run:*</code>, deliberately: the registry&rsquo;s
+active-run scan walks that namespace and must never trip over a compaction marker. The task sets the
+key when it starts (<code>_mark_in_flight</code>, :258) and clears it in its <code>finally</code>
+(<code>_clear_in_flight</code>, :275) &mdash; and both of those helpers swallow every Redis error,
+because a marker is an optimization and must never fail a turn.</p>
+
+<p>The read side is the mirror image, and it is the only part of this subsystem that runs while a
+user waits. <code>is_rolling_compaction_in_flight</code> (:131) answers <strong>no</strong> on any
+failure whatsoever &mdash; Redis down, no reader wired, anything &mdash; because a false &ldquo;no&rdquo;
+merely means the turn proceeds on a slightly stale context, which is a state the system already
+tolerates. Then <code>wait_for_rolling_compaction</code> (:157) polls:</p>
+
+<pre><code>COMPACTION_WAIT_CEILING_SECONDS       = 10.0   # a latency bound, not a correctness one
+COMPACTION_WAIT_POLL_INTERVAL_SECONDS = 0.25   # ~40 GETs on one key, worst case</code></pre>
+
+<p>It returns <code>True</code> only if the marker was observed <em>cleared</em> within the ceiling
+&mdash; the one case where re-reading is worth a round trip. Timeout, Redis failure, no reader: all
+<code>False</code>, all meaning &ldquo;carry on with what you have&rdquo;. The one exception it
+re-raises is <code>asyncio.CancelledError</code>: a client stop is not this function&rsquo;s to
+absorb.</p>
+
+<figure>
+<div class="fig-box">
+<div class="lane"><span class="who">turn N</span><div class="bar"><span style="left:0;width:58%;background:#3d6fd8">stream, answer, assistant write</span><span style="left:58%;width:8%;background:#2f9e6e">✓</span></div></div>
+<div class="lane"><span class="who">compaction task</span><div class="bar"><span style="left:60%;width:30%;background:#7a4fc0">re-fetch &rarr; merge (Gemini) &rarr; write</span></div></div>
+<div class="lane"><span class="who">Redis key</span><div class="bar"><span style="left:60%;width:30%;background:#d99a17">agent:chat:compaction:&lt;nonce&gt; = 1</span></div></div>
+<div class="lane"><span class="who">turn N+1</span><div class="bar"><span style="left:66%;width:24%;background:#c07f2a">status: compacting &mdash; wait &le;10s</span><span style="left:90%;width:10%;background:#3d6fd8">run</span></div></div>
+<p class="small" style="text-align:center;margin:.6rem 0 0">time &rarr;</p>
+</div>
+<figcaption>Figure 3 &mdash; a user who asks the next question immediately. Turn N+1 sees the flag,
+emits one <code>compacting</code> beat (&ldquo;이전 대화 정리 중&rdquo; in the UI), waits for the
+marker to clear, re-reads the three rolling fields, and runs on the fresh summary.</figcaption>
+</figure>
+
+<p>The wait lives inside the stream generator, after the <code>preparing</code> phase and before the
+agent runs (<code>chat.py:1283</code>) &mdash; because SSE frames only exist there, and because the
+pre-stream status beat only renders while the answer body is still empty. Three details in that
+block repay attention:</p>
+
+<ul>
+  <li>After the wait the run record is put back to <code>preparing</code> with <strong>no second
+  frame</strong>: status frames are emit-once, and a client reconnecting mid-answer must not read a
+  stale <code>compacting</code>.</li>
+  <li>The wait is the one place a turn can sit idle for seconds, so the disconnect and cancel signals
+  are re-checked immediately afterwards, before spending a model call.</li>
+  <li>The re-read, <code>_refresh_rolling_summary_state</code> (<code>chat.py:836</code>), is a full
+  detail fetch but <strong>grafts on only the three rolling fields</strong>. The fresh message list is
+  discarded on purpose: it now contains this turn&rsquo;s user message, which the agent already
+  receives separately, and re-assembling from it would hand the model the same question twice.</li>
+</ul>
+
+<div class="callout">
+<p><strong>The posture, stated once.</strong> Every branch in this subsystem &mdash; marker write,
+marker read, wait, merge, persist, re-read &mdash; degrades to &ldquo;proceed with the previous
+summary and the extra raws&rdquo;. That state is explicitly legal (the 21&ndash;29 raw over-window
+case), which is what lets every failure path be a one-liner instead of a recovery protocol. Design
+the tolerated degraded state first, and the error handling writes itself.</p>
+</div>
+
+<h3>4. The token budget &mdash; <code>apps/agent/app/chat/budget.py</code></h3>
+
+<p>A message count cannot see size. Twenty short messages and twenty pasted 사업계획서 are the same
+number. So the pre-P61 budget survives beneath the window as a second-line valve:</p>
+
+<pre><code>DEFAULT_CHAT_CONTEXT_BUDGET_TOKENS = 200_000     # budget.py:19</code></pre>
+
+<h4>Two estimators, and why the cheap one won</h4>
+
+<p><code>GeminiChatContextTokenEstimator</code> (:29) is exact &mdash; it calls Gemini&rsquo;s token
+counting endpoint. It is also a network round trip on every turn, so it is no longer the default;
+it is kept injectable for calibration work.
+<code>LocalHeuristicChatContextTokenEstimator</code> (:116) is what actually runs:</p>
+
+<pre><code>_HEURISTIC_CJK_TOKENS_PER_CHAR   = 1.0     # Hangul / Kana / CJK: ~1 token per char
+_HEURISTIC_OTHER_TOKENS_PER_CHAR = 0.25    # everything else: ~4 chars per token</code></pre>
+
+<p>The naive &ldquo;characters ÷ 4&rdquo; heuristic every tutorial teaches would under-count Korean
+by roughly a factor of four, which for this product is the whole corpus. <code>_is_cjk_char</code>
+(:100) enumerates the actual Unicode ranges &mdash; Hangul syllables, four Jamo blocks, Hiragana and
+Katakana, two CJK ideograph blocks, and the halfwidth/fullwidth forms &mdash; and the class is
+otherwise a single loop with no dependencies and no I/O. The estimate is deliberately conservative
+rather than exact: it guards a 200k threshold, not a bill.</p>
+
+<p class="small">(The corresponding operator role, <code>chat_context_token_estimation</code>, is
+labelled 채팅 컨텍스트 토큰 추정 <strong>(현재 미사용)</strong> in
+<code>operators/llm_roles.py:114</code> &mdash; the console is honest about the fact that the remote
+estimator is not on the hot path any more.)</p>
+
+<p>What gets measured is <code>render_chat_context_preview</code> (:216): a flat text rendering of
+the current user message, the verbatim messages, the selected content and the retrieval results. Not
+the real prompt &mdash; a faithful stand-in for it, cheap to build.</p>
+
+<h4>Where it trips: the tail of <code>_build_checkpointed_chat_history</code></h4>
+
+<p>The estimate is taken on the <strong>windowed</strong> context, never the fetched one. The code
+even rebuilds a temporary context to make that true, and says why:</p>
+
+<pre><code>windowed_context = (
+    assembled_context
+    if verbatim_messages == assembled_context.verbatim_messages
+    else replace(assembled_context, verbatim_messages=verbatim_messages)
+)
+# the route keeps history_message_limit=None, so pre-watermark messages are
+# still in assembled_context and would otherwise be counted TWICE --
+# once as raws, once inside the summary.</code></pre>
+
+<p>Then four branches, in order (<code>agent.py:795&ndash;843</code>):</p>
+
+<table>
+<tr><th>Condition</th><th>What the model gets</th></tr>
+<tr><td>the estimator itself raised</td><td>persisted summary + the newest <code>DEFAULT_CHAT_HISTORY_MESSAGE_LIMIT = 6</code> messages &mdash; the conservative fallback</td></tr>
+<tr><td><code>estimated_tokens &le; 200_000</code> (the overwhelmingly common case)</td><td>persisted summary + the whole window. <strong>No LLM call at all.</strong></td></tr>
+<tr><td>over budget, but only &le; 6 raws exist</td><td>everything anyway, plus a log line: there is nothing left to compact</td></tr>
+<tr><td>over budget with more than 6 raws</td><td><code>build_rolling_merged_history_summary(previous_summary=persisted_summary, evicted_messages=window[:-6])</code> &rarr; summary + the newest 6</td></tr>
+</table>
+
+<p>Two things to notice about that last branch. First, it <em>rolls the persisted summary
+forward</em> rather than recomputing from scratch &mdash; the same merge function the background task
+uses, so the valve can never throw away work the task already paid for. Second, and easy to miss:
+<strong>the inline merge is not persisted.</strong> Nothing in <code>_build_checkpointed_chat_history</code>
+writes to Django; only the background task does. So the valve is a per-turn repair that runs again on
+the next turn if the pathological message is still inside the window &mdash; correct, and honest about
+which component owns the write. If the merge itself fails, the code falls back to the persisted
+summary, because dropping it would hand the model strictly <em>less</em> context than it already
+had.</p>
+
+<h3>5. Recall &mdash; <code>apps/agent/app/chat/session_search_tool.py</code></h3>
+
+<h4>First, why the route fetches everything</h4>
+
+<p><code>build_assembled_chat_context</code> (<code>chat/context.py:53</code>) takes a
+<code>history_message_limit</code> and slices the tail off the history when it is set. The default is
+6. The chat route passes <code>None</code> (<code>chat.py:463</code>), i.e. <em>give me the whole
+conversation</em>.</p>
+
+<p>That looks like a contradiction &mdash; why fetch 90 messages to send 13? It is the enabling
+decision for everything in this section. The windowing happens <em>later</em>, at checkpoint build, so
+between the fetch and the model call there is a moment where the full session sits in memory,
+already parsed, already carrying every message&rsquo;s citations. Two features are built entirely out
+of that fact, and neither needs a new endpoint, a query or a round trip: the recall tool here, and the
+cited ledger below.</p>
+
+<p class="small">(<code>DEFAULT_CHAT_RETRIEVAL_LIMIT = 4</code> in the same module is a different
+kind of constant &mdash; its own comment marks it &ldquo;<strong>NOT</strong> the live per-call
+retrieval cap &hellip; quarantined, not deleted&rdquo;, kept only because two test suites depend on
+it. The real cap is operator-tunable at runtime. Reading a constant is not the same as reading the
+behaviour.)</p>
+
+<h4>The tool</h4>
+
+<p><code>search_conversation_history</code> (:351) is a LangChain tool bound on every default-chat
+turn. Its docstring <em>is</em> its API &mdash; the model reads exactly this Korean text when deciding
+whether to call it:</p>
+
+<pre><code>지금 이 대화에서 앞서 오간 사용자·어시스턴트 메시지를 검색합니다.
+
+오래된 대화는 대화 요약에만 남아 있을 수 있습니다.
+사용자가 앞선 대화를 가리키면(예: "내가 아까 말했잖아", "아까 그거",
+"전에 얘기한 그 브랜드") 기억으로 답하지 말고 이 도구로 원문을 찾으세요.</code></pre>
+
+<p>Mechanically it is the least clever component on this page, and that is the design: a substring
+scan over a list already in memory. No embeddings, no database, no model call, no network.</p>
+
+<div class="ladder">
+  <div class="rung"><span class="n">1</span><span><code>_resolve_keywords</code> (:173) lowercases the query and splits it on whitespace, capped at <code>MAX_SESSION_SEARCH_KEYWORDS = 6</code>. <strong>Substring</strong> matching, not tokenization &mdash; because Korean particles mean the user&rsquo;s earlier wording is rarely an exact token match (&ldquo;카페&rdquo; vs &ldquo;카페를&rdquo;), and a substring absorbs the particle.</span></div>
+  <div class="rung"><span class="n">2</span><span><code>_scrub_message_content</code> (:145) cleans each message <em>before</em> searching it (see below).</span></div>
+  <div class="rung"><span class="n">3</span><span><code>_collect_matches</code> (:211) records, per matching message, how many distinct keywords hit, its position, and <code>messages_ago</code> &mdash; counted so that the newest stored message is 1.</span></div>
+  <div class="rung"><span class="n">4</span><span><code>_build_excerpt</code> (:196) cuts a <code>SESSION_SEARCH_EXCERPT_CHARS = 300</code> window centred on the earliest hit, with ellipses.</span></div>
+  <div class="rung"><span class="n">5</span><span><code>_select_matches</code> (:256) keeps the strongest <code>MAX_SESSION_SEARCH_MATCHES = 5</code>, then emits them oldest-first.</span></div>
+</div>
+
+<p>Three of those steps encode a ruling that is worth more than the mechanism.</p>
+
+<p><strong>Scrub before searching, not before emitting.</strong> Past message text can carry visible
+<code>[3]</code> citation markers, internal <code>[post:51927]</code> markers, and (in old
+conversations) a prior-turn annotation. All of it is stripped up front, so &ldquo;an excerpt window
+can never be cut around a marker that is about to disappear &mdash; and no unscrubbed byte has a path
+to the output at all&rdquo;. The tool echoes conversation text back into the model&rsquo;s context; if
+a post id survived that trip, the P51 this-turn citation guarantee would have a hole in it. The
+guidance string sent alongside the results says the same thing to the model in Korean: 창플 문서가
+아니므로 인용 마커는 붙이지 마세요 &mdash; this is not a document, do not cite it.</p>
+
+<p><strong>Bounded output.</strong> Five matches × 300 characters, with
+<code>SESSION_SEARCH_MAX_TOTAL_EXCERPT_CHARS</code> asserted by a test. Otherwise a deliberately broad
+query (&ldquo;아&rdquo;) would drag the whole compacted prefix back into the context and undo exactly
+the saving compaction just made.</p>
+
+<p><strong>Ties break to the OLDEST.</strong> This one was flipped after live testing. The newest
+10&ndash;19 messages are <em>always</em> raw in the model&rsquo;s window, so the tool exists for the
+older, compacted-away specifics. On a one-word query every match ties on keyword count, and the
+tie-break alone decided the five slots &mdash; handing back five recent mentions, including the
+user&rsquo;s own question, and pushing out the original one &ldquo;아까&rdquo; actually meant.
+Preferring the oldest also subsumes a &ldquo;prefer pre-watermark matches&rdquo; rule, since every
+compacted-away message is by definition older than every retained one &mdash; which is why this tool
+never reads the watermark at all.</p>
+
+<figure>
+<div class="fig-box">
+<p class="small"><strong>The same session, two visibilities.</strong> Watermark on #10, 23 messages
+stored, the user asks &ldquo;아까 말한 그 임대료 얼마였지?&rdquo; and the answer is in message 4.</p>
+<div class="strip">
+<div class="cell gone">1</div><div class="cell gone">2</div><div class="cell gone">3</div><div class="cell gone">4</div><div class="cell gone">5</div><div class="cell gone">6</div><div class="cell gone">7</div><div class="cell gone">8</div><div class="cell gone">9</div><div class="cell wmk">10</div><div class="cell raw">11</div><div class="cell raw">12</div><div class="cell raw">13</div><div class="cell raw">14</div><div class="cell raw">15</div><div class="cell raw">16</div><div class="cell raw">17</div><div class="cell raw">18</div><div class="cell raw">19</div><div class="cell raw">20</div><div class="cell raw">21</div><div class="cell raw">22</div><div class="cell raw">23</div>
+</div>
+<p class="small" style="margin-top:.9rem"><b>the model&rsquo;s context</b> &mdash; summary of 1&ndash;10, then #11&ndash;#23 verbatim. Message 4 is prose in a paragraph.<br>
+<b><code>search_conversation_history</code></b> &mdash; scans all 23, finds &ldquo;임대료&rdquo; in
+message 4, returns a scrubbed 300-character excerpt with <code>messages_ago: 20</code>.</p>
+</div>
+<figcaption>Figure 4 &mdash; the window and the tool disagree by design. What the model no longer
+sees, it can still be asked to find.</figcaption>
+</figure>
+
+<h4>The return type is a <code>Command</code>, and that is the budget exemption</h4>
+
+<p>The tool returns a LangGraph <code>Command</code> (:311) whose update carries exactly two keys:</p>
+
+<pre><code>update = {"messages": [ToolMessage(content=json.dumps(payload, ensure_ascii=False), ...)]}
+if status == "ok":
+    update[CHAT_AGENT_SESSION_RECALL_STATE_KEY] = True   # "session_recall_used"
+# NOTE: no `retrieval_call_count` key, EVER.
+# That omission is the entire budget exemption, and it is pinned by a test.</code></pre>
+
+<p>Recall #5: the 4-call search budget is enforced by each retrieval tool incrementing
+<code>retrieval_call_count</code> in the shared state. A tool that never writes that channel is
+exempt &mdash; not by a flag or an <code>if</code>, but by the shape of what it returns.</p>
+
+<p>The <code>session_recall_used</code> marker exists for a subtler reason. A recall answer is
+grounded in the conversation but cites no documents, so the ungrounded-memory gate from #5
+(&ldquo;you answered from memory with no sources &mdash; refuse&rdquo;) used to swallow perfectly good
+recall answers and replace them with a canned refusal &mdash; observed twice on the live stack. The
+marker is the one bit the gate reads to know better. Two details in how it is written are the actual
+lesson: it is set only on <code>status: "ok"</code> (a blank query, an empty result and an unavailable
+context all deliver no grounding, so those turns stay under the gate), and it is written
+<code>True</code> and never <code>False</code>, so a second, empty-handed call cannot un-mark a turn
+that already recalled something.</p>
+
+<p>Finally, four <code>status</code> values, each with its own Korean guidance line, because the
+difference matters to the model: <code>ok</code>, <code>empty_results</code> (&ldquo;the phrase is not
+in this conversation &mdash; ask, do not invent&rdquo;), <code>invalid_query</code>, and
+<code>unavailable</code> (&ldquo;I could not check&rdquo;, which is <em>not</em> the same claim as
+&ldquo;it never happened&rdquo;). And the whole body is wrapped in a bare
+<code>except Exception</code> that degrades to <code>unavailable</code>: the tool-call middleware
+turns any tool exception into a failed turn, and a memory lookup must never be able to do that.</p>
+
+<h3>6. Citations across turns &mdash; the ledger and the markers</h3>
+
+<p>One thing survives compaction that is not text: the record of which documents this session has
+already cited. Two modules own it.</p>
+
+<h4><code>cited_ledger.py</code> &mdash; what this session has cited</h4>
+
+<p>Built from the same in-memory full history, with the same zero-I/O posture,
+<code>build_session_cited_ledger_from_messages</code> (:292) walks every message&rsquo;s
+<code>cited_documents</code> / <code>cited_content</code> rows &mdash; the citation side-tables from
+#4 &mdash; and accumulates a <code>SessionCitedLedger</code> (:131): one entry per id, in
+<strong>first-cited order</strong>, carrying the title, the first citation&rsquo;s <code>[k]</code>
+slot, how many messages cited it, and how many messages ago it was last cited. Three rulings inside
+it are the interesting part:</p>
+
+<ul>
+  <li><strong>Posts and contents are separate namespaces.</strong> A 창플 카페 post id and a published
+  미라클 content id are never the same kind of thing, so an id collision across the two is not a
+  collision at all.</li>
+  <li><strong>Titles take the most recent non-empty value; positions keep the first.</strong> A title
+  backfilled later is a better label, but a later blank must never erase a good earlier one.</li>
+  <li><strong>Metadata only.</strong> No bodies, and no guarantee the document is still eligible;
+  a caller that wants either must re-fetch by id.</li>
+</ul>
+
+<p>And the property that ties it to this page: <em>the ledger is unaffected by the window.</em>
+Because compaction happens later, at checkpoint build, the ledger still sees citations from turns the
+rolling window has already summarized away. The session&rsquo;s citation history outlives the
+session&rsquo;s visible history. Its consumer is the cited retrieval arm,
+<code>cited_retrieval_tool.search_cited_documents</code> &mdash; a tool that re-materializes an
+already-cited document so it becomes citable <em>again</em> this turn. That arm is
+explainer&nbsp;#7&rsquo;s
+subject; here it is a surface with one relevant property, the same one as recall: it writes no
+<code>retrieval_call_count</code>, so it too is budget-exempt.</p>
+
+<h4><code>citations.py</code> &mdash; two marker vocabularies</h4>
+
+<p>There are two kinds of citation marker in this system and confusing them is the source of a whole
+family of bugs:</p>
+
+<table>
+<tr><th></th><th>Internal</th><th>Visible</th></tr>
+<tr><td>form</td><td><code>[post:51927]</code>, <code>[content:19]</code>, and the grouped/shorthand variants <code>[post:5, post:13]</code> / <code>[post:5,13]</code></td><td><code>[1]</code>, <code>[2]</code> &hellip;</td></tr>
+<tr><td>who writes it</td><td>the model, following the system prompt</td><td><code>render_citation_markers</code> (:348)</td></tr>
+<tr><td>who sees it</td><td>nobody &mdash; it is rewritten before the user or the database ever sees it</td><td>the user; the number is also the citation&rsquo;s position in the ordered list the web renders</td></tr>
+</table>
+
+<p><code>render_citation_markers</code> assigns sequential numbers in first-mention order across
+<em>one</em> numbering space shared by both corpora, so <code>[content:19][post:51927]</code> renders
+<code>[1][2]</code>. Ids that are not in the turn&rsquo;s valid set are <strong>dropped</strong>, and
+when a whole group is dropped the whitespace that introduced it is dropped too &mdash; otherwise the
+answer ships an orphan &ldquo;&nbsp;.&rdquo;.</p>
+
+<p>Doing this <em>while streaming</em> is the interesting engineering. Tokens arrive in arbitrary
+chunks, so <code>[post:</code> can end one chunk and <code>51927]</code> begin the next.
+<code>CitationMarkerStreamParser</code> (:535) holds back an unterminated marker in a pending buffer
+and emits everything before it; <code>_consume_internal_citation_marker</code> (:231) is a small
+hand-written parser returning <code>complete</code> / <code>partial</code> / <code>invalid</code>, and
+the two prefixes were chosen to differ in their first character so a partial match is never
+ambiguous. Trailing spaces get their own second buffer, so that a marker arriving on the next chunk
+can still consume the space that introduced it. <code>InternalCitationStripper</code> (:499) is the
+same chunk-boundary machinery with the opposite job &mdash; used where citations are not allowed at
+all, such as the 컨설팅 follow-up stream.</p>
+
+<h4>What a prior turn&rsquo;s citation looks like to the model</h4>
+
+<p>The last piece closes the loop with #5. When the window keeps a message that carried citations,
+<code>_format_message_context</code> (<code>agent.py:657</code>) rewrites it: the visible markers are
+stripped, and the documents come back as an annotation with a source label and a title &mdash; and
+<strong>no id</strong>:</p>
+
+<pre><code>(이전 턴 참고 자료, 인용 불가: 창플 카페 "평상집 임대료 계약 전에 확인할 것들")</code></pre>
+
+<p>The label constant is <code>PRIOR_TURN_REFERENCE_ANNOTATION_PREFIX</code>
+(<code>citations.py:45</code>), defined next to the stripper that removes it so the two can never
+drift. The comment records what the previous form cost: it carried
+<code>post:&lt;id&gt;="&lt;title&gt;"</code> pairs, which was &ldquo;both the standing invitation to
+cite out-of-map ids and, copied verbatim into an answer, the visible leak the operator
+reported&rdquo;. The rule it enforces is P51&rsquo;s: <strong>citation is a this-turn property.</strong>
+A document is citable only if this turn&rsquo;s retrieval put it in this turn&rsquo;s document map. A
+compacted-away citation, a citation from message 4, a citation the model remembers &mdash; none of
+them are citable. The only routes back are retrieving the document again, or asking the cited arm to
+re-materialize it. The gate that enforces the rule at answer time belongs to
+explainer&nbsp;#11.</p>
+
+<h3>Putting it together: what the model sees on message ninety</h3>
+
+<p>The question the Background opened with now has a mechanical answer. On a session with 90 stored
+messages and a watermark on message 80:</p>
+
+<div class="kv">
+<ul>
+<li><b>system prompt</b> &mdash; the cached Korean rulebook, then <code>[Conversation summary]</code>
+with the merged prose covering messages 1&ndash;80, then <code>[Current selected content]</code>.</li>
+<li><b>messages</b> &mdash; <code>HumanMessage</code>/<code>AIMessage</code> for messages 81&ndash;90,
+verbatim except that any citations they carried are now id-free annotations, then this turn&rsquo;s
+question.</li>
+<li><b>available on request</b> &mdash; <code>search_conversation_history</code> over all 90, capped
+and scrubbed, free; <code>search_cited_documents</code> over every document the session ever cited,
+also free; and up to 4 fresh retrieval calls into the corpus.</li>
+<li><b>afterwards</b> &mdash; if this turn pushed the raw count to 20, a detached task merges
+messages 81&ndash;90 into the summary and moves the bookmark to 90, and the next turn starts from a
+window of one.</li>
+</ul>
+</div>
+
+<p>And what the <em>user</em> sees is unchanged throughout: a reload renders every one of the 90
+messages, because Django stored all of them (#4). Compaction only ever narrows what the model
+reads &mdash; never what the product remembers.</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p class="small">Five questions on the machinery above. Click an answer to see whether it is right and
+why.</p>
+
+<div class="q" id="q1">
+<p><strong>1.</strong> A session has 41 stored messages and a watermark on message 10 &mdash; 31
+post-watermark raws, because an earlier compaction job was lost. The next turn finishes and a new
+compaction runs. How many messages does <code>plan_rolling_compaction</code> evict?</p>
+<button class="opt" data-correct="false">10 &mdash; one batch per run, so it takes three more turns to catch up</button>
+<button class="opt" data-correct="true">20 &mdash; the slice expands by whole batches until the remainder is back under 20</button>
+<button class="opt" data-correct="false">21 &mdash; everything above the 10-message floor</button>
+<button class="opt" data-correct="false">0 &mdash; an over-window session is an error state and is left alone</button>
+<p class="why" hidden>The catch-up loop runs <code>while remaining &ge; window_limit</code>: 31 &ge; 20
+evicts 10 (remaining 21), 21 &ge; 20 evicts 20 (remaining 11), and 11 &lt; 20 stops. One task run, one
+model call, every missed boundary cleared &mdash; which is why a lost job needs no retry queue.</p>
+</div>
+
+<div class="q" id="q2">
+<p><strong>2.</strong> The watermark is stored as <code>(summarized_through_message_id,
+summarized_through_created_at)</code> rather than as a count of summarized messages. What breaks if
+you store the count instead?</p>
+<button class="opt" data-correct="false">Nothing functionally &mdash; a count is smaller and the two are equivalent</button>
+<button class="opt" data-correct="true">Retract-tail deletes a <code>[user, assistant]</code> pair, and every count-based boundary silently shifts</button>
+<button class="opt" data-correct="false">Counts overflow on very long conversations</button>
+<button class="opt" data-correct="false">The model cannot be told a number, only a message id</button>
+<p class="why" hidden>An owner can delete the last turn to redo it (#4). With a count, &ldquo;the first
+10 are summarized&rdquo; starts pointing at different messages after any deletion. An identity
+compared as <code>(created_at, id)</code> keeps ordering correctly even when its own row is gone
+&mdash; which is also why it is a bare UUID and not a foreign key.</p>
+</div>
+
+<div class="q" id="q3">
+<p><strong>3.</strong> A user sends the next question while a compaction for that session is still
+running. What does the turn do?</p>
+<button class="opt" data-correct="false">Fails with a 409 until the compaction finishes</button>
+<button class="opt" data-correct="false">Awaits the compaction task directly, so the two can never disagree</button>
+<button class="opt" data-correct="true">Emits one <code>compacting</code> status frame, polls the Redis marker for at most ~10s, then re-reads only the three rolling fields &mdash; and proceeds either way</button>
+<button class="opt" data-correct="false">Cancels the compaction, since a live turn outranks a background job</button>
+<p class="why" hidden>The wait is bounded (<code>COMPACTION_WAIT_CEILING_SECONDS = 10.0</code>, 0.25s
+poll) and never blocking in the strong sense: a timeout, a Redis failure or a failed re-read all fall
+back to the pre-wait context, which is the legal over-window state. The task is
+<em>detached</em> &mdash; nothing awaits it, and the turn only ever observes a Redis key.</p>
+</div>
+
+<div class="q" id="q4">
+<p><strong>4.</strong> <code>search_conversation_history</code> can find a phrase from message 4 of a
+90-message session, even though the model&rsquo;s context only holds the summary plus messages
+81&ndash;90. How, given that the tool does zero I/O?</p>
+<button class="opt" data-correct="false">It searches the rolling summary text, which mentions everything important</button>
+<button class="opt" data-correct="false">It issues its own query against the conversations table over the read bridge</button>
+<button class="opt" data-correct="true">The route assembles context with <code>history_message_limit=None</code>, so the full history is already in memory; windowing happens later, at checkpoint build</button>
+<button class="opt" data-correct="false">It re-fetches the conversation from Django with the caller&rsquo;s bearer token</button>
+<p class="why" hidden>Fetch everything, send a slice. The full session sits in
+<code>AssembledChatContext.verbatim_messages</code> the whole time, so the tool is a substring scan
+over a list already in hand &mdash; and so is the cited ledger. That is also why the tool costs
+nothing against the 4-call search budget: it returns a <code>Command</code> that never writes
+<code>retrieval_call_count</code>.</p>
+</div>
+
+<div class="q" id="q5">
+<p><strong>5.</strong> Message 85 of a session cited a 창플 카페 post, and message 85 is still inside
+the verbatim window. What does the model see of that citation this turn?</p>
+<button class="opt" data-correct="false">The original <code>[post:51927]</code> marker, so it can cite the same document again</button>
+<button class="opt" data-correct="false">The rendered <code>[3]</code> marker plus the document&rsquo;s stored body</button>
+<button class="opt" data-correct="true">An id-free annotation &mdash; <code>(이전 턴 참고 자료, 인용 불가: 창플 카페 "&lt;title&gt;")</code> &mdash; and nothing citable</button>
+<button class="opt" data-correct="false">Nothing at all; messages with citations are excluded from the rebuilt history</button>
+<p class="why" hidden>Citation is a <em>this-turn</em> property. The rebuilt thread carries Human/AI
+messages only, so no prior tool result, body or post id survives, and
+<code>_format_message_context</code> rewrites a cited message into a source label plus a title marked
+인용 불가. The routes back to citability are retrieving the document again this turn, or asking the
+cited arm to re-materialize it.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Files walked on this page:</strong>
+<span class="files"><code>apps/agent/app/chat/rolling_window.py</code>,
+<code>apps/agent/app/chat/rolling_compaction.py</code>,
+<code>apps/agent/app/chat/compaction.py</code>, <code>apps/agent/app/chat/budget.py</code>,
+<code>apps/agent/app/chat/context.py</code>, <code>apps/agent/app/chat/cited_ledger.py</code>,
+<code>apps/agent/app/chat/citations.py</code>,
+<code>apps/agent/app/chat/session_search_tool.py</code>,
+<code>apps/agent/app/chat/_text.py</code>, <code>apps/agent/app/chat/run_registry.py</code>,
+<code>apps/agent/app/chat/backend.py</code>, <code>apps/agent/app/chat/agent.py</code>,
+<code>apps/agent/app/api/routes/chat.py</code>, <code>apps/agent/app/prompts.py</code>,
+<code>apps/agent/app/llm_config.py</code>;
+<code>apps/backend/conversations/rolling_summary.py</code>,
+<code>apps/backend/conversations/{models,views,serializers,urls}.py</code>,
+<code>apps/backend/operators/llm_roles.py</code>.</span></p>
+
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5 A chat turn end
+to end: the LangChain agent, streaming, cancel, and replay</a>. Next is #7, retrieval &mdash; the RAG
+read path from query plan to ranked citations, which opens the three search tools this page and #5
+have both been treating as surfaces. Earlier in Part B:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4
+Conversations as the system of record</a>.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
