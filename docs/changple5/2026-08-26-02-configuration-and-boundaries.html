@@ -1,0 +1,1392 @@
+<!--kb
+title: "Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config"
+date: 2026-08-26
+tags:
+  - changple5
+  - configuration
+  - postgres-schemas
+  - auth-boundaries
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1b1b1b; --muted:#5d6672; --rule:#d9dee5;
+          --accent:#2f6f4f; --accent-soft:#eef6f1; --warn:#8a5a00; --warn-soft:#fdf5e6;
+          --code-bg:#f4f5f7; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e8e8e8; --muted:#a7b0bb; --rule:#39414c; --accent:#7fd0a5;
+            --accent-soft:#16241d; --warn:#e6b25c; --warn-soft:#2a2214; --code-bg:#1d2026; }
+  }
+  body { max-width: 48rem; margin: 2.5rem auto 5rem; padding: 0 1.1rem; color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; font-size: 17px; }
+  h1 { font-size: 1.95rem; line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h2 { font-size: 1.4rem; margin: 2.6rem 0 .7rem; padding-top: .9rem; border-top: 1px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.9rem 0 .5rem; }
+  h4 { font-size: .98rem; margin: 1.4rem 0 .35rem; color: var(--muted); text-transform: uppercase;
+       letter-spacing: .06em; }
+  p, li { overflow-wrap: break-word; }
+  .lede { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  nav.toc { background: var(--accent-soft); border: 1px solid var(--rule); border-radius: 8px;
+            padding: .8rem 1rem; margin: 1.6rem 0 2rem; }
+  nav.toc ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .15rem 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em;
+         background: var(--code-bg); padding: .08em .3em; border-radius: 4px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg);
+        padding: .8rem .9rem; border-radius: 7px; border: 1px solid var(--rule);
+        font-size: .84rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft);
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 0 6px 6px 0; }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag { display: block; font-size: .78rem; text-transform: uppercase;
+                  letter-spacing: .08em; color: var(--muted); margin-bottom: .3rem; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .87rem; color: var(--muted); margin-top: .5rem; text-align: center; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1.1rem 0; }
+  th, td { border: 1px solid var(--rule); padding: .45rem .55rem; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  .path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; }
+  .ladder { list-style: none; padding: 0; margin: 1.1rem 0; }
+  .ladder li { border: 1px solid var(--rule); border-radius: 6px; padding: .5rem .75rem;
+               margin: .35rem 0; background: var(--code-bg); }
+  .ladder li .rung { font-weight: 600; }
+  .ladder li .note { color: var(--muted); font-size: .9em; display: block; }
+  .tl { list-style: none; padding: 0; margin: 1.2rem 0; border-left: 3px solid var(--rule);
+        padding-left: 1rem; }
+  .tl li { margin: .55rem 0; position: relative; }
+  .tl li::before { content: ""; position: absolute; left: -1.42rem; top: .55rem; width: .55rem;
+                   height: .55rem; border-radius: 50%; background: var(--accent); }
+  .tl .t { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           font-size: .85em; color: var(--accent); font-weight: 600; }
+  .q { border: 1px solid var(--rule); border-radius: 8px; padding: .85rem 1rem; margin: 1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+            cursor: pointer; border: 1px solid var(--rule); border-radius: 6px;
+            background: var(--code-bg); color: inherit; font: inherit; font-size: .95rem; }
+  .q .opt:hover { border-color: var(--accent); }
+  .q .opt.correct { background: #d6f5d6; color: #123; border-color: #4a7; }
+  .q .opt.incorrect { background: #f7d6d6; color: #311; border-color: #c66; }
+  .q .why { margin: .55rem 0 0; font-size: .93em; color: var(--muted); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+           font-size: .9rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config</h1>
+<p class="lede">Explainer #2 of the changple5 builder&rsquo;s curriculum. How each process learns
+who it is, what it is allowed to touch, and which knobs it can change without a redeploy.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<p>The previous explainer,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">Big picture: three apps,
+one Postgres, one Redis, and how a request travels</a>, drew the shape of the system: a Next.js
+front end, a Django backend behind <code>/api/</code>, a FastAPI agent behind
+<code>/agent-api/</code>, one Postgres database split into two schemas, and one Redis split into
+three logical databases. It stopped at the edge of four questions and promised them to this page:</p>
+
+<ul>
+  <li>Where does a process get its <strong>configuration</strong> &mdash; database host, API keys,
+      timeouts, feature flags &mdash; and when is it allowed to change?</li>
+  <li>How does each app <strong>pin itself to its own schema</strong>, and how does one of them
+      read across into the other&rsquo;s?</li>
+  <li>What exactly do the <strong>two shared secrets</strong> guard, and which arrow carries which?</li>
+  <li>How can the operator change a model id in a web form and have a <em>running</em> Python
+      process pick it up thirty seconds later, with no deploy?</li>
+</ul>
+
+<p>Those four are really one question asked four ways: <em>what does a process know about itself,
+where did it learn it, and how stale is it allowed to be?</em></p>
+
+<div class="callout">
+<span class="tag">Skip this box if you already know it</span>
+<p><strong>Environment variables</strong> are a set of <code>NAME=value</code> pairs the operating
+system hands to a program when it starts. They are the standard way to give a program a secret or an
+address without writing it into the source code: the code says &ldquo;read <code>DATABASE_PASSWORD</code>
+from the environment&rdquo;, and the password lives outside the repository. A <strong>dotenv file</strong>
+(here <code class="path">.dev.env</code> for development, <code class="path">.prod.env</code> on the
+server) is just a text file of those pairs that some tool loads for you. The critical property, which
+this page comes back to twice: the environment is handed over <em>once, at process start</em>. Nothing
+in the operating system pushes an update to a running process when you edit the file.</p>
+</div>
+
+<div class="callout">
+<span class="tag">Skip this box if you already know it</span>
+<p>A PostgreSQL <strong>schema</strong> is a namespace inside one database &mdash; a folder for tables.
+Two schemas can each hold a table called <code>documents</code> without colliding, because their full
+names are <code>backend.documents</code> and <code>agent.documents</code>. When SQL mentions a bare
+table name, Postgres resolves it through the connection&rsquo;s <strong>search_path</strong>, an
+ordered list of schemas to look in &mdash; the same idea as <code>PATH</code> for shell commands. A
+<strong>role</strong> is a Postgres login (a user). Roles are given <strong>grants</strong>:
+permission to see a schema, to <code>SELECT</code> from a table, to write to it. changple5 uses these
+three ideas together to build a wall down the middle of one database.</p>
+</div>
+
+<div class="callout">
+<span class="tag">Skip this box if you already know it</span>
+<p>A <strong>JWT</strong> (JSON Web Token) is a small blob of JSON &mdash; here things like
+<code>user_id</code>, <code>exp</code>, <code>token_type</code> &mdash; plus a signature. With the
+<code>HS256</code> algorithm the signature is an HMAC computed with a <em>shared secret</em>: whoever
+holds the secret can both mint tokens and verify them. That is why a JWT lets one service trust
+another service&rsquo;s claim about who the caller is without a database lookup or a network round
+trip &mdash; and why the secret is the whole boundary. This page covers only <em>which</em> secret
+guards <em>which</em> arrow; explainer #3 covers login, minting and entitlements.</p>
+</div>
+
+<p><strong>What this page does not cover.</strong> Login flows, token minting and entitlements belong
+to explainer #3. The prompt-injection guard, session lockdown and the trial caps belong to #11. The
+operator console&rsquo;s <em>writer</em> side &mdash; the forms, serializers and permissions behind
+<code class="path">/operator/settings</code> &mdash; belongs to #17. Here we stay on the reading side
+and on the boundaries themselves.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>One file, two readers, one habit</h3>
+
+<p>Both Python apps start the same way: find a shared env file, read it, and freeze what they found
+into an object. They do it with different libraries &mdash; Django&rsquo;s <code>django-environ</code>
+on one side, <code>pydantic-settings</code> on the other &mdash; but the resolution rule is written
+twice, deliberately identically: <em>the file named by <code>CHANGPLE_ENV_FILE</code>, or
+<code>.dev.env</code>, at the workspace root; plus an optional per-app <code class="path">.env</code>.</em></p>
+
+<figure>
+<svg viewBox="0 0 660 260" role="img" aria-label="One env file read by two apps into two settings objects">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/>
+    </marker>
+  </defs>
+  <rect x="20" y="100" width="150" height="62" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="95" y="125" text-anchor="middle" font-size="13" font-family="monospace" fill="#1b1b1b">.dev.env</text>
+  <text x="95" y="145" text-anchor="middle" font-size="11" fill="#5d6672">(or .prod.env)</text>
+
+  <line x1="170" y1="118" x2="252" y2="62" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="170" y1="145" x2="252" y2="200" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="258" y="24" width="180" height="76" rx="8" fill="#f4f5f7" stroke="#7b8794"/>
+  <text x="348" y="46" text-anchor="middle" font-size="12.5" fill="#1b1b1b">Django backend</text>
+  <text x="348" y="65" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#5d6672">environ.Env.read_env()</text>
+  <text x="348" y="82" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#5d6672">module-level env(...)</text>
+
+  <rect x="258" y="166" width="180" height="76" rx="8" fill="#f4f5f7" stroke="#7b8794"/>
+  <text x="348" y="188" text-anchor="middle" font-size="12.5" fill="#1b1b1b">FastAPI agent</text>
+  <text x="348" y="207" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#5d6672">Settings(BaseSettings)</text>
+  <text x="348" y="224" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#5d6672">@lru_cache get_settings()</text>
+
+  <line x1="438" y1="62" x2="500" y2="62" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="438" y1="204" x2="500" y2="204" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="506" y="34" width="132" height="56" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="572" y="58" text-anchor="middle" font-size="12" fill="#1b1b1b">settings module</text>
+  <text x="572" y="76" text-anchor="middle" font-size="11" fill="#5d6672">frozen at import</text>
+
+  <rect x="506" y="176" width="132" height="56" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="572" y="200" text-anchor="middle" font-size="12" fill="#1b1b1b">Settings object</text>
+  <text x="572" y="218" text-anchor="middle" font-size="11" fill="#5d6672">frozen by the cache</text>
+</svg>
+<figcaption>Figure 1. Two libraries, one resolution rule &mdash; and, at the right-hand edge, the
+same consequence: whatever was in the environment at start-up is what the process believes for the
+rest of its life.</figcaption>
+</figure>
+
+<p>That right-hand edge is the load-bearing part. In the agent it is explicit:
+<code>get_settings()</code> is wrapped in <code>@lru_cache</code>, so the <code>Settings</code> object
+is built exactly once per process and every later call gets the same instance. In Django it is
+implicit but identical: <code class="path">settings.py</code> is a module, its <code>env(...)</code>
+calls run at import time, and a module is imported once. Editing <code class="path">.dev.env</code>
+while the stack is up changes nothing anywhere until the process restarts.</p>
+
+<p>That is not a defect &mdash; it is what you want for a database password. It becomes a problem the
+moment a human wants to change something <em>while the system is serving traffic</em>: which Gemini
+model the chat agent uses, how many documents a search hands the model, whether a particular brand&rsquo;s
+posts are quoted. Those knobs cannot live in the frozen object. changple5&rsquo;s answer is the
+pattern this page builds up to.</p>
+
+<h3>Three kinds of knob</h3>
+
+<p>Sorting every setting in the repo into three buckets makes the rest of the page easy to read:</p>
+
+<table>
+  <thead><tr><th>Kind</th><th>Lives in</th><th>Changes when</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Structural</strong></td><td>env file &rarr; process env</td><td>the process restarts</td>
+        <td><code>DATABASE_PASSWORD</code>, <code>JWT_SHARED_SECRET</code></td></tr>
+    <tr><td><strong>Operator-live (snapshot)</strong></td><td>a Django-owned table, read by the agent
+        on a TTL snapshot</td><td>within ~30 s of the operator saving the form</td>
+        <td>a role&rsquo;s model id, <code>max_tool_results</code></td></tr>
+    <tr><td><strong>Operator-live (predicate)</strong></td><td>a Django-owned table, joined straight
+        into the query</td><td>on the very next query</td>
+        <td>brand / branch <code>reference_enabled</code></td></tr>
+  </tbody>
+</table>
+
+<p>The third row is the interesting one. It is not cached at all: the toggle state is a
+<code>LEFT JOIN</code> inside the retrieval SQL, so flipping a brand off takes effect immediately and
+is instantly reversible. But that creates a second-order problem &mdash; the <em>ranked results</em>
+of a search are cached in Redis, and a cached result computed under the old toggle state would keep
+being served. The fix is a small hash of the disabled-id set mixed into the cache key. We will walk
+it in the Code section; it is the neatest idea on this page.</p>
+
+<h3>The wall down the middle of the database</h3>
+
+<p>One Postgres database, two schemas, two roles, and a deliberately asymmetric set of grants. Django
+owns <code>backend</code> and may do anything in it. The agent owns <code>agent</code> (its LangGraph
+checkpoints and its pgvector chunk tables) and may do anything <em>there</em> &mdash; plus
+<code>SELECT</code>, and only <code>SELECT</code>, on Django&rsquo;s schema.</p>
+
+<figure>
+<svg viewBox="0 0 660 250" role="img" aria-label="Two roles, two schemas, and a one-way read bridge">
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f6f4f"/>
+    </marker>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/>
+    </marker>
+  </defs>
+  <rect x="18" y="18" width="624" height="214" rx="10" fill="none" stroke="#d9dee5" stroke-dasharray="5 4"/>
+  <text x="330" y="40" text-anchor="middle" font-size="11.5" fill="#5d6672">one database: changple</text>
+
+  <rect x="46" y="58" width="150" height="52" rx="8" fill="#f4f5f7" stroke="#7b8794"/>
+  <text x="121" y="80" text-anchor="middle" font-size="12" fill="#1b1b1b">role</text>
+  <text x="121" y="97" text-anchor="middle" font-size="11.5" font-family="monospace" fill="#1b1b1b">django_user</text>
+
+  <rect x="46" y="150" width="150" height="52" rx="8" fill="#f4f5f7" stroke="#7b8794"/>
+  <text x="121" y="172" text-anchor="middle" font-size="12" fill="#1b1b1b">role</text>
+  <text x="121" y="189" text-anchor="middle" font-size="11.5" font-family="monospace" fill="#1b1b1b">fastapi_user</text>
+
+  <rect x="404" y="58" width="200" height="52" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="504" y="80" text-anchor="middle" font-size="12" fill="#1b1b1b">schema</text>
+  <text x="504" y="97" text-anchor="middle" font-size="11.5" font-family="monospace" fill="#1b1b1b">backend</text>
+
+  <rect x="404" y="150" width="200" height="52" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="504" y="172" text-anchor="middle" font-size="12" fill="#1b1b1b">schema</text>
+  <text x="504" y="189" text-anchor="middle" font-size="11.5" font-family="monospace" fill="#1b1b1b">agent</text>
+
+  <line x1="196" y1="80" x2="398" y2="80" stroke="#2f6f4f" stroke-width="1.8" marker-end="url(#ar2)"/>
+  <text x="297" y="72" text-anchor="middle" font-size="11" fill="#2f6f4f">owns: all privileges</text>
+
+  <line x1="196" y1="176" x2="398" y2="176" stroke="#2f6f4f" stroke-width="1.8" marker-end="url(#ar2)"/>
+  <text x="297" y="168" text-anchor="middle" font-size="11" fill="#2f6f4f">owns: all privileges</text>
+
+  <line x1="196" y1="163" x2="398" y2="103" stroke="#7b8794" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ar3)"/>
+  <text x="300" y="140" text-anchor="middle" font-size="11" fill="#5d6672">USAGE + SELECT only</text>
+  <text x="300" y="154" text-anchor="middle" font-size="10.5" fill="#5d6672">(+ default privileges for future tables)</text>
+</svg>
+<figcaption>Figure 2. The one-way read bridge. There is no mirror arrow: <code>django_user</code>
+receives nothing at all on the <code>agent</code> schema.</figcaption>
+</figure>
+
+<p>Everything the agent knows about users, conversations, documents and operator settings arrives
+through that dashed arrow &mdash; as a plain <code>SELECT</code>. Everything the agent wants to
+<em>write</em> to Django&rsquo;s world (a new assistant message, a rolling summary, an indexing
+result) has to go the long way round: over HTTP, through a Django view, with a credential. That
+asymmetry is the reason the next diagram exists.</p>
+
+<h3>Four arrows, two secrets</h3>
+
+<figure>
+<svg viewBox="0 0 660 300" role="img" aria-label="Four service-to-service arrows and the credential each carries">
+  <defs>
+    <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/>
+    </marker>
+  </defs>
+  <rect x="245" y="16" width="170" height="48" rx="8" fill="#f4f5f7" stroke="#7b8794"/>
+  <text x="330" y="45" text-anchor="middle" font-size="13" fill="#1b1b1b">browser</text>
+
+  <rect x="40" y="150" width="190" height="60" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="135" y="175" text-anchor="middle" font-size="13" fill="#1b1b1b">Django backend</text>
+  <text x="135" y="194" text-anchor="middle" font-size="11" font-family="monospace" fill="#5d6672">/api/</text>
+
+  <rect x="430" y="150" width="190" height="60" rx="8" fill="#eef6f1" stroke="#2f6f4f"/>
+  <text x="525" y="175" text-anchor="middle" font-size="13" fill="#1b1b1b">FastAPI agent</text>
+  <text x="525" y="194" text-anchor="middle" font-size="11" font-family="monospace" fill="#5d6672">/agent-api/</text>
+
+  <line x1="270" y1="64" x2="150" y2="145" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <text x="150" y="105" text-anchor="middle" font-size="10.5" fill="#5d6672">&#9312; Authorization: Bearer</text>
+  <text x="150" y="119" text-anchor="middle" font-size="10.5" fill="#5d6672">(access JWT)</text>
+
+  <line x1="390" y1="64" x2="510" y2="145" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <text x="512" y="105" text-anchor="middle" font-size="10.5" fill="#5d6672">&#9313; the same JWT,</text>
+  <text x="512" y="119" text-anchor="middle" font-size="10.5" fill="#5d6672">or X-Guest-Token</text>
+
+  <path d="M230 168 L424 168" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <text x="330" y="160" text-anchor="middle" font-size="10.5" fill="#5d6672">&#9314; X-Agent-Service-Token</text>
+
+  <path d="M424 196 L236 196" stroke="#7b8794" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <text x="330" y="214" text-anchor="middle" font-size="10.5" fill="#5d6672">&#9315; the caller&rsquo;s own JWT (chat write-back)</text>
+  <text x="330" y="230" text-anchor="middle" font-size="10.5" fill="#5d6672">or X-Agent-Service-Token (indexing hand-off)</text>
+
+  <rect x="150" y="252" width="360" height="34" rx="6" fill="#fdf5e6" stroke="#8a5a00"/>
+  <text x="330" y="274" text-anchor="middle" font-size="11.5" fill="#1b1b1b">two secrets: JWT_SHARED_SECRET &nbsp;&middot;&nbsp; AGENT_BACKEND_SHARED_TOKEN</text>
+</svg>
+<figcaption>Figure 3. Arrows &#9312; and &#9313; are guarded by the signing secret; &#9314; and
+&#9315; by the static service token &mdash; except for the case that matters most, chat write-back,
+where the agent forwards the <em>user&rsquo;s own</em> token instead of a service credential.</figcaption>
+</figure>
+
+<p>Notice the asymmetry in arrow &#9315;. When the agent finishes generating an answer and needs to
+persist it, it could authenticate to Django as &ldquo;the agent service&rdquo; and write wherever it
+liked. It deliberately does not: for a first-party user it forwards that user&rsquo;s bearer token,
+so Django &mdash; not the agent&rsquo;s routing code &mdash; decides which conversation may be
+touched. The privilege boundary is enforced at the far end, by the service that owns the data.</p>
+
+<h3>The centrepiece: a knob the operator can turn on a running system</h3>
+
+<p>Now put the two halves together. The operator opens <code class="path">/operator/settings</code>
+and changes the chat model from one Gemini id to another. That is an HTTP request to Django, which
+writes a row in the <code>backend</code> schema. The agent is a different process, on a different
+container, holding a frozen <code>Settings</code> object &mdash; but it can <code>SELECT</code>
+across the bridge. So it does, on a timer:</p>
+
+<figure>
+<ul class="tl">
+  <li><span class="t">t = 0.0 s</span> &mdash; the agent serves a turn. Its snapshot of the config
+      table was taken 12 s ago and is still fresh, so <strong>no query runs at all</strong>; the model
+      id comes from memory.</li>
+  <li><span class="t">t = 3.0 s</span> &mdash; the operator saves the form.
+      <code>UPDATE backend.operators_llmroleconfig SET model_id = &#39;gemini-3.7-flash&#39; WHERE role = &#39;chat&#39;</code>.
+      The agent has no idea. Nothing notifies it.</li>
+  <li><span class="t">t = 5.0 s</span> &mdash; another turn arrives. The snapshot is still inside its
+      30-second window, so this turn <strong>still uses the old model</strong>. This is the accepted
+      staleness, not a bug.</li>
+  <li><span class="t">t = 18.0 s</span> &mdash; the snapshot expires. The next turn&rsquo;s pre-warm
+      step runs one <code>SELECT</code>, replaces the snapshot, and constructs the model with the new
+      id. From here on every process converges within one TTL window.</li>
+  <li><span class="t">t = 18.0 s, unhappy path</span> &mdash; suppose that <code>SELECT</code> had
+      failed. The turn would not fail: the reader keeps the last good snapshot, remembers the failure
+      for the same TTL so it retries once per window rather than once per call, and logs it once
+      instead of flooding the log during a stream.</li>
+</ul>
+<figcaption>Figure 4. The life of one operator edit. One query per process per window &mdash; not one
+per LLM call &mdash; and a config read that can never break generation.</figcaption>
+</figure>
+
+<p>Three modules in the agent implement exactly this shape for three different values. Reading one of
+them closely, then recognising the other two as the same skeleton, is the fastest way to understand
+how configuration actually moves through this system.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<h3>1. One env file, two readers</h3>
+
+<p>The backend resolves the file in <code class="path">apps/backend/config/settings.py</code>, line
+13, and reads it immediately below:</p>
+
+<pre><code># apps/backend/config/settings.py:13
+def resolve_env_files(
+    *,
+    workspace_root: Path = WORKSPACE_ROOT,
+    app_root: Path = BASE_DIR,
+    shared_env_file: str | os.PathLike[str] | None = None,
+) -&gt; tuple[Path, Path]:
+    shared_file = Path(
+        shared_env_file or os.getenv("CHANGPLE_ENV_FILE") or ".dev.env"
+    )
+    if not shared_file.is_absolute():
+        shared_file = workspace_root / shared_file
+    return shared_file, app_root / ".env"
+
+
+env = environ.Env(DEBUG=(bool, True))
+for env_file in resolve_env_files():
+    if env_file.exists():
+        environ.Env.read_env(env_file)
+</code></pre>
+
+<p>The agent resolves it in <code class="path">apps/agent/app/config.py</code>, line 15, with a
+function whose body is the same three lines &mdash; and then hands the result to pydantic instead of
+looping over it:</p>
+
+<pre><code># apps/agent/app/config.py:29
+ENV_FILES = get_default_env_files()
+
+
+class Settings(BaseSettings):                     # config.py:32
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILES,
+        env_file_encoding="utf-8",
+        env_ignore_empty=True,
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    database_user: str = Field(
+        default="fastapi_user",
+        validation_alias=AliasChoices("DATABASE_USER", "FASTAPI_DB_USER"),
+    )
+    database_schema: str = Field(
+        default="agent",
+        validation_alias=AliasChoices("DATABASE_SCHEMA", "FASTAPI_DB_SCHEMA"),
+    )
+    # ... ~70 more fields ...
+
+
+@lru_cache                                        # config.py:586
+def get_settings() -&gt; Settings:
+    return Settings()
+</code></pre>
+
+<p>Two style differences are worth naming. First, the agent declares <em>typed</em> fields with
+defaults and <code>AliasChoices</code> &mdash; <code>database_port</code> accepts either
+<code>DATABASE_PORT</code> or <code>POSTGRES_PORT</code>, and a bad value fails validation at
+start-up rather than at the first use. Django reaches the same end with per-call converters
+(<code>env.int</code>, <code>env.float</code>, <code>env.bool</code>, <code>env.list</code>) and
+explicit <code>default=</code> arguments. Second, and more importantly: in <em>both</em> libraries an
+already-present process environment variable wins over the file. <code>django-environ</code>&rsquo;s
+<code>read_env</code> takes <code>overwrite=False</code> by default, and pydantic-settings ranks
+environment variables above dotenv files. The file is a source of <em>defaults for local runs</em>,
+not an override.</p>
+
+<div class="callout">
+<span class="tag">The consequence to remember</span>
+<p><code>get_settings()</code> is <code>@lru_cache</code>d. One <code>Settings</code> instance per
+process, built the first time anything asks. <code class="path">app/main.py</code> line 111 pins it
+onto <code>app.state.settings</code> so every request handler sees the same object. Nothing re-reads
+the environment, ever. <strong>An env-only knob requires a restart</strong> &mdash; which is exactly
+why sections 4 and 5 of this page exist.</p>
+</div>
+
+<h3>2. From a file on your laptop to a variable in a container</h3>
+
+<p>If you only read the two functions above you would conclude that the containers read
+<code class="path">.dev.env</code>. They do not &mdash; the file is never copied into an image
+(<code class="path">apps/backend/Dockerfile</code> sets <code>WORKDIR /workspace/apps/backend</code>
+and copies only that app), so inside a container <code>env_file.exists()</code> is simply false and
+the loop does nothing. Everything arrives as a real process environment variable, put there by
+Docker Compose. The Makefile shows the seam:</p>
+
+<pre><code># Makefile:1
+CHANGPLE_ENV_FILE ?= .dev.env
+DOCKER_COMPOSE := COMPOSE_BAKE=false docker compose --env-file $(CHANGPLE_ENV_FILE)
+</code></pre>
+
+<p><code>--env-file</code> does <em>not</em> pass those variables into the containers. It populates
+the variables Compose itself interpolates while parsing <code class="path">compose.yaml</code>, and
+each service block then declares, explicitly, which variables its process gets:</p>
+
+<pre><code># compose.yaml, django_backend                # compose.yaml, fastapi_agent
+environment:                                    environment:
+  DATABASE_USER:   ${DJANGO_DB_USER:-django_user}   DATABASE_USER:   ${FASTAPI_DB_USER:-fastapi_user}
+  DATABASE_SCHEMA: ${DJANGO_DB_SCHEMA:-backend}     DATABASE_SCHEMA: ${FASTAPI_DB_SCHEMA:-agent}
+  JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:-...}      JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:-...}
+  AGENT_BACKEND_SHARED_TOKEN: ${AGENT_...:-...}     AGENT_BACKEND_SHARED_TOKEN: ${AGENT_...:-...}
+</code></pre>
+
+<p>This is how one file gives two processes two <em>different identities</em> through the same
+variable names. Both apps read a variable called <code>DATABASE_SCHEMA</code>; the backend&rsquo;s
+copy is filled from <code>DJANGO_DB_SCHEMA</code> and the agent&rsquo;s from
+<code>FASTAPI_DB_SCHEMA</code>. Meanwhile the two secrets are passed through <em>unrenamed</em> to
+both &mdash; because a shared secret is only shared if both sides genuinely receive the same string.</p>
+
+<p>So any value has three rungs to fall through:</p>
+
+<ul class="ladder">
+  <li><span class="rung">1. <code class="path">.dev.env</code> / <code class="path">.prod.env</code></span>
+      <span class="note">read by Compose at parse time; the operator&rsquo;s real setting</span></li>
+  <li><span class="rung">2. the Compose default in <code>${VAR:-default}</code></span>
+      <span class="note">what the service gets when the key is absent from the env file</span></li>
+  <li><span class="rung">3. the code default in <code class="path">settings.py</code> /
+      <code class="path">config.py</code></span>
+      <span class="note">what the process gets when the variable is not in the environment at all</span></li>
+</ul>
+
+<div class="callout warn">
+<span class="tag">The exact trap &mdash; quoted from the architecture doc</span>
+<p><em>&ldquo;The same class of bug bit three times (an env key present in
+<code class="path">.dev.env</code>/<code class="path">.prod.env</code> but absent from the
+per-service compose block, so the code ran its default). P53.S29 measured it end to end &mdash;
+<strong>148 keys &times; 4 services</strong> &mdash; and fixed 11 real gaps. The durable invariant to
+re-check after any compose edit is <strong><code>prod &supe; dev</code> on every service</strong>.
+The trap that makes a naive fix fatal: django-environ resolves
+<code>value = None if default is None and value == ''</code>, so <code>${VAR:-}</code> is safe on the
+<strong>backend only when the code default is <code>None</code></strong> &mdash; otherwise
+<code>env.int</code>/<code>env.float</code> raise <code>ValueError</code> and settings import dies.
+The agent is uniformly empty-safe via pydantic <code>env_ignore_empty</code>.&rdquo;</em>
+(<code class="path">docs/current/architecture.md</code> &sect;5)</p>
+<p>Read that twice. &ldquo;Unset&rdquo; and &ldquo;set to the empty string&rdquo; are the same thing
+to Compose (an unset variable soft-passes as <code>""</code>), and settings.py leans on it on
+purpose &mdash; <code>DJANGO_CACHE_URL = env("DJANGO_CACHE_URL", default="") or build_redis_url(...)</code>
+(line 680) treats the empty string as &ldquo;fall back to the computed URL&rdquo;. The same idiom
+applied to an <code>env.int</code> with a numeric default would kill the process at import.</p>
+</div>
+
+<h3>3. What is actually in <code class="path">settings.py</code></h3>
+
+<p>781 lines, and you never need to read them linearly. They come in blocks, and almost every block
+carries a comment saying which decision put it there. A map, with line anchors:</p>
+
+<table>
+  <thead><tr><th>Lines</th><th>Block</th><th>One example</th></tr></thead>
+  <tbody>
+    <tr><td>13&ndash;30</td><td>env-file resolution and loading</td><td><code>resolve_env_files()</code></td></tr>
+    <tr><td>38&ndash;65</td><td>identity, hosts, cookie/proxy hardening</td>
+        <td><code>SECURE_PROXY_SSL_HEADER</code> only when <code>DEBUG</code> is false</td></tr>
+    <tr><td>70&ndash;126</td><td>installed apps, middleware order, templates</td>
+        <td>12 first-party apps; <code>ApiNoStoreMiddleware</code> second in the chain</td></tr>
+    <tr><td>128&ndash;158</td><td>database, including the schema pin</td>
+        <td><code>"options": f"-c search_path={DATABASE_SCHEMA}"</code></td></tr>
+    <tr><td>160&ndash;172</td><td><strong>the two shared secrets</strong> + the agent&rsquo;s address</td>
+        <td><code>JWT_SHARED_SECRET</code>, <code>AGENT_BACKEND_SHARED_TOKEN</code>, <code>AGENT_BASE_URL</code></td></tr>
+    <tr><td>173&ndash;248</td><td>vendor credentials, each dormant when unset</td>
+        <td>Vocky, Cloudflare analytics, Notion, Toss, Naver/Google social login, the Naver scraper</td></tr>
+    <tr><td>249&ndash;422</td><td>Gemini API keys, per-role model ids, resilience budgets</td>
+        <td>a dozen <code>GEMINI_CONTENT_*_MODEL</code> pairs, each &ldquo;only the middle rung of the
+            DB &rarr; env &rarr; <code>DEFAULT_*</code> ladder&rdquo;</td></tr>
+    <tr><td>428&ndash;548</td><td>feature kill-switches, reclaim windows, guest-trial caps, upload limits</td>
+        <td><code>ENABLE_CORRELATION_IDS</code>, <code>GUEST_TRIAL_TOKEN_TTL_SECONDS</code></td></tr>
+    <tr><td>550&ndash;597</td><td>DRF throttles and the SimpleJWT policy</td>
+        <td><code>"ALGORITHM": "HS256"</code>, <code>"SIGNING_KEY": JWT_SHARED_SECRET</code></td></tr>
+    <tr><td>621&ndash;712</td><td>Redis, Celery, and the logical-database policy comment</td>
+        <td><code>build_redis_url(...)</code>, <code>CACHES</code> on db/1 with <code>KEY_PREFIX="backend"</code></td></tr>
+    <tr><td>717&ndash;781</td><td>email, alert recipients, logging handlers</td>
+        <td><code>INGESTION_ALERT_RECIPIENTS</code> &mdash; from env, never the DB, so alerting works
+            when the ORM is broken</td></tr>
+  </tbody>
+</table>
+
+<p>Two blocks deserve a sentence each. The <strong>vendor block</strong> follows one convention
+throughout: <em>unconfigured is the off switch</em>. An empty <code>TOSS_SECRET_KEY</code> makes the
+whole billing surface answer <code>503</code> without a network call; an empty
+<code>NOTION_API_TOKEN</code> makes the mirror task a no-op; a missing Cloudflare triple makes the
+analytics endpoint answer <code>503</code>. There is no separate <code>ENABLE_X</code> flag to keep
+in sync with the credential. The <strong>Redis block</strong> (621&ndash;712) carries the
+logical-database policy verbatim, and explainer #1 quotes it in full: db/0 for Celery plus the
+agent&rsquo;s registries, db/1 for the Django cache, db/2 for the agent&rsquo;s retrieval cache
+&mdash; split because Django&rsquo;s <code>cache.clear()</code> is a <code>FLUSHDB</code> and must not
+be able to wipe the Celery queue.</p>
+
+<h3>4. Schema pinning, in three places</h3>
+
+<p>Explainer #1 sketched the two schemas; here is how each process actually gets pinned to its own.
+There are three mechanisms, and the two apps use them differently.</p>
+
+<h4>a. Django pins its connection with a libpq option</h4>
+
+<pre><code># apps/backend/config/settings.py:146
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        ...
+        "OPTIONS": {
+            "options": f"-c search_path={DATABASE_SCHEMA}",
+        },
+    }
+}
+</code></pre>
+
+<p>Every connection Django opens starts with <code>search_path</code> set to <code>backend</code>.
+Every unqualified table name in every ORM query resolves there, and &mdash; note what is
+<em>missing</em> &mdash; <code>public</code> is not in the list, so nothing leaks in from the default
+schema.</p>
+
+<h4>b. A signal handler makes the schema exist and re-asserts the path</h4>
+
+<pre><code># apps/backend/core/db.py:4
+def ensure_backend_schema(sender, connection, **kwargs) -&gt; None:
+    """Create the configured backend schema when Django opens a fresh DB."""
+
+    if connection.alias != "default" or connection.vendor != "postgresql":
+        return
+    schema_name = getattr(settings, "DATABASE_SCHEMA", "")
+    if not schema_name or schema_name == "public":
+        return
+    quoted_schema_name = connection.ops.quote_name(schema_name)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT 1 FROM information_schema.schemata WHERE schema_name = %s",
+            [schema_name],
+        )
+        if cursor.fetchone() is None:
+            cursor.execute(
+                f"CREATE SCHEMA {quoted_schema_name} AUTHORIZATION CURRENT_USER"
+            )
+        cursor.execute(f"SET search_path TO {quoted_schema_name}, public")
+</code></pre>
+
+<p>It is wired to Django&rsquo;s <code>connection_created</code> signal in
+<code class="path">apps/backend/core/apps.py</code>, with a <code>dispatch_uid</code> so a re-import
+cannot register it twice:</p>
+
+<pre><code># apps/backend/core/apps.py:9
+def ready(self) -&gt; None:
+    from .db import ensure_backend_schema
+
+    connection_created.connect(
+        ensure_backend_schema,
+        dispatch_uid="core.ensure_backend_schema",
+    )
+</code></pre>
+
+<p>This is what makes a fresh database work: the test runner creates an empty database, Django opens
+the first connection, and the schema springs into existence before the first migration runs. Note the
+difference from (a): this <code>SET</code> appends <code>, public</code>, so a connection that has
+been through the signal can also see extension objects living in <code>public</code> &mdash; the
+<code>vector</code> type among them.</p>
+
+<h4>c. The agent pins nothing per connection &mdash; on purpose</h4>
+
+<pre><code># apps/agent/app/db/connection.py:22
+def build_conninfo(settings: Settings) -&gt; str:
+    """Build a libpq conninfo string for the shared agent/backend database."""
+    return make_conninfo(
+        host=settings.database_host,
+        port=settings.database_port,
+        dbname=settings.database_name,
+        user=settings.database_user,
+        password=settings.database_password,
+    )
+</code></pre>
+
+<p>No <code>options=</code>, no <code>search_path</code>. The agent relies on the role default the
+database bootstrap installed once, at cluster init:</p>
+
+<pre><code># infra/postgres/init/00-bootstrap.sh:112,120  (built with format(...) + \gexec)
+ALTER ROLE %I IN DATABASE %I SET search_path TO %I, public
+</code></pre>
+
+<p>&hellip; applied to <em>both</em> roles. So <code>fastapi_user</code> logs in already pointed at
+<code>agent, public</code>. And when the agent wants a Django-owned table it never relies on the path
+at all &mdash; it qualifies the name explicitly, with a helper that escapes the identifier:</p>
+
+<pre><code># apps/agent/app/db/connection.py:13
+def quote_identifier(identifier: str) -&gt; str:
+    return '"' + identifier.replace('"', '""') + '"'
+
+
+def qualify_table_name(schema_name: str, table_name: str) -&gt; str:
+    """Return a schema-qualified, double-quote-escaped SQL identifier."""
+    return f"{quote_identifier(schema_name)}.{quote_identifier(table_name)}"
+</code></pre>
+
+<p>Which is why every cross-schema reader in the agent begins the same way:</p>
+
+<pre><code># apps/agent/app/llm_config.py:84
+BACKEND_SCHEMA_NAME = "backend"
+LLM_ROLE_CONFIG_TABLE = qualify_table_name(
+    BACKEND_SCHEMA_NAME,
+    "operators_llmroleconfig",
+)
+# -&gt; "backend"."operators_llmroleconfig"
+</code></pre>
+
+<p>There is exactly one exception in the agent, and it proves the rule. LangGraph&rsquo;s Postgres
+checkpointer creates and manages its own tables, and it does that with unqualified SQL that we do not
+control &mdash; so that one connection gets an explicit pin:</p>
+
+<pre><code># apps/agent/app/db/connection.py:33
+def build_checkpoint_conninfo(settings: Settings) -&gt; str:
+    """Build a conninfo string for the LangGraph checkpointer connection,
+    pinning `search_path` to the agent schema (falling back to `public`)."""
+    search_path = f"{settings.database_schema},public"
+    return make_conninfo(..., options=f"-c search_path={search_path}")
+</code></pre>
+
+<div class="callout">
+<span class="tag">A non-obvious per-connection side effect</span>
+<p><code>connect_agent_db</code> calls <code>register_vector(connection)</code> before yielding.
+Without it, pgvector&rsquo;s <code>vector</code> columns do not round-trip through psycopg &mdash;
+you get strings where you expected arrays. It is easy to miss because it is not part of the
+connection string; it is a Python-side type registration that must be redone on every new connection.
+The agent opens short-lived connections per unit of work (there is no pool), so this runs constantly.</p>
+</div>
+
+<h4>d. The grants that make (c) safe</h4>
+
+<p>Pinning is about convenience; the grants are about permission. From
+<code class="path">infra/postgres/init/00-bootstrap.sh</code>, quoted in explainer #1 and worth
+re-reading with the diagram in mind:</p>
+
+<pre><code>GRANT USAGE ON SCHEMA &lt;django_schema&gt; TO &lt;fastapi_user&gt;
+GRANT SELECT ON ALL TABLES IN SCHEMA &lt;django_schema&gt; TO &lt;fastapi_user&gt;
+ALTER DEFAULT PRIVILEGES FOR ROLE &lt;django_user&gt; IN SCHEMA &lt;django_schema&gt;
+    GRANT SELECT ON TABLES TO &lt;fastapi_user&gt;
+</code></pre>
+
+<p>The third statement is the load-bearing one: without it, every table a <em>future</em> Django
+migration creates would be invisible to the agent, and the failure would show up months later as a
+mysterious permission error on a brand-new feature. And there is no mirror: <code>django_user</code>
+is granted nothing whatsoever on the <code>agent</code> schema. The wall has a window, and the window
+only opens one way.</p>
+
+<h3>5. The trust boundaries</h3>
+
+<p>Two secrets, four arrows. Both secrets are plain strings in the environment, passed unrenamed to
+every service that needs them, and both comparisons use <code>compare_digest</code> &mdash; a
+constant-time string comparison, so an attacker cannot learn the secret one character at a time by
+measuring how long a rejection takes.</p>
+
+<h4>a. <code>JWT_SHARED_SECRET</code> &mdash; minted in Django, verified in the agent</h4>
+
+<p>Django is the only minter. Its SimpleJWT policy names the secret directly:</p>
+
+<pre><code># apps/backend/config/settings.py:577
+SIMPLE_JWT: dict[str, object] = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ALGORITHM": "HS256",
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ROTATE_REFRESH_TOKENS": True,
+    "SIGNING_KEY": JWT_SHARED_SECRET,
+}
+</code></pre>
+
+<p>The agent never mints, only verifies &mdash; in
+<code class="path">apps/agent/app/api/dependencies.py</code>, which is where every authenticated
+route gets its caller:</p>
+
+<pre><code># apps/agent/app/api/dependencies.py:124  (_build_user_context)
+claims = jwt.decode(
+    credentials.credentials,
+    request.app.state.settings.jwt_shared_secret,
+    algorithms=["HS256"],
+    options={"require": REQUIRED_ACCESS_TOKEN_CLAIMS},   # ("exp","token_type","user_id")
+)
+if claims.get("token_type") != "access":
+    raise unauthorized("Invalid authentication credentials.")
+</code></pre>
+
+<p>Two guards there are easy to skim past and both matter. <code>algorithms=["HS256"]</code> pins the
+algorithm, so a token that claims <code>"alg": "none"</code> is rejected rather than trusted.
+<code>options={"require": ...}</code> makes the claim set mandatory, so a token without an expiry
+cannot slip through as &ldquo;never expires&rdquo;.</p>
+
+<p>The same secret also signs the anonymous <strong>trial</strong> credential (the browser-held guest
+token), and the two token families are kept apart structurally rather than by convention:</p>
+
+<pre><code># apps/agent/app/api/dependencies.py:306  (_build_guest_trial_context)
+claims = jwt.decode(
+    provided_token,
+    request.app.state.settings.jwt_shared_secret,
+    algorithms=["HS256"],
+    options={"require": REQUIRED_GUEST_TOKEN_CLAIMS},    # ("exp","token_type","guest_id")
+)
+if claims.get("token_type") != GUEST_TOKEN_TYPE:         # "guest"
+    raise _guest_unauthorized("Invalid authentication credentials.")
+
+# A guest credential must never carry a user principal along with it.
+if "user_id" in claims:
+    raise _guest_unauthorized("Invalid authentication credentials.")
+</code></pre>
+
+<p>A guest token requires <code>guest_id</code> and forbids <code>user_id</code>; a user token
+requires <code>user_id</code> and must say <code>token_type: "access"</code>. Neither verifier can be
+satisfied by the other family&rsquo;s token, even though one secret signs both. The guest token also
+travels in its own header, <code>X-Guest-Token</code>, never in <code>Authorization</code> &mdash;
+the comment in <code class="path">apps/agent/app/chat/backend.py</code> gives the reason: Django&rsquo;s
+SimpleJWT authenticator <em>raises</em> on a non-access bearer token instead of falling through to
+the next authenticator, so reusing the header would break the request rather than degrade it.</p>
+
+<h4>b. <code>AGENT_BACKEND_SHARED_TOKEN</code> &mdash; one static string, used in both directions</h4>
+
+<p>This one is not a token in the JWT sense at all; it is a fixed password that says &ldquo;I am the
+other half of this system&rdquo;. It rides in the header <code>X-Agent-Service-Token</code>, and both
+apps implement the same check. On the agent side:</p>
+
+<pre><code># apps/agent/app/api/dependencies.py:244
+def require_agent_service_context(request, service_token=Depends(service_token_header)):
+    configured_token = str(
+        getattr(request.app.state.settings, "agent_backend_shared_token", "") or ""
+    ).strip()
+    if not configured_token:
+        raise _unauthorized("Agent service token is not configured.", ...)
+    provided_token = str(service_token or "").strip()
+    if not provided_token:
+        raise _unauthorized("Authentication credentials were not provided.", ...)
+    if not compare_digest(provided_token, configured_token):
+        raise _unauthorized("Invalid authentication credentials.", ...)
+    return AgentServiceContext(service_name="backend-ingestion")
+</code></pre>
+
+<p>And on the Django side, as a DRF authentication class:</p>
+
+<pre><code># apps/backend/ingestion/authentication.py:25
+class AgentServiceTokenAuthentication(BaseAuthentication):
+    def authenticate(self, request) -&gt; tuple[AgentServicePrincipal, None]:
+        configured_token = str(settings.AGENT_BACKEND_SHARED_TOKEN or "")
+        if not configured_token:
+            raise AuthenticationFailed("Agent service token is not configured.")
+        provided_token = str(request.META.get(_HEADER_META_KEY, "") or "")
+        if not provided_token:
+            raise AuthenticationFailed("Authentication credentials were not provided.")
+        if not hmac.compare_digest(provided_token, configured_token):
+            raise AuthenticationFailed("Invalid authentication credentials.")
+        return AgentServicePrincipal(), None
+</code></pre>
+
+<p>Note that an <em>empty</em> configured token is a hard failure on both sides, not an open door.
+Mis-deploying the variable makes the boundary refuse everything, which is the safe direction.</p>
+
+<h4>c. Which arrow carries which</h4>
+
+<table>
+  <thead><tr><th>Arrow</th><th>Credential</th><th>Verified by</th></tr></thead>
+  <tbody>
+    <tr><td>browser &rarr; Django (<code>/api/</code>)</td>
+        <td><code>Authorization: Bearer &lt;access JWT&gt;</code></td>
+        <td>SimpleJWT, <code class="path">settings.py:577</code></td></tr>
+    <tr><td>browser &rarr; agent (<code>/agent-api/</code>)</td>
+        <td>the same access JWT, or <code>X-Guest-Token</code>, or (dormant)
+            <code>X-Agent-Service-Token</code> &mdash; <strong>exactly one</strong></td>
+        <td><code>require_chat_caller_context</code>, <code class="path">dependencies.py:347</code></td></tr>
+    <tr><td>Django &rarr; agent</td>
+        <td><code>X-Agent-Service-Token</code> (indexing hand-off, chunk indexing, draft dispatch,
+            consulting-report dispatch, retrieval bench)</td>
+        <td><code>require_agent_service_context</code>, <code class="path">dependencies.py:244</code></td></tr>
+    <tr><td>agent &rarr; Django</td>
+        <td><strong>the caller&rsquo;s own bearer JWT</strong> for a first-party chat write-back; the
+            caller&rsquo;s guest token for a trial turn; <code>X-Agent-Service-Token</code> for the
+            indexing hand-off</td>
+        <td>SimpleJWT / guest auth / <code>AgentServiceTokenAuthentication</code></td></tr>
+    <tr><td>third party &rarr; agent retrieval</td>
+        <td><code>X-Agent-Api-Key</code>, matched against the
+            <code>AGENT_INTEGRATION_API_KEYS</code> map</td>
+        <td><code>require_retrieval_caller_context</code>, <code class="path">dependencies.py:188</code></td></tr>
+  </tbody>
+</table>
+
+<p>The header-picking code makes the intent explicit:</p>
+
+<pre><code># apps/agent/app/chat/backend.py:540  (_conversation_request_headers)
+"""Pick the caller credential for a conversation detail/message call.
+
+* first-party turn -&gt; the user access token (bearer);
+* P68 anonymous trial turn -&gt; the caller's own guest token, FORWARDED as-is.
+  The agent does not substitute the service token here on purpose: the
+  backend then scopes the lookup to that token's `guest_id`, so cross-guest
+  isolation is enforced at the backend chokepoint rather than trusted to the
+  agent;
+* dormant changple_web BFF guest turn -&gt; the service token.
+"""
+</code></pre>
+
+<p>Compare that with the <em>other</em> agent&rarr;Django call, the indexing hand-off, which has no
+human caller to impersonate and therefore does use the service token:</p>
+
+<pre><code># apps/agent/app/indexing/backend_handoff.py:223
+headers = {"X-Agent-Service-Token": self._service_token}
+</code></pre>
+
+<p>One system, two answers, chosen by whether a user identity exists to carry.</p>
+
+<div class="callout warn">
+<span class="tag">Read the defaults</span>
+<p>Both secrets have committed development defaults
+(<code>"changple-shared-dev-jwt-secret-key-2026"</code>,
+<code>"changple-agent-backend-service-token-2026"</code>), in the code <em>and</em> in
+<code class="path">compose.yaml</code>&rsquo;s <code>${VAR:-default}</code>. That is a deliberate
+convenience so a fresh clone runs &mdash; and a deployment that forgets to set them is
+catastrophically insecure while looking perfectly healthy, because a well-known signing key means
+anyone can mint a valid token for any <code>user_id</code>. Nothing in the code can detect this for
+you: a real secret and the default secret are both just strings.</p>
+</div>
+
+<h3>6. Live operator config across the read bridge &mdash; the pattern</h3>
+
+<p>Now the centrepiece. The problem statement is in the module docstring, and it is the same argument
+Figure 1 ended on:</p>
+
+<pre><code># apps/agent/app/llm_config.py:8
+Why a module-level snapshot rather than a settings field: ``get_settings()`` is
+``@lru_cache``d (``app/config.py``), so anything derived from the environment is
+frozen for the life of the process. A value the operator must be able to change
+without a redeploy has to be read **outside** that cached object ...
+</code></pre>
+
+<p>Three modules do this today, for three different values. Walk the first one fully; the other two
+are the same skeleton with a different <code>SELECT</code>.</p>
+
+<h4>a. <code class="path">app/llm_config.py</code> &mdash; which model each role runs</h4>
+
+<p>Django&rsquo;s <code>operators</code> app owns a table with one row per <em>LLM role</em> &mdash; a
+named job like <code>chat</code>, <code>retrieval_rerank</code>, <code>consulting_report</code>,
+<code>content_architect</code>. Each row holds a model id and an optional thinking level. The
+operator edits them at <code class="path">/operator/settings</code>. The agent reads them, whole
+table at a time:</p>
+
+<pre><code># apps/agent/app/llm_config.py:129
+def _fetch_llm_config_rows(settings) -&gt; dict[str, tuple[str | None, str | None]]:
+    """Read every stored role row. 12 rows — cheaper than a filtered query."""
+    rows: dict[str, tuple[str | None, str | None]] = {}
+    with connect_agent_db(settings) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT role, model_id, thinking_level FROM {LLM_ROLE_CONFIG_TABLE}"
+            )
+            for record in cursor.fetchall():
+                role, model_id, thinking_level = record[0], record[1], record[2]
+                slug = _normalize(role)
+                if slug is None:
+                    continue
+                rows[slug] = (_normalize(model_id), _normalize(thinking_level))
+    return rows
+</code></pre>
+
+<p>The state is three module-level globals behind a lock &mdash; the snapshot, when it expires, and
+when the last failure was logged:</p>
+
+<pre><code># apps/agent/app/llm_config.py:103
+_lock = threading.Lock()
+_snapshot: dict[str, tuple[str | None, str | None]] | None = None
+_snapshot_expires_at: float = 0.0
+_failure_logged_at: float | None = None
+</code></pre>
+
+<p>And the refresh is where all the interesting decisions live:</p>
+
+<pre><code># apps/agent/app/llm_config.py:148
+def refresh_llm_config(settings=None, *, force: bool = False) -&gt; None:
+    """Refresh the snapshot when it is stale (or ``force``). Never raises."""
+    global _snapshot, _snapshot_expires_at, _failure_logged_at
+
+    now = time.monotonic()
+    with _lock:
+        if not force and _snapshot_expires_at &gt; now:
+            return
+        ttl = _cache_ttl_seconds(settings)
+        try:
+            rows = _fetch_llm_config_rows(settings)
+        except Exception as exc:               # broad on purpose
+            _snapshot_expires_at = now + ttl   # remember the FAILURE for a window too
+            if _failure_logged_at is None or (now - _failure_logged_at) &gt;= max(
+                ttl, _FAILURE_LOG_MIN_INTERVAL_SECONDS
+            ):
+                _failure_logged_at = now
+                logger.warning(
+                    "LLM runtime config read failed; falling back to %s (%s: %s)",
+                    "the last known snapshot" if _snapshot else "env defaults",
+                    type(exc).__name__, exc,
+                )
+            return
+        _snapshot = rows
+        _snapshot_expires_at = now + ttl
+        _failure_logged_at = None
+</code></pre>
+
+<ul>
+  <li><strong><code>time.monotonic()</code>, not <code>time.time()</code>.</strong> A clock adjustment
+      (NTP, daylight saving) must not make a snapshot look fresh for an hour or expire instantly.</li>
+  <li><strong>The failure sets the expiry too.</strong> A dead database costs one attempt per window,
+      not one per LLM call &mdash; and the old snapshot is deliberately <em>not</em> cleared, so the
+      agent keeps serving the last known-good configuration.</li>
+  <li><strong>Log throttling with its own floor.</strong> <code>max(ttl, 30 s)</code> means even a TTL
+      of zero (refresh on every call) cannot turn an outage into a log flood during a stream.</li>
+  <li><strong><code>except Exception</code> is justified in a comment</strong>, not left to guesswork:
+      a partially-stubbed settings object raises <code>AttributeError</code> inside
+      <code>build_conninfo</code> long before psycopg is reached, and that path must degrade exactly
+      like a dead network.</li>
+</ul>
+
+<p>There are two freshness helpers, because the agent has both synchronous and asynchronous call
+paths:</p>
+
+<pre><code># apps/agent/app/llm_config.py:180
+def ensure_llm_config_snapshot(settings=None) -&gt; None:
+    """Sync freshness check. Refreshes inline when stale (sync call paths)."""
+    if _snapshot_expires_at &gt; time.monotonic():
+        return
+    refresh_llm_config(settings)
+
+
+async def ensure_llm_config_fresh(settings=None) -&gt; None:      # :187
+    """Async pre-warm for hot paths, so the sync resolvers do no I/O."""
+    if _snapshot_expires_at &gt; time.monotonic():
+        return
+    await asyncio.to_thread(refresh_llm_config, settings)
+</code></pre>
+
+<p>The async one is awaited at the entry points that precede model construction, so the blocking
+database read happens in a worker thread instead of stalling the event loop that is streaming tokens
+to a browser. When the snapshot is warm it does not even hop threads &mdash; it is a float
+comparison.</p>
+
+<p>Finally, the resolvers &mdash; the only functions the rest of the app calls:</p>
+
+<pre><code># apps/agent/app/llm_config.py:207
+def resolve_role_model(settings, *, role: str, settings_attr: str, default: str) -&gt; str:
+    """Resolve a role's model id: store -&gt; ``settings_attr`` -&gt; ``default``."""
+    stored_model, _ = _stored_role_config(settings, role)
+    if stored_model:
+        return stored_model
+    return getattr(settings, settings_attr, default)
+</code></pre>
+
+<p>That is the <strong>DB &rarr; env &rarr; <code>DEFAULT_*</code> ladder</strong> in five lines, and
+it is why <code class="path">settings.py</code> keeps saying &ldquo;this is only the middle rung&rdquo;.
+<code>resolve_role_thinking_level</code> (line 226) adds one wrinkle worth knowing: it can return
+<code>None</code>, and <code>None</code> means <em>omit the keyword argument entirely</em> rather than
+pass a null &mdash; because the model builder rejects a null level. It also refuses a stored value
+outside <code>("minimal", "low", "medium", "high")</code>, guarding the Django-admin break-glass path
+where nobody validated the write.</p>
+
+<div class="callout warn">
+<span class="tag">The code is the authority &mdash; and it drifts</span>
+<p>That docstring says &ldquo;12 rows&rdquo;, and
+<code class="path">docs/current/architecture.md</code> says 13. Counting the registry today
+(<code class="path">apps/backend/operators/llm_roles.py</code>) gives <strong>25 roles</strong>:
+successive content-agent phases kept adding them. Nothing is broken &mdash; the query is
+<code>SELECT</code>-all-rows and the agent simply ignores the 16 slugs it does not own (they belong to
+backend-side jobs like <code>conversation_title</code>, <code>image_alt</code>,
+<code>brand_classification</code>, <code>cost_table_normalize</code>) &mdash; but it is a useful
+reminder for the whole curriculum: comments and docs are orientation, the code is the authority.</p>
+</div>
+
+<h4>b. <code class="path">app/chat/retrieval_config.py</code> &mdash; the same shape, one integer</h4>
+
+<p>How many documents one chat search hands to the model. Same globals, same lock, same TTL, same
+fail-open logging. Three differences:</p>
+
+<pre><code># apps/agent/app/chat/retrieval_config.py:121
+cursor.execute(
+    f"SELECT max_tool_results FROM {CHAT_RETRIEVAL_CONFIG_TABLE} "
+    "WHERE singleton_key = %s",
+    (CHAT_RETRIEVAL_SINGLETON_KEY,),          # "default"
+)
+</code></pre>
+
+<ol>
+  <li>The row is a <strong>singleton</strong> &mdash; one row keyed <code>"default"</code>, the
+      project&rsquo;s idiom for &ldquo;a settings object that happens to live in a table&rdquo;.</li>
+  <li>Every rung is <strong>clamped</strong> to <code>[1, 16]</code> (<code>_clamp</code>, line 85),
+      including the value read from the database. 16 is the size of the reranked candidate pool, so a
+      hand-written SQL value cannot widen the cap past the pool it slices from.</li>
+  <li>It <strong>reuses <code>llm_config_cache_ttl_seconds</code></strong> rather than adding a
+      second TTL field &mdash; one TTL for every agent-side operator-config snapshot. The docstring
+      says so explicitly, which is how a pattern stays a pattern.</li>
+</ol>
+
+<p>Note also what the module says it is <em>not</em>: not the per-turn call budget
+(<code>MAX_CHAT_RETRIEVAL_CALLS = 4</code>), not the published-content supplement width
+(<code>MAX_CHAT_CONTENT_RESULTS = 3</code>). Retrieval widths are explainer #7&rsquo;s subject; here
+it is only an instance of the pattern.</p>
+
+<h4>c. <code class="path">app/retrieval/brand_policy.py</code> &mdash; the counter-example, and a fingerprint</h4>
+
+<p>The operator can switch a brand &mdash; or one branch of a brand &mdash; out of retrieval. Unlike
+the two above, this state is <strong>not</strong> read into Python and cached. It is compiled into
+the SQL of every retrieval query as a join plus a predicate:</p>
+
+<pre><code># apps/agent/app/retrieval/brand_policy.py:55
+BRAND_POLICY_JOIN_SQL = (
+    f"LEFT JOIN {BRAND_TABLE} AS bp_brand\n"
+    f"    ON bp_brand.id = ds.brand_id\n"
+    f"LEFT JOIN {BRANCH_TABLE} AS bp_branch\n"
+    f"    ON bp_branch.id = ds.branch_id"
+)
+
+BRAND_POLICY_PREDICATE_SQL = (                                        # :68
+    "(ds.brand_id IS NULL OR bp_brand.reference_enabled)"
+    " AND (ds.branch_id IS NULL OR bp_branch.reference_enabled)"
+)
+</code></pre>
+
+<p>Read the predicate as English: a document with no brand is never blocked (unclassified is
+retrievable by default, enforced structurally by the nullable foreign key); a document with no branch
+is never blocked; and because both clauses must hold, switching the brand off overrides a branch that
+is still on. <code>LEFT JOIN</code>, not <code>JOIN</code>, is what keeps the un-branded rows in the
+result at all. The fragment is deliberately parameter-free &mdash; the surrounding query builder
+maintains an order-sensitive positional parameter list, and a predicate needing a bound value would
+have to be spliced in at exactly the right index. Pure joins sidestep that whole class of bug.</p>
+
+<p>Because it is live SQL, a toggle flip takes effect on the very next query and is instantly
+reversible. Which creates the second-order problem promised in the Intuition section: <em>ranked
+retrieval results are cached</em>. A result computed while a brand was enabled would keep being
+served after it was switched off. The fix is small and elegant &mdash; put a fingerprint of the
+disabled set into the cache key:</p>
+
+<pre><code># apps/agent/app/retrieval/brand_policy.py:172
+def _fetch_fingerprint(settings) -&gt; str:
+    """Digest the *disabled* ids only -- the common case is "none disabled"."""
+    with connect_agent_db(settings) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT id FROM {BRAND_TABLE} WHERE reference_enabled = FALSE")
+            brand_ids = sorted(int(row[0]) for row in cursor.fetchall())
+            cursor.execute(f"SELECT id FROM {BRANCH_TABLE} WHERE reference_enabled = FALSE")
+            branch_ids = sorted(int(row[0]) for row in cursor.fetchall())
+
+    material = (
+        f"brands:{','.join(str(value) for value in brand_ids)}"
+        f"|branches:{','.join(str(value) for value in branch_ids)}"
+    )
+    return sha256(material.encode("utf-8")).hexdigest()[:16]
+</code></pre>
+
+<p>And <em>that</em> read &mdash; the fingerprint, not the predicate &mdash; is cached on exactly the
+same TTL snapshot as the other two modules. So the module is both the counter-example and the third
+instance of the pattern, at the same time.</p>
+
+<p>Toy example. Suppose brands 7 and 12 are disabled and no branches are. The material string is
+<code>brands:7,12|branches:</code>, whose digest might be <code>4f2b9a10c7e35d88</code>, and the
+Redis key for a ranked search becomes something like
+<code>agent:cache:rank:&lt;query-hash&gt;:4f2b9a10c7e35d88</code>. Re-enable brand 7 and the material
+becomes <code>brands:12|branches:</code> &mdash; a different digest, a different key. The old entries
+are not deleted; they simply go cold and expire on their own TTL. No invalidation logic, no sweep, no
+chance of a missed key. The two sentinels matter too: <code>"off"</code> when the caller opted out of
+the policy entirely, and <code>"unknown"</code> when the toggle tables could not be read &mdash; a
+<em>stable</em> string, so a database blip does not shatter the cache into unique keys.</p>
+
+<h4>d. The three constraints that define the pattern</h4>
+
+<p><code class="path">docs/current/architecture.md</code> states them, and all three fall out of what
+we just read:</p>
+
+<ol>
+  <li><strong>It must be read outside <code>get_settings()</code></strong>, which is
+      <code>@lru_cache</code>d &mdash; otherwise the value is frozen for the process&rsquo;s life.</li>
+  <li><strong>The table identifier must be schema-qualified</strong> with
+      <code>qualify_table_name(...)</code>, because the agent&rsquo;s own <code>search_path</code>
+      points at <code>agent</code> while these tables live in <code>backend</code>.</li>
+  <li><strong>A read failure must degrade, never raise.</strong> The bridge is read-only and the agent
+      has no write-back path for configuration, so an unreachable table falls through to env and then
+      to a code default, logging once.</li>
+</ol>
+
+<p>And the direction is absolute: writes never cross the bridge. The operator console writes through
+Django over HTTP; the agent only ever <code>SELECT</code>s.</p>
+
+<h3>7. Two small cross-cutting boundaries</h3>
+
+<h4>a. <code>ApiNoStoreMiddleware</code> &mdash; the browser cache is a boundary too</h4>
+
+<p>Thirty lines in <code class="path">apps/backend/config/middleware.py</code>, and its docstring is a
+bug story worth reading in full:</p>
+
+<pre><code># apps/backend/config/middleware.py:9
+class ApiNoStoreMiddleware:
+    """Send ``Cache-Control: no-store`` on every ``/api/`` response.
+
+    API payloads are identity-scoped: the user-side and the operator-side
+    session providers fetch the SAME url (``/api/auth/me`` above all) with
+    different ``Authorization`` headers. Nothing here sends
+    ``Vary: Authorization``, so without a caching directive the browser keeps
+    one disk-cache entry per url for both identities and, on a history
+    navigation, reuses it without revalidating -- which answered the operator
+    provider's ``/auth/me`` with the *user's* body and silently swapped the
+    session on a back navigation (P67.F5). ``no-store`` closes the whole class,
+    not just that endpoint: no ``/api/`` response is meant to be HTTP-cached.
+    """
+</code></pre>
+
+<p>The implementation is four lines, and the guard in it is load-bearing:</p>
+
+<pre><code>    def __call__(self, request):
+        response = self.get_response(request)
+        if request.path.startswith(API_PATH_PREFIX) and not response.has_header(
+            "Cache-Control"
+        ):
+            response["Cache-Control"] = API_CACHE_CONTROL
+        return response
+</code></pre>
+
+<p>A response that already set its own <code>Cache-Control</code> is left alone &mdash; the content
+delivery views set <code>public, max-age=3600</code> on media derivatives and <code>no-cache</code>
+on content HTML, and Django admin&rsquo;s <code>never_cache</code> sets one too. Blanket-overwriting
+would have made every image uncacheable. Its position in <code>MIDDLEWARE</code> (second, line 92)
+is also deliberate and commented: it does no request-phase work, and sitting near the top means its
+response pass runs <em>last</em> and therefore sees the final headers.</p>
+
+<h4>b. Correlation IDs &mdash; the same middleware, written twice</h4>
+
+<p>Both apps bind an <code>X-Request-ID</code> for the duration of a request so one user action can be
+traced across service logs. They are separate implementations for separate frameworks, with the same
+contract:</p>
+
+<table>
+  <thead><tr><th></th><th>Django</th><th>agent</th></tr></thead>
+  <tbody>
+    <tr><td>File</td><td><code class="path">operators/middleware.py</code></td>
+        <td><code class="path">app/correlation.py</code></td></tr>
+    <tr><td>Class</td><td><code>CorrelationIdMiddleware</code></td><td><code>RequestIDMiddleware</code></td></tr>
+    <tr><td>Storage</td><td>a <code>ContextVar</code></td><td>a <code>ContextVar</code></td></tr>
+    <tr><td>Behaviour</td><td>honour an inbound id, else mint a UUID; echo it on the response;
+        <code>reset(token)</code> in <code>finally</code></td><td>identical</td></tr>
+    <tr><td>Wrinkle</td><td>Django reuses worker threads, so the reset is mandatory or an id leaks
+        into the next request on that thread</td>
+        <td>written as <em>pure ASGI</em> rather than <code>BaseHTTPMiddleware</code>, so the
+            contextvar stays visible inside streaming response generators</td></tr>
+  </tbody>
+</table>
+
+<p>So the answer to &ldquo;does Django have a matching middleware?&rdquo; is yes &mdash; it is first
+in the <code>MIDDLEWARE</code> list, above even the no-store header middleware. Generation and echo
+are unconditional in both apps. What <code>ENABLE_CORRELATION_IDS</code> gates is only
+<em>forwarding</em> the id on outbound service calls and <em>persisting</em> it into error records:</p>
+
+<pre><code># apps/agent/app/chat/backend.py:505
+def _correlation_headers() -&gt; dict[str, str]:
+    # FORWARD is gated by the flag; the X-Request-ID itself is always generated
+    # by the request middleware (read here from the request-scoped contextvar).
+    if not get_settings().enable_correlation_ids:
+        return {}
+    request_id = get_request_id()
+    if not request_id:
+        return {}
+    return {REQUEST_ID_HEADER: request_id}
+</code></pre>
+
+<p>Every outbound header builder in that module &mdash; bearer, service token, guest token &mdash;
+splats <code>**_correlation_headers()</code> into its dictionary, so a single chat turn carries one
+id from the browser through the agent into Django and back out into both services&rsquo; logs.</p>
+
+<h3>8. The files this page walked</h3>
+
+<p><code class="path">apps/backend/config/settings.py</code> &middot;
+<code class="path">apps/agent/app/config.py</code> &middot;
+<code class="path">apps/backend/core/db.py</code> &middot;
+<code class="path">apps/backend/core/apps.py</code> &middot;
+<code class="path">apps/agent/app/db/connection.py</code> &middot;
+<code class="path">apps/backend/config/middleware.py</code> &middot;
+<code class="path">apps/agent/app/llm_config.py</code> &middot;
+<code class="path">apps/agent/app/chat/retrieval_config.py</code> &middot;
+<code class="path">apps/agent/app/retrieval/brand_policy.py</code> &middot;
+<code class="path">apps/agent/app/correlation.py</code> &middot;
+<code class="path">apps/backend/operators/middleware.py</code> &middot;
+<code class="path">apps/agent/app/api/dependencies.py</code> &middot;
+<code class="path">apps/agent/app/chat/backend.py</code> (header builders) &middot;
+<code class="path">apps/agent/app/indexing/backend_handoff.py</code> &middot;
+<code class="path">apps/backend/ingestion/authentication.py</code> &middot;
+<code class="path">apps/backend/operators/llm_roles.py</code> &middot;
+<code class="path">apps/backend/operators/models.py</code> &middot;
+<code class="path">apps/backend/accounts/tokens.py</code> &middot;
+<code class="path">infra/postgres/init/00-bootstrap.sh</code> &middot;
+<code class="path">compose.yaml</code> &middot;
+<code class="path">Makefile</code> &middot;
+<code class="path">apps/backend/Dockerfile</code>.</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> An operator edits <code class="path">.prod.env</code> to change
+  <code>GEMINI_CHAT_AGENT_MODEL</code>, and separately changes the <code>chat</code> role&rsquo;s
+  model on <code class="path">/operator/settings</code>. The agent container is not restarted. What
+  happens?</p>
+  <button class="opt" data-correct="false">Both take effect within ~30 seconds; the env file is re-read on the same TTL.</button>
+  <button class="opt" data-correct="true">Only the console edit takes effect; the env value is frozen in the cached <code>Settings</code> object until the process restarts.</button>
+  <button class="opt" data-correct="false">Neither takes effect; the agent only reads configuration at container build time.</button>
+  <button class="opt" data-correct="false">Only the env edit takes effect, because the environment always outranks the database.</button>
+  <p class="why" hidden><code>get_settings()</code> is <code>@lru_cache</code>d, so the env-derived
+  <code>Settings</code> object is built once per process &mdash; and the file is not even present
+  inside the container. The console edit lands in <code>backend.operators_llmroleconfig</code>, which
+  <code class="path">llm_config.py</code> re-reads across the bridge once its snapshot expires. The
+  ladder is DB &rarr; env &rarr; <code>DEFAULT_*</code>, so the stored value also outranks the env
+  value when both are set.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> <code>connect_agent_db</code> never sets <code>search_path</code>, yet the
+  agent successfully reads Django&rsquo;s <code>operators_llmroleconfig</code> table. Why?</p>
+  <button class="opt" data-correct="false">Because <code>public</code> is always searched last, and Django&rsquo;s tables live there.</button>
+  <button class="opt" data-correct="false">Because psycopg sets <code>search_path</code> to every schema the role can see.</button>
+  <button class="opt" data-correct="true">Because the role logs in with a database-level default path of <code>agent, public</code>, and cross-schema reads are written as fully qualified <code>"backend"."table"</code> identifiers anyway.</button>
+  <button class="opt" data-correct="false">Because the two schemas were merged into one at bootstrap; the split is only conceptual.</button>
+  <p class="why" hidden>The bootstrap runs <code>ALTER ROLE ... IN DATABASE ... SET search_path TO
+  &lt;schema&gt;, public</code> for both roles, so <code>fastapi_user</code> arrives pointed at its own
+  schema. Every cross-schema reader then builds its table name with
+  <code>qualify_table_name("backend", ...)</code>, which does not depend on the path at all. The one
+  connection that <em>does</em> pin explicitly is the LangGraph checkpointer&rsquo;s, because that
+  library emits unqualified SQL we do not control.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The agent has finished generating an answer for a signed-in user and needs
+  Django to persist it. Which credential does it send, and why that one?</p>
+  <button class="opt" data-correct="false"><code>X-Agent-Service-Token</code> &mdash; a service-to-service call should use a service credential.</button>
+  <button class="opt" data-correct="true">The caller&rsquo;s own bearer JWT, forwarded as-is, so Django decides which conversation may be written rather than trusting the agent&rsquo;s routing.</button>
+  <button class="opt" data-correct="false">A freshly minted JWT for that <code>user_id</code>, signed with <code>JWT_SHARED_SECRET</code>.</button>
+  <button class="opt" data-correct="false">No credential &mdash; the write goes over the read bridge in SQL.</button>
+  <button class="opt" data-correct="false">An <code>X-Agent-Api-Key</code> from the integration key map.</button>
+  <p class="why" hidden>Forwarding the user&rsquo;s own token keeps authorization at the service that
+  owns the data. The same reasoning applies to an anonymous trial turn: the guest token is forwarded
+  so the backend scopes the lookup to that token&rsquo;s <code>guest_id</code>. The service token is
+  used for the calls with no human caller to carry, such as the indexing hand-off. And the bridge is
+  <code>SELECT</code>-only &mdash; there is no SQL write path at all.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The brand/branch filter is a live SQL predicate rather than a cached value.
+  What, then, is the <em>fingerprint</em> in <code class="path">brand_policy.py</code> protecting
+  against?</p>
+  <button class="opt" data-correct="false">Someone editing the toggle tables directly in the database instead of through the console.</button>
+  <button class="opt" data-correct="true">The Redis cache of ranked retrieval results serving entries that were computed under the previous toggle state.</button>
+  <button class="opt" data-correct="false">SQL injection through brand and branch identifiers spliced into the query.</button>
+  <button class="opt" data-correct="false">Two agent processes disagreeing about which brands are enabled.</button>
+  <p class="why" hidden>The predicate itself is always current, so live queries are correct. But
+  ranked results are cached, and a cached entry has no idea the policy moved. Mixing a digest of the
+  disabled-id set into the cache key means a flip produces different keys, so stale entries simply go
+  cold instead of needing an explicit invalidation sweep.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A compose block is edited so a service gets
+  <code>SCRAPER_REQUEST_DELAY_SECONDS: ${SCRAPER_REQUEST_DELAY_SECONDS:-}</code> and the key is not
+  present in the env file. What is the result?</p>
+  <button class="opt" data-correct="false">The variable is simply omitted, so <code>env.float</code> uses its <code>2.0</code> default.</button>
+  <button class="opt" data-correct="true">The service receives an empty string, and because the code default is not <code>None</code>, <code>env.float</code> raises <code>ValueError</code> and the Django process dies at settings import.</button>
+  <button class="opt" data-correct="false">Compose refuses to start the stack, reporting an unset variable.</button>
+  <button class="opt" data-correct="false">Nothing at all &mdash; empty values are ignored uniformly by both apps.</button>
+  <p class="why" hidden>Compose soft-passes an unset variable as <code>""</code>, and django-environ
+  resolves an empty value to <code>None</code> <em>only</em> when the declared default is
+  <code>None</code>; otherwise the typed converter gets <code>""</code> and raises. The last option is
+  the trap: the <em>agent</em> is uniformly empty-safe via pydantic&rsquo;s
+  <code>env_ignore_empty=True</code>, but the backend is not, so the same edit is harmless on one
+  service and fatal on the other.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1 Big picture: three apps,
+one Postgres, one Redis, and how a request travels</a>. Next up is #3, identity and auth: Naver and
+Google login, JWTs, guests, and entitlements &mdash; which picks up exactly where this page&rsquo;s
+&ldquo;two secrets&rdquo; section stopped.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
