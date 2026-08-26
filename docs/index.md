@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-26 · [Indexing and embeddings: from documents to pgvector chunks](changple5/2026-08-26-09-indexing-and-embeddings.html) — changple5
 - 2026-08-26 · [Ingestion: how Naver cafe posts become an eligible corpus](changple5/2026-08-26-08-ingestion-pipeline.html) — changple5
 - 2026-08-26 · [Retrieval: the RAG read path from query plan to ranked citations](changple5/2026-08-26-07-retrieval-read-path.html) — changple5
 - 2026-08-26 · [Chat context: rolling windows, compaction, budgets, and recall](changple5/2026-08-26-06-chat-context-and-memory.html) — changple5

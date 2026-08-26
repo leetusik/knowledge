@@ -1,0 +1,1275 @@
+<!--kb
+title: "Indexing and embeddings: from documents to pgvector chunks"
+date: 2026-08-26
+tags:
+  - changple5
+  - indexing
+  - embeddings
+  - pgvector
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indexing and embeddings: from documents to pgvector chunks</title>
+<style>
+  html { background: #fbfbfa; }
+  body {
+    max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.15rem 5rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.68; color: #1f2328; background: #fbfbfa;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.95rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 .6rem; }
+  .subtitle { color: #57606a; font-size: 1.03rem; margin: 0 0 2rem; }
+  h2 {
+    font-size: 1.5rem; margin: 3rem 0 1rem; padding-left: .7rem;
+    border-left: 5px solid #3d6fd8; letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .6rem; color: #14324f; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .4rem; color: #3c4551; }
+  p { margin: .85rem 0; }
+  a { color: #2f5fc4; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .89em; background: #eef1f5; padding: .1em .32em; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #f6f8fa; border: 1px solid #e3e7ec; color: #1f2328;
+    padding: .85rem 1rem; border-radius: 7px; font-size: .855rem; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout, .skip, .warn, .note {
+    padding: .8rem 1.05rem; margin: 1.35rem 0; border-radius: 6px; font-size: .97rem;
+  }
+  .callout { border-left: 4px solid #2f9e6e; background: #eefaf3; }
+  .skip { border-left: 4px solid #9aa4b2; background: #f2f4f7; color: #34404e; }
+  .warn { border-left: 4px solid #d99a17; background: #fdf6e6; }
+  .note { border-left: 4px solid #3d6fd8; background: #eef3fd; }
+  .callout p:first-child, .skip p:first-child, .warn p:first-child, .note p:first-child { margin-top: 0; }
+  .callout p:last-child, .skip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .73rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #5c6874; margin-bottom: .25rem;
+  }
+  nav.toc {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    padding: .9rem 1.1rem; margin: 1.6rem 0 2.4rem;
+  }
+  nav.toc strong { display: block; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: #5c6874; }
+  nav.toc ol { margin: .5rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.3rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #e3e7ec; padding: .48rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f2f4f7; font-weight: 650; }
+  td.num, th.num { text-align: right; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  figure { margin: 1.6rem 0; }
+  figcaption { font-size: .85rem; color: #57606a; margin-top: .55rem; text-align: center; }
+  .fig-box {
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 1.1rem .9rem;
+    overflow-x: auto;
+  }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: .45rem; }
+  .node {
+    flex: 1 1 8.5rem; min-width: 7.6rem; background: #f6f8fa; border: 1px solid #d9dee5;
+    border-radius: 7px; padding: .55rem .6rem; font-size: .82rem; line-height: 1.4;
+  }
+  .node b { display: block; font-size: .87rem; margin-bottom: .12rem; }
+  .node .m { color: #57606a; font-family: ui-monospace, Menlo, monospace; font-size: .75rem; overflow-wrap: anywhere; }
+  .node.user { background: #eef3fd; border-color: #b9cdf3; }
+  .node.svc { background: #f3eefd; border-color: #cfc0ef; }
+  .node.deny { background: #fdeeee; border-color: #f0bcbc; }
+  .node.ok { background: #eefaf3; border-color: #a8dcc2; }
+  .arrow { align-self: center; color: #8b96a2; font-size: 1.15rem; padding: 0 .1rem; }
+  .stack { display: flex; flex-direction: column; gap: .45rem; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .32rem 0; }
+  .q { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: .95rem 1.1rem; margin: 1.15rem 0; }
+  .q > p:first-child { margin-top: 0; }
+  .q .opt {
+    display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+    cursor: pointer; border: 1px solid #d9dee5; border-radius: 6px; background: #f8f9fb;
+    font: inherit; font-size: .92rem; color: #1f2328; line-height: 1.45;
+  }
+  .q .opt:hover { background: #eef1f5; }
+  .q .opt.correct { background: #d9f5e3; border-color: #86d3a6; }
+  .q .opt.incorrect { background: #fbdede; border-color: #eda9a9; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: #f2f4f7; padding: .55rem .8rem; border-radius: 6px; }
+  footer { margin-top: 3.5rem; border-top: 1px solid #e3e7ec; padding-top: 1.2rem; font-size: .93rem; color: #57606a; }
+  .files { font-size: .87rem; }
+  .files code { font-size: .95em; }
+  .small { font-size: .88rem; color: #57606a; }
+  .ladder { display: grid; gap: .35rem; }
+  .rung {
+    display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start;
+    background: #fff; border: 1px solid #e3e7ec; border-left: 4px solid #3d6fd8;
+    border-radius: 6px; padding: .5rem .7rem; font-size: .87rem;
+  }
+  .rung .n { font-weight: 700; color: #3d6fd8; text-align: center; }
+  .rung.stop { border-left-color: #d05a5a; }
+  .rung.write { border-left-color: #2f9e6e; }
+  .rung.obs { border-left-color: #d99a17; }
+  .legend { display: flex; flex-wrap: wrap; gap: .9rem; font-size: .78rem; color: #57606a; margin-top: .5rem; }
+  .legend i { display: inline-block; width: .85rem; height: .85rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; border: 1px solid #d9dee5; }
+  .layers { display: grid; gap: .5rem; }
+  .layer { border: 1px solid #e3e7ec; border-radius: 7px; padding: .6rem .8rem; background: #fff; font-size: .87rem; }
+  .layer b { display: block; color: #14324f; }
+  .layer.l1 { border-left: 5px solid #3d6fd8; }
+  .layer.l2 { border-left: 5px solid #d99a17; }
+  .layer.l3 { border-left: 5px solid #2f9e6e; }
+  .layer.l4 { border-left: 5px solid #7a4fc0; }
+  .down { color: #8b96a2; font-size: .95rem; line-height: 1; text-align: center; }
+  .seq { display: grid; gap: .3rem; }
+  .step { display: grid; grid-template-columns: 5.2rem 1.2rem 5.2rem 1fr; gap: .5rem; align-items: center; font-size: .84rem; }
+  .step .who { font-weight: 650; color: #14324f; font-size: .79rem; text-align: right; overflow-wrap: anywhere; }
+  .step .to { font-weight: 650; color: #14324f; font-size: .79rem; overflow-wrap: anywhere; }
+  .step .ar { text-align: center; color: #8b96a2; }
+  .step .what { color: #3c4551; }
+  .step .what code { font-size: .82em; }
+  .chunkbar { display: grid; gap: .3rem; margin: .4rem 0 0; }
+  .cb { position: relative; height: 1.65rem; background: #f2f4f7; border-radius: 4px; }
+  .cb i {
+    position: absolute; top: 0; bottom: 0; border-radius: 4px; font-style: normal;
+    font-size: .72rem; line-height: 1.65rem; text-align: center; color: #14324f;
+    font-family: ui-monospace, Menlo, monospace; overflow: hidden; white-space: nowrap;
+  }
+  .cb i.c0 { background: #cfe0fb; border: 1px solid #a8c4f2; }
+  .cb i.c1 { background: #d9f5e3; border: 1px solid #86d3a6; }
+  .cb i.c2 { background: #fdeacd; border: 1px solid #eccb8a; }
+  .cb i.c3 { background: #ead9fb; border: 1px solid #c6a8ef; }
+</style>
+</head>
+<body>
+
+<h1>Indexing and embeddings: from documents to pgvector chunks</h1>
+<p class="subtitle">Explainer #9 of the changple5 builder&rsquo;s curriculum, Part B &mdash; the second
+half of the write path, and the last page of Part B. Explainer #8 stopped at a single HTTP call:
+Django posts a list of post ids to <code>POST /agent-api/indexing/runs</code> and starts polling.
+Explainer #7 started one table later, reading <code>keyword_terms</code>, <code>summary_embedding</code>
+and two <code>halfvec(3072)</code> chunk tables as if they had always been there. This page is the
+machine in between &mdash; and it turns out to be <strong>three</strong> parallel pipelines, not one.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<div class="skip">
+<p><span class="tag">Skip if you know it</span> This page assumes four things from earlier explainers
+and re-derives none of them: the repo runs <strong>two Python apps over one Postgres</strong> &mdash; a
+Django backend owning schema <code>backend</code>, a FastAPI agent owning schema <code>agent</code>
+&mdash; with a <strong>one-way read grant</strong> so the agent may <code>SELECT</code> Django&rsquo;s
+tables and never write them
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>); calls between the two
+services carry a static <code>X-Agent-Service-Token</code> shared secret
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>);
+retrieval filters on <code>ds.reference_eligible = TRUE</code> and fuses a lexical arm with a vector arm
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a>); and a Naver
+cafe post becomes a stored, enriched, judged row through the ingestion pipeline
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">#8</a>).</p>
+</div>
+
+<h3>What an &ldquo;index&rdquo; means on this page</h3>
+
+<p>In everyday database talk an <em>index</em> is a B-tree that makes <code>WHERE post_id = 42</code>
+fast. That is not what this page is about. Here an index is a <strong>derived, lossy, re-buildable
+representation of the corpus</strong> that exists so a question phrased in Korean prose can find the
+posts that answer it. The corpus itself &mdash; <code>backend.documents_documentsource</code>, one row
+per Naver cafe article &mdash; is the truth. Everything this page builds lives in the
+<code>agent</code> schema, is derived from that truth, and could be dropped and rebuilt tonight without
+losing a single post.</p>
+
+<p>The derived representation is an <strong>embedding</strong>. An embedding model takes a piece of text
+and returns a fixed-length list of numbers &mdash; here <strong>3,072 floating-point numbers</strong>
+&mdash; chosen so that texts about similar things end up pointing in similar directions. Nobody assigns
+meanings to the individual numbers; what matters is only the <em>angle</em> between two of these
+vectors.</p>
+
+<p>The angle is measured with <strong>cosine distance</strong>: <code>1 &minus; cos(&theta;)</code>, so
+identical direction is <code>0</code>, unrelated is around <code>1</code>. Postgres&rsquo;s
+<code>pgvector</code> extension spells this operator <code>&lt;=&gt;</code>. Here is the whole idea in
+three dimensions instead of 3,072, with the numbers actually computed:</p>
+
+<figure>
+<div class="fig-box">
+<pre><code>query   "치킨집 창업 비용 얼마나 드나요"   ->  [0.90, 0.30, 0.10]
+
+candidate summaries                        vector                distance (&lt;=&gt;)
+  "치킨집 창업 비용 후기"                   [0.86, 0.35, 0.12]        0.0023   &lt;- nearest
+  "고깃집 인테리어 견적"                    [0.55, 0.70, 0.20]        0.1670
+  "출석체크 3일차"                          [0.05, 0.10, 0.95]        0.8137   &lt;- unrelated</code></pre>
+</div>
+<figcaption>Cosine distance on a toy 3-dimensional embedding. The real vectors have 3,072 components;
+the arithmetic is identical.</figcaption>
+</figure>
+
+<p>Two practical consequences follow, and both shape the code:</p>
+
+<ul>
+  <li><strong>Finding the nearest vector is a scan.</strong> With no help, Postgres computes the
+  distance from the query to <em>every</em> stored row and sorts. At a few thousand rows that is
+  milliseconds and perfectly fine. At tens of thousands of rows, several times per chat turn, it is
+  not.</li>
+  <li><strong>So there are ANN indexes.</strong> <em>ANN</em> = approximate nearest neighbour: a data
+  structure that finds <em>almost always</em> the right neighbours in a fraction of the time.
+  <code>pgvector</code>&rsquo;s is <strong>HNSW</strong> (hierarchical navigable small world) &mdash; a
+  layered graph of vectors you descend like a skip-list. Approximate is the price; you can miss a true
+  neighbour occasionally.</li>
+</ul>
+
+<div class="note">
+<p><strong>Why one column here is <code>vector</code> and two are <code>halfvec(3072)</code>.</strong>
+<code>pgvector</code> caps an HNSW index on the plain <code>vector</code> type at <strong>2,000
+dimensions</strong>, and this model returns 3,072. The <code>halfvec</code> type (16-bit floats, half the
+storage) is indexable up to 4,000, so the two chunk tables use it and get an HNSW index; the older
+summary table keeps a dimension-less <code>vector</code> column and gets no ANN index at all &mdash;
+which, at one row per post, is a deliberate non-problem. Every one of those facts is load-bearing later
+on this page.</p>
+</div>
+
+<h3>Three tables, three readers</h3>
+
+<p>The agent schema holds exactly three artifact tables. Read this table now; the rest of the page is
+these three rows explained.</p>
+
+<table>
+<thead>
+<tr><th>Table (schema <code>agent</code>)</th><th>Written by</th><th>Read by (from #7)</th><th>Embedding column</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>document_index_artifacts</code><br><span class="small">one row per post</span></td>
+  <td><strong>Pipeline A</strong><br><span class="small">the summary index</span></td>
+  <td>The <strong>lexical arm</strong> (exact set matching on <code>keyword_terms</code>) <em>and</em>
+  the <strong>summary vector arm</strong></td>
+  <td><code>summary_embedding vector</code><br><span class="small">dimension-less, <strong>no ANN
+  index</strong></span></td>
+</tr>
+<tr>
+  <td><code>document_chunk_artifacts</code><br><span class="small">many rows per post</span></td>
+  <td><strong>Pipeline B</strong><br><span class="small">the naver chunk layer</span></td>
+  <td>The <strong>chunk vector arm</strong> (<code>chunk_mode</code>, <code>OFF</code> by default)</td>
+  <td><code>halfvec(3072)</code> + HNSW<br><span class="small"><code>halfvec_cosine_ops</code></span></td>
+</tr>
+<tr>
+  <td><code>content_chunk_artifacts</code><br><span class="small">many rows per 미라클 content</span></td>
+  <td><strong>Pipeline C</strong><br><span class="small">the content chunk layer</span></td>
+  <td>The <strong>published-content arm</strong> (<code>content_mode</code>)</td>
+  <td><code>halfvec(3072)</code> + HNSW<br><span class="small"><code>halfvec_cosine_ops</code></span></td>
+</tr>
+</tbody>
+</table>
+
+<p>Two of those rows are Naver cafe posts at two granularities; the third is a different corpus
+entirely &mdash; the 미라클 콘텐츠 the operator publishes in-product. The architecture record states the
+relationship between the first two in one sentence
+(<code>docs/current/architecture.md</code>, &sect;3):</p>
+
+<div class="callout">
+<p>&ldquo;<code>agent.document_chunk_artifacts</code> is <strong>additive and invisible to the post
+pipeline</strong>: it never touches <code>DocumentSource.ingested</code>, never re-derives eligibility
+(it reads the materialized column), and deleting the table restores the previous system exactly.&rdquo;</p>
+</div>
+
+<p>That is the promise the code has to keep, and the reason there are three runners instead of one
+clever one.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>A card catalogue and a page index</h3>
+
+<p>Think of the 창플 corpus as a library of roughly 42,000 short documents. There are two useful ways to
+index a library, and this system builds both.</p>
+
+<div class="layers">
+  <div class="layer l1"><b>Pipeline A &mdash; the card catalogue (one card per post)</b>
+  During ingestion (#8) a Gemini pass already wrote each post a <strong>summary</strong> (150&ndash;500
+  characters) and up to <strong>10 keywords</strong>. This pipeline embeds the summary into one vector
+  and copies the keywords into a <code>text[]</code>. One row per post. That is what the lexical arm
+  matches against and what the summary vector arm searches.</div>
+  <div class="down">&#9660;</div>
+  <div class="layer l3"><b>Pipeline B &mdash; the page index (many chunks per post)</b>
+  A card tells you a post is about 치킨집 opening costs. It cannot tell you that the number
+  &ldquo;보증금 3,000&rdquo; appears at character 1,700 of that post. So this pipeline cuts each post
+  into overlapping ~900-character chunks, embeds every chunk, and stores the character offsets. Now a
+  citation can quote the exact span.</div>
+  <div class="down">&#9660;</div>
+  <div class="layer l4"><b>Pipeline C &mdash; the same page index over a different library</b>
+  미라클 콘텐츠 are the operator&rsquo;s own long-form published documents. Same chunker contract,
+  different corpus, different eligibility rule, its own table &mdash; a deliberate <em>sibling</em> of
+  B rather than a generalization of it.</div>
+</div>
+
+<h3>The one idea that makes all three cheap: a fingerprint</h3>
+
+<p>Embedding text costs money and takes about a second per request. A pipeline that re-embedded
+everything on every run would be unusable. All three runners therefore share one trick: before
+embedding anything, compute a <strong>fingerprint</strong> &mdash; a SHA-256 over exactly the text that
+<em>would</em> be embedded &mdash; and compare it with the fingerprint stored beside the existing
+artifact. Same fingerprint and same embedding model? Skip; it is already correct.</p>
+
+<pre><code># apps/agent/app/indexing/storage.py  (Pipeline A)
+def build_source_fingerprint(summary: str, keyword_terms: Sequence[str]) -&gt; str:
+    canonical_payload = {
+        "keyword_terms": list(normalize_keyword_terms(keyword_terms)),
+        "summary": normalize_summary(summary),
+    }
+    canonical_json = json.dumps(canonical_payload, ensure_ascii=False,
+                               separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()</code></pre>
+
+<p>Three details in those eight lines are the whole discipline. The payload is
+<strong>normalized</strong> first (whitespace collapsed, keywords case-folded and de-duplicated
+in order), so cosmetic edits do not trigger a re-embed. The JSON is <strong>canonical</strong>
+(<code>sort_keys</code>, no spaces), so the hash is stable across processes and Python versions. And the
+chunk pipelines put their <strong>chunker version inside the hash</strong>:</p>
+
+<pre><code># apps/agent/app/indexing/chunking.py
+CHUNKER_VERSION = "1"
+...
+canonical_payload = {"chunk_texts": [...], "chunker_version": CHUNKER_VERSION}</code></pre>
+
+<p>So bumping <code>CHUNKER_VERSION</code> is how you say &ldquo;re-chunk and re-embed the entire
+corpus&rdquo; &mdash; one character in one file &mdash; and <em>not</em> bumping it is how a re-run
+costs one scan and zero provider calls. The comment above it states the rule outright:
+&ldquo;Never bump for a pure refactor.&rdquo;</p>
+
+<h3>What a chunk actually looks like</h3>
+
+<p>Chunking sounds vague until you see the offsets. Here is a real run of the real chunker
+(<code>build_post_chunks</code>) on a toy post of eight paragraphs, 1,714 characters after
+rendering:</p>
+
+<figure>
+<div class="fig-box">
+<div class="chunkbar">
+  <div class="cb"><i class="c0" style="left:0%;width:61.8%">chunk 0 &mdash; [0, 1059)</i></div>
+  <div class="cb"><i class="c1" style="left:53.4%;width:46.6%">chunk 1 &mdash; [916, 1714)</i></div>
+</div>
+<p class="small" style="margin:.6rem 0 0">Paragraph line spans in the rendered body:
+[0,211] [213,408] [410,614] [616,827] [829,1059] [1061,1272] [1274,1469] [1471,1714].
+Chunk&nbsp;0 packs paragraphs 1&ndash;5 and closes at 1,059 characters (past the 900 target).
+Chunk&nbsp;1 begins at <strong>916</strong>, i.e. 143 characters <em>before</em> chunk&nbsp;0 ends
+&mdash; the overlap.</p>
+</div>
+<figcaption>Measured output, not an illustration: <code>rendered_text[char_start:char_end] == chunk.body</code>
+holds for both chunks.</figcaption>
+</figure>
+
+<p>Two things to take from the picture. First, the spans are <strong>half-open character offsets into
+the stored body</strong>, so any consumer &mdash; a citation, the operator console, a future feature
+&mdash; can slice the quote straight out of <code>DocumentSource.text_with_image_replacement</code> with
+no re-derivation. Second, chunks <strong>overlap</strong> on purpose: a sentence that straddles a
+boundary would otherwise be semantically cut in half and match nothing.</p>
+
+<p>Notice also where chunk&nbsp;1 starts: 916 is <em>inside</em> paragraph&nbsp;5, not at a paragraph
+boundary. The overlap rule prefers to snap back to a line start within its 150-character budget; here
+paragraph&nbsp;5 is 230 characters long, so no line start falls inside the budget and the code falls to
+its second branch &mdash; snap forward to the nearest space. Deterministic either way.</p>
+
+<h3>The hand-off loop, and what <code>ingested</code> means</h3>
+
+<p>Pipeline A is the only one of the three that talks back to Django, and the reason is a single boolean
+column. #8 left the corpus with posts that are <strong>eligible</strong> &mdash;
+<code>reference_eligible = TRUE</code>, the eligibility engine&rsquo;s materialized verdict &mdash; but
+not yet <strong>ingested</strong>. The distinction is exactly:</p>
+
+<table>
+<thead><tr><th>Column</th><th>Owner</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td><code>reference_eligible</code></td><td>The backend eligibility engine (#8)</td>
+    <td>&ldquo;This post is <em>allowed</em> to be quoted to a user.&rdquo;</td></tr>
+<tr><td><code>ingested</code></td><td>This page&rsquo;s hand-off loop</td>
+    <td>&ldquo;A current summary-index artifact <em>exists</em> for this post.&rdquo;</td></tr>
+</tbody>
+</table>
+
+<p>Retrieval requires both (#7). And the pending work queue is precisely the gap between them:
+<code>reference_eligible = TRUE AND ingested = FALSE</code>. That is why the agent cannot simply set the
+flag itself &mdash; it has <strong>no write grant</strong> on the <code>backend</code> schema (#1). It
+has to ask, over HTTP, with the service token:</p>
+
+<figure>
+<div class="fig-box">
+<div class="seq">
+  <div class="step"><span class="who">Django</span><span class="ar">&rarr;</span><span class="to">agent</span>
+    <span class="what"><code>POST /agent-api/indexing/runs</code> &mdash; <code>{post_ids, trigger, bot_min_content_length}</code></span></div>
+  <div class="step"><span class="who">agent</span><span class="ar">&rarr;</span><span class="to">Django</span>
+    <span class="what"><code>202 Accepted</code> with a <code>run_id</code>; the work starts in a background task</span></div>
+  <div class="step"><span class="who">agent</span><span class="ar">&rarr;</span><span class="to">Postgres</span>
+    <span class="what">SELECT the eligible, not-yet-ingested rows (over the read bridge)</span></div>
+  <div class="step"><span class="who">agent</span><span class="ar">&rarr;</span><span class="to">Gemini</span>
+    <span class="what">embed each summary &mdash; one request per summary, 1.0&nbsp;s apart</span></div>
+  <div class="step"><span class="who">agent</span><span class="ar">&rarr;</span><span class="to">Postgres</span>
+    <span class="what"><code>INSERT ... ON CONFLICT (post_id) DO UPDATE</code> into <code>agent.document_index_artifacts</code></span></div>
+  <div class="step"><span class="who">agent</span><span class="ar">&rarr;</span><span class="to">Django</span>
+    <span class="what"><code>POST /api/documents/ingestion/index-handoffs</code> &mdash; <code>{post_id, source_fingerprint}</code> &times; up to 100</span></div>
+  <div class="step"><span class="who">Django</span><span class="ar">&rarr;</span><span class="to">Postgres</span>
+    <span class="what">re-computes the fingerprint; if it still matches, <code>UPDATE ... SET ingested = TRUE</code></span></div>
+  <div class="step"><span class="who">Django</span><span class="ar">&rarr;</span><span class="to">agent</span>
+    <span class="what"><code>GET /agent-api/indexing/runs/{run_id}</code> every 30&nbsp;s until terminal</span></div>
+</div>
+</div>
+<figcaption>The Pipeline A hand-off loop. Both HTTP legs carry the same static
+<code>X-Agent-Service-Token</code>; neither carries a user identity, because there is no user.</figcaption>
+</figure>
+
+<p>The fingerprint travels on that last leg for a reason worth pausing on. Between the agent reading the
+summary and Django marking the post ingested, an enrichment job may have rewritten that summary. So the
+agent sends the fingerprint of <em>what it actually embedded</em>, Django recomputes the fingerprint of
+what the row holds <em>now</em>, and a mismatch is refused with <code>source_changed</code> &mdash; the
+post stays <code>ingested = FALSE</code> and gets picked up again next run. The flag can never claim an
+artifact that describes an older version of the post.</p>
+
+<p>And now &ldquo;re-index a post&rdquo; has a precise meaning: <strong>set <code>ingested = FALSE</code>
+in the backend</strong>. That is a backend data operation, not an agent invocation. The next run selects
+it, sees a fingerprint mismatch (or a model mismatch), re-embeds, upserts, and hands it back.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Everything below lives in two places: <code>apps/agent/app/indexing/</code> (19 modules, ~5.7k lines
+&mdash; the three pipelines) and a handful of Django clients under
+<code>apps/backend/ingestion/</code>. We walk Pipeline A end to end, then B, then C as a diff against B,
+then the embedding posture all three share, then the DDL bootstrap that creates the tables.</p>
+
+<h3>1. Pipeline A &mdash; the summary index</h3>
+
+<h4>The two routes</h4>
+
+<p><code>apps/agent/app/api/routes/indexing.py</code> exposes exactly two endpoints, both behind
+<code>require_agent_service_context</code> (the shared-secret dependency from #2 and #3 &mdash; no user
+JWT is accepted here):</p>
+
+<pre><code>@router.post("/indexing/runs", status_code=status.HTTP_202_ACCEPTED, ...)   # :98
+@router.get("/indexing/runs/{run_id}", ...)                                  # :139</code></pre>
+
+<p>The request model is strict in a way that documents the contract
+(<code>IndexingRunCreateRequest</code>, <code>extra="forbid"</code>): <code>post_ids</code> must be
+non-empty and positive (duplicates are dropped, order preserved); <code>trigger</code> must be
+<code>automatic_schedule</code> or <code>manual_incremental</code>; and a model-level validator enforces
+that the matching backend run id is present <em>and the other one absent</em> &mdash; an automatic run
+carries <code>backend_automatic_run_id</code> and may not carry
+<code>backend_manual_incremental_run_id</code>, and vice versa. One more field has a comment worth
+reading:</p>
+
+<pre><code># P53.S4: the floor may legitimately be 0 ("no floor"). A `ge=200` bound
+# here 422s an entire indexing run the moment the operator drops it.
+bot_min_content_length: int = Field(ge=0)</code></pre>
+
+<p>That is the length policy from #8 travelling <em>as data</em> on every request, because the operator
+owns it and the agent must never out-gate the backend engine.</p>
+
+<p>The POST does three things and returns: register a run record in Redis, hand the actual work to
+FastAPI&rsquo;s <code>BackgroundTasks</code>, and answer <code>202</code> with the run id. The
+background task flips the record to <code>running</code>, calls the synchronous runner on a worker
+thread (<code>anyio.to_thread.run_sync</code> &mdash; the runner uses blocking <code>psycopg</code> and
+must not sit on the event loop), and writes back a terminal status. That status is computed, not
+guessed:</p>
+
+<pre><code>def _resolve_terminal_status(summary):            # indexing.py:203
+    failed, handoff_failed = ...
+    if not failed and not handoff_failed:
+        return "succeeded"
+    successful_work = sum(... "embedded", "reused_current_artifact", "handed_off",
+                          "skipped_unchanged", "skipped_ineligible",
+                          "skipped_below_floor", "skipped_unprojectable" ...)
+    return "partial" if successful_work else "failed"</code></pre>
+
+<p><code>succeeded</code> / <code>partial</code> / <code>failed</code> &mdash; and note that a
+<em>counted skip</em> is treated as resolved work, never as a failure.</p>
+
+<h4>The run registry (Redis)</h4>
+
+<p><code>run_registry.py</code> is a small Redis hash per run under the key prefix
+<code>agent:indexing:run</code> on <strong>db/0</strong> (the registry database from #1), holding
+<code>trigger</code>, the backend correlation ids, <code>requested_post_count</code>,
+<code>status</code>, a JSON <code>summary</code> and <code>error_message</code>. Two TTLs:
+<strong>6 hours</strong> while active, <strong>1 hour</strong> once terminal. Every Redis failure is
+converted to <code>IndexingRunRegistryUnavailableError</code> and surfaces as a
+<strong>503</strong>.</p>
+
+<div class="warn">
+<p><strong>The TTL is shorter than a big run.</strong> A full-corpus pass takes hours; the registry entry
+expires after six. So a <code>GET</code> that 404s does <em>not</em> mean &ldquo;that run
+failed&rdquo; &mdash; it usually means &ldquo;the registry forgot&rdquo; while the work continued.
+The chunk-run client on the Django side takes this so seriously that it raises a
+<strong>separate exception type</strong> for a 404 (<code>AgentChunkRunNotFound</code>, deliberately not
+a subclass of its generic client error) so a poller can stop polling <em>without</em> declaring the run
+dead. Real progress lives in the artifact tables, not in Redis.</p>
+</div>
+
+<h4>The projection &mdash; what &ldquo;pending&rdquo; means, in SQL</h4>
+
+<p><code>projection.py</code> is the read bridge in its purest form: the agent reading Django&rsquo;s
+tables, schema-qualified because this connection pins no <code>search_path</code> (#2). The one
+shared SELECT prefix <em>is</em> the definition of pending work:</p>
+
+<pre><code>SELECT ds.post_id, ds.author, ds.text_with_image_replacement, ds.summary, ds.keywords
+FROM "backend"."documents_documentsource" AS ds
+INNER JOIN "backend"."documents_documentsourcestatus" AS dss
+    ON dss.post_id = ds.post_id
+    AND dss.status = %s              -- 'SAVED'
+WHERE ds.ingested = FALSE
+    AND ds.reference_eligible = TRUE</code></pre>
+
+<p>The comment above it names the history: this used to be an <code>INNER JOIN</code> against an
+AllowedAuthor table &mdash; &ldquo;the agent&rsquo;s own private copy of the author rule &mdash; exactly
+the divergence the engine exists to end.&rdquo; Today eligibility is one materialized column and the
+agent only reads it.</p>
+
+<p>Rows that come back still have to <em>project</em>, and a row that cannot is counted, never silently
+dropped. <code>_projection_from_row</code> returns either a <code>DocumentIndexProjection</code> or one
+of two refusal reasons:</p>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">1</span><span><code>unprojectable</code> &mdash; a data
+  problem: bad <code>post_id</code>, non-string author, empty body, empty summary, keywords not a list,
+  or an empty keyword list after normalization. A junk index entry avoided.</span></div>
+  <div class="rung obs"><span class="n">2</span><span><code>below_floor</code> &mdash; a policy
+  decision: <code>len(content_text) &lt;= min_content_length</code>, where the floor came in on the
+  request. Only checked when the floor is above 0, which it is not in production today.</span></div>
+</div>
+
+<p>The tally class carries a comment that is really an incident report: before it existed, &ldquo;a
+refusal was a silent <code>continue</code> &mdash; S25&rsquo;s stranded-set re-embed lost 540 sub-floor
+posts out of a run that reported <code>skipped_ineligible: 0</code>, and the pass had to be repeated
+with the floor at 0 before anyone could tell where they went.&rdquo; Hence <code>_report_projection_
+refusals</code> in the runner, which prints the drop count <em>and the floor in force</em> even when the
+run resolved to nothing.</p>
+
+<h4>The runner</h4>
+
+<p><code>runner.py</code>&rsquo;s entry point is <code>run_indexing()</code> (<code>:473</code>), and it
+has two modes. With <code>post_ids</code> it runs <strong>explicit</strong> mode
+(<code>_select_explicit_documents</code>, <code>:145</code>) &mdash; the mode the route always uses.
+Without them it runs <strong>pending</strong> mode (<code>_select_pending_documents</code>,
+<code>:88</code>), a keyset walk over the pending query in pages, used by the module&rsquo;s own CLI
+(<code>python -m app.indexing.runner --limit N</code>).</p>
+
+<p>Pending mode does something explicit mode cannot: it splits the selection in two. For each candidate
+it loads the existing artifact (batched, <code>WHERE post_id = ANY(%s)</code>) and asks
+<code>artifact_requires_reindex</code>:</p>
+
+<pre><code>def artifact_requires_reindex(artifact, *, summary, keyword_terms, embedding_model) -&gt; bool:
+    if artifact is None:
+        return True
+    return (artifact.source_fingerprint != build_source_fingerprint(summary, keyword_terms)
+            or artifact.embedding_model != normalize_embedding_model(embedding_model))</code></pre>
+
+<p>&ldquo;No&rdquo; does <em>not</em> mean skip. It means the artifact is already correct and the post is
+merely missing its <code>ingested</code> flag &mdash; so it goes straight into the hand-off list as a
+<code>handoff_candidate</code> with <strong>no provider call at all</strong>. That is what makes a
+crashed run cheap to resume: the posts it embedded but never reported are re-selected next pass, find a
+current artifact, and are simply handed off.</p>
+
+<p>The constants at the top of the module are the run&rsquo;s whole economics:</p>
+
+<table>
+<thead><tr><th>Constant</th><th class="num">Value</th><th>What it governs</th></tr></thead>
+<tbody>
+<tr><td><code>DEFAULT_PENDING_LIMIT</code></td><td class="num">100</td><td>Sweep-mode page size / default cap.</td></tr>
+<tr><td><code>DEFAULT_EMBEDDING_BATCH_SIZE</code></td><td class="num">1</td><td><strong>Not</strong> a provider batch &mdash; the accumulation and fail-soft group size.</td></tr>
+<tr><td><code>DEFAULT_EMBEDDING_RETRY_ATTEMPTS</code></td><td class="num">3</td><td>Retries for a <em>transport</em> error (not a provider rejection).</td></tr>
+<tr><td><code>DEFAULT_HANDOFF_BATCH_SIZE</code></td><td class="num">100</td><td>Posts per hand-off POST back to Django.</td></tr>
+</tbody>
+</table>
+
+<p>The comment on the second one is the best short explanation of fail-soft batching in the repo:</p>
+
+<div class="callout">
+<p>&ldquo;1, not 20. Since P53.F4 the summary client issues one provider request per text, so this is
+only the accumulation / fail-soft group size &mdash; and under 429 pressure a group of 20 is an
+amplifier: one exhausted-retry text discards up to 19 <em>successful</em> embeddings and re-requests
+them through the split ladder (20 &rarr; 10 &rarr; 5 &rarr; 3 &rarr; 2 &rarr; 1). At 1 a 429 costs
+exactly one post and no quota is spent twice.&rdquo;</p>
+</div>
+
+<p>That split ladder is real code: <code>_index_projection_batch</code> catches an embedding error and,
+if the group holds more than one projection, halves it and recurses on both halves; at size 1 it records
+the failure against that post and moves on. Nothing raises out of a single document&rsquo;s failure
+&mdash; that is the runner&rsquo;s documented contract.</p>
+
+<p>Hand-off is decoupled from embedding for a cost reason that only shows up at scale. The comment:
+reporting once per embedding group &ldquo;would, at group size 1, open one backend handoff job per post
+(~12k single-item <code>IngestionJob</code> rows for a full-corpus pass, plus a round trip in the pacing
+path).&rdquo; So candidates accumulate and flush at 100, with a final flush before
+<code>run_indexing</code> returns.</p>
+
+<h4>The artifact store and its DDL</h4>
+
+<p><code>storage.py</code> owns <code>agent.document_index_artifacts</code> and the four normalizers
+every other module imports. Here is the table, verbatim from
+<code>build_create_table_sql</code> (<code>:131</code>):</p>
+
+<pre><code>CREATE TABLE IF NOT EXISTS "agent"."document_index_artifacts" (
+    post_id integer PRIMARY KEY,
+    summary_embedding vector NOT NULL,
+    keyword_terms text[] NOT NULL,
+    source_fingerprint char(64) NOT NULL,
+    embedding_model text NOT NULL DEFAULT '',
+    indexed_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+)</code></pre>
+
+<div class="warn">
+<p><strong>Look at <code>summary_embedding vector</code> &mdash; no dimension.</strong> Postgres will
+accept a 1,536-dimension vector into that column without a murmur. The damage surfaces much later, at
+query time, when <code>&lt;=&gt;</code> refuses to compare a 1,536-wide row with a 3,072-wide query
+vector. There is no schema constraint to lean on, which is exactly why the assertion lives in the client
+(<code>SUMMARY_EMBEDDING_DIMENSIONS = 3072</code>) at &ldquo;the only place that can still tell the
+difference between &lsquo;provider returned something odd&rsquo; and &lsquo;the corpus is now
+half-poisoned&rsquo;.&rdquo;</p>
+</div>
+
+<p><code>keyword_terms</code> is the other half of the story, and it closes a loop from #7. The lexical
+retrieval arm is <em>not</em> full-text search &mdash; no <code>tsvector</code>, no trigram &mdash; it is
+exact set matching (<code>dia.keyword_terms &amp;&amp; inputs.lexical_matches</code>). That only works
+because both sides run through the <em>same</em> normalizer,
+<code>normalize_keyword_terms</code>, which case-folds, collapses whitespace and de-duplicates in
+order. Index time and query time agree by construction, not by convention. The same function also feeds
+<code>build_source_fingerprint</code> &mdash; and that function has a <strong>byte-identical twin</strong>
+on the Django side (<code>apps/backend/ingestion/fingerprints.py:36</code>), because the hand-off
+verification recomputes it there.</p>
+
+<p>The write is a plain upsert on the primary key, refreshing every column and
+<code>updated_at = now()</code>, followed by an explicit <code>commit()</code>.</p>
+
+<h4>The hand-off client, and the Django side of it</h4>
+
+<p><code>backend_handoff.py</code> is the only place in the agent that <em>writes</em> to the backend,
+and it does so over HTTP with a single header:</p>
+
+<pre><code>headers = {"X-Agent-Service-Token": self._service_token}        # :223
+url = f"{self._backend_base_url}/api/documents/ingestion/index-handoffs"</code></pre>
+
+<p>No user JWT, no correlation splat &mdash; there is no user in this flow (contrast the chat path in
+#4, where the agent forwards the <em>caller&rsquo;s own</em> bearer token). The client is paranoid about
+the answer in a way worth copying: it validates every item, refuses duplicate post ids in the request,
+and then asserts that the <strong>set of post ids in the response equals the set requested</strong>
+&mdash; anything else raises rather than silently mis-attributing an outcome.</p>
+
+<p>On the Django side <code>ingestion/index_handoff.py::execute_index_handoff</code> materializes the
+whole thing as an <code>IngestionJob</code> of type <code>INDEX_HANDOFF</code> with one
+<code>IngestionJobItem</code> per post &mdash; so a hand-off is visible in the operator console like any
+other job &mdash; and then walks a five-outcome ladder per item:</p>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">1</span><span><code>source_missing</code> &mdash; no
+  <code>DocumentSource</code> row.</span></div>
+  <div class="rung stop"><span class="n">2</span><span><code>source_status_missing</code> /
+  <code>source_not_saved</code> &mdash; the post is no longer in <code>SAVED</code>.</span></div>
+  <div class="rung stop"><span class="n">3</span><span><code>source_changed</code> &mdash; the
+  recomputed fingerprint differs from the one the agent sent. The current fingerprint is written into
+  the item payload for forensics.</span></div>
+  <div class="rung"><span class="n">4</span><span><code>already_ingested</code> &mdash; succeeded,
+  nothing to do (a re-report is harmless).</span></div>
+  <div class="rung write"><span class="n">5</span><span><code>marked_ingested</code> &mdash;
+  <code>DocumentSource.objects.filter(pk=...).update(ingested=True)</code>. The only write in the whole
+  hand-off.</span></div>
+</div>
+
+<p>The view behind it (<code>IngestionIndexHandoffView</code>) is
+<code>authentication_classes = [AgentServiceTokenAuthentication]</code> with
+<code>permission_classes = [AllowAny]</code> &mdash; the idiom from #3: the authenticator <em>is</em> the
+gate, so &ldquo;allow any authenticated caller&rdquo; means &ldquo;allow the one caller that has the
+token&rdquo;.</p>
+
+<p>And who starts all this? From #8: the automatic run&rsquo;s <code>indexing</code> stage.
+<code>ingestion/agent_indexing.py::create_agent_indexing_run</code> POSTs over plain
+<code>urllib</code> with a 30-second timeout, then the stage polls
+<code>GET /agent-api/indexing/runs/{run_id}</code> every
+<code>AGENT_INDEXING_POLL_INTERVAL_SECONDS = 30</code>, with a retry ladder of 3 attempts 300 seconds
+apart. If the candidate list is empty the stage succeeds immediately and never calls the agent at all.</p>
+
+<h3>2. Pipeline B &mdash; the naver chunk layer</h3>
+
+<p>Pipeline B answers a different question: not &ldquo;which posts are about this?&rdquo; but
+&ldquo;<em>where in this post</em> is the answer?&rdquo; It shares no code with Pipeline A beyond four
+normalizers, it never touches a backend column, and it is triggered separately.</p>
+
+<h4>The chunker (<code>chunking.py</code>)</h4>
+
+<p>Its input is not the stored body text but the SmartEditor <strong>segment array</strong> the scraper
+captured, plus the post&rsquo;s images. Four segment types exist and the distinction between two of them
+is the sort of thing that is invisible until it is wrong:</p>
+
+<table>
+<thead><tr><th>Segment</th><th>Rendered as</th></tr></thead>
+<tbody>
+<tr><td><code>{"type": "text", "text": ...}</code></td><td>content, appended to the current line buffer</td></tr>
+<tr><td><code>{"type": "image", "placeholder": "IMAGE_n"}</code></td><td><code>[IMAGE_n]</code>, or <code>[IMAGE_n:alt]</code> when generated alt text exists</td></tr>
+<tr><td><code>{"type": "break"}</code></td><td>a line boundary; consecutive ones collapse</td></tr>
+<tr><td><code>{"type": "blank"}</code></td><td>an <strong>authored blank line</strong> &mdash; a paragraph separator, not content</td></tr>
+</tbody>
+</table>
+
+<p>The module docstring says why the last row matters: &ldquo;A chunker that treats it as text emits
+empty content and skews every boundary.&rdquo; Blank lines are what define paragraphs, and paragraphs
+are what the packer packs.</p>
+
+<p>The rendering rules mirror the scraper&rsquo;s own renderer line for line &mdash; zero-width
+characters stripped, horizontal whitespace collapsed, the two player-chrome strings
+<code>{"예약", "재생"}</code> dropped outright, blank-line runs capped at 2, leading and trailing blanks
+trimmed. Alt text goes through <code>sanitize_alt_text</code>, a deliberate mirror of the backend&rsquo;s
+function of the same name (note it rewrites <code>[</code>/<code>]</code> to parentheses, so alt text can
+never forge a placeholder). All of that exists to support one claim, verified on 2,500 real rows:
+<strong>the chunker&rsquo;s rendered text is byte-identical to the
+<code>text_with_image_replacement</code> the backend stored</strong> &mdash; which is what makes
+<code>char_start</code>/<code>char_end</code> valid offsets into that stored column.</p>
+
+<p>Then the packer, with three constants and four rules:</p>
+
+<pre><code>CHUNK_TARGET_CHARS  = 900     # greedy pack target
+CHUNK_MAX_CHARS     = 1400    # hard ceiling
+CHUNK_OVERLAP_CHARS = 150     # carried backwards into the next chunk</code></pre>
+
+<div class="ladder">
+  <div class="rung"><span class="n">1</span><span><strong>Short post &rarr; one chunk.</strong>
+  <code>len(rendered_text) &lt;= 1400</code> emits a single chunk flagged
+  <code>is_whole_post = True</code>. &ldquo;Chunking these is pure cost &mdash; the chunk would equal the
+  post.&rdquo;</span></div>
+  <div class="rung"><span class="n">2</span><span><strong>Units are paragraphs.</strong> Maximal runs of
+  non-blank lines. A unit boundary is therefore always a paragraph boundary, &ldquo;which is what makes
+  the packer prefer paragraph boundaries without any extra scoring.&rdquo;</span></div>
+  <div class="rung"><span class="n">3</span><span><strong>Oversized units split downward:</strong> first
+  on their own line boundaries, then &mdash; only if a single line still overflows &mdash; on whitespace
+  inside that line, with a hard cut as the last resort.</span></div>
+  <div class="rung"><span class="n">4</span><span><strong>Pack greedily, then overlap.</strong> Keep
+  adding units while the current chunk is under 900 <em>and</em> adding the next stays under 1,400. Then
+  extend each chunk&rsquo;s start backwards by up to 150 characters, snapped to a content line start
+  when one falls inside the budget, otherwise forward to the nearest space.</span></div>
+</div>
+
+<p>Every chunk carries a <strong>context header</strong> built by <code>build_chunk_header</code> &mdash;
+<code>[title] &middot; board &middot; author &middot; YYYY-MM</code>, skipping absent parts. The header
+is prefixed to <code>chunk_text</code> (so it is embedded, which is the cheap deterministic form of
+&ldquo;contextual retrieval&rdquo;) but is deliberately <strong>outside</strong> the span. From the toy
+run earlier:</p>
+
+<pre><code>chunk_text = "[치킨집 창업 비용] · 창업준비 · 창플지기 · 2026-03\n" + body
+body       = rendered_text[char_start:char_end]     # exactly, asserted</code></pre>
+
+<h4>What Pipeline B scans (<code>chunk_projection.py</code>)</h4>
+
+<p>Same two tables, one crucial difference in the <code>WHERE</code>:</p>
+
+<pre><code>WHERE ds.ingested = TRUE            -- Pipeline A said FALSE
+    AND ds.reference_eligible = TRUE</code></pre>
+
+<p>&ldquo;The chunk index <strong>trails</strong> the post-level index, so a post that has not been
+summarized/indexed yet is not chunk material either.&rdquo; It selects more columns than Pipeline A
+&mdash; <code>title</code>, <code>category</code> (the board name), <code>author</code>,
+<code>published_at</code>, <code>image_urls</code>, <code>content_segments</code> &mdash; because the
+chunker needs them for the header and the rendering. And <code>filter_still_chunkable()</code> re-uses
+the identical predicate for the stale sweep, so the sweep can never disagree with the scan.</p>
+
+<h4>The chunk table (<code>chunk_storage.py</code>)</h4>
+
+<pre><code>CREATE TABLE IF NOT EXISTS "agent"."document_chunk_artifacts" (
+    post_id integer NOT NULL,
+    chunk_index integer NOT NULL,
+    chunk_text text NOT NULL,
+    char_start integer NOT NULL,
+    char_end integer NOT NULL,
+    is_whole_post boolean NOT NULL DEFAULT false,
+    embedding halfvec(3072) NOT NULL,
+    chunk_set_fingerprint char(64) NOT NULL,
+    chunker_version text NOT NULL,
+    embedding_model text NOT NULL DEFAULT '',
+    indexed_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (post_id, chunk_index)
+)
+
+CREATE INDEX IF NOT EXISTS "document_chunk_artifacts_embedding_hnsw"
+ON "agent"."document_chunk_artifacts"
+USING hnsw (embedding halfvec_cosine_ops)</code></pre>
+
+<p>Three deliberate differences from Pipeline A&rsquo;s table. The primary key is
+<code>(post_id, chunk_index)</code>, not <code>post_id</code>. The embedding column is
+<code>halfvec(3072)</code> &mdash; pinned, because an ANN index requires a fixed dimension &mdash; with
+an HNSW index using <code>halfvec_cosine_ops</code>. And the fingerprint plus
+<code>chunker_version</code> are stored on every row of the set.</p>
+
+<p>The <code>halfvec</code> type has a sharp edge the module calls out twice: on the way in you must
+bind an explicit <code>HalfVector(...)</code> (a bare Python list is sent as <code>float8[]</code> and
+rejected), and on the way out a <code>HalfVector</code> <strong>has no <code>__iter__</code></strong>,
+so the summary path&rsquo;s <code>normalize_summary_embedding</code> cannot be reused &mdash; hence
+<code>chunk_embedding_to_list()</code>. This is also why the retrieval arm in #7 must cast its query
+vector as <code>%s::halfvec(3072)</code>: the cast has to name the same type the index was built on, or
+the planner ignores the HNSW index.</p>
+
+<p>The write path is one method with a one-line justification:</p>
+
+<pre><code>def replace_chunk_set(...):
+    """DELETE + INSERT + one commit. A partially-replaced set would carry a
+    fingerprint that describes chunks it no longer holds."""</code></pre>
+
+<p>There is also a read helper, <code>list_chunks_for_posts</code>, which <em>never</em> selects
+<code>embedding</code>: &ldquo;a halfvec read costs 6&nbsp;KB per row and the retrieval arm already has
+its distance from SQL.&rdquo;</p>
+
+<h4>The catch-up run (<code>chunk_runner.py</code>)</h4>
+
+<p><code>run_chunk_indexing()</code> (<code>:237</code>) walks the chunk-eligible corpus by keyset,
+200 posts per page. For each post: build the chunk set (<code>_build_pending</code>, <code>:91</code>),
+compute its fingerprint, compare against the stored <code>ChunkSetState</code> (fingerprint
+<em>and</em> embedding model <em>and</em> chunk count), and either skip or queue. Queued chunks
+accumulate until they reach the embedding batch size, then <code>_flush_pending</code>
+(<code>:120</code>) embeds them and replaces each post&rsquo;s set in its own transaction.</p>
+
+<p>Its failure posture is per-post and deliberate: if any chunk of a post fails to embed, that
+<em>whole post</em> is skipped and counted in <code>failed</code>, because a partial set is worse than
+no set. A persistence failure rolls the connection back and moves on.</p>
+
+<p>The reconciler is the part most people forget to build:</p>
+
+<pre><code>def _sweep_stale_chunk_sets(...):                      # :204
+    # keyset-walk the CHUNK table (not the corpus), 1000 post ids at a time
+    still_chunkable = document_store.filter_still_chunkable(indexed_post_ids)
+    stale_post_ids  = [p for p in indexed_post_ids if p not in still_chunkable]
+    chunk_store.delete_chunk_sets(stale_post_ids)</code></pre>
+
+<p>A post that was banned, moved to a de-indexed board, or deleted stops being chunk-eligible &mdash; but
+its chunk rows would otherwise sit in the retrievable index forever. The sweep walks the index itself,
+asks the corpus which of those posts are still valid, and deletes the complement. It runs only when the
+run is <strong>unscoped</strong>: <code>if reconcile_stale and not post_ids and limit is None</code>
+(<code>:345</code>). A scoped run knows nothing about the rest of the index and must not guess.</p>
+
+<h4>Triggering it</h4>
+
+<p>Routes: <code>POST /agent-api/indexing/chunk-runs</code> (<code>chunk_indexing.py:56</code>) and
+<code>GET /agent-api/indexing/chunk-runs/{run_id}</code> (<code>:91</code>), same service-token
+dependency, same 202-then-background-task shape. Progress is reported <em>during</em> the run: the
+synchronous runner calls a progress callback which hops back to the event loop with
+<code>asyncio.run_coroutine_threadsafe</code>, fire-and-forget, because &ldquo;a progress write must
+never slow down or fail the run.&rdquo; The registry key prefix is
+<code>agent:indexing:chunk-run</code> &mdash; its own key space, so &ldquo;which corpus was that
+run?&rdquo; stays answerable from Redis alone.</p>
+
+<p>The Django-side client, <code>ingestion/agent_chunk_indexing.py</code>
+(<code>create_chunk_run</code> <code>:112</code>), is worth reading for its docstring alone. It
+deliberately exposes neither <code>limit</code> nor <code>embedding_batch_size</code>, because their only
+effect from the backend would be to disable the stale sweep or re-tune a knob the agent owns. It refuses
+an <strong>empty</strong> <code>post_ids</code> list with a <code>ValueError</code> rather than
+forwarding it &mdash; the agent reads falsy <code>post_ids</code> as &ldquo;the whole corpus&rdquo;, so
+forwarding <code>[]</code> would turn &ldquo;index these zero posts&rdquo; into a multi-hour full run.
+And it states the cost honestly: the initial full build was <strong>26,562 chunks over 7 h
+29 m</strong>. &ldquo;Callers must plan for hours, not minutes.&rdquo;</p>
+
+<div class="warn">
+<p><strong>No conflict guard on this route.</strong> Unlike Pipeline C&rsquo;s, this route registers
+every run it is asked for &mdash; no single-active-run check, no 409. Two overlapping full runs would
+both walk the corpus and race on the same chunk rows. Mutual exclusion is the caller&rsquo;s job, and
+the module says so.</p>
+</div>
+
+<h3>3. Pipeline C &mdash; the content chunk layer</h3>
+
+<p>The <code>content_chunk_*</code> modules are a deliberate sibling set: same contract, no shared code.
+The docstring explains the refusal to generalize &mdash; <code>chunking.py</code> exists to reproduce
+the Naver scraper&rsquo;s renderer byte for byte, &ldquo;which has no analogue here, and a shared
+abstraction would put the naver corpus at risk for a refactor it does not benefit from.&rdquo;</p>
+
+<p>Its input is <code>backend.content_notioncontent.extracted_text</code> &mdash; the flattened published
+document the backend materializes. Its eligibility predicate is written <strong>once</strong> and reused
+by the scan, the by-id fetch and the sweep:</p>
+
+<pre><code># content_chunk_projection.py:49
+_CHUNKABLE_CONTENT_WHERE = (
+    "c.html_path &lt;&gt; '' AND c.has_body = TRUE AND c.published_at IS NOT NULL"
+)</code></pre>
+
+<p>The module is emphatic that this is <em>not</em> the naver gate: &ldquo;reusing
+<code>filter_still_chunkable</code> here would delete this whole index on its first run.&rdquo; Two
+sibling indexes, two predicates, neither able to delete the other&rsquo;s rows.</p>
+
+<h4>Headings instead of blank lines</h4>
+
+<p>The backend extractor emits <strong>no blank lines</strong> &mdash; every line it produces carries
+content. So <code>chunking.py</code>&rsquo;s paragraph rule would see the entire document as one unit and
+fall through to the oversized-unit splitter, losing every real boundary. Here the structure is the
+markdown heading, and it is treated as structure:</p>
+
+<pre><code>_HEADING_LINE_RE       = re.compile(r"^(#{1,3}) +(.*)$")   # h1/h2/h3 from the extractor
+_HEADING_PATH_SEPARATOR = " &gt; "
+CONTENT_CORPUS_LABEL    = "미라클 콘텐츠"</code></pre>
+
+<p>A heading always starts a new section <em>and</em> a new chunk; a section carrying a different heading
+path never merges into its neighbour; and the <strong>heading path in force</strong> travels into the
+chunk header. A real run of <code>build_content_chunks</code> on a 1,645-character toy document with two
+h1s and two h2s produced four chunks:</p>
+
+<figure>
+<div class="fig-box">
+<div class="chunkbar">
+  <div class="cb"><i class="c0" style="left:0%;width:21.9%">0 &mdash; [0,360)</i></div>
+  <div class="cb"><i class="c1" style="left:12.9%;width:38.1%">1 &mdash; [212,838)</i></div>
+  <div class="cb"><i class="c2" style="left:42.1%;width:35.7%">2 &mdash; [692,1279)</i></div>
+  <div class="cb"><i class="c3" style="left:69.0%;width:31.0%">3 &mdash; [1135,1645)</i></div>
+</div>
+<pre style="margin-top:.6rem"><code>chunk 0  heading_path ""                    header "[치킨집 오픈 가이드] · 미라클 콘텐츠 · 2026-02 · 오픈 준비"
+chunk 1  heading_path "오픈 준비 &gt; 상권 분석"    header "... · 오픈 준비 &gt; 상권 분석"
+chunk 2  heading_path "오픈 준비 &gt; 인테리어"     header "... · 오픈 준비 &gt; 인테리어"
+chunk 3  heading_path "운영"                    header "... · 운영"</code></pre>
+</div>
+<figcaption>Measured. A chunk two levels deep carries its ancestry in the text that gets embedded, so a
+query about 상권 can find a section whose own words never repeat the document&rsquo;s subject.</figcaption>
+</figure>
+
+<h4>The two differences that are not cosmetic</h4>
+
+<p>Everything else about Pipeline C mirrors B &mdash; same 900/1400/150, same fingerprint discipline,
+same <code>halfvec(3072)</code> + HNSW table (<code>content_chunk_artifacts</code>, keyed
+<code>(content_id, chunk_index)</code>, plus one extra column <code>extractor_version</code>), same
+one-request-per-text embedding client. Two things differ on purpose:</p>
+
+<p><strong>(a) A single-active-run guard.</strong> <code>content_chunk_run_registry.py</code> adds one
+Redis string key, <code>agent:indexing:content-chunk-run:active</code>, taken with
+<code>SET nx ex</code> and released on the run&rsquo;s terminal status &mdash; but only when the stored
+run id still matches. A second run gets <code>ContentChunkRunConflictError</code> (<code>:45</code>) and
+the route answers <strong>409</strong> <em>without registering a run</em>. Why here and not for naver
+chunks? Because Pipeline C fires <strong>per publish</strong> (that trigger is #12&rsquo;s subject), so
+overlapping runs are the normal case rather than an operator error, and &ldquo;two runs writing the same
+content&rsquo;s chunk set concurrently is not something idempotency alone saves you from.&rdquo; The
+route&rsquo;s comment adds that the 409 is retriable by construction: the run that holds the corpus
+heals whatever this one was going to do, <em>except</em> for the ids it was never told about &mdash;
+which is why the caller retries rather than drops.</p>
+
+<p><strong>(b) Scoped de-indexing.</strong> Pipeline B reconciles only on a full run. Pipeline C
+reconciles in <em>two</em> shapes, both driven by one flag:</p>
+
+<pre><code>def _de_index_scoped_contents(requested_ids, *, chunkable_ids, ...):   # :216
+    stale_ids = [cid for cid in requested_ids if cid not in chunkable_ids]
+    chunk_store.delete_chunk_sets(stale_ids)
+    progress.deleted_scoped += len(stale_ids)</code></pre>
+
+<p>A requested content that does not come back from the eligibility query was unpublished, emptied or
+deleted &mdash; so its chunk set goes, and the count lands in its own counter,
+<code>deleted_scoped</code>, distinct from the full sweep&rsquo;s <code>deleted_stale</code>. That is
+what makes <code>POST {"content_ids": [id]}</code> a <em>single call shape</em> the backend can fire on
+publish <em>and</em> on unpublish. Before it existed, an unpublish had to wait for a full catch-up sweep
+&mdash; meaning an unpublished content stayed retrievable in the meantime.</p>
+
+<h4>B and C side by side</h4>
+
+<table>
+<thead><tr><th></th><th>B &mdash; naver post chunks</th><th>C &mdash; 미라클 content chunks</th></tr></thead>
+<tbody>
+<tr><td>Source column</td><td><code>content_segments</code> (+ fallback to the stored body)</td><td><code>content_notioncontent.extracted_text</code></td></tr>
+<tr><td>Unit boundary</td><td>blank line &rarr; paragraph</td><td><code>#</code>/<code>##</code>/<code>###</code> heading</td></tr>
+<tr><td>Header</td><td><code>[title] &middot; board &middot; author &middot; YYYY-MM</code></td><td><code>[title] &middot; 미라클 콘텐츠 &middot; YYYY-MM &middot; heading path</code></td></tr>
+<tr><td>Eligibility</td><td><code>SAVED</code> + <code>reference_eligible</code> + <code>ingested = TRUE</code></td><td><code>html_path &lt;&gt; '' AND has_body AND published_at IS NOT NULL</code></td></tr>
+<tr><td>Pack / ceiling / overlap</td><td>900 / 1400 / 150</td><td>900 / 1400 / 150</td></tr>
+<tr><td>Table &amp; key</td><td><code>document_chunk_artifacts (post_id, chunk_index)</code></td><td><code>content_chunk_artifacts (content_id, chunk_index)</code></td></tr>
+<tr><td>Embedding column</td><td><code>halfvec(3072)</code> + HNSW cosine</td><td><code>halfvec(3072)</code> + HNSW cosine</td></tr>
+<tr><td>Redis key space</td><td><code>agent:indexing:chunk-run</code></td><td><code>agent:indexing:content-chunk-run</code> <strong>+ <code>:active</code> guard</strong></td></tr>
+<tr><td>Concurrency</td><td>none &mdash; caller&rsquo;s job</td><td><strong>one active run</strong>, else 409</td></tr>
+<tr><td>Reconciliation</td><td>full runs only</td><td>full sweep <strong>and</strong> scoped de-index</td></tr>
+<tr><td>Triggered by</td><td>operator / ops, and the soft 재수집 flow</td><td>every publish and unpublish (see #12)</td></tr>
+</tbody>
+</table>
+
+<h3>4. The one-embedding posture, and why <code>batch_size = 1</code></h3>
+
+<p>Every embedding client in this repo sends <strong>one text per provider request</strong>. That looks
+like a beginner&rsquo;s mistake &mdash; batching is the obvious optimization &mdash; and it is instead
+the single most expensive lesson in the indexing history. The module docstring states it as a
+measurement, not an opinion:</p>
+
+<div class="callout">
+<p>&ldquo;<strong>ONE SUMMARY PER PROVIDER REQUEST &mdash; measured, not assumed.</strong>
+<code>GoogleGenerativeAIEmbeddings.embed_documents</code> accepts a list and packs it into
+<code>client.models.embed_content(contents=[...])</code>, but through this project&rsquo;s key that call
+returns <strong>exactly one embedding no matter how many contents are sent</strong> (2 sent &rarr; 1
+back; 5 sent &rarr; 1 back; 20 sent &rarr; 2 back, langchain having split them into two token-budgeted
+sub-requests that each returned one). The batched version of this client therefore raised
+<code>SummaryEmbeddingBatchResultError</code> for essentially every batch &mdash; and a client that did
+<em>not</em> check would have paired the wrong vector with the wrong post.&rdquo;</p>
+</div>
+
+<p>Read that last clause twice. The failure that <em>did</em> happen was loud: ~95&nbsp;% of a
+full-corpus pass failing, 6,239 errors in 72 minutes. The failure that was <em>avoided</em> would have
+been silent &mdash; post 12,345 wearing post 12,340&rsquo;s vector, forever, discoverable only as
+&ldquo;retrieval feels a bit off&rdquo;. Every client therefore carries the same guard:</p>
+
+<pre><code>if embeddings is None or len(embeddings) != 1:
+    raise ...("returned N embeddings for a single summary")
+values = [float(v) for v in embeddings[0]]
+if len(values) != SUMMARY_EMBEDDING_DIMENSIONS:      # 3072
+    raise ...("returned N dimensions; the summary embedding must have 3072")</code></pre>
+
+<p>The shared shape across the three write-side clients (<code>indexing/embeddings.py</code>,
+<code>chunk_embeddings.py</code>, <code>content_chunk_embeddings.py</code>) is exactly five things: one
+request per text; <code>call_with_retry</code> per request (the bounded 429 retry envelope in
+<code>app/llm_resilience.py</code>, whose internals are #16&rsquo;s subject); the timeout carried in
+<code>request_options</code> because <code>GoogleGenerativeAIEmbeddings</code> exposes no
+<code>timeout</code> kwarg; a <strong>1.0-second monotonic slot gate</strong>; and the two guards
+above.</p>
+
+<pre><code>def _wait_for_request_slot(self) -&gt; None:
+    if self._request_interval_seconds &lt;= 0:
+        return
+    now = time.monotonic()
+    if self._last_request_at is not None:
+        remaining = self._request_interval_seconds - (now - self._last_request_at)
+        if remaining &gt; 0:
+            time.sleep(remaining)
+    self._last_request_at = time.monotonic()</code></pre>
+
+<p>(The fourth client, the <em>query</em>-side <code>retrieval/embeddings.py</code> from #7, is
+single-text by construction &mdash; it calls <code>embed_query</code> on one string &mdash; and shares
+only <code>call_with_retry</code> and the <code>request_options</code> timeout. It needs no slot gate:
+one user question is one request.)</p>
+
+<h4>&ldquo;Batch size 20&rdquo; and &ldquo;one per request&rdquo; are both true</h4>
+
+<p>The chunk client sets <code>DEFAULT_CHUNK_EMBEDDING_BATCH_SIZE = 20</code>, which looks like a
+contradiction until you read what the number does. <code>embed_chunks()</code> loops:
+<code>return [self._embed_one(text) for text in texts]</code>. Twenty texts is twenty requests, one
+second apart. The batch size is the runner&rsquo;s <strong>accumulation and fail-soft granularity</strong>
+&mdash; how many chunks it collects before it writes, and therefore the blast radius of one failure. For
+the summary runner that number is <strong>1</strong>, because a failed group is retried through a
+halving ladder and a group of 20 would re-request up to 19 <em>successful</em> embeddings.</p>
+
+<h4>Three consequences you have to know</h4>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">1</span><span><strong>The summary column accepts a wrong-width
+  vector silently.</strong> <code>summary_embedding vector</code> has no dimension, so there is no schema
+  constraint. The client-side assertion is the only defence, and the damage would otherwise appear at
+  query time, corpus-wide.</span></div>
+  <div class="rung stop"><span class="n">2</span><span><strong>Switching embedding models is a
+  whole-corpus operation.</strong> <code>gemini-embedding-2-preview</code> and GA
+  <code>gemini-embedding-2</code> are <em>distinct vector spaces of the same width</em>:
+  <code>&lt;=&gt;</code> compares them without complaint and just returns worse neighbours. The only
+  component that notices is the ranked cache, whose key carries the model id (#7). A migration must
+  re-embed the whole corpus in one window, and <code>ds.ingested = FALSE</code> is the gate on every
+  re-embed path.</span></div>
+  <div class="rung"><span class="n">3</span><span><strong>Pacing is ours, not the
+  provider&rsquo;s.</strong> Under the preview model a quota ceiling (~8 requests in 4&nbsp;s) forced
+  group size 1 and a stretched retry envelope. On GA the same corpus indexed at <strong>59.6 posts/min
+  with zero 429s</strong> &mdash; exactly the client&rsquo;s own 1.0-second slot. Lowering that interval
+  is an available, untested lever.</span></div>
+</div>
+
+<p>The model id itself is <code>settings.gemini_embedding_model</code>
+(<code>apps/agent/app/config.py:140</code>), currently <strong><code>gemini-embedding-2</code></strong>,
+GA, 3,072 dimensions. It is env-pinned in <code>compose.yaml</code>
+(<code>GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}</code>) and
+<strong>deliberately not</strong> in the operator&rsquo;s live LLM-role store (#2), unlike the rerank
+model &mdash; because a live toggle here would silently split the corpus across two vector spaces. The
+code comment says it plainly: &ldquo;a missing env var must not silently select a dead model.&rdquo;</p>
+
+<h3>5. Bootstrap &mdash; where the three tables come from</h3>
+
+<p>The agent owns no migration framework. Its DDL is one idempotent function,
+<code>apps/agent/app/db/bootstrap.py::bootstrap_agent_db</code> (<code>:60</code>), and it runs on
+<strong>every container start</strong> &mdash; the Dockerfile&rsquo;s last line is:</p>
+
+<pre><code>CMD ["sh", "-c", "python -m app.db.bootstrap &amp;&amp; exec uvicorn app.main:app --host 0.0.0.0 --port 8001"]</code></pre>
+
+<p>So a failed bootstrap is a container that never serves, which is the intended behaviour. The function
+checks three preconditions and then does all its DDL under one lock:</p>
+
+<div class="ladder">
+  <div class="rung stop"><span class="n">1</span><span>The configured schema exists &mdash; otherwise
+  <code>RuntimeError</code>. The agent creates data, not schemas; roles and schemas belong to
+  <code>infra/postgres/init/00-bootstrap.sh</code> (#1).</span></div>
+  <div class="rung stop"><span class="n">2</span><span>The <code>vector</code> extension is installed,
+  and the <code>halfvec</code> <em>type</em> exists (<code>:41</code>) &mdash; the probe for pgvector
+  &ge; 0.7.0, &ldquo;insurance against a database whose extension is older or was never upgraded
+  (<code>ALTER EXTENSION vector UPDATE</code>)&rdquo;.</span></div>
+  <div class="rung"><span class="n">3</span><span><code>SELECT pg_advisory_xact_lock(key)</code> where
+  the key is derived from <code>"agent:document_index_artifacts"</code>. Transaction-scoped, so it
+  releases on commit. The comment is a standing instruction: &ldquo;One transaction-scoped advisory lock
+  serializes ALL agent DDL here &mdash; never derive a second key.&rdquo; Two agent containers starting
+  at once therefore cannot race.</span></div>
+  <div class="rung write"><span class="n">4</span><span>Six statements, all
+  <code>IF NOT EXISTS</code> and forward-only: the summary table, its late-added
+  <code>embedding_model</code> column, the naver chunk table + its HNSW index, the content chunk table +
+  its HNSW index. Neither index is <code>CONCURRENTLY</code> &mdash; that is forbidden inside a
+  transaction, and the tables are empty at creation, so the build is instant and later inserts extend the
+  graph incrementally.</span></div>
+  <div class="rung"><span class="n">5</span><span>Finally, outside the DDL block:
+  <code>asyncio.run(setup_chat_checkpointer(settings))</code> &mdash; the LangGraph checkpointer tables
+  from #5.</span></div>
+</div>
+
+<h3>Putting it together: what a re-index actually is</h3>
+
+<table>
+<thead><tr><th>You want to&hellip;</th><th>Do this</th><th>Because</th></tr></thead>
+<tbody>
+<tr><td>Re-index one post&rsquo;s summary artifact</td><td>Set <code>ingested = FALSE</code> on the backend row</td><td>That is the pending predicate; the next run re-embeds and hands off.</td></tr>
+<tr><td>Refresh a post&rsquo;s chunks after an edit</td><td>Nothing &mdash; the next chunk run notices</td><td>The chunk-set fingerprint changed; unchanged posts stay free.</td></tr>
+<tr><td>Change how chunks are cut</td><td>Bump <code>CHUNKER_VERSION</code></td><td>The version is inside the fingerprint, so every post re-chunks and re-embeds.</td></tr>
+<tr><td>Remove a de-eligible post from the chunk index</td><td>Run a <strong>full</strong> (unscoped) chunk run</td><td>Only an unscoped run sweeps stale sets.</td></tr>
+<tr><td>De-index one unpublished content</td><td><code>POST /indexing/content-chunk-runs {"content_ids": [id]}</code></td><td>Scoped runs reconcile the ids they were given (<code>deleted_scoped</code>).</td></tr>
+<tr><td>Switch embedding models</td><td>Re-embed <strong>everything</strong> in one window</td><td>Two model ids are two vector spaces; mixing them degrades silently.</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q">
+<p><strong>1.</strong> A post has <code>reference_eligible = TRUE</code> and
+<code>ingested = FALSE</code>. What is true of it?</p>
+<button class="opt" data-correct="false">It is retrievable now; <code>ingested</code> only affects the
+operator console.</button>
+<button class="opt" data-correct="true">It is allowed to be quoted but has no current summary-index
+artifact, so it sits in the pending queue and is invisible to retrieval.</button>
+<button class="opt" data-correct="false">It failed enrichment, which is what <code>ingested = FALSE</code>
+records.</button>
+<button class="opt" data-correct="false">Its chunk set exists but its summary artifact does not.</button>
+<p class="why" hidden><code>reference_eligible</code> is the backend engine&rsquo;s verdict
+(&ldquo;may be quoted&rdquo;); <code>ingested</code> is this pipeline&rsquo;s receipt (&ldquo;a current
+artifact exists&rdquo;). Retrieval requires both, and the pending queue is exactly the gap between them.
+Pipeline B additionally requires <code>ingested = TRUE</code>, so no chunk set exists either.</p>
+</div>
+
+<div class="q">
+<p><strong>2.</strong> Why does <code>agent.document_index_artifacts.summary_embedding</code> have no ANN
+index while both chunk tables do?</p>
+<button class="opt" data-correct="false">Because the summary arm uses exact string matching, not vector
+distance.</button>
+<button class="opt" data-correct="false">Because HNSW cannot be built on a table with a single-column
+primary key.</button>
+<button class="opt" data-correct="true">Because the column is a dimension-less <code>vector</code> and
+pgvector caps HNSW on <code>vector</code> at 2,000 dimensions, while the model returns 3,072 &mdash; the
+chunk tables use <code>halfvec(3072)</code>, which is indexable, and one exact scan per post-level
+variant is cheap enough anyway.</button>
+<button class="opt" data-correct="false">Because the summary table is rebuilt on every run, so an index
+would be invalidated constantly.</button>
+<p class="why" hidden>An ANN index needs a fixed dimension, and <code>vector</code> caps out at 2,000
+dims for HNSW. <code>halfvec</code> is indexable to 4,000, which is why the two chunk tables use it with
+<code>USING hnsw (embedding halfvec_cosine_ops)</code>. The summary arm still uses <code>&lt;=&gt;</code>
+&mdash; just as an exact scan, one row per post.</p>
+</div>
+
+<div class="q">
+<p><strong>3.</strong> The chunk embedding client sets <code>DEFAULT_CHUNK_EMBEDDING_BATCH_SIZE = 20</code>
+while the summary runner sets <code>DEFAULT_EMBEDDING_BATCH_SIZE = 1</code>. What does that number
+mean?</p>
+<button class="opt" data-correct="false">How many texts are packed into one provider request &mdash; so
+chunks are batched 20-at-a-time and summaries are not.</button>
+<button class="opt" data-correct="true">How many items are accumulated before writing &mdash; the
+fail-soft blast radius. Both clients still send exactly one text per provider request.</button>
+<button class="opt" data-correct="false">How many parallel provider connections the client opens.</button>
+<button class="opt" data-correct="false">How many rows are inserted per <code>executemany</code>
+call.</button>
+<p class="why" hidden>Both clients loop <code>[self._embed_one(text) for text in texts]</code>: one
+request per text, 1.0&nbsp;s apart. The batch size only sets how much work one failure discards. The
+summary runner uses 1 because its recovery path halves a failed group (20&rarr;10&rarr;&hellip;&rarr;1)
+and would re-request already-successful embeddings.</p>
+</div>
+
+<div class="q">
+<p><strong>4.</strong> You switch <code>GEMINI_EMBEDDING_MODEL</code> to a new model of the same width
+and restart, without re-embedding. What happens?</p>
+<button class="opt" data-correct="false">Every query raises a dimension-mismatch error until the corpus
+is re-embedded.</button>
+<button class="opt" data-correct="false">Nothing at all &mdash; embeddings of equal width are
+interchangeable.</button>
+<button class="opt" data-correct="true">Retrieval keeps working and quietly gets worse: query vectors
+from the new space are compared against stored vectors from the old one, and only the ranked cache key
+notices the change.</button>
+<button class="opt" data-correct="false">The next indexing run automatically re-embeds the entire corpus,
+because the model id is stored per artifact.</button>
+<p class="why" hidden>Two model ids are two vector spaces of the same width; <code>&lt;=&gt;</code>
+compares them without complaint and returns worse neighbours. It is a silent-degradation risk, not an
+error. Selection <em>does</em> compare <code>embedding_model</code> &mdash; but pending mode only sees
+posts with <code>ingested = FALSE</code>, so a migration means re-embedding the whole corpus in one
+window, gated by setting that flag false.</p>
+</div>
+
+<div class="q">
+<p><strong>5.</strong> Why does the content chunk route answer <strong>409</strong> when a run is already
+active, while the naver chunk route happily starts a second one?</p>
+<button class="opt" data-correct="false">Because the content corpus is much larger, so overlapping runs
+would exhaust the embedding quota.</button>
+<button class="opt" data-correct="true">Because Pipeline C is fired per publish/unpublish, so overlapping
+runs are the normal case &mdash; and two runs writing the same content&rsquo;s chunk set concurrently is
+not made safe by per-item idempotency. Pipeline B is operator-triggered, and its module states that
+mutual exclusion is the caller&rsquo;s job.</button>
+<button class="opt" data-correct="false">Because the content table has no HNSW index, so concurrent writes
+would corrupt it.</button>
+<button class="opt" data-correct="false">Because Redis cannot hold two run records under the same key
+prefix.</button>
+<p class="why" hidden>The guard is one Redis key,
+<code>agent:indexing:content-chunk-run:active</code>, taken with <code>SET nx ex</code> and released on
+the terminal status only when the stored id matches; the 409 is raised before any run is registered, and
+is retriable by construction. The naver route has no such check &mdash; two overlapping full runs would
+race on the same chunk rows, and its docstring says so outright.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>Files walked on this page:</strong>
+<span class="files"><code>apps/agent/app/indexing/runner.py</code>,
+<code>projection.py</code>, <code>storage.py</code>, <code>embeddings.py</code>,
+<code>run_registry.py</code>, <code>backend_handoff.py</code>, <code>chunking.py</code>,
+<code>chunk_projection.py</code>, <code>chunk_storage.py</code>, <code>chunk_embeddings.py</code>,
+<code>chunk_runner.py</code>, <code>chunk_run_registry.py</code>, <code>content_chunking.py</code>,
+<code>content_chunk_projection.py</code>, <code>content_chunk_storage.py</code>,
+<code>content_chunk_embeddings.py</code>, <code>content_chunk_runner.py</code>,
+<code>content_chunk_run_registry.py</code>;
+<code>apps/agent/app/api/routes/{indexing,chunk_indexing,content_chunk_indexing}.py</code>;
+<code>apps/agent/app/db/bootstrap.py</code>, <code>apps/agent/app/config.py</code>,
+<code>apps/agent/app/retrieval/{embeddings,candidates}.py</code>;
+<code>apps/backend/ingestion/{agent_indexing,agent_chunk_indexing,index_handoff,index_candidates,views,urls}.py</code>,
+<code>apps/backend/content/chunk_indexing.py</code>; <code>apps/agent/Dockerfile</code>,
+<code>compose.yaml</code>.</span></p>
+
+<p><strong>Curriculum:</strong> previous &mdash;
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">#8 Ingestion: how Naver
+cafe posts become an eligible corpus</a>, which ends at the <code>POST /agent-api/indexing/runs</code>
+this page begins with. The read side of everything built here is
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7 Retrieval: the RAG
+read path</a>; the two-schema layout and the read grant are in
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1</a>, and the shared-secret
+boundary plus live operator config in
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>. Later:
+#12 covers the content library and the publish trigger that fires Pipeline C, and #16 covers Celery and
+the <code>llm_resilience</code> retry envelope named here. This page closes Part B.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
