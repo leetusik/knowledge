@@ -1,0 +1,1435 @@
+<!--kb
+title: "The content library: models, the single publish seam, media derivatives, and the Notion mirror"
+date: 2026-08-26
+tags:
+  - changple5
+  - content-library
+  - publish-seam
+  - media
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The content library: models, the single publish seam, media derivatives, and the Notion mirror</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1c1d20; --mut:#5d6068; --line:#d9dce2; --accent:#3a6ea5; --warm:#a8622b; }
+  * { box-sizing: border-box; }
+  body { max-width: 48rem; margin: 2rem auto 5rem; padding: 0 1.1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.68; color: var(--ink); }
+  h1 { font-size: 1.95rem; line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.015em; }
+  h2 { font-size: 1.45rem; margin: 3rem 0 .8rem; padding-top: .9rem; border-top: 2px solid var(--line); letter-spacing: -.01em; }
+  h3 { font-size: 1.13rem; margin: 2.1rem 0 .5rem; }
+  h4 { font-size: 1rem; margin: 1.5rem 0 .35rem; color: var(--mut); text-transform: uppercase; letter-spacing: .06em; font-size: .82rem; }
+  p, li { font-size: 1.02rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em;
+         background: rgba(127,127,127,.14); padding: .1em .32em; border-radius: 4px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: rgba(127,127,127,.11);
+        padding: .8rem .9rem; border-radius: 7px; font-size: .855rem; line-height: 1.5;
+        border-left: 3px solid var(--line); }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .lede { font-size: 1.12rem; color: var(--mut); margin: 0 0 1.6rem; }
+  nav.toc { background: rgba(127,127,127,.08); border: 1px solid var(--line); border-radius: 9px; padding: .9rem 1.1rem; margin: 1.6rem 0 2rem; }
+  nav.toc ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+  nav.toc li { font-size: .97rem; margin: .18rem 0; }
+  .callout { border-left: 4px solid var(--accent); background: rgba(58,110,165,.09);
+             padding: .8rem 1rem; margin: 1.2rem 0; border-radius: 0 6px 6px 0; }
+  .callout.warn { border-left-color: var(--warm); background: rgba(168,98,43,.1); }
+  .callout.def { border-left-color: #4a8f6a; background: rgba(74,143,106,.1); }
+  .callout p:first-child { margin-top: 0; } .callout p:last-child { margin-bottom: 0; }
+  .callout .lbl { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; display: block; margin-bottom: .25rem; color: var(--mut); }
+  table { border-collapse: collapse; width: 100%; margin: 1.1rem 0; font-size: .9rem; }
+  th, td { border: 1px solid var(--line); padding: .42rem .6rem; text-align: left; vertical-align: top; }
+  th { background: rgba(127,127,127,.13); font-weight: 650; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .87rem; color: var(--mut); margin-top: .5rem; text-align: center; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .skip { font-size: .87rem; color: var(--mut); font-style: italic; }
+  .filelist { font-size: .9rem; }
+  .q { border: 1px solid var(--line); border-radius: 9px; padding: .9rem 1.1rem; margin: 1.1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .55rem .8rem;
+            cursor: pointer; border: 1px solid var(--line); border-radius: 6px; background: rgba(127,127,127,.06);
+            font: inherit; font-size: .95rem; color: inherit; }
+  .q .opt:hover { background: rgba(127,127,127,.15); }
+  .q .opt.correct { background: #d6f5d6; border-color: #5aa35a; color: #14320f; }
+  .q .opt.incorrect { background: #f7d6d6; border-color: #c07070; color: #3d1010; }
+  .q .why { margin: .6rem 0 0; font-size: .93rem; background: rgba(127,127,127,.1); padding: .55rem .75rem; border-radius: 6px; }
+  .tag { display: inline-block; font-size: .74rem; letter-spacing: .05em; text-transform: uppercase;
+         background: rgba(127,127,127,.18); padding: .1rem .45rem; border-radius: 4px; color: var(--mut); }
+  hr.soft { border: 0; border-top: 1px dashed var(--line); margin: 2rem 0; }
+  .fin { font-size: .92rem; color: var(--mut); }
+</style>
+</head>
+<body>
+
+<h1>The content library: models, the single publish seam, media derivatives, and the Notion mirror</h1>
+<p class="lede">Explainer #12 of the changple5 builder's curriculum &mdash; and the first page of Part C, the content side.
+Everything before this was the chat product. This is the library the chat quotes from, the thing an operator actually
+publishes, and the one function in the whole codebase that decides whether a 미라클 콘텐츠 is visible.</p>
+
+<p class="skip">Previous: <a href="https://knowledge.hi2vi.com/@leetusik/changple5/11-safety-and-grounding">#11 &mdash; Safety and grounding: the injection guard, session lockdown, the citation gate, and trial caps</a>.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background &mdash; what a &ldquo;content&rdquo; is in changple5</a></li>
+    <li><a href="#intuition">Intuition &mdash; a row, a folder, and one switch</a></li>
+    <li><a href="#code">Code &mdash; walking the library</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background &mdash; what a &ldquo;content&rdquo; is in changple5</h2>
+
+<p>In this product, a <strong>content</strong> is one published 미라클 article. Concretely, it is a long HTML
+document with photographs &mdash; a real 창업 case study: what the shop was, what it cost, what went wrong &mdash;
+that a user reads on the site at <code>/content/&lt;id&gt;</code>. It usually carries a thumbnail, and it may carry a
+<strong>총 비용 표</strong> (a registered total-cost table, priced line by line, whose numbers are masked for
+non-paying readers).</p>
+
+<p>A content is not just a page, though. It shows up in three different places in the product, and that is why it has
+so much machinery behind it:</p>
+
+<ul>
+  <li><strong>You read it.</strong> The catalog lists it, the reader renders its body, its images are downscaled and
+  re-encoded on the way out.</li>
+  <li><strong>You attach it to a chat turn.</strong> The chat composer lets a user pick contents as
+  <em>선택 콘텐츠</em> (&ldquo;selected content&rdquo;), and their plain text is injected into that turn&rsquo;s prompt.
+  That path was described from the agent side in
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4</a> and
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5</a>; this page shows where the
+  text comes from.</li>
+  <li><strong>Retrieval can cite it.</strong> Published contents are the agent&rsquo;s <em>second corpus</em>: chunked,
+  embedded, and searched alongside the naver cafe posts.
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a> covered the read side and
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9</a> covered the chunk
+  pipeline itself.</li>
+</ul>
+
+<div class="callout def">
+  <span class="lbl">Jargon, defined once</span>
+  <p><strong>Corpus</strong> &mdash; the body of documents a search system can retrieve from. changple5 has two:
+  the scraped naver cafe posts, and the published contents.
+  <strong>Chunk</strong> &mdash; a slice of a document (a few hundred to ~1,400 characters) that gets its own
+  embedding, so retrieval can point at a passage rather than a whole article.
+  <strong>Derivative</strong> &mdash; a re-encoded copy of an image (here: WebP, optionally downscaled) generated and
+  cached beside the original.
+  <strong>Seam</strong> &mdash; in this codebase, a single function every caller must route through so that one
+  behaviour can be attached in one place.</p>
+</div>
+
+<h3>Two populations, one table</h3>
+
+<p>Every content lives in one Postgres row of <code>backend.content_notioncontent</code> (Django model
+<code>NotionContent</code>), but the rows arrive by two very different roads:</p>
+
+<ol>
+  <li><strong>Legacy Notion exports.</strong> The original 미라클 articles were written in Notion and exported as
+  ZIP files: one HTML document plus an image folder. An operator uploads the ZIP and the backend unpacks it into
+  <code>MEDIA_ROOT/html_content/&lt;id&gt;/</code>. The model name <code>NotionContent</code> is a fossil of exactly
+  this &mdash; the table has long since stopped being &ldquo;content from Notion&rdquo;.</li>
+  <li><strong>Agent-written drafts.</strong> Since P30 (v1) and P54 (v2), an operator can have the content agent
+  <em>write</em> an article from KakaoTalk transcripts and corpus material, then publish it &mdash; which materializes
+  the same kind of HTML tree under the same path and creates the same kind of row. Explainers
+  <span class="tag">#13</span> <span class="tag">#14</span> <span class="tag">#15</span> cover that agent; they are
+  not published yet.</li>
+</ol>
+
+<p>The reason this matters for <em>this</em> page: the library deliberately does not care which road a row came from.
+Publishing, delivery, chunk indexing, media derivatives and the cost table all work off &ldquo;there is a row and there
+are files on disk&rdquo;. This page stops exactly at the boundary the phase drew for it: <strong>a content row exists
+and is (un)published</strong>. How a draft gets written is the next three explainers&rsquo; job.</p>
+
+<h3>The map of files</h3>
+
+<p><code>apps/backend/content/</code> is the largest app in the repository &mdash; about 57,000 lines &mdash; but 40,000
+of those are <code>content/agent_jobs/</code>, the content agent v2. The <em>library</em> half is roughly 17,000 lines
+across the modules below, and that is what we walk:</p>
+
+<table>
+<tr><th>Module</th><th>What it owns</th></tr>
+<tr><td><code>models.py</code></td><td>The rows: <code>NotionContent</code> and its queryset, upload sessions, import jobs, cost tables, view history, landing copy (plus the v1 draft models).</td></tr>
+<tr><td><code>services.py</code></td><td>Operator create/update/delete, <strong><code>set_content_publish_state</code></strong>, analytics, the chat selection context.</td></tr>
+<tr><td><code>upload_sessions.py</code> · <code>import_jobs.py</code> · <code>importers.py</code> · <code>extraction.py</code> · <code>weights.py</code></td><td>Getting a ZIP in: chunked upload, the async import job, unpacking, plain-text extraction, the materialized weight fields.</td></tr>
+<tr><td><code>chunk_indexing.py</code></td><td>The backend&rarr;agent index/de-index <em>trigger</em>.</td></tr>
+<tr><td><code>delivery.py</code> · <code>media_derivatives.py</code> · <code>remote_images.py</code></td><td>Getting it out: HTML rewriting and caching, WebP variants, hot-link localisation.</td></tr>
+<tr><td><code>cost_tables.py</code> · <code>cost_table_workbook.py</code> · <code>cost_table_normalize.py</code></td><td>The 총 비용 표: contract validation, the two projections, xlsx intake, LLM normalisation.</td></tr>
+<tr><td><code>notion_mirror.py</code></td><td>Archiving a published v1 draft back into a Notion database.</td></tr>
+<tr><td><code>views.py</code> · <code>urls.py</code> · <code>serializers.py</code> · <code>admin.py</code></td><td>The HTTP surface, public and operator.</td></tr>
+</table>
+
+</section>
+
+<section id="intuition">
+<h2>Intuition &mdash; a row, a folder, and one switch</h2>
+
+<p>If you keep three ideas in your head, the rest of this page is detail.</p>
+
+<h3>Idea 1: the row is the index card; the folder is the article</h3>
+
+<p>A content is stored in two places at once, and they have very different properties. Postgres holds the
+<em>facts</em> &mdash; title, description, publish state, and a set of <em>materialized</em> numbers about the document.
+The filesystem holds the <em>document</em> &mdash; one HTML file plus every image, under
+<code>MEDIA_ROOT/html_content/&lt;id&gt;/</code>.</p>
+
+<figure>
+<svg viewBox="0 0 700 250" role="img" aria-label="A content row in Postgres beside its file tree on disk">
+  <rect x="8" y="14" width="320" height="222" rx="9" fill="rgba(58,110,165,.10)" stroke="#3a6ea5"/>
+  <text x="24" y="38" font-size="13" font-weight="700" fill="#3a6ea5">Postgres · content_notioncontent</text>
+  <text x="24" y="62" font-size="12.5" font-family="ui-monospace,Menlo,monospace">id            = 42</text>
+  <text x="24" y="82" font-size="12.5" font-family="ui-monospace,Menlo,monospace">title         = "치킨집 창업, 진짜…"</text>
+  <text x="24" y="102" font-size="12.5" font-family="ui-monospace,Menlo,monospace">published_at  = 2026-08-20 09:11Z</text>
+  <text x="24" y="122" font-size="12.5" font-family="ui-monospace,Menlo,monospace">html_path     = html_content/42/</text>
+  <text x="24" y="140" font-size="12.5" font-family="ui-monospace,Menlo,monospace">                  치킨집.html</text>
+  <text x="24" y="160" font-size="12.5" font-family="ui-monospace,Menlo,monospace">image_count   = 12</text>
+  <text x="24" y="180" font-size="12.5" font-family="ui-monospace,Menlo,monospace">local_image_count = 11</text>
+  <text x="24" y="200" font-size="12.5" font-family="ui-monospace,Menlo,monospace">has_body      = true</text>
+  <text x="24" y="220" font-size="12.5" font-family="ui-monospace,Menlo,monospace">extracted_text= "# 치킨집…"</text>
+
+  <path d="M334 120 L372 120" stroke="#5d6068" stroke-width="2" marker-end="url(#a12)"/>
+  <defs><marker id="a12" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+    <path d="M0,0 L9,4.5 L0,9 z" fill="#5d6068"/></marker></defs>
+  <text x="337" y="112" font-size="10.5" fill="#5d6068">html_path</text>
+
+  <rect x="378" y="14" width="314" height="222" rx="9" fill="rgba(168,98,43,.10)" stroke="#a8622b"/>
+  <text x="394" y="38" font-size="13" font-weight="700" fill="#a8622b">MEDIA_ROOT · the article itself</text>
+  <text x="394" y="62" font-size="12.5" font-family="ui-monospace,Menlo,monospace">html_content/42/</text>
+  <text x="394" y="82" font-size="12.5" font-family="ui-monospace,Menlo,monospace">  치킨집.html</text>
+  <text x="394" y="102" font-size="12.5" font-family="ui-monospace,Menlo,monospace">  치킨집/1H6A9367.jpg</text>
+  <text x="394" y="122" font-size="12.5" font-family="ui-monospace,Menlo,monospace">  치킨집/…10 more…</text>
+  <text x="394" y="142" font-size="12.5" font-family="ui-monospace,Menlo,monospace">  remote/9f3c…c1.jpg</text>
+  <text x="394" y="166" font-size="12.5" font-family="ui-monospace,Menlo,monospace">thumbnail_img/42/cover.jpg</text>
+  <text x="394" y="192" font-size="12.5" font-family="ui-monospace,Menlo,monospace">content_derivatives/webp-w1024/</text>
+  <text x="394" y="210" font-size="12.5" font-family="ui-monospace,Menlo,monospace">  html_content/42/…/1H6A9367.jpg.webp</text>
+  <text x="394" y="228" font-size="11" fill="#5d6068">(generated, disposable)</text>
+</svg>
+<figcaption>One content, two homes. Everything on the right is re-derivable; everything on the left is the truth.</figcaption>
+</figure>
+
+<p>Several of the columns on the left are <em>materialized derivations of the document on the right</em>:
+<code>image_count</code>, <code>local_image_count</code>, <code>asset_bytes</code>, <code>has_body</code>,
+<code>has_canonical_header</code>, and above all <code>extracted_text</code> &mdash; the whole article flattened to
+plain text. They are stored rather than computed on demand for two reasons. First, the reader needs to decide how to
+render <em>before</em> downloading the body. Second, and more fundamentally: the agent&rsquo;s chunk index computes
+character offsets (<code>char_start</code>/<code>char_end</code>) into that text, and an offset is only meaningful if
+both sides agree, byte for byte, on which string it indexes. A derivation both sides recompute independently would
+drift; a stored string cannot.</p>
+
+<h3>Idea 2: visibility is one nullable timestamp, changed through one function</h3>
+
+<p>There is no <code>is_published</code> boolean. Visibility is
+<code>published_at</code>: <strong><code>NULL</code> means draft</strong>, a timestamp means published (and says
+<em>when</em>). The timestamp form is not decoration &mdash; it reads naturally in the SQL the agent splices into its
+own queries: <code>published_at IS NOT NULL</code>.</p>
+
+<figure>
+<svg viewBox="0 0 700 190" role="img" aria-label="Lifecycle of a content row: created as a draft, published, unpublished, deleted">
+  <defs><marker id="b12" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+    <path d="M0,0 L9,4.5 L0,9 z" fill="#5d6068"/></marker></defs>
+  <rect x="14" y="60" width="140" height="54" rx="8" fill="rgba(127,127,127,.14)" stroke="#5d6068"/>
+  <text x="84" y="82" font-size="12.5" text-anchor="middle" font-weight="650">초안 (draft)</text>
+  <text x="84" y="100" font-size="11.5" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">published_at NULL</text>
+
+  <rect x="286" y="60" width="150" height="54" rx="8" fill="rgba(74,143,106,.16)" stroke="#4a8f6a"/>
+  <text x="361" y="82" font-size="12.5" text-anchor="middle" font-weight="650">발행됨 (published)</text>
+  <text x="361" y="100" font-size="11.5" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">published_at = t</text>
+
+  <rect x="558" y="60" width="128" height="54" rx="8" fill="rgba(168,98,43,.16)" stroke="#a8622b"/>
+  <text x="622" y="90" font-size="12.5" text-anchor="middle" font-weight="650">deleted (row gone)</text>
+
+  <path d="M156 76 L282 76" stroke="#5d6068" stroke-width="2" marker-end="url(#b12)"/>
+  <text x="219" y="68" font-size="11" text-anchor="middle">발행 &rarr; index</text>
+  <path d="M282 104 L158 104" stroke="#5d6068" stroke-width="2" marker-end="url(#b12)"/>
+  <text x="219" y="122" font-size="11" text-anchor="middle">발행 취소 &rarr; de-index</text>
+  <path d="M440 86 L554 86" stroke="#5d6068" stroke-width="2" marker-end="url(#b12)"/>
+  <text x="497" y="78" font-size="11" text-anchor="middle">delete()</text>
+  <text x="497" y="102" font-size="11" text-anchor="middle" fill="#a8622b">&rarr; de-index</text>
+
+  <text x="84" y="140" font-size="11" text-anchor="middle" fill="#5d6068">invisible to every</text>
+  <text x="84" y="155" font-size="11" text-anchor="middle" fill="#5d6068">public surface</text>
+  <text x="361" y="140" font-size="11" text-anchor="middle" fill="#5d6068">catalog · reader · retrieval</text>
+  <text x="361" y="155" font-size="11" text-anchor="middle" fill="#5d6068">· 선택 콘텐츠 · recommendations</text>
+</svg>
+<figcaption>Three transitions, all through one function, all firing the same one-shaped agent call.</figcaption>
+</figure>
+
+<p>Every transition goes through <code>services.set_content_publish_state</code>. That is not a style preference, it is
+load-bearing: an <em>automatic</em> index/de-index has to hang somewhere, and this codebase deliberately did not hang it
+on a Django signal. If you have one function, you can attach one behaviour and be sure it fires. If you have three call
+sites writing the column directly, you have three chances to forget &mdash; and forgetting was a real production
+incident (P53.F11: publishing extracted the text but nobody ever embedded it, so the article was live and unsearchable).</p>
+
+<h3>Idea 3: the index lags; the query does not</h3>
+
+<p>This is the single most useful thing to understand about the content corpus, and it is the reason the publish trigger
+is allowed to be best-effort.</p>
+
+<p>When you publish, a background chain eventually adds the content&rsquo;s chunks to
+<code>agent.content_chunk_artifacts</code>. That chain can be slow, retried, or (in the worst case) lost. But the
+retrieval SQL does <strong>not</strong> trust the index to be a gate. It re-states the visibility predicate in its own
+<code>WHERE</code> clause &mdash; <code>html_path &lt;&gt; '' AND has_body AND published_at IS NOT NULL</code> &mdash;
+joining back to the backend row over the one-way read bridge from
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>.</p>
+
+<div class="callout">
+  <span class="lbl">The consequence, stated plainly</span>
+  <p><strong>Unpublishing is instant. Publishing is eventual.</strong> The moment <code>published_at</code> goes
+  <code>NULL</code>, no query can return that content, whether or not its chunks are still sitting in the index. The
+  moment it becomes a timestamp, the content is readable on the site immediately &mdash; but it becomes
+  <em>citable</em> only once the chunks land. That asymmetry is exactly the right one: the failure mode of a lagging
+  index is &ldquo;the AI has not learned about this article yet&rdquo;, never &ldquo;the AI is quoting something we
+  took down&rdquo;.</p>
+</div>
+
+<p>Because of that, the trigger module can be <em>stateless</em>: no backend run table, no reconciliation bookkeeping,
+just a pair of Celery tasks carrying their own attempt counters, plus a manual catch-up run that heals anything lost.
+Postgres stays the source of truth, and the recovery story is &ldquo;re-run the catch-up&rdquo;.</p>
+
+</section>
+
+<section id="code">
+<h2>Code &mdash; walking the library</h2>
+
+<p>Five stops: the models, getting content in, the publish seam, reading content, and the two side domains (cost tables
+and the Notion mirror). Every path below is relative to the repository root; line numbers are as of 2026-08-26.</p>
+
+<h3>1. The models &mdash; <code>apps/backend/content/models.py</code></h3>
+
+<p>The file is 1,120 lines and holds two domains. Lines 86&ndash;700 are the library (ours); lines 704&ndash;1120 are
+the <em>v1</em> content agent&rsquo;s draft models (<code>ContentDraftSettings</code>, <code>ContentDraftJob</code>,
+<code>ContentDraftVersion</code>, <code>ContentDraftMessage</code>, <code>ContentDraftAttachment</code>,
+<code>ContentDraftDecision</code>) &mdash; explainer <span class="tag">#15</span>&rsquo;s subject. The <em>v2</em> agent
+lives in its own package, <code>content/agent_jobs/</code>, and is only <em>imported</em> at the top of this file so
+Django registers its models under the same app label; that is explainers <span class="tag">#13</span> and
+<span class="tag">#14</span>.</p>
+
+<figure>
+<svg viewBox="0 0 700 330" role="img" aria-label="Entity relationship diagram of the content library models around one toy content">
+  <defs><marker id="c12" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="#5d6068"/></marker></defs>
+
+  <rect x="238" y="8" width="224" height="86" rx="8" fill="rgba(58,110,165,.13)" stroke="#3a6ea5" stroke-width="2"/>
+  <text x="350" y="28" font-size="13" text-anchor="middle" font-weight="700" fill="#3a6ea5">NotionContent · id 42</text>
+  <text x="350" y="47" font-size="11.5" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">published_at = 2026-08-20</text>
+  <text x="350" y="64" font-size="11.5" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">is_preferred = false</text>
+  <text x="350" y="83" font-size="11.5" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">html_path = html_content/42/…</text>
+
+  <rect x="14" y="128" width="180" height="62" rx="7" fill="rgba(127,127,127,.10)" stroke="#5d6068"/>
+  <text x="104" y="148" font-size="12" text-anchor="middle" font-weight="650">ContentCostTable</text>
+  <text x="104" y="165" font-size="11" text-anchor="middle">OneToOne · at most 1</text>
+  <text x="104" y="181" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">schema 2.0</text>
+
+  <rect x="256" y="128" width="188" height="62" rx="7" fill="rgba(127,127,127,.10)" stroke="#5d6068"/>
+  <text x="350" y="148" font-size="12" text-anchor="middle" font-weight="650">ContentImportJob</text>
+  <text x="350" y="165" font-size="11" text-anchor="middle">FK · many per content</text>
+  <text x="350" y="181" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">status=succeeded</text>
+
+  <rect x="506" y="128" width="180" height="62" rx="7" fill="rgba(127,127,127,.10)" stroke="#5d6068"/>
+  <text x="596" y="148" font-size="12" text-anchor="middle" font-weight="650">ContentViewHistory</text>
+  <text x="596" y="165" font-size="11" text-anchor="middle">FK · one per view</text>
+  <text x="596" y="181" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">user may be NULL</text>
+
+  <rect x="256" y="222" width="188" height="58" rx="7" fill="rgba(127,127,127,.10)" stroke="#5d6068"/>
+  <text x="350" y="242" font-size="12" text-anchor="middle" font-weight="650">ContentUploadSession</text>
+  <text x="350" y="259" font-size="11" text-anchor="middle">FK from the import job</text>
+  <text x="350" y="274" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">uuid pk · 24h TTL</text>
+
+  <rect x="466" y="238" width="222" height="62" rx="7" fill="rgba(168,98,43,.12)" stroke="#a8622b" stroke-dasharray="4 3"/>
+  <text x="577" y="258" font-size="12" text-anchor="middle" font-weight="650">ContentDraftJob / ContentAgentJob</text>
+  <text x="577" y="275" font-size="11" text-anchor="middle">FK <tspan font-family="ui-monospace,Menlo,monospace">published_content</tspan> &rarr;</text>
+  <text x="577" y="291" font-size="11" text-anchor="middle" fill="#a8622b">the agents point at us, not vice versa</text>
+
+  <path d="M194 152 L252 128" stroke="#5d6068" marker-end="url(#c12)"/>
+  <path d="M350 124 L350 96" stroke="#5d6068" marker-end="url(#c12)"/>
+  <path d="M506 152 L466 122" stroke="#5d6068" marker-end="url(#c12)"/>
+  <path d="M350 222 L350 194" stroke="#5d6068" marker-end="url(#c12)"/>
+  <path d="M508 238 L462 96" stroke="#a8622b" stroke-dasharray="4 3" marker-end="url(#c12)"/>
+</svg>
+<figcaption>The library&rsquo;s five tables around one toy content. Note the direction of the dashed edge: a
+<code>NotionContent</code> has no column pointing at the job that produced it &mdash; the job points at the content
+(<code>related_name="source_draft_jobs"</code> / <code>"source_agent_jobs"</code>), so a hand-uploaded content has
+nothing to be null about.</figcaption>
+</figure>
+
+<h4>The queryset is the visibility policy (lines 115&ndash;200)</h4>
+
+<p>Read these four methods and you know every rule about who sees what:</p>
+
+<pre><code>class NotionContentQuerySet(models.QuerySet["NotionContent"]):
+    def with_stored_html(self):     # the FILE predicate only
+        return self.exclude(html_path="")
+
+    def published(self):
+        return self.filter(published_at__isnull=False)
+
+    def drafts(self):
+        return self.filter(published_at__isnull=True)
+
+    def readable(self):             # the PUBLIC-VISIBILITY gate (P59.S1)
+        return self.with_stored_html().published()
+
+    def catalog(self):              # readable, minus the pinned rail
+        return self.readable().filter(is_preferred=False)
+
+    def preferred(self):            # the pinned rail itself
+        return self.readable().filter(is_preferred=True)</code></pre>
+
+<p>The distinction between <code>with_stored_html()</code> and <code>readable()</code> is the one worth internalising.
+Maintenance jobs &mdash; weight backfill, media-derivative warming, remote-image localisation, the content agent&rsquo;s
+reference-profile reader &mdash; use the <em>file</em> predicate, because a draft has real files and there is no reason
+to make a publish wait for a re-encode. Every public surface uses <code>readable()</code>. Operator surfaces
+deliberately use neither: an operator must be able to see a draft, which is why the operator lookup mixin does a plain
+<code>filter(pk=…)</code> (<code>views.py:263&ndash;290</code>).</p>
+
+<div class="callout warn">
+  <span class="lbl">There is no &ldquo;unlisted&rdquo; state</span>
+  <p>Two flags, not three states. <code>published_at</code> decides <em>visible or not</em>;
+  <code>is_preferred</code> decides <em>which rail</em> a visible content appears on (the pinned
+  <code>/preferred</code> list versus the paginated <code>/catalog</code>). A content is never &ldquo;published but
+  hidden from the catalog&rdquo;: <code>catalog()</code> and <code>preferred()</code> partition
+  <code>readable()</code> exactly, so every published content is in precisely one of them.</p>
+</div>
+
+<h4><code>NotionContent.save()</code> is a file pipeline, not a row write (lines 320&ndash;350)</h4>
+
+<p>This is the fact that explains a surprising amount of the rest of the codebase. Saving a content row does far more
+than write columns:</p>
+
+<pre><code>def save(self, *args, **kwargs):
+    had_uploaded_zip = bool(self.zip_file)
+    super().save(*args, **kwargs)
+    field_updates = {}
+
+    if self.zip_file:                       # 1. unpack the ZIP into html_content/&lt;id&gt;/
+        process_uploaded_zip(self)
+        self.zip_file.delete(save=False)
+        ...
+    relocated_thumbnail = relocate_thumbnail(self)   # 2. move the thumbnail into thumbnail_img/&lt;id&gt;/
+
+    if self.pk is not None and self.html_path:      # 3. RESCAN the document
+        field_updates.update(refresh_content_weight_fields(self).as_field_updates())
+
+    if field_updates:
+        type(self).objects.filter(pk=self.pk).update(**field_updates)
+
+    if self.pk is not None and (had_uploaded_zip or relocated_thumbnail is not None):
+        queue_content_media_derivative_warming_on_commit(self.pk)   # 4. re-encode images after commit</code></pre>
+
+<p>A <code>.save()</code> can therefore unpack an archive, move files, re-parse the whole HTML document, re-flatten it
+to text and queue an image re-encode. That is correct for an edit. It is <em>wrong</em> for anything that merely wants
+to touch one column &mdash; which is why publish state, cost tables and the draft publisher all write with a queryset
+<code>.update()</code> instead, each with a comment saying so. The weight rescan runs unconditionally (not just on the
+ZIP branch) on purpose: <code>has_canonical_header</code> compares the document against <code>title</code>, so a
+title-only edit that touches no file would otherwise leave the flag stale and the reader would print the title twice.</p>
+
+<h4><code>delete()</code> is hooked at the model, not at the call sites (line 340)</h4>
+
+<pre><code>def delete(self, *args, **kwargs):
+    content_id = self.pk                  # captured BEFORE super() clears it
+    cleanup_content_files(self)
+    super().delete(*args, **kwargs)
+    if content_id is not None:
+        queue_content_chunk_sync_on_commit(content_id)</code></pre>
+
+<p>Hooking the model rather than the two call sites is what makes the Django admin&rsquo;s per-object
+<code>delete_queryset</code> loop covered too (<code>admin.py</code> loops deliberately instead of issuing a bulk
+delete, for exactly this reason). The de-index needs no special &ldquo;delete&rdquo; message: a deleted row can no
+longer pass the agent&rsquo;s chunkable gate, so the same scoped run that would index it now removes it.</p>
+
+<h4>The other four models, briefly</h4>
+
+<table>
+<tr><th>Model (line)</th><th>Shape</th><th>Statuses</th></tr>
+<tr><td><code>ContentUploadSession</code> (361)</td><td>UUID pk, one operator, one ZIP being uploaded in chunks; <code>received_chunks</code> is a JSON list of indexes.</td><td><code>uploading → completed → queued → imported</code>, plus <code>failed</code> / <code>expired</code></td></tr>
+<tr><td><code>ContentImportJob</code> (439)</td><td>FK to the content <em>and</em> to the upload session; carries the Celery task id and timestamps.</td><td><code>queued → running → succeeded | failed</code></td></tr>
+<tr><td><code>ContentCostTable</code> (504)</td><td>OneToOne with the content. The whole validated document is a single <code>JSONField</code>; <code>schema_version</code>/<code>variant</code>/<code>dataset_id</code> are denormalised for querying only.</td><td>&mdash; (has <code>attached_at</code> / <code>replaced_at</code>)</td></tr>
+<tr><td><code>ContentViewHistory</code> (597)</td><td>One row per view. <code>user</code> is nullable &mdash; anonymous views are recorded too.</td><td>&mdash;</td></tr>
+<tr><td><code>LandingPageCopy</code> (642)</td><td>One row per agent mode (<code>default</code>, <code>consulting</code>), holding the operator-editable landing greeting, subtitle lines and prompt bubbles.</td><td>&mdash;</td></tr>
+</table>
+
+<p><code>ContentCostTable</code>&rsquo;s docstring is worth quoting because it states the &ldquo;save is a file
+pipeline&rdquo; consequence out loud: it is <em>a separate row on purpose, never a JSON field on
+<code>NotionContent</code></em>, because the operator retrofits cost tables onto already-published content and that must
+not re-derive its files.</p>
+
+<p><code>LandingPageCopy</code> is a small oddity: landing-page copy has nothing to do with the content library
+conceptually, but it lives in this app because it is operator-editable text served next to the catalog. Its
+<code>LandingAgentType</code> (line 86) mirrors two members of <code>conversations.AgentType</code> locally, with a
+comment explaining why &mdash; importing the real enum would create a <code>content → conversations</code> import
+cycle. The retired <code>diagnosis</code> mode resolves to <code>default</code> at the read boundary.</p>
+
+<h3>2. Getting content in</h3>
+
+<p>An operator has a 500 MB Notion export ZIP and a browser. Between those two facts sits the most-engineered part of
+this app that nobody ever thinks about.</p>
+
+<h4>Why the upload is chunked at all</h4>
+
+<p>Not because the file is large in absolute terms &mdash; because of a hard ceiling nobody in the code controls.
+Production sits behind Cloudflare, whose request-body cap was measured at exactly <strong>104,857,600 bytes</strong>
+(100 MiB) during P83. No amount of nginx or gunicorn tuning moves it. So the ZIP is cut client-side into
+<strong>16 MiB</strong> pieces, each shipped as its own ordinary request, and reassembled server-side.</p>
+
+<p>Three coupled limits, all now real settings (<code>config/settings.py:471&ndash;480</code>, <code>:573</code>):</p>
+
+<table>
+<tr><th>Knob</th><th>Default</th><th>What binds it</th></tr>
+<tr><td><code>CONTENT_ZIP_MAX_BYTES</code></td><td>500 MiB</td><td>The ceiling the upload-session POST enforces (measured: 524,288,001 bytes → 400).</td></tr>
+<tr><td><code>CONTENT_UPLOAD_CHUNK_SIZE_BYTES</code></td><td>16 MiB</td><td>Must stay under <em>both</em> Cloudflare&rsquo;s 100 MiB and Django&rsquo;s body cap.</td></tr>
+<tr><td><code>DATA_UPLOAD_MAX_MEMORY_SIZE</code></td><td>20 MiB</td><td>Django refuses a <code>request.body</code> read above this <em>before the view runs</em>. Django&rsquo;s own default is 2.5 MiB &mdash; below the chunk size, so leaving it alone would kill every upload.</td></tr>
+</table>
+
+<p>That last one is a genuine trap and the code treats it as one. The console sends each chunk as a raw
+<code>application/octet-stream</code> body, so <code>request.body</code> is read against the cap; if the cap is below
+the chunk size, Django raises <code>RequestDataTooBig</code> and the operator gets Django&rsquo;s HTML error page
+instead of an API error. <code>OperatorContentUploadChunkView._extract_chunk_body</code>
+(<code>views.py:491&ndash;514</code>) catches it and translates it into an ordinary JSON refusal that names both
+numbers, so the console can print a sentence.</p>
+
+<h4>The three-call upload protocol</h4>
+
+<pre><code>POST   /api/content/admin/uploads                       → 201 {id, total_chunks, chunk_size, expires_at}
+PUT    /api/content/admin/uploads/&lt;uuid&gt;/chunks/&lt;index&gt;  → 200  (repeat N times, any order)
+POST   /api/content/admin/uploads/&lt;uuid&gt;/complete        → 200  status=completed, assembled_path set</code></pre>
+
+<p><code>upload_sessions.py</code> is 215 lines of unglamorous correctness:</p>
+
+<ul>
+  <li><code>calculate_total_chunks</code> (<code>:54</code>) is <code>ceil(expected_size / chunk_size)</code>, and
+  <code>expected_chunk_size</code> (<code>:62</code>) computes the exact expected length of each index &mdash; the last
+  one is the remainder. <code>store_upload_chunk</code> then <strong>rejects any chunk whose length is not exactly
+  that</strong>, which is a cheap, complete guard against a truncated or duplicated body.</li>
+  <li>Chunks land at <code>MEDIA_ROOT/.content_uploads/&lt;uuid&gt;/chunks/00000003.part</code>
+  (<code>CONTENT_UPLOAD_ROOT_NAME = ".content_uploads"</code>), and re-uploading an already-received index is a no-op
+  past the size check &mdash; so a flaky network retry is free.</li>
+  <li><code>assemble_upload_session</code> concatenates in index order into a <code>.tmp</code> sibling, verifies the
+  assembled size equals <code>expected_size</code>, and only then does <code>temporary_path.replace(assembled_path)</code>
+  &mdash; an atomic rename. There is no window in which a half-written ZIP is visible under the real name.</li>
+  <li>Sessions carry a 24-hour TTL (<code>expires_at</code>); <code>cleanup_expired_upload_sessions</code> is a
+  periodic task that <code>rmtree</code>s the directory and marks the row <code>expired</code>.</li>
+</ul>
+
+<h4>From assembled ZIP to a row: the import job</h4>
+
+<p>The operator&rsquo;s content write (<code>POST /api/content/admin</code> or <code>PATCH admin/&lt;id&gt;</code>) can
+carry a <code>zip_upload_id</code>. The serializer&rsquo;s shared body
+(<code>serializers.py:640&ndash;676</code>) does four things inside one transaction, in this order:</p>
+
+<pre><code>upload_session = validated_data.pop("zip_upload_session", None)
+requested_publish_state = validated_data.pop("is_published", None)
+
+with transaction.atomic():
+    if upload_session is not None:
+        upload_session = self._get_zip_upload_session(upload_session.pk, lock=True)  # SELECT … FOR UPDATE
+    content = content_factory()                                # create_ or update_operator_content
+    if requested_publish_state is not None:
+        self.publish_changed = set_content_publish_state(content, requested_publish_state)
+    if upload_session is not None:
+        self.import_job = queue_content_import_job(content=content, upload_session=upload_session)
+    return content</code></pre>
+
+<p>Two details in there are easy to skim past. First, <code>publish_changed</code> and <code>import_job</code> are
+<em>side channels</em>: DRF&rsquo;s <code>save()</code> returns only the instance, so the serializer stores each on
+itself and the view reads it back afterwards. <code>publish_changed</code> is <code>None</code> when the request never
+mentioned publishing, and otherwise carries the seam&rsquo;s real verdict &mdash; which lets the console suppress its
+&ldquo;published!&rdquo; notice when nothing actually moved. Second, the upload session is locked with
+<code>select_for_update()</code> only at the moment it is <em>consumed</em>; the field-level validation that runs
+earlier, outside any transaction, does a plain read.</p>
+
+<p>Then <code>import_jobs.queue_content_import_job</code> creates a <code>QUEUED</code> job, flips the session to
+<code>queued</code>, and dispatches on <code>transaction.on_commit</code> &mdash; the codebase-wide
+dispatch-after-commit pattern (explainer <span class="tag">#16</span> owns it) with a failure branch that marks the job
+failed if even the dispatch raises.</p>
+
+<p><code>execute_content_import_job</code> (<code>import_jobs.py:77</code>) is the worker body, and it is
+<strong>idempotent by early return</strong>: a job already <code>SUCCEEDED</code> or <code>FAILED</code> returns its
+status without re-running. It locks the row, marks it <code>RUNNING</code>, resolves the assembled path (through
+<code>resolve_assembled_upload_path</code>, which refuses anything that resolves outside <code>MEDIA_ROOT</code>), and
+then does the whole import with one line:</p>
+
+<pre><code>update_operator_content(job.content, zip_file=upload_path)</code></pre>
+
+<p>&mdash; which is to say, it hands the file to <code>NotionContent.save()</code> and lets the post-save pipeline from
+stop 1 do the unpacking, the rewriting, the weight rescan and the derivative warming. And then, at the very end, the
+part that matters for this page:</p>
+
+<pre><code>if NotionContent.objects.filter(pk=job.content_id, published_at__isnull=False).exists():
+    # S1's ordering edge (P59.S3): an operator can send `is_published: true`
+    # together with a `zip_upload_id`, so the row is already published and no
+    # publish *transition* happens here -- the files simply appear underneath
+    # it. Without this trigger nothing would ever index that content.
+    queue_content_chunk_sync_on_commit(job.content_id)</code></pre>
+
+<div class="callout">
+  <span class="lbl">Why that branch exists</span>
+  <p>The seam fires on a <em>transition</em>. If the operator publishes and uploads in the same request, the transition
+  happens while the row still has no files &mdash; and the seam itself notices this and returns early without queueing
+  anything (there would be nothing to index). Minutes later the import job lands the files under an already-published
+  row, and <em>no transition occurs</em>. This is the second of the three trigger sites, and it exists purely to close
+  that ordering hole.</p>
+</div>
+
+<h4>Unpacking: <code>importers.py</code></h4>
+
+<p><code>import_uploaded_zip</code> (<code>:77</code>) extracts into a staging directory, finds the primary HTML file,
+rewrites its relative asset references to the final <code>MEDIA_URL</code> paths, locates the asset directory, and only
+then swaps staging into place. Everything happens under a temporary root that a <code>finally</code> always removes, so
+a bad archive leaves nothing behind. Bad input is expressed as <code>ValueError</code> (&ldquo;Uploaded file is not a
+valid zip archive&rdquo;, &ldquo;does not contain an HTML file&rdquo;), which the service layer wraps into a
+<code>ContentWriteError</code> with <code>field_name="zip_file"</code> so DRF reports it against the right field.</p>
+
+<h4>Localising hot-linked images: <code>remote_images.py</code></h4>
+
+<p>Legacy Notion exports are full of <code>&lt;img src="https://postfiles.pstatic.net/…"&gt;</code> &mdash; images that
+were never in the ZIP and still live on Naver&rsquo;s CDN. Those are outside every optimisation this app can do: no
+WebP derivative, no width variant, no cache control, and a third-party host on the critical path of every page view.</p>
+
+<p><code>localize_content_remote_images</code> (<code>:160</code>) downloads them into the content&rsquo;s own
+<code>remote/</code> subdirectory, deduping by URL hash, and rewrites <code>&lt;img&gt;</code>,
+<code>&lt;source&gt;</code>, <code>srcset</code> and any wrapping <code>&lt;a&gt;</code> to point at the local copy.
+It is host-allowlisted, deliberately narrowly:</p>
+
+<pre><code>ALLOWED_REMOTE_IMAGE_HOSTS = frozenset({
+    "blogfiles.pstatic.net",
+    "postfiles.pstatic.net",
+    "cafeptthumb-phinf.pstatic.net",     # added P83.S5 — 19 of 199 stragglers lived here
+})
+REMOTE_IMAGE_TIMEOUT_SECONDS = 20</code></pre>
+
+<p>This is a management command, not an automatic step, and it is genuinely load-bearing: running it on production in
+P83 localised <strong>198 images and rewrote 396 references</strong>, taking one content&rsquo;s first paint from
+169 requests across 154 third-party hosts down to zero third-party hosts.</p>
+
+<h4>The weight scan: <code>weights.py</code> and <code>extraction.py</code></h4>
+
+<p><code>refresh_content_weight_fields</code> re-derives seven columns from the stored document
+(<code>CONTENT_WEIGHT_FIELDS</code>). Three of them are load metrics &mdash; <code>image_count</code>,
+<code>local_image_count</code> (whose difference is the un-reachable hot-linked remainder), <code>asset_bytes</code>.
+Two are reader gates ported from JavaScript the frontend used to run after downloading the whole body:
+<code>has_body</code> and <code>has_canonical_header</code>. And two are the RAG input: <code>extracted_text</code> plus
+<code>extracted_text_version</code>.</p>
+
+<p><code>extraction.extract_document_text</code> is a deliberately boring flattener: headings become
+<code>#</code>/<code>##</code>/<code>###</code> lines, block tags (<code>p</code>, <code>li</code>,
+<code>blockquote</code>, <code>figcaption</code>, <code>td</code>, <code>th</code>) become lines, every
+<code>&lt;img&gt;</code> becomes an <code>[IMG]</code> marker, and <strong>the output has no blank lines at all</strong>
+&mdash; which is why the agent&rsquo;s content chunker splits on heading markers rather than paragraph breaks
+(<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9</a>).</p>
+
+<div class="callout warn">
+  <span class="lbl">The salt discipline</span>
+  <p><code>CONTENT_EXTRACTION_VERSION</code> is currently <code>"2"</code> and is stored beside the text on every row.
+  It is folded into the agent&rsquo;s chunk-set fingerprint, so bumping it forces every chunk set derived from an old
+  text to be rebuilt rather than silently mixed with new ones. Its docstring gives the rule and the exception:
+  <em>bump on any change to the emitted text; never bump for a pure refactor.</em> Version 2 exists because P77.S3
+  changed one thing &mdash; an <code>&lt;img&gt;</code> inside a <code>&lt;figure&gt;</code> with no
+  <code>&lt;figcaption&gt;</code> now contributes its <code>alt</code> text after the marker, since otherwise that
+  caption would vanish from the RAG text entirely.</p>
+</div>
+
+<h3>3. The publish seam &mdash; the centrepiece</h3>
+
+<p>Here is the entire function, <code>services.set_content_publish_state</code>
+(<code>apps/backend/content/services.py:216</code>), docstring elided. It is twenty lines and it is the most carefully
+reasoned twenty lines in the app.</p>
+
+<pre><code>def set_content_publish_state(content: NotionContent | int, published: bool) -&gt; bool:
+    content_pk = content if isinstance(content, int) else content.pk
+    if content_pk is None:
+        raise ContentWriteError("Content must exist before changing publish state.")
+
+    published_at = timezone.now() if published else None
+    changed = bool(
+        NotionContent.objects.filter(pk=content_pk)
+        .filter(published_at__isnull=published)        # &lt;-- change detection, in SQL
+        .update(published_at=published_at)             # &lt;-- never .save()
+    )
+    if not changed:
+        return False
+    if not isinstance(content, int):
+        content.published_at = published_at
+        if published and not content.html_path:
+            # Published before its files exist (the import-job ordering edge).
+            return True
+    queue_content_chunk_sync_on_commit(content_pk)
+    return True</code></pre>
+
+<p>Five decisions, each with a consequence you would hit within a week of getting one wrong.</p>
+
+<h4>(a) <code>QuerySet.update()</code>, never <code>content.save()</code></h4>
+
+<p>From stop 1: saving a <code>NotionContent</code> re-runs its post-save file pipeline. Flipping a visibility switch
+must not unpack an archive, move a thumbnail, re-parse the document and queue an image re-encode. An
+<code>.update()</code> emits one <code>UPDATE</code> statement and touches nothing else. As a bonus,
+<code>updated_at</code> is <code>auto_now</code> &mdash; and it is deliberately <em>not</em> bumped here, because the
+catalog orders by <code>-updated_at</code> and a visibility flip is not a content edit. Re-publishing an old article
+should not float it to the top of the list.</p>
+
+<h4>(b) Change detection happens in SQL, not in Python</h4>
+
+<p><code>.filter(published_at__isnull=published)</code> is the whole trick, and it reads backwards until you see it.
+If you are <em>publishing</em> (<code>published=True</code>), the filter is <code>published_at IS NULL</code> &mdash;
+i.e. it matches only rows currently in the <em>other</em> state. <code>.update()</code> returns the number of rows
+matched, so <code>changed</code> is <code>True</code> exactly when a real transition occurred.</p>
+
+<p>Doing it this way rather than &ldquo;read the row, compare, write&rdquo; buys two things at once. There is no
+read-modify-write race: two concurrent publishes cannot both see &ldquo;it was a draft&rdquo; and both fire the
+trigger, because the second <code>UPDATE</code> matches zero rows. And a republish is a genuine no-op that
+<strong>keeps the original publish timestamp</strong> &mdash; the article&rsquo;s publication date does not quietly
+move every time someone clicks 발행 again.</p>
+
+<h4>(c) It returns a verdict, and the verdict is used</h4>
+
+<p><code>True</code> means &ldquo;the stored state actually moved&rdquo;. That value is not decorative: the operator
+serializer stashes it as <code>publish_changed</code> and the console suppresses its result notice on
+<code>False</code>. Before P55.S17 the verdict was computed here and thrown away, so the write response could not tell
+the operator that nothing had happened.</p>
+
+<h4>(d) Signals were rejected on purpose &mdash; and that forces the seam</h4>
+
+<div class="callout">
+  <span class="lbl">Why no <code>post_save</code> signal</span>
+  <p>A Django signal on <code>NotionContent</code> would fire on every write &mdash; including the file-pipeline
+  <code>.update()</code> calls, the draft publisher&rsquo;s <code>.update()</code>, the legacy importer&rsquo;s
+  <code>.update()</code>, and any admin edit &mdash; and it would <em>not</em> fire at all for the queryset
+  <code>.update()</code> this function itself uses (Django emits no signals for bulk updates). So the natural
+  &ldquo;automatic&rdquo; mechanism is both too loud and too quiet. The alternative is explicit: one function, and a
+  rule that every caller uses it. That rule is enforced socially (docstrings and comments at every call site) rather
+  than mechanically, which is the honest cost of this design.</p>
+</div>
+
+<h4>(e) Five callers, all found</h4>
+
+<table>
+<tr><th>#</th><th>Caller</th><th>Trigger in the product</th></tr>
+<tr><td>1</td><td><code>serializers.py:669</code> (<code>NotionContentWriteSerializer</code>)</td><td>The operator console&rsquo;s content editor: <code>POST /api/content/admin</code> or <code>PATCH admin/&lt;id&gt;</code> carrying <code>is_published</code>.</td></tr>
+<tr><td>2</td><td><code>admin.py:92</code> (<code>_set_publish_state</code>)</td><td>The two Django-admin bulk actions, 발행 / 발행 취소.</td></tr>
+<tr><td>3</td><td><code>draft_publish.py:411</code></td><td>The <strong>v1</strong> content agent: approving a draft job <em>is</em> the publish action.</td></tr>
+<tr><td>4</td><td><code>agent_jobs/publishing.py:1367</code> (<code>run_publish</code>)</td><td>The <strong>v2</strong> content agent: 승인 writes the content unpublished, and 발행 is a second, separate act.</td></tr>
+<tr><td>5</td><td><code>legacy_assets.py:161</code></td><td>The one-off legacy asset bootstrap importer, when run with <code>publish=True</code>.</td></tr>
+</table>
+
+<p>Caller 2 is worth a second look, because it shows the discipline in miniature:</p>
+
+<pre><code># admin.py — deliberately per-object rather than a bulk `.update()`, same reason
+# `delete_queryset` loops, so the single publish choke point sees every transition
+# and P59.S3's index/de-index trigger fires for each one.
+changed = sum(1 for content in queryset if set_content_publish_state(content, published))</code></pre>
+
+<p>A bulk <code>queryset.update(published_at=now)</code> would have been one statement instead of N, and would have
+silently de-synchronised the search index for every row it touched.</p>
+
+<h3>3b. The trigger &mdash; <code>chunk_indexing.py</code></h3>
+
+<p>484 lines whose whole job is: <em>tell the agent that one content&rsquo;s chunk set may be out of date.</em> Note
+the word &ldquo;may&rdquo;. This module is scrupulously agnostic:</p>
+
+<div class="callout def">
+  <span class="lbl">One call shape, both directions</span>
+  <p>Publish and unpublish and delete all send the exact same request:
+  <code>POST /agent-api/indexing/content-chunk-runs {"content_ids": [42]}</code>. The agent re-reads its own
+  eligibility gate at run time and either indexes the content or deletes its chunk set. So a flip that happens between
+  enqueue and run always resolves to the database&rsquo;s current truth &mdash; <em>&ldquo;the backend never decides
+  index vs de-index&rdquo;</em>.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 700 400" role="img" aria-label="Sequence diagram of the publish to chunk-index trigger">
+  <defs><marker id="d12" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="#3a6ea5"/></marker>
+    <marker id="e12" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="#a8622b"/></marker></defs>
+
+  <text x="58" y="18" font-size="11.5" text-anchor="middle" font-weight="650">operator</text>
+  <text x="196" y="18" font-size="11.5" text-anchor="middle" font-weight="650">Django</text>
+  <text x="350" y="18" font-size="11.5" text-anchor="middle" font-weight="650">Postgres</text>
+  <text x="498" y="18" font-size="11.5" text-anchor="middle" font-weight="650">celery worker</text>
+  <text x="648" y="18" font-size="11.5" text-anchor="middle" font-weight="650">agent</text>
+  <line x1="58" y1="26" x2="58" y2="386" stroke="#c8ccd4"/>
+  <line x1="196" y1="26" x2="196" y2="386" stroke="#c8ccd4"/>
+  <line x1="350" y1="26" x2="350" y2="386" stroke="#c8ccd4"/>
+  <line x1="498" y1="26" x2="498" y2="386" stroke="#c8ccd4"/>
+  <line x1="648" y1="26" x2="648" y2="386" stroke="#c8ccd4"/>
+
+  <path d="M58 46 L192 46" stroke="#3a6ea5" stroke-width="1.7" marker-end="url(#d12)"/>
+  <text x="126" y="40" font-size="10.5" text-anchor="middle">클릭 발행</text>
+
+  <path d="M196 76 L346 76" stroke="#3a6ea5" stroke-width="1.7" marker-end="url(#d12)"/>
+  <text x="271" y="70" font-size="10.5" text-anchor="middle">UPDATE … WHERE published_at IS NULL</text>
+  <path d="M346 98 L200 98" stroke="#5d6068" stroke-width="1.3" stroke-dasharray="3 3" marker-end="url(#d12)"/>
+  <text x="273" y="112" font-size="10.5" text-anchor="middle" fill="#5d6068">1 row → changed = True</text>
+
+  <rect x="150" y="124" width="96" height="26" rx="5" fill="rgba(58,110,165,.15)" stroke="#3a6ea5"/>
+  <text x="198" y="141" font-size="10.5" text-anchor="middle">on_commit</text>
+  <text x="198" y="164" font-size="10" text-anchor="middle" fill="#5d6068">200 OK returns here</text>
+
+  <path d="M246 186 L494 186" stroke="#3a6ea5" stroke-width="1.7" marker-end="url(#d12)"/>
+  <text x="370" y="180" font-size="10.5" text-anchor="middle">send_task content.sync_content_chunk_index</text>
+
+  <path d="M498 214 L644 214" stroke="#3a6ea5" stroke-width="1.7" marker-end="url(#d12)"/>
+  <text x="571" y="208" font-size="10.5" text-anchor="middle">POST content-chunk-runs {ids:[42]}</text>
+  <path d="M644 236 L502 236" stroke="#5d6068" stroke-width="1.3" stroke-dasharray="3 3" marker-end="url(#d12)"/>
+  <text x="573" y="250" font-size="10.5" text-anchor="middle" fill="#5d6068">202 {run_id, status:queued}</text>
+
+  <rect x="600" y="262" width="94" height="40" rx="5" fill="rgba(74,143,106,.16)" stroke="#4a8f6a"/>
+  <text x="647" y="278" font-size="10" text-anchor="middle">chunk + embed</text>
+  <text x="647" y="292" font-size="10" text-anchor="middle">(or delete)</text>
+
+  <path d="M498 316 L644 316" stroke="#a8622b" stroke-width="1.5" marker-end="url(#e12)"/>
+  <text x="571" y="310" font-size="10.5" text-anchor="middle" fill="#a8622b">GET run/&lt;id&gt;  ×  every 20 s</text>
+  <path d="M644 340 L502 340" stroke="#5d6068" stroke-width="1.3" stroke-dasharray="3 3" marker-end="url(#d12)"/>
+  <text x="573" y="354" font-size="10.5" text-anchor="middle" fill="#5d6068">succeeded → done (silent)</text>
+  <text x="573" y="374" font-size="10.5" text-anchor="middle" fill="#a8622b">partial / failed / timeout → email alert</text>
+</svg>
+<figcaption>The publish path. Everything below the <code>on_commit</code> box happens after the operator&rsquo;s
+request has already returned 200 &mdash; the trigger can never make a publish slower or make it fail.</figcaption>
+</figure>
+
+<h4>Fire-and-poll, with two separate budgets</h4>
+
+<p>Two Celery tasks, both stateless, both carrying their own attempt counters as task kwargs
+(<code>SYNC_TASK_NAME = "content.sync_content_chunk_index"</code>,
+<code>POLL_TASK_NAME = "content.poll_content_chunk_sync"</code>):</p>
+
+<pre><code>SYNC_MAX_ATTEMPTS = 5
+SYNC_RETRY_COUNTDOWN_SECONDS = (30, 60, 120, 300)   # transport/protocol failures: growing backoff
+SYNC_CONFLICT_MAX_ATTEMPTS = 20
+SYNC_CONFLICT_COUNTDOWN_SECONDS = 60                # HTTP 409: flat, patient, 20 minutes
+
+POLL_START_COUNTDOWN_SECONDS = 5
+POLL_INTERVAL_SECONDS = 20
+POLL_MAX_ATTEMPTS = 90                              # 90 × 20 s = 30 minutes
+POLL_ERROR_MAX_ATTEMPTS = 5                         # consecutive unreadable statuses give up sooner</code></pre>
+
+<p>The 409 deserves its own paragraph, because it is the interesting failure. From
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9</a>: the content chunk-index
+route holds a <strong>single-active-run guard</strong> &mdash; one Redis key
+<code>agent:indexing:content-chunk-run:active</code> set with <code>SET nx ex</code> &mdash; and answers 409
+<em>without registering a run</em>. So when a second publish lands while a full corpus catch-up is grinding through
+thousands of chunks, there is no run id to poll and nothing to wait on. This module models that precisely:</p>
+
+<pre><code>class ContentChunkRunConflict(RuntimeError):
+    """HTTP 409: another content chunk-index run holds the corpus (P59.S2).
+
+    Deliberately **not** a subclass of `ContentChunkIndexingClientError`: a
+    conflict is the expected outcome of two publishes in quick succession, is
+    retriable by construction (no run was registered, so there is nothing to
+    poll) and runs on its own budget. Keeping the hierarchies separate means an
+    `except ContentChunkIndexingClientError` can never swallow it."""</code></pre>
+
+<p>Two exception types with no inheritance relationship, so a broad <code>except</code> on the transport error cannot
+accidentally consume a healthy conflict &mdash; and 20 flat one-minute retries, because &ldquo;the thing failing&rdquo;
+is a perfectly healthy run doing real work.</p>
+
+<h4>The three trigger sites, and why <code>delete</code> is one of them</h4>
+
+<ol>
+  <li><code>services.set_content_publish_state:262</code> &mdash; every real publish/unpublish transition.</li>
+  <li><code>import_jobs.execute_content_import_job:168</code> &mdash; files landing under an already-published row.</li>
+  <li><code>models.NotionContent.delete:358</code> &mdash; the row going away.</li>
+</ol>
+
+<p>Delete is a trigger site for the same reason unpublish is: the chunk rows in
+<code>agent.content_chunk_artifacts</code> live in the <em>agent&rsquo;s</em> schema, and Postgres foreign keys do not
+cross that boundary &mdash; the agent&rsquo;s tables have no FK to <code>content_notioncontent</code> at all, and the
+read bridge is <code>SELECT</code>-only in one direction. So deleting the Django row does not cascade anything. Without
+this trigger, a deleted article&rsquo;s chunks would sit in the index until the next full catch-up run, and the
+retrieval query&rsquo;s join back to the (now absent) backend row is the only thing keeping them from being served.</p>
+
+<h4>Fail-soft dispatch, alert on give-up</h4>
+
+<p><code>queue_content_chunk_sync_on_commit</code> wraps <code>app.send_task</code> in a bare
+<code>try/except Exception</code> that only logs. A broker hiccup must never break the publish that triggered it, and
+the cost of a dropped dispatch is a stale index until the next catch-up &mdash; exactly the recovery story the module is
+designed around. But nothing is <em>silently</em> lost: every give-up path emails the operator through
+<code>send_ingestion_alert</code> (explainer <span class="tag">#16</span>), under three content-scoped keys so a retry
+storm for one content collapses into one mail while a second content failing at the same time still gets through:</p>
+
+<pre><code>START_FAILED_ALERT_KEY_PREFIX = "content-chunk-sync-start-failed"
+RUN_FAILED_ALERT_KEY_PREFIX   = "content-chunk-sync-run-failed"
+POLL_TIMEOUT_ALERT_KEY_PREFIX = "content-chunk-sync-poll-timeout"</code></pre>
+
+<p>and every alert body ends with the same remedy sentence, spelled out as a runnable command:</p>
+
+<pre><code>CATCH_UP_REMEDY = (
+    "Postgres stays the source of truth, so nothing is lost: re-run the "
+    "content chunk catch-up to heal the index -- POST "
+    "/agent-api/indexing/content-chunk-runs with {\"content_ids\": [&lt;id&gt;]} for "
+    "this one content, or with {} for the whole corpus."
+)</code></pre>
+
+<p>Transport-wise the client is plain <code>urllib</code> with a 30-second timeout and a bare
+<code>X-Agent-Service-Token</code> header &mdash; the shared-secret boundary from
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>. There is no user to
+impersonate here, so no JWT is forwarded. And the response is validated field by field
+(<code>_build_content_chunk_run_status</code>): a payload missing <code>run_id</code>, <code>trigger</code>,
+<code>status</code>, <code>progress</code> or <code>error_message</code>, or with the wrong type, is a client error
+rather than an <code>AttributeError</code> three frames later.</p>
+
+<h3>3c. The clean copy &mdash; <code>publish_scrub.py</code></h3>
+
+<p>66 lines, pure Python, no Django imports. When the content agent publishes a draft, the body it wrote is full of
+internal markers, and none of them may reach a public page. <code>scrub_public_text</code> strips six things, in a
+fixed order:</p>
+
+<table>
+<tr><th>Pattern</th><th>Example</th><th>Why it must go</th></tr>
+<tr><td><code>[post:N]</code></td><td><code>[post: 12841]</code></td><td>Internal citation marker naming a naver cafe post id.</td></tr>
+<tr><td>cafe.naver.com URLs</td><td><code>https://cafe.naver.com/…</code></td><td>Leaks the member-only source the article was written from.</td></tr>
+<tr><td><code>[n]</code> for n ≤ 50</td><td><code>[3]</code></td><td>Visible citation numbering; the published copy has no citations to number. Numbers above 50 are left alone &mdash; those are years and quantities.</td></tr>
+<tr><td><code>Post N</code></td><td><code>Post 12841</code></td><td>The backfilled-title leak surface: shared retrieval sets an empty post title to <code>Post &lt;id&gt;</code>, so the id can escape through prose that never contained a bracket.</td></tr>
+<tr><td><code>{{img:uuid}}</code></td><td><code>{{img:9f3c…}}</code></td><td>Image placement marker; the publisher materialises it into <code>&lt;figure&gt;</code> markup separately.</td></tr>
+<tr><td><code>{{cap:rev:from-to}}</code></td><td><code>{{cap:7:12-19}}</code></td><td>KakaoTalk capture marker carrying an internal revision id.</td></tr>
+</table>
+
+<p>It runs on rendered body chunks, the extracted title, the extracted description and (since P77.S3) a
+figure&rsquo;s <code>alt</code>. Two design notes are worth stealing. First, the <code>&le; 50</code> guard on visible
+citation markers is a closure clone of the agent&rsquo;s
+<code>chat.citations.strip_unmatched_visible_citation_markers</code> with <code>valid_citation_count = 0</code> &mdash;
+the same rule expressed in the same numbers, in a module that shares no code with it, because this one must stay
+import-free. Second, there is deliberately <strong>no whitespace collapse</strong>: the body is markdown and relies on
+blank-line and hard-break structure, so tidying the gaps a strip leaves behind would change the rendering.</p>
+
+<h3>4. Reading content</h3>
+
+<p>Everything so far was write-side. Now the other direction: what a browser, and what a chat turn, actually get.</p>
+
+<h4>The route table</h4>
+
+<p>All of these hang under <code>/api/content/</code> (<code>content/urls.py</code>). The public half:</p>
+
+<table>
+<tr><th>Route</th><th>View</th><th>Auth</th></tr>
+<tr><td><code>GET catalog</code></td><td><code>ContentCatalogView</code></td><td>none (<code>AllowAny</code>, <code>authentication_classes = []</code>)</td></tr>
+<tr><td><code>GET preferred</code></td><td><code>PreferredContentListView</code></td><td>none · unpaginated pinned rail</td></tr>
+<tr><td><code>GET &lt;id&gt;</code></td><td><code>ContentDetailView</code></td><td>none</td></tr>
+<tr><td><code>GET &lt;id&gt;/html[?deferred=1]</code></td><td><code>ContentHtmlView</code></td><td>none · the rendered body</td></tr>
+<tr><td><code>GET &lt;id&gt;/assets/&lt;path&gt;[?w=]</code></td><td><code>ContentAssetView</code></td><td>none · one embedded image</td></tr>
+<tr><td><code>GET &lt;id&gt;/thumbnail[?w=]</code></td><td><code>ContentThumbnailView</code></td><td>none</td></tr>
+<tr><td><code>GET &lt;id&gt;/recommendations</code></td><td><code>ContentRecommendationsView</code></td><td>none</td></tr>
+<tr><td><code>GET &lt;id&gt;/cost-table</code></td><td><code>ContentCostTableView</code></td><td><em>auth-capable, never auth-required</em></td></tr>
+<tr><td><code>GET/POST views</code></td><td><code>ContentViewHistoryListCreateView</code></td><td>GET authenticated · POST <code>AllowAny</code></td></tr>
+<tr><td><code>POST selection-context</code></td><td><code>ContentSelectionContextView</code></td><td>authenticated</td></tr>
+<tr><td><code>GET landing-page</code></td><td><code>PublicLandingPageCopyView</code></td><td>none</td></tr>
+</table>
+
+<p>And the operator half, all behind <code>[IsAuthenticated, IsOperatorUser]</code> with both JWT and session
+authentication: <code>admin</code> (list/create), <code>admin/&lt;id&gt;</code>,
+<code>admin/&lt;id&gt;/analytics</code>, <code>admin/&lt;id&gt;/cost-table</code>, the upload trio
+(<code>admin/uploads</code>, <code>…/chunks/&lt;index&gt;</code>, <code>…/complete</code>),
+<code>admin/import-jobs/&lt;id&gt;</code>, <code>admin/cost-tables/parse</code> and <code>…/normalize</code>,
+<code>admin/landing-page</code>, and &mdash; added by P82.S7 &mdash; a <strong>delivery trio</strong>
+(<code>admin/&lt;id&gt;/html</code>, <code>/thumbnail</code>, <code>/assets/&lt;path&gt;</code>) that serves the same
+three representations for <em>any</em> content, drafts included, so an operator can preview before publishing.</p>
+
+<p>That operator trio is a nice piece of subclassing: <code>OperatorContentHtmlView</code> inherits
+<code>ContentHtmlView</code> whole and overrides exactly one class attribute, the cache-control value. The media pair
+overrides one hook, <code>build_media_response</code>, to stamp <code>private</code> caching and patch
+<code>Vary: Authorization</code> onto the response the public builder produced &mdash; so a draft&rsquo;s bytes can
+never be reused for another caller, and every byte of the negotiation logic is shared.</p>
+
+<h4>Rendering the body: <code>delivery.py</code></h4>
+
+<p>The stored HTML file is not what the browser gets. <code>render_content_html</code> parses it and rewrites every
+local asset reference (<code>HTML_REFERENCE_ATTRIBUTES = (("img","src"), ("source","src"), ("a","href"))</code>) from a
+raw <code>MEDIA_URL</code> path to a served <code>api-content-asset</code> URL &mdash; and for images, does a good deal
+more:</p>
+
+<pre><code>tag["src"]     = asset_url + "?w=2560"                       # CONTENT_MEDIA_BODY_WIDTH
+tag["srcset"]  = "…?w=1024 1024w, …?w=2560 2560w"            # CONTENT_MEDIA_BODY_SRCSET_WIDTHS
+tag["sizes"]   = "(max-width: 760px) 100vw, 680px"           # CONTENT_IMAGE_SIZES_ATTRIBUTE
+tag["data-original-src"] = asset_url                         # uncapped — the lightbox's zoom source
+tag["width"], tag["height"] = read_image_dimensions(source)  # so the box is reserved before bytes arrive</code></pre>
+
+<p>The <code>?w=</code> values are a <strong>long-edge cap</strong>, not a width, and only three exist:
+<code>CONTENT_MEDIA_WIDTH_VARIANTS = (512, 1024, 2560)</code>. Anything else &mdash; absent, malformed, unlisted
+&mdash; degrades to today&rsquo;s behaviour rather than 400ing, so the contract can never break an existing URL. The
+<code>sizes</code> hint is derived from the real reader layout, not guessed: the article iframe spans a 720 CSS px
+column with <code>clamp(1rem, 2.5vw, 1.75rem)</code> of padding a side, giving a ~684 px image box; the
+<code>&lt;svg&gt;</code>-free arithmetic is written out in the comment at <code>delivery.py:101&ndash;111</code>.
+Note that only <em>local</em> images get any of this &mdash; a hot-linked <code>postfiles.pstatic.net</code> URL fails
+the storage-prefix test and is left exactly as it is, which is the whole motivation for
+<code>remote_images.py</code>.</p>
+
+<p><strong><code>?deferred=1</code></strong> selects a second representation where each reserved local image&rsquo;s
+source is parked in <code>data-src</code>/<code>data-srcset</code>, and its live <code>src</code> is replaced by a
+~95-byte transparent SVG data URI with the image&rsquo;s exact intrinsic dimensions. Nothing inside the document can
+un-defer it &mdash; the reader frames the article with a <code>sandbox</code> that has no
+<code>allow-scripts</code>, which is also why native <code>loading="lazy"</code> is inert there &mdash; so the swap is
+driven from the parent realm by an <code>IntersectionObserver</code>. Two measured details justify the odd shape:
+only images that came out of the width-variant pass with intrinsic <code>width</code>/<code>height</code> are deferred
+(an unreserved deferred image is 0 px tall, the article collapses into one viewport, and every image intersects at
+once), and the placeholder must be a real <code>src</code> rather than bare attributes because Chrome lays a
+srcless <code>&lt;img&gt;</code> out from the raw attributes instead of the attribute <em>ratio</em> &mdash; measured
+over-reserving one article by 2.3&times;. It is a variant rather than the default because the operator&rsquo;s
+&ldquo;미리보기 열기&rdquo; links open this route in a bare tab, which has no parent realm to run the loader.</p>
+
+<h4>Caching: two fingerprints and one deliberate omission</h4>
+
+<pre><code>CONTENT_HTML_RENDER_VERSION = "5"                 # BUMP when the rewrite or the URL shape changes
+CONTENT_HTML_RENDER_CACHE_KEY_PREFIX = "content:html-render"
+CONTENT_HTML_CACHE_CONTROL = "no-cache"           # store, but ALWAYS revalidate
+
+fingerprint = sha256("5|eager|html_content/42/치킨집.html|184213|1755678901234567890")</code></pre>
+
+<p>The fingerprint mixes the render version, the eager/deferred flag, the file&rsquo;s media-relative name, its size and
+its <code>st_mtime_ns</code> &mdash; nanoseconds, not seconds, so a same-second republish still flips it. That one
+string is <em>both</em> the ETag and the Redis render-memo key, which makes staleness structurally impossible: the key
+<em>is</em> the identity of the thing rendered, so the 300-second TTL only bounds Redis growth. Cache failures degrade
+to rendering; a Redis outage must never turn a content page into a 500.</p>
+
+<div class="callout warn">
+  <span class="lbl">The <code>Last-Modified</code> that was removed on purpose (P83.S5)</span>
+  <p>The HTML route sends an <code>ETag</code> and <strong>no</strong> <code>Last-Modified</code>, and calls
+  <code>request_cache_is_fresh(..., allow_if_modified_since=False)</code>. The reason is measured, not theoretical:
+  Cloudflare strips <code>ETag</code> from <em>every</em> <code>text/html</code> response on production. With both
+  headers present, a returning reader behind that CDN falls back to <code>If-Modified-Since</code> and gets a
+  <code>304</code> for markup the <em>previous</em> render version produced &mdash; so a
+  <code>CONTENT_HTML_RENDER_VERSION</code> bump silently never reaches them. With only the ETag, an intermediary that
+  strips it costs one re-transfer of ~160 KB of markup (~30 KB compressed) on a page whose images are measured in
+  megabytes, and can never serve stale markup. The file&rsquo;s mtime is simply not a sufficient validator for a
+  representation that also depends on a constant in the source code.</p>
+</div>
+
+<p>And the reason the content routes are allowed to set caching headers at all, on an <code>/api/</code> path: the
+<code>ApiNoStoreMiddleware</code> from <a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>
+stamps <code>Cache-Control: no-store</code> on every <code>/api/</code> response that does <em>not already carry
+one</em>. Its docstring names these views explicitly as the load-bearing exception: API payloads are identity-scoped and
+must not be cached, but content HTML and media derivatives are public, non-identity-scoped bytes.</p>
+
+<h4>Images: <code>media_derivatives.py</code></h4>
+
+<p>Every eligible image gets a WebP twin, generated lazily on first request and cached on disk. Four flavours per
+source &mdash; the uncapped encode plus one per <code>?w=</code> variant &mdash; each in its own sibling root:</p>
+
+<pre><code>content_derivatives/webp/       html_content/42/치킨집/1H6A9367.jpg.webp   (+ .json sidecar)
+content_derivatives/webp-w512/  …
+content_derivatives/webp-w1024/ …
+content_derivatives/webp-w2560/ …
+
+WEBP_QUALITY = 85 · Pillow method=4 · ImageOps.exif_transpose · long-edge cap, never an upscale</code></pre>
+
+<p>Sibling roots rather than one root with a width key in the sidecar, because the freshness check is
+<strong>whole-dict equality</strong> on the sidecar &mdash; adding a <code>"width": null</code> key to the existing
+root&rsquo;s metadata would have invalidated every derivative already on disk and forced a global re-encode. For the
+same reason <code>_build_derivative_metadata</code> adds the <code>width</code> key only for a capped variant. The
+sidecar holds <code>{version, source_path, source_size, source_mtime_ns}</code>: if any of them moves, the derivative
+is regenerated.</p>
+
+<p>Writing is atomic in the usual way &mdash; encode to <code>.name.tmp</code>, then <code>replace()</code> &mdash; and
+every failure path (<code>OSError</code>, <code>UnidentifiedImageError</code>, <code>ValueError</code>) returns
+<code>None</code> and logs, so an unreadable source degrades to serving the original bytes rather than 500ing.</p>
+
+<p>Warming is queued after commit by the same three write paths that touch files
+(<code>queue_content_media_derivative_warming_on_commit</code>), and covers <em>all four</em> widths including the
+512 thumbnail variant &mdash; because the first uncached request pays a full Pillow decode and resize of the source,
+operators upload straight-from-the-shoot files (6 MB is real), and a list of cards is exactly where that latency would
+be visible.</p>
+
+<h4>The negotiation, and the CDN bug that changed it</h4>
+
+<p><code>select_content_media_representation</code> (<code>:178</code>) decides what to serve:</p>
+
+<figure>
+<svg viewBox="0 0 700 236" role="img" aria-label="Decision tree for selecting a content media representation">
+  <defs><marker id="f12" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="#5d6068"/></marker></defs>
+  <rect x="220" y="8" width="260" height="34" rx="6" fill="rgba(127,127,127,.12)" stroke="#5d6068"/>
+  <text x="350" y="30" font-size="12" text-anchor="middle">source is already <tspan font-family="ui-monospace,Menlo,monospace">image/webp</tspan>?</text>
+
+  <path d="M220 25 L120 25 L120 58" stroke="#5d6068" marker-end="url(#f12)"/>
+  <text x="150" y="20" font-size="10.5" fill="#5d6068">yes</text>
+  <rect x="14" y="60" width="212" height="52" rx="6" fill="rgba(74,143,106,.15)" stroke="#4a8f6a"/>
+  <text x="120" y="80" font-size="11.5" text-anchor="middle">serve the original</text>
+  <text x="120" y="98" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">public, max-age=3600</text>
+
+  <path d="M350 42 L350 64" stroke="#5d6068" marker-end="url(#f12)"/>
+  <text x="372" y="58" font-size="10.5" fill="#5d6068">no</text>
+  <rect x="238" y="66" width="290" height="34" rx="6" fill="rgba(127,127,127,.12)" stroke="#5d6068"/>
+  <text x="383" y="88" font-size="12" text-anchor="middle">client&rsquo;s <tspan font-family="ui-monospace,Menlo,monospace">Accept</tspan> names image/webp, q&gt;0?</text>
+
+  <path d="M528 83 L600 83 L600 126" stroke="#5d6068" marker-end="url(#f12)"/>
+  <text x="566" y="78" font-size="10.5" fill="#5d6068">yes</text>
+  <rect x="466" y="128" width="222" height="66" rx="6" fill="rgba(74,143,106,.15)" stroke="#4a8f6a"/>
+  <text x="577" y="148" font-size="11.5" text-anchor="middle">ensure_webp_derivative(w)</text>
+  <text x="577" y="166" font-size="11.5" text-anchor="middle">serve the WebP</text>
+  <text x="577" y="184" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">public, max-age=3600</text>
+
+  <path d="M290 100 L200 100 L200 126" stroke="#5d6068" marker-end="url(#f12)"/>
+  <text x="228" y="95" font-size="10.5" fill="#5d6068">no</text>
+  <rect x="66" y="128" width="268" height="66" rx="6" fill="rgba(168,98,43,.16)" stroke="#a8622b"/>
+  <text x="200" y="148" font-size="11.5" text-anchor="middle">serve the ORIGINAL bytes</text>
+  <text x="200" y="166" font-size="11.5" text-anchor="middle" font-weight="700" fill="#a8622b">private, max-age=3600</text>
+  <text x="200" y="184" font-size="10.5" text-anchor="middle">(never stored at a shared cache)</text>
+
+  <text x="350" y="220" font-size="11" text-anchor="middle" fill="#5d6068">Both branches also send <tspan font-family="ui-monospace,Menlo,monospace">Vary: Accept</tspan> · ETag · Last-Modified · 304 support</text>
+</svg>
+<figcaption>The one asymmetric cell is the orange one, and it exists because of a measured CDN behaviour.</figcaption>
+</figure>
+
+<p>Here is the story behind <code>CONTENT_MEDIA_UNNEGOTIATED_CACHE_CONTROL = "private, max-age=3600"</code>, measured
+on production in P83.S5. Cloudflare caches <code>/api/content/&lt;id&gt;/assets/…</code> and <strong>ignores
+<code>Vary: Accept</code></strong> (only the Enterprise &ldquo;Vary for images&rdquo; feature honours it). So whichever
+representation lands in the edge cache first is served to <em>every</em> later client for the whole TTL. One request
+without <code>image/webp</code> in its <code>Accept</code> header &mdash; a crawler, a link-preview bot, an uptime
+monitor, a stray <code>curl</code> &mdash; poisons that URL with the original bytes. The measurement:
+<strong>7,996,055 bytes of JPEG returned as a <code>cf-cache-status: HIT</code></strong> on
+<code>…/1H6A9367.jpg?w=1024</code>, against 131,300 bytes of WebP. A 61&times; regression, completely invisible at the
+origin.</p>
+
+<p>The fix is one line and no negotiation change: mark the <em>un-negotiated original</em> <code>private</code>. It
+stays correct for the client that asked for it and is simply never stored at a shared cache, so it can no longer
+displace the WebP every browser wants. Browsers have all sent <code>image/webp</code> since 2020, so no reader response
+changes flavour or loses edge caching. Note the flag is keyed on <strong>what the client asked for</strong>, not on
+what was served &mdash; so a failed derivative (an SVG, an unreadable source) still caches publicly for the browsers
+that get it.</p>
+
+<p>The ETag is built the same way as the HTML one, with the representation name in the mix
+(<code>"webp-w1024"</code> / <code>"original"</code>), so <code>?w=1024</code>, <code>?w=2560</code> and the bare URL
+can never share a cache validator.</p>
+
+<h4>What a chat turn receives: <code>build_selected_content_context</code></h4>
+
+<p>When a user attaches contents to a message, the agent calls back with their ids:</p>
+
+<pre><code>agent: fetch_selected_content_context()        # apps/agent/app/chat/backend.py:842
+   →  POST {backend}/api/content/selection-context   {"content_ids": [42, 51]}
+   ←  {"selected_content": [{id, title, description, text}, …]}</code></pre>
+
+<p>Server side that is <code>ContentSelectionContextView</code> &rarr;
+<code>services.build_selected_content_context</code> (<code>:367</code>), which for each content reads the stored HTML
+file, decomposes <code>script</code>/<code>style</code>/<code>noscript</code>, and flattens the rest to text with a
+block-tag-aware walker (<code>_SELECTION_CONTEXT_BLOCK_TAGS</code>, 25 tags), collapsing runs of blank lines.
+<code>&lt;img&gt;</code> tags contribute their <code>alt</code> text; <code>&lt;br&gt;</code> becomes a newline.</p>
+
+<p>Three properties worth noting:</p>
+<ul>
+  <li><strong>It is all-or-nothing.</strong> If any item&rsquo;s HTML is missing, unreadable or empty, the whole call
+  raises <code>ContentSelectionContextUnavailableError</code> and the route answers <strong>503</strong> with a single
+  opaque detail &mdash; never a partial context, because a turn silently missing one of the three articles the user
+  attached is worse than a turn that fails loudly.</li>
+  <li><strong>It reads the file, not <code>extracted_text</code>.</strong> The two flatteners are genuinely different
+  &mdash; this one preserves inline structure for a prompt, <code>extraction.py</code> emits offset-stable markdown-ish
+  lines for the chunker. They are not interchangeable and the codebase does not pretend they are.</li>
+  <li><strong>The agent verifies the answer.</strong> Per <a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4</a>,
+  <code>fetch_selected_content_context</code> fails if the returned ids are not exactly the requested ids in order
+  &mdash; so a reordering or a dropped item cannot silently change what the model reads. The text then lands in the
+  <em>tail</em> of the system prompt as <code>[Current selected content]</code>, which is precisely why
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5</a> insists nothing dynamic may
+  be added earlier: the static Korean rulebook above it is the cached Gemini prefix.</li>
+</ul>
+
+<p>Related, and much smaller: <code>build_public_content_body_preview</code> (<code>:96</code>) extracts a &le;180-char
+plain-text teaser for the catalog card, skipping any lead block that merely repeats the title or description &mdash;
+with a fuzzy prefix match (both &ge;24 chars, either a prefix of the other) so a truncated description in the document
+still counts as a duplicate.</p>
+
+<h4>Recommendations, view history and analytics</h4>
+
+<p><code>NotionContentQuerySet.recommended_for</code> (<code>models.py:159</code>) is popularity-then-recency: count
+<code>ContentViewHistory</code> rows in a 30-day window, excluding the current content and anything not readable, order
+by view count then <code>-updated_at</code> then <code>-id</code>; if fewer than 10 come back, backfill the remaining
+slots with the most recently updated readable contents. No personalisation, no embedding &mdash; and the fallback
+guarantees the rail is never short on a young corpus.</p>
+
+<p><code>ContentViewHistoryListCreateView</code> has an asymmetry that is easy to misread:
+<code>get_permissions</code> returns <code>[AllowAny()]</code> for <code>POST</code> and the authenticated default for
+<code>GET</code>. Anyone may <em>record</em> a view (the row&rsquo;s <code>user</code> is then <code>NULL</code>);
+only the owner may <em>list</em> theirs. Recording still goes through <code>ReadableContentLookupMixin</code>, so you
+cannot record a view of a draft.</p>
+
+<p><code>build_operator_content_analytics</code> (<code>services.py:270</code>) is what the console&rsquo;s per-content
+panel draws: lifetime and date-ranged view counts, unique users, and <em>uses</em> &mdash; where a &ldquo;use&rdquo; is
+a <code>ConversationMessageSelectedContent</code> row on a <code>USER</code> message, i.e. someone actually attached
+this article to a question. It counts on <code>content_id_snapshot</code> rather than a live FK, so analytics survive
+a content being deleted. The <code>conversations</code> import is deferred inside the function to avoid the
+<code>content ↔ conversations</code> cycle, and the daily series is built by walking every date in the range and
+filling zeros &mdash; a missing day is a real zero, not a gap in the chart.</p>
+
+<h3>5. Cost tables and the Notion mirror</h3>
+
+<h4>The 총 비용 표 &mdash; two schema majors, one masking rule</h4>
+
+<p>A cost table is the paid-content payload of this product: the itemised construction and equipment cost of a real
+shop. It has its own written contract
+(<code>docs/reference/content-standard/cost-table/contract.md</code>) and <code>cost_tables.py</code> implements it in
+1,252 lines. Three jobs: validate, project, attach.</p>
+
+<p><strong>Two majors are live at once</strong>, and neither migrates the other &mdash; a stored document keeps the
+<code>schema</code> string it was registered with:</p>
+
+<table>
+<tr><th></th><th><code>changple.cost-table/1.x</code></th><th><code>changple.cost-table/2.0</code></th></tr>
+<tr><td>Shape</td><td>Fixed six-공정 taxonomy (주방관련 · 공사내용 · 가구 · 간판 · VMD · 그 외), always all six, always in that order</td><td>Free-form: the document defines its own groups; only duplicate group codes are refused</td></tr>
+<tr><td>Check slots</td><td><code>CHECK_SLOT_COUNT = 5</code>, exactly &mdash; indexes 1..5, fixed order</td><td>Free; the slot count is whatever the document declares</td></tr>
+<tr><td>Arrives via</td><td>The fixed xlsx template, parsed by <code>cost_table_workbook.py</code>, stamped <code>1.1</code></td><td>The operator&rsquo;s manual editor, or an LLM proposal from a mismatched workbook</td></tr>
+</table>
+
+<p>The column <em>keys</em> (<code>group · item · detail · min · max · note</code>), the price section, the scalars and
+the masked projection are identical in both; 2.0 frees the printed labels, never the column set. Support is
+<em>enumerated</em>, never open-ended &mdash; <code>SUPPORTED_SCHEMA_MAJORS = (1, 2)</code> and a <code>3.x</code>
+payload is an error, not a partial render.</p>
+
+<p>Validation is non-raising by default: <code>collect_cost_table_issues</code> returns <em>every</em> violation in
+document order (<code>validate_cost_table_document</code> is the raising wrapper), because the operator&rsquo;s upload
+preview must be able to <em>show</em> what is wrong before anything is attached. Each
+<code>CostTableIssue</code> carries three fields:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class CostTableIssue:
+    path: str          # "groups[3].items[7].min"  — where
+    message: str       # the developer-facing English clause, printed verbatim in mono
+    message_ko: str    # the Korean clause for the same CONDITION</code></pre>
+
+<p>The Korean table (<code>ISSUE_MESSAGES_KO</code>) is keyed by the <em>condition</em>, not by the English sentence,
+so the same key yields the same Korean clause wherever the condition is checked and a wording change happens in one
+place. And it holds only conditions, never locations &mdash; the client composes
+&ldquo;<code>4. 간판 · 행 28 · 외부 간판</code>의 min&rdquo; from <code>path</code> against the document it is
+holding, because that is the only place that knows the document. An unknown code yields <code>""</code>, which the
+client renders as &ldquo;fall back to the English clause&rdquo;, never as a blank line.</p>
+
+<div class="callout">
+  <span class="lbl">Masking is an allow-list, and that is a security decision</span>
+  <p><code>build_cost_table_projection(document, entitled=…)</code> returns either the entitled document or a
+  <strong>masked</strong> one built by <em>key omission</em> from an explicit allow-list of the contract&rsquo;s
+  &ldquo;safe to show as shape&rdquo; fields. Never a deny-list &mdash; a deny-list leaks every field added after it
+  was written. Where the contract grants a wildcard (<code>unit.*</code>, <code>vat.*</code>,
+  <code>columns.*</code>), this module copies the <em>known</em> keys only, so a field added inside one of those
+  objects later cannot ride the wildcard into a masked payload. A masked payload carrying a key the contract does not
+  list as shape-safe is, by definition, a bug.</p>
+</div>
+
+<p>The public route mirrors that carefully. <code>ContentCostTableView</code> is <strong>auth-capable but never
+auth-required</strong>: <code>authentication_classes = [JWTAuthentication]</code> with
+<code>permission_classes = [AllowAny]</code>. Its neighbours run <code>authentication_classes = []</code> and so
+literally cannot tell who is asking; <code>IsAuthenticated</code> would 401 a guest &mdash; but the masked table is a
+<em>designed state a guest is meant to see</em>, not an error. So a guest gets a 200 with the masked payload, exactly
+like a signed-in free user. Entitlement is read from the database
+(<code>accounts.entitlements.get_entitlements</code> &rarr; <code>User.tier</code>), never from the JWT
+<code>tier</code> claim, which as <a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3</a>
+established gates nothing server-side and can trail the DB by a refresh cycle. The response is
+<code>private, no-store</code> plus <code>Vary: Authorization</code>, because the body varies by entitlement. And an
+absent table is a <strong>404</strong>, never a 200 with an empty object for the client to hide &mdash; &ldquo;render
+nothing&rdquo; is a server-side decision.</p>
+
+<p><code>attach_cost_table</code> takes the same posture as the publish seam and says so:
+it <em>never touches the <code>NotionContent</code> row</em> &mdash; no <code>save()</code>, so no file pipeline, and
+<code>updated_at</code> stays put, because a cost table is not a content edit. It locks any existing row with
+<code>select_for_update()</code> and refuses with <code>CostTableAlreadyAttachedError</code> unless the caller passed
+<code>replace=True</code>, so an operator re-upload is always deliberate rather than an accidental overwrite.</p>
+
+<h4>Workbook intake and the LLM normaliser</h4>
+
+<p><code>cost_table_workbook.py</code> (1,681 lines) reads a filled 산출표 <code>.xlsx</code> &mdash; and does it with
+<strong>stdlib only</strong>, because no xlsx library exists anywhere in this stack. It opens the workbook as a zip of
+OOXML parts (<code>xl/workbook.xml</code> + the rels for sheet order, <code>xl/worksheets/sheetN.xml</code>,
+<code>xl/sharedStrings.xml</code>, <code>xl/styles.xml</code>). Four binding rules are worth remembering:</p>
+
+<ul>
+  <li><strong>First sheet in workbook order</strong>, resolved through the rels &mdash; never by filename, because the
+  delivered workbooks name the data sheet after the project.</li>
+  <li><strong>Blocks are located by their labels</strong> (<code>0. 체크사항</code>, the column-header row,
+  <code>N. &lt;name&gt; 소계</code>, <code>합계</code>), never by absolute row number, because 창플 is told to insert
+  rows inside a group.</li>
+  <li><strong><code>unrecognized[]</code> is a required output.</strong> Every label, column, row or trailing cell the
+  parser cannot map is collected with its cell reference, its raw text and why. Nothing is silently dropped, and an
+  unmapped row is never summed into a subtotal &mdash; the sheet&rsquo;s own subtotals are transcribed as-is so a
+  discrepancy surfaces as a reconciliation issue at preview instead of quietly changing the numbers.</li>
+  <li><strong>Formulas are read, never evaluated.</strong> A 소계 cell contributes its cached value; a workbook saved
+  by a tool that does not compute parses with placeholder totals, which is exactly what the reconciliation issues are
+  for.</li>
+</ul>
+
+<p>A workbook that does not match the template comes back as <code>document=None</code> plus issues &mdash; the module
+never raises, because the operator preview must be able to show the failure. That is where
+<code>cost_table_normalize.py</code> picks up (P82.S5): <code>extract_workbook_grid()</code> reads <em>any</em>
+workbook into a raw cell grid with no interpretation at all, and this module turns that grid into a
+<code>2.0</code> <strong>proposal</strong>:</p>
+
+<pre><code>grid → prompt → Gemini (structured output) → server-side assembly → the S1 validator → back to the console</code></pre>
+
+<p>Three properties are deliberate, and generalise well beyond cost tables:</p>
+
+<ol>
+  <li><strong>Nothing is persisted and nothing is auto-applied.</strong> The proposal goes back to the operator&rsquo;s
+  document editor and only their <code>PUT</code> writes anything. An <em>invalid</em> proposal is still a 200 &mdash;
+  the whole point of a preview is that the operator sees the issues and fixes them.</li>
+  <li><strong>The model proposes text and numbers; the server decides structure.</strong> Group codes, the
+  <code>1..n</code> check-slot run, <code>is_range</code>, the schema string, the provenance block, and above all every
+  <code>contains_amount</code> sensitivity flag are computed here by <code>text_contains_amount()</code>. A model is
+  never trusted with a masking decision: a wrong flag leaks money to a free reader, and it is exactly the kind of
+  judgement call a language model gets subtly wrong.</li>
+  <li><strong>Amounts cross the model as strings, not numbers.</strong> The house structured-output style makes every
+  field non-nullable with a sentinel default &mdash; and a <em>nullable number</em> is the one thing that style cannot
+  express, while <code>0</code> and &ldquo;not quoted&rdquo; are genuinely different facts in this contract. So the
+  model writes <code>""</code> for a blank cell and <code>"1234.5"</code> for a figure, and a string the parser cannot
+  read becomes <code>null</code> plus an operator-visible warning &mdash; never a guess.</li>
+</ol>
+
+<p>The model id is not hard-coded: it comes through the P44 operator LLM-runtime store under role
+<code>ROLE_COST_TABLE_NORMALIZE</code> (<code>resolve_role_config</code>, defaults
+<code>gemini-3.7-flash</code> / thinking <code>high</code>) &mdash; explainer <span class="tag">#17</span>&rsquo;s
+subject. And because the operator is watching a spinner, the call is synchronous with a hard
+<code>MAX_CALL_SECONDS = 90.0</code>, chosen against the real stack: <code>nginx proxy_read_timeout 300s</code> &rarr;
+<code>gunicorn --timeout 120</code> &rarr; this call. At 120 s gunicorn kills the worker and the operator gets a bare
+502 with no <code>detail</code>; 90 s leaves room for the upload read, the grid extraction, the validator and both
+projections inside that budget.</p>
+
+<h4>The Notion mirror &mdash; <code>notion_mirror.py</code></h4>
+
+<p>Last, and smallest: an archival side-effect. When the <strong>v1</strong> content agent publishes a draft, the same
+scrubbed public copy is mirrored to a Notion database page (기록/보관). Be precise about the scope, because the name
+invites confusion in both directions: this has nothing to do with the <em>legacy Notion exports</em> that gave
+<code>NotionContent</code> its name, and it is triggered from exactly one place &mdash;
+<code>draft_publish.py:170</code>, right after <code>publish_draft_job</code> returns, <em>outside</em> the
+publish&rsquo;s own transaction (which has already committed), which is why it dispatches directly via
+<code>app.send_task</code> rather than <code>on_commit</code>. The v2 agent&rsquo;s publish path does not mirror.</p>
+
+<p>The design rule is stated in the module docstring and enforced everywhere: <strong>a Notion failure or rate-limit
+never blocks, delays, or rolls back the 미라클 publish.</strong> Concretely:</p>
+
+<ul>
+  <li><code>queue_notion_mirror</code> (<code>:90</code>) swallows every failure of its own &mdash; unconfigured is a
+  quiet no-op, an already-mirrored job is a quiet no-op, and <code>send_task</code> raising is logged and swallowed.</li>
+  <li>The task <strong>never touches <code>job.status</code></strong>, only the three mirror-state fields
+  (<code>notion_page_id</code>, <code>notion_mirror_error</code>, <code>notion_mirrored_at</code>). A failed mirror must
+  never look like a failed publish &mdash; <code>fail_notion_mirror</code>&rsquo;s docstring says exactly that.</li>
+  <li>The double-dispatch guard exists twice: best-effort at queue time, authoritative inside
+  <code>execute_notion_mirror</code> (<code>:134</code>), so a re-publish never re-mirrors.</li>
+  <li>The whole feature is <strong>dormant until configured</strong>: without <code>NOTION_API_TOKEN</code> and
+  <code>NOTION_MIRROR_DATABASE_ID</code> every dispatch and every execution quietly no-ops. That is the house
+  &ldquo;unconfigured is the off switch&rdquo; convention from
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a> &mdash; no separate
+  <code>ENABLE_</code> flag.</li>
+  <li>Retries: <code>NOTION_MIRROR_MAX_ATTEMPTS = 3</code>, 30 s apart, with <code>429</code> and Notion&rsquo;s
+  <code>529</code> (&ldquo;service overload&rdquo;) in the retryable set alongside the usual 5xx.</li>
+</ul>
+
+<p>One API detail is recorded in the docstring because it is a live trap: creating a page needs a <em>two-call</em>
+sequence &mdash; <code>GET /v1/databases/{id}</code> to read <code>data_sources[0].id</code>, then
+<code>POST /v1/pages</code> with a <code>data_source_id</code> parent &mdash; because the older
+<code>database_id</code> parent shape has been documented-deprecated since 2025-09-03.</p>
+
+<p>And the body is <strong>re-derived, never stored</strong>: <code>build_notion_mirror_markdown</code> rebuilds
+<code>(title, markdown)</code> from the approved draft version the exact same way <code>publish_draft_job</code> derives
+the published HTML &mdash; same <code>_extract_title</code>, same <code>_split_blocks</code>, same
+<code>scrub_public_text</code>. One derivation, two outputs, so the 미라클 page and the Notion archive can never
+disagree.</p>
+
+<hr class="soft">
+
+<h3>What this page verified, and what it left alone</h3>
+
+<p class="fin"><strong>Verified against the code, not the docs.</strong> The five callers of
+<code>set_content_publish_state</code> were found by grep, not assumed (the phase&rsquo;s own plan expected four &mdash;
+it missed the v1 draft publisher at <code>draft_publish.py:411</code>). There is no &ldquo;unlisted&rdquo; state
+anywhere in this app; visibility is <code>published_at</code> and <code>is_preferred</code> is a rail selector.
+<code>NotionContent</code> holds no foreign key to the job that produced it &mdash; both agents&rsquo; job tables point
+<em>at</em> the content. Every line anchor cited here was checked on 2026-08-26.</p>
+
+<p class="fin"><strong>Left to other pages.</strong> What happens inside the agent once the trigger fires &mdash;
+chunking, embeddings, the single-active-run guard, the eligibility SQL &mdash; is
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9</a>. How a content chunk is
+searched and ranked is <a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a>. How a
+draft is written, reviewed and approved is <span class="tag">#13</span>&ndash;<span class="tag">#15</span>. Celery,
+dispatch-after-commit and the alert plumbing are <span class="tag">#16</span>; the operator console and the LLM
+runtime store are <span class="tag">#17</span>.</p>
+
+<h4>Files walked</h4>
+
+<p class="filelist"><code>apps/backend/content/</code>: <code>models.py</code> (1&ndash;700, 810&ndash;835) ·
+<code>services.py</code> (all 582) · <code>chunk_indexing.py</code> (all 484) · <code>publish_scrub.py</code> (all 66) ·
+<code>extraction.py</code> (all 123) · <code>weights.py</code> (1&ndash;120, 200&ndash;311) ·
+<code>upload_sessions.py</code> (all 215) · <code>import_jobs.py</code> (all 228) · <code>importers.py</code>
+(1&ndash;130) · <code>remote_images.py</code> (1&ndash;240) · <code>delivery.py</code> (all 636) ·
+<code>media_derivatives.py</code> (all 609) · <code>cost_tables.py</code> (1&ndash;300, 1175&ndash;1252) ·
+<code>cost_table_workbook.py</code> (1&ndash;60) · <code>cost_table_normalize.py</code> (1&ndash;80, role resolution) ·
+<code>notion_mirror.py</code> (1&ndash;200) · <code>reference_profile.py</code> (all 63) ·
+<code>views.py</code> (225&ndash;340, 445&ndash;600, 641&ndash;830, 862&ndash;928) · <code>urls.py</code>
+(125&ndash;160, 605&ndash;695) · <code>serializers.py</code> (549&ndash;700) · <code>admin.py</code> (60&ndash;110) ·
+<code>legacy_assets.py</code> (100&ndash;175) · <code>tasks.py</code> (1&ndash;60) ·
+<code>draft_publish.py</code> (155&ndash;420) · <code>agent_jobs/publishing.py</code> (1330&ndash;1385).
+Also <code>apps/backend/config/settings.py</code> (448&ndash;490, 565&ndash;580, 705&ndash;715),
+<code>apps/backend/config/middleware.py</code>, <code>apps/agent/app/chat/backend.py</code> (842&ndash;870), and
+<code>docs/current/architecture.md</code> §&ldquo;Published Contents as a Second Retrieval Corpus (P41)&rdquo; for
+orientation only.</p>
+
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> <code>set_content_publish_state</code> persists with a queryset <code>.update()</code>. What
+  would break if it used <code>content.save()</code> instead?</p>
+  <button class="opt" data-correct="false">Nothing functional &mdash; <code>.update()</code> is only a performance optimisation over <code>.save()</code>.</button>
+  <button class="opt" data-correct="true">Every publish would re-run <code>NotionContent</code>&rsquo;s post-save file pipeline &mdash; ZIP import, thumbnail relocation, a full document rescan &mdash; and would bump <code>updated_at</code>, floating a republished old article to the top of the catalog.</button>
+  <button class="opt" data-correct="false">The change-detection would still work, but Django signals would stop firing, so the chunk-index trigger would be lost.</button>
+  <button class="opt" data-correct="false">The <code>published_at</code> timestamp would be written in local time rather than UTC.</button>
+  <p class="why" hidden><code>NotionContent.save()</code> is a file pipeline, not a column write (models.py:320&ndash;350): it unpacks any pending ZIP, relocates the thumbnail, re-parses the document to refresh seven weight fields, and queues media-derivative warming on commit. It also touches <code>auto_now</code> <code>updated_at</code>, and the catalog orders by <code>-updated_at</code>. The seam&rsquo;s docstring names both consequences explicitly.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Which three sites queue the content chunk-index sync, and why is <code>delete</code> one of
+  them?</p>
+  <button class="opt" data-correct="false">Publish, unpublish and cost-table attach &mdash; delete is handled by a Postgres <code>ON DELETE CASCADE</code> onto the agent&rsquo;s chunk table.</button>
+  <button class="opt" data-correct="true">The publish seam, import-job completion on an already-published row, and <code>NotionContent.delete()</code> &mdash; delete needs an explicit trigger because the agent&rsquo;s chunk table is in a different schema with no foreign key back, so nothing cascades.</button>
+  <button class="opt" data-correct="false">The publish seam, the Django admin bulk action and the delete &mdash; the import job never triggers, because the files are already there by then.</button>
+  <button class="opt" data-correct="false">Only the publish seam &mdash; unpublish and delete are picked up by the nightly catch-up run.</button>
+  <p class="why" hidden><code>services.py:262</code>, <code>import_jobs.py:168</code> and <code>models.py:358</code>. <code>agent.content_chunk_artifacts</code> lives in the agent&rsquo;s schema, which the backend role can only read; there is no FK and no cascade. The import-job site exists for the ordering edge where an operator publishes and uploads in one request, so the files land under an already-published row with no transition to fire on.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> An operator publishes a content while a full-corpus catch-up run is already in flight. The
+  agent answers <strong>409</strong>. What happens?</p>
+  <button class="opt" data-correct="false">The publish is rolled back and the operator sees an error, because the index must stay consistent with the row.</button>
+  <button class="opt" data-correct="false">The task treats it like any other client error: five attempts with a 30/60/120/300 s backoff, then an alert.</button>
+  <button class="opt" data-correct="true">Nothing user-visible. The 409 is modelled as its own exception, not a subclass of the transport error, and gets a separate patient budget: 20 retries, 60 s apart &mdash; because no run was registered, so there is nothing to poll.</button>
+  <button class="opt" data-correct="false">The sync task waits synchronously on the Redis <code>:active</code> key until the running job releases it.</button>
+  <p class="why" hidden><code>ContentChunkRunConflict</code> is deliberately <em>not</em> a subclass of <code>ContentChunkIndexingClientError</code>, so a broad <code>except</code> cannot swallow it, and it runs on <code>SYNC_CONFLICT_MAX_ATTEMPTS = 20</code> &times; <code>SYNC_CONFLICT_COUNTDOWN_SECONDS = 60</code>. The publish itself already returned 200 long before &mdash; the whole chain runs after <code>transaction.on_commit</code>.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Content HTML is served <code>no-cache</code> while an image derivative is served
+  <code>public, max-age=3600</code> &mdash; except for one case, which is <code>private</code>. Which case, and why?</p>
+  <button class="opt" data-correct="false">A draft&rsquo;s image served through the operator route, because a draft must not be cached at all.</button>
+  <button class="opt" data-correct="true">The original bytes served to a client that did <em>not</em> ask for WebP &mdash; because Cloudflare ignores <code>Vary: Accept</code>, so one crawler&rsquo;s un-negotiated request would poison the edge cache with the huge original for every later reader.</button>
+  <button class="opt" data-correct="false">Any image above 2,560 px on its long edge, because those exceed the CDN&rsquo;s object-size limit.</button>
+  <button class="opt" data-correct="false">A source that is already WebP, since it has no derivative and therefore no stable ETag.</button>
+  <p class="why" hidden><code>CONTENT_MEDIA_UNNEGOTIATED_CACHE_CONTROL = "private, max-age=3600"</code>. Measured in P83.S5: 7,996,055 bytes of JPEG returned as a <code>cf-cache-status: HIT</code> against 131,300 bytes of WebP &mdash; a 61&times; regression invisible at the origin. The flag is keyed on what the client <em>asked for</em>, not on what was served. A source that is already WebP is one representation for everybody and stays <code>public</code>.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Suppose the chunk-sync task is lost entirely &mdash; a broker hiccup, and the dispatch never
+  happens. A content was just <em>unpublished</em>. What can a user retrieve?</p>
+  <button class="opt" data-correct="false">The content&rsquo;s chunks, until the next catch-up run &mdash; which is why the trigger alerts on every give-up path.</button>
+  <button class="opt" data-correct="true">Nothing from that content. Retrieval re-states the visibility predicate (<code>html_path &lt;&gt; '' AND has_body AND published_at IS NOT NULL</code>) in its own <code>WHERE</code> clause, so the index is a cache, not a gate.</button>
+  <button class="opt" data-correct="false">Nothing, because <code>set_content_publish_state</code> deletes the chunk rows synchronously before returning.</button>
+  <button class="opt" data-correct="false">Only the first chunk of the content, since the whole-document chunk is the only one carrying the publish flag.</button>
+  <p class="why" hidden>This is the asymmetry the page&rsquo;s third idea names: unpublishing is instant, publishing is eventual. The chunk table carries no gates of its own, so the retrieval SQL repeats the readable-content predicate by joining back to the backend row over the read bridge (a test pins that the two copies have not drifted). A lost dispatch costs searchability of a <em>new</em> article until the catch-up run, never the exposure of a withdrawn one.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
