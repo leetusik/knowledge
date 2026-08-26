@@ -1,0 +1,1774 @@
+<!--kb
+title: "컨설팅 mode: the planned multi-round consultation and its 구성안 report"
+date: 2026-08-26
+tags:
+  - changple5
+  - consulting
+  - langgraph-interrupt
+  - celery
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>컨설팅 mode: the planned multi-round consultation and its 구성안 report</title>
+<style>
+  :root { color-scheme: light dark; --line:#c9cdd4; --accent:#2f6f4f; --accent2:#3a5a9b; --warn:#a05a00; }
+  body { max-width: 50rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+         line-height: 1.65; font-size: 17px; }
+  h1 { line-height: 1.25; font-size: 1.85rem; }
+  h2 { margin-top: 2.6rem; padding-bottom: .3rem; border-bottom: 2px solid var(--line); }
+  h3 { margin-top: 2rem; }
+  h4 { margin-top: 1.5rem; margin-bottom: .3rem; }
+  pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+         background: #f4f4f4; color:#1a1a1a; padding: .75rem; border-radius: 6px;
+         font-size: .86em; line-height: 1.5; border:1px solid #e2e2e2; }
+  code { background: #f0f0f0; color:#1a1a1a; padding: .08em .3em; border-radius: 3px;
+         font-size: .88em; overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid var(--accent); background: #f0f8f4;
+             padding: .7rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.blue { border-left-color: var(--accent2); background: #eef2fa; }
+  .callout.warn { border-left-color: var(--warn); background: #fdf5e8; }
+  .callout.grey { border-left-color: #8a8f98; background: #f3f4f6; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout, .callout code, .callout pre { color: #17202a; }
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .9em; }
+  th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+  th { background: #eef0f3; color:#17202a; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .87em; opacity: .8; margin-top: .45rem; text-align: center; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .lanes { display: flex; flex-wrap: wrap; gap: .5rem; align-items: stretch; }
+  .lane { flex: 1 1 14rem; border: 1px solid var(--line); border-radius: 6px; padding: .6rem .7rem;
+          background: #fbfbfc; color:#17202a; font-size: .9em; }
+  .lane h4 { margin: 0 0 .35rem; font-size: .95rem; }
+  .lane ol, .lane ul { margin: .2rem 0 0 1.1rem; padding: 0; }
+  .step { border:1px solid var(--line); border-radius:6px; padding:.5rem .7rem; margin:.4rem 0;
+          background:#fbfbfc; color:#17202a; font-size:.92em; }
+  .step b { color: var(--accent2); }
+  .tag { display:inline-block; font-size:.78em; padding:.05em .45em; border-radius:3px;
+         border:1px solid var(--line); background:#eef0f3; color:#17202a; margin-right:.3em; }
+  .q { border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; margin: 1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+            padding: .5rem .75rem; cursor: pointer; border: 1px solid var(--line);
+            border-radius: 5px; background: #fafafa; color:#17202a; font: inherit; font-size: .95em; }
+  .q .opt:hover { background: #f0f0f0; }
+  .q .opt.correct   { background: #d6f5d6; border-color: #6ab86a; }
+  .q .opt.incorrect { background: #f7d6d6; border-color: #cc8080; }
+  .q .why { margin: .55rem 0 0; font-size: .93em; background:#f3f4f6; color:#17202a;
+            padding:.5rem .7rem; border-radius:4px; }
+  .files { font-size: .9em; }
+  nav ol { line-height: 1.9; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 2.5rem 0; }
+  .small { font-size: .9em; opacity: .85; }
+</style>
+</head>
+<body>
+
+<h1>컨설팅 mode: the planned multi-round consultation and its 구성안 report</h1>
+
+<p class="small">Explainer #10 of the changple5 builder's curriculum. The previous one is
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9 — Indexing and embeddings: from documents to pgvector chunks</a>.
+This page assumes you have read
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5 — A chat turn end to end</a>,
+because 컨설팅 mode is <em>the same machinery plus three new ideas</em>, and this page teaches only
+the difference.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — one product, two agents, and a retired sibling</a></li>
+    <li><a href="#intuition">Intuition — a conversation that pauses, and a report written elsewhere</a></li>
+    <li><a href="#code">Code — walking the real implementation</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<h2 id="background">Background — one product, two agents, and a retired sibling</h2>
+
+<p>Everything you have read so far in this curriculum describes <strong>default chat</strong>: the
+user types, the agent retrieves, the agent answers, the answer is persisted, the turn ends. One
+request in, one answer out. 컨설팅 mode ("미라클") is the other conversation type the product
+ships, and it is not a variation of that turn — it is a different <em>shape of interaction</em> laid
+on top of the same plumbing.</p>
+
+<p>From <code>docs/current/product.md</code> §"Consulting Mode (미라클)", the product promise is
+three properties:</p>
+
+<ul>
+  <li><strong>Grounded and cited.</strong> Every concrete claim in the report carries a source and is
+  surfaced as an explicit <strong>참고 문서</strong> list; when sources are thin the report is
+  required to admit the limit rather than fabricate.</li>
+  <li><strong>Durable and recoverable.</strong> The round's lifecycle state lives in Django
+  (<code>ConsultingRound</code>), not in the browser and not in the agent's memory, so a reload in the
+  middle of the questions — or in the middle of report generation — recovers the exact state.</li>
+  <li><strong>Bounded.</strong> A conversation allows <strong>3 reports</strong>
+  (<code>report_limit = 3</code>); a probing round the user cancels does not consume one.</li>
+</ul>
+
+<p>The corresponding architecture decision is recorded as
+<code>docs/current/decisions.md</code> §"D-1 · Consulting v2: backend-owned durable lifecycle":
+<em>backend is the source of truth for consulting round state; LangGraph checkpoints are agent
+execution-continuity only, not browser reload recovery.</em> Hold on to that sentence — half of the
+code on this page exists to honour it.</p>
+
+<h3>A deeper background you can skip if you already know it</h3>
+
+<p>Three pieces of vocabulary carry the whole page. If they are already familiar, jump to
+<a href="#the-three-new-ideas">the three new ideas</a>.</p>
+
+<div class="callout">
+<p><strong>Agent.</strong> In this codebase an "agent" is a LangGraph state machine built by
+LangChain's <code>create_agent(...)</code>: a <em>model</em> node that calls Gemini, a <em>tools</em>
+node that runs whichever Python function the model asked for, and an edge that loops back to the
+model with the tool's result. Explainer #5 walks the default one. 컨설팅 mode builds a
+<strong>second, separate agent</strong> with its own tools, its own system prompt, its own state
+fields and its own checkpoint thread.</p>
+</div>
+
+<div class="callout">
+<p><strong>Interrupt / resume.</strong> A normal function runs to completion. A LangGraph node can
+call <code>interrupt(value)</code>, which <em>suspends the whole graph mid-node</em>, saves
+everything to the checkpointer, and hands <code>value</code> back to the caller. Later — minutes
+later, from a different HTTP request, even after a redeploy — you resume the graph with
+<code>Command(resume=answer)</code>, and that <code>interrupt(...)</code> call
+<em>returns <code>answer</code></em> as if it had simply been a slow function call. This is how a
+tool can ask the user a question in the middle of its own execution.</p>
+</div>
+
+<div class="callout">
+<p><strong>Background worker.</strong> Django serves HTTP requests; Celery runs jobs off to the side,
+picked off a Redis queue by a separate <code>celery_worker</code> container. A job survives the
+browser closing, can be retried, and can take minutes. Explainer #16 owns Celery in this codebase;
+this page uses it and points there.</p>
+</div>
+
+<h3 id="the-three-new-ideas">The three new ideas</h3>
+
+<p>Everything else on this page is detail hanging off exactly these:</p>
+
+<ol>
+  <li><strong>A round is a first-class, backend-owned object.</strong> Starting a consultation
+  creates a <code>ConsultingRound</code> row in Postgres that walks
+  <code>probing → generating → complete | cancelled | error</code>. The browser never holds this
+  state; it reads it back on every conversation load.</li>
+  <li><strong>The clarifying questions are an interrupt inside a tool call.</strong> The model calls
+  one tool, <code>start_consulting</code>, and that tool asks up to three rounds of grounded
+  questions by suspending the graph — not by ending the turn and hoping the next message is an
+  answer.</li>
+  <li><strong>The report is not written by the live stream.</strong> The stream's job ends at "a
+  report is now being generated". A Celery task then calls back <em>into</em> the agent over an
+  internal HTTP route, runs a four-stage pipeline, and writes the finished report plus its assistant
+  message into the conversation. The browser finds out by polling.</li>
+</ol>
+
+<h3>The retired sibling: 무료 AI 진단 is not a mode any more</h3>
+
+<p>If you read older documents or older code comments you will meet a third conversation type,
+<code>agent_type = "diagnosis"</code> — the 무료 AI 진단, a public anonymous funnel that reused
+consulting's retrieval machinery for a fixed 5-question 상황분석. <strong>It is retired.</strong>
+Treat it as history, never as a mode you could turn on:</p>
+
+<table>
+<tr><th>Stage</th><th>What happened</th><th>Where it is visible today</th></tr>
+<tr>
+  <td>P35</td>
+  <td>The agent's <code>chat/diagnosis/</code> package was <strong>deleted</strong>, and a
+      diagnosis-typed turn became a tombstone.</td>
+  <td><code>apps/agent/app/api/routes/chat.py:164</code> defines
+      <code>DIAGNOSIS_RETIRED_DETAIL</code>; the pre-stream guard at <code>:1898–1909</code> answers
+      <strong>403</strong> for <code>conversation_detail.agent_type == "diagnosis"</code>, with an
+      explicit "no fall-through to default chat".</td>
+</tr>
+<tr>
+  <td>P36.S1</td>
+  <td>Creation was tombstoned <strong>unconditionally</strong> and the reversal switch was removed.</td>
+  <td>The conversation-create serializer rejects <code>agent_type == "diagnosis"</code> with
+      <code>{"agent_type": ["Diagnosis mode has been retired."]}</code>; the Django setting
+      <code>ENABLE_DIAGNOSIS_MODE</code> <strong>no longer exists</strong>, and the env var and every
+      <code>compose*.yml</code> line were dropped
+      (<code>docs/current/backend.md</code> §"Diagnosis Retirement (backend leg, D49 completion — P36.S1)").</td>
+</tr>
+<tr>
+  <td>Deliberately kept</td>
+  <td>The <strong>guest plumbing is dormant, not deleted</strong> — and no migration was needed.</td>
+  <td>The <code>AgentType.DIAGNOSIS</code> enum member, the guest hard-scoped queryset,
+      <code>GUEST_CAPABLE_AUTHENTICATION_CLASSES</code>,
+      <code>conversations/snapshots.py</code>'s <code>resolve_guest_diagnosis_snapshot</code> and the
+      guest-retention purge all survive for a possible future guest feature. Old
+      <code>"diagnosis"</code> rows still <em>read</em> back fine — only creation is refused.</td>
+</tr>
+</table>
+
+<div class="callout blue">
+<p><strong>Why no migration was needed</strong> — a fact worth carrying: <code>agent_type</code> is a
+plain <code>CharField</code>, not a database enum (explainer #4). Retiring a value therefore costs
+one serializer branch, and historic rows keep working.</p>
+</div>
+
+<div class="callout warn">
+<p><strong>A stale doc, flagged not fixed.</strong> <code>docs/current/product.md</code> §"Diagnosis
+Mode (무료 AI 진단)" still opens with "currently disabled (zero use), <em>reversibly</em> … gated off
+behind <code>ENABLE_DIAGNOSIS_MODE</code> … a single env flip re-enables it". That flag was deleted
+by P36.S1, and creation is now refused regardless of any flag, so the paragraph describes a world
+that no longer exists. <strong>The code is the authority.</strong> This curriculum changes no code
+and no docs, so the drift was recorded as an operator question for the phase review rather than
+silently patched.</p>
+</div>
+
+<h3>What this page does <em>not</em> re-teach</h3>
+
+<p>컨설팅 mode reuses the shared machinery wholesale. Where a mechanism is shared, this page names it
+and links the explainer that owns it:</p>
+
+<table>
+<tr><th>Shared mechanism</th><th>Owner</th></tr>
+<tr><td>The conversation models, the message write API, idempotency keys, the alternation rule,
+        <code>append_finalized_message</code>, the pre-turn detail GET</td>
+    <td><a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4 — Conversations as the system of record</a></td></tr>
+<tr><td>SSE framing, the run registry and cancel, keepalives, checkpoint sync, the abandoned-stream
+        finalizer, the security-guard hook</td>
+    <td><a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5 — A chat turn end to end</a></td></tr>
+<tr><td>Retrieval: query planning, the two arms, RRF fusion, the reranker, hydration</td>
+    <td><a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7 — Retrieval: the RAG read path</a></td></tr>
+<tr><td>Live operator model config (which Gemini model a role runs)</td>
+    <td><a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2 — Configuration and boundaries</a></td></tr>
+<tr><td>Celery, the dispatch-after-commit pattern, beat and startup recovery</td>
+    <td>#16 — Running it (later in this curriculum)</td></tr>
+<tr><td>The injection guard's internals, the citation-grounding gate, trial caps</td>
+    <td>#11 — Safety and grounding (next)</td></tr>
+<tr><td>The operator console's view of reports and follow-up requests</td>
+    <td>#17 — The operator console backend</td></tr>
+</table>
+
+<div class="callout grey">
+<p><strong>A naming note.</strong> This page's title says "구성안 report" because that is the title
+fixed in the curriculum's reading order. In the running product and throughout the code the consulting
+deliverable is called <strong>보고서 / 컨설팅 보고서</strong> — the report card's default heading is
+literally <code>"컨설팅 보고서"</code>
+(<code>apps/web/src/components/consulting/consulting-report-message.tsx:63</code>). The word
+<em>구성안</em> belongs to a different subsystem, the 미라클 에이전트 content pipeline (explainers
+#13/#14). Read "구성안 report" here as "the structured consulting report".</p>
+</div>
+
+<h2 id="intuition">Intuition — a conversation that pauses, and a report written elsewhere</h2>
+
+<h3>One turn versus one round</h3>
+
+<p>A default chat turn is a straight line. A consulting <em>round</em> is a line with a hole punched
+in the middle of it, and a second line that runs later, in another process.</p>
+
+<figure>
+<div class="lanes">
+  <div class="lane">
+    <h4>Default chat turn (explainer #5)</h4>
+    <ol>
+      <li>Django writes the <strong>user</strong> message (pre-stream).</li>
+      <li>The agent runs: model → maybe retrieval tools → model.</li>
+      <li>Deltas stream out as they are produced.</li>
+      <li>Django writes the <strong>assistant</strong> message.</li>
+      <li><code>message_end</code>, <code>done</code>. The turn is over and nothing survives except
+          two rows.</li>
+    </ol>
+  </div>
+  <div class="lane">
+    <h4>컨설팅 round (this page)</h4>
+    <ol>
+      <li>Django writes the user message, same as always.</li>
+      <li>The model calls <strong>one tool</strong>, <code>start_consulting</code>.</li>
+      <li>The tool creates a <strong>round row</strong>, generates questions, and
+          <strong>suspends the graph</strong>. The HTTP request ends here, with a
+          <code>consulting_probe</code> frame carrying the question card.</li>
+      <li>The user answers → a <strong>new HTTP request</strong> resumes the same graph, up to
+          3 times.</li>
+      <li>When probing is enough, the tool asks Django to create a
+          <strong>report row</strong> and returns. The stream ends with
+          <code>consulting_report_start</code>.</li>
+      <li><strong>Celery</strong> writes the report, minutes later if it must, and appends the
+          assistant message itself. The browser polls until it appears.</li>
+    </ol>
+  </div>
+</div>
+<figcaption>The same conversation table, the same SSE transport, a completely different shape.</figcaption>
+</figure>
+
+<h3>What "interrupt" really means, with toy data</h3>
+
+<p>The unfamiliar piece is step 3. A tool is a Python function; functions do not normally stop halfway
+and continue tomorrow. LangGraph's <code>interrupt()</code> makes them do exactly that, by taking a
+checkpoint of the whole graph and raising out of the node. Here is the shape, stripped to nothing:</p>
+
+<pre><code># toy version of apps/agent/app/chat/consulting/tools.py
+def start_consulting(subject):
+    round_id = backend.start_round(subject)          # a real Postgres row
+
+    for turn in (1, 2, 3):
+        questions = ask_the_model_for_questions(subject)   # ≤ 3 questions
+        backend.save_pending_probe(round_id, questions)    # so a reload can recover them
+
+        answers = interrupt({"questions": questions, "turn": turn})
+        #         ^^^^^^^^^ the graph STOPS here. This HTTP request is over.
+        #                   Some later request calls Command(resume={"answers": [...]})
+        #                   and *this same line* returns that value.
+
+        if answers.get("cancelled"):
+            backend.cancel_round(round_id)
+            return "취소했어요."
+        remember(answers)
+        if enough(subject, remembered):
+            break
+
+    backend.create_report(round_id, remembered)      # → Celery does the writing
+    return "보고서를 작성 중입니다..."</code></pre>
+
+<p>With real toy data, a two-turn consultation looks like this:</p>
+
+<table>
+<tr><th>#</th><th>HTTP request</th><th>What the tool does</th><th>What the browser gets</th></tr>
+<tr><td>1</td>
+    <td><code>{"message": "떡볶이집 창업하려는데 조언 좀 해줘"}</code></td>
+    <td>model streams a one-sentence empathy line, then calls
+        <code>start_consulting(subject="떡볶이집 창업 전략")</code>; the tool creates the round,
+        generates turn-1 questions, <code>interrupt()</code>s</td>
+    <td>deltas of the empathy line, then a <code>consulting_probe</code> card:
+        <code>t1_q1</code> 예산은 어느 정도로 생각하고 계세요? · <code>t1_q2</code> 어느 지역·상권을
+        보고 계신가요? · <code>t1_q3</code> 외식업 경험이 있으신가요?</td></tr>
+<tr><td>2</td>
+    <td><code>{"resume_value": {"answers": [{"id":"t1_q1","value":"5천만원"}, …], "note":"배달 위주로 생각 중"}}</code></td>
+    <td>the graph resumes <em>inside</em> the loop, records turn 1, asks the model whether that is
+        enough (it says no), generates turn-2 questions, <code>interrupt()</code>s again</td>
+    <td>a second <code>consulting_probe</code> card, turn 2 of 3</td></tr>
+<tr><td>3</td>
+    <td><code>{"resume_value": {"answers": [{"id":"t2_q1","value":"…"}], "finish": true}}</code></td>
+    <td>records turn 2; <code>finish</code> means "stop asking"; emits
+        <code>consulting_summary</code> + <code>consulting_report_start</code>, asks Django for a
+        report row, returns</td>
+    <td><code>consulting_report_start {report_id}</code>, then <code>done</code>. The card turns into
+        a "보고서를 작성 중입니다" placeholder and the browser starts polling.</td></tr>
+</table>
+
+<div class="callout blue">
+<p><strong>Why an interrupt rather than "just ask in chat".</strong> The model could have typed the
+questions as ordinary text and waited for a reply. Three things break if it does: the questions become
+free text the code cannot render as a form (the product shows a card with labelled inputs and a skip
+button); the "are we still probing?" state becomes a guess about the last message instead of a fact;
+and a reload has nothing to recover. The interrupt keeps the questions <em>structured</em> and the
+loop's local variables alive across HTTP requests.</p>
+</div>
+
+<h3>The round state machine</h3>
+
+<p>Everything user-visible about a consultation is derivable from one row. Five states, and each
+transition has exactly one owner:</p>
+
+<figure>
+<svg viewBox="0 0 720 330" role="img" aria-label="Consulting round state machine">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#555"></polygon>
+    </marker>
+  </defs>
+  <g font-family="system-ui, sans-serif" font-size="13">
+    <circle cx="26" cy="60" r="7" fill="#555"></circle>
+    <line x1="34" y1="60" x2="86" y2="60" stroke="#555" stroke-width="1.6" marker-end="url(#ah)"></line>
+    <text x="36" y="48" font-size="11" fill="#555">start_consulting</text>
+
+    <rect x="90" y="38" width="150" height="46" rx="8" fill="#eef2fa" stroke="#3a5a9b" stroke-width="1.6"></rect>
+    <text x="165" y="60" text-anchor="middle" font-weight="600" fill="#17202a">probing</text>
+    <text x="165" y="75" text-anchor="middle" font-size="11" fill="#17202a">pending_probe != null</text>
+
+    <path d="M110 38 C 100 -2, 230 -2, 220 38" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#ah)"></path>
+    <text x="165" y="12" text-anchor="middle" font-size="11" fill="#555">answers accepted → next turn (≤3)</text>
+
+    <line x1="240" y1="61" x2="352" y2="61" stroke="#555" stroke-width="1.6" marker-end="url(#ah)"></line>
+    <text x="296" y="52" text-anchor="middle" font-size="11" fill="#555">report created</text>
+
+    <rect x="356" y="38" width="160" height="46" rx="8" fill="#eef2fa" stroke="#3a5a9b" stroke-width="1.6"></rect>
+    <text x="436" y="60" text-anchor="middle" font-weight="600" fill="#17202a">generating</text>
+    <text x="436" y="75" text-anchor="middle" font-size="11" fill="#17202a">report_started_at set</text>
+
+    <line x1="516" y1="52" x2="596" y2="30" stroke="#555" stroke-width="1.6" marker-end="url(#ah)"></line>
+    <rect x="600" y="8" width="106" height="40" rx="8" fill="#f0f8f4" stroke="#2f6f4f" stroke-width="1.6"></rect>
+    <text x="653" y="33" text-anchor="middle" font-weight="600" fill="#17202a">complete</text>
+
+    <line x1="516" y1="72" x2="596" y2="108" stroke="#555" stroke-width="1.6" marker-end="url(#ah)"></line>
+    <rect x="600" y="112" width="106" height="40" rx="8" fill="#fdf5e8" stroke="#a05a00" stroke-width="1.6"></rect>
+    <text x="653" y="137" text-anchor="middle" font-weight="600" fill="#17202a">error</text>
+
+    <line x1="165" y1="84" x2="165" y2="150" stroke="#555" stroke-width="1.6" marker-end="url(#ah)"></line>
+    <text x="175" y="118" font-size="11" fill="#555">user cancels the card</text>
+    <rect x="105" y="154" width="120" height="40" rx="8" fill="#f3f4f6" stroke="#8a8f98" stroke-width="1.6"></rect>
+    <text x="165" y="179" text-anchor="middle" font-weight="600" fill="#17202a">cancelled</text>
+
+    <g font-size="12" fill="#17202a">
+      <rect x="20" y="222" width="680" height="96" rx="6" fill="#fbfbfc" stroke="#c9cdd4"></rect>
+      <text x="34" y="242" font-weight="600">Who drives each edge</text>
+      <text x="34" y="262">→ probing: the agent's tool, via POST /api/conversations/internal/&lt;nonce&gt;/consulting-rounds</text>
+      <text x="34" y="280">→ probing (loop): the chat route, via .../consulting-rounds/&lt;id&gt;/answers, BEFORE the graph resumes</text>
+      <text x="34" y="298">→ generating: .../reports (links the round) · → complete | error: the Celery task, in Django</text>
+      <text x="34" y="316">→ cancelled: .../consulting-rounds/&lt;id&gt;/cancel — and the tool re-cancels on its own resume</text>
+    </g>
+  </g>
+</svg>
+<figcaption>Only <code>probing</code> and <code>generating</code> are "active". A partial unique index
+allows <strong>one</strong> active round per conversation.</figcaption>
+</figure>
+
+<div class="callout">
+<p><strong>The cancel rule, operator-confirmed.</strong> Cancelling the question card produces
+<strong>no assistant reply at all</strong>. The card disappears, the round goes
+<code>cancelled</code>, and nothing is written to the transcript. That is deliberate, not a missing
+feature — the code for it is named <code>skip_cancel_write</code> and we walk it below.</p>
+</div>
+
+<h3>Why the report left the live stream</h3>
+
+<p>Generating a consulting report means: one model call to plan an outline, up to eight retrieval
+queries (each with its own embedding call and reranker call), one model call to write several
+thousand Korean characters against two dozen full post bodies. That is minutes, not seconds. If it ran
+inside the SSE response, three things would go wrong:</p>
+
+<table>
+<tr><th>Failure</th><th>On the live stream</th><th>With Celery (what actually ships)</th></tr>
+<tr><td>The user closes the tab</td><td>The work is cancelled; nothing is written; the round is
+    stuck</td><td>The task is already queued and finishes anyway; the report lands in the
+    conversation</td></tr>
+<tr><td>Gemini rate-limits us (429)</td><td>The turn dies with an error frame</td>
+    <td>The task raises a <em>transient</em> error and is retried, 30 s later, up to
+    3 attempts total</td></tr>
+<tr><td>The worker is killed mid-report</td><td>Nothing to reclaim — the request is gone</td>
+    <td>The row is still <code>generating</code>; the reclaim pass requeues it</td></tr>
+</table>
+
+<p>The price is a handover: the live stream must tell the browser <em>"a report with this id is
+coming"</em> and then get out of the way, and the browser must find out about completion some other
+way. Both halves are visible in the sequence below.</p>
+
+<h3>The whole thing, once, as a sequence</h3>
+
+<figure>
+<svg viewBox="0 0 760 640" role="img" aria-label="Sequence diagram of a consulting report from the last probing answer to the rendered report card">
+  <defs>
+    <marker id="ah2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#3a5a9b"></polygon>
+    </marker>
+    <marker id="ah3" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#2f6f4f"></polygon>
+    </marker>
+  </defs>
+  <g font-family="system-ui, sans-serif" font-size="12" fill="#17202a">
+    <rect x="20" y="10" width="150" height="34" rx="6" fill="#eef2fa" stroke="#3a5a9b"></rect>
+    <text x="95" y="32" text-anchor="middle" font-weight="600">Browser</text>
+    <rect x="280" y="10" width="180" height="34" rx="6" fill="#eef2fa" stroke="#3a5a9b"></rect>
+    <text x="370" y="32" text-anchor="middle" font-weight="600">FastAPI agent</text>
+    <rect x="570" y="10" width="170" height="34" rx="6" fill="#eef2fa" stroke="#3a5a9b"></rect>
+    <text x="655" y="26" text-anchor="middle" font-weight="600">Django</text>
+    <text x="655" y="39" text-anchor="middle" font-size="11">+ Celery worker</text>
+
+    <line x1="95" y1="44" x2="95" y2="620" stroke="#c9cdd4" stroke-dasharray="4 4"></line>
+    <line x1="370" y1="44" x2="370" y2="620" stroke="#c9cdd4" stroke-dasharray="4 4"></line>
+    <line x1="655" y1="44" x2="655" y2="620" stroke="#c9cdd4" stroke-dasharray="4 4"></line>
+
+    <line x1="95" y1="70" x2="362" y2="70" stroke="#3a5a9b" stroke-width="1.5" marker-end="url(#ah2)"></line>
+    <text x="228" y="64" text-anchor="middle" font-size="11">1. POST /agent-api/chat/stream {resume_value:{answers,…}}</text>
+
+    <line x1="370" y1="100" x2="647" y2="100" stroke="#3a5a9b" stroke-width="1.5" marker-end="url(#ah2)"></line>
+    <text x="508" y="94" text-anchor="middle" font-size="11">2. POST internal …/consulting-rounds/&lt;id&gt;/answers</text>
+    <text x="508" y="114" text-anchor="middle" font-size="10.5" fill="#555">(records the turn AND writes the user's Q&amp;A bubble)</text>
+
+    <rect x="300" y="128" width="140" height="26" rx="4" fill="#f0f8f4" stroke="#2f6f4f"></rect>
+    <text x="370" y="145" text-anchor="middle" font-size="11">3. resume the graph</text>
+
+    <line x1="370" y1="180" x2="647" y2="180" stroke="#3a5a9b" stroke-width="1.5" marker-end="url(#ah2)"></line>
+    <text x="508" y="174" text-anchor="middle" font-size="11">4. POST internal …/reports {report_id, round_id}</text>
+    <text x="508" y="194" text-anchor="middle" font-size="10.5" fill="#555">report=GENERATING · round→generating · report_started_at</text>
+
+    <rect x="575" y="206" width="165" height="40" rx="4" fill="#fdf5e8" stroke="#a05a00"></rect>
+    <text x="657" y="222" text-anchor="middle" font-size="11">5. transaction.on_commit</text>
+    <text x="657" y="238" text-anchor="middle" font-size="11">→ send_task(...)</text>
+
+    <line x1="362" y1="272" x2="103" y2="272" stroke="#2f6f4f" stroke-width="1.5" marker-end="url(#ah3)"></line>
+    <text x="232" y="266" text-anchor="middle" font-size="11">6. SSE consulting_report_start · message_end · done</text>
+    <text x="232" y="286" text-anchor="middle" font-size="10.5" fill="#555">the HTTP stream is now finished</text>
+
+    <line x1="647" y1="320" x2="378" y2="320" stroke="#2f6f4f" stroke-width="1.5" marker-end="url(#ah3)"></line>
+    <text x="512" y="314" text-anchor="middle" font-size="11">7. POST /agent-api/internal/consulting/reports/generate</text>
+    <text x="512" y="334" text-anchor="middle" font-size="10.5" fill="#555">service token · 180 s timeout</text>
+
+    <rect x="270" y="350" width="200" height="72" rx="4" fill="#f0f8f4" stroke="#2f6f4f"></rect>
+    <text x="370" y="367" text-anchor="middle" font-size="11" font-weight="600">8. the report pipeline</text>
+    <text x="370" y="383" text-anchor="middle" font-size="10.5">plan_report → build queries</text>
+    <text x="370" y="398" text-anchor="middle" font-size="10.5">→ retrieve (≤8 queries, ≤24 docs)</text>
+    <text x="370" y="413" text-anchor="middle" font-size="10.5">→ generate_report → render [k]</text>
+
+    <line x1="378" y1="446" x2="647" y2="446" stroke="#3a5a9b" stroke-width="1.5" marker-end="url(#ah2)"></line>
+    <text x="512" y="440" text-anchor="middle" font-size="11">9. 200 {content, citations, cited_document_post_ids, cited_content}</text>
+
+    <rect x="575" y="462" width="165" height="56" rx="4" fill="#fdf5e8" stroke="#a05a00"></rect>
+    <text x="657" y="479" text-anchor="middle" font-size="11">10. complete_consulting_report</text>
+    <text x="657" y="494" text-anchor="middle" font-size="10.5">report→COMPLETE + assistant</text>
+    <text x="657" y="509" text-anchor="middle" font-size="10.5">message + round→complete</text>
+
+    <line x1="95" y1="546" x2="647" y2="546" stroke="#3a5a9b" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ah2)"></line>
+    <text x="371" y="540" text-anchor="middle" font-size="11">11. GET /api/conversations/&lt;nonce&gt;/reports/&lt;id&gt; — every 3 s, ≤60 times</text>
+
+    <line x1="647" y1="580" x2="103" y2="580" stroke="#2f6f4f" stroke-width="1.5" marker-end="url(#ah3)"></line>
+    <text x="375" y="574" text-anchor="middle" font-size="11">12. status:"complete" → browser reloads conversation detail</text>
+    <text x="375" y="594" text-anchor="middle" font-size="10.5" fill="#555">the report card renders from the persisted assistant message</text>
+
+    <text x="20" y="620" font-size="10.5" fill="#555">Steps 1–6 are one HTTP request. Steps 7–10 are a Celery job. Steps 11–12 are the browser on its own clock.</text>
+  </g>
+</svg>
+<figcaption>The handover is step 6/7: the stream promises a <code>report_id</code>, and a different
+process fulfils it.</figcaption>
+</figure>
+
+<h2 id="code">Code — walking the real implementation</h2>
+
+<p>Six stops, in the order the data moves: the durable rows, the internal API that mutates them, the
+second agent, the tool with the interrupt, the stream that frames it, and the Celery pipeline that
+writes the report. File paths are relative to the repository root, and line numbers are from
+2026-08-26.</p>
+
+<h3>1 · The durable side: three tables and one lifecycle object</h3>
+
+<p>All three models live in <code>apps/backend/conversations/models.py</code>, beside the
+conversation models from explainer #4.</p>
+
+<table>
+<tr><th>Model</th><th>Key fields</th><th>Statuses</th></tr>
+<tr><td><code>ConsultingReport</code> (<code>:736</code>)</td>
+    <td>UUID pk · <code>session</code> · <code>owner</code> · <code>subject</code> ·
+        <code>probing_context</code> (JSON) · <code>content</code> · <code>citations</code> (JSON) ·
+        <code>message</code> (FK to the assistant message it produced) · plus the three
+        generation-bookkeeping columns <code>generation_task_id</code>,
+        <code>generation_attempt_count</code>, <code>generation_last_attempt_at</code></td>
+    <td><code>generating</code> → <code>complete</code> | <code>error</code></td></tr>
+<tr><td><code>ConsultingRound</code> (<code>:805</code>)</td>
+    <td>UUID pk · <code>subject</code> · <code>pending_probe</code> (JSON, the unanswered question
+        set) · <code>probing_context</code> (JSON, every answered turn) ·
+        <code>report</code> (OneToOne) · <code>report_started_at</code> · <code>terminal_at</code></td>
+    <td><code>probing</code> · <code>generating</code> · <code>complete</code> ·
+        <code>cancelled</code> · <code>error</code></td></tr>
+<tr><td><code>ConsultingFollowUpRequest</code> (<code>:870</code>)</td>
+    <td><code>report</code> FK · <code>name</code> · <code>phone</code> / <code>email</code> (the
+        legacy blended <code>contact</code> column survives for pre-split rows) · <code>topic</code> ·
+        <code>preferred_time</code></td>
+    <td><code>pending</code> · <code>contacted</code> · <code>closed</code></td></tr>
+</table>
+
+<p>The single most load-bearing line in the three models is a database constraint:</p>
+
+<pre><code># ConsultingRound.Meta.constraints
+models.UniqueConstraint(
+    fields=("session",),
+    condition=models.Q(status__in=("probing", "generating")),
+    name="consultrnd_one_active_session",
+)</code></pre>
+
+<div class="callout">
+<p>A <strong>partial</strong> unique index: at most one row per session <em>whose status is probing or
+generating</em>, with terminal rounds unconstrained. "One consultation at a time" is therefore
+enforced by Postgres, not by careful Python. Everything else in the lifecycle code is there to give a
+<em>good error message</em> before the database has to say no.</p>
+</div>
+
+<h4>The read side: <code>consulting_lifecycle.py</code></h4>
+
+<p><code>apps/backend/conversations/consulting_lifecycle.py</code> is 147 lines and contains no
+mutation at all. It answers "what is the state of consulting in this conversation?" as one JSON blob:</p>
+
+<pre><code>CONSULTING_REPORT_LIMIT = 3                                          # :13
+ACTIVE_ROUND_STATUSES = (Status.PROBING, Status.GENERATING)          # :14
+
+get_active_consulting_round(session=...)      # :20  newest row in an active status, or None
+count_started_consulting_reports(session=...) # :44  rounds with report_started_at NOT NULL
+can_start_consulting_round(session=...)       # :51  consulting type + not deleted
+                                              #      + no active round + count &lt; 3
+build_consulting_lifecycle(session=...)       # :59  the dict below, or None for a non-consulting session</code></pre>
+
+<p><code>build_consulting_lifecycle</code> returns exactly nine keys, and this dict is the browser's
+<em>entire</em> source of truth about consulting:</p>
+
+<pre><code>{
+  "active_round": {"id", "status", "subject", "created_at", "updated_at"} | None,
+  "pending_probe": {…the unanswered questions…, "round_id"} | None,   # only while probing
+  "active_report_id": &lt;uuid&gt; | None,                                  # only while generating
+  "completed_report_ids": ["…", …],            # newest first
+  "follow_up_submitted_report_ids": [...],     # subset, in the same order
+  "latest_round_status": "complete" | "cancelled" | … | None,
+  "reports_started_count": 2,
+  "report_limit": 3,
+  "can_start_round": true
+}</code></pre>
+
+<p>It rides on the ordinary conversation-detail GET: explainer #4 noted that
+<code>ConversationHistoryDetailSerializer</code> carries <code>consulting_lifecycle</code> as a
+<code>SerializerMethodField</code>. So a browser that reloads mid-round, and an agent turn that is
+about to start, both learn the state from the <em>same</em> request they were making anyway — no extra
+round trip, and no possibility of the two disagreeing.</p>
+
+<div class="callout blue">
+<p><strong>Metadata only, on purpose.</strong> <code>completed_report_ids</code> carries ids, never
+bodies (see the comment at <code>:70-73</code>): the conversation-detail payload is fetched on every
+load, and embedding two or three multi-thousand-character reports in it would make every page load pay
+for them. The agent fetches a body on demand instead — that is what the grounding helper in §5 does.</p>
+</div>
+
+<h4>The write side: <code>consulting_mutations.py</code></h4>
+
+<p><code>apps/backend/conversations/consulting_mutations.py</code> (597 lines) holds every state
+change, and each one follows the same four-step discipline:</p>
+
+<pre><code>with transaction.atomic():
+    session   = _lock_session(nonce=…, owner_user_id=…)   # :38  SELECT … FOR UPDATE
+    _require_consulting_session(session)                  # :69  agent_type must be consulting
+    round_obj = _lock_round(session=…, round_id=…)        # :53  SELECT … FOR UPDATE
+    _require_probing_round(round_obj)                     # :77  status guard
+    … mutate, save(update_fields=[…]) …</code></pre>
+
+<p>Two locks, always in the same order (session, then round), so two concurrent requests on the same
+conversation can never deadlock against each other. Every refusal is a
+<code>ConsultingLifecycleConflict</code> (<code>:26</code>) — a DRF <code>APIException</code> with
+<code>status_code = 409</code> whose body is <code>{"code": …, "detail": …}</code>, so clients branch
+on a machine-readable code and never on prose. The vocabulary:</p>
+
+<table>
+<tr><th><code>code</code></th><th>Meaning</th></tr>
+<tr><td><code>not_consulting_session</code></td><td>the conversation is a default-chat one</td></tr>
+<tr><td><code>active_round_exists</code></td><td>a round is already running (and it is not a
+    replayable probing round)</td></tr>
+<tr><td><code>round_not_probing</code></td><td>answers/cancel arrived for a round that is not waiting
+    for input</td></tr>
+<tr><td><code>round_not_generating</code></td><td>a completion arrived for a round that is not
+    generating</td></tr>
+<tr><td><code>stale_probe_answers</code></td><td>the submitted answer ids ≠ the current pending
+    question ids</td></tr>
+<tr><td><code>report_limit_reached</code></td><td>3 reports already started in this conversation</td></tr>
+</table>
+
+<p>Four functions do the work.</p>
+
+<p><strong><code>start_consulting_round</code> (<code>:159</code>)</strong> creates the round — or,
+crucially, <em>returns the existing one</em>:</p>
+
+<pre><code>if active_round is not None:
+    # LangGraph re-executes an interrupted node top-to-bottom on every
+    # resume, so the agent's `start_consulting` tool re-fires this
+    # round-start after the round it created is already active (still
+    # PROBING). Treat that as a replay and return the existing round …
+    if active_round.status == ConsultingRound.Status.PROBING:
+        return active_round
+    raise _conflict("active_round_exists", …)</code></pre>
+
+<div class="callout warn">
+<p><strong>The single most surprising fact about interrupts.</strong> Resuming does not continue from
+the <code>interrupt()</code> line — LangGraph <strong>re-runs the whole node from the top</strong> and
+replays each <code>interrupt()</code> call from the checkpoint until it reaches the one that is still
+pending. So every line before the interrupt runs again, on every resume. That is why round-start is
+idempotent here, why the tool re-reads persisted questions instead of regenerating them, and why the
+cancel path re-cancels the round it just "created". Any side effect you put in an interrupting node
+must be idempotent, full stop.</p>
+</div>
+
+<p><strong><code>persist_pending_probe</code> (<code>:205</code>)</strong> stores the question set the
+user has not answered yet, so a reload can re-render the card.</p>
+
+<p><strong><code>accept_probe_answers</code> (<code>:319</code>)</strong> is the busiest function.
+It validates that the submitted ids are exactly the pending ids
+(<code>set(answer_by_id) != set(question_ids)</code> → <code>stale_probe_answers</code>), appends a
+turn entry to <code>probing_context["turns"]</code>, clears <code>pending_probe</code> — and then
+writes the user's answers into the transcript as a real message
+(<code>_persist_probe_answers_message</code>, <code>:259</code>):</p>
+
+<pre><code>Q. 창업 예산은 어느 정도로 생각하고 계세요?
+A. 5천만원
+
+Q. 어느 지역·상권을 보고 계신가요?
+A. 아직 정하지 못했어요</code></pre>
+
+<p>with <code>metadata = {"message_type": "consulting_probe_answers", "qa_pairs": […], "turn": 1,
+"round_id": …}</code>. Two details are worth copying into your own designs:</p>
+
+<ul>
+  <li><strong>Its own idempotency namespace.</strong>
+  <code>build_consulting_probe_answers_idempotency_key</code> (<code>:240</code>) is a
+  <code>uuid5</code> over <code>"{nonce}:{round_id}:{turn}:consulting_probe_answers"</code> under a
+  namespace constant that belongs to this message kind alone (<code>:235</code>). The same turn
+  therefore always derives the same key, and explainer #4's
+  <code>UniqueConstraint(session, idempotency_key)</code> makes the write replay-safe for free.</li>
+  <li><strong>It refuses rather than breaks alternation.</strong> Before writing, it checks that the
+  newest message is an assistant one; if a preceding acknowledgment failed to persist, the bubble is
+  simply skipped (the answers still live in <code>probing_context</code>). A user→user pair would be
+  rejected by <code>append_finalized_message</code> and would block the submission entirely — so a
+  cosmetic bubble is never allowed to cost the user their answer.</li>
+</ul>
+
+<p><strong><code>cancel_probing_round</code> (<code>:402</code>)</strong> flips the round to
+<code>cancelled</code>, clears <code>pending_probe</code>, stamps <code>terminal_at</code> — and is
+idempotent: a round already <code>cancelled</code> is returned as-is.</p>
+
+<p>A fifth function, <strong><code>create_or_link_consulting_report</code>
+(<code>:433</code>)</strong>, is where probing becomes generating: it creates the
+<code>ConsultingReport</code> row, moves the round to <code>generating</code>, stamps
+<code>report_started_at</code>, and calls
+<code>queue_consulting_report_generation_on_commit(report)</code>. Note what
+<code>report_started_at</code> means: <code>count_started_consulting_reports</code> counts rounds
+where it is set, so <strong>the 3-report cap counts started reports, not successful ones</strong> — a
+report that errors still consumes one — while a cancelled probing round never sets it and therefore
+costs nothing.</p>
+
+<h4>The internal routes</h4>
+
+<p>All of the above is reachable only over the service-token internal API
+(<code>apps/backend/conversations/urls.py:75–118</code>), the same
+<code>authentication_classes = [AgentServiceTokenAuthentication]</code> +
+<code>permission_classes = [AllowAny]</code> idiom explainer #3 described:</p>
+
+<pre><code>POST /api/conversations/internal/&lt;nonce&gt;/consulting-rounds                       → start
+POST /api/conversations/internal/&lt;nonce&gt;/consulting-rounds/&lt;round_id&gt;/pending-probe
+POST /api/conversations/internal/&lt;nonce&gt;/consulting-rounds/&lt;round_id&gt;/answers
+POST /api/conversations/internal/&lt;nonce&gt;/consulting-rounds/&lt;round_id&gt;/cancel
+POST /api/conversations/internal/&lt;nonce&gt;/reports                                 → create/link
+
+GET  /api/conversations/&lt;nonce&gt;/reports/&lt;report_id&gt;            ← owner JWT, the polled endpoint
+GET  /api/conversations/&lt;nonce&gt;/reports/&lt;report_id&gt;/download   ← owner JWT, text/markdown
+POST /api/conversations/&lt;nonce&gt;/reports/&lt;report_id&gt;/follow-up  ← owner JWT</code></pre>
+
+<p>Every internal route takes <code>owner_user_id</code> as a plain field in the body, because a
+service token carries no identity of its own; the mutation then scopes its
+<code>SELECT … FOR UPDATE</code> by <code>(nonce, user_id)</code>, so a wrong owner is a clean 404.
+The three public routes use the owner's JWT and go through
+<code>OwnedConversationLookupMixin</code> — explainer #4's "the scope <em>is</em> the lookup"
+rule.</p>
+
+<div class="callout grey">
+<p><strong>A vestigial pair.</strong> Two more internal routes exist —
+<code>…/reports/&lt;id&gt;/complete</code> and <code>…/reports/&lt;id&gt;/error</code> — from the era
+when the agent finalized its own reports. Grepping the agent finds <strong>no caller</strong>: today
+Celery calls <code>complete_consulting_report(...)</code> in-process, inside Django. The routes are
+still wired and still tested, but nothing in production reaches them.</p>
+</div>
+
+<h3>2 · The agent side: a second agent, not a second prompt</h3>
+
+<p><code>apps/agent/app/chat/consulting/</code> is its own package (about 3.4k lines against the
+shared <code>chat</code> package's 11.4k). Its entry point mirrors explainer #5's exactly:</p>
+
+<pre><code># apps/agent/app/chat/consulting/agent.py:250
+@asynccontextmanager
+async def open_consulting_agent(settings, *, model_name=None):
+    await ensure_llm_config_fresh(settings)
+    resolved_model = model_name or _resolve_consulting_model_name(settings, ROLE_CONSULTING_CHAT)
+    model = _build_consulting_model(settings, model_name=resolved_model)
+    async with open_chat_checkpointer(settings) as checkpointer:
+        yield ConsultingAgentRuntime(
+            agent=create_agent(
+                model=model,
+                tools=[start_consulting, security_check],   # ← two tools. That is all.
+                middleware=[ConsultingAgentMiddleware()],
+                state_schema=ConsultingAgentState,
+                context_schema=ConsultingAgentContext,
+                checkpointer=checkpointer,
+                name="changple_consulting_agent",
+            ),
+            checkpointer=checkpointer,
+        )</code></pre>
+
+<div class="callout">
+<p><strong>The consulting agent cannot retrieve.</strong> Default chat registers up to seven tools —
+three retrieval tools, session search, cited-document search, the security check, and the feedback
+tool. 미라클 registers <strong>two</strong>: <code>start_consulting</code> and
+<code>security_check</code>. Retrieval still happens, but only <em>inside</em> the consulting code
+paths (probing-question grounding and the report pipeline), never as something the conversational
+model can decide to do. That is the mechanical expression of the product rule "all substantive analysis
+comes from the report": with no retrieval tool, an ungrounded claim has no source to come from, and the
+system prompt's [제한] section forbids inventing one.</p>
+</div>
+
+<h4>Two models, two operator roles</h4>
+
+<pre><code># agent.py:71-87
+DEFAULT_CONSULTING_CHAT_MODEL  = "gemini-3.5-flash"          # the conversation
+DEFAULT_CONSULTING_AGENT_MODEL = "gemini-3.1-pro-preview"    # the report
+CONSULTING_AGENT_MODEL_PROVIDER = "google_genai"
+
+MAX_CONSULTING_RETRIEVAL_QUERIES = 8    # report: at most 8 queries
+MAX_CONSULTING_DOCUMENTS         = 24   # report: at most 24 naver posts total
+CANDIDATES_PER_QUERY             = 6    # report: top 6 per query
+CONTENT_CANDIDATES_PER_QUERY     = 3    # report: 미라클 콘텐츠 per query  (P41.S9)
+MAX_CONSULTING_CONTENTS          = 6    # report: 미라클 콘텐츠 total
+
+PROBING_RETRIEVAL_MAX_DOCS       = 6    # probing: at most 6 summaries
+MAX_PROBING_RETRIEVAL_QUERIES    = 2    # probing: at most 2 queries</code></pre>
+
+<p>Those <code>DEFAULT_*</code> constants are the <em>last</em> rung of explainer #2's three-rung
+ladder. <code>_resolve_consulting_model_name</code> (<code>:183</code>) walks the ladder through a
+small table (<code>:171</code>) that maps each role to its env attribute and its code default:</p>
+
+<table>
+<tr><th>Role slug (operator store)</th><th>Console label</th><th>Env var</th><th>Code default</th><th>Used for</th></tr>
+<tr><td><code>consulting_chat</code></td><td>컨설팅 대화</td>
+    <td><code>GEMINI_CONSULTING_CHAT_MODEL</code></td><td><code>gemini-3.5-flash</code></td>
+    <td>the streaming turn, probing questions, the sufficiency check, the acknowledgment</td></tr>
+<tr><td><code>consulting_report</code></td><td>컨설팅 리포트 생성</td>
+    <td><code>GEMINI_CONSULTING_AGENT_MODEL</code></td><td><code>gemini-3.1-pro-preview</code></td>
+    <td><code>plan_report</code> and <code>generate_report</code></td></tr>
+</table>
+
+<p>Both are registered in <code>apps/backend/operators/llm_roles.py:136–149</code> with
+<code>supports_thinking=True</code>, so the operator can change the model <em>and</em> the thinking
+level at <code>/operator/settings</code> with no redeploy. <code>_build_consulting_model</code>
+(<code>:193</code>) applies them: the thinking level is passed as a kwarg only when one resolves
+(<code>:233</code> — "no kwarg at all when nothing resolved"), and every one-shot caller passes
+<code>disable_native_retry=True</code> so the SDK's own retry loop cannot fight the codebase's
+<code>acall_with_retry</code> (<code>max_retries=1</code> is how google-genai spells "none";
+<code>0</code> means "use the default ~6").</p>
+
+<h4>The state schema, and why consulting kept the fingerprint</h4>
+
+<p><code>ConsultingAgentState</code> (<code>:120</code>) extends LangChain's <code>AgentState</code>
+with the whole lifecycle mirror:</p>
+
+<pre><code>conversation_summary            consulting_report_content     consulting_start_allowed
+backend_history_fingerprint     consulting_report_count       consulting_limit_reached
+consulting_phase                consulting_cancelled          consulting_retrieved_documents
+consulting_probing_turn         consulting_round_id           security_locked
+consulting_probing_context</code></pre>
+
+<p>Explainer #5 recorded that default chat <strong>deleted</strong> its
+<code>backend_history_fingerprint</code>: <code>sync_chat_agent_checkpoint</code> unconditionally
+deletes the thread and rebuilds it from backend history every turn, so a fingerprint would have had
+nothing to decide. Consulting cannot do that, and this is the reason:</p>
+
+<pre><code># agent.py:350  sync_consulting_agent_checkpoint
+if snapshot_values and stored_fingerprint == backend_history_fingerprint:
+    return config                     # history unchanged → keep the thread as-is
+if is_resume and snapshot_values:
+    return config                     # ← a RESUME must never rebuild the thread
+
+preserved_consulting_state = {…}      # :375  keep the 11 consulting_* fields
+if snapshot_values:
+    await runtime.checkpointer.adelete_thread(f"consult:{conversation_nonce}")
+… rebuild from verbatim_messages, then re-merge preserved_consulting_state …</code></pre>
+
+<div class="callout warn">
+<p><strong>Deleting the thread would destroy the pending interrupt.</strong> The suspended
+<code>start_consulting</code> call — its loop counter, its accumulated
+<code>probing_context</code>, its place in the <code>interrupt()</code> sequence — <em>is</em> the
+checkpoint. So the resume path returns early, and the non-resume path preserves the eleven
+<code>consulting_*</code> fields across a rebuild. The fingerprint (a hash of the backend message
+history, <code>chat/fingerprints.py</code>) is what lets it skip the rebuild entirely when nothing
+changed. That module survives in the codebase <strong>for consulting alone</strong>.</p>
+<p>One nice touch at <code>:400</code>: while re-merging, a preserved
+<code>consulting_phase == "generating"</code> with at least one report counted is rewritten to
+<code>"complete"</code> — the report is being written by Celery, so the agent must not think it is
+still mid-generation.</p>
+</div>
+
+<p>The counterpart, <code>update_consulting_agent_backend_history_fingerprint</code>
+(<code>:414</code>), is called by the stream after every write so the next turn can take the cheap
+path. The thread id is <code>f"consult:{conversation_nonce}"</code> (<code>:284</code>) — a different
+namespace from default chat's, so the two agents never share a thread even on the same
+conversation.</p>
+
+<h4>The middleware: same three hooks, one different</h4>
+
+<pre><code># apps/agent/app/chat/consulting/middleware.py
+class ConsultingAgentMiddleware(AgentMiddleware[ConsultingAgentState, ConsultingAgentContext]):
+    async def awrap_model_call(...)   # :27  rebuild the system prompt from state, every model step
+    async def awrap_tool_call(...)    # :48  wrap tool exceptions → ConsultingAgentToolError
+    @hook_config(can_jump_to=["end"])
+    async def aafter_model(...)       # :63  → apply_security_guard_after_model(state, runtime)</code></pre>
+
+<p>Structurally identical to explainer #5's <code>ChatAgentMiddleware</code>, with two differences
+that matter:</p>
+
+<ul>
+  <li><strong>The security guard is literally shared.</strong> <code>aafter_model</code> delegates to
+  the same <code>apply_security_guard_after_model</code> from
+  <code>app/chat/security_guard.py</code>, and the tool list includes the same
+  <code>security_check</code> tool. The comment states the design rule: the hook is
+  <em>lifecycle-neutral</em> — it sets no <code>consulting_*</code> state and returns <code>None</code>
+  on the happy path, so the injection defence cannot perturb the round. Explainer #11 owns what the
+  guard does.</li>
+  <li><strong>The prompt is state-driven, not turn-driven.</strong> <code>awrap_model_call</code>
+  passes five lifecycle values into <code>build_consulting_system_prompt</code>, and
+  <code>_build_tool_guidance_section</code> (<code>prompts.py:24</code>) selects one of
+  <strong>six</strong> mutually exclusive [현재 상태] blocks: generating ("write nothing, do not call
+  the tool"), probing ("wait for the answers"), limit reached ("explain the 3-report cap"), not
+  allowed, just-cancelled ("chat normally; restart only on an explicit, specific new request"), a
+  terminal round ("a round already finished; the bar for a new one is high"), and the default
+  low-bar block ("call the tool as soon as they ask for help with an 외식업/서비스업 topic").</li>
+</ul>
+
+<div class="callout blue">
+<p><strong>One <code>awrap_tool_call</code> subtlety worth stealing.</strong> It re-raises
+<code>GraphBubbleUp</code> untouched before catching <code>Exception</code>
+(<code>middleware.py:55</code>). LangGraph signals an interrupt by raising a
+<code>GraphBubbleUp</code> subclass — so a naive "catch everything and wrap it" would convert every
+probing suspension into a tool error and the feature would simply not exist.</p>
+</div>
+
+<h3>3 · <code>start_consulting</code>: the tool that suspends</h3>
+
+<p><code>apps/agent/app/chat/consulting/tools.py</code> is 419 lines and defines <em>one</em> tool
+(<code>:150</code>). Its docstring is not documentation — it is the prompt the model reads when
+deciding to call it:</p>
+
+<pre><code>CONSULTING_TOOL_NAME = "start_consulting"          # :21
+MAX_CONSULTING_REPORTS_PER_SESSION = 3             # :22  mirrors CONSULTING_REPORT_LIMIT
+MAX_PROBING_TURNS = 3                              # :23
+
+@tool(name_or_callable=CONSULTING_TOOL_NAME)
+async def start_consulting(subject: str, runtime: ToolRuntime) -> Command:
+    """Start a structured consulting analysis for a business topic. …
+       Pass the consulting subject as a concise Korean description of the topic."""</code></pre>
+
+<h4>Three guards before anything happens</h4>
+
+<p>Lines <code>:173–219</code> refuse the call in three ways, each returning a <code>Command</code>
+that appends a plain <code>ToolMessage</code> — the model then paraphrases it and the turn ends
+normally, with no round created:</p>
+
+<table>
+<tr><th>Guard</th><th>Condition</th><th>Message (<code>:24–35</code>)</th></tr>
+<tr><td>start not allowed</td>
+    <td><code>consulting_start_allowed is False</code></td>
+    <td>if <code>consulting_limit_reached</code>:
+        <em>"이 대화에서 이미 3개의 컨설팅 보고서를 작성했습니다. 새로운 컨설팅 세션을 시작해
+        주세요."</em>; otherwise the vaguer <em>"지금은 새 컨설팅 보고서를 시작할 수 없습니다…"</em></td></tr>
+<tr><td>report count</td><td><code>report_count &gt;= 3</code></td><td>the same limit message</td></tr>
+<tr><td>cancelled</td><td><code>consulting_cancelled</code> and not allowed to start</td>
+    <td><em>"이전 컨설팅이 취소되었습니다…"</em></td></tr>
+</table>
+
+<p>Note the ordering comment at <code>:174-177</code>: the limit check is folded into the
+<em>first</em> guard because at the cap the backend already says "start not allowed", and the vaguer
+copy would be the wrong thing for the user to read.</p>
+
+<div class="callout blue">
+<p><strong>The 3-report cap is enforced four times</strong>, and that redundancy is deliberate — each
+layer catches a different failure. (1) The system prompt tells the model not to call the tool. (2) The
+tool's guard answers politely if it does. (3) <code>_build_consulting_stream_plan</code> refuses the
+request with a 409 <code>report_limit_reached</code> before the agent even runs, when the client asked
+explicitly for <code>consulting_action: "start_round"</code>. (4)
+<code>start_consulting_round</code> / <code>create_or_link_consulting_report</code> raise the same
+409 inside the locked transaction — the only layer that is actually race-proof.</p>
+</div>
+
+<h4>The loop</h4>
+
+<pre><code># tools.py:230-253 (abridged)
+round_result = await start_backend_consulting_round(settings=…, subject=normalized_subject)
+round_id = round_result.round.id
+
+recovered_turns   = round_result.round.probing_context["turns"]   # replay recovery
+recovered_pending = round_result.round.pending_probe
+
+probing_context = {"subject": normalized_subject, "turns": []}
+
+for turn_index in range(MAX_PROBING_TURNS):          # 3 turns, hard cap
+    current_turn = turn_index + 1
+    questions = (_recovered_turn_questions(recovered_turns, turn_index)
+                 or _recovered_pending_questions(recovered_pending, current_turn))
+    if questions is None:
+        questions, ack = await asyncio.gather(       # :269  two LLM calls, concurrently
+            generate_probing_questions(…, turn_number=current_turn),
+            generate_probe_acknowledgment(…, answered_turn=answered_turn),
+        )
+    else:
+        ack = FALLBACK_PROBE_ACKNOWLEDGMENT          # :294  replayed turn → skip the LLM call
+
+    pending_probe = {"type": "consulting_probe", "round_id": …, "ack": ack,
+                     "questions": […], "turn": current_turn,
+                     "max_turns": MAX_PROBING_TURNS, "subject": …}
+
+    await persist_consulting_pending_probe(          # :313  minus type/round_id/ack
+        …, pending_probe={k: v for k, v in pending_probe.items()
+                          if k not in {"type", "round_id", "ack"}})
+
+    resume_value = interrupt(pending_probe)          # :325  ← the suspension
+
+    if resume_value.get("cancelled"):  … cancel the round, return a friendly ToolMessage  # :327
+    probing_context["turns"].append(ProbingTurn(turn=…, questions=…, answers=…))
+    if resume_value.get("finish"):     break         # :373  user pressed "그만 물어보기"
+    if current_turn >= MAX_PROBING_TURNS: break      # :376
+    if await check_probing_sufficiency(…): break     # :379  the model says it has enough</code></pre>
+
+<p>Four exit conditions, in that order. Then two <code>stream_writer</code> events and the final
+<code>Command</code>:</p>
+
+<pre><code># :387-418
+stream_writer({"type": "consulting_summary",      "round_id": …, "subject": …, "probing_context": …})
+stream_writer({"type": "consulting_report_start", "round_id": …, "subject": …, "probing_context": …})
+
+return Command(update={
+    "consulting_phase": "generating",
+    "consulting_probing_turn": len(probing_context["turns"]),
+    "consulting_probing_context": probing_context,
+    "consulting_report_count": report_count + 1,
+    "consulting_round_id": str(round_id),
+    "consulting_start_allowed": False,
+    "messages": [ToolMessage(content="보고서를 작성 중입니다...", tool_call_id=…)],
+})</code></pre>
+
+<p><code>stream_writer</code> is LangGraph's side channel (explainer #5 used it for the
+<code>searching</code> status frame): the tool writes a dict, and the stream loop sees it as a
+<code>custom</code> chunk. It is how a tool deep inside the graph gets to emit an SSE frame without
+knowing anything about HTTP.</p>
+
+<h4>Three details in the replay logic</h4>
+
+<ul>
+  <li><strong>Questions are recovered, not regenerated</strong> (<code>_recover_questions</code>,
+  <code>:99</code>). On resume the node re-runs from the top; without recovery every replayed turn
+  would burn another question-generation call <em>and</em> the wording could drift under the user's
+  eyes. The persisted round carries the answered turns and the pending set, so the replay reads them
+  back. <code>interrupt()</code> is still called once per turn regardless — LangGraph matches resume
+  values to interrupts by call index, so skipping one would misalign the whole sequence.</li>
+  <li><strong>The acknowledgment is skipped on replay</strong> (<code>:283-294</code>). The reasoning
+  in the comment is a small proof: only the turn that genuinely <em>suspends</em> reaches
+  <code>stream.py</code> as the interrupt value, and a non-resume stream on an active probing round is
+  refused with a 409, so the suspending turn is always a new turn — therefore the ack computed on a
+  replayed turn is provably never consumed. One saved <code>ainvoke</code> per replayed turn per
+  resume.</li>
+  <li><strong>The ack never touches the database via the round.</strong> It rides only the in-memory
+  interrupt payload; the three keys <code>type</code>, <code>round_id</code>, <code>ack</code> are
+  stripped from what is persisted (<code>:318-322</code>) so
+  <code>consulting_lifecycle.pending_probe</code> stays a pure question set.</li>
+</ul>
+
+<h4>The resume value, and who validates it</h4>
+
+<p>A resume arrives as an ordinary chat-stream request with no <code>message</code>. The route model
+validates it in <code>apps/agent/app/api/routes/chat.py:250</code>, and the important property is that
+it does not merely <em>reject</em> — it <strong>rebuilds</strong>:</p>
+
+<pre><code>@field_validator("resume_value")
+def _validate_resume_value(cls, value):
+    if keys == {"cancelled"} and value.get("cancelled") is True:
+        return {"cancelled": True}
+    if "answers" not in keys or not keys &lt;= {"answers", "finish", "note"}:
+        raise ValueError("resume_value must be either answers (optionally with finish and note) or cancelled.")
+    …
+    normalized = {"answers": answers}        # :305  built from scratch
+    if finish: normalized["finish"] = True
+    if note is not None: normalized["note"] = note
+    return normalized                        # ← anything else you sent is GONE</code></pre>
+
+<div class="callout warn">
+<p><strong>A known trap, worth knowing before you add a field.</strong> Each answer must be exactly
+<code>{"id", "value"}</code> — no more keys, no fewer — and the returned dict is assembled from
+scratch. So adding a key to the resume value needs an edit <em>here</em>, not just in the tool or the
+frontend: without it the key is silently normalised away and the tool sees a value that never
+mentions it. (Empty <code>value</code> strings are allowed on purpose: that is the "skip this
+question" button.)</p>
+</div>
+
+<h4>Before the graph resumes, Django has already recorded the answers</h4>
+
+<p>This ordering is easy to miss and explains the transcript you see. In
+<code>chat.py:2048–2080</code>, on a resume request the route calls the backend
+<strong>first</strong>:</p>
+
+<pre><code>if is_resume:
+    if chat_request.resume_value.get("cancelled") is True:
+        await cancel_consulting_probe_round(…, round_id=consulting_plan.active_round_id)
+    else:
+        await accept_consulting_probe_answers(…, answers=_extract_resume_answers(…),
+                                                 note=_extract_resume_note(…))
+    …
+    return _sse_streaming_response(iter_consulting_stream(…, resume_value=…))</code></pre>
+
+<p>Consequences: the durable round advances even if the stream dies immediately afterwards; the user's
+Q&amp;A bubble is written by <em>Django</em> (inside <code>accept_probe_answers</code>), not by the
+agent; and a resume turn writes <strong>no ordinary user message</strong> at all — unlike a default
+turn, where explainer #4 showed the user row being written pre-stream. Any lifecycle conflict at this
+point is translated by <code>_consulting_lifecycle_error_response</code>
+(<code>planning.py:190</code>) into a 400/404/409/503 and the run record is cleaned up, so the browser
+gets a typed refusal rather than a half-started stream.</p>
+
+<h4>The gatekeeper: <code>_build_consulting_stream_plan</code></h4>
+
+<p><code>apps/agent/app/chat/consulting/planning.py:68</code> decides, before any model work, whether
+this request may proceed and whether it may start a round. It reads only
+<code>conversation_detail.consulting_lifecycle</code> — the object §1 built:</p>
+
+<table>
+<tr><th>Request</th><th>Lifecycle</th><th>Outcome</th></tr>
+<tr><td>resume</td><td>no active round</td><td>409 <code>round_not_probing</code></td></tr>
+<tr><td>resume</td><td>active round <code>generating</code></td><td>409 <code>round_generating</code></td></tr>
+<tr><td>resume</td><td>active round <code>probing</code></td>
+    <td><code>ConsultingStreamPlan(start_allowed=False, active_round_id=…)</code></td></tr>
+<tr><td>ordinary message</td><td>any active round</td>
+    <td>409 <code>round_probing</code> / <code>round_generating</code> — <strong>the conversation is
+    frozen while a round runs</strong></td></tr>
+<tr><td>ordinary message</td><td>none, <code>can_start_round</code></td>
+    <td><code>ConsultingStreamPlan(start_allowed=True)</code></td></tr>
+<tr><td>explicit <code>consulting_action: "start_round"</code></td><td>at the cap</td>
+    <td>409 <code>report_limit_reached</code></td></tr>
+<tr><td>ordinary message</td><td>none, cannot start</td>
+    <td><code>start_allowed=False</code> — the turn runs as plain chat</td></tr>
+</table>
+
+<p>The plan then becomes agent state through
+<code>_consulting_lifecycle_state_for_stream</code> (<code>:142</code>), which computes the six
+<code>consulting_*</code> fields the middleware's prompt selector reads. Two rulings live in that
+function: a <strong>cancelled</strong> round with <code>start_allowed</code> is reported as
+<code>phase="idle"</code> rather than as a terminal phase (<code>:161-166</code> — otherwise the model
+treats a re-ask as "a round already happened" and refuses to restart, then free-chats ungrounded
+advice), and <code>limit_reached</code> is computed narrowly as "cannot start <em>and</em> no active
+round <em>and</em> count ≥ limit" so the prompt can say "you have used all three" instead of
+conflating it with "a round is in progress".</p>
+
+<h3>4 · The stream: frames, the acknowledgment, and the silent cancel</h3>
+
+<p><code>apps/agent/app/chat/consulting/stream.py:157</code>,
+<code>iter_consulting_stream</code>, is the consulting counterpart of explainer #5's
+<code>iter_chat_stream</code>. It emits this vocabulary:</p>
+
+<table>
+<tr><th>Frame</th><th>When</th><th>Payload</th></tr>
+<tr><td><code>message_start</code></td><td>always, first</td>
+    <td><code>run_id</code>, <code>conversation_nonce</code>, <code>message_idempotency_key</code></td></tr>
+<tr><td><code>status</code></td><td>once, phase <code>preparing</code></td>
+    <td>consulting emits <strong>only</strong> this phase — no <code>searching</code>, no
+    <code>finalizing</code>, because the conversational model has no retrieval tool</td></tr>
+<tr><td><code>message_delta</code></td><td>model text, filtered to
+    <code>langgraph_node == "model"</code></td>
+    <td><code>delta</code> — with internal <code>[post:N]</code> markers stripped as they flow</td></tr>
+<tr><td><code>consulting_summary</code></td><td>the tool finished probing</td>
+    <td><code>subject</code>, <code>probing_context</code>, <code>round_id</code>; also sets
+    <code>suppress_deltas = True</code></td></tr>
+<tr><td><code>consulting_report_start</code></td><td>right after the report row is created</td>
+    <td><code>run_id</code>, <code>report_id</code> — the id the browser will poll</td></tr>
+<tr><td><code>consulting_probe</code></td><td>the graph suspended on a probe</td>
+    <td>the interrupt value minus <code>type</code> and <code>ack</code>: the questions, the turn
+    number, <code>max_turns</code>, <code>subject</code>, <code>round_id</code></td></tr>
+<tr><td><code>message_end</code> / <code>done</code></td><td>terminal</td>
+    <td>as in explainer #5; <code>keepalive</code> frames are injected by the shared
+    <code>with_sse_keepalive</code> wrapper</td></tr>
+</table>
+
+<p>The run registry (Redis) is advanced alongside them, with two status values default chat never
+uses: <code>probing</code> (<code>:429</code>) and <code>generating_report</code>
+(<code>:514</code>).</p>
+
+<h4>Reading the interrupt back out</h4>
+
+<pre><code># :112  _consulting_snapshot_interrupt_value
+for task in getattr(snapshot, "tasks", ()) or ():
+    for pending in getattr(task, "interrupts", ()) or ():
+        if isinstance(pending.value, dict):
+            return pending.value</code></pre>
+
+<p>The comment explains why it walks the tasks rather than trusting <code>snapshot.next</code>: a node
+re-suspended at a <em>later</em> <code>interrupt()</code> (multi-turn probing, turn ≥ 2) reports an
+empty <code>snapshot.next</code> while its task still carries the pending interrupt. Detecting
+"we are still probing" from <code>snapshot.next</code> alone works on turn 1 and quietly fails on
+turn 2.</p>
+
+<h4>The per-turn acknowledgment, and the live→persisted swap it avoids</h4>
+
+<p>Before emitting the probe card, the stream persists an assistant message so the transcript reads
+<em>user → assistant ack → (card)</em> and survives a reload (<code>:434–482</code>):</p>
+
+<pre><code>live_ack = "".join(streamed_ack_parts).strip()
+ack_text = live_ack or interrupt_value.get("ack")
+… write_conversation_message(role="assistant", content=ack_text,
+      idempotency_key=build_probe_ack_message_idempotency_key(
+          conversation_nonce=…, round_id=ack_round_id, turn=ack_turn))</code></pre>
+
+<ul>
+  <li>On <strong>turn 1</strong> the model node ran, so text already streamed to the browser;
+  <code>streamed_ack_parts</code> is exactly those deltas, and persisting them means the reloaded
+  transcript is byte-identical to what the user watched. (Explainer #5 made the same promise for
+  <code>message_end</code>.)</li>
+  <li>On <strong>turn 2+</strong> the request is a resume: the model node does not re-run, nothing
+  streams, and the fallback is the dedicated <code>generate_probe_acknowledgment</code> text carried
+  in the interrupt payload.</li>
+  <li>The key is <code>uuid5(ns, f"{nonce}:{round_id}:{turn}:probe_ack")</code>
+  (<code>chat/agent.py:619</code>) — keyed on <strong>round + turn</strong>, not on the per-request
+  idempotency key, so replays and retries all derive the same key and the first ack wins.</li>
+  <li>The write is wrapped in a bare <code>try/except</code> that only logs: a failed <em>cosmetic</em>
+  ack must never cost the user their question card.</li>
+</ul>
+
+<h4>The silent cancel, in code</h4>
+
+<p>Three mechanisms cooperate to produce "the card just disappears":</p>
+
+<pre><code>is_consulting_cancel = bool(resume_value and resume_value.get("cancelled"))     # :194
+suppress_deltas      = is_consulting_cancel                                    # :211
+…
+content = _resolve_consulting_final_content(content, is_cancel=is_consulting_cancel)   # :552
+tail_is_assistant = conversation_detail.messages[-1].role == "assistant"       # :562
+skip_cancel_write = is_consulting_cancel and tail_is_assistant                 # :566</code></pre>
+
+<ol>
+  <li><strong>Suppress the model's deltas.</strong> On a cancel resume the node still runs the model
+  once more after the tool returns, and that regenerated reply "tends to apologize with a system-fault
+  tone or append an unsolicited report" (<code>:50-56</code>). The prompt cannot fix it, because it
+  cannot distinguish the cancel turn from a later turn whose round merely <em>has</em> a cancelled
+  status. So the deltas are dropped.</li>
+  <li><strong>Replace the content</strong> with the deterministic
+  <code>_CONSULTING_CANCEL_MESSAGE</code> (<code>:57</code>) — "컨설팅 질문을 취소했어요. 다른 도움이
+  필요하시면 언제든 편하게 말씀해 주세요."</li>
+  <li><strong>Then usually do not write it at all.</strong> Because per-turn acks are persisted, the
+  transcript tail during probing is already an assistant message; writing a second assistant message
+  would violate the alternation rule and be rejected. So <code>skip_cancel_write</code> takes the
+  <code>elif</code> branch at <code>:637</code>: mark the agent state cancelled, refresh the
+  fingerprint, terminalize the run, emit <code>done</code> — and write nothing.</li>
+</ol>
+
+<div class="callout">
+<p>The user-visible result — card gone, round <code>cancelled</code>, no bubble — is
+<strong>operator-confirmed intended behaviour</strong>, not an oversight. The durable
+<code>cancelled</code> status is what the frontend renders the terminal state from. If you "fix" it by
+writing a cancel reply, you break alternation and re-introduce the bug this code was written to
+remove.</p>
+</div>
+
+<h4>Two more inheritances from explainer #5</h4>
+
+<ul>
+  <li><strong>The real request object.</strong> Unlike a generated default turn (which gets an
+  <code>AlwaysConnectedRequest</code> shim under durable runs), <code>iter_consulting_stream</code> is
+  handed the <em>real</em> request, so its <code>is_disconnected()</code> checks are live and the
+  abandoned-stream finalizer at <code>:717–791</code> is on the live path. That finalizer runs through
+  <code>_run_abandoned_stream_finalizer</code> (<code>create_task</code> + <code>shield</code>) —
+  never inline — because a client "stop" cancels this task and an inline <code>await</code> of a
+  backend POST would die before the write landed. It persists a cancel reply only under four
+  conditions at once: the run was explicitly cancelled, it is not a probe-cancel, the tail is not
+  already an assistant message, and no round is active.</li>
+  <li><strong>The lockdown marker.</strong> After the astream loop, <code>security_locked</code> is
+  read off the snapshot (<code>:410</code>) and, if the kill-switch allows, the assistant write
+  carries <code>metadata={"message_type": "security_lockdown"}</code>, which makes Django lock the
+  conversation in the same transaction (explainer #4's ladder step 6). Identical to default chat —
+  explainer #11 owns the guard itself.</li>
+</ul>
+
+<h3>5 · The three one-shot model calls behind one probing turn</h3>
+
+<p>The conversational agent produces the empathy line. Everything else in a probing turn comes from
+three separate, single-shot Gemini calls in <code>agent.py</code> — all on the
+<code>consulting_chat</code> role, all with <code>disable_native_retry=True</code> and the shared
+<code>acall_with_retry</code> wrapper, and <strong>all three degrade instead of failing</strong>.</p>
+
+<table>
+<tr><th>Function</th><th>Asks the model</th><th>Failure behaviour</th></tr>
+<tr><td><code>generate_probing_questions</code> (<code>:448</code>)</td>
+    <td>up to 3 questions as JSON, grounded in retrieved 창플 material</td>
+    <td>on any exception → one deterministic fallback question,
+    <em>"현재 사업 상황에 대해 좀 더 자세히 알려주시겠어요?"</em></td></tr>
+<tr><td><code>check_probing_sufficiency</code> (<code>:524</code>)</td>
+    <td><code>{"sufficient": bool, "reason": str}</code></td>
+    <td>on failure → <strong><code>True</code></strong> (<code>:555</code>): "when in doubt, stop
+    asking and write the report" — annoying the user with extra questions is the worse outcome</td></tr>
+<tr><td><code>generate_probe_acknowledgment</code> (<code>:565</code>)</td>
+    <td>one empathy/paraphrase line about the turn just answered — explicitly <em>no advice</em></td>
+    <td>→ <code>FALLBACK_PROBE_ACKNOWLEDGMENT</code> (<code>:560</code>)</td></tr>
+</table>
+
+<p>All three parse JSON through <code>_parse_json_from_llm</code> (<code>:432</code>), which strips a
+```-fenced block if the model wrapped its answer in one, and flattens Gemini's list-shaped content into
+text first. (Explainer #5's rule again: <code>response.content</code> from Gemini can be a
+<em>list</em> of blocks, not a string — a bare <code>.strip()</code> on it silently takes the failure
+path.)</p>
+
+<h4>Grounding the questions: a smaller, cheaper retrieval</h4>
+
+<p>The questions are supposed to be the ones 창플 would ask, so they are grounded — but through a
+deliberately tiny read path (<code>:852</code>):</p>
+
+<pre><code>def retrieve_probing_documents(settings, *, subject, prior_turns=None) -> list[ProbingReferenceDoc]:
+    queries = _build_probing_retrieval_queries(subject=subject, prior_turns=prior_turns)  # :822
+    for query in queries:                       # ≤ 2 queries
+        result = build_ranked_retrieval_result(query, settings=settings)   # ← explainer #7
+        for candidate in result.reranked_candidates[:CANDIDATES_PER_QUERY]:
+            documents[post_id] = ProbingReferenceDoc(post_id=…, title=…, summary=metadata.summary)
+        …                                       # ≤ 6 docs total
+    return list(documents.values())</code></pre>
+
+<p>Four properties, each with a reason:</p>
+
+<ul>
+  <li><strong>Summaries only, no bodies.</strong> It returns the reranker's precomputed
+  <code>summary</code> — free, because it is what retrieval matched on — and deliberately never calls
+  <code>hydrate_document_bodies</code>. Writing a question does not need the full post.</li>
+  <li><strong>Ephemeral.</strong> The docs are never persisted, never cited, never surfaced. The type
+  is even a separate one, <code>ProbingReferenceDoc</code> (<code>types.py:14</code>), so it cannot be
+  confused with the report path's <code>RetrievedDocumentState</code>.</li>
+  <li><strong>Query 1 is the subject; query 2 adds the latest answers</strong> (<code>:822-846</code>),
+  so the questions sharpen as the consultation learns more.</li>
+  <li><strong>It runs off the event loop and cannot break probing.</strong> The caller wraps it in
+  <code>asyncio.to_thread</code> (retrieval is synchronous and sits in the same
+  <code>asyncio.gather</code> as the acknowledgment, so blocking would serialize the two) and catches
+  <em>everything</em>: "Probing retrieval raised, proceeding ungrounded" → generate the questions with
+  no documents. The prompt's no-document branch says
+  <em>"참고할 수 있는 창플 자료가 아직 없습니다."</em> instead of a document block.</li>
+</ul>
+
+<div class="callout">
+<p><strong>Probing output must never cite.</strong> The question text is run through
+<code>strip_all_citation_markers</code> before it becomes a <code>ProbingQuestion</code>
+(<code>:506</code>) even though the prompt already forbids markers, and the stream strips them again
+from the conversational deltas with a chunk-boundary-safe
+<code>InternalCitationStripper</code>. Citation numbers are per-report and are re-numbered inside each
+report, so a <code>[2]</code> outside a report body points at nothing at all.</p>
+</div>
+
+<h3>6 · The report pipeline, owned by Celery</h3>
+
+<p>Now the second half of the sequence diagram, in code. It crosses the app boundary three times, so
+keep track of which process you are in.</p>
+
+<h4>6.1 Dispatch (Django) — <code>consulting_report_dispatch.py</code></h4>
+
+<pre><code>CONSULTING_REPORT_GENERATION_TASK_NAME       = "conversations.generate_consulting_report"  # :26
+CONSULTING_REPORT_GENERATION_MAX_ATTEMPTS    = 3                                           # :27
+CONSULTING_REPORT_GENERATION_RETRY_DELAY_SECONDS = 30                                      # :28
+CONSULTING_REPORT_GENERATION_TIMEOUT_SECONDS = 180                                         # :29
+CONSULTING_REPORT_RECLAIM_AFTER_DEFAULT_MINUTES = 15                                       # :30
+AGENT_CONSULTING_REPORT_GENERATION_PATH = "/agent-api/internal/consulting/reports/generate" # :31</code></pre>
+
+<p><code>queue_consulting_report_generation_on_commit(report)</code> (<code>:68</code>) is the
+codebase's standard dispatch-after-commit shape (explainer #16 owns the pattern):</p>
+
+<pre><code># :206  _queue_report_generation_on_commit
+if report.status != GENERATING:            return report.generation_task_id   # nothing to do
+if report.generation_task_id and not replace_task: return …                   # already queued
+
+task_id = uuid.uuid4().hex
+report.generation_task_id = task_id
+report.save(update_fields=["generation_task_id", "updated_at"])
+
+def _dispatch():
+    try:    dispatch_consulting_report_generation(report_id=report.id, task_id=task_id)
+    except Exception as exc:  logger.warning(…)      # a dead broker must not 500 the request
+
+transaction.on_commit(_dispatch)</code></pre>
+
+<div class="callout blue">
+<p><strong>Why <code>on_commit</code> and not <code>send_task</code> directly.</strong> The dispatch
+happens inside the same <code>transaction.atomic()</code> block that created the report row. Send the
+task immediately and a fast worker can pick it up before the transaction commits — and find no row.
+Sending it from <code>on_commit</code> means the task is queued only if the row is really there. The
+task id is <strong>chosen by Django and stored on the row first</strong>, which turns
+<code>generation_task_id</code> into a claim ticket: a task whose id does not match the row's
+current one bows out (<code>:257-262</code>).</p>
+</div>
+
+<h4>6.2 The task (Celery worker) — <code>conversations/tasks.py</code></h4>
+
+<pre><code>@shared_task(bind=True, name="conversations.generate_consulting_report",
+             max_retries=CONSULTING_REPORT_GENERATION_MAX_ATTEMPTS - 1)
+def generate_consulting_report(self, report_id: str) -> dict[str, object]:
+    return run_consulting_report_generation_with_retry(report_id=…, task_id=…, retry_count=…, retry=self.retry)
+
+def run_consulting_report_generation_with_retry(...):
+    try:
+        return execute_consulting_report_generation(report_id=…, task_id=…)
+    except AgentReportGenerationTransientError as exc:      # 429/500/502/503/504, timeout, URLError
+        if retry_count &lt; MAX_ATTEMPTS - 1:
+            raise retry(exc=exc, countdown=30)
+        return terminally_fail_consulting_report_generation(report_id=…, error_detail=str(exc))
+    except AgentReportGenerationPermanentError as exc:      # 4xx, bad JSON, empty content, …
+        return terminally_fail_consulting_report_generation(report_id=…, error_detail=str(exc))</code></pre>
+
+<p>The transient/permanent split is decided by <code>_is_retryable_agent_status</code>
+(<code>:457</code>): <code>{429, 500, 502, 503, 504}</code> are transient; everything else, plus a
+non-JSON or structurally invalid response, is permanent and fails the report immediately rather than
+burning three attempts on a request that will never succeed.</p>
+
+<p><code>execute_consulting_report_generation</code> (<code>:93</code>) opens with
+<code>_prepare_generation_attempt</code> (<code>:237</code>), which under
+<code>select_for_update()</code> refuses in three ways and otherwise books the attempt:</p>
+
+<pre><code>if report.status != GENERATING:                     return None   # someone already finished it
+if report.generation_task_id and task_id and they differ: return None   # a stale task; the row was re-claimed
+if report.generation_attempt_count &gt;= 3:            raise AgentReportGenerationPermanentError(…)
+report.generation_attempt_count += 1
+report.generation_last_attempt_at = timezone.now()</code></pre>
+
+<h4>6.3 Back into the agent — <code>routes/consulting_reports.py:154</code></h4>
+
+<pre><code>POST /agent-api/internal/consulting/reports/generate     # service-token only
+{ "report_id", "conversation_nonce", "owner_user_id", "subject",
+  "probing_context": {"subject": …, "turns": [{"turn", "questions", "answers", "note"?}]} }</code></pre>
+
+<p>The request models are strict (<code>model_config = ConfigDict(extra="forbid")</code>,
+<code>StrictStr</code>, non-blank validators) — with two deliberate softenings, each recorded with the
+bug it prevents:</p>
+
+<ul>
+  <li>An answer <code>value</code> may be <strong>blank</strong> (<code>:56-62</code>): the 건너뛰기
+  button records an empty answer, and 422-ing the whole report over a skipped question would be
+  absurd.</li>
+  <li>A turn may carry a <code>note</code> (<code>:71-76</code>): the review step lets the user add a
+  free-text memo, Django stores it verbatim in <code>probing_context</code>, and this model must
+  accept it or "report generation 422s whenever a note is present".</li>
+</ul>
+
+<p>The route awaits the pipeline, builds the citation list, and on <em>any</em> exception logs, reports
+the error through <code>report_agent_error</code>, and answers <strong>503</strong> — which the Django
+side reads as transient and retries.</p>
+
+<h4>6.4 The pipeline — <code>agent.py:966</code></h4>
+
+<pre><code>async def run_consulting_report_pipeline(settings, *, subject, probing_context):
+    outline = await plan_report(…)                                   # :606  ← consulting_report role
+    documents_by_post_id, contents_by_post_id, content_by_id = \
+        await retrieve_consulting_documents(…, report_outline=outline)  # :734
+    raw_report = await generate_report(…)                            # :909  ← consulting_report role
+    … citation rendering …
+    return ConsultingReportPipelineResult(report_content=…, retrieved_documents=…,
+                                          cited_post_ids=…, report_outline_title=…,
+                                          retrieved_content=…, cited_references=…)</code></pre>
+
+<p><strong>Stage 1 — <code>plan_report</code>.</strong> One model call returns
+<code>{"title": …, "sections": [{"heading", "key_points", "retrieval_queries"}]}</code>, capped at 7
+sections. On any failure it returns a fixed three-section Korean outline
+(현황 분석 / 전략 제안 / 실행 계획) — a worse report, never no report.</p>
+
+<p><strong>Stage 2 — queries.</strong> <code>_build_retrieval_queries</code> (<code>:683</code>)
+assembles, in order: the subject; one query per probing turn built from that turn's first two answers;
+then every <code>retrieval_queries</code> string the outline asked for. Case-insensitive dedupe, then
+<code>[:8]</code>. With the toy data:</p>
+
+<pre><code>["떡볶이집 창업 전략",
+ "떡볶이집 창업 전략 5천만원 아직 정하지 못했어요",
+ "떡볶이집 상권 분석",
+ "분식 프랜차이즈 창업 비용",
+ …]                        # ≤ 8</code></pre>
+
+<p><strong>Stage 3 — retrieval.</strong> Every query goes through explainer #7's single chokepoint,
+<code>build_ranked_retrieval_result</code>, and they run <em>concurrently</em>:</p>
+
+<pre><code># :761  each query is independent: sync function, own DB connection, own embedding/rerank clients
+results = await asyncio.gather(*(_retrieve_one(query) for query in queries))</code></pre>
+
+<p>The comment is careful about what parallelism did and did not change: results are still accumulated
+in the original query order, so the deduped, capped output is byte-identical to the old serial loop —
+the only difference is that a query past the cap now runs and is discarded, instead of being skipped.
+Two budgets accumulate independently: naver posts up to
+<code>MAX_CONSULTING_DOCUMENTS = 24</code> (6 per query) and 미라클 콘텐츠 up to
+<code>MAX_CONSULTING_CONTENTS = 6</code> (3 per query). The report path opts the content channel
+<strong>on</strong> (<code>content_mode=ContentMode.ON</code>) while probing deliberately leaves it
+off. Failures are per-query: a <code>RetrievalEmbeddingError</code> or
+<code>RetrievalRerankError</code> logs and returns <code>None</code> for that query only. Finally the
+bodies of the selected posts are hydrated in one batch — <strong>gate first, hydrate after</strong>,
+explainer #7's security rule.</p>
+
+<p><strong>Stage 4 — <code>generate_report</code>.</strong> The prompt
+(<code>prompts.py:446</code>) hands the model the subject, the Q&amp;A, the outline, a
+<code>[참고 문서]</code> block of <code>[문서 post_id=42] 제목\n본문</code> entries, and a separate
+<code>[참고 콘텐츠]</code> block of excerpt-based <code>[콘텐츠 content_id=19]</code> entries. The
+rules are explicit about the two id spaces (<code>[post:N]</code> vs <code>[content:N]</code>, never
+mixed, never bundled as <code>[post:42,43]</code>, never a bare number), about admitting thin sources
+("참고 문서가 없거나 부족하면 … 솔직히 밝히고 추측으로 빈자리를 채우지 마세요"), and about
+<strong>not</strong> writing its own 참고 문서 list — the app renders that from the structured
+citations. Empty output raises rather than returning "": an empty report is a failure, and the Django
+side agrees (<code>_build_agent_report_generation_result</code> rejects blank content as
+<em>permanent</em>).</p>
+
+<p><strong>Citation rendering</strong> (<code>:986-1013</code>) then does three passes:
+<code>normalize_bare_post_id_markers</code> rewrites a bare <code>[42]</code> into
+<code>[post:42]</code> when 42 is a retrieved post id (never for content ids — a bare
+<code>[19]</code> is indistinguishable from a display number); <code>render_citation_markers</code>
+turns the internal markers into the visible, sequential <code>[k]</code> and records the merged,
+ordered <code>cited_references</code>; and
+<code>strip_unmatched_visible_citation_markers</code> deletes any leftover <code>[k]</code> with no
+citation behind it. The route then projects that one ordered list into the response's three
+fields — <code>citations</code> (each with <code>index</code>, <code>type</code>, and either
+<code>post_id</code> + <code>source_url</code> or <code>content_id</code>),
+<code>cited_document_post_ids</code>, and <code>cited_content</code> — and every id must resolve or
+the whole thing raises.</p>
+
+<h4>6.5 Finalization (Django) — <code>consulting_report_finalization.py</code></h4>
+
+<pre><code>complete_consulting_report(nonce=…, report_id=…, owner_user_id=…, content=…,
+                           citations=…, cited_document_post_ids=…, cited_content=…)   # :33</code></pre>
+
+<p>Inside one <code>transaction.atomic()</code>, with the session and report locked and the linked
+round locked too:</p>
+
+<ol>
+  <li>Already <code>COMPLETE</code>? Re-run the round transition (idempotent) and return.</li>
+  <li>Not <code>GENERATING</code>? Refuse — 409 <code>round_not_generating</code> if a round is linked,
+  otherwise a validation error.</li>
+  <li>Derive the message key:
+  <code>uuid5(ns, f"{nonce}:{report_id}:consulting_report")</code> (<code>:22</code>) — again a
+  <em>content</em>-derived key under its own namespace, so a retried task cannot double-post.</li>
+  <li>If a message with that key already exists, adopt it; otherwise
+  <code>session.append_finalized_message(role=ASSISTANT, content=…, cited_document_post_ids=…,
+  cited_content=…, metadata={"message_type": "consulting_report", "report_id": …, "subject": …,
+  "per_turn_persisted": True})</code>.</li>
+  <li>Save the report as <code>COMPLETE</code> with its content, citations and message FK, then
+  <code>transition_linked_round_to_complete</code>.</li>
+</ol>
+
+<p><code>fail_consulting_report</code> (<code>:141</code>) is the mirror image: same key, an apology
+message <em>"죄송합니다. 보고서 생성 중 오류가 발생했습니다. 다시 시도해 주세요."</em> with
+<code>message_type: "consulting_report_error"</code>, the report to <code>ERROR</code> with its
+<code>error_detail</code>, and the round to <code>error</code>. Either way <strong>the round always
+leaves the active states</strong>, so the conversation is never left frozen by a report that failed.
+(<code>_extract_qa_pairs_from_probing_context</code> at <code>:271</code> is the legacy helper that
+flattened turns into <code>qa_pairs</code> for the report card; new reports set
+<code>per_turn_persisted: True</code> and the frontend renders the per-turn bubbles instead —
+<code>consulting-report-message.tsx:43</code> gates on exactly that flag, so old reports keep their
+inline summary.)</p>
+
+<h4>6.6 How the browser finds out</h4>
+
+<p>No SSE frame carries the finished report — the stream is long over. The browser polls:</p>
+
+<pre><code>// apps/web/src/lib/consulting.ts:195
+export async function pollConsultingReport(getReport, options) {
+  const intervalMs  = options.intervalMs  ?? 3000;
+  const maxAttempts = options.maxAttempts ?? 60;
+  for (let attempt = 0; attempt &lt; maxAttempts; attempt += 1) {
+    const report = await getReport(options.conversationNonce, options.reportId);
+    if (report.status === "complete") return { status: "complete", report };
+    if (report.status === "error")    return { status: "error", report };
+    await sleep(intervalMs);
+  }
+  return { status: "timeout" };
+}</code></pre>
+
+<p>3 s × 60 = <strong>3 minutes</strong> — the same order as the 180 s the agent gets for one attempt.
+The endpoint is the owner-JWT
+<code>GET /api/conversations/&lt;nonce&gt;/reports/&lt;report_id&gt;</code>, and on a terminal status the
+hook reloads the whole conversation detail so the report renders from the <em>persisted assistant
+message</em>, not from the poll response.</p>
+
+<div class="callout">
+<p><strong>Why this survives a reload.</strong> The poll is not started by the SSE frame. It is started
+by an effect keyed on <code>generatingReportId</code>, which comes from
+<code>getActiveGeneratingState(detail)</code> — that is,
+<code>consulting_lifecycle.active_round.status === "generating" &amp;&amp;
+consulting_lifecycle.active_report_id</code>
+(<code>apps/web/src/lib/consulting-lifecycle.ts:70</code>). A browser that loads the page fresh, hours
+later, sees the same lifecycle object and starts polling as if it had been there all along. This is
+decision D-1 paying for itself: the browser recovers from durable backend state, never from stream
+history.</p>
+</div>
+
+<h4>6.7 Recovery when the worker itself dies</h4>
+
+<p>Retries cover a failing call. They do not cover a worker that is killed between "claim the attempt"
+and "finish", which would leave a row <code>generating</code> forever — and, because the round is
+<code>generating</code> too, the whole conversation refuses new turns with a 409. That is what
+<code>reclaim_stale_consulting_report_generations</code> (<code>:150</code>) is for: every report
+still <code>GENERATING</code> whose <code>generation_last_attempt_at</code> (or, if never attempted,
+<code>updated_at</code>) is older than <code>CONSULTING_REPORT_RECLAIM_AFTER_MINUTES</code>
+(<strong>default 15</strong>) is either requeued or, at the attempt ceiling, terminally failed.</p>
+
+<div class="callout warn">
+<p><strong>Read the trigger carefully.</strong> The reclaim task is <strong>not</strong> on the beat
+schedule. <code>apps/backend/config/celery.py</code>'s <code>beat_schedule</code>
+(<code>:15-43</code>) lists five entries and this is not one of them; the task is dispatched from
+<code>@worker_ready.connect dispatch_startup_recovery</code> (<code>:59-72</code>), i.e. <strong>only
+when a Celery worker starts</strong>. So the 15-minute window is not "checked every 15 minutes" — it
+is "checked at the next worker restart, and only reclaims rows older than 15 minutes at that moment".
+In a long-lived deployment a report stranded by a hard worker kill stays stranded, with its
+conversation frozen, until the next restart. <code>docs/current/backend.md</code> describes this
+correctly as <em>startup recovery</em>; recorded as an operator question, not changed here.</p>
+</div>
+
+<h3>7 · Follow-up requests, in one paragraph</h3>
+
+<p>A completed report card offers 후속 상담 신청. <code>POST
+/api/conversations/&lt;nonce&gt;/reports/&lt;report_id&gt;/follow-up</code>
+(<code>views.py:680</code>) is owner-JWT, refuses a report that is not <code>COMPLETE</code> with a
+400, and creates a <code>ConsultingFollowUpRequest</code> (name, phone/email, topic, preferred time)
+in status <code>pending</code>. The only wrinkle worth knowing is a reload-durability one: the
+lifecycle object carries <code>follow_up_submitted_report_ids</code> (§1), intersected against
+<code>completed_report_ids</code>, so the card can render "후속 상담 신청 완료" after a refresh
+without extra requests. The operator's side of that queue — the list, the status transitions —
+belongs to explainer #17.</p>
+
+<h3>8 · A default turn and a consulting round, side by side</h3>
+
+<table>
+<tr><th></th><th>Default chat (#5)</th><th>컨설팅 (this page)</th></tr>
+<tr><td>Agent</td><td><code>changple_chat_agent</code>, thread <code>chat:&lt;nonce&gt;</code></td>
+    <td><code>changple_consulting_agent</code>, thread <code>consult:&lt;nonce&gt;</code></td></tr>
+<tr><td>Tools</td><td>up to 7 (3 retrieval + session search + cited search + security + feedback)</td>
+    <td>2 (<code>start_consulting</code>, <code>security_check</code>)</td></tr>
+<tr><td>Model roles</td><td><code>chat</code> (+ compaction, estimation, rerank …)</td>
+    <td><code>consulting_chat</code> and <code>consulting_report</code></td></tr>
+<tr><td>Checkpoint</td><td>deleted and rebuilt every turn; no fingerprint</td>
+    <td>kept when the fingerprint matches; <strong>never</strong> rebuilt on a resume</td></tr>
+<tr><td>Status phases</td><td><code>preparing</code>, <code>compacting</code>,
+    <code>searching</code>, <code>finalizing</code></td>
+    <td><code>preparing</code> only</td></tr>
+<tr><td>Extra SSE frames</td><td>—</td>
+    <td><code>consulting_probe</code>, <code>consulting_summary</code>,
+        <code>consulting_report_start</code></td></tr>
+<tr><td>Who writes the user message</td><td>the chat route, pre-stream</td>
+    <td>the chat route for a plain message; <strong>Django's
+    <code>accept_probe_answers</code></strong> for a probe answer bubble</td></tr>
+<tr><td>Who writes the assistant message</td><td>the stream, in-request</td>
+    <td>the stream (acks, chat replies) <em>and</em> Celery (the report)</td></tr>
+<tr><td>Long work</td><td>bounded by the request</td>
+    <td>a Celery task with 3 attempts, 30 s backoff, 180 s per attempt</td></tr>
+<tr><td>Recovery after reload</td><td>replay the persisted transcript</td>
+    <td><code>consulting_lifecycle</code> re-renders the card or restarts the poll</td></tr>
+</table>
+
+<h3>What was verified for this page, and what is stale</h3>
+
+<ul>
+  <li><strong>Verified against the code (2026-08-26):</strong> the round state machine and every edge's
+  owner; the partial unique index; the nine lifecycle keys; the six 409 codes; the two role slugs and
+  their current defaults (<code>gemini-3.5-flash</code>, <code>gemini-3.1-pro-preview</code>); the
+  retrieval widths; the frame vocabulary; the 3/30 s/180 s/15 min generation constants; the
+  3 s × 60 poll; that the browser learns of completion by polling, not by any frame.</li>
+  <li><strong>The plan for this page said the reclaim job was a "beat job".</strong> It is not — it is
+  <code>worker_ready</code> startup recovery. The page says what the code says.</li>
+  <li><strong>Stale document:</strong> <code>docs/current/product.md</code> §"Diagnosis Mode" still
+  describes a reversible <code>ENABLE_DIAGNOSIS_MODE</code> flag that P36.S1 deleted. Recorded as an
+  operator question; no doc was edited by this curriculum.</li>
+  <li><strong>Vestigial code:</strong> the internal <code>…/reports/&lt;id&gt;/complete</code> and
+  <code>…/reports/&lt;id&gt;/error</code> routes have no caller outside tests.</li>
+</ul>
+
+<p class="files"><strong>Files walked for this page.</strong>
+<code>apps/agent/app/chat/consulting/{agent,tools,stream,planning,middleware,prompts,grounding,types,__init__}.py</code> ·
+<code>apps/agent/app/api/routes/consulting_reports.py</code> ·
+<code>apps/agent/app/api/routes/chat.py</code> (the consulting branches, <code>_validate_resume_value</code>) ·
+<code>apps/agent/app/chat/backend.py</code> (the six consulting clients) ·
+<code>apps/agent/app/{config,llm_config}.py</code> ·
+<code>apps/backend/conversations/{models,consulting_lifecycle,consulting_mutations,consulting_report_dispatch,consulting_report_finalization,tasks,urls,views}.py</code> ·
+<code>apps/backend/config/{celery,settings}.py</code> ·
+<code>apps/backend/operators/llm_roles.py</code> ·
+<code>apps/web/src/lib/{consulting,consulting-lifecycle}.ts</code> ·
+<code>apps/web/src/components/scaffold/use-consulting-session.ts</code> ·
+<code>apps/web/src/components/consulting/consulting-report-message.tsx</code> ·
+<code>docs/current/{product,backend,decisions}.md</code> (orientation, checked against the code).</p>
+
+<h2 id="quiz">Quiz</h2>
+
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A user answers the last probing question. Which process writes the finished
+  consulting report into the conversation, and why that one?</p>
+  <button class="opt" data-correct="false">The SSE stream that handled the answer — it already has
+    the probing context in memory, so finishing there avoids a round trip.</button>
+  <button class="opt" data-correct="true">A Celery task: it calls back into the agent over an internal
+    route, and it survives the browser closing, can retry a rate-limited model call, and is not bound
+    by the request's lifetime.</button>
+  <button class="opt" data-correct="false">The browser: it receives the report body in the
+    <code>consulting_report_start</code> frame and POSTs it back once rendering succeeds.</button>
+  <button class="opt" data-correct="false">A LangGraph background node scheduled by the checkpointer
+    after the graph completes.</button>
+  <p class="why" hidden>The live stream's job ends at "a report with this id is coming"
+  (<code>consulting_report_start</code>). <code>queue_consulting_report_generation_on_commit</code>
+  queues <code>conversations.generate_consulting_report</code>; the worker POSTs to
+  <code>/agent-api/internal/consulting/reports/generate</code> (180 s), then writes the report row and
+  the assistant message itself. That buys durability, 3 attempts with 30 s backoff, and reclaim after a
+  crash.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> What is <code>resume_value</code>, and who is the last component that gets to
+  decide what it contains?</p>
+  <button class="opt" data-correct="false">The interrupt payload the agent sends to the browser; the
+    tool decides its shape.</button>
+  <button class="opt" data-correct="true">The value the browser sends back to resume the suspended
+    graph; the chat route's <code>_validate_resume_value</code> validator has the last word — it
+    rebuilds the dict from scratch, so unknown keys are dropped, not passed through.</button>
+  <button class="opt" data-correct="false">A Redis key holding the paused run; the run registry decides
+    its contents.</button>
+  <button class="opt" data-correct="false">The LangGraph checkpoint id; the checkpointer owns it.</button>
+  <p class="why" hidden>It is either <code>{"cancelled": true}</code> or
+  <code>{"answers": [{"id","value"}, …]}</code> plus optional <code>finish</code> / <code>note</code>.
+  <code>chat.py:250</code> rejects anything else <em>and</em> normalises away what it does not
+  recognise, so adding a field to the resume value requires an edit there — otherwise the tool never
+  sees it.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> A conversation has already started three reports (one of which errored). The
+  user asks for a fourth. What happens?</p>
+  <button class="opt" data-correct="false">It is allowed: the errored report does not count, so only
+    two of the three slots are used.</button>
+  <button class="opt" data-correct="true">It is refused. The cap counts rounds with
+    <code>report_started_at</code> set, so an errored report still consumes a slot; the prompt, the
+    tool guard, the stream plan and the locked backend transaction each refuse in turn.</button>
+  <button class="opt" data-correct="false">It is allowed but the report is generated without
+    retrieval, as a degraded free-tier answer.</button>
+  <button class="opt" data-correct="false">The oldest report is deleted to make room, and a new round
+    starts.</button>
+  <p class="why" hidden><code>count_started_consulting_reports</code> counts
+  <code>report_started_at__isnull=False</code>, which is stamped when the round enters
+  <code>generating</code> — outcome irrelevant. Only a <em>cancelled probing</em> round costs nothing,
+  because it never reaches that stamp. The user is told to start a new conversation.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The user cancels the probing card in the middle of turn 2. What is written to
+  the conversation transcript?</p>
+  <button class="opt" data-correct="false">An assistant message saying the consultation was
+    cancelled, so the transcript explains itself on reload.</button>
+  <button class="opt" data-correct="false">A system message with
+    <code>message_type: "consulting_cancelled"</code>, hidden from the UI but kept for auditing.</button>
+  <button class="opt" data-correct="true">Usually nothing at all: the model's regenerated reply is
+    suppressed and, because the tail is already the assistant acknowledgment, the deterministic cancel
+    message is not written either — the round's durable <code>cancelled</code> status carries the
+    state.</button>
+  <button class="opt" data-correct="false">The partially answered turn is written as a user message so
+    the answers are not lost.</button>
+  <p class="why" hidden>Three cooperating pieces: <code>suppress_deltas</code>,
+  <code>_resolve_consulting_final_content</code>, and <code>skip_cancel_write</code> (true when it is a
+  probe cancel <em>and</em> the tail is an assistant message). Writing a second assistant message would
+  break the user→assistant alternation rule. Operator-confirmed as intended: the card just
+  disappears.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A legacy conversation with <code>agent_type = "diagnosis"</code> is opened and
+  a message is sent today. What does the user get?</p>
+  <button class="opt" data-correct="false">A normal default-chat answer — diagnosis turns fall through
+    to default chat now that the package is gone.</button>
+  <button class="opt" data-correct="true">A <strong>403</strong>: the chat route refuses a
+    diagnosis-typed conversation unconditionally, pre-stream, with no fall-through — and creating a new
+    one is refused by the serializer regardless of any flag.</button>
+  <button class="opt" data-correct="false">A 404 — the retirement migration deleted every diagnosis
+    row.</button>
+  <button class="opt" data-correct="false">It works if <code>ENABLE_DIAGNOSIS_MODE</code> is set,
+    which is how the mode can be reversed.</button>
+  <p class="why" hidden>P35 deleted the agent package and added the 403 tombstone; P36.S1 removed
+  <code>ENABLE_DIAGNOSIS_MODE</code> entirely and made creation refuse unconditionally. No migration
+  was needed because <code>agent_type</code> is a plain <code>CharField</code>, so historic rows still
+  read back — they just cannot be continued. (<code>product.md</code>'s "reversibly flag-gated"
+  paragraph is stale.)</p>
+</div>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
