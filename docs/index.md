@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-26 · [Safety and grounding: the injection guard, session lockdown, the citation gate, and trial caps](changple5/2026-08-26-11-safety-and-grounding.html) — changple5
 - 2026-08-26 · [컨설팅 mode: the planned multi-round consultation and its 구성안 report](changple5/2026-08-26-10-consulting-mode.html) — changple5
 - 2026-08-26 · [Indexing and embeddings: from documents to pgvector chunks](changple5/2026-08-26-09-indexing-and-embeddings.html) — changple5
 - 2026-08-26 · [Ingestion: how Naver cafe posts become an eligible corpus](changple5/2026-08-26-08-ingestion-pipeline.html) — changple5
