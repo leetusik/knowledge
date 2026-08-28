@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-28 · [Content agent III: the agent-side drafting service and its live progress](changple5/2026-08-28-15-content-agent-agent-side.html) — changple5
 - 2026-08-28 · [Content agent II: architect, build, edit, publish](changple5/2026-08-28-14-content-agent-build-and-publish.html) — changple5
 - 2026-08-28 · [Content agent I: KakaoTalk intake and scaffolding a draft](changple5/2026-08-28-13-content-agent-intake-and-scaffold.html) — changple5
 - 2026-08-26 · [The content library: models, the single publish seam, media derivatives, and the Notion mirror](changple5/2026-08-26-12-content-library.html) — changple5

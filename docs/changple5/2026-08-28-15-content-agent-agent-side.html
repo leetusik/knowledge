@@ -1,0 +1,1371 @@
+<!--kb
+title: "Content agent III: the agent-side drafting service and its live progress"
+date: 2026-08-28
+tags:
+  - changple5
+  - content-agent
+  - agent-service
+  - retrieval
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content agent III: the agent-side drafting service and its live progress</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; font-size: 17px; }
+  h1 { line-height: 1.25; font-size: 1.9rem; }
+  h2 { margin-top: 2.6rem; line-height: 1.3; border-bottom: 1px solid rgba(128,128,128,.35);
+       padding-bottom: .3rem; }
+  h3 { margin-top: 2rem; line-height: 1.35; }
+  h4 { margin-top: 1.5rem; margin-bottom: .4rem; }
+  pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+         background: rgba(128,128,128,.12); padding: .75rem .9rem; border-radius: 6px;
+         font-size: .86em; line-height: 1.45; }
+  code { background: rgba(128,128,128,.16); padding: .08em .3em; border-radius: 3px;
+         font-size: .89em; overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid #4a7; background: rgba(74,170,119,.10);
+             padding: .8rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.warn { border-left-color: #c96; background: rgba(204,150,90,.12); }
+  .callout.def  { border-left-color: #58a; background: rgba(85,136,170,.12); }
+  .callout.measured { border-left-color: #96c; background: rgba(150,100,200,.12); }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .92em; }
+  th, td { border: 1px solid rgba(128,128,128,.35); padding: .45rem .6rem; text-align: left;
+           vertical-align: top; }
+  th { background: rgba(128,128,128,.14); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .88em; opacity: .8; margin-top: .4rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  .path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+  nav ol { line-height: 1.5; }
+  nav ol ol { margin: .2rem 0 .4rem; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
+            padding: .55rem .8rem; cursor: pointer; border: 1px solid rgba(128,128,128,.5);
+            border-radius: 5px; background: transparent; font: inherit; font-size: .95em;
+            color: inherit; }
+  .q .opt:hover { border-color: #58a; }
+  .q .opt.correct   { background: rgba(74,170,119,.28); border-color: #4a7; }
+  .q .opt.incorrect { background: rgba(200,80,80,.22); border-color: #c55; }
+  .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .95; border-left: 3px solid #58a;
+            padding-left: .7rem; }
+  .q { margin: 1.6rem 0; }
+  .lede { font-size: 1.05em; opacity: .95; }
+  hr { border: none; border-top: 1px solid rgba(128,128,128,.35); margin: 2.5rem 0; }
+  .small { font-size: .9em; opacity: .85; }
+</style>
+</head>
+<body>
+
+<h1>Content agent III: the agent-side drafting service and its live progress</h1>
+
+<p class="lede">Explainer #15 of the changple5 builder's curriculum, and the last of Part C.
+Pages <a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13</a>
+and <a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14</a>
+taught the content agent that runs today — the one that lives entirely inside Django. This page
+teaches the generation that came <em>before</em> it: <span class="path">ContentDraftJob</span>, the
+backend that orchestrates it, and above all
+<span class="path">apps/agent/app/content_drafts/</span> — a drafting service that runs on the
+<strong>agent</strong> side, over <span class="path">/agent-api</span>, and is the only place in
+this repository where Django asks the FastAPI agent to write an article.</p>
+
+<nav aria-label="Contents">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#background">Background — two agents, one product surface</a></li>
+  <li><a href="#intuition">Intuition</a>
+    <ol>
+      <li><a href="#i-hop">The hop that defines the generation</a></li>
+      <li><a href="#i-tools">Schema-only tools: the model proposes, the loop disposes</a></li>
+      <li><a href="#i-edits">Update-vs-rewrite</a></li>
+      <li><a href="#i-markers">A five-character layout language</a></li>
+    </ol>
+  </li>
+  <li><a href="#code">Code</a>
+    <ol>
+      <li><a href="#c1">The dispatch — how Django asks the agent to write</a></li>
+      <li><a href="#c2">The door — one route, one contract</a></li>
+      <li><a href="#c3">The room — <span class="path">content_drafts/agent.py</span></a></li>
+      <li><a href="#c4">The supporting modules</a></li>
+      <li><a href="#c5">The progress channel — and a drift to report</a></li>
+      <li><a href="#c6">Back on the backend: what v1 does with the answer</a></li>
+      <li><a href="#c7">Part C in one view</a></li>
+    </ol>
+  </li>
+  <li><a href="#quiz">Quiz</a></li>
+</ol>
+</nav>
+
+<section id="background">
+<h2>Background — two agents, one product surface</h2>
+
+<p>창플 publishes 미라클 콘텐츠: long Korean articles about real small-business owners, written
+from the brand's own archive of Naver cafe posts. Two different software systems in this repository
+know how to write one. They were built two years apart by the same team for the same operator, and
+they agree on almost nothing else.</p>
+
+<p>The older one — call it <strong>v1</strong>, the P30 <em>미라클 content-draft agent</em> — is the
+subject of this page. Its job table is <span class="path">ContentDraftJob</span>. The newer one —
+<strong>v2</strong>, the P54 <em>content agent</em>, job table
+<span class="path">ContentAgentJob</span> — is what explainers
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13</a>
+and <a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14</a>
+walked, and it is what the operator opens today at
+<span class="path">/operator/miracle-agent</span>.</p>
+
+<h3>What a beginner needs first: what these systems actually do</h3>
+
+<p class="small">Skip this subsection if you already know the product. Everything after it assumes
+only these five sentences.</p>
+
+<p>A 미라클 article is not written from thin air. Somewhere in the corpus — thousands of scraped
+Naver cafe posts, enriched, embedded and indexed by the pipelines explainers
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">#8</a> and
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9</a>
+describe — there are twenty or fifty posts about one particular shop. An operator wants those turned
+into a single publishable article, in 창플's voice, with photographs, and then put into the content
+library that explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12</a> taught. Both
+generations do exactly that. Both take an operator brief, gather source material, propose a plan,
+write Korean prose, place images, and end by materializing a
+<span class="path">NotionContent</span> row that readers can open.</p>
+
+<div class="callout def">
+<p><strong>Jargon, defined once.</strong></p>
+<ul>
+<li><strong>Brief</strong> — the operator's one-paragraph request that starts a job
+(<em>"당술샘 사장님 이야기로 미라클 한 편"</em>).</li>
+<li><strong>구성안</strong> (<em>gu-seong-an</em>, "composition plan") — the article's plan:
+title, sections, sub-headings, which source posts feed which section, which photos go where. Both
+generations make one and both make the operator approve it before any prose is written.</li>
+<li><strong>Marker</strong> — a placeholder the model writes into the markdown to say "an image
+goes here", spelled <code>{{img:&lt;key&gt;}}</code>. It is not HTML; it becomes HTML at publish.</li>
+<li><strong>doc_map</strong> — v1's in-memory dictionary of every corpus post the research loop
+collected this turn: <code>{post_id: {meta, body, rank, score, queries}}</code>.</li>
+<li><strong>Post-process</strong> — the deterministic pass that runs after every model call:
+renumber citations, drop unknown image markers, extract the questions block.</li>
+</ul>
+</div>
+
+<h3>The comparison, cell by cell</h3>
+
+<p>Every row below was checked against the code today, not inherited from a document. Two of them
+are more subtle than the phase's own shorthand suggested, and the corrections are stated underneath.</p>
+
+<table>
+<thead><tr><th></th><th>v1 (<span class="path">ContentDraftJob</span>)</th><th>v2 (<span class="path">ContentAgentJob</span>)</th></tr></thead>
+<tbody>
+<tr><td><strong>where the LLM runs</strong></td>
+    <td>the agent service, over <span class="path">/agent-api</span> — Django makes an HTTP call</td>
+    <td>Django itself, in the Celery worker; <span class="path">agent_jobs/</span> has zero matches for <code>agent-api</code></td></tr>
+<tr><td><strong>getting JSON out of a model</strong></td>
+    <td>hand-rolled <code>_parse_json_from_llm</code> — strip a <code>```</code> fence, <code>json.loads</code>; <em>never</em> <code>with_structured_output</code> (one deliberate exception, §4.2)</td>
+    <td><code>analysis.GeminiStructuredWorker</code>, a shared structured-output worker</td></tr>
+<tr><td><strong>agent framework</strong></td>
+    <td>a hand-rolled, stateless research loop with two schema-only tools; no LangGraph, no checkpointer</td>
+    <td>no loop at all — discrete structured passes, each its own function</td></tr>
+<tr><td><strong>where source posts come from</strong></td>
+    <td>the shared retrieval chokepoint (<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a>) at content-only wide limits: 64 / 64 / 24 / 40, plus a chunk arm</td>
+    <td>ordinary Django querysets over <span class="path">DocumentSource</span>, scoped by brand</td></tr>
+<tr><td><strong>the models</strong></td>
+    <td>three roles — <code>content_draft</code>, <code>content_research</code>, <code>content_curation</code> — all defaulting <code>gemini-3.6-flash</code></td>
+    <td>ten role slugs, all defaulting <code>gemini-3.7-flash</code> at thinking level <code>high</code></td></tr>
+<tr><td><strong>the plan gate</strong></td>
+    <td>the agent proposes a 구성안 from its own research; the operator edits and approves it (<code>outline_review → drafting</code>)</td>
+    <td>the operator picks posts and a KakaoTalk chat first; the architect proposes a scaffold; the operator approves it (<code>needs_review → writing</code>)</td></tr>
+<tr><td><strong>what "approve" means at the end</strong></td>
+    <td><strong>one act</strong>: approving the draft <em>is</em> publishing — <code>approved → publishing → published</code></td>
+    <td><strong>two acts</strong>: 초안 저장 (write a real but 비공개 row) and 발행 (make it visible)</td></tr>
+<tr><td><strong>the operator's UI</strong></td>
+    <td>a chat-shaped workspace, ~3,375 lines — still in the tree, <strong>unrouted</strong></td>
+    <td>the live <span class="path">/operator/miracle-agent</span> route</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+<p><strong>Two corrections to the shorthand this page inherited.</strong></p>
+<p>(1) "v1 = a brief and a thread, then approve; v2 = approves a 구성안 before prose" is not the
+difference. <em>Both</em> generations gate on a plan. v1 grew its 구성안 gate in P30.S15 and the
+operator-editable curation gate in P52 — the job even has a dedicated status,
+<code>outline_review</code>, and a dedicated table, <span class="path">ContentDraftOutline</span>,
+with proposed/superseded/approved lineage. The real difference is at the <em>other</em> end: v1
+collapses approval and publication into a single operator act, and v2 splits them.</p>
+<p>(2) v1's 구성안 is the agent's <em>own</em> proposal, derived from research it chose to do; v2's
+scaffold is built over posts the <em>operator</em> selected up front. That is a difference of who
+picks the material, not of whether a plan is approved.</p>
+</div>
+
+<h3>Which one runs today, and why the other is still here</h3>
+
+<p>The honest label for v1 is <strong>routed but superseded</strong>, and each word is literal.</p>
+
+<p><strong>Superseded.</strong> <span class="path">apps/web/src/app/operator/miracle-agent/page.tsx</span>
+serves v2, and says so in a comment that is worth quoting because it is the clearest statement of
+the situation anywhere in the repo:</p>
+
+<pre><code>// **v1 is retired from this route here.** It used to render
+// `components/operator/operator-miracle-agent-route.tsx` (the chat-shaped
+// workspace, 3,355 lines). That file and its siblings stay in the tree,
+// UNROUTED — nothing imports them any more; deleting them is a later decision.</code></pre>
+
+<p>Verified: that component is now 3,375 lines and is imported by exactly one non-test file — a
+sibling of its own v1 tree — plus a test fixture. No page under
+<span class="path">apps/web/src/app/</span> reaches it.</p>
+
+<p><strong>Routed.</strong> The backend half is not dormant at all:</p>
+
+<ul>
+<li><strong>Thirteen operator routes plus one internal route are still mounted.</strong>
+<span class="path">content/urls.py:158</span> and <span class="path">:544–604</span> carry the
+non-<code>v2/</code> <span class="path">admin/miracle-agent/…</span> paths — job list/create, job
+detail, messages, attachments, the corpus-image proxy, manual versions, outline approve, outline
+history, approve, cancel — plus
+<span class="path">internal/miracle-agent/jobs/&lt;id&gt;/progress</span> at
+<span class="path">:594</span>. An operator token can drive the whole v1 lifecycle over HTTP right
+now; only the screen is gone.</li>
+<li><strong>The Celery task is defined and still dispatched.</strong>
+<code>content.generate_draft</code> is registered at <span class="path">content/tasks.py:173</span>
+and its name constant lives at <span class="path">draft_dispatch.py:57</span>;
+<code>dispatch_draft_generation</code> (<span class="path">:144</span>) sends it, and the views call
+<code>queue_draft_generation_on_commit</code> / <code>requeue_draft_generation_on_commit</code> at
+<span class="path">draft_views.py:197</span> (job create), <span class="path">:246</span> (a new
+operator message) and <span class="path">:856</span> (구성안 approval).</li>
+<li><strong>Two recovery sweeps fire on every worker start.</strong>
+<span class="path">config/celery.py:74</span> and <span class="path">:81</span> send
+<code>content.reclaim_stale_draft_generations</code> and
+<code>content.reclaim_stale_draft_publications</code> from the <code>worker_ready</code> signal —
+so every deploy still asks "did any v1 job get stranded?".</li>
+</ul>
+
+<h3>The interesting question: what the old generation still does for the new one</h3>
+
+<p>An obituary would stop there. The genuinely interesting fact is that v2 <em>depends</em> on v1 —
+not historically, but at import time, on every publish.</p>
+
+<ul>
+<li><strong>v2 publishes through v1's helpers.</strong> The bottom of
+<span class="path">content/draft_publish.py</span> (lines <span class="path">707–718</span>) is an
+explicitly additive block of <strong>twelve public aliases</strong> — nine functions
+(<code>extract_title</code>, <code>extract_description</code>, <code>finalize_title</code>,
+<code>split_blocks</code>, <code>render_markdown_fragment</code>, <code>render_html_document</code>,
+<code>flatten_inline_markdown</code>, <code>collapse_whitespace</code>,
+<code>iter_paragraph_blocks</code>) and three regexes (<code>H1_HEADING_LINE_RE</code>,
+<code>IMAGE_LINE_RE</code>, <code>IMAGE_ID_RE</code>). <span class="path">agent_jobs/publishing.py</span>
+uses <strong>nine</strong> of the twelve, importing v1 <em>inside</em> eight different functions
+(<code>from .. import draft_publish as v1</code>) because v1 imports
+<span class="path">content.models</span> at module level and a top-level import would be circular.</li>
+<li><strong>v2 writes into v1's own directory.</strong> <code>PUBLISHED_CONTENT_SUBDIRECTORY = "miracle"</code>
+(<span class="path">draft_publish.py:78</span>) is the sub-folder every published article's HTML and
+images land in; v2 reuses the constant's value rather than choosing its own.</li>
+<li><strong>The marker grammar v2 obeys is defined here.</strong> The canonical regex is
+<span class="path">apps/agent/app/content_drafts/agent.py:133</span> —
+<code>_IMG_MARKER_RE = re.compile(r"\{\{img:([^}]+)\}\}")</code> — and
+<span class="path">agent_jobs/build.py:135</span> keeps a byte-identical local copy that says it is a
+copy. Grepping <code>{{img:</code> across <span class="path">apps/</span> hits 23 files in all three
+applications.</li>
+</ul>
+
+<div class="callout">
+<p><strong>The frame for the whole page:</strong> v1 is not dead code, it is a <em>library the new
+generation stands on</em>. The interesting reading of an old subsystem is rarely "what killed it" —
+it is "which of its decisions turned out to be load-bearing". For v1 the answer is: its file layout,
+its markdown-to-HTML semantics, and its five-character image language.</p>
+</div>
+
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3 id="i-hop">1. The hop that defines the generation</h3>
+
+<p>Everything that feels different about v1 follows from one architectural choice: <strong>the model
+call happens in the other process.</strong> Django never talks to Gemini for a v1 draft. It packs a
+JSON payload, POSTs it to the FastAPI agent with a shared service token, and waits — for up to 15
+minutes.</p>
+
+<figure>
+<svg viewBox="0 0 720 330" role="img" aria-label="Diagram: Django posts a draft-generation payload to the FastAPI agent, which searches the corpus and calls Gemini, then returns one JSON result.">
+  <defs>
+    <marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#58a"/>
+    </marker>
+    <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#4a7"/>
+    </marker>
+  </defs>
+  <rect x="8" y="20" width="230" height="150" rx="8" fill="rgba(85,136,170,.13)" stroke="#58a"/>
+  <text x="20" y="42" font-size="13" font-weight="bold" fill="currentColor">Django (celery_worker)</text>
+  <text x="20" y="64" font-size="11.5" fill="currentColor">content.generate_draft</text>
+  <text x="20" y="82" font-size="11.5" fill="currentColor">_prepare_generation_attempt()</text>
+  <text x="20" y="100" font-size="11.5" fill="currentColor">_build_generation_payload()</text>
+  <text x="20" y="118" font-size="11.5" fill="currentColor">urllib POST, timeout 900 s</text>
+  <text x="20" y="140" font-size="11.5" fill="currentColor">_apply_agent_draft_result()</text>
+  <text x="20" y="158" font-size="11.5" fill="currentColor">→ ContentDraftVersion row</text>
+
+  <rect x="300" y="20" width="240" height="150" rx="8" fill="rgba(74,170,119,.13)" stroke="#4a7"/>
+  <text x="312" y="42" font-size="13" font-weight="bold" fill="currentColor">FastAPI agent</text>
+  <text x="312" y="64" font-size="11.5" fill="currentColor">POST /agent-api/internal/</text>
+  <text x="312" y="80" font-size="11.5" fill="currentColor">content/drafts/generate</text>
+  <text x="312" y="102" font-size="11.5" fill="currentColor">run_content_draft_pipeline()</text>
+  <text x="312" y="120" font-size="11.5" fill="currentColor">research → curate → gate</text>
+  <text x="312" y="138" font-size="11.5" fill="currentColor">→ write → integrate</text>
+  <text x="312" y="156" font-size="11.5" fill="currentColor">→ post-process</text>
+
+  <rect x="600" y="20" width="112" height="66" rx="8" fill="rgba(150,100,200,.13)" stroke="#96c"/>
+  <text x="612" y="44" font-size="12" font-weight="bold" fill="currentColor">Gemini</text>
+  <text x="612" y="64" font-size="11" fill="currentColor">flash + flash</text>
+
+  <rect x="600" y="106" width="112" height="64" rx="8" fill="rgba(128,128,128,.13)" stroke="#888"/>
+  <text x="612" y="130" font-size="12" font-weight="bold" fill="currentColor">Postgres</text>
+  <text x="612" y="150" font-size="11" fill="currentColor">read bridge</text>
+
+  <line x1="240" y1="80" x2="296" y2="80" stroke="#58a" stroke-width="2" marker-end="url(#a1)"/>
+  <text x="243" y="72" font-size="10.5" fill="currentColor">X-Agent-Service-Token</text>
+  <line x1="296" y1="126" x2="242" y2="126" stroke="#4a7" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="243" y="144" font-size="10.5" fill="currentColor">one JSON result</text>
+
+  <line x1="542" y1="60" x2="596" y2="55" stroke="#96c" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="542" y1="130" x2="596" y2="134" stroke="#888" stroke-width="2" marker-end="url(#a1)"/>
+
+  <rect x="8" y="205" width="704" height="105" rx="8" fill="rgba(204,150,90,.10)" stroke="#c96"/>
+  <text x="20" y="228" font-size="12.5" font-weight="bold" fill="currentColor">What the hop costs, and what it buys</text>
+  <text x="20" y="250" font-size="11.5" fill="currentColor">costs: one attempt = one long HTTP request (no streaming, no partial result); a dropped connection</text>
+  <text x="20" y="267" font-size="11.5" fill="currentColor">is indistinguishable from a slow one; progress needs its own back-channel (§5).</text>
+  <text x="20" y="289" font-size="11.5" fill="currentColor">buys: the drafting logic sits beside retrieval, embeddings and the agent's LLM plumbing — reuse, not re-implementation.</text>
+</svg>
+<figcaption>The v1 round trip. v2 deleted the two arrows on the left and made the same call in-process.</figcaption>
+</figure>
+
+<p>That single design decision explains a surprising amount. Because the answer must survive one
+HTTP response, the agent returns <em>one JSON object</em> describing a whole turn — never a stream.
+Because the call can take ten minutes, the backend needs a claim, an attempt counter, a reclaim
+sweep, and a 900-second timeout. And because the operator would otherwise stare at a spinner for ten
+minutes with no idea what is happening, v1 needed a second, one-way channel just for progress
+pings — which is exactly the module §5 is about.</p>
+
+<h3 id="i-tools">2. Schema-only tools: the model proposes, the loop disposes</h3>
+
+<p>If you have used a tool-calling agent before, you know the normal shape: you write a function,
+decorate it, hand it to the model, and the framework calls your function when the model asks for it.
+v1 does something that looks the same and is not. Its two tools are declared with LangChain's
+<code>@tool</code> decorator — and their bodies <strong>raise
+<code>NotImplementedError</code></strong>.</p>
+
+<pre><code>@tool
+def search_cafe_posts(query: str) -&gt; str:
+    """인덱싱된 네이버 카페 코퍼스에서 query와 관련된 글을 검색한다. …"""
+    # Schema-only: the research loop dispatches this call manually against the
+    # live retrieval stack, so this body is never executed.
+    raise NotImplementedError</code></pre>
+
+<p>The decorator is used purely to <em>generate a JSON schema</em> for the model — the name, the
+argument types, the Korean docstring the model reads as documentation. Nothing else. The loop then
+reads <code>response.tool_calls</code> itself and dispatches each call by hand.</p>
+
+<figure>
+<svg viewBox="0 0 720 300" role="img" aria-label="Diagram: the research loop dispatches tool calls manually, enforcing caps and merging results into one shared document map.">
+  <defs>
+    <marker id="b1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect x="10" y="16" width="150" height="60" rx="8" fill="rgba(150,100,200,.13)" stroke="#96c"/>
+  <text x="24" y="40" font-size="12.5" font-weight="bold" fill="currentColor">flash driver</text>
+  <text x="24" y="60" font-size="11" fill="currentColor">bound to 2 schemas</text>
+
+  <rect x="230" y="16" width="200" height="60" rx="8" fill="rgba(85,136,170,.13)" stroke="#58a"/>
+  <text x="244" y="40" font-size="12.5" font-weight="bold" fill="currentColor">the loop (our code)</text>
+  <text x="244" y="60" font-size="11" fill="currentColor">reads response.tool_calls</text>
+
+  <rect x="500" y="4" width="210" height="42" rx="8" fill="rgba(204,150,90,.13)" stroke="#c96"/>
+  <text x="512" y="21" font-size="11" fill="currentColor">cap 1: ≤ 8 searches</text>
+  <text x="512" y="37" font-size="11" fill="currentColor">cap 2: ≤ 6 iterations</text>
+  <rect x="500" y="52" width="210" height="42" rx="8" fill="rgba(204,150,90,.13)" stroke="#c96"/>
+  <text x="512" y="69" font-size="11" fill="currentColor">cap 3: pool ≤ 100 posts</text>
+  <text x="512" y="85" font-size="11" fill="currentColor">preview back: ≤ 12 rows</text>
+
+  <line x1="162" y1="34" x2="226" y2="34" stroke="#888" stroke-width="2" marker-end="url(#b1)"/>
+  <text x="163" y="26" font-size="10" fill="currentColor">tool_call</text>
+  <line x1="226" y1="62" x2="164" y2="62" stroke="#888" stroke-width="2" marker-end="url(#b1)"/>
+  <text x="167" y="76" font-size="10" fill="currentColor">ToolMessage</text>
+  <line x1="432" y1="42" x2="496" y2="42" stroke="#888" stroke-width="2" marker-end="url(#b1)"/>
+
+  <rect x="230" y="120" width="200" height="150" rx="8" fill="rgba(74,170,119,.13)" stroke="#4a7"/>
+  <text x="244" y="144" font-size="12.5" font-weight="bold" fill="currentColor">one shared doc_map</text>
+  <text x="244" y="166" font-size="11" fill="currentColor">1023 → meta, body, rank 3</text>
+  <text x="244" y="184" font-size="11" fill="currentColor">1187 → meta, body "", rank 1</text>
+  <text x="244" y="202" font-size="11" fill="currentColor">1402 → meta, body "", rank 7</text>
+  <text x="244" y="220" font-size="11" fill="currentColor">…</text>
+  <text x="244" y="244" font-size="10.5" fill="currentColor">duplicate hit keeps the BETTER rank</text>
+  <text x="244" y="260" font-size="10.5" fill="currentColor">trimmed once, after collection ends</text>
+
+  <line x1="330" y1="80" x2="330" y2="116" stroke="#888" stroke-width="2" marker-end="url(#b1)"/>
+  <text x="336" y="104" font-size="10.5" fill="currentColor">every candidate merges in</text>
+
+  <rect x="10" y="120" width="180" height="80" rx="8" fill="rgba(128,128,128,.13)" stroke="#888"/>
+  <text x="24" y="144" font-size="12" font-weight="bold" fill="currentColor">shared retrieval</text>
+  <text x="24" y="164" font-size="10.5" fill="currentColor">build_ranked_retrieval_result</text>
+  <text x="24" y="182" font-size="10.5" fill="currentColor">at content-only widths</text>
+  <line x1="192" y1="160" x2="226" y2="160" stroke="#888" stroke-width="2" marker-end="url(#b1)"/>
+</svg>
+<figcaption>Manual dispatch is what makes the two caps and the shared map possible.</figcaption>
+</figure>
+
+<p><strong>What manual dispatch buys, concretely:</strong></p>
+<ol>
+<li><strong>A budget the model cannot spend past.</strong> Once <code>search_count</code> reaches
+<code>MAX_RESEARCH_SEARCHES = 8</code>, the loop does not call retrieval; it hands the model back the
+string <em>"검색 한도에 도달했습니다. 정리해서 마치세요."</em> ("You have reached the search limit.
+Wrap up.") — a refusal expressed as a normal tool result, so the model reasons its way to a stop
+instead of hitting an exception.</li>
+<li><strong>One accumulating map instead of N independent results.</strong> With framework-run tools
+you get eight separate tool outputs and whatever the model remembered of them. Here every search's
+full candidate list is merged into a single <code>doc_map</code>, deduplicated by
+<code>post_id</code>, keeping the <em>best</em> rerank rank a post earned across all queries — while
+the model only ever sees a 12-row preview per search. The material the writer eventually gets is
+assembled by our code, not reconstructed from the model's transcript.</li>
+</ol>
+
+<div class="callout">
+<p><strong>The transferable lesson.</strong> "Tool calling" is really two separable things: letting
+the model <em>choose</em> a call, and letting a framework <em>execute</em> it. Keep the first, take
+back the second, and you can enforce budgets, deduplicate across calls, and keep the real payload out
+of the context window. The cost is that you write the loop.</p>
+</div>
+
+<h3 id="i-edits">3. Update-vs-rewrite</h3>
+
+<p>An operator reads a 5,000-character draft and says: <em>"세 번째 문단만 조금 부드럽게"</em>
+("just soften the third paragraph a bit"). The naive implementation asks the model to output the
+whole article again. That is slow, expensive, and — worst — it silently rewrites the 4,800 characters
+nobody complained about.</p>
+
+<p>v1's revise turn lets the model answer in either of two shapes. It may return markdown (a full
+rewrite), or it may return a JSON directive of exact string substitutions:</p>
+
+<pre><code>{"mode": "edits",
+ "note": "세 번째 문단의 어투를 부드럽게 조정했습니다.",
+ "edits": [{"find": "사장님은 3년을 준비했습니다", "replace": "사장님은 3년을 차근차근 준비했습니다"}]}</code></pre>
+
+<p><code>_apply_edits</code> then applies them <em>deterministically</em>, with one strict rule:
+each <code>find</code> must occur <strong>exactly once</strong> in the body, and if any edit in the
+set fails that test the whole set is discarded and the original body is returned byte-identical.</p>
+
+<div class="callout measured">
+<p><strong>Measured, by executing the real function.</strong> The three helpers below were source-
+sliced verbatim out of <span class="path">agent.py</span> and run against a toy Korean draft:</p>
+<pre><code>applied: True
+untouched tail byte-identical: True
+ambiguous find (2 occurrences) applied: False | body unchanged: True
+one bad edit in the set  ->  applied: False | body unchanged: True</code></pre>
+<p>So a partial application can never happen: the edit set is atomic, and "unique-once" is the
+integrity check that makes a blind string replace safe.</p>
+</div>
+
+<p>When the set does not apply, the code does not fail the turn and does not ask the operator
+anything. It calls the model again with the same feedback plus a Korean suffix that says, in effect,
+<em>"the local edits could not be applied — rewrite the whole body from scratch, no JSON"</em>, and
+takes the rewrite. Three properties fall out of this: an accepted edit set leaves untouched prose
+byte-identical; a rewrite is always available as a floor; and the server records only
+<code>{mode, edit_count, base_version_number}</code> — never the find/replace strings, because
+post-processing mutates the body afterwards and a stored span could not be guaranteed to still
+match.</p>
+
+<h3 id="i-markers">4. A five-character layout language</h3>
+
+<p>The model cannot emit HTML — the published copy is scrubbed of everything model-authored except
+prose. So how does an image get into an article at a place the model chose? With a marker, and two
+rules about lines:</p>
+
+<pre><code>{{img:a1b2c3}}                      a marker alone on a line  ->  a full-width image
+{{img:a1b2}} {{img:c3d4}}           2–3 markers on ONE line   ->  a row of columns (max 3)
+문장 안 {{img:x}} 인라인 마커        anything else             ->  not a layout instruction</code></pre>
+
+<p>The key inside the marker is a UUID, and — this is the part worth remembering — that UUID
+<em>is the primary key of the attachment row</em> the backend creates for the image. There is no
+mapping table, no rewriting step: the model invents a placement, and the database row is created
+under the exact name the model used.</p>
+
+<div class="callout measured">
+<p><strong>Measured.</strong> Running the real <code>_strip_unknown_image_markers</code> over a body
+containing six markers, where only <code>AAA</code>, <code>BBB</code>, <code>EEE</code> and
+<code>FFF</code> were actually provided:</p>
+<pre><code>input                        output
+{{img:AAA}}               →  {{img:AAA}}          (kept, full width)
+{{img:BBB}} {{img:CCC}}   →  {{img:BBB}}          (row collapses to one image)
+{{img:DDD}} {{img:EEE}}   →  {{img:EEE}}          (survivor keeps the line)
+문장 안 {{img:FFF}} …     →  문장 안 {{img:FFF}} … (inline marker kept as text)</code></pre>
+<p>A marker-only line whose markers all die is deleted entirely, so a hallucinated image leaves no
+blank hole in the article.</p>
+</div>
+
+<p>The same measurement exposes a small, real asymmetry. The publisher's block splitter
+(<code>_split_blocks</code>) matches <em>whole lines only</em>, so the surviving inline marker is
+never turned into a figure — and the scrubber then deletes it as residue. Verified end to end:
+<code>scrub_public_text("문장 안 인라인 {{img:FFF}} 마커와 텍스트.")</code> returns
+<code>"문장 안 인라인  마커와 텍스트."</code>. In v1 an inline marker is silently nothing. That is
+precisely the failure v2 later engineered away: its <code>_partition_marker_lines</code> lifts an
+inline marker onto its own line before it can reach the scrubber (explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14</a>,
+§2).</p>
+
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>The walk goes in the order a turn actually happens: Django decides to ask (§1), the request
+crosses the boundary (§2), the agent does the work (§3, §4), it reports progress on a side channel
+(§5), and Django consumes the answer and eventually publishes it (§6).</p>
+
+<h3 id="c1">§1 The dispatch — how Django asks the agent to write</h3>
+
+<p><span class="path">apps/backend/content/draft_dispatch.py</span> (938 lines). Its own docstring
+says it was <em>"cloned 1:1"</em> from
+<span class="path">conversations/consulting_report_dispatch.py</span> — the module explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/10-consulting-mode">#10</a> walked. So the
+right way to read it is not as content-agent code but as <strong>this repository's standard shape for
+"a long backend→agent job"</strong>, instantiated a second time. Learn the shape once and you have
+read three modules.</p>
+
+<h4>The shape, in five moves</h4>
+
+<table>
+<thead><tr><th>Move</th><th>Where</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Dispatch after commit</strong></td><td><code>_queue_generation_on_commit</code> (<span class="path">:807</span>)</td>
+<td>Reserves a fresh <code>task_id</code> on the job row, then queues the real <code>send_task</code> inside <code>transaction.on_commit</code>. Never send a task naming a row that a rollback could erase. Explainer #16 owns this pattern.</td></tr>
+<tr><td><strong>2. Locked claim</strong></td><td><code>_prepare_generation_attempt</code> (<span class="path">:835</span>)</td>
+<td><code>select_for_update</code>, refuse if the status left the queueable set, refuse if <code>generation_task_id</code> belongs to a different task, refuse at the attempt ceiling; otherwise increment the counter, stamp <code>generation_last_attempt_at</code>, clear <code>progress</code>, and move <code>requested/collecting → drafting</code>.</td></tr>
+<tr><td><strong>3. Attempt guard</strong></td><td><code>DRAFT_GENERATION_MAX_ATTEMPTS = 3</code></td>
+<td>Counts <em>attempts</em>, stored on the row — so a retry after a worker restart still counts. The Celery task registers <code>max_retries = MAX_ATTEMPTS - 1</code>, keeping the two numbers from drifting apart.</td></tr>
+<tr><td><strong>4. Transient vs permanent</strong></td><td><code>AgentDraftGenerationTransientError</code> / <code>…PermanentError</code></td>
+<td>Two exception classes are the whole retry policy. <code>_is_retryable_agent_status</code> (<span class="path">:415</span>) calls exactly <code>{429, 500, 502, 503, 504}</code> transient; everything else — including a non-JSON body or an unknown <code>outcome</code> — is permanent and fails the job immediately, with no wasted retries.</td></tr>
+<tr><td><strong>5. Stale reclaim</strong></td><td><code>reclaim_stale_draft_generations</code> (<span class="path">:218</span>)</td>
+<td>Finds jobs stuck in <code>collecting/drafting/revising</code> whose last attempt is older than <code>CONTENT_DRAFT_RECLAIM_AFTER_MINUTES = 30</code> and either requeues them or fails them at the ceiling. <code>requested</code> is deliberately excluded: a dispatch failure is always caught synchronously by <code>_mark_dispatch_failure</code>, so nothing should ever linger there.</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<p><strong>Why 30 minutes and not 5.</strong> The settings comment is explicit: the reclaim window
+<em>must exceed</em> the maximum attempt duration, which is bounded by
+<code>DRAFT_GENERATION_TIMEOUT_SECONDS = 900</code> (per-attempt urllib timeout, raised from a
+hard-coded 300 when the write turn became segmented and started making <em>M</em> section calls plus
+an integration pass). A reclaim window shorter than the work it supervises does not recover jobs —
+it double-dispatches live ones.</p>
+</div>
+
+<h4>The HTTP boundary</h4>
+
+<p><code>request_agent_draft_generation</code> (<span class="path">:257</span>) is the seam.
+<code>_request_agent_draft_generation</code> (<span class="path">:274</span>) builds the request by
+hand — plain <code>urllib</code>, not <code>requests</code> or <code>httpx</code> — with two headers
+and an optional third:</p>
+
+<pre><code>headers = {
+    "Content-Type": "application/json",
+    AGENT_SERVICE_TOKEN_HEADER: str(settings.AGENT_BACKEND_SHARED_TOKEN),
+}
+if getattr(settings, "ENABLE_CORRELATION_IDS", False):
+    request_id = get_request_id()
+    if request_id:
+        headers["X-Request-ID"] = request_id</code></pre>
+
+<p>That first credential is the static Django↔agent service token explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2</a>
+taught: one shared secret, passed unrenamed to both services, compared with
+<code>hmac.compare_digest</code> on the agent side. There is no user to impersonate here — a draft
+job belongs to an operator, but the <em>call</em> is machine-to-machine, so the service token is the
+right credential rather than a forwarded JWT. The correlation header is usually absent in practice,
+because the dispatch runs under Celery where there is no inbound request to inherit an id from.</p>
+
+<h4>What the agent is told: <code>_build_generation_payload</code> (<span class="path">:426</span>)</h4>
+
+<table>
+<thead><tr><th>Key</th><th>Contents</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td><code>job_id</code></td><td>the job UUID</td><td>used only for progress pings — the pipeline is otherwise stateless</td></tr>
+<tr><td><code>brief</code></td><td>the operator's original request</td><td>validated non-blank on the agent side</td></tr>
+<tr><td><code>reference_profile</code></td><td><code>{content_id, title, text, image_count, char_count}</code> of a published 미라클 post</td><td>the format exemplar; <code>None</code> when the operator chose 기준 콘텐츠 없이 작성. A configured id that does not resolve raises a <em>permanent</em> error with an actionable message — a fail-soft requirement, since content id 19 exists on production and not in dev</td></tr>
+<tr><td><code>messages</code></td><td>the whole operator↔agent thread in order, each with <code>role/kind/body/payload/version_number</code></td><td>this is v1's memory — there is no other state carried between turns</td></tr>
+<tr><td><code>attachments</code></td><td><code>{id, caption, source_url}</code> per uploaded or previously-downloaded photo</td><td><code>id</code> is the marker key; <code>source_url</code> lets the agent avoid re-offering an image it already has</td></tr>
+<tr><td><code>latest_version</code></td><td><code>{number, body_markdown}</code> or <code>None</code></td><td>presence of this key <em>is</em> the "this is a revision" signal</td></tr>
+<tr><td><code>approved_outline</code></td><td>the stored 구성안 payload, only when a version does not exist yet</td><td>presence of this key (with no version) <em>is</em> the "this is the write turn" signal</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+<p><strong>A behavioural subtlety with a good name.</strong> <code>latest_version</code> does not
+mean "the highest-numbered version". It resolves to the version targeted by the newest operator
+feedback/answer message that carries a version foreign key, falling back to the max-number version
+only when no such message exists. That is what makes "step back to version 2 and leave feedback
+there" actually revise version 2 instead of version 5. The field name never changed; its meaning
+did — the kind of thing worth a comment, and it has one.</p>
+</div>
+
+<h4>What comes back: three outcomes</h4>
+
+<p><code>_build_agent_draft_result</code> (<span class="path">:325</span>) validates the response into
+a frozen <code>AgentDraftResult</code> dataclass, and refuses any <code>outcome</code> outside
+<code>{"draft", "needs_input", "outline"}</code> as permanent. <code>_apply_agent_draft_result</code>
+(<span class="path">:687</span>) then forks:</p>
+
+<ul>
+<li><strong><code>outline</code></strong> → <code>_apply_outline_result</code>
+(<span class="path">:642</span>): supersede any prior <code>proposed</code> outline, insert a new
+<span class="path">ContentDraftOutline</span> at <code>number + 1</code>, post one short Korean
+agent NOTE pointing at the canvas, and park the job at <code>outline_review</code>. No version row
+is written at all.</li>
+<li><strong><code>needs_input</code></strong> → write an ASKS message carrying
+<code>{questions, image_requests}</code> and park at <code>needs_input</code>. This is the outcome
+that makes v1's whole message thread exist: the agent is <em>allowed to answer "I need more from
+you"</em>, and the operator's reply is just another row in the thread that the next turn sees.</li>
+<li><strong><code>draft</code></strong> → download the placed corpus images, then, in one locked
+transaction, create the attachment rows, the new <span class="path">ContentDraftVersion</span>, an
+optional NOTE, an optional ASKS, an optional SYSTEM message about dropped images, and park at
+<code>awaiting_review</code>.</li>
+</ul>
+
+<p>All three start with the same idempotency guard — reload the job under
+<code>select_for_update</code> and return silently if its status has left the queueable set — so a
+duplicated task or a late reclaim cannot double-write. And note the ordering in the
+<code>draft</code> branch: <strong>the image downloads happen before the transaction opens</strong>,
+with a comment saying why. Holding a row lock across arbitrary network I/O to Naver's CDN is exactly
+the kind of thing that turns a slow third party into a database incident.</p>
+
+<h3 id="c2">§2 The door — one route, one contract</h3>
+
+<p><span class="path">apps/agent/app/api/routes/content_drafts.py</span> (172 lines) is one of the
+agent's 17 public routes and by far the simplest interesting one:
+<code>POST /agent-api/internal/content/drafts/generate</code>, guarded by
+<code>require_agent_service_context</code>, which is immediately discarded (<code>del
+service_context</code>) — the dependency exists for its side effect of rejecting an unauthenticated
+caller.</p>
+
+<p>Two details are worth copying:</p>
+
+<ol>
+<li><strong>Every request model sets <code>model_config = ConfigDict(extra="forbid")</code></strong>,
+with a comment saying why: <em>"so a backend↔agent drift 422s loudly instead of silently dropping
+fields."</em> When two services in one repository share a payload contract, strictness at the
+boundary converts a silent behavioural bug into a loud deploy-time failure.</li>
+<li><strong>Every pipeline exception becomes a 503 with a fixed detail string</strong>, after
+<code>report_agent_error</code> is called with <code>{"source": "content_draft", "job_id",
+"request_id"}</code>. The backend's transient/permanent classifier reads 503 as transient, so a
+Gemini hiccup becomes a Celery retry rather than a failed job. Error reporting itself belongs to
+explainer #16.</li>
+</ol>
+
+<h3 id="c3">§3 The room — <span class="path">content_drafts/agent.py</span></h3>
+
+<p>2,295 lines, and the centre of this page. Its docstring frames the whole thing in one sentence,
+which the code then honours:</p>
+
+<blockquote><p><em>"A hybrid turn: a bounded, model-driven agentic RESEARCH loop (flash driver + two
+tools over the indexed Naver Cafe corpus) feeds a deterministic write → reflect → post-process spine
+(pro model). Generation and revision share this module; the backend brokers to it via the internal
+service-token route — the operator UI never calls it directly."</em></p></blockquote>
+
+<p>Two words in that sentence carry the design. <strong>Hybrid</strong>: the part where creativity
+helps (deciding what to search for) is model-driven; the part where correctness matters (what the
+writer sees, what the markers mean, which citations survive) is straight-line Python.
+<strong>Shared</strong>: there is no separate revise service — one entry point,
+<code>run_content_draft_pipeline</code>, handles all three turn kinds.</p>
+
+<h4>3.1 Which turn is this? Precedence, not a mode flag</h4>
+
+<pre><code>is_revision   = latest_version is not None
+is_write_turn = (not is_revision) and (approved_outline is not None)
+# else: outline turn</code></pre>
+
+<p>The caller never sends a <code>turn_type</code>. The turn kind is <em>derived</em> from which
+data is present, in a fixed precedence: a job that has a version is revising, a job that has an
+approved 구성안 but no version is writing, and everything else is researching toward a proposal. One
+consequence is stated in a comment on the backend side: once a version exists, the approved outline
+is not re-sent, because revision precedence would ignore it anyway.</p>
+
+<figure>
+<svg viewBox="0 0 720 250" role="img" aria-label="Diagram of the three turn kinds and their stages.">
+  <defs><marker id="c1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6 z" fill="#888"/></marker></defs>
+
+  <text x="8" y="24" font-size="12.5" font-weight="bold" fill="currentColor">OUTLINE turn (no version, no approved 구성안)</text>
+  <rect x="8" y="32" width="112" height="34" rx="6" fill="rgba(150,100,200,.15)" stroke="#96c"/>
+  <text x="20" y="54" font-size="11" fill="currentColor">research loop</text>
+  <rect x="132" y="32" width="86" height="34" rx="6" fill="rgba(204,150,90,.15)" stroke="#c96"/>
+  <text x="146" y="54" font-size="11" fill="currentColor">filter</text>
+  <rect x="230" y="32" width="104" height="34" rx="6" fill="rgba(204,150,90,.15)" stroke="#c96"/>
+  <text x="242" y="54" font-size="11" fill="currentColor">categorize</text>
+  <rect x="346" y="32" width="120" height="34" rx="6" fill="rgba(85,136,170,.15)" stroke="#58a"/>
+  <text x="358" y="54" font-size="11" fill="currentColor">gate + 구성안</text>
+  <rect x="478" y="32" width="180" height="34" rx="6" fill="rgba(128,128,128,.12)" stroke="#888"/>
+  <text x="490" y="54" font-size="11" fill="currentColor">→ outline | needs_input</text>
+  <line x1="120" y1="49" x2="129" y2="49" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="218" y1="49" x2="227" y2="49" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="334" y1="49" x2="343" y2="49" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="466" y1="49" x2="475" y2="49" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+
+  <text x="8" y="108" font-size="12.5" font-weight="bold" fill="currentColor">WRITE turn (구성안 approved, no version yet)</text>
+  <rect x="8" y="116" width="150" height="34" rx="6" fill="rgba(74,170,119,.15)" stroke="#4a7"/>
+  <text x="20" y="138" font-size="11" fill="currentColor">rehydrate doc_map</text>
+  <rect x="170" y="116" width="164" height="34" rx="6" fill="rgba(85,136,170,.15)" stroke="#58a"/>
+  <text x="182" y="138" font-size="11" fill="currentColor">write section 1…M</text>
+  <rect x="346" y="116" width="120" height="34" rx="6" fill="rgba(85,136,170,.15)" stroke="#58a"/>
+  <text x="358" y="138" font-size="11" fill="currentColor">integrate</text>
+  <rect x="478" y="116" width="180" height="34" rx="6" fill="rgba(128,128,128,.12)" stroke="#888"/>
+  <text x="490" y="138" font-size="11" fill="currentColor">post-process → draft</text>
+  <line x1="158" y1="133" x2="167" y2="133" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="334" y1="133" x2="343" y2="133" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="466" y1="133" x2="475" y2="133" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+
+  <text x="8" y="192" font-size="12.5" font-weight="bold" fill="currentColor">REVISE turn (a version exists)</text>
+  <rect x="8" y="200" width="112" height="34" rx="6" fill="rgba(150,100,200,.15)" stroke="#96c"/>
+  <text x="20" y="222" font-size="11" fill="currentColor">research loop</text>
+  <rect x="132" y="200" width="202" height="34" rx="6" fill="rgba(85,136,170,.15)" stroke="#58a"/>
+  <text x="144" y="222" font-size="11" fill="currentColor">edits  |  rewrite  (+ reflect)</text>
+  <rect x="346" y="200" width="312" height="34" rx="6" fill="rgba(128,128,128,.12)" stroke="#888"/>
+  <text x="358" y="222" font-size="11" fill="currentColor">post-process → draft (with revision metadata)</text>
+  <line x1="120" y1="217" x2="129" y2="217" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+  <line x1="334" y1="217" x2="343" y2="217" stroke="#888" stroke-width="1.6" marker-end="url(#c1)"/>
+</svg>
+<figcaption>Three turns through one function. Only the write turn skips research — it rehydrates the
+document set the outline turn stored.</figcaption>
+</figure>
+
+<h4>3.2 Decision one: the research loop is hand-rolled and stateless</h4>
+
+<p>Six iterations, at most eight searches, no framework:</p>
+
+<pre><code>for _iteration in range(MAX_RESEARCH_ITERATIONS):
+    response = await acall_with_retry(lambda: bound.ainvoke(messages), …)
+    tool_calls = list(getattr(response, "tool_calls", None) or [])
+    if not tool_calls:
+        break
+    messages.append(response)
+    for call in tool_calls:
+        …                       # cap checks, manual dispatch, progress ping
+        messages.append(ToolMessage(content=result_text, tool_call_id=call_id))</code></pre>
+
+<p><code>messages</code> is a plain Python list that lives for the duration of one function call. When
+the turn ends it is garbage. Nothing is persisted, nothing is resumable.</p>
+
+<div class="callout">
+<p><strong>Contrast with the chat agent, deliberately.</strong> Explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5</a> walked a
+loop in the very same codebase that is the opposite in every respect: a LangChain
+<code>create_agent</code> graph with a <strong>Postgres checkpointer</strong>, so a turn can be
+interrupted, resumed and replayed. Same company, same repo, two answers — and the reason is the shape
+of the work, not fashion. A chat turn is watched by a human who may reload the page mid-stream, so it
+must survive interruption; a draft turn runs headless inside a Celery task for ten minutes, and if it
+dies the honest recovery is to run it again from the top. Persistence machinery you do not need is
+not free: it is schema, migrations, and a whole class of stale-state bugs.</p>
+</div>
+
+<h4>3.3 Decision two: the tools' bodies never run</h4>
+
+<p>Covered in the Intuition; here is what the manual dispatch actually does per call.</p>
+
+<p><strong><code>search_cafe_posts</code></strong> → <code>_run_search</code>
+(<span class="path">:509</span>). Runs the (blocking) shared retrieval through
+<code>asyncio.to_thread</code>, catches exactly two exception types
+(<code>RetrievalEmbeddingError</code>, <code>RetrievalRerankError</code>) and turns them into the
+Korean string <em>"검색에 실패했습니다."</em> — a failed search is a tool result, not a turn failure.
+Then it merges every candidate into <code>doc_map</code>: new posts get
+<code>{meta, body:"", rank, score, queries:[q]}</code>; a repeat hit keeps the <em>better</em> rank
+("never first-writer-wins", says the comment). Only the first
+<code>SEARCH_PREVIEW_LIMIT = 12</code> rows go back to the model.</p>
+
+<p><strong><code>read_posts</code></strong> → <code>_run_read</code> (<span class="path">:565</span>).
+Normalizes the id list defensively (rejecting <code>bool</code> before <code>int</code>, dropping
+non-positives and duplicates), hydrates bodies through the shared
+<code>hydrate_document_bodies</code>, stores the full body in <code>doc_map</code> and returns only an
+800-character excerpt per post. The model gets enough to decide whether to dig deeper; the writer
+later gets the whole thing.</p>
+
+<p>After the loop, and only after, the pool is trimmed:</p>
+
+<pre><code>def _trim_candidate_pool(doc_map, *, limit=MAX_CANDIDATE_POOL):
+    """… This runs once, after collection ends — never mid-candidate-list, which is
+    what made the old `break` truncate a late search arbitrarily. Documents the
+    driver actually read (body hydrated) are never evicted: they cost a model
+    call already and dropping one would silently lose researched content."""</code></pre>
+
+<div class="callout measured">
+<p><strong>Measured.</strong> Running the real <code>_trim_candidate_pool</code> on a pool of 104
+unread posts plus one <em>read</em> post ranked 400th: final size <strong>101</strong>, and the
+rank-400 post <strong>survived</strong>. The "never evict a hydrated body" rule can legitimately push
+the pool past its own limit — the cap is a budget on cheap items, not a hard ceiling.</p>
+</div>
+
+<p>This is the fix for a real, measured bug. Before P52 the same loop capped at 24 documents and
+enforced the cap with a <code>break</code> in the middle of a candidate list; live on the dev stack,
+five driver queries plateaued at 6 → 9 → 9 → 9 → 9 documents. The pooled version over the same
+queries reached 24 → 37 → 69 → 82 → 110, trimmed to 100. The corpus had always been there; the
+boundary was throwing it away.</p>
+
+<h4>3.4 Decision three: the model-call idiom, cloned from the consulting pipeline</h4>
+
+<p>Every model call in this package is built the same way (<code>_build_draft_model</code>,
+<span class="path">:247</span>) and invoked the same way. Four rules, all of them defensive:</p>
+
+<table>
+<thead><tr><th>Rule</th><th>Code</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>one constructor</td><td><code>init_chat_model(model, model_provider=…, temperature=0.0, google_api_key=…)</code></td><td>determinism at temperature 0; the provider is itself resolvable from the operator store</td></tr>
+<tr><td>native retry off</td><td><code>max_retries = 1</code> when <code>disable_native_retry</code></td><td>google-genai reads <code>1</code> as "no retries", so <code>acall_with_retry</code> stays <strong>the single 429 authority</strong> — two retry loops stacked would multiply the backoff invisibly</td></tr>
+<tr><td>conditional thinking level</td><td><code>if thinking_level: extra["thinking_level"] = …</code></td><td>an unresolved level means <em>omit the kwarg</em>, never pass <code>None</code></td></tr>
+<tr><td>normalize every <code>.content</code></td><td><code>normalize_llm_text_content(...)</code></td><td>Gemini may return <code>.content</code> as a <em>list</em> of content-block parts; a bare <code>.strip()</code> raises and silently degrades</td></tr>
+</tbody>
+</table>
+
+<p><code>acall_with_retry</code> (<span class="path">apps/agent/app/llm_resilience.py</span>) bounds
+each attempt with <code>asyncio.timeout</code> when
+<code>gemini_request_timeout_seconds</code> is set (default <code>None</code>), retries only Gemini
+429s (walking the <code>__cause__</code> chain, since LangChain may wrap the provider error),
+<code>gemini_max_retries = 2</code> with exponential backoff from
+<code>gemini_retry_backoff_base_seconds = 0.5</code>, and deliberately does <em>not</em> retry a
+timeout. Explainer #16 owns that module.</p>
+
+<p>And then the part that is genuinely unusual: <strong>JSON comes out by hand.</strong></p>
+
+<pre><code>def _parse_json_from_llm(text):
+    if not isinstance(text, str):
+        text = "\n".join(…)                 # flatten list-shaped content
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")[1:]     # drop the opening fence
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+    return json.loads(cleaned)</code></pre>
+
+<p>Fourteen lines, no schema, no validation library, and callers that treat a
+<code>JSONDecodeError</code> as "the model did not choose that shape". Set that next to v2's
+<code>analysis.GeminiStructuredWorker</code> (explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13</a>)
+and you have two opposite answers to the same question, both of them defensible:</p>
+
+<ul>
+<li><em>Structured output</em> guarantees a shape, and therefore forces you to <em>have</em> a shape.
+It is a poor fit when the model is choosing between kinds of answer — v1's revise turn returns either
+a JSON edit directive <em>or</em> plain markdown prose, and "either" is not a schema.</li>
+<li><em>Hand parsing</em> costs a class of failures — but those failures are recoverable here by
+design: an unparseable revise response is simply treated as a rewrite.</li>
+</ul>
+
+<h4>3.5 Decision four: the write turn is segmented, and integration replaces reflection</h4>
+
+<p><code>_write_segmented</code> (<span class="path">:1559</span>) writes one section per model call,
+in order, then makes one whole-body integration call. Three things make it work:</p>
+
+<ul>
+<li><strong>Each section sees only its own category's documents.</strong>
+<code>_section_write_post_ids</code> resolves <code>sections[i].category_key</code> to the approved
+category and passes just those post ids — with a careful fallback: a section that cannot resolve its
+own category falls back to the whole curated union, <em>never to an empty list</em>, because "the
+model would invent the section from nothing".</li>
+<li><strong>Continuity without an unbounded prompt.</strong> <code>_previous_sections_block</code>
+gives the writer everything written so far, and once that exceeds
+<code>MAX_PREVIOUS_SECTIONS_CONTEXT_CHARS = 8000</code> it degrades to the immediately previous
+section verbatim plus the earlier sections' headings.</li>
+<li><strong>Integration is fail-soft; sections are not.</strong> An empty section response raises and
+fails the attempt (the Celery ladder re-runs the whole idempotent turn); an integration failure logs
+a warning and falls back to the plain concatenation of the sections. The expensive, already-paid-for
+work is never thrown away for want of a final polish.</li>
+</ul>
+
+<p><code>_reflect_draft</code> — a settings-gated self-critique pass
+(<code>content_draft_reflection_enabled</code>, default <code>True</code>) — therefore runs only on
+the two paths that have no integration pass: a zero-section outline's one-shot write, and a
+<code>rewrite</code>-mode revision. Running both would be paying twice for the same review.</p>
+
+<h4>3.6 The deterministic tail: <code>_post_process</code> (<span class="path">:1964</span>)</h4>
+
+<p>Whatever the model produced, five deterministic steps close every turn:</p>
+
+<ol>
+<li><code>_extract_asks_block</code> — pull a trailing <code>```json</code> fence off the body if it
+is asks-shaped (<code>questions</code> or <code>image_requests</code>). A malformed fence is logged
+and dropped; a trailing JSON fence that is <em>not</em> asks-shaped is left in the body untouched.</li>
+<li><code>normalize_bare_post_id_markers</code> then <code>render_citation_markers</code> — turn the
+model's <code>[post:1023]</code> internal markers into visible <code>[1] [2] …</code> numbering,
+keeping only ids that are actually in <code>doc_map</code>. This is shared chat-citation machinery
+(explainer <a href="https://knowledge.hi2vi.com/@leetusik/changple5/11-safety-and-grounding">#11</a>),
+reused verbatim.</li>
+<li><code>strip_unmatched_visible_citation_markers</code> — remove any <code>[n]</code> the model
+invented beyond the real citation count, with a warning log.</li>
+<li><code>_strip_unknown_image_markers</code> — the line-level marker rules measured earlier.</li>
+<li>An empty result after all that <em>raises</em> — an empty article is a failed turn, not a
+publishable one.</li>
+</ol>
+
+<div class="callout measured">
+<p><strong>Measured.</strong> <code>_extract_asks_block</code> on
+<code>"본문입니다.\n\n```json\n{\"questions\": [{\"id\": \"q1\", …}]}\n```"</code> returns the body
+<code>'본문입니다.'</code> and the dict
+<code>{'questions': [{'id': 'q1', 'text': '가격표 사진이 있나요?'}], 'image_requests': []}</code> —
+note the missing key is normalized to <code>[]</code> rather than left absent, so downstream code
+never has to test for it.</p>
+</div>
+
+<h3 id="c4">§4 The supporting modules</h3>
+
+<h4>4.1 <span class="path">retrieval.py</span> (122 lines) — wide, and only for us</h4>
+
+<p>This is the smallest module in the package and the one with the most interesting docstring. Its
+whole body is one function that calls the shared retrieval entry point with four explicit width
+arguments:</p>
+
+<pre><code>CONTENT_LEXICAL_CANDIDATE_LIMIT      = 64   # shared default: 32
+CONTENT_VECTOR_CANDIDATE_LIMIT       = 64   # shared default: 32
+CONTENT_VECTOR_PER_VARIANT_LIMIT     = 24   # shared default: 12
+CONTENT_RERANK_CANDIDATE_LIMIT       = 40   # shared default: 16
+CONTENT_CHUNK_CANDIDATE_LIMIT        = 24   # + chunk_mode=ChunkMode.SUPPLEMENT</code></pre>
+
+<p>The boast in the docstring is the teachable part: <em>"<strong>This module changes nothing for
+anyone else.</strong>"</em> No shared module-level default is touched. Chat, 컨설팅 report and
+probing, author posts and the public <code>POST /agent-api/v1/retrieve</code> all keep calling with
+defaults. And this is the concrete payoff for the claim explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7</a> made about the
+retrieval chokepoint: <em>because</em> the shared function takes per-call widths as keyword
+arguments, a demanding new consumer needs a 122-line call-site wrapper and zero edits inside
+<span class="path">app/retrieval/</span>. The same is true of the chunk arm added later: this module
+is the <em>only</em> caller that passes <code>chunk_mode=ChunkMode.SUPPLEMENT</code>, so every other
+caller executes no chunk SQL at all.</p>
+
+<div class="callout">
+<p><strong>The property that makes it safe:</strong> the ranked-result cache key already carries all
+four widths, the chunk mode and the chunk limit, so a wide content-agent call gets its own cache
+entry and <em>cannot poison chat's</em>. Widening a shared default would have been one line and would
+have quietly changed four other products; the boundary makes the reversal one line too (delete two
+keyword arguments — "it is never a re-index").</p>
+</div>
+
+<h4>4.2 <span class="path">curation.py</span> (400 lines) — ranking is not judgment</h4>
+
+<p>This module exists because of one sentence in its docstring:</p>
+
+<blockquote><p><em>"P52.S2 widened collection to a ~100-post relevance-ranked pool, but ranking is not
+judgment: <code>_merge_reranked_post_ids</code> re-appends every candidate the reranker omitted, so a
+passing mention of the subject survives next to a post that is entirely about it."</em></p></blockquote>
+
+<p>Unpack that. The reranker sorts; it never filters — anything the model left out of its ordering is
+appended back in fusion order (explainer #7 recorded this as the chokepoint's totality guarantee). So
+after collection you hold 100 posts in a sensible order, of which perhaps 30 are actually <em>about</em>
+the shop and 70 mention it in passing. Order alone cannot tell you where that line falls. Two flash
+stages supply the judgment:</p>
+
+<ol>
+<li><strong><code>filter_relevant_documents</code></strong> — one call over every pooled title +
+summary, returning the ids with <em>dedicated</em> content about the subject.</li>
+<li><strong><code>categorize_documents</code></strong> — multi-label grouping of the survivors into
+the sections the article will be written from. Names are invented per subject; there is no house
+taxonomy.</li>
+</ol>
+
+<p>Two structural rules make these stages safe to run on every outline turn:</p>
+
+<p><strong>Neither stage may fail a turn.</strong> Pool ≤ <code>MIN_RELEVANT_DOCUMENTS = 8</code> →
+no model call at all. Survivors below that floor → the pool's top 8 by rank. Any exception → the
+whole pool, with a warning. Categorization failure, or a result that normalizes to zero categories →
+one <strong>전체</strong> category holding the top 10 by rank. Degraded, but always valid.</p>
+
+<p><strong>Caps are code, never the model.</strong> Ids outside the survivor set are dropped,
+duplicates collapse, <code>MAX_CATEGORIES = 10</code> × <code>MAX_POSTS_PER_CATEGORY = 10</code> are
+applied after the call, categories are ordered by their best member's rank, empty ones vanish, and the
+stable key is minted <em>here</em> as <code>cat-1 … cat-10</code> — after ordering — because the
+operator may rename a category and the key has to survive that.</p>
+
+<div class="callout warn">
+<p><strong>The one exception to "never <code>with_structured_output</code>".</strong> These two stages
+<em>do</em> use it (with <code>include_raw=True</code>, at temperature 0), and the module docstring
+argues the case rather than hiding it: both outputs are bare lists of integers,
+<code>GeminiRetrievalReranker</code> already proves the pattern works in this app, and it removes a
+whole class of parse failure from a stage that runs on every outline turn. Worth noting as a matter
+of engineering culture: the exception is documented at the exception, next to the rule it breaks.</p>
+</div>
+
+<h4>4.3 <span class="path">images.py</span> (223 lines) — alt text, or invisible</h4>
+
+<p><code>load_document_images</code> is a deliberate sibling of
+<span class="path">retrieval/document_bodies.load_document_bodies</span>: a single
+<code>SELECT post_id, image_urls FROM documents_documentsource WHERE post_id = ANY(%s)</code> over the
+read bridge, owned by the content-draft package, touching none of the shared retrieval SQL or
+metadata that consumer chat depends on. <code>hydrate_document_images</code> wraps it fail-soft — an
+image-load failure means an article with no corpus photographs, never a failed turn.</p>
+
+<p><code>build_corpus_image_inventory</code> then turns those raw rows into placeable candidates, and
+its filter is the memorable part:</p>
+
+<pre><code>alt = _normalized_alt(entry)          # entry["generated_alt"], may be None
+url = _normalized_url(entry)
+if not alt or not url or url in seen_urls:
+    continue                          # ← an alt-less image never becomes a candidate</code></pre>
+
+<div class="callout">
+<p><strong>Why an alt-less image is not "an image with no caption" but <em>no image at all</em>.</strong>
+The model choosing where photographs go is a text model. It never sees pixels. Its entire view of an
+image is one inventory line — <code>{{img:&lt;key&gt;}} — 매장 내부 좌석과 조명 (post 1023)</code> —
+so an image with an empty <code>generated_alt</code> is literally not describable to it. Excluding it
+is not a quality filter; it is a type constraint.</p>
+</div>
+
+<p>This ties both ways. The <code>generated_alt</code> column is filled by ingestion's
+<span class="path">image_alt.py</span> enrichment (explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">#8</a>) — that is what
+makes corpus images visible to any writer at all. And v2 hit the same wall from the other side and
+attacked the other end: its <span class="path">alt_backfill.py</span> service writes
+<code>generated_alt</code> onto rows that lack it, precisely because writing an alt <em>moves a
+corpus row into candidacy</em> (explainer #14).</p>
+
+<p>The rest of the module is quiet good behaviour: a fresh <code>uuid4</code> per candidate (so a
+corpus image is placed with the same marker grammar as an operator upload), per-post round-robin under
+<code>MAX_CORPUS_IMAGES_PER_POST = 6</code> and <code>DEFAULT_CORPUS_IMAGE_INVENTORY_CAP = 40</code>,
+so one photo-heavy post cannot fill the whole tray, and a <code>seen_urls</code> set seeded with the
+job's existing attachments so a previously downloaded image is never offered twice.</p>
+
+<h4>4.4 <span class="path">prompts.py</span> (584 lines) — where the Korean lives</h4>
+
+<p>Nine prompt builders, all Korean-facing, all grounded in exactly three inputs: the operator's brief
+plus the operator↔agent thread; the reference format profile; and the corpus documents the research
+loop gathered. The module's structural idea is that the <em>conventions</em> are constants shared
+across builders — <code>_IMAGE_CONVENTION</code>, <code>_CORPUS_IMAGE_CONVENTION</code>,
+<code>_CITATION_CONVENTION</code>, <code>_ASKS_CONVENTION</code>, <code>_VOICE_GUIDANCE</code> — so a
+draft and its revisions state the same rules to the model and therefore render identically downstream.
+Change the marker grammar in one place and write, revise and reflect all learn it at once.</p>
+
+<p>Two prompt decisions are worth reading as product decisions:</p>
+
+<ul>
+<li><strong>Adapt, never copy.</strong> <code>_format_reference_profile</code> hands the model a real
+published article and then narrows what it may take from it: <em>"문체·톤·문장 길이·이미지 배치
+리듬만 본보기로 삼고, 문장이나 사실을 그대로 베끼지 않는다"</em> — voice, tone, sentence length and
+image rhythm only, never sentences or facts. And explicitly: <em>"글의 구조(섹션 수·순서·주제)는 이
+참고 형식을 따르지 않는다"</em> — the approved 구성안 owns structure, not the exemplar.</li>
+<li><strong>The section writer is told what it is not allowed to do.</strong>
+<code>build_section_prompt</code> forbids a <code>#</code> title, forbids inventing a new
+<code>##</code> section, forbids numbering the 소제목, and forbids appending an asks fence — because
+citation renumbering, marker validation and the single asks block are the integration pass's and the
+post-process's job. Prompts in this codebase are written as contracts with the deterministic code
+downstream.</li>
+</ul>
+
+<h3 id="c5">§5 The progress channel — and a drift to report</h3>
+
+<p><span class="path">content_drafts/progress.py</span> is 61 lines and does one thing: POST a JSON
+envelope to the backend and swallow every possible error.</p>
+
+<pre><code>except Exception as exc:  # noqa: BLE001 - progress must never break a turn
+    logger.debug("Draft progress emit failed for job %s: %s", job_id, exc)</code></pre>
+
+<p>Five-second timeout, a falsy <code>job_id</code> is a no-op (so the pipeline stays testable without
+a backend), missing configuration is a no-op, and a network failure is a <code>debug</code> log. The
+justification is a proportionality argument worth internalizing: a dropped progress ping leaves the
+operator's panel one poll tick stale; a raised progress ping loses a ten-minute article. Telemetry
+must never be able to fail the thing it is describing.</p>
+
+<p>One channel, extended twice and never duplicated: the segmented write turn's build stages
+(<code>writing</code>, <code>integrating</code>) came first, then the research stages
+(<code>collecting → filtering → categorizing → outlining</code>, plus <code>revising</code> and
+<code>reflecting</code>) rode the same endpoint, same field, same panel. Each envelope is tagged with
+a <code>flow</code> (<code>"outline"</code> or <code>"revise"</code>) so the UI can pick the right row
+set. On the backend the envelope lands on <code>ContentDraftJob.progress</code>, a schema-light
+JSONField whose <code>help_text</code> ends with the instruction <em>"do not add a second
+channel."</em></p>
+
+<h4>The drift</h4>
+
+<p>The module's docstring closes with this paragraph:</p>
+
+<blockquote><p><em>"P54.S5 extends the SAME channel to Content Agent v2: the backend endpoint resolves
+the posted job id against the v1 job table and then against the v2 <code>ContentAgentJob</code> table,
+so <strong>a v2 stage emits through this exact function</strong> with its own stage names in the
+envelope. Still no second channel."</em></p></blockquote>
+
+<p>The first half is true and the emphasized clause is not, any more. Verified today:</p>
+
+<ul>
+<li>v2 makes <strong>no agent-service call at all</strong> — <span class="path">agent_jobs/</span> has
+zero matches for <code>agent-api</code>, <code>AGENT_BASE_URL</code> or
+<code>X-Agent-Service-Token</code>.</li>
+<li>Its five live progress producers are <strong>in-process Django/Celery call sites</strong> that
+import <code>record_job_progress</code> directly: <span class="path">build.py:1860</span>,
+<span class="path">architect.py:718</span>, <span class="path">chat_intake.py:700</span>,
+<span class="path">revisions.py:306</span>, <span class="path">publishing.py:1216</span>.</li>
+<li>The HTTP fall-through at <span class="path">content/urls.py:594</span> →
+<span class="path">draft_views.py:1022</span> is real and reachable, but it is a <strong>seam</strong>,
+not the live path: it exists so that anything which ever <em>does</em> emit for a v2 job lands on the
+same field and envelope instead of growing a second channel.</li>
+</ul>
+
+<p>So the sentence is prose lag, not a bug — the guarantee it protects still holds; only the mechanism
+described is no longer the one in use. It is reported here and routed as a question for the operator
+(this phase changes no product code, and a docs-only phase fixing comments in passing is how
+unreviewed edits happen).</p>
+
+<div class="callout warn">
+<p><strong>A second, smaller precision.</strong> It is often said that "both halves share
+<code>PROGRESS_ACCEPTING_STATES</code>". They do not share the constant — they share the
+<em>rule</em>. v1's view gates on <code>DRAFT_GENERATION_QUEUEABLE_STATUSES</code>
+(<code>requested · collecting · drafting · revising</code>); v2's
+<code>record_job_progress</code> gates on <code>PROGRESS_ACCEPTING_STATES</code>
+(<code>processing · proposing · writing · integrating · publishing</code>), whose own comment says it
+is "the v1 rule … carried over to the SAME channel". Both refuse a ping outside an active window with
+a cheap no-op rather than an error, and v2 deliberately excludes <code>draft_ready</code> so a late
+envelope cannot paint a progress panel over the editor.</p>
+</div>
+
+<h3 id="c6">§6 Back on the backend: what v1 does with the answer</h3>
+
+<h4>6.1 <span class="path">draft_images.py</span> (134 lines) — a hardened downloader</h4>
+
+<p>The agent returns <code>corpus_images</code>: the candidates whose markers survived post-process,
+each <code>{id, url, caption, post_id, image_index}</code>. The backend downloads each one and creates
+an ordinary <span class="path">ContentDraftAttachment</span> row <strong>whose primary key is the
+agent-minted uuid</strong>. That is the whole trick: because the marker key <em>is</em> the attachment
+pk, every downstream machine — preview, publish, thumbnail selection, revision ordinals — works
+unchanged on a corpus image and an operator upload alike. (v2 reached the identical idea from a
+different direction with its asset uuid.)</p>
+
+<p>The module is modelled on <span class="path">remote_images.download_remote_image</span> (explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12</a>) but hardened,
+because these URLs come out of a corpus rather than an operator's hands:</p>
+
+<table>
+<thead><tr><th>Guard</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>scheme</td><td><code>https</code> only</td></tr>
+<tr><td>host</td><td>must end with <code>.pstatic.net</code> (Naver's CDN — dominated by <code>cafeptthumb-phinf</code>; a rare non-pstatic host fails soft and drops)</td></tr>
+<tr><td>content type</td><td>must start <code>image/</code></td></tr>
+<tr><td>size</td><td><code>15 MiB</code>, enforced from <code>Content-Length</code> <strong>and</strong> by reading one byte past the cap — an undeclared-length stream cannot slip through</td></tr>
+<tr><td>timeout</td><td>20 s</td></tr>
+<tr><td>bytes</td><td>stored as-is; the extension comes from the URL suffix, else the content type, else <code>.img</code></td></tr>
+</tbody>
+</table>
+
+<p>Every failure raises one exception type, and the caller (<code>_materialize_corpus_images</code>)
+treats it as "drop this candidate": strip its marker from the body, post one Korean SYSTEM message
+saying <em>N</em> images could not be loaded, and carry on. There is also a small dedupe fence — a key
+already used by <em>any</em> job's attachment is dropped rather than colliding on the primary key.</p>
+
+<h4>6.2 <span class="path">draft_publish.py</span> (718 lines) — approve <em>is</em> publish</h4>
+
+<p>The operator's approval of a version queues <code>content.publish_draft</code> after commit;
+<code>publish_draft_job</code> (<span class="path">:307</span>) turns markdown into a live article. The
+pipeline is small and worth knowing in order:</p>
+
+<ol>
+<li><strong>Resolve the approved version</strong> from the newest <code>approve</code> decision
+carrying a version FK.</li>
+<li><strong>Title and description</strong>: lift the first heading out of the body
+(<code>_extract_title</code>), truncate (<code>_finalize_title</code>, 200 chars), and derive a
+300-character description from the first real paragraph, with inline markdown flattened.</li>
+<li><strong>Create the content row early</strong> (<code>_ensure_published_content</code>) with an
+empty <code>html_path</code>. This is the idempotency anchor: a retry or a reclaim reuses the same
+content id, and a half-published row is invisible to readers because
+<code>readable()</code> requires a non-empty <code>html_path</code> (explainer #12).</li>
+<li><strong>Split into blocks</strong> (<code>_split_blocks</code>) — image lines become
+<code>{"type": "images", "ids": […]}</code>, everything else accumulates as markdown. The docstring
+says it mirrors the web splitter <code>splitMiracleAgentArtifactBlocks</code> "at exact line-level
+granularity", which is why the model's line-level marker rules are meaningful at all.</li>
+<li><strong>Render</strong>: markdown blocks go through <code>scrub_public_text</code> and then
+<code>markdown.markdown</code>; image blocks become a <code>&lt;figure&gt;</code>, or a
+<code>&lt;div class="column-list"&gt;</code> of <code>&lt;div class="column"&gt;</code> figures when
+the line carried 2–3 markers.</li>
+<li><strong>Stage, then swap</strong>: write <code>index.html</code> plus the images into a temporary
+tree and <code>_swap_directory</code> it into <code>html_content/&lt;id&gt;/miracle/</code>, so a
+reader never observes a half-written article.</li>
+<li><strong>Update, never save</strong>: one queryset <code>.update()</code> writes title,
+description, paths, thumbnail and the weight fields — with an emphatic comment that
+<code>content.save()</code> would re-trigger the model's post-save file pipeline.</li>
+<li><strong>Flip visibility through the seam</strong>: <code>set_content_publish_state(content_id,
+True)</code> at <span class="path">draft_publish.py:411</span> — deliberately <em>not</em> folded into
+the <code>.update()</code> above, so it stays the single publish choke point the chunk-index trigger
+hangs off. Explainer #12 owns that seam; v1 is one of its five callers.</li>
+<li><strong>Then, and only then</strong>, queue the non-blocking Notion archive mirror.</li>
+</ol>
+
+<div class="callout">
+<p><strong>The status flow, and the one asymmetry worth remembering.</strong>
+<code>approved → publishing → published</code>. A publish failure is <strong>recoverable</strong>: the
+job returns to <code>awaiting_review</code> with a Korean SYSTEM message —
+<em>"게시에 실패했습니다: … 다시 승인해 주세요."</em> — bound to the approved version, so the operator
+simply re-approves. <code>failed</code> is reserved for generation, and the reclaim sweep for
+publications has <strong>no attempt ceiling at all</strong>, because publish is idempotent and any
+exception already parks the job somewhere an operator can act on. Contrast v2, where publishing is one
+of two separate acts (초안 저장 writes a real but invisible row; 발행 makes it visible) — v1 has a
+single act, and the recoverable failure is what makes a single act safe.</p>
+</div>
+
+<h4>6.3 The operator API and the job domain</h4>
+
+<p><span class="path">draft_views.py</span> (1,049) and <span class="path">draft_serializers.py</span>
+(796) are the surface an operator client drives: job create/list/detail, the message thread, photo
+attachments, manual versions, the 구성안 approve and history routes, approve, cancel, and a job-scoped
+corpus-image proxy. Two details repay attention:</p>
+
+<ul>
+<li><strong>The message route is the engine.</strong> Posting an operator message re-queues generation
+— and <em>which</em> turn it re-queues depends on where the job is: at
+<code>outline_review</code> the status is set back to <code>collecting</code> so the agent re-proposes
+a 구성안 with the feedback now in the thread digest; anywhere else it becomes <code>revising</code>.
+One endpoint, two meanings, decided by state rather than by a parameter.</li>
+<li><strong>The corpus-image proxy exists because of a CDN detail.</strong> The serializer never emits
+a raw <code>.pstatic.net</code> URL to the operator's browser: Naver's CDN 403s the
+<code>Referer</code> a browser sends for a cross-origin <code>&lt;img&gt;</code> from our origin, so a
+raw hotlink is dead in the console even though the same URL downloads fine server-side. Every
+display-facing URL is rewritten to a job-scoped route on our own origin.</li>
+</ul>
+
+<p>The tables live at <span class="path">content/models.py:704–1120</span> — seven of them:</p>
+
+<table>
+<thead><tr><th>Model</th><th>What it holds</th></tr></thead>
+<tbody>
+<tr><td><code>ContentDraftSettings</code></td><td>a singleton row carrying the standing reference-content id (default 19). A plain integer, deliberately <em>not</em> a foreign key, because the configured id may not exist in every environment and must fail soft.</td></tr>
+<tr><td><code>ContentDraftJob</code></td><td>UUID pk, the brief, <strong>twelve statuses</strong>, the snapshotted <code>reference_content_id</code>, the three generation-attempt columns, <code>progress</code>, <code>published_content</code>, and the three Notion-mirror columns.</td></tr>
+<tr><td><code>ContentDraftVersion</code></td><td>immutable, append-only, unique on <code>(job, number)</code>, with <code>base_number</code> + <code>revision_meta</code> lineage.</td></tr>
+<tr><td><code>ContentDraftMessage</code></td><td>the thread: roles <code>operator/agent/system</code>, kinds <code>brief/feedback/answer/asks/note/system</code>, an optional version FK. <strong>There is no Ask model</strong> — open/answered state is derived from the thread plus <code>status == needs_input</code>.</td></tr>
+<tr><td><code>ContentDraftAttachment</code></td><td>UUID pk = the marker key; the image file, caption, and <code>source_url</code>/<code>source_post_id</code> for corpus-origin images.</td></tr>
+<tr><td><code>ContentDraftOutline</code></td><td>the 구성안 lineage — per-job <code>number</code>, payload, and <code>proposed/superseded/approved</code> status. Editing a 구성안 at the gate writes a <em>new</em> row and supersedes the old one; nothing is mutated.</td></tr>
+<tr><td><code>ContentDraftDecision</code></td><td>the audit trail: <code>approve</code>, <code>cancel</code>, <code>approve_outline</code>.</td></tr>
+</tbody>
+</table>
+
+<p>The twelve statuses, in the order a job meets them:
+<code>requested → collecting → drafting → outline_review → drafting → awaiting_review</code>, sideways
+to <code>needs_input</code> or <code>revising</code>, then
+<code>approved → publishing → published</code>, with <code>failed</code> and <code>cancelled</code> as
+terminals.</p>
+
+<p class="small"><strong>A small fossil.</strong> <code>ContentDraftJob.Mode</code> declares
+<code>MANUAL</code> and <code>AUTO</code>, and the field is even serialized to the client — but
+nothing in the backend ever writes <code>AUTO</code> or reads <code>job.mode</code>. The scheduled
+auto-drafting mode was scoped out ("no auto-mode beat entry was added") and only its enum survived.
+Harmless, and a good example of the kind of residue a superseded subsystem accumulates.</p>
+
+<h3 id="c7">§7 Part C in one view</h3>
+
+<p>Three pages, one product area, told in the order the system was built rather than the order it
+runs. Explainer
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12</a> taught the
+<em>library</em>: the <span class="path">NotionContent</span> row, the single publish seam, media
+derivatives and delivery — the destination every 미라클 article ends up in, whoever wrote it.
+Explainers <a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13</a>
+and <a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14</a>
+taught the <em>agent that fills it today</em>: KakaoTalk intake, brand-scoped post selection, the
+architect's scaffold, the unit-by-unit build, the editing surface, and the two publishing acts — all
+inside Django, all structured passes, all in one 40,000-line package. This page taught the
+<em>generation that came before</em>: the same product goal answered with an HTTP hop to a separate
+service, a hand-rolled research loop, hand-parsed JSON, and a five-character image language.</p>
+
+<p>Read together they make one point that no single page could: the hard parts of this product were
+never the model calls. They were the boundaries — what the writer is allowed to see, what a marker
+means, who is allowed to change a plan, when a row becomes visible to a reader. v2 replaced almost
+every mechanism v1 used, and kept, verbatim, v1's answers to those four questions.</p>
+
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p class="small">Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+<p><strong>1.</strong> v1's two research tools are declared with <code>@tool</code> but their bodies
+raise <code>NotImplementedError</code>. What does dispatching each tool call manually inside the loop
+actually buy?</p>
+<button class="opt" data-correct="false">It lets the model call the tools in parallel, halving research latency.</button>
+<button class="opt" data-correct="true">A hard budget the model cannot spend past, and one accumulating <code>doc_map</code> instead of N independent tool results.</button>
+<button class="opt" data-correct="false">It avoids sending a tool schema to Gemini, which reduces prompt size.</button>
+<button class="opt" data-correct="false">It lets the loop retry a failed tool call transparently without the model noticing.</button>
+<p class="why" hidden>The caps (<code>MAX_RESEARCH_SEARCHES = 8</code>, <code>MAX_CANDIDATE_POOL = 100</code>) are enforced by the loop, which hands back a Korean "limit reached" string instead of running the search; and every search's full candidate list merges into one shared map keyed by <code>post_id</code>, keeping the best rank per post, while the model only ever sees a 12-row preview. The schema <em>is</em> still sent — that is the only thing the decorator is for.</p>
+</div>
+
+<div class="q" id="q2">
+<p><strong>2.</strong> <code>curation.py</code>'s docstring says "ranking is not judgment". What
+exactly does <code>_merge_reranked_post_ids</code> re-add that makes a separate relevance filter
+necessary?</p>
+<button class="opt" data-correct="false">Posts that failed brand-policy filtering, which must be re-checked downstream.</button>
+<button class="opt" data-correct="true">Every candidate the reranker omitted from its ordering — appended back in fusion order — so a post that merely mentions the subject sits in the pool beside one entirely about it.</button>
+<button class="opt" data-correct="false">Duplicate post ids the model listed twice, which the filter then deduplicates.</button>
+<button class="opt" data-correct="false">Posts whose bodies could not be hydrated, which the filter later drops.</button>
+<p class="why" hidden>The reranker orders; it never filters. Anything it left out is appended in fusion order, so the pool is invariant and only the order is the model's. Ordering cannot tell you where "dedicated content" ends and "passing mention" begins — that judgment is <code>filter_relevant_documents</code>'s job, with an 8-document floor and a fail-soft path in three directions.</p>
+</div>
+
+<div class="q" id="q3">
+<p><strong>3.</strong> A corpus image has a perfectly good URL and downloads fine, but its
+<code>generated_alt</code> is empty. Why can the agent never place it?</p>
+<button class="opt" data-correct="false">Because the publish renderer requires a non-empty <code>alt</code> attribute and would fail validation.</button>
+<button class="opt" data-correct="false">Because an empty alt means the ingestion pipeline marked the image as unusable.</button>
+<button class="opt" data-correct="true">Because the model's entire view of an image is one inventory line built from its alt text; with no alt there is nothing to offer it, so <code>build_corpus_image_inventory</code> skips the entry.</button>
+<button class="opt" data-correct="false">Because the marker key is derived from the alt text, so an empty alt yields no key.</button>
+<p class="why" hidden>A text-only model selects by alt semantics. <code>build_corpus_image_inventory</code> keeps only entries with a non-empty <code>generated_alt</code> and a usable url — the exclusion is a type constraint, not a quality bar. The key is a fresh <code>uuid4</code>, unrelated to the alt. This is the exact problem v2's <code>alt_backfill</code> attacks from the other end.</p>
+</div>
+
+<div class="q" id="q4">
+<p><strong>4.</strong> On a revise turn the model returns an <code>edits</code> directive, but one of
+its three <code>find</code> strings appears twice in the body. What happens?</p>
+<button class="opt" data-correct="false">The two edits that matched uniquely are applied; the ambiguous one is skipped with a warning.</button>
+<button class="opt" data-correct="false">The first occurrence is replaced and the turn continues, since order is deterministic.</button>
+<button class="opt" data-correct="true">The whole edit set is discarded, the original body is returned byte-identical, and the pipeline re-calls the model asking for a full rewrite instead.</button>
+<button class="opt" data-correct="false">The turn fails and the Celery ladder retries it from the beginning.</button>
+<p class="why" hidden><code>_apply_edits</code> is atomic: any edit whose <code>find</code> does not occur exactly once aborts the entire set and returns the previous body unchanged (measured). The caller logs a warning and calls <code>_rewrite_fallback</code>, which re-sends the feedback with a Korean suffix instructing a from-scratch rewrite with no JSON block. The turn never fails for this, and edits-mode metadata records <code>mode="rewrite", edit_count=0</code>.</p>
+</div>
+
+<div class="q" id="q5">
+<p><strong>5.</strong> A v2 article is published today. Whose code turns its markdown into the
+stored HTML document?</p>
+<button class="opt" data-correct="false">v2's own renderer — <code>agent_jobs/publishing.py</code> re-implements the semantics so the two generations cannot drift.</button>
+<button class="opt" data-correct="true">v1's — <code>publishing.py</code> imports v1's <code>draft_publish</code> inside eight functions and calls its <code>split_blocks</code>, <code>render_markdown_fragment</code> and <code>render_html_document</code>, and writes into v1's <code>"miracle"</code> sub-directory.</button>
+<button class="opt" data-correct="false">The agent service's, over <code>/agent-api</code>, which both generations share for rendering.</button>
+<button class="opt" data-correct="false">Neither — v2 stores markdown and renders HTML on read in <code>delivery.py</code>.</button>
+<p class="why" hidden>The bottom of <code>draft_publish.py</code> (lines 707–718) exports twelve public aliases, added purely so v2 could reuse v1's exact title/description/block/markdown/document semantics instead of growing a second copy; v2 uses nine of them. The imports are function-local because v1 imports <code>content.models</code> at module level. That is what "v1 is a library the new generation stands on" means literally.</p>
+</div>
+
+</section>
+
+<hr>
+
+<p class="small"><strong>Files walked for this page.</strong> Agent side:
+<span class="path">apps/agent/app/content_drafts/{agent,curation,retrieval,images,prompts,progress,__init__}.py</span>,
+<span class="path">apps/agent/app/api/routes/content_drafts.py</span>,
+<span class="path">apps/agent/app/llm_resilience.py</span>,
+<span class="path">apps/agent/app/llm_config.py</span>,
+<span class="path">apps/agent/app/config.py</span>. Backend side:
+<span class="path">apps/backend/content/{draft_dispatch,draft_publish,draft_images,draft_views,draft_serializers,tasks,urls,models,publish_scrub}.py</span>,
+<span class="path">apps/backend/content/agent_jobs/{progress,publishing,states}.py</span>,
+<span class="path">apps/backend/config/{settings,celery}.py</span>. Front end (to establish what is
+routed): <span class="path">apps/web/src/app/operator/miracle-agent/page.tsx</span> and the unrouted
+<span class="path">apps/web/src/components/operator/operator-miracle-agent-route.tsx</span>.</p>
+
+<p class="small">Previous in this series:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14 —
+Content agent II: architect, build, edit, publish</a>.</p>
+
+<script>
+document.querySelectorAll('.q').forEach(function (q) {
+  var why = q.querySelector('.why');
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var right = btn.dataset.correct === 'true';
+      btn.classList.add(right ? 'correct' : 'incorrect');
+      if (why) why.hidden = false;
+    });
+  });
+});
+</script>
+</body>
+</html>
