@@ -1,0 +1,1405 @@
+<!--kb
+title: "Content agent II: architect, build, edit, publish"
+date: 2026-08-28
+tags:
+  - changple5
+  - content-agent
+  - drafting
+  - publishing
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content agent II: architect, build, edit, publish</title>
+<style>
+  :root { color-scheme: light dark; --line: #d8dbe0; --muted: #6b7280; --accent: #3b6ea5; }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; font-size: 17px; }
+  h1 { line-height: 1.25; font-size: 1.9rem; margin-bottom: .3rem; }
+  h2 { margin-top: 2.6rem; padding-bottom: .3rem; border-bottom: 2px solid var(--line); }
+  h3 { margin-top: 2rem; font-size: 1.18rem; }
+  h4 { margin-top: 1.4rem; font-size: 1.02rem; color: var(--accent); }
+  p, li { overflow-wrap: break-word; }
+  pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+         background: #f4f5f7; padding: .8rem .9rem; border-radius: 6px;
+         font-size: .86em; line-height: 1.5; border: 1px solid var(--line); }
+  code { background: #f0f1f3; padding: .1em .3em; border-radius: 3px; font-size: .9em; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid #4a7; background: #f0f8f4;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.warn { border-left-color: #c88; background: #fbf2f2; }
+  .callout.def  { border-left-color: #78a; background: #f2f5fa; }
+  .callout.meas { border-left-color: #c9a227; background: #fbf7ea; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .lede { font-size: 1.06rem; color: var(--muted); }
+  nav { border: 1px solid var(--line); border-radius: 6px; padding: .6rem 1rem; margin: 1.6rem 0 2rem; }
+  nav ol { margin: .4rem 0; padding-left: 1.3rem; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .87em; color: var(--muted); text-align: center; margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9em; margin: 1.2rem 0; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: .35rem .55rem; text-align: left; vertical-align: top; }
+  th { background: #f4f5f7; }
+  .q { border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; margin: 1.1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
+            padding: .55rem .75rem; cursor: pointer; border: 1px solid var(--line);
+            border-radius: 5px; background: #fafbfc; font: inherit; font-size: .95em; }
+  .q .opt:hover { border-color: var(--accent); }
+  .q .opt.correct   { background: #d6f5d6; border-color: #4a7; }
+  .q .opt.incorrect { background: #f7d6d6; border-color: #c88; }
+  .q .why { margin: .5rem 0 0; font-size: .93em; color: var(--muted); }
+  .fileref { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+  .small { font-size: .9em; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Content agent II: architect, build, edit, publish</h1>
+<p class="lede">Explainer #14 of the changple5 builder's curriculum. Part C, second half of the 미라클
+content agent: from the moment the operator approves a 구성안 to the moment an article becomes
+public. Continues from
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13 — Content agent I: KakaoTalk intake and scaffolding a draft</a>.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — from an approved plan to a published article</a></li>
+    <li><a href="#intuition">Intuition — the plan is frozen, everything downstream obeys it</a></li>
+    <li><a href="#code">Code — the real walkthrough</a>
+      <ol>
+        <li><a href="#code-gate">The 승인 gate: two calls, one guard</a></li>
+        <li><a href="#code-build">The build — <span class="fileref">build.py</span></a></li>
+        <li><a href="#code-assets">The assets the writing places</a></li>
+        <li><a href="#code-draft">The draft as an editing surface</a></li>
+        <li><a href="#code-publish">Publish, and the handoff to #12</a></li>
+        <li><a href="#code-strip">The strip and the progress channel</a></li>
+        <li><a href="#code-drift">Drift found while walking (reported, not fixed)</a></li>
+      </ol>
+    </li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background — from an approved plan to a published article</h2>
+
+<p>Explainer #13 left the 미라클 content agent (v2) parked at a state called
+<code>needs_review</code>. Everything before that point was about deciding <em>what the article is
+going to be</em>: which cafe posts count as evidence, which KakaoTalk conversations the operator
+chose, which photos the job may use, and finally a <strong>구성안</strong> — a section-by-section
+plan, each section carrying a pinned heading, a target length, its own evidence, and an explicit
+list of the photos and conversation captures allocated to it.</p>
+
+<p>What is left is the second half of the job, and it is the half a reader of the finished article
+actually sees: write the prose, smooth it into one body, let the operator edit it, and ship it.
+That is four backend stages —</p>
+
+<pre><code>needs_review --approve_scaffold--> writing --units_done--> integrating
+             --integration_done--> draft_ready
+             --(begin_adjust)--> adjusting
+             --publish--> publishing --publish_succeeded--> published</code></pre>
+
+<p>— plus two things that ride alongside them the whole way: the <strong>asset registry</strong>
+(which images exist, which may be used, and what their identity is) and the <strong>six-step
+strip</strong> (the one server-computed answer to "where is this job right now").</p>
+
+<div class="callout def">
+<p><strong>Jargon, defined once.</strong></p>
+<ul>
+<li><strong>구성안</strong> (<em>gu-seong-an</em>) — the approved outline document: title, core
+message, an opening plan, numbered sections, a closing plan, and a per-unit media allocation.</li>
+<li><strong>Unit</strong> — one writable piece of the article: the 서두 (opening), each 절
+(numbered section), and the 맺음 (closing). The build's denominator is units, not sections.</li>
+<li><strong>Marker</strong> — a placeholder the writer puts inline in its prose:
+<code>{{img:&lt;asset-uuid&gt;}}</code> for a photo, <code>{{cap:&lt;chat_rev&gt;:&lt;from&gt;-&lt;to&gt;}}</code>
+for a KakaoTalk conversation range. A marker is a <em>position</em>, not a picture.</li>
+<li><strong>Revision</strong> — an immutable row holding a whole 구성안 document. Approving writes
+a new one; nothing ever edits an old one.</li>
+<li><strong>Draft</strong> — an immutable row holding one integrated body. Every save appends the
+next draft; nothing ever rewrites one.</li>
+</ul>
+</div>
+
+<p>If you want the wider orientation before the code,
+<span class="fileref">docs/current/backend.md</span> § "Content Agent v2" and its sub-sections
+"Writing, verification, chat, publishing, revisions", "The v3 machine — the simple job flow (P79)"
+and "The draft is rendered, saved and adjusted (P81)" are the fastest read. Everything below was
+verified against the code, and § <a href="#code-drift">Drift found while walking</a> lists the
+three places where that documentation has fallen behind the source.</p>
+
+<h3>The one design commitment that makes this interesting</h3>
+
+<p>You could build this stage as "hand the LLM the outline and the evidence, ask for an article".
+This system deliberately does not. The organising rule of everything below is:</p>
+
+<div class="callout">
+<p><strong>The approved plan is immutable input, and every stage downstream is forbidden from
+quietly changing it.</strong> Not "discouraged by the prompt" — <em>forbidden by machine checks
+that fail the attempt</em>. The heading sequence the operator approved comes back identically or
+the integration attempt is thrown away. The photos the operator allocated come back marker for
+marker or the return is repaired deterministically. A unit the machine could not write is
+<em>removed from the build</em> by an explicit operator answer, and the approved revision is still
+not touched.</p>
+</div>
+
+<p>That commitment is what turns a pile of LLM calls into something an operator can trust with a
+public article, and it is the transferable idea on this page. Everything else — the sequential
+loop, the asset registry, the derived section list, the single publish choke point — is a
+consequence of taking it seriously.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition — the plan is frozen, everything downstream obeys it</h2>
+
+<h3>The gate is a guard over data, not a button</h3>
+
+<p>The clearest small example of the system's whole posture sits right at the entrance to this
+page's territory. "Approving the 구성안" is <strong>two separate calls</strong>, not one:</p>
+
+<ol>
+<li><code>services.approve_scaffold_revision(job, …)</code> writes an immutable revision row with
+<code>kind=APPROVED</code>, a content hash, a timestamp and the approver. That is the
+<em>record</em>.</li>
+<li><code>services.transition(job, "approve_scaffold")</code> moves the job from
+<code>needs_review</code> to <code>writing</code>. That is the <em>move</em>, and it is
+<strong>gated on the record existing</strong>.</li>
+</ol>
+
+<p>The state machine's edge does not ask "did someone click 승인?". It asks a guard function, and
+the guard reads the database: <em>is there an approved revision, and does it record that the
+operator saw the change list?</em> If either is false the transition refuses with a machine-readable
+blocker. Nothing about the operator's session, intent or click is trusted; only durable data is.</p>
+
+<figure>
+<svg viewBox="0 0 700 210" role="img" aria-label="The approval gate as two calls, with the guard reading the revision row">
+  <rect x="10" y="70" width="140" height="60" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+  <text x="80" y="95" text-anchor="middle" font-size="14" font-family="system-ui">job state</text>
+  <text x="80" y="115" text-anchor="middle" font-size="14" font-family="monospace">needs_review</text>
+
+  <rect x="280" y="10" width="180" height="62" rx="6" fill="#eaf6ee" stroke="#4a7"/>
+  <text x="370" y="32" text-anchor="middle" font-size="13" font-family="system-ui">1. the RECORD</text>
+  <text x="370" y="50" text-anchor="middle" font-size="11.5" font-family="monospace">ScaffoldRevision</text>
+  <text x="370" y="64" text-anchor="middle" font-size="11.5" font-family="monospace">kind=APPROVED</text>
+
+  <rect x="280" y="120" width="180" height="70" rx="6" fill="#fbf7ea" stroke="#c9a227"/>
+  <text x="370" y="142" text-anchor="middle" font-size="13" font-family="system-ui">2. the MOVE (gated)</text>
+  <text x="370" y="160" text-anchor="middle" font-size="11.5" font-family="monospace">transition(</text>
+  <text x="370" y="175" text-anchor="middle" font-size="11.5" font-family="monospace">"approve_scaffold")</text>
+
+  <rect x="540" y="70" width="150" height="60" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+  <text x="615" y="95" text-anchor="middle" font-size="14" font-family="system-ui">job state</text>
+  <text x="615" y="115" text-anchor="middle" font-size="14" font-family="monospace">writing</text>
+
+  <path d="M150 92 L275 45" stroke="#4a7" stroke-width="2" fill="none" marker-end="url(#a14)"/>
+  <path d="M150 108 L275 150" stroke="#c9a227" stroke-width="2" fill="none" marker-end="url(#a14)"/>
+  <path d="M460 155 L535 112" stroke="#7a8fa6" stroke-width="2" fill="none" marker-end="url(#a14)"/>
+  <path d="M370 120 L370 78" stroke="#999" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#a14)"/>
+  <text x="378" y="102" font-size="11" fill="#666" font-family="system-ui">guard reads it</text>
+  <defs>
+    <marker id="a14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#666"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>승인 is a record plus a guarded move. The guard cannot be satisfied by a request — only
+by a row that already exists.</figcaption>
+</figure>
+
+<h3>Why the build is a chain and not a fan-out</h3>
+
+<p>An article has six units. You have six independent LLM calls to make. The obvious engineering
+instinct is to run them in parallel — six calls at once, one sixth of the wall-clock time.</p>
+
+<p>This build refuses to, and the reason is not caution. Each unit's prompt packet carries the
+<strong>summaries and continuity notes of every unit already written</strong>. Unit 4 is told, in
+the writer's own earlier words, what units 1–3 already said and what thread they left hanging. That
+is a genuine data dependency: unit 4's input does not exist until unit 3 has returned.</p>
+
+<figure>
+<svg viewBox="0 0 700 250" role="img" aria-label="Sequential unit chain, each packet fed by predecessors' summaries">
+  <g font-family="system-ui" font-size="12">
+    <rect x="15" y="30" width="150" height="86" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+    <text x="90" y="50" text-anchor="middle" font-size="13" font-weight="600">서두 packet</text>
+    <text x="90" y="70" text-anchor="middle" font-size="11">brief · guide rules</text>
+    <text x="90" y="86" text-anchor="middle" font-size="11">evidence · allocation</text>
+    <text x="90" y="104" text-anchor="middle" font-size="11" fill="#999">neighbors: (none)</text>
+
+    <rect x="190" y="30" width="150" height="86" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+    <text x="265" y="50" text-anchor="middle" font-size="13" font-weight="600">01절 packet</text>
+    <text x="265" y="70" text-anchor="middle" font-size="11">brief · guide rules</text>
+    <text x="265" y="86" text-anchor="middle" font-size="11">evidence · allocation</text>
+    <text x="265" y="104" text-anchor="middle" font-size="11" fill="#3b6ea5">neighbors: 서두</text>
+
+    <rect x="365" y="30" width="150" height="86" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+    <text x="440" y="50" text-anchor="middle" font-size="13" font-weight="600">02절 packet</text>
+    <text x="440" y="70" text-anchor="middle" font-size="11">brief · guide rules</text>
+    <text x="440" y="86" text-anchor="middle" font-size="11">evidence · allocation</text>
+    <text x="440" y="104" text-anchor="middle" font-size="11" fill="#3b6ea5">neighbors: 서두 · 01절</text>
+
+    <rect x="540" y="30" width="145" height="86" rx="6" fill="#eef2f7" stroke="#7a8fa6"/>
+    <text x="612" y="50" text-anchor="middle" font-size="13" font-weight="600">맺음 packet</text>
+    <text x="612" y="70" text-anchor="middle" font-size="11">brief · guide rules</text>
+    <text x="612" y="86" text-anchor="middle" font-size="11">(no evidence)</text>
+    <text x="612" y="104" text-anchor="middle" font-size="11" fill="#3b6ea5">neighbors: all above</text>
+
+    <path d="M165 73 L186 73" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b14)"/>
+    <path d="M340 73 L361 73" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b14)"/>
+    <path d="M515 73 L536 73" stroke="#3b6ea5" stroke-width="2" marker-end="url(#b14)"/>
+
+    <rect x="15" y="150" width="150" height="50" rx="6" fill="#eaf6ee" stroke="#4a7"/>
+    <text x="90" y="170" text-anchor="middle" font-size="11.5">summary (≤300자)</text>
+    <text x="90" y="188" text-anchor="middle" font-size="11.5">continuity_note</text>
+    <rect x="190" y="150" width="150" height="50" rx="6" fill="#eaf6ee" stroke="#4a7"/>
+    <text x="265" y="170" text-anchor="middle" font-size="11.5">summary (≤300자)</text>
+    <text x="265" y="188" text-anchor="middle" font-size="11.5">continuity_note</text>
+    <rect x="365" y="150" width="150" height="50" rx="6" fill="#eaf6ee" stroke="#4a7"/>
+    <text x="440" y="170" text-anchor="middle" font-size="11.5">summary (≤300자)</text>
+    <text x="440" y="188" text-anchor="middle" font-size="11.5">continuity_note</text>
+
+    <path d="M90 116 L90 147" stroke="#4a7" stroke-width="1.6" marker-end="url(#b14)"/>
+    <path d="M265 116 L265 147" stroke="#4a7" stroke-width="1.6" marker-end="url(#b14)"/>
+    <path d="M440 116 L440 147" stroke="#4a7" stroke-width="1.6" marker-end="url(#b14)"/>
+
+    <path d="M90 200 C 90 232, 265 232, 265 118" stroke="#4a7" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b14)"/>
+    <path d="M265 200 C 265 240, 440 240, 440 118" stroke="#4a7" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b14)"/>
+    <path d="M440 200 C 440 244, 612 244, 612 118" stroke="#4a7" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b14)"/>
+  </g>
+  <defs>
+    <marker id="b14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4a7"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>Each unit returns a summary and a continuity note; the next unit's packet carries every
+predecessor's. Sequence here is a correctness requirement, not a performance oversight.</figcaption>
+</figure>
+
+<div class="callout">
+<p><strong>The reusable lesson.</strong> In an LLM pipeline, ask what each call's <em>input</em>
+depends on before you reach for concurrency. If call <em>n</em> is prompted with the output of call
+<em>n−1</em>, parallelising them does not make the pipeline faster — it makes it produce a different,
+worse artifact: six units that repeat each other, contradict each other, and hand off to nothing.
+Exactly one unit row is in <code>writing</code> at any moment, and that is on purpose.</p>
+</div>
+
+<h3>A machine check standing behind a prompt instruction</h3>
+
+<p>After the units are written, one more LLM call — the <strong>integration pass</strong> — reads
+the whole assembled body and smooths the seams between units. Its instructions say, in Korean,
+that it may not add a single fact.</p>
+
+<p>That instruction is worth exactly nothing on its own. A language model asked to "smooth
+transitions without adding facts" will, on some run, quietly delete a photo marker it found ugly,
+retitle a section, or invent a sentence of connective tissue containing a claim. So the system does
+not rely on the sentence. Immediately after the model returns, two <strong>deterministic
+post-checks</strong> run against the returned body:</p>
+
+<ol>
+<li>the sequence of <code>## NN. heading</code> lines must be <em>identical</em> to the approved
+one, and</li>
+<li>the multiset of markers (<code>img:…</code> and <code>cap:…</code>, kind-qualified) must be
+<em>identical</em> to what went in.</li>
+</ol>
+
+<p>Fail either and the attempt is thrown away and retried under the failure budget. The model is
+free to rewrite prose; it is structurally incapable of changing what the operator decided.</p>
+
+<div class="callout meas">
+<p><strong>Measured, not asserted.</strong> I extracted <code>check_integration</code> and
+<code>body_markers</code> from <span class="fileref">build.py</span> and ran them against a toy
+draft with two sections, a two-photo row and one conversation capture. Results:</p>
+<pre><code>markers extracted        -&gt; ['img:aaaa-1111', 'img:bbbb-2222', 'cap:7:120-134']
+
+integrator reorders the two photos on the line  -&gt; PASSES
+integrator drops one photo                      -&gt; BuildError marker_multiset_changed
+integrator adds a photo                         -&gt; BuildError marker_multiset_changed
+integrator retitles "02. 두 번째 절"              -&gt; BuildError heading_sequence_mismatch
+a removed unit's heading is still present       -&gt; BuildError removed_unit_present</code></pre>
+<p>Note the first line: the marker check is a <strong>sorted multiset</strong>, not a sequence.
+It guarantees <em>which</em> markers survive, deliberately not their order — reflowing is the
+integrator's job, and reordering photos inside a row is legal.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code — the real walkthrough</h2>
+
+<p>Everything from here lives in
+<span class="fileref">apps/backend/content/agent_jobs/</span> unless a path says otherwise. That
+package is 52 modules and about 40,300 lines — the largest subsystem in the repository — so this
+page walks the spine and samples the stage modules rather than enumerating them. Explainer #13
+taught <code>states.py</code>, <code>services.py</code>, the intake chain and the scaffold; this
+one picks up at the edge that leaves <code>needs_review</code>.</p>
+
+<h3 id="code-gate">1. The 승인 gate: two calls, one guard</h3>
+
+<p>The edge itself, from the table in <span class="fileref">states.py</span>:</p>
+
+<pre><code>needs_review --approve_scaffold--&gt; writing
+    actor = Actor.OPERATOR
+    kind  = Kind.GATE
+    guard = GUARD_SCAFFOLD_REVISION_APPROVED   # "scaffold_revision_approved"</code></pre>
+
+<p>The guard's implementation is nine lines at <span class="fileref">services.py:115</span>:</p>
+
+<pre><code>def _guard_scaffold_revision_approved(job, context) -&gt; list[str]:
+    revision = job.approved_scaffold_revision
+    if revision is None:
+        return ["scaffold_revision_not_approved"]
+    if not revision.change_list_seen:
+        # Round 12 §3.6: the gate records that the operator saw the list.
+        return ["change_list_not_seen"]
+    return []</code></pre>
+
+<p>Two blockers, both facts about rows. The second one is the interesting one: re-approving a
+구성안 after edits produces a <em>change list</em> ("these three sections will be rewritten, these
+two are kept"), and the gate refuses to move unless the row itself records that the operator was
+shown it. "The operator understood the consequences" is stored as data, not assumed from a request
+reaching the endpoint.</p>
+
+<p>The record is written by <code>services.approve_scaffold_revision</code>
+(<span class="fileref">services.py:286</span>) — a plain <code>objects.create(...)</code> of a new
+<code>ContentAgentScaffoldRevision</code> with <code>kind=APPROVED</code>, a canonical content
+hash, <code>approved_at</code> and <code>approved_by</code>. Its docstring is explicit: <em>"Writes
+a new row; a predecessor is never mutated. The approval act is this row — the state move is a
+separate <code>transition(job, "approve_scaffold")</code> call, gated on it."</em></p>
+
+<p>The caller that binds them is in <span class="fileref">scaffold.py:7123</span>, inside one
+transaction:</p>
+
+<pre><code>with transaction.atomic():
+    revision = services.approve_scaffold_revision(
+        job,
+        payload={**document, "invalidation": invalidation},
+        change_list=changes["lines"], change_list_seen=True, actor=actor,
+    )
+    discard_working_copy(job)
+    services.transition(job, "approve_scaffold", actor=actor)
+
+# P54.S12: 승인 chains straight into the build — round 12's lifecycle has no
+# idle gap between the gate and 집필.
+build_service.dispatch_build(job, actor=actor)      # scaffold.py:7143</code></pre>
+
+<div class="callout def">
+<p><strong>승인 IS the freeze.</strong> Explainer #13 described <code>freeze_input_revision</code>
+— the immutable snapshot of the job's inputs — and noted that the intake stays editable right up
+until approval. This is the moment it stops. From here the 구성안 is history: the build reads it,
+the draft may diverge from it, and nothing writes back to it.</p>
+</div>
+
+<h3 id="code-build">2. The build — <span class="fileref">build.py</span> (2,564 lines)</h3>
+
+<p>This is the centre of gravity of the whole page, and its module docstring is unusually good.
+Rather than paraphrase it, here it is, condensed — and then each claim verified against the body of
+the module:</p>
+
+<pre><code>"""Content Agent v2 — the sequential unit build and the integration pass.
+
+* **Strictly sequential.** Exactly one unit is in `writing` at any moment, and
+  each unit's packet carries the *summaries* of every unit already written —
+  that is the whole reason the build is sequential and not a fan-out.
+* **The approved revision is immutable input.** Unit rows are derived from it;
+  the `delete_unit` answer marks a **row** `removed` and never edits the revision.
+* **D56 drives every failure** … `unit_retry` (a `writing` self-loop — the same
+  unit re-runs in place) while budget remains and `unit_capped` → `needs_answer`.
+* **No stop, no cancel.** … Recovery is re-entrancy instead: the task picks the
+  first unit that is `queued` **or** `writing` (a crashed attempt).
+* **Nothing is auto-rewritten for length.** A ±20% deviation is *reported*.
+* **The integrator may not add facts.** … the deterministic post-checks enforce
+  what a sentence cannot.
+"""</code></pre>
+
+<h4>The two models this page owns</h4>
+
+<p>Two storage rows, both created by migration <code>0029</code>:</p>
+
+<ul>
+<li><code>ContentAgentBuildUnit</code> — one row per unit per approved revision, unique on
+<code>(job, scaffold_revision, unit_id)</code>. Its <code>state</code> is
+<code>queued · writing · done · failed · removed</code>. It carries the <em>pinned</em> heading
+denormalized from the revision, the target length, the measured <code>chars</code>, the written
+<code>body</code> with markers inline, and a <code>returns</code> JSON blob holding the worker's
+structured answer.</li>
+<li><code>ContentAgentDraft</code> — append-only, one row per integration pass, unique on
+<code>(job, number)</code>. It holds the integrated <code>body</code>, a <code>units_map</code>
+saying where each unit landed in it, an <code>integration</code> record, and (since P79.S5) an
+optional <code>document</code>: <em>the draft's own allocation</em>. <code>None</code> means
+"inherit the approved revision verbatim", which is why every draft written before that field
+existed still renders byte-identically.</li>
+</ul>
+
+<h4>Unit rows come from the revision, and re-approval is read verbatim</h4>
+
+<p><code>ensure_build_units(job, revision)</code> (<span class="fileref">build.py:569</span>) is
+idempotent — "existing rows are law" — and it reads the <code>invalidation</code> block that the
+approval stored inside the revision's payload:</p>
+
+<pre><code># scaffold.compute_invalidation, computed per SECTION ID (never per number)
+{"first_revision": False,
+ "rewrite_ids": ["sec-b", "sec-e"],     # changed or added -&gt; start `queued`
+ "keep_ids":    ["sec-a", "sec-c"],     # untouched -&gt; copy the previous
+                                        #   build's body forward, state `done`
+ "removed_ids": ["sec-d"],              # no row is created at all
+ "summary": "다시 집필: 2단위 · 유지: 2단위"}</code></pre>
+
+<p><code>_carry_forward</code> finds the newest <code>done</code> row for that
+<code>unit_id</code> from an <em>earlier</em> revision and copies its body, chars and returns onto
+the new row, stamping <code>carried_from_revision</code>. So editing one section of a six-section
+구성안 and re-approving costs one LLM call, not six — and the fact that a unit was carried is
+recorded rather than re-derived later.</p>
+
+<div class="callout">
+<p><strong>Why <code>removed_ids</code> needs no handling at all.</strong> A section the operator
+deleted from the 구성안 is simply not in the new document, so the loop that walks
+<code>scaffold_service.units(document)</code> never sees it and creates no row. Deletion needs no
+delete path. That is a small, repeatable design win: derive the set rather than diff it.</p>
+</div>
+
+<h4>The packet — everything one call may read, and nothing else</h4>
+
+<p><code>build_unit_packet</code> (<span class="fileref">build.py:1097</span>) assembles a dict
+that is hashed (<code>services.canonical_hash</code>) and recorded with the attempt, so an attempt
+is reproducible after the fact. Its keys:</p>
+
+<table>
+<tr><th>Key</th><th>What it carries</th></tr>
+<tr><td><code>brief</code></td><td>The story brief — immutable per build: what the whole content is.</td></tr>
+<tr><td><code>guide_rules</code></td><td>Chapters 3, 5, 6, 7, 8, 13 of the frozen 가이드, sliced verbatim by the standard's own <code>## n.</code> headings.</td></tr>
+<tr><td><code>section_contract</code></td><td>The unit's pinned heading, body intent, decision, sub-headings, target length, transitions in/out and risks — straight from the approved section.</td></tr>
+<tr><td><code>neighbors</code></td><td><code>neighbor_summaries(rows)</code>: for every <code>done</code> unit, its <code>summary</code> (≤300 chars) and <code>continuity_note</code> (≤400). <em>The sequential dependency.</em></td></tr>
+<tr><td><code>evidence</code></td><td>Post excerpts (6,000 chars each) and chat excerpts (20,000 total, 1,000 per message) for exactly this section's assigned evidence.</td></tr>
+<tr><td><code>media</code></td><td><code>_allocated_media(...)</code> — the operator's allocation for this unit and nothing else.</td></tr>
+<tr><td><code>forbidden</code></td><td>Facts belonging to other sections, so this unit does not steal them.</td></tr>
+<tr><td><code>style_profile</code>, <code>operator_answer</code></td><td>The reference shape, and the operator's three-option answer if this unit is a retry.</td></tr>
+</table>
+
+<p>The <code>media</code> block is worth reading closely, because P72.S11 changed the system's whole
+posture here. The docstring of <code>_allocated_media</code> says it plainly:</p>
+
+<blockquote><p><em>"P72.S11 replaced S8's job-wide candidate list with this: the writer is not
+choosing a photo any more, it is being told which ones this unit carries and in what order. An
+un-allocated unit carries nothing, so a marker cannot appear where the operator placed none."</em></p></blockquote>
+
+<div class="callout meas">
+<p><strong>The guide slice, measured.</strong> <code>build.guide_rules()</code> cuts the six
+chapters the writer's instruction set quotes. Explainer #13 established that guide head
+<strong>v1.8</strong> is the operator's own rewrite with §8 (총 비용 표) removed and the original
+numbering preserved. Running <code>guide_rules</code> over the packaged sources confirms what that
+means for the writer's prompt:</p>
+<pre><code>guide_v1_5_ko.md  23,820 chars -&gt; chapters 3,5,6,7,8,13   10,449 chars  missing []
+guide_v1_7_ko.md  31,544 chars -&gt; chapters 3,5,6,7,8,13   15,360 chars  missing []
+guide_v1_8_ko.md   4,734 chars -&gt; chapters 3,5,6,7,13      2,230 chars  missing ["8"]</code></pre>
+<p>10,449 is exactly the number the module's own comment claims for v1.5, so the comment is
+current. And v1.8 degrades <em>gracefully and visibly</em>: <code>missing == ["8"]</code>,
+<code>fallback == False</code>. The constant <code>GUIDE_RULE_CHAPTERS</code> keeps its
+<code>"8"</code> on purpose — v1.1–v1.7 are still frozen on older jobs and do carry it.</p>
+</div>
+
+<h4>The sequential loop, and what happens when the worker dies</h4>
+
+<p><code>_write_units</code> (<span class="fileref">build.py:2040</span>) is eleven lines and worth
+quoting whole, because the comment inside it is the entire crash-recovery story:</p>
+
+<pre><code>while True:
+    rows = list(unit_rows(job, revision))
+    pending = [
+        unit for unit in rows
+        if unit.state in (
+            ContentAgentBuildUnit.State.QUEUED,
+            # A `writing` row means an earlier run crashed on it: re-run it
+            # in place on its remaining budget rather than stranding it.
+            ContentAgentBuildUnit.State.WRITING,
+        )
+    ]
+    if not pending:
+        return None
+    outcome = _write_one_unit(job, pending[0], …, neighbors=neighbor_summaries(rows), …)
+    if outcome is not None:
+        return outcome</code></pre>
+
+<p>There is no cancel edge anywhere in the build — the state machine has exactly <strong>one</strong>
+<code>Kind.CANCEL</code> transition in the whole table, and it belongs to the proposal stage
+(<code>proposing --cancel--&gt; intake</code>). So the build cannot answer "what if this dies
+halfway" with a rollback. It answers with <strong>re-entrancy</strong>: the selection predicate
+includes <code>writing</code>, so a Celery worker that was killed mid-unit leaves a row the next run
+picks up first. A <code>done</code> unit is never re-written; a half-written one is never
+stranded.</p>
+
+<div class="callout">
+<p><strong>Two stages, two answers to the same question.</strong> Explainer #13's proposal turn
+<em>does</em> have a cancel edge, and it handles the race by re-checking
+<code>_still_proposing(job)</code> before every single write — a cancel means the writes must stop
+landing. The build has no cancel, so it instead makes re-entry safe and idempotent. Both are valid;
+what matters is that each stage picked one answer deliberately and the code says which. When you
+design a long-running job, decide up front whether it is <em>interruptible</em> or
+<em>resumable</em> — trying to be casually both is how half-written state escapes.</p>
+</div>
+
+<p>The build does still check for interruption, but for a different reason: <code>_write_one_unit</code>
+re-reads the job's state from the database at the top of each attempt
+(<code>if _job_state(job) != JobState.WRITING: return {"status": "interrupted", …}</code>), so a job
+that got capped out from under the loop stops cleanly instead of writing into a state that no longer
+expects it.</p>
+
+<h4>Failure: D56, in place, with a fresh budget per turn</h4>
+
+<p>The retry doctrine (internally "D56") is the same one explainer #13 described for the proposal
+turn, wired to different triggers. <code>services.MAX_STAGE_ATTEMPTS = 2</code> counts
+<em>attempts</em>, and <code>services.STAGE_FAILURE_TRIGGERS</code> maps the job's current state to
+its (retry, capped) pair — for <code>writing</code> that is
+<code>("unit_retry", "unit_capped")</code>. In the machine:</p>
+
+<pre><code>writing     --unit_retry-----&gt; writing        system  failure   # self-loop: same unit, in place
+writing     --unit_capped----&gt; needs_answer   system  failure
+needs_answer--resume_build---&gt; writing        operator recover
+integrating --stage_retry----&gt; integrating    system  failure
+integrating --stage_capped---&gt; needs_answer   system  failure</code></pre>
+
+<p>At the cap the job parks in <code>needs_answer</code> and the operator is served round 12 §3.7's
+<strong>three options</strong>, defined as fixed design copy in
+<span class="fileref">build.py:257</span> (<code>RESUME_OPTIONS</code>):</p>
+
+<table>
+<tr><th>action</th><th>label</th><th>what it does to the data</th></tr>
+<tr><td><code>retry</code></td><td>근거를 다시 확인하고 이 단위만 다시 씁니다</td><td>row → <code>queued</code>; neighbours untouched.</td></tr>
+<tr><td><code>delete_unit</code></td><td>이 단위를 빼고 계속합니다</td><td>row → <code>removed</code>. <strong>The approved 구성안 is not touched</strong> — its own served detail says so: 「승인된 구성안은 그대로 남고…」</td></tr>
+<tr><td><code>keep_empty</code></td><td>사진 없이 다시 씁니다</td><td>row → <code>queued</code>, and this write's packet drops the allocation (<code>_allocated_media(..., keep_empty=True)</code>). The 구성안's placement itself stays.</td></tr>
+</table>
+
+<p>All three then take <code>resume_build</code> back into <code>writing</code>. And crucially,
+attempts are keyed <code>(stage, unit_key)</code> where <code>_unit_key</code> appends
+<code>@turn</code>, and <code>build_turn(job)</code> counts entries into <code>writing</code> from
+the append-only transition log. So the operator's answer gets a genuinely fresh budget instead of
+immediately re-hitting the exhausted counter — the docstring is blunt about why: <em>"which would
+make round 12 §3.7's three options a lie the second time."</em> Nothing is ever deleted; every
+attempt row survives as the audit trail.</p>
+
+<p>One elegant consequence: when the <em>integration</em> stage caps, no unit is failed, so
+<code>resume_build</code> is a <strong>two-hop</strong> — it moves the job to <code>writing</code>,
+the task finds nothing queued, immediately takes <code>units_done</code> to
+<code>integrating</code>, and retries the integration. One code path serves both caps.</p>
+
+<h4>Length is reported, never fixed</h4>
+
+<p><code>normalize_unit_return</code> computes, when the section has a target:</p>
+
+<pre><code>deviation = {"target": target, "chars": chars, "delta": chars - target,
+             "ratio": round(delta / target, 4),
+             "within_band": abs(ratio) &lt;= LENGTH_TOLERANCE}   # LENGTH_TOLERANCE = 0.20</code></pre>
+
+<p>and stores it in the unit's <code>returns.length_deviation</code>. No second call is ever made to
+stretch or trim the prose. The reason is upstream: explainer #13 showed that a section's
+<code>target_len</code> comes from <code>reference_shape</code>'s medians over the operator's
+chosen reference articles. A median is a <em>shape hint</em>, not a contract, and re-prompting a
+model to hit a character count reliably damages the prose to satisfy a number nobody promised.
+The module's comment quotes the design: <em>"Target length is an instruction, not a contract (±20%
+reported, never auto-rewritten)."</em></p>
+
+<h4>Server-side repair: the return is normalized before it is believed</h4>
+
+<p>The writer returns a Pydantic-validated <code>UnitWriteOut</code>
+(<code>body · quotes[] · continuity_note · summary · unresolved[]</code>). Note what is
+<em>not</em> in it: an <code>images</code> field. P72.S11 deleted it. The writer no longer reports
+which photos it used, because the writer no longer <em>chooses</em>; the placement record is
+computed server-side from the allocation and the body.</p>
+
+<p><code>normalize_unit_return</code> (<span class="fileref">build.py:1549</span>) then runs a fixed
+ladder of deterministic repairs, each of which appends a recorded warning:</p>
+
+<ol>
+<li><strong><code>heading_rewritten</code></strong> — the heading is pinned, so a body that restates
+it loses the line (<code>_strip_leading_heading</code>).</li>
+<li><strong><code>image_not_allowed</code></strong> — a <code>{{img:}}</code> key outside
+<code>media.asset_ids</code> is dropped, line-aware (a line left empty by the drop goes with it).</li>
+<li><strong><code>image_marker_appended</code></strong> — an allocated photo the writer forgot is
+<em>appended</em> to the end of the unit rather than lost.</li>
+<li>the same two rules again for <code>{{cap:}}</code> conversation markers
+(<code>capture_not_allowed</code> / <code>capture_marker_appended</code>).</li>
+<li><strong><code>marker_lines_repartitioned</code></strong> — <code>_partition_marker_lines</code>
+rebuilds the marker layout from the allocation's canonical <code>row</code> ordinals: a group's
+markers share one line (max 3), an ungrouped photo and <em>every</em> capture get their own line,
+and a marker written inline in a prose sentence is lifted onto its own line below it — because an
+inline marker publishes as nothing (the publish scrubber eats it), so lifting it is a repair, not a
+reformat.</li>
+</ol>
+
+<div class="callout">
+<p><strong>The guarantee this buys, stated plainly:</strong> <em>the integrated draft carries the
+operator's allocation, marker for marker, and the integrator may not touch one.</em> Step 2 makes
+"only allocated photos" true; step 3 makes "all allocated photos" true; the integration post-check
+(next) makes "and it stays that way" true. Three mechanisms, one promise, none of them a
+sentence in a prompt.</p>
+</div>
+
+<h4>The integration pass</h4>
+
+<p><code>_integrate</code> (<span class="fileref">build.py:2079</span>) assembles the pre-integration
+draft with <code>assemble_draft_body</code> — unit bodies in order, with
+<code>## NN. heading</code> lines pinned in for sections only (the 맺음 has no heading, per guide
+§2.6) — records the expected heading list and marker multiset, and hands the body plus the section
+transitions to one LLM call. On return:</p>
+
+<pre><code>integrated = check_integration(
+    answer.body,
+    expected_headings=headings,        # from assemble_draft_body
+    expected_markers=markers,          # body_markers(pre-integration body)
+    removed_headings=removed_headings, # units the operator removed
+)</code></pre>
+
+<p>and <code>check_integration</code> (<span class="fileref">build.py:1726</span>) — docstring:
+<em>"Enforce, don't trust. A failed check fails the attempt (D56)."</em> — raises one of four coded
+<code>BuildError</code>s: <code>integration_empty</code>, <code>heading_sequence_mismatch</code>,
+<code>marker_multiset_changed</code>, <code>removed_unit_present</code>. The measured behaviour is
+in the box back in <a href="#intuition">Intuition</a>.</p>
+
+<p>A passing integration writes the draft row and takes <code>integration_done</code> in one
+transaction, and then the flow <strong>stops</strong>. There used to be a chained §11 audit here
+that produced a machine verdict on the draft; P79.S3 deleted it, and the comment records why:
+<em>"round 19's draft is the operator's editing surface, not a machine's verdict."</em></p>
+
+<h4>Where the routes are</h4>
+
+<p><span class="fileref">build_views.py</span> (356 lines) ships two endpoints on the operator's
+admin segment:</p>
+
+<pre><code>GET  /api/content/admin/miracle-agent/v2/jobs/&lt;uuid&gt;/build
+POST /api/content/admin/miracle-agent/v2/jobs/&lt;uuid&gt;/build/resume</code></pre>
+
+<p>with a convention that runs through this whole subsystem and is worth stealing: <strong>one
+response shape for every read <em>and</em> write, and a refused write answers 400 with that same
+body plus an <code>error{code, detail, …}</code></strong>. The screen never needs an optimistic
+update or a refetch, because every answer is the whole screen. Everything numeric on it is
+measured, never estimated — elapsed from the row's timestamps, retries from the current turn's
+attempt rows — and the ETA is served as <code>null</code> with the label <code>측정 불가</code>
+("cannot be measured"). The system does not invent a progress estimate.</p>
+
+<h3 id="code-assets">3. The assets that the writing places</h3>
+
+<p>A marker is only useful if the key inside it resolves to real bytes with a caption. That is the
+asset registry's job, and it runs from intake all the way to publish.</p>
+
+<h4><span class="fileref">assets.py</span> (744) — one row per usable image, and one candidacy rule</h4>
+
+<p><code>ContentAgentAsset</code> holds one row per image across three provenance
+<em>families</em>: <code>upload</code> (the operator's 추가 사진), <code>chat_media</code> (images
+extracted from the KakaoTalk <code>.zip</code> in #13), and <code>corpus</code> (images carried by
+the selected cafe posts). The single most load-bearing fact about it:</p>
+
+<div class="callout">
+<p><strong>The asset's uuid primary key <em>is</em> the <code>{{img:&lt;key&gt;}}</code> key.</strong>
+Not a mapping, not a lookup table — the marker payload is the row's pk. v1's contract was "the
+attachment pk IS the marker key", and v2 kept exactly that shape (an opaque uuid) so that
+<em>every existing parser keeps working and not one consumer site changes</em>. The canonical
+grammar lives on the <strong>agent</strong> side at
+<span class="fileref">apps/agent/app/content_drafts/agent.py:133</span>:</p>
+<pre><code>_IMG_MARKER_RE = re.compile(r"\{\{img:([^}]+)\}\}")</code></pre>
+<p>and <span class="fileref">build.py:135</span> keeps a byte-identical local copy with a comment
+saying so. Grepping <code>{{img:</code> across <code>apps/</code> (tests excluded) finds it in
+<strong>23 files across all three apps</strong> — the backend's dispatch, publish, scrub, extraction
+and mirror paths, the agent's drafting service, and the operator's Next.js console. That regex is
+the forward pointer into explainer #15.</p>
+</div>
+
+<p>The registry exists to fix a specific v1 failure. In v1, a corpus image with no
+<code>generated_alt</code> was silently dropped and got no key at all
+(<span class="fileref">apps/agent/app/content_drafts/images.py:191-195</span>) — invisible and
+unrecoverable. Here it gets a row anyway, is listed, and becomes usable the moment the operator
+writes a caption. Two related rules from the docstring: <strong>original filenames are provenance
+and survive verbatim, forever</strong> (captured at the view boundary <em>before</em> file
+assignment, because Django's storage sanitizes the stored name), and <strong>the system never
+writes a caption</strong> — <code>inspection_caption</code> is the operator's field and is the only
+recovery path for an uncaptioned image.</p>
+
+<p>Candidacy — "may this asset be placed?" — is exactly one function,
+<code>evaluate_candidacy</code> (<span class="fileref">assets.py:604</span>), and every other module
+calls it rather than re-deriving. Three job-wide clauses first, then a per-family rule:</p>
+
+<pre><code>deleted_at is not None   -&gt; not a candidate  (recoverable_by="restore")
+excluded                 -&gt; not a candidate
+duplicate_of is not None -&gt; not a candidate  (byte-sha256 equality, cross-family, no recovery:
+                                              the kept copy already IS the recovery)
+
+upload      : candidate iff it has bytes AND an inspection_caption
+chat_media  : its conversation must be selected FIRST (deselect the conversation and its photos
+              leave the candidate set through THIS rule and no other), then
+              matched -&gt; candidate (1.0) · ambiguous -&gt; candidate carrying its 0.70 ·
+              unreferenced -&gt; candidate once captioned
+corpus      : a genuinely FAILED byte fetch is out whatever its alt says;
+              otherwise candidate iff generated_alt OR an operator caption</code></pre>
+
+<h4><span class="fileref">asset_intake.py</span> (798) — three idempotent arrival paths</h4>
+
+<ul>
+<li><code>store_upload</code> — validates the extension, reads the bytes, <em>probes the image with
+PIL</em> for its real format and dimensions (so the extension is not trusted), hashes it with
+sha256, stores it in a job-scoped private root, and keeps the client's filename verbatim in a
+separate field from the sanitized stored name.</li>
+<li><code>sync_chat_media_assets</code> — <strong>a plain function call at the zip pipeline's
+success path, not a signal</strong> (<span class="fileref">chat_intake.py:534</span>). Re-attaching
+a <code>.zip</code> re-syncs; deleting one takes the asset rows with it through the FK cascade. The
+docstring names the choice explicitly, and it is the right one: a signal here would fire on paths
+that are not "the archive finished successfully".</li>
+<li><code>sync_corpus_assets</code> — one row per image URL on the selected posts, including
+alt-less ones. Deselecting a post drops its rows <em>unless</em> the operator captioned them or
+replaced their bytes, in which case the row is kept and reported as <code>orphaned</code> — "both
+are operator work and the system does not throw operator work away."</li>
+</ul>
+
+<p>A fourth path, <code>materialize_corpus_asset</code>, is the only one that touches the network:
+it downloads a corpus image's bytes <em>at intake</em> rather than at publish, through the publish
+path's own downloader (<code>draft_images.download_corpus_image</code>, with its
+<code>.pstatic.net</code> allow-list and 15 MB cap). The comment is worth internalising:
+<em>"There is deliberately no second, laxer downloader anywhere."</em></p>
+
+<h4><span class="fileref">asset_selection.py</span> (469) — intent versus effect</h4>
+
+<p>The sharpest distinction in the asset story, and one that generalises far beyond this codebase:</p>
+
+<div class="callout">
+<p><code>ContentAgentAsset.selected</code> stores the operator's <strong>intent</strong>.
+<code>selected_assets()</code> serves the <strong>effect</strong>, which is that intent
+<strong>AND</strong> <code>evaluate_candidacy</code>. Selection therefore sits <em>on top of</em>
+candidacy and can never override it — but it is also never destroyed by it. Deselect a KakaoTalk
+conversation and its photos drop out of the effective set while the operator's earlier picks stay
+recorded; re-select the conversation and the picks come back.</p>
+</div>
+
+<p>The other two acts: <strong>교체</strong> (replace) is a swap <em>in place</em> — same row id,
+same family, same lineage, new bytes, previous name pushed onto <code>replacement_trail</code>.
+Because the id is the marker key, a replace is invisible to every marker consumer by construction.
+Chat photos have no replace at all ("the export <em>is</em> the record"), and the API refuses by
+name. <strong>삭제</strong> (delete) is reversible: it sets <code>deleted_at</code>, and
+<code>restore</code> puts the row back; the original bytes, the cafe post and the KakaoTalk export
+are never touched. And "cafe images outweigh chat images" is expressed as group order
+(카페 → 카카오톡 → 업로드) and <em>nothing else</em> — no score, no badge, no quality field
+anywhere.</p>
+
+<h4><span class="fileref">image_pick.py</span> (1,020) — the first v2 stage to send pixels</h4>
+
+<p>Explainer #13 taught this module's <em>pass</em> — what it decides. Here is its
+<em>module</em> — how it is built, because every unusual thing about it follows from "it sends
+images to a multimodal model":</p>
+
+<ul>
+<li><strong>One idempotent scheduler behind four triggers.</strong>
+<code>schedule_image_pass(job)</code> is the only door, knocked on by: the conversation pass landing
+or failing, the end of corpus materialization, an operator upload
+(<span class="fileref">asset_intake.py:238</span>), and a conversation-selection write that moved
+chat-photo candidacy. At most one run per job is alive, claimed atomically on a shared
+<code>ContentAgentPass</code> row, so a burst of triggers collapses into one run. A broker outage is
+logged and swallowed — <em>a read must never fail because a pass could not be queued</em>.</li>
+<li><strong>Batches of 8 inside one family</strong>, families walked in the fixed order above. A
+batch never crosses a family, because the grid renders per-family judging state.</li>
+<li><strong>Capped WebP derivatives, never originals</strong>: <code>DERIVATIVE_WIDTH = 512</code>,
+<code>MAX_IMAGE_BYTES = 1,536 KiB</code> per image, <code>MAX_REQUEST_IMAGE_BYTES = 6 MiB</code> per
+call — and note the difference in how the two ceilings behave: an over-sized <em>image</em> is left
+unjudged (fail open, per row), while the <em>request</em> ceiling never drops an image, it closes
+the batch early and the image leads the next call.</li>
+<li><strong>Judgment is per asset and durable</strong> — <code>agent_proposed</code> /
+<code>agent_reason</code> / <code>agent_off_brand</code> / <code>agent_judged_at</code> live on the
+asset row, and a re-run judges only rows carrying no judgment and <strong>never rewrites an existing
+reason</strong>. That is what makes 나머지 다시 시도 ("retry the rest") mean exactly what it
+says.</li>
+<li><strong>Korean prose reasons for the tiles it picked <em>and</em> the tiles it did not.</strong>
+A rejected photo is not silently absent; it says why.</li>
+<li><strong>The pass never writes a caption</strong> — same rule as everywhere else. A
+caption-required row is judged, gets its reason, and is stored
+<code>agent_proposed = False</code>.</li>
+</ul>
+
+<p>One late fix is a good cautionary tale about prompt/packet mismatch: the guide had listed
+"프로젝트와 무관한 사진" (a photo unrelated to the project) as a rejection criterion since v1.3, but
+the packet carried no subject at all — so the clause was literally undecidable, and a car-wash photo
+sitting in a tanning-salon job's pool was proposed by a model that was never told what the job was
+about. <code>build_subject</code> is that missing fact. <strong>If a prompt criterion needs a fact,
+check that the packet actually carries it.</strong></p>
+
+<h4><span class="fileref">alt_backfill.py</span> (325) — the module in neither slice's file list</h4>
+
+<p>This one is in neither #13's nor #14's decomposition file list, and it belongs here. Three of one
+published article's fourteen figures shipped with <code>alt=""</code>: the publish path always
+writes the attribute, and its caption source is <code>inspection_caption or generated_alt</code> —
+so an empty attribute simply means the row has neither. Corpus rows arrive with the scraper's alt
+copied in; chat photos and uploads never had one, because nothing inside <code>content/</code> had
+ever generated one.</p>
+
+<p>Six decisions make it a good miniature of the codebase's taste:</p>
+
+<ol>
+<li><strong>A service plus a management command</strong>
+(<span class="fileref">content/management/commands/backfill_content_agent_alts.py</span>), not a job
+action and not a new state — <em>"putting an LLM call inside <code>run_publish</code> is
+deliberately not done here."</em></li>
+<li>The client resolves through the same operator-editable model store as everything else, reusing
+the image pass's role slug rather than adding a role to the settings UI for a backfill.</li>
+<li>It writes <code>generated_alt</code> and <strong>only</strong> <code>generated_alt</code>;
+<code>inspection_caption</code> is the operator's field, never machine-written.</li>
+<li>Scope defaults to the job's <em>selected</em> live rows with both description fields blank —
+because writing <code>generated_alt</code> on a corpus row <em>moves it into candidacy</em>, so a
+wide run would silently grow a reopened job's candidate pool.</li>
+<li><strong>A row with no usable bytes is skipped and counted, never captioned.</strong> There is no
+canned placeholder: <em>"An empty alt says 'no description'; a canned sentence says
+'described'."</em></li>
+<li>Bytes ride the image pass's existing path — same derivatives, same batches, same ceilings.
+Ingestion's URL-based alt enricher cannot be reused (an upload has no URL), but its pure
+<code>sanitize_alt_text</code> is.</li>
+</ol>
+
+<p><span class="fileref">asset_views.py</span> (930) is the route table for all of it: list, upload,
+selection, retry, per-asset delete/replace/restore/fetch, under
+<code>…/v2/jobs/&lt;uuid&gt;/assets…</code>.</p>
+
+<h3 id="code-draft">4. The draft as an editing surface — <span class="fileref">draft_editing.py</span> (1,596)</h3>
+
+<p>When integration lands, the job is <code>draft_ready</code> and the operator gets one screen.
+Not an approval screen — an <em>editing</em> screen. The module docstring is again the best summary,
+and again each claim is checkable.</p>
+
+<h4><code>sections[]</code> is derived, never stored</h4>
+
+<p>The draft row holds <strong>one integrated body</strong> plus a <code>units_map</code> of spans.
+A "section" on the screen is that body's slice for one written unit, split into the prose the screen
+edits and the marker lines it does not. <code>split_slice</code> and <code>compose_slice</code>
+(<span class="fileref">draft_editing.py:185</span>) are symmetric and deterministic.</p>
+
+<div class="callout meas">
+<p><strong>Worked example, actually run.</strong> I extracted <code>split_slice</code>,
+<code>compose_slice</code> and <code>revisions._paragraphs</code> and fed them one unit's slice:</p>
+<pre><code>## 02. 매장을 고른 이유          &lt;- input slice
+
+첫 문단입니다.
+
+{{img:aaaa}} {{img:bbbb}}
+
+둘째 문단입니다.
+
+{{cap:7:120-134}}
+
+셋째 문단입니다.</code></pre>
+<p><code>split_slice</code> returns:</p>
+<pre><code>{"heading": "## 02. 매장을 고른 이유",
+ "prose":   "첫 문단입니다.\n\n둘째 문단입니다.\n\n셋째 문단입니다.",
+ "markers": [{"line": "{{img:aaaa}} {{img:bbbb}}", "after": 1},
+             {"line": "{{cap:7:120-134}}",         "after": 2}]}</code></pre>
+<p>The screen edits only <code>prose</code>. Each marker line keeps an <strong>anchor</strong> —
+how many prose paragraphs precede it. Editing the second paragraph and recomposing puts everything
+back where the writer placed it:</p>
+<pre><code>첫 문단입니다.
+
+{{img:aaaa}} {{img:bbbb}}
+
+둘째 문단을 짧게 고쳤습니다.      &lt;- the only edited line
+
+{{cap:7:120-134}}
+
+셋째 문단입니다.</code></pre>
+<p>And with no edit at all, <code>compose_slice(split_slice(x))</code> returns the input exactly.
+The anchor is what makes that true: without it, a conversation capture placed mid-section would
+drift to the end of the unit on every save. An anchor past the (possibly shorter) new prose falls
+to the tail; an anchor of 0 leads.</p>
+</div>
+
+<h4>A save is a new rev, never a rewrite</h4>
+
+<p><code>save_edits</code> (<span class="fileref">draft_editing.py:838</span>) does three things in
+one transaction, and the docstring insists all three are needed:</p>
+
+<ol>
+<li>the edited prose is spliced back into the body under its <strong>pinned</strong> heading, with
+the unit's marker lines put back at their anchors;</li>
+<li><strong>the same text is written to the unit row</strong> — because the 자유 지시 engine
+re-assembles from those rows, so <em>"an edit that lived only in the body would be silently
+overwritten by the next request"</em>;</li>
+<li>draft <code>rev N+1</code> is appended via <code>revisions.write_draft</code>.</li>
+</ol>
+
+<p>A stale <code>rev</code> is refused outright (the round has no merge surface), and a refused write
+answers <strong>409</strong> — well-formed request, the state or the rev said no — so the editor can
+tell "reload" from "fix your input". One more detail worth stealing: the edits are applied
+<em>later spans first</em>, because a splice shifts every offset after it, so working backwards
+keeps the earlier units' precomputed spans valid.</p>
+
+<p>And <strong>no edge is taken</strong>: a parked 미발행 초안 stays parked and a
+<code>draft_ready</code> job stays <code>draft_ready</code>. Saving text and 초안 저장 (parking the
+job) are two different acts.</p>
+
+<h4>Media edits change the draft's document, never the approved 구성안</h4>
+
+<p>This is the "ruling f" the <code>ContentAgentDraft.document</code> field exists for. The draft
+screen can remove a photo, bring one in from the 재료 drawer, group or ungroup a row, or trim a
+conversation range — and all of that changes what publishes without touching the approved revision,
+which stays the immutable record of what the build ran from. Every draft-stage read of media goes
+through one accessor, <code>build.draft_document(draft)</code>, which returns the draft's own
+document when it has one and falls back to the revision's when it does not.</p>
+
+<h4>The 자유 지시 is atomic — by construction, not by rollback</h4>
+
+<p>The screen has one free-text instruction box ("자유 지시" — <em>free instruction</em>): «서두를
+두 문장 줄이고, 03절 견적 이야기를 더 구체적으로». It applies to the whole draft. And here is the
+lovely part — <code>run_free_note</code> (<span class="fileref">draft_editing.py:1342</span>)
+rewrites every unit and runs the integration pass <strong>entirely in memory</strong>:</p>
+
+<pre><code>revision_service._recompose_unit(…, persist=False)      # applies text to the row OBJECT, no save
+revision_service._integrate_revision(…, persist=False)  # returns the body, appends no draft
+…
+return _end(entry, APPLIED, {"result": {"sections": rewritten, …}})</code></pre>
+
+<p>Nothing is written. The request hands the rewritten sections back to the client, which applies
+them as <strong>one undo entry</strong>, and the next save persists them. So a failure, an
+exhausted budget, or the operator hitting 취소 leaves the draft untouched <em>because nothing was
+ever touched</em> — there is no partial state to undo.</p>
+
+<div class="callout">
+<p><strong>Why this is worth remembering.</strong> "Atomic" usually means "we wrote it and can roll
+it back". This is the cheaper and stronger version: <em>don't write until the whole result exists</em>.
+It costs one design decision (the worker returns a value instead of mutating rows) and buys you a
+cancel path, a failure path and an undo entry for free. The cancel check is polled between units
+(<code>if _cancelled(entry)</code>), and even a cancel arriving at the last moment costs nothing but
+the compute.</p>
+</div>
+
+<h4><span class="fileref">revisions.py</span> (765) — the machinery underneath</h4>
+
+<p>Be honest about this module's history: P79.S3 deleted 수정지시 (the structured revision-request
+subsystem) <em>whole</em> — four scopes, their radio rows, the diff screen, the re-open path. What
+survives is the primitives the draft editor is built out of:
+<code>unit_spans</code> / <code>splice_unit</code> (where a unit lives in the body and how to put it
+back), <code>write_draft</code> (<strong>a new draft row per write, never a rewrite</strong>), and
+<code>_recompose_unit</code> / <code>_integrate_revision</code>, which reuse
+<span class="fileref">build.py</span>'s public names — packet → prompt → client →
+<code>normalize_unit_return</code> — so nothing about the writer is re-implemented. There is no job
+state here any more: a rewrite does not move the job.</p>
+
+<p><code>write_draft</code> also carries two things forward so that "rev N" keeps meaning something:
+the draft's own <code>document</code> (omitted ⇒ inherit the previous draft's, so a prose-only save
+never resurrects or drops a media edit), and a per-unit <code>last_edit</code> stamp that rides
+inside <code>units_map</code> rather than in a new column.</p>
+
+<h4>조정 (<code>adjusting</code>) — the fourteenth state</h4>
+
+<p>P81 added one more state on operator request. It is reached by <code>begin_adjust</code> from
+<code>draft_ready</code>, <code>approved_unpublished</code> <em>or</em> <code>failed</code>, and
+left by <code>back_to_draft</code>, <code>save_draft</code> or <code>publish</code>. The important
+property: <code>draft_ready --publish--&gt;</code> was left untouched, so <strong>조정 is never a
+required stop</strong>. It joined <code>draft_editing.EDIT_STATES</code> and
+<code>states.PUBLISH_SOURCES</code> — and <code>publishing.PUBLISH_STATES</code> is now
+<em>derived</em> from that tuple instead of being a second hand-written copy, so the pre-check and
+the machine's edges cannot disagree. It is deliberately <em>not</em> in
+<code>PROGRESS_ACCEPTING_STATES</code> or <code>PAUSE_STATES</code>: 조정 is the operator moving
+photos around, not the machine running.</p>
+
+<h4>The rest of the surface</h4>
+
+<p><span class="fileref">draft_editing_views.py</span> (257) carries the save, the adjust
+begin/end, per-unit media ops and the four free-note endpoints.
+<span class="fileref">draft_reading_views.py</span> (341) serves
+<code>GET/PATCH …/v2/jobs/&lt;uuid&gt;/draft</code>.
+<span class="fileref">draft_preview.py</span> (100) answers "what will this look like published?"
+and <strong>materializes nothing</strong> — no content row, no files, no thumbnail, no state
+change. It calls the <em>shared</em> renderer <code>publishing.render_document</code> with the
+console's own asset URLs substituted for the published tree's, which is the single argument the two
+callers disagree about, so the preview cannot drift from what 발행 actually writes. For how the
+published document is then delivered to a reader — conditional requests, the render memo,
+width-capped derivatives — see
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">explainer #12</a>; that
+is its territory, not this one's.</p>
+
+<h3 id="code-publish">5. Publish — <span class="fileref">publishing.py</span> (1,482), and the handoff to #12</h3>
+
+<p>Round 19 replaced a two-act gate (승인, then a 발행 게이트 with five rows and a blocker) with the
+draft editor's <strong>end bar</strong>. 승인, the gate and the chained 승인→발행 path were all
+deleted. Two acts remain.</p>
+
+<h4>Act one — 초안 저장, and its other half</h4>
+
+<p><code>save_draft</code> is a state transition with a sentence, deliberately not an autosave: the
+job becomes a <strong>미발행 초안</strong> (<code>approved_unpublished</code>) that the rail can
+reopen later. Nothing is made public.</p>
+
+<p><code>materialize_unpublished</code> (<span class="fileref">publishing.py:1185</span>) is the
+other half, added by P81: it writes the <em>real</em> <code>NotionContent</code> row — the actual
+published-content model from explainer #12 — with the HTML and the images on disk, and
+<strong><code>published_at</code> NULL</strong>. So the work appears in the operator's content list
+with the 비공개 badge while every public surface (<code>NotionContent.objects.readable()</code>)
+skips it. It is idempotent by construction, keyed on
+<code>job.published_content_id</code>, so every save refreshes the same content id.</p>
+
+<div class="callout">
+<p><strong>A detail that is pure product thinking.</strong>
+<code>build_published_content(..., touch: bool = False)</code> — the final row update uses a
+queryset <code>.update()</code>, which bypasses Django's <code>auto_now</code>, so
+<code>updated_at</code> moves <em>only</em> when the caller asks. 초안 저장 asks
+(<code>touch=True</code>): the operator rewrote the piece and expects to find it at the top of
+최근 변경. 발행 does not: the content screen's own served help promises that
+「발행·비공개는 최근 변경 시각을 바꾸지 않습니다」, because a visibility flip is not an edit. The same
+reasoning appears one layer down in explainer #12's publish seam, which also refuses to bump
+<code>updated_at</code>. Two layers, one rule, stated in both.</p>
+</div>
+
+<h4>Act two — 발행</h4>
+
+<p><code>request_publish</code> (<span class="fileref">publishing.py:1257</span>) is 바로 발행 /
+다시 발행. P79.S3 widened it and <strong>took its guard off</strong>: the draft publishes from
+wherever it sits — <code>draft_ready</code>, <code>approved_unpublished</code>,
+<code>adjusting</code> or <code>failed</code>. Confirmed by executing the state table: all four
+<code>publish</code> edges are <code>Kind.GATE</code> with <code>guard = None</code>, and the only
+<em>guarded</em> edge left in the entire machine is <code>approve_scaffold</code>.</p>
+
+<p>It still validates two things about the 대표 사진 (hero image), and the second is a nice example
+of a rule that only makes sense if you think about the reader: the hero must be an asset of this
+job, <em>and</em> it must be one the draft actually places in its 서두 — because
+<em>"a hero from outside that list would publish a thumbnail the reader never meets on the
+page."</em> Then, in one transaction, it takes the <code>publish</code> edge, records an immutable
+decision row carrying the title/hero/category, and queues the worker
+<code>on_commit</code>.</p>
+
+<h4>The worker, and the one line this page ends on</h4>
+
+<p><code>run_publish</code> (<span class="fileref">publishing.py:1339</span>) reads the decision's
+payload, materializes the whole <code>NotionContent</code> row, and then:</p>
+
+<pre><code>from ..services import set_content_publish_state          # publishing.py:1349
+…
+with transaction.atomic():
+    set_content_publish_state(result["content_id"], True)  # publishing.py:1367
+    services.transition(job, "publish_succeeded")</code></pre>
+
+<p>Its docstring: <em>"<code>set_content_publish_state</code> is called HERE and only here — the
+single choke point v1 established."</em> Verified by grep: within
+<span class="fileref">agent_jobs/</span> that symbol appears at exactly one call site,
+<span class="fileref">publishing.py:1367</span>, which is precisely the line explainer #12's
+grounding predicted.</p>
+
+<div class="callout">
+<p><strong>This is where this page stops.</strong> Everything on the other side of that call —
+the SQL-level change detection that makes a republish a no-op, why <code>updated_at</code> is not
+bumped, the <code>publish → chunk-index</code> trigger that feeds the published-content retrieval
+corpus, media derivatives, and how the HTML reaches a reader — belongs to
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">explainer #12 — The
+content library</a>. It is already taught and is not re-taught here. One function makes an article
+public, and the content agent's entire second half exists to hand it a well-formed row.</p>
+</div>
+
+<p>Any failure takes <code>publish_failed</code> to <code>failed</code>, with the content still
+unpublished, the reason served, and a 다시 발행 button on top of the draft. Nothing is ever left
+sitting in <code>publishing</code>.</p>
+
+<h4>v1 is reused, never re-implemented and never changed</h4>
+
+<p>The v2 publisher does not re-implement the older generation's rendering. It imports v1's pure
+helpers through six additive public aliases at the bottom of
+<span class="fileref">content/draft_publish.py:707-712</span>:</p>
+
+<pre><code>extract_title             = _extract_title
+extract_description       = _extract_description
+finalize_title            = _finalize_title
+split_blocks              = _split_blocks
+render_markdown_fragment  = _render_markdown_fragment
+render_html_document      = _render_html_document</code></pre>
+
+<p>and mirrors <code>publish_draft_job</code>'s staging → swap → <code>.update()</code> shape: write
+the HTML and images into a temporary root, swap the directory into place atomically, then update the
+row's paths. The <code>{{img:&lt;key&gt;}}</code> grammar is <strong>consumed, never
+redefined</strong>. The v1 modules are imported <em>inside</em> the functions that need them
+(<code>from .. import draft_publish as v1</code>, eight times) because they import
+<code>content.models</code> at their own top level.</p>
+
+<p>Two more inherited rules survive verbatim. There is a shouted comment in
+<code>build_published_content</code>: <em>"NEVER <code>content.save()</code> here — v1's warning
+applies unchanged: saving a <code>NotionContent</code> re-triggers its post-save file pipeline."</em>
+And the content row is created <strong>before</strong> any file work with
+<code>html_path=""</code> — invisible to readers — so a re-publish, a retry after failure or a
+post-edit refresh all land on the same content id.</p>
+
+<div class="callout">
+<p><strong>The bridge into explainer #15.</strong> The older generation is not dead code sitting
+around waiting to be deleted: it is a <em>library the new generation stands on</em>. The v2 agent
+imports v1's title extraction, description extraction, markdown rendering and HTML shell; it writes
+into v1's <code>miracle/</code> sub-directory so a reader cannot tell which generation made an
+article; and v1's own drafting service — which lives on the <em>agent</em> side — is still live and
+still dispatched. That is #15's subject.</p>
+</div>
+
+<h4>Per-family image rules at publish</h4>
+
+<p><code>_resolve_asset</code> (<span class="fileref">publishing.py:438</span>) turns one asset into
+the bytes that will actually be published, and the rule differs per family for reasons that are
+about privacy, not convenience:</p>
+
+<table>
+<tr><th>family</th><th>what publishes</th><th>why</th></tr>
+<tr><td><code>upload</code></td><td>the stored original</td><td>the operator supplied it deliberately</td></tr>
+<tr><td><code>chat_media</code></td><td>the <strong>WebP derivative</strong>, never the source bytes</td><td>"originals stay private by construction" — the operator picked the photo, not the raw file out of someone's chat export</td></tr>
+<tr><td><code>corpus</code></td><td>the bytes materialized at intake</td><td>network-free at publish; a legacy un-materialized row falls back to the allow-listed downloader, and a failed download renders <strong>nothing</strong> plus a warning — never a broken tag</td></tr>
+</table>
+
+<h4><code>publish_inputs</code> — one computation, three surfaces</h4>
+
+<p><code>publish_inputs</code> (<span class="fileref">publishing.py:121</span>) produces the title
+default, the 대표 사진 choice, the publication counts and the one inline confirm sentence — so the
+end bar, the confirm dialog and the publish itself <em>can never describe different things</em>.
+Note the care in the title default: it is the title the <em>document itself</em> carries (the
+구성안's title, else the body's first-line H1), deliberately <strong>not</strong> the total
+resolver's <code>job.label</code> / brand-name tail, because <em>"those exist to make the resolution
+total, but neither is a title anyone chose for this document."</em> And it runs the same finalizer
+the publish runs, so the served default is the published title byte for byte and handing it back as
+an override changes nothing.</p>
+
+<h4><span class="fileref">conversation.py</span> (759) — the published conversation, re-rendered every time</h4>
+
+<p>When the draft places a <code>{{cap:&lt;chat_rev&gt;:&lt;from&gt;-&lt;to&gt;}}</code> marker, the
+publish turns that <em>reference</em> — not a copy — into a
+<code>&lt;blockquote class="chat-view"&gt;</code>: a day pill per date change, one group per
+same-sender run, the authoring side on the right, one <code>&lt;time&gt;</code> per same-minute run,
+system rows as pills, and a <strong>mandatory</strong> credit line.</p>
+
+<p>Three properties make this a design decision rather than a renderer:</p>
+
+<ul>
+<li><strong>Nothing is stored.</strong> It is re-rendered from the archive on every publish and on
+every 발행 모습 read. No screenshot, no stored copy of the conversation, and no internal identifier
+(a message id, a <code>chat_rev</code>, an asset uuid) anywhere in the output. Redactions live in
+their own durable table keyed by <code>message_id</code>, so trimming the range (moving
+<code>from_id</code>/<code>to_id</code>) can never invalidate one.</li>
+<li><strong>Photos inside a conversation publish as placeholder bubbles</strong> —
+<code>사진 N장</code>, <code>파일 1개</code>, <code>동영상 1개</code> — with <em>no bytes ever</em>.
+And the export's own filler strings (the ones the KakaoTalk parser uses to <em>recognise</em> a media
+row, including <code>파일: &lt;원본 이름&gt;</code>) are suppressed, so no original file name reaches a
+public page.</li>
+<li><strong>The authoring side is the row's, never the renderer's guess.</strong> If no participant
+is marked, nobody is "me" and every bubble renders left — a visible state the operator fixes in the
+participant rail, deliberately not a heuristic that is right most of the time.</li>
+</ul>
+
+<p>Every string leaves through <code>content.publish_scrub.scrub_public_text</code> and is
+HTML-escaped; newlines survive because the reader stylesheet sets
+<code>white-space: pre-line</code>. This is a privacy-and-provenance decision that happens to be
+implemented as a renderer.</p>
+
+<h3 id="code-strip">6. The strip and the progress channel</h3>
+
+<h4><span class="fileref">stage_strip.py</span> (420) — one producer, three servings</h4>
+
+<p>Every job screen carries the same six rows directly under the header, and every row in the job
+rail carries them again as a mini strip. This module is the <strong>only</strong> producer of all
+three servings:</p>
+
+<pre><code>STEPS = (("intake","입력"), ("scaffold","구성안"), ("writing","집필"),
+         ("draft","초안"),  ("adjust","조정"),     ("publish","발행"))
+
+stage_strip(job)    -&gt; [{index, key, label, state, status, highlight, note}, …]   # the screen
+stage_index(job)    -&gt; [{index, status}, …]   # the rail mini — built FROM stage_strip's rows
+job_list_value(job) -&gt; the rail's mono word, non-null for every state</code></pre>
+
+<p>Because <code>stage_index</code> is literally a projection of <code>stage_strip</code>'s output,
+a strip and a rail mini <strong>can never disagree</strong>. And nothing is derived on the client:
+the label is served, the note is served as a whole sentence, and the visual class is resolved
+server-side from a single mapping table (<code>RUN_STATES</code> / <code>WAIT_STATES</code> /
+<code>FAIL_STATES</code> / <code>DONE_STATES</code>) and served pre-resolved as
+<code>status</code>, so a screen never carries the table at all.</p>
+
+<p>Two readings recorded in the module deserve a look. First,
+<code>needs_answer</code> is raised at <em>two</em> stages — the proposal turn and the build — so
+mapping it unconditionally to 집필 would print "writing" for a job that has never written a unit;
+the step is instead resolved from the transition that produced the pause. Second,
+<code>MAX_STAGE_ATTEMPTS</code> is never a literal in the served sentence: it prints
+<code>services.MAX_STAGE_ATTEMPTS + 1</code>, so the number moves with the constant.</p>
+
+<p>There is also a self-aware comment about a real footgun:
+<code>STATE_STEP.get(state, STEP_INTAKE)</code> fails <em>silently</em> to 입력, so a state missing
+from the map prints the wrong step rather than raising — <em>"which is why the sixth token is mapped
+in the same edit that adds it."</em></p>
+
+<h4><span class="fileref">progress.py</span> (42) — the v2 half of <em>one</em> channel</h4>
+
+<p>This is the smallest module on the page and the clearest statement in the repository of how the
+two generations relate. Its docstring:</p>
+
+<blockquote><p><em>"There is exactly one progress channel in this system and this module does not
+create a second one. … Same emitter, same endpoint, same field name (<code>progress</code>), same
+envelope, same fail-soft posture — only the row it lands on differs. Adding a second channel is
+explicitly forbidden by the agent module's own docstring and by the P54 regression-risk
+list."</em></p></blockquote>
+
+<p>The shared internal route is
+<code>POST /api/content/internal/miracle-agent/jobs/&lt;id&gt;/progress</code>
+(<span class="fileref">content/urls.py:594</span>), service-token gated, and its view
+<code>draft_views.InternalContentDraftProgressView</code> resolves the id against the <strong>v1</strong>
+job table first and falls through to the v2 row:</p>
+
+<pre><code>def post(self, request, job_id):
+    job = ContentDraftJob.objects.filter(pk=job_id).first()     # v1
+    if job is None:
+        if record_agent_job_progress(job_id, request.data):     # v2 fall-through
+            return Response(status=204)
+        raise Http404(…)</code></pre>
+
+<div class="callout warn">
+<p><strong>Resolving the apparent tension.</strong> Explainer #13 established (grep-verified) that
+v2 <em>never calls <code>/agent-api</code></em> — no <code>AGENT_BASE_URL</code>, no
+<code>X-Agent-Service-Token</code>, no agent hop anywhere in <code>agent_jobs/</code>. So who writes
+v2 progress rows, if the route above exists for an agent that never calls it?</p>
+<p><strong>Answer, from the code:</strong> the v2 pipeline runs entirely inside Django and Celery, so
+it calls <code>record_job_progress</code> <em>directly, in process</em>. Grepping the whole backend
+for that function finds exactly five non-test producers, and every one of them is a v2 backend
+module: <span class="fileref">build.py:1860</span> (unit write and integration),
+<span class="fileref">architect.py:718</span> (the proposal turn),
+<span class="fileref">chat_intake.py:700</span> (the KakaoTalk archive pipeline),
+<span class="fileref">revisions.py:306</span> and
+<span class="fileref">publishing.py:1216</span> (the publish). The HTTP fall-through in the view is a
+<em>seam</em>, not the live producer — it exists so that if anything ever emits progress for a v2
+job over the wire, it lands on the same field through the same envelope instead of growing a second
+channel.</p>
+<p>Both halves also share the same guard, and that is the point of the design: a ping outside
+<code>PROGRESS_ACCEPTING_STATES</code> (<code>processing · proposing · writing · integrating ·
+publishing</code>) is a cheap no-op returning <code>True</code> — the job exists, nothing was
+stored. A late telemetry envelope must never error the caller or resurrect a stale panel. Note what
+is deliberately excluded: the draft's free-note request runs while the job sits in
+<code>draft_ready</code> and reports through its own request row, so a late envelope can never paint
+a progress panel over the editor.</p>
+</div>
+
+<h3 id="code-drift">7. Drift found while walking (reported, not fixed)</h3>
+
+<p>This curriculum's standing rule is that <strong>the code is the authority</strong>. Three places
+where the current documentation and comments have fallen behind. None is a bug; all three are prose
+lag, and this phase changes no code and no docs.</p>
+
+<ol>
+<li><span class="fileref">docs/current/backend.md</span> § "The job machine" says
+<em>"<code>approve_scaffold</code> from <code>needs_review</code> is the only <code>Kind.GATE</code>
+edge left in the table"</em>. Executing <code>states.py</code> shows <strong>five</strong>
+<code>Kind.GATE</code> edges: <code>approve_scaffold</code> plus the four <code>publish</code>
+edges from <code>draft_ready · approved_unpublished · adjusting · failed</code>. What is actually
+true — and is the more interesting fact — is that <code>approve_scaffold</code> is the only
+<strong>guarded</strong> edge; the four publish gates carry <code>guard = None</code>. The sentence
+conflates "gate" with "guarded".</li>
+<li>The same file's <code>publishing.py</code> bullet still describes the deleted world: <em>"the
+발행 gate as ONE computation serving the screen and the approval guard; 승인 records the decision …
+a failure returning the job to <code>approved_unpublished</code>."</em> P79.S3 deleted 승인 and the
+발행 게이트, and a publish failure takes <code>publish_failed</code> to <code>failed</code>, not to
+<code>approved_unpublished</code>. The later P79 and P81 sections of the same document state the
+current behaviour correctly; the older bullet was simply never rewritten (unlike the
+<code>audit.py</code> bullet above it, which carries an explicit "this no longer exists"
+blockquote).</li>
+<li>The same section's header line says the domain is "~45 modules"; it is <strong>52</strong>
+(non-test) at about 40,300 lines.</li>
+</ol>
+
+<p>These are recorded in the phase notebook as an operator decision — file a deferred job to refresh
+the lines on the next touch of this area, or leave them and rely on the curriculum's "code is the
+authority" note.</p>
+
+<h3>Files this explainer walked</h3>
+
+<p>All under <span class="fileref">apps/backend/content/agent_jobs/</span> unless noted:
+<span class="fileref">build.py</span>, <span class="fileref">build_views.py</span>,
+<span class="fileref">assets.py</span>, <span class="fileref">asset_intake.py</span>,
+<span class="fileref">asset_selection.py</span>, <span class="fileref">asset_views.py</span>,
+<span class="fileref">image_pick.py</span>, <span class="fileref">alt_backfill.py</span>,
+<span class="fileref">draft_editing.py</span>, <span class="fileref">draft_editing_views.py</span>,
+<span class="fileref">draft_preview.py</span>, <span class="fileref">draft_reading_views.py</span>,
+<span class="fileref">revisions.py</span>, <span class="fileref">publishing.py</span>,
+<span class="fileref">publishing_views.py</span>, <span class="fileref">conversation.py</span>,
+<span class="fileref">progress.py</span>, <span class="fileref">stage_strip.py</span>,
+<span class="fileref">states.py</span>, <span class="fileref">services.py</span>,
+<span class="fileref">scaffold.py</span> (the approval function and
+<code>compute_invalidation</code> only), <span class="fileref">guide_source/guide_v1_{5,7,8}*.md</span>;
+plus <span class="fileref">content/draft_publish.py</span>,
+<span class="fileref">content/draft_views.py</span>, <span class="fileref">content/urls.py</span>,
+<span class="fileref">content/management/commands/</span>, and
+<span class="fileref">apps/agent/app/content_drafts/agent.py</span> (the canonical marker regex).
+Orientation from <span class="fileref">docs/current/backend.md</span>.</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+<p class="small">Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+<p><strong>1.</strong> The unit build writes 서두, each 절 and 맺음 strictly one at a time. What
+actually breaks if you parallelise the six calls?</p>
+<button class="opt" data-correct="false">Nothing breaks; the sequential loop is a leftover from a simpler prototype.</button>
+<button class="opt" data-correct="false">The Gemini API would rate-limit the job, so the loop exists as a throttle.</button>
+<button class="opt" data-correct="true">Each unit's packet carries the summaries and continuity notes of every unit already written, so unit <em>n</em>'s input does not exist until unit <em>n−1</em> has returned.</button>
+<button class="opt" data-correct="false">The database's unique constraint on <code>(job, scaffold_revision, unit_id)</code> would deadlock under concurrent writes.</button>
+<p class="why" hidden>It is a real data dependency, not a throttle. <code>neighbor_summaries()</code>
+feeds every written unit's own summary and continuity note into the next packet — parallel calls
+would produce six units that repeat each other and hand off to nothing.</p>
+</div>
+
+<div class="q" id="q2">
+<p><strong>2.</strong> The integration pass is told, in its prompt, that it may not add a single
+fact. What does the code actually check when the model returns, and why is the prompt sentence
+insufficient?</p>
+<button class="opt" data-correct="false">It re-runs the writer on each unit and diffs the prose; a prompt cannot be trusted for style.</button>
+<button class="opt" data-correct="true">It compares the returned body's <code>## NN.</code> heading sequence and its sorted <code>img:</code>/<code>cap:</code> marker multiset against what went in; a prompt instruction cannot stop a model from dropping a photo or retitling a section on some run.</button>
+<button class="opt" data-correct="false">It measures the returned length against the sum of the unit targets and rejects a ±20% deviation.</button>
+<button class="opt" data-correct="false">It asks a second model to verify that no new facts were introduced, and fails the attempt on disagreement.</button>
+<p class="why" hidden><code>check_integration</code> raises <code>heading_sequence_mismatch</code> or
+<code>marker_multiset_changed</code> and fails the attempt. Length is <em>reported</em> per unit and
+never enforced, and there is no verifier model — the checks are deterministic on purpose.</p>
+</div>
+
+<div class="q" id="q3">
+<p><strong>3.</strong> A Celery worker is killed while a unit row sits in state <code>writing</code>.
+What does the next run of the build task do with that row?</p>
+<button class="opt" data-correct="false">Nothing — a <code>writing</code> row is skipped as "in progress elsewhere" and the operator must reset it manually.</button>
+<button class="opt" data-correct="false">It rolls the whole build back to the approved revision and re-writes every unit from scratch.</button>
+<button class="opt" data-correct="true">It picks it up: the loop selects the first unit that is <code>queued</code> <strong>or</strong> <code>writing</code>, so a crashed attempt re-runs in place on its remaining budget while <code>done</code> units are never rewritten.</button>
+<button class="opt" data-correct="false">It takes the <code>cancel</code> edge to unwind the partial build, then resumes from the last <code>done</code> unit.</button>
+<p class="why" hidden>The build has no cancel edge at all — the machine's single
+<code>Kind.CANCEL</code> transition belongs to the proposal stage. The build's answer to a crash is
+re-entrancy, spelled out in the comment inside <code>_write_units</code>.</p>
+</div>
+
+<div class="q" id="q4">
+<p><strong>4.</strong> The 자유 지시 ("free instruction") worker rewrites every unit of a draft and
+re-runs integration. Why does a failure or a cancel halfway through need no rollback?</p>
+<button class="opt" data-correct="false">Because the whole run is wrapped in a single <code>transaction.atomic()</code> block that is rolled back on any exception.</button>
+<button class="opt" data-correct="true">Because it writes nothing at all: <code>_recompose_unit</code> and <code>_integrate_revision</code> run with <code>persist=False</code> in memory and hand the rewritten sections back to the client, which applies them as one undo entry and persists them on the next save.</button>
+<button class="opt" data-correct="false">Because each rewritten unit is appended as its own draft row, so failing partway just leaves extra drafts the operator can ignore.</button>
+<button class="opt" data-correct="false">Because the previous draft body is snapshotted first and restored by the failure handler.</button>
+<p class="why" hidden>"Don't write until the whole result exists" is cheaper and stronger than
+rolling back. It gives you the cancel path, the failure path and the undo entry for free — and note
+that a save always appends <code>rev N+1</code>, so no path in this subsystem rewrites a draft.</p>
+</div>
+
+<div class="q" id="q5">
+<p><strong>5.</strong> Which single call makes a content-agent article publicly visible, and where
+does it live?</p>
+<button class="opt" data-correct="false"><code>publishing.build_published_content</code> — it writes the <code>NotionContent</code> row, the HTML and the images.</button>
+<button class="opt" data-correct="false"><code>publishing.request_publish</code> — the operator's 바로 발행 act, which takes the <code>publish</code> edge.</button>
+<button class="opt" data-correct="true"><code>content.services.set_content_publish_state(content_id, True)</code>, called from <code>run_publish</code> at <code>publishing.py:1367</code> and nowhere else in v2.</button>
+<button class="opt" data-correct="false"><code>materialize_unpublished</code> with <code>touch=True</code>, which flips <code>published_at</code> while bumping <code>updated_at</code>.</button>
+<p class="why" hidden><code>build_published_content</code> is deliberately visibility-neutral — it
+writes the row, the HTML and the images and flips nothing, which is exactly what lets 초안 저장
+reuse it to produce a real but 비공개 row. Visibility belongs to the single choke point, and
+explainer #12 owns everything downstream of it.</p>
+</div>
+
+<script>
+document.querySelectorAll('.q').forEach(function (q) {
+  var why = q.querySelector('.why');
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var right = btn.dataset.correct === 'true';
+      btn.classList.add(right ? 'correct' : 'incorrect');
+      if (why) why.hidden = false;
+    });
+  });
+});
+</script>
+</section>
+
+</body>
+</html>
