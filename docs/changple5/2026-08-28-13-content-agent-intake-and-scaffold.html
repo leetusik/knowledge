@@ -1,0 +1,1752 @@
+<!--kb
+title: "Content agent I: KakaoTalk intake and scaffolding a draft"
+date: 2026-08-28
+tags:
+  - changple5
+  - content-agent
+  - state-machine
+  - kakaotalk-intake
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content agent I: KakaoTalk intake and scaffolding a draft</title>
+<style>
+  :root { color-scheme: light dark; --line:#c9cdd4; --muted:#6b7280; --s13:#e8f2ff; --s13b:#2f6fb5; --s14:#eeeeee; --s14b:#9aa0a6; }
+  body { max-width: 50rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; }
+  h1 { line-height: 1.25; }
+  h2 { margin-top: 2.4rem; border-bottom: 2px solid var(--line); padding-bottom: .3rem; }
+  h3 { margin-top: 1.9rem; }
+  h4 { margin-top: 1.4rem; margin-bottom: .3rem; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f4f4f4; color:#111;
+        padding: .75rem; border-radius: 6px; font-size: .87em; line-height: 1.5; }
+  code { background: #f0f0f0; color:#111; padding: .08em .3em; border-radius: 3px; font-size: .9em; }
+  pre code { background: none; padding: 0; }
+  .callout { border-left: 4px solid #4a7; background: #f0f8f4; color:#111;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.warn { border-left-color: #d08a2a; background: #fdf5e8; }
+  .callout.def  { border-left-color: #4a6fd0; background: #eef2fd; }
+  .callout h4 { margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+  th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+  th { background: #f4f6f8; color:#111; }
+  td, th { overflow-wrap: anywhere; }
+  figure { margin: 1.4rem 0; }
+  figcaption { font-size: .88em; color: var(--muted); margin-top: .4rem; }
+  svg { max-width: 100%; height: auto; }
+  .pipe { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .pipe .st { flex: 1 1 9.5rem; border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem;
+              background: #fafbfc; color:#111; font-size: .85em; }
+  .pipe .st b { display: block; font-size: .95em; }
+  .pipe .st .w { color: #345; display:block; margin-top:.25rem; font-size:.95em; }
+  .pipe .st .n { color: var(--muted); display:block; margin-top:.2rem; }
+  .erow { display: flex; flex-wrap: wrap; gap: .6rem; margin: .6rem 0; }
+  .ebox { flex: 1 1 12rem; border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem;
+          background:#fafbfc; color:#111; font-size: .85em; }
+  .ebox b { display:block; }
+  .ebox span { color: var(--muted); }
+  .ebox.hi { background: var(--s13); border-color: var(--s13b); }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .55rem .75rem;
+            cursor: pointer; border: 1px solid var(--line); border-radius: 5px; background:#fff; color:#111;
+            font: inherit; font-size: .95em; }
+  .q .opt:hover { background:#f2f5f9; }
+  .q .opt.correct   { background: #d6f5d6; border-color:#4a7; }
+  .q .opt.incorrect { background: #f7d6d6; border-color:#c66; }
+  .q .why { margin: .5rem 0 0; font-size: .93em; background:#f6f6f6; color:#111; padding:.5rem .7rem;
+            border-radius:5px; }
+  .q { margin-bottom: 1.6rem; }
+  nav ol { margin: .4rem 0; }
+  .lead { font-size: 1.07em; }
+  .small { font-size: .9em; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Content agent I: KakaoTalk intake and scaffolding a draft</h1>
+
+<p class="lead">Thirteenth in the changple5 builder's curriculum. The previous page,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">The content library: models,
+the single publish seam, media derivatives, and the Notion mirror</a>, stopped at a finished article:
+a <code>NotionContent</code> row that is either published or not. This page is about where that row
+comes from — how raw material becomes a <strong>구성안</strong> (a composition proposal) that a human
+approves before a single sentence of the article is written.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a>
+      <ol>
+        <li><a href="#spine">The spine: a state machine that is data</a></li>
+        <li><a href="#models">The models</a></li>
+        <li><a href="#posts">Intake I — the raw material: posts</a></li>
+        <li><a href="#kakao">Intake II — the KakaoTalk chain</a></li>
+        <li><a href="#rules">Intake III — the rules the draft must obey</a></li>
+        <li><a href="#proposal">The 제안 turn — how a 구성안 gets made</a></li>
+        <li><a href="#routes">The routes, and where this page stops</a></li>
+      </ol>
+    </li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+
+<h3>Two job tables, one screen</h3>
+
+<p>Open <code>/operator/miracle-agent</code> in the changple5 operator console and you are looking at
+the <strong>content agent</strong>: the machine that turns the operator's raw material into a published
+article on 창플. There are two generations of it in the repository, and telling them apart is the first
+thing to get straight, because both still exist and both still have tables.</p>
+
+<ul>
+  <li><strong>v1 — <code>ContentDraftJob</code></strong> (built in P30/P52). It lives in
+    <code>apps/backend/content/models.py</code> with a handful of <code>draft_*.py</code> modules
+    (<code>draft_dispatch.py</code>, <code>draft_publish.py</code>, <code>draft_views.py</code>) and an
+    agent-side service in <code>apps/agent/app/content_drafts/</code>. It is <em>superseded but still
+    routed</em>: <code>draft_views.py</code> still calls
+    <code>queue_draft_generation_on_commit</code>/<code>requeue_draft_generation_on_commit</code>, which
+    still send the Celery task named <code>content.generate_draft</code>. Explainer #15 covers it. This
+    page names it once and moves on.</li>
+  <li><strong>v2/v3 — <code>ContentAgentJob</code></strong> (built in P54, then reworked across P72–P82).
+    It lives in its own package, <code>apps/backend/content/agent_jobs/</code> — <strong>57 modules and
+    about 40,000 lines</strong>, by a wide margin the largest subsystem in this repository. This is what
+    the console actually runs today, and it is the subject of this page and the next one.</li>
+</ul>
+
+<div class="callout warn">
+<h4>A fact about the deployment, not about the code</h4>
+<p>The 미라클 에이전트 console ships to production but is <strong>unexercised there</strong>: there is
+no operator account on the production instance yet, so every job that has ever run has run on the
+development stack. Nothing below is speculative — it is all real, tested, deployed code — but if you go
+looking for production job rows you will not find many.</p>
+</div>
+
+<h3>The product story</h3>
+
+<p>창플 publishes long-form articles about the real, unglamorous business of running a franchise
+outlet: what a founder actually decided, what it cost, what went wrong. The raw material for such an
+article is not an interview transcript and not a blog draft. It is two things the operator already
+has:</p>
+
+<ol>
+  <li><strong>Published Naver cafe posts</strong> — the corpus explainer #8 built by scraping, and
+    explainer #9 turned into vector chunks. Here they are read as <em>project records</em>: partial,
+    out of order, written by several people over months.</li>
+  <li><strong>KakaoTalk conversation exports</strong> — the operator's own chat rooms with the founder,
+    exported from the phone as a <code>.zip</code> containing a <code>.txt</code> transcript and
+    whatever photos KakaoTalk still had. This is where the 고민 and the 의사결정 live, the material
+    that never made it into a public post.</li>
+</ol>
+
+<p>The agent reads both, and then — and this is the design decision that shapes the whole subsystem —
+it does <strong>not</strong> write the article. It produces a <strong>구성안</strong>: a composition
+proposal listing the core message, the sections with their headings and target lengths, the evidence
+each section rests on, and (since P74) which photos and conversation excerpts go where. The operator
+reads that proposal, edits it, and approves it. Only then does anything write prose.</p>
+
+<div class="callout def">
+<h4>Vocabulary you will need</h4>
+<ul style="margin:.3rem 0">
+<li><strong>구성안</strong> — the composition proposal. A JSON document with a core message and an
+ordered list of sections. Produced by the "architect"; approved by the operator.</li>
+<li><strong>절 (unit)</strong> — one section of the 구성안.</li>
+<li><strong>가이드</strong> — the content standard, a versioned Korean markdown document that tells the
+agent what a 창플 article is allowed to be. It rides inside the prompts.</li>
+<li><strong>제안 turn</strong> — one run of the proposal pipeline: analysis workers, then the architect
+call, then the recorded proposal.</li>
+<li><strong>승인 (approve)</strong> — the operator's one gate. This page ends the moment before it.</li>
+</ul>
+</div>
+
+<h3>Where this page starts and stops</h3>
+
+<p>The whole v2 lifecycle is a state machine with fourteen states. This page covers everything up to
+and including <strong>the turn that produces a 구성안 and parks the job in <code>needs_review</code></strong>
+— the intake surfaces, the KakaoTalk pipeline, the rules the draft must obey, and the proposal turn
+itself. <code>services.approve_scaffold_revision</code> is the last thing mentioned here and the first
+thing explainer #14 teaches. Chunking, embeddings and retrieval are explainers #7 and #9; the publish
+seam is #12; Celery and dispatch-after-commit are #16.</p>
+
+<p>Orientation reading, if you want the doc's version first:
+<code>docs/current/backend.md</code> §"Intake — what the operator selects, and how it is frozen",
+§"The agent-curated intake proposal layer (P73)", §"Composition — the architect, and reference-anchored
+lengths", §"The v3 machine — the simple job flow (P79)". Everything on this page was then verified
+against the code, and where the two disagree the code wins (there are two such places, both noted).</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>The big idea: the state machine is data, and the data is checked before the app can boot</h3>
+
+<p>A subsystem of 40,000 lines needs a spine, and here the spine is 606 lines long:
+<code>apps/backend/content/agent_jobs/states.py</code>. It contains no logic about photos, prompts,
+zip files or Gemini. It contains a <em>list of legal moves</em>:</p>
+
+<pre><code>Transition(
+    JobState.PROPOSING,
+    "proposal_ready",
+    JobState.NEEDS_REVIEW,
+    Actor.SYSTEM,
+    Kind.ADVANCE,
+)</code></pre>
+
+<p>Twenty-nine of these, over fourteen states. Nothing else in the codebase is allowed to write
+<code>job.state</code> — one function, <code>services.transition()</code>, looks the move up in that
+table and refuses if it is not there.</p>
+
+<p>The part worth internalising is what happens <em>at import time</em>. The last statement in the
+module is:</p>
+
+<pre><code>TRANSITION_INDEX: dict[tuple[StateName, str], Transition] = _validate_table()</code></pre>
+
+<p><code>_validate_table()</code> walks the table and asserts three design invariants. If any of them
+fails, importing the module raises <code>AssertionError</code> — which means Django cannot start, the
+worker cannot start, and the test suite cannot even collect. <strong>An illegal edge is a startup
+error, not a runtime bug.</strong> You cannot ship a state machine that contradicts its own design and
+discover it in production three weeks later, because the process will not boot.</p>
+
+<p>That is a pattern worth stealing. Configuration-as-data is common; <em>configuration-as-data with
+its invariants asserted at import</em> is what makes it trustworthy. Everything else in this
+subsystem — nine LLM passes, a zip parser, a media matcher — is allowed to be messy precisely because
+the thing that decides what may happen next is small, declarative and mechanically checked.</p>
+
+<h3>A toy job to carry through</h3>
+
+<p>Take one imaginary job and follow it to the end of the page.</p>
+
+<pre><code>ContentAgentJob
+  id          7f3a1c9e-…            (uuid pk)
+  label       "행복한 김밥 강남점 3월"
+  brand       행복한 김밥            (FK, exactly one brand per job)
+  scope_mode  "branch"              (지점 선택 / 지점 미지정 / 브랜드 전체)
+  branch      강남점                 (set iff scope_mode == "branch")
+  state       "intake"              (only services.transition() may write this)</code></pre>
+
+<p>The operator picks four Naver cafe posts from that brand's corpus, uploads one KakaoTalk export,
+and presses 구성안 만들기. The KakaoTalk <code>.txt</code> inside the zip looks like this (four
+records — the real export from the operator's own phone had 389):</p>
+
+<pre><code>2024. 3. 12. 오후 2:10, 김세연 : 사장님, 지난주 매출은 어떠셨어요?
+2024. 3. 12. 오후 2:12, 박정우 : 주말에만 30% 올랐어요. 점심 세트를 바꾼 게 컸습니다.
+2024. 3. 12. 오후 2:13, 박정우 : 사진 2장
+2024. 3. 12. 오후 2:15, 박정우 : 파일: 3월_원가표.xlsx</code></pre>
+
+<p>Beside it in the zip: <code>20240312_141305_001.jpg</code> and
+<code>20240312_141305_002.jpg</code>. There is no <code>3월_원가표.xlsx</code> — KakaoTalk's export
+drops file attachments entirely, and drops older photos too. In the operator's real sample, 125 photos
+were referenced and 53 were present (~42%), and every one of the 19 <code>파일:</code> attachments was
+missing.</p>
+
+<p>By the end of this page that raw material has become four normalized message rows with stable ids,
+a conversation boundary <code>seg:5:1-4</code>, two matched photos and one missing file reference, an
+immutable snapshot of every input, and a 구성안 document sitting in <code>needs_review</code> waiting
+for a human.</p>
+
+<h3>Snapshot, not lock</h3>
+
+<p>The second idea to hold on to is subtle and it changed once, in P79. Pressing 구성안 만들기 takes a
+<strong>snapshot</strong> of the inputs — a canonical JSON payload, hashed with SHA-256, stored in an
+immutable <code>ContentAgentInputRevision</code> row. Every downstream stage reads its inputs from that
+row rather than from the live tables.</p>
+
+<p>But it does not <em>lock</em> anything. The operator can keep editing the selection while the
+proposal is being generated. The button's own served helper sentence says so:</p>
+
+<pre><code>SCAFFOLD_HELPER_SENTENCE = (
+    "구성안을 만드는 동안에도 입력은 계속 고칠 수 있습니다 — 잠기는 것은 없습니다."
+)</code></pre>
+
+<p>Which raises an obvious question: if the inputs kept moving, how does the screen know that the
+proposal you are looking at is out of date? Answer: it hashes the inputs again and compares. That one
+comparison — <code>inputs_fingerprint(job) != frozen.content_hash</code> — is the entire mechanism
+behind the sentence «구성안은 2024-03-12의 입력으로 만들어졌습니다.» No change-tracking table, no
+dirty flags, no write hooks. Two hashes.</p>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+
+<p>Everything below is real code in <code>apps/backend/content/agent_jobs/</code> unless another path
+is given. Line numbers were verified on 2026-08-28.</p>
+
+<h3 id="spine">1. The spine: a state machine that is data</h3>
+
+<p>Two files, 1,074 lines together, and they are the ones worth reading whole:
+<code>states.py</code> (606) holds the vocabulary and the table; <code>services.py</code> (468) holds
+the only writer and the retry semantics.</p>
+
+<h4>Provenance, stated in the file</h4>
+
+<p><code>states.py</code>'s module docstring is unusual and instructive: it says where every state came
+from. This subsystem was built through a design co-work process in which each "round" produced a signed
+implementation contract, and the docstring names the round and section for each edge — round 12
+(<code>proposing → needs_review → writing → integrating → draft_ready</code>, the capped-retry failure
+question, and «There is no <code>cancelled</code>»), round 13 (<code>publishing → published</code>, and
+«Failures never advance state»), round 19 (the shrink). Then one honest exception:</p>
+
+<pre><code>**P81.S8 — a fourteenth token, and the only one not from a round.** 조정
+(``adjusting``) is the operator's optional placement step between 초안 and 발행 …
+Round 19's "five rows, always" reads **six** from here on — a deliberate,
+recorded departure, not a silent edit.</code></pre>
+
+<p>A state machine that records which of its states are <em>not</em> from the design record is a state
+machine you can trust when it says the other thirteen are.</p>
+
+<h4>The ladder</h4>
+
+<p><code>JobState</code> (<code>states.py:77</code>) is a Django <code>TextChoices</code> enum with
+fourteen members. Executing the module and counting gives exactly:</p>
+
+<pre><code>intake · processing · ready · needs_answer · proposing · needs_review ·
+writing · integrating · draft_ready · approved_unpublished · adjusting ·
+publishing · published · failed          → 14 states, 29 transitions</code></pre>
+
+<div class="callout warn">
+<h4>Two of those tokens are dead but kept</h4>
+<p><code>processing</code> and <code>ready</code> are produced by <strong>nothing</strong>. They were
+the verdicts of 사전 점검 — a preflight run that P79 deleted. They survive because round 19 still
+prints a rail word for each and because legacy rows in the database still hold them. A new job simply
+stays in <code>intake</code> until 구성안 만들기. This matters when you read the table: they appear
+only as <em>sources</em> of <code>request_scaffold</code>, never as targets.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 790 545" role="img" aria-label="The v2 job state machine: S13's territory shaded blue, S14's greyed out">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#5a6472"/>
+    </marker>
+    <marker id="arb" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#2f6fb5"/>
+    </marker>
+  </defs>
+  <style>
+    .bx  { stroke-width: 1.5; rx: 6; }
+    .s13 { fill: #e8f2ff; stroke: #2f6fb5; }
+    .s14 { fill: #eeeeee; stroke: #9aa0a6; }
+    .dead{ fill: #f7f7f7; stroke: #b9bec6; stroke-dasharray: 4 3; }
+    .t   { font: 13px system-ui, sans-serif; fill: #14304f; }
+    .t14 { font: 13px system-ui, sans-serif; fill: #565c63; }
+    .lb  { font: 11px system-ui, sans-serif; fill: #5a6472; }
+    .lbb { font: 11px system-ui, sans-serif; fill: #2f6fb5; }
+    .ed  { stroke: #5a6472; stroke-width: 1.4; fill: none; marker-end: url(#ar); }
+    .edb { stroke: #2f6fb5; stroke-width: 1.6; fill: none; marker-end: url(#arb); }
+    .hd  { font: bold 12px system-ui, sans-serif; }
+  </style>
+
+  <rect class="bx dead" x="20" y="8" width="160" height="34"/>
+  <text class="lb" x="100" y="29" text-anchor="middle">processing · ready (dead)</text>
+
+  <rect class="bx s13" x="20" y="86" width="160" height="38"/>
+  <text class="t" x="100" y="103" text-anchor="middle">intake</text>
+  <text class="lb" x="100" y="117" text-anchor="middle">입력 준비</text>
+
+  <rect class="bx s13" x="230" y="86" width="160" height="38"/>
+  <text class="t" x="310" y="103" text-anchor="middle">proposing</text>
+  <text class="lb" x="310" y="117" text-anchor="middle">구성안 제안 중</text>
+
+  <rect class="bx s13" x="440" y="86" width="160" height="38"/>
+  <text class="t" x="520" y="103" text-anchor="middle">needs_review</text>
+  <text class="lb" x="520" y="117" text-anchor="middle">검토 필요</text>
+
+  <rect class="bx s13" x="230" y="182" width="160" height="38"/>
+  <text class="t" x="310" y="199" text-anchor="middle">needs_answer</text>
+  <text class="lb" x="310" y="213" text-anchor="middle">답변 필요</text>
+
+  <rect class="bx s14" x="440" y="182" width="160" height="38"/>
+  <text class="t14" x="520" y="205" text-anchor="middle">writing</text>
+
+  <rect class="bx s14" x="440" y="252" width="160" height="38"/>
+  <text class="t14" x="520" y="275" text-anchor="middle">integrating</text>
+
+  <rect class="bx s14" x="440" y="322" width="160" height="38"/>
+  <text class="t14" x="520" y="345" text-anchor="middle">draft_ready</text>
+
+  <rect class="bx s14" x="215" y="322" width="175" height="38"/>
+  <text class="t14" x="302" y="345" text-anchor="middle">approved_unpublished</text>
+
+  <rect class="bx s14" x="215" y="396" width="175" height="38"/>
+  <text class="t14" x="302" y="419" text-anchor="middle">adjusting</text>
+
+  <rect class="bx s14" x="440" y="396" width="160" height="38"/>
+  <text class="t14" x="520" y="419" text-anchor="middle">publishing</text>
+
+  <rect class="bx s14" x="440" y="470" width="160" height="38"/>
+  <text class="t14" x="520" y="493" text-anchor="middle">published</text>
+
+  <rect class="bx s14" x="20" y="396" width="160" height="38"/>
+  <text class="t14" x="100" y="419" text-anchor="middle">failed</text>
+
+  <path class="edb" d="M 180 98 L 226 98"/>
+  <text class="lbb" x="203" y="90" text-anchor="middle">request_scaffold</text>
+  <path class="edb" d="M 230 116 L 184 116"/>
+  <text class="lbb" x="205" y="132" text-anchor="middle">cancel</text>
+
+  <path class="edb" d="M 390 105 L 436 105"/>
+  <text class="lbb" x="413" y="97" text-anchor="middle">proposal_ready</text>
+
+  <path class="edb" d="M 290 124 L 290 178"/>
+  <text class="lbb" x="296" y="148">stage_capped</text>
+  <path class="edb" d="M 250 182 L 250 128"/>
+  <text class="lbb" x="244" y="158" text-anchor="end">resume_scaffold</text>
+
+  <path class="edb" d="M 500 124 L 500 152 L 350 152 L 350 128"/>
+  <text class="lbb" x="425" y="166" text-anchor="middle">request_scaffold · 구성안 다시 만들기</text>
+
+  <path class="edb" d="M 310 86 C 310 56, 250 56, 250 82 L 250 84" marker-end="url(#arb)"/>
+  <text class="lbb" x="276" y="52" text-anchor="middle">stage_retry (self-loop)</text>
+
+  <path class="ed" d="M 560 124 L 560 178"/>
+  <text class="lb" x="566" y="148">approve_scaffold ⛨ gate</text>
+
+  <path class="ed" d="M 520 220 L 520 248"/>
+  <text class="lb" x="526" y="238">units_done</text>
+  <path class="ed" d="M 520 290 L 520 318"/>
+  <text class="lb" x="526" y="308">integration_done</text>
+  <path class="ed" d="M 440 341 L 394 341"/>
+  <text class="lb" x="417" y="334" text-anchor="middle">save_draft</text>
+  <path class="ed" d="M 520 360 L 520 392"/>
+  <text class="lb" x="526" y="380">publish</text>
+  <path class="ed" d="M 520 434 L 520 466"/>
+  <text class="lb" x="526" y="454">publish_succeeded</text>
+  <path class="ed" d="M 440 415 L 184 415"/>
+  <text class="lb" x="312" y="408" text-anchor="middle">publish_failed</text>
+  <path class="ed" d="M 302 360 L 302 392"/>
+  <text class="lb" x="308" y="380">begin_adjust</text>
+
+  <rect class="bx s13" x="640" y="14" width="18" height="14"/>
+  <text class="lb" x="666" y="26">this page (#13)</text>
+  <rect class="bx s14" x="640" y="38" width="18" height="14"/>
+  <text class="lb" x="666" y="50">explainer #14</text>
+</svg>
+<figcaption>The spine of the v2 lifecycle. Shaded blue is this page's territory; grey is explainer
+#14's. Nine of the 29 edges are omitted for legibility (the three extra
+<code>request_scaffold</code> sources, <code>unit_retry</code>/<code>unit_capped</code>/<code>resume_build</code>,
+the second <code>stage_retry</code>/<code>stage_capped</code> pair on <code>integrating</code>, and the
+other <code>begin_adjust</code>/<code>publish</code> sources).</figcaption>
+</figure>
+
+<h4>The shape of an edge</h4>
+
+<p>A <code>Transition</code> (<code>states.py:245</code>) is a frozen dataclass with seven fields:
+source, trigger, target, <code>actor</code>, <code>kind</code>, an optional <code>guard</code>, and a
+human note. The two enum-ish helper classes beside it are the interesting part:</p>
+
+<ul>
+  <li><strong><code>Actor</code></strong> (<code>:228</code>) — <code>OPERATOR</code> or
+    <code>SYSTEM</code>. Eighteen edges are operator-triggered, eleven are system-triggered. An
+    operator edge attempted without an operator raises <code>ActorRequired</code>.</li>
+  <li><strong><code>Kind</code></strong> (<code>:233</code>) — <code>ADVANCE</code> (14 edges),
+    <code>RECOVER</code> (2), <code>FAILURE</code> (7), <code>GATE</code> (5), <code>CANCEL</code> (1).
+    <code>kind</code> is not decoration: <code>_validate_table</code> uses it to enforce an invariant,
+    and the append-only history log records it.</li>
+</ul>
+
+<p>Exactly one guard survives in the whole machine:</p>
+
+<pre><code>GUARD_SCAFFOLD_REVISION_APPROVED = "scaffold_revision_approved"   # states.py:261</code></pre>
+
+<p>It hangs off <code>needs_review --approve_scaffold--&gt; writing</code>, the one human gate left, and
+its implementation (<code>services.py:115</code>) refuses on two named blockers:
+<code>scaffold_revision_not_approved</code> (no approved revision row) and
+<code>change_list_not_seen</code> (there is one, but the operator never saw the list of what changed).
+P79 retired the other three guards along with the surfaces they gated.</p>
+
+<h4>The three invariants, enforced at import</h4>
+
+<p><code>_validate_table</code> (<code>states.py:520</code>) is the heart of the design. Quoting the
+docstring's own numbering:</p>
+
+<pre><code>1. **No stop, no cancel outside ``proposing``.** There is no ``cancelled``
+   state, and ``cancel`` is legal from exactly one state (round 12 §5.3:
+   "Cancel exists only in ``proposing``"). Its target is now ``intake``: with
+   the freeze retired there is nothing to fall back *to* but the inputs, which
+   were editable the whole time anyway.
+2. **Failures never advance state.** A ``failure``-kind edge may never raise the
+   lifecycle order of the job and may never reach ``published``.
+3. **``approved_unpublished`` and ``published`` are both arrivals** — 초안 저장 is
+   a destination (「미발행 초안」), not a half-finished publish.</code></pre>
+
+<p>And the checks themselves, in code:</p>
+
+<pre><code>if transition.kind == Kind.FAILURE:
+    if transition.target == JobState.PUBLISHED:
+        raise AssertionError(f"failure transition {key} reaches `published` — "
+                             "failures never advance state")
+    source_order = LIFECYCLE_ORDER.get(transition.source)
+    target_order = LIFECYCLE_ORDER.get(transition.target)
+    if (source_order is not None and target_order is not None
+            and target_order &gt; source_order):
+        raise AssertionError(f"failure transition {key} advances the lifecycle …")
+
+cancel_sources = {t.source for t in TRANSITIONS if t.kind == Kind.CANCEL}
+if cancel_sources != {JobState.PROPOSING}:
+    raise AssertionError("cancel exists only in `proposing` (round 12 §5.3) …")
+if "cancelled" in states:
+    raise AssertionError("there is no `cancelled` state (round 12 §4)")</code></pre>
+
+<p>Plus three structural checks: no duplicate <code>(source, trigger)</code> key, no unknown state, and
+— added by P79 — <strong>no stranded state</strong>: every token must be both reachable and leavable,
+with <code>published</code> the single permitted terminal. That last check is why the
+<code>request_scaffold</code> edge has four sources rather than one: <code>processing</code> and
+<code>ready</code> are dead, but a legacy row sitting in one of them still needs a way out, and the
+assertion refuses to let you forget.</p>
+
+<p>Two more assertions insist that <code>STATE_PILL</code> and <code>STATE_LABELS</code> — the pill
+colour family and the Korean word each state prints — cover <em>exactly</em> the vocabulary. Add a
+state, forget its label, and the app does not start.</p>
+
+<div class="callout">
+<h4>The design lesson: states are a liability</h4>
+<p>P79.S3 shrank this machine from <strong>21 states and 56 edges to 13 and 23</strong> (P81.S8 later
+added 조정, making it 14 and 29). What was deleted: 사전 점검 (the preflight run and its
+<code>blocked</code> verdict), the 작업 시작 · 입력 고정 Start gate and its <code>frozen</code> state,
+the whole audit-and-auto-repair family (<code>audit_running · audit_failed · repairing ·
+awaiting_operator</code>), and the 수정지시 / 구성안 재개방 paths (<code>revising · reopened</code>).
+The trigger was one operator sentence: «the process is overcomplicated».</p>
+<p>Note the direction of travel. The machine got <em>smaller</em> as the product got <em>clearer</em>.
+Every state is a promise that some screen can render it, some transition can leave it, and some human
+knows what it means; the honest move when a surface dies is to delete its tokens too.</p>
+</div>
+
+<h4><code>services.transition()</code> — the only writer</h4>
+
+<p><code>services.py:137</code>. Every state change in the subsystem goes through this one function,
+and its shape is worth copying:</p>
+
+<pre><code>with transaction.atomic():
+    locked = ContentAgentJob.objects.select_for_update().get(pk=job.pk)
+    edge = find_transition(locked.state, trigger)
+    if edge is None:
+        raise IllegalTransition(f"`{trigger}` is not legal from `{locked.state}` …")
+    if edge.actor == Actor.OPERATOR and actor is None:
+        raise ActorRequired(…)
+    for guard in _edge_guards(edge):
+        blockers = guard_blockers(guard, locked, context)
+        if blockers:
+            raise TransitionBlocked(guard, blockers)
+
+    from_state = locked.state
+    locked.state = edge.target
+    …
+    locked.save(update_fields=[…])
+    ContentAgentJobTransition.objects.create(
+        job=locked, from_state=from_state, to_state=edge.target,
+        trigger=trigger, kind=edge.kind, actor_kind=edge.actor,
+        actor=actor, note=note[:255], context=context,
+    )</code></pre>
+
+<p>Four things happen here that are each deliberate. The row is <strong>re-read under
+<code>select_for_update()</code></strong>, so the state the guard checks is the state on disk and two
+concurrent callers cannot race the same job. The refusals are <strong>typed</strong> —
+<code>IllegalTransition</code>, <code>ActorRequired</code>, <code>TransitionBlocked</code> (which
+carries a machine-readable <code>blockers</code> list) — so the HTTP layer maps them to distinct
+responses instead of a generic 400. The history row is written <strong>inside the same
+transaction</strong>, so a state change without its audit entry is not representable. And the guard
+registry fails closed:</p>
+
+<pre><code>def guard_blockers(name, job, context=None) -> list[str]:
+    fn = _GUARDS.get(name)
+    if fn is None:
+        return [f"guard_not_implemented:{name}"]     # deny, with a name
+    return list(fn(job, context or {}))</code></pre>
+
+<p>An unregistered guard <em>denies</em> its edge rather than silently allowing it — which is what let
+earlier slices declare a gate before the slice that computed it had landed.</p>
+
+<h4>Stage attempts: the retry budget (D56)</h4>
+
+<p>LLM stages fail. The design's answer, recorded as deferred job D56 and absorbed into the machine, is
+that a failed stage <strong>re-runs in place, on the same job, over the same input snapshot</strong> —
+never by creating a second job — and after a capped number of attempts it stops and asks a human.</p>
+
+<pre><code>MAX_STAGE_ATTEMPTS = 2        # services.py:49</code></pre>
+
+<p>The cap counts <em>attempts</em>, not extra retries, because the console literally prints
+«시도 n / 최대 2» and the printed string is the contract. Four functions implement it:</p>
+
+<table>
+<tr><th>Function</th><th>What it does</th></tr>
+<tr><td><code>start_stage_attempt</code> <span class="small">(:349)</span></td>
+    <td>Opens attempt N of a stage <em>over <code>job.frozen_input_revision</code></em>. Raises
+    <code>ValueError</code> if there is no snapshot yet, and <code>StageAttemptsExhausted</code>
+    (<code>:76</code>) at the cap.</td></tr>
+<tr><td><code>finish_stage_attempt</code> <span class="small">(:384)</span></td>
+    <td>Stamps the attempt succeeded or failed with an error code, and stores its payload.</td></tr>
+<tr><td><code>attempts_remaining</code> <span class="small">(:344)</span></td>
+    <td><code>MAX_STAGE_ATTEMPTS - count(attempts for this stage+unit)</code>, floored at 0.</td></tr>
+<tr><td><code>fail_stage</code> <span class="small">(:424)</span></td>
+    <td>The whole of D56 in one call: finish the attempt, then take
+    <code>stage_retry</code> (budget remains) or <code>stage_capped</code> (exhausted).</td></tr>
+</table>
+
+<p><code>fail_stage</code> looks the pair of triggers up in a small map so no stage invents its own
+vocabulary:</p>
+
+<pre><code>STAGE_FAILURE_TRIGGERS: dict[str, tuple[str, str]] = {
+    str(JobState.PROPOSING):   ("stage_retry", "stage_capped"),
+    str(JobState.WRITING):     ("unit_retry",  "unit_capped"),
+    str(JobState.INTEGRATING): ("stage_retry", "stage_capped"),
+}</code></pre>
+
+<p><code>stage_retry</code> is a <strong>self-loop</strong>: <code>proposing → proposing</code>. The
+job does not move, the frozen inputs do not move, the id does not change — the failing unit simply runs
+again. And crucially, work already done is not thrown away: a worker that already succeeded is reused
+from its stored attempt payload (<code>architect._reuse_analysis</code>, <code>architect.py:691</code>).
+At the cap, <code>stage_capped</code> moves the job to <code>needs_answer</code> and a human is asked.</p>
+
+<h4>Why the operator's 다시 시도 gets a fresh budget</h4>
+
+<p>If attempts were counted per stage forever, the operator's «다시 시도» button would be a lie the
+second time it was pressed — the counter would already be at 2. So attempts are scoped to the
+<em>turn</em>:</p>
+
+<pre><code>def proposal_turn(job) -> int:                       # architect.py:658
+    return max(job.transitions.filter(
+        trigger__in=("request_scaffold", "propose_scaffold", "resume_scaffold")
+    ).count(), 1)
+
+def _unit_key(base: str, turn: int) -> str:          # architect.py:679
+    if turn &lt;= 1:
+        return base
+    return f"{base}@{turn}" if base else f"turn{turn}"</code></pre>
+
+<p>The turn number is <em>derived from the append-only transition log</em> — no counter column. Every
+entry into <code>proposing</code> (a fresh 구성안 만들기, a 다시 만들기, or a
+<code>resume_scaffold</code> out of <code>needs_answer</code>) increments it, and the unit key becomes
+<code>post@2</code>, <code>conversation@2</code>, and so on. Fresh key, fresh budget. And nothing is
+ever deleted — every <code>ContentAgentStageAttempt</code> row from every turn stays as the audit
+trail.</p>
+
+<h4>The snapshot, and its hash</h4>
+
+<p><code>freeze_input_revision</code> (<code>services.py:220</code>) writes the immutable input
+revision. Its docstring records the P79 change of meaning in as many words:</p>
+
+<pre><code>**P79.S3 re-homed this act.** It used to be the Start gate's freeze, and it
+locked the intake; the gate is gone and nothing locks … What survives is the
+snapshot itself, because every downstream stage reads its inputs from
+``job.frozen_input_revision.payload`` (the architect packet, the build brief,
+``start_stage_attempt``'s D56 anchor).</code></pre>
+
+<p>Immutability is enforced rather than trusted: re-freezing an already-frozen row raises
+<code>ValueError("an input snapshot is immutable — write the next one")</code>. The identity of a
+revision is <code>canonical_hash</code> (<code>services.py:209</code>):</p>
+
+<pre><code>def canonical_hash(payload) -> str:
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()</code></pre>
+
+<p>Sorted keys, no ASCII escaping (the payload is full of Korean), <code>default=str</code> so
+datetimes and UUIDs do not explode. The same function hashes scaffold revisions and chat revisions, so
+"is this the same thing?" has exactly one answer everywhere in the subsystem.</p>
+
+<h3 id="models">2. The models</h3>
+
+<p><code>models.py</code> (612 lines) holds seven tables. Their arrangement around our toy job:</p>
+
+<figure>
+<div class="erow">
+  <div class="ebox hi"><b>ContentAgentJob <span class="small">(:49)</span></b>
+    <span>uuid pk · brand + scope_mode + branch · <code>state</code> · <code>progress</code> (the one
+    envelope) · <code>note</code> · <code>guide_instruction</code> · FK <code>guide_version</code> ·
+    <code>reference_content_id</code> (a plain int, deliberately not a FK) ·
+    <code>published_content</code></span></div>
+</div>
+<div class="erow">
+  <div class="ebox hi"><b>ContentAgentInputRevision <span class="small">(:240)</span></b>
+    <span>rev 1, 2, 3… · <code>payload</code> (the whole snapshot) · <code>content_hash</code> ·
+    <code>frozen_at</code> / <code>frozen_by</code>. Immutable.</span></div>
+  <div class="ebox hi"><b>ContentAgentPostSelection <span class="small">(:493)</span></b>
+    <span>one row per selected 게시글, ordered. <code>post_id</code> is the <em>Naver</em> id, never the
+    <code>DocumentSource</code> autopk. <code>Source</code> = <code>scope</code> |
+    <code>out_of_scope</code> (operator-accepted, with the reason it was outside).</span></div>
+</div>
+<div class="erow">
+  <div class="ebox hi"><b>ContentAgentScaffoldRevision <span class="small">(:300)</span></b>
+    <span><code>Kind</code> = <code>PROPOSAL</code> (the agent's) | <code>APPROVED</code> (rev N) ·
+    <code>payload</code> = the 구성안 document · <code>content_hash</code> · <code>change_list</code> +
+    <code>change_list_seen</code> · <code>approved_at</code>/<code>approved_by</code>. Never
+    mutated.</span></div>
+  <div class="ebox hi"><b>ContentAgentStageAttempt <span class="small">(:416)</span></b>
+    <span><code>stage</code> × <code>unit_key</code> × <code>attempt</code>, FK to the input revision it
+    ran over. <code>State</code> = running | succeeded | failed.</span></div>
+</div>
+<div class="erow">
+  <div class="ebox"><b>ContentAgentDecision <span class="small">(:371)</span></b>
+    <span>승인 and 발행 as an immutable decision log. Explainer #14.</span></div>
+  <div class="ebox hi"><b>ContentAgentJobTransition <span class="small">(:574)</span></b>
+    <span>append-only lifecycle history: from/to/trigger/kind/actor_kind/actor/note/context, ordered by
+    <code>created_at</code>. Written only by <code>services.transition()</code>.</span></div>
+</div>
+<figcaption>The seven tables of <code>agent_jobs/models.py</code>. Blue: touched by this page. All of
+them hang off the job FK; none of them is an extension of the v1 draft models.</figcaption>
+</figure>
+
+<p>Two details are worth pausing on.</p>
+
+<p><strong>The FK to the published article points from the job at the content, not the other way
+round.</strong> <code>ContentAgentJob.published_content</code> (<code>:181</code>) is a nullable
+<code>ForeignKey("content.NotionContent", on_delete=SET_NULL,
+related_name="source_agent_jobs")</code>. Explainer #12 established this direction: v1 has the mirror
+field <code>ContentDraftJob.published_content</code> with
+<code>related_name="source_draft_jobs"</code>, and a hand-uploaded article has nothing to be null
+about. A <code>NotionContent</code> row does not know which job made it; each job knows what it
+produced.</p>
+
+<p><strong>The KakaoTalk tables live next door, on purpose.</strong> <code>chat_models.py</code> (590)
+holds six more: <code>ContentAgentChatArchive</code> (the uploaded <code>.zip</code> and its named
+validation steps), <code>ContentAgentChatRevision</code> (the immutable normalized conversation, hashed
+with the same <code>canonical_hash</code>), <code>ContentAgentChatMessage</code> (one record, with a
+stable 1-based contiguous <code>message_id</code> that is never renumbered),
+<code>ContentAgentChatMedia</code> (one extracted image), <code>ContentAgentChatMediaRef</code> (the
+materialized reference↔file join), and <code>ContentAgentChatSegment</code> (one conversation
+boundary). <code>models.py</code>'s own docstring reserves those tables for that module and says «do
+not widen these models to hold their data» — a stated seam, kept.</p>
+
+<p>And a third file you should recognise but never read: <code>legacy_models.py</code> (198 lines),
+which its docstring calls <strong>history, with no reader</strong>. It holds the two tables round 19's
+deletion left behind (<code>content_contentagentpreflight</code>,
+<code>content_contentagentauditrun</code>). They stay registered with Django not out of tidiness but
+because a table Django does not know about while it still carries a FK to
+<code>content_contentagentjob</code> breaks <code>TRUNCATE</code>-based operations — including Django's
+own test teardown, which fails with «cannot truncate a table referenced in a foreign key
+constraint».</p>
+
+<h3 id="posts">3. Intake I — the raw material: posts</h3>
+
+<p>Two modules, and one architectural fact that surprises people.</p>
+
+<div class="callout warn">
+<h4>v2 never calls <code>/agent-api</code></h4>
+<p>Grep-verified: <code>apps/backend/content/agent_jobs/</code> contains <strong>zero</strong>
+references to <code>agent-api</code>, <code>AGENT_BASE_URL</code> or
+<code>X-Agent-Service-Token</code>. Post selection is plain Django querysets straight over
+<code>DocumentSource</code> — explainer #8's corpus — not explainer #7's retrieval chokepoint. And the
+LLM calls in this subsystem are made from Django itself, with <code>langchain_google_genai</code>, not
+by asking the FastAPI agent. The agent service owns the <em>chat</em> read path; the content agent is a
+backend-side pipeline that happens to call the same provider.</p>
+</div>
+
+<p><strong><code>scope.py</code></strong> (605) answers "which posts belong to this job?". All three
+scope modes are a call into <code>documents.brand_lookup.brand_documents()</code> — membership is never
+re-derived here:</p>
+
+<pre><code>def scope_queryset(job, *, include_suspect=False):              # scope.py:84
+    if job.scope_mode == ContentAgentJob.ScopeMode.BRANCH:
+        return brand_documents(job.brand_id, branch=job.branch_id, …)
+    if job.scope_mode == ContentAgentJob.ScopeMode.UNASSIGNED:
+        return brand_documents(job.brand_id, branch_unassigned=True, …)
+    return brand_documents(job.brand_id, …)</code></pre>
+
+<p>Note the third mode: <strong>지점 미지정 is its own mode</strong> (<code>branch_unassigned=True</code>),
+not <code>branch=None</code> — which means 브랜드 전체. Conflating them would silently widen a
+pre-opening job's scope to the whole brand.</p>
+
+<p><code>brand_universe_queryset</code> (<code>:110</code>) is everything linked to the brand,
+자동 · 의심 rows included: "the outer bound of what an operator may accept". Between the two sits the
+<strong>범위 밖 제안 panel</strong> (<code>out_of_scope_suggestions</code>, <code>:537</code>,
+<code>SUGGESTION_LIMIT = 20</code> at <code>:78</code>) — posts the operator can see but that are not
+members, each labelled with why:</p>
+
+<pre><code>REASON_OTHER_BRANCH      = "other_branch"        # scope.py:66-68
+REASON_BRANCH_UNASSIGNED = "branch_unassigned"
+REASON_AUTO_SUSPECT      = "auto_suspect"
+
+OUT_OF_SCOPE_REASONS = {
+    REASON_OTHER_BRANCH:      "다른 지점",
+    REASON_BRANCH_UNASSIGNED: "지점 미지정",
+    REASON_AUTO_SUSPECT:      "자동 · 의심",
+}</code></pre>
+
+<p>The module docstring is emphatic about what this is <em>not</em>: «There is no corpus-wide lexical
+pass, and nothing here selects anything: acceptance is an explicit operator act.» The agent proposes;
+it never absorbs. When the operator does accept one, the row is written with
+<code>Source.OUT_OF_SCOPE</code> plus the reason it was outside, who accepted it and when.</p>
+
+<p><strong><code>selection.py</code></strong> (549) is the write side, and it is where the editability
+rule lives:</p>
+
+<pre><code>SELECTION_MIN = 1        # selection.py:46
+SELECTION_MAX = 20       # 1–20 posts per job
+
+EDITABLE_STATES: frozenset[str] = frozenset(…)                  # :80
+
+def paused_in_proposal(job) -> bool:  …                          # :91
+def is_intake_editable(job) -> bool:  …                          # :114</code></pre>
+
+<p><code>paused_in_proposal</code> is the P79 rule in one predicate: a job sitting in
+<code>proposing</code> is still editable, because the freeze is a snapshot and not a lock. Refusals are
+machine codes — <code>selection_cap_exceeded</code>, <code>post_out_of_scope</code>,
+<code>unknown_post_id</code>, <code>selection_below_minimum</code>, <code>selection_not_editable</code>
+— never prose the client has to parse.</p>
+
+<h3 id="kakao">4. Intake II — the KakaoTalk chain</h3>
+
+<p>This is the part of the subsystem with the most surface area and the most interesting engineering:
+roughly ten modules turning an untrusted <code>.zip</code> from someone's phone into selectable,
+citable conversation units. Follow our four toy messages through it.</p>
+
+<figure>
+<div class="pipe">
+  <div class="st"><b>chat_archive.py <span class="small">550</span></b>
+    <span class="w">Validate the zip without extracting it.</span>
+    <span class="n">writes: nothing (a rejection stores no bytes)</span></div>
+  <div class="st"><b>kakao_txt.py <span class="small">319</span></b>
+    <span class="w">Parse the <code>.txt</code> into typed records.</span>
+    <span class="n">writes: nothing — pure functions, no Django</span></div>
+  <div class="st"><b>chat_intake.py <span class="small">773</span></b>
+    <span class="w">Orchestrate: transfer · inspect · normalize · match · link_photos.</span>
+    <span class="n">writes: ChatArchive, ChatRevision, ChatMessage, ChatMedia</span></div>
+  <div class="st"><b>chat_participants.py <span class="small">658</span></b>
+    <span class="w">Who speaks, what colour, which side.</span>
+    <span class="n">writes: ChatParticipant</span></div>
+  <div class="st"><b>chat_matching.py <span class="small">265</span></b>
+    <span class="w">Score references against present files.</span>
+    <span class="n">writes: ChatMediaRef (matched | ambiguous | missing)</span></div>
+  <div class="st"><b>chat_segmentation.py <span class="small">742</span></b>
+    <span class="w"><strong>LLM pass 1</strong> — draw context boundaries.</span>
+    <span class="n">writes: ChatSegment (source: initial | agent | fallback)</span></div>
+  <div class="st"><b>chat_pick.py <span class="small">530</span></b>
+    <span class="w"><strong>LLM pass 2</strong> — which conversations are worth using.</span>
+    <span class="n">writes: the selection, via set_selection(picked_by="agent")</span></div>
+  <div class="st"><b>chat_conversations.py <span class="small">889</span></b>
+    <span class="w">Serve units; own the one selection write.</span>
+    <span class="n">writes: ChatConversationSelection (the ONE write)</span></div>
+</div>
+<figcaption>The KakaoTalk chain. Everything left of <code>chat_segmentation</code> is deterministic;
+the two LLM passes in the middle are proposals the operator may overrule; the right-hand module owns
+the single selection write both of them go through.</figcaption>
+</figure>
+
+<h4>4.1 The zip is untrusted input</h4>
+
+<p><code>chat_archive.py</code> states two rules and both are load-bearing:</p>
+
+<pre><code>1. **Inspect before extracting.** Every check below reads the archive's central
+   directory (and at most a 12-byte header per member) — nothing is written to
+   disk until the archive has passed.
+2. **Rejected files are not stored** (round 11 §4.3). Every rejection path in
+   ``chat_intake.py`` deletes the quarantine, so a refused upload leaves a row
+   carrying its machine reason and no bytes anywhere.</code></pre>
+
+<p>Five machine rejection reasons (<code>:53-57</code>): <code>unsupported_format</code>,
+<code>encrypted_member</code>, <code>path_unsafe</code>, <code>ratio_exceeded</code>,
+<code>type_not_allowed</code>. The budgets behind them (<code>:117-125</code>):</p>
+
+<pre><code>DEFAULT_MAX_MEMBERS           = 5_000
+DEFAULT_MAX_EXPANDED_BYTES    = 2 * 1024 * 1024 * 1024      # 2 GiB
+DEFAULT_MAX_COMPRESSION_RATIO = 120
+DEFAULT_MAX_ARCHIVE_BYTES     = 100 * 1024 * 1024           # 100 MiB
+
+TEXT_EXTENSIONS  = frozenset({".txt"})
+IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".gif", ".webp"})</code></pre>
+
+<p>The compression-ratio budget is the zip-bomb guard, and there is a pointed note about what is
+<em>not</em> reused: <code>content/importers.py</code>'s <code>_extract_archive</code> recursively
+expands every nested <code>.zip</code> it finds with no depth or size budget. Here a nested archive is
+<em>rejected</em> instead.</p>
+
+<p>Two refinements that only show up when real people use a thing. First, a non-allow-listed member is
+<strong>skipped, not fatal</strong> (an operator ruling from 2026-08-23): real KakaoTalk exports carry
+<code>.mp4</code> videos, audio, PDFs, <code>.vcf</code> contacts, and refusing the whole export over
+one of them made ordinary archives unusable. Those members are never extracted, and the inspect step
+reports them as <code>skipped_files</code> / <code>skipped_extensions</code> so the operator can see
+what was left out. <code>type_not_allowed</code> survives for the two real attack shapes: a nested
+archive, and image-named bytes that are not an allowed image (checked by sniffing a 12-byte header,
+not by trusting the extension).</p>
+
+<p>Second, and my favourite bug-that-was-anticipated:</p>
+
+<pre><code>Korean member names are handled explicitly. ``zipfile`` decodes a member name as
+UTF-8 only when general-purpose flag bit ``0x800`` is set and otherwise falls
+back to **CP437**, so a Windows-client export with CP949 names arrives as
+mojibake unless the bytes are recovered. ``decoded_member_name`` does that
+recovery (CP437 round-trip is lossless — the codec maps all 256 byte values).</code></pre>
+
+<h4>4.2 Parsing the transcript: measured, not guessed</h4>
+
+<p><code>kakao_txt.py</code> is 319 lines of pure functions with no Django import, and its docstring
+opens with a claim it then backs up: «The contract implemented here is <strong>measured</strong>, not
+guessed» — an earlier slice read the operator's own export byte for byte and wrote the format down.</p>
+
+<p>The load-bearing discovery is about line endings:</p>
+
+<pre><code>**The record separator is CRLF; user line breaks are bare LF.** … the *last*
+physical line of every record ends ``\r\n`` while a line break the sender typed
+inside a message ends ``\n``. So records split deterministically and 114 of 389
+records in the real file are multiline. A parser that instead asked "does this
+line start with a timestamp?" would be wrong by design — a user can type a
+date-shaped line, and one did not have to for the guess to be unsound.</code></pre>
+
+<p>Everything else follows: UTF-8 with a BOM; line 1 is the filename, line 2 is
+<code>저장한 날짜 : …</code>; date separators (<code>2023년 9월 1일 금요일</code>) sit on their own
+record; a message record is <code>2023. 9. 1. 오후 4:24, 김세연 : &lt;text&gt;</code>; a
+<em>system</em> record has the same timestamp followed by a colon and <strong>no sender</strong>.
+Timestamps are Korean 오전/오후 12-hour, resolved in <code>KST = ZoneInfo("Asia/Seoul")</code>, and
+they are <strong>minute-granular</strong> — remember that, it matters in a moment.</p>
+
+<p>Seven message kinds (<code>:49-57</code>):</p>
+
+<table>
+<tr><th>KIND</th><th>Recognised by</th><th>Our toy transcript</th></tr>
+<tr><td><code>text</code></td><td>anything else</td><td>messages 1 and 2</td></tr>
+<tr><td><code>photo_ref</code></td><td>text is exactly <code>사진</code> or <code>사진 N장</code></td><td>message 3 (N = 2)</td></tr>
+<tr><td><code>file_ref</code></td><td><code>파일: &lt;original name&gt;</code></td><td>message 4</td></tr>
+<tr><td><code>system</code></td><td>timestamp + <code>:</code> + no sender</td><td>—</td></tr>
+<tr><td><code>board_post</code></td><td><code>톡게시판 '공지': &lt;body&gt;</code></td><td>—</td></tr>
+<tr><td><code>emoticon</code></td><td colspan="2">deliberately <strong>not</strong> classified — the kind exists in the model, but the measured <code>.zip</code> contract never produces it</td></tr>
+<tr><td><code>video_ref</code></td><td colspan="2">same</td></tr>
+</table>
+
+<p>That last row is the discipline the module exists for. Two kinds are declared and left unproduced
+rather than given an invented rule — «inventing a rule for them here would be exactly the guesswork
+this module exists to avoid».</p>
+
+<h4>4.3 Storing it: five named steps, and a 30-minute reclaim</h4>
+
+<p><code>chat_intake.py</code> orchestrates. It is explicitly cloned from
+<code>content/import_jobs.py</code> — the codebase's canonical async skeleton: a DB row,
+<code>transaction.on_commit</code> → Celery, RUNNING → terminal, idempotency against an
+already-terminal row, and a <code>@worker_ready</code> reclaim for runs an interrupted worker left
+behind (<code>DEFAULT_RECLAIM_MINUTES = 30</code>, <code>:69</code>).</p>
+
+<p>The transfer half is not new machinery either: Django request bodies cap at 20 MiB and a real export
+exceeds that, so the archive rides <code>content/upload_sessions.py</code>'s chunked session — the
+500 MiB / 16 MiB-chunk / 24h-TTL machinery explainer #12 covered — and this module only takes the
+assembled file into a job-scoped quarantine.</p>
+
+<p>The steps are stored on the archive row so the card can render each one individually rather than
+«one spinner»:</p>
+
+<pre><code>STEP_KEYS   = ("transfer", "inspect", "normalize", "match", "link_photos")
+STEP_LABELS = {
+    "transfer":    "전송",
+    "inspect":     "압축 파일 검사",
+    "normalize":   "대화 정규화",
+    "match":       "미디어 연결",
+    "link_photos": "사진 연결 — 내보내기에 있는 것만",
+}</code></pre>
+
+<div class="callout warn">
+<h4>Comment drift (code wins): four steps or five?</h4>
+<p>Both <code>chat_intake.py</code>'s and <code>chat_models.py</code>'s docstrings say «four named
+steps … transfer · inspect · normalize · match», quoting round 11 §4.3. <code>STEP_KEYS</code> has
+<strong>five</strong>: <code>link_photos</code> was added later, when chat photos became selectable
+assets. Nothing is broken — the docstrings simply predate the fifth step. When a docstring and a
+constant disagree, believe the constant.</p>
+</div>
+
+<p>Progress reporting adds <strong>no second channel</strong>. There is no new route, no new field and
+no new emitter: the same <code>agent_jobs.progress.record_job_progress</code> that the single internal
+endpoint writes through receives each step envelope — and it is a deliberate no-op while the job sits
+in <code>intake</code>, because <code>intake</code> is not in
+<code>states.PROGRESS_ACCEPTING_STATES</code> (<code>:217</code>). The durable step list on the archive
+row is what the card actually renders.</p>
+
+<h4>4.4 Who is speaking</h4>
+
+<p><code>chat_participants.py</code> syncs one <code>ContentAgentChatParticipant</code> row per sender
+per chat revision (<code>sync_participants</code>, <code>:223</code>), idempotently. Three facts on the
+row and one operator control:</p>
+
+<ul>
+  <li><code>AUTHORING_SIDE_SENDER = "김세연"</code> (<code>:70</code>) — the 창플 side is marked
+    <code>is_authoring_side</code> when the row is <em>first created</em> and never re-asserted, so the
+    viewer's toggle can turn it off and it stays off.</li>
+  <li><code>avatar_color</code> is drawn from <code>AVATAR_PALETTE</code> (<code>:82</code>)
+    <strong>once per job</strong> and carried forward by sender across chat revisions, so re-uploading a
+    <code>.zip</code> never reshuffles the faces of a conversation the operator has already looked
+    at.</li>
+  <li><code>set_participant_flags</code> (<code>:341</code>) is the one write the one rail control
+    calls.</li>
+</ul>
+
+<p>What is <em>gone</em> is instructive. Round 13 designed five naming modes (관례 따름 · 실명 · 역할
+라벨 · 이니셜 · 직접 입력) plus a 참여자 A/B/C fallback and a <code>role_label</code> column. P80
+deleted all of it, by operator ruling: a conversation prints <strong>the export display name,
+verbatim</strong>, and nothing else. Also here: the redaction offer
+(<code>redaction_candidates</code>, <code>:501</code> — phone numbers and person names) whose approved
+rows are durable elsewhere, keyed by <code>message_id</code> so trimming a range never invalidates
+one.</p>
+
+<h4>4.5 Matching photos to references — a scored join, not a lookup</h4>
+
+<p>Here is the mismatch <code>chat_matching.py</code> exists to bridge: the archive's image filenames
+carry send time <strong>to the second</strong> (<code>YYYYMMDD_HHMMSS_&lt;seq&gt;.&lt;ext&gt;</code>)
+while the transcript's timestamps are <strong>minute</strong>-granular. And the export is
+systematically incomplete.</p>
+
+<p>So every reference gets a row and a state, and a missing reference is still carried:</p>
+
+<pre><code>STATE_MATCHED   = "matched"
+STATE_AMBIGUOUS = "ambiguous"
+STATE_MISSING   = "missing"</code></pre>
+
+<p>Same-minute collisions are paired <strong>in send order</strong>, with confidence recorded as
+<strong>0.7</strong> (a clean match is 1.0) — a design ruling, not a heuristic invented in the module.
+For our toy job: message 3's <code>사진 2장</code> resolves against
+<code>20240312_141305_001.jpg</code> and <code>…_002.jpg</code>; message 4's
+<code>파일: 3월_원가표.xlsx</code> becomes a <code>missing</code> row, because KakaoTalk exports no
+file attachments at all.</p>
+
+<p>One more thing happened here later, and it is a good example of a surface being deleted while its
+machinery stays: <strong>P72.S10 made the states and confidences internal</strong>. No state, tally,
+confidence or missing-photo statistic leaves this module for any payload any more. The scoring survives
+because it decides which bytes a reference points at; the operator simply never sees the word
+«모호».</p>
+
+<h4>4.6 LLM pass 1 — cutting the room into conversations</h4>
+
+<p>Until P73, conversation units were derived by a pure rule: cut at a gap of one day or more,
+recomputed on every read. P73 replaced it with an LLM that reads the messages and draws topic
+boundaries, so a same-day stream may split and a multi-day thread may stay whole. The old rule was
+<strong>deleted, not kept as a fallback</strong> — «a hidden day-gap fallback would resurrect it
+invisibly while the panel's label says <code>맥락 기준</code>».</p>
+
+<p>That single change forces the module's four decisions:</p>
+
+<ol>
+  <li><strong>Boundaries are persisted.</strong> An LLM is not a pure function, so a recomputed boundary
+    could drift between two reads and silently drop the operator's selection.
+    <code>ContentAgentChatSegment</code> stores them and <code>chat_conversations.units()</code> serves
+    nothing else.</li>
+  <li><strong>Its own packet builder, windowed with carry-over.</strong>
+    <code>SEGMENTATION_WINDOW_CHARS = 80_000</code> per window, <code>MAX_WINDOWS = 12</code>
+    (~960k characters), and every window after the first <em>restarts at the first message of the
+    previous window's last boundary</em>, so a conversation straddling a window edge is re-read whole.
+    A progress guard closes a trailing segment at the edge when it alone would exceed half a window, so
+    the loop always advances. It is pointedly <em>not</em> the architect's
+    <code>analysis.CHAT_PACKET_CHARS</code>, which describes a different stage over a different
+    revision and simply drops the overflow.</li>
+  <li><strong>Contiguous and total, always.</strong> The writer keeps only the <em>cut points</em> the
+    model returned, snaps them to real message ids, and rebuilds the spans from them — so overlaps,
+    holes and reversed ranges cannot survive into the table.</li>
+  <li><strong>All-or-nothing, failing open.</strong> Any window that fails drops the whole segmentation
+    to a single whole-room boundary. Coverage is never partial, and the panel is never empty while
+    messages exist.</li>
+</ol>
+
+<p>Each segment records where it came from: <code>source ∈ {initial, agent, fallback}</code> —
+<code>initial</code> being the whole-room substrate written at parse time, which is rewritable
+<em>precisely because</em> nothing has been picked on top of it yet
+(<code>can_write_boundaries</code>, <code>:213</code>, refuses a rewrite once any <code>seg:</code>
+selection exists).</p>
+
+<p>And one hard cap that is a lovely piece of product engineering:</p>
+
+<pre><code>#: **P81.S6 — how long an automatically drawn conversation may be, in SPOKEN
+#: messages** (``kind != system``…)
+#: … the fix is a **deterministic cap at segmentation** rather than a prompt
+#: line an LLM may ignore on a bad day.
+#: Measured on dev before the change: 103 agent segments, median 9 spoken, max
+#: 35, and the *placed* captures ran {3,10,10,11,12,13,13,15,19,22,22,28,33,35}
+#: — the 19–35 tail is what the operator is complaining about.
+SEGMENT_MAX_SPOKEN = 15</code></pre>
+
+<p>The complaint was "published conversations are too long to read in one glance". The response was not
+a sentence added to a prompt; it was a measurement of the actual distribution, a number that trims the
+tail without touching the median, and a server-side cut applied after the model answers. Note also that
+the cap counts <em>spoken</em> messages: join/leave/invite system lines are not part of a reader's
+burden.</p>
+
+<h4>4.7 LLM pass 2 — which conversations are worth using</h4>
+
+<p><code>chat_pick.py</code> reads each context unit <strong>against the job's own 콘텐츠 가이드</strong>
+and pre-selects the ones worth writing about, with a Korean prose reason for the units it picked
+<em>and</em> the units it did not. Five decisions, and three of them generalise well beyond this
+codebase:</p>
+
+<ul>
+  <li><strong>It is a post-<code>ready</code> follow-on, never a sixth parse step.</strong> It runs on
+    its own record (an <code>agent_pass</code> row) instead of inside
+    <code>ContentAgentChatArchive.steps</code>. That keeps the panel live while the pass runs, and it
+    keeps an LLM failure from ever reading as a failed <code>.zip</code>.</li>
+  <li><strong>One guide read, recorded.</strong> The version is resolved once at pass start and the
+    label is stored on the record, so the UI prints what was actually read rather than a fresh resolve
+    that could have drifted. What rides in the packet is that version's <strong>선별 기준</strong>
+    chapter (<code>SELECTION_CHAPTER = "14"</code>), falling back to the whole body for versions that
+    predate the chapter. <strong>No guide row ⇒ the pass does not run at all.</strong></li>
+  <li><strong>It writes through the existing whole-selection write</strong> —
+    <code>chat_conversations.set_selection(..., picked_by="agent")</code>. There is one selection state,
+    not a proposal state beside it.</li>
+  <li><strong>No-clobber</strong>: the write is
+    <code>proposal ∪ operator_touched_selected \ operator_touched_unselected</code>, computed by
+    <code>agent_pass.merge_no_clobber</code> from durable provenance stamps. A pass landing on top of
+    the operator's own picks changes none of them.</li>
+  <li><strong>Fail open, everywhere.</strong> Missing key, unreachable provider, malformed return,
+    fallen-back segmentation — all land on <code>state = "failed"</code> with <em>no selection write at
+    all</em>, and the panel keeps every control it had.</li>
+</ul>
+
+<p>Packet budgets: <code>PICK_UNIT_CHARS = 2_500</code>, <code>PICK_MESSAGE_CHARS = 300</code>,
+<code>PICK_PACKET_CHARS = 60_000</code>.</p>
+
+<div class="callout def">
+<h4>Provenance is durable, not a wall clock</h4>
+<p>The no-clobber algebra only works because every selection write stamps <code>picked_by</code>
+(<code>operator</code> or <code>agent</code>) on the rows it actually <em>changes</em>. A row that was
+already selected keeps whoever picked it — which is what lets the UI say «직접 고름» about a row the
+agent's later write merely left standing. Provenance in a column survives a worker restart and needs no
+session state; provenance in memory does not.</p>
+</div>
+
+<h4>4.8 One selection write</h4>
+
+<p><code>chat_conversations.py</code> serves the units and owns the write. A unit id carries its own
+range — <code>seg:&lt;chat_rev&gt;:&lt;from&gt;-&lt;to&gt;</code> for an agent-drawn one,
+<code>range:&lt;chat_rev&gt;:&lt;from&gt;-&lt;to&gt;</code> for one the operator made by hand — so an id
+is self-describing and verifiable, and the freeze can read the range straight out of it. Our toy job's
+single conversation is <code>seg:5:1-4</code>.</p>
+
+<pre><code>SEGMENT_LABEL   = "맥락 기준"        # what the panel calls the boundary rule
+PREVIEW_MESSAGES = 4                 # the card shows 4 messages…
+PREVIEW_CHARS    = 60                # …clipped to 60 chars each</code></pre>
+
+<p><code>set_selection</code> (<code>:714</code>) replaces the whole selection atomically. Every id is
+checked against the units the server derives, so a stale screen cannot select a conversation that no
+longer exists — it is refused by name (<code>unknown_conversation</code>) instead. And the module
+maintains exactly one candidacy rule: two denormalized columns on the asset row
+(<code>chat_message_id</code>, <code>conversation_selected</code>) that
+<code>assets.evaluate_candidacy</code> reads, so "which chat photos may be used?" stays a pure function
+of the asset row rather than a second derivation.</p>
+
+<p>One counting rule worth stating plainly: <strong>photo counts are present bytes only</strong>. A
+reference whose bytes are absent from the export contributes nothing to any count and appears in no
+payload. Our toy conversation reports <em>two</em> photos, not three.</p>
+
+<h3 id="rules">5. Intake III — the rules the draft must obey</h3>
+
+<p>Material is not enough. The agent also needs to know <em>what a 창플 article is</em>, <em>how long
+its sections run</em>, and <em>how ambitious this particular job is allowed to be</em>. Four small
+modules answer those, and a fifth measures whether the whole intake is ready.</p>
+
+<h4>5.1 The 가이드: versioned, packaged, pinned per job</h4>
+
+<p>The content standard is a Korean markdown document, and it is treated exactly the way this
+workspace treats its own docs — <strong>versioned, never edited</strong>:</p>
+
+<pre><code>1. ``ContentAgentJob.guide_instruction`` — a job-scoped instruction, frozen into
+   the input revision, which **cannot override the guide**;
+2. editing the guide document itself, which creates a **new version** applying
+   to later jobs only — a job that already froze v1.1 keeps v1.1 forever.
+
+Rule 2 is why this is a versioned table and never an ``UPDATE``.</code></pre>
+
+<p>Where does the text live? Docker images ship <code>apps/backend</code> but not <code>docs/</code>,
+so each version is copied verbatim into <code>agent_jobs/guide_source/</code> and seeded by a data
+migration. Eight files sit there today:</p>
+
+<pre><code>guide_v1_1.md  guide_v1_2_ko.md  guide_v1_3_ko.md  guide_v1_4_ko.md
+guide_v1_5_ko.md  guide_v1_6_ko.md  guide_v1_7_ko.md  guide_v1_8_ko.md
+
+LATEST_SEED_VERSION = SEED_V18_VERSION      # guide.py:219  →  "v1.8"</code></pre>
+
+<p><strong>The current head version is v1.8</strong>, seeded by migration <code>0060</code>. Its
+history is a nice illustration of the versioning discipline: v1.8 is not a diff of v1.7 but the
+operator's own rewrite, authored outside the repository and landed verbatim — the 31,544-character
+document compressed to 4,734 characters, every chapter restated in the operator's words, and
+<strong>§8 (총 비용 표) deliberately removed</strong>, so the standard now has 14 chapters, not 15.</p>
+
+<p>What makes that drop-in rather than breaking is that <strong>the original chapter numbers are
+preserved and §8 is simply absent</strong>: 1–7, then 9–15. Every number-keyed reader still resolves —
+<code>image_pick.PHOTO_CHAPTER</code> §7, <code>chat_pick.SELECTION_CHAPTER</code> §14,
+<code>allocation_pick.ALLOCATION_CHAPTER</code> §15 — and <code>build.guide_rules()</code> skips the
+missing chapter cleanly, reporting <code>missing == ["8"]</code> and <code>fallback == False</code>.
+The <code>fallback</code> flag fires only when <em>no</em> requested chapter is found, which is why the
+chapter list keeps its <code>"8"</code>: removing it would change nothing for v1.8 and would stop
+v1.1–v1.7 — still frozen on 20 jobs — from cutting the chapter they do carry.</p>
+
+<p><code>guide_choice.py</code> (279) makes the version a <strong>per-job</strong> pick, defaulted to
+the latest <em>at job creation</em> — «the choice is sticky, not a live pointer», which is why a
+"not latest" warning pill can exist at all. It is writable before the freeze only
+(<code>guide_choice_not_editable</code>), and the frozen note the console prints is a constant:</p>
+
+<pre><code>FROZEN_NOTE = "나중에 나온 가이드 버전은 이 작업을 바꾸지 않습니다."</code></pre>
+
+<p>A small detail with a large principle behind it: the picker's <code>v&lt;n&gt; (한국어|영문)</code>
+label is <strong>measured, not stored</strong> — there is no language column;
+<code>detect_language</code> counts Hangul against Latin characters in the body. The design rule is
+«nothing printed that the system did not measure», and it recurs throughout this subsystem.</p>
+
+<h4>5.2 참고 콘텐츠: an already-published article as the house style</h4>
+
+<p><code>reference_choice.py</code> (300) lets a job pick <strong>one published
+<code>NotionContent</code></strong> as its tone-and-rhythm exemplar. Three rules:</p>
+
+<ol>
+  <li><strong>Published only</strong> — the candidate read is
+    <code>NotionContent.objects.readable()</code>, which explainer #12 defined as
+    <code>with_stored_html().published()</code>. A draft cannot be a style standard.</li>
+  <li><strong>One per job, before the freeze only</strong>; the freeze unit is the published row's
+    profile hash.</li>
+  <li><strong>Tone and rhythm only, never evidence.</strong> The exemplar's text reaches exactly one
+    consumer — the 참고 콘텐츠 말투 분석 analysis worker — and «is never a fact source, never cited in
+    a draft and never in the evidence overlay».</li>
+</ol>
+
+<p>Note also that this <em>supersedes</em> the old global singleton
+<code>ContentDraftSettings.reference_content_id</code> for v2 and does not read it at all: «An unpicked
+job has <em>no</em> reference — that is the design's own empty state, and falling back to the singleton
+would leave the singleton driving v2.»</p>
+
+<p><code>reference_shape.py</code> (263) then does something I find genuinely elegant. Instead of
+inventing a target section length, it <strong>measures the published references</strong>:</p>
+
+<pre><code>SCALE_MAX  = 1200      # the length meter's full-scale value
+OVER_RATIO = 1.5       # past this, a unit reads as over-long
+MIN_HEADINGS = 2       # fewer than two headings → not segmentable, skipped</code></pre>
+
+<p>It flattens the reference through <code>content.extraction</code> (explainer #12's one-line-per-block
+form) and splits it at <strong>one</strong> heading level — «the level carrying the most heading lines,
+shallowest wins a tie». Why not just hard-code <code>##</code>? Because the two dev references disagree:
+one numbers its sections <code>##</code> under an <code>#</code> title, the other uses <code>###</code>.
+Hard-coding would measure one of them as a single 15,000-character unit.</p>
+
+<p>And when there is nothing to measure, it says so rather than guessing: <code>available: False</code>
+with null medians, the UI drops the tick mark and keeps the target bar. «Nothing is invented to fill the
+hole.»</p>
+
+<h4>5.3 깊이: how ambitious may this job be?</h4>
+
+<p><code>depth.py</code> (481) classifies the job's material into one of two bands the guide promises:</p>
+
+<pre><code>DEPTH_RICH   = "rich"       # 12–18절 / 6,000–16,000자
+DEPTH_SPARSE = "sparse"     #     7절 / 3,500–6,000자
+SOURCE_CLASSIFIED = "classified"
+SOURCE_FALLBACK   = "fallback"
+FALLBACK_NOTE = "재료 깊이를 판정하지 못해 sparse 기준을 적용했습니다."</code></pre>
+
+<p>This one has a history worth telling. It used to be the single semantic call inside 사전 점검, and
+P79 deleted it with that surface — leaving every job planned against the <em>shorter</em> band no
+matter what it held. P79.S4 restored the judgment and dropped the gate: the classifier now runs
+<strong>inside the Celery proposal turn</strong>, bounded by the same <code>MAX_STAGE_ATTEMPTS</code>,
+and <em>any</em> failure falls back to <code>sparse</code> with a served note saying so. «It never
+blocks, never asks, never moves the job.»</p>
+
+<p>Its role slug is a fossil, and the module says so plainly:</p>
+
+<pre><code>**The role slug is now a misnomer.** It stays ``content_preflight_classify``
+because it is the P44 store key an operator has already tuned at
+``/operator/settings``; renaming it would orphan that row for a cosmetic gain.
+There is no 사전 점검 any more — the slug names this call.</code></pre>
+
+<p>That is the right call, and the comment is why it is not confusing three years later.</p>
+
+<h4>5.4 <code>intake_state.py</code>: what the intake <em>is</em>, measured on read</h4>
+
+<p>737 lines, and the module's opening sentence is the design in one line: «Nothing here moves a job.
+There is no transition, no queue and no LLM call in this module by design: reading what the intake is
+must never be a write.»</p>
+
+<p>Six deterministic checks, in fixed order (<code>:63-68</code>):</p>
+
+<table>
+<tr><th>Check</th><th>Label</th><th>Asks</th></tr>
+<tr><td><code>CHECK_SCOPE</code></td><td>범위 확인</td><td>Is there a brand and a scope? <em>This is the only one that can block.</em></td></tr>
+<tr><td><code>CHECK_SELECTION</code></td><td>게시글 선택 확인</td><td>How many posts are selected, and are they all still in scope?</td></tr>
+<tr><td><code>CHECK_BODY</code></td><td>본문 확인</td><td>Do the selected posts actually have body text?</td></tr>
+<tr><td><code>CHECK_ATTACHMENTS</code></td><td>첨부 확인</td><td>Is the KakaoTalk archive terminal, and did it parse?</td></tr>
+<tr><td><code>CHECK_ASSETS</code></td><td>사진 확인</td><td>How many photos are candidates? (calls <code>asset_intake.sync_job_assets</code>)</td></tr>
+<tr><td><code>CHECK_GUIDE</code></td><td>콘텐츠 가이드 확인</td><td>Is a guide version resolvable? (<code>guide_version_missing</code>)</td></tr>
+</table>
+
+<p>Each returns one of four statuses (<code>:91-94</code>): <code>ready</code>,
+<code>warning</code>, <code>failed</code>, <code>blocked</code> — and the comment is explicit that
+<strong>only <code>blocked</code> blocks</strong>: «warnings do not block», and <code>failed</code> is
+the optional-input half of the design's two-state ruling and never blocks either. A job with no photos,
+no chat and one thin post is a supported input shape.</p>
+
+<p>Then the manifest builders (<code>:147-296</code>) — one per input kind, assembling into:</p>
+
+<pre><code>def current_inputs_payload(job) -> dict:              # intake_state.py:296
+    version = guide_choice_service.chosen_version(job)
+    return {
+        "posts":            posts_manifest(job),
+        "guide":            guide_service.guide_identity(version),
+        "instruction":      job.guide_instruction or "",
+        "chat":             chat_manifest(job),
+        "conversations":    conversations_manifest(job),
+        "image_selection":  image_selection_manifest(job),
+        "images":           images_manifest(job),
+        "reference":        reference_manifest(job),
+        "note":             job.note or "",
+        "answers":          {},        # reserved; nothing has ever filled it
+    }</code></pre>
+
+<div class="callout">
+<h4>The fingerprint, and why it answers a question nothing else can</h4>
+<p>Two lines of code sit on top of that payload:</p>
+<pre><code>def inputs_fingerprint(job, payload=None):
+    if payload is None:
+        payload = current_inputs_payload(job)
+    return canonical_hash(payload)
+
+def inputs_changed(job, *, against: str, payload=None) -> bool:
+    return inputs_fingerprint(job, payload) != against</code></pre>
+<p>Because <code>current_inputs_payload</code> has <strong>one function and two callers</strong> — the
+snapshot itself and the fingerprint the screen compares against — «what a 구성안 was built from and
+what the screen compares against can never be two different things». That is the whole answer to «your
+inputs changed since this proposal».</p>
+<p>And note the constraint it buys you: <strong>the shape is frozen history.</strong> Already-stored
+revisions carry these exact keys — including <code>answers</code>, which nothing has ever filled — and
+the fingerprint hashes the whole dict, so <em>adding or dropping a key would make every existing job
+report a phantom change</em>. A hash over a payload is a schema commitment. Design it once.</p>
+</div>
+
+<p>Finally, <code>scaffold_action(job)</code> (<code>:628</code>) decides what the button at the foot of
+the 입력 요약 says and may do. Three readings, all served from the server so the console «prints, it
+never composes»:</p>
+
+<ul>
+  <li><strong>blocked</strong> — brand or scope missing: <code>enabled: false</code> plus the one
+    sentence «브랜드와 범위를 정해야 시작합니다 — 게시글·사진·대화는 없어도 됩니다.» This is the
+    <em>only</em> disabled control in the whole flow. Enablement is computed <strong>from the
+    inputs</strong>, never from the state column, so a job that never moved and one that came back from
+    a <code>cancel</code> read identically.</li>
+  <li><strong>building</strong> — the job is in <code>proposing</code>: a strip replaces the button,
+    reading «방금 시작 · 보통 40초». The «보통 40초» is a stated habit, deliberately a constant and never
+    a countdown («no number the system did not measure»), and the «방금» is
+    <code>time_ago</code> of the <code>request_scaffold</code> edge read out of the append-only
+    transition log — the fact is already recorded, so no new column.</li>
+  <li><strong>stale</strong> — a 구성안 exists, 승인 has not happened, and
+    <code>inputs_changed(job, against=frozen.content_hash)</code> is true: the label becomes
+    다시 만들기 under the dated sentence «구성안은 {날짜}의 입력으로 만들어졌습니다…».</li>
+</ul>
+
+<h3 id="proposal">6. The 제안 turn — how a 구성안 gets made</h3>
+
+<p>One button press. One Celery task. Six or seven model calls. One document. Here is the whole
+sequence.</p>
+
+<h4>6.1 The act: <code>scaffold.request_scaffold</code></h4>
+
+<p><code>scaffold.py:7150</code>, and it is short enough to quote entire:</p>
+
+<pre><code>with transaction.atomic():
+    services.freeze_input_revision(
+        job,
+        payload=intake_state_service.current_inputs_payload(job),
+        actor=actor if getattr(actor, "is_authenticated", False) else None,
+    )
+    architect_service.dispatch_scaffold_proposal(job, actor=actor)</code></pre>
+
+<p>Two things, one transaction: <strong>snapshot the inputs</strong>, then <strong>open the
+turn</strong>. <code>dispatch_scaffold_proposal</code> is the single entry point — it picks the right
+edge by the state it is called from (<code>request_scaffold</code> from an intake or from a proposal
+nobody has approved; <code>resume_scaffold</code> from <code>needs_answer</code>) and queues
+<code>run_scaffold_proposal</code> after commit. Because there is one door, a resume and a fresh
+request cannot drift apart.</p>
+
+<h4>6.2 The four analysis workers</h4>
+
+<p><code>analysis.py</code> (909) holds four read-only workers that run over the <em>frozen</em>
+revision through bounded packets. Each maps to one of the guide's 자료 활용 원칙:</p>
+
+<table>
+<tr><th>Worker</th><th>Label</th><th>Reads</th><th>Rule it obeys</th></tr>
+<tr><td><code>post</code></td><td>게시글 분석</td><td>the selected posts' bodies</td>
+    <td>cafe posts are partial records by several authors — integrate, do not concatenate; posting order ≠ project order</td></tr>
+<tr><td><code>conversation</code></td><td>대화 분석</td><td>the selected conversations</td>
+    <td>each beat is anchored to <strong>message-id ranges</strong> so the architect can cite <code>{chat_rev, from_id, to_id}</code> — the scaffold stores references, never copied text</td></tr>
+<tr><td><code>media</code></td><td>사진 정리</td><td>the candidate photos</td>
+    <td>an <strong>inventory</strong>, never placements — photos are chosen after the text is written, so proposing a placement here would invert the order</td></tr>
+<tr><td><code>reference</code></td><td>참고 콘텐츠 말투 분석</td><td>the one published exemplar</td>
+    <td>tone and rhythm <strong>only</strong>; never a factual source</td></tr>
+</table>
+
+<p>Three rules shape all four. They are <strong>read-only</strong> — no tools, no DB writes, no state
+moves — and the materials ride in a fenced <code>&lt;자료&gt;</code> block that the instructions declare
+inert, which is the same prompt-injection posture explainer #11 covered for the chat agent. They use
+<strong>bounded packets with reported truncation</strong>: <code>POST_EXCERPT_CHARS = 6000</code>,
+<code>POST_PACKET_CHARS = 60000</code>, <code>CHAT_PACKET_CHARS = 80000</code>,
+<code>MEDIA_INVENTORY_MAX = 200</code>, <code>REFERENCE_PACKET_CHARS = 12000</code> — and whatever a cap
+drops is reported in the worker's return, never silently swallowed. And <strong>the frozen revision is
+the universe</strong>: bodies are fetched by identity and checked against the frozen
+<code>body_sha256</code>; a mismatch is recorded as a <em>drift note</em> rather than crashed on.</p>
+
+<p>Why sequential rather than a four-way fan-out? The tuple that orders them says so:</p>
+
+<pre><code>#: The order the workers run in. Sequential in one task by recorded choice
+#: (DECOMP2 R4 *allows* ≤4 fan-out; the design never surfaces worker
+#: parallelism, the packets are small, and one task keeps the D56 bookkeeping
+#: and the cancel tolerance trivial). If a later phase wants fan-out, this
+#: tuple is the seam.
+WORKERS = (WORKER_POST, WORKER_CONVERSATION, WORKER_MEDIA, WORKER_REFERENCE)</code></pre>
+
+<p>A comment that records the option not taken, the reason, and where to change it. Copy this habit.</p>
+
+<h4>6.3 <code>GeminiStructuredWorker</code>: two recovery layers below D56</h4>
+
+<p><code>analysis.py:310</code> is the shared client for every structured call in the subsystem —
+architect, build, the passes — so «the five v2 LLM stages cannot drift apart in their resilience
+posture». Same <code>with_structured_output(..., include_raw=True)</code>, same
+<code>call_with_retry</code>, same <code>native_resilience_kwargs()</code>, <code>temperature=0.0</code>.</p>
+
+<p>Its <code>run()</code> carries two recovery layers <em>below</em> D56's operator-visible attempts: a
+malformed <code>parsed</code> is first <strong>repair-parsed</strong> from the raw message, and only if
+that fails is the call <strong>re-invoked once</strong> with a strict-JSON nudge:</p>
+
+<pre><code>MALFORMED_OUTPUT_REINVOKES = 1     # analysis.py:120
+#: Bounded and constant on purpose: this retry lives **below** D56's
+#: operator-visible stage attempts (``services.MAX_STAGE_ATTEMPTS``), so it must
+#: never grow into a second attempt counter — and it is deliberately not a
+#: settings knob.</code></pre>
+
+<p>Note the repair-parse detail: it reads the raw content through
+<code>_normalize_content</code>, «i.e. the Gemini list-content rule is honoured by never
+string-assuming, not by never reading». (Gemini's <code>.content</code> can be a list rather than a
+string; a bare <code>.strip()</code> silently falls through.)</p>
+
+<p>Model resolution never hard-codes an id:</p>
+
+<pre><code>LLMRoleConfig row → settings attr → literal default        # analysis.build_client, :413</code></pre>
+
+<p><code>operators.llm_runtime.resolve_role_config</code> <strong>cannot raise</strong> — the chain is
+total and even a <code>DatabaseError</code> is treated as an absent row — «which is why no content-agent
+call, pass or stage can stop on a missing model any more». Explainer #17 owns that store; here it is
+enough to know that the operator changes the model and the thinking effort for any of these roles at
+<code>/operator/settings</code>, with no redeploy.</p>
+
+<h4>6.4 The architect call</h4>
+
+<p><code>architect.py</code> (1042) runs the turn. After the workers, <strong>one</strong> structured
+call derives the core message with its derivation record and lays out the sections. What rides in the
+packet: the four worker returns, the <em>frozen</em> guide (<code>GUIDE_PACKET_CHARS = 40000</code>),
+the job note (<code>NOTE_PACKET_CHARS = 2000</code>), the depth classification and its band, and the
+measured reference shape. Two constants are quoted straight into the prompt:</p>
+
+<pre><code>CORE_VALUES = ("성공보다 생존 · 결과보다 과정 · 고객 중심 · 브랜드 중심 · "
+               "현실적인 고민과 해결 과정 · 무엇보다 왜")
+HEADING_RULE = "한 문장, 판단이나 교훈을 담고, 25–45자"</code></pre>
+
+<p>What the stage may <strong>not</strong> do is stated as plainly as what it may: «write prose for the
+final content (that is the build stage), assign <code>asset_id</code> (photos are chosen after the
+writing), or invent a fact (an unverifiable beat becomes a <em>risk</em>, never prose)».</p>
+
+<div class="callout">
+<h4>The deterministic fix worth stealing: keep the heuristic and the prompt in agreement</h4>
+<p>Sections come back with a <code>target_len</code>. Sometimes the model omits one, and the fallback
+used to be the midpoint of the band — which, for a 10,000–16,000자 document over 12–18 sections, is
+about 1,000자 per section, while the actual published references run to roughly two thirds of that.
+The article read padded.</p>
+<p>P72.S14's fix (<code>architect._fill_target_lens</code>, <code>:405</code>) anchors an omitted
+<code>target_len</code> on <code>reference_shape</code>'s <strong>measured per-unit median</strong>,
+clamped so the document's total still lands in the band. The band is a total-volume bound, not a
+per-section length.</p>
+<p>And the second half is the part people forget: <strong>the same measurement rides in the prompt as
+one line</strong>, so the model's own targets and the deterministic fallback answer to the same number.
+A fallback that disagrees with the instruction you gave the model is a fallback that makes your output
+worse in a way nobody can see.</p>
+</div>
+
+<h4>6.5 Failure, and cancel</h4>
+
+<p><strong>D56 drives every failure here</strong> — each worker and the architect run inside a
+<code>ContentAgentStageAttempt</code>, and a failure calls <code>services.fail_stage</code>, which takes
+the <code>proposing → proposing</code> self-loop while budget remains and
+<code>stage_capped → needs_answer</code> at the cap. Nothing new to learn; it is the machinery from
+§1.</p>
+
+<p><strong>Cancel tolerance</strong> is the part unique to this stage. The operator may press cancel
+while the Celery task is running, and cancel is a real transition
+(<code>proposing → intake</code>). So every write re-checks the job's state first:</p>
+
+<pre><code>def _still_proposing(job) -> bool:                      # architect.py:711
+    return _job_state(job) == JobState.PROPOSING
+
+…
+if not _still_proposing(job):
+    logger.info("content agent job %s cancelled before recording", job.pk)
+    return {"job_id": str(job.pk), "status": "cancelled"}</code></pre>
+
+<p>A cancelled-out run drops its results with a log line and writes nothing. No new state, no partial
+document. This is what «Cancel exists only in <code>proposing</code>» means operationally: the one
+place a cancel is legal is the one place a long-running task can be interrupted, and every write in
+that task is guarded.</p>
+
+<h4>6.6 Landing the proposal</h4>
+
+<pre><code>_progress(job, stage="scaffold_proposal", step="proposal",
+          note="구성안 제안을 기록하고 있습니다.")
+with transaction.atomic():
+    revision = services.record_scaffold_proposal(job, payload=outcome.payload["document"])
+    services.transition(job, "proposal_ready")
+    from . import allocation_pick
+    allocation_pick.schedule_allocation_pass(job)</code></pre>
+
+<p>Three details in six lines. The last progress ping goes out <strong>before</strong> the state
+moves, because past <code>proposal_ready</code> the job is <code>needs_review</code>, which is
+deliberately not in <code>PROGRESS_ACCEPTING_STATES</code> — a later ping would be a silent no-op. The
+proposal row and the state move are in <strong>one transaction</strong>. And the allocation pass is
+scheduled here, at the turn's end, as its <em>one</em> trigger — dispatched <code>on_commit</code>
+inside the scheduler so the worker reads the revision this block just wrote, with a broker outage
+logged and swallowed «because a proposal must never fail because a pass could not be queued».</p>
+
+<p>The job is now in <code>needs_review</code>. <strong>This is where explainer #13 ends.</strong></p>
+
+<h4>6.7 The 구성안 document itself</h4>
+
+<p><code>scaffold.py</code> is <strong>7,434 lines and about 215 function definitions</strong> — a
+module to sample, not to enumerate. Two things in it matter for understanding the rest:</p>
+
+<p><strong><code>ContentAgentScaffoldWorkingCopy</code></strong> (<code>:683</code>) is <em>the 구성안
+document</em> in its mutable form. The rule around it is the module's first:</p>
+
+<pre><code>1. **Immutable history, one mutable copy.** ``record_scaffold_proposal`` writes
+   the proposal; ``approve_scaffold_revision`` writes ``rev N``. Neither is ever
+   mutated. The only mutable row is ``ContentAgentScaffoldWorkingCopy`` —
+   nullable by design (no copy means "no edits since the last immutable row"),
+   created lazily on the first edit and deleted the moment an approval freezes
+   a revision.
+2. **Nothing computed is stored.** Candidacy, coverage, the usage matrix, the
+   unused pool, ``dirty`` and the change list are computed at read time.
+3. **References, never copies.** A chat range is
+   ``{chat_rev, from_id, to_id, count}`` pointing at the stable ``message_id``;
+   message text is never copied into the scaffold, and a range carrying a stale
+   ``chat_rev`` is refused rather than silently re-pointed.</code></pre>
+
+<p><strong><code>normalize_document</code></strong> (<code>:1446</code>) is the one shape everything is
+forced through — the proposal row, every approved revision, and the working copy all carry the
+identical JSON — and its first act is to <strong>refuse unknown keys</strong>
+(<code>_reject_unknown</code>). A model that invents a field gets a
+<code>ScaffoldError("invalid_document", …)</code>, and because
+<code>scaffold.validate_document</code> runs before the proposal is recorded, an invalid document
+<em>fails the attempt</em> and is never stored.</p>
+
+<p>Two neighbours get a paragraph each. <code>scaffold_pool.py</code> (572) answers the drawer's one
+question — «what may I drag into this unit, and where is each of those things already used?» — for both
+allocatable kinds, keying <code>used_in</code> on <code>scaffold.media_key</code>
+(<code>asset:&lt;id&gt;</code> / <code>capture:&lt;rev&gt;:&lt;a&gt;-&lt;b&gt;</code>) so there is never
+a second spelling of the same identity. <code>scaffold_note.py</code> (1055) is the section editor that
+survived: round 15 deleted every structured field and all five structure ops, leaving
+<strong>one free-form note an LLM applies</strong>, run inside the request rather than queued (budget
+8–20 s), with structural intent («delete this section») diverted to a dry-run that returns the six
+delete consequences plus a <code>django.core.signing</code>-signed <code>confirm_token</code> carrying
+the note, the unit and the <em>document hash</em> — so a confirm arriving after the document moved is
+refused rather than applied to a different 구성안 than the operator saw.</p>
+
+<div class="callout warn">
+<h4>Comment drift #2 (code wins)</h4>
+<p><code>scaffold_note.py</code>'s decision 1 says «there is <strong>no new job state</strong> —
+<code>states.py</code>'s <strong>21</strong> stand». There are 14 today; the sentence predates P79's
+shrink. The <em>claim</em> is still true (the note stage adds no state, and locks only
+<code>section.note_pending</code>); the number is stale.</p>
+</div>
+
+<h4>6.8 P74's allocation pass — the 구성안 arrives already allocated</h4>
+
+<p><code>allocation_pick.py</code> (890). Before P74, a 구성안 arrived with empty photo rows and a
+drawer for the operator to fill. Now, right after the proposal is recorded, one more pass reads the
+<em>whole</em> proposal and the <em>whole</em> pool at once and decides which 재료 belongs in which 절 —
+with one Korean sentence of reasoning per unit, «uneven by design, leftovers normal».</p>
+
+<p>Six decisions, of which three generalise:</p>
+
+<ul>
+  <li><strong>Chained, not folded into the architect's call.</strong> It runs on its own
+    <code>ContentAgentPass</code> row (<code>Panel.ALLOCATION</code>), «which buys the whole tested
+    lifecycle — atomic claim, land/fail-open, one operator retry, no-clobber merge — instead of
+    re-implementing it inside the largest prompt in the pipeline».</li>
+  <li><strong>It reads text only, never pixels.</strong> Every allocatable photo already carries the
+    image pass's durable <code>inspection_caption</code> and <code>agent_reason</code>, and the media
+    worker's inventory describes it in prose. A caption-less photo is non-allocatable anyway — «the
+    pixels a second multimodal pass could newly learn from belong to items this stage may not
+    place».</li>
+  <li><strong>The model answers in pool keys, never raw ids</strong> (<code>asset:&lt;pk&gt;</code> /
+    <code>capture:&lt;rev&gt;:&lt;a&gt;-&lt;b&gt;</code>). The keys ride in the packet, «so a
+    hallucinated range cannot be spelled at all»; an unknown key is dropped and reported rather than
+    fatal. This is a small, very transferable trick: constrain the output alphabet to identifiers you
+    put in the prompt.</li>
+</ul>
+
+<p>It reads the guide's §15 배치 기준 chapter (<code>ALLOCATION_CHAPTER = "15"</code>,
+<code>GUIDE_EXCERPT_CHARS = 6_000</code>), lands as a new <code>kind=PROPOSAL</code> revision — so the
+allocated document becomes the base automatically and an untouched job still reads "not dirty" — and
+fails open, leaving the empty-media proposal and the entire manual path working.</p>
+
+<h4>6.9 The LLM-pass inventory</h4>
+
+<p>Counting honestly: <strong>eight distinct model roles fire between "the operator uploads a zip" and
+"the operator presses 승인"</strong>. Every one of them resolves its model and thinking effort through
+<code>operators.llm_runtime.resolve_role_config</code>.</p>
+
+<table>
+<tr><th>#</th><th>Pass</th><th>Module</th><th>Role slug</th><th>Decides</th><th>Writes</th></tr>
+<tr><td>1</td><td>Segmentation</td><td><code>chat_segmentation.py</code></td><td><code>content_chat_segmentation</code></td>
+    <td>where one conversation ends and the next begins</td><td><code>ContentAgentChatSegment</code> rows</td></tr>
+<tr><td>2</td><td>Conversation pick</td><td><code>chat_pick.py</code></td><td><code>content_chat_pick</code></td>
+    <td>which conversations are worth writing about, with a reason either way</td><td>the selection, via <code>set_selection(picked_by="agent")</code></td></tr>
+<tr><td>3</td><td>Image pick <span class="small">(multimodal, batches of 8)</span></td><td><code>image_pick.py</code></td><td><code>content_image_pick</code></td>
+    <td>which photos a 절 could use; a caption and a reason per tile</td><td><code>agent_proposed</code> / <code>agent_reason</code> / <code>agent_off_brand</code> on the asset row</td></tr>
+<tr><td>4</td><td>Depth</td><td><code>depth.py</code></td><td><code>content_preflight_classify</code> <span class="small">(a fossil name)</span></td>
+    <td>rich or sparse band</td><td>the stage attempt's payload</td></tr>
+<tr><td>5</td><td>Analysis ×4</td><td><code>analysis.py</code></td><td><code>content_analysis</code></td>
+    <td>post records · conversation beats · media inventory · reference tone</td><td>one stage attempt per worker</td></tr>
+<tr><td>6</td><td>Architect</td><td><code>architect.py</code></td><td><code>content_architect</code></td>
+    <td>the core message and the section layout</td><td><code>ContentAgentScaffoldRevision(kind=PROPOSAL)</code></td></tr>
+<tr><td>7</td><td>Allocation</td><td><code>allocation_pick.py</code></td><td><code>content_allocation_pick</code></td>
+    <td>which 재료 goes in which 절</td><td>a further <code>PROPOSAL</code> revision (or a no-clobber merge into the working copy)</td></tr>
+<tr><td>8</td><td>Section note</td><td><code>scaffold_note.py</code></td><td><code>scaffold_section_note</code></td>
+    <td>applies the operator's free-form note to one section</td><td>the working copy</td></tr>
+</table>
+
+<p>For completeness: two more roles, <code>content_section_writer</code> and
+<code>content_integration</code> (<code>build.py:81-82</code>), fire <em>after</em> 승인 — they are
+explainer #14's.</p>
+
+<h4>6.10 What the operator sees these passes through</h4>
+
+<p><code>agent_pass.py</code> (574) is the shared record for the three proposal panels
+(<code>CONVERSATION</code>, <code>IMAGE</code>, <code>ALLOCATION</code>): one row per job per panel,
+carrying the state, the timings, <strong>which guide version was actually read</strong>, the
+proposed/kept/judged counts, the retry allowance (<code>RETRY_ALLOWANCE = 1</code>) and a
+<strong>measured</strong> duration range. That last one is the «nothing printed that the system did not
+measure» rule again — the design renders «보통 20–40초» only when the backend serves a real
+<code>observed_seconds</code> range, sampled from the last
+<code>OBSERVED_SAMPLE_MIN = 3</code>…<code>OBSERVED_SAMPLE_MAX = 20</code> runs.</p>
+
+<h3 id="routes">7. The routes, and where this page stops</h3>
+
+<p>All of it is under <code>/api/admin/miracle-agent/v2/…</code>, with a <code>v2</code> segment that
+keeps v1's routes byte-identical for historical jobs (<code>&lt;uuid:job_id&gt;</code> never matches
+the literal <code>v2</code>, so the two sets cannot collide). The intake-and-proposal half:</p>
+
+<table>
+<tr><th>Route <span class="small">(prefix <code>/api/admin/miracle-agent/v2</code>)</span></th><th>What it is</th></tr>
+<tr><td><code>/jobs</code>, <code>/jobs/&lt;id&gt;</code></td><td>the job list and detail</td></tr>
+<tr><td><code>/brands</code>, <code>/jobs/&lt;id&gt;/scope</code></td><td>brand options with the three scope counts; set the job's scope</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/posts</code>, <code>/posts/suggestions</code>, <code>/selection</code></td><td>scoped search, 범위 밖 제안, the post selection write</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/attachments/chat</code>, <code>/chat/messages</code>, <code>/chat/media/&lt;uuid&gt;</code></td><td>attach the zip, read the normalized conversation, serve image <em>derivatives</em> only</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/chat/conversations</code>, <code>…/selection</code>, <code>…/retry</code></td><td>the units, the one selection write, the pass's single retry</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/chat/overview</code>, <code>/chat/participants/…</code>, <code>/chat/redactions</code></td><td>the viewer, the participant flags, the redaction rows</td></tr>
+<tr><td><code>/guide</code>, <code>/jobs/&lt;id&gt;/guide-version</code></td><td>the global version list; this job's pinned version</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/reference-content</code>, <code>…/candidates</code></td><td>the 참고 콘텐츠 pick</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/intake</code></td><td><strong>the 입력 요약</strong> — six checks, manifests, <code>scaffold_action</code></td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/scaffold/request</code></td><td><strong>구성안 만들기 / 다시 만들기</strong> — snapshot + open the turn in one transaction; a refusal is 409</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/scaffold/propose</code></td><td>the capped-retry question's 다시 시도 (<code>needs_answer → resume_scaffold</code>)</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/scaffold</code>, <code>/scaffold/ops</code>, <code>/scaffold/pool</code>, <code>/scaffold/units/&lt;unit&gt;/media</code>, <code>…/note</code></td><td>read the 구성안, edit the working copy, the allocation drawer, the free note</td></tr>
+<tr><td><code>/jobs/&lt;id&gt;/scaffold/allocation/retry</code>, <code>…/revert</code></td><td>P74's three acts on the proposal-time allocation</td></tr>
+<tr style="background:#fff6f6"><td><code>/jobs/&lt;id&gt;/scaffold/approval</code></td><td><strong>승인 — explainer #14 starts here</strong></td></tr>
+</table>
+
+<p>Behind that last route sits <code>services.approve_scaffold_revision</code>
+(<code>services.py:286</code>), which writes a new <code>ContentAgentScaffoldRevision</code> row with
+<code>kind=APPROVED</code>, its hash, its timestamp, its approver and the change list the operator saw
+— and its docstring draws the boundary for us:</p>
+
+<pre><code>Writes a new row; a predecessor is never mutated. The approval *act* is
+this row — the state move is a separate ``transition(job, "approve_scaffold")``
+call, gated on it.</code></pre>
+
+<p>Two separate things: the record, and the move that the record unlocks. Explainer #14 picks it up
+from there — writing, integrating, the draft, 조정, and publishing.</p>
+
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> <code>states.py</code> ends with
+  <code>TRANSITION_INDEX = _validate_table()</code> — a module-level call, so the checks run at import
+  time. What does that buy, concretely?</p>
+  <button class="opt" data-correct="false">It caches the transition lookup so <code>services.transition()</code> does not have to scan the table on every call.</button>
+  <button class="opt" data-correct="true">A transition table that violates a design invariant makes the process fail to start — so an illegal edge is a boot failure, never a runtime bug discovered in production.</button>
+  <button class="opt" data-correct="false">It lets Django migrations validate that every state value fits in the <code>state</code> column's <code>max_length</code>.</button>
+  <button class="opt" data-correct="false">It ensures the guard functions are registered before the first transition is attempted.</button>
+  <p class="why" hidden>The indexing is a side benefit; the point is the assertions. <code>_validate_table</code> raises <code>AssertionError</code> on a duplicate key, an unknown state, a failure edge that advances the lifecycle or reaches <code>published</code>, a cancel outside <code>proposing</code>, a stranded state, or a missing pill/label — and because it runs at import, Django, the Celery worker and even test collection all refuse to start. The machine's rules are checked before the app can boot.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> <code>cancel</code> is legal from exactly one state, <code>proposing</code>,
+  and its target is <code>intake</code>. Why <em>that</em> target rather than a dedicated
+  <code>cancelled</code> state or the previous state?</p>
+  <button class="opt" data-correct="false">Because <code>intake</code> is the lowest <code>LIFECYCLE_ORDER</code> value, and cancels must always reset a job to zero.</button>
+  <button class="opt" data-correct="true">Because P79 retired the input freeze-as-lock: the inputs stayed editable the whole time, so there is nothing to fall back <em>to</em> except the intake the operator was already editing — and the design forbids a <code>cancelled</code> token outright.</button>
+  <button class="opt" data-correct="false">Because a cancelled proposal must be re-proposed from scratch, and only <code>intake</code> has a <code>request_scaffold</code> edge.</button>
+  <button class="opt" data-correct="false">Because <code>cancel</code> is a <code>FAILURE</code>-kind edge and failure edges may never advance the lifecycle.</button>
+  <p class="why" hidden>The docstring says it directly: "with the freeze retired there is nothing to fall back *to* but the inputs, which were editable the whole time anyway". The third option is also wrong on a fact — <code>request_scaffold</code> has four sources, not one. And <code>cancel</code> is its own <code>Kind.CANCEL</code>, the only such edge in the table.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> An analysis worker fails twice, the job hits <code>stage_capped</code> and
+  lands in <code>needs_answer</code>. The operator presses 다시 시도. What happens to the attempt
+  budget and to the work already done?</p>
+  <button class="opt" data-correct="false">The failed stage's <code>ContentAgentStageAttempt</code> rows are deleted so the counter reads zero again, and all four workers re-run.</button>
+  <button class="opt" data-correct="false">The budget stays exhausted — 다시 시도 only re-reads the last successful attempt's payload and re-runs the architect call.</button>
+  <button class="opt" data-correct="true">A new turn opens, so attempts get a fresh key (<code>post@2</code>, …) and a full budget; nothing is deleted, and workers that already succeeded are reused from their stored attempt payloads.</button>
+  <button class="opt" data-correct="false">The job returns to <code>intake</code>, a new input revision is frozen, and the turn starts over against the new snapshot.</button>
+  <p class="why" hidden><code>proposal_turn()</code> counts <code>request_scaffold</code> / <code>propose_scaffold</code> / <code>resume_scaffold</code> edges in the append-only transition log, and <code>_unit_key(base, turn)</code> appends <code>@turn</code> for turns past the first — so the budget is scoped to the turn, "otherwise the three options round 12 §3.7 prints would be a lie the second time". <code>_reuse_analysis</code> reuses succeeded workers, and every attempt row stays as D56's audit trail.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The intake screen can say «구성안은 2024-03-12의 입력으로 만들어졌습니다 —
+  다시 만들어야 합니다». What makes that answerable, and what constraint does it impose on the
+  codebase?</p>
+  <button class="opt" data-correct="false">An <code>updated_at</code> comparison between the job's last input write and the proposal revision's <code>created_at</code>; the constraint is that every input write must bump <code>updated_at</code>.</button>
+  <button class="opt" data-correct="true">A SHA-256 over the canonical JSON of <em>every</em> input (<code>current_inputs_payload</code>), compared against the frozen revision's <code>content_hash</code>; the constraint is that the payload's key set is frozen history — adding or dropping a key would make every existing job report a phantom change.</button>
+  <button class="opt" data-correct="false">A per-input dirty flag set by write hooks on the selection, chat and asset tables; the constraint is that any new input surface must register its own hook.</button>
+  <button class="opt" data-correct="false">A row-count comparison between the working selection and the frozen manifest; the constraint is that reordering posts must not count as a change.</button>
+  <p class="why" hidden><code>inputs_fingerprint()</code> is <code>canonical_hash(current_inputs_payload(job))</code>, and <code>inputs_changed(job, against=frozen.content_hash)</code> is the whole comparison — computed on read, with no side effects and no write hooks (P78's write-time version was deleted). Because the hash covers the whole dict, the shape is a schema commitment: the payload still carries an <code>answers</code> key that nothing has ever filled, precisely because removing it would change every stored job's fingerprint.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Which statement about the content agent's intake pipeline is true?</p>
+  <button class="opt" data-correct="false">Post selection goes through the FastAPI agent's <code>/agent-api/retrieval</code> endpoint, so it shares the chat agent's ranking and citation machinery.</button>
+  <button class="opt" data-correct="false">Conversation boundaries are recomputed on every read from a ≥1-day-gap rule, with the LLM pass used only as an optimisation.</button>
+  <button class="opt" data-correct="true">Post selection is plain Django querysets over <code>DocumentSource</code> with no call to the agent service at all, while conversation boundaries come from an LLM pass and are <em>persisted</em> because an LLM is not a pure function.</button>
+  <button class="opt" data-correct="false">Both post selection and conversation segmentation are deterministic; the first model call in the whole subsystem is the architect's.</button>
+  <button class="opt" data-correct="false">A KakaoTalk photo reference whose bytes are missing from the export is dropped, so the counts always match the files on disk.</button>
+  <p class="why" hidden>Grep-verified: <code>agent_jobs/</code> contains zero references to <code>agent-api</code> — scope and selection are <code>brand_documents()</code> querysets, and the LLM calls are made from Django directly. Segmentation deleted the day-gap rule outright ("a hidden day-gap fallback would resurrect it invisibly while the panel says 맥락 기준") and stores boundaries in <code>ContentAgentChatSegment</code>, because a recomputed boundary could drift between two reads and silently drop the operator's selection. And a missing media reference is <em>carried</em> as a row with <code>state="missing"</code>, not dropped — it is only the photo <em>counts</em> that are present-bytes-only.</p>
+</div>
+</section>
+
+<hr>
+<p class="small"><strong>Files walked for this page</strong> (all under
+<code>apps/backend/content/agent_jobs/</code> unless noted): <code>states.py</code>,
+<code>services.py</code>, <code>models.py</code>, <code>chat_models.py</code>,
+<code>legacy_models.py</code>, <code>scope.py</code>, <code>selection.py</code>,
+<code>chat_archive.py</code>, <code>kakao_txt.py</code>, <code>chat_intake.py</code>,
+<code>chat_participants.py</code>, <code>chat_matching.py</code>, <code>chat_segmentation.py</code>,
+<code>chat_pick.py</code>, <code>chat_conversations.py</code>, <code>guide.py</code> +
+<code>guide_source/</code>, <code>guide_choice.py</code>, <code>reference_choice.py</code>,
+<code>reference_shape.py</code>, <code>depth.py</code>, <code>intake_state.py</code>,
+<code>analysis.py</code>, <code>architect.py</code>, <code>allocation_pick.py</code>,
+<code>agent_pass.py</code>, <code>scaffold.py</code>, <code>scaffold_pool.py</code>,
+<code>scaffold_note.py</code>, <code>image_pick.py</code>; plus
+<code>apps/backend/content/urls.py</code>, <code>content/draft_dispatch.py</code>,
+<code>content/draft_views.py</code>, <code>content/tasks.py</code>, and
+<code>docs/current/backend.md</code>.</p>
+<p class="small">Previous in this curriculum:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12 — The content library</a>.</p>
+
+<script>
+document.querySelectorAll('.q').forEach(function (q) {
+  var why = q.querySelector('.why');
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var right = btn.dataset.correct === 'true';
+      btn.classList.add(right ? 'correct' : 'incorrect');
+      if (why) why.hidden = false;
+    });
+  });
+});
+</script>
+</body>
+</html>

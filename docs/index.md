@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-08-28 · [Content agent I: KakaoTalk intake and scaffolding a draft](changple5/2026-08-28-13-content-agent-intake-and-scaffold.html) — changple5
 - 2026-08-26 · [The content library: models, the single publish seam, media derivatives, and the Notion mirror](changple5/2026-08-26-12-content-library.html) — changple5
 - 2026-08-26 · [Safety and grounding: the injection guard, session lockdown, the citation gate, and trial caps](changple5/2026-08-26-11-safety-and-grounding.html) — changple5
 - 2026-08-26 · [컨설팅 mode: the planned multi-round consultation and its 구성안 report](changple5/2026-08-26-10-consulting-mode.html) — changple5
