@@ -1,7 +1,7 @@
 <!--kb
 title: "How the Live Investment Strategy Was Built and How It Runs"
 date: 2026-08-31
-version: 2
+version: 1
 tags:
   - market-making
   - upbit
@@ -234,23 +234,19 @@ own mid is noisy. The KRW books behind it are enormous. So fair value is <em>imp
   <text x="582" y="42" text-anchor="middle" class="svgtxt mono">USDT-XRP (thin)</text>
   <text x="582" y="58" text-anchor="middle" class="svgtxt sm">₩202M / day · 493 prints/day</text>
 
-  <line x1="596" y1="88" x2="680" y2="88" stroke="var(--line)" stroke-width="1.5"/>
-  <text x="590" y="91" text-anchor="end" class="svgtxt sm">best ask</text>
+  <line x1="500" y1="86" x2="665" y2="86" stroke="var(--line)" stroke-width="1"/>
+  <text x="500" y="80" class="svgtxt sm">best ask</text>
+  <line x1="500" y1="152" x2="665" y2="152" stroke="var(--line)" stroke-width="1"/>
+  <text x="500" y="168" class="svgtxt sm">best bid</text>
+  <text x="670" y="122" text-anchor="end" class="svgtxt sm">spread ≈ 14.5 bps (2 ticks)</text>
 
-  <line x1="596" y1="104" x2="680" y2="104" class="good-s" stroke-width="2.5"/>
-  <text x="590" y="107" text-anchor="end" class="svgtxt sm" style="fill:var(--good)">our ask</text>
+  <line x1="510" y1="119" x2="655" y2="119" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="510" y="114" class="svgtxt sm" style="fill:var(--accent)">f'</text>
 
-  <line x1="596" y1="122" x2="680" y2="122" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <text x="590" y="125" text-anchor="end" class="svgtxt sm" style="fill:var(--accent)">f'</text>
-
-  <line x1="596" y1="140" x2="680" y2="140" class="good-s" stroke-width="2.5"/>
-  <text x="590" y="143" text-anchor="end" class="svgtxt sm" style="fill:var(--good)">our bid</text>
-
-  <line x1="596" y1="156" x2="680" y2="156" stroke="var(--line)" stroke-width="1.5"/>
-  <text x="590" y="159" text-anchor="end" class="svgtxt sm">best bid</text>
-
-  <text x="582" y="188" text-anchor="middle" class="svgtxt sm">we stand off δ = 14 bps either side of f'</text>
-  <text x="582" y="204" text-anchor="middle" class="svgtxt sm">book spread ≈ 14.5 bps (2 ticks)</text>
+  <line x1="520" y1="100" x2="645" y2="100" class="good-s" stroke-width="2.5"/>
+  <text x="650" y="103" class="svgtxt sm" style="fill:var(--good)">our ask  f'(1+δ)</text>
+  <line x1="520" y1="138" x2="645" y2="138" class="good-s" stroke-width="2.5"/>
+  <text x="650" y="141" class="svgtxt sm" style="fill:var(--good)">our bid  f'(1−δ)</text>
 </svg>
 <figcaption>Fair value is imported from two deep KRW books, then corrected for the persistent basis
 between that import and the event pair's own mid. Prices from the live log at 10:43 KST;
@@ -322,24 +318,27 @@ what P4's 912-run band-matched sweep was for.</p>
 <code>q ∈ [0.20, 0.30]</code>. Outside it, one side goes quiet and waits.</p>
 
 <figure>
-<svg viewBox="0 0 700 200" role="img" aria-label="The inventory axis showing target, band, the two-sided zone and today's q">
-  <text x="350" y="56" text-anchor="middle" class="svgtxt" style="fill:var(--good)">two-sided zone — both sides quotable</text>
-  <text x="350" y="74" text-anchor="middle" class="svgtxt sm">q ∈ [0.20, 0.30] · width 2(band − size) = 0.10</text>
+<svg viewBox="0 0 700 190" role="img" aria-label="The inventory axis showing target, band, the two-sided zone and today's q">
+  <line x1="40" y1="100" x2="660" y2="100" stroke="var(--line)" stroke-width="2"/>
+  <text x="40" y="130" class="svgtxt sm">q = 0.00</text>
+  <text x="660" y="130" text-anchor="end" class="svgtxt sm">q = 0.50 = target + band (the XRP cap, ₩1,281,406)</text>
 
-  <text x="150" y="92" text-anchor="middle" class="svgtxt sm">ask-only</text>
-  <text x="560" y="92" text-anchor="middle" class="svgtxt sm">bid-only</text>
+  <rect x="288" y="86" width="124" height="28" fill="var(--good)" opacity="0.22"/>
+  <text x="350" y="78" text-anchor="middle" class="svgtxt sm" style="fill:var(--good)">two-sided zone, width 2(band − size)</text>
+  <text x="350" y="145" text-anchor="middle" class="svgtxt sm">q ∈ [0.20, 0.30]</text>
 
-  <line x1="40" y1="110" x2="660" y2="110" stroke="var(--line)" stroke-width="2"/>
-  <rect x="288" y="96" width="124" height="28" fill="var(--good)" opacity="0.22"/>
-  <line x1="350" y1="96" x2="350" y2="124" stroke="var(--accent)" stroke-width="1.5"/>
+  <line x1="350" y1="70" x2="350" y2="130" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="350" y="62" text-anchor="middle" class="svgtxt sm" style="fill:var(--accent)">target 0.25</text>
 
-  <text x="40" y="146" class="svgtxt sm">q = 0.00</text>
-  <text x="350" y="146" text-anchor="middle" class="svgtxt sm" style="fill:var(--accent)">target 0.25</text>
-  <text x="660" y="146" text-anchor="end" class="svgtxt sm">0.50 = the XRP cap</text>
+  <line x1="288" y1="90" x2="288" y2="110" stroke="var(--muted)" stroke-width="1"/>
+  <line x1="412" y1="90" x2="412" y2="110" stroke="var(--muted)" stroke-width="1"/>
 
-  <circle cx="462" cy="110" r="6" fill="var(--bad)"/>
-  <line x1="462" y1="118" x2="462" y2="160" stroke="var(--bad)" stroke-width="1"/>
-  <text x="462" y="178" text-anchor="middle" class="svgtxt" style="fill:var(--bad)">today: q = 0.3407 — bid blocked, ask rests</text>
+  <circle cx="462" cy="100" r="6" fill="var(--bad)"/>
+  <text x="462" y="168" text-anchor="middle" class="svgtxt">today: q = 0.3407</text>
+  <text x="462" y="80" text-anchor="middle" class="svgtxt sm" style="fill:var(--bad)">bid blocked · ask only</text>
+
+  <text x="120" y="100" class="svgtxt sm">ask-only region</text>
+  <text x="560" y="118" class="svgtxt sm">bid-only region</text>
 </svg>
 <figcaption>The live inventory axis. At <code>q = 0.3407</code> the bid needs
 <code>0.0907 + 0.20 = 0.29 &gt; 0.25</code> and is refused; the ask needs
@@ -414,7 +413,7 @@ yourself first, and recorder uptime literally <em>is</em> the calibration budget
   <rect x="410" y="14" width="160" height="62" rx="6" class="box"/>
   <text x="490" y="34" text-anchor="middle" class="svgtxt sm">P1 sweep: 69/576 qualify</text>
   <text x="490" y="50" text-anchor="middle" class="svgtxt sm">pick = anchor_spread XRP</text>
-  <text x="490" y="66" text-anchor="middle" class="svgtxt sm">core ₩263,046 · inv 0.42</text>
+  <text x="490" y="66" text-anchor="middle" class="svgtxt sm">core ₩263,046 · inv_share 0.42</text>
 
   <rect x="410" y="86" width="160" height="62" rx="6" class="box"/>
   <text x="490" y="106" text-anchor="middle" class="svgtxt sm">P4 sizing: 57 points</text>
