@@ -1,13 +1,13 @@
 <!--kb
-title: "How the Live Investment Strategy Was Built and How It Runs"
+title: "How the Live Investment System Was Rebuilt for Two Markets and How It Runs Now"
 date: 2026-08-31
-version: 2
+version: 3
 tags:
   - market-making
   - upbit
   - trading-bot
-  - backtesting
   - live-operations
+  - multi-market
 source:
   project: arb_upbit_1
   repo: arb_upbit_1
@@ -16,911 +16,812 @@ source:
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How the Live Investment Strategy Was Built and How It Runs</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --bg: #ffffff;
-    --fg: #1b1f24;
-    --muted: #5c6670;
-    --line: #d9e0e6;
-    --panel: #f5f7f9;
-    --panel2: #eef2f5;
-    --accent: #2b6cb0;
-    --good: #2f855a;
-    --bad: #c53030;
-    --warn: #b7791f;
-    --code-bg: #f4f4f4;
-  }
-  @media (prefers-color-scheme: dark) {
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How the Live Investment System Was Rebuilt for Two Markets and How It Runs Now</title>
+  <style>
     :root {
-      --bg: #14171a;
-      --fg: #e6e9ec;
-      --muted: #9aa5b0;
-      --line: #2c3339;
-      --panel: #1c2126;
-      --panel2: #232a30;
-      --accent: #79b8f3;
-      --good: #68d391;
-      --bad: #fc8181;
-      --warn: #ecc94b;
-      --code-bg: #1b2026;
+      color-scheme: light dark;
+      --ink: #1c1c1c; --muted: #5a5f66; --bg: #ffffff; --panel: #f5f6f7; --line: #d9dde2;
+      --green: #2f8f5b; --green-bg: #eef8f1; --amber: #b7791f; --amber-bg: #fdf6e7;
+      --red: #c0392b; --red-bg: #fbeeed; --blue: #2b6cb0; --blue-bg: #ebf3fb;
+      --code-bg: #f1f2f4;
     }
-  }
-  html { background: var(--bg); }
-  body {
-    max-width: 47rem; margin: 2rem auto; padding: 0 1rem;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    line-height: 1.65; color: var(--fg); background: var(--bg);
-    font-size: 17px;
-  }
-  h1 { line-height: 1.25; font-size: 1.9rem; margin-bottom: .25rem; }
-  h2 { margin-top: 2.6rem; font-size: 1.45rem; border-bottom: 1px solid var(--line); padding-bottom: .3rem; }
-  h3 { margin-top: 1.9rem; font-size: 1.13rem; }
-  h4 { margin-top: 1.4rem; font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  p, li { overflow-wrap: break-word; }
-  .lede { color: var(--muted); font-size: 1.05rem; }
-  a { color: var(--accent); }
-  code { background: var(--code-bg); padding: .1rem .32rem; border-radius: 4px;
-         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .87em; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg);
-        padding: .8rem .9rem; border-radius: 6px; border: 1px solid var(--line);
-        font-size: .82rem; line-height: 1.5; }
-  pre code { background: none; padding: 0; font-size: inherit; }
-  .callout { border-left: 4px solid var(--accent); background: var(--panel);
-             padding: .8rem 1rem; margin: 1.2rem 0; border-radius: 0 6px 6px 0; }
-  .callout.warn { border-left-color: var(--warn); }
-  .callout.good { border-left-color: var(--good); }
-  .callout p:first-child { margin-top: 0; }
-  .callout p:last-child { margin-bottom: 0; }
-  .callout .lbl { font-weight: 600; letter-spacing: .02em; }
-  nav { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-        padding: .8rem 1rem .9rem; margin: 1.6rem 0 2rem; }
-  nav ol { margin: .4rem 0 0; padding-left: 1.3rem; }
-  nav li { margin: .15rem 0; }
-  .tblwrap { overflow-x: auto; margin: 1.1rem 0; }
-  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
-  th, td { border: 1px solid var(--line); padding: .38rem .55rem; text-align: left; vertical-align: top; }
-  th { background: var(--panel2); font-weight: 600; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  figure { margin: 1.6rem 0; }
-  figure svg { display: block; width: 100%; height: auto; }
-  figcaption { color: var(--muted); font-size: .86rem; margin-top: .5rem; }
-  .svgtxt { font-family: system-ui, sans-serif; font-size: 12px; fill: var(--fg); }
-  .svgtxt.sm { font-size: 10.5px; fill: var(--muted); }
-  .svgtxt.mono { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
-  .box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
-  .box2 { fill: var(--panel2); stroke: var(--line); stroke-width: 1; }
-  .arrow { stroke: var(--muted); stroke-width: 1.4; fill: none; }
-  .good-s { stroke: var(--good); }
-  .bad-s { stroke: var(--bad); }
-  .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
-            padding: .55rem .8rem; cursor: pointer; border: 1px solid var(--line);
-            border-radius: 6px; background: var(--panel); color: var(--fg);
-            font: inherit; font-size: .95rem; }
-  .q .opt:hover { border-color: var(--accent); }
-  .q .opt.correct { background: color-mix(in srgb, var(--good) 22%, var(--bg)); border-color: var(--good); }
-  .q .opt.incorrect { background: color-mix(in srgb, var(--bad) 20%, var(--bg)); border-color: var(--bad); }
-  .q .why { margin: .55rem 0 0; font-size: .92rem; color: var(--muted);
-            border-left: 3px solid var(--line); padding-left: .7rem; }
-  .q { margin: 1.5rem 0 2rem; }
-  .src { color: var(--muted); font-size: .88rem; }
-  hr { border: none; border-top: 1px solid var(--line); margin: 2.5rem 0; }
-</style>
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e6e6e6; --muted: #a0a6ad; --bg: #131416; --panel: #1c1e21; --line: #343940;
+        --green: #5cc48a; --green-bg: #15261c; --amber: #e0a94a; --amber-bg: #2a2214;
+        --red: #ef7b6f; --red-bg: #2c1a18; --blue: #7fb2e6; --blue-bg: #16222f;
+        --code-bg: #1e2126;
+      }
+    }
+    html { background: var(--bg); }
+    body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: var(--ink); background: var(--bg);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+           line-height: 1.6; font-size: 1.02rem; }
+    h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .5rem; }
+    h2 { font-size: 1.45rem; margin: 2.6rem 0 .8rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+    h3 { font-size: 1.15rem; margin: 1.8rem 0 .5rem; }
+    h4 { font-size: 1rem; margin: 1.2rem 0 .3rem; }
+    p { margin: .7rem 0; }
+    .lede { color: var(--muted); font-size: 1.05rem; }
+    nav ol { padding-left: 1.4rem; }
+    nav li { margin: .15rem 0; }
+    a { color: var(--blue); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: .9em; }
+    code { background: var(--code-bg); padding: .08em .3em; border-radius: 3px; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg); padding: .8rem .9rem;
+          border-radius: 6px; border: 1px solid var(--line); line-height: 1.45; }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: .8rem 0 1rem; font-size: .93rem; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: var(--panel); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .tablewrap { overflow-x: auto; }
+    .callout { border-left: 4px solid var(--green); background: var(--green-bg); padding: .7rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-color: var(--amber); background: var(--amber-bg); }
+    .callout.danger { border-color: var(--red); background: var(--red-bg); }
+    .callout.note { border-color: var(--blue); background: var(--blue-bg); }
+    .callout p:first-child { margin-top: 0; } .callout p:last-child { margin-bottom: 0; }
+    .snapshot { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; margin: 1rem 0; font-size: .95rem; }
+    .snapshot b { font-variant-numeric: tabular-nums; }
+    figure { margin: 1.2rem 0; }
+    figcaption { color: var(--muted); font-size: .9rem; margin-top: .4rem; }
+    svg { max-width: 100%; height: auto; display: block; }
+    svg text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--ink); }
+    svg .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    svg .muted { fill: var(--muted); }
+    svg .box { fill: var(--panel); stroke: var(--line); }
+    svg .box-green { fill: var(--green-bg); stroke: var(--green); }
+    svg .box-blue { fill: var(--blue-bg); stroke: var(--blue); }
+    svg .box-amber { fill: var(--amber-bg); stroke: var(--amber); }
+    svg .box-red { fill: var(--red-bg); stroke: var(--red); }
+    svg .ln { stroke: var(--muted); fill: none; }
+    svg .ln-green { stroke: var(--green); fill: none; }
+    svg .ln-red { stroke: var(--red); fill: none; }
+    .flow { display: flex; flex-wrap: wrap; gap: .5rem; align-items: stretch; margin: 1rem 0; }
+    .flow .step { flex: 1 1 9rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; font-size: .88rem; }
+    .flow .step b { display: block; font-size: .95rem; }
+    .flow .step.hi { border-color: var(--green); background: var(--green-bg); }
+    .q { border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; margin: 1rem 0; background: var(--panel); }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0; padding: .55rem .75rem; cursor: pointer;
+              border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: .95rem; }
+    .q .opt:hover { border-color: var(--blue); }
+    .q .opt.correct { background: var(--green-bg); border-color: var(--green); }
+    .q .opt.incorrect { background: var(--red-bg); border-color: var(--red); }
+    .q .why { margin: .6rem 0 0; font-size: .95em; padding-top: .5rem; border-top: 1px dashed var(--line); }
+    .small { font-size: .9rem; color: var(--muted); }
+    kbd { font-family: ui-monospace, Menlo, monospace; font-size: .88em; }
+  </style>
 </head>
 <body>
 
-<h1>How the Live Investment Strategy Was Built and How It Runs</h1>
-<p class="lede">The <code>USDT-XRP</code> anchored quoting strategy in <code>arb_upbit_1</code>: the one
-market fact that shaped it, the evidence chain that fixed every number, and the machinery that keeps
-it quoting with real money on the book. Written for the person who wrote it, six months from now.</p>
+<h1>How the Live Investment System Was Rebuilt for Two Markets and How It Runs Now</h1>
+<p class="lede">The one-account, two-market anchored-quoting stack in <code>arb_upbit_1</code>: what phase P9
+learned about the numbers, the second bot it bolted onto the same Upbit account, the capital re-cut that
+funded it, and the machinery that keeps both quoting with real money on the book. This is the third version
+of this document; the second (2026-08-31) described a single USDT-XRP bot, and a table below says exactly
+what moved. Written for the person who wrote it, six months from now.</p>
 
-<p class="src">Snapshot: <strong>2026-08-31 10:43 KST</strong> — run <code>full-20260830T172116Z</code>,
-uptime 30,148&nbsp;s (8.4&nbsp;h), <code>q=0.3407</code>, <code>resting=[ask@1.349]</code>, 4 fills,
-<code>core_pnl_today=405 KRW</code>, 0 rejects, 0 reconnects. The P8 manager is
-<em>running</em> (pid 71094 since 09:36, 20 ticks, all <code>ok</code>) — which the docs, written
-this morning, still describe as waiting on you.</p>
+<div class="snapshot">
+  <b>Snapshot: 2026-09-02 17:42 KST.</b>
+  <b>USDT-XRP</b> run <code>full-20260902T081137Z</code>, up 31 min — f′ 1.332566, basis +7.89 bps,
+  resting <code>[bid@1.330 ask@1.335]</code>, q 0.2461, 0 fills this run (8 on the KST day),
+  <code>core_pnl_today=795 KRW</code>.
+  <b>USDT-ETH</b> run <code>full-20260902T073756Z</code>, up 64 min — f′ 2401.92, basis +6.19 bps,
+  resting <code>[bid@2401.58 ask@2404.5]</code>, q 0.2434, 3 fills, <code>core_pnl_today=-416 KRW</code>,
+  reward 0.1490 USDT. Both bots hold the same <b>691 USDT</b> sleeve, both report
+  <code>post_only_rejects 0</code>, <code>insufficient_funds 0</code>, <code>private_ws true</code>.
+  Manager pid 99505: <code>ok: bot alive</code>, <code>restarts_today 0</code>. Recorder pid 87291 up 4 days.
+  No post-re-cut report has been generated yet, so every ledger-level number in this document is either a
+  heartbeat line or a P9 research result, and says which.
+</div>
 
 <nav aria-label="Contents">
   <strong>Contents</strong>
   <ol>
-    <li><a href="#background">Background — the event, and the inequality that shaped everything</a></li>
-    <li><a href="#intuition">Intuition — fair price, the δ stand-off, and the band that is secretly the size knob</a></li>
-    <li><a href="#code">Code — how it was established, and how it runs</a></li>
+    <li><a href="#changed">What changed since the previous version</a></li>
+    <li><a href="#background">Background — the event, the capital, and the rule that decides eligibility</a></li>
+    <li><a href="#intuition">Intuition — two anchors, one sleeve, the 30-second mark, and honest fills</a></li>
+    <li><a href="#code">Code — how the numbers were re-established, and how two bots run on one account</a></li>
     <li><a href="#best-practices">Best practices &amp; next steps</a></li>
     <li><a href="#quiz">Quiz</a></li>
   </ol>
 </nav>
 
-<!-- ============================================================ -->
+<section id="changed">
+<h2>What changed since the previous version</h2>
+<p>If you read v2, this table is the diff. Everything not listed here — the event, the anchor, δ 14 bps on
+XRP, the post-fill band, the exit-code contract, the P8 manager's decision table — still holds and is
+restated below only as far as the new material needs it.</p>
+<div class="tablewrap">
+<table>
+<tr><th>Was (v2, 2026-08-31)</th><th>Is (2026-09-02, after P9)</th><th>Why</th></tr>
+<tr><td>One bot, USDT-XRP, capital ₩2,562,811</td><td><b>Two bots on one account:</b> USDT-XRP and USDT-ETH, ₩1,267,965 each (half of the marked ₩2,535,930)</td><td>P9.S4 found USDT-ETH the only second market worth a process; the operator chose to split what was already there rather than wait for the ₩10M deposit (decision 24)</td></tr>
+<tr><td>Fill simulator: a print through our price fills the whole order (R0)</td><td><b>Fill model R2</b> is the default in the backtest and the paper sink: partial through-fills plus a decaying queue ahead; <code>legacy</code> kept bit-for-bit</td><td>Calibrated on 15,549 real acked orders — R0 over-counted notional 2.05×, R2 1.28× (decision 13)</td></tr>
+<tr><td>Headline PnL = core alpha marked at the fill instant</td><td><b>Headline = core alpha marked 30 s after the fill</b>, the at-fill number beside it, <code>marked n/N</code> on every surface</td><td>The at-fill mark was wrong in sign on the worst day: −₩9,259 became +₩6,909 on the same 34 fills (decision 14)</td></tr>
+<tr><td>No sanity check on the fill mark</td><td><b>50-bps mark band</b>: a book mid more than 50 bps from f′ marks at f′ instead, in both sinks; it is also the daily-loss-stop input</td><td>50 bps is the tape's p99.9; the band catches the post-trade-touch artefact at write time (P9.S6)</td></tr>
+<tr><td>Order rate 6/s, the whole account pocket</td><td><b>3 + 3</b>: each bot's REST client is built with <code>order_rate=3</code></td><td>XRP's live placement histogram never needed more than 3/s in 99.95 % of seconds (decision 22)</td></tr>
+<tr><td>Balance = whatever the account holds</td><td><b>Sleeve clamp</b>: each bot caps its USDT at <code>usdt_share × capital_krw / px</code> ≈ 691 USDT</td><td>The account balance and the <code>myAsset</code> stream are account-wide; two bots would each size against the whole (P9.S8)</td></tr>
+<tr><td>Any Upbit market flag made the pair ineligible</td><td>Only the 거래유의 <code>warning</code> flag stops; a 주의 <code>caution</code> flag is a warn-level <code>market_caution</code> event</td><td>A <code>TRADING_VOLUME_SOARING</code> caution blocked the XRP restart on re-cut day; the operator: "ignore 주의 respect 유의" (decision 25)</td></tr>
+<tr><td>ADR D18 pending: at 2026-09-01 22:00 KST, if fills/day &lt; 4 → δ 11</td><td><b>D18 fired and did nothing</b>: 25.41 fills/day ≥ 4, δ stays 14; the S3 re-sweep independently kept the live set</td><td><code>data/live/manager/actions.jsonl</code> 2026-09-01T22:00:34 <code>d18_ok</code></td></tr>
+<tr><td><code>inv_share ≤ 0.5</code> disqualified a candidate</td><td><code>inv_share</code> is reported as a risk descriptor; the gate is <code>max |q| ≤ 0.5</code></td><td>Over 3.6 days the inventory mark on a 25 % base layout dwarfs a ₩10k alpha; the live set itself scored 1.90 (decision 15a)</td></tr>
+<tr><td>Manager watches "the bot"</td><td>Manager watches <b>the XRP bot only</b>; the ETH bot has its own supervisor loop and nothing else</td><td>No manager code changed in P9; an ETH risk stop is silent until someone tails <code>eth_supervisor.out</code></td></tr>
+</table>
+</div>
+</section>
+
 <section id="background">
-<h2>Background — the event, and the inequality that shaped everything</h2>
+<h2>Background — the event, the capital, and the rule that decides eligibility</h2>
 
-<p>None of this is a view on XRP. The whole system exists to harvest one temporary promotion, and it
-would be pointless without it.</p>
+<h3>The event (unchanged, and still the reason any of this exists)</h3>
+<p>Upbit's 메이커 플러스+ promotion (notice 1793218405) runs <b>2026-08-29 00:00 → 2026-09-11 23:59 KST</b>
+across the BTC and USDT markets. For API orders it pays a <b>0.00 % maker fee</b> and a <b>+0.04 % maker
+reward</b> on filled notional, paid in the quote currency. A 22 % withholding applies to the <i>whole</i> gross
+reward once it passes ₩50,000 — a cliff, not a rate — so the net reward above the cliff is 3.12 bps. Taker fees
+are 0.05 % everywhere, and the KRW market is not in the event.</p>
+<p>The hedge-cost fact from v2 has not moved and still shapes the design: hedging one fill on the deep KRW book
+costs about <b>8.81 bps</b> (5.00 fee + 2.81 half-spread + 1.00 slippage) against a reward worth at most 4 bps.
+So profit has to come from maker-to-maker round trips inside the event market, never from crossing a spread.
+Both bots run <code>band_mode: "soft"</code> and have never hedged.</p>
 
-<p>Upbit's <strong>메이커 플러스+</strong> event (notice <code>1793218405</code>) runs
-<strong>2026-08-29 00:00 → 2026-09-11 23:59 KST</strong> across the BTC and USDT markets. For orders
-placed through the API it pays:</p>
-
-<div class="tblwrap">
+<h3>The capital, and how it got cut in half twice</h3>
+<p>Version 2 said the capital was ₩2,562,811 "because that is what was on the account". On 2026-09-02 the
+operator confirmed that the full ₩10,000,000 is available but not yet deposited, and then — at the open P9
+acceptance gate — decided not to wait for it: <i>"for now, we doing it with only what we got."</i> So the
+₩10M top-up (RUNBOOK §10.2) is <b>deferred, not cancelled</b>, and what actually ran is the two-market split at
+the current size:</p>
+<div class="tablewrap">
 <table>
-<tr><th>Item</th><th>Value</th><th>What it means here</th></tr>
-<tr><td>Maker fee (API)</td><td class="num">0.00 %</td><td>A resting order that gets filled costs nothing.</td></tr>
-<tr><td>Taker fee, event markets</td><td class="num">0.05 %</td><td>Crossing the spread costs 5 bps.</td></tr>
-<tr><td>Maker reward</td><td class="num">+0.04 %</td><td>Of filled notional, paid in the quote currency (USDT here).</td></tr>
-<tr><td>Withholding</td><td class="num">22 %</td><td>Of the <em>whole</em> gross reward, once gross passes ₩50,000. A <strong>cliff</strong>, not a rate → net reward <strong>0.0312 %</strong> (3.12 bps) above it.</td></tr>
-<tr><td>KRW-market taker</td><td class="num">0.05 %</td><td><strong>The KRW market is not in the event.</strong></td></tr>
+<tr><th>Step (2026-09-02 KST)</th><th>What happened</th><th>Numbers</th></tr>
+<tr><td>14:20</td><td>Operator stopped the manager and the XRP bot (clean exit 0, run <code>full-20260830T172116Z</code> closed)</td><td>—</td></tr>
+<tr><td>14:27–14:33</td><td>Two <b>post-only limit</b> legs on the event markets, zero fee — the operator's one caveat was "no market but limit order for the reward"</td><td>sold 246.65210898 XRP on USDT-XRP @ 1.351 · bought 0.09513828 ETH on USDT-ETH @ 2419.75</td></tr>
+<tr><td>after</td><td>Holdings marked at KRW-USDT 1,377 / KRW-XRP 1,861 / KRW-ETH 3,332,000</td><td>KRW 10,969 · USDT 1,373.15 (≈ ₩1,890,830) · XRP 170.408 (≈ ₩317,130) · ETH 0.09513828 (≈ ₩317,000) = <b>₩2,535,930</b></td></tr>
+<tr><td>14:34</td><td>Both params files edited and loaded</td><td><code>capital_krw 1,267,965</code> (half) · <code>daily_loss_stop_krw 40,000</code> (≈ 3 %) · <code>max_order_req_per_s 3</code></td></tr>
+<tr><td>16:37:56</td><td>ETH bot live, <code>bin/market-bot.sh … start --stage full --override …</code></td><td>run <code>full-20260902T073756Z</code></td></tr>
+<tr><td>17:11:37</td><td>XRP bot live (operator-run, after decision 25 unblocked it)</td><td>run <code>full-20260902T081137Z</code></td></tr>
+<tr><td>17:15:18</td><td>Manager started</td><td>pid 99505</td></tr>
 </table>
 </div>
-
-<p>That last row is the load-bearing one. The obvious design for an event like this is
-<em>quote both sides of a thin event pair and hedge each fill on the deep KRW market</em>. Price it
-out on the real book:</p>
-
-<pre><code>hedge one fill on KRW-XRP:
-    taker fee        5.00 bps
-    half spread      2.81 bps      (measured, research/data/quality_*.csv)
-    slippage         1.00 bps
-                   ─────────
-                     8.81 bps   per hedged fill
-
-what the fill earns:  3.12 bps   (0.04% reward, after the 22% cliff)</code></pre>
-
 <div class="callout warn">
-<p><span class="lbl">The hedge-cost fact.</span> A KRW taker hedge costs <strong>2.8×</strong> what the
-reward pays. Any design that hedges per fill pays away its entire reward and more, on every single
-trade. So profit has to come from <strong>maker-to-maker round trips inside the USDT market</strong> —
-buy passively low, sell passively high, and never cross the spread. Hedging is reserved for a band
-edge or a kill-switch unwind. The live configuration has <code>band_mode: "soft"</code> and
-<code>hedge_cost_krw = 0</code>: it has never hedged.</p>
+<p><b>Why the legs were hand-placed and not <code>arb.live.convert</code>.</b> <code>convert --to-layout</code>
+reads the whole account and plans against <i>one</i> params file. With two bots sharing the USDT sleeve it would
+happily place an ask selling the other bot's USDT down to one file's layout. RUNBOOK §10.6 says it plainly:
+<i>"There is no two-market form of <code>convert</code>; do not invent one."</i> The re-cut is two hand-placed
+legs, sell first.</p>
 </div>
+<p>Each sleeve is laid out USDT 75 % / base 25 %, and the layout is fundable by construction exactly as before:
+<code>usdt_share 0.75 ≥ target + band + size_pct/100 = 0.25 + 0.25 + 0.20 = 0.70</code>. A full 20 % bid
+(≈ ₩253,600 ≈ 184 USDT) can always be paid for while the base coin sits at or below its cap. At this size the
+projected gross reward stays far under the ₩50,000 cliff; the cliff would only bind at the ₩5M + ₩5M split the
+runbook was written for.</p>
 
-<p>Two more constraints fall out of the same notice and never move:</p>
-<ul>
-<li><strong>Never self-match or wash.</strong> It forfeits the whole reward. Hence: one order per
-side, and a bot that structurally cannot cross itself.</li>
-<li><strong>Eligibility can be revoked.</strong> A 거래유의 (investment-warning) flag removes a pair
-from the event — <code>BTC-SNX</code> was flagged mid-research. So the bot re-checks
-<code>orders/chance</code> hourly and hard-stops if the maker fee is no longer 0 or the market goes
-non-<code>active</code>.</li>
-</ul>
-
-<p>Capital is <strong>₩2,562,811</strong> — the KRW that was already on the account, not a funding
-decision. At that size the projected gross reward stays under the ₩50,000 cliff, so in practice the
-22 % has not applied; the code still models the cliff correctly because a good run could cross it.</p>
+<h3>Eligibility: the flag that stops and the flag that warns</h3>
+<p>Upbit publishes two kinds of market flag in <code>GET /v1/market/all?isDetails=true</code>: a boolean
+<code>warning</code> (거래유의, the investment-warning designation that removes a pair from the event — BTC-SNX
+carried it and was dropped in P1) and a <code>caution</code> dictionary (주의, automatic surge notices such as
+<code>TRADING_VOLUME_SOARING</code> or <code>PRICE_FLUCTUATIONS</code>). Until re-cut day either one made a
+market ineligible: the hourly check emitted a stop-level <code>eligibility_failed</code> and the bot exited 2.
+At 14:35 KST on 2026-09-02 Upbit set <code>caution.TRADING_VOLUME_SOARING</code> on USDT-XRP, preflight FAILed on
+it, and the XRP bot could not restart. The operator's ruling — <i>"ignore 주의 respect 유의"</i> — became a
+six-line change: only <code>warning</code> (plus a non-zero maker fee or a non-active market) fails eligibility;
+a caution flag is recorded, emits a warn-level <code>market_caution</code> event on every hourly check, and turns
+the preflight row WARN instead of FAIL. The XRP bot started under exactly that flag an hour later.</p>
 </section>
 
-<!-- ============================================================ -->
 <section id="intuition">
-<h2>Intuition — fair price, the δ stand-off, and the band that is secretly the size knob</h2>
+<h2>Intuition — two anchors, one sleeve, the 30-second mark, and honest fills</h2>
 
-<h3>1. Where "fair" comes from when the book you quote is thin</h3>
+<h3>1. The anchor, now for two pairs</h3>
+<p>Nothing about fair value changed. Each event pair is thin and its own mid is noisy, so fair is imported from
+the deep KRW books behind it and then corrected for the persistent basis between that import and the pair's own
+mid, with a 1,800 s half-life EWMA:</p>
+<pre>f_XRP = last(KRW-XRP) / last(KRW-USDT)        f′ = f · (1 + b),  b = EWMA(own_mid / f − 1, hl 1800 s)
+f_ETH = last(KRW-ETH) / last(KRW-USDT)        same formula, same half-life, its own EWMA</pre>
+<p>The quote arithmetic is the same pure function for both markets — <code>desired_quotes()</code> in
+<code>src/arb/live/quote.py</code>: <code>q</code> = base holdings in KRW ÷ capital, <code>dev = q − target</code>,
+<code>lean = 2δ · dev</code>, bid and ask at <code>f′ · (1 ∓ δ − lean)</code>, clipped post-only, then the
+post-fill band decides whether the side may be placed at all. What differs between the two markets is six
+parameters, and one of them differs by a factor of ten.</p>
 
-<p><code>USDT-XRP</code> is the only event pair with a spread worth capturing — but it is thin, and its
-own mid is noisy. The KRW books behind it are enormous. So fair value is <em>imported</em>:</p>
-
+<h3>2. Why δ is 14 bps on XRP and 1.4 bps on ETH</h3>
+<p>δ is how far outside f′ the quotes sit, and it has to be read against the book it sits in. The two books
+could hardly be more different:</p>
+<div class="tablewrap">
+<table>
+<tr><th></th><th class="num">USDT-XRP</th><th class="num">USDT-ETH</th></tr>
+<tr><td>price ≈</td><td class="num">1.33 USDT</td><td class="num">2,404 USDT</td></tr>
+<tr><td>tick</td><td class="num">0.001 = 7.5 bps</td><td class="num">0.01 = 0.042 bps</td></tr>
+<tr><td>median book spread (87-h recording)</td><td class="num">≈ 14 bps = 2 ticks</td><td class="num">2.857 bps = 70 ticks</td></tr>
+<tr><td>top-1 depth</td><td class="num">≈ 7,800 USDT</td><td class="num">≈ ₩11.1 M</td></tr>
+<tr><td><code>delta_bps</code></td><td class="num"><b>14</b> ≈ 1.9 ticks</td><td class="num"><b>1.4</b> ≈ 34 ticks</td></tr>
+<tr><td><code>requote_bps</code></td><td class="num">7 ≈ 1 tick</td><td class="num">0.5 ≈ 12 ticks</td></tr>
+<tr><td>share of sim alpha that is the maker reward</td><td class="num">low (spread capture)</td><td class="num"><b>79 %</b></td></tr>
+<tr><td>sim fills/day at ₩2.56 M (R2)</td><td class="num">9.9</td><td class="num">61.2</td></tr>
+</table>
+</div>
 <figure>
-<svg viewBox="0 0 700 240" role="img" aria-label="Two deep KRW books produce a fair price for the thin USDT-XRP book">
-  <rect x="10" y="20" width="180" height="62" rx="6" class="box2"/>
-  <text x="100" y="44" text-anchor="middle" class="svgtxt mono">KRW-XRP</text>
-  <text x="100" y="62" text-anchor="middle" class="svgtxt sm">₩207B / 24h · depth ₩85.8M</text>
-  <text x="100" y="76" text-anchor="middle" class="svgtxt sm">last ≈ ₩1,872</text>
+<svg viewBox="0 0 720 200" role="img" aria-label="Two price ladders: XRP with wide ticks, ETH with fine ticks">
+  <text x="20" y="22" font-size="13" font-weight="600">USDT-XRP — coarse ladder, δ ≈ 2 ticks</text>
+  <line x1="20" y1="70" x2="340" y2="70" class="ln" stroke-width="1"/>
+  <g class="mono" font-size="11">
+    <line x1="60" y1="60" x2="60" y2="80" class="ln-red" stroke-width="2"/><text x="44" y="96">1.330</text><text x="36" y="110" class="muted" font-size="10">our bid</text>
+    <line x1="120" y1="60" x2="120" y2="80" class="ln" stroke-width="2"/><text x="104" y="96">1.331</text>
+    <line x1="180" y1="55" x2="180" y2="85" class="ln-green" stroke-width="2"/><text x="164" y="96">f′ 1.3326</text>
+    <line x1="240" y1="60" x2="240" y2="80" class="ln" stroke-width="2"/><text x="224" y="96">1.334</text>
+    <line x1="300" y1="60" x2="300" y2="80" class="ln-red" stroke-width="2"/><text x="284" y="96">1.335</text><text x="276" y="110" class="muted" font-size="10">our ask</text>
+  </g>
+  <text x="20" y="140" font-size="11" class="muted">one tick = 7.5 bps; the book itself is about 2 ticks wide, so δ 14 bps stands about the width of the book off f′</text>
 
-  <rect x="10" y="120" width="180" height="62" rx="6" class="box2"/>
-  <text x="100" y="144" text-anchor="middle" class="svgtxt mono">KRW-USDT</text>
-  <text x="100" y="162" text-anchor="middle" class="svgtxt sm">₩163B / 24h · depth ₩6.1B</text>
-  <text x="100" y="176" text-anchor="middle" class="svgtxt sm">last ≈ ₩1,390</text>
-
-  <path d="M190 51 L 245 90" class="arrow" marker-end="url(#ah)"/>
-  <path d="M190 151 L 245 112" class="arrow" marker-end="url(#ah)"/>
-  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-    <path d="M0,0 L6,3 L0,6 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
-
-  <rect x="250" y="72" width="170" height="58" rx="6" class="box"/>
-  <text x="335" y="94" text-anchor="middle" class="svgtxt mono">f = XRP / USDT</text>
-  <text x="335" y="112" text-anchor="middle" class="svgtxt sm">the raw anchor fair ≈ 1.347</text>
-
-  <path d="M335 130 L 335 165" class="arrow" marker-end="url(#ah)"/>
-  <rect x="250" y="166" width="170" height="52" rx="6" class="box"/>
-  <text x="335" y="186" text-anchor="middle" class="svgtxt mono">f' = f · (1 + b)</text>
-  <text x="335" y="204" text-anchor="middle" class="svgtxt sm">b = EWMA(own_mid/f − 1), hl 1800 s</text>
-
-  <path d="M420 101 L 470 101" class="arrow" marker-end="url(#ah)"/>
-
-  <rect x="475" y="20" width="215" height="198" rx="6" class="box2"/>
-  <text x="582" y="42" text-anchor="middle" class="svgtxt mono">USDT-XRP (thin)</text>
-  <text x="582" y="58" text-anchor="middle" class="svgtxt sm">₩202M / day · 493 prints/day</text>
-
-  <line x1="596" y1="88" x2="680" y2="88" stroke="var(--line)" stroke-width="1.5"/>
-  <text x="590" y="91" text-anchor="end" class="svgtxt sm">best ask</text>
-
-  <line x1="596" y1="104" x2="680" y2="104" class="good-s" stroke-width="2.5"/>
-  <text x="590" y="107" text-anchor="end" class="svgtxt sm" style="fill:var(--good)">our ask</text>
-
-  <line x1="596" y1="122" x2="680" y2="122" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <text x="590" y="125" text-anchor="end" class="svgtxt sm" style="fill:var(--accent)">f'</text>
-
-  <line x1="596" y1="140" x2="680" y2="140" class="good-s" stroke-width="2.5"/>
-  <text x="590" y="143" text-anchor="end" class="svgtxt sm" style="fill:var(--good)">our bid</text>
-
-  <line x1="596" y1="156" x2="680" y2="156" stroke="var(--line)" stroke-width="1.5"/>
-  <text x="590" y="159" text-anchor="end" class="svgtxt sm">best bid</text>
-
-  <text x="582" y="188" text-anchor="middle" class="svgtxt sm">we stand off δ = 14 bps either side of f'</text>
-  <text x="582" y="204" text-anchor="middle" class="svgtxt sm">book spread ≈ 14.5 bps (2 ticks)</text>
+  <text x="380" y="22" font-size="13" font-weight="600">USDT-ETH — fine ladder, δ ≈ 34 ticks</text>
+  <line x1="380" y1="70" x2="700" y2="70" class="ln" stroke-width="1"/>
+  <g class="mono" font-size="11">
+    <g stroke-width="1" class="ln"><line x1="392" y1="66" x2="392" y2="74"/><line x1="404" y1="66" x2="404" y2="74"/><line x1="416" y1="66" x2="416" y2="74"/><line x1="428" y1="66" x2="428" y2="74"/><line x1="440" y1="66" x2="440" y2="74"/><line x1="452" y1="66" x2="452" y2="74"/><line x1="464" y1="66" x2="464" y2="74"/><line x1="476" y1="66" x2="476" y2="74"/><line x1="488" y1="66" x2="488" y2="74"/><line x1="500" y1="66" x2="500" y2="74"/><line x1="512" y1="66" x2="512" y2="74"/><line x1="524" y1="66" x2="524" y2="74"/><line x1="536" y1="66" x2="536" y2="74"/><line x1="548" y1="66" x2="548" y2="74"/><line x1="560" y1="66" x2="560" y2="74"/><line x1="572" y1="66" x2="572" y2="74"/><line x1="584" y1="66" x2="584" y2="74"/><line x1="596" y1="66" x2="596" y2="74"/><line x1="608" y1="66" x2="608" y2="74"/><line x1="620" y1="66" x2="620" y2="74"/><line x1="632" y1="66" x2="632" y2="74"/><line x1="644" y1="66" x2="644" y2="74"/><line x1="656" y1="66" x2="656" y2="74"/><line x1="668" y1="66" x2="668" y2="74"/><line x1="680" y1="66" x2="680" y2="74"/></g>
+    <line x1="420" y1="58" x2="420" y2="82" class="ln-red" stroke-width="2"/><text x="398" y="96">2401.58</text><text x="398" y="110" class="muted" font-size="10">our bid</text>
+    <line x1="540" y1="55" x2="540" y2="85" class="ln-green" stroke-width="2"/><text x="512" y="96">f′ 2401.92</text>
+    <line x1="660" y1="58" x2="660" y2="82" class="ln-red" stroke-width="2"/><text x="640" y="96">2404.50</text><text x="640" y="110" class="muted" font-size="10">our ask</text>
+  </g>
+  <text x="380" y="140" font-size="11" class="muted">one tick = 0.042 bps; the book is ≈ 70 ticks wide; δ 1.4 bps = 34 ticks still lands inside the spread,</text>
+  <text x="380" y="156" font-size="11" class="muted">and the 0.5-bps re-quote gate (≈ 12 ticks) keeps the quotes following a fair that moves in ≈ 3-bps KRW-ETH steps</text>
+  <text x="20" y="190" font-size="11" class="muted">Prices from the 17:42 KST heartbeats. The ETH ask sits on the far side of the book from f′ because the lean (q 0.2434 &lt; target) shifts both quotes up.</text>
 </svg>
-<figcaption>Fair value is imported from two deep KRW books, then corrected for the persistent basis
-between that import and the event pair's own mid. Prices from the live log at 10:43 KST;
-book statistics from <code>research/recommendation.md</code> §2.</figcaption>
+<figcaption>The same δ rule, two very different ladders. A "bps" only means something once you know the tick.</figcaption>
 </figure>
+<p>On XRP the stand-off is there to avoid being picked off by anchor noise (σ ≈ 4 bps against a 14-bps δ), and the
+S3 re-sweep confirmed there is nothing to gain from moving it: δ 8 was the only same-capital point that beat the
+baseline at all (+₩211/day), and it flipped to −₩3,871/day under the legacy fill rule. A gain that changes sign
+across fill rules is a tie, and a tie keeps the live set. On ETH the edge is a different animal: the book is deep
+and tight, the reward is 79 % of the simulated alpha, and 1.4 bps is simply the innermost stand-off that still
+survived every mark and every fill rule in S4. Quoting 14 bps out on that book would be 340 ticks from fair and
+would never fill.</p>
 
-<p><code>f = last(KRW-XRP) / last(KRW-USDT)</code> — never candles, always trade ticks or book mids.
-But <code>f</code> is systematically <em>off</em>: the event pair's own mid ran at
-<strong>+3.18 bps</strong> against it on average. That level is real and persistent, so an EWMA with a
-<strong>1,800 s half-life</strong> tracks <code>own_mid/f − 1</code> and corrects it away:
-<code>f' = f·(1+b)</code>. What is left is ≈<strong>4.15 bps of σ</strong> — irreducible noise.</p>
+<h3>3. The band is unchanged; the sleeve is new</h3>
+<p>The post-fill band from v2 still governs both bots: before placing, the engine asks whether a full fill would
+leave inventory inside <code>target ± band</code>, so <code>band</code> is the order-size ceiling and the
+two-sided zone is <code>q ∈ [0.20, 0.30]</code>. What P9 added is the answer to a question a single bot never
+had to ask: <b>whose USDT is this?</b></p>
+<p>Upbit's account balance (<code>GET /v1/accounts</code>) and the private <code>myAsset</code> stream are
+account-wide — the stream cannot even be filtered by market. Only the base coin is per-market. So two bots on
+one key would each read the same 1,373 USDT and each size its bids against all of it. The fix is a clamp, not
+a sub-account: each bot caps the USDT it believes it holds at its own sleeve,
+<code>usdt_share × capital_krw / px(KRW-USDT)</code> = 0.75 × 1,267,965 / 1,377 ≈ <b>691 USDT</b>.</p>
+<figure>
+<svg viewBox="0 0 720 230" role="img" aria-label="One account, two sleeves: the shared USDT balance clamped per bot">
+  <rect x="20" y="20" width="680" height="190" rx="8" class="box"/>
+  <text x="34" y="44" font-size="13" font-weight="600">One Upbit account, one API key — holdings at 17:42 KST</text>
+  <rect x="34" y="60" width="452" height="34" rx="4" class="box-blue"/>
+  <text x="44" y="82" font-size="12" class="mono">USDT 1,373.15  (≈ ₩1,890,830)  — shared by both bots</text>
+  <rect x="500" y="60" width="90" height="34" rx="4" class="box-amber"/>
+  <text x="506" y="82" font-size="11" class="mono">XRP 170.41</text>
+  <rect x="598" y="60" width="90" height="34" rx="4" class="box-green"/>
+  <text x="604" y="82" font-size="11" class="mono">ETH 0.0934</text>
+  <path d="M34 104 L34 116 L262 116 L262 104" class="ln-green" stroke-width="2"/>
+  <text x="40" y="132" font-size="11" class="mono">XRP bot sees hold_usdt = 691.37 (clamped)</text>
+  <path d="M258 150 L258 162 L486 162 L486 150" class="ln-green" stroke-width="2"/>
+  <text x="262" y="178" font-size="11" class="mono">ETH bot sees hold_usdt = 691.11 (clamped)</text>
+  <line x1="34" y1="104" x2="34" y2="96" class="ln-green" stroke-width="2"/>
+  <line x1="486" y1="150" x2="486" y2="96" class="ln-green" stroke-width="2"/>
+  <text x="34" y="203" font-size="11" class="muted">2 × 691 = 1,382 &gt; 1,373: the ceilings overlap by 9 USDT. A ceiling is not a reservation — a genuine shortfall still arrives as the exchange's insufficient_funds reject.</text>
+</svg>
+<figcaption>Each bot's raw balance is kept as <code>raw_hold_usdt</code> and both numbers are written once to the ledger as a <code>balances_seeded</code> event, so the clamp is auditable after the fact.</figcaption>
+</figure>
+<p>The clamp is read in exactly one place downstream — the bid-side balance cap in <code>quote._round_side</code>
+— so it is literally a "do not spend the other bot's USDT" rule and nothing else. It does not reserve anything.
+A full-size bid is only 20 % of capital (≈ 184 USDT) per bot, so the two bots together could bid about 368 USDT
+against a 1,373 USDT balance, and the 9-USDT overlap between the ceilings is academic. If it ever stops being
+academic, the symptom is <code>insufficient_funds</code> rejects on one bot, and RUNBOOK §10.6 says repeated
+ones mean the sleeves no longer fit the account.</p>
+<p>The same "one account" problem exists for the order rate. Upbit meters order creation per account, not per
+process. Two bots that each assumed the whole pocket would race each other into 429s and, eventually, an
+IP ban. So each bot's REST client is constructed with its own slice: <code>max_order_req_per_s 3</code> in both
+files, 3 + 3 against the workspace's 6/s policy cap. The split was decided on data, not symmetry for its own sake:
+the XRP bot's live placement histogram is p50 1 / p90 2 / p99 3 / max 6 per second, with only 101 seconds at
+≥ 4 in 57 hours (0.049 % of wall clock), while the ETH smoke burst to 4/s nine times in eight minutes. At 3/s
+each, XRP queues a placement in about 0.05 % of seconds and ETH queues one order per four-burst — a sub-second
+delay either way, never a dropped order.</p>
 
-<div class="callout">
-<p><span class="lbl">Why the half-life is 1,800 s and not 300 s.</span> The 300 s point scored
-<strong>55 % higher</strong> core alpha in the sweep (₩407,537 vs ₩263,046) and was
-<strong>disqualified anyway</strong>: its <code>inv_share</code> was 1.50, meaning the "profit" was
-larger than the strategy's own output and therefore really inventory drift. A fast EWMA chases the
-market's own mid, which turns anchored quoting into directional trading wearing a costume.</p>
+<h3>4. Why fills are marked 30 seconds late</h3>
+<p>This is the one finding in P9 that changes the number you read every day, so it deserves the toy data.
+On 2026-09-01 the live report said the day's core alpha was <b>−₩9,259</b> on 34 fills. P9.S2 re-marked the
+same 34 fills against the recorded book at several horizons:</p>
+<figure>
+<svg viewBox="0 0 720 210" role="img" aria-label="The same 34 fills marked at five horizons">
+  <line x1="60" y1="120" x2="680" y2="120" class="ln" stroke-width="1.5"/>
+  <g font-size="11" class="mono">
+    <circle cx="90" cy="120" r="6" class="box-green"/><text x="62" y="100">−1 s</text><text x="56" y="150" font-weight="600">+₩11,744</text>
+    <circle cx="230" cy="120" r="7" class="box-red"/><text x="200" y="100">at fill</text><text x="196" y="150" font-weight="600">−₩9,259</text><text x="176" y="166" class="muted" font-size="10">the old headline</text>
+    <circle cx="370" cy="120" r="7" class="box-green"/><text x="348" y="100">+30 s</text><text x="340" y="150" font-weight="600">+₩6,909</text><text x="322" y="166" class="muted" font-size="10">the new headline</text>
+    <circle cx="510" cy="120" r="6" class="box-green"/><text x="484" y="100">+30 min</text><text x="480" y="150" font-weight="600">+₩9,611</text>
+    <circle cx="650" cy="120" r="6" class="box-blue"/><text x="600" y="100">realised FIFO</text><text x="620" y="150" font-weight="600">+₩2,440</text>
+  </g>
+  <text x="60" y="40" font-size="12" font-weight="600">2026-09-01, 34 fills, one set of prices — five answers</text>
+  <text x="60" y="58" font-size="11" class="muted">Only the at-fill mark is negative. The book was fresh at every fill (|Δ| vs the recorded mid p50/p90 0.0 bps);</text>
+  <text x="60" y="74" font-size="11" class="muted">what it was fresh about was the touch the filling sweep had just pushed 1–3 levels away.</text>
+  <text x="60" y="198" font-size="11" class="muted">17 sweep-flagged fills carry −₩15,763 of the window's −₩14,751 at-fill total; the other 42 carry +₩1,012.</text>
+</svg>
+<figcaption>A mark is a price you did not trade at. Which price you pick decides the sign.</figcaption>
+</figure>
+<p>The mechanism: our ask rests at the top of the book; a buyer sweeps through it and two more levels; the next
+book the bot sees has its best ask three levels higher, and the at-fill mark books that whole move as our loss
+on the fill that started it. Thirty seconds later the book has re-formed and the same fill marks positive. The
+market-microstructure name for this is a <i>markout</i>: the price change over a chosen interval after a fill,
+the standard instrument for measuring adverse selection. The old headline was a zero-second markout, and a
+zero-second markout on a thin book measures the sweep, not the fill.</p>
+<p>P9 fixed it on both sides of the ledger. On the <b>read side</b>, the report and both dashboards now headline
+<code>core alpha @30 s</code>, recomputed per fill from the <code>mid_30s</code> the bot was already storing,
+with the at-fill number kept beside it and <code>marked n/N</code> on every surface (a fill younger than 30 s
+falls back to its at-fill value and is <i>counted</i>, never silently zeroed). On the <b>write side</b>, the
+sink's <code>_mark</code> now refuses a book mid more than <b>50 bps</b> from f′ — the tape's p99.9 — and marks
+at f′ instead, emitting a <code>mark_band</code> event. That second fix matters more than it looks, because the
+at-fill mark is also what feeds the <b>daily-loss stop</b>: three post-trade-touch marks could have tripped a
+₩40,000 stop on a day that was actually positive.</p>
+<div class="callout note">
+<p><b>Two things the band is not.</b> It is not a clamp (it falls back to f′, it does not pull the mid toward
+it), and it is not a freshness gate — the plan for P9.S2 expected staleness to be the bug and the tape refuted
+that. "Healthy" is roughly zero <code>mark_band</code> events per hour; 50 bps caught three fills in 3.6 days.</p>
 </div>
 
-<h3>2. Why δ = 14 bps and not 6</h3>
-
-<p>δ is how far outside <code>f'</code> the quotes sit. Set it too tight and every fill is a pick-off:
-you are trading against the anchor's own noise, not against real flow.</p>
-
-<pre><code>anchor residual σ            4.15 bps
-δ = 14 bps                =  3.4 σ
-one tick (0.001 USDT)     =  7.23 bps   →  δ ≈ 1.9 ticks
-market spread             = 14.5 bps    →  we quote about the width of the book</code></pre>
-
-<p>The sweep found core alpha <em>monotone increasing</em> in δ over 6 / 8 / 10 / 14 bps
-(₩209,763 → ₩263,046), and 14 was the grid edge. That monotonicity is the reason δ was left as a
-runtime lever rather than frozen: if competition tightens the book, a lower δ still works
-(₩209,763 at δ = 6, because fill pace rises to 25.7/day) — you just move along the curve.</p>
-
-<h3>3. The post-fill band — the one non-obvious mechanism in the whole system</h3>
-
-<p>Inventory is tracked as <code>q</code> = XRP holdings valued in KRW ÷ capital. You want
-<code>q ≈ target</code>. Two separate mechanisms push it there, and the second one has a
-consequence nobody predicted.</p>
-
-<p><strong>(a) The lean.</strong> Both quotes shift by <code>k·(q − target)</code> with
-<code>k = 2δ</code>. Long → both prices drop → your ask is more attractive and your bid less. This is
-textbook inventory skew.</p>
-
-<p><strong>(b) The post-fill band.</strong> Before an order is placed at all, the engine asks:
-<em>if this order filled completely, would inventory still be inside the band?</em> If not, that side
-is simply not quoted.</p>
-
-<pre><code>dev       = q − target
-size_frac = order notional / capital
-
-bid allowed   iff   dev + size_frac ≤ band
-ask allowed   iff   size_frac − dev ≤ band</code></pre>
-
-<div class="callout good">
-<p><span class="lbl">The consequence: <code>band</code> is the order-size ceiling.</span> Put
-<code>dev = 0</code> into either line and you get <code>size_frac ≤ band</code>. An order larger than
-the band is <strong>structurally unplaceable</strong> — not rejected by the exchange, never
-constructed. This is why raising <code>size_pct</code> alone did nothing for months: the P1 grid held
-<code>band = 0.10</code> and swept size up to 30 %, so every row above 10 was a <em>dead run</em>
-producing zeros. Full size was unlocked by raising the band <em>with</em> the size, which is exactly
-what P4's 912-run band-matched sweep was for.</p>
+<h3>5. Honest fills: the R0 → R3 ladder</h3>
+<p>v2 said plainly that the backtest's full-fill rule was optimistic by roughly 2×. P9.S2 replaced the guess with a
+measurement. It rebuilt the real order timeline from the ledger — 15,892 orders, 15,549 acked, 59 deduplicated
+fills — and replayed it against the recorded tape (with our own resting orders subtracted, the "de-self"
+transform) under four candidate fill rules:</p>
+<div class="tablewrap">
+<table>
+<tr><th>rule</th><th>a print <i>through</i> our price…</th><th>queue ahead of us…</th><th class="num">F1</th><th class="num">recall</th><th class="num">size ratio</th><th class="num">notional vs actual</th></tr>
+<tr><td><b>R0 / <code>legacy</code></b> (v2's engine)</td><td>fills the whole order</td><td>seeded once, never decays</td><td class="num">0.765</td><td class="num">0.886</td><td class="num">1.040</td><td class="num">2.05×</td></tr>
+<tr><td>R1</td><td>fills <code>min(print, remaining)</code></td><td>as R0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+<tr><td><b>R2</b> (picked)</td><td>fills <code>min(print, remaining)</code></td><td>from the last book before ack, <b>decays</b> with at-price prints and observed shrinkage of our level</td><td class="num"><b>0.815</b></td><td class="num"><b>1.000</b></td><td class="num"><b>1.003</b></td><td class="num">1.28×</td></tr>
+<tr><td>R3</td><td>as R0, plus the opposite best crossing our price fills fully</td><td>as R0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">2.5× fill size</td></tr>
+</table>
 </div>
-
-<p>And a second consequence: both sides are quotable simultaneously only while
-<code>|dev| ≤ band − size_frac</code>. That is a <strong>two-sided zone of width
-2(band − size_frac)</strong>. At the live set (band 0.25, size 0.20) the zone is 0.10 wide:
-<code>q ∈ [0.20, 0.30]</code>. Outside it, one side goes quiet and waits.</p>
-
-<figure>
-<svg viewBox="0 0 700 200" role="img" aria-label="The inventory axis showing target, band, the two-sided zone and today's q">
-  <text x="350" y="56" text-anchor="middle" class="svgtxt" style="fill:var(--good)">two-sided zone — both sides quotable</text>
-  <text x="350" y="74" text-anchor="middle" class="svgtxt sm">q ∈ [0.20, 0.30] · width 2(band − size) = 0.10</text>
-
-  <text x="150" y="92" text-anchor="middle" class="svgtxt sm">ask-only</text>
-  <text x="560" y="92" text-anchor="middle" class="svgtxt sm">bid-only</text>
-
-  <line x1="40" y1="110" x2="660" y2="110" stroke="var(--line)" stroke-width="2"/>
-  <rect x="288" y="96" width="124" height="28" fill="var(--good)" opacity="0.22"/>
-  <line x1="350" y1="96" x2="350" y2="124" stroke="var(--accent)" stroke-width="1.5"/>
-
-  <text x="40" y="146" class="svgtxt sm">q = 0.00</text>
-  <text x="350" y="146" text-anchor="middle" class="svgtxt sm" style="fill:var(--accent)">target 0.25</text>
-  <text x="660" y="146" text-anchor="end" class="svgtxt sm">0.50 = the XRP cap</text>
-
-  <circle cx="462" cy="110" r="6" fill="var(--bad)"/>
-  <line x1="462" y1="118" x2="462" y2="160" stroke="var(--bad)" stroke-width="1"/>
-  <text x="462" y="178" text-anchor="middle" class="svgtxt" style="fill:var(--bad)">today: q = 0.3407 — bid blocked, ask rests</text>
-</svg>
-<figcaption>The live inventory axis. At <code>q = 0.3407</code> the bid needs
-<code>0.0907 + 0.20 = 0.29 &gt; 0.25</code> and is refused; the ask needs
-<code>0.20 − 0.0907 = 0.11 ≤ 0.25</code> and rests. That is exactly what the 10:43 log line shows:
-<code>resting=[ask@1.349]</code>.</figcaption>
-</figure>
-
+<p>R2 wins on F1, never misses a real fill (recall 1.000), and sizes each fill within 0.3 % of reality. The old
+rule's 2× optimism turned out to live in <i>which</i> orders fill, not in how much of each fills — its size ratio
+on orders that did fill was already 1.04. The engine default became <code>fill_model = "r2"</code>, the paper
+sink got the same two branches so a paper soak fills the way the backtest does, and <code>legacy</code> was kept
+and verified bit-for-bit against the pre-P9 code so every P1 number still reproduces.</p>
 <div class="callout warn">
-<p><span class="lbl">Read this before you "fix" a skewed inventory at 3 a.m.</span> A one-sided book
-is the design working, not a fault. The impaired side is <em>degraded, not dead</em> — it keeps
-quoting at reduced size. P6 priced an automatic rebalance: one taker leg ≈ 8.79 bps ≈ <strong>₩819</strong>,
-and since the layout holds no KRW it is structurally <em>two</em> legs ≈ <strong>₩1,600</strong>,
-against ≈ <strong>₩71.5</strong> of core alpha per forgone fill. 48 backtested rule variants:
-<strong>0 of 48</strong> beat their own baseline on core alpha. The bot does the cheaper thing —
-it waits.</p>
+<p><b>The gap that was reported, not tuned away.</b> Over the live window R2 makes 37 fills where the ledger has
+59 — −37 % against a ±25 % parity bar, and −53 % on 09-01 against ±40 %. R3 is the only rule inside the bar
+(−23.7 %) and buys it with 2.5× fill size. R2 is right on size (₩141k per fill vs ₩149k live) and short on
+count. Nothing was adjusted to close the gap; the orchestrator's honesty rule (decision 6) makes every P9 number
+an R2 <i>floor</i>, and the live parity result is the reason real numbers should run higher.</p>
 </div>
 
-<h3>4. Why the ranking key is <code>core_alpha</code> and not PnL</h3>
-
-<p>A control that just <em>held</em> the capital split without quoting at all returned
-<strong>+1.31 % / 14 d</strong>, and the <code>USDT-SOL</code> split <strong>+4.49 %</strong>. Rank on
-net PnL and pure directional drift wins the tournament. So (ADR D2):</p>
-
-<pre><code>core_alpha = trading_pnl + reward_net − hedge_cost        # marks on held inventory EXCLUDED
-inv_share  = |inventory marks| / max(|core_alpha|, 1)     # disqualify above 0.5</code></pre>
-
-<p><code>inv_share</code> is the honesty check. It is what killed the 300 s basis half-life, the wider
-bands, and both two-leg combos (<code>inv_share</code> 1.00–1.18 — the entire "alpha" was drift). It
-is also why P6's rebalance rule <em>looked</em> like a 138.9 % improvement on net PnL and was still
-rejected: that gain was <code>inventory_pnl</code>, i.e. one lucky XRP move over one 36 h window.</p>
+<h3>6. Capacity: fills are print-sized, so capital saturates — on one market</h3>
+<p>R2 changed the answer to a question v2 never asked: what happens to core alpha as the order gets bigger?
+Under the old rule a bigger order filled bigger; under R2 a fill is the size of the print that hit it, and the
+median USDT-XRP print is ₩30–62k whatever the order is. So the fraction of an order that fills collapses from
+6.0 % at ₩512k per side to 1.0 % at ₩4M per side, and the 30-s core alpha per day goes ₩2,232 → ₩3,201 →
+<b>₩4,671</b> → ₩4,702 at ₩2.56M / ₩5M / ₩10M / ₩20M — marginal ₩398, ₩294, then ₩3 per extra ₩1M. USDT-XRP
+absorbs about ₩10M and not a won more. Under <code>legacy</code> or R3 the curve never saturates, "precisely
+because those rules fill whole orders; the saturation is a property of the honest rule".</p>
+<p>USDT-ETH does not saturate inside ₩20M (₩4,364 → ₩6,313 → ₩10,257 → ₩21,253 per day), which is the
+quantitative reason it is a second <i>market</i> rather than more XRP. Along the way <code>inv_share</code> —
+v2's honesty check — was demoted from a gate to a descriptor: over a 3.6-day window the mark on a 25 % base
+layout dwarfs a ₩10k alpha and the live set itself scores 1.90. The inventory condition for the rest of P9 is
+<code>max |q| ≤ 0.5</code>, which every row holds under the soft band; <code>inv_share</code> is still printed,
+and priced as directional exposure when allocating.</p>
 </section>
 
-<!-- ============================================================ -->
 <section id="code">
-<h2>Code — how it was established, and how it runs</h2>
+<h2>Code — how the numbers were re-established, and how two bots run on one account</h2>
 
-<h3>Part 1 — how the numbers were established</h3>
+<h3>Part 1 — the P9 evidence chain</h3>
+<div class="flow">
+  <div class="step"><b>S1 convert + pre-screen</b>87 contiguous recorded hours (2026-08-29T16 → 09-02T06 KST), 23.9M book snapshots, 43 codes; 29 event pairs pre-screened → 9 survivors</div>
+  <div class="step"><b>S2 reconcile</b>15,549 acked orders replayed; R2 picked; quote path 99.8 % exact-tick vs the ledger; Sep-1 diagnosed as a mark artefact</div>
+  <div class="step"><b>S3 XRP re-sweep</b>δ 8/11/14/18 × HL 600/1800 × size 10/20 + a book-aware variant: live set kept, variant not adopted, capacity ladder A–E</div>
+  <div class="step"><b>S4 multi-market</b>153 runs over 7 survivors; touch-exit diagnostic inverts BTC-NIL; USDT-ETH the only inventory-neutral qualifier</div>
+  <div class="step hi"><b>Pick + DECOMP2</b>USDT-ETH at δ 1.4 bps; S5–S9 cut: 30-s headline, mark band + paper R2, runbook, the ETH bot, go-live runbook</div>
+  <div class="step hi"><b>Re-cut + go-live</b>2026-09-02: operator changes plan twice (current capital; "you do it all"); two post-only legs; both bots live by 17:11 KST</div>
+</div>
 
-<p>Upbit publishes <strong>no historical order book</strong>. That single gap dictates the whole
-pipeline: you cannot backtest passive fills against data you can buy, so you have to record it
-yourself first, and recorder uptime literally <em>is</em> the calibration budget (~0.92 GB/day).</p>
+<h4>The XRP capital ladder (S3, R2, 30-s mark)</h4>
+<div class="tablewrap">
+<table>
+<tr><th>rung</th><th class="num">capital ₩</th><th class="num">order/side ₩</th><th class="num">core @30 s / day ₩</th><th class="num">fills/day</th><th class="num">fill % of order</th><th class="num">marginal ₩ per extra ₩1M/day</th></tr>
+<tr><td>A (was live)</td><td class="num">2,562,811</td><td class="num">512,562</td><td class="num">2,232</td><td class="num">9.9</td><td class="num">6.0 %</td><td class="num">—</td></tr>
+<tr><td>B</td><td class="num">5,000,000</td><td class="num">1,000,000</td><td class="num">3,201</td><td class="num">12.7</td><td class="num">6.2 %</td><td class="num">398</td></tr>
+<tr><td>C</td><td class="num">10,000,000</td><td class="num">2,000,000</td><td class="num"><b>4,671</b></td><td class="num">17.1</td><td class="num">1.9 %</td><td class="num">294</td></tr>
+<tr><td>D</td><td class="num">20,000,000</td><td class="num">4,000,000</td><td class="num">4,702</td><td class="num">11.6</td><td class="num">1.0 %</td><td class="num">3</td></tr>
+<tr><td>E (₩10M at size 5 %)</td><td class="num">10,000,000</td><td class="num">500,000</td><td class="num">3,449</td><td class="num">16.3</td><td class="num">8.3 %</td><td class="num">—</td></tr>
+</table>
+</div>
+<p class="small">Source: <code>research/results/p9_xrp/XRP.md</code> §6. Rung E is 73 % of rung C with a quarter of the order size — most of the ₩10M gain is inventory room, not order size.</p>
 
+<h4>The multi-market ranking (S4, best R2 row per market)</h4>
+<div class="tablewrap">
+<table>
+<tr><th>market</th><th>config</th><th class="num">@30 s / day ₩</th><th class="num">₩ per ₩1M / day</th><th class="num">fills/day</th><th class="num">inv_share</th><th class="num">touch-exit @30 s ₩</th><th>verdict</th></tr>
+<tr><td>BTC-NIL</td><td>δ 50 bps, hl 120, size 3</td><td class="num">11,018</td><td class="num">4,299</td><td class="num">16.3</td><td class="num">2.02</td><td class="num"><b>−14,909</b></td><td>rejected — 425-bps book, 22 % fresh marks, zero fills after 08-31</td></tr>
+<tr><td><b>USDT-ETH</b></td><td>δ 1.4 bps, HL 1800, size 20</td><td class="num">4,364</td><td class="num">1,703</td><td class="num">61.2</td><td class="num"><b>0.29</b></td><td class="num">1,812</td><td><b>picked</b> — the only inventory-neutral row, 3/3 days, all three fill rules</td></tr>
+<tr><td>BTC-XRP</td><td>δ 16.8 bps, HL 1800, size 20</td><td class="num">3,122</td><td class="num">1,218</td><td class="num">9.1</td><td class="num">1.37</td><td class="num">2,224</td><td>alternative only if BTC exposure is wanted (75 % of the sleeve in BTC) — deferred D38</td></tr>
+<tr><td>USDT-SOL</td><td>δ 1.9 bps, HL 1800, size 20</td><td class="num">2,282</td><td class="num">891</td><td class="num">59.6</td><td class="num">4.01</td><td class="num">772</td><td>not worth a second process</td></tr>
+<tr><td>USDT-BTC</td><td>touch gate 2 bps, size 20</td><td class="num">1,419</td><td class="num">554</td><td class="num">28.4</td><td class="num">3.79</td><td class="num">1,313</td><td>reward-only, saturated</td></tr>
+<tr><td>USDT-XRP (comparator)</td><td>live set</td><td class="num">2,232</td><td class="num">871 (A) / 467 (C)</td><td class="num">9.9</td><td class="num">1.90</td><td class="num">189</td><td>the bar a second market had to beat: ≥ ₩300 per ₩1M/day</td></tr>
+</table>
+</div>
+<p class="small">Source: <code>research/results/p9_mm/MM.md</code> §2 and the touch-exit table. The touch-exit column re-marks each fill against the same-side touch instead of the mid — a diagnostic added beside the rule, which is what exposed BTC-NIL (its "alpha" was the midpoint of a 425-bps book). Filed as deferred D39.</p>
+
+<h4>ADR D18, as it actually fired</h4>
+<p>v2 ended with "the one decision still ahead": at ≈ 2026-09-01 22:00 KST, if fills/day were under 4, restart with
+δ 11. The manager took it on schedule. <code>data/live/manager/actions.jsonl</code> holds two <code>d18_ok</code>
+rows — 22:00:34 KST, <i>"D18 checkpoint: 25.41 fills/day &gt;= 4 — delta unchanged"</i>, and a second at 00:01
+the next day at 24.87 — and <code>delta.json</code> reads <code>{"last_check_day": "2026-09-02"}</code> with no
+delta applied. δ stayed 14, which S3's grid then confirmed on the numbers. The only code consequence was that a
+manager test asserting "exactly one row per healthy tick" went red by wall clock at 22:00 and P9.S5 froze the
+tests on a fixed <code>now</code>; <code>core.py</code> was not touched, and the actuator is still armed.</p>
+
+<h3>Part 2 — how it runs now</h3>
 <figure>
-<svg viewBox="0 0 700 250" role="img" aria-label="The evidence pipeline from market scan to the live parameter file">
-  <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-    <path d="M0,0 L6,3 L0,6 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+<svg viewBox="0 0 720 330" role="img" aria-label="Process diagram: one recorder, two bot stacks with their own ledgers and dashboards, one manager watching the XRP stack">
+  <rect x="20" y="20" width="200" height="54" rx="6" class="box"/>
+  <text x="32" y="42" font-size="12" font-weight="600">arb.record (pid 87291)</text>
+  <text x="32" y="60" font-size="11" class="muted">43 codes, both books, 4 days up</text>
 
-  <rect x="8" y="14" width="150" height="46" rx="6" class="box2"/>
-  <text x="83" y="34" text-anchor="middle" class="svgtxt mono">arb.scan</text>
-  <text x="83" y="50" text-anchor="middle" class="svgtxt sm">561 pairs → 1 candidate</text>
+  <rect x="20" y="100" width="330" height="120" rx="6" class="box-amber"/>
+  <text x="32" y="122" font-size="12" font-weight="600">USDT-XRP stack — bin/bot.sh (unchanged)</text>
+  <text x="32" y="142" font-size="11" class="mono">supervisor 99313 → bot 99339</text>
+  <text x="32" y="160" font-size="11" class="mono">params research/live/xrp_anchor.json</text>
+  <text x="32" y="178" font-size="11" class="mono">ledger data/live/ledger.sqlite (WAL, 1 writer)</text>
+  <text x="32" y="196" font-size="11" class="mono">dashboard :8777 (pid 96956) — read-only</text>
+  <text x="32" y="212" font-size="11" class="mono">logs/bot.out · logs/supervisor.out · bot.pid</text>
 
-  <rect x="8" y="82" width="150" height="46" rx="6" class="box2"/>
-  <text x="83" y="102" text-anchor="middle" class="svgtxt mono">arb.record</text>
-  <text x="83" y="118" text-anchor="middle" class="svgtxt sm">the only book history</text>
+  <rect x="370" y="100" width="330" height="120" rx="6" class="box-green"/>
+  <text x="382" y="122" font-size="12" font-weight="600">USDT-ETH stack — bin/market-bot.sh (new)</text>
+  <text x="382" y="142" font-size="11" class="mono">eth_supervisor 96795 → eth_bot 96816</text>
+  <text x="382" y="160" font-size="11" class="mono">params research/live/eth_anchor.json</text>
+  <text x="382" y="178" font-size="11" class="mono">ledger data/live/eth_ledger.sqlite (its own)</text>
+  <text x="382" y="196" font-size="11" class="mono">dashboard :8778 (pid 97113) — read-only</text>
+  <text x="382" y="212" font-size="11" class="mono">logs/eth_bot.out · eth_supervisor.out · eth_bot.pid</text>
 
-  <rect x="8" y="150" width="150" height="46" rx="6" class="box2"/>
-  <text x="83" y="170" text-anchor="middle" class="svgtxt mono">arb.data.*</text>
-  <text x="83" y="186" text-anchor="middle" class="svgtxt sm">parquet + quality report</text>
+  <rect x="20" y="246" width="330" height="64" rx="6" class="box-blue"/>
+  <text x="32" y="268" font-size="12" font-weight="600">arb.manager (pid 99505), every 300 s</text>
+  <text x="32" y="286" font-size="11" class="muted">gather → decide → act; hard-coded to bot.pid / ledger.sqlite / bin/bot.sh</text>
+  <text x="32" y="302" font-size="11" class="muted">watches the XRP stack only — D18 actuator still armed</text>
+  <path d="M185 246 L185 220" class="ln" stroke-width="1.5" stroke-dasharray="4 3"/>
 
-  <path d="M158 37 L 200 100" class="arrow" marker-end="url(#ah2)"/>
-  <path d="M158 105 L 200 105" class="arrow" marker-end="url(#ah2)"/>
-  <path d="M158 173 L 200 112" class="arrow" marker-end="url(#ah2)"/>
+  <rect x="370" y="246" width="330" height="64" rx="6" class="box-red"/>
+  <text x="382" y="268" font-size="12" font-weight="600">nothing watches the ETH bot but its supervisor loop</text>
+  <text x="382" y="286" font-size="11" class="muted">exit 1 → restart (≤ 5/h); exit 2 (risk stop) and exit 3 → stays down, silently,</text>
+  <text x="382" y="302" font-size="11" class="muted">until someone tails data/live/logs/eth_supervisor.out</text>
 
-  <rect x="205" y="70" width="160" height="76" rx="6" class="box"/>
-  <text x="285" y="92" text-anchor="middle" class="svgtxt mono">arb.backtest</text>
-  <text x="285" y="108" text-anchor="middle" class="svgtxt sm">event-driven fill sim</text>
-  <text x="285" y="122" text-anchor="middle" class="svgtxt sm">~316k events/s</text>
-  <text x="285" y="136" text-anchor="middle" class="svgtxt sm">Q1–Q5 qualification</text>
-
-  <path d="M365 108 L 405 108" class="arrow" marker-end="url(#ah2)"/>
-
-  <rect x="410" y="14" width="160" height="62" rx="6" class="box"/>
-  <text x="490" y="34" text-anchor="middle" class="svgtxt sm">P1 sweep: 69/576 qualify</text>
-  <text x="490" y="50" text-anchor="middle" class="svgtxt sm">pick = anchor_spread XRP</text>
-  <text x="490" y="66" text-anchor="middle" class="svgtxt sm">core ₩263,046 · inv 0.42</text>
-
-  <rect x="410" y="86" width="160" height="62" rx="6" class="box"/>
-  <text x="490" y="106" text-anchor="middle" class="svgtxt sm">P4 sizing: 57 points</text>
-  <text x="490" y="122" text-anchor="middle" class="svgtxt sm">912 runs, band-matched</text>
-  <text x="490" y="138" text-anchor="middle" class="svgtxt sm">band 0.25 / size 20 %</text>
-
-  <rect x="410" y="158" width="160" height="52" rx="6" class="box" style="stroke:var(--accent);stroke-width:2"/>
-  <text x="490" y="178" text-anchor="middle" class="svgtxt" style="fill:var(--accent)">OPERATOR CONFIRMS</text>
-  <text x="490" y="196" text-anchor="middle" class="svgtxt sm">2026-08-30 — "go"</text>
-
-  <path d="M570 45 L 600 45 L 600 184 L 575 184" class="arrow" marker-end="url(#ah2)"/>
-  <path d="M570 117 L 590 117 L 590 184 L 575 184" class="arrow" marker-end="url(#ah2)"/>
-
-  <path d="M490 210 L 490 232" class="arrow" marker-end="url(#ah2)"/>
-  <rect x="330" y="218" width="320" height="28" rx="6" class="box2"/>
-  <text x="490" y="237" text-anchor="middle" class="svgtxt mono">research/live/xrp_anchor.json</text>
+  <rect x="250" y="20" width="450" height="54" rx="6" class="box"/>
+  <text x="262" y="42" font-size="12" font-weight="600">one Upbit account, one API key, two private WebSockets</text>
+  <text x="262" y="60" font-size="11" class="muted">shared USDT (clamped per bot) · shared order pocket (3 + 3 of 6/s) · HTTP 418 would hit both</text>
 </svg>
-<figcaption>Nothing reaches the live parameter file without passing through a qualification gate
-<em>and</em> an explicit operator confirmation. No code path re-derives a parameter at runtime.</figcaption>
+<figcaption>Seven host processes on the same Mac, no container. The two ledgers never touch; the two bots share only the account.</figcaption>
 </figure>
 
-<h4>The scan, and why there is exactly one candidate</h4>
-<p><code>arb.scan</code> walked all 561 BTC/USDT event pairs. Almost all of them have
-<strong>no spread to capture</strong>:</p>
+<h4>The launcher: every path derived from the params file</h4>
+<p><code>bin/bot.sh</code> was never edited (rewriting a running bash script in place kills it mid-loop — v2's
+rule stands). The ETH bot runs from a new, parameterised launcher whose only input is the params file; the
+market inside it decides every path, and the XRP market is refused so a second XRP process can never quote beside
+the live one:</p>
+<pre><code># bin/market-bot.sh &lt;params.json&gt; start|stop|status|kill   (start defaults to --stage paper)
+MARKET="$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1]))["market"])' "$PARAMS")"
+SLUG="$(printf '%s' "${MARKET#*-}" | tr '[:upper:]' '[:lower:]')"      # USDT-ETH -&gt; eth
 
-<div class="tblwrap">
-<table>
-<tr><th>Market</th><th class="num">Spread (mean/median bps)</th><th class="num">Prints/day</th><th>Verdict</th></tr>
-<tr><td><code>USDT-ETH</code></td><td class="num">0.04 / 0.04</td><td class="num">318</td><td>nothing to capture</td></tr>
-<tr><td><code>USDT-BTC</code></td><td class="num">0.81 / 0.89</td><td class="num">1,043</td><td>nothing to capture</td></tr>
-<tr><td><code>USDT-SOL</code></td><td class="num">1.23 / 0.96</td><td class="num">204</td><td>nothing to capture</td></tr>
-<tr><td><strong><code>USDT-XRP</code></strong></td><td class="num"><strong>11.52 / 14.46</strong></td><td class="num"><strong>493–552</strong></td><td><strong>a real spread, and real flow</strong></td></tr>
-<tr><td><code>BTC-USDT</code></td><td class="num">14.05 / 15.53</td><td class="num">125</td><td>wide but ~no flow</td></tr>
-<tr><td><code>USDT-EURC</code></td><td class="num">1,588</td><td class="num">31</td><td>unevaluable</td></tr>
-</table>
-</div>
+BOTDIR="${MARKET_BOT_DIR:-$ROOT/data/live}"
+PIDFILE="$BOTDIR/${SLUG}_bot.pid"
+SUPFILE="$BOTDIR/${SLUG}_supervisor.pid"
+OUTLOG="$BOTDIR/logs/${SLUG}_bot.out"
+SUPLOG="$BOTDIR/logs/${SLUG}_supervisor.out"
+LEDGER="$BOTDIR/${SLUG}_ledger.sqlite"
 
-<p>Eight other candidate designs were built and dropped — touch quoting on <code>USDT-BTC</code> and
-<code>USDT-ETH</code> (their apparent 13.6 bps/fill edge is an artefact of marking a fill against fair
-on a 0.81 bps book), a <code>BTC-USDT</code> mirror, stablecoin pairs, tier-B alts, two combos. Every
-rejection is in <code>research/recommendation.md</code> §3 with the number that killed it.</p>
+refuse_xrp() {
+  if [ "$MARKET" = "USDT-XRP" ]; then
+    echo "refusing: USDT-XRP is bin/bot.sh's bot (data/live/bot.pid)." &gt;&amp;2
+    exit 2
+  fi
+}
+ARGS=(--params "$PARAMS" --ledger "$LEDGER" --log "$OUTLOG" --pidfile "$PIDFILE")</code></pre>
+<p>The supervisor loop inside it is <code>bin/bot.sh</code>'s verbatim — the same exit-code contract
+(0 clean, 1 crash → restart after 10 s at most 5 per rolling hour, 2 risk stop → never, 3 refused → never), the same
+<code>caffeinate -i</code> wrapper. <code>arb.live.bot run</code> gained one flag, <code>--pidfile</code>, with
+the old default, so <code>bin/bot.sh</code>, <code>convert</code>, the manager and the XRP dashboard are
+unaffected. The second dashboard is the same program pointed at the second ledger:</p>
+<pre><code>DASH_PIDFILE=data/live/eth_dash.pid DASH_OUTLOG=data/live/logs/eth_dash.out \
+  bin/dash.sh start --port 8778 --tailscale \
+    --ledger data/live/eth_ledger.sqlite --params research/live/eth_anchor.json</code></pre>
+<p>The two env overrides are how <code>bin/dash.sh</code> finds its own process, so they go on
+<kbd>stop</kbd> and <kbd>status</kbd> too. <code>--params</code> is what labels the page: the market, the
+currencies, the capital and the caps card all come from the file rather than being hard-coded to XRP, and the
+<code>eth_</code> prefix (<code>LiveParams.file_prefix</code>) resolves the right pidfiles for the health card.
+One caveat carried over from a P9 fresh-eyes finding: the dashboard caches its params at start, so after editing
+a params file the page reports the <i>old</i> capital until the dashboard is restarted (deferred D46 is the
+footnote that clips the path).</p>
 
-<h4>The three things the backtest cannot tell you</h4>
-<p>This matters more than any single result, because it is the reason the staging ladder exists:</p>
-<ol>
-<li><strong>The full-fill rule is optimistic.</strong> A print trading <em>through</em> our resting
-price fills the whole order. The median <code>USDT-XRP</code> print is ₩50k against a ₩1M order, so
-modelled notional per fill is roughly <strong>2× real</strong>.</li>
-<li><strong>Implied market share is implausible.</strong> Model turnover was 8.8 % of the pair's
-entire daily traded value.</li>
-<li><strong>Adverse selection is not modelled</strong> beyond a small pick-off term. The 5 bps
-haircut in the base case is an <em>assumption</em>.</li>
-</ol>
-<p>So the honest claim was never "this earns 2.38 %". It was: <em>the edge per fill is measured
-(16.7 bps against fair on a 14.5 bps book); the fill pace and the adverse selection are not, and only
-a live paper run can measure them.</em> Which it did: 19.2 h of paper coverage, 4.99 fills/day,
-adverse selection <strong>−14.3 bps</strong> at 30 s — negative, i.e. in our favour.</p>
+<h4>The sleeve clamp</h4>
+<pre><code># src/arb/live/orders.py — LiveSink
+def sleeve_ceiling(self) -&gt; float:
+    """This bot's own share of the **shared** quote balance, in quote units."""
+    snap = self.snapshot
+    px = float(getattr(snap, "px_krw_quote", NAN)) if snap is not None else NAN
+    if not (px == px) or px &lt;= 0.0:
+        return NAN                      # no snapshot yet: the raw balance stands, as before P9
+    return float(self.p.usdt_share) * float(self.p.capital_krw) / px
 
-<h4>What the parameter file actually says</h4>
-<p><code>research/live/xrp_anchor.json</code> is tracked in git, and its <code>note</code> field carries
-its own reasoning. This is the entire strategy:</p>
+def _recompute_holdings(self) -&gt; None:
+    for ccy, attr in ((self.p.quote_ccy, "hold_usdt"), (self.p.base_ccy, "hold_xrp")):
+        bal, lock = self.assets.get(ccy, (0.0, 0.0))
+        setattr(self, attr, bal + lock)  # a resting order still owns its funds
+    self.raw_hold_usdt = self.hold_usdt
+    ceiling = self.sleeve_ceiling()
+    if ceiling == ceiling and self.hold_usdt &gt; ceiling:
+        self.hold_usdt = ceiling</code></pre>
+<p>Checked against the 17:42 heartbeats: 0.75 × 1,267,965 / 1,377 = 690.6 USDT; the XRP bot reports
+<code>hold=691.37USDT</code> and the ETH bot <code>691.11USDT</code>, the two differing only by the KRW-USDT
+mark each read last. The account holds 1,373 USDT.</p>
 
-<pre><code>"market": "USDT-XRP",  "anchor_base": "KRW-XRP",  "anchor_quote": "KRW-USDT",
+<h4>The order-rate split</h4>
+<pre><code># src/arb/upbit/rest.py — UpbitRest.__init__(…, order_rate=None)
+group_rates = dict(GROUP_RATES)                      # copy; the module table is never mutated
+if order_rate is not None:
+    r = float(order_rate)
+    if not (r &gt; 0.0) or r &gt; ORDER_RATE_CAP:          # ORDER_RATE_CAP = 6.0
+        raise ValueError(f"order_rate {order_rate!r} — must be &gt; 0 and &lt;= {ORDER_RATE_CAP} req/s")
+    group_rates["order"] = (r, r)
+    group_rates["order-test"] = (r, r)
+self.order_rate = group_rates["order"][0]
 
-"delta_bps": 14,          "k": "2d",           "requote_bps": 7,     "timer_s": 2,
-"size_pct": 20,           "target": 0.25,      "band": 0.25,         "band_mode": "soft",
-"basis_halflife_s": 1800, "tick": "0.001",     "min_total": "0.5",
+# src/arb/live/bot.py — live mode only
+self.rest = UpbitRest(order_rate=self.p.max_order_req_per_s)</code></pre>
+<p>The client can only ever <i>lower</i> the order bucket: a params typo above the cap raises instead of
+widening it. Two known wrinkles, both cosmetic: the docstring's example still says "XRP 4 + ETH 2" (the
+provisional split the measurements replaced with 3 + 3), and the heartbeat's <code>peak_reqs_s</code> gauge counts
+every order-path REST call — cancels and polls in the 30/s default pocket included — against the placement-only
+bucket, which is why the ETH heartbeat prints <code>peak_reqs_s=20</code> without a single 429. That gauge is
+deferred job D22.</p>
 
-"capital_krw": 2562811,   "usdt_share": 0.75,  "daily_loss_stop_krw": 100000,
-"stale_s": 5,             "stale_quote_s": 15, "max_order_req_per_s": 6</code></pre>
+<h4>The mark band and the 30-second headline</h4>
+<pre><code># src/arb/live/orders.py — LiveSink._mark (the paper sink carries the identical block)
+mid = fair                                            # f′ from the snapshot
+if self.book is not None:
+    bb, ba = self.book.best_bid, self.book.best_ask
+    if bb &gt; 0 and ba &gt; 0:
+        mid = 0.5 * (bb + ba)
+band = float(self.p.mark_band_bps)                    # LiveParams default 50.0; &lt;= 0 disables
+if (band &gt; 0 and math.isfinite(fair) and fair &gt; 0 and math.isfinite(mid) and mid &gt; 0):
+    dev_bps = abs(mid / fair - 1.0) * 1e4
+    if dev_bps &gt; band:
+        self._event("mark_band", ident, ts, {"mid": mid, "fair": fair, "bps": round(dev_bps, 2), "band_bps": band})
+        mid = fair
 
-<p>The layout is fundable <em>by construction</em>, and the JSON note proves it inline:
-<code>usdt_share 0.75 ≥ target + band + size_pct/100 = 0.25 + 0.25 + 0.20 = 0.70</code>. A full 20 %
-bid can always be paid for while XRP sits at or below its cap. The conversion into that layout was
-executed once, on 2026-08-30: <strong>1,380.80403458 USDT</strong> at ₩1,388.00 and
-<strong>329.74884199 XRP</strong> at ₩1,943.00, <strong>0.00 bps of slippage on both</strong>,
-≈₩1,279 of one-off cost, ₩5,233 of idle KRW left.</p>
+# src/arb/live/report.py — the headline, recomputed at read time from the stored mid_30s
+def trading_pnl_30s(row: sqlite3.Row) -&gt; tuple[float, bool]:
+    at_fill = _fl(row["trading_pnl_quote"])
+    mid = row["mid_30s"]
+    if not _ok(mid) or float(mid) &lt;= 0:
+        return at_fill, False                         # fall back AND count it: a silent zero is a worse lie
+    return mark_fill(str(row["side"]), row["price"], row["size"], float(mid)), True</code></pre>
+<p>Both numbers come out of the same <code>mark_fill</code> implementation and are converted at the same
+<code>fx.at(ts)</code> instant, so the 30-s and at-fill headlines differ <i>only</i> in which mid they use. The
+review's scratch dashboard, pointed at the live ledger, read <b>₩10,849 @30 s (marked 60/60)</b> against
+<b>−₩6,884 @fill</b> for the same run, with 2026-09-01 at ₩8,217 against −₩9,259.</p>
 
-<hr>
+<h4>Eligibility, six lines</h4>
+<pre><code># src/arb/live/risk.py — RiskState.refresh_eligibility, hourly
+caution = {k: v for k, v in (event.get("caution") or {}).items() if v}
+warning = bool(event.get("warning"))
+ok = maker_bid == 0 and maker_ask == 0 and state == "active" and not warning
+…
+if not ok:
+    self._warn("eligibility_failed", detail, level="stop")   # → cancel all, confirm flat, exit 2
+elif caution:
+    self._warn("market_caution", detail)                     # warn only
 
-<h3>Part 2 — how it runs</h3>
+# src/arb/live/preflight.py — the "market warning flags" row
+cl.add(FAIL if warning else (WARN if caution else PASS), "market warning flags", …)</code></pre>
 
-<p>Three long-running host processes, plus one opt-in fourth. None supervises another; the recorder
-and the bot each hold their own sockets and their own slice of Upbit's rate limits.</p>
+<h4>The manager's scope, and the one asymmetry you have to carry</h4>
+<p>No manager source changed in P9. Its paths are properties on a <code>Paths</code> object —
+<code>live / "bot.pid"</code>, <code>live / "supervisor.pid"</code>, <code>live / "ledger.sqlite"</code>,
+<code>root / "bin" / "bot.sh"</code> — and none of them knows an <code>eth_</code> prefix exists. Everything v2
+said about it still holds for the XRP bot: five-minute loop, the KILL / LEAVE_DOWN / RESTART table, the single
+Gemini question with three legal answers and <code>leave_down</code> as every fallback, three lifecycle actions
+per KST day. For the ETH bot the only supervision is the launcher's own loop, which restarts a crash and
+deliberately never restarts a risk stop. An ETH exit 2 raises no alert anywhere. That is the single most
+important line in the daily loop below.</p>
 
-<figure>
-<svg viewBox="0 0 700 300" role="img" aria-label="The runtime: feed, risk, quote, orders, ledger, and the supervisor and manager around them">
-  <defs><marker id="ah3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-    <path d="M0,0 L6,3 L0,6 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+<h4>The daily loop, two-market edition</h4>
+<pre><code>make stack-status                                   # recorder, XRP bot, XRP dashboard, manager — XRP stack ONLY
+bin/market-bot.sh research/live/eth_anchor.json status
+tail -3 data/live/logs/eth_supervisor.out           # an ETH risk stop is silent; this is where it shows
+tail -20 data/live/logs/bot.out                     # XRP heartbeat
+tail -20 data/live/logs/eth_bot.out                 # ETH heartbeat
+open http://127.0.0.1:8777/  http://127.0.0.1:8778/ # also http://100.77.164.42:{8777,8778}/ on the tailnet
+uv run python -m arb.live.report --run &lt;xrp_run_id&gt;                      # one run, not the chained session
+uv run python -m arb.live.report --stage full --ledger data/live/eth_ledger.sqlite \
+    --params research/live/eth_anchor.json --out /tmp/eth-live           # ETH report
+df -h .                                             # ≈ 0.92 GB/day of raw recording</code></pre>
+<p>Healthy, on a live run, is still v2's list: both sides resting in the zone, <code>paused</code> rare and only
+<code>feed_stale</code> / <code>private_ws_down</code>, <code>insufficient_funds 0</code>, rejects ≈ 0,
+<code>reconciled … unknown: 0, missing: 0</code> every 60 s, <code>ws_reconnects 0</code>, heartbeat under
+30 s old, restarts in the last hour 0 — now checked twice.</p>
 
-  <rect x="14" y="30" width="672" height="150" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
-  <text x="26" y="48" class="svgtxt sm">arb.live.bot — one asyncio process, one market</text>
-
-  <rect x="30" y="62" width="118" height="52" rx="6" class="box2"/>
-  <text x="89" y="82" text-anchor="middle" class="svgtxt mono">feed</text>
-  <text x="89" y="98" text-anchor="middle" class="svgtxt sm">3 codes, own WS</text>
-  <text x="89" y="110" text-anchor="middle" class="svgtxt sm">basis EWMA</text>
-
-  <path d="M148 88 L 178 88" class="arrow" marker-end="url(#ah3)"/>
-
-  <rect x="182" y="62" width="118" height="52" rx="6" class="box2"/>
-  <text x="241" y="82" text-anchor="middle" class="svgtxt mono">risk.evaluate</text>
-  <text x="241" y="98" text-anchor="middle" class="svgtxt sm">quote / pause / stop</text>
-  <text x="241" y="110" text-anchor="middle" class="svgtxt sm">pure, no I/O</text>
-
-  <path d="M300 88 L 330 88" class="arrow" marker-end="url(#ah3)"/>
-
-  <rect x="334" y="62" width="118" height="52" rx="6" class="box2"/>
-  <text x="393" y="82" text-anchor="middle" class="svgtxt mono">quote</text>
-  <text x="393" y="98" text-anchor="middle" class="svgtxt sm">δ ladder, tick round</text>
-  <text x="393" y="110" text-anchor="middle" class="svgtxt sm">post-fill band</text>
-
-  <path d="M452 88 L 482 88" class="arrow" marker-end="url(#ah3)"/>
-
-  <rect x="486" y="62" width="118" height="52" rx="6" class="box2"/>
-  <text x="545" y="82" text-anchor="middle" class="svgtxt mono">orders</text>
-  <text x="545" y="98" text-anchor="middle" class="svgtxt sm">post_only, 1/side</text>
-  <text x="545" y="110" text-anchor="middle" class="svgtxt sm">cancel→place interlock</text>
-
-  <path d="M545 114 L 545 140" class="arrow" marker-end="url(#ah3)"/>
-  <path d="M241 114 L 241 140" class="arrow" marker-end="url(#ah3)"/>
-  <rect x="182" y="142" width="422" height="30" rx="6" class="box"/>
-  <text x="393" y="161" text-anchor="middle" class="svgtxt mono">ledger.sqlite (WAL) — single writer, 8 tables</text>
-
-  <path d="M393 172 L 393 200" class="arrow" marker-end="url(#ah3)"/>
-  <rect x="240" y="202" width="150" height="42" rx="6" class="box2"/>
-  <text x="315" y="220" text-anchor="middle" class="svgtxt mono">arb.dash</text>
-  <text x="315" y="235" text-anchor="middle" class="svgtxt sm">read-only, 2 origins</text>
-
-  <rect x="410" y="202" width="150" height="42" rx="6" class="box2"/>
-  <text x="485" y="220" text-anchor="middle" class="svgtxt mono">arb.live.report</text>
-  <text x="485" y="235" text-anchor="middle" class="svgtxt sm">read-only</text>
-
-  <rect x="30" y="202" width="180" height="80" rx="6" class="box" style="stroke:var(--accent)"/>
-  <text x="120" y="221" text-anchor="middle" class="svgtxt mono" style="fill:var(--accent)">bin/bot.sh __supervise</text>
-  <text x="120" y="238" text-anchor="middle" class="svgtxt sm">exit 1 → restart (≤5/h)</text>
-  <text x="120" y="252" text-anchor="middle" class="svgtxt sm">exit 0 / 2 / 3 → never</text>
-  <text x="120" y="272" text-anchor="middle" class="svgtxt sm">arb.manager watches this</text>
-
-  <path d="M120 202 L 120 130 L 178 130 L 178 100" class="arrow" marker-end="url(#ah3)" stroke-dasharray="4 3"/>
-</svg>
-<figcaption>Every arrow that touches money passes through <code>risk.evaluate</code> first, and every
-outcome lands in one SQLite ledger that all readers agree on.</figcaption>
-</figure>
-
-<h4>The quote path, verified against a real log line</h4>
-
-<p><code>src/arb/live/quote.py</code> is deliberately pure — no I/O, no clock, no asyncio — and is a
-line-by-line transcription of <code>arb.backtest.engine</code>. Where the two could disagree, the
-backtest wins. Here is the arithmetic, and then the same arithmetic checked against the log:</p>
-
-<pre><code># src/arb/live/quote.py — desired_quotes(), the strategy step
-q    = inventory_q(hold_xrp, px_krw_xrp, p.capital_krw)   # XRP in KRW / capital
-dev  = q - p.target
-lean = p.k_frac * dev                                     # k = 2δ
-bid, ask = _clip_post_only(f * (1.0 - p.delta - lean),
-                           f * (1.0 + p.delta - lean),
-                           s.best_bid, s.best_ask, p.tick_f)</code></pre>
-
-<pre><code>10:43:44 KST  f'=1.346596  q=0.3410  resting=[ask@1.349]
-
-dev  = 0.3407 − 0.25          = 0.0907
-lean = 2 × 0.0014 × 0.0907    = 0.000254        (2.54 bps, both quotes shift down)
-ask  = 1.346596 × (1 + 0.0014 − 0.000254)
-     = 1.3481392  →  ceil to the 0.001 tick  →  1.349     ✓ matches the log
-bid  = 1.346596 × (1 − 0.0014 − 0.000254) = 1.344369 → floor → 1.344
-       but  dev + size_frac = 0.0907 + 0.20 = 0.29 &gt; band 0.25  →  refused, reason "band"</code></pre>
-
-<p>Three live-only refinements sit on top of that shared arithmetic, and each has a reason worth
-remembering:</p>
-<ul>
-<li><strong>Exact decimals, not binary floats.</strong> Prices are quantized with
-<code>Decimal</code>; volume is <em>floored</em> onto the exchange's 8-dp lattice, so the balance cap
-can never be exceeded by rounding.</li>
-<li><strong>Post-only clipping.</strong> <code>bid ≤ best_ask − 1 tick</code>,
-<code>ask ≥ best_bid + 1 tick</code>, so a quote can never be born a taker.</li>
-<li><strong><code>BAND_TOL = 1e-3</code></strong> — the one place the live path deliberately diverges
-from the backtest. The band values an order at <code>price × KRW-USDT</code> while <code>q</code> is
-marked at <code>KRW-XRP</code>, so a holdings-capped order lands 2–9 × 10⁻⁵ of capital
-<em>outside</em> the band and, with <code>target == band</code>, could never be placed at all. That
-knife edge left the live run bid-only until P4.F1. <code>engine._band_ok</code> keeps no tolerance,
-because the backtest must stay bit-reproducible.</li>
-</ul>
-
-<h4>Risk: three outcomes, and the exit-code contract</h4>
-
-<p><code>src/arb/live/risk.py</code> returns exactly one of three things, and the loop does precisely
-what it says:</p>
-
-<div class="tblwrap">
-<table>
-<tr><th>Outcome</th><th>Meaning</th><th>Triggers</th></tr>
-<tr><td><code>quote</code></td><td>everything inside its limit</td><td>—</td></tr>
-<tr><td><code>pause</code></td><td><strong>recoverable</strong>: cancel all, keep the process alive, resume after 2 s of everything being fresh</td><td>anchor or own-book staleness, a public socket down, (live) the private socket down</td></tr>
-<tr><td><code>stop</code></td><td><strong>terminal</strong>: cancel all, confirm flat, <strong>exit 2</strong></td><td>daily core loss &gt; ₩100,000 in a KST day · HTTP 418 · eligibility check fails · a second unexplained resting order · (live only) trailing-24 h adverse selection &gt; 10 bps on ≥ 10 fills</td></tr>
-</table>
-</div>
-
-<p>Note what is <em>absent</em>: there is no inventory rule in <code>risk.py</code>. The post-fill band
-already blocks the growing side by construction, so this module only <em>reports</em> an XRP share
-above <code>target + band</code> as a warning. A limit enforced structurally does not need a second,
-weaker enforcement watching it.</p>
-
-<p>The exit code is the whole contract between the bot and everything above it:</p>
-
-<div class="tblwrap">
-<table>
-<tr><th class="num">Code</th><th>Meaning</th><th>Supervisor</th></tr>
-<tr><td class="num">0</td><td>clean stop — duration elapsed, SIGTERM/SIGINT</td><td>stops too</td></tr>
-<tr><td class="num">1</td><td>crash (and any other unexpected code)</td><td><strong>restarts after 10 s</strong>, ≤ 5 per rolling hour</td></tr>
-<tr><td class="num">2</td><td><strong>risk stop</strong> — flat, deliberate</td><td>never restarts</td></tr>
-<tr><td class="num">3</td><td><strong>refused</strong> — another bot owns <code>data/live/bot.pid</code></td><td>never restarts</td></tr>
-</table>
-</div>
-
-<h4>The order path: four rules a full-size two-sided run needs</h4>
-
-<p>These four defects existed only on real, two-sided, full-size wiring — none of them can appear in
-paper mode, which is precisely why paper mode is not sufficient evidence:</p>
-<ol>
-<li><strong>The cancel→place interlock.</strong> An ack is <em>not</em> confirmation: Upbit releases
-the locked currency ≈500 ms after acknowledging a cancel. So <code>_do_place</code> waits in
-<code>_await_side_clear</code> until the outstanding cancel is confirmed <em>gone</em>, capped at 2 s,
-after which it proceeds with a <code>cancel_unconfirmed</code> warning. Without it, a re-quote raced
-its own cancel and got a 400 <code>insufficient_funds</code>.</li>
-<li><strong>The reject memo arms only on a post-only refusal.</strong> It used to arm on a funding
-400, which suppressed a whole side for 72 s.</li>
-<li><strong>Fills book newly executed volume only</strong>, keyed on (order, cumulative
-<code>executed_volume</code>) — a repeated message used to double-count.</li>
-<li><strong>A still-resting order is never marked cancelled</strong>, which would free a side that
-really has an order on it.</li>
-</ol>
-
-<h4>The ledger, and why exactly one process writes it</h4>
-
-<p><code>data/live/ledger.sqlite</code> (WAL, schema v1, 8 tables) is the only record of what the bot
-did, and it cannot be regenerated. Every reader — the report, the dashboard, the manager, the
-staging gate — opens it <code>readonly=True</code>. That is not politeness; SQLite's WAL mode allows
-many readers but <strong>exactly one writer</strong>, and the wal-index lives in shared memory, so all
-processes must be on the same host. P7 learned the second half of that sentence the hard way: over a
-Docker bind mount host and container do <em>not</em> share POSIX locks, so a host read-write open
-believes it is alone, checkpoints, and <strong>unlinks the container writer's WAL</strong>.</p>
-
-<h4>The P8 manager — where an LLM does and does not earn its place</h4>
-
-<p><code>arb.manager</code> is an opt-in 5-minute loop: <strong>gather</strong> (read-only)
-→ <strong>decide</strong> (pure) → <strong>act + audit</strong>. It exists to buy exactly two things:
-uptime, and applying one dated decision on time.</p>
-
-<pre><code># src/arb/manager/core.py — decide(), in order
-1. bot pid alive but heartbeat &gt; 120 s   → KILL (SIGTERM, SIGKILL after 30 s)
-2. bot down, supervisor up               → OK   (its own restart loop owns this)
-3. both down — what killed it decides:
-     exit 3                              → LEAVE_DOWN            (never acted on)
-     exit 2, risk ≠ http_418             → LEAVE_DOWN_ALERT      (operator decision)
-     exit 2, http_418, cooled 900 s      → ask triage
-     supervisor budget exhausted         → ask triage
-     ≥ 3 consecutive exit 1              → ask triage
-     exit 0 within 900 s of our own kill → RESTART (manager-induced)
-     exit 0 otherwise                    → LEAVE_DOWN  (never undo a deliberate stop)
-     anything else                       → RESTART</code></pre>
-
-<p>The LLM (Gemini) is consulted for <strong>one</strong> question, the only input in the whole system
-that is text rather than a number: <em>this bot is down and the log is ambiguous — restart it, or
-leave it down?</em> It answers one of three words —
-<code>restart</code> / <code>leave_down</code> / <code>leave_down_alert</code> — and that answer is a
-<em>vote</em> that the deterministic caps then check. Every failure mode (missing key, timeout, HTTP
-error, unparsable body, an action outside the closed set) returns <code>leave_down</code>: leaving
-the bot down is always the safe answer, so <strong>the fallback is the design</strong>. Log lines
-matching <code>key|jwt|bearer|authorization|secret|token|password</code> are scrubbed before the
-prompt is built.</p>
-
-<div class="callout">
-<p><span class="lbl">What the manager cannot do — as a property, not a policy.</span> The only
-commands the package can <em>construct</em> are <code>bin/bot.sh start</code>,
-<code>bin/bot.sh stop</code> and the report. Not the kill switch, not <code>convert --unwind</code>,
-not <code>convert --execute</code>, no change to capital / band / size / target, no ledger write.
-Hard caps: <strong>3 lifecycle actions per KST day</strong>, applied <em>after</em> any LLM vote.</p>
-</div>
-
-<p>The narrowness is the point. δ adaptation was already a dated deterministic rule; rebalancing was
-already <em>measured</em> as unprofitable. Handing either to a model would have added variance, not
-return. The return path is uptime plus one decision on time — not cleverness.</p>
-
-<h4>The one decision still ahead: ADR D18</h4>
-
-<p>δ = 14 bps was confirmed against a book that trades <em>1 tick wide</em> (≈7 bps) much of the day —
-57.2 % of heartbeats on the last full report, 66–70 % on earlier windows. If we are standing off
-14 bps from a 7 bps book, we may simply be too far out to get filled. So the question was given a
-date and a rule rather than an opinion:</p>
-
-<pre><code># src/arb/manager/core.py
-D18_DUE          = 2026-09-01 22:00 KST     # 48 h on the full stage
-D18_FILLS_PER_DAY = 4.0
-D18_DELTA_BPS     = 11.0
-
-if fills_per_day &lt; 4:  restart with  bin/bot.sh start --stage full --delta-bps 11</code></pre>
-
-<p><code>research/live/xrp_anchor.json</code> is <strong>not</strong> edited — the file keeps recording
-the confirmed set, and the change is expressed as a runtime override. δ is read at start only, so
-the checkpoint costs exactly one restart of a live run. If the manager is up when the clock strikes,
-it applies this itself and writes <code>data/live/manager/delta.json</code>; if it is down, the
-checkpoint falls to you by hand.</p>
-
-<h4>The daily loop</h4>
-
-<pre><code>make stack-status                                  # recorder, bot, dashboard, manager — always exit 0
-uv run python -m arb.live.report --stage full      # → data/live/reports/  (writes a gate event)
-open http://127.0.0.1:8777/                        # also http://100.77.164.42:8777/ on the tailnet
-df -h .                                            # ~0.92 GB/day of raw recording</code></pre>
-
-<div class="callout warn">
-<p><span class="lbl">Four rules that only bite once real orders rest.</span></p>
-<ul>
-<li><strong>Never <code>make stack-down</code> during the event</strong> — it stops the bot and ends
-the run. <code>make dash-stop</code> for the page alone; <code>make -n stack-down</code> to see what
-the real one would do.</li>
-<li><strong>Never edit <code>bin/bot.sh</code> while it runs.</strong> Bash reads a script by byte
-offset, so rewriting it in place makes the running loop resume at a stale offset and die with a
-syntax error on a line that does not exist. Observed on 2026-08-30.</li>
-<li><strong><code>preflight</code> cannot pass while the bot quotes</strong> — its
-<em>no resting orders</em> check FAILs by design. Run it after <code>bin/bot.sh kill</code>.</li>
-<li><strong>The Mac must stay awake with the lid open.</strong> <code>caffeinate -i</code> (which the
-supervisor wraps itself in) holds off <em>idle</em> sleep only; closing the lid still sleeps the
-machine and abandons real resting orders.</li>
-</ul>
+<div class="callout danger">
+<p><b>Rules that bite with two bots on one account.</b></p>
+<p>Never run <code>arb.live.convert</code> while both bots exist — it plans one file's layout against the whole
+account and would sell the other bot's USDT. Re-cuts are hand-placed post-only legs.</p>
+<p>Never edit <code>bin/bot.sh</code> <i>or</i> <code>bin/market-bot.sh</code> while it runs; both loops are read
+by byte offset.</p>
+<p>Stop the manager before any deliberate XRP restart, or it will restart the bot under you; the manager does
+not know the ETH bot exists, so an ETH restart needs no manager step but gets no manager safety net either.</p>
+<p><code>make stack-status</code> is the XRP stack only. The ETH bot has no Make target — its status and its
+supervisor log are separate commands, every time.</p>
+<p>Restart a dashboard after editing its params file; it caches the file at start.</p>
+<p>Never <code>preflight --probe</code> on a live account — it places three real ≈ 0.5-USDT orders. The eight
+plain checks suffice, and <code>--market USDT-ETH</code> selects the second file.</p>
+<p><code>--override</code> text must be plain ASCII: no ₩, no em dash, "pct" not "%".</p>
+<p>The Mac stays awake with the lid open; <code>caffeinate -i</code> holds off idle sleep only. Two bots now
+mean up to four resting orders abandoned if it sleeps — the reason P10 (host resilience) is queued.</p>
 </div>
 </section>
 
-<!-- ============================================================ -->
 <section id="best-practices">
 <h2>Best practices &amp; next steps</h2>
 
 <h3>Where this aligns with prevailing practice</h3>
+<p><b>Quoting around an inventory-skewed reservation price is still the textbook design, now twice over.</b>
+Hummingbot's guide to the Avellaneda &amp; Stoikov strategy states the rule this system's <code>lean = 2δ·(q −
+target)</code> implements: "At q = 0, the reservation price equals the market mid-price; at q &lt; 0, the trader is
+short, raising the reservation price to favor buy orders; at q &gt; 0, the trader is long, lowering the reservation
+price to favor sell orders", with the deviation q measured against a user-specified inventory target percentage
+(<a href="https://hummingbot.org/blog/guide-to-the-avellaneda--stoikov-strategy/">Guide to the Avellaneda &amp;
+Stoikov Strategy</a> — hummingbot.org). Both bots run exactly that shape with <code>target 0.25</code>; the
+difference remains that their skew comes from a risk-aversion coefficient and a volatility estimate, while ours
+was swept.</p>
+<p><b>Marking fills at a later horizon is the standard measure of maker quality.</b> Databento's microstructure
+guide defines a markout as "the price change within some arbitrary time interval before or after an event, such as
+a fill", calculated "mid-to-mid, trade-to-mid (fill-to-mid), or trade-to-trade" and used by liquidity providers "to
+determine the toxicity and adverse selection from price takers"
+(<a href="https://databento.com/microstructure/markout">What are markouts</a> — databento.com). The 30-s
+headline is a 30-second fill-to-mid markout plus the reward; the at-fill number was a zero-second one. P9 also
+already reports +5 min beside it in the backtest digests, which is the markout-curve practice the guide describes.</p>
+<p><b>Modelling the queue ahead of a resting order, and letting it shrink, is what serious backtesters do.</b>
+hftbacktest documents the same two mechanisms R2 combines: a risk-averse queue model where "the order queue position
+will be advanced only if a trade happens at the price", a probabilistic one where "the decrease in quantity happens
+at both before and after the queue position", and a <code>PartialFillExchange</code> where orders "will be executed
+based on the quantity of the order book"
+(<a href="https://hftbacktest.readthedocs.io/en/py-v2.1.0/order_fill.html">Order Fill</a> — hftbacktest.readthedocs.io).
+R2 sits between the two queue models — it advances on at-price prints <i>and</i> on observed shrinkage of our own
+level — and its partial through-fill is the partial-fill exchange. The difference is that ours was picked by
+scoring four rules against 15,549 real orders rather than assumed.</p>
+<p><b>One writer per SQLite database, all processes on one host — and two databases is the natural way to get
+two writers.</b> SQLite's own WAL page: "since there is only one WAL file, there can only be one writer at a time",
+and "All processes using a database must be on the same host computer; WAL does not work over a network filesystem…
+because WAL requires all processes to share a small amount of memory"
+(<a href="https://www.sqlite.org/wal.html">Write-Ahead Logging</a> — sqlite.org). Giving the ETH bot
+<code>eth_ledger.sqlite</code> instead of a second writer on the XRP ledger is the correct reading of the first
+sentence; keeping both on the bare Mac (decision 21) satisfies the second.</p>
+<p><b>Splitting a per-account rate limit below the published number is the conservative form of what the
+exchange asks for.</b> Upbit's current developer documentation puts the order group at "up to 8 requests per second"
+per account and the default group at 30/s, with a <code>remaining-req</code> header of the form
+<code>group=default; min=1800; sec=29</code>, and warns that continuing to send after a 429 "may be temporarily
+blocked by the system… an HTTP 418 status code and the block duration will be returned", with "progressively longer
+block durations" for repeat offenders (<a href="https://global-docs.upbit.com/reference/rate-limits">Rate
+Limits</a> — global-docs.upbit.com). The workspace caps itself at 6/s and splits that 3 + 3, a margin below the
+published 8; a 418 would take both bots down at once, which is why the manager treats it as the one exit-2 reason
+it may ask triage about.</p>
 
-<p><strong>Quoting around a reference price, skewed by inventory, is the standard design.</strong> The
-Avellaneda–Stoikov framework — the reference point for essentially every open-source market maker —
-starts from the same insight: quote around a <em>reservation price</em>, the mid shifted against your
-current inventory, so that "at q &gt; 0, the trader is long, lowering the reservation price to favor
-sell orders; at q &lt; 0, the trader is short, raising the reservation price to favor buy orders"
-(<a href="https://hummingbot.org/blog/guide-to-the-avellaneda--stoikov-strategy/">Hummingbot's guide
-to the Avellaneda &amp; Stoikov strategy</a> — hummingbot.org). Our <code>lean = k·(q − target)</code>
-with <code>k = 2δ</code> is exactly that shift, and our <code>target</code> is their inventory-target
-parameter. The difference is that theirs is derived from a risk-aversion coefficient γ and a
-volatility estimate, while ours was <em>swept</em>: <code>k = 2δ</code> is a grid result, not a
-closed-form.</p>
-
-<p><strong>One writer per SQLite database is the documented rule, not a stylistic choice.</strong>
-SQLite's own WAL documentation states plainly that "since there is only one WAL file, there can only
-be one writer at a time", and that "all processes using a database must be on the same host computer;
-WAL does not work over a network filesystem… because WAL requires all processes to share a small
-amount of memory" (<a href="https://www.sqlite.org/wal.html">Write-Ahead Logging</a> — sqlite.org).
-ADR D11's single-writer ledger is the correct reading of that; P7's discovery that a Docker bind
-mount breaks lock sharing between host and container is the same constraint arriving through a door
-nobody was watching.</p>
-
-<p><strong>Restart-on-failure with a retry budget is the conventional supervision shape.</strong>
-Docker's own restart policies offer <code>on-failure</code>, which restarts "if it exits due to an
-error, which manifests as a non-zero exit code", with a <code>:max-retries</code> limit
-(<a href="https://docs.docker.com/engine/containers/start-containers-automatically/">Start containers
-automatically</a> — docs.docker.com). <code>bin/bot.sh __supervise</code> implements that shape by
-hand — restart on exit 1, at most 5 per rolling hour — which is also why the compose file
-deliberately sets <code>restart: "no"</code>: two supervisors with different opinions about a risk
-stop is worse than one.</p>
-
-<h3>Where this deliberately diverges — and why that is defensible</h3>
-
-<ul>
-<li><strong>No per-fill hedge, and no automatic rebalance at all.</strong> Every conventional market
-maker hedges or rebalances inventory. Here both are refused on measured cost: the hedge is 2.8× the
-reward, and 48 backtested rebalance variants produced <em>0 wins</em> on core alpha. The divergence
-is legitimate because the venue's fee asymmetry — the reward market and the deep hedging market are
-different markets with different fee schedules — is unusual and temporary.</li>
-<li><strong>Restart-on-failure, but explicitly <em>not</em> on a risk stop.</strong> Docker's
-<code>on-failure</code> would happily restart a bot that stopped because it lost ₩100,000 today. The
-exit-code contract splits "crashed" (exit 1, restartable) from "decided to stop" (exit 2, never), and
-that distinction does not exist in generic supervisors. It has to be encoded in the application.</li>
-<li><strong>An LLM with one question and three legal answers.</strong> The prevailing direction of
-travel is toward broader agent autonomy. This system went the other way on purpose: everything that
-could be a dated rule or a measured number was made one, and the model was left with the single
-judgment that is genuinely textual. That is a smaller LLM footprint than the field default, and the
-justification is written down as ADR D21 rather than assumed.</li>
-</ul>
+<h3>Where this deliberately diverges — and why that is defensible here</h3>
+<p><b>The sleeve is a ceiling, not an allocation.</b> A general multi-strategy framework would hold a per-strategy
+budget and reserve funds as orders are placed. Here each bot merely refuses to <i>believe</i> in more USDT than its
+share, and the exchange arbitrates any real collision with an <code>insufficient_funds</code> reject. That is
+legitimate because a full bid is 20 % of a sleeve (≈ 184 USDT) against a 1,373 USDT balance — the two bots cannot
+plausibly collide — and because the reject is already a first-class, counted, alerting event in the sink. It stops
+being legitimate the day the sleeves are sized close to the balance.</p>
+<p><b>The conservative fill rule was kept even though it fails the parity bar.</b> A backtester tuning for
+agreement with live would have moved to R3 (inside ±25 %) or blended the rules. P9 kept R2 with recall 1.000 and
+size ratio 1.003 and reported the −37 % count gap, because every P9 decision is a capacity decision and a floor is
+the right side to err on. The gap is written down in decision 13 for whoever sizes the next deposit.</p>
+<p><b>Still no per-fill hedge and no automatic rebalance</b> — v2's argument stands, and USDT-ETH strengthens it:
+79 % of that market's simulated alpha is the maker reward, which any taker leg would give back several times
+over.</p>
+<p><b>The manager watches one of the two bots.</b> The field default would be to supervise both from one place.
+P9 shipped the second bot without touching the manager on purpose (a manager change is a change to the one
+component allowed to restart a live bot, and the phase's review was already the largest of the project). The cost
+is stated rather than hidden: an ETH risk stop is silent until tailed.</p>
 
 <h3>Next steps</h3>
-<ol>
-<li><strong>Take the D18 checkpoint deliberately, and record which surface you read.</strong> It is
-due ≈2026-09-01 22:00 KST. The window is the full-stage <em>latest session</em> — the same one the
-report, the gate and the dashboard share. Do not compute a second window; a second window is a second
-answer.</li>
-<li><strong>Close the alerting gap.</strong> If the manager leaves the bot down, the <em>only</em>
-surfaces that say so are an audit line, <code>make stack-status</code>, and a log file. The dashboard
-says nothing about the manager at all. A phone-visible alert is the highest-value small addition
-left, and it is cheap: the audit trail is already one JSON line per tick.</li>
-<li><strong>Decide the manager's post-event status explicitly.</strong> The standing authorisation for
-an agent to restart the bot was written for an unattended run. When you are back at the keyboard,
-either renew it in writing or stop the manager — do not let it lapse into ambiguity.</li>
-<li><strong>Run the cutover after 2026-09-11, not before.</strong> <code>RUNBOOK.md</code> §9 is
-written and rehearsed in parts. Uptime is itself return, so mid-event it is pure downside; afterwards
-it is free.</li>
-</ol>
+<p><b>Clear or fail the P9 acceptance gate.</b> The phase review passed and the gate is still open
+(<code>python3 scripts/workflow.py accept-gate P9 --clear</code>). Clearing it accepts the code, the headline and
+the runbook; it does not require any further money step. Until it is cleared the phase cannot be marked done.</p>
+<p><b>Give the ETH bot a watcher.</b> The cheapest correct move is not to generalise the manager but to add the
+<code>eth_supervisor.out</code> tail to whatever you already look at every few hours, and — the P10 intent —
+an off-Mac dead-man switch that cancels all orders when the host heartbeat goes stale (deferred D43). A frozen
+Mac now abandons up to four resting orders.</p>
+<p><b>Decide the ₩10M deposit on the ETH numbers, not the XRP ones.</b> XRP saturates at ≈ ₩10M; ETH does not
+saturate inside ₩20M. If the deposit lands, the runbook's ₩5M + ₩5M split is the documented target, and at that
+size the ₩50,000 withholding cliff binds (≈ ₩14.8k withheld on ≈ ₩67k gross) — the D17 arithmetic in RUNBOOK
+§10.6 already carries it. Do it with the manager stopped first and hand-placed legs, never <code>convert</code>.</p>
+<p><b>Plan the end of the event.</b> It closes 2026-09-11 23:59 KST. Uptime is return until then, so the container
+cutover (ADR D20) and the docs phase that owes nine of eleven durable docs their P9 truth (four ADR candidates,
+the D8 amendment, D18's outcome) belong after it, not before.</p>
 </section>
 
-<!-- ============================================================ -->
 <section id="quiz">
 <h2>Quiz</h2>
-<p class="src">Five questions. Click an answer to see whether it is right and why.</p>
+<p>Five questions on the parts that changed. Click an answer to see whether it is right and why.</p>
 
 <div class="q" id="q1">
-  <p><strong>1.</strong> The live set has <code>band = 0.25</code> and <code>size_pct = 20</code>. You
-  want bigger orders, so you raise <code>size_pct</code> to 30 and leave everything else alone. What
-  happens?</p>
-  <button class="opt" data-correct="false">Orders get 50 % bigger and inventory swings more.</button>
-  <button class="opt" data-correct="false">The exchange starts rejecting orders for insufficient funds.</button>
-  <button class="opt" data-correct="true">Neither side can ever be placed — the bot goes silent.</button>
-  <button class="opt" data-correct="false">Only the ask side is affected, because the bid is paid for in USDT.</button>
-  <p class="why" hidden>The post-fill band requires <code>size_frac ≤ band</code> even at
-  <code>dev = 0</code>. At <code>size_frac = 0.30 &gt; band = 0.25</code> no order passes the test, so
-  none is ever constructed — the exchange never sees anything to reject. This is exactly the trap that
-  made every row above <code>size_pct = 10</code> in the P1 grid a dead run.</p>
+  <p><strong>1.</strong> Both bots read the same account balance of 1,373 USDT and each clamps it to
+  <code>0.75 × 1,267,965 / 1,377 ≈ 691 USDT</code>. Which statement about the clamp is true?</p>
+  <button class="opt" data-correct="false">Each bot has 691 USDT reserved for it; the other bot cannot touch that money.</button>
+  <button class="opt" data-correct="true">A bot never sizes a bid against more than its own sleeve; a genuine shortfall still comes back from the exchange as an <code>insufficient_funds</code> reject.</button>
+  <button class="opt" data-correct="false">The two clamps always sum to the account balance, so nothing is left unallocated.</button>
+  <button class="opt" data-correct="false">The exchange enforces the split through per-market sub-accounts created at go-live.</button>
+  <p class="why" hidden>The clamp caps <code>hold_usdt</code>, which only the bid-side balance cap reads; it reserves nothing at the exchange, and 2 × 691 = 1,382 already exceeds the 1,373 held. A real collision surfaces where it always did — as the exchange's reject, which the sink counts and the runbook watches.</p>
 </div>
 
 <div class="q" id="q2">
-  <p><strong>2.</strong> A backtested variant shows net PnL up <strong>138.9 %</strong> against its
-  baseline, with the entire gain in <code>inventory_pnl</code>. Why was it rejected anyway?</p>
-  <button class="opt" data-correct="false">Net PnL is unreliable because the fill model is optimistic.</button>
-  <button class="opt" data-correct="true">The gain is directional drift, which <code>core_alpha</code> exists to strip out — a passive control that merely held the split returned +1.31 %/14 d on drift alone.</button>
-  <button class="opt" data-correct="false">The variant failed the stress column at 1,000 ms latency.</button>
-  <button class="opt" data-correct="false">It was rejected on cost: the taker legs exceeded the fee budget.</button>
-  <p class="why" hidden>ADR D2. <code>inventory_pnl</code> is the mark on held inventory, i.e. what the
-  price did while you were holding — luck, not strategy output. Rank on net PnL and pure drift tops
-  the table. <code>core_alpha = trading_pnl + reward_net − hedge_cost</code> excludes marks by
-  construction, and <code>inv_share &gt; 0.5</code> disqualifies a candidate whose "alpha" is really
-  drift. On core alpha, 0 of 48 rebalance points beat baseline.</p>
+  <p><strong>2.</strong> Over the live window fill rule R2 produces 37 simulated fills against 59 real ones (−37 %,
+  outside the ±25 % parity bar), while R3 lands inside the bar. Why is R2 the default anyway?</p>
+  <button class="opt" data-correct="false">R3 was not implemented in the paper sink, so it could not be the default.</button>
+  <button class="opt" data-correct="false">R2 runs faster, and the 87-hour replay had to fit the shared Mac's compute rule.</button>
+  <button class="opt" data-correct="true">R2 never misses a real fill (recall 1.000) and sizes each one within 0.3 %; R3 buys its fill count with 2.5× fill size. The count gap was reported as a floor rather than tuned away, because every P9 number is a capacity decision.</button>
+  <button class="opt" data-correct="false">The operator picked R2 at the DECOMP2 gate along with the headline mark.</button>
+  <p class="why" hidden>Decision 13: highest F1 wins, and the honesty rule (decision 6) says the parity gap is stated, not closed. R3's notional optimism is exactly the kind of error that made the old rule over-count by 2×.</p>
 </div>
 
 <div class="q" id="q3">
-  <p><strong>3.</strong> The manager may restart a bot that stopped with <code>exit 2</code> for
-  <code>http_418</code>, after a 900 s cool-down and if triage agrees. It may <em>never</em> restart
-  one that stopped with <code>exit 2</code> for the daily loss stop. What is the principle?</p>
-  <button class="opt" data-correct="false">418 is an HTTP error, so it is not a real risk stop.</button>
-  <button class="opt" data-correct="true">A rate-limit block is a transient condition that time alone repairs; a loss stop is a decision about capital, which is the operator's to revisit.</button>
-  <button class="opt" data-correct="false">The daily loss stop already restarts itself at the KST day boundary.</button>
-  <button class="opt" data-correct="false">418 stops do not count against the 3-actions-per-day cap.</button>
-  <p class="why" hidden>The split is between conditions that <em>heal</em> and conditions that
-  <em>mean something</em>. Waiting out a 418 changes the world; restarting after a loss stop changes
-  nothing except that you are losing money again. Everything unrecognised is treated as terminal too —
-  the default answer is always "leave it down".</p>
+  <p><strong>3.</strong> On 2026-09-01 the at-fill mark gave −₩9,259 and the +30 s mark gave +₩6,909 on the same 34
+  fills. What was wrong with the at-fill mark?</p>
+  <button class="opt" data-correct="false">The bot's order book was stale at the fill instant, so it marked against an old mid.</button>
+  <button class="opt" data-correct="true">The book was fresh, but the mid it read was the post-trade touch the filling sweep had just pushed one to three levels away — a zero-second markout that measures the sweep, not the fill.</button>
+  <button class="opt" data-correct="false">The KRW-USDT conversion rate used for the at-fill number was from the wrong hour.</button>
+  <button class="opt" data-correct="false">The fills really were adversely selected; the 30-s number is the optimistic one.</button>
+  <p class="why" hidden>The ledger's <code>mid_at_fill</code> equals the raw recorded mid at the fill instant (|Δ| p50/p90 0.0 bps), so a freshness gate would have changed nothing. The 50-bps band and the 30-s headline both address the same artefact; the realised FIFO PnL for the day was +₩2,440.</p>
 </div>
 
 <div class="q" id="q4">
-  <p><strong>4.</strong> Why is the ADR D18 δ change applied as <code>--delta-bps 11</code> at a
-  restart, instead of editing <code>research/live/xrp_anchor.json</code> or hot-reloading it?</p>
-  <button class="opt" data-correct="false">Because the JSON file is read-only inside the container mount.</button>
-  <button class="opt" data-correct="false">Because hot-reloading would cancel the resting orders.</button>
-  <button class="opt" data-correct="true">Because the file records the operator-confirmed set and this is an experiment — and δ is read at start only, so a restart is the only door.</button>
-  <button class="opt" data-correct="false">Because the manager is not permitted to run <code>bin/bot.sh</code> at all.</button>
-  <p class="why" hidden>Two reasons stacked. First, provenance: <code>xrp_anchor.json</code> is the set
-  the operator confirmed on 2026-08-30, and an experimental δ has no business overwriting that record.
-  Second, mechanism: nothing in the bot hot-reloads — parameters are read once at start — so a restart
-  is the only way to change one, and the supervisor makes a restart cheap. The checkpoint therefore
-  costs exactly one restart.</p>
+  <p><strong>4.</strong> δ is 14 bps on USDT-XRP and 1.4 bps on USDT-ETH — a factor of ten. What justifies the
+  difference?</p>
+  <button class="opt" data-correct="false">ETH is less volatile than XRP, so the anchor residual σ is ten times smaller.</button>
+  <button class="opt" data-correct="true">δ is read against the book: ETH's median spread is 2.9 bps (70 ticks of 0.01) and 79 % of its alpha is the maker reward, so 1.4 bps still sits inside the spread; 14 bps there would be ≈ 340 ticks out and never fill.</button>
+  <button class="opt" data-correct="false">The tick on ETH is 0.01 instead of 0.001, and δ is always set to about two ticks.</button>
+  <button class="opt" data-correct="false">Upbit pays a lower maker reward on USDT-ETH, so the quotes have to be tighter to earn the same.</button>
+  <p class="why" hidden>One ETH tick is 0.042 bps, so δ 1.4 bps is ≈ 34 ticks and the 0.5-bps re-quote gate ≈ 12 ticks; on XRP one tick is 7.5 bps and δ 14 ≈ 1.9 ticks on a 2-tick book. The reward rate is the same 0.04 % on both markets — what differs is how much of the edge the reward is.</p>
 </div>
 
 <div class="q" id="q5">
-  <p><strong>5.</strong> The fair price is <code>last(KRW-XRP) / last(KRW-USDT)</code> from trade ticks
-  or book mids — <em>never</em> candles. And the basis EWMA half-life is 1,800 s even though 300 s
-  scored 55 % higher. What do those two choices have in common?</p>
-  <button class="opt" data-correct="false">Both reduce the number of REST calls against Upbit's rate limits.</button>
-  <button class="opt" data-correct="true">Both refuse to let the strategy track the event pair's own noisy mid, which would convert anchored quoting into disguised directional trading.</button>
-  <button class="opt" data-correct="false">Both are required for the backtest to stay bit-reproducible.</button>
-  <button class="opt" data-correct="false">Both were forced by the 15 s <code>KRW-USDT</code> staleness window.</button>
-  <p class="why" hidden>A candle is an aggregate that lags and smooths; a 300 s EWMA chases the thin
-  pair's own mid closely enough that <code>f'</code> stops being an independent reference. In both
-  cases you lose the thing the anchor was for — an opinion about fair value that the thin book did not
-  supply. The 300 s point's <code>inv_share</code> of 1.50 is that failure showing up in the metrics:
-  more "profit" than strategy output, i.e. drift.</p>
+  <p><strong>5.</strong> Upbit sets <code>caution.TRADING_VOLUME_SOARING</code> on USDT-XRP while the bot is running.
+  After decision 25, what does the bot do?</p>
+  <button class="opt" data-correct="false">Cancels both sides, waits for the flag to clear, then resumes (a <code>pause</code>).</button>
+  <button class="opt" data-correct="false">Exits 2 with <code>eligibility_failed</code>; the manager restarts it once the flag clears.</button>
+  <button class="opt" data-correct="true">Keeps quoting and emits a warn-level <code>market_caution</code> event at each hourly check; only the 거래유의 <code>warning</code> flag, a non-zero maker fee or a non-active market still ends the run with exit 2.</button>
+  <button class="opt" data-correct="false">Halves its order size until the next hourly eligibility check.</button>
+  <p class="why" hidden>The six-line change in <code>risk.py</code> / <code>preflight.py</code>: <code>ok</code> depends on <code>warning</code> only, a caution flag is recorded and warned about, and preflight shows WARN. The XRP bot was started under exactly that flag at 17:11 KST on re-cut day.</p>
 </div>
+
+<p class="small"><b>Where the evidence lives:</b>
+<code>works/phases/active/P9/phase.md</code> (decisions 12–25, the source of every P9 number here) ·
+<code>research/results/p9_reconcile/RECONCILE.md</code> (fill rules, the Sep-1 diagnosis) ·
+<code>research/results/p9_xrp/XRP.md</code> (re-sweep, capital ladder, basis contamination) ·
+<code>research/results/p9_mm/MM.md</code> (multi-market ranking, touch-exit diagnostic) ·
+<code>research/live/xrp_anchor.json</code> and <code>eth_anchor.json</code> (the live sets, with the re-cut
+in their <code>note</code>) · <code>research/live/RUNBOOK.md</code> §10 (the deploy procedure, whose ₩10M
+numbers are now the deferred plan, not the live state) ·
+<code>src/arb/live/orders.py</code>, <code>src/arb/upbit/rest.py</code>, <code>bin/market-bot.sh</code>
+(the three files worth re-reading first) · <code>data/live/manager/actions.jsonl</code> (D18's two rows).</p>
 </section>
 
-<hr>
-<p class="src"><strong>Where the evidence lives:</strong>
-<code>research/recommendation.md</code> (the P1 GO, §3 rejections, §5 arithmetic, §6 sized risks) ·
-<code>research/results/p4b_sizing/P4_SIZING2.md</code> (the 912-run band-matched sizing sweep) ·
-<code>research/live/xrp_anchor.json</code> (the live set, with its reasoning in the <code>note</code>) ·
-<code>research/live/RUNBOOK.md</code> (the operator procedure) ·
-<code>docs/current/decisions.md</code> (ADRs D1–D21) ·
-<code>docs/current/operations.md</code> (commands, runtime, the daily loop) ·
-<code>src/arb/live/quote.py</code> and <code>src/arb/manager/core.py</code> (the two files worth
-re-reading first).</p>
-
 <script>
-document.querySelectorAll('.q').forEach(function (q) {
-  var why = q.querySelector('.why');
-  q.querySelectorAll('.opt').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var right = btn.dataset.correct === 'true';
-      btn.classList.add(right ? 'correct' : 'incorrect');
-      if (!right) {
-        var ans = q.querySelector('.opt[data-correct="true"]');
-        if (ans) ans.classList.add('correct');
-      }
-      if (why) why.hidden = false;
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (right) {
+          q.querySelectorAll('.opt').forEach(function (b) { if (b !== btn && b.dataset.correct !== 'true') { b.disabled = true; } });
+        }
+        if (why) why.hidden = false;
+      });
     });
   });
-});
 </script>
 </body>
 </html>
