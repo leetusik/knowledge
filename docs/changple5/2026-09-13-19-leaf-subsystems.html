@@ -1,0 +1,1389 @@
+<!--kb
+title: "Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge"
+date: 2026-09-13
+tags:
+  - changple5
+  - mbti
+  - consultations
+  - vocky
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+           line-height: 1.65; font-size: 17px; }
+    h1 { line-height: 1.25; font-size: 1.9rem; }
+    h2 { margin-top: 2.6rem; line-height: 1.3; border-bottom: 1px solid #8884; padding-bottom: .3rem; }
+    h3 { margin-top: 2rem; line-height: 1.35; }
+    h4 { margin-top: 1.5rem; margin-bottom: .4rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           font-size: .92em; background: #8881; padding: .08em .32em; border-radius: 4px; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+           background: #f4f4f4; color: #111; padding: .8rem .9rem; border-radius: 6px;
+           font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           font-size: .86rem; line-height: 1.5; }
+    pre code { background: none; padding: 0; font-size: 1em; }
+    .callout { border-left: 4px solid #4a7; background: #f0f8f4; color: #111;
+               padding: .75rem 1rem; margin: 1.3rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: #d88; background: #fbf0f0; }
+    .callout.def  { border-left-color: #78a; background: #eef3fa; }
+    .callout p:first-child { margin-top: 0; }
+    .callout p:last-child { margin-bottom: 0; }
+    figure { margin: 1.6rem 0; }
+    figcaption { font-size: .88rem; opacity: .78; margin-top: .5rem; text-align: center; }
+    svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    table { border-collapse: collapse; width: 100%; font-size: .92rem; margin: 1.2rem 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid #8886; padding: .42rem .55rem; text-align: left; vertical-align: top; }
+    th { background: #8881; }
+    nav ol { line-height: 1.9; }
+    .q { border: 1px solid #8886; border-radius: 8px; padding: .9rem 1rem; margin: 1.1rem 0; }
+    .q p:first-child { margin-top: 0; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
+              padding: .55rem .75rem; cursor: pointer; border: 1px solid #8887;
+              border-radius: 6px; background: #8881; font: inherit; font-size: .95rem; color: inherit; }
+    .q .opt:hover { border-color: #888; }
+    .q .opt.correct   { background: #d6f5d6; color: #111; border-color: #4a7; }
+    .q .opt.incorrect { background: #f7d6d6; color: #111; border-color: #d88; }
+    .q .why { margin: .6rem 0 0; font-size: .93em; background: #8881; padding: .6rem .75rem;
+              border-radius: 6px; }
+    .cube { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; margin: 1rem 0; }
+    .cube div { text-align: center; padding: .45rem .2rem; border: 1px solid #8886;
+                border-radius: 6px; font-family: ui-monospace, Menlo, monospace; font-size: .9rem; }
+    .cube div.hl { background: #4a71; border-color: #4a7; font-weight: 700; }
+    .lead { font-size: 1.04rem; opacity: .95; }
+    .small { font-size: .9rem; opacity: .85; }
+    hr { border: none; border-top: 1px solid #8884; margin: 2.4rem 0; }
+  </style>
+</head>
+<body>
+
+<h1>Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge</h1>
+
+<p class="lead">Explainer #19 of the changple5 curriculum, and the last one that walks code.
+The previous page was
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/18-billing-toss">#18 — Billing: the Toss
+subscription lifecycle from checkout to reconciliation</a>. This one visits the three smallest
+apps in the backend, the ones nothing else waits on: <code>mbti</code>, <code>consultations</code>,
+and <code>feedback</code> (plus its twin inside the agent). They are small enough to read in an
+afternoon and, precisely because they are small, they show this repository's house patterns with
+nothing else in the frame.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — three leaves, one page</a></li>
+    <li><a href="#intuition">Intuition — an instrument, a ledger, and a bridge</a></li>
+    <li><a href="#code">Code — the three walks (and how they compare)</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background — three leaves, one page</h2>
+
+<p>Most of this curriculum has walked load-bearing machinery: the chat turn (#5), retrieval (#7),
+ingestion (#8), the content agent (#13–#15), Celery (#16), the operator console (#17), billing
+(#18). Every one of those has other things standing on top of it, which is why each needed a page
+of its own.</p>
+
+<p>The three subsystems here are the opposite. In graph terms they are <em>leaves</em>: no part of
+the product's main paths — a chat turn, a retrieval call, an ingestion run, a content draft, a
+subscription renewal — reads them, calls them, or waits on them. Pull any one of them out and the
+rest of changple5 keeps working exactly as before.</p>
+
+<div class="callout def">
+<p><strong>"Leaf", measured rather than asserted.</strong> Grepping the backend for inbound imports
+gives a short and honest list:</p>
+<ul>
+<li><code>feedback</code> — <strong>zero</strong> inbound imports. Nothing in the repo imports it.</li>
+<li><code>mbti</code> — <strong>one</strong>: <code>accounts/usage.py</code> counts a user's
+<code>MBTISubmission</code> rows for <code>GET /api/auth/usage</code>. A count, not a behaviour.</li>
+<li><code>consultations</code> — <strong>one</strong> read (<code>accounts/operator_serializers.py</code>
+counts a user's 상담신청 for the operator user-detail 활동 strip) and <strong>two writes</strong> into it
+(the consulting follow-up in <code>conversations/views.py</code>, and <code>mbti</code>'s own lead
+endpoint). Writes point <em>into</em> a leaf; they do not make it a dependency.</li>
+</ul>
+<p>Both count-reads use function-local imports, so even the module-load graph stays clean.</p>
+</div>
+
+<p>Their HTTP mount points, from <code>apps/backend/config/urls.py</code>:</p>
+
+<pre><code>path("api/mbti/",                  include("mbti.urls")),
+path("api/consultation-requests/", include("consultations.urls")),
+path("api/",                       include("feedback.urls")),   # -&gt; /api/feedback, /api/admin/feedback…</code></pre>
+
+<p>The <code>feedback</code> app mounts at bare <code>api/</code> on purpose: it owns
+<em>both</em> its user-facing capture route and its own <code>/api/admin/feedback…</code> operator
+routes, rather than leaking a Vocky client into the <code>operators</code> app (explainer #17).</p>
+
+<p>And their sizes, counting non-test, non-migration Python:</p>
+
+<table>
+<thead><tr><th>App</th><th>Lines</th><th>Of which</th></tr></thead>
+<tbody>
+<tr><td><code>apps/backend/mbti</code></td><td>~2,268</td><td><code>metadata.py</code> is 1,162 of them — result copy, not logic. The engine is 663 lines (<code>typology</code> + <code>items</code> + <code>validation</code> + <code>scoring</code>).</td></tr>
+<tr><td><code>apps/backend/consultations</code></td><td>~919</td><td>two models, one write seam, one Celery task, one ingress, four operator routes.</td></tr>
+<tr><td><code>apps/backend/feedback</code></td><td>~1,086</td><td>no models at all — 346 lines of HTTP client, 278 of capture view, 223 of operator proxy.</td></tr>
+<tr><td><code>apps/agent/app/chat/vocky_feedback*.py</code></td><td>745</td><td>562 transport + 183 LangChain tool facade.</td></tr>
+</tbody>
+</table>
+
+<p>So why put them on one page instead of writing three short ones? Because read together they are a
+compact museum of how this repository does things:</p>
+
+<ul>
+<li><strong><code>mbti</code> is a measurement model as pure Python.</strong> One module is declared
+the single source of truth for the typology, and every other module derives from it rather than
+restating it — to the point where the item count, the axis count and the display-name maps are all
+checked by <code>assert</code> statements that run at import time.</li>
+<li><strong><code>consultations</code> is a record designed to outlive its source.</strong> It
+snapshots the text it was created from, because the thing that produced that text gets hard-deleted
+30 days later.</li>
+<li><strong><code>feedback</code> is a dormant-by-default external integration that exists
+twice</strong> — once as a REST proxy on Django, once as an MCP client inside the agent — with
+different credentials, different transports, and deliberately different contracts about how they are
+allowed to fail.</li>
+</ul>
+
+<p>The rest of the page is three independent walks, in that order, followed by a short comparison
+that puts them side by side. Nothing here depends on anything else here, so you can read the three
+sections in any order you like.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition — an instrument, a ledger, and a bridge</h2>
+
+<h3>1. 창업가 MBTI is an instrument, and instruments must be reproducible</h3>
+
+<p>창업가 MBTI ("founder MBTI") is a 40-question quiz on the product's <code>/mbti</code> page. You
+answer each statement on a five-point 그렇다/아니다 scale, and you get back one of 16 founder types
+plus a "준비도" (readiness) reading.</p>
+
+<p>The temptation with something like this is to ask a language model to judge the answers. This
+code does the opposite, and the module docstring says so out loud: the scorer is
+<em>"deterministic, LLM-free … pure function of the answers"</em>. Two consequences follow, and they
+drive the whole design.</p>
+
+<p><strong>First: the same answers must always give the same type.</strong> A user who retakes the
+quiz identically must land on the identical type, and an operator must be able to re-derive an old
+result years later. That is why the raw submission is stored verbatim and the type is recomputed
+server-side on every submit rather than trusted from the client.</p>
+
+<p><strong>Second: the arithmetic must have no floating-point ambiguity.</strong> Each axis is a
+tug-of-war between two poles. Eight statements load on it; agreeing with a statement pulls toward
+the pole that statement points at. Sum everything up and you get a number; whichever side of the
+midpoint it lands on wins.</p>
+
+<figure>
+<svg viewBox="0 0 700 200" role="img" aria-label="A number line from 8 to 40 with the midpoint at 24 marked, showing the C pole below 24, the G pole above 24, and the tie at exactly 24.">
+  <line x1="60" y1="90" x2="640" y2="90" stroke="#888" stroke-width="2"/>
+  <line x1="350" y1="60" x2="350" y2="120" stroke="#d88" stroke-width="3"/>
+  <text x="350" y="50" text-anchor="middle" font-size="13" fill="#888">midpoint = 3n = 24</text>
+  <text x="60" y="115" font-size="12" fill="#888">8</text>
+  <text x="632" y="115" font-size="12" fill="#888">48</text>
+  <text x="200" y="145" text-anchor="middle" font-size="14" fill="#888">raw &lt; 24 → 검증형 C</text>
+  <text x="500" y="145" text-anchor="middle" font-size="14" fill="#888">raw &gt; 24 → 감각형 G</text>
+  <text x="350" y="175" text-anchor="middle" font-size="13" fill="#d88">raw = 24 exactly → tie-break → G</text>
+  <circle cx="500" cy="90" r="7" fill="#4a7"/>
+  <text x="500" y="78" text-anchor="middle" font-size="12" fill="#4a7">raw = 36</text>
+</svg>
+<figcaption>One axis of the 창업가 MBTI, with n = 8 items. The midpoint is reachable exactly, so the
+tie needs a rule — not a rounding convention.</figcaption>
+</figure>
+
+<p>Here is the subtlety that makes this more than a sum. The neutral answer (보통이다) is the integer
+3, and each item's two poles always sum to 6. So an "I felt nothing either way about any of these"
+profile lands on <em>exactly</em> the midpoint — not near it, on it. A float comparison
+(<code>raw &gt; 1.5 * n</code>) would be answering a question about equality with a data type that is
+bad at equality. The code instead compares doubled integers, <code>2*raw</code> against
+<code>6*n</code>, and gives the exact tie its own named branch. We will watch it happen in the Code
+section with real numbers.</p>
+
+<div class="callout">
+<p><strong>준비도 is not a fifth axis.</strong> Questions 33–40 ask whether you have <em>already
+done</em> concrete preparation (separated startup capital from operating capital, computed a
+break-even point, agreed roles with partners in writing). They are summed plainly, 8 to 40, and
+mapped to one of four bands. They never touch the typology. Mixing them in would have been the
+obvious shortcut and would have made the 16 types mean something different for a prepared founder
+than for an unprepared one.</p>
+</div>
+
+<h3>2. A consultation request is a ledger entry that must outlive its source</h3>
+
+<p>상담신청 ("consultation request") is what happens when a visitor asks to be contacted. Four
+different surfaces can produce one: the end of a 컨설팅 session, the 무료진단 flow on the apex
+site, the plain <code>/contact</code> form, and — new in this page — the MBTI result screen.</p>
+
+<p>The interesting design decision is not the four sources; it is what the row <em>stores</em>. A
+consultation raised at the end of a guest 진단 session refers to a report that lives in a
+<code>ConversationSession</code>. Those anonymous sessions are hard-deleted by a nightly Celery beat
+job 30 days later (explainer #3 for guests, #16 for the beat schedule). If the consultation row
+merely pointed at the session, the operator who opens it on day 31 would find an empty page.</p>
+
+<figure>
+<svg viewBox="0 0 700 260" role="img" aria-label="Timeline showing a guest session and a consultation request; at day 30 the session is deleted and the FK becomes null, while the snapshot survives.">
+  <rect x="40" y="30" width="290" height="64" rx="8" fill="#78a2" stroke="#78a"/>
+  <text x="185" y="55" text-anchor="middle" font-size="13" fill="#888">ConversationSession (guest 진단)</text>
+  <text x="185" y="76" text-anchor="middle" font-size="12" fill="#888">report text + citations live here</text>
+
+  <rect x="380" y="30" width="280" height="150" rx="8" fill="#4a72" stroke="#4a7"/>
+  <text x="520" y="55" text-anchor="middle" font-size="13" fill="#888">ConsultationRequest</text>
+  <text x="520" y="78" text-anchor="middle" font-size="12" fill="#888">content_snapshot = "…report text…"</text>
+  <text x="520" y="98" text-anchor="middle" font-size="12" fill="#888">cited_documents = [ {post_id,…} ]</text>
+  <text x="520" y="118" text-anchor="middle" font-size="12" fill="#888">name / phone / email</text>
+  <text x="520" y="140" text-anchor="middle" font-size="12" fill="#888">session → (FK, SET_NULL)</text>
+  <text x="520" y="163" text-anchor="middle" font-size="12" fill="#888">status = pending</text>
+
+  <path d="M380 148 L340 148 L340 70" stroke="#888" stroke-width="1.6" fill="none" stroke-dasharray="4 3"/>
+  <line x1="40" y1="215" x2="660" y2="215" stroke="#888" stroke-width="2"/>
+  <text x="60" y="238" font-size="12" fill="#888">day 0 — submitted</text>
+  <text x="330" y="238" font-size="12" fill="#d88">day 30 — purge deletes the session, FK → NULL</text>
+  <text x="330" y="205" font-size="12" fill="#4a7">snapshot unaffected ✓</text>
+  <circle cx="50" cy="215" r="5" fill="#4a7"/>
+  <circle cx="420" cy="215" r="5" fill="#d88"/>
+</svg>
+<figcaption>The snapshot is the durable record; the foreign key is a convenience that is allowed to
+disappear. Hence <code>on_delete=SET_NULL</code> rather than <code>CASCADE</code> or
+<code>PROTECT</code>.</figcaption>
+</figure>
+
+<p>Once you see the row as a ledger entry rather than a pointer, the rest of the app follows
+mechanically: one write seam so the notification email is wired at one chokepoint instead of four;
+a Celery task that mails a human-readable Korean summary; and an operator queue with three statuses
+(<code>pending</code> → <code>contacted</code> → <code>closed</code>).</p>
+
+<h3>3. Vocky is one service reached by two very different bridges</h3>
+
+<p>Vocky is an external feedback service (a separate product, at <code>vocky.hi2vi.com</code>).
+changple5 sends it feedback from two completely separate places, and the two paths share nothing but
+the destination:</p>
+
+<figure>
+<svg viewBox="0 0 700 300" role="img" aria-label="Diagram: the browser posts to Django's feedback app which calls Vocky's REST API with a project key; separately the chat agent's tool calls Vocky's MCP endpoint with a different token.">
+  <rect x="20" y="20" width="150" height="52" rx="8" fill="#8881" stroke="#888"/>
+  <text x="95" y="42" text-anchor="middle" font-size="12" fill="#888">Browser</text>
+  <text x="95" y="60" text-anchor="middle" font-size="11" fill="#888">👍 / 👎 · 피드백 폼</text>
+
+  <rect x="215" y="14" width="200" height="64" rx="8" fill="#78a2" stroke="#78a"/>
+  <text x="315" y="36" text-anchor="middle" font-size="12" fill="#888">django_backend · feedback/</text>
+  <text x="315" y="54" text-anchor="middle" font-size="11" fill="#888">urllib REST proxy</text>
+  <text x="315" y="70" text-anchor="middle" font-size="11" fill="#888">VOCKY_BASE_URL + VOCKY_API_AUTH_TOKEN</text>
+
+  <rect x="20" y="180" width="150" height="52" rx="8" fill="#8881" stroke="#888"/>
+  <text x="95" y="202" text-anchor="middle" font-size="12" fill="#888">Chat model</text>
+  <text x="95" y="220" text-anchor="middle" font-size="11" fill="#888">record_user_feedback</text>
+
+  <rect x="215" y="174" width="200" height="64" rx="8" fill="#4a72" stroke="#4a7"/>
+  <text x="315" y="196" text-anchor="middle" font-size="12" fill="#888">fastapi_agent · vocky_feedback</text>
+  <text x="315" y="214" text-anchor="middle" font-size="11" fill="#888">MCP over Streamable-HTTP</text>
+  <text x="315" y="230" text-anchor="middle" font-size="11" fill="#888">VOCKY_MCP_URL + VOCKY_MCP_API_TOKEN</text>
+
+  <rect x="500" y="96" width="180" height="70" rx="8" fill="#8882" stroke="#888"/>
+  <text x="590" y="124" text-anchor="middle" font-size="13" fill="#888">Vocky</text>
+  <text x="590" y="144" text-anchor="middle" font-size="11" fill="#888">vocky.hi2vi.com</text>
+
+  <line x1="170" y1="46" x2="213" y2="46" stroke="#888" stroke-width="1.6"/>
+  <line x1="170" y1="206" x2="213" y2="206" stroke="#888" stroke-width="1.6"/>
+  <path d="M415 46 C470 46 470 110 498 116" stroke="#78a" stroke-width="1.8" fill="none"/>
+  <text x="455" y="36" font-size="11" fill="#78a">POST /api/feedback</text>
+  <path d="M415 206 C470 206 470 152 498 146" stroke="#4a7" stroke-width="1.8" fill="none"/>
+  <text x="452" y="250" font-size="11" fill="#4a7">tools/call capture_feedback</text>
+  <text x="590" y="200" text-anchor="middle" font-size="11" fill="#888">the 피드백 console reads back</text>
+  <text x="590" y="218" text-anchor="middle" font-size="11" fill="#888">through the same REST key</text>
+  <path d="M590 168 L590 188" stroke="#888" stroke-width="1.4" stroke-dasharray="3 3"/>
+</svg>
+<figcaption>Two integrations, two transports, two credentials. The operations doc is explicit that
+neither service ever receives the other's environment variables.</figcaption>
+</figure>
+
+<p>The user-facing path is ordinary: a browser posts, Django validates and forwards, the user gets a
+receipt. The agent path is the interesting one, because it runs <em>inside a chat turn</em>. If the
+model decides "the user just complained about search being slow, record that", the recording must
+not be able to hurt the answer the user is waiting for. That single constraint produces all three of
+the properties the agent module owns — dormant when unconfigured, never raises, bounded by a
+timeout — and it explains why the model receives the identical acknowledgment whether the capture
+succeeded, failed, or was never even attempted.</p>
+
+<div class="callout def">
+<p><strong>MCP (Model Context Protocol)</strong> is a wire protocol for exposing tools to language
+models: a client connects, calls <code>initialize</code>, and can then list tools
+(<code>tools/list</code>) or invoke one (<code>tools/call</code>). changple5's agent skips the
+listing step entirely — more on why below.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>Code — the three walks (and how they compare)</h2>
+
+<h3>Walk 1 — 창업가 MBTI: <code>apps/backend/mbti/</code></h3>
+
+<p>Six modules do the work, and they form a strict one-way chain. Nothing lower in the list is
+imported by anything above it:</p>
+
+<pre><code>typology.py    172 lines   the measurement model: axes, poles, the Likert scale, the 16-type cube
+items.py       241 lines   the 40-item bank (32 성향 + 8 준비도), and the client-facing payload
+validation.py   96 lines   the closed-set input bound
+scoring.py     154 lines   the deterministic scorer + the readiness bands
+models.py       62 lines   MBTISubmission — one table
+metadata.py  1,162 lines   per-type result copy (16 types x 11 sections) + display-name maps
+views.py       316 lines   five HTTP endpoints</code></pre>
+
+<h4><code>typology.py</code> — one module declared the source of truth</h4>
+
+<p>Its docstring is unusually direct about its job: it is <em>"the single source of truth for the
+typology that every other mbti module reads"</em>. Four bipolar axes, each with two poles, and the
+pole's machine key <em>is</em> its code letter:</p>
+
+<table>
+<thead><tr><th>Axis</th><th>Korean name</th><th>A-side pole (positive)</th><th>B-side pole (negative)</th></tr></thead>
+<tbody>
+<tr><td><code>a1</code></td><td>판단 방식</td><td><code>G</code> 감각형 — customer reaction first</td><td><code>C</code> 검증형 — revenue, cost, margin first</td></tr>
+<tr><td><code>a2</code></td><td>목표 방향</td><td><code>E</code> 확장형 — grow it big</td><td><code>S</code> 생존형 — run it steadily, for a long time</td></tr>
+<tr><td><code>a3</code></td><td>강점 영역</td><td><code>B</code> 브랜드형 — experience and differentiation</td><td><code>O</code> 운영형 — operations, cost, systems</td></tr>
+<tr><td><code>a4</code></td><td>실행 방식</td><td><code>I</code> 독립형 — my own way</td><td><code>F</code> 시스템형 — proven systems and experts</td></tr>
+</tbody>
+</table>
+
+<p>Because each pole is a single letter, the type id is simply the four winning letters concatenated
+in axis order — <code>GEBI</code> at one corner, <code>CSOF</code> at the other. The 16-type cube is
+not typed out by hand; it is generated, and then checked:</p>
+
+<pre><code># apps/backend/mbti/typology.py
+TYPE_CUBE: dict[tuple[str, str, str, str], str] = {
+    poles: _type_id(*poles)
+    for poles in itertools.product(
+        AXIS_POLES[AXIS_1], AXIS_POLES[AXIS_2],
+        AXIS_POLES[AXIS_3], AXIS_POLES[AXIS_4],
+    )
+}
+
+assert len(TYPE_CUBE) == 16, "the type cube must have all 16 (2⁴) entries"
+assert len(MBTI_TYPE_IDS) == 16, "the 16 type ids must be distinct"</code></pre>
+
+<div class="cube">
+  <div class="hl">GEBI</div><div>GEBF</div><div>GEOI</div><div>GEOF</div>
+  <div>GSBI</div><div class="hl">GSBF</div><div>GSOI</div><div>GSOF</div>
+  <div>CEBI</div><div>CEBF</div><div>CEOI</div><div>CEOF</div>
+  <div>CSBI</div><div>CSBF</div><div>CSOI</div><div>CSOF</div>
+</div>
+<p class="small" style="text-align:center">The 2×2×2×2 cube, flattened. The two highlighted cells
+are the results we compute by hand further down.</p>
+
+<p>The Likert scale lives here too, and the comment explains why it lives here rather than on each
+item: it is a property of the measurement model, not of any one question. One constant deserves
+special attention:</p>
+
+<pre><code>LIKERT_MIN = 1
+LIKERT_MAX = 5
+# Reversal constant: a reverse-scored item contributes ``LIKERT_REVERSE - v``
+# (agreeType = v, disagreeType = 6 − v; the two poles always sum to 6 per item).
+LIKERT_REVERSE = LIKERT_MIN + LIKERT_MAX  # == 6</code></pre>
+
+<div class="callout def">
+<p><strong>Reverse-keyed items.</strong> Half the statements on each axis are written from the
+<em>other</em> pole's point of view — "아무리 끌리는 아이템이어도 손익분기점이 보이지 않으면 시작할
+마음이 거의 생기지 않는다" argues for 검증형 <code>C</code>, not 감각형 <code>G</code>. A 5 on that
+statement has to become a 1 in favour of <code>G</code>. That is what <code>6 − v</code> does: it
+mirrors the answer around the neutral point, and it stays inside {1,2,3,4,5} because the scale is
+symmetric. Psychometric questionnaires mix directions like this so that a respondent who simply
+agrees with everything does not automatically land at one extreme.</p>
+</div>
+
+<h4><code>items.py</code> — a static bank that checks itself at import</h4>
+
+<p>There is no items table and no migration: the 40 questions are Python literals. Each is built by
+one of two tiny helpers — <code>_p(id, axis, direction, text)</code> for a personality item,
+<code>_r(id, text)</code> for a readiness item — which exist mainly so the 40 declarations read as a
+table rather than as forty constructor calls:</p>
+
+<pre><code>_p("q1", AXIS_1, POLE_G, "숫자 계산이 아직 덜 되어 있어도, 고객이 좋아할 “느낌”이 강하면 먼저 시도해보고 싶다."),
+…
+_p("q5", AXIS_1, POLE_C, "아무리 끌리는 아이템이어도 손익분기점이 보이지 않으면 시작할 마음이 거의 생기지 않는다."),
+…
+_r("q35", "고정비, 변동비, 마진을 넣어 손익분기점을 계산해봤다."),</code></pre>
+
+<p><code>direction</code> is "the pole that agreement scores toward" — that is the entire content of
+a personality item beyond its text. Readiness items carry <code>axis=None, direction=None</code>.
+Ids <code>q1</code>–<code>q40</code> map 1:1 onto the spec's question numbers, which makes the bank
+reviewable by the non-programmer who wrote the questions.</p>
+
+<p>Then the module asserts its own shape at import time — meaning a malformed bank crashes the
+container at startup rather than producing quietly wrong types in production:</p>
+
+<pre><code>assert len(MBTI_ITEMS) == 40, "the bank must hold exactly 40 items"
+assert len(_PERSONALITY_ITEMS) == 32, "there must be exactly 32 personality items"
+assert len(_READINESS_ITEMS) == 8, "there must be exactly 8 readiness items"
+
+for _item in _PERSONALITY_ITEMS:
+    assert _item.direction in AXIS_POLES[_item.axis], …   # no pole from the wrong axis
+
+_PER_AXIS = Counter(i.axis for i in _PERSONALITY_ITEMS)
+for _axis_id in AXIS_IDS:
+    assert _PER_AXIS[_axis_id] == 8, …                    # 8 items per axis, all four axes</code></pre>
+
+<p>The client-facing payload is built by <code>build_items_payload()</code>, and what it
+<em>omits</em> is the point: <code>{"id", "text", "kind"}</code> per item, plus the scale and one
+guidance string — and <strong>no</strong> <code>axis</code>, <code>direction</code> or
+<code>pole</code>. Telling the browser which pole a statement scores toward would both leak the
+instrument and let a user farm a desired result.</p>
+
+<h4><code>validation.py</code> — the one place untrusted input is bounded</h4>
+
+<p>96 lines standing between a JSON body and the scorer. The expected count is derived, not typed:</p>
+
+<pre><code>EXPECTED_ANSWER_COUNT = len(MBTI_ITEM_IDS)</code></pre>
+
+<p>and the value check is stricter than it first looks:</p>
+
+<pre><code>def _coerce_likert_int(raw_value: object, *, answer_id: str) -&gt; int:
+    if isinstance(raw_value, bool) or not isinstance(raw_value, int):
+        raise MbtiAnswerValidationError(…)
+    if raw_value not in LIKERT_VALUE_SET:
+        raise MbtiAnswerValidationError(…)
+    return raw_value</code></pre>
+
+<p><code>isinstance(raw_value, bool)</code> is checked <em>first</em> because in Python
+<code>isinstance(True, int)</code> is <code>True</code> — <code>True</code> would otherwise sail
+through as the integer 1. (Explainer #3 found the same guard in the agent's JWT parsing; it is a
+house habit.) A string <code>"3"</code>, a float <code>3.0</code>, a <code>0</code> and a
+<code>6</code> are all rejected as well. Finally, after the exact-count, no-duplicate and
+all-known-id checks have already made it impossible, the function asserts the set identity anyway —
+the comment calls it "cheap insurance".</p>
+
+<h4><code>scoring.py</code> — the doubled-integer decision, measured</h4>
+
+<p>The scorer walks the validated answers, skips readiness items, and accumulates each contribution
+toward its axis's positive pole:</p>
+
+<pre><code>toward_positive = item.direction == axis.positive
+contribution = value if toward_positive else LIKERT_REVERSE - value
+raw_by_axis[item.axis] += contribution
+n_by_axis[item.axis] += 1</code></pre>
+
+<p>and then decides each axis:</p>
+
+<pre><code>def _axis_pole(raw_sum: int, n: int, axis_id: AxisId) -&gt; str:
+    axis = AXES[axis_id]
+    doubled_sum = 2 * raw_sum
+    midpoint = LIKERT_REVERSE * n        # == 2 * (3n)
+    if doubled_sum &gt; midpoint:
+        return axis.positive
+    if doubled_sum &lt; midpoint:
+        return axis.negative
+    return axis.tie_break                # the exact midpoint raw == 3n</code></pre>
+
+<p>Note that <code>n</code> is counted from the bank at score time rather than hard-coded, so
+re-balancing the questionnaire needs no change here.</p>
+
+<p>The whole <code>mbti</code> domain is import-clean — <code>typology</code>, <code>items</code>,
+<code>validation</code> and <code>scoring</code> touch neither Django nor the database — so we can
+run the real scorer directly and watch it decide. Two profiles, both produced by executing the
+shipped code:</p>
+
+<pre><code># Profile A — every one of the 40 answers is 3 (보통이다)
+all-3 → type GEBI
+        a1: raw=24 n=8 pole=G      a2: raw=24 n=8 pole=E
+        a3: raw=24 n=8 pole=B      a4: raw=24 n=8 pole=I
+readiness = 24 → band "low"
+
+# Profile B — a leaning founder
+#   a1: 5 on the four G items, 2 on the four C items
+#   a2: 2 on the four E items, 4 on the four S items
+#   a3: 4 on all eight items          &lt;-- deliberately balanced
+#   a4: 3 on the four I items, 4 on the four F items
+toy2  → type GSBF
+        a1: raw=36 n=8 pole=G   axis_percent → (75, 25)
+        a2: raw=16 n=8 pole=S   axis_percent → (33, 67)
+        a3: raw=24 n=8 pole=B   axis_percent → (50, 50)   &lt;-- exact tie, resolved by tie_break
+        a4: raw=20 n=8 pole=F   axis_percent → (42, 58)
+readiness = 33 → band "high"        (readiness_band(32) → "medium")</code></pre>
+
+<p>Profile A is the all-neutral run the docstring predicts: every axis lands on
+<code>raw = 3n = 24</code>, every tie-break fires, and the user gets <code>GEBI</code> — the A-side
+corner of the cube. Profile B is more instructive. Axis <code>a1</code> is a landslide: four items at
+5 pointing at <code>G</code> (+5 each = 20) and four items at 2 pointing at <code>C</code>
+(<code>6 − 2 = 4</code> each = 16), total 36 out of a possible 48 → 75% 감각형. Axis <code>a3</code>
+is the interesting one: answering 4 to <em>every</em> statement, half of which argue for the opposite
+pole, produces <code>4 × 4 + (6−4) × 4 = 24</code> — dead centre, again resolved deterministically to
+<code>B</code>.</p>
+
+<div class="callout warn">
+<p><strong>Why determinism matters more than "fairness" at the tie.</strong> A random or
+timestamp-based tie-break would mean the same answers give different types on different days, and
+the stored submission could no longer be re-scored to the stored result. The code chooses a fixed
+winner (the A-side pole), documents it in three places, and accepts the small bias that follows.</p>
+</div>
+
+<p>Readiness is a plain sum with four bands, the thresholds sitting as named module constants:
+<code>high ≥ 33</code>, <code>medium ≥ 25</code>, <code>low ≥ 17</code>, else <code>very_low</code>
+— which is why 33 and 32 land in different bands above.</p>
+
+<h4><code>models.py</code> — one table, shaped for a typology that may change</h4>
+
+<pre><code>class MBTISubmission(TimeStampedModel):
+    user             = ForeignKey(AUTH_USER_MODEL, on_delete=CASCADE, related_name="mbti_submissions")
+    answers          = JSONField(default=dict)      # the canonical [{id, value}, …] — reproducible rescore
+    result_type      = CharField(max_length=64, db_index=True)
+    axis_scores      = JSONField(default=dict)      # {axis_id: {raw, n, pole}} — analytics only
+    readiness_score  = PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)</code></pre>
+
+<p>Two decisions worth copying. <code>axis_scores</code> is JSON rather than four integer columns
+<em>"so a later typology change (more/fewer axes) needs no schema migration"</em>. And
+<code>readiness_score</code> is a dedicated nullable column rather than another key inside
+<code>axis_scores</code>, because the views iterate that map per axis and a stray key would break the
+loop. Legacy rows are null, and the view recomputes from the stored answers when it finds one — which
+is only possible because the raw answers were kept.</p>
+
+<h4><code>metadata.py</code> — 1,162 lines of copy behind a 20-line function</h4>
+
+<p>This module holds, per type, an eleven-section result page: 유형명, 대표 키워드, 한 줄 요약,
+해석, 강점, 돈을 버는 방식, 놓치기 쉬운 것, 흔들리기 쉬운 조건, 시작 전략, 필요한 파트너, 창업 전
+확인 질문. It is authored Korean copy transcribed verbatim from the client's document; reproducing
+it here would teach nothing. What matters is its shape:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class MbtiTypeMeta: …                                  # one per type, 16 of them
+
+assert set(_TYPE_META) == set(MBTI_TYPE_IDS), "metadata must cover exactly the 16 scorer type_ids"
+assert set(AXIS_NAMES) == set(AXIS_IDS)
+assert set(POLE_NAMES) == {pole for pair in AXIS_POLES.values() for pole in pair}
+assert set(READINESS_BANDS) == {"high", "medium", "low", "very_low"}
+
+def result_payload_for_type(type_id: str) -&gt; dict[str, object]:
+    meta = _TYPE_META[type_id]
+    return {"type_id": …, "keywords": list(meta.keywords), …,
+            "image": MBTI_TYPE_IMAGES[type_id], "footer": _footer_payload()}</code></pre>
+
+<p>Same habit as the item bank: the maps must be <em>total</em> over their domain, and an import-time
+assertion enforces it, so the scorer can never produce a type the result page cannot render. The
+builder also rebuilds every list and the footer per call, so a caller that mutates the returned
+payload cannot corrupt the module-level constant — and one caller does exactly that, attaching a
+<code>"scores"</code> key.</p>
+
+<h4><code>views.py</code> — five endpoints, three different auth answers</h4>
+
+<table>
+<thead><tr><th>Route</th><th>Auth</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>GET /api/mbti/items</code></td><td><code>authentication_classes = []</code> + <code>AllowAny</code></td><td>the quiz. Empty auth on purpose, so a stale first-party token cannot 401 someone mid-quiz.</td></tr>
+<tr><td><code>POST /api/mbti/submit</code></td><td><code>IsAuthenticated</code></td><td>validate → score → persist → 201 with the result DTO + a <code>"scores"</code> overlay.</td></tr>
+<tr><td><code>GET/DELETE /api/mbti/me</code></td><td><code>IsAuthenticated</code></td><td>latest result for reload; <code>DELETE</code> wipes <em>all</em> the user's rows so 다시 검사하기 truly restarts.</td></tr>
+<tr><td><code>POST /api/mbti/lead</code></td><td><code>IsAuthenticated</code></td><td>the result-page 상담신청 → a <code>ConsultationRequest</code>.</td></tr>
+<tr><td><code>GET /api/mbti/types/&lt;type_id&gt;</code></td><td><code>authentication_classes = []</code> + <code>AllowAny</code></td><td>the public share link; the static DTO with no per-submission numbers.</td></tr>
+</tbody>
+</table>
+
+<p>The wall is deliberately placed <em>between</em> taking the quiz and seeing the result: anyone can
+fetch the items, only a logged-in user can submit. Three details in this file repay reading:</p>
+
+<p><strong>The partitioned shuffle.</strong> <code>MbtiItemsView</code> splits the payload by
+<code>kind</code>, shuffles the 32 personality items among themselves and the 8 readiness items among
+themselves, and always emits personality-then-readiness. The bank is grouped by axis, and serving it
+in that order would telegraph the grouping; the 준비도 block has to stay last because it is a
+labeled section with its own instructions ("'그럴 것 같다'가 아니라 '이미 해두었는지'를 기준으로").
+Order is cosmetic — the scorer keys on ids — and the static bank is never mutated: fresh copies are
+shuffled.</p>
+
+<p><strong>The legacy-row guard.</strong> <code>/me</code> returns 404 not only when the user has
+never submitted, but also when the stored <code>result_type</code> is not one of the current 16 —
+a row left by an earlier eight-type version of this quiz (keys like
+<code>execute_creative_org</code>). Dropping the user back onto the quiz is a better answer than a
+500 from a <code>KeyError</code> in the metadata map.</p>
+
+<p><strong>Percents, never raw sums.</strong> The <code>"scores"</code> overlay that
+<code>/submit</code> and <code>/me</code> attach is built by
+<code>submission_scores_payload</code>, which converts each axis's stored <code>raw</code> into a
+complementary percentage pair via <code>axis_percent(raw, n) → (pos, 100 − pos)</code> and resolves
+the Korean labels through <code>AXIS_NAMES</code> / <code>POLE_NAMES</code>. The internal score
+stays server-side; the shareable <code>/types/&lt;id&gt;</code> DTO carries no overlay at all,
+because there is no submission behind it.</p>
+
+<p>And the seam to the next walk — <code>MbtiLeadView</code>:</p>
+
+<pre><code>submission = request.user.mbti_submissions.first()
+if submission is not None:
+    type_line = f"[창업가 유형: {_readable_type_name(submission.result_type)}]"
+    additional_notes = f"{type_line}\n{additional_notes}".strip() if additional_notes else type_line
+
+client_ip, client_user_agent = capture_client_meta(request)
+consultation = record_consultation_submission(
+    source=ConsultationRequest.Source.MBTI, name=…, phone=…, email=…,
+    additional_notes=additional_notes, session=None,
+    client_ip=client_ip, client_user_agent=client_user_agent,
+)</code></pre>
+
+<p>It writes the <em>readable</em> Korean type name with the machine key in parentheses — "직접
+뛰며 버티는 현실 창업자형 (GSOI)" rather than a bare <code>GSOI</code> — because the notification
+email surfaces <code>additional_notes</code> verbatim and a human consultant reads it. That is a
+neat example of a boundary rule: the machine key is for the machine, and the moment a string crosses
+into a human's inbox it is translated. The lookup is best-effort
+(<code>_readable_type_name</code> falls back to the bare id for an unknown type) because the lead
+must be recorded even if the type cannot be resolved — losing a sales lead to a cosmetic lookup
+would be a poor trade.</p>
+
+<hr>
+
+<h3>Walk 2 — Consultation requests: <code>apps/backend/consultations/</code></h3>
+
+<p>919 lines, and the whole app is one idea repeated: <strong>four funnels, one row shape, one write
+seam, one email.</strong></p>
+
+<figure>
+<svg viewBox="0 0 700 330" role="img" aria-label="Four sources feeding one write seam which creates a ConsultationRequest row and enqueues a Celery notification task.">
+  <rect x="10" y="20" width="190" height="44" rx="7" fill="#8881" stroke="#888"/>
+  <text x="105" y="40" text-anchor="middle" font-size="12" fill="#888">컨설팅 follow-up</text>
+  <text x="105" y="56" text-anchor="middle" font-size="10.5" fill="#888">conversations/views.py (best-effort)</text>
+
+  <rect x="10" y="76" width="190" height="44" rx="7" fill="#8881" stroke="#888"/>
+  <text x="105" y="96" text-anchor="middle" font-size="12" fill="#888">무료진단 (diagnosis)</text>
+  <text x="105" y="112" text-anchor="middle" font-size="10.5" fill="#888">BFF → POST …/ingest</text>
+
+  <rect x="10" y="132" width="190" height="44" rx="7" fill="#8881" stroke="#888"/>
+  <text x="105" y="152" text-anchor="middle" font-size="12" fill="#888">/contact (일반 상담신청)</text>
+  <text x="105" y="168" text-anchor="middle" font-size="10.5" fill="#888">BFF → POST …/ingest</text>
+
+  <rect x="10" y="188" width="190" height="44" rx="7" fill="#4a72" stroke="#4a7"/>
+  <text x="105" y="208" text-anchor="middle" font-size="12" fill="#888">MBTI 결과 상담신청</text>
+  <text x="105" y="224" text-anchor="middle" font-size="10.5" fill="#888">POST /api/mbti/lead</text>
+
+  <rect x="250" y="90" width="200" height="70" rx="8" fill="#78a2" stroke="#78a"/>
+  <text x="350" y="116" text-anchor="middle" font-size="12.5" fill="#888">record_consultation_submission</text>
+  <text x="350" y="136" text-anchor="middle" font-size="11" fill="#888">services.py — the single seam</text>
+  <text x="350" y="152" text-anchor="middle" font-size="11" fill="#888">+ _enqueue_notification()</text>
+
+  <line x1="200" y1="42"  x2="248" y2="112" stroke="#888" stroke-width="1.4"/>
+  <line x1="200" y1="98"  x2="248" y2="118" stroke="#888" stroke-width="1.4"/>
+  <line x1="200" y1="154" x2="248" y2="126" stroke="#888" stroke-width="1.4"/>
+  <line x1="200" y1="210" x2="248" y2="134" stroke="#4a7" stroke-width="1.6"/>
+
+  <rect x="500" y="40" width="185" height="72" rx="8" fill="#4a72" stroke="#4a7"/>
+  <text x="592" y="66" text-anchor="middle" font-size="12" fill="#888">ConsultationRequest</text>
+  <text x="592" y="84" text-anchor="middle" font-size="11" fill="#888">source · status · snapshot</text>
+  <text x="592" y="100" text-anchor="middle" font-size="11" fill="#888">one operator queue</text>
+
+  <rect x="500" y="140" width="185" height="72" rx="8" fill="#8882" stroke="#888"/>
+  <text x="592" y="166" text-anchor="middle" font-size="12" fill="#888">Celery: send_…notification</text>
+  <text x="592" y="184" text-anchor="middle" font-size="11" fill="#888">reads active recipients (ORM)</text>
+  <text x="592" y="200" text-anchor="middle" font-size="11" fill="#888">mails a Korean summary</text>
+
+  <line x1="450" y1="112" x2="498" y2="88"  stroke="#888" stroke-width="1.5"/>
+  <line x1="450" y1="140" x2="498" y2="168" stroke="#888" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+  <text x="350" y="250" text-anchor="middle" font-size="11.5" fill="#888">the dashed edge is fire-and-forget: an enqueue failure is logged and swallowed</text>
+  <text x="350" y="280" text-anchor="middle" font-size="11.5" fill="#888">operator console: GET/PATCH/DELETE /api/consultation-requests/admin/requests[/&lt;pk&gt;]</text>
+  <text x="350" y="302" text-anchor="middle" font-size="11.5" fill="#888">recipients: GET/POST /admin/recipients · DELETE /admin/recipients/&lt;pk&gt; (soft)</text>
+</svg>
+<figcaption>Every 상담신청 in the product goes through one function, which is why the notification
+is wired in one place instead of four.</figcaption>
+</figure>
+
+<h4><code>models.py</code> — the snapshot decision, in the docstring</h4>
+
+<pre><code>class ConsultationRequest(TimeStampedModel):
+    """Unified 상담신청 record aggregating every submission source.
+
+    The 내용 is SNAPSHOTTED (``content_snapshot`` + inert ``cited_documents``) so an
+    operator can still follow up after the 30-day guest purge hard-deletes the linked
+    session; the session FK is therefore ``SET_NULL`` and the snapshot is the durable
+    record.
+    """
+    class Source(TextChoices):  CONSULTING | DIAGNOSIS(무료진단) | CONTACT | MBTI
+    class Status(TextChoices):  PENDING | CONTACTED | CLOSED</code></pre>
+
+<p>Four fields carry the payload: <code>content_snapshot</code> (the report or 진단 결과 text as it
+read at submit time — empty for <code>/contact</code>, which produces no report),
+<code>additional_notes</code> (the user's free text, plus whatever each funnel folds in),
+<code>cited_documents</code> (a JSON list of <code>{post_id, title, source_url}</code>, described in
+the help text as "inert … never an FK into conversations"), and the nullable <code>session</code>
+link.</p>
+
+<div class="callout">
+<p><strong>Why "inert" is the right word for <code>cited_documents</code>.</strong> The citations
+could have been foreign keys into the documents table. Then a re-crawl that changes a post's title,
+or a purge that removes it, would silently rewrite history in a record the operator is using to call
+a customer back. A denormalised copy is worse for querying and better for testimony — and testimony
+is what this row is.</p>
+</div>
+
+<p>Two fields are newer (P76) and worth a careful reading, because they contradict a plausible
+assumption about this codebase:</p>
+
+<pre><code>client_ip = models.GenericIPAddressField(null=True, blank=True, help_text=(
+    "Submitter's IP as reported by the edge (Cloudflare -&gt; edge nginx -&gt; app: the first "
+    "X-Forwarded-For hop …), stored in CLEAR as evidence for abusive submissions - never "
+    "hashed, truncated, or used for authorization. …  NULL = not captured. "
+    "Retention: lives and dies with this row."))
+client_user_agent = models.CharField(max_length=512, null=True, blank=True, …)</code></pre>
+
+<p>changple5 stores no IP addresses for chat, conversations or accounts. It stores one here, in
+clear, for exactly one purpose — evidence about an abusive submission — and the help text pins down
+all three things that usually go unsaid: where the value comes from, what it may never be used for
+(authorization), and how long it lives (as long as the row). The UA is capped at 512 characters
+defensively; the IP is never transformed, because a truncated or hashed IP is evidence you cannot
+act on.</p>
+
+<p>The second model is four fields and a docstring:</p>
+
+<pre><code>class NotificationRecipient(TimeStampedModel):
+    email  = EmailField(unique=True)
+    active = BooleanField(default=True, db_index=True)
+    # "Delete is SOFT (``active=False``) so the unique email is preserved; re-registering
+    #  a removed email reactivates the existing row instead of colliding on the unique key."</code></pre>
+
+<p>A unique column plus a hard delete is a classic small trap: remove a recipient, re-add them a
+month later, and the insert collides with a row you thought was gone. The soft flag plus
+<code>update_or_create</code> in the view makes re-adding idempotent.</p>
+
+<h4><code>services.py</code> — the seam, and a trust rule stated once</h4>
+
+<p><code>record_consultation_submission()</code> is a keyword-only function that creates the row and
+then fires the notification. Its docstring names its own reason for existing: <em>"the consulting
+dual-write, the service-token ingress, and the async notification email all create rows here, so the
+email trigger is wired once at one chokepoint instead of at three call sites."</em></p>
+
+<pre><code>def _enqueue_notification(consultation_id: int) -&gt; None:
+    try:
+        from .tasks import send_consultation_notification
+        send_consultation_notification.delay(consultation_id)
+    except Exception:  # noqa: BLE001 - enqueue failure must not fail the submit
+        logger.exception("failed to enqueue consultation %s notification", consultation_id)</code></pre>
+
+<p>Two things here connect to explainer #16. First, this is the <code>.delay()</code> idiom with a
+function-local import (to avoid an import cycle), <em>not</em> the repository's usual
+<code>transaction.on_commit(...)</code> dispatch — and that is correct rather than sloppy, because
+<code>settings.py</code> sets no <code>ATOMIC_REQUESTS</code>: Django is in autocommit, so the row is
+already committed when the task is queued and the worker cannot outrun it. Second, the
+<code>try/except</code> is the house "fire-and-forget" contract: a Redis outage must not turn a
+customer's 상담신청 into an error page.</p>
+
+<p><code>capture_client_meta(request)</code> reuses the guest-limit trust rule wholesale — first
+<code>X-Forwarded-For</code> hop under <code>GUEST_TRUST_FORWARDED_FOR</code>, else
+<code>REMOTE_ADDR</code> — and its docstring carries a prohibition that is really a piece of
+architectural reasoning:</p>
+
+<pre><code>"""…
+**Never call this on the service-token ingress**: there ``request`` describes the
+changple_web BFF host, and storing that as "the visitor" would look like an answer
+while being none. That path reads the payload instead.
+"""</code></pre>
+
+<p>"Would look like an answer while being none" is the whole argument for why the ingress reads the
+IP from the request body instead. A wrong IP is worse than a null one, because nobody audits a
+column that is always populated.</p>
+
+<h4><code>tasks.py</code> — the one Celery task in the app</h4>
+
+<p><code>send_consultation_notification</code> is the entire async surface of
+<code>consultations</code> (explainer #16 counted 58 registered tasks across the backend; this is
+one of them). It does four things in order: load the row, read the recipients, build a Korean body,
+send. Every step has a named non-failure:</p>
+
+<pre><code>consultation = ConsultationRequest.objects.filter(pk=consultation_id).first()
+if consultation is None:
+    return {"status": "missing", …}
+
+recipients = list(NotificationRecipient.objects.filter(active=True).values_list("email", flat=True))
+if not recipients:
+    return {"status": "no_recipients", …}
+
+try:
+    mail.send_mail(subject=f"[창플] 새 상담신청 ({source_label})", message=body,
+                   from_email=settings.CONSULTATION_FROM_EMAIL,
+                   recipient_list=recipients, fail_silently=False)
+except Exception:  # noqa: BLE001 - a notification failure must never crash
+    return {"status": "error", …}
+
+return {"status": "sent", "consultation_id": …, "recipients": len(recipients)}</code></pre>
+
+<p>The body is assembled as labeled Korean sections — ■ 신청자, ■ 내용 (only when a snapshot
+exists), ■ 추가 내용, ■ 참고할만한 글, and finally ■ 상담신청 상세 with a deep link built from
+<code>settings.OPERATOR_BASE_URL</code>. It is written for a person to act on, not for a machine to
+parse.</p>
+
+<div class="callout def">
+<p><strong>Three mail paths, three different designs — and each one is right.</strong> Put them side
+by side:</p>
+<ul>
+<li><strong><code>consultations</code> (here):</strong> a real Celery task, recipients read from the
+<strong>ORM</strong> inside the task. A product notification. If the database is broken there is no
+consultation to notify about, so depending on the ORM costs nothing.</li>
+<li><strong><code>ingestion/alerts.py</code> (#16):</strong> deliberately <strong>ORM-free</strong>,
+with its recipient module kept model-free so the ORM never enters that import graph. An outage alert
+has to work <em>while things are broken</em> — including while the database is the broken thing.</li>
+<li><strong><code>billing</code> (#18):</strong> no task at all — a local
+<code>transaction.on_commit</code> closure around <code>send_mail</code>, recipients from an env
+variable, because the renewal sweep already runs inside a worker and queueing a task from a task
+would buy nothing.</li>
+</ul>
+<p>The shared thing across all three is the <em>pattern</em> — fire-and-forget, log-and-swallow,
+never fail the caller — and not a line of shared code. A "unified mail helper" would have had to be
+ORM-free, task-based and closure-based simultaneously.</p>
+</div>
+
+<h4><code>views.py</code> and <code>admin_views.py</code> — one ingress, four operator routes</h4>
+
+<p><code>ConsultationIngestView</code> (<code>POST /api/consultation-requests/ingest</code>) is the
+door for the apex site's BFF. Its authentication list mirrors the guest-capable ordering explainer
+#3 explained:</p>
+
+<pre><code>GUEST_CAPABLE_AUTHENTICATION_CLASSES = [JWTAuthentication, AgentServiceTokenAuthentication]
+
+def post(self, request):
+    if not isinstance(request.user, AgentServicePrincipal):
+        raise PermissionDenied("Consultation ingress is restricted to the agent service token.")</code></pre>
+
+<p>Read the two together and the three outcomes are deliberate: a valid first-party JWT
+authenticates and is then rejected with <strong>403</strong>; a missing or bad token makes the
+service authenticator raise, giving <strong>401</strong>; only the service principal writes. The
+serializer restricts <code>source</code> to <code>diagnosis</code> and <code>contact</code> — the
+other two sources are produced in-process and can never arrive over this door.</p>
+
+<p>For a diagnosis submission the view resolves the report through a single import from the other
+app:</p>
+
+<pre><code>session, content_snapshot, cited_documents = resolve_guest_diagnosis_snapshot(data["nonce"])
+if session is None:
+    return Response({"detail": "Guest diagnosis session not found."}, status=404)</code></pre>
+
+<p>The comment calls this a "read-direction inversion": rather than <code>consultations</code>
+reaching into the guest hard-scope and message internals (three imports), <code>conversations</code>
+exposes one function that returns exactly what the snapshot needs. Explainer #4 owns those
+internals.</p>
+
+<p>The operator side is four routes behind a locally declared mixin:</p>
+
+<pre><code>class OperatorConsultationAdminViewMixin:
+    # Mixed-auth admin gate, mirroring each app's local copy …
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsOperatorUser]</code></pre>
+
+<p>Bearer token for the operator SPA, Django admin session for a browser tab, and
+<code>IsOperatorUser</code> (<code>user_type == "admin"</code>) deciding. Explainer #17 measured the
+pattern across the backend: eight apps import that one permission class, and each declares its own
+two-line copy of the mixin rather than importing another app's — <code>feedback</code>'s copy, in
+the next walk, even names this one as its mirror in a comment. The shared thing is the permission
+class; the mixin is duplicated on purpose so no app depends on another's admin module.</p>
+
+<p>One route is worth pausing on. <code>DELETE /admin/requests/&lt;pk&gt;</code> is a <em>hard</em>
+delete, and the docstring justifies it precisely:</p>
+
+<pre><code>"""…``delete`` is a HARD delete of the single row (P55.S4): nothing points at a
+``ConsultationRequest`` (no inbound FK anywhere), its outbound ``session`` is
+``SET_NULL`` and ``cited_documents`` is an inert JSON snapshot, so the row is
+self-contained and removing it orphans nothing. It is also IRREVERSIBLE and
+unlogged — this app has no audit trail …"""</code></pre>
+
+<p>"Self-contained" is exactly the property the snapshot design bought, and here it is being spent:
+because the row copies rather than references, it can be deleted without a cascade analysis.
+Recipients, by contrast, are soft-deleted — because their uniqueness constraint has to keep
+remembering them.</p>
+
+<hr>
+
+<h3>Walk 3 — The Vocky feedback bridge: one service, two integrations</h3>
+
+<p>Teach the split first, because everything else follows from it. The operations doc
+(<code>docs/current/operations.md</code>, §"Agent Vocky Feedback Capture") states it as an
+operational rule, and the code matches:</p>
+
+<table>
+<thead><tr><th></th><th>Backend REST proxy</th><th>Agent MCP client</th></tr></thead>
+<tbody>
+<tr><td>Code</td><td><code>apps/backend/feedback/</code></td><td><code>apps/agent/app/chat/vocky_feedback*.py</code></td></tr>
+<tr><td>Runs on</td><td><code>django_backend</code>, <code>celery_worker</code>, <code>celery_beat</code></td><td><strong><code>fastapi_agent</code> only</strong></td></tr>
+<tr><td>Transport</td><td>plain <code>urllib</code>, JSON over HTTPS</td><td>MCP over Streamable-HTTP (<code>langchain-mcp-adapters</code>)</td></tr>
+<tr><td>Endpoint</td><td><code>VOCKY_BASE_URL</code> + <code>/api/feedback</code> (base origin)</td><td><code>VOCKY_MCP_URL</code> — the <strong>full</strong> endpoint, e.g. <code>https://vocky.hi2vi.com/mcp/</code></td></tr>
+<tr><td>Credential</td><td><code>VOCKY_API_AUTH_TOKEN</code> — a <code>vk_</code> project key as Bearer</td><td><code>VOCKY_MCP_API_TOKEN</code> — a different <code>vk_</code> key</td></tr>
+<tr><td>Timeout</td><td><code>VOCKY_REQUEST_TIMEOUT_SECONDS</code>, default 5.0</td><td><code>VOCKY_MCP_TIMEOUT_SECONDS</code>, default 5.0</td></tr>
+<tr><td>Direction</td><td>write <em>and</em> read (the operator 피드백 console)</td><td>write only</td></tr>
+</tbody>
+</table>
+
+<p>Two transports, two credentials, two service scopes — verified by a real
+<code>docker compose config</code> render when the feature shipped. Neither set of variables is ever
+forwarded to the other's service, which means a compromised agent key cannot read the operator
+console's feedback list, and a Django-side outage cannot take the agent's capture path down.</p>
+
+<h4>3a. Backend: <code>feedback/client.py</code> (346 lines)</h4>
+
+<p>The first thing to notice about this app is a file that is <strong>not</strong> there: there is no
+<code>models.py</code> and no <code>migrations/</code>. The 피드백 console reads Vocky live; changple5
+keeps no local copy of a feedback record. That is why "delete" in the console is irreversible — there
+is nothing local to restore from.</p>
+
+<p>The client is deliberately unfashionable: <code>urllib</code> from the standard library, no
+<code>requests</code>, no <code>httpx</code>, no retry library. Three properties are worth stealing.</p>
+
+<p><strong>Dormant before the network, not after it.</strong></p>
+
+<pre><code>def _require_vocky_config(*, unavailable_detail: str) -&gt; tuple[str, str]:
+    base_url   = str(getattr(settings, "VOCKY_BASE_URL", "") or "").strip()
+    auth_token = str(getattr(settings, "VOCKY_API_AUTH_TOKEN", "") or "").strip()
+    if not base_url or not auth_token:
+        raise VockyServiceUnavailableError(unavailable_detail)
+    return base_url, auth_token</code></pre>
+
+<p>Every call starts here, so an environment that has not configured Vocky answers 503 without ever
+opening a socket. A blank token is treated exactly like a blank URL, with the reasoning spelled out
+in the docstring: Vocky's auth is mandatory, so a blank token could only ever produce a 401 —
+pretending it might work would just convert a configuration mistake into a slow network error.</p>
+
+<p><strong>An explicit User-Agent, learned the hard way.</strong></p>
+
+<pre><code># urllib's default `Python-urllib/x.y` UA is banned by the Cloudflare in front
+# of the public Vocky app (error 1010); identify explicitly on every call.
+VOCKY_USER_AGENT = "changple5-feedback-proxy/1.0"</code></pre>
+
+<p>This is the kind of fact that costs an afternoon once and a comment forever. The agent-side module
+later cites this same lesson when it sets its own UA, even though <code>httpx</code>'s default is a
+different string that is probably fine — the docstring reasons that the question is cheaper to kill
+than to keep asking.</p>
+
+<p><strong>No retries, and a status map that means something.</strong> The error classes each carry
+the HTTP status the view will return:</p>
+
+<table>
+<thead><tr><th>Exception</th><th>Status</th><th>Raised when</th></tr></thead>
+<tbody>
+<tr><td><code>VockyServiceUnavailableError</code></td><td>503</td><td>unconfigured (no network call), or a timeout / connection failure</td></tr>
+<tr><td><code>VockyBadGatewayError</code></td><td>502</td><td>Vocky rejected the request, or returned something unreadable</td></tr>
+<tr><td><code>VockyNotFoundError</code></td><td>404</td><td>no such record in <em>this credential's</em> scope</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<p><strong>Why an out-of-scope id is a 404 and never a 403.</strong> The project scope comes from the
+credential, not from a parameter in the request. So when the operator console asks for a feedback id
+belonging to a different project, Vocky's honest answer is "no such record here" — it has no way to
+say "that exists but is not yours" without leaking that it exists. The client passes that 404 through
+deliberately (the docstring: "a deleted or out-of-scope feedback id is a client-visible fact about
+the record, not a gateway failure"), while an upstream 401/403 — which means <em>our own</em> key is
+wrong or revoked — becomes a 502 with a message naming it as an operator-side misconfiguration. The
+key itself is never echoed.</p>
+</div>
+
+<p>The write path validates the receipt before claiming success:</p>
+
+<pre><code>if response_status != 202:
+    raise VockyBadGatewayError()
+…
+def _validate_receipt(raw_receipt):          # request_id non-blank str
+    …                                        # accepted_at parses as ISO-8601
+    if receipt_status != "accepted": raise VockyBadGatewayError(…)</code></pre>
+
+<p>A 200 that is not a 202, a receipt without a <code>request_id</code>, a timestamp that will not
+parse — all of them mean "we cannot honestly tell the user this was recorded", so they become 502s.
+The read path (added later, for the operator console) reuses the same request helper against Vocky's
+project-scoped review API: <code>list_vocky_feedback</code>, <code>get_vocky_feedback</code>,
+<code>create_vocky_feedback_comment</code>, <code>delete_vocky_feedback</code>.</p>
+
+<h4>3b. Backend: <code>feedback/views.py</code> — what actually gets sent</h4>
+
+<p><code>FeedbackCaptureView</code> (<code>POST /api/feedback</code>, <code>IsAuthenticated</code>)
+serves two shapes, matching the two places the UI offers feedback: a 👍/👎 on an assistant message,
+and a free-text form in the profile modal (<code>target_id: "profile-modal-feedback"</code>).</p>
+
+<p>The message shape is ownership-scoped, and the checks are worth reading as a pair:</p>
+
+<pre><code>session = get_object_or_404(owner_conversation_session_queryset(user=user), nonce=…)
+message = get_object_or_404(ConversationMessage.objects.filter(session=session), public_id=…)
+if message.role != ConversationMessage.Role.ASSISTANT:
+    raise ValidationError({"target_id": ["Message feedback is only valid for assistant messages."]})</code></pre>
+
+<p>Someone else's conversation is a 404 (not a 403 — same reasoning as Vocky's own 404 above: do not
+confirm that an id exists), and rating your own message is a 400. The surface shape has no ownership
+scope at all, because there is nothing to own.</p>
+
+<p>What makes the payload useful to whoever reads it later is the context it carries. A thumbs-down
+on an answer, with no idea what the question was, is nearly worthless:</p>
+
+<pre><code>MAX_TARGET_TEXT_LENGTH  = 4000     # the rated message itself
+MAX_CONTEXT_TEXT_LENGTH = 1200     # each surrounding message
+CONTEXT_BEFORE_COUNT    = 2
+CONTEXT_AFTER_COUNT     = 1</code></pre>
+
+<p>So Vocky receives the rated message (up to 4,000 chars) plus a four-message window — two before,
+the target, one after — each truncated to 1,200 characters with an ellipsis, ordered chronologically.
+The window query orders by <code>(created_at, id)</code> in both directions, because two messages
+written in the same instant still need a stable order. Alongside it rides
+<code>used_context</code>: the citations attached to that answer, read from the
+<code>ConversationMessageCitedDocument</code> snapshot rows (explainer #4) — so the reader of a
+complaint can see which 창플 카페 posts the model was working from. A small helper,
+<code>_compact_metadata</code>, drops <code>None</code> values so optional fields are absent rather
+than null.</p>
+
+<h4>3c. Backend: <code>feedback/admin_views.py</code> — a proxy that adds exactly one thing</h4>
+
+<p>The operator console's 피드백 screen is a passthrough of Vocky's own shapes, and the module
+docstring lists its self-imposed limits: the keyset cursor stays a keyset cursor
+(<code>next_cursor</code>, no page numbers and no total, because Vocky has none), and no search, sort
+or triage parameter is invented anywhere. Proxies that "improve" an upstream API tend to end up
+implementing it.</p>
+
+<p>The single enrichment is identity. Vocky stores <code>user_id</code> as free-form text; changple5
+writes <code>str(user.pk)</code> into it. So the proxy joins those strings back to local users:</p>
+
+<pre><code>MAX_USER_PK = 2**63 - 1        # changple5 PKs are BigAutoField
+
+def _coerce_user_pk(raw):
+    if isinstance(raw, bool): return None          # bool-before-int, again
+    …
+    return value if 1 &lt;= value &lt;= MAX_USER_PK else None
+
+users_by_pk = User.objects.filter(pk__in=list(wanted)).only(…).in_bulk() if wanted else {}</code></pre>
+
+<p>One bulk query per response, never an N+1; an unknown, non-numeric or out-of-range id yields
+<code>user: null</code> and the console falls back to showing the raw string. The range check is not
+pedantry — an integer larger than a 64-bit column is a database driver error, not a lookup miss, so
+it must be stopped before the query.</p>
+
+<h4>3d. Agent: <code>chat/vocky_feedback.py</code> (562 lines) — three owned properties</h4>
+
+<p>Now the half that runs inside a chat turn. The module docstring names three properties it owns,
+and they are worth quoting because each one is a constraint, not a feature.</p>
+
+<p><strong>Dormant when unconfigured.</strong> A blank URL <em>or</em> a blank token switches the
+whole path off, and there is no separate enable flag. The predicate lives here and nowhere else —
+<code>app/config.py</code> deliberately does not define it — so there is exactly one answer to "is
+feedback capture live in this process?":</p>
+
+<pre><code>def is_vocky_feedback_configured(settings=None) -&gt; bool:
+    return resolve_vocky_mcp_config(settings) is not None</code></pre>
+
+<p>Explainer #5 found the consequence at the other end: <code>open_chat_agent</code> binds
+<code>record_user_feedback</code> <strong>only if</strong> that predicate is true, and the system
+prompt's feedback section is gated on the same call. An unconfigured environment never advertises a
+tool that could only fail.</p>
+
+<p><strong>Never raises.</strong> This one is a direct consequence of explainer #5's middleware:
+<code>ChatAgentMiddleware.awrap_tool_call</code> converts any tool exception into a
+<code>ChatAgentToolError</code>, which fails the whole turn. So every failure family — DNS, TLS,
+timeout, 401, a <code>503 capture queue unavailable</code>, an <code>isError</code> tool result, an
+unreadable receipt, a plain programming error — is swallowed into a <code>failed</code>
+<code>CaptureOutcome</code> and logged:</p>
+
+<pre><code>CaptureStatus         = Literal["recorded", "dormant", "failed"]
+CaptureFailureReason  = Literal["blank_message", "timeout", "rejected",
+                                "transport_error", "malformed_receipt"]</code></pre>
+
+<p>Two things deliberately still propagate: a genuine external cancellation (the user's turn being
+torn down — swallowing it would leave a zombie task awaiting), and non-<code>Exception</code>
+<code>BaseException</code>s like <code>KeyboardInterrupt</code>. Spotting the cancellation is subtler
+than it looks, because the Streamable-HTTP transport is built on anyio task groups:</p>
+
+<pre><code>def _contains_cancelled(exc: BaseException) -&gt; bool:
+    if isinstance(exc, asyncio.CancelledError):   return True
+    if isinstance(exc, BaseExceptionGroup):
+        return any(_contains_cancelled(sub) for sub in exc.exceptions)
+    return False</code></pre>
+
+<p><strong>Bounded.</strong> One <code>asyncio.timeout</code> wraps the <em>whole</em> attempt —
+connect plus <code>initialize</code> plus <code>tools/call</code> — rather than one read, and the
+transport's own read timeout is set to the same value as a second line of defence. The post-mortem
+branch reads the timeout object rather than the exception type, which is the correct way to ask "did
+<em>my</em> deadline fire?":</p>
+
+<pre><code>timeout = asyncio.timeout(config.timeout_seconds)
+try:
+    async with timeout:
+        result = await _call_capture_tool(config, arguments)
+except BaseException as exc:
+    if timeout.expired():                      return _failed("timeout")
+    if _contains_cancelled(exc) or not isinstance(exc, Exception):  raise
+    return _fail_with_exception("transport_error", exc, token)</code></pre>
+
+<p><strong>The call shape, and the round trip that is not made.</strong> The capture goes through
+<code>client.session("vocky")</code> + <code>session.call_tool("capture_feedback", …)</code> — never
+<code>MultiServerMCPClient.get_tools()</code>. <code>get_tools()</code> would perform a real
+<code>initialize</code> + <code>tools/list</code> discovery exchange, i.e. a second network hop on the
+turn path, to learn the name and arguments of a tool the code already knows from the contract. The
+process-level client cache is honest about what it buys, too: the docstring notes that
+<code>client.session()</code> opens a fresh connection and re-runs <code>initialize</code> every
+time, so the cache saves object construction rather than a socket — and a construction failure is
+deliberately <em>not</em> cached, so one bad moment cannot poison the path.</p>
+
+<div class="callout warn">
+<p><strong>The trailing-slash trap, and why a silent failure is the worst kind.</strong>
+<code>POST …/mcp</code> without the slash answers <strong>307 with an <code>http://</code>
+Location</strong> — a scheme downgrade. Every conforming client drops the
+<code>Authorization</code> header across that origin change, the handshake dies on 401, and because
+this path is fail-open by design, <em>the feature is silently dead</em>: users are served perfectly
+and Vocky simply stays empty. The fix is defence in depth rather than an operator obligation —
+<code>resolve_vocky_mcp_config</code> appends the slash to the endpoint <em>path</em> (split and
+rejoin, so a query string is untouched) before the client is built, and both env examples ship the
+canonical URL with a comment naming the trap.</p>
+</div>
+
+<p>The module is import-clean too — no LangChain, no agent state — so we can run the real resolver
+against a stub settings object and watch the rules fire:</p>
+
+<pre><code>resolve_vocky_mcp_config(url="",                              token="vk_x")  → None      # dormant
+resolve_vocky_mcp_config(url="https://vocky.hi2vi.com/mcp",   token="   ")   → None      # dormant
+resolve_vocky_mcp_config(url="https://vocky.hi2vi.com/mcp",   token="vk_secret",
+                         timeout="oops")
+    → url      = "https://vocky.hi2vi.com/mcp/"      # slash appended
+      timeout  = 5.0                                  # unparseable → documented default
+      product  = "changple"                           # blank → documented default
+
+_scrub("HTTPStatusError: 401 for Bearer vk_secret", token="vk_secret")
+    → "HTTPStatusError: 401 for Bearer ***"
+
+_build_arguments(message="검색이 너무 느려요", comment="   ", tags=[" ", None],
+                 conversation_id="9f1c…", session_id=None, user_id=42)
+    → {'message': '검색이 너무 느려요',
+       'source': {'product': 'changple', 'integration': 'langchain-mcp'},
+       'conversation_id': '9f1c…', 'user_id': '42'}
+
+await capture_user_feedback(message="   ", …)   → CaptureOutcome(status='failed',  reason='blank_message')
+await capture_user_feedback(message="hi", url="", token="")
+                                                → CaptureOutcome(status='dormant', is_dormant=True)</code></pre>
+
+<p>Every one of those lines is the shipped code executing; none of them touched the network. Read the
+<code>_build_arguments</code> result closely: the blank comment is dropped rather than sent as
+<code>""</code>, the all-blank tag list is omitted entirely rather than sent as <code>[]</code>,
+<code>session_id=None</code> disappears, and <code>user_id=42</code> is stringified.
+<code>recorded_by</code> is missing on purpose — on this endpoint an omitted marker is stored as
+<code>"agent"</code>, which is exactly right, and sending it explicitly would only add a value that
+could be rejected. And <code>_scrub</code> exists so that the one string that must never reach a log
+line cannot: the bearer is replaced before the detail is truncated to 200 characters.</p>
+
+<h4>3e. Agent: <code>chat/vocky_feedback_tool.py</code> (183 lines) — the tool the model sees</h4>
+
+<p>Explainer #5 listed this tool as the last entry in the chat agent's registration order and
+deferred it to this page. Here it is. The model sees two arguments — the user's words verbatim, and
+the agent's own note about them — and everything else (product, integration, correlation ids) is
+built from the runtime context. Binding Vocky's raw <code>capture_feedback</code> tool, with its
+~22 arguments and English docstring, was considered and rejected.</p>
+
+<p>Three contracts, and the third is the one people find surprising.</p>
+
+<p><strong>Never fails a turn.</strong> The transport already never raises; the facade adds a
+catch-all for everything that could go wrong inside <em>it</em> (a hostile runtime object, a bad id
+coercion, a plain bug). <code>except Exception</code> is used precisely because it does not catch
+<code>CancelledError</code>.</p>
+
+<p><strong>Zero retrieval-budget impact.</strong> Explainer #5 showed that the four-call retrieval
+budget is enforced by each retrieval tool reading and incrementing
+<code>retrieval_call_count</code> in the graph state. This tool never writes that channel — and the
+code says so where someone might be tempted to add it:</p>
+
+<pre><code>def _ack_command(tool_call_id: str, *, attempted: bool) -&gt; Command:
+    update = {"messages": [ToolMessage(content=CHAT_AGENT_FEEDBACK_TOOL_ACK, tool_call_id=tool_call_id)]}
+    if attempted:
+        update[CHAT_AGENT_FEEDBACK_ATTEMPTED_STATE_KEY] = True
+    # NOTE: no ``retrieval_call_count`` key, ever. That omission is the entire
+    # budget-exemption mechanism.
+    return Command(update=update)</code></pre>
+
+<p><strong>One acknowledgment for every outcome.</strong> <code>recorded</code>, <code>failed</code>
+and <code>dormant</code> all return the same short, neutral Korean string:</p>
+
+<pre><code>CHAT_AGENT_FEEDBACK_TOOL_ACK = (
+    "확인했습니다. 같은 내용으로 다시 호출하지 말고, "
+    "이 도구에 대한 언급 없이 사용자에게 하려던 답변을 그대로 이어가세요."
+)</code></pre>
+
+<p>It claims nothing ("확인했습니다" — acknowledged, not "기록했습니다" — recorded), tells the model
+not to call again with the same content, and tells it to carry on without mentioning the tool. The
+reasoning in the docstring: if the model could tell a failed capture from a successful one, it would
+eventually apologise, retry, or otherwise let the user learn that an internal integration is
+down — and a failed capture is invisible to the user by design. The distinction is kept where it
+belongs, in the application log.</p>
+
+<p>One flag does record the difference, and its subtlety is instructive:</p>
+
+<pre><code>attempted = not outcome.is_dormant      # on ATTEMPT, not on success</code></pre>
+
+<p><code>feedback_capture_attempted</code> is what the ungrounded-memory gate (explainers #5 and
+#11) reads to exempt a feedback turn from being rewritten — a turn spent recording a complaint
+naturally retrieves no documents. Marking only <em>successes</em> would mean a Vocky outage silently
+re-arms that gate on exactly the turns the feature exists for. A <code>dormant</code> outcome writes
+nothing, because nothing was attempted.</p>
+
+<p>A last detail with a long shadow: the tool takes a bare <code>ToolRuntime</code>, never
+<code>ToolRuntime[ChatAgentContext]</code>, and every context field is read through a defensive
+helper. A concrete generic parameter would make LangGraph build a pydantic schema for that exact
+dataclass and coerce the runtime context into it, which would make binding the same tool to the
+컨설팅 agent (whose context type has different fields) impossible later.</p>
+
+<h4>What each side actually looks like from outside</h4>
+
+<ul>
+<li><strong>The user, REST path:</strong> presses 👍/👎 on an answer or submits the 프로필 피드백
+form, and the browser gets Vocky's receipt with <code>202 Accepted</code> — or a 502/503 if the
+proxy could not deliver it. Feedback here is an explicit act with visible confirmation.</li>
+<li><strong>The user, agent path:</strong> sees nothing at all. They complained in conversation; the
+model recorded it and carried on answering. A successful capture does not even produce a container
+log line — the agent installs no root log handler, so its <code>logger.info</code> success message is
+suppressed and Vocky itself is the only success signal. A failure logs exactly one
+<code>WARNING</code>.</li>
+<li><strong>The operator:</strong> opens <code>/operator/feedback</code>, which reads
+<strong>Vocky</strong>, not a local table — both paths' records land in the same place — and can
+append a 조치 기록 (an internal handling note, never shown to the end user) or delete a record
+upstream, irreversibly.</li>
+</ul>
+
+<hr>
+
+<h3>The three leaves side by side</h3>
+
+<table>
+<thead><tr><th></th><th>창업가 MBTI</th><th>Consultation requests</th><th>Vocky feedback</th></tr></thead>
+<tbody>
+<tr><td><strong>Storage</strong></td><td>one table (<code>MBTISubmission</code>) + a static Python bank and copy module</td><td>two tables (<code>ConsultationRequest</code>, <code>NotificationRecipient</code>)</td><td><strong>none</strong> — no model, no migration; the record lives in Vocky</td></tr>
+<tr><td><strong>Who calls it</strong></td><td>the <code>/mbti</code> pages; one count read from <code>accounts</code></td><td>four funnels write; the operator console and one <code>accounts</code> count read</td><td>the browser (REST) and the chat model (MCP); the operator console reads back</td></tr>
+<tr><td><strong>Failure mode</strong></td><td>400 on bad answers, 404 on an unknown or legacy type — it is a pure function, so there is nothing else to fail</td><td>the submit always succeeds; the notification is fire-and-forget and returns a status dict</td><td>REST: 502/503 to the caller. Agent: never fails — every family becomes a <code>failed</code> outcome</td></tr>
+<tr><td><strong>Dormancy gate</strong></td><td>none — always on</td><td>none; with no active recipients the task returns <code>no_recipients</code></td><td>blank URL <em>or</em> token, on each side independently. No enable flag</td></tr>
+<tr><td><strong>Machinery it borrows</strong></td><td>DRF auth (#3); <code>consultations</code>' write seam for its lead</td><td>Celery + mail (#16); the guest purge (#3/#4); the operator mixin (#17)</td><td>the agent loop, tool registration and middleware (#5); the ungrounded gate (#11); the operator mixin (#17)</td></tr>
+</tbody>
+</table>
+
+<p>Read down the "failure mode" row and you get the design principle these three quietly share: each
+one decides, explicitly and in a docstring, <em>who is allowed to be hurt by its failure</em>. The
+MBTI scorer may reject your input (you are right there, you can fix it). A consultation submit may
+never fail because of a mail problem (the customer has done their part). An agent-side capture may
+never fail anything at all (the user did not even ask for it). Nothing here is defensive by reflex;
+each catch-all has a named victim it is protecting.</p>
+
+<h3>Closing Part D — and the curriculum's last code page</h3>
+
+<p>Part D has been about everything around the product rather than the product itself.
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">#16</a>
+covered running it — Celery, dispatch-after-commit, alerts, the production topology.
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/17-operator-console-and-llm-runtime">#17</a>
+covered operating it — the operator console and the live LLM runtime config.
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/18-billing-toss">#18</a> covered charging
+for it — the Toss subscription lifecycle. This page covered the leaves: the parts that hang off the
+edge of the system and, being small, show its habits most clearly — a single source of truth with
+derived constants and import-time assertions, a snapshot that outlives its source, a trust rule
+written down once and cited by name, and an integration that is dormant until configured and silent
+when it fails.</p>
+
+<p>The next and final page in the set is a reading guide rather than a code walk: how to navigate all
+nineteen of these, in what order, and which corrections later pages made to earlier ones.</p>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p class="small">Five questions on the three leaves. Click an answer to see whether it is right and
+why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Questions 33–40 of the 창업가 MBTI measure 준비도 (readiness). What is their
+  relationship to the 16 types?</p>
+  <button class="opt" data-correct="false">They form a fifth axis, so the type code is really five letters long.</button>
+  <button class="opt" data-correct="false">They are tie-breakers: when an axis lands exactly on its midpoint, the readiness score decides the pole.</button>
+  <button class="opt" data-correct="true">None — <code>score_mbti</code> skips them entirely; they are summed separately (8–40) into four bands and stored in their own column.</button>
+  <button class="opt" data-correct="false">They are weighted into every axis, which is why <code>axis_scores</code> is stored as JSON.</button>
+  <p class="why" hidden>Only the 32 <code>kind="personality"</code> items feed the typology
+  (<code>if item.kind != "personality": continue</code>). 준비도 is a plain additive score with bands
+  at 33 / 25 / 17, kept in the nullable <code>readiness_score</code> column — deliberately not folded
+  into <code>axis_scores</code>, which the views iterate per axis.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> A user answers 보통이다 (the neutral 3) to all 40 statements. What comes back,
+  and why?</p>
+  <button class="opt" data-correct="false">A 400, because an all-neutral submission carries no signal.</button>
+  <button class="opt" data-correct="true"><code>GEBI</code> — every axis lands on <code>raw = 3n = 24</code>, which is an exact tie, and each axis's <code>tie_break</code> is its A-side pole.</button>
+  <button class="opt" data-correct="false">A random one of the 16 types, re-rolled per submission so the bias is spread out.</button>
+  <button class="opt" data-correct="false">Whatever type the previous submission produced, since nothing in the answers moved any axis.</button>
+  <button class="opt" data-correct="false"><code>CSOF</code>, because a float midpoint comparison rounds the neutral case down.</button>
+  <p class="why" hidden>Measured by running the shipped scorer: all-3 → <code>GEBI</code> with
+  <code>raw=24, n=8</code> on every axis. Because the neutral point is an integer and each item's two
+  poles sum to 6, the exact midpoint is reachable — so the code compares doubled integers
+  (<code>2*raw</code> vs <code>6*n</code>) to make equality exact and gives the tie a fixed,
+  documented winner. Determinism is what lets a stored submission be re-scored to the stored
+  result.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> <code>ConsultationRequest</code> copies the report text into
+  <code>content_snapshot</code> and links its session with <code>on_delete=SET_NULL</code>. What is
+  that combination buying?</p>
+  <button class="opt" data-correct="false">Query speed — reading a text column beats joining to the conversation tables.</button>
+  <button class="opt" data-correct="true">Survival of the nightly guest purge: anonymous sessions are hard-deleted after 30 days, so the FK must be allowed to vanish while the operator's copy of the 내용 stays readable.</button>
+  <button class="opt" data-correct="false">A cheap audit log — the snapshot records every edit made to the report afterwards.</button>
+  <button class="opt" data-correct="false">Nothing structural; it is a leftover from before the conversations app existed.</button>
+  <p class="why" hidden>The model docstring says it outright. A 30-day beat job hard-deletes anonymous
+  guest 진단 sessions, so a consultation that only <em>pointed</em> at one would be empty on day 31.
+  The same self-containment is what later licenses a hard <code>DELETE</code> of a request from the
+  operator console: nothing points at the row and it points at nothing that matters.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The agent-side Vocky client turns every failure — timeout, 401, an
+  <code>isError</code> result, even a programming error — into a <code>failed</code> outcome instead
+  of raising. Why is swallowing correct here?</p>
+  <button class="opt" data-correct="false">Because <code>urllib</code> cannot distinguish error classes, so there is nothing useful to re-raise.</button>
+  <button class="opt" data-correct="false">Because the retry loop needs a return value to decide how long to back off.</button>
+  <button class="opt" data-correct="true">Because <code>ChatAgentMiddleware.awrap_tool_call</code> converts any tool exception into a failed turn — so an exception from a feedback capture would cost the user the answer they were waiting for.</button>
+  <button class="opt" data-correct="false">Because MCP forbids a client from raising on a tool result.</button>
+  <p class="why" hidden>The docstring names the middleware as the reason. Two things still propagate:
+  a genuine <code>CancelledError</code> (the user's turn being torn down — swallowing it would leave a
+  zombie task), found by unwrapping <code>BaseExceptionGroup</code>s from the anyio-based transport,
+  and non-<code>Exception</code> <code>BaseException</code>s. There is no retry machinery at all: a
+  capture is rare and already fail-open.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Vocky is reached with two different <code>vk_</code> tokens. What is the
+  split?</p>
+  <button class="opt" data-correct="false">One is a read key and one is a write key, both on <code>fastapi_agent</code>.</button>
+  <button class="opt" data-correct="true"><code>VOCKY_API_AUTH_TOKEN</code> is the REST proxy's key on the three Django services; <code>VOCKY_MCP_API_TOKEN</code> is the MCP client's key on <code>fastapi_agent</code> only — different transports, never forwarded to each other's service.</button>
+  <button class="opt" data-correct="false">The second is a fallback used when the first is rate-limited.</button>
+  <button class="opt" data-correct="false">One is for production and one for the dev stack; only one is ever set at a time.</button>
+  <p class="why" hidden>Two integrations, two transports, two credentials, two service scopes —
+  verified when the feature shipped with a real <code>docker compose config</code> render. They also
+  take differently-shaped URLs: <code>VOCKY_BASE_URL</code> is a base origin the client appends
+  <code>/api/feedback</code> to, while <code>VOCKY_MCP_URL</code> is the full endpoint (and the agent
+  normalises its trailing slash, because the slash-less form answers 307 with an
+  <code>http://</code> Location and the feature dies silently).</p>
+</div>
+</section>
+
+<hr>
+
+<p class="small">Files walked for this page: <code>apps/backend/mbti/{typology,items,validation,scoring,models,metadata,serializers,urls,views}.py</code> ·
+<code>apps/backend/consultations/{models,services,tasks,views,serializers,admin_views,admin,urls}.py</code> ·
+<code>apps/backend/feedback/{client,views,admin_views,serializers,urls}.py</code> ·
+<code>apps/agent/app/chat/{vocky_feedback,vocky_feedback_tool}.py</code> ·
+<code>apps/backend/conversations/{views,guest_retention}.py</code> (the consulting projection and the
+purge) · <code>apps/backend/accounts/{usage,operator_serializers,views}.py</code> (the two count
+reads) · <code>apps/backend/operators/permissions.py</code> · <code>apps/backend/config/{urls,settings}.py</code> ·
+<code>apps/web/src/lib/feedback-client.ts</code> · <code>docs/current/operations.md</code>
+§"Agent Vocky Feedback Capture (P63)".</p>
+
+<p class="small">Previous in this series:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/18-billing-toss">#18 — Billing: the Toss
+subscription lifecycle from checkout to reconciliation</a>.</p>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
