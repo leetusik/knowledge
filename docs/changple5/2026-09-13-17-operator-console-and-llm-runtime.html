@@ -1,0 +1,1223 @@
+<!--kb
+title: "The operator console backend and live LLM runtime config"
+date: 2026-09-13
+tags:
+  - changple5
+  - operator-console
+  - llm-config
+  - backend
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The operator console backend and live LLM runtime config</title>
+<style>
+  :root { color-scheme: light dark; --accent: #2f8f5b; --accent-soft: rgba(47,143,91,.12); --warn: #b5651d; --warn-soft: rgba(181,101,29,.12); --line: rgba(128,128,128,.45); }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; font-size: 1.02rem; }
+  h1 { line-height: 1.25; font-size: 1.85rem; }
+  h2 { margin-top: 2.6rem; padding-bottom: .3rem; border-bottom: 2px solid var(--accent); font-size: 1.4rem; }
+  h3 { margin-top: 2rem; font-size: 1.14rem; }
+  h4 { margin-top: 1.5rem; font-size: 1rem; }
+  p, li { overflow-wrap: break-word; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+         font-size: .9em; background: rgba(128,128,128,.14); padding: .1em .32em; border-radius: 3px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: rgba(128,128,128,.12);
+        padding: .8rem .9rem; border-radius: 6px; border: 1px solid var(--line);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: .84rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft);
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 0 5px 5px 0; }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout p:first-child { margin-top: 0; } .callout p:last-child { margin-bottom: 0; }
+  .callout .tag { display: inline-block; font-size: .74rem; letter-spacing: .07em;
+                  text-transform: uppercase; font-weight: 700; opacity: .8; margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1.1rem 0; font-size: .88rem; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: .38rem .55rem; text-align: left; vertical-align: top; }
+  th { background: rgba(128,128,128,.14); font-weight: 600; }
+  figure { margin: 1.4rem 0; }
+  figcaption { font-size: .85rem; opacity: .8; margin-top: .45rem; text-align: center; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  nav { border: 1px solid var(--line); border-radius: 6px; padding: .6rem 1rem .8rem; background: rgba(128,128,128,.07); }
+  nav ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+  .filepath { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .84rem; opacity: .85; }
+  .q { border: 1px solid var(--line); border-radius: 6px; padding: .9rem 1rem; margin: 1.1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .5rem .7rem;
+            cursor: pointer; border: 1px solid var(--line); border-radius: 5px;
+            background: rgba(128,128,128,.07); color: inherit; font: inherit; font-size: .93rem; }
+  .q .opt:hover { border-color: var(--accent); }
+  .q .opt.correct { background: rgba(47,143,91,.26); border-color: var(--accent); }
+  .q .opt.incorrect { background: rgba(190,60,60,.22); border-color: #b03c3c; }
+  .q .why { margin: .6rem 0 0; font-size: .92rem; padding: .5rem .7rem;
+            background: var(--accent-soft); border-radius: 5px; }
+  .sr { font-size: .86rem; opacity: .85; }
+  ul.tight li { margin: .25rem 0; }
+</style>
+</head>
+<body>
+
+<h1>The operator console backend and live LLM runtime config</h1>
+
+<p class="sr">Explainer 17 of the changple5 builder's curriculum · Part D (running the system) · previous:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">Running it: Celery, dispatch-after-commit, alerts, and the production topology</a>.</p>
+
+<p>Every day you open <code>/operator/…</code>, glance at the dashboard, maybe change a model on the
+settings page, and close the tab. This page is about what sits <em>behind</em> that tab: eleven
+Django routes, one permission class, five small tables, and — the part worth the price of admission —
+the mechanism that lets you change which Gemini model the product uses <strong>while it is
+running</strong>, with no deploy, no restart, and no downtime.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — what "the console" is on the backend</a></li>
+    <li><a href="#intuition">Intuition — a setting that is alive</a></li>
+    <li><a href="#code">Code — walking the real implementation</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ====================================================================== -->
+<section id="background">
+<h2>Background — what "the console" is on the backend</h2>
+
+<h3>Two halves with one name</h3>
+
+<p>"The operator console" names two different things that meet over HTTP. The half you look at is a
+set of Next.js pages under <code>/operator/…</code> in <span class="filepath">apps/web</span> — not this
+page's subject. The half this page teaches is the JSON API those pages call, and it lives almost
+entirely in one small Django app: <span class="filepath">apps/backend/operators/</span>, about 2,900
+lines across a dozen modules.</p>
+
+<p>Django's URL root shows where it hangs (<span class="filepath">apps/backend/config/urls.py</span>):</p>
+
+<pre><code>path("api/admin", RedirectView.as_view(pattern_name="api-admin-overview", permanent=False)),
+path("api/admin/", include("operators.urls")),
+path("api/documents", DocumentSourceListView.as_view(), …),
+path("api/documents/ingestion/", include("ingestion.urls")),
+path("api/documents/", include("documents.urls")),
+path("api/django-admin/", admin.site.urls),</code></pre>
+
+<p>Three things are worth noticing already.</p>
+
+<p>First, <strong>the console's API is not all under one prefix.</strong> The dedicated operator app
+mounts at <code>/api/admin/</code>, but plenty of operator-only endpoints live under the prefix of the
+app that owns the data — the corpus coverage tab is served from <code>/api/documents/collection/coverage</code>,
+the ingestion job controls from <code>/api/documents/ingestion/…</code>, the content library's
+operator writes from <code>/api/content/admin/…</code>. There is no single "admin router". What holds
+these scattered surfaces together is not a URL prefix; it is a permission class.</p>
+
+<p>Second, <code>api/admin</code> without a trailing slash is a redirect to the overview endpoint. A
+small courtesy, and a hint that this API is browsed by humans with session cookies as well as by the
+SPA.</p>
+
+<p>Third, <code>api/django-admin/</code> is Django's own built-in admin site. It is the
+<strong>break-glass path</strong>: the resolver module's docstring literally calls it "the django-admin
+break-glass path". Nobody uses it day to day — it exists so that when the console is broken, or a
+value needs setting that no panel exposes, someone with a superuser account can still edit a row by
+hand. You will see the code defend against exactly that below: several readers re-validate values
+"because django admin can write anything".</p>
+
+<h3>One permission class for the whole backend</h3>
+
+<p>Here is <span class="filepath">apps/backend/operators/permissions.py</span> in its entirety — all
+28 lines, including the docstring, because its size is part of the point:</p>
+
+<pre><code>"""Operator authorization: the ``is_operator_user`` predicate and DRF permission.
+
+``IsOperatorUser`` is the single operator permission class across the backend
+(documents/ingestion consolidated onto it in P34.S7); it grants access only to
+authenticated users whose ``user_type == "admin"``.
+"""
+
+from __future__ import annotations
+
+from rest_framework.permissions import BasePermission
+
+
+def is_operator_user(user) -&gt; bool:
+    return bool(
+        user
+        and getattr(user, "is_authenticated", False)
+        and getattr(user, "user_type", "") == "admin"
+    )
+
+
+class IsOperatorUser(BasePermission):
+    """Allow operator (admin) users only; 403 with a generic message otherwise."""
+
+    message = "You do not have permission to perform this action."
+
+    def has_permission(self, request, view) -&gt; bool:
+        return is_operator_user(request.user)</code></pre>
+
+<p>That is the whole authorization story for every operator surface in the product. Two conditions:
+the request is authenticated, and the user row's <code>user_type</code> column reads
+<code>"admin"</code>. Note what is <em>not</em> here — no roles, no scopes, no per-object rules, no
+superuser requirement. (How a user gets <code>user_type == "admin"</code> in the first place, and how
+the JWT that proves authentication is minted and verified, is
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">explainer 3</a>'s
+subject. This page starts one step later, at the permission check.)</p>
+
+<p>Measured reach, grepped today rather than assumed: <strong>eight non-test modules import
+<code>IsOperatorUser</code>, spread across eight app directories</strong> —
+<code>accounts/operator_views.py</code>, <code>consultations/admin_views.py</code>,
+<code>content/views.py</code>, <code>conversations/admin_views.py</code>,
+<code>documents/views.py</code>, <code>feedback/admin_views.py</code>,
+<code>ingestion/views.py</code>, and <code>operators/views.py</code> itself. Those eight declare ten
+<code>permission_classes = [IsAuthenticated, IsOperatorUser]</code> lines directly, and then fan the
+pair out through mixins: <code>content/views.py</code>'s <code>OperatorContentViewMixin</code> /
+<code>OperatorJsonContentViewMixin</code> / <code>OperatorContentLookupMixin</code> are inherited by
+<strong>sixteen</strong> content modules, most of them the content agent v2 stage views from
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">explainers 13–14</a>.</p>
+
+<div class="callout">
+  <span class="tag">Pattern worth naming</span>
+  <p>The <em>permission</em> is centralized; the <em>mixin</em> is not. Each app writes its own tiny
+  base class that pairs <code>IsOperatorUser</code> with whatever authentication and parsers it needs
+  — <code>operators.OperatorAdminViewMixin</code>, <code>documents.AdminDocumentViewMixin</code>,
+  <code>content.OperatorContentViewMixin</code>, <code>accounts.OperatorUserAdminViewMixin</code>.
+  Duplicating four three-line classes buys the thing that actually matters: the <code>operators</code>
+  app depends on no domain app, and no domain app has to import another one just to be gated.
+  <code>operators/serializers.py</code> does the same with its <code>StrictSerializer</code> and says
+  so in a comment — "third copy of the same tiny class … duplicated rather than cross-imported so the
+  operators app keeps no dependency on a domain app".</p>
+</div>
+
+<p>The authentication half is equally short. The shared mixin in
+<span class="filepath">operators/views.py</span> reads:</p>
+
+<pre><code>class OperatorAdminViewMixin:
+    """Shared authentication/authorization for operator-console JSON endpoints.
+
+    Accepts either a bearer JWT (the Next.js ``/operator/*`` SPA) or a Django
+    session (django-admin login), and requires the caller to be an operator
+    (``user_type == "admin"``). Endpoints inheriting this mixin answer 401 for
+    anonymous callers and 403 for authenticated non-operators.
+    """
+
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsOperatorUser]</code></pre>
+
+<p>Two ways in, one gate: the SPA carries a bearer JWT, and a human logged into django-admin carries a
+session cookie. 401 means "I do not know who you are"; 403 means "I know, and you are not an
+operator".</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="intuition">
+<h2>Intuition — a setting that is alive</h2>
+
+<h3>The console is two kinds of endpoint</h3>
+
+<p>Once you look past the routing, every endpoint in the console is one of exactly two shapes:</p>
+
+<ul class="tight">
+  <li><strong>Read models.</strong> The overview dashboard, the system-log list, the Cloudflare
+  analytics panel, the corpus coverage and per-post diagnostic screens. These run bounded aggregate
+  queries and return a payload. They write nothing.</li>
+  <li><strong>Config panels.</strong> LLM runtime config, ingestion alert recipients, the chat
+  retrieval width, the Notion export credentials. These read and write a handful of rows that the
+  <em>rest of the product</em> then obeys.</li>
+</ul>
+
+<p>The read models are honest, careful, and not very surprising — we will walk them, because the
+carefulness is instructive. The config panels are where the interesting engineering is, and they all
+turn on one question.</p>
+
+<h3>The question: how do you change a setting on a running system?</h3>
+
+<p>Start from the obvious answer and watch it fail. Suppose the chat model should move from
+<code>gemini-3-flash-preview</code> to something newer. The traditional answer is an environment
+variable: edit <code>.prod.env</code>, redeploy, done. But a redeploy of this product means rebuilding
+and restarting the Django backend, the FastAPI agent, and the Celery worker and beat containers. It
+takes minutes, it interrupts in-flight chat streams, and — the fatal part — it means the person who
+should be tuning the model (the operator) needs the person who can deploy (the builder). A knob you
+can only turn by shipping is not a knob.</p>
+
+<p>So the value has to live in the database, where an HTTP request can change it and every process can
+see it. That gives the shape the whole rest of this page elaborates:</p>
+
+<figure>
+<svg viewBox="0 0 700 260" role="img" aria-label="An operator edits a value in the console; it is validated, probed against the provider, and written to one Postgres row; the Django backend and the FastAPI agent each read that row with a different policy.">
+  <g stroke="currentColor" fill="none" stroke-width="1.4">
+    <rect x="8" y="16" width="150" height="52" rx="7"/>
+    <rect x="8" y="104" width="150" height="52" rx="7" fill="rgba(47,143,91,.12)"/>
+    <rect x="262" y="104" width="176" height="52" rx="7" fill="rgba(47,143,91,.2)"/>
+    <rect x="524" y="30" width="168" height="60" rx="7"/>
+    <rect x="524" y="170" width="168" height="60" rx="7"/>
+    <rect x="8" y="192" width="150" height="44" rx="7" stroke-dasharray="4 3"/>
+  </g>
+  <g fill="currentColor" font-size="12.5" font-family="system-ui, sans-serif">
+    <text x="83" y="38" text-anchor="middle">Operator at</text>
+    <text x="83" y="55" text-anchor="middle" font-family="ui-monospace, monospace">/operator/settings</text>
+    <text x="83" y="126" text-anchor="middle">PATCH /api/admin/</text>
+    <text x="83" y="143" text-anchor="middle" font-family="ui-monospace, monospace">llm-config</text>
+    <text x="350" y="124" text-anchor="middle" font-weight="600">one Postgres row</text>
+    <text x="350" y="142" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace">operators_llmroleconfig</text>
+    <text x="608" y="52" text-anchor="middle" font-weight="600">Django backend</text>
+    <text x="608" y="69" text-anchor="middle" font-size="11">1 ORM read per job</text>
+    <text x="608" y="83" text-anchor="middle" font-size="11">no cache</text>
+    <text x="608" y="192" text-anchor="middle" font-weight="600">FastAPI agent</text>
+    <text x="608" y="209" text-anchor="middle" font-size="11">cross-schema SELECT</text>
+    <text x="608" y="223" text-anchor="middle" font-size="11">30-second snapshot</text>
+    <text x="83" y="212" text-anchor="middle" font-size="11.5">Gemini (live probe</text>
+    <text x="83" y="228" text-anchor="middle" font-size="11.5">of the new model id)</text>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.3" marker-end="url(#a17)">
+    <path d="M83 68 L83 104"/>
+    <path d="M158 130 L262 130"/>
+    <path d="M438 124 L470 124 L470 60 L524 60"/>
+    <path d="M438 138 L470 138 L470 200 L524 200"/>
+    <path d="M70 156 L70 192" stroke-dasharray="4 3"/>
+    <path d="M96 192 L96 156" stroke-dasharray="4 3"/>
+  </g>
+  <defs>
+    <marker id="a17" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>One write, one row, two readers — and the two readers deliberately do not read it the same way.</figcaption>
+</figure>
+
+<p>The dashed box is the piece people usually forget. If the operator types
+<code>gemini-3.7-flesh</code>, a database-backed setting will happily store the typo and every
+generation call in the product will start failing minutes later, in the background, where nobody is
+watching. So the write path makes <em>one cheap real call</em> to Gemini with the submitted id before
+it saves. We will look at exactly which failures block the save and which do not, because that
+asymmetry is the most thoughtful thing in the module.</p>
+
+<h3>The part that is genuinely counter-intuitive: two readers, two policies</h3>
+
+<p>Both services read the same row. Neither caches it the way you would guess.</p>
+
+<p>The <strong>agent</strong> — the FastAPI service that serves chat — caches it for 30 seconds in
+process memory. The <strong>Django backend</strong> — which runs the Celery jobs — does not cache it
+at all: it re-reads the row every single time. If you have absorbed the usual instinct that caching
+is an optimization and "no cache" is the lazy option, this looks backwards. It is not. Look at how
+often each side actually asks:</p>
+
+<figure>
+<svg viewBox="0 0 700 250" role="img" aria-label="Timeline comparison. The agent asks for the config many times per second during a chat turn and therefore caches for thirty seconds. The backend asks once per Celery job and therefore reads fresh every time.">
+  <g font-family="system-ui, sans-serif" font-size="12.5" fill="currentColor">
+    <text x="10" y="22" font-weight="600">FastAPI agent — one chat turn</text>
+    <text x="10" y="140" font-weight="600">Django backend — one Celery job</text>
+  </g>
+  <g stroke="currentColor" stroke-width="1.2" fill="none">
+    <path d="M10 62 L660 62"/>
+    <path d="M10 180 L660 180"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="40" cy="62" r="4"/><circle cx="70" cy="62" r="4"/><circle cx="104" cy="62" r="4"/>
+    <circle cx="150" cy="62" r="4"/><circle cx="186" cy="62" r="4"/><circle cx="214" cy="62" r="4"/>
+    <circle cx="262" cy="62" r="4"/><circle cx="300" cy="62" r="4"/><circle cx="338" cy="62" r="4"/>
+    <circle cx="372" cy="62" r="4"/><circle cx="412" cy="62" r="4"/><circle cx="452" cy="62" r="4"/>
+    <circle cx="494" cy="62" r="4"/><circle cx="540" cy="62" r="4"/><circle cx="588" cy="62" r="4"/>
+    <circle cx="628" cy="62" r="4"/>
+    <circle cx="120" cy="180" r="6"/>
+    <circle cx="470" cy="180" r="6"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" stroke-dasharray="3 3">
+    <rect x="26" y="44" width="248" height="36" rx="5"/>
+    <rect x="290" y="44" width="350" height="36" rx="5"/>
+  </g>
+  <g fill="currentColor" font-family="system-ui, sans-serif" font-size="11.5">
+    <text x="150" y="98" text-anchor="middle">one 30 s snapshot → 1 query</text>
+    <text x="465" y="98" text-anchor="middle">next 30 s snapshot → 1 query</text>
+    <text x="120" y="204" text-anchor="middle">job starts → 1 ORM read</text>
+    <text x="470" y="204" text-anchor="middle">next job → 1 ORM read</text>
+    <text x="10" y="232" font-size="11.5">A cache here would save nothing and could only add staleness.</text>
+  </g>
+</svg>
+<figcaption>The right caching policy is not a property of the value. It is a property of how often the value is asked for.</figcaption>
+</figure>
+
+<p>The agent builds a model client on nearly every step of a streaming chat turn — per model call, per
+retrieval rerank, per compaction. Without a cache, a single conversation would mean dozens of
+round-trips to Postgres for a value that changes maybe twice a month. The Django backend's builders,
+by contrast, are called <em>once per Celery job</em>: a title-generation task, an image-alt task, a
+content-agent stage. One ORM read per job already gives per-job liveness, for free. Adding a 30-second
+cache there would save a fraction of a query per job and would mean a job could start with a stale
+model id the operator had just changed.</p>
+
+<div class="callout">
+  <span class="tag">The idea to keep</span>
+  <p>Same store, two read policies, each justified by <em>call frequency</em> rather than by taste.
+  Say it as a rule: cache a config read when the read is in a hot loop; skip the cache when the read
+  already happens exactly as often as the work it configures. Both sides here wrote the reasoning into
+  their module docstrings, which is why the decision survived three years of later edits.</p>
+</div>
+
+<p>One consequence of the 30-second snapshot is worth internalizing as an operator: after you press
+저장, the agent may keep using the previous model for <strong>up to about half a minute</strong>. That
+is not a bug and not a deploy problem — it is the snapshot window expiring. The backend, on the other
+hand, picks it up on the very next job.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="code">
+<h2>Code — walking the real implementation</h2>
+
+<h3>The route map</h3>
+
+<p><span class="filepath">apps/backend/operators/urls.py</span> is 108 lines and declares eleven
+routes. Each one carries a comment naming the phase that added it, which makes the file a small
+history of what an operator has needed over time.</p>
+
+<table>
+<thead><tr><th>Route (under <code>/api/admin/</code>)</th><th>View</th><th>What it is for</th></tr></thead>
+<tbody>
+<tr><td><code>overview</code></td><td><code>OperatorOverviewView</code></td><td>Dashboard counts across five apps</td></tr>
+<tr><td><code>users</code></td><td><code>OperatorUserListCreateView</code></td><td>List/search users, create an admin</td></tr>
+<tr><td><code>users/bulk-status</code></td><td><code>OperatorUserBulkStatusView</code></td><td>Bulk 활성/비활성, per-record outcomes (P55.S4)</td></tr>
+<tr><td><code>users/&lt;int:user_id&gt;</code></td><td><code>OperatorUserDetailView</code></td><td>Read / patch one account</td></tr>
+<tr><td><code>users/&lt;int:user_id&gt;/password</code></td><td><code>OperatorUserPasswordResetView</code></td><td>Reset an admin's password</td></tr>
+<tr><td><code>system-logs</code></td><td><code>SystemErrorLogListView</code></td><td>Paginated cross-service error log</td></tr>
+<tr><td><code>system-logs/report</code></td><td><code>SystemErrorLogReportView</code></td><td><em>Ingress</em>: the agent posts errors here</td></tr>
+<tr><td><code>analytics/web</code></td><td><code>CloudflareWebAnalyticsView</code></td><td>Referrers + visits from Cloudflare</td></tr>
+<tr><td><code>llm-config</code></td><td><code>LLMRoleConfigView</code></td><td>The live LLM runtime store (P44)</td></tr>
+<tr><td><code>alert-recipients</code> + <code>/test</code></td><td><code>AlertRecipientsView</code>, <code>…TestView</code></td><td>Ingestion alert addresses, 테스트 메일 (P53.S15)</td></tr>
+<tr><td><code>chat-retrieval</code></td><td><code>ChatRetrievalConfigView</code></td><td>Per-call retrieval width (P60.S7)</td></tr>
+<tr><td><code>notion-export</code> + <code>/test</code> + <code>/properties</code></td><td><code>NotionExportConfigView</code>, …</td><td>Notion 내보내기 credentials (P90.S1)</td></tr>
+</tbody>
+</table>
+
+<p>Two routes break the pattern and both breaks are deliberate.
+<code>users/bulk-status</code> is declared <em>before</em> <code>users/&lt;int:user_id&gt;</code>, and
+the file explains that the order does not actually matter here — "the int converter cannot match
+<code>bulk-status</code>, so there is no shadowing either way"; it is declared first purely so a reader
+meets the collection routes together. And <code>system-logs/report</code> is not an operator endpoint
+at all: it is an <em>ingress</em>, authenticated by the agent service token, which we will come back
+to.</p>
+
+<h3>The five tables</h3>
+
+<p><span class="filepath">operators/models.py</span> (351 lines) holds every table the app owns. Four
+of the five are configuration; one is a log.</p>
+
+<table>
+<thead><tr><th>Model</th><th>Shape</th><th>Seeded by</th><th>Backs</th></tr></thead>
+<tbody>
+<tr><td><code>SystemErrorLog</code></td><td>Append-only rows</td><td><code>0001_initial</code></td><td>The 시스템 로그 screen</td></tr>
+<tr><td><code>LLMRoleConfig</code></td><td>One row per role</td><td><code>0003_llmroleconfig</code> (+ 0004, 0005, 0009–0014)</td><td>The LLM panel on <code>/operator/settings</code></td></tr>
+<tr><td><code>IngestionAlertRecipientConfig</code></td><td>Singleton</td><td><code>0006_ingestion_alert_recipients_p53</code></td><td>알림 수신자 panel</td></tr>
+<tr><td><code>ChatRetrievalConfig</code></td><td>Singleton</td><td><code>0007…p60</code>, retuned by <code>0008…default_6</code></td><td>검색 결과 개수 panel</td></tr>
+<tr><td><code>NotionExportConfig</code></td><td>Singleton, <em>no seed row</em></td><td><code>0015_notion_export_config_p90</code></td><td>Notion 내보내기 panel</td></tr>
+</tbody>
+</table>
+
+<p><code>SystemErrorLog</code> is the odd one out: it is written by three different producers and read
+by exactly one consumer. Its writers —
+the in-process <code>DatabaseLogHandler</code>, the agent over HTTP, and the browser's client-error
+report — are
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">explainer 16</a>'s
+subject and are not re-taught here. What belongs to the console is the read side: five
+<code>Service</code> values (<code>backend</code>, <code>agent</code>, <code>celery_worker</code>,
+<code>celery_beat</code>, <code>web</code>), three <code>Level</code> values (<code>warning</code>,
+<code>error</code>, <code>critical</code>), a free-form <code>context</code> JSON column, and two
+composite indexes — <code>(service, -created_at)</code> and <code>(level, -created_at)</code> — that
+exist because the list view filters on exactly those two columns plus a date window:</p>
+
+<pre><code>qs = SystemErrorLog.objects.all().order_by("-created_at")
+if service: qs = qs.filter(service=service)
+if level:   qs = qs.filter(level=level)
+if start_date:
+    qs = qs.filter(created_at__gte=datetime.combine(start_date, time.min, tzinfo=dt_timezone.utc))
+if end_date:
+    qs = qs.filter(created_at__lt=datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=dt_timezone.utc))</code></pre>
+
+<p>The end-date handling is a small correctness detail with a long tail of bugs behind it in other
+codebases: the filter is <code>&lt; (end_date + 1 day)</code>, not <code>&lt;= end_date</code>, so
+"through 9 September" includes events at 23:59 on the 9th. The same convention appears in
+<code>operators/date_ranges.py</code>, which every other operator date-windowed endpoint shares.</p>
+
+<h3>The overview snapshot</h3>
+
+<p><span class="filepath">operators/overview.py</span> (247 lines) is the dashboard. Five builders,
+each returning a frozen dataclass, composed into one <code>OperatorOverviewSnapshot</code>:
+<code>accounts</code>, <code>content</code>, <code>documents</code>, <code>ingestion</code>,
+<code>conversations</code>. Model imports are function-local, deliberately, "to avoid cross-app import
+cycles at module load" — the same independence rule the duplicated mixins bought.</p>
+
+<p>Here is one builder in full. Read it for its shape rather than its fields:</p>
+
+<pre><code>def build_ingestion_overview_summary() -&gt; IngestionOverviewSummary:
+    from ingestion.models import IngestionJob
+
+    # One pass over ingestion_ingestionjob: total + the seven per-status counts
+    # + the two Max bounds, all conditional (was 9 separate queries).
+    status = IngestionJob.Status
+    aggregates = IngestionJob.objects.aggregate(
+        total_jobs=Count("id"),
+        pending_jobs=Count("id", filter=Q(status=status.PENDING)),
+        queued_jobs=Count("id", filter=Q(status=status.QUEUED)),
+        running_jobs=Count("id", filter=Q(status=status.RUNNING)),
+        succeeded_jobs=Count("id", filter=Q(status=status.SUCCEEDED)),
+        failed_jobs=Count("id", filter=Q(status=status.FAILED)),
+        partial_jobs=Count("id", filter=Q(status=status.PARTIAL)),
+        cancelled_jobs=Count("id", filter=Q(status=status.CANCELLED)),
+        latest_job_created_at=Max("created_at"),
+        latest_job_finished_at=Max("finished_at"),
+    )
+    …</code></pre>
+
+<p><strong>Conditional aggregation</strong> — <code>Count("id", filter=Q(…))</code> — is the technique
+here, and it is the difference between one <code>SELECT</code> and nine. In SQL it compiles to
+<code>COUNT(id) FILTER (WHERE status = 'queued')</code> repeated per tile, all in a single pass over
+the table. Every builder in the file carries a comment recording how many queries it replaced; the
+documents builder additionally swaps a <code>post_id__in</code> subquery for a correlated
+<code>Exists()</code>, and the conversations builder replaces a <code>join + distinct</code> with the
+same. The dashboard as a whole is, in the view's own words, "the ~10-query conditional-aggregation
+collapse".</p>
+
+<p>The last helper in the file is three lines and quietly the most maintainable thing in it:</p>
+
+<pre><code>def _build_status_breakdown(*, queryset, field_name: str, choices: list[str]) -&gt; dict[str, int]:
+    raw_counts = {
+        row[field_name]: row["count"]
+        for row in queryset.values(field_name).annotate(count=Count("id"))
+    }
+    return {choice: raw_counts.get(choice, 0) for choice in choices}</code></pre>
+
+<p>It takes the <em>choices</em> from the model's own <code>TextChoices</code> class and fills in a
+zero for any value the data does not currently contain. Two properties follow. First, a status with no
+rows shows as <code>0</code> rather than vanishing from the payload — the console's tiles never
+silently change shape. Second, when a new status is added to the domain, the console picks it up for
+free. That is not hypothetical: P98 added <code>RANK_RESTRICTED</code> to
+<code>DocumentSourceStatus.Status</code> (a post the scraper account's cafe rank cannot read), and I
+verified today that the only change needed on the operators side was the <em>test</em> file's expected
+dictionary — <code>_build_status_breakdown</code> is called with
+<code>choices=DocumentSourceStatus.Status.values</code>, so the new key appeared in the payload with no
+console code touched at all.</p>
+
+<p>The whole snapshot is cached for 20 seconds on the shared Redis cache
+(<code>OPERATOR_OVERVIEW_CACHE_KEY = "operators:overview-snapshot"</code>), under a convention
+<code>settings.py</code> spells out: <em>poll</em>-class TTLs of roughly 15–30 s for polled operator
+snapshots, <em>read</em>-class TTLs of roughly 5 minutes for content read caches. One key serves every
+operator because the payload is permission-invariant and takes no query parameters, and
+<code>generated_at</code> is stored <em>inside</em> the cached payload so it truthfully says when the
+data was gathered rather than when it was re-served. Setting the TTL to 0 disables the cache entirely,
+which is how tests assert the uncached query shape.</p>
+
+<h4>Cloudflare Web Analytics, in one breath</h4>
+
+<p><span class="filepath">operators/cloudflare_analytics.py</span> (290 lines) is the console's only
+outbound third-party read. One HTTP round-trip to Cloudflare's GraphQL Analytics API with four aliased
+selections on the same <code>rumPageloadEventsAdaptiveGroups</code> dataset (totals, daily, referrers,
+hosts), normalized into a flat payload, cached for 300 seconds per resolved date window. Two error
+classes map to two statuses and nothing else can escape:
+<code>CloudflareAnalyticsBadGatewayError</code> → <strong>502</strong> ("Cloudflare rejected the query"
+or returned a malformed body — the normalizer catches <code>KeyError</code>/<code>IndexError</code>/
+<code>TypeError</code> and converts them), and <code>CloudflareAnalyticsUnavailableError</code> →
+<strong>503</strong> (unreachable, timed out at 10 s, or — importantly — <em>not configured</em>, which
+is checked before any network call is made). Errors are never cached.</p>
+
+<div class="callout warn">
+  <span class="tag">Read the numbers correctly</span>
+  <p>The module's docstring records three quirks that matter more than the code: Cloudflare's adaptive
+  sampling means every pageview/visit figure is <strong>extrapolated, not exact</strong>; a referrer
+  legitimately showing <code>visits: 0</code> is a real measurement, not a gap; and an empty referrer
+  host (<code>""</code>) means <strong>direct traffic</strong>. A dashboard that presents estimates as
+  counts is a dashboard that will eventually be used to make a wrong decision.</p>
+</div>
+
+<h3 id="llm">The centrepiece: live LLM runtime config</h3>
+
+<p>Now the main event. The feature, in one sentence: an operator edits a model id and a reasoning
+effort per LLM role at <code>/operator/settings</code>, and both services start using it within
+seconds, with no redeploy. It is built from five small modules, and the cleanest way to understand it
+is to follow one save all the way through.</p>
+
+<h4>1. The registry — what a "role" is</h4>
+
+<p><span class="filepath">operators/llm_roles.py</span> (393 lines) is the source of truth for which
+roles exist. A role is one place in the product that calls an LLM: generating a chat reply, writing a
+conversation title, reranking retrieval candidates, drafting one section of a 미라클 article. Each is
+one frozen dataclass:</p>
+
+<pre><code>@dataclass(frozen=True, slots=True)
+class LLMRoleSpec:
+    """One configurable LLM role.
+
+    ``slug`` is simultaneously the DB key, the API field key and the UI label
+    key — freeze it. ``label`` is operator-facing and therefore Korean.
+    """
+
+    slug: str
+    app: str
+    label: str
+    supports_thinking: bool
+    default_model_id: str
+    default_thinking_level: str | None = None
+    requires_explicit_thinking: bool = False</code></pre>
+
+<p>"<code>slug</code> is simultaneously the DB key, the API field key and the UI label key — freeze
+it" is the sort of comment worth copying into your own code. One string is the primary key of a table
+row, a JSON field name in a public API, and the key a React component looks up its label by. Renaming
+it is a three-system migration; the comment is there so nobody tries.</p>
+
+<p>I counted the registry by parsing the module rather than trusting its comments:
+<strong>25 roles</strong>, tagged <code>app=agent</code> for 20 and <code>app=backend</code> for 5.
+A sample across the range:</p>
+
+<table>
+<thead><tr><th>slug</th><th>app tag</th><th>supports_thinking</th><th>default model</th><th>default level</th></tr></thead>
+<tbody>
+<tr><td><code>chat</code></td><td>agent</td><td>yes</td><td><code>gemini-3-flash-preview</code></td><td><code>high</code> (never NULL)</td></tr>
+<tr><td><code>chat_context_token_estimation</code></td><td>agent</td><td><strong>no</strong></td><td><code>gemini-3.1-flash-lite</code></td><td>—</td></tr>
+<tr><td><code>retrieval_rerank</code></td><td>agent</td><td>yes</td><td><code>gemini-3.1-flash-lite</code></td><td>NULL</td></tr>
+<tr><td><code>consulting_report</code></td><td>agent</td><td>yes</td><td><code>gemini-3.1-pro-preview</code></td><td>NULL</td></tr>
+<tr><td><code>content_architect</code></td><td>agent</td><td>yes</td><td><code>gemini-3.7-flash</code></td><td><code>high</code></td></tr>
+<tr><td><code>conversation_title</code></td><td>backend</td><td>yes</td><td><code>gemini-3.1-flash-lite</code></td><td>NULL</td></tr>
+<tr><td><code>cost_table_normalize</code></td><td>backend</td><td>yes</td><td><code>gemini-3.7-flash</code></td><td><code>high</code></td></tr>
+</tbody>
+</table>
+
+<p>Three details in that table repay attention.</p>
+
+<p><strong><code>supports_thinking=False</code> is a real distinction.</strong>
+<code>chat_context_token_estimation</code> calls <code>get_num_tokens</code> — a counting endpoint, not
+a generation one — so a reasoning level is meaningless for it, and the API refuses one ("This role does
+not support a reasoning level"). Modelling "this knob does not apply" beats letting the UI show a
+control that silently does nothing.</p>
+
+<p><strong>NULL is a value, not an absence.</strong> A NULL <code>thinking_level</code> means "send no
+thinking kwarg at all" — take the provider's own default. Every role except <code>chat</code> seeds
+NULL, which is precisely what made turning the store on behavior-neutral on the day it shipped.</p>
+
+<p><strong>The <code>chat</code> role can never be cleared.</strong> That is the
+<code>requires_explicit_thinking</code> flag, and it is the one non-obvious rule in the module. The
+chat role's stored level is not merely an internal default — it is the service default a <em>user</em>
+sees on the composer's 생각 깊이 control. If it were NULL, the control would have nothing to show. So
+the serializer refuses an explicit clear, in Korean, because the message is rendered verbatim in the
+console:</p>
+
+<pre><code>if (spec is not None and spec.requires_explicit_thinking
+        and "thinking_level" in attrs and attrs["thinking_level"] is None):
+    raise serializers.ValidationError({"thinking_level": [
+        f"{spec.label} 역할의 추론 강도는 비울 수 없습니다. "
+        "사용자에게 보이는 서비스 기본값이라 항상 한 단계를 선택해야 합니다."
+    ]})</code></pre>
+
+<p>Note the precision of the condition: only an <em>explicit</em> <code>null</code> is refused.
+Omitting the key — a model-only update — stays legal and leaves the stored level alone.</p>
+
+<div class="callout warn">
+  <span class="tag">Prose lag — trust the code</span>
+  <p>The <code>app</code> column is a <strong>UI grouping label, and it has drifted from reality.</strong>
+  Eleven roles tagged <code>agent</code> — <code>content_architect</code>,
+  <code>content_section_writer</code>, <code>content_chat_pick</code>, <code>scaffold_section_note</code>
+  and their siblings — are in fact called from the <em>Django backend</em>, in
+  <code>content/agent_jobs/</code>, through the shared factory <code>analysis.build_client()</code>.
+  The registry's own section comments still read <code>--- apps/agent (9) ---</code> and
+  <code>--- apps/backend (4) ---</code>, counts that predate the content agent v2 block and the
+  <code>cost_table_normalize</code> role. The same stale-count family reaches the docs and
+  <code>apps/agent/app/llm_config.py:132</code> ("12 rows") and is already recorded as an open operator
+  question for this curriculum phase. Nothing is broken by it — the query is a <code>SELECT</code>-all
+  and each reader ignores the slugs it does not own — but count the registry, do not read the comment.</p>
+</div>
+
+<p>The module also owns the model-id vocabulary. <code>MODEL_ID_PATTERN</code> is
+<code>^(models/)?[a-zA-Z0-9]+([.\-][a-zA-Z0-9]+)*$</code> and is deliberately permissive: an allow-list
+of known model ids "would go stale within weeks and block the operator from adopting a new Gemini
+model — which is the entire point of the phase". Embedding models, by contrast, are rejected outright
+for any generation role, because swapping the embedding model at runtime would silently invalidate the
+entire vector index (so <code>gemini_embedding_model</code> is not in the registry at all and stays
+env-pinned). I executed the three helpers against stubs to see exactly where the lines fall:</p>
+
+<pre><code>input                            normalize_model_id       is_valid  is_embedding
+'models/Gemini-3.7-Flash'    →   'gemini-3.7-flash'        True      False
+'  gemini-3.5-flash  '       →   'gemini-3.5-flash'        True      False
+'gemini_3_flash'             →   'gemini_3_flash'          False     False   ← underscore
+'gemini--3'                  →   'gemini--3'               False     False   ← empty segment
+'gemini-3.'                  →   'gemini-3.'               False     False   ← trailing dot
+'GEMINI-EMBEDDING-001'       →   'gemini-embedding-001'    True      True    ← blocked
+'models/gemini-embedding-001'→   'gemini-embedding-001'    True      True    ← blocked
+'x' * 201                    →   (unchanged)               False     False   ← 200-char cap</code></pre>
+
+<p>A subtlety the measurement exposes: <code>normalize_model_id</code> is a <em>comparison</em> helper,
+not a write-path normalizer. The serializer's <code>validate_model_id</code> only calls
+<code>.strip()</code> before storing, so an operator who types <code>models/Gemini-3.7-Flash</code>
+gets exactly that stored (Gemini accepts both forms). Normalization exists so the embedding check
+cannot be dodged by case or by the <code>models/</code> prefix — matched <em>exactly</em> against a
+known list rather than by substring, "so a future generation model that happens to carry the word never
+locks the operator out".</p>
+
+<h4>2. The probe — one cheap real call</h4>
+
+<p><span class="filepath">operators/llm_probe.py</span> (127 lines) answers "does this model id
+actually exist?" by asking the provider. One throwaway client, one
+<code>get_num_tokens("ping")</code>. Then the classification that makes the module worth studying:</p>
+
+<pre><code>#: Provider status codes that mean "this model id is wrong" rather than "the
+#: probe could not run". 401/403 (auth/permission), 429 (quota) and 5xx are
+#: deliberately treated as infrastructure failures.
+REJECTION_STATUS_CODES = frozenset({400, 404})</code></pre>
+
+<pre><code>def probe_model_id(model_id: str) -&gt; None:
+    api_key = resolve_probe_api_key()
+    if not api_key:
+        logger.warning("Skipping LLM model probe for %r: no Gemini API key is configured "
+                       "on this service; allowing the save.", model_id)
+        return
+    try:
+        build_probe_client(model_id, api_key).get_num_tokens(PROBE_TEXT)
+    except Exception as exc:
+        rejection = _provider_rejection_message(exc)
+        if rejection is not None:
+            raise ModelProbeRejected(rejection) from exc
+        logger.warning("LLM model probe for %r could not run (%s: %s); allowing the save.", …)</code></pre>
+
+<p>Two failures, two opposite reactions. A <strong>400 or 404</strong> means the provider looked at the
+id and said no — that is a typo, and the save is refused with the provider's own message carried back
+to the panel. <strong>Anything else</strong> — no API key on this container, a timeout, a network
+error, a 429 quota wall, a 5xx at Google — means the probe could not run, and the save is
+<em>allowed</em> with a warning in the log.</p>
+
+<div class="callout">
+  <span class="tag">Why the asymmetry is right</span>
+  <p>Imagine the opposite policy. Gemini has an outage; the operator wants to switch to a different
+  model to work around it; the probe cannot reach Gemini; the save is blocked. The configuration
+  system would fail exactly when configuring is most needed. A validator that cannot run must not
+  become a lock. The same reasoning gives the endpoint a <code>?probe=false</code> escape hatch: a
+  brand-new model might reject <code>count_tokens</code> while being perfectly usable for generation,
+  and the operator must never be locked out of adopting one.</p>
+  <p>The rejection walk is also careful: <code>_provider_rejection_message</code> traverses the
+  <code>__cause__</code> chain, because LangChain wraps provider errors, and it truncates the message
+  to 500 characters before it becomes a validation error.</p>
+</div>
+
+<h4>3. The write — one atomic round trip</h4>
+
+<p><code>PATCH /api/admin/llm-config</code> takes a partial map keyed by role slug —
+<code>{"chat": {"model_id": "…", "thinking_level": "medium"}, …}</code> — because the panel has one
+save button and firing twenty-five requests behind it would be absurd. The view
+(<span class="filepath">operators/views.py</span>) does four things in order:</p>
+
+<pre><code>serializer = LLMRoleConfigBulkUpdateSerializer(data=request.data)
+serializer.is_valid(raise_exception=True)
+changes = serializer.validated_data
+
+existing = {row.role: row for row in LLMRoleConfig.objects.filter(role__in=list(changes))}
+
+if self._probe_enabled(request):
+    self._probe_changed_model_ids(changes, existing)
+
+with transaction.atomic():
+    locked = {row.role: row for row in
+              LLMRoleConfig.objects.select_for_update().filter(role__in=list(changes))}
+    for slug, fields in changes.items():
+        row = locked.get(slug)
+        if row is None:
+            # The seed migration creates every row, but a hand-deleted
+            # (or newly registered) role must still be writable: start
+            # from the registry default and apply the submitted fields.
+            spec = LLM_ROLES_BY_SLUG[slug]
+            row = LLMRoleConfig(role=slug, model_id=spec.default_model_id,
+                                thinking_level=spec.default_thinking_level)
+        for field, value in fields.items():
+            setattr(row, field, value)
+        row.updated_by = request.user
+        row.save()
+
+return Response(build_llm_role_config_payload())</code></pre>
+
+<p>Validate → probe → write under <code>select_for_update()</code> → return exactly the payload
+<code>GET</code> would have returned. That last move is a convention every config panel in this app
+follows: the write response <em>is</em> the fresh read, so the UI never needs a second request and can
+never render a value the server did not confirm.</p>
+
+<p>The probe step is narrower than it first looks. <code>_probe_changed_model_ids</code> compares each
+submitted id against the current one (the stored row, or the registry default when no row exists) and
+probes only the ids that actually changed — deduplicated, so two roles moving to the same model cost
+one provider call. Re-saving an unchanged panel costs zero. Rejections are collected per slug and
+raised together, so the operator sees every bad field at once rather than one per attempt.</p>
+
+<p>And validation is <em>strict</em>. <code>StrictSerializer</code> rejects any payload key that is not
+a declared field, an unknown slug is an error rather than a silent no-op, and the entry serializer
+refuses an empty object. The store is small enough and consequential enough that silently ignoring
+input would be the wrong kindness.</p>
+
+<h4>4. The backend read seam — no cache, on purpose</h4>
+
+<p><span class="filepath">operators/llm_runtime.py</span> is 95 lines, and roughly half of them are the
+docstring explaining why it does <em>not</em> do things. The whole resolver:</p>
+
+<pre><code>def resolve_role_config(role: str, *, settings_attr: str, default_model: str,
+                        default_thinking: str | None = None) -&gt; tuple[str, str | None]:
+    try:
+        row = (LLMRoleConfig.objects.filter(role=role)
+               .values_list("model_id", "thinking_level").first())
+    except DatabaseError:
+        logger.warning("LLM runtime config read failed for role %r; falling back to env/default.",
+                       role, exc_info=True)
+        row = None
+
+    stored_model_id, stored_thinking_level = row if row is not None else (None, None)
+
+    model_id = (stored_model_id
+                or getattr(settings, settings_attr, default_model)
+                or default_model)
+
+    thinking_level = stored_thinking_level
+    if thinking_level not in THINKING_LEVELS:
+        thinking_level = default_thinking
+
+    return model_id, thinking_level</code></pre>
+
+<p>The fallback chain is three rungs for the model (<em>stored → the role's Django setting →
+the co-located default constant</em>) and two for the thinking level (<em>stored, if it is one of the
+four known levels → the caller's default</em>). There is no environment layer for the thinking level
+at all, by an explicit decision: no per-role thinking env var was ever added, so an unset or
+out-of-vocabulary stored value goes straight to the default. That vocabulary check is what defends
+against the break-glass path — the API rejects a bad level on write, but django-admin, or a hand-run
+<code>UPDATE</code>, can put anything in the column, and passing it through would raise at model
+construction.</p>
+
+<p>I ran the function against a stub <code>settings</code> object and a fake queryset to confirm every
+rung rather than read it off:</p>
+
+<pre><code>case                                       result                          warned
+stored row wins over env                   ('gemini-9-ultra', 'medium')    False
+empty stored model      → env              ('gemini-env', None)            False
+no row                  → env              ('gemini-env', None)            False
+no row, empty env       → default          ('gemini-3.1-flash-lite', None) False
+no row, no env attr     → default          ('gemini-3.1-flash-lite', None) False
+stored junk level, default None            ('m', None)                     False
+stored junk level, default 'high'          ('m', 'high')                   False
+DatabaseError           → env + warning    ('gemini-env', None)            True
+ProgrammingError (subclass) → env + warning('gemini-env', None)            True</code></pre>
+
+<p>The last two rows are the invariant that matters most: <strong>a config read must never fail a
+Celery task.</strong> <code>ProgrammingError</code> — which is what an unapplied migration looks like,
+when the table does not exist yet — is a <code>DatabaseError</code> subclass, so the deploy window in
+which the code is new and the migration has not run yet degrades to "use the env value and log a
+warning" instead of crashing every background job. The content-agent factory states the consequence
+plainly: "<code>resolve_role_config</code> <strong>cannot raise</strong>: the chain is total and a
+<code>DatabaseError</code> is treated as an absent row … That invariant is why no content-agent call,
+pass or stage can stop on a missing model any more."</p>
+
+<p>Five backend role constants live in this module —
+<code>ROLE_CONVERSATION_TITLE</code>, <code>ROLE_IMAGE_ALT</code>, <code>ROLE_TEXT_ENRICHMENT</code>,
+<code>ROLE_BRAND_CLASSIFICATION</code>, <code>ROLE_COST_TABLE_NORMALIZE</code> — "copied verbatim from
+<code>llm_roles.py</code>". But the resolver's reach is much wider than five: grepping today finds
+<strong>nine direct call sites</strong> (<code>conversations/title_generation.py</code>,
+<code>ingestion/text_enrichment.py</code>, <code>ingestion/image_alt.py</code>,
+<code>ingestion/batch_execution.py</code> ×2, <code>documents/brand_verification.py</code>,
+<code>content/cost_table_normalize.py</code>, <code>content/agent_jobs/analysis.py</code>,
+<code>content/agent_jobs/depth.py</code>) <em>plus</em> the shared factory
+<code>analysis.build_client()</code>, which eleven more content-agent stage modules call. A
+representative consumer, the conversation-title builder:</p>
+
+<pre><code>model_name, thinking_level = resolve_role_config(
+    ROLE_CONVERSATION_TITLE,
+    settings_attr="GEMINI_CONVERSATION_TITLE_MODEL",
+    default_model=DEFAULT_CONVERSATION_TITLE_MODEL,
+)
+model = GeminiConversationTitleModel(model_name=model_name, google_api_key=google_api_key,
+                                     thinking_level=thinking_level)</code></pre>
+
+<p>The env attribute name and the <code>DEFAULT_*</code> constant stay at the call site rather than
+moving into the resolver. That is deliberate: every consumer kept the exact shape it had before the
+store existed, so adopting live config was a two-line change per call site instead of a refactor.</p>
+
+<h4>5. The agent read seam — a snapshot across the schema boundary</h4>
+
+<p>The agent's copy of this problem is a different problem, for two reasons. First, it cannot use the
+ORM at all: it is a separate FastAPI service with its own database role, and it reaches the Django
+tables through the one-way read bridge that
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">explainer 2</a>
+teaches — a <code>SELECT</code> grant on the <code>backend</code> schema and nothing else. Second, its
+settings object is <code>@lru_cache</code>d, so <em>anything derived from the environment is frozen for
+the life of the process</em>. A value the operator must be able to change without a redeploy has to be
+read outside that cached object. <span class="filepath">apps/agent/app/llm_config.py</span> (271 lines)
+is that reader:</p>
+
+<pre><code>LLM_ROLE_CONFIG_TABLE = qualify_table_name(BACKEND_SCHEMA_NAME, "operators_llmroleconfig")
+
+def _fetch_llm_config_rows(settings) -&gt; dict[str, tuple[str | None, str | None]]:
+    """Read every stored role row. 12 rows — cheaper than a filtered query."""
+    rows = {}
+    with connect_agent_db(settings) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT role, model_id, thinking_level FROM {LLM_ROLE_CONFIG_TABLE}")
+            for record in cursor.fetchall():
+                slug = _normalize(record[0])
+                if slug is None:
+                    continue
+                rows[slug] = (_normalize(record[1]), _normalize(record[2]))
+    return rows</code></pre>
+
+<p>(That "12 rows" in the docstring is the prose lag flagged above — there are 25 today. The query is
+a <code>SELECT</code>-all, so the number is descriptive, not load-bearing; the module then serves the
+nine slugs it owns and ignores the rest.)</p>
+
+<p>Around that read sits the snapshot. Four module-level globals under a
+<code>threading.Lock</code> — <code>_snapshot</code>, <code>_snapshot_expires_at</code>,
+<code>_failure_logged_at</code> — with <code>time.monotonic()</code> for the clock (never wall time,
+which can jump). The failure path is the interesting half:</p>
+
+<pre><code>try:
+    rows = _fetch_llm_config_rows(settings)
+except Exception as exc:
+    # Broad on purpose: a stubbed/partial settings object raises
+    # AttributeError inside build_conninfo long before psycopg is
+    # reached, and that path must degrade exactly like a dead network.
+    _snapshot_expires_at = now + ttl
+    if _failure_logged_at is None or (now - _failure_logged_at) &gt;= max(ttl, _FAILURE_LOG_MIN_INTERVAL_SECONDS):
+        _failure_logged_at = now
+        logger.warning("LLM runtime config read failed; falling back to %s (%s: %s)",
+                       "the last known snapshot" if _snapshot else "env defaults", …)
+    return
+_snapshot = rows
+_snapshot_expires_at = now + ttl
+_failure_logged_at = None</code></pre>
+
+<p>Three decisions in nine lines. <strong>The failure sets the expiry too</strong>, so a database
+outage costs one attempt per 30-second window rather than one attempt per LLM call — without that line,
+an outage during a busy hour would mean thousands of failing connections. <strong>The last
+known-good snapshot is kept</strong> and preferred over env, so an outage degrades to slightly stale
+config rather than to code defaults. And <strong>the log is throttled</strong> to at most once per
+<code>max(ttl, 30 s)</code>, because a broken config table must not flood the logs during a stream.
+(Exactly the same skeleton appears in the agent's two sibling live-config readers —
+<code>chat/retrieval_config.py</code> and <code>retrieval/brand_policy.py</code> — all three sharing the
+single <code>llm_config_cache_ttl_seconds</code> knob rather than growing three.)</p>
+
+<p>The public surface is four functions: <code>ensure_llm_config_fresh</code> (async; awaited at the
+entry points before model construction, and a genuine no-op — not even a thread hop — while the
+snapshot is warm, otherwise the blocking read goes through <code>asyncio.to_thread</code>),
+<code>resolve_role_model</code>, <code>resolve_role_thinking_level</code> (where returning
+<code>None</code> means <em>omit the kwarg</em>), and <code>resolve_model_provider</code>.</p>
+
+<h4>6. The contrast, stated plainly</h4>
+
+<table>
+<thead><tr><th></th><th>Django backend</th><th>FastAPI agent</th></tr></thead>
+<tbody>
+<tr><td>Module</td><td><code>operators/llm_runtime.py</code> (95)</td><td><code>app/llm_config.py</code> (271)</td></tr>
+<tr><td>Access</td><td>ORM, same schema</td><td>Raw <code>SELECT</code>, cross-schema over the read bridge</td></tr>
+<tr><td>Caching</td><td><strong>None</strong></td><td>Process-wide snapshot, ~30 s TTL</td></tr>
+<tr><td>Why</td><td>One call per Celery job — a cache adds staleness, saves nothing</td><td>Many calls per chat turn — a cache saves a query per call</td></tr>
+<tr><td>On failure</td><td><code>except DatabaseError</code> → warn → env/default</td><td><code>except Exception</code> → keep last snapshot, cache the failure for the TTL, log once per window</td></tr>
+<tr><td>Liveness</td><td>Next job</td><td>Within ~30 s</td></tr>
+</tbody>
+</table>
+
+<p>And one operational corollary that belongs to the previous explainer and is only cited here: because
+the store is read by code that lives inside images,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">a deploy
+must rebuild <code>celery_worker</code> and <code>celery_beat</code> as well as the backend image</a>,
+or the roles those services own keep running the old code and appear to ignore the store entirely. The
+<code>NotionExportConfig</code> docstring repeats the same warning for its own row.</p>
+
+<h3>The three other config panels — same shape, smaller</h3>
+
+<p>Once you have the LLM panel, the rest of <code>/operator/settings</code> is variations on one
+skeleton, and the variations are the lesson:</p>
+
+<p><strong>The shared shape.</strong> A singleton-ish config row (<code>singleton_key = "default"</code>,
+the <code>DocumentRetrievalPolicy</code> idiom); a <em>dumb</em> model with no <code>save()</code> or
+<code>clean()</code> override, so validation lives in field validators for django-admin and is
+<em>re-declared</em> in the serializer for the API (DRF does not run model validators for a plain
+<code>Serializer</code> — <code>ChatRetrievalConfigUpdateSerializer</code> has a comment saying exactly
+that, "without these two kwargs a PATCH of 0 or 99 would reach <code>save()</code> and land"); a
+<code>get_or_create</code> under <code>select_for_update()</code> inside a transaction; an
+<code>updated_by</code> foreign key; and a payload that returns the <em>effective</em> value plus
+<code>is_stored</code> — the flag that separates "the operator decided this" from "this is just the
+fallback".</p>
+
+<h4>Ingestion alert recipients — a write-through cache, because the reader may not use the ORM</h4>
+
+<p>This one has a constraint none of the others do. The alert path
+(<code>ingestion/alerts.py</code>) is deliberately <strong>ORM-free</strong>: during the 2026-07 outage
+a poisoned Celery prefork child made every ORM call raise <code>SynchronousOnlyOperation</code> for
+days, and <code>except DatabaseError</code> does not catch that. Making the recipient list
+operator-editable therefore could not put a model read in the alert path. The resolution is a
+write-through cache, and <span class="filepath">operators/alert_recipients.py</span> (85 lines)
+deliberately imports no models at all so that the ORM stays out of that import graph:</p>
+
+<pre><code>ALERT_RECIPIENTS_CACHE_KEY = "ingestion:alert-recipients"
+MAX_ALERT_RECIPIENTS = 5
+
+def read_cached_alert_recipients() -&gt; list[str] | None:
+    try:
+        payload = cache.get(ALERT_RECIPIENTS_CACHE_KEY)
+    except Exception:   # the alert path must survive a dead Redis
+        logger.warning("Alert recipient cache read failed.", exc_info=True)
+        return None
+    if not isinstance(payload, dict) or not payload.get("stored"):
+        return None
+    …</code></pre>
+
+<p>The <code>{"stored": True, "recipients": [...]}</code> envelope — rather than storing the bare list —
+is what makes <strong>a saved empty list meaningful</strong>. An empty list with
+<code>stored: True</code> means "deliberately nobody, send no alerts"; a cache <em>miss</em> means
+nothing was ever saved and the env fallback
+<code>settings.INGESTION_ALERT_RECIPIENTS</code> applies. Without the marker the two would be
+indistinguishable. The cache is written with <code>timeout=None</code> (no expiry) because it is a
+transport, not a cache in the performance sense — and if Redis is flushed, the degraded window closes
+the next time anyone <em>reads</em> the settings panel, because <code>build_alert_recipients_payload</code>
+re-warms it:</p>
+
+<pre><code>row = _alert_recipient_row()
+is_stored = row is not None
+stored = stored_alert_recipients(row)
+cached = read_cached_alert_recipients()
+if is_stored and cached is None:
+    cached = stored if write_cached_alert_recipients(stored) else None</code></pre>
+
+<p>The panel therefore reports three separate facts — <code>is_stored</code> (the operator decided),
+<code>is_cached</code> (the alert path can actually see it), and <code>email_backend</code> (whether
+mail really leaves the box or is printed to the console). The 테스트 메일 button sends through the
+<em>real</em> alert path with <code>throttle_seconds=0</code> and its own key, re-warming the cache
+first, and distinguishes two outcomes that are genuinely separate: "the addresses are saved" (200 with
+the stored list intact) and "the mail went out" (502 <code>send_failed</code> if it did not).</p>
+
+<h4>Chat retrieval width — the row <em>is</em> the transport</h4>
+
+<p>One integer: how many naver-cafe documents a single <code>search_changple</code> call hands to the
+chat model. Default 6, ceiling 16 — and the ceiling is not arbitrary: 16 is the agent's
+<code>DEFAULT_RERANK_CANDIDATE_LIMIT</code>, the size of the pool the reranker actually orders, so a
+higher cap could only pad the list with the rerank tail. It is explicitly <em>not</em> the per-turn
+call budget (<code>MAX_CHAT_RETRIEVAL_CALLS = 4</code> stays a source constant) and not the published
+content supplement width.</p>
+
+<p>No Redis write-through here, and the docstring says why: "the row <em>is</em> the transport", read
+cross-schema by the agent on the same ~30 s TTL snapshot. And the bound is enforced three times — model
+validator (for django-admin), serializer field (for the API), and a <code>_clamp()</code> on the agent
+side — so even a hand-written SQL value can never widen the cap past the ceiling. Belt, braces, and a
+third belt, for a value that multiplies prompt size by up to four.</p>
+
+<h4>Notion export — the one with a secret in it</h4>
+
+<p>Token plus target database id, for the content export. Two deliberate differences from its siblings:
+there is <strong>no seed row and no env fallback</strong> (a fresh environment reads as unconfigured
+until an operator saves), and <strong>the token is never stored or returned in plaintext</strong> —
+only a Fernet ciphertext whose key is derived from <code>SECRET_KEY</code>
+(<code>urlsafe_b64encode(sha256(SECRET_KEY).digest())</code>), with the API returning a mask. A blank
+or omitted token on PATCH keeps the stored ciphertext, because the panel only ever holds the mask and
+so cannot resubmit the real value.</p>
+
+<p>The nicest consequence is a security property that falls out of the encryption for free. A
+production database dump restored into another environment has a different <code>SECRET_KEY</code>, so
+the ciphertext will not decrypt — and <code>notion_export_config_state()</code> reports that as
+<code>unconfigured_reason: "token_unreadable"</code> rather than pretending. A restored dump therefore
+<em>cannot</em> export into the production Notion workspace by accident.</p>
+
+<h3>The observability read models — why they live in <code>documents/</code></h3>
+
+<p>Two of the console's most-used screens are not served by the <code>operators</code> app at all.
+<span class="filepath">documents/observability.py</span> (633 lines) backs the corpus coverage tab
+(<code>GET /api/documents/collection/coverage</code>), the authors tab
+(<code>collection/authors</code>, <code>…/summary</code>, <code>…/export</code>) and the per-post
+진단 readout (<code>/api/documents/&lt;int:post_id&gt;/diagnostic</code>) — all gated by
+<code>MixedAuthAdminDocumentViewMixin</code>, which is <code>documents</code>' own local copy of the
+same JWT-or-session + <code>IsOperatorUser</code> pair.</p>
+
+<p>They live in <code>documents/</code> for a reason worth generalizing: <strong>the module reads
+materialized state, it does not re-derive policy.</strong> Its opening line is "Everything here
+<em>reads</em> the materialized eligibility state written by <code>eligibility_engine</code>; nothing
+re-derives the predicate (that scatter is what P53.S4 removed) and nothing writes." A "verdict" here —
+is this author citable, is this post retrievable — is the answer the retrieval rules already computed;
+the console displays it. <code>annotate_author_verdict</code> makes the point in code:</p>
+
+<pre><code>return queryset.annotate(
+    is_citable=Exists(citable_author_queryset().filter(pk=OuterRef("pk"))),
+).annotate(
+    verdict=Case(
+        When(is_banned=True,   then=Value(AUTHOR_VERDICT_BANNED)),
+        When(is_citable=True,  then=Value(AUTHOR_VERDICT_CITABLE)),
+        When(current_rank="",  then=Value(AUTHOR_VERDICT_UNKNOWN)),
+        default=Value(AUTHOR_VERDICT_INELIGIBLE),
+        output_field=CharField(),
+    ),
+)</code></pre>
+
+<p><code>is_citable</code> <em>is</em> <code>citable_author_queryset()</code> — the single SQL
+expression of the author gate, not a reimplementation. The <code>verdict</code> annotation only
+sub-classifies the not-citable case for display, "which is presentation, not policy". The rules
+themselves belong to
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">explainers 7 and 8</a>.
+Had the console re-derived them, the corpus screen and the chatbot would eventually have disagreed —
+which is exactly the class of bug this arrangement was built to end. The same discipline gives the list
+view and the CSV export one shared queryset builder, "so a download can never disagree with the table
+it was taken from".</p>
+
+<p>The module's other rule is epistemic, and my favourite line in the console:</p>
+
+<div class="callout">
+  <span class="tag">A zero is a measurement; an unmeasured code is null</span>
+  <p><code>_reason_count_is_observed</code> decides whether the reason histogram may print
+  <code>0</code> for a code. A code nothing in the pipeline can stamp today is never "observed" — its
+  true count is <em>unknown</em>, not zero. And for every other code, the count is trustworthy only
+  when the eligibility engine has covered the whole corpus: "One unswept row is enough to make 'zero
+  documents carry this code' a claim we cannot make." A dashboard that renders unknown as zero is
+  lying to the person who trusts it most.</p>
+</div>
+
+<p>A related honesty, worth a sentence: the coverage tab's brand tiles and the diagnostic's brand gate
+read the <em>live</em> toggle tables — exactly what retrieval reads — while the histogram's
+<code>brand_filtered</code> row reports the last sweep's stamp. The two can legitimately disagree for
+one sweep interval, and the module states that "that disagreement is information, not a bug".</p>
+
+<p>The per-post diagnostic (<code>build_document_diagnostic</code>) returns facts plus a nine-gate state
+list, computed server-side on purpose — which gate is <code>na</code> rather than <code>pass</code> is
+a domain question, and shipping raw reason codes for the UI to interpret is precisely the thirteen-site
+re-derivation that was removed. Its one live-evaluation branch is a nice touch: if the sweep has not
+reached this row yet, it evaluates that one document read-only, because "a row the sweep has not reached
+would otherwise read as 'blocked by nothing'". Nothing is written back — the sweep owns
+materialization.</p>
+
+<p>Finally, <span class="filepath">documents/retrieval_bench.py</span> (142 lines): the operator's
+retrieval bench runs the <em>production</em> retrieval path, which lives in the agent, and the agent has
+no operator concept — its JWT contract carries no <code>user_type</code>. So the chain is
+<code>web → Django (operator gate) → agent (X-Agent-Service-Token)</code>: one synchronous
+<code>urllib</code> POST to <code>/agent-api/retrieval/operator/explain</code> with a 20-second default
+timeout. Unreachable, timed out or malformed → 503; the agent's own 5xx → 503 with the upstream detail
+preserved; the agent's 4xx → passed through with its status, "so a contract mistake shows up as a
+contract mistake rather than an outage".</p>
+
+<h3>Users administration</h3>
+
+<p>Four views in <span class="filepath">accounts/operator_views.py</span>, mounted under
+<code>/api/admin/users…</code> — an operator can list and search accounts, create an admin, patch one
+account, reset an admin's password, and activate/deactivate in bulk. The interesting parts are the two
+guards, which I verified exist and are broader than "you cannot deactivate yourself":</p>
+
+<pre><code>if (instance.pk == request.user.pk
+        and (not next_is_active
+             or next_user_type != "admin"
+             or (instance.is_staff and not next_is_staff)
+             or (instance.is_superuser and not next_is_superuser))):
+    raise serializers.ValidationError({"non_field_errors": [
+        "The current operator cannot deactivate or demote their own account."]})</code></pre>
+
+<p>You cannot deactivate yourself, <em>or</em> demote yourself out of <code>admin</code>, <em>or</em>
+strip your own staff/superuser bits. The second guard is the system-level one: "At least one active
+admin account must remain" — the last active admin cannot be deactivated or demoted by anybody,
+including another admin.</p>
+
+<p>The bulk endpoint is shaped around those guards rather than in spite of them. It is deliberately
+<em>not</em> the all-or-nothing batch shape used elsewhere in the product: because per-user rejection is
+a designed outcome, every id gets its own <code>{id, ok, error?}</code> row and the successes commit
+regardless of the failures. The guards run sequentially in the caller's (deduplicated) id order, each
+seeing the changes the earlier ids already made — "so deactivating every admin in one batch deactivates
+all but the last one, and the last one fails with <code>last_active_admin</code> deterministically".
+The serializer still owns the decision; a small classifier turns its rejection into a stable machine
+code (<code>self_deactivate</code>, <code>last_active_admin</code>, <code>invalid</code>) so the UI never
+parses an English sentence.</p>
+
+<h3>Closing: a thin layer over rows, and two seams worth copying</h3>
+
+<p>Stand back and the operator console backend is unglamorous, which is the compliment it deserves. It
+is a thin DRF layer over five small tables and a handful of read models, gated by a 28-line permission
+class, with one convention repeated everywhere — the write returns exactly what the read would, and
+every payload reports whether the value it just gave you was decided by an operator or fell out of a
+default.</p>
+
+<p>The engineering that is actually hard lives in the <em>read seams</em>: how a value that lives in a
+row reaches code that is running right now. This repo has two of them for the same store, and they look
+nothing alike — an uncached ORM read on the backend because the caller is a once-per-job builder, and a
+30-second cross-schema snapshot in the agent because the caller is a hot loop behind an
+<code>lru_cache</code>d settings object. Neither is the "right" way to read config. Each is the right
+way to read <em>that</em> config from <em>that</em> caller, and both modules wrote the reasoning down
+where the next person would find it. When you next add an operator-editable setting here, that is the
+question to answer first: not "where do I store it?" but "how often will the code that obeys it ask,
+and what does it do on the day the answer does not come back?"</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="quiz">
+<h2>Quiz</h2>
+<p class="sr">Five questions. Click an option to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> The Django backend's <code>resolve_role_config</code> has no cache at all,
+  while the agent's <code>llm_config.py</code> keeps a ~30-second snapshot. What actually justifies the
+  difference?</p>
+  <button class="opt" data-correct="false">The agent's database role has no ORM access, so it must batch its reads into a snapshot.</button>
+  <button class="opt" data-correct="true">Each backend builder is called about once per Celery job, so a single read already gives per-job liveness; the agent builds model clients many times per chat turn, where a cache saves a query per call.</button>
+  <button class="opt" data-correct="false">Django's ORM caches queries internally, so an extra application-level cache would be redundant.</button>
+  <button class="opt" data-correct="false">The backend's values change more often than the agent's, so staleness would be more dangerous there.</button>
+  <p class="why" hidden>The deciding factor is <em>call frequency</em>, stated in both module docstrings. One read per job costs nothing and can never be stale; dozens of reads per chat turn would be wasteful, so the agent pays 30 seconds of staleness to avoid them. (The agent does read raw SQL cross-schema, but that is a consequence of the service boundary, not the reason for the cache.)</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> An operator saves a new model id. The live probe call fails because the Gemini
+  API key is not configured on the backend container. What happens?</p>
+  <button class="opt" data-correct="false">The save is rejected with a 400 carrying the provider's message.</button>
+  <button class="opt" data-correct="false">The save is rejected with a 503, since configuration cannot be validated.</button>
+  <button class="opt" data-correct="true">The save is allowed, with a warning logged — only a 400 or 404 from the provider (meaning "this id is wrong") blocks it.</button>
+  <button class="opt" data-correct="false">The save is queued and retried once the probe can run.</button>
+  <p class="why" hidden><code>REJECTION_STATUS_CODES = frozenset({400, 404})</code>. Everything else — missing key, timeout, network error, 429 quota, 5xx — is an infrastructure failure and must not lock the operator out. Otherwise a provider outage would block exactly the configuration change that works around it.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Why can the <code>chat</code> role's <code>thinking_level</code> never be
+  cleared to NULL, when every other role's can?</p>
+  <button class="opt" data-correct="false">Gemini rejects a chat request that carries no thinking kwarg.</button>
+  <button class="opt" data-correct="true">Its stored level is the service default users see on the composer's 생각 깊이 control, so it must always hold a concrete level; the <code>requires_explicit_thinking</code> flag makes the API refuse an explicit clear.</button>
+  <button class="opt" data-correct="false">NULL would make the agent fall back to an env variable that no longer exists.</button>
+  <button class="opt" data-correct="false">The database column is <code>NOT NULL</code> for that row.</button>
+  <p class="why" hidden>NULL is otherwise a perfectly good value meaning "send no thinking kwarg". The <code>chat</code> row is special because it is user-visible: the composer's control has to display something. Note the precision — only an explicit <code>null</code> is refused; a model-only update that omits the key is still legal.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> The ingestion-alert cache holds <code>{"stored": true, "recipients": []}</code>.
+  What does the alert path do with it?</p>
+  <button class="opt" data-correct="false">Falls back to <code>settings.INGESTION_ALERT_RECIPIENTS</code>, because an empty list is the same as no configuration.</button>
+  <button class="opt" data-correct="true">Sends to nobody — a saved empty list means "deliberately no recipients", and the <code>stored</code> marker is what distinguishes it from a cache miss.</button>
+  <button class="opt" data-correct="false">Raises, so the caller can decide.</button>
+  <button class="opt" data-correct="false">Reads the database row directly as a fallback.</button>
+  <p class="why" hidden>That marker is the whole reason the cache stores an envelope rather than a bare list. Cache hit ⇒ the operator decided, empty included; cache miss ⇒ nothing was ever saved, so env applies. And the alert path may not touch the ORM at all — that is why <code>operators/alert_recipients.py</code> imports no models.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Which statement about <code>IsOperatorUser</code> is correct?</p>
+  <button class="opt" data-correct="false">It gates only routes under <code>/api/admin/</code>; other apps define their own operator permissions.</button>
+  <button class="opt" data-correct="false">It requires a Django superuser account, which is why django-admin is the break-glass path.</button>
+  <button class="opt" data-correct="true">It is the single operator permission class across the backend — authenticated <em>and</em> <code>user_type == "admin"</code> — imported by eight modules across eight apps and fanned out through per-app mixins.</button>
+  <button class="opt" data-correct="false">It checks the <code>tier</code> claim carried in the caller's JWT.</button>
+  <p class="why" hidden>Two conditions, no superuser requirement, no roles or scopes. Operator-only endpoints are scattered across <code>/api/admin/</code>, <code>/api/documents/…</code> and <code>/api/content/admin/…</code>, and what unifies them is this class — each app pairs it with its own small authentication mixin so no app has to import another. And enforcement always re-reads the database: the JWT's <code>tier</code> claim gates nothing server-side.</p>
+</div>
+</section>
+
+<p class="sr" style="margin-top:2.5rem">Files walked for this explainer:
+<code>apps/backend/config/urls.py</code>;
+<code>apps/backend/operators/{permissions,urls,views,serializers,models,llm_roles,llm_runtime,llm_probe,alert_recipients,notion_export_config,overview,date_ranges,cloudflare_analytics}.py</code>;
+<code>apps/backend/accounts/{operator_views,operator_serializers}.py</code>;
+<code>apps/backend/documents/{observability,retrieval_bench,urls,views,models}.py</code>;
+<code>apps/backend/content/{views.py,agent_jobs/analysis.py}</code>;
+<code>apps/backend/conversations/title_generation.py</code>;
+<code>apps/backend/config/settings.py</code>;
+<code>apps/agent/app/{llm_config.py,chat/retrieval_config.py,config.py}</code>;
+<code>apps/backend/operators/migrations/</code>.</p>
+
+<script>
+document.querySelectorAll('.q').forEach(function (q) {
+  var why = q.querySelector('.why');
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var right = btn.dataset.correct === 'true';
+      btn.classList.add(right ? 'correct' : 'incorrect');
+      if (!right) {
+        var good = q.querySelector('.opt[data-correct="true"]');
+        if (good) good.classList.add('correct');
+      }
+      if (why) why.hidden = false;
+    });
+  });
+});
+</script>
+</body>
+</html>
