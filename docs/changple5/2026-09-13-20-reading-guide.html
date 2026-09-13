@@ -1,0 +1,1201 @@
+<!--kb
+title: "Reading guide: the whole curriculum in order"
+date: 2026-09-13
+tags:
+  - changple5
+  - curriculum
+  - reading-guide
+  - index
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading guide: the whole curriculum in order</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; }
+  h1 { line-height: 1.25; margin-bottom: .2rem; }
+  h2 { margin-top: 2.4rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: .3rem; }
+  h3 { margin-top: 1.9rem; }
+  h4 { margin-top: 1.4rem; margin-bottom: .3rem; }
+  .lede { font-size: 1.05em; opacity: .9; }
+  pre  { white-space: pre-wrap; overflow-wrap: anywhere;
+         background: rgba(128,128,128,.12); padding: .75rem; border-radius: 6px;
+         font-size: .9em; }
+  code { background: rgba(128,128,128,.15); padding: .05rem .3rem; border-radius: 4px;
+         font-size: .92em; overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; }
+  .callout { border-left: 4px solid #4a7; background: rgba(74,170,119,.10);
+             padding: .75rem 1rem; margin: 1.1rem 0; border-radius: 4px; }
+  .warn { border-left-color: #d08a2a; background: rgba(208,138,42,.12); }
+  .note { border-left-color: #6a8fd0; background: rgba(106,143,208,.12); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93em; }
+  th, td { border: 1px solid rgba(128,128,128,.4); padding: .4rem .55rem; text-align: left;
+           vertical-align: top; }
+  th { background: rgba(128,128,128,.13); }
+  nav ol { margin: .4rem 0 0; }
+  nav ol ol { margin: .2rem 0 .4rem; }
+  figure { margin: 1.4rem 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: .88em; opacity: .8; margin-top: .45rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: .5rem; font-size: .85em; margin: .5rem 0 0; }
+  .legend span { padding: .12rem .5rem; border-radius: 999px; border: 1px solid rgba(128,128,128,.45); }
+  .pa { background: rgba(120,130,150,.22); }
+  .pb { background: rgba(106,143,208,.22); }
+  .pc { background: rgba(74,170,119,.22); }
+  .pd { background: rgba(208,138,42,.22); }
+  .page { margin: 1.5rem 0 0; padding: .1rem 0 0; }
+  .page h4 { font-size: 1.06em; }
+  .files { font-size: .88em; opacity: .85; }
+  .surprise { font-size: .93em; border-left: 3px solid #d08a2a; padding-left: .7rem; margin: .5rem 0 0; }
+  .sc { border: 1px solid rgba(128,128,128,.4); border-radius: 6px; padding: .7rem .85rem;
+        margin: .6rem 0; }
+  .sc p { margin: .25rem 0; }
+  .reveal { margin-top: .35rem; padding: .3rem .7rem; cursor: pointer; border-radius: 5px;
+            border: 1px solid rgba(128,128,128,.55); background: rgba(128,128,128,.12);
+            font: inherit; font-size: .88em; }
+  .selfcheck { margin-top: 1.4rem; }
+  .q { margin: 1.3rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+            padding: .5rem .75rem; cursor: pointer; font: inherit; font-size: .95em;
+            border: 1px solid rgba(128,128,128,.5); border-radius: 5px;
+            background: rgba(128,128,128,.08); }
+  .q .opt.correct   { background: #d6f5d6; color: #123; border-color: #4a7; }
+  .q .opt.incorrect { background: #f7d6d6; color: #311; border-color: #c66; }
+  .q .why { margin: .5rem 0 0; font-size: .95em; opacity: .92; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid rgba(128,128,128,.35);
+           font-size: .9em; opacity: .88; }
+</style>
+</head>
+<body>
+
+<h1>Reading guide: the whole curriculum in order</h1>
+<p class="lede">Explainer #20 of 20 — the index page for the nineteen that came before it. Previous:
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/19-leaf-subsystems">#19 Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge</a>.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — what this curriculum is, and how to read it</a></li>
+    <li><a href="#intuition">Intuition — the map</a></li>
+    <li><a href="#code">The curriculum, part by part</a>
+      <ol>
+        <li><a href="#part-a">Part A — the shape of the system (#1–#4)</a></li>
+        <li><a href="#part-b">Part B — the chat product (#5–#11)</a></li>
+        <li><a href="#part-c">Part C — the content side (#12–#15)</a></li>
+        <li><a href="#part-d">Part D — running it (#16–#19)</a></li>
+      </ol>
+    </li>
+    <li><a href="#corrections">Corrections and open questions — where the code beat the folklore</a></li>
+    <li><a href="#next">Where to go next</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background — what this curriculum is, and how to read it</h2>
+
+<p>changple5 was built by vibecoding: it works, it is in production, it makes money — and its
+builder had never sat down and read it. This curriculum is the sitting down. Nineteen pages,
+one per subsystem, written by walking the real code rather than the documentation, so that the
+person who owns this app can stop steering it by feel and start changing it deliberately.
+That is the whole ambition: not reference material, not an architecture deck, but a course you
+read once, front to back, after which nothing in the repository is a black box.</p>
+
+<p>The order is deliberate and it is top-down. First the shape of the system: what the containers
+are, where the boundaries sit, who is allowed to write what. Then the chat product, which is the
+thing users actually touch and by far the most intricate machinery in the repository. Then the
+content side — where 미라클 articles come from and how they get published. Then running it: Celery,
+the operator console, billing, and the small subsystems that hang off the edge. Each part assumes
+the ones before it, because the code does.</p>
+
+<h3>Reading in order is not a suggestion</h3>
+
+<p>Every page after the first opens by linking its predecessor, and the pages were written to lean
+on each other rather than repeat each other. A handful of pages became <em>anchors</em> that later
+pages cite instead of re-teaching, and it is worth knowing which:</p>
+
+<ul>
+  <li><strong>#2</strong> owns configuration, schema pinning, the one-way read bridge and the two
+    shared secrets. Nothing else re-teaches them.</li>
+  <li><strong>#5</strong> owns the chat loop — streaming, cancel, replay, the tool-call budget.
+    #10 (컨설팅) explains only what <em>differs</em> from it.</li>
+  <li><strong>#7</strong> owns retrieval's read path. #5 names the three retrieval tools as
+    surfaces and stops at the door; #8 and #9 own the write path that fills the index.</li>
+  <li><strong>#12</strong> owns the publish seam — the single function that makes an article
+    public. #14 and #15 hand off to it rather than describing it.</li>
+  <li><strong>#16</strong> owns Celery, dispatch-after-commit and the mail path. Every earlier page
+    that dispatches a background task points here instead of explaining it.</li>
+</ul>
+
+<p>Read out of order and you will hit those pointers cold. Read in order and each page is roughly
+self-contained, because its prerequisites are three pages back.</p>
+
+<h3>What a page is, physically</h3>
+
+<p>Each page is one self-contained HTML document: between roughly 65 KB and 95 KB of markup, which
+the knowledge base extracts to somewhere around 37,000–63,000 characters of prose, code and tables.
+That is a long article, not a blog post. The honest pacing is <strong>one page per sitting</strong>;
+there is no prize for doing two. Part B is seven pages and is the long middle of the course — if you
+are going to lose momentum anywhere, it will be there, and the thing to do is stop after a page
+rather than skim three.</p>
+
+<p>Three conventions hold on every page:</p>
+
+<ul>
+  <li><strong>English prose, Korean product terms verbatim.</strong> 미라클, 컨설팅, 구성안,
+    창업가 MBTI, 상담신청, 발행 and friends appear exactly as the product and the code spell them —
+    translating them would have made the pages harder to grep against the repository, not easier.</li>
+  <li><strong>Real file paths, with line anchors.</strong> Claims are grounded in files, usually with
+    a line number. Those anchors were verified on the day the page was published and code moves; if
+    an anchor misses, the symbol name still finds it.</li>
+  <li><strong>A five-question quiz at the end.</strong> Multiple choice, medium difficulty, answers
+    revealed on click. They are there so you can find out whether you actually read the page.</li>
+</ul>
+
+<div class="callout warn">
+<p><strong>The pages are dated snapshots.</strong> #1–#12 were published 2026-08-26, #13–#15 on
+2026-08-28, #16–#19 and this guide on 2026-09-13. Where a page and the tree disagree, <strong>the
+code is the authority</strong> — that rule is what the curriculum was written under, and it is why
+the pages correct the documentation in a dozen places rather than repeating it. The
+<a href="#corrections">corrections section</a> collects every one of those, so a reader who only
+skims still learns where the folklore is wrong.</p>
+</div>
+</section>
+
+<section id="intuition">
+<h2>Intuition — the map</h2>
+
+<p>Here is the whole system on one screen, with the page number that owns each piece. If you come
+back to this guide later, this is probably the section you are coming back for.</p>
+
+<figure>
+<svg viewBox="0 0 920 700" role="img" aria-labelledby="maptitle mapdesc">
+  <title id="maptitle">changple5 system map with curriculum page numbers</title>
+  <desc id="mapdesc">Browser to edge nginx to the Next.js app, which reaches the Django backend and
+  the FastAPI agent; both sit on one Postgres with two schemas and one Redis with three logical
+  databases. Each module is labelled with the explainer page that covers it.</desc>
+  <rect x="0" y="0" width="920" height="700" fill="#ffffff"/>
+  <g font-family="system-ui, sans-serif" font-size="13" fill="#111">
+
+    <!-- browser -->
+    <rect x="360" y="14" width="200" height="38" rx="8" fill="#eef1f6" stroke="#7d8698"/>
+    <text x="460" y="38" text-anchor="middle" font-size="14">Browser</text>
+    <line x1="460" y1="52" x2="460" y2="74" stroke="#7d8698" stroke-width="2"/>
+    <polygon points="460,80 455,70 465,70" fill="#7d8698"/>
+
+    <!-- edge -->
+    <rect x="272" y="80" width="376" height="46" rx="8" fill="#f2f0ea" stroke="#9a8f73" stroke-dasharray="5 3"/>
+    <text x="460" y="100" text-anchor="middle">Cloudflare + edge-nginx — TLS, ports 80/443</text>
+    <text x="460" y="117" text-anchor="middle" font-size="11" fill="#5b5445">a separate project on the host, NOT in this repo · #1</text>
+    <line x1="460" y1="126" x2="460" y2="146" stroke="#7d8698" stroke-width="2"/>
+    <polygon points="460,152 455,142 465,142" fill="#7d8698"/>
+
+    <!-- next.js -->
+    <rect x="316" y="152" width="288" height="44" rx="8" fill="#eef1f6" stroke="#7d8698"/>
+    <text x="460" y="171" text-anchor="middle">Next.js (apps/web) — nextjs_frontend</text>
+    <text x="460" y="188" text-anchor="middle" font-size="11" fill="#444">same-origin /api and /agent-api, so CORS never applies · #1</text>
+
+    <!-- split arrows -->
+    <path d="M400 196 L230 226" stroke="#7d8698" stroke-width="2" fill="none"/>
+    <polygon points="224,229 234,222 236,231" fill="#7d8698"/>
+    <path d="M520 196 L690 226" stroke="#7d8698" stroke-width="2" fill="none"/>
+    <polygon points="696,229 684,231 686,222" fill="#7d8698"/>
+
+    <!-- django -->
+    <rect x="24" y="232" width="396" height="238" rx="10" fill="#fbfbfc" stroke="#55606f" stroke-width="1.5"/>
+    <text x="40" y="254" font-size="14" font-weight="bold">Django backend (apps/backend)</text>
+    <text x="40" y="271" font-size="11" fill="#444">gunicorn, sync workers — owns every write</text>
+    <g font-size="12">
+      <rect x="40" y="282" width="364" height="24" rx="5" fill="#eceff4"/>
+      <text x="50" y="298">accounts — login, JWTs, guests, entitlements</text>
+      <text x="392" y="298" text-anchor="end" font-weight="bold" fill="#3d4757">#3</text>
+
+      <rect x="40" y="310" width="364" height="24" rx="5" fill="#eceff4"/>
+      <text x="50" y="326">conversations — the system of record</text>
+      <text x="392" y="326" text-anchor="end" font-weight="bold" fill="#3d4757">#4</text>
+
+      <rect x="40" y="338" width="364" height="24" rx="5" fill="#e7effa"/>
+      <text x="50" y="354">ingestion + documents — the corpus</text>
+      <text x="392" y="354" text-anchor="end" font-weight="bold" fill="#2d4f7f">#8</text>
+
+      <rect x="40" y="366" width="364" height="24" rx="5" fill="#e7f5ec"/>
+      <text x="50" y="382">content — library, publish seam, agent_jobs</text>
+      <text x="392" y="382" text-anchor="end" font-weight="bold" fill="#2c6244">#12 #13 #14</text>
+
+      <rect x="40" y="394" width="364" height="24" rx="5" fill="#faf1e2"/>
+      <text x="50" y="410">operators · billing · mbti/consultations/feedback</text>
+      <text x="392" y="410" text-anchor="end" font-weight="bold" fill="#7a5518">#17 #18 #19</text>
+
+      <rect x="40" y="428" width="364" height="30" rx="5" fill="#faf1e2" stroke="#c8a765" stroke-dasharray="4 3"/>
+      <text x="50" y="447" font-size="11">one image, three containers: django_backend · celery_worker · celery_beat</text>
+      <text x="392" y="447" text-anchor="end" font-size="11" font-weight="bold" fill="#7a5518">#16</text>
+    </g>
+
+    <!-- agent -->
+    <rect x="500" y="232" width="396" height="238" rx="10" fill="#fbfbfc" stroke="#55606f" stroke-width="1.5"/>
+    <text x="516" y="254" font-size="14" font-weight="bold">FastAPI agent (apps/agent)</text>
+    <text x="516" y="271" font-size="11" fill="#444">one async uvicorn process — owns the streaming turn</text>
+    <g font-size="12">
+      <rect x="516" y="282" width="364" height="24" rx="5" fill="#e7effa"/>
+      <text x="526" y="298">api/routes/chat + chat/agent — the turn</text>
+      <text x="868" y="298" text-anchor="end" font-weight="bold" fill="#2d4f7f">#5</text>
+
+      <rect x="516" y="310" width="364" height="24" rx="5" fill="#e7effa"/>
+      <text x="526" y="326">chat context, window, compaction, recall</text>
+      <text x="868" y="326" text-anchor="end" font-weight="bold" fill="#2d4f7f">#6</text>
+
+      <rect x="516" y="338" width="364" height="24" rx="5" fill="#e7effa"/>
+      <text x="526" y="354">retrieval — plan, candidates, fusion, rerank</text>
+      <text x="868" y="354" text-anchor="end" font-weight="bold" fill="#2d4f7f">#7</text>
+
+      <rect x="516" y="366" width="364" height="24" rx="5" fill="#e7effa"/>
+      <text x="526" y="382">consulting · security guard and gates</text>
+      <text x="868" y="382" text-anchor="end" font-weight="bold" fill="#2d4f7f">#10 #11</text>
+
+      <rect x="516" y="394" width="364" height="24" rx="5" fill="#e7f5ec"/>
+      <text x="526" y="410">indexing (3 pipelines) · content_drafts (v1)</text>
+      <text x="868" y="410" text-anchor="end" font-weight="bold" fill="#2c6244">#9 #15</text>
+
+      <rect x="516" y="428" width="364" height="30" rx="5" fill="#eef1f6" stroke="#8d96a6" stroke-dasharray="4 3"/>
+      <text x="526" y="447" font-size="11">settings, schema pinning, live operator config, correlation ids</text>
+      <text x="868" y="447" text-anchor="end" font-size="11" font-weight="bold" fill="#3d4757">#2</text>
+    </g>
+
+    <!-- between apps -->
+    <line x1="420" y1="320" x2="500" y2="320" stroke="#55606f" stroke-width="2"/>
+    <polygon points="500,320 490,315 490,325" fill="#55606f"/>
+    <polygon points="420,320 430,315 430,325" fill="#55606f"/>
+    <text x="460" y="308" text-anchor="middle" font-size="10">caller JWT ·</text>
+    <text x="460" y="340" text-anchor="middle" font-size="10">service token</text>
+
+    <!-- down to data -->
+    <line x1="222" y1="470" x2="222" y2="506" stroke="#7d8698" stroke-width="2"/>
+    <polygon points="222,512 217,502 227,502" fill="#7d8698"/>
+    <line x1="698" y1="470" x2="698" y2="506" stroke="#7d8698" stroke-width="2"/>
+    <polygon points="698,512 693,502 703,502" fill="#7d8698"/>
+
+    <!-- data band -->
+    <rect x="24" y="512" width="872" height="170" rx="10" fill="#fbfbfc" stroke="#55606f" stroke-width="1.5"/>
+    <text x="40" y="534" font-size="13" font-weight="bold">One Postgres, one Redis — shared by both apps · #1 #2</text>
+
+    <rect x="40" y="544" width="500" height="124" rx="8" fill="#f4f6f9" stroke="#8d96a6"/>
+    <text x="54" y="564" font-size="12" font-weight="bold">Postgres (postgres_db)</text>
+    <rect x="54" y="574" width="220" height="42" rx="5" fill="#eceff4" stroke="#8d96a6"/>
+    <text x="164" y="592" text-anchor="middle" font-size="11">schema "backend"</text>
+    <text x="164" y="608" text-anchor="middle" font-size="10" fill="#444">Django writes everything</text>
+    <rect x="306" y="574" width="220" height="42" rx="5" fill="#eceff4" stroke="#8d96a6"/>
+    <text x="416" y="592" text-anchor="middle" font-size="11">schema "agent"</text>
+    <text x="416" y="608" text-anchor="middle" font-size="10" fill="#444">pgvector artifacts · #9</text>
+    <line x1="274" y1="595" x2="304" y2="595" stroke="#2d4f7f" stroke-width="2" stroke-dasharray="4 3"/>
+    <polygon points="306,595 296,590 296,600" fill="#2d4f7f"/>
+    <text x="290" y="638" text-anchor="middle" font-size="10.5" fill="#2d4f7f">one-way read bridge: the agent role may SELECT the backend schema (future tables included);</text>
+    <text x="290" y="654" text-anchor="middle" font-size="10.5" fill="#2d4f7f">Django is granted nothing at all on the agent schema · #2</text>
+
+    <rect x="560" y="544" width="316" height="124" rx="8" fill="#f4f6f9" stroke="#8d96a6"/>
+    <text x="574" y="564" font-size="12" font-weight="bold">Redis — three logical databases</text>
+    <text x="574" y="586" font-size="11">db/0 — Celery broker + agent registries</text>
+    <text x="574" y="606" font-size="11">db/1 — Django cache (cache.clear() = FLUSHDB)</text>
+    <text x="574" y="626" font-size="11">db/2 — agent retrieval cache · #7</text>
+    <text x="574" y="650" font-size="10.5" fill="#444">split so a cache flush cannot wipe the queue · #1</text>
+  </g>
+</svg>
+<figcaption>Figure 1 — the system, with the page that owns each piece. Colour follows the four parts:
+grey #1–#4, blue #5–#11, green #12–#15, amber #16–#19.</figcaption>
+</figure>
+
+<p class="legend">
+  <span class="pa">Part A · #1–#4</span>
+  <span class="pb">Part B · #5–#11</span>
+  <span class="pc">Part C · #12–#15</span>
+  <span class="pd">Part D · #16–#19</span>
+</p>
+
+<h3>The four parts, and the question each one answers</h3>
+
+<table>
+  <thead>
+    <tr><th>Part</th><th>Pages</th><th>The question it answers</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>A — the shape of the system</strong></td><td>#1 #2 #3 #4</td>
+        <td>What is this thing made of, where are its boundaries, and what does it consider the
+        truth? Ends at the conversation record, because everything in Part B writes into it.</td></tr>
+    <tr><td><strong>B — the chat product</strong></td><td>#5 #6 #7 #8 #9 #10 #11</td>
+        <td>How does one answer get made — and how is it kept honest? The turn itself, the context
+        it carries, the corpus it cites, the two ways that corpus is built, the planned
+        consultation, and the guards around all of it.</td></tr>
+    <tr><td><strong>C — the content side</strong></td><td>#12 #13 #14 #15</td>
+        <td>Where do 미라클 articles come from, and what makes one public? The library and its single
+        publish seam, then the two generations of the content agent that write the drafts.</td></tr>
+    <tr><td><strong>D — running it</strong></td><td>#16 #17 #18 #19</td>
+        <td>How does it run in production, who can change it while it is running, how does money
+        move, and what is left over? Celery and observability, the operator console and live LLM
+        config, Toss billing, and the three leaf subsystems.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+<p><strong>One boundary worth naming.</strong> #4 (conversations) could plausibly sit at the head of
+Part B — it is, after all, chat data. It is in Part A because of what it teaches: ownership,
+authorization, idempotency and the alternation invariant. Those are boundary rules, and Part B
+assumes them from its first page.</p>
+</div>
+</section>
+
+<section id="code">
+<h2>The curriculum, part by part</h2>
+
+<p>This section stands where every other page in the set has a <em>Code</em> section. There is no
+code to walk here: the code is on the nineteen pages, and this is the map to them. For each page:
+what you will know after reading it, the core files it walks, and the one thing most likely to
+surprise a first-time reader. Each part closes with a short self-check — no scoring, just questions
+you should be able to answer before moving on.</p>
+
+<h3 id="part-a">Part A — the shape of the system (#1–#4)</h3>
+
+<div class="page">
+<h4>#1 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">Big picture: three apps, one Postgres, one Redis, and how a request travels</a></h4>
+<p>After this page you will know why one product runs as three containers instead of one, and the
+answer is a concurrency model rather than fashion: Django runs under gunicorn with sync workers,
+one request each, while the agent is a single async process built to hold a streaming turn open for
+minutes. You will be able to draw the data layer from memory — one Postgres with two schemas and a
+deliberately one-way read bridge, one Redis split into three logical databases so that a Django
+<code>cache.clear()</code> (which is a <code>FLUSHDB</code>) cannot wipe the Celery queue or the
+agent's run registries — and you will be able to trace a request from the browser to a row and
+back.</p>
+<p class="files"><strong>Walks:</strong> <code>compose.yaml</code>, <code>compose.prod.yml</code>,
+<code>infra/nginx/nginx.conf</code>, <code>infra/postgres/init/00-bootstrap.sh</code>,
+<code>apps/agent/app/main.py</code>, <code>apps/backend/config/{urls,asgi,wsgi}.py</code>,
+<code>apps/agent/app/api/routes/health.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the production front door is not in this repository.
+<code>compose.prod.yml</code> defines no <code>edge</code> service at all — TLS and ports 80/443
+belong to a separate <code>edge-nginx</code> project on the host. The <code>nginx</code> service you
+can read here is the <em>dev</em> front door. And <code>config/asgi.py</code> is referenced nowhere:
+production runs <code>gunicorn config.wsgi</code>.</p>
+</div>
+
+<div class="page">
+<h4>#2 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">Configuration and boundaries: settings, schema pinning, shared secrets, and live operator config</a></h4>
+<p>After this page you will know how a value actually reaches a running container — three rungs,
+<code>.dev.env</code>/<code>.prod.env</code> → the compose <code>${VAR:-default}</code> → the code
+default — and, more usefully, why editing the dotenv file changes nothing for a container that is
+already up. You will know the three places <code>search_path</code> is pinned and why the agent
+pins none of them, and you will have learned the one pattern this codebase reuses for operator
+config read live across the read bridge: a module-level snapshot with a TTL, a failure path that
+keeps the last known good value, and throttled logging. That pattern appears three times with one
+skeleton; recognising it saves you reading the other two.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/config/settings.py</code> (all 781
+lines, line-anchored), <code>apps/agent/app/config.py</code>, <code>core/db.py</code>,
+<code>agent/app/db/connection.py</code>, <code>llm_config.py</code>,
+<code>chat/retrieval_config.py</code>, <code>retrieval/brand_policy.py</code>,
+<code>correlation.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> both shared secrets ship with committed dev defaults
+— in the code <em>and</em> in <code>compose.yaml</code>. A deploy that forgets to set them looks
+perfectly healthy and is fully compromised. (An <em>empty</em> configured service token, by
+contrast, fails closed on both sides.)</p>
+</div>
+
+<div class="page">
+<h4>#3 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">Identity and auth: Naver and Google login, JWTs, guests, and entitlements</a></h4>
+<p>After this page you will know the three caller shapes the backend recognises — a real
+<code>User</code> row, a <code>GuestPrincipal</code>, an <code>AgentServicePrincipal</code> — and
+why the authenticator order is forced rather than stylistic. You will have seen the same stateless-token
+trick used three times (the OAuth <code>state</code>, the email verification and reset tokens, the
+guest credential) in a codebase with no token table anywhere, including the fingerprint trick that
+makes every outstanding reset token die the moment a password changes. And you will know that
+entitlement decisions always re-read the database.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/accounts/{social,naver,google,tokens,guest_tokens,entitlements,guest_limits,backends,models,views,usage,email_tokens}.py</code>,
+<code>apps/agent/app/api/dependencies.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the <code>tier</code> claim inside the JWT gates
+<em>nothing</em> server-side. Its only live reader is the browser's badge; every enforcement point,
+including the agent's own per-turn read over the bridge, re-queries the row. That is why billing can
+change a subscription without invalidating a single token.</p>
+</div>
+
+<div class="page">
+<h4>#4 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">Conversations as the system of record: models, the API, and the agent write-back loop</a></h4>
+<p>After this page you will know why the Django table, not the agent, is the truth about a
+conversation, and what that costs: the user's message is written <em>before</em> the model runs, so
+a dead turn strands a lone trailing user row and there is a whole repair endpoint for it. You will
+understand the two invariants (strict user/assistant alternation, and append-only finalized
+messages) and the idempotency scheme underneath — <code>uuid5</code> keys recomputed on both sides
+with a unique constraint as the floor, so a replay is a 200 and a different payload under the same
+key is a 409. And you will have met the authorization chokepoint that makes a foreign conversation
+id a clean 404 rather than a 403, by construction.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/conversations/{models,views,serializers,querysets,snapshots,title_generation,guest_adoption,guest_retention}.py</code>,
+<code>apps/agent/app/chat/{backend,backend_errors}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the 409 your browser sees when you send a message too
+early is <em>manufactured in the agent</em>. Django answers 400; the agent string-matches the error
+text and re-raises it as 409. Rewording that message in <code>models.py</code> would silently turn
+every turn conflict into "the service is down" (tracked as <strong>Q3</strong>).</p>
+</div>
+
+<div class="selfcheck">
+<h4>Self-check — Part A</h4>
+
+<div class="sc">
+<p><strong>A1.</strong> Which app may read which schema, and in which direction?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The agent's role has <code>USAGE</code> and <code>SELECT</code> on the backend
+schema — including on tables added by <em>future</em> Django migrations, thanks to
+<code>ALTER DEFAULT PRIVILEGES</code>. Django's role is granted nothing at all on the agent schema.
+The bridge is one-way by construction, not by convention (#1, #2).</p>
+</div>
+
+<div class="sc">
+<p><strong>A2.</strong> A container is running and you edit a value in <code>.dev.env</code>. What
+happens?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>Nothing. The dotenv file is never copied into the image, so inside the
+container the resolver finds no file and does nothing; values arrive as real process environment
+variables from the compose <code>environment:</code> block. You have to recreate the service. The
+exception is operator-editable config, which is read live from Postgres with a ~30 s snapshot (#2).</p>
+</div>
+
+<div class="sc">
+<p><strong>A3.</strong> A user's subscription just lapsed, but their browser still holds a JWT with
+<code>tier: "pro"</code>. Can they use Pro features?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>No. The claim is a display hint. Every gate re-reads the database —
+<code>get_entitlements</code> on the backend, and the agent's own per-turn
+<code>SELECT tier, chat_thinking_level</code> over the read bridge. Only the badge is stale (#3).</p>
+</div>
+
+<div class="sc">
+<p><strong>A4.</strong> The browser receives a 409 when sending a message. Who produced it?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The agent. The model layer raised a plain <code>ValueError</code>, the
+serializer turned it into a DRF validation error, and Django answered <strong>400</strong>; the
+agent's route sniffed the detail text for "alternate" / "awaiting a finalized assistant reply" and
+re-raised it as 409. Any <em>other</em> 400 from that write degrades to 503 (#4, Q3).</p>
+</div>
+</div>
+
+<h3 id="part-b">Part B — the chat product (#5–#11)</h3>
+
+<div class="page">
+<h4>#5 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">A chat turn end to end: the LangChain agent, streaming, cancel, and replay</a></h4>
+<p>After this page you will be able to narrate one turn in order: a thirteen-rung guard ladder, the
+user row written before the model starts, the SSE frame vocabulary the browser consumes, the agent
+loop with its four-call retrieval budget, and the assistant row written inside the generator. You
+will know how a turn survives a closed tab (the frames are buffered in-process and the run is
+durable), how cancel works with no task handle and no signal at all (two Redis fields, polled at
+named points), and why the search budget is reported inside tool results rather than in the system
+prompt — because the prompt is the cached Gemini prefix, and a per-turn number in it would cost the
+cache discount on every single turn.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/api/routes/chat.py</code>,
+<code>apps/agent/app/chat/{agent,sse,durable_runs,run_registry,checkpointing,previews,fingerprints,user_thinking_level}.py</code>,
+<code>apps/agent/app/prompts.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> an answer is streamed live only when the turn is
+<em>grounded</em>. An ungrounded turn's deltas are buffered, so the three finalizer gates can replace
+the answer before the reader sees a word — with one honest exception, documented on the page, where
+a grounded turn's answer is replaced after it has already streamed.</p>
+</div>
+
+<div class="page">
+<h4>#6 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/06-chat-context-and-memory">Chat context: rolling windows, compaction, budgets, and recall</a></h4>
+<p>After this page you will stop thinking of a chat model as having memory, and start thinking of
+memory as a name for what the application chooses to re-send. You will know the rolling window's
+arithmetic — its watermark, its turn-boundary snapping, and what happens when a session falls
+behind — and the single most clarifying fact on the page: <strong>the conversation summary is not a
+message at all</strong>, it is a slot in the system prompt, rebuilt at every model step. You will
+also know why the recall tool is deliberately exempt from the search budget, and how it sees what
+the window has evicted.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/chat/{rolling_window,rolling_compaction,compaction,budget,context,cited_ledger,citations,session_search_tool}.py</code>,
+<code>apps/backend/conversations/rolling_summary.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the 200,000-token inline valve. Under the rolling
+window the common path makes no compaction call at all, but this second-line valve still can — and
+it logs nothing and persists nothing, so a session that keeps tripping it pays for the same merge on
+every turn (<strong>Q5</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#7 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">Retrieval: the RAG read path from query plan to ranked citations</a></h4>
+<p>After this page you will know the full read path: a query plan, two candidate arms (lexical and
+vector) run over the read bridge, reciprocal-rank fusion with a recency boost, an LLM reranker, and
+only then body hydration — which is last for a cost reason <em>and</em> a security reason. You will
+know there are four corpora, not one, and you will understand the cache well enough to predict when
+it hits: thirteen key components, including a fingerprint of the operator's brand policy, so an
+operator toggle invalidates exactly what it should.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/retrieval/{query_planning,candidates,ranking,cache,embeddings,brand_policy,content_search,cited_search,author_posts,document_bodies,operator_metadata,rate_limit}.py</code>,
+<code>apps/agent/app/api/routes/retrieval.py</code>,
+<code>apps/backend/documents/{eligibility,rank_policy}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the "lexical" arm is not full-text search. It is
+exact array overlap against the keyword list that ingestion's summariser chose — so lexical recall is
+a function of #8's enrichment, and a natural Korean question loses its particle-suffixed words
+entirely (<strong>Q7</strong>). And a single reranker failure burns the turn's whole four-search
+budget rather than falling back to the fused order (<strong>Q6</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#8 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">Ingestion: how Naver cafe posts become an eligible corpus</a></h4>
+<p>After this page you will know how a 창플 cafe post becomes a corpus row: two transports (a fast
+JSON one and a slow DOM fallback, with the three real cases that force it), job/item bookkeeping
+that decides what survives a re-scrape, two Gemini enrichment passes (image alt text, then a text
+summary with keywords), and a nine-rung eligibility ladder that deliberately does <em>not</em>
+short-circuit, so every reason a post is excluded is stamped rather than just the first. That
+stamped reason list is what every downstream query reads.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/ingestion/{scraper,execution,enumeration,board_sync,membership_walk,batch_execution,automatic_runs,schedules,recovery,job_control,monitoring,text_enrichment,image_alt,entity_resolution,models}.py</code>,
+<code>apps/backend/documents/{eligibility_engine,brand_curation,brand_verification,models}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> <code>enrichment_failed</code> is defined, reserved
+and queried — and never written by anything. A post whose enrichment fails every time keeps the
+"never attempted" stamp, so it re-enters the paid enrichment queue on every reprocess run, and the
+operator console reports <code>null</code> rather than a count (<strong>Q8</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#9 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">Indexing and embeddings: from documents to pgvector chunks</a></h4>
+<p>After this page you will know what an index <em>is</em> here — derived, lossy and rebuildable —
+and why that licences everything else about it. You will know the three artifact tables and why they
+do not share a column type (one dimension-less <code>vector</code> with no ANN index, two
+<code>halfvec(3072)</code> with HNSW), the three parallel pipelines that fill them (post summaries,
+post chunks, content chunks — the last two near-twins), the fingerprint with the chunker version
+baked in that makes a re-index cheap, and the one-embedding-per-request posture with the measurement
+that produced it.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/indexing/**</code> (both pipelines and
+their <code>content_chunk_*</code> twins), <code>apps/agent/app/db/bootstrap.py</code>,
+<code>apps/agent/app/api/routes/{indexing,chunk_indexing,content_chunk_indexing}.py</code>,
+<code>apps/backend/ingestion/{index_handoff,index_candidates,agent_indexing,agent_chunk_indexing}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> only the content-chunk route refuses a second
+concurrent run. Its naver twin registers every run it is asked for and says so in its own client's
+comment — "mutual exclusion is the caller's job" — while a full build takes longer than the
+registry's own TTL (<strong>Q10</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#10 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/10-consulting-mode">컨설팅 mode: the planned multi-round consultation and its 구성안 report</a></h4>
+<p>After this page you will know exactly what a planned consultation adds to #5's turn: a LangGraph
+<code>interrupt()</code>/resume loop instead of a single pass, a round state machine with its own
+409 vocabulary, and a 구성안 report generated by a Celery task rather than in the stream — because
+the report must survive a closed tab, a rate limit and a killed worker. You will also get a clean
+worked example of retiring a product mode without a migration, in the 무료 AI 진단 tombstone.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/chat/consulting/{agent,planning,stream,grounding,tools,middleware,prompts,types}.py</code>,
+<code>apps/backend/conversations/{consulting_lifecycle,consulting_mutations,consulting_report_dispatch,consulting_report_finalization}.py</code>,
+<code>apps/agent/app/api/routes/consulting_reports.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> cancelling a probe writes no assistant reply at all —
+the card simply disappears and the round goes <code>cancelled</code>. That is deliberate (it keeps
+the alternation invariant intact), not a missing feature.</p>
+</div>
+
+<div class="page">
+<h4>#11 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/11-safety-and-grounding">Safety and grounding: the injection guard, session lockdown, the citation gate, and trial caps</a></h4>
+<p>After this page you will have four concrete failure classes of an LLM product and the mechanism
+that answers each: prompt injection (a hard-reject after-model hook), ungrounded answers sold as
+sourced (the citation gates), abuse of a free anonymous surface (the double-guarded trial cap), and
+runaway spend (the limiters). More transferable than any single mechanism are the two house rules
+the page draws out — <strong>every rule is written twice</strong>, once in the agent as user
+experience and once in Django as the invariant; and fail-open versus fail-closed is decided per cap,
+with a stated reason, never by default.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/chat/{security_guard,session_lock,guest_trial,guest_rate_limit,citations,missing_features}.py</code>,
+<code>apps/backend/conversations/guest_trial.py</code>,
+<code>apps/backend/accounts/guest_limits.py</code>,
+<code>apps/agent/app/retrieval/rate_limit.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> one documented open edge. A turn that searches, finds
+zero documents and <em>then</em> trips the injection guard refuses correctly but never carries the
+lockdown marker — so that conversation is not locked. It is rare by construction and has two
+backstops, and it is a one-line decision left open (<strong>Q13</strong>).</p>
+</div>
+
+<div class="selfcheck">
+<h4>Self-check — Part B</h4>
+
+<div class="sc">
+<p><strong>B1.</strong> A user closes the tab three seconds into an answer. What happens to the
+turn?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>It keeps running. With durable runs enabled the route hands the generator an
+always-connected shim, so the disconnect checks never fire: the turn completes, the assistant row is
+written, and re-opening the conversation replays it. The caveat is that the frame buffer lives in
+the agent's own process, which quietly requires exactly one agent container (#5, Q4).</p>
+</div>
+
+<div class="sc">
+<p><strong>B2.</strong> Where does the model learn how many searches it has left, and why not in the
+system prompt?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>In the tool result. The system prompt is the stable, cached Gemini prefix; only
+the summary and selected-content slots are dynamic, at its tail. Putting a per-turn counter in the
+prompt would break prefix caching on every chat turn (#5).</p>
+</div>
+
+<div class="sc">
+<p><strong>B3.</strong> A user asks 치킨집 창업 비용은 얼마인가요? Which candidate arm carries that
+question, and why?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The vector arm. The lexical arm is exact equality against the indexed keyword
+array, and the tokenizer strips only surrounding punctuation — so 비용은 never matches the indexed
+비용. Natural Korean carries particles on most content words, so the lexical arm routinely
+contributes less than it looks like it should (#7, Q7).</p>
+</div>
+
+<div class="sc">
+<p><strong>B4.</strong> On message ninety of a conversation, what does the model actually see?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The newest window of raw messages plus a <code>[Conversation summary]</code>
+slot rendered into the system prompt — not ninety messages. The user still sees all ninety in the
+browser, and the recall tool can search the evicted ones on demand, which is why the tool exists and
+why it is exempt from the search budget (#6).</p>
+</div>
+</div>
+
+<h3 id="part-c">Part C — the content side (#12–#15)</h3>
+
+<div class="page">
+<h4>#12 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">The content library: models, the single publish seam, media derivatives, and the Notion mirror</a></h4>
+<p>After this page you will know what a 미라클 content actually is as data, and why its extracted
+text is <em>stored</em> rather than derived on demand (the chunker's character offsets are only
+meaningful against one agreed string). You will know that visibility is a single nullable timestamp,
+changed through exactly one function — the publish seam — and why Django signals were rejected in
+favour of that seam. And you will have the asymmetry that licenses a best-effort index trigger:
+<strong>unpublish is instant, publish is eventual</strong>, because the query filters the live row
+while the index only lags.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/content/{models,services,views,serializers,media_derivatives,remote_images,cost_tables,notion_mirror,chunk_indexing,publish_scrub,delivery,upload_sessions,importers,import_jobs,extraction,weights}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> there is no "unlisted" content state anywhere in the
+app. It was a plan artifact; in the code, <code>catalog()</code> and <code>preferred()</code>
+partition <code>readable()</code> exactly. If you were carrying that idea, drop it.</p>
+</div>
+
+<div class="page">
+<h4>#13 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">Content agent I: KakaoTalk intake and scaffolding a draft</a></h4>
+<p>After this page you will have the spine of the largest subsystem in the repository — roughly
+40,000 lines — in your head as a job state machine with fourteen states, and you will know why
+reading it as a state machine is the only tractable way in. You will follow an exported KakaoTalk
+conversation from a raw text file through parsing, participant matching, segmentation and selection
+into material a draft can be built from, and you will see a 구성안 scaffold proposed and approved.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/content/agent_jobs/{states,services,models,intake_state,kakao_txt,chat_*,scaffold*,scope,depth,selection,guide,reference_*}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the module's own docstrings lie slightly. The
+KakaoTalk archive runs five named steps, not the four the prose claims (photo linking was added
+later), and a decision note still cites the pre-P79 count of 21 job states when there are 14
+(<strong>Q16</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#14 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">Content agent II: architect, build, edit, publish</a></h4>
+<p>After this page you will know the organising commitment of the whole content agent: <strong>승인
+is the freeze</strong>. Once a plan is approved it is immutable input, and every stage downstream is
+prevented from quietly changing it by machine post-checks that fail the attempt — not by a sentence
+in a prompt. You will know why the build is a sequential chain rather than a fan-out (each unit is
+fed by its predecessors' summaries, so concurrency would change the output, not just the speed), and
+you will meet the marker grammar in which an asset's UUID primary key <em>is</em> the key in the
+text.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/content/agent_jobs/{architect,build,agent_pass,conversation,progress,draft_editing,draft_preview,revisions,publishing,assets,asset_intake,asset_selection,image_pick,analysis,stage_strip,views}.py</code>,
+<code>apps/backend/content/{draft_dispatch,draft_publish,draft_images,draft_views}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> all four <code>publish</code> edges are gate-kind
+edges with no guard; <code>approve_scaffold</code> is the only <em>guarded</em> edge in the machine.
+The backend documentation conflates the two ideas, and gets the publish-failure target wrong as well
+(<strong>Q17</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#15 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/15-content-agent-agent-side">Content agent III: the agent-side drafting service and its live progress</a></h4>
+<p>After this page you will understand the generational split in one sentence — v1 makes an HTTP hop
+to the FastAPI agent and v2 does not — and you will know what that hop costs and what it buys.
+You will have seen a deliberately different agent design from #5's: a stateless hand-rolled loop
+with <em>schema-only</em> tools, where the model chooses a call and the application dispatches it by
+hand, which is a useful reminder that "tool calling" is two separable things. And you will know the
+one progress channel both generations share.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/agent/app/content_drafts/{agent,curation,retrieval,images,prompts,progress}.py</code>,
+<code>apps/agent/app/api/routes/content_drafts.py</code>, plus
+<code>apps/backend/content/draft_dispatch.py</code> as the caller.</p>
+<p class="surprise"><strong>Watch for:</strong> v1 is <em>not</em> retired. Thirteen operator routes
+plus one internal route are still mounted, its Celery task is still dispatched from three call
+sites, and v2 reuses it as a library — a dozen public aliases, the shared media sub-directory, and
+the marker grammar defined there (<strong>Q18</strong>).</p>
+</div>
+
+<div class="selfcheck">
+<h4>Self-check — Part C</h4>
+
+<div class="sc">
+<p><strong>C1.</strong> What single function makes a 미라클 article public, and why is it a function
+rather than a model signal?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden><code>set_content_publish_state</code> in <code>content/services.py</code>.
+Signals were rejected deliberately — which is precisely what <em>forces</em> one auditable seam. It
+uses <code>.update()</code> rather than <code>.save()</code>, detects the change in SQL, and returns
+a verdict its five callers actually use (#12).</p>
+</div>
+
+<div class="sc">
+<p><strong>C2.</strong> A publish-triggered chunk-index dispatch is lost. What is the damage — and
+what if it had been an unpublish?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>A lost publish trigger is survivable: the article is readable immediately but
+not yet retrievable, and a catch-up run repairs it. A lost <em>unpublish</em> trigger costs nothing
+at all, because retrieval filters on the live row — the index lags, the query does not. That
+asymmetry is what makes a stateless best-effort trigger an acceptable design (#12).</p>
+</div>
+
+<div class="sc">
+<p><strong>C3.</strong> What does 승인 on a 구성안 actually do?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>It freezes the plan. It is the only guarded edge in the job state machine, and
+from that point every stage is stopped from altering the plan by machine checks: dropping, adding or
+retitling a marker each fails with its own code, while a pure reorder passes (#14).</p>
+</div>
+
+<div class="sc">
+<p><strong>C4.</strong> Which generation of the content agent calls the FastAPI agent over HTTP?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>Only v1. The v2 package contains no reference to the agent API at all — its
+five progress producers are in-process Django/Celery call sites, and the shared HTTP progress route
+survives as a seam rather than a live path (#15, Q18).</p>
+</div>
+</div>
+
+<h3 id="part-d">Part D — running it (#16–#19)</h3>
+
+<div class="page">
+<h4>#16 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">Running it: Celery, dispatch-after-commit, alerts, and the production topology</a></h4>
+<p>After this page you will know the seven production containers and the single operational fact
+that catches people most often: one source tree ships as three images, so a backend change that the
+console stubbornly refuses to show is very often a stale <code>celery_worker</code>. You will know
+the 58-task registry, the dispatch-after-commit pattern and its three idioms, the startup recovery
+fan-out, the two <code>llm_resilience</code> twins, and the deliberately ORM-free alert path that
+exists because the 2026-07 ingestion outage stayed silent.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/config/celery.py</code>, the seven
+<code>tasks.py</code> modules, <code>{ingestion,conversations}/dispatcher.py</code>,
+<code>ingestion/alerts.py</code>, <code>operators/{logging_handler,middleware}.py</code>,
+<code>core/llm_resilience.py</code>,
+<code>apps/agent/app/{error_reporting,llm_resilience,llm_telemetry,langsmith_check}.py</code>,
+<code>compose.prod.yml</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> the startup recovery fan-out re-dispatches
+<strong>eight</strong> tasks, not the three the operations document names — the entire content-agent
+reclaim family is missing from the doc an operator reads when a job is stuck after a deploy
+(<strong>Q19</strong>). And none of those reclaims is on the beat schedule, so a stranded job waits
+for the next worker restart (<strong>Q12</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#17 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/17-operator-console-and-llm-runtime">The operator console backend and live LLM runtime config</a></h4>
+<p>After this page you will know how the operator changes the running system without a deploy: a
+registry of 25 LLM roles, one <code>SELECT</code>-all store, and two very different readers — the
+agent's ~30-second process-wide snapshot versus the backend's uncached per-job read. You will know
+the console's read models (overview, analytics, ingestion monitoring, the retrieval bench) and the
+permission surface behind them, and you will be able to predict how long any given operator edit
+takes to bite.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/operators/{llm_roles,llm_runtime,llm_probe,alert_recipients,overview,cloudflare_analytics,date_ranges,permissions,views,serializers,models,urls}.py</code>,
+<code>apps/backend/documents/{retrieval_bench,observability}.py</code>,
+<code>apps/agent/app/llm_config.py</code> as the read side.</p>
+<p class="surprise"><strong>Watch for:</strong> eleven roles are labelled <code>agent</code> in the
+console but actually run on the backend, inside Celery jobs. The label is what tells an operator
+which service to watch and which image to rebuild, and for those eleven it names the wrong one
+(<strong>Q21</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#18 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/18-billing-toss">Billing: the Toss subscription lifecycle from checkout to reconciliation</a></h4>
+<p>After this page you will know the whole money path — checkout, confirm, webhooks, renewal, the
+nightly reconciliation sweep — and the one property that makes it safe to replay: a renewal's order
+id is recomputable from columns that do not move, and the same string is sent as the payment
+provider's idempotency key. So a crash anywhere in a renewal is repaired by recomputing the id and
+asking again. You will also know how a subscription reaches the product, which is refreshingly
+boring: it writes <code>User.tier</code>, and every gate re-reads the database (#3).</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/billing/{models,services,toss,webhooks,renewals,reconciliation,periods,tasks,views,serializers,urls}.py</code>
+— every non-test module in the app — plus the entitlement seam from #3.</p>
+<p class="surprise"><strong>Watch for:</strong> that replay property covers renewals and not the
+<em>first</em> charge, which mints a random order id inside the transaction. A process death between
+the provider's success and our commit loses the anchor with the rollback, and nothing scans for it
+(<strong>Q22</strong>).</p>
+</div>
+
+<div class="page">
+<h4>#19 · <a href="https://knowledge.hi2vi.com/@leetusik/changple5/19-leaf-subsystems">Leaf subsystems: 창업가 MBTI, consultation requests, and the Vocky feedback bridge</a></h4>
+<p>After this page you will have the three small subsystems as a set, and a useful method along with
+them: "leaf" is <em>measured</em> here by counting inbound imports, not asserted. You will know the
+MBTI model as a pure-Python, LLM-free measurement instrument (four bipolar axes, sixteen type codes,
+raw answers stored so a rescore is reproducible), the 상담신청 record where four sources funnel
+through one write seam and the content is snapshotted so it outlives the guest purge, and the Vocky
+bridge — one external service reached by two entirely independent integrations, both dormant by
+default.</p>
+<p class="files"><strong>Walks:</strong> <code>apps/backend/mbti/{items,scoring,typology,metadata,models,validation,views}.py</code>,
+<code>apps/backend/consultations/**</code>,
+<code>apps/backend/feedback/{client,views,serializers,admin_views}.py</code> (an app with no models
+and no migrations at all), <code>apps/agent/app/chat/{vocky_feedback,vocky_feedback_tool}.py</code>.</p>
+<p class="surprise"><strong>Watch for:</strong> <code>ConsultationRequest</code> stores a client IP
+in clear — the one place in the app that stores one, contradicting the repo-wide shorthand that it
+never does. The help text pins all three usually-unsaid facts: where it comes from, that it is
+evidence and never an authorization input, and that it dies with the row.</p>
+</div>
+
+<div class="selfcheck">
+<h4>Self-check — Part D</h4>
+
+<div class="sc">
+<p><strong>D1.</strong> You change a model id for a content-agent role in the operator console and
+nothing seems to happen. Why?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>Those roles run on the backend inside Celery jobs, despite the console
+labelling them <code>agent</code>. The change is picked up on the <em>next job</em> via an uncached
+read, not within the agent's ~30 s snapshot — and a deploy carrying code for them must rebuild
+<code>celery_worker</code> / <code>celery_beat</code>, not <code>fastapi_agent</code> (#17, Q21).</p>
+</div>
+
+<div class="sc">
+<p><strong>D2.</strong> A background job is stuck after a deploy. What re-dispatches it, and when?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The <code>worker_ready</code> startup fan-out — eight tasks, not the three the
+operations doc lists (Q19). It fires when a worker starts, not on a schedule, so the reclaim windows
+are staleness thresholds evaluated at the next worker start. In practice deploys close the window
+(#16, Q12).</p>
+</div>
+
+<div class="sc">
+<p><strong>D3.</strong> Why does the ingestion alert path refuse to use the ORM?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>Because it is the alert path for exactly the class of failure where the ORM and
+the queue may themselves be part of the problem. It resolves recipients without models and sends
+synchronously, and it never raises. Whether anyone is actually on the recipient list in production is
+a separate, open question (#16, Q20).</p>
+</div>
+
+<div class="sc">
+<p><strong>D4.</strong> Why can a renewal charge be safely retried when the first charge cannot?</p>
+<button class="reveal" type="button">Show answer</button>
+<p class="sca" hidden>The renewal's order id is derived from the subscription id, the period end and
+an attempt counter — all columns that survive a rollback — and is sent as the idempotency key, so
+recomputing it makes the provider replay rather than charge. The initial charge mints a random id
+<em>inside</em> the transaction, so a crash before commit loses it (#18, Q22).</p>
+</div>
+</div>
+</section>
+
+<section id="corrections">
+<h2>Corrections and open questions — where the code beat the folklore</h2>
+
+<p>Walking nineteen subsystems against their documentation turned up two dozen places where the
+written record and the running code disagree, or where the code has a sharp corner nobody had
+written down. Every one of them was <strong>recorded, never fixed</strong>: this was a learning
+phase, so no line of product code was touched. They are open decisions for the operator, not bugs
+the curriculum quietly repaired, and they are tracked by number in the phase notebook.</p>
+
+<div class="callout warn">
+<p><strong>Read this table as a warning list, not a bug list.</strong> Nothing here is known to be
+broken in production. Most are stale prose, one is an operator-state question only the operator can
+answer, and a few are real but narrow risks. If you only skim one section of this guide, make it
+this one — it is where the code contradicts what you would otherwise believe.</p>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Page</th><th>What was believed</th><th>What the code says</th><th>Tracked</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>#2 / #17</td><td>The architecture doc: 13 LLM roles, chat retrieval width 8, editable
+      "via Django admin only"; the agent's own comment says 12 rows.</td>
+      <td>25 registered roles, default width 6, and a real console route for it.</td><td>Q1</td></tr>
+    <tr><td>#3</td><td>The signed OAuth <code>state</code> blocks login-CSRF.</td>
+      <td>It proves <em>this backend</em> issued it within 600 s for this provider — nothing binds it
+      to the browser that started the login. Mitigated by the callback being a POST from our own
+      page.</td><td>Q2</td></tr>
+    <tr><td>#4</td><td>The alternation conflict is a backend 409.</td>
+      <td>Django answers 400; the agent string-matches the message text and re-raises 409. Reword the
+      model's error and every conflict silently becomes a 503.</td><td>Q3</td></tr>
+    <tr><td>#5</td><td>The agent can be scaled out like any stateless web service.</td>
+      <td>The durable frame queue is in-process; a second replica silently breaks live re-attach for
+      half the turns. No document states the constraint.</td><td>Q4</td></tr>
+    <tr><td>#6</td><td>Compaction runs whenever the context gets big.</td>
+      <td>Under the rolling window the common path makes no compaction call at all; the 200k valve
+      still can, logs nothing, and persists nothing — so it re-runs every turn.</td><td>Q5</td></tr>
+    <tr><td>#7</td><td>A reranker hiccup just costs some ranking quality.</td>
+      <td>It is not caught: the turn's whole four-search budget is burned and the published-content
+      channel is discarded with it, while a usable fused ranking sits in a local variable.</td><td>Q6</td></tr>
+    <tr><td>#7</td><td>Lexical search matches words.</td>
+      <td>Exact array overlap on the indexed keyword list — 비용은 never matches 비용, and a particle
+      stripper already exists one module over.</td><td>Q7</td></tr>
+    <tr><td>#8</td><td>A post that fails enrichment is marked as failed.</td>
+      <td><code>enrichment_failed</code> is defined, reserved and queried, but never stamped — so the
+      post re-enters the paid queue on every reprocess run and the console reports
+      <code>null</code>.</td><td>Q8</td></tr>
+    <tr><td>#8</td><td><code>DocumentSource.brand_classified_at</code> is live state.</td>
+      <td>Dead since P66; nothing reads or writes it. The promised one-phase cleanup migration never
+      ran, so it still carries an index.</td><td>Q9</td></tr>
+    <tr><td>#9</td><td>Both chunk-index routes refuse a second concurrent run.</td>
+      <td>Only the content one does. The naver route registers every run asked for, and a full build
+      outlives its own registry TTL.</td><td>Q10</td></tr>
+    <tr><td>#10</td><td>The product doc: 무료 AI 진단 is reversibly flag-gated and can be switched back
+      on.</td>
+      <td>The package was deleted, the mode answers 403, and the flag itself was removed — session
+      creation refuses unconditionally. Two current docs contradict each other.</td><td>Q11</td></tr>
+    <tr><td>#10 / #16</td><td>A stranded consulting report is reclaimed on a schedule.</td>
+      <td>The reclaim task is dispatched only at worker startup; until then the round stays
+      <code>generating</code> and 409s every further message in that conversation.</td><td>Q12</td></tr>
+    <tr><td>#11</td><td>Tripping the injection guard always locks the conversation.</td>
+      <td>A turn that retrieves zero documents first refuses without the lockdown marker, so the
+      session is never locked. Documented, with two backstops.</td><td>Q13</td></tr>
+    <tr><td>#11</td><td>The old eternal guest-spend Redis key is gone.</td>
+      <td>It is unread but still sitting in production with no TTL; the module docstring and the
+      security doc both say ops should delete it by hand.</td><td>Q14</td></tr>
+    <tr><td>#12</td><td>Content view counts are trustworthy input.</td>
+      <td>The recording endpoint is anonymous and unthrottled, and its rows drive both the
+      recommendation rail's ranking and the operator's analytics panel.</td><td>Q15</td></tr>
+    <tr><td>#13</td><td>The KakaoTalk archive has four steps; the state machine has 21 states.</td>
+      <td>Five steps (photo linking was added later and the prose never caught up) and 14
+      states.</td><td>Q16</td></tr>
+    <tr><td>#14</td><td>The backend doc: <code>approve_scaffold</code> is the only gate edge; a
+      publish failure returns the job to "approved, unpublished"; ~45 modules.</td>
+      <td>Five gate edges but only one <em>guarded</em> edge; publish failure goes to
+      <code>failed</code>; 52 non-test modules and ~40,300 lines. The doc also still describes a
+      발행 게이트 that was deleted.</td><td>Q17</td></tr>
+    <tr><td>#15</td><td>v2 emits progress through the agent's progress function; v1 is retired.</td>
+      <td>v2 makes no agent-service call at all (five in-process producers; the HTTP route is a
+      seam), and v1 is still routed, still dispatched, and reused as a library.</td><td>Q18</td></tr>
+    <tr><td>#16</td><td>The operations doc: startup recovery re-dispatches three tasks.</td>
+      <td>Eight. The whole content-agent reclaim family is missing from the doc an operator reads
+      when a job is stuck, and three line anchors in the same section are stale.</td><td>Q19</td></tr>
+    <tr><td>#16</td><td>Ingestion alerts reach somebody.</td>
+      <td>Unknown, and only the operator can find out: the environment ships the list blank and a
+      saved-empty list is indistinguishable from unset. Production may have been alert-less since
+      P32 — which is how the 2026-07 outage stayed silent.</td><td>Q20</td></tr>
+    <tr><td>#17</td><td>The console's <code>app</code> label tells you which service runs a role.</td>
+      <td>Eleven content-agent roles labelled <code>agent</code> run on the backend, so they take
+      effect on the next Celery job and need the worker image rebuilt.</td><td>Q21</td></tr>
+    <tr><td>#18</td><td>Every Toss charge can be replayed safely.</td>
+      <td>Only renewals. The initial charge mints a random order id inside the transaction, so a
+      crash between the provider's success and our commit loses the anchor and nothing scans for
+      it.</td><td>Q22</td></tr>
+    <tr><td>#18</td><td>A named function <code>reconciliation._repair_initial</code> creates the
+      second class of subscription rows.</td>
+      <td>No such function exists; the initial-repair branch is inline in the paid-repair path. The
+      claim it supports is still true.</td><td>Q23</td></tr>
+    <tr><td>#19</td><td>A docstring example names a real 창업가 유형.</td>
+      <td>That name is not one of the sixteen authored type names, so grepping for it returns
+      nothing.</td><td>Q24</td></tr>
+  </tbody>
+</table>
+
+<h3>Corrections the pages simply settled</h3>
+
+<p>A handful of beliefs were corrected outright and left no open question behind — the page says the
+true thing and that is the end of it:</p>
+
+<ul>
+  <li><strong>#1</strong> — <code>config/asgi.py</code> is referenced nowhere; production runs
+    <code>gunicorn config.wsgi</code> with sync workers. That concurrency split, not performance
+    folklore, is the honest answer to "why are there two Python apps".</li>
+  <li><strong>#3</strong> — <code>accounts/_auth_helpers.py</code> is a <em>test</em> module. The
+    real OAuth state signing and the real withdraw call live elsewhere; do not cite it as
+    production.</li>
+  <li><strong>#5</strong> — the abandoned-stream finalizer is cold for generated turns (durable runs
+    hand the generator an always-connected shim) and live only for replayed ones.</li>
+  <li><strong>#12</strong> — there is no "unlisted" content state; the readable set is partitioned
+    exactly by the catalogue and preferred querysets.</li>
+  <li><strong>#17</strong> — the operator permission mixin is imported by 8 modules across 8 apps,
+    and the role registry is 25 roles, neither of which matched the numbers the phase started
+    with.</li>
+  <li><strong>#19</strong> — "only the operator console reads the leaf subsystems" is one notch too
+    strong: one of the two inbound reads is the end user's own 마이페이지 usage summary.</li>
+</ul>
+</section>
+
+<section id="next">
+<h2>Where to go next</h2>
+
+<p>This page runs no web research and carries no "best practices" section — everything here is
+grounded in this repository and in the nineteen pages. What follows is how to actually use them.</p>
+
+<h3>Find the page that owns the file</h3>
+
+<p>The most common use of this curriculum after the first read-through is not reading: it is
+lookup. You are about to change a file and you want the page that explains its neighbourhood. The
+ownership boundaries were agreed up front precisely so that this table has one answer per file:</p>
+
+<table>
+  <thead><tr><th>If you are touching…</th><th>Read (or re-read)</th></tr></thead>
+  <tbody>
+    <tr><td><code>apps/backend/config/settings.py</code>, <code>apps/agent/app/config.py</code>,
+      anything about schemas or the shared secrets</td><td>#2</td></tr>
+    <tr><td><code>apps/backend/accounts/**</code>, <code>agent/app/api/dependencies.py</code></td><td>#3</td></tr>
+    <tr><td><code>apps/backend/conversations/**</code>, <code>agent/app/chat/backend.py</code></td><td>#4</td></tr>
+    <tr><td><code>apps/agent/app/api/routes/chat.py</code>, <code>chat/agent.py</code>,
+      <code>durable_runs.py</code>, <code>run_registry.py</code></td><td>#5 (context builders: #6;
+      finalizer gates and the guard: #11)</td></tr>
+    <tr><td><code>apps/agent/app/retrieval/**</code></td><td>#7 (the corpus behind it: #8, #9)</td></tr>
+    <tr><td><code>apps/backend/ingestion/**</code>, <code>apps/backend/documents/**</code></td><td>#8</td></tr>
+    <tr><td><code>apps/agent/app/indexing/**</code></td><td>#9</td></tr>
+    <tr><td><code>apps/agent/app/chat/consulting/**</code>, the consulting lifecycle modules</td><td>#10 (then #5 for everything shared)</td></tr>
+    <tr><td><code>apps/backend/content/services.py</code> and the library modules</td><td>#12</td></tr>
+    <tr><td><code>apps/backend/content/agent_jobs/**</code></td><td>#13 (intake and scaffold) or #14
+      (architect, build, edit, publish)</td></tr>
+    <tr><td><code>apps/agent/app/content_drafts/**</code></td><td>#15</td></tr>
+    <tr><td><code>apps/backend/config/celery.py</code>, any <code>tasks.py</code>, any dispatcher,
+      alerts</td><td>#16</td></tr>
+    <tr><td><code>apps/backend/operators/**</code></td><td>#17</td></tr>
+    <tr><td><code>apps/backend/billing/**</code></td><td>#18 (plus #3 for the entitlement seam)</td></tr>
+    <tr><td><code>apps/backend/{mbti,consultations,feedback}/**</code>,
+      <code>chat/vocky_feedback*.py</code></td><td>#19</td></tr>
+  </tbody>
+</table>
+
+<h3>What to re-read before the likely next moves</h3>
+
+<p>Three kinds of work are already visible on the horizon, and each has a natural preparatory
+page:</p>
+
+<ul>
+  <li><strong>A documentation pass.</strong> Nine of the twenty-four open questions are stale prose
+    in the durable docs (Q1, Q11, Q16, Q17, Q18, Q19, Q23, Q24, and partly Q9). The workspace marks a
+    document stale when an unconsolidated note has outrun it; when that pass happens, the pages that
+    already hold the corrected text are <strong>#2</strong> and <strong>#17</strong> (the live-config
+    numbers), <strong>#16</strong> (the scheduled-jobs section), <strong>#14</strong> (the content
+    agent section), and <strong>#10</strong> (the retired 진단 mode). Reading them first turns a
+    rewrite into transcription.</li>
+  <li><strong>Anything touching <code>operators/</code>.</strong> Start at <strong>#17</strong>, then
+    <strong>#16</strong>. The reason is Q21: the console's service label is wrong for eleven roles,
+    which means the obvious mental model of "console change → agent picks it up" is wrong for exactly
+    those eleven, and so is the rebuild list for a deploy.</li>
+  <li><strong>Anything touching billing.</strong> Start at <strong>#18</strong>, then
+    <strong>#3</strong> for the entitlement seam. Q22 is the one open item in this app with money on
+    it, and the fix — if the operator wants one — is a small, well-shaped change inside the confirm
+    path rather than a redesign.</li>
+</ul>
+
+<h3>Two mechanical facts about the curriculum itself</h3>
+
+<p>First, <strong>the knowledge base lists documents sorted by slug</strong>, and every page in this
+set is numbered <code>01-</code> through <code>20-</code>. The listing order <em>is</em> the reading
+order; you never have to reconstruct it.</p>
+
+<p>Second, <strong>published pages are never edited</strong>. That is why no page links its
+successor — the forward direction did not exist when they were written, and this guide is what
+supplies it. It also means a correction discovered later does not appear on the page it belongs to:
+it lands here, in the phase record, or in a new page. If you read a page in six months and something
+smells stale, trust the code, and check this guide's corrections table before you trust the
+prose.</p>
+
+<div class="callout">
+<p><strong>The one habit worth keeping.</strong> Every page in this set was written by reading the
+code and then checking the documentation against it, rather than the other way round. That is also
+the cheapest way to keep the set useful: when you change something these pages describe, the code
+becomes right and the page becomes a dated snapshot — which is fine, as long as you never again let
+a document be the thing you believe.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<p>Five questions across the whole curriculum — one per part, plus one that only makes sense if you
+have read all four. Click an answer to see whether it is right and why.</p>
+
+<div class="q" id="q1">
+<p><strong>1.</strong> Which statement about the two Postgres schemas is true?</p>
+<button class="opt" type="button" data-correct="false">Each app has its own database, and a nightly job syncs them.</button>
+<button class="opt" type="button" data-correct="true">One database, two schemas: the agent's role may <code>SELECT</code> the backend schema — including tables added by later migrations — while Django's role is granted nothing on the agent schema.</button>
+<button class="opt" type="button" data-correct="false">Both roles hold read and write grants on both schemas; the one-way rule is enforced in application code.</button>
+<button class="opt" type="button" data-correct="false">The agent owns both schemas and Django connects through it.</button>
+<p class="why" hidden>The bootstrap script grants the agent role <code>USAGE</code> + <code>SELECT</code>
+on the backend schema and then adds <code>ALTER DEFAULT PRIVILEGES</code> so future tables are
+visible too. There is no mirror grant in the other direction — the bridge is one-way in the database
+itself, not in code (#1, #2).</p>
+</div>
+
+<div class="q" id="q2">
+<p><strong>2.</strong> During a default chat turn, what decides whether the answer's text is streamed
+to the browser as it is produced, or buffered until the turn finishes?</p>
+<button class="opt" type="button" data-correct="false">The number of retrieval calls the model made.</button>
+<button class="opt" type="button" data-correct="false">Whether the user is on a paid tier.</button>
+<button class="opt" type="button" data-correct="true">Whether the turn is grounded — a turn that retrieved nothing, or searched and found nothing, is buffered so the finalizer gates can replace the answer first.</button>
+<button class="opt" type="button" data-correct="false">Whether the conversation is locked.</button>
+<p class="why" hidden>The buffering predicate keys on grounding, not on the call count. Grounded turns
+stream live; ungrounded ones are held so the no-document, ungrounded-memory and filtered-citation
+gates can discard the draft before the reader sees it (#5, #11).</p>
+</div>
+
+<div class="q" id="q3">
+<p><strong>3.</strong> An operator unpublishes a 미라클 article. When does it stop being citable in
+chat?</p>
+<button class="opt" type="button" data-correct="true">Immediately — retrieval filters on the live row, so the lagging chunk index cannot keep it visible.</button>
+<button class="opt" type="button" data-correct="false">After the next content-chunk index run removes its chunks.</button>
+<button class="opt" type="button" data-correct="false">After the agent's ~30 s config snapshot expires.</button>
+<button class="opt" type="button" data-correct="false">After the Notion mirror syncs the change back.</button>
+<p class="why" hidden>This asymmetry — unpublish instant, publish eventual — is exactly what makes a
+stateless, best-effort index trigger acceptable: a lost dispatch can delay a publication becoming
+searchable, but it can never leave an unpublished article reachable (#12).</p>
+</div>
+
+<div class="q" id="q4">
+<p><strong>4.</strong> You change the model id for the <code>content_architect</code> role in the
+operator console. When does it take effect, and what must the next deploy rebuild?</p>
+<button class="opt" type="button" data-correct="false">Within about 30 seconds, in the FastAPI agent; rebuild <code>fastapi_agent</code>.</button>
+<button class="opt" type="button" data-correct="true">On the next Celery job that uses it, via an uncached read; a deploy carrying code for it must rebuild <code>celery_worker</code> and <code>celery_beat</code>.</button>
+<button class="opt" type="button" data-correct="false">Only after a full redeploy, because role config is an environment variable.</button>
+<button class="opt" type="button" data-correct="false">Immediately everywhere — the store is read on every request in both apps.</button>
+<p class="why" hidden>The console labels it <code>agent</code>, but this role is called from the Django
+content agent inside Celery jobs, which read the store uncached per job. The label names the wrong
+service, which is why it is an open question (#17, Q21) — and why the "rebuild the worker" rule from
+#16 keeps catching people.</p>
+</div>
+
+<div class="q" id="q5">
+<p><strong>5.</strong> A chat answer cites a 미라클 article. Which chain of machinery had to run for
+that citation to be possible?</p>
+<button class="opt" type="button" data-correct="false">The ingestion scraper collected the article, the eligibility engine stamped it, and the naver chunk pipeline indexed it.</button>
+<button class="opt" type="button" data-correct="true">The publish seam made the row public and fired the content-chunk index trigger, the agent's content-chunk pipeline wrote the chunks, the retrieval content arm searched them, and the chat loop enforced citation of what it actually retrieved.</button>
+<button class="opt" type="button" data-correct="false">The content agent wrote the draft, and the draft's text was embedded directly at build time.</button>
+<button class="opt" type="button" data-correct="false">The Notion mirror exported the article, and retrieval read it from Notion.</button>
+<p class="why" hidden>Contents are a second corpus with their own pipeline: <code>set_content_publish_state</code>
+(#12) → the content-chunk trigger → the agent's content-chunk pipeline (#9) → the content arm of the
+read path (#7) → the chat loop's citation enforcement (#5, #11). The first option describes the naver
+post corpus (#8), which is a different road entirely.</p>
+</div>
+</section>
+
+<footer>
+<p><strong>The set, in order:</strong>
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/01-big-picture">#1 Big picture</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/02-configuration-and-boundaries">#2 Configuration and boundaries</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3 Identity and auth</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/04-conversations-system-of-record">#4 Conversations as the system of record</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/05-chat-turn-end-to-end">#5 A chat turn end to end</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/06-chat-context-and-memory">#6 Chat context</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/07-retrieval-read-path">#7 Retrieval</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/08-ingestion-pipeline">#8 Ingestion</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/09-indexing-and-embeddings">#9 Indexing and embeddings</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/10-consulting-mode">#10 컨설팅 mode</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/11-safety-and-grounding">#11 Safety and grounding</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12 The content library</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/13-content-agent-intake-and-scaffold">#13 Content agent I</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/14-content-agent-build-and-publish">#14 Content agent II</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/15-content-agent-agent-side">#15 Content agent III</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">#16 Running it</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/17-operator-console-and-llm-runtime">#17 The operator console backend</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/18-billing-toss">#18 Billing</a> ·
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/19-leaf-subsystems">#19 Leaf subsystems</a> ·
+<strong>#20 Reading guide</strong> (this page).</p>
+<p>Nineteen code walks plus this guide, written 2026-08-26 to 2026-09-13 against the repository at
+<code>/Users/sugang/projects/personal/changple5</code>. No product code was changed to produce any of
+them.</p>
+</footer>
+
+<script>
+document.querySelectorAll('.reveal').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var ans = btn.parentElement.querySelector('.sca');
+    if (!ans) return;
+    ans.hidden = !ans.hidden;
+    btn.textContent = ans.hidden ? 'Show answer' : 'Hide answer';
+  });
+});
+document.querySelectorAll('.q').forEach(function (q) {
+  var why = q.querySelector('.why');
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var right = btn.dataset.correct === 'true';
+      btn.classList.add(right ? 'correct' : 'incorrect');
+      if (why) why.hidden = false;
+    });
+  });
+});
+</script>
+</body>
+</html>
