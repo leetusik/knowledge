@@ -1,0 +1,1367 @@
+<!--kb
+title: "Running it: Celery, dispatch-after-commit, alerts, and the production topology"
+date: 2026-09-13
+tags:
+  - changple5
+  - celery
+  - operations
+  - observability
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running it: Celery, dispatch-after-commit, alerts, and the production topology</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+         line-height: 1.65; }
+  h1 { line-height: 1.25; }
+  h2 { margin-top: 2.6rem; border-bottom: 1px solid rgba(128,128,128,.35); padding-bottom: .3rem; }
+  h3 { margin-top: 2rem; }
+  h4 { margin-top: 1.4rem; margin-bottom: .3rem; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f4f4f4; color: #111;
+        padding: .75rem; border-radius: 6px; font-size: .88em; }
+  code { background: #f4f4f4; color: #111; padding: .05rem .25rem; border-radius: 3px;
+         font-size: .92em; overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .callout { border-left: 4px solid #4a7; background: #f0f8f4; color: #111;
+             padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.warn { border-left-color: #c96; background: #fbf4ea; }
+  .callout.bad  { border-left-color: #c66; background: #fbeeee; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: .92em; display: block;
+          overflow-x: auto; }
+  th, td { border: 1px solid rgba(128,128,128,.4); padding: .4rem .55rem; text-align: left;
+           vertical-align: top; }
+  th { background: rgba(128,128,128,.12); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .88em; opacity: .8; margin-top: .5rem; }
+  svg { width: 100%; height: auto; }
+  .tl { display: grid; gap: .35rem; margin: .6rem 0 1rem; }
+  .tl .row { display: grid; grid-template-columns: 7.5rem 1fr; gap: .5rem; align-items: center; }
+  .tl .who { font-size: .82em; text-align: right; opacity: .85; }
+  .tl .bar { display: flex; gap: .25rem; flex-wrap: wrap; }
+  .tl .ev { font-size: .8em; padding: .2rem .45rem; border-radius: 4px; border: 1px solid rgba(128,128,128,.5); }
+  .tl .ev.ok  { background: #d9f2d9; color: #111; }
+  .tl .ev.bad { background: #f7d6d6; color: #111; }
+  .tl .ev.mid { background: #eee; color: #111; }
+  .nest { border: 2px solid #7a9; border-radius: 8px; padding: .6rem .8rem; margin: 0; }
+  .nest .lbl { font-size: .82em; font-weight: 600; opacity: .9; }
+  .nest .inner { border-color: #a89; margin-top: .5rem; }
+  .nest .inner .inner { border-color: #99a; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem;
+            cursor: pointer; border: 1px solid rgba(128,128,128,.5); border-radius: 5px;
+            background: transparent; color: inherit; font: inherit; }
+  .q .opt.correct   { background: #d6f5d6; color: #111; }
+  .q .opt.incorrect { background: #f7d6d6; color: #111; }
+  .q .why { margin: .5rem 0 0; font-size: .95em; background: rgba(128,128,128,.12);
+            padding: .5rem .7rem; border-radius: 5px; }
+  .q { margin-bottom: 1.8rem; }
+  .meta { font-size: .9em; opacity: .85; }
+  ul.tight li { margin: .25rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Running it: Celery, dispatch-after-commit, alerts, and the production topology</h1>
+
+<p class="meta">Explainer #16 of the changple5 builder's curriculum — the first page of Part D
+(“operating the thing”). The previous page is
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/15-content-agent-agent-side">#15 — Content agent III: the
+agent-side drafting service and its live progress</a>. Fifteen pages have now ended a story at a line
+like <code>queue_…_on_commit(...)</code> and said “#16 explains that”. This is that page.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — the running shape</a></li>
+    <li><a href="#intuition">Intuition — the request thread is not where the work happens</a></li>
+    <li><a href="#code">Code — the nine moving parts</a>
+      <ol>
+        <li><a href="#c-app">The Celery app, and what <code>namespace="CELERY"</code> means</a></li>
+        <li><a href="#c-registry">The task registry: 58 names, seven apps, thin wrappers</a></li>
+        <li><a href="#c-retry">A task that retries itself</a></li>
+        <li><a href="#c-commit">Dispatch-after-commit, and its variants</a></li>
+        <li><a href="#c-breadth">The breadth: 33 files, three idioms, two exceptions</a></li>
+        <li><a href="#c-recovery">Startup recovery: the <code>worker_ready</code> fan-out</a></li>
+        <li><a href="#c-resilience">Retries at two layers, and the two <code>llm_resilience</code> twins</a></li>
+        <li><a href="#c-alerts">Alerts — when the worker <em>is</em> the broken thing</a></li>
+        <li><a href="#c-observability">Observability — where a builder looks</a></li>
+        <li><a href="#c-health">Health checks and the boring parts</a></li>
+      </ol>
+    </li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background — the running shape</h2>
+
+<p>Everything you have read so far in this curriculum was about <em>what the code does</em>. This page
+is about <em>where it runs</em>, and the answer is: in seven containers on one shared 4-core Oracle
+Cloud VM, two of which you have never met. Those two are <code>celery_worker</code> and
+<code>celery_beat</code>, and almost every slow, flaky or long-running thing in changple5 happens
+inside them — scraping Naver, embedding a corpus, writing a 구성안, charging a subscription, sending
+a mail.</p>
+
+<h3>Seven services, and no web server among them</h3>
+
+<p>The production stack is one file: <code>compose.prod.yml</code>, 536 lines, seven services, every
+one of them <code>restart: unless-stopped</code> with its own <code>healthcheck</code>:</p>
+
+<table>
+  <tr><th>Service</th><th>Image / build</th><th>What it is</th></tr>
+  <tr><td><code>postgres_db</code></td><td><code>pgvector/pgvector:pg17</code></td><td>The one database, two schemas (Django's and the agent's) — see #1 and #2</td></tr>
+  <tr><td><code>redis</code></td><td><code>redis:7-alpine</code></td><td>Celery broker <em>and</em> result backend (db 0), Django cache (db 1), agent read cache (db 2)</td></tr>
+  <tr><td><code>nextjs_frontend</code></td><td>builds <code>./apps/web</code></td><td>The Next.js UI</td></tr>
+  <tr><td><code>django_backend</code></td><td>builds <code>./apps/backend</code></td><td>gunicorn, the REST API, the operator console API</td></tr>
+  <tr><td><code>fastapi_agent</code></td><td>builds <code>./apps/agent</code></td><td>uvicorn, the streaming chat + retrieval + indexing service</td></tr>
+  <tr><td><code>celery_worker</code></td><td>builds <code>./apps/backend</code></td><td><strong>Executes</strong> background tasks. Prefork, <code>--concurrency=2</code></td></tr>
+  <tr><td><code>celery_beat</code></td><td>builds <code>./apps/backend</code></td><td><strong>Schedules</strong> them. One process, no execution</td></tr>
+</table>
+
+<p>Three things about that table are worth stopping on.</p>
+
+<p><strong>The last three services build from the same directory.</strong> <code>django_backend</code>,
+<code>celery_worker</code> and <code>celery_beat</code> all say <code>build: *backend_build</code> —
+the same YAML anchor pointing at <code>./apps/backend</code>. They are the same source, the same
+Dockerfile and the same env (they all splat the same <code>&amp;backend_env</code> anchor); only the
+<code>command</code> differs:</p>
+
+<pre><code># compose.prod.yml — the three commands that matter
+django_backend:
+  command: ["sh", "-c",
+    "python manage.py migrate --noinput &amp;&amp; exec gunicorn config.wsgi:application
+     --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-120}
+     --access-logfile - --error-logfile -"]
+
+celery_worker:
+  command: ["celery", "-A", "config", "worker", "--loglevel=info", "--concurrency=2"]
+
+celery_beat:
+  command: ["celery", "-A", "config", "beat", "--loglevel=info"]</code></pre>
+
+<div class="callout warn">
+<p><strong>They are the same source but three separate images</strong> — and that is the single most
+expensive operational fact in this repo. A deploy that rebuilds only <code>django_backend</code>
+leaves the worker running last week's code, silently. Three of the eleven operator-configurable LLM
+roles (<code>conversation_title</code>, <code>image_alt</code>, <code>text_enrichment</code>) do not
+execute in <code>django_backend</code> at all — they run in <code>celery_worker</code> — so the
+operator console cheerfully reports a new model as saved while the worker keeps using the old one, with
+no error anywhere (<code>docs/current/operations.md</code> §“LLM Runtime Config” →
+“Deploy first, or the feature ships dead on the backend side”). <strong>Rebuild
+<code>celery_worker</code> and <code>celery_beat</code> alongside the web services, always.</strong>
+Explainer #17 owns the runtime-config store itself; here it is just “why the worker image is never
+optional”.</p>
+</div>
+
+<p><strong>migrate-on-boot.</strong> <code>django_backend</code> runs <code>manage.py migrate</code>
+before <code>exec gunicorn</code>. What it buys: a deploy never needs a separate “now run the
+migration” step, so a new column and the code that uses it land together. What it risks: the migration
+runs while the <em>old</em> worker is still alive (compose starts the new backend before the old
+containers are all gone), so every migration must be backward-compatible for the length of a
+deploy — and if the migration fails, the container never reaches gunicorn and the health check keeps
+failing, which is the loud, correct behaviour.</p>
+
+<p><strong>The worker is not just “the backend with another command”.</strong> It also carries a
+browser. Only <code>celery_worker</code> gets <code>LANG: ko_KR.UTF-8</code>, <code>TZ: Asia/Seoul</code>
+and <code>shm_size: 1gb</code>, because the Naver login runs headful Chromium inside it and the scraper
+asserts that <code>navigator.language</code> starts with <code>ko</code> before it touches Naver. It
+mounts <code>scraper_state</code> (the persistent Chromium profile — that persistence is what makes the
+daily login look like a returning browser) and <code>backend_media</code>. <code>celery_beat</code>
+mounts only <code>backend_media</code> and gets none of the locale env: it schedules, it does not scrape.</p>
+
+<h3>Where the TLS is, and why it is not here</h3>
+
+<p><strong>There is no nginx service in <code>compose.prod.yml</code>, and no service publishes a host
+port.</strong> Every app container is <code>expose:</code>-only. The front door is a <em>separate</em>
+compose project on the same host — <code>edge-nginx</code>, living in <code>/home/opc/edge</code> — which
+owns ports 80/443 for all three sites on that box and reaches changple5's containers by name over the
+external <code>changple_shared_network</code>. Cloudflare sits in front of that in Full (strict) mode.
+Explainer #1 established this; do not re-derive it from the compose file, because the compose file is
+precisely where it is <em>not</em>.</p>
+
+<figure>
+<svg viewBox="0 0 760 430" role="img" aria-label="Production topology: browser through Cloudflare and edge-nginx to three app containers, with Redis and Postgres behind them and two Celery containers hanging off Redis">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#777"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #eef3f8; stroke: #6a86a3; stroke-width: 1.4; rx: 7; }
+    .box2 { fill: #f3eef8; stroke: #8a6aa3; stroke-width: 1.4; rx: 7; }
+    .box3 { fill: #eff8ef; stroke: #6aa36a; stroke-width: 1.4; rx: 7; }
+    .out { fill: #f8f4ee; stroke: #a3866a; stroke-width: 1.4; rx: 7; }
+    .t { font: 12px system-ui, sans-serif; fill: #222; }
+    .tb { font: bold 12px system-ui, sans-serif; fill: #222; }
+    .ts { font: 10.5px system-ui, sans-serif; fill: #555; }
+    .ln { stroke: #777; stroke-width: 1.4; fill: none; marker-end: url(#ar); }
+    .lnd { stroke: #777; stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; marker-end: url(#ar); }
+    .dash { stroke: #aaa; stroke-width: 1.2; fill: none; stroke-dasharray: 5 4; }
+  </style>
+  <rect class="out" x="10" y="14" width="110" height="42"/>
+  <text class="tb" x="30" y="32">browser</text><text class="ts" x="22" y="47">miracle.changple.ai</text>
+  <rect class="out" x="150" y="14" width="110" height="42"/>
+  <text class="tb" x="176" y="32">Cloudflare</text><text class="ts" x="169" y="47">Full (strict)</text>
+  <rect class="out" x="290" y="14" width="150" height="42"/>
+  <text class="tb" x="317" y="32">edge-nginx</text><text class="ts" x="300" y="47">separate project, :80/:443</text>
+  <line class="ln" x1="122" y1="35" x2="146" y2="35"/>
+  <line class="ln" x1="262" y1="35" x2="286" y2="35"/>
+
+  <rect class="dash" x="20" y="80" width="720" height="330"/>
+  <text class="ts" x="30" y="97">docker compose project “changple5” — no published host ports</text>
+
+  <rect class="box" x="40" y="112" width="150" height="46"/>
+  <text class="tb" x="57" y="131">nextjs_frontend</text><text class="ts" x="86" y="147">:3000</text>
+  <rect class="box" x="230" y="112" width="150" height="46"/>
+  <text class="tb" x="250" y="131">django_backend</text><text class="ts" x="253" y="147">gunicorn :8000</text>
+  <rect class="box" x="420" y="112" width="150" height="46"/>
+  <text class="tb" x="443" y="131">fastapi_agent</text><text class="ts" x="450" y="147">uvicorn :8001</text>
+  <line class="ln" x1="360" y1="60" x2="120" y2="108"/>
+  <line class="ln" x1="370" y1="60" x2="300" y2="108"/>
+  <line class="ln" x1="380" y1="60" x2="490" y2="108"/>
+
+  <rect class="box3" x="150" y="210" width="150" height="50"/>
+  <text class="tb" x="196" y="231">redis</text>
+  <text class="ts" x="160" y="248">db0 broker · db1 cache · db2</text>
+  <rect class="box3" x="420" y="210" width="150" height="50"/>
+  <text class="tb" x="456" y="231">postgres_db</text>
+  <text class="ts" x="431" y="248">two schemas, pgvector</text>
+  <line class="ln" x1="290" y1="160" x2="250" y2="206"/>
+  <line class="ln" x1="310" y1="160" x2="470" y2="206"/>
+  <line class="ln" x1="480" y1="160" x2="500" y2="206"/>
+  <line class="lnd" x1="470" y1="160" x2="290" y2="206"/>
+
+  <rect class="box2" x="80" y="315" width="160" height="60"/>
+  <text class="tb" x="112" y="337">celery_worker</text>
+  <text class="ts" x="92" y="354">prefork, concurrency 2</text>
+  <text class="ts" x="104" y="368">+ headful Chromium</text>
+  <rect class="box2" x="280" y="315" width="150" height="60"/>
+  <text class="tb" x="315" y="337">celery_beat</text>
+  <text class="ts" x="296" y="354">six scheduled entries</text>
+  <text class="ts" x="312" y="368">no execution</text>
+  <line class="ln" x1="200" y1="311" x2="215" y2="264"/>
+  <line class="ln" x1="340" y1="311" x2="270" y2="264"/>
+  <line class="ln" x1="235" y1="330" x2="416" y2="252"/>
+  <text class="ts" x="600" y="330">same build context as</text>
+  <text class="ts" x="600" y="345">django_backend —</text>
+  <text class="ts" x="600" y="360">three separate images</text>
+</svg>
+<figcaption>The running shape. Solid arrows are “talks to”; the dashed one is the agent's read-only
+view of Django's schema (#1, #2). Everything below the dashed border is one <code>docker compose</code>
+project; the top row is not in this repository at all.</figcaption>
+</figure>
+
+<h3>What Redis is doing here</h3>
+
+<p>Redis wears three hats, on three logical databases, and #1 recorded why they are split: Django's
+<code>cache.clear()</code> is a <code>FLUSHDB</code>, and it must not be able to wipe the Celery queue.
+<strong>db 0</strong> is the Celery broker <em>and</em> result backend; <strong>db 1</strong> is the
+Django cache; <strong>db 2</strong> is the agent's retrieval cache. For Celery, “broker” means the
+queue a dispatcher pushes a task message onto and a worker pops it from; “result backend” means where
+a task's return value goes if anyone asks for it.</p>
+
+<pre><code># apps/backend/config/settings.py:697
+CELERY_BROKER_URL = env(
+    "CELERY_BROKER_URL",
+    default=f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
+)
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND",
+    default=CELERY_BROKER_URL,
+)</code></pre>
+
+<p>Notice the code default carries no password, while the production Redis runs
+<code>--requirepass</code>. That is exactly why <code>compose.prod.yml</code> makes both
+<em>required</em> (<code>${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}</code>) rather than
+defaulted: a soft default would connect to nothing and fail at the first dispatch instead of at
+<code>docker compose up</code>.</p>
+</section>
+
+<section id="intuition">
+<h2>Intuition — the request thread is not where the work happens</h2>
+
+<p>Here is the whole idea of this page in one sentence, in the builder's terms:</p>
+
+<div class="callout">
+<p><strong>Django's request thread does the smallest possible thing and hands everything slow, flaky
+or long-running to a Celery worker through Redis — and it does so only after its own transaction has
+committed.</strong></p>
+</div>
+
+<p>The first half is ordinary: gunicorn runs <em>three</em> sync workers, each handling exactly one
+request at a time, so a 40-second scrape inside a request would block one third of the entire site's
+capacity for 40 seconds. Handing it off costs one Redis round-trip.</p>
+
+<p>The second half — <em>after the commit</em> — is the part that bites everyone once. Consider a real
+toy case: an operator clicks 발행 on a content draft. In one HTTP request, Django opens a transaction,
+writes <code>published_at</code> on the row, and wants a worker to re-index that content into the
+vector store.</p>
+
+<figure>
+<div class="tl">
+  <div class="row"><div class="who">naive version</div><div class="bar">
+    <span class="ev mid">BEGIN</span>
+    <span class="ev mid">UPDATE published_at</span>
+    <span class="ev mid">send_task(sync, id=7)</span>
+    <span class="ev mid">…work…</span>
+    <span class="ev ok">COMMIT</span>
+  </div></div>
+  <div class="row"><div class="who">worker</div><div class="bar">
+    <span class="ev mid">&nbsp;</span><span class="ev mid">&nbsp;</span>
+    <span class="ev bad">SELECT id=7 → published_at is NULL</span>
+    <span class="ev bad">“nothing to index”</span>
+  </div></div>
+</div>
+<div class="tl">
+  <div class="row"><div class="who">on_commit version</div><div class="bar">
+    <span class="ev mid">BEGIN</span>
+    <span class="ev mid">UPDATE published_at</span>
+    <span class="ev mid">on_commit(dispatch)</span>
+    <span class="ev ok">COMMIT</span>
+    <span class="ev ok">send_task(sync, id=7)</span>
+  </div></div>
+  <div class="row"><div class="who">worker</div><div class="bar">
+    <span class="ev mid">&nbsp;</span><span class="ev mid">&nbsp;</span><span class="ev mid">&nbsp;</span>
+    <span class="ev ok">SELECT id=7 → published_at set ✓</span>
+  </div></div>
+</div>
+<figcaption>The race, drawn. A Celery worker is a <em>different process</em> with a
+<em>different database connection</em>, so it cannot see uncommitted rows — and it is fast enough to
+lose the race reliably. The bug does not look like a race: it looks like “the index is just wrong”.</figcaption>
+</figure>
+
+<p>The worker usually <em>wins</em> that race, which is what makes the bug so nasty: the symptom is not
+a crash but a worker that reads a row in its pre-write state (or, worse, does not find the row at all
+and quietly exits). Django's answer is <code>transaction.on_commit(callback)</code>: the callback is
+parked until the outermost transaction commits, and then runs; if the transaction rolls back, it is
+dropped entirely — which is the second thing you want, because you do not want to index a publish that
+did not happen.</p>
+
+<p>Around that one pattern sit five supporting systems, and the rest of this page is those five:</p>
+
+<ul class="tight">
+  <li><strong>Recovery</strong> — what if the worker was restarting when the job was queued? (§3.6)</li>
+  <li><strong>Scheduling</strong> — who fires the daily 05:40 scrape? (§3.1)</li>
+  <li><strong>Retries, at two layers</strong> — the Celery task retry above, and the LLM retry below. (§3.3, §3.7)</li>
+  <li><strong>Alerting</strong> — what if the worker <em>is</em> the broken thing? (§3.8)</li>
+  <li><strong>Observability</strong> — where does a builder look afterwards? (§3.9)</li>
+</ul>
+</section>
+
+<section id="code">
+<h2>Code — the nine moving parts</h2>
+
+<h3 id="c-app">3.1 The Celery app, and what <code>namespace="CELERY"</code> means</h3>
+
+<p><code>apps/backend/config/celery.py</code> is 114 lines and it is the whole control surface. The
+first four lines do everything structural:</p>
+
+<pre><code># apps/backend/config/celery.py:10-14
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+app = Celery("config")
+app.config_from_object("django.conf:settings", namespace="CELERY")
+app.autodiscover_tasks()</code></pre>
+
+<p><code>config_from_object(..., namespace="CELERY")</code> means: read Celery's configuration out of
+Django settings, taking every setting whose name starts with <code>CELERY_</code> and lowercasing the
+rest. So <code>CELERY_BROKER_URL</code> becomes Celery's <code>broker_url</code>, and
+<code>CELERY_WORKER_MAX_TASKS_PER_CHILD</code> becomes <code>worker_max_tasks_per_child</code>. One
+settings file configures both Django and Celery, with no second config format. <code>#2</code> owns
+settings resolution; this is the one line where it reaches Celery.</p>
+
+<p><code>autodiscover_tasks()</code> means: for every app in <code>INSTALLED_APPS</code>, import its
+<code>tasks</code> module. That import is what registers the task names — nothing else does.</p>
+
+<h4>The beat schedule: six entries, and one of them is the whole ingestion clock</h4>
+
+<pre><code># apps/backend/config/celery.py:15-43 (abridged)
+app.conf.beat_schedule = {
+    "ingestion-evaluate-scheduled-incremental": {
+        "task": "ingestion.evaluate_scheduled_incremental_schedule",
+        "schedule": crontab(minute="*"),          # every minute
+    },
+    "content-cleanup-expired-upload-sessions": {  # hourly at :00
+        "task": "content.cleanup_expired_upload_sessions",
+        "schedule": crontab(minute=0),
+    },
+    "conversations-purge-expired-guest-sessions": {   # 03:00
+        "task": "conversations.purge_expired_guest_sessions",
+        "schedule": crontab(hour=3, minute=0),
+    },
+    "accounts-flush-expired-tokens": {                # 03:30
+        "task": "accounts.flush_expired_tokens",
+        "schedule": crontab(hour=3, minute=30),
+    },
+    # Billing (P27.S3). Merchant-owned renewal cadence — Toss billing keys are
+    # charge-on-demand, not auto-scheduled. Renewals first, reconciliation 30 min
+    # later so a fresh outcome-unknown from the same run resolves the same day.
+    "billing-run-renewal-sweep": {
+        "task": "billing.run_renewal_sweep",
+        "schedule": crontab(hour=2, minute=0),    # 02:00 UTC = 11:00 KST
+    },
+    "billing-run-reconciliation-sweep": {
+        "task": "billing.run_reconciliation_sweep",
+        "schedule": crontab(hour=2, minute=30),   # 02:30 UTC
+    },
+}</code></pre>
+
+<p>Six entries, and the interesting one is the first. Beat does <em>not</em> know that the daily Naver
+scrape happens at 05:40 Asia/Seoul; it only knows to poke
+<code>ingestion.evaluate_scheduled_incremental_schedule</code> once a minute. That task reads an
+<code>IngestionSchedule</code> row from the database and decides whether it is time. Putting the
+schedule in a row instead of in <code>crontab()</code> is what lets the operator change the daily time
+from the console without a deploy — and it is why beat's own schedule can stay this short. (#8 owns the
+ingestion pipeline; #18 owns what the two billing sweeps actually do.)</p>
+
+<p>The second thing beat is not doing is just as important: <strong>beat never executes a task.</strong>
+It publishes a message to Redis at the scheduled moment and nothing more. If the worker is down, beat
+keeps queueing; when the worker returns it drains the backlog.</p>
+
+<h3 id="c-registry">3.2 The task registry: 58 names, seven apps, thin wrappers</h3>
+
+<p>Seven Django apps each own a <code>tasks.py</code>. Together they register <strong>58</strong> tasks
+(grep-verified today across <code>apps/backend/*/tasks.py</code>):</p>
+
+<table>
+  <tr><th>App</th><th>Tasks</th><th>A representative one</th><th>Taught in</th></tr>
+  <tr><td><code>ingestion</code></td><td>19</td><td><code>ingestion.run_job</code></td><td>#8</td></tr>
+  <tr><td><code>content</code></td><td>23</td><td><code>content.sync_content_chunk_index</code></td><td>#12, #13, #14</td></tr>
+  <tr><td><code>documents</code></td><td>5</td><td><code>documents.sweep_eligibility</code></td><td>#8</td></tr>
+  <tr><td><code>conversations</code></td><td>4</td><td><code>conversations.generate_consulting_report</code></td><td>#4, #10</td></tr>
+  <tr><td><code>billing</code></td><td>3</td><td><code>billing.run_renewal_sweep</code></td><td>#18</td></tr>
+  <tr><td><code>accounts</code></td><td>3</td><td><code>accounts.send_verification_email</code></td><td>#3</td></tr>
+  <tr><td><code>consultations</code></td><td>1</td><td><code>consultations.send_consultation_notification</code></td><td>#19</td></tr>
+</table>
+
+<p>Every single one of them is a <em>thin wrapper</em>. The pattern, verbatim from
+<code>apps/backend/ingestion/tasks.py</code>:</p>
+
+<pre><code>"""Celery task entrypoints for the ingestion app.
+
+Thin ``@shared_task`` wrappers that bind the ``"ingestion.*"`` task names to the
+pipeline callables in ``execution``, ``backfills``, ``reprocess``, the automatic /
+manual-incremental run modules, and ``recovery``. Keep the task-name strings here
+byte-stable: they are the Celery routing contract.
+"""
+
+@shared_task(name="ingestion.poll_provider_batches")
+def poll_provider_batches(job_id: int) -&gt; dict[str, object]:
+    status = poll_provider_enrichment_job(job_id)
+    return {"job_id": job_id, "status": status}</code></pre>
+
+<p>Two design rules hide in there, and both pay off constantly.</p>
+
+<p><strong>Why the logic lives in another module.</strong> <code>poll_provider_enrichment_job</code> is
+a plain function. You can call it from a test, from <code>manage.py shell</code>, or from another
+task, with no broker running and no Celery imported. The <code>@shared_task</code> wrapper adds exactly
+one thing — a name — and the name is the only part Celery needs.</p>
+
+<p><strong>Why the name is a string, everywhere.</strong> A dispatcher fires a task like this:</p>
+
+<pre><code>app.send_task("conversations.generate_session_title", kwargs={"session_id": session_id})</code></pre>
+
+<p>— <em>not</em> <code>generate_session_title.delay(...)</code>. Dispatching by string means the
+dispatching module never imports the task module, which means <code>content</code> can queue a task
+that lives in <code>content.tasks</code> without an import cycle (<code>tasks.py</code> imports the
+pipeline modules; if those imported <code>tasks.py</code> back, Python would deadlock the import). The
+docstring's phrase for this is exactly right: the strings <em>are</em> the routing contract. Renaming a
+Python function is free; renaming the string in <code>name=</code> orphans every message already sitting
+in Redis under the old name.</p>
+
+<h3 id="c-retry">3.3 A task that retries itself</h3>
+
+<p>When a task can fail transiently, the idiom is <code>bind=True</code> plus a retry budget. The
+cleanest worked example is the 컨설팅 report (#10 told the story; here is its Celery half):</p>
+
+<pre><code># apps/backend/conversations/tasks.py:25-40
+@shared_task(
+    bind=True,
+    name="conversations.generate_consulting_report",
+    max_retries=CONSULTING_REPORT_GENERATION_MAX_ATTEMPTS - 1,   # 3 - 1 = 2
+)
+def generate_consulting_report(self, report_id: str) -&gt; dict[str, object]:
+    parsed_report_id = UUID(str(report_id))
+    task_id = str(getattr(self.request, "id", "") or "")
+    retry_count = int(getattr(self.request, "retries", 0) or 0)
+
+    return run_consulting_report_generation_with_retry(
+        report_id=parsed_report_id,
+        task_id=task_id,
+        retry_count=retry_count,
+        retry=self.retry,
+    )</code></pre>
+
+<p><code>bind=True</code> makes Celery pass the task instance as <code>self</code>, which is how the
+function reaches <code>self.request.retries</code> (how many times this message has already been
+retried) and <code>self.retry(...)</code> (raise a special exception that re-queues the same message
+with a delay). <code>max_retries = MAX_ATTEMPTS - 1</code> is the standard off-by-one: three
+<em>attempts</em> are two <em>retries</em>.</p>
+
+<p>Then look at what the wrapper does with it — it hands <code>self.retry</code> to a plain function:</p>
+
+<pre><code># apps/backend/conversations/tasks.py:43-69
+def run_consulting_report_generation_with_retry(*, report_id, task_id="", retry_count=0, retry):
+    try:
+        return execute_consulting_report_generation(report_id=report_id, task_id=task_id)
+    except AgentReportGenerationTransientError as exc:
+        if retry_count &lt; CONSULTING_REPORT_GENERATION_MAX_ATTEMPTS - 1:
+            raise retry(exc=exc, countdown=CONSULTING_REPORT_GENERATION_RETRY_DELAY_SECONDS)  # 30s
+        return terminally_fail_consulting_report_generation(report_id=report_id, error_detail=str(exc))
+    except AgentReportGenerationPermanentError as exc:
+        return terminally_fail_consulting_report_generation(report_id=report_id, error_detail=str(exc))</code></pre>
+
+<div class="callout">
+<p><strong>The pattern to steal:</strong> the <em>policy</em> (transient → retry with a countdown;
+permanent → record a terminal failure; budget exhausted → also terminal) is a normal function taking
+<code>retry</code> as a parameter. A unit test passes a fake <code>retry</code> and asserts the whole
+decision table without Celery, without Redis, and without waiting 30 seconds. The
+<code>@shared_task</code> above it is four lines of plumbing.</p>
+</div>
+
+<p>The other half of the pattern is the exception taxonomy. The code distinguishes
+<code>TransientError</code> from <code>PermanentError</code> at the dispatch boundary — and #15
+recorded how that classification is produced: the agent answers <strong>503</strong> for any pipeline
+failure, and the backend's classifier treats <code>{429, 500, 502, 503, 504}</code> as transient and
+everything else (including a non-JSON body) as permanent. So “Gemini hiccuped” becomes a Celery retry
+30 seconds later, while “the payload was malformed” fails the job immediately instead of burning three
+attempts on a bug.</p>
+
+<h3 id="c-commit">3.4 Dispatch-after-commit, and its variants</h3>
+
+<p>Start with the smallest instance in the repository. This is
+<code>apps/backend/conversations/dispatcher.py</code> — all 31 lines of it, minus imports:</p>
+
+<pre><code># apps/backend/conversations/dispatcher.py
+def queue_session_title_generation_on_commit(session_id: int) -&gt; None:
+    def _dispatch() -&gt; None:
+        try:
+            dispatch_session_title_generation(session_id)
+        except Exception as exc:
+            logger.warning(
+                "Failed to dispatch conversation title generation for session %s: %s",
+                session_id, exc,
+            )
+
+    transaction.on_commit(_dispatch)
+
+
+def dispatch_session_title_generation(session_id: int) -&gt; str:
+    result = app.send_task(
+        "conversations.generate_session_title",
+        kwargs={"session_id": session_id},
+    )
+    return str(result.id)</code></pre>
+
+<p>Three decisions in those lines:</p>
+
+<ol>
+<li><strong>The callback is registered, not called.</strong> <code>transaction.on_commit(_dispatch)</code>
+returns immediately. Django runs <code>_dispatch</code> after the outermost
+<code>transaction.atomic()</code> block commits. Two edge cases are worth knowing precisely:
+<em>outside</em> any transaction (Django's default autocommit mode, which is what this project runs —
+there is no <code>ATOMIC_REQUESTS</code> anywhere in <code>settings.py</code>) the callback runs
+<strong>immediately and synchronously</strong>; and inside <em>nested</em> atomic blocks it waits for
+the <em>outermost</em> one, because an inner block is a savepoint, not a commit.</li>
+<li><strong>The dispatch cannot fail the request.</strong> A dead broker raises inside
+<code>_dispatch</code>, which logs a warning and returns. The user's message was already saved; they
+just get an untitled conversation.</li>
+<li><strong>The dispatcher is a module, not a line in a view.</strong> Naming
+<code>queue_…_on_commit</code> makes the guarantee visible at every call site, which is why this
+codebase has twelve functions whose names end in <code>_on_commit</code>.</li>
+</ol>
+
+<p>Now the hardened variant. Ingestion jobs are long, operator-visible and scheduled, so
+<code>apps/backend/ingestion/dispatcher.py</code> (77 lines) does three more things:</p>
+
+<pre><code># apps/backend/ingestion/dispatcher.py:17-49
+def queue_ingestion_job_on_commit(job_id, *, on_dispatch_error=None) -&gt; None:
+    def _dispatch() -&gt; None:
+        try:
+            scheduled_at = IngestionJob.objects.values_list("scheduled_at", flat=True).get(pk=job_id)
+            if scheduled_at is None:
+                task_id = dispatch_ingestion_job(job_id)
+            else:
+                task_id = dispatch_ingestion_job(job_id, eta=scheduled_at)      # (1)
+        except Exception as exc:
+            logger.exception("Failed to dispatch ingestion job %s.", job_id)
+            IngestionJob.objects.filter(pk=job_id).update(                      # (2)
+                status=IngestionJob.Status.FAILED,
+                finished_at=timezone.now(),
+                error_message=f"Failed to dispatch ingestion job: {exc}",
+            )
+            if on_dispatch_error is not None:
+                on_dispatch_error(exc)
+            return
+
+        IngestionJob.objects.filter(pk=job_id).update(                          # (3)
+            status=IngestionJob.Status.QUEUED,
+            celery_root_task_id=task_id,
+            error_message="",
+        )
+
+    transaction.on_commit(_dispatch)</code></pre>
+
+<ol>
+<li><strong>It re-reads the row inside the callback</strong> to pick up <code>scheduled_at</code> and
+turn it into Celery's <code>eta</code> (“do not run this before that timestamp”). Re-reading, rather
+than closing over a value from before the commit, is deliberate: by the time the callback runs, the
+committed row is the truth.</li>
+<li><strong>A failed dispatch is written down.</strong> The job goes <code>FAILED</code> with the error
+text, and an optional <code>on_dispatch_error</code> callback lets the caller react (the schedule
+evaluator uses it to raise an alert). Compare the title dispatcher, which only logs: here the row
+<em>is</em> the operator's view of the system, so “was this ever queued?” must be answerable from the
+database.</li>
+<li><strong>A successful dispatch is written down too</strong> — status <code>QUEUED</code> plus
+<code>celery_root_task_id</code>, which is later what lets an operator cancel the job
+(<code>app.control.revoke(task_id)</code>, three lines further down the same file).</li>
+</ol>
+
+<h3 id="c-breadth">3.5 The breadth: 33 files, three idioms, two exceptions</h3>
+
+<p>Grep the non-test backend for <code>transaction.on_commit</code> or <code>.send_task(</code> and you
+get <strong>33 files</strong> with <strong>59</strong> on-commit registrations. That is the real size of
+this pattern in changple5:</p>
+
+<table>
+  <tr><th>App</th><th>Files</th><th>Entry points (a sample)</th><th>Taught in</th></tr>
+  <tr><td><code>ingestion/</code></td><td>8</td><td><code>queue_ingestion_job_on_commit</code>, <code>advance_backfill_run</code>, <code>start_automatic_run_indexing</code>, <code>recover_startup_state</code>, <code>evaluate_scheduled_incremental_schedule</code></td><td>#8, #9</td></tr>
+  <tr><td><code>content/</code> (library)</td><td>7</td><td><code>queue_content_chunk_sync_on_commit</code>, <code>queue_content_import_job</code>, <code>queue_content_media_derivative_warming_on_commit</code>, <code>queue_notion_export</code>, <code>queue_notion_mirror</code></td><td>#12</td></tr>
+  <tr><td><code>content/agent_jobs/</code></td><td>10</td><td><code>dispatch_scaffold_proposal</code>, <code>dispatch_build</code>, <code>request_publish</code>, <code>queue_conversation_pass</code>, <code>schedule_image_pass</code></td><td>#13, #14</td></tr>
+  <tr><td><code>content/</code> (v1 drafts)</td><td>(in the 7)</td><td><code>dispatch_draft_generation</code>, <code>queue_draft_publication_on_commit</code></td><td>#15</td></tr>
+  <tr><td><code>conversations/</code></td><td>2</td><td><code>queue_session_title_generation_on_commit</code>, <code>dispatch_consulting_report_generation</code></td><td>#4, #10</td></tr>
+  <tr><td><code>documents/</code></td><td>3</td><td><code>enqueue_eligibility_sweep</code>, <code>_dispatch_classification_run</code>, brand triggers</td><td>#8</td></tr>
+  <tr><td><code>billing/</code></td><td>2</td><td><code>_queue_email</code> (dunning), <code>_notify_operator_refund_request</code></td><td>#18</td></tr>
+  <tr><td><code>config/celery.py</code></td><td>1</td><td><code>dispatch_startup_recovery</code></td><td>this page, §3.6</td></tr>
+</table>
+
+<p>Across those files there are exactly <strong>three</strong> dispatch idioms, and the differences are
+not stylistic.</p>
+
+<h4>Idiom 1 — <code>app.send_task("name", …)</code> inside <code>on_commit</code> (the default)</h4>
+<p>Everything above. Use it whenever a row you just wrote is the task's input.</p>
+
+<h4>Idiom 2 — <code>app.send_task</code> directly, no <code>on_commit</code> (two sites, both justified)</h4>
+<p>The first is <code>celery.py</code>'s <code>worker_ready</code> handler (§3.6): it runs at process
+startup, where no transaction exists, so there is nothing to wait for. The second is the Notion mirror,
+and its docstring states the reasoning better than a summary could:</p>
+
+<pre><code># apps/backend/content/notion_mirror.py:118-129 (called from draft_publish.py:170)
+def queue_notion_mirror(job: ContentDraftJob) -&gt; str:
+    """The S4 seam entry point: called right after a Miracle publish
+    succeeds (`execute_draft_publication`), OUTSIDE any transaction (the
+    publish's own `transaction.atomic()` block already committed by then) —
+    so this dispatches directly via `app.send_task`, NOT `on_commit`.
+    ...
+    """</code></pre>
+
+<p>The rule generalises: <strong><code>on_commit</code> is not a ritual, it is an answer to “am I inside
+a transaction right now?”</strong> If the answer is no, <code>on_commit</code> runs the callback
+immediately anyway — harmless, but it hides the intent, and the comment above is better documentation
+than a no-op wrapper.</p>
+
+<h4>Idiom 3 — the task object, with a function-local import</h4>
+<p>Four sites use Celery's classic <code>.delay()</code> —
+<code>accounts/views.py:117</code> and <code>:132</code> (verification and password-reset mail),
+<code>consultations/services.py:53</code> (the 상담신청 notification), and
+<code>billing/views.py:381</code> (the Toss webhook) — and one uses
+<code>.apply_async()</code>: <code>content/notion_export.py:198</code>. All of them import the task
+<em>inside</em> the function:</p>
+
+<pre><code># apps/backend/consultations/services.py:43-58
+def _enqueue_notification(consultation_id: int) -&gt; None:
+    """Fire the async notification without ever blocking/failing the submit. ..."""
+    try:
+        from .tasks import send_consultation_notification     # deferred: tasks.py imports this module
+
+        send_consultation_notification.delay(consultation_id)
+    except Exception:   # noqa: BLE001 - enqueue failure must not fail the submit
+        logger.exception("failed to enqueue consultation %s notification", consultation_id)</code></pre>
+
+<p>That function-local <code>import</code> is the import cycle idiom 1 avoids for free, worked around by
+hand. And none of the five wraps its dispatch in <code>on_commit</code> — correctly, because Django runs
+in autocommit and none of those views opens an <code>atomic()</code> block around the write, so the row
+is already committed when <code>.delay()</code> is called. <strong>The pattern is not “always use
+<code>on_commit</code>”; it is “know whether you are inside a transaction”.</strong></p>
+
+<h3 id="c-recovery">3.6 Startup recovery: the <code>worker_ready</code> fan-out</h3>
+
+<p>Dispatch-after-commit protects you from a worker that is too fast. Startup recovery protects you from
+a worker that was not there at all. Celery emits a <code>worker_ready</code> signal when a worker has
+booted and is consuming the queue; <code>celery.py:59-114</code> hangs eight re-dispatches off it:</p>
+
+<pre><code># apps/backend/config/celery.py:59-114 (first two of eight, all identical in shape)
+@worker_ready.connect
+def dispatch_startup_recovery(**kwargs) -&gt; None:
+    del kwargs
+    try:
+        app.send_task("ingestion.recover_jobs")
+    except Exception as error:
+        logger.warning("Failed to dispatch ingestion startup recovery: %s", error)
+    try:
+        app.send_task("conversations.reclaim_stale_consulting_reports")
+    except Exception as error:
+        logger.warning("Failed to dispatch consulting report startup recovery: %s", error)
+    ...</code></pre>
+
+<p>The eight, in order: <code>ingestion.recover_jobs</code>,
+<code>conversations.reclaim_stale_consulting_reports</code>,
+<code>content.reclaim_stale_draft_generations</code>,
+<code>content.reclaim_stale_draft_publications</code>,
+<code>content.reclaim_stale_agent_chat_intakes</code>,
+<code>content.reclaim_stale_agent_author_briefs</code>, <code>billing.run_renewal_sweep</code>,
+<code>billing.run_reconciliation_sweep</code>.</p>
+
+<p>Every one is in its own <code>try/except</code>, which is the whole point of writing it out eight
+times instead of looping: one failing dispatch must never stop the other seven. Six of the eight are
+<strong>startup-only</strong> — they have no beat entry at all. The two billing sweeps are
+<strong>both</strong> startup and daily, so on a deploy day they run twice; that is safe by
+construction, because a renewal computes a deterministic <code>orderId</code> (and Toss
+<code>Idempotency-Key</code>) of the form <code>sub-{id}-{period_end:%Y%m%d}-a{n+1}</code> and skips
+without charging if a Payment row already exists for it (#18 has the full ladder).</p>
+
+<p>Why does a worker restart matter so much? Because <strong>a deploy is a worker restart</strong>, and
+Celery's prefork children die with their task. A 12-minute embedding run that was 8 minutes in when the
+deploy landed leaves a row saying <code>RUNNING</code> and no process anywhere that intends to finish
+it. Recovery is what notices.</p>
+
+<p>Follow the first one: <code>ingestion.recover_jobs</code> → <code>recovery.recover_startup_state()</code>
+in <code>apps/backend/ingestion/recovery.py</code> (296 lines). #8 owns what those jobs <em>do</em>; what
+matters here is the contract, and the module states it in a comment that deserves to be quoted in full:</p>
+
+<pre><code># apps/backend/ingestion/recovery.py:32-38
+#: Worker-boot recovery must never touch a paused run. Every queryset below is
+#: a positive status allow-list that already leaves `paused` out, but the
+#: exclusion is spelled out anyway (P53.S14 rule 3): a redeploy silently
+#: un-pausing an operator-stopped run would be the worst failure this module
+#: can have, and a future widening of one of those allow-lists must not be able
+#: to cause it by accident.
+_RECOVERY_EXCLUDED_RUN_STATUSES = {IngestionBackfillRun.Status.PAUSED}</code></pre>
+
+<div class="callout">
+<p><strong>The recovery contract, in three rules.</strong>
+(1) <em>Allow-list, never deny-list</em> — recovery acts only on explicitly named non-terminal statuses
+(<code>RECOVERABLE_JOB_STATUSES = {QUEUED, RUNNING}</code>), so a status invented next year is ignored
+by default rather than resurrected.
+(2) <em>Redundant exclusions on purpose</em> — <code>PAUSED</code> is already outside every allow-list,
+and is excluded again anyway, because the cost of getting it wrong (a deploy restarting a run the
+operator deliberately stopped) is far higher than a redundant <code>.exclude()</code>. The soft-재수집
+run gets the same treatment for <code>SUCCEEDED</code> / <code>CANCELLED</code> / <code>NEEDS_ATTENTION</code>:
+“a finished run is history and a <code>needs_attention</code> one has already been judged.”
+(3) <em>Re-dispatch, do not re-execute</em> — recovery decides <em>which message to send</em>
+(<code>poll</code> vs <code>start</code>, based on the run's stored <code>retry_state</code>) and sends
+it; it never runs pipeline work in the boot path.</p>
+</div>
+
+<p>The reclaim tasks (the six others) share one invariant that #15 recorded from the other side, and it
+is the single easiest thing to get wrong:</p>
+
+<div class="callout warn">
+<p><strong>The reclaim window MUST exceed the maximum attempt duration.</strong> If a draft generation
+can legitimately take 900 seconds (<code>DRAFT_GENERATION_TIMEOUT_SECONDS = 900</code>) and you reclaim
+anything “stuck” for more than 10 minutes, you will re-dispatch a <em>live</em> attempt and have two
+workers writing the same job. The real numbers keep a comfortable margin:
+<code>CONTENT_DRAFT_RECLAIM_AFTER_MINUTES = 30</code> against a 15-minute attempt;
+<code>CONSULTING_REPORT_RECLAIM_AFTER_DEFAULT_MINUTES = 15</code> against a 180-second attempt. The
+settings comment in <code>settings.py:507-518</code> states the rule out loud so the next person who tunes a
+timeout knows to tune both.</p>
+</div>
+
+<h3 id="c-resilience">3.7 Retries at two layers, and the two <code>llm_resilience</code> twins</h3>
+
+<p>You have now seen one retry mechanism (§3.3): Celery re-queues the whole task. There is a second one,
+strictly <em>underneath</em> it, inside a single LLM call. Keeping them straight is the difference
+between “one flaky Gemini response” and “three full pipeline attempts burned”.</p>
+
+<figure>
+<div class="nest">
+  <div class="lbl">operator-visible stage attempt (Content Agent v2) — the operator sees “시도 2/3”</div>
+  <div class="nest inner">
+    <div class="lbl">Celery task retry — <code>self.retry(countdown=30)</code>, budget <code>MAX_ATTEMPTS - 1</code></div>
+    <div class="nest inner">
+      <div class="lbl">llm_resilience retry — inside ONE call: 429 budget, and (backend only) a transient-5xx budget</div>
+    </div>
+  </div>
+</div>
+<figcaption>Three nested budgets. A transient LLM retry <strong>never</strong> spends a stage attempt —
+<code>core/llm_resilience.py</code>'s docstring says so explicitly: “this loop sits <em>below</em> the
+content agent's operator-visible stage attempts”.</figcaption>
+</figure>
+
+<p>There are two implementations of the inner layer, one per service:
+<code>apps/backend/core/llm_resilience.py</code> (330 lines) and
+<code>apps/agent/app/llm_resilience.py</code> (247 lines). They are deliberate twins — the same knob
+names on both sides, “so an operator configures one contract across both services” — and their
+differences are all forced by the environment they serve.</p>
+
+<table>
+  <tr><th></th><th>backend (<code>core/llm_resilience.py</code>)</th><th>agent (<code>app/llm_resilience.py</code>)</th></tr>
+  <tr><td>calls are</td><td>synchronous</td><td>async (<code>acall_with_retry</code>) + a sync twin</td></tr>
+  <tr><td>per-attempt timeout</td><td>native client <code>timeout=</code> kwarg (you cannot wrap a blocking call in <code>asyncio.timeout</code>)</td><td><code>async with asyncio.timeout(...)</code></td></tr>
+  <tr><td>timeout default</td><td><code>None</code> (off)</td><td><code>None</code> (off)</td></tr>
+  <tr><td>429 budget</td><td><code>GEMINI_MAX_RETRIES</code> = 2, base <code>0.5 * 2**attempt</code> <strong>+ up to 25% jitter</strong></td><td><code>gemini_max_retries</code> = 2, base <code>0.5 * 2**attempt</code>, <strong>no jitter</strong></td></tr>
+  <tr><td>transient 5xx budget</td><td><strong>yes</strong> — <code>GEMINI_SERVER_ERROR_MAX_RETRIES</code> = 3, base 2.0 s</td><td><strong>no</strong> — a 503 propagates on the first failure</td></tr>
+  <tr><td>wall-clock cap</td><td><code>deadline_seconds</code> (optional, P83.S6)</td><td>—</td></tr>
+  <tr><td>a timeout is retried</td><td>never</td><td>never</td></tr>
+  <tr><td>telemetry</td><td>—</td><td><code>log_llm_usage(operation, result)</code> on every success</td></tr>
+</table>
+
+<p>Both disable the vendor SDK's own retry so there is exactly one authority:
+<code>native_resilience_kwargs()</code> passes <code>max_retries=1</code> (google-genai's “no retries”
+value) into the client constructor, and the module docstring names the consequence —
+<code>call_with_retry</code> is “the single 429 authority”.</p>
+
+<h4>The asymmetry is a decision, not an oversight</h4>
+
+<p>The backend twin's docstring records the reasoning verbatim:</p>
+
+<pre><code># apps/backend/core/llm_resilience.py:42-48
+**Scope (P77.S1 decision).** The widening is deliberately Gemini-wide at this
+seam — every backend Gemini caller (content agent v2, ingestion enrichment,
+conversation titles, brand verification) gets the same bounded transient
+retry, because this module is already "the single retry authority" and a 503 is
+transient for all of them. The agent-side twin
+(``apps/agent/app/llm_resilience.py``) is deliberately NOT widened: it serves
+interactive chat, where a multi-second backoff is worse than a fast failure.</code></pre>
+
+<p>Read that as a product decision wearing an infrastructure costume. A 구성안 generation running in a
+worker can afford to sleep 2 s, then 4 s, then 8 s before giving up — nobody is watching. A user
+waiting on a streaming chat turn cannot: an eight-second silent pause is worse than an honest “try
+again”. Same class of error, opposite right answer, and #15 recorded how the agent side then hands the
+problem <em>upwards</em> anyway — a 503 from the agent becomes a transient Celery retry on the backend,
+which is the slow-path budget re-entering by the correct door.</p>
+
+<p>Both twins also encode one operator ruling that is easy to miss: <strong>a retry always re-invokes
+the identical client</strong> — same model, same thinking level. There is no fallback to a cheaper or
+different model, ever. The backend docstring: “because P77's operator ruling forbids any fallback to
+another model”.</p>
+
+<h4>Measuring it, instead of believing the docstring</h4>
+
+<p>You can execute these loops without a broker, without Django and without the Gemini SDK, by slicing
+the functions out of the source with Python's <code>ast</code> module and running them against stubs.
+Here is the backend loop, driven by a fake client that fails with two 429s, then two 503s, then a
+message-only <code>"try again later"</code>, then succeeds — with <code>time.sleep</code> replaced by a
+list that records what it was asked to sleep:</p>
+
+<pre><code>seq = [APIError(429), APIError(429), APIError(503), APIError(503),
+       RuntimeError("The model is overloaded. Please try again later."), None]
+
+# result: ok | attempts: 6 | sleeps: [0.528, 1.212, 2.048, 4.976, 8.246]
+# three 429s -&gt; APIError 429 | attempts: 3
+# 400 -&gt; raised immediately, code 400
+# deadline 25s, each attempt 20s -&gt; stopped after one attempt, code 503</code></pre>
+
+<p>Four things fall out of those numbers, and none of them is obvious from reading:</p>
+<ul class="tight">
+<li><strong>Six attempts in one call.</strong> The two budgets are counted <em>independently</em>
+(<code>used = {"429": 0, "transient server error": 0}</code>), so a provider outage cannot eat the
+rate-limit budget. Total sleeping: about 17 seconds inside one “single” LLM call.</li>
+<li><strong>The jitter is real and applies to both classes.</strong> 0.5 → 0.528, 1.0 → 1.212,
+2.0 → 2.048, 4.0 → 4.976: each delay is multiplied by <code>1 + random()*0.25</code> so a fleet of
+workers hitting the same outage does not re-converge on the same second.</li>
+<li><strong>The fifth failure had no status code at all.</strong> It matched
+<code>_SERVER_ERROR_TOKENS</code> (<code>"try again later"</code>) — the narrow list of provider
+phrasings used only when LangChain's wrapper has swallowed the numeric status. An exception that
+<em>does</em> carry a status is judged by the status alone, so a 4xx can never match a token.</li>
+<li><strong>The wall-clock deadline works as advertised.</strong> With
+<code>deadline_seconds=25</code> and 20-second attempts, the loop refuses the retry it cannot afford
+and re-raises immediately, so a caller inside a 120-second gunicorn worker can answer in its own words
+instead of being killed mid-request.</li>
+</ul>
+
+<p>The agent twin, sliced the same way, behaves exactly as its docstring says — delays
+<code>[0.5, 1.0]</code> for <code>base=0.5, max_retries=2</code>, the <em>original</em> exception
+re-raised once the budget is spent, a wrapped 429 (a <code>RuntimeError</code> whose
+<code>__cause__</code> is the <code>APIError</code>) still counted as retryable because the predicate
+walks the <code>__cause__</code> chain, a 503 re-raised on the first failure, and
+<code>max_retries=0</code> disabling the loop entirely.</p>
+
+<div class="callout warn">
+<p><strong>Defaults are not what production runs.</strong> <code>GEMINI_MAX_RETRIES</code> defaults to
+2 in code and in <code>compose.prod.yml</code>, but the env file sets it to <strong>6</strong>. With the
+3-retry 5xx budget on top, the backend's own docstring does the arithmetic: “up to ten retries and
+~140 s of sleeping <em>on top of</em> every attempt's own request timeout — measured against a 120 s
+gunicorn worker”. That is precisely why <code>deadline_seconds</code> exists, and why a caller inside a
+web request should pass it while a Celery caller usually should not.</p>
+</div>
+
+<h3 id="c-alerts">3.8 Alerts — when the worker <em>is</em> the broken thing</h3>
+
+<p>Everything so far assumes that when something breaks, something else still works well enough to
+record it. In July 2026 that assumption failed, and the module that came out of it,
+<code>apps/backend/ingestion/alerts.py</code> (101 lines), is the best-written piece of operational
+reasoning in this repository. Its docstring is the lesson:</p>
+
+<pre><code># apps/backend/ingestion/alerts.py:1-21
+"""Operator mail alerts for ingestion failures.
+
+Born from the 2026-07 outage, where a leaked Playwright event loop poisoned a
+Celery prefork child and EVERY ORM call in it raised SynchronousOnlyOperation
+for days with zero external signal. The alert path therefore has hard rules:
+
+- Zero ORM access: recipients are resolved WITHOUT the database ...
+  A saved list wins once written — including a saved EMPTY list, which means
+  "deliberately no recipients". A cache read failure is itself a miss, so a
+  dead Redis degrades to env rather than to silence.
+- Synchronous send, no .delay(): a queued task may never run when the worker
+  is the thing that is broken.
+- Never raises: an alert failure must not mask the original error.
+- Throttle state is a module-level in-process dict, not the Redis cache (cache
+  get/set raises when Redis is down). Worst case is one duplicate mail per
+  prefork child plus a reset when a child recycles — acceptable for ops mail.
+"""</code></pre>
+
+<p>Sit with what happened for a moment. A browser automation leak left one prefork child in a state where
+<em>every database call raised</em>. The child kept accepting tasks. The container kept passing its
+health check. The console kept rendering. Nothing said a word for days.</p>
+
+<p>Each of the four rules is a direct negation of a way the system could have stayed silent:</p>
+
+<table>
+  <tr><th>Rule</th><th>The failure it refuses</th></tr>
+  <tr><td>Zero ORM — recipients come from the Redis cache written by <code>/operator/settings</code>, falling back to <code>settings.INGESTION_ALERT_RECIPIENTS</code> (env) on a miss</td><td>In the poisoned child, reading a <code>NotificationRecipient</code> row raises — so the alert about the broken ORM would itself need the ORM</td></tr>
+  <tr><td>Synchronous <code>mail.send_mail</code>, never <code>.delay()</code></td><td>A queued alert is executed by… the worker you are trying to report on</td></tr>
+  <tr><td>The whole body is inside one <code>try/except Exception</code> returning <code>False</code></td><td>An SMTP failure must never replace the original exception in the logs</td></tr>
+  <tr><td>Throttle state is a module-level dict guarded by a <code>threading.Lock</code>, not the cache</td><td><code>cache.get()</code>/<code>set()</code> raise when Redis is down — the throttle must not need the thing that may be down</td></tr>
+</table>
+
+<p>The send itself is 30 lines, and the shape is worth reading once:</p>
+
+<pre><code># apps/backend/ingestion/alerts.py:55-101 (abridged)
+def send_ingestion_alert(*, key, subject, body, throttle_seconds=None) -&gt; bool:
+    try:
+        recipients = resolve_alert_recipients()
+        if not recipients:
+            ...   # log ONCE (a module flag), then skip silently forever after
+            return False
+        window = settings.INGESTION_ALERT_THROTTLE_SECONDS if throttle_seconds is None else throttle_seconds
+        now = time.monotonic()
+        with _throttle_lock:
+            last = _last_sent_at.get(key)
+            if last is not None and now - last &lt; window:
+                return False
+            _last_sent_at[key] = now
+        mail.send_mail(
+            subject=f"[창플 ingestion] {subject}",
+            message=body, from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipients, fail_silently=False,
+        )
+        return True
+    except Exception:
+        logger.warning("Ingestion alert send failed (key=%s).", key, exc_info=True)
+        return False</code></pre>
+
+<p>The <code>key</code> is the throttle identity: the same key sends at most once per window, and the
+default window is <code>INGESTION_ALERT_THROTTLE_SECONDS = 21600</code> — <strong>six hours</strong>.
+That is long, on purpose: these are ops mails to one human, and the failure mode of a chatty alert is an
+ignored alert. Eighteen call sites across the backend register keys; the ones other explainers named:</p>
+
+<table>
+  <tr><th>Key</th><th>Where</th><th>Meaning</th></tr>
+  <tr><td><code>ingestion-job-failed:&lt;job_id&gt;</code></td><td><code>ingestion/execution.py</code></td><td>A job terminal-failed (per job, so a bad run mails once)</td></tr>
+  <tr><td><code>scraper-circuit-open</code>, <code>naver-login-*</code></td><td><code>ingestion/scraper.py</code></td><td>The scraper tripped its consecutive-failure breaker; the Naver login needs a human</td></tr>
+  <tr><td><code>ingestion.board_sync.{added,removed,race_removed}</code></td><td><code>ingestion/board_sync.py</code></td><td>The cafe's board list changed underneath us</td></tr>
+  <tr><td><code>ingestion.membership_walk.moved</code></td><td><code>ingestion/membership_walk.py</code></td><td>Posts moved between boards</td></tr>
+  <tr><td><code>schedule-{evaluator-error,skip:&lt;date&gt;,stale-blocker-recovery,terminal-failed-run-recovery}</code></td><td><code>ingestion/schedules.py</code></td><td>The every-minute evaluator's own health</td></tr>
+  <tr><td><code>automatic-run-{needs-attention,continued-on-partial}:&lt;run_id&gt;</code></td><td><code>ingestion/automatic_runs.py</code></td><td>The daily run wants a human, or continued past a partial</td></tr>
+  <tr><td><code>ingestion.soft_resync.{needs_attention,chunk_run}</code></td><td><code>ingestion/soft_resync.py</code></td><td>재수집 run trouble</td></tr>
+  <tr><td><code>content-chunk-sync-{start-failed,run-failed,poll-timeout}:&lt;content_id&gt;</code></td><td><code>content/chunk_indexing.py</code></td><td>#12's publish → index trigger gave up</td></tr>
+  <tr><td><code>operator-alert-recipients-test</code></td><td><code>operators/views.py</code></td><td>The 테스트 메일 보내기 button — sends through the real path with <strong>no</strong> throttle</td></tr>
+</table>
+
+<p>Recipients are editable at <code>/operator/settings</code>, and the write-through that makes that
+possible without touching the ORM in the alert path is <code>operators/alert_recipients.py</code>:
+the save endpoint writes the list <em>plus a “stored” marker</em> to the shared Redis cache (db 1, no
+expiry), and the alert path reads only the cache. Explainer #17 owns that editor; this page only reads
+it. Two consequences worth carrying: a <em>saved empty list</em> means “deliberately nobody” and
+suppresses sends, and a flushed Redis reads as a miss and silently falls back to the env list — so env
+stays a live fail-safe rather than dead config.</p>
+
+<div class="callout bad">
+<p><strong>“No mail” is not health.</strong> <code>docs/current/operations.md</code>
+§“Alerting, and why ‘no mail’ is not health” records that production has most likely been running with
+ingestion alerts <em>off</em> since P32, because <code>INGESTION_ALERT_RECIPIENTS</code> ships blank —
+“which is precisely how the 2026-07 outage stayed silent.” When you use the 테스트 메일 보내기 button,
+read the <code>EMAIL_BACKEND</code> it reports back before believing a “success”: a console backend
+prints the mail to stdout and reports success.</p>
+</div>
+
+<p>One more defence came out of the same outage, and it lives in settings rather than in this module:</p>
+
+<pre><code># apps/backend/config/settings.py:705-713
+# Defense-in-depth against a poisoned prefork child (e.g. a leaked Playwright
+# event loop making every ORM call raise SynchronousOnlyOperation — the
+# 2026-07 ingestion outage). Children recycle BETWEEN tasks, never mid-task,
+# so long scrape jobs are unaffected; a wedged child is bounded to ~100 tasks
+# instead of living forever.
+CELERY_WORKER_MAX_TASKS_PER_CHILD = env.int("CELERY_WORKER_MAX_TASKS_PER_CHILD", default=100)</code></pre>
+
+<p>Three lessons, one outage: make the alert path independent of everything that can break
+(<code>alerts.py</code>), bound how long a poisoned process can live
+(<code>worker_max_tasks_per_child</code>) — and, as §3.10 will show, notice that the container health
+check could never have caught it.</p>
+
+<h3 id="c-observability">3.9 Observability — where a builder looks</h3>
+
+<p>There is <strong>no metrics stack, no APM, no tracing backend</strong> in changple5. Observability is
+four instruments, and knowing which one to open is most of the skill.</p>
+
+<h4>(a) <code>DatabaseLogHandler</code> — WARNING+ into a table</h4>
+
+<p><code>apps/backend/operators/logging_handler.py</code> (75 lines) is a stdlib
+<code>logging.Handler</code> that writes every <code>WARNING</code>/<code>ERROR</code>/<code>CRITICAL</code>
+record into the <code>SystemErrorLog</code> table, which the operator console reads. It is installed
+twice, once per process family:</p>
+
+<pre><code># apps/backend/config/settings.py:837-854 — the web process
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        "db_backend": {"()": "operators.logging_handler.DatabaseLogHandler",
+                       "level": "WARNING", "service": "backend"},
+    },
+    "root": {"handlers": ["console", "db_backend"], "level": "INFO"},
+}
+
+# apps/backend/config/celery.py:46-57 — the worker and beat processes
+@setup_logging.connect
+def configure_celery_logging(**kwargs: object) -&gt; None:
+    import sys
+    from operators.logging_handler import DatabaseLogHandler
+    is_beat = "beat" in sys.argv
+    service = "celery_beat" if is_beat else "celery_worker"
+    handler = DatabaseLogHandler(service=service)
+    handler.setLevel(logging.WARNING)
+    logging.root.addHandler(handler)</code></pre>
+
+<p>Celery replaces Django's logging configuration when it starts, which is why the
+<code>setup_logging</code> signal exists at all — connecting to it is how you say “no thanks, I will
+configure it myself”. And the service name is derived by <em>looking at <code>sys.argv</code></em>: the
+same image, the same code, two identities, distinguished by the word <code>beat</code> on the command
+line. Crude, and exactly sufficient.</p>
+
+<p>The handler itself has one subtlety, and it is the kind of bug you only find in production:</p>
+
+<pre><code># apps/backend/operators/logging_handler.py:32-41
+def emit(self, record: logging.LogRecord) -&gt; None:
+    if getattr(self._local, "_in_emit", False):
+        return
+    self._local._in_emit = True
+    try:
+        self._write_record(record)
+    except Exception:
+        self.handleError(record)
+    finally:
+        self._local._in_emit = False</code></pre>
+
+<div class="callout">
+<p><strong>Why <code>_in_emit</code> exists.</strong> This handler writes to the database. If that write
+fails, Django's database layer logs a warning. That warning goes to the root logger. The root logger
+calls this handler. Which writes to the database. Which fails. Without the guard, one database hiccup
+becomes infinite recursion inside the logging system. The flag is a <code>threading.local()</code> —
+per-thread, because gunicorn serves concurrent requests on separate threads and a shared flag would
+make one request's logging suppress another's.</p>
+</div>
+
+<p>The <code>context</code> column carries <code>{"request_id": ...}</code> only when
+<code>ENABLE_CORRELATION_IDS</code> is on, and outside a request (Celery, management commands) there is
+no bound id, so it stays <code>None</code>.</p>
+
+<h4>(b) Correlation ids — one id across two services</h4>
+
+<p><code>apps/backend/operators/middleware.py</code> is 40 lines and is worth reading whole:</p>
+
+<pre><code># apps/backend/operators/middleware.py:18-40
+class CorrelationIdMiddleware:
+    """Bind an ``X-Request-ID`` correlation id for the duration of each request.
+
+    Generation is unconditional (never gated): every request honors an inbound
+    ``X-Request-ID`` or mints a fresh UUID, binds it to a contextvar, and echoes
+    it on the response. The ``reset(token)`` in ``finally`` is mandatory — Django
+    serves requests on reused worker threads, so without it a contextvar could
+    leak the previous request's id into the next request served by that thread.
+    """
+
+    def __call__(self, request):
+        incoming = (request.headers.get(REQUEST_ID_HEADER) or "").strip()
+        request_id = incoming or str(uuid.uuid4())
+        token = _request_id_var.set(request_id)
+        try:
+            response = self.get_response(request)
+        finally:
+            _request_id_var.reset(token)
+        response[REQUEST_ID_HEADER] = request_id
+        return response</code></pre>
+
+<p>A <code>ContextVar</code> is the async-and-thread-safe replacement for a thread-local: set it at the
+top of a request and any code deeper in the stack can read it without passing it through twenty function
+signatures. <code>set()</code> returns a <em>token</em>, and <code>reset(token)</code> restores the
+previous value — the discipline that keeps a pooled worker thread from carrying one request's id into
+the next.</p>
+
+<p>#2 taught the agent's half (<code>app/correlation.py</code>, a pure-ASGI middleware rather than
+<code>BaseHTTPMiddleware</code>, so the contextvar stays visible inside streaming generators) and the
+two gates. The join is what matters here: <strong>generation and the response echo are unconditional on
+both sides; <code>ENABLE_CORRELATION_IDS</code> (default <code>True</code>, and never set in
+<code>compose.prod.yml</code>) gates only FORWARD and PERSIST</strong> — whether the agent puts the id
+on its backend calls, and whether the backend stores it on a log row. So a browser that sends
+<code>X-Request-ID: abc</code> can find <code>abc</code> in the <code>context</code> column of rows
+written by two different services.</p>
+
+<h4>(c) Agent → backend error reporting</h4>
+
+<p>The agent has no operator console of its own, so it posts its errors into the backend's:
+<code>apps/agent/app/error_reporting.py</code> (137 lines).</p>
+
+<pre><code># apps/agent/app/error_reporting.py:102-137 (abridged)
+def report_agent_error(settings, *, exc, logger_name, context=None) -&gt; None:
+    if not getattr(settings, "enable_correlation_ids", False):
+        return                                   # gate 1: the flag
+    reporter = _maybe_build_reporter(settings)   # gate 2: base URL AND token both set
+    if reporter is None:
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        reporter.report_exception(exc, logger_name=logger_name, context=context)
+        return
+    task = loop.create_task(asyncio.to_thread(reporter.report_exception, exc, ...))
+    _BACKGROUND_REPORT_TASKS.add(task)           # strong ref, or the GC may eat it
+    task.add_done_callback(_BACKGROUND_REPORT_TASKS.discard)</code></pre>
+
+<p>Four things here are transferable to any async service. The report is <strong>fire-and-forget</strong>
+(a <code>POST /api/admin/system-logs/report</code> with the shared service token, 5-second timeout,
+every failure swallowed into a warning). It runs <strong>off the event loop</strong> via
+<code>asyncio.to_thread</code>, because the reporter uses a synchronous <code>httpx.Client</code> and
+blocking the loop of a streaming server is how you stall every other user's turn. It is a
+<strong>detached</strong> task, so tearing down the failed stream does not cancel the report of why it
+failed. And the module keeps a <strong>strong reference set</strong> — an asyncio task with no live
+reference can be garbage-collected before it ever runs, a genuinely surprising footgun.</p>
+
+<p>Three call sites, each tagging its own context: <code>chat.py:1495</code>
+(<code>source: "chat_stream"</code>, plus the run id), <code>content_drafts.py:151</code>
+(<code>source: "content_draft"</code>, plus the job id — the one #15 showed), and
+<code>consulting_reports.py:191</code> (report id + conversation nonce; it is the only one of the three
+that does not set a <code>source</code> key). Each adds <code>request_id</code> when one is bound.</p>
+
+<p>So <code>SystemErrorLog</code> has <strong>three writers</strong>, and the <code>service</code> column
+is how you tell them apart:</p>
+
+<table>
+  <tr><th>Writer</th><th>Route / mechanism</th><th>Auth</th><th><code>service</code></th></tr>
+  <tr><td>Django + Celery logging</td><td><code>DatabaseLogHandler</code> (no HTTP at all)</td><td>in-process</td><td><code>backend</code> / <code>celery_worker</code> / <code>celery_beat</code></td></tr>
+  <tr><td>The agent</td><td><code>POST /api/admin/system-logs/report</code> (<code>operators/urls.py:57</code>)</td><td><code>X-Agent-Service-Token</code>, never an operator session</td><td><code>agent</code></td></tr>
+  <tr><td>The browser</td><td><code>POST /api/client-errors/report</code> (<code>config/urls.py:18</code>)</td><td>logged-in user (JWT); the serializer <em>forces</em> <code>service="web"</code> and caps field sizes</td><td><code>web</code></td></tr>
+</table>
+
+<h4>(d) LLM telemetry, and the trace that is off</h4>
+
+<p><code>apps/agent/app/llm_telemetry.py</code> (130 lines) reads LangChain's
+<code>usage_metadata</code> off a model response and emits one structured line per call:</p>
+
+<pre><code>logger.info(
+    "llm_usage operation=%s correlation_id=%s input_tokens=%d "
+    "cached_input_tokens=%d output_tokens=%d total_tokens=%d", ...)</code></pre>
+
+<p><code>cached_input_tokens</code> is the interesting field: it is the
+<code>input_token_details.cache_read</code> slice Gemini reports when its <em>implicit</em> context
+cache served part of the prompt prefix — i.e. free evidence about whether prompt-prefix stability is
+paying off. <code>extract_usage</code> handles the two response shapes the agent produces and returns
+<code>None</code> for responses that carry no usage at all (embeddings return a list of floats), and
+<code>log_llm_usage</code> is wrapped so that telemetry can never raise into an LLM call. It fires from
+inside both <code>llm_resilience</code> wrappers, which is why one wiring covers rerank, budget,
+compaction and consulting at once.</p>
+
+<div class="callout bad">
+<p><strong>And it has never once appeared in a container log.</strong> <code>fastapi_agent</code>
+configures no logging of its own: uvicorn configures only its <code>uvicorn*</code> loggers, so the root
+logger has no handler and sits at WARNING — every <code>app.*</code> <code>logger.info</code> is
+dropped on the floor. P89 gave exactly one logger (<code>app.chat.turn_trace</code>) its own stdout
+handler; the rest, including <code>llm_usage</code>, is still silent
+(<code>docs/current/operations.md</code> §“Observability &amp; Logging”). It is an instrument that is
+built, correct, and not plugged in — worth knowing before you go looking for its output.</p>
+</div>
+
+<p>The fourth instrument is <strong>LangSmith</strong>, and it is off by default
+(<code>langsmith_tracing</code> defaults to <code>False</code>). When enabled, tracing is not wired
+through code at all — <code>main.py</code> copies the <code>LANGSMITH_*</code> values into
+<code>os.environ</code> <em>before</em> any langchain module is imported, because LangChain's auto-tracing
+reads them at import time (hence the unusual <code># noqa: E402</code> imports at the bottom of that
+file). <code>apps/agent/app/langsmith_check.py</code> (143 lines) is a three-state probe —
+<code>skipped</code> (tracing disabled) / <code>ok</code> (client built, <code>client.info</code>
+answered, a test trace submitted and flushed) / <code>error</code> — and, verified today, it has
+<strong>no caller anywhere in the repository</strong>: it carries its own <code>main()</code> and a
+<code>__main__</code> guard, so it is a script you run
+(<code>python -m app.langsmith_check</code>), not a route or a management command.</p>
+
+<h4>The builder's checklist: symptom → instrument</h4>
+
+<table>
+  <tr><th>Symptom</th><th>Open first</th><th>Why</th></tr>
+  <tr><td>“A user says the app threw an error”</td><td>The operator console's log list (<code>SystemErrorLog</code>)</td><td>All three writers land there, with <code>service</code> and (when correlation ids are on) <code>request_id</code> to join across them</td></tr>
+  <tr><td>“The daily scrape did not run”</td><td>The mail — then <code>docker logs changple5-celery_beat-1</code></td><td>Beat dispatches every minute; if it is alive the problem is downstream. Remember 6-hour throttling, and that no mail may mean no recipients</td></tr>
+  <tr><td>“A background job is stuck in RUNNING”</td><td><code>docker logs changple5-celery_worker-1</code></td><td>Tasks log at INFO there; a restart will also trip the <code>worker_ready</code> reclaim (§3.6)</td></tr>
+  <tr><td>“The chat answer was wrong/empty”</td><td><code>docker logs … fastapi_agent | grep chat_turn</code></td><td>The one INFO line the agent actually prints — content-free, one per turn (P89)</td></tr>
+  <tr><td>“A deployed change did nothing”</td><td>Which images were rebuilt</td><td>Compose builds images, it does not mount source; the worker is the usual victim</td></tr>
+  <tr><td>Anything infrastructural</td><td><code>docs/current/operations.md</code> §“Troubleshooting”</td><td>The runbook for compose-bake panics, missing networks, preflight aborts</td></tr>
+</table>
+
+<h3 id="c-health">3.10 Health checks and the boring parts</h3>
+
+<p>All seven services define a <code>healthcheck</code>, and the app ones are real HTTP probes:</p>
+
+<pre><code># compose.prod.yml — django_backend
+test: ["CMD", "python", "-c",
+  "import sys, urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5); sys.exit(0 if response.status == 200 else 1)"]
+interval: 10s   timeout: 5s   retries: 10   start_period: 30s
+
+# compose.prod.yml — fastapi_agent (same shape, /agent-api/health on :8001)
+
+# compose.prod.yml — celery_worker
+test: ["CMD", "python", "-c",
+  "from pathlib import Path; import sys; cmd = Path('/proc/1/cmdline').read_text(); sys.exit(0 if 'celery' in cmd and 'worker' in cmd else 1)"]
+interval: 30s   timeout: 5s   retries: 5   start_period: 30s</code></pre>
+
+<p>Look hard at that third one. The worker's health check reads PID 1's command line and asks whether
+the words <code>celery</code> and <code>worker</code> appear in it. That is <em>liveness in the weakest
+possible sense</em>: it proves a celery worker process was started. It cannot tell you whether the
+worker is consuming the queue, whether a prefork child is poisoned, or whether every ORM call has been
+raising for three days. The 2026-07 outage passed this check continuously. Written down plainly:
+<strong>the alert path in §3.8 exists because this health check structurally cannot do that job</strong>,
+and no amount of tuning the check would change that — only something that reports the <em>work</em>, not
+the <em>process</em>, can.</p>
+
+<p>The <code>depends_on: condition: service_healthy</code> chains are a startup ordering tool, not a
+runtime guarantee:</p>
+
+<pre><code>django_backend  → postgres_db, redis
+fastapi_agent   → postgres_db, redis, django_backend
+celery_worker   → postgres_db, redis, django_backend
+celery_beat     → postgres_db, redis, django_backend
+nextjs_frontend → (nothing)</code></pre>
+
+<p>Both Celery services wait for <code>django_backend</code> to be healthy — which usually means the
+migration in its command has finished, so the worker never boots against a schema older than its code.
+Once everything is up, <code>depends_on</code> does nothing at all; a Redis that dies at noon is handled
+by <code>restart: unless-stopped</code> plus the code's own degradation, not by compose.</p>
+
+<p>Finally the volumes, because two of them belong to the worker:
+<code>backend_media</code> (uploaded and derived media — mounted by backend, worker <em>and</em> beat)
+and <code>scraper_state</code> (mounted by backend and worker only). The second one holds the persistent
+Chromium profile for the Naver login, and the compose comment explains why it must survive a restart:
+cookies, cache and device state persisting is “what makes the daily login look like a returning
+browser”. <code>pg_data</code> and <code>redis_data</code> are the obvious two; Redis runs
+<code>--appendonly yes</code>, so a restart does not lose queued task messages.</p>
+
+<p>The release procedure itself — <code>deploy.sh</code>, the GitHub Actions workflow, backup and
+rollback — is deliberately out of scope here; it lives in <code>docs/current/operations.md</code>
+§“Deploy: <code>./deploy.sh</code>” and §“CI/CD: GitHub Actions”. This page is about the shape that runs,
+not the procedure that puts it there.</p>
+
+<div class="callout">
+<p><strong>What the next pages pick up.</strong> #17 takes the operator console backend and the live LLM
+runtime config — including the alert-recipient editor this page only read from. #18 takes billing, whose
+two sweeps have appeared here purely as beat and startup entries. #19 takes the leaf subsystems,
+including <code>consultations.send_consultation_notification</code>, the single-task app.</p>
+</div>
+</section>
+
+<section id="quiz">
+<h2>Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A view opens <code>transaction.atomic()</code>, writes a row, and calls
+  <code>app.send_task("content.sync_content_chunk_index", kwargs={"content_id": 7})</code> directly
+  inside the block. What is the most likely observable result?</p>
+  <button class="opt" data-correct="false">Celery raises, because a task cannot be queued inside a transaction</button>
+  <button class="opt" data-correct="true">The worker reads row 7 in its pre-write state (or not at all) and quietly does the wrong thing</button>
+  <button class="opt" data-correct="false">The task is queued twice — once now and once at commit</button>
+  <button class="opt" data-correct="false">Nothing: Redis delays the message until the transaction commits</button>
+  <p class="why" hidden>The message is published immediately, and the worker is a separate process with
+  its own connection, so it cannot see uncommitted rows. It usually wins the race, and the symptom is
+  silently wrong data rather than an error. <code>transaction.on_commit(...)</code> parks the dispatch
+  until after COMMIT — and drops it entirely on a rollback.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> Why does <code>ingestion/alerts.py</code> refuse to use the ORM
+  <em>and</em> refuse to use <code>.delay()</code>?</p>
+  <button class="opt" data-correct="false">Because mail is slow and would block the request thread</button>
+  <button class="opt" data-correct="false">Because the ORM is not thread-safe inside a Celery prefork child</button>
+  <button class="opt" data-correct="true">Because the thing it reports on may be the worker itself — a poisoned child whose every ORM call raises, and whose queue may never be drained</button>
+  <button class="opt" data-correct="false">Because Django's mail backend cannot be used from a task</button>
+  <p class="why" hidden>In the 2026-07 outage a leaked Playwright event loop poisoned a prefork child so
+  that every ORM call raised <code>SynchronousOnlyOperation</code> for days. An alert that needed a
+  database read, or that needed the worker to execute a queued task, would have been silent in exactly
+  the situation it existed for. Hence: recipients from a Redis cache with an env fallback, a synchronous
+  send, an in-process throttle dict, and a top-level <code>except</code> that never raises.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Gemini answers <code>503 UNAVAILABLE</code>. What happens on the backend versus
+  in the agent, and why do they differ?</p>
+  <button class="opt" data-correct="false">Both retry three times with a 2-second base backoff; the knob names are shared, so the behaviour is too</button>
+  <button class="opt" data-correct="true">The backend retries it on a separate transient-5xx budget (3 retries, 2 s base, jittered); the agent does not retry it at all, because a multi-second pause in interactive chat is worse than a fast failure</button>
+  <button class="opt" data-correct="false">Neither retries: only 429 is retryable, on both sides</button>
+  <button class="opt" data-correct="false">The agent retries with a different, cheaper model; the backend re-invokes the same one</button>
+  <p class="why" hidden>P77.S1 widened only the backend twin, and the docstring says why: backend callers
+  are batch/worker work where sleeping is free, while the agent serves streaming chat. Note also that no
+  retry anywhere falls back to another model — the operator ruling is that a retry re-invokes the
+  identical client. On the backend the 429 budget and the 5xx budget are counted independently, so an
+  outage cannot consume the rate-limit allowance.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> A reclaim task re-dispatches jobs that have been “running” too long. Its window
+  is 10 minutes; the attempt it protects can legitimately take up to 15. What goes wrong?</p>
+  <button class="opt" data-correct="false">Nothing — the second dispatch is deduplicated by the task id</button>
+  <button class="opt" data-correct="false">The job is marked failed after 10 minutes and the operator must retry manually</button>
+  <button class="opt" data-correct="true">A still-live attempt is re-dispatched, so two workers process the same job concurrently</button>
+  <button class="opt" data-correct="false">The reclaim task itself times out and is retried forever</button>
+  <p class="why" hidden>The reclaim window must exceed the maximum attempt duration — the rule is written
+  into the settings comment beside <code>CONTENT_DRAFT_RECLAIM_AFTER_MINUTES</code> (30 minutes against a
+  900-second attempt). Nothing deduplicates for you: the reclaim's whole premise is “no process is
+  working on this any more”, and if that premise is wrong you get a double-dispatch.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> <code>DatabaseLogHandler.emit()</code> sets a thread-local
+  <code>_in_emit</code> flag and returns early if it is already set. What does that prevent?</p>
+  <button class="opt" data-correct="false">Two threads writing the same log row twice</button>
+  <button class="opt" data-correct="true">Infinite recursion: a failed database write logs a warning, which re-enters this handler, which writes to the database again</button>
+  <button class="opt" data-correct="false">Celery's <code>setup_logging</code> signal installing the handler twice</button>
+  <button class="opt" data-correct="false">Log records arriving before Django's app registry is ready</button>
+  <p class="why" hidden>The handler's output destination is the thing that can fail — and a failure
+  inside the database layer is itself logged. Without the re-entrancy guard one hiccup becomes an
+  unbounded recursion inside the logging system. It is thread-local rather than global so that one
+  request's in-progress emit does not suppress another thread's logging.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
