@@ -1,0 +1,1396 @@
+<!--kb
+title: "Billing: the Toss subscription lifecycle from checkout to reconciliation"
+date: 2026-09-13
+tags:
+  - changple5
+  - billing
+  - toss
+  - backend
+  - curriculum
+source:
+  project: changple5
+  repo: changple5
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billing: the Toss subscription lifecycle from checkout to reconciliation</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1b1b1b; --muted:#5d6670; --line:#d8dde3;
+          --accent:#2f6f4f; --warn:#9a5b00; --bad:#a33; --good:#2f6f4f; }
+  body { max-width: 49rem; margin: 2rem auto; padding: 0 1.1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+         line-height: 1.65; color: var(--ink); }
+  h1 { line-height: 1.25; font-size: 1.9rem; margin-bottom: .3rem; }
+  h2 { margin-top: 2.6rem; font-size: 1.45rem; border-bottom: 2px solid var(--line);
+       padding-bottom: .3rem; }
+  h3 { margin-top: 2rem; font-size: 1.14rem; }
+  h4 { margin-top: 1.4rem; font-size: 1.02rem; color: var(--muted); }
+  p, li { overflow-wrap: break-word; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+         font-size: .91em; background: rgba(127,127,127,.14); padding: .08em .3em;
+         border-radius: 3px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: rgba(127,127,127,.10);
+        padding: .8rem .9rem; border-radius: 7px; border: 1px solid var(--line);
+        font-size: .875rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .lede { font-size: 1.06rem; color: var(--muted); }
+  .callout { border-left: 4px solid var(--accent); background: rgba(47,111,79,.09);
+             padding: .7rem 1rem; margin: 1.1rem 0; border-radius: 5px; }
+  .warn { border-left-color: var(--warn); background: rgba(154,91,0,.10); }
+  .defn { border-left-color: #4a6ea9; background: rgba(74,110,169,.10); }
+  .callout p:first-child { margin-top: 0; } .callout p:last-child { margin-bottom: 0; }
+  nav.toc { border: 1px solid var(--line); border-radius: 7px; padding: .7rem 1rem .8rem; }
+  nav.toc ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1.1rem 0; font-size: .89rem;
+          display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: .42rem .55rem; text-align: left;
+           vertical-align: top; }
+  th { background: rgba(127,127,127,.12); font-weight: 600; }
+  figure { margin: 1.4rem 0; }
+  figcaption { font-size: .85rem; color: var(--muted); margin-top: .45rem; text-align: center; }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .4rem; }
+  .flow .box { flex: 1 1 8rem; border: 1px solid var(--line); border-radius: 6px;
+               padding: .5rem .6rem; background: rgba(127,127,127,.07); font-size: .84rem; }
+  .flow .box b { display: block; font-size: .8rem; letter-spacing: .02em; }
+  .flow .arrow { align-self: center; color: var(--muted); font-size: 1.2rem; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .7rem; }
+  .card { border: 1px solid var(--line); border-radius: 7px; padding: .65rem .8rem;
+          background: rgba(127,127,127,.05); font-size: .9rem; }
+  .card h4 { margin: 0 0 .3rem; color: var(--ink); font-size: .97rem; }
+  .tag { display: inline-block; font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
+         border: 1px solid var(--line); border-radius: 20px; padding: .05rem .5rem; color: var(--muted); }
+  .ok { color: var(--good); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+  .q { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .32rem 0; padding: .5rem .7rem;
+            cursor: pointer; border: 1px solid var(--line); border-radius: 6px;
+            background: rgba(127,127,127,.06); font: inherit; font-size: .92rem; color: inherit; }
+  .q .opt:hover { background: rgba(127,127,127,.14); }
+  .q .opt.correct { background: rgba(47,111,79,.22); border-color: var(--good); }
+  .q .opt.incorrect { background: rgba(170,51,51,.18); border-color: var(--bad); }
+  .q .why { margin: .55rem 0 0; font-size: .92em; color: var(--muted); }
+  footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1rem;
+           font-size: .9rem; color: var(--muted); }
+  svg { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+
+<h1>Billing: the Toss subscription lifecycle from checkout to reconciliation</h1>
+
+<p class="lede">Explainer #18 of the changple5 curriculum. Everything else in this codebase can be
+retried, re-indexed or regenerated. <code>apps/backend/billing/</code> is the one subsystem where a
+bug costs somebody real money — and it was written with that in mind. This page walks the
+subscription lifecycle end to end and, more importantly, the five mechanisms that keep it correct
+when the process dies, the network hangs, a webhook is lost, or the same sweep runs twice.</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a> — what is sold, how Toss billing works, and the six models</li>
+    <li><a href="#intuition">Intuition</a> — the five safety mechanisms, and what catches what</li>
+    <li><a href="#code">Code</a> — the client, checkout, renewals, reconciliation, webhooks, the API</li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<p>The previous explainer,
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/17-operator-console-and-llm-runtime">#17 — The
+operator console backend and live LLM runtime config</a>, ended with a finding that sets this page
+up: billing has <em>no</em> operator-console REST surface at all. Not an oversight — a deliberate
+shape we will come back to at the end.</p>
+
+<h2 id="background">Background</h2>
+
+<h3>What is actually being sold</h3>
+
+<p>One product, one price, one tier. A <code>Plan</code> row
+(<code>billing/models.py:33</code>) holds a stable machine <code>code</code> (<code>"pro"</code>), a
+display <code>name</code>, and <code>price_krw</code> — a plain integer number of Korean won. The
+app bills whatever row <code>services.get_active_plan()</code> returns:</p>
+
+<pre><code># apps/backend/billing/services.py:211
+def get_active_plan() -&gt; Plan | None:
+    """The plan the checkout flow bills. ``None`` ⇒ billing is treated as dormant
+    (checkout/confirm answer 503, status reports ``enabled=false``)."""
+
+    return Plan.objects.filter(is_active=True).order_by("id").first()</code></pre>
+
+<p>Price is <strong>data, not code</strong>: the operator edits it in Django admin, and a migration
+history records the moves (<code>0002_seed_pro_plan</code> at 19,000 KRW/월,
+<code>0005_pro_price_29000</code> at today's 29,000 KRW/월). Buying it flips exactly one column —
+<code>User.tier</code> from <code>free</code> to <code>pro</code> — and stores exactly one card, as
+a Toss <em>billing key</em>.</p>
+
+<div class="callout defn">
+<p><strong>Jargon, once:</strong> a <em>billing key</em> (빌링키) is a durable token Toss gives a
+merchant in exchange for a customer's one-time card authorisation. It stands in for the card: you
+never see or store the number, you charge the key. A <em>customerKey</em> is the merchant's own id
+for that customer, echoed back on every call. And <em>idempotency</em> means "doing it twice has
+the same effect as doing it once" — the single most important word on this page.</p>
+</div>
+
+<h3>The one Toss fact everything else follows from</h3>
+
+<p>Here is the sentence at the top of <code>billing/renewals.py</code>, and it is the design
+premise of half this subsystem:</p>
+
+<pre><code>A Toss billing key is charge-on-demand — Toss does **not** auto-schedule
+renewals (DECOMP finding), so the merchant owns the cadence.</code></pre>
+
+<p>Many payment providers (Stripe's Subscriptions, for instance) will run the recurring schedule for
+you: you describe a plan, they bill it monthly and tell you what happened. Toss's billing-key API
+does not. It gives you one verb — "charge this key for this amount, now" — and nothing else. Every
+monthly renewal in this product exists because <em>our</em> Celery beat woke up at 02:00 UTC and
+decided it was due. That single fact is why <code>renewals.py</code> (558 lines) is the largest
+module in the app and why the dunning ladder, the retry timers and the reconciliation sweep are all
+ours to get right.</p>
+
+<figure>
+<div class="flow">
+  <div class="box"><b>1 · BROWSER</b>Toss SDK <code>requestBillingAuth</code>: the customer types the
+  card into Toss's own window. Our JavaScript never touches it.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>2 · REDIRECT</b>Toss sends the browser back to us with an
+  <code>authKey</code> — a one-shot voucher, not a card.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>3 · SERVER</b><code>POST /api/billing/confirm</code> exchanges the
+  <code>authKey</code> for a durable <strong>billingKey</strong>, then charges it.</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>4 · FOREVER</b>Every later charge — renewal or retry — is just
+  "charge that billingKey", initiated by us.</div>
+</div>
+<figcaption>The card never reaches our servers; what reaches them is a token. Step 4 is the part
+Toss does <em>not</em> schedule.</figcaption>
+</figure>
+
+<h3>Dormant by default</h3>
+
+<p>Billing ships switched off. <code>config/settings.py</code> (lines 201–209) reads three values,
+and the first one is the master switch:</p>
+
+<pre><code># apps/backend/config/settings.py
+# Toss Payments billing (P27). Dormant by default like NOTION/CLOUDFLARE above:
+# an unset TOSS_SECRET_KEY makes the whole billing surface answer 503 with no
+# network call (billing/toss.py:_require_configured) and the status endpoint
+# report enabled=false, so dark-launch = keys unset (D9).
+TOSS_SECRET_KEY = env("TOSS_SECRET_KEY", default="")
+TOSS_API_BASE_URL = env("TOSS_API_BASE_URL", default="https://api.tosspayments.com")
+TOSS_REQUEST_TIMEOUT_SECONDS = env.float("TOSS_REQUEST_TIMEOUT_SECONDS", default=10.0)</code></pre>
+
+<p>Every service entry point calls <code>toss._require_configured()</code> as its literal first
+statement, so an unconfigured deployment answers <strong>503</strong> before it takes a lock, writes
+a row or opens a socket. <code>GET /api/billing/status</code> reports
+<code>{"enabled": false, "plan": {...}}</code> — the plan payload rides along even while disabled so
+the frontend can still render the pricing copy behind a "결제 준비 중" state.</p>
+
+<p>Three operational facts live in <code>docs/current/operations.md</code> §"Toss Billing (P27)" and
+are worth knowing but not re-teaching here:</p>
+
+<ul>
+  <li><strong>Turning billing on is a key deployment, never a code change</strong> —
+  <code>TOSS_SECRET_KEY</code> on <code>django_backend</code> + <code>celery_worker</code> +
+  <code>celery_beat</code> (all three: the sweeps charge from the workers), and
+  <code>NEXT_PUBLIC_TOSS_CLIENT_KEY</code> as a web build arg.</li>
+  <li><strong>The webhook URL</strong> registered in the Toss 개발자센터 is
+  <code>https://miracle.changple.ai/api/billing/webhook</code>. A successful billing <em>charge</em>
+  sends no webhook at all, so the registration is defensive; the reconciliation sweep is what
+  actually protects the money.</li>
+  <li><strong>The go-live history</strong> — sandbox <code>test_</code> keys ran on production during
+  the card 심사 window, and swapping to <code>live_</code> keys requires administratively expiring
+  every sandbox-era subscription in the same window (a <code>test_</code> key cannot be charged with
+  a <code>live_</code> secret). That is a written runbook:
+  <code>docs/reference/toss-live-cutover-runbook.md</code>.</li>
+</ul>
+
+<h3>The six models and their vocabularies</h3>
+
+<p><code>billing/models.py</code> is 420 lines for six models, and most of it is docstring. Learn
+the status vocabularies now — the rest of the page is written in them.</p>
+
+<table>
+<thead><tr><th>Model</th><th>What it is</th><th>Status vocabulary</th></tr></thead>
+<tbody>
+<tr><td><code>Plan</code> (<code>:33</code>)</td><td>The product. Operator-editable price in KRW.</td>
+<td><code>is_active</code> boolean; checkout bills the lowest-id active row.</td></tr>
+<tr><td><code>BillingKey</code> (<code>:63</code>)</td><td>One row per user: the stored Toss key plus
+an <strong>opaque</strong> <code>customer_key</code> (a random UUID — never the email or the pk, so
+no PII leaves for Toss or appears in the redirect URL).</td>
+<td><code>pending</code> (row exists, no key yet) · <code>active</code> · <code>deactivated</code></td></tr>
+<tr><td><code>Subscription</code> (<code>:118</code>)</td><td>The lifecycle. Created <em>only</em>
+after a successful first charge.</td>
+<td><code>active</code> · <code>past_due</code> · <code>expired</code>, plus
+<code>cancel_at_period_end</code>, <code>current_period_start</code>/<code>_end</code>,
+<code>renewal_attempt_count</code>, <code>last_renewal_attempt_at</code>, <code>next_retry_at</code></td></tr>
+<tr><td><code>Payment</code> (<code>:203</code>)</td><td>One row per charge <em>attempt</em> —
+successes, declines and refunds alike. Unique <code>order_id</code>.</td>
+<td>purpose <code>subscription_initial</code> / <code>subscription_renewal</code> /
+<code>single_purchase</code> (reserved, no code path) · status <code>paid</code> /
+<code>failed</code> / <code>canceled</code></td></tr>
+<tr><td><code>RefundRequest</code> (<code>:295</code>)</td><td>A <em>filed</em> 환불·청약철회 request.
+It moves no money.</td>
+<td>kind <code>withdrawal</code> (청약철회) / <code>refund</code> (환불 요청) · status
+<code>received</code> / <code>processed</code> / <code>dismissed</code></td></tr>
+<tr><td><code>WebhookEvent</code> (<code>:390</code>)</td><td>Inbound Toss callback audit + dedup.
+Payload stored, never trusted.</td>
+<td><code>received</code> · <code>processed</code> · <code>ignored</code> · <code>failed</code>;
+<code>dedup_key</code> is unique</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<p><strong>Two partial unique constraints do real work.</strong> A <em>partial</em> unique index is
+one that applies only to rows matching a condition — the database enforces a rule on part of the
+table. Both of billing's are load-bearing:</p>
+<pre><code># Subscription.Meta (models.py:191)
+models.UniqueConstraint(
+    fields=["user"],
+    condition=~models.Q(status="expired"),
+    name="billing_one_live_subscription_per_user",
+)
+
+# RefundRequest.Meta (models.py:375)
+models.UniqueConstraint(
+    fields=["payment"],
+    condition=models.Q(status="received"),
+    name="billing_one_open_refund_request_per_payment",
+)</code></pre>
+<p>Read the first one carefully: the excluded status is <code>expired</code> — so
+<strong><code>past_due</code> counts as live</strong>. That is why a past-due user gets a
+<strong>409 <code>already_subscribed</code></strong> from <code>/checkout</code> and cannot
+"fix" a failing card by re-subscribing. The only exits from <code>past_due</code> are a successful
+dunning retry (→ <code>active</code>) or expiry (→ <code>free</code>, after which a fresh checkout
+is allowed) — or the card-change endpoint pair, which exists precisely because of this.</p>
+</div>
+
+<h3>The lifecycle, as a state machine</h3>
+
+<figure>
+<svg viewBox="0 0 760 330" role="img" aria-label="Subscription state machine: none to active to past_due to expired">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7b838c"/>
+    </marker>
+  </defs>
+  <g font-family="system-ui, sans-serif" font-size="13">
+    <rect x="20" y="130" width="120" height="52" rx="8" fill="rgba(127,127,127,.12)" stroke="#b9c0c8"/>
+    <text x="80" y="152" text-anchor="middle" font-weight="600">no subscription</text>
+    <text x="80" y="170" text-anchor="middle" font-size="11" fill="#5d6670">tier = free</text>
+
+    <rect x="250" y="130" width="120" height="52" rx="8" fill="rgba(47,111,79,.18)" stroke="#2f6f4f"/>
+    <text x="310" y="152" text-anchor="middle" font-weight="600">active</text>
+    <text x="310" y="170" text-anchor="middle" font-size="11" fill="#5d6670">tier = pro</text>
+
+    <rect x="470" y="130" width="120" height="52" rx="8" fill="rgba(154,91,0,.18)" stroke="#9a5b00"/>
+    <text x="530" y="152" text-anchor="middle" font-weight="600">past_due</text>
+    <text x="530" y="170" text-anchor="middle" font-size="11" fill="#5d6670">tier stays pro</text>
+
+    <rect x="640" y="240" width="100" height="52" rx="8" fill="rgba(170,51,51,.16)" stroke="#a33"/>
+    <text x="690" y="262" text-anchor="middle" font-weight="600">expired</text>
+    <text x="690" y="280" text-anchor="middle" font-size="11" fill="#5d6670">tier = free</text>
+
+    <path d="M 142 156 L 246 156" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="194" y="148" text-anchor="middle" font-size="11">initial charge OK</text>
+
+    <path d="M 372 146 L 466 146" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="419" y="138" text-anchor="middle" font-size="11">decline #1</text>
+
+    <path d="M 466 172 L 374 172" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="419" y="188" text-anchor="middle" font-size="11">retry OK</text>
+
+    <path d="M 530 60 a 55 40 0 1 1 -30 72" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="560" y="52" text-anchor="middle" font-size="11">decline #2 (retry in 3 d)</text>
+
+    <path d="M 560 182 L 660 238" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="640" y="214" text-anchor="middle" font-size="11">decline #3</text>
+
+    <path d="M 330 184 C 360 280, 560 300, 648 276" stroke="#7b838c" fill="none" marker-end="url(#ar)"/>
+    <text x="440" y="296" text-anchor="middle" font-size="11">cancel_at_period_end + period ended (no charge)</text>
+
+    <path d="M 660 240 C 560 200, 200 250, 74 186" stroke="#b9c0c8" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+    <text x="300" y="242" text-anchor="middle" font-size="11" fill="#5d6670">re-subscribe allowed again</text>
+  </g>
+</svg>
+<figcaption>Three states, and the thing beginners get wrong: <code>past_due</code> still grants
+<code>pro</code>. The grace period is deliberate — a declined card is usually an expiry or a limit,
+not a cancellation.</figcaption>
+</figure>
+
+<h2 id="intuition">Intuition</h2>
+
+<p>Ask one question of this subsystem and everything else falls out of the answer:</p>
+
+<div class="callout warn">
+<p><strong>What happens if the process dies in the instant right after Toss says <code>DONE</code>,
+but before our database commits?</strong></p>
+<p>The customer's card has been charged. Our database knows nothing about it. Nobody is going to
+tell us — a successful billing charge sends no webhook.</p>
+</div>
+
+<p>A naive implementation retries the charge and bills the customer twice. A slightly less naive one
+gives up and silently keeps money for a subscription it never activated. The interesting engineering
+is entirely in the third option: make the retry provably be <em>the same request</em>, and then make
+something come back later to check. Five mechanisms carry that weight.</p>
+
+<h3>The five safety mechanisms</h3>
+
+<div class="grid2">
+  <div class="card">
+    <h4>1 · One lock, one order</h4>
+    <p>Every billing mutation for a user takes <code>select_for_update()</code> on that user's
+    <code>accounts_user</code> row <strong>first</strong>, then touches <code>BillingKey</code> /
+    <code>Subscription</code> / <code>Payment</code> under it. One lock, always in the same order, so
+    two concurrent money paths for one user cannot interleave — and deadlock between two users is
+    structurally impossible.</p>
+  </div>
+  <div class="card">
+    <h4>2 · A deterministic order id that <em>is</em> the idempotency key</h4>
+    <p>A renewal's <code>order_id</code> is computed, not generated:
+    <code>sub-42-20261001-a1</code>. It is sent to Toss as both the <code>orderId</code> and the
+    <code>Idempotency-Key</code> header. Recompute it tomorrow and you get the same string, so Toss
+    replays the original outcome instead of charging again.</p>
+  </div>
+  <div class="card">
+    <h4>3 · <code>failure_code = ""</code> — the outcome-unknown marker</h4>
+    <p>A <em>declined</em> charge stores Toss's real code. A charge whose outcome we never learned
+    (timeout, 5xx, "still processing") stores an <strong>empty</strong> code. One blank string is
+    the entire interface between "the money path gave up" and "the backstop must look into it".</p>
+  </div>
+  <div class="card">
+    <h4>4 · A daily reconciliation sweep anchored on <code>Payment</code> rows</h4>
+    <p>At 02:30 UTC every <code>failed</code> row with a blank code from the last 7 days is
+    re-queried against Toss <em>by our own order id</em> and resolved. Because it scans our rows
+    rather than an event feed, it works even if every webhook we ever get is lost.</p>
+  </div>
+  <div class="card">
+    <h4>5 · Webhooks are hints, never truth</h4>
+    <p>The receiver is unauthenticated, answers 200 to everything, and mutates nothing from the
+    payload. It re-queries Toss authoritatively and only then runs the same repair function the sweep
+    uses. A webhook can therefore only make the system <em>faster</em>, never wrong.</p>
+  </div>
+  <div class="card">
+    <h4>+ Amounts come from the database</h4>
+    <p>A quiet sixth: the charged amount is always <code>plan.price_krw</code> read server-side.
+    No client-supplied amount is accepted anywhere, at any endpoint, ever.</p>
+  </div>
+</div>
+
+<h3>What catches what</h3>
+
+<p>Here is the same idea as a table of disasters. Read the right-hand column as the answer to "who
+notices?".</p>
+
+<table>
+<thead><tr><th>What goes wrong</th><th>State just after</th><th>What catches it</th></tr></thead>
+<tbody>
+<tr><td><strong>Crash after Toss says <code>DONE</code></strong>, before our commit (renewal)</td>
+<td>Nothing written at all — the transaction rolled back. Toss has the money.</td>
+<td><span class="ok">Mechanism 2.</span> <code>renewal_attempt_count</code> and
+<code>current_period_end</code> never moved, so tomorrow's sweep computes the <em>same</em>
+<code>order_id</code>, sends the same <code>Idempotency-Key</code>, and Toss replays the original
+success. The period advances a day late; the card is charged once.</td></tr>
+
+<tr><td><strong>Toss times out</strong> (10 s) or answers 5xx</td>
+<td>A <code>Payment(failed, failure_code="")</code> is committed. No dunning strike, no email, no
+status change.</td>
+<td><span class="ok">Mechanisms 3 + 4.</span> The 02:30 sweep re-queries by <code>order_id</code>:
+<code>DONE</code> ⇒ repair the row and advance the period; a terminal non-<code>DONE</code> ⇒ stamp
+the real failure and run the dunning transition <em>then</em>; anything still in flight ⇒ leave it
+for tomorrow.</td></tr>
+
+<tr><td><strong>A webhook is lost</strong> in transit</td>
+<td>Nothing arrives. An unknown-outcome row sits there.</td>
+<td><span class="ok">Mechanism 4.</span> Scan (a) never looked at events in the first place.</td></tr>
+
+<tr><td><strong>A webhook is delivered twice</strong></td>
+<td>Two identical POSTs.</td>
+<td><span class="ok">Dedup + idempotent repair.</span> <code>dedup_key</code> is unique, so the
+second insert returns the stored row and the receiver answers <code>duplicate</code>. Even if it
+processed twice, <code>apply_paid_repair</code> no-ops on an already-<code>paid</code> row.</td></tr>
+
+<tr><td><strong>A webhook arrives from a stranger</strong> (no signature to check)</td>
+<td>An unauthenticated POST with an arbitrary body.</td>
+<td><span class="ok">Mechanism 5.</span> The body is persisted and then ignored: the repair is gated
+on a re-query of Toss. A forged payload makes us ask Toss a question, and Toss answers
+truthfully.</td></tr>
+
+<tr><td><strong>The sweeps run twice on the same day</strong> (Celery beat <em>and</em> the
+<code>worker_ready</code> fan-out at deploy)</td>
+<td>Two full passes over the due set.</td>
+<td><span class="ok">The skip rule + the due re-check.</span> Detailed below — this is the open
+question <a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">explainer
+#16</a> left for this page.</td></tr>
+
+<tr><td><strong>Two requests for one user race</strong> (double-submitted confirm, card change
+during a sweep)</td>
+<td>Two transactions want the same subscription.</td>
+<td><span class="ok">Mechanisms 1 + 2, then the DB.</span> The user-row lock serialises them, the
+loser re-checks its guards under the lock, and the partial unique constraint is the final
+backstop.</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<p>The sentence to remember, straight out of <code>reconciliation.py</code>'s module docstring:
+<strong>money safety is anchored on <code>Payment</code> rows, not events.</strong> Events are an
+optimisation. Rows are the truth.</p>
+</div>
+
+<h3>A subscription's life, with toy data</h3>
+
+<p>User 7, 29,000 KRW/월. Follow the columns that change.</p>
+
+<table>
+<thead><tr><th>When</th><th>What happens</th><th>Subscription 42</th><th>Payment written</th><th>tier</th></tr></thead>
+<tbody>
+<tr><td>Sep 1</td><td>Checkout → confirm; initial charge OK</td>
+<td><code>active</code>, period 09-01 → 10-01, count 0</td>
+<td><code>sub-init-9f3c…</code> <span class="ok">paid</span> 29000</td><td><code>pro</code></td></tr>
+<tr><td>Oct 1, 02:00</td><td>Sweep: due, charge OK</td>
+<td><code>active</code>, period 10-01 → 11-01, count 0</td>
+<td><code>sub-42-20261001-a1</code> <span class="ok">paid</span></td><td><code>pro</code></td></tr>
+<tr><td>Nov 1, 02:00</td><td>Sweep: card expired → Toss declines</td>
+<td><code>past_due</code>, count 1, retry <strong>Nov 2 01:00</strong></td>
+<td><code>sub-42-20261101-a1</code> <span class="no">failed</span> <code>REJECT_CARD_COMPANY</code></td>
+<td><code>pro</code> (grace)</td></tr>
+<tr><td>Nov 2, 02:00</td><td>Sweep: retry due, declines again</td>
+<td><code>past_due</code>, count 2, retry <strong>Nov 5 01:00</strong></td>
+<td><code>sub-42-20261101-a2</code> <span class="no">failed</span></td><td><code>pro</code></td></tr>
+<tr><td>Nov 3</td><td>User replaces the card on <code>/account</code></td>
+<td><code>active</code> again, count 0, period 11-01 → 12-01</td>
+<td><code>sub-42-20261101-a3</code> <span class="ok">paid</span> — charged immediately, through the
+sweep's own machinery</td><td><code>pro</code></td></tr>
+</tbody>
+</table>
+
+<p>Note the order ids in the last three rows: same subscription, same period end
+(<code>20261101</code>), attempt suffix <code>a1</code> → <code>a2</code> → <code>a3</code>. Each
+attempt against one period gets its own anchor, and the anchor is reproducible from the row's own
+columns. Had the user done nothing, the third decline would have expired the subscription and
+dropped the tier to <code>free</code>.</p>
+
+<h2 id="code">Code</h2>
+
+<p>Eleven modules, 3,743 lines including <code>__init__</code>. The walk below follows the money:
+the client, the checkout, the renewal sweep, the backstops, then the edges (the HTTP surface, the
+operator's tools, and what <code>pro</code> actually buys).</p>
+
+<table>
+<thead><tr><th>Module</th><th>Lines</th><th>Its job</th></tr></thead>
+<tbody>
+<tr><td><code>services.py</code></td><td>955</td><td>The money core: checkout, confirm, card change, cancel, refund</td></tr>
+<tr><td><code>renewals.py</code></td><td>558</td><td>The daily sweep and the 3-strike dunning ladder</td></tr>
+<tr><td><code>models.py</code></td><td>420</td><td>The six models</td></tr>
+<tr><td><code>views.py</code></td><td>387</td><td>The eleven DRF endpoints</td></tr>
+<tr><td><code>reconciliation.py</code></td><td>334</td><td>The backstop sweep + the shared paid-repair</td></tr>
+<tr><td><code>toss.py</code></td><td>305</td><td>The Toss HTTP client</td></tr>
+<tr><td><code>admin.py</code></td><td>300</td><td>The operator surface (there is no other)</td></tr>
+<tr><td><code>webhooks.py</code></td><td>214</td><td>Ingest + hint-and-re-query processing</td></tr>
+<tr><td><code>serializers.py</code> / <code>urls.py</code> / <code>tasks.py</code> / <code>periods.py</code></td>
+<td>125 / 57 / 41 / 32</td><td>Wire shapes, routes, three Celery shims, calendar-month math</td></tr>
+</tbody>
+</table>
+
+<h3>1 · The Toss client — <code>billing/toss.py</code></h3>
+
+<p>No SDK, no <code>requests</code>: module-level functions over stdlib
+<code>urllib.request</code>, the same shape as <code>accounts/social.py</code> and
+<code>operators/cloudflare_analytics.py</code>. Services do <code>from . import toss</code> and call
+<code>toss.charge_billing_key(...)</code>, which makes
+<code>mock.patch.object(billing.toss, ...)</code> the single test seam for the whole app.</p>
+
+<p>Six calls, all of them thin wrappers over one private <code>_request</code>:</p>
+
+<table>
+<thead><tr><th>Function</th><th>Toss endpoint</th><th>Idempotency-Key</th></tr></thead>
+<tbody>
+<tr><td><code>issue_billing_key(auth_key, customer_key)</code></td><td><code>POST /v1/billing/authorizations/issue</code></td><td><code>issue-{auth_key}</code></td></tr>
+<tr><td><code>charge_billing_key(key, customer_key, amount, order_id, order_name)</code></td><td><code>POST /v1/billing/{billingKey}</code></td><td><strong><code>{order_id}</code></strong></td></tr>
+<tr><td><code>delete_billing_key(key)</code></td><td><code>DELETE /v1/billing/{billingKey}</code></td><td>none (a repeat delete is a rejection the caller ignores)</td></tr>
+<tr><td><code>get_payment(payment_key)</code></td><td><code>GET /v1/payments/{paymentKey}</code></td><td>n/a (read)</td></tr>
+<tr><td><code>get_payment_by_order_id(order_id)</code></td><td><code>GET /v1/payments/orders/{orderId}</code></td><td>n/a (read)</td></tr>
+<tr><td><code>cancel_payment(payment_key, reason)</code></td><td><code>POST /v1/payments/{paymentKey}/cancel</code></td><td><code>cancel-{payment_key}</code></td></tr>
+</tbody>
+</table>
+
+<p>Authentication is HTTP Basic with the secret as the username and an empty password —
+<code>base64(secretKey + ":")</code> — and the secret is used for exactly that and nothing else:</p>
+
+<pre><code># billing/toss.py
+**Secret hygiene:** the secret key is used only to build the Basic-auth header and
+is **never** placed in an exception message, ``detail``, or log.</code></pre>
+
+<h4>The error ladder is where the design lives</h4>
+
+<p>Four exception classes, each carrying the HTTP status a view should forward:</p>
+
+<table>
+<thead><tr><th>Exception</th><th>Status</th><th>Means</th><th>Money consequence</th></tr></thead>
+<tbody>
+<tr><td><code>TossNotConfiguredError</code></td><td>503</td><td>No secret key — dormant. Raised before any network call.</td><td>Nothing happened.</td></tr>
+<tr><td><code>TossApiError</code></td><td>400</td><td>Toss answered &lt; 500 with a parsed <code>{code, message}</code> — a domain rejection (declined card, bad key).</td><td><strong>Definitive:</strong> no charge. This is what counts as a dunning strike.</td></tr>
+<tr><td><code>TossUnavailableError</code></td><td>503</td><td>Timeout / connection error — <em>or</em> a retryable idempotency code.</td><td><strong>Unknown.</strong> Hand it to reconciliation.</td></tr>
+<tr><td><code>TossBadGatewayError</code></td><td>502</td><td>A 5xx, or a body that would not parse.</td><td><strong>Unknown.</strong> Same lane.</td></tr>
+</tbody>
+</table>
+
+<p>The subtle part is a small frozen set near the top of the file:</p>
+
+<pre><code># billing/toss.py — RETRYABLE_TOSS_CODES
+# Toss idempotency-key codes that mean "the outcome is UNKNOWN, retry to read",
+# NOT a domain decline (S7-verified 409/400 taxonomy):
+# * IDEMPOTENT_REQUEST_PROCESSING — a duplicate request arrived while the first is
+#   still processing (409); the original may still succeed.
+# * INVALID_IDEMPOTENCY_KEY — the key was rejected (400, e.g. length/window); the
+#   request did not run, but treating it as a counted decline would falsely dun.
+RETRYABLE_TOSS_CODES = frozenset(
+    {"IDEMPOTENT_REQUEST_PROCESSING", "INVALID_IDEMPOTENCY_KEY"}
+)</code></pre>
+
+<p>Both of those arrive as ordinary &lt; 500 responses with a code — exactly the shape that otherwise
+becomes a <code>TossApiError</code> and a dunning strike. Re-routing them to
+<code>TossUnavailableError</code> with <code>toss_code=None</code> is what makes the caller write
+<code>failure_code=""</code>, which is what makes reconciliation pick the row up. A single
+non-empty code here would break that scan and start emailing customers about payments that were
+merely slow.</p>
+
+<div class="callout warn">
+<p><strong>Toss calls are never retried in-process, and that is deliberate.</strong>
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">Explainer
+#16</a> covered <code>core/llm_resilience.py</code>, which retries Gemini calls with exponential
+backoff and jitter. There is no equivalent here and there should not be. An LLM call is idempotent
+and cheap to repeat; a charge whose outcome you do not know is a <em>possible double charge</em>.
+The safe move is to write the unknown marker, return, and let a sweep that can <em>read</em> the
+outcome decide. Retry-to-read beats retry-to-write whenever money is involved.</p>
+</div>
+
+<h3>2 · Checkout and confirm — <code>billing/services.py</code></h3>
+
+<p>The module docstring is the contract, and it is worth reading before the code:</p>
+
+<pre><code>**Lock-order contract (frozen for S3/S4):** any billing mutation for a user takes
+``select_for_update()`` on the ``accounts_user`` row FIRST; BillingKey /
+Subscription mutate only under that lock. Toss network calls happen *inside* the
+transaction on purpose — the per-user lock only serializes that one user's
+concurrent confirms, and ``TOSS_REQUEST_TIMEOUT_SECONDS`` bounds the hold.
+
+``_set_tier`` is the ONLY place ``User.tier`` is written in the billing app. No
+JWT token is issued here — the frontend forces a normal refresh after confirm,
+and S1's rotation re-stamps the tier claim from the DB.</code></pre>
+
+<p>Two claims in there are worth pausing on, because both look wrong at first glance.</p>
+
+<div class="callout defn">
+<p><strong>"A network call inside a transaction" is normally an antipattern.</strong> Holding a
+database transaction open across an HTTP round trip means holding locks for as long as a remote
+server feels like taking. It is defensible here for two specific reasons. The lock is on
+<em>one user's row</em>, so the only thing that can block is that same user's other billing request —
+which is exactly what we <em>want</em> blocked. And the hold is bounded:
+<code>TOSS_REQUEST_TIMEOUT_SECONDS</code> is 10 seconds, so the worst case is a 10-second wait for
+one person. The alternative — commit an intent, call Toss outside the transaction, commit the
+result — trades a bounded lock for a distributed-transaction problem, which is a much worse
+trade.</p>
+</div>
+
+<div class="callout defn">
+<p><strong>Nothing re-issues a JWT after the tier flips.</strong> A reader coming from
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">explainer #3</a>
+already knows why this is safe: the <code>tier</code> claim inside the access token gates
+<em>nothing</em> server-side. Every enforcement point re-reads the database —
+<code>accounts/entitlements.py</code> on the backend, and a direct
+<code>SELECT tier … FROM "backend"."accounts_user"</code> over the read bridge on the agent side.
+The claim is a display hint for the browser badge, and the frontend's own client library documents
+it as one. Writing <code>User.tier</code> is therefore <em>sufficient</em>; the refresh is cosmetic
+timing, not correctness.</p>
+</div>
+
+<h4><code>start_checkout</code> — three guards and an opaque key</h4>
+
+<pre><code># services.py:283
+def start_checkout(user: User) -&gt; dict[str, Any]:
+    toss._require_configured()          # dormant → 503 before any work
+    plan = get_active_plan()
+    if plan is None:
+        raise toss.TossNotConfiguredError("Billing is not configured.")
+    if _live_subscription(user) is not None:
+        raise AlreadySubscribedError()  # 409 — and past_due counts as live
+    billing_profile = ensure_billing_profile(user)
+    return {
+        "customer_key": str(billing_profile.customer_key),
+        "plan": plan,
+        "amount_krw": plan.price_krw,
+        "order_name": f"{plan.name} 구독",
+    }</code></pre>
+
+<p>No charge, no network — it only assembles what the browser SDK needs. The
+<code>customer_key</code> is a random UUID minted once per user by
+<code>ensure_billing_profile</code>'s <code>get_or_create</code>. Using the user's pk or email
+instead would be easier and would leak a stable identifier into Toss's systems and into the
+billing-auth redirect URL; a UUID costs nothing and leaks nothing.</p>
+
+<h4><code>confirm_subscription</code> — twelve numbered steps, one commit</h4>
+
+<p>This is the money core. The step comments in the source are numbered 1–12; here is the shape,
+with the two branches that matter:</p>
+
+<pre><code># services.py:303 (abridged — comments are the source's own)
+toss._require_configured()                       # 1: dormant 503 before locks/writes
+
+with transaction.atomic():                       # 2
+    locked_user = User.objects.select_for_update().get(pk=user.pk)   # 3: user row FIRST
+
+    existing = _live_subscription(locked_user)   # 4: idempotent replay
+    if existing is not None:
+        return ConfirmResult(subscription=existing, payment=None, idempotent=True)
+
+    plan = get_active_plan()                     # (pulled after the CTA rendered ⇒ dormant)
+    billing_profile = BillingKey.objects.filter(user=locked_user).first()   # 5: ownership
+    if billing_profile is None or str(billing_profile.customer_key) != str(customer_key):
+        raise CustomerKeyMismatchError()         # generic — never leaks whether a profile exists
+
+    issue_response = toss.issue_billing_key(auth_key, billing_profile.customer_key)  # 6
+    ...                                          # 7: persist key + card meta
+    order_id = f"sub-init-{uuid4().hex}"         # 8
+
+    try:
+        charge_response = toss.charge_billing_key(                       # 9
+            billing_profile.billing_key, billing_profile.customer_key,
+            plan.price_krw,                      # ← from the DB, never the client
+            order_id, f"{plan.name} 구독",
+        )
+    except toss.TossBillingError as exc:
+        Payment.objects.create(..., status=FAILED,                       # 10
+                               failure_code=exc.toss_code or "")
+        charge_failure = exc                     # raise AFTER the block commits
+    else:
+        subscription = Subscription.objects.create(..., status=ACTIVE,   # 11
+                                                  current_period_start=now,
+                                                  current_period_end=add_months(now, 1))
+        payment = Payment.objects.create(..., status=PAID)
+        _set_tier(locked_user, str(User.Tier.PRO))
+        return ConfirmResult(subscription=subscription, payment=payment, idempotent=False)
+
+assert charge_failure is not None                # 12: committed failure → 400
+raise SubscribeChargeFailedError(charge_failure.detail, toss_code=charge_failure.toss_code)</code></pre>
+
+<p>Four things in there repay attention.</p>
+
+<ul>
+<li><strong>Step 4 is the replay guard.</strong> A double-submitted confirm finds a live
+subscription and returns it — crucially <em>without</em> re-submitting the <code>authKey</code>,
+which is single-use.</li>
+<li><strong>The failure path exits the block normally and raises afterwards.</strong> If it raised
+inside the <code>atomic()</code>, Django would roll back — losing both the <code>failed</code>
+Payment row and the freshly issued billing key. Leaving the block and raising after the commit keeps
+the evidence. A decline should be auditable, not erased.</li>
+<li><strong>Success is one commit.</strong> Subscription, Payment and the tier flip land together or
+not at all. There is no window in which a user is <code>pro</code> without a paid row.</li>
+<li><strong><code>_set_tier</code> asserts its own precondition</strong> —
+<code>assert transaction.get_connection().in_atomic_block</code> — so a future caller that forgets
+the lock fails loudly rather than silently racing.</li>
+</ul>
+
+<div class="callout warn">
+<p><strong>One honest asymmetry, worth naming.</strong> The initial charge's order id is
+<code>sub-init-{uuid4().hex}</code> — <em>random</em>, not derived. That is fine for the
+outcome-unknown case (the <code>failed</code> row <em>is</em> committed, carrying the id, so
+reconciliation can re-query it), but it means the crash-before-commit replay trick from the renewal
+path does not apply here: if the process dies between Toss's <code>DONE</code> and the commit,
+nothing is written and the random id is gone with it. The window is narrow — a user-initiated
+request, with the commit immediately after the call — and it is materially different from the
+unattended sweep the determinism was designed for. It is still the one gap in the five mechanisms,
+and this page names it rather than implying it away.</p>
+</div>
+
+<h4>The card-change pair — <code>start_billing_key_checkout</code> / <code>confirm_billing_key_change</code></h4>
+
+<p>Toss has no "update card" call. Changing a card is a second
+<code>requestBillingAuth</code> → issue round trip that produces a <em>new</em> billing key, and the
+old one is replaced rather than mutated. That forced a second endpoint pair, because the subscribe
+pair's guards are exactly backwards for this job: <code>start_checkout</code> refuses when a live
+subscription exists, and <code>confirm_subscription</code> short-circuits idempotently before the
+issue call. The mirror image:</p>
+
+<table>
+<thead><tr><th></th><th>Subscribe pair</th><th>Card-change pair</th></tr></thead>
+<tbody>
+<tr><td>Live subscription?</td><td>refuses one — 409 <code>already_subscribed</code></td><td><em>requires</em> one — 404 <code>no_subscription</code></td></tr>
+<tr><td>Charges?</td><td>always (the initial charge)</td><td>only out of <code>past_due</code>, and only on a genuine change</td></tr>
+<tr><td>Replay detection</td><td>a live subscription already exists</td><td>Toss returns the <em>same</em> billing key (<code>Idempotency-Key: issue-{auth_key}</code>) ⇒ <code>idempotent=True</code></td></tr>
+<tr><td>Afterwards</td><td>—</td><td>best-effort <code>delete_billing_key</code> of the replaced key, after commit, never fatal</td></tr>
+</tbody>
+</table>
+
+<p>The money half is the interesting bit, and it is nine lines:</p>
+
+<pre><code># services.py, after the key-overwrite transaction commits
+retry: str | None = None
+if not idempotent and subscription.status == Subscription.Status.PAST_DUE:
+    retry = _retry_outstanding_renewal(subscription)</code></pre>
+
+<p>A user whose card was declining has just fixed it; making them wait up to three days for the next
+retry timer is the churn this path exists to prevent. But the charge does <strong>not</strong> get
+its own code path — <code>_retry_outstanding_renewal</code> delegates to
+<code>renewals.charge_past_due_now</code>, the sweep's own machinery: same
+<code>renewal_order_id</code> anchor, same existing-Payment skip guard, same bookkeeping, same
+transitions. There is exactly one charge path in this app, by construction. The outcome is then
+translated to a three-valued wire field:</p>
+
+<pre><code># services.py — sweep outcome → the wire's ``retry`` value
+_RETRY_OUTCOME_TO_WIRE = {
+    "renewed": "paid",
+    "past_due": "failed",          # counted decline, still dunning
+    "expired": "failed",           # counted decline, final strike
+    "outcome_unknown": "failed",   # reconciliation owns the truth
+    "skipped_pending": "failed",   # a sweep attempt is already in flight
+}</code></pre>
+
+<p>Everything that is not a confirmed payment reports <code>"failed"</code>, because from the user's
+side the amount is still outstanding — and an outcome missing from the map means no charge was
+attempted at all, so the field is <em>omitted</em> from the response rather than sent as
+<code>null</code>. An optional field with one honest meaning.</p>
+
+<h4>Cancel, reactivate, refund, and a refund <em>request</em></h4>
+
+<ul>
+<li><strong><code>cancel_subscription</code></strong> sets <code>cancel_at_period_end = True</code>.
+No Toss call, no proration — the sweep already honours the flag. Because it is DB-only it works even
+while billing is dormant: <em>a user can always exit, even if the keys have been pulled.</em></li>
+<li><strong><code>reactivate_subscription</code></strong> clears the flag and deliberately leaves
+<code>renewal_attempt_count</code> / <code>next_retry_at</code> alone. Resetting them would let a
+cancel→reactivate cycle extend past-due grace forever; leaving them means dunning resumes exactly
+where it paused.</li>
+<li><strong><code>refund_payment</code></strong> (operator-only) wraps
+<code>toss.cancel_payment</code> under the user lock. <code>ALREADY_CANCELED_PAYMENT</code> is
+treated as confirmed-canceled and proceeds; every other Toss error propagates and rolls back
+write-free. Then <code>_apply_refund_to_subscription</code> — the exact inverse of the
+reconciliation repair — expires the subscription and drops the tier to <code>free</code>
+<em>only</em> when the refunded charge funds the current period (live subscription <em>and</em> no
+newer paid charge on it). Otherwise the refund is payment-only.</li>
+<li><strong><code>file_refund_request</code></strong> (user-facing) files a 환불·청약철회 request
+and <strong>moves no money</strong>. It exists because the 전자상거래법 다크패턴 amendment forbids
+offering 청약철회 only through a channel other than the one used to buy — 해지 and 탈퇴 were
+already self-serve, 환불 was 고객센터-only. So this is the online filing route, and the actual
+refund stays the operator's admin action. It takes no user lock at all (no money moves; the only
+hazard is a double submit, which the partial unique constraint settles at the database) and mails
+<code>settings.BILLING_REFUND_REQUEST_RECIPIENTS</code> best-effort — an empty list simply means no
+mail, and a mail failure never fails the filing, because the admin queue is the record.</li>
+</ul>
+
+<h3>3 · Renewals and the dunning ladder — <code>billing/renewals.py</code></h3>
+
+<p>The centrepiece. A Celery beat entry (<code>billing.run_renewal_sweep</code>, 02:00 UTC = 11:00
+KST) walks every due subscription and drives a state machine whose contract is written out as a
+table in the module docstring. Four module constants parameterise the whole thing — no Django
+settings, deliberately:</p>
+
+<pre><code># billing/renewals.py:97
+RENEWAL_MAX_ATTEMPTS = 3
+# One offset per resulting count: count→1 waits 1 day, count→2 waits 3 days.
+# count→3 (=MAX) expires and never indexes this tuple.
+RENEWAL_RETRY_OFFSETS = (timedelta(days=1), timedelta(days=3))
+# Retry slack: schedule +1d/+3d *minus* an hour so a retry that lands ~seconds
+# after 02:00 is not pushed past the next day's 02:00 sweep.
+RETRY_SLACK = timedelta(hours=1)
+RECONCILIATION_LOOKBACK_DAYS = 7</code></pre>
+
+<h4>The transition table (R1–R9) is the binding contract</h4>
+
+<table>
+<thead><tr><th>Row</th><th>State + trigger / guard</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><strong>R1</strong></td><td><code>active</code>, period_end ≤ now, cancel flag set</td>
+<td>No Toss call. → <code>expired</code>, tier→<code>free</code>, <code>next_retry_at</code>=NULL, no email.</td></tr>
+<tr><td><strong>R2</strong></td><td><code>past_due</code>, sweep, cancel flag set (retry timer ignored)</td>
+<td>Same as R1 — never charge after cancel intent; the period already ended.</td></tr>
+<tr><td><strong>R3</strong></td><td><code>active</code>, due, no flag, no Payment for the order id → charge OK</td>
+<td>Period = (old_end, +1 month), <code>active</code>, count=0, retry NULL, <code>Payment(paid, renewal)</code>, tier→<code>pro</code> re-asserted, no email.</td></tr>
+<tr><td><strong>R4</strong></td><td><code>active</code>, due, charge → <code>TossApiError</code></td>
+<td><code>Payment(failed, code)</code>; → <code>past_due</code> (tier stays <code>pro</code>), count=1, <code>next_retry_at</code>=now+1d−1h, <strong>email #1</strong>.</td></tr>
+<tr><td><strong>R5</strong></td><td><code>past_due</code>, retry due, charge OK</td>
+<td>As R3, plus status → <code>active</code>. No email.</td></tr>
+<tr><td><strong>R6</strong></td><td><code>past_due</code>, retry due, charge → <code>TossApiError</code>, count→2</td>
+<td><code>Payment(failed, code)</code>; stays <code>past_due</code>, <code>next_retry_at</code>=now+3d−1h, no email.</td></tr>
+<tr><td><strong>R7</strong></td><td><code>past_due</code>, retry due, charge → <code>TossApiError</code>, count→3 (=MAX)</td>
+<td><code>Payment(failed, code)</code>; → <code>expired</code>, tier→<code>free</code>, retry NULL, <strong>final email</strong>.</td></tr>
+<tr><td><strong>R8</strong></td><td>either state, due, charge → <code>Unavailable</code> / <code>BadGateway</code></td>
+<td><code>Payment(failed, failure_code="")</code> <strong>only</strong>. No count, no status change, no email — reconciliation owns it.</td></tr>
+<tr><td><strong>R9</strong></td><td>either state, due, a Payment already exists for the computed order id</td>
+<td><strong>Skip</strong>, no Toss call (and warn if that row is older than 7 days).</td></tr>
+</tbody>
+</table>
+
+<p>Rows 10–15 live in <code>reconciliation.py</code> / <code>webhooks.py</code>, and
+<code>_apply_counted_failure</code> — the shared R4/R6/R7 helper — is reused by reconciliation as
+row 11. One ladder, two entrances.</p>
+
+<h4>The deterministic order id, measured</h4>
+
+<p>Rather than trust the docstring, slice the pure functions out of the module with
+<code>ast</code> and run them against stub objects — no Django, no database, no network (the same
+technique explainers #15, #16 and #17 used). Here is the real output:</p>
+
+<pre><code>sliced: ['renewal_order_id', '_is_due', '_expire_subscription', '_apply_counted_failure']
+constants: {'RENEWAL_MAX_ATTEMPTS': 3, 'RENEWAL_RETRY_OFFSETS': (timedelta(days=1), timedelta(days=3)),
+            'RETRY_SLACK': timedelta(seconds=3600), 'RECONCILIATION_LOOKBACK_DAYS': 7}
+
+== 1. deterministic order id (subscription 42, period_end 2026-10-01 09:00 KST = 00:00 UTC)
+   attempt_count=0 -> 'sub-42-20261001-a1' (len 18)
+   attempt_count=1 -> 'sub-42-20261001-a2' (len 18)
+   attempt_count=2 -> 'sub-42-20261001-a3' (len 18)
+   period_end 2026-10-01 08:00 KST (= 2026-09-30 23:00 UTC) -> 'sub-42-20260930-a1'</code></pre>
+
+<pre><code># billing/renewals.py:107
+def renewal_order_id(subscription: Subscription) -&gt; str:
+    period = subscription.current_period_end.astimezone(dt_timezone.utc).strftime("%Y%m%d")
+    attempt = subscription.renewal_attempt_count + 1
+    return f"sub-{subscription.id}-{period}-a{attempt}"</code></pre>
+
+<p>Three properties, all of them load-bearing:</p>
+
+<ul>
+<li><strong>It is a pure function of columns that do not move</strong> during an attempt. A crash
+before commit leaves <code>id</code>, <code>current_period_end</code> and
+<code>renewal_attempt_count</code> untouched, so tomorrow's sweep recomputes the identical
+string.</li>
+<li><strong>It is short</strong> — 18 characters against a 64-character column and Toss's
+300-character idempotency-key limit.</li>
+<li><strong>It normalises to UTC</strong> before formatting. Note the last measured line: a period
+ending at 08:00 KST is 23:00 UTC on the <em>previous</em> day and yields
+<code>20260930</code>. Unintuitive, but consistent — and consistency is the only property the id
+needs, since it is never parsed, only recomputed and compared.</li>
+</ul>
+
+<h4>The due re-check, measured</h4>
+
+<p>The sweep selects candidate ids with a cheap unlocked query, then re-checks each one under the
+lock — because state can drift between the selection and the lock (a webhook may have repaired the
+row; a user may have cancelled):</p>
+
+<pre><code>== 2. _is_due, re-checked under the lock at the 02:00 UTC sweep
+   ACTIVE, period ended yesterday    -> True
+   ACTIVE, period ends tomorrow      -> False
+   PAST_DUE, retry in 20 h           -> False
+   PAST_DUE, retry 1 min ago         -> True
+   PAST_DUE, cancel flag set         -> True     ← R2: due in order to EXPIRE, not to charge
+   EXPIRED                           -> False</code></pre>
+
+<h4>Three rows walked with toy data</h4>
+
+<p><strong>R3 — the happy renewal.</strong> Subscription 42's period ended at 02:00; no Payment
+exists for <code>sub-42-20261001-a1</code>; Toss returns a payment object. The success path advances
+the period <em>from the old end, not from now</em>:</p>
+
+<pre><code># renewals.py:410 — _apply_renewal_success
+old_end = sub.current_period_end
+sub.current_period_start = old_end
+sub.current_period_end = add_months(old_end, 1)</code></pre>
+
+<p>Chaining from the old end is what keeps the anniversary fixed. Advancing from <code>now</code>
+would let every late sweep slide the billing date forward a few hours a month until a January
+subscriber is billed in the middle of February. (<code>periods.add_months</code> clamps to the
+month's last valid day: Jan 31 → Feb 28, or Feb 29 in a leap year, computed with stdlib
+<code>calendar</code> rather than pulling in <code>python-dateutil</code>, which is only a
+transitive Celery dependency in the lockfile and must not become a first-class import.)</p>
+
+<p><strong>R4 → R6 → R7 — three declines in a row.</strong> Sliced
+<code>_apply_counted_failure</code>, run three times with a stub subscription and a recorder in
+place of the mailer:</p>
+
+<pre><code>== 3. the dunning ladder, three declines in a row (R4 -> R6 -> R7)
+   strike 1 at 2026-10-01 02:00:03Z -> past_due count=1 status=past_due  next_retry_at=2026-10-02 01:00:03 emails=['past_due'] tier_writes=[]
+   strike 2 at 2026-10-02 01:00:04Z -> past_due count=2 status=past_due  next_retry_at=2026-10-05 00:00:04 emails=[]          tier_writes=[]
+   strike 3 at 2026-10-05 00:00:05Z -> expired  count=3 status=expired   next_retry_at=None               emails=['expired']  tier_writes=['free']
+            saved fields: ('renewal_attempt_count', 'last_renewal_attempt_at', 'status', 'next_retry_at', 'updated_at')</code></pre>
+
+<p>Exactly two emails across a failing subscription's whole death: one at the first strike (with the
+retry story) and one at expiry (the downgrade notice). Strike two is silent on purpose — a second
+"we tried again" mail teaches the customer to ignore the first. Note also
+<code>tier_writes=[]</code> for the first two strikes: <strong>the tier stays <code>pro</code>
+through the entire grace period</strong>, and drops only at expiry, through
+<code>_expire_subscription</code>.</p>
+
+<p>That expiry write is the app's <em>only</em> one, and rows R1, R2, R7 and the operational unwind
+all go through it:</p>
+
+<pre><code># renewals.py:340
+def _expire_subscription(locked_user, sub, *, also_save: tuple[str, ...] = ()) -&gt; None:
+    """The app's single expiry write: EXPIRED + ``next_retry_at`` NULL + tier→free."""
+    sub.status = Subscription.Status.EXPIRED
+    sub.next_retry_at = None
+    sub.save(update_fields=[*also_save, "status", "next_retry_at", "updated_at"])
+    _set_tier(locked_user, str(User.Tier.FREE))</code></pre>
+
+<p>The <code>also_save</code> parameter is a small but instructive piece of craft: row 7 has its own
+dunning bookkeeping to persist, and passing it through means the whole expiry still commits in
+<em>one</em> <code>UPDATE</code> — no intermediate state where the status changed but the count did
+not. And because there is one writer, the model's stated invariant (<code>past_due</code> ⇒
+<code>next_retry_at</code> set; <code>active</code>/<code>expired</code> ⇒ NULL) cannot drift.</p>
+
+<h4>Why the retry offsets subtract an hour</h4>
+
+<p><code>RETRY_SLACK</code> looks like superstition until you write down the arithmetic. The sweep
+runs at 02:00 UTC; a charge that fails does so a few seconds later; a naive <code>now + 1 day</code>
+therefore schedules the retry a few seconds <em>after</em> tomorrow's sweep has already selected its
+work:</p>
+
+<pre><code>== 4. why RETRY_SLACK subtracts an hour (failure 3 s after the 02:00 sweep starts)
+   count=1: raw +1d = 10-02 02:00:03 > that day's sweep 10-02 02:00 -> waits a FULL extra day
+            minus RETRY_SLACK = 10-02 01:00:03 &lt;= sweep 10-02 02:00 -> picked up that morning
+   count=2: raw +3d = 10-04 02:00:03 > that day's sweep 10-04 02:00 -> waits a FULL extra day
+            minus RETRY_SLACK = 10-04 01:00:03 &lt;= sweep 10-04 02:00 -> picked up that morning</code></pre>
+
+<p>Without the hour, a "1-day" retry is a 2-day retry and a "3-day" retry is a 4-day retry — every
+time, for every customer. The general lesson is worth carrying to any scheduled system: <strong>when
+a timer is consumed by a periodic poller, the timer must land strictly inside the poller's window,
+not on its boundary.</strong></p>
+
+<h4>The skip rule (R9), and the deploy-day double run</h4>
+
+<p>Before charging anything, <code>_charge_and_apply</code> asks whether a Payment already exists for
+the computed order id:</p>
+
+<pre><code># renewals.py:215 — the first thing the shared charge body does
+order_id = renewal_order_id(sub)
+
+existing = Payment.objects.filter(order_id=order_id).first()
+if existing is not None:
+    age = now - existing.created_at
+    if age &gt; timedelta(days=RECONCILIATION_LOOKBACK_DAYS):
+        logger.warning("renewal sweep: skipped-pending payment %s is %s old … operator attention", ...)
+    return "skipped_pending"</code></pre>
+
+<p>This is the second-layer race guard behind the user lock, and it is what makes an outcome-unknown
+row (R8) safe: that row was <em>committed</em>, so the next sweep sees it and refuses to charge
+again, leaving the outcome to reconciliation. The 7-day warning is a nice touch — a pending row
+older than the reconciliation window means the backstop has itself failed, and only a human can help
+from there.</p>
+
+<div class="callout">
+<p><strong>The open question from explainer #16, answered.</strong> Both billing sweeps are wired
+twice: as Celery beat entries (02:00 / 02:30 UTC) <em>and</em> in <code>config/celery.py</code>'s
+<code>worker_ready</code> fan-out, which fires on every worker boot. So on a deploy day they run
+twice — and that is safe, by two independent mechanisms rather than luck. First,
+<code>_is_due</code> re-checks under the lock: a subscription the first pass renewed now has a
+<code>current_period_end</code> a month in the future and simply is not due. Second, if the first
+pass left an unknown outcome instead, the Payment row it committed makes the second pass hit the R9
+skip. Neither path can charge twice; the worst case is a second pass that selects nothing and logs
+a summary of zeroes.</p>
+</div>
+
+<h4>The one seam that expires without charging</h4>
+
+<p><code>expire_subscription_administratively</code> exists for a single operational reason: a
+billing key issued with sandbox <code>test_</code> keys cannot be charged with a <code>live_</code>
+secret (Toss rejects mixed pairs with <code>INVALID_API_KEY</code>), so a surviving sandbox-era
+subscription would fail its next renewal, walk the dunning ladder, and email a real person about a
+payment that never moved money. Its only caller is a management command
+(<code>manage.py audit_sandbox_pro --unwind --yes</code>). It is deliberately narrow — zero refunds,
+zero deletes (the audit trail is the point), and silent (no dunning or expiry email, since avoiding
+exactly those emails is why it exists) — and it reuses <code>_expire_subscription</code> rather than
+writing its own expiry, so the invariants cannot drift.</p>
+
+<h3>4 · Reconciliation — <code>billing/reconciliation.py</code></h3>
+
+<p>02:30 UTC, thirty minutes after the renewal sweep, so an unknown outcome created at 02:00
+resolves the same day. Two scans and one shared repair.</p>
+
+<figure>
+<div class="flow">
+  <div class="box"><b>SCAN (a)</b><code>Payment</code> rows: <code>failed</code> +
+  <code>failure_code=""</code> + purpose initial/renewal + created within 7 days</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>RE-QUERY</b><code>GET /v1/payments/orders/{our order_id}</code> — <em>by order
+  id</em>, because an unknown row has no <code>paymentKey</code> yet</div>
+  <div class="arrow">→</div>
+  <div class="box"><b>RESOLVE</b><code>DONE</code> ⇒ repair · terminal non-DONE / 404 ⇒ real failure
+  + dunning · anything else ⇒ leave for tomorrow</div>
+</div>
+<figcaption>Scan (b) is a footnote by comparison: any <code>WebhookEvent</code> still
+<code>received</code> after 7 days or less is re-processed inline — the backstop for a webhook whose
+Celery enqueue failed.</figcaption>
+</figure>
+
+<p>The three-way branch is worth reading in full, because "we do not know" is treated as a first-class
+answer:</p>
+
+<pre><code># reconciliation.py:256 — _reconcile_unknown_payment (abridged)
+try:
+    toss_payment = toss.get_payment_by_order_id(payment.order_id)
+except toss.TossApiError as exc:
+    # Row 11 — Toss has no such settled order (404 NOT_FOUND_PAYMENT) or a
+    # domain rejection → the charge definitively did not go through.
+    return _resolve_as_failure(locked_user, payment, now,
+                               failure_code=exc.toss_code or "NOT_FOUND_PAYMENT", ...)
+except toss.TossBillingError:
+    return "left"                      # Row 12 — still unknown; retry tomorrow
+
+status_value = str(toss_payment.get("status", "")).upper()
+if status_value == "DONE":
+    apply_paid_repair(locked_user, payment, toss_payment, now=now)   # Row 10
+    return "repaired"
+if status_value in TERMINAL_NON_DONE_STATUSES:                       # Row 11
+    return _resolve_as_failure(..., failure_code=status_value, ...)
+return "left"                          # READY / IN_PROGRESS / WAITING_FOR_DEPOSIT</code></pre>
+
+<p><code>TERMINAL_NON_DONE_STATUSES</code> is <code>{ABORTED, CANCELED, EXPIRED,
+PARTIAL_CANCELED}</code> — an explicit allow-list of "definitely did not settle". Anything
+unrecognised falls through to "leave it", which is the right default: a status this code has never
+heard of must not be turned into a customer email.</p>
+
+<p>And when a re-query <em>does</em> resolve an unknown into a real failure,
+<code>_resolve_as_failure</code> stamps the code and then calls
+<code>renewals._apply_counted_failure</code> — the same R4/R6/R7 helper. The dunning strike lands a
+day late, but it lands, with the same emails and the same timers. There is one ladder.</p>
+
+<h4><code>apply_paid_repair</code> — the shared "it settled after all" function</h4>
+
+<p>Called from two places (the sweep's row 10 and the webhook's row 14), it opens with an assertion
+about its own preconditions and an idempotency check:</p>
+
+<pre><code># reconciliation.py:59
+assert transaction.get_connection().in_atomic_block, (
+    "apply_paid_repair must run under the per-user lock"
+)
+
+if payment.status == Payment.Status.PAID:
+    return "already_paid"</code></pre>
+
+<p>Then it promotes the row and branches on four situations:</p>
+
+<table>
+<thead><tr><th>Situation</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td>Renewal, subscription still live</td><td>Advance the period from the old end, reset the
+dunning counter, tier→<code>pro</code> — exactly like a sweep success. <em>Safe because of the skip
+rule:</em> while this outcome was unknown, no sweep could charge or advance the subscription, so
+<code>current_period_end</code> is still the period this charge renews.</td></tr>
+<tr><td>Renewal, subscription already expired</td><td>Promote the Payment and <code>warn</code> —
+the "paid but expired" corner. A human (or a refund) resolves it.</td></tr>
+<tr><td>Initial, no live subscription</td><td>Create the <code>active</code> subscription anchored at
+Toss's <code>approvedAt</code>, tier→<code>pro</code>. The subscribe that "failed" is retroactively
+completed.</td></tr>
+<tr><td>Initial, but a live subscription exists</td><td>Promote only + <code>warn</code> — an orphan
+paid initial, again a human's problem.</td></tr>
+</tbody>
+</table>
+
+<p>Notice the shape of the two odd cases. They do not guess, and they do not silently drop money:
+they make the row truthful, log a warning loudly enough for the operator to find, and stop. Automated
+repair handles the cases with one obviously-correct answer; everything else escalates.</p>
+
+<h3>5 · Webhooks — <code>billing/webhooks.py</code></h3>
+
+<p>Toss's classic webhooks carry <strong>no HMAC signature</strong>. For most systems that would be
+alarming; here it is a non-event, and the docstring explains why:</p>
+
+<pre><code>**No webhook secret / signature.** Classic Toss webhooks carry no HMAC signature
+(DECOMP finding); Toss's own documented authenticity pattern is exactly this
+re-query. Because we trust the payload for *nothing* — dedup keys off content,
+and every mutation is gated on an authoritative Toss re-query — a signature would
+add no safety.</code></pre>
+
+<p>A signature proves a message came from Toss. A re-query proves the <em>fact</em> came from Toss,
+which is strictly stronger and also survives a signed-but-stale message. The receiver is therefore
+unauthenticated, unthrottled, and answers <strong>200 in every path</strong> — garbage bodies,
+duplicates and internal errors included, because Toss retries non-2xx deliveries and the only thing a
+5xx would achieve is a retry storm against an endpoint that cannot use the data anyway.</p>
+
+<pre><code># webhooks.py:43
+HANDLED_EVENT_TYPES = frozenset({"PAYMENT_STATUS_CHANGED"})
+# Log-only (P71.S11): persisted + marked IGNORED like any unhandled type, but
+# worth a log line because we cause them — Toss emits BILLING_DELETED when a
+# billing key is deleted, which is exactly what the card-change flow does.
+LOGGED_EVENT_TYPES = frozenset({"BILLING_DELETED"})</code></pre>
+
+<p>Deduplication is the other half. <code>compute_dedup_key</code> prefers a Toss-supplied
+<code>eventId</code> or <code>id</code>; failing that it hashes the canonical tuple
+<code>(eventType, createdAt, data.paymentKey, data.status)</code>; failing even that (a body that did
+not parse) it hashes the raw bytes. What it never does is key off <code>orderId</code> — with a
+practical consequence the operations doc records: <strong>a test-fire from the Toss dashboard must
+carry a genuinely unique event, or the receiver correctly reads it back as
+<code>duplicate</code></strong>.</p>
+
+<p>Processing is then a five-step funnel, and every branch ends in a stamped status:</p>
+
+<ol>
+<li>Not <code>received</code> any more? No-op (<code>not_received</code>) — idempotent by
+construction.</li>
+<li>Unhandled type? <code>ignored</code>.</li>
+<li>Re-query Toss by <code>paymentKey</code>, else by <code>orderId</code>. A
+<code>TossApiError</code> (Toss has no such payment) ends as <code>processed</code>/no_payment; an
+<em>unreachable</em> Toss leaves the event <code>received</code> on purpose, so scan (b) retries
+it.</li>
+<li>Match the resolved <code>orderId</code> to one of our <code>Payment</code> rows. No match ⇒
+<code>ignored</code>.</li>
+<li>Repairable only if <code>status == "DONE"</code> <em>and</em> our row is <code>failed</code> with
+a blank code. Then take the user lock, re-check under it, and call the same
+<code>apply_paid_repair</code>. Anything else is a no-op success.</li>
+</ol>
+
+<p>The view's last two lines are the final piece of the safety argument:</p>
+
+<pre><code># views.py — WebhookView.post
+try:
+    process_webhook_event_task.delay(event.id)
+except Exception:  # noqa: BLE001 - enqueue failure: reconciliation scan (b)
+    logger.exception("billing webhook: failed to enqueue event %s (left RECEIVED)", event.id)
+return Response({"status": "accepted"})</code></pre>
+
+<p>Even the <em>enqueue</em> is allowed to fail. The row stays <code>received</code>, tomorrow's scan
+(b) re-runs it inline, and Toss still gets its 200. (For how <code>.delay()</code> differs from this
+codebase's usual <code>transaction.on_commit</code> dispatch, see
+<a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">explainer
+#16</a> — here the insert is already committed by the time the view dispatches, because Django runs
+in autocommit and there is no <code>ATOMIC_REQUESTS</code>.)</p>
+
+<h3>6 · The HTTP surface — <code>billing/urls.py</code> and <code>views.py</code></h3>
+
+<p>Eleven routes under <code>/api/billing/</code>. The default DRF authenticator is
+<code>rest_framework_simplejwt.JWTAuthentication</code>, so "IsAuthenticated" below means a valid
+access token; the two <code>AllowAny</code> routes clear
+<code>authentication_classes</code> entirely.</p>
+
+<table>
+<thead><tr><th>Route</th><th>Method</th><th>Auth</th><th>Networks?</th><th>Contract</th></tr></thead>
+<tbody>
+<tr><td><code>/status</code></td><td>GET</td><td>AllowAny</td><td>never</td><td><code>{enabled, plan}</code> — <code>enabled</code> = secret key set <em>and</em> an active plan exists. The plan rides along even when disabled.</td></tr>
+<tr><td><code>/checkout</code></td><td>POST</td><td>IsAuthenticated</td><td>no</td><td>Pre-Toss intent. 503 dormant · 409 <code>already_subscribed</code></td></tr>
+<tr><td><code>/confirm</code></td><td>POST</td><td>IsAuthenticated</td><td><strong>yes</strong></td><td><code>{auth_key, customer_key}</code> → issue + charge + activate, one commit. Answers <code>{subscription, kind: "subscribe"}</code></td></tr>
+<tr><td><code>/billing-key/checkout</code></td><td>POST</td><td>IsAuthenticated</td><td>no</td><td>Card-change intent. 503 dormant · 404 <code>no_subscription</code></td></tr>
+<tr><td><code>/billing-key/confirm</code></td><td>POST</td><td>IsAuthenticated</td><td><strong>yes</strong></td><td>Re-issue the key; <code>{subscription, kind: "card_change", retry?: "paid"|"failed"}</code></td></tr>
+<tr><td><code>/subscription</code></td><td>GET</td><td>IsAuthenticated</td><td>no</td><td>The live subscription or <code>null</code> (expired history is not surfaced)</td></tr>
+<tr><td><code>/subscription/cancel</code></td><td>POST</td><td>IsAuthenticated</td><td>no</td><td>Set <code>cancel_at_period_end</code>. Works while dormant · 404 <code>no_subscription</code></td></tr>
+<tr><td><code>/subscription/reactivate</code></td><td>POST</td><td>IsAuthenticated</td><td>no</td><td>Clear the flag. Same shape, same 404</td></tr>
+<tr><td><code>/payments</code></td><td>GET</td><td>IsAuthenticated</td><td>no</td><td>The caller's own attempt log — <code>failed</code> and <code>canceled</code> rows included — 8/page, DRF's <code>{count, next, previous, results}</code></td></tr>
+<tr><td><code>/refund-requests</code></td><td>POST</td><td>IsAuthenticated</td><td>no</td><td>File a 환불·청약철회 요청. 201 <code>{status, contact_email}</code>, no ticket number</td></tr>
+<tr><td><code>/webhook</code></td><td>POST</td><td>AllowAny</td><td><strong>yes</strong> (in the worker)</td><td>Always 200: <code>accepted</code> / <code>duplicate</code> / <code>ignored</code></td></tr>
+</tbody>
+</table>
+
+<p>Errors are one envelope everywhere — <code>{"detail", "code"?, "toss_code"?}</code> at the
+exception's own <code>status_code</code>, never echoing a secret or a raw Toss body. The mapping is
+declared once, as exception classes at the top of <code>services.py</code> (lines 57–160):</p>
+
+<table>
+<thead><tr><th>Exception</th><th>HTTP</th><th><code>code</code></th><th>Why that status</th></tr></thead>
+<tbody>
+<tr><td><code>AlreadySubscribedError</code></td><td>409</td><td><code>already_subscribed</code></td><td>A live subscription exists — including <code>past_due</code></td></tr>
+<tr><td><code>NoLiveSubscriptionError</code></td><td>404</td><td><code>no_subscription</code></td><td>The card-change / cancel paths need one</td></tr>
+<tr><td><code>CustomerKeyMismatchError</code></td><td>400</td><td><code>customer_key_mismatch</code></td><td>Deliberately generic detail — never leaks whether a profile exists</td></tr>
+<tr><td><code>SubscribeChargeFailedError</code></td><td>400</td><td><code>toss_error</code></td><td>Carries <code>toss_code</code> so the UI can say something specific</td></tr>
+<tr><td><code>PaymentNotFoundError</code></td><td>404</td><td><code>payment_not_found</code></td><td><strong>Unknown <em>or</em> someone else's</strong> — one answer, no existence leak</td></tr>
+<tr><td><code>PaymentNotPaidError</code></td><td>400</td><td><code>payment_not_paid</code></td><td>It is the caller's own row, so the honest answer leaks nothing and helps a stale form</td></tr>
+<tr><td><code>DuplicateRefundRequestError</code></td><td>409</td><td><code>duplicate_request</code></td><td>An open request already exists (checked, then constraint-backstopped)</td></tr>
+<tr><td><code>RefundNotAllowedError</code></td><td>400</td><td><code>refund_not_allowed</code></td><td>Not <code>paid</code>, or no <code>payment_key</code> to cancel</td></tr>
+</tbody>
+</table>
+
+<p>Those last two rows are a nice miniature of security thinking: the <em>same</em> 404 for "no such
+payment" and "not yours" (an attacker learns nothing by probing ids), but an honest 400 once the row
+is provably the caller's own.</p>
+
+<h3>7 · The operator surface: django-admin, and nothing else</h3>
+
+<p>Explainer #17 walked a real operator console — <code>/api/admin/</code> routes, an
+<code>IsOperatorUser</code> permission class, a cached overview snapshot with five summaries. Billing
+appears in none of it. Measured, not assumed: <strong>no module under
+<code>apps/backend/billing/</code> imports <code>IsOperatorUser</code></strong>, no
+<code>/api/admin/</code> route touches billing, and
+<code>build_operator_overview_snapshot()</code> has no billing tile.</p>
+
+<p>The operator's actual tools are <code>billing/admin.py</code> (300 lines), and its shape is a
+decision rather than a gap:</p>
+
+<div class="grid2">
+  <div class="card">
+    <h4><code>Plan</code> — fully editable</h4>
+    <p>The price-audit surface. Price is data, so the operator can adjust it without a deploy.</p>
+  </div>
+  <div class="card">
+    <h4>Everything else — read-only</h4>
+    <p>Billing keys, subscriptions, payments and webhook events are <em>records</em>, via a
+    <code>ReadOnlyAdminMixin</code>. The raw <code>billing_key</code> string appears only in a detail
+    view's <code>readonly_fields</code>, never in a list column.</p>
+  </div>
+  <div class="card">
+    <h4><code>RefundRequest</code> — the work queue</h4>
+    <p>The one narrow exception: its <code>status</code> is editable, because that model
+    <em>is</em> the operator's queue. The content stays read-only.</p>
+  </div>
+  <div class="card">
+    <h4>The refund action — superusers only</h4>
+    <p><code>PaymentAdmin.refund_selected_payment</code> is gated by
+    <code>has_refund_permission</code> → <code>request.user.is_superuser</code>. It refuses unless
+    exactly one row is selected, stamps a fixed reason
+    (<code>"고객 요청에 따른 운영자 환불"</code> — no free text at the admin), and reports through
+    <code>message_user</code>, never a 500.</p>
+  </div>
+</div>
+
+<p>Why this is a reasonable shape for a one-plan product: every operator action here is rare
+(adjust a price, work a refund queue, execute a refund) and every one of them is
+<em>dangerous</em> in a way the console's routine tiles are not. Django admin gives per-model
+permissions, an audit log and a superuser gate for free — building the same thing as REST routes
+plus console UI would be more code and more attack surface for a workflow measured in a handful of
+actions a month.</p>
+
+<p>What it costs is also real, and worth stating: there is no billing tile on the operator overview
+(so nobody <em>notices</em> a spike in declines without going looking), the sweeps' outcomes live in
+worker logs rather than a dashboard, and the two loud <code>logger.warning</code> corners from
+<code>apply_paid_repair</code> — "paid but expired" and "orphan paid initial" — surface only to
+whoever reads logs. For a product with one plan and few subscribers that is a fair trade; it is the
+kind of trade worth revisiting the day the numbers change.</p>
+
+<h3>8 · What <code>pro</code> actually buys — the entitlement seam</h3>
+
+<p>Billing writes one column. Everything downstream reads it through one function:</p>
+
+<pre><code># apps/backend/accounts/entitlements.py
+@dataclass(frozen=True, slots=True)
+class Entitlements:
+    tier: str
+    is_paid: bool
+
+
+def get_entitlements(user: Any) -&gt; Entitlements:
+    """Resolve a user's current entitlements from their DB-authoritative tier.
+
+    No caching, no JWT claim involved -- always reads `user.tier` fresh.
+    """
+    tier = getattr(user, "tier", User.Tier.FREE)
+    return Entitlements(tier=tier, is_paid=tier == User.Tier.PRO)</code></pre>
+
+<p>Grepped today, the readers of <code>is_paid</code> across both Python apps are exactly these:</p>
+
+<ul>
+<li><code>accounts/serializers.py:151</code> — the <code>/auth/me</code> payload (display).</li>
+<li><code>accounts/views.py:241</code> and <code>entitlements.py:70</code> — the chat
+<strong>thinking-level gate</strong>: <code>PRO_ONLY_THINKING_LEVELS = ("high",)</code>. A free user
+may neither write nor read back the <code>high</code> level; the stored value survives a downgrade
+and simply resolves to "unset" until they re-subscribe.</li>
+<li><code>content/views.py:886</code> and <code>:988</code> — the <strong>cost-table masking</strong>
+from <a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">explainer #12</a>:
+the 창업 비용표 is served masked to everyone else and unmasked to <code>pro</code>
+(<code>build_cost_table_projection(record.document, entitled=entitled)</code>). The list endpoint
+resolves the tier once per request, not once per content row.</li>
+<li><code>apps/agent/app/chat/user_thinking_level.py</code> — the agent's mirror, which does not
+call this function at all: it runs its own
+<code>SELECT tier, chat_thinking_level FROM "backend"."accounts_user" WHERE id = %s</code> over the
+read bridge, per turn, with <code>PAID_TIERS = ("pro",)</code> as a local constant.</li>
+</ul>
+
+<p>So the honest one-line answer to "what does Pro gate today?" is: <strong>the
+<code>high</code> chat thinking level, and the unmasked cost tables.</strong> That is a small list
+for a subsystem this careful — which is exactly the right order of operations. The money path had to
+be correct before it was worth attaching anything valuable to it, and the seam (<code>grep
+get_entitlements</code>) is deliberately trivial to extend when there is more to sell.</p>
+
+<h2 id="quiz">Quiz</h2>
+
+<p>Five questions. Click an option for immediate feedback.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A renewal sweep charges subscription 42, Toss returns <code>DONE</code>, and
+  the worker is killed before the transaction commits. Tomorrow's sweep runs. What stops the customer
+  being charged twice?</p>
+  <button class="opt" data-correct="false">The webhook Toss sends for the successful charge tells the sweep to skip.</button>
+  <button class="opt" data-correct="false">The <code>Payment</code> row written before the Toss call makes tomorrow's sweep hit the skip rule.</button>
+  <button class="opt" data-correct="true">Nothing was written, so <code>renewal_attempt_count</code> and <code>current_period_end</code> are unchanged; the sweep recomputes the identical <code>order_id</code>, sends it as the <code>Idempotency-Key</code>, and Toss replays the original success.</button>
+  <button class="opt" data-correct="false">The per-user row lock is still held by the dead worker, so the row is skipped.</button>
+  <p class="why" hidden>The rollback is the point: because nothing moved, the order id
+  <code>sub-42-{period_end}-a{count+1}</code> recomputes to the same string, and Toss deduplicates on
+  it. A successful billing charge sends no webhook at all, and a crashed worker's locks are released
+  by the database.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> The Toss webhook receiver is unauthenticated, verifies no signature, and
+  answers 200 to literally any body. Why is that not a security hole here?</p>
+  <button class="opt" data-correct="false">Because the endpoint is IP-restricted to Toss's servers at the nginx layer.</button>
+  <button class="opt" data-correct="true">Because no mutation is ever derived from the payload: the receiver stores the delivery, then re-queries Toss authoritatively, and only an authoritative <code>DONE</code> can trigger the repair.</button>
+  <button class="opt" data-correct="false">Because the <code>dedup_key</code> is computed from <code>orderId</code>, which an attacker cannot guess.</button>
+  <button class="opt" data-correct="false">Because webhook processing runs as a Celery task, and Celery tasks cannot write to the money tables.</button>
+  <p class="why" hidden>A forged payload can at most make the server ask Toss a question. Toss answers
+  truthfully, and a payment that is not <code>DONE</code> repairs nothing. (The dedup key deliberately
+  <em>ignores</em> <code>orderId</code>, and the repair runs under the ordinary per-user lock.)</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> A renewal charge raises <code>TossUnavailableError</code>. What is written,
+  and who resolves it?</p>
+  <button class="opt" data-correct="false">Nothing is written; the sweep retries the charge immediately with exponential backoff.</button>
+  <button class="opt" data-correct="false">A <code>Payment(failed, failure_code="TIMEOUT")</code> row, and the dunning ladder advances one strike.</button>
+  <button class="opt" data-correct="true">A <code>Payment(failed, failure_code="")</code> row and nothing else — no strike, no status change, no email — and the 02:30 reconciliation sweep re-queries Toss by that <code>order_id</code> to settle it.</button>
+  <button class="opt" data-correct="false">A <code>Payment(paid)</code> row optimistically, which a later webhook downgrades if the charge did not settle.</button>
+  <p class="why" hidden>The empty <code>failure_code</code> is the "outcome unknown" marker and the
+  only thing reconciliation's scan (a) keys on. A real code would mean a definitive decline —
+  and would silently exempt the row from ever being re-checked.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> <code>RENEWAL_RETRY_OFFSETS</code> is <code>(1 day, 3 days)</code> but the
+  code schedules <code>now + offset - RETRY_SLACK</code>, an hour earlier. Why?</p>
+  <button class="opt" data-correct="false">To spread load so that retries do not all land in the same minute as the main sweep.</button>
+  <button class="opt" data-correct="true">Because the failure happens seconds after the 02:00 sweep starts, so a raw <code>+1 day</code> lands just <em>after</em> the next 02:00 sweep has selected its work — turning a 1-day retry into a 2-day one, every time.</button>
+  <button class="opt" data-correct="false">To stay inside Toss's 24-hour idempotency-key retention window.</button>
+  <button class="opt" data-correct="false">To compensate for the KST/UTC offset when the period end is stored in local time.</button>
+  <p class="why" hidden>It is boundary arithmetic: a timer consumed by a periodic poller must land
+  strictly inside the poller's window. Without the slack, every advertised retry interval silently
+  gains a full day.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A user's card declined once, so their subscription is <code>past_due</code>.
+  They try to subscribe again from the pricing page. What happens, and why is it built that way?</p>
+  <button class="opt" data-correct="false">A second <code>active</code> subscription is created; the old <code>past_due</code> row is expired as a side effect.</button>
+  <button class="opt" data-correct="false">The checkout succeeds but the confirm returns the existing <code>past_due</code> subscription unchanged, because of the idempotent-replay guard.</button>
+  <button class="opt" data-correct="true"><code>/checkout</code> answers 409 <code>already_subscribed</code>: the partial unique constraint excludes only <code>expired</code>, so <code>past_due</code> is still "live". The supported remedy is the card-change endpoint pair, which charges the outstanding renewal once through the sweep's own machinery.</button>
+  <button class="opt" data-correct="false">The request is accepted and a second billing key is issued, with the sweep charging whichever key was most recently used.</button>
+  <p class="why" hidden>Allowing a re-subscribe would create a second live subscription and a second
+  monthly charge for one person. The constraint <code>~Q(status="expired")</code> makes that
+  impossible at the database, and P71's card-change pair is the designed way out of
+  <code>past_due</code>.</p>
+</div>
+
+<footer>
+  <p><strong>Files walked for this explainer.</strong>
+  <code>apps/backend/billing/{models,toss,services,renewals,reconciliation,webhooks,views,urls,serializers,tasks,admin,periods}.py</code>;
+  <code>apps/backend/accounts/entitlements.py</code>;
+  <code>apps/backend/content/views.py</code> (the two <code>is_paid</code> readers);
+  <code>apps/backend/config/{settings,celery}.py</code>;
+  <code>apps/agent/app/chat/user_thinking_level.py</code>;
+  <code>docs/current/operations.md</code> §"Toss Billing (P27)" and
+  <code>docs/current/data.md</code> (the billing model table).
+  The order-id, due-check and dunning-ladder outputs quoted above were produced by
+  <code>ast</code>-slicing <code>renewals.py</code> and executing the sliced functions against stub
+  objects — no Django, no database, no network.</p>
+  <p><strong>Previous in this series:</strong>
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/17-operator-console-and-llm-runtime">#17 —
+  The operator console backend and live LLM runtime config</a>. Related:
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/03-identity-and-auth">#3 — Identity and
+  auth</a> (why the <code>tier</code> claim in the JWT gates nothing),
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/16-running-it-celery-and-observability">#16
+  — Running it: Celery, dispatch-after-commit, alerts</a> (the beat schedule and the
+  <code>worker_ready</code> fan-out),
+  <a href="https://knowledge.hi2vi.com/@leetusik/changple5/12-content-library">#12 — The content
+  library</a> (the cost tables <code>pro</code> unmasks).</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

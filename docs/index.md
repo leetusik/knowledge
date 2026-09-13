@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-09-13 · [Billing: the Toss subscription lifecycle from checkout to reconciliation](changple5/2026-09-13-18-billing-toss.html) — changple5
 - 2026-09-13 · [The operator console backend and live LLM runtime config](changple5/2026-09-13-17-operator-console-and-llm-runtime.html) — changple5
 - 2026-09-13 · [Running it: Celery, dispatch-after-commit, alerts, and the production topology](changple5/2026-09-13-16-running-it-celery-and-observability.html) — changple5
 - 2026-08-31 · [How the Live Investment Strategy Was Built and How It Runs](arb_upbit_1/2026-08-31-real-running-investment-strategy.html) — arb_upbit_1
