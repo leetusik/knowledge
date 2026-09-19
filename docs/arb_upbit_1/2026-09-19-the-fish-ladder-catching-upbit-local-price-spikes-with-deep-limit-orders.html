@@ -1,0 +1,855 @@
+<!--kb
+title: "The Fish Ladder: Catching Upbit-Local Price Spikes with Deep Limit Orders"
+date: 2026-09-19
+tags:
+  - market-making
+  - upbit
+  - fishing-strategy
+  - limit-orders
+  - bybit-hedge
+source:
+  project: arb_upbit_1
+  repo: arb_upbit_1
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Fish Ladder: Catching Upbit-Local Price Spikes with Deep Limit Orders</title>
+  <style>
+    :root { color-scheme: light dark;
+      --ink: #1c1c1c; --muted: #5b6470; --bg: #fdfdfb; --panel: #f3f4f1; --line: #d8dbd5;
+      --bid: #2b7a4b; --ask: #b5442d; --mid: #3b5f8a; --warn: #8a6d1f; --warnbg: #fbf4de;
+      --calloutbg: #eef5f0; --callout: #4a8a5f; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #e6e6e2; --muted: #a2a9b3; --bg: #16181a; --panel: #22262a; --line: #3a4046;
+        --bid: #6fcf97; --ask: #f08a6e; --mid: #86b0e0; --warn: #e0c26a; --warnbg: #2e2a1a;
+        --calloutbg: #1e2a22; --callout: #6fbf88; }
+    }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: var(--ink); background: var(--bg);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.6; }
+    h1 { font-size: 1.9rem; line-height: 1.2; }
+    h2 { margin-top: 2.6rem; border-bottom: 1px solid var(--line); padding-bottom: .3rem; }
+    h3 { margin-top: 1.8rem; }
+    p.lede { font-size: 1.08rem; color: var(--muted); }
+    nav ol { padding-left: 1.4rem; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); padding: .75rem;
+          border-radius: 6px; font-size: .86rem; line-height: 1.45; border: 1px solid var(--line); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
+    p code, li code, td code { background: var(--panel); padding: 0 .25em; border-radius: 3px; }
+    .callout { border-left: 4px solid var(--callout); background: var(--calloutbg);
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: var(--warn); background: var(--warnbg); }
+    .callout h4 { margin: 0 0 .4rem; font-size: 1rem; }
+    .src { color: var(--muted); font-size: .84rem; margin: -.4rem 0 1rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: var(--panel); }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    figure { margin: 1.4rem 0; }
+    figure svg { width: 100%; height: auto; display: block; }
+    figcaption { font-size: .88rem; color: var(--muted); margin-top: .4rem; }
+    details { margin: 1rem 0; }
+    details summary { cursor: pointer; font-weight: 600; }
+    blockquote { border-left: 3px solid var(--line); margin: 1rem 0; padding: .2rem 1rem; color: var(--muted); }
+    .q { margin: 1.6rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: 8px; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .55rem .75rem;
+              cursor: pointer; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+              color: var(--ink); font: inherit; }
+    .q .opt:hover, .q .opt:focus { outline: 2px solid var(--mid); }
+    .q .opt.correct   { background: #d6f5d6; color: #123; border-color: #6c6; }
+    .q .opt.incorrect { background: #f7d6d6; color: #311; border-color: #c66; }
+    .q .why { margin: .5rem 0 0; font-size: .95em; }
+    .q .why.ok { color: var(--bid); } .q .why.no { color: var(--ask); }
+    .kv { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; font-size: .92rem; }
+    @media (max-width: 560px) { body { margin: 1rem auto; } h1 { font-size: 1.5rem; } .kv { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>The Fish Ladder: Catching Upbit-Local Price Spikes with Deep Limit Orders</h1>
+  <p class="lede">How the <code>arb_upbit_1</code> workspace went from "rest some orders 5 % away and
+  wait for a whale" to a ₩6.4 M live book on five thin Korean markets, hedged with perpetual shorts on
+  Bybit, armed by a two-step switch and unwound short-first. Written for a novice programmer who
+  has never placed a limit order. Snapshot: 2026-09-19, the day the book went live for the second
+  time.</p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#intuition">Intuition</a></li>
+      <li><a href="#code">Code</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <section id="background">
+    <h2>Background</h2>
+
+    <p>This repository started life as a market-making project on Upbit, Korea's largest crypto
+    exchange. Its first strategy quoted a tight bid and ask around a "fair" price on the USDT-XRP
+    pair (later USDT-ETH too), earning maker rebates during a fee promotion. That stack is history:
+    on 2026-09-06 both maker bots and their LLM manager were stopped and liquidated to KRW (phase
+    P15, decision D17). What replaced them is the subject of this document, and it is a very different
+    animal. It never quotes near the price. It rests orders <em>far</em> from it and waits.</p>
+
+    <details>
+      <summary>A beginner's primer on the words you need (skip if you know order books)</summary>
+      <div class="kv">
+        <strong>Order book</strong><span>The exchange's list of resting buy orders (<em>bids</em>) and sell orders
+        (<em>asks</em>), each at a price and size. The best bid and best ask are the <em>touch</em>; halfway
+        between them is the <em>mid</em>.</span>
+        <strong>Maker / taker</strong><span>A <em>maker</em> rests an order and waits for someone to hit it. A
+        <em>taker</em> crosses the spread and hits a resting order immediately. On Upbit's KRW markets both
+        pay 0.05 %, no maker discount.</span>
+        <strong>Post-only</strong><span>A limit order that must rest; if it would execute immediately the
+        exchange rejects it instead. It guarantees you are the maker.</span>
+        <strong>IOC</strong><span>"Immediate-or-cancel": a limit order that fills whatever it can right now and
+        cancels the rest. The strategy uses it only to <em>exit</em>.</span>
+        <strong>Tick</strong><span>The smallest price step allowed. On Upbit KRW markets it changes by price
+        band: 5 won between ₩5,000 and ₩10,000, 10 won from ₩10,000 up. This detail caused a real bug.</span>
+        <strong>Market-order sweep</strong><span>A big market buy consumes the asks level by level, walking the
+        price up until it is filled. On a thin book, a modest order walks a long way.</span>
+        <strong>Perp short</strong><span>A perpetual futures position that profits when the coin falls. Holding
+        coin on Upbit and an equal short on Bybit makes you <em>delta-neutral</em>: the coin's price no longer
+        matters to your P&amp;L, only the <em>difference</em> between the two venues does.</span>
+        <strong>Funding</strong><span>A small payment perp longs and shorts exchange every 8 hours. A short can
+        earn it or pay it; over a month it is a real line item.</span>
+        <strong>Kimchi premium</strong><span>The gap between a coin's KRW price on Korean exchanges and its
+        global USDT price. It widens and converges; that convergence turns out to be where the money is.</span>
+      </div>
+    </details>
+
+    <h3>The operator's sketch</h3>
+    <p>Every strategy here begins as an operator note in a phase's <code>intent.md</code>. The one that
+    started phase P11 reads, verbatim:</p>
+    <blockquote>
+      <p>/create-phase for market order fishing on the order book(liquidity providing) strategy<br>
+      - 50:50 ratio crypto/fiat<br>
+      - 50 currency amount hedge via shot(bybit or binance)<br>
+      - make big price gap orders compare to current price like 5% 10% or more<br>
+      - we gonna catch some spikes. if someone market ordered big amoung of money they gonna sweep the
+      orderbook and eventually reach to mine.<br>
+      - and me, just compensate the trade immediately.<br>
+      I tried similar strategy on okx(?) when they offer korean market service. low liquidity helped.</p>
+    </blockquote>
+    <p class="src">works/phases/active/P11/intent.md</p>
+    <p>The nets are resting limit orders; the fish are the sweeps. The word stuck, and the whole
+    package is called <code>arb.fish</code>.</p>
+
+    <h3>What counts as a fish</h3>
+    <p>P11 measured spikes against a reference price fixed at the top of each hour and found lots of
+    them. That was wrong: a bot re-quotes off the <em>current</em> price every couple of seconds, so a
+    slow 30-minute drift never reaches a rung that keeps moving with it. Phase P12 replaced the
+    definition with the one still in use:</p>
+    <div class="callout">
+      <h4>Definition: a fish</h4>
+      <p>A one-minute bar in which Upbit's price range exceeds the same coin's range on a major global
+      exchange (Bybit or Binance) by at least <em>g</em> percent. In the census's own words: "trades
+      printed on Upbit at prices the global market never reached, so an order resting at ±g from the
+      current price would have been hit, and the move was Upbit-local." An up-fish is an ask fill; a
+      down-fish is a bid fill. A spike that Bybit made too is <strong>not</strong> a fish.</p>
+    </div>
+    <p>The 60-day census over 6.58 million traded Upbit minutes confirmed the thesis in the sketch's last
+    line. Small, thin markets had fish; the majors had almost none. KRW-BTC produced zero fish on four
+    touches in 60 days, KRW-ETH one on twenty, while KRW-BONK produced 56.65 a day at g = 1 %. Thin books
+    are where a sweep can walk far enough to reach a deep order.</p>
+
+    <h3>Five phases, each killed by a cost the previous one under-priced</h3>
+    <p>The most useful way to read the history is not "the signal got better" but "another cost was
+    discovered". Each row below is a phase; each verdict is a cost that the phase before had not put a
+    number on.</p>
+    <table>
+      <thead><tr><th>Phase</th><th>Shape</th><th>Verdict, and the cost that decided it</th></tr></thead>
+      <tbody>
+        <tr><td>P11</td><td>Ask ladder at 5/7/10 %, fully hedged with a standing perp short, 60-min hold</td>
+            <td><strong>NO-GO.</strong> Fill income +₩9,776 per ₩1 M per month, but the short's
+            funding carry cost ₩7,469. Net ₩2,307 against the ₩8,000 bar. Also: only 6.6 % of 5 % up-moves
+            were Upbit-local.</td></tr>
+        <tr><td>P12</td><td>The fish census (research only)</td>
+            <td>Redefined the target as <em>divergence</em>, minute by minute. Found the fish live on thin
+            markets, and that ~58 % of an excursion is still there after 15 minutes: a fish is more often a
+            step to a new level than a wick that snaps back.</td></tr>
+        <tr><td>P13</td><td>Tight ladder, rungs at 1 / 1.5 / 2 %, both sides, 15 markets, ₩4.5 M, no hedge.
+            <code>src/arb/fish/</code> built here.</td>
+            <td>Modelled at +₩149,816 per ₩1 M per month, then the paper run measured the <em>exit</em>:
+            crossing the spread to close cost 0.4292 % per fill against a 0.221 % break-even line. The
+            mechanics worked; the taker exit did not pay.</td></tr>
+        <tr><td>P14</td><td>The wide net: rungs at 5 / 7.5 / 10 %, ₩200,000 each, ask fill held 4 hours,
+            bid fill closed in 60 seconds</td>
+            <td>At 5 % the capture per fill is an order of magnitude larger, so the same ~0.27 % exit is
+            2.9 % of the up leg's capture. Picked row: ₩736,030/month on ₩8.8 M. Also found the net cannot
+            absorb more capital: past rank 90 a market has no measured fish at g ≥ 5.</td></tr>
+        <tr><td>P15</td><td>Live: five markets, ₩6.4 M of a ₩10 M deposit, three of them hedged on Bybit,
+            book-aware placement, a two-step armed start</td>
+            <td><strong>Running since 2026-09-19.</strong> First nine hours: three seed buys, zero rung fills,
+            ₩0 realised, and 17,696 rejected asks on KRW-INJ from a tick-band bug (fixed the same day).
+            Three of P14's eight markets were delisted within two weeks.</td></tr>
+        <tr><td>P16–P18</td><td>Dashboard, an LLM observer for the daily reads, and a screen of the other
+            four Korean exchanges</td><td>Planned / in progress. P18 has already found Bithumb, Coinone and
+            Korbit currently trade fee-free, which lowers the bar before a single fish is counted.</td></tr>
+      </tbody>
+    </table>
+    <p class="src">Sources: research/p11/recommendation.md, research/p12/fish.md, research/p13/economics.md,
+    research/p14/strategy.md, works/phases/active/P15/phase.md (D54), research/p18/venues.md</p>
+
+    <div class="callout warn">
+      <h4>Read the numbers honestly</h4>
+      <p>Every P&amp;L figure in this document is a <em>model</em> number derived from a 60-day census and a
+      fill model. The live book has so far bought its seeds and rested its rungs; it has not yet caught a
+      single fish. The one live measurement that exists is the hedge working as designed (see Intuition).
+      The ₩8,000 per ₩1 M per month bar is the workspace's own threshold, set in P11, for "worth running
+      at all".</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="intuition">
+    <h2>Intuition</h2>
+
+    <p>Take one of the five live markets, KRW-INJ, at the mid it actually traded on 2026-09-19:
+    ₩9,530. The ladder rests three rungs on each side, at 5, 7.5 and 10 % from the mid, each worth
+    ₩200,000. Asks are rounded <em>away</em> from the touch (ceiling), bids likewise (floor), and each on
+    the tick of its own price band.</p>
+
+    <table>
+      <thead><tr><th>Rung</th><th>Raw price (mid × (1 ± g))</th><th>Rounded on its band's tick</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>Ask +10 %</td><td class="num">10,483.0</td><td class="num">10,490 (tick 10)</td><td class="num">≈ 19.06 INJ</td></tr>
+        <tr><td>Ask +7.5 %</td><td class="num">10,244.75</td><td class="num">10,250 (tick 10)</td><td class="num">≈ 19.51 INJ</td></tr>
+        <tr><td>Ask +5 %</td><td class="num">10,006.5</td><td class="num">10,010 (tick 10)</td><td class="num">≈ 19.98 INJ</td></tr>
+        <tr><td><em>mid</em></td><td class="num">9,530</td><td></td><td></td></tr>
+        <tr><td>Bid −5 %</td><td class="num">9,053.5</td><td class="num">9,050 (tick 5)</td><td class="num">≈ 22.09 INJ</td></tr>
+        <tr><td>Bid −7.5 %</td><td class="num">8,815.25</td><td class="num">8,815 (tick 5)</td><td class="num">≈ 22.68 INJ</td></tr>
+        <tr><td>Bid −10 %</td><td class="num">8,577.0</td><td class="num">8,575 (tick 5)</td><td class="num">≈ 23.32 INJ</td></tr>
+      </tbody>
+    </table>
+    <p class="src">Sizes are ₩200,000 / price, floored to the volume step. The three ask rungs sit in the
+    ₩10,000+ band (tick 10) while the mid sits in the ₩5,000–10,000 band (tick 5): that is exactly the
+    mismatch behind the 17,696 <code>invalid_price_ask</code> refusals in the first live run.</p>
+
+    <figure>
+      <svg viewBox="0 0 720 300" role="img" aria-label="Ladder diagram: three ask rungs above the mid, three bid rungs below, a market-buy sweep arrow reaching the +5 % ask rung">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ask)"/>
+          </marker>
+        </defs>
+        <line x1="120" y1="20" x2="120" y2="280" stroke="var(--line)" stroke-width="2"/>
+        <!-- asks -->
+        <g font-size="13" fill="var(--ink)">
+          <rect x="130" y="30" width="180" height="18" fill="var(--ask)" opacity=".85"/><text x="320" y="44">ask +10 %  ₩10,490  ₩200k</text>
+          <rect x="130" y="62" width="180" height="18" fill="var(--ask)" opacity=".85"/><text x="320" y="76">ask +7.5 %  ₩10,250  ₩200k</text>
+          <rect x="130" y="94" width="180" height="18" fill="var(--ask)" opacity=".85"/><text x="320" y="108">ask +5 %  ₩10,010  ₩200k  ← the fish hits here</text>
+          <!-- thin book between mid and rung -->
+          <rect x="130" y="126" width="40" height="6" fill="var(--muted)" opacity=".6"/>
+          <rect x="130" y="136" width="25" height="6" fill="var(--muted)" opacity=".6"/>
+          <rect x="130" y="146" width="55" height="6" fill="var(--muted)" opacity=".6"/>
+          <text x="320" y="140" fill="var(--muted)">other people's asks: thin</text>
+          <!-- mid -->
+          <line x1="100" y1="160" x2="700" y2="160" stroke="var(--mid)" stroke-dasharray="6 4"/>
+          <text x="20" y="164" fill="var(--mid)" font-weight="600">mid ₩9,530</text>
+          <!-- bids -->
+          <rect x="130" y="176" width="180" height="18" fill="var(--bid)" opacity=".85"/><text x="320" y="190">bid −5 %  ₩9,050  ₩200k</text>
+          <rect x="130" y="208" width="180" height="18" fill="var(--bid)" opacity=".85"/><text x="320" y="222">bid −7.5 %  ₩8,815  ₩200k</text>
+          <rect x="130" y="240" width="180" height="18" fill="var(--bid)" opacity=".85"/><text x="320" y="254">bid −10 %  ₩8,575  ₩200k</text>
+        </g>
+        <!-- sweep arrow -->
+        <path d="M 60 160 C 60 130, 90 110, 118 104" fill="none" stroke="var(--ask)" stroke-width="3" marker-end="url(#arrow)"/>
+        <text x="8" y="120" font-size="12" fill="var(--ask)">a market buy</text>
+        <text x="8" y="134" font-size="12" fill="var(--ask)">sweeps up</text>
+      </svg>
+      <figcaption>Figure 1. The ladder around the KRW-INJ mid. A large market buy eats the thin asks between
+      the touch and +5 %, prints through our rung, and we have sold 19.98 INJ at ₩10,010.</figcaption>
+    </figure>
+
+    <h3>What happens after the fill</h3>
+    <p>This is where the two sides of the ladder stop being mirror images. P14 measured what a fish
+    price does afterwards, by direction:</p>
+    <table>
+      <thead><tr><th>Leg</th><th>Mean mark vs fill at 0 min</th><th>15 min</th><th>60 min</th><th>240 min</th><th>1,440 min</th></tr></thead>
+      <tbody>
+        <tr><td>Up-fish (we sold)</td><td class="num">+0.87 %</td><td class="num">+2.72 %</td><td class="num">—</td><td class="num">+8.06 %</td><td class="num">+9.29 %</td></tr>
+        <tr><td>Down-fish (we bought)</td><td class="num">+0.19 %</td><td class="num">−0.20 %</td><td class="num">−1.38 %</td><td class="num">—</td><td class="num">−3.25 %</td></tr>
+      </tbody>
+    </table>
+    <p class="src">research/p14/strategy.md, "the asymmetry"</p>
+    <p>An up-fish keeps giving: the price we sold at looks better and better for four hours, because a
+    Upbit-local spike upward is usually a premium that then converges back toward the global price.
+    A down-fish goes the other way: the coin we bought keeps falling. So the exit is a <em>direction-split
+    time stop</em>. An ask fill is held for 14,400 seconds (four hours) and then bought back with an IOC
+    limit that crosses the touch; a bid fill is sold back after 60 seconds. Both exits cost roughly the
+    half-spread, measured at 0.271 % up and 0.273 % down. At g = 5 that is 2.9 % of the up leg's capture
+    and 143 % of the down leg's, which is why the bid side is closed almost immediately: it exists to
+    catch the occasional sharp dip, not to hold anything.</p>
+
+    <figure>
+      <svg viewBox="0 0 720 200" role="img" aria-label="Timeline of the direction-split time stop">
+        <g font-size="13" fill="var(--ink)">
+          <text x="10" y="40" font-weight="600" fill="var(--ask)">ask fill (up-fish)</text>
+          <line x1="150" y1="36" x2="700" y2="36" stroke="var(--ask)" stroke-width="3"/>
+          <circle cx="150" cy="36" r="6" fill="var(--ask)"/><text x="140" y="60">t = 0: sold at +5 %</text>
+          <circle cx="700" cy="36" r="6" fill="var(--ask)"/><text x="560" y="60">t = 4 h: IOC buy-back</text>
+          <text x="330" y="24" fill="var(--muted)">held while the premium converges</text>
+
+          <text x="10" y="130" font-weight="600" fill="var(--bid)">bid fill (down-fish)</text>
+          <line x1="150" y1="126" x2="230" y2="126" stroke="var(--bid)" stroke-width="3"/>
+          <circle cx="150" cy="126" r="6" fill="var(--bid)"/><text x="120" y="150">t = 0: bought at −5 %</text>
+          <circle cx="230" cy="126" r="6" fill="var(--bid)"/><text x="240" y="150">t = 60 s: IOC sell-back</text>
+          <line x1="230" y1="126" x2="700" y2="126" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <text x="420" y="114" fill="var(--muted)">not held: the down leg keeps falling</text>
+        </g>
+      </svg>
+      <figcaption>Figure 2. <code>close_ask_s = 14400</code>, <code>close_bid_s = 60</code>. Same code path, opposite
+      horizons.</figcaption>
+    </figure>
+
+    <h3>Why there is a seed and a short</h3>
+    <p>To rest an ask you must own the coin. So each both-sided market first buys a <em>seed</em>:
+    ₩800,000 of the coin, bought post-only at the best bid (never with a market order: "a market buy on
+    these books would make <em>us</em> someone's fish"). The seed is inventory, not a position; the ask
+    ladder is dark until it fills.</p>
+    <p>Owning ₩800,000 of a thin altcoin for weeks is itself a bet, and P13 measured the median market
+    drifting −9.6 % a month. The hedge removes that bet: a Bybit perpetual short of the same coin
+    quantity. Now the seed's spot value and the short's value move together and cancel; what is left
+    is exactly the thing the fish is made of, the Upbit-versus-global gap.</p>
+
+    <figure>
+      <svg viewBox="0 0 720 210" role="img" aria-label="Seed on Upbit paired with a short on Bybit">
+        <g font-size="13" fill="var(--ink)">
+          <rect x="30" y="30" width="300" height="140" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+          <text x="45" y="55" font-weight="600">Upbit (KRW)</text>
+          <text x="45" y="85" fill="var(--bid)">long: seed ₩800,000 of CRV</text>
+          <text x="45" y="110">+ three resting asks from it</text>
+          <text x="45" y="135">+ three resting bids in KRW</text>
+          <text x="45" y="158" fill="var(--muted)">spot marks +₩28,358 at 60 min</text>
+
+          <rect x="390" y="30" width="300" height="140" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+          <text x="405" y="55" font-weight="600">Bybit (USDT perp)</text>
+          <text x="405" y="85" fill="var(--ask)">short: the same CRV quantity</text>
+          <text x="405" y="110">contracts = coin qty / multiplier</text>
+          <text x="405" y="135">cross margin, 2×, one-way</text>
+          <text x="405" y="158" fill="var(--muted)">marks −14.06 USDT ≈ −₩19,176</text>
+
+          <line x1="330" y1="100" x2="390" y2="100" stroke="var(--mid)" stroke-width="3"/>
+          <text x="300" y="195" fill="var(--mid)" font-weight="600">net on ₩2.4 M of seeds: +₩9,182 (+0.38 %) while spot swung +1.18 %</text>
+        </g>
+      </svg>
+      <figcaption>Figure 3. The one live measurement that exists: at the 60-minute read of run 2 the three seeds
+      had gained and the three shorts had lost, netting to a third of the raw swing. The hedge is doing
+      its job. (works/phases/active/P15/phase.md, D54.)</figcaption>
+    </figure>
+
+    <div class="callout">
+      <h4>Key idea: the edge is a premium, not a wick</h4>
+      <p>P11 expected Upbit spikes to be local wicks that snap back. Its own data said otherwise: the Bybit
+      perp shared a median 0.891 of every 5 % Upbit move. What the hedged ask fill actually captures is the
+      remaining slice, a kimchi premium of about 0.5 % at the touch, roughly half of which converges within
+      the hour. Three independent calculations in P11 reconcile to the same median hedged gain of
+      +0.398 % per fill. That is why the ask leg is held for hours and the position is neutral to the
+      coin's direction.</p>
+    </div>
+
+    <h3>Why so few markets, and why so little capital</h3>
+    <p>The catch is concentrated and lumpy. In the 60-day window, 471 fish at g = 5 % were spread across
+    246 rankable KRW markets, but eight markets held 65 % of them and two (BONK and STORJ) held 43 %.
+    One KST day held 23.8 % of all fish; on the eight picked markets, 60 % of days produced no up-fish at
+    all. Beyond rank 90 a market has no measured fish at g ≥ 5, so adding capital adds nothing. The
+    ₩10 M deposit therefore funds a ₩6.4 M book and leaves ₩3.6 M idle on purpose.</p>
+    <p>The book also shrank by attrition. Of P14's eight picked markets, two were already flagged for
+    delisting before P14 picked them; BONK terminated on 2026-09-07, STORJ on 2026-09-14 and ICX was
+    declared on 2026-09-18 and left the same day. What remains: KRW-ZIL, KRW-CRV and KRW-INJ both-sided
+    and hedged, KRW-SKR and KRW-MANTRA bid-only (SKR's short would cost ~₩120 k/month in funding against
+    ~4 % of the catch; MANTRA has no Bybit perp at all). Five markets carry 26.78 % of P14's basket
+    value, so the model row written into the live params is ₩18,000 per ₩1 M per month: 2.2× the bar,
+    down from the 9–10× P14 modelled on eight.</p>
+
+    <figure>
+      <svg viewBox="0 0 720 150" role="img" aria-label="Arc of costs discovered across phases P11 to P15">
+        <g font-size="12" fill="var(--ink)">
+          <line x1="40" y1="70" x2="690" y2="70" stroke="var(--line)" stroke-width="2"/>
+          <g>
+            <circle cx="70" cy="70" r="8" fill="var(--ask)"/><text x="40" y="50" font-weight="600">P11</text><text x="20" y="100">funding carry</text><text x="20" y="114" fill="var(--muted)">of a standing short</text>
+            <circle cx="220" cy="70" r="8" fill="var(--warn)"/><text x="190" y="50" font-weight="600">P12</text><text x="170" y="100">hourly reference</text><text x="170" y="114" fill="var(--muted)">counted drifts as spikes</text>
+            <circle cx="370" cy="70" r="8" fill="var(--ask)"/><text x="340" y="50" font-weight="600">P13</text><text x="330" y="100">taker exit slippage</text><text x="330" y="114" fill="var(--muted)">0.43 % vs 0.22 % line</text>
+            <circle cx="520" cy="70" r="8" fill="var(--warn)"/><text x="490" y="50" font-weight="600">P14</text><text x="470" y="100">seed drift, dark ladder,</text><text x="470" y="114" fill="var(--muted)">capacity ceiling</text>
+            <circle cx="660" cy="70" r="8" fill="var(--bid)"/><text x="630" y="50" font-weight="600">P15</text><text x="610" y="100">tick bands, stale</text><text x="610" y="114" fill="var(--muted)">snapshots, delistings</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>Figure 4. The arc is cost discovery, not signal discovery. Each phase put a number on
+      something the previous one had assumed away.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="code">
+    <h2>Code</h2>
+
+    <p>The strategy is the package <code>src/arb/fish/</code>: eighteen modules, about 13,000 lines,
+    with the heavy ones being <code>runner.py</code> (the loop), <code>live.py</code> (real orders),
+    <code>hedge.py</code>, <code>preflight.py</code> and <code>report.py</code>. The package docstring
+    lists the modules in the order the loop uses them, and that is the order this section follows.</p>
+
+    <pre><code>The modules, in the order the loop uses them: params (the whole
+configuration, from JSON), ticks, feed (one socket over every market),
+gate (the cross-exchange pre-fill check and the halts), ladder (the ±g
+diff), paper (the tape-driven fill model) or live (the real one), closer
+(positions and the direction-split time stop), hedge, ledger, runner,
+preflight and report.</code></pre>
+    <p class="src">src/arb/fish/__init__.py (docstring, lightly condensed)</p>
+
+    <p>One architectural rule sits above all of it: <em>nothing under <code>arb.live</code> is
+    modified</em>. The old maker bots' machinery was copied, not edited, because it was single-market
+    throughout. And <code>FishParams</code> refuses the maker bots' two markets outright, so the two
+    strategies could never have quoted the same book by accident.</p>
+
+    <h3>1. Parameters: the live file</h3>
+    <p>Everything is a frozen dataclass loaded from JSON; unknown keys are rejected. The live book runs
+    from <code>research/p15/params/live_six.json</code> (the name records the original six-market cut,
+    not the current count). The values that matter:</p>
+    <table>
+      <thead><tr><th>Key</th><th>Live value</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><code>markets</code></td><td>ZIL, CRV, INJ, SKR, MANTRA (all KRW-)</td><td>The five nets</td></tr>
+        <tr><td><code>sides</code></td><td><code>{"*": "both", "KRW-SKR": "bid", "KRW-MANTRA": "bid"}</code></td><td>Bid-only markets buy no seed and are never hedged</td></tr>
+        <tr><td><code>rungs_pct</code></td><td>[5.0, 7.5, 10.0]</td><td>Depth of each rung from the mid</td></tr>
+        <tr><td><code>order_krw</code></td><td>200,000</td><td>Q: the size of one rung</td></tr>
+        <tr><td><code>cap_krw</code>, <code>cap_coin_krw</code>, <code>seed_krw_per_market</code></td><td>800,000 each</td><td>Per-side exposure cap and the seed size: (rungs + 1) × Q</td></tr>
+        <tr><td><code>hysteresis_frac</code></td><td>0.05</td><td>Re-quote when the mid moves 5 % of the rung's own depth (0.25 % at g = 5)</td></tr>
+        <tr><td><code>max_age_s</code></td><td>3,600</td><td>Re-quote an order older than an hour regardless</td></tr>
+        <tr><td><code>min_requote_s</code>, <code>book_budget_frac</code></td><td>84 s, 0.25</td><td>Floor between book-driven re-quotes; rolling-minute budget</td></tr>
+        <tr><td><code>close_ask_s</code> / <code>close_bid_s</code></td><td>14,400 / 60</td><td>The direction-split time stop</td></tr>
+        <tr><td><code>book_daily_realised_loss_cap_krw</code></td><td>600,000</td><td>3 × Q realised in one KST day → OFF and exit 2</td></tr>
+        <tr><td><code>daily_loss_cap_krw</code></td><td>900,000 per market</td><td>Realised, per market, halts that market for the day</td></tr>
+        <tr><td><code>unhedged_max_s</code> / <code>unhedged_tol_frac</code></td><td>1,800 / 1.0</td><td>One seed notional unhedged for half an hour → OFF that market</td></tr>
+        <tr><td><code>hedge</code></td><td>bybit, ratio 1.0, 2×, cross, tolerance 0.35, rebalance 300 s</td><td>Seed hedged at once; rung fills rebalanced on a threshold</td></tr>
+        <tr><td><code>control_port</code></td><td>8796 on 127.0.0.1</td><td>The ON/OFF switch, loopback-only</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2. The ladder: where a rung goes</h3>
+    <p><code>ladder.py</code> is the strategy in its purest form: a clock-free function that compares
+    what is resting with what should be, and emits actions. The base price is one line:</p>
+    <pre><code>def rung_price(side: str, anchor: float, rung_pct: float) -&gt; float:
+    """``anchor × (1 ∓ g)`` — a bid below the anchor, an ask above it."""
+    g = float(rung_pct) / 100.0
+    return anchor * (1.0 - g) if side == BID else anchor * (1.0 + g)</code></pre>
+    <p class="src">src/arb/fish/ladder.py:103</p>
+
+    <p>P15 added a book-aware refinement, the <em>competitor nudge</em>. If someone else's order of at
+    least ₩50,000 rests just beyond our rung, we place one tick nearer the touch than they do, so a sweep
+    reaches us first. The nudge is bounded on both sides: never nearer the touch than g itself (the seed
+    bid rests there), and never past one tick inside the next rung.</p>
+    <pre><code>    levels = () if book is None else (book.bids if side == BID else book.asks)
+    if not levels:
+        return base, {"why": BLIND}
+    competitor = Decimal(0)
+    comp_krw = 0.0
+    for px, sz in levels:
+        if not (px &gt; 0.0) or not (sz &gt; 0.0) or not _deeper(side, px, base_f):
+            continue                       # inside the rung, or not a real level
+        if px * sz &gt;= float(competitor_min_krw):
+            competitor, comp_krw = Decimal(str(px)), px * sz
+            break                          # touch-first order: the first is the nearest
+    if competitor &lt;= 0:
+        return base, {"why": NO_COMPETITOR}
+    ...
+    ahead = _one_tick_nearer(side, competitor, tick_at(competitor, tick, band))
+    if not _deeper(side, ahead, base):
+        return base, why                   # the floor binds — the rung goes at g
+    cap_raw = Decimal(str(rung_price(side, anchor,
+                                     float(next_g) if next_g else float(rung_cap_pct))))
+    ceiling = _one_tick_nearer(side, cap_raw, tick_at(cap_raw, tick, band))
+    target = ahead
+    why["why"] = NUDGE
+    if _deeper(side, ahead, ceiling):
+        target, why["why"] = ceiling, CAPPED</code></pre>
+    <p class="src">src/arb/fish/ladder.py, book_target (condensed). Each outcome is written to the ledger as
+    <code>blind</code>, <code>no_competitor</code>, <code>floor</code>, <code>nudge</code> or <code>capped</code>.
+    In the P15 measurement the floor bound 21 times out of 27: the first real level beyond g is usually
+    the first tick beyond g.</p>
+
+    <p>Whether a resting rung is replaced is decided by <code>needs_requote</code>, and the order of its
+    three tests is deliberate:</p>
+    <pre><code>    a = float(order.anchor)
+    if mid == mid and mid &gt; 0 and a == a and a &gt; 0:
+        if abs(mid / a - 1.0) &gt;= hysteresis_frac * float(order.rung_pct) / 100.0:
+            return HYSTERESIS
+    if (book_price is not None and book_price != order.price
+            and order.age_s(ts_ms) &gt;= float(min_requote_s)):
+        return BOOK
+    if order.age_s(ts_ms) &gt;= max_age_s:
+        return AGE
+    return ""</code></pre>
+    <p class="src">src/arb/fish/ladder.py:284-293</p>
+    <p>Two things to notice. The hysteresis compares the current mid with the anchor <em>the resting order
+    was priced from</em>, not with the last mid, so a slow drift accumulates until it crosses the threshold.
+    And the 84-second floor applies only to the book reason, because book-driven re-quotes are what the
+    rolling-minute budget counts. With <code>hysteresis_frac</code> 0.05 the tabulated rate was ~20 re-quotes
+    a minute across the book, 17 % of Upbit's 2-per-second order pocket.</p>
+
+    <p>Finally <code>plan_actions</code> decides whether a wanted rung can actually go out. Three things stop
+    it, in this order:</p>
+    <pre><code>            price, volume = quote
+            notional = float(price) * float(volume)
+            if exposure + notional &gt; cap + CAP_TOL_KRW:
+                continue                      # the cap is what stops the ladder
+            if side == ASK and float(volume) &gt; coin - used_coin:
+                continue                      # not enough seed coin to sell
+            if side == BID and notional &gt; krw - used_krw:
+                continue                      # not enough KRW to pay
+            actions.append(Action("place", market, side, g, reason,
+                                  price=price, volume=volume, anchor=anchor,
+                                  detail=why))</code></pre>
+    <p class="src">src/arb/fish/ladder.py:405-414. "Not enough seed coin" is why the ask ladder is dark
+    until the seed fills.</p>
+
+    <h3>3. Sizing and the tick-band bug</h3>
+    <p>One arithmetic sizes every rung and explains every refusal, so a refusal can never be explained by
+    a second, drifting copy of the rule:</p>
+    <pre><code>    price, tick = round_price_banded(side, raw_price, tick, band)
+    ...
+    step = vol_step
+    volume = floor_volume(Decimal(str(order_krw)) / price, step)
+    if float(volume) * pf &lt; float(min_total_krw) and step &gt; VOLUME_STEP:
+        # the book's inferred lattice was the coarse one; Upbit's own limit is 8 dp
+        step = VOLUME_STEP
+        volume = floor_volume(Decimal(str(order_krw)) / price, step)
+    if float(volume) * pf &lt; float(min_total_krw):
+        # flooring, not the order size, is what dropped it under ``min_total``:
+        # round **up** one step and keep it while it still fits the order size
+        up = volume + step
+        if float(min_total_krw) &lt;= float(up) * pf &lt;= float(order_krw) * MIN_TOTAL_OVERSHOOT:
+            detail["rounded_up"] = True
+            volume = up</code></pre>
+    <p class="src">src/arb/fish/ticks.py, _size_rung</p>
+    <div class="callout warn">
+      <h4>Edge case that bit: a price's tick is the tick of the price, not of the mid</h4>
+      <p>Until fix P15.F4, a rung was rounded on the tick measured at the mid. On 2026-09-19 KRW-INJ traded
+      at ₩9,530 (tick 5) while its ask rungs at +5/7.5/10 % were all above ₩10,000 (tick 10). Every ask
+      was rounded to a multiple of 5, Upbit refused every one with <code>invalid_price_ask</code>, and because
+      nothing memoised a refusal that was not post-only, the ladder re-sent it about twice a second:
+      17,696 refusals in nine hours. Two fixes landed the same day: <code>round_price_banded</code> rounds on
+      the band of the price itself, and any refusal the engine cannot interpret now spends a per-side
+      budget of 5 before pausing that side with one probe every 300 seconds.</p>
+    </div>
+
+    <h3>4. The runner: two clocks, one order of operations</h3>
+    <p>The loop is driven by WebSocket events (order book and trade updates from Upbit's public feed)
+    and a two-second timer. Nothing else calls the strategy.</p>
+    <pre><code>        while not self.stop_evt.is_set():
+            now = time.monotonic()
+            if deadline is not None and now &gt;= deadline:
+                self.exit_reason = self.exit_reason or "duration elapsed"
+                break
+            ev = await self.feed.get(max(0.0, min(next_tick - now, 1.0)))
+            if ev is not None:
+                self._handle_event(ev)
+            if time.monotonic() &gt;= next_tick:
+                next_tick = time.monotonic() + self.p.timer_s
+                await self._tick()
+                await self._refresh_ticks()
+            if time.monotonic() &gt;= next_hb:
+                next_hb = time.monotonic() + self.p.heartbeat_s
+                self._heartbeat()</code></pre>
+    <p class="src">src/arb/fish/runner.py, _loop</p>
+    <p>An event updates the sink and the gate, then <em>drains fills to the ledger before the ladder can
+    react to them</em>, then steps that one market. The timer tick has a stricter order, and the docstring
+    says why: "a market halted a microsecond ago cannot be re-quoted here".</p>
+    <pre><code>        ts = now_ms()
+        self.sink.sweep(ts)
+        self._drain(ts)
+        self._check_blocked(ts)
+        self._process_halt_requests(ts)
+        await self._check_cleanups(ts)    # a declared delisting past its deadline
+        for ex in self.closer.step(ts):
+            self._log_exit(ex)
+        self._drain(ts)
+        await self._check_caps(ts)
+        self._drain(ts)
+        self._step_hedge(ts)
+        self._check_hedge_lag(ts)
+        for market in self.p.markets:
+            self._step_market(market, ts)</code></pre>
+    <p class="src">src/arb/fish/runner.py, _tick. Transitions, then the time stop, then the caps, then
+    the hedge, and only then the ladder.</p>
+
+    <h3>5. The gate: the one strategic refusal</h3>
+    <p>Before a side is quoted, the gate asks whether Upbit's recent move was <em>shared</em> with the
+    major exchange. If Upbit rose 0.3 % in the last minute and Bybit rose at least a quarter of that, the
+    move is global, the ask side would be selling into a real rally rather than a local premium, and the
+    side is refused. P13 found this signal worth +₩25,618 per ₩1 M per month as a pre-fill gate and
+    −₩102,958 as an exit rule, which is why it lives here and not in the closer.</p>
+    <pre><code>        thr = float(self.p.hysteresis_frac) * min(float(g) for g in self.p.rungs_pct) / 100.0
+        sign = 1.0 if side == ASK else -1.0
+        local = self.upbit_move(market, ts) * sign
+        if not (local == local) or local &lt; thr:
+            return False, {"why": "no_move", "upbit": local, "threshold": thr}
+        ...
+        major = self.feed.move(market, ts, self.window_s) * sign
+        if not (major == major):
+            self._stale(market, side, ts, "major_ring_short", local, age)
+            return False, {"why": "major_ring_short"}
+        if major &gt;= float(self.p.gate_frac) * local:
+            return True, {"why": "shared_move", "upbit_pct": local * 100.0,
+                          "major_pct": major * 100.0,
+                          "gate_frac": float(self.p.gate_frac)}
+        return False, {"why": "pure_local", "upbit_pct": local * 100.0,
+                       "major_pct": major * 100.0}</code></pre>
+    <p class="src">src/arb/fish/gate.py, _decide (condensed). <code>True</code> means "refuse". Every
+    missing or stale input returns <code>False</code>: the gate fails open and logs one
+    <code>gate_stale</code> row per market per minute.</p>
+
+    <h3>6. Fills, positions and the exit</h3>
+    <p>In paper mode a fill is simulated from the public trade tape with a queue-position model: a print
+    <em>through</em> our price fills us outright; a print <em>at</em> our price first eats the queue that
+    was ahead of us.</p>
+    <pre><code>            if o.side == BID:
+                if px &lt;= p - half:
+                    self._fill(o, through, ts)
+                elif px &lt; p + half:
+                    if taker_side == "ASK":
+                        self._queue_fill(o, size, ts)
+                    else:
+                        self._fill(o, through, ts)</code></pre>
+    <p class="src">src/arb/fish/paper.py, _trade_fills (bid half)</p>
+    <p>In live mode a fill arrives on Upbit's private <code>myOrder</code> WebSocket with the exchange's own
+    fee. Either way, a maker fill opens a <code>Position</code> and the closer holds it until its stop:</p>
+    <pre><code>    def stop_s(self, p: FishParams) -&gt; float:
+        return float(p.close_ask_s if self.side == ASK else p.close_bid_s)</code></pre>
+    <p class="src">src/arb/fish/closer.py:99</p>
+    <p>When the stop passes, the closer crosses the position out with an IOC limit and books the exit.
+    The arithmetic charges both fees and never rewards either; slippage is measured against the mid at
+    the moment of decision, which is the number P13 and P14 compared to their break-even lines.</p>
+    <pre><code>        slip = (abs(vwap - mid) / mid * 100.0) if (mid == mid and mid &gt; 0) else NAN
+        entry_fee = pos.price * size * self.p.fee_frac
+        gross = ((vwap - pos.price) if pos.side == BID else (pos.price - vwap)) * size
+        pnl = gross - entry_fee - float(fee_krw)
+        pos.size -= size
+        pos.n_exits += 1
+        flat = pos.size &lt;= FLAT_TOL
+        partial = not flat</code></pre>
+    <p class="src">src/arb/fish/closer.py, _book_exit</p>
+
+    <h3>7. Real orders: post-only in, IOC out</h3>
+    <p>The live sink presents the same interface as the paper sink over Upbit's REST API, with one serial
+    worker per market. A rung and a seed both go out <code>post_only</code>; only an exit is an IOC. That
+    single line is the whole of "never a market order" in the operator's sketch.</p>
+    <pre><code>        # a seed buy is a limit bid joining the touch, so it is post_only too;
+        # only the exit crosses, and only the exit is an IOC (P15.S5 / D35)
+        tif = "ioc" if o.kind == EXIT else "post_only"
+        ...
+                resp = await self.rest.order_place(
+                    o.market, o.side, o.volume, o.price, identifier=ident,
+                    ord_type="limit", time_in_force=tif,
+                )</code></pre>
+    <p class="src">src/arb/fish/live.py, _do_place</p>
+    <p>Before an order is even queued, three guards can silently refuse it: the order-rate pocket being
+    down to its last slot this second, the side resting under a place-error pause, and a memo that says
+    this exact price at this exact touch was refused already. The first live run's 8,654 orders were all
+    post-only and none ever crossed.</p>
+
+    <h3>8. The hedge, in prose</h3>
+    <p><code>hedge.py</code> is a thousand lines of Bybit v5 API handling, so here is its policy rather
+    than its code. The seed is hedged the instant its fill arrives (the short is sized from the fill, not
+    from an account snapshot, after a dry run measured one short arriving 185 seconds late because the
+    balance frame lagged the fill frame). Rung fills are <em>not</em> hedged one by one: a taker round trip
+    on Bybit costs 0.11 % of notional, and a four-hour ask hold makes those fills transient, so the leg
+    rebalances every 300 seconds only when holding and short disagree by more than 35 % of a seed. The
+    short is always sized as <code>contracts = coin_qty / multiplier</code>, never from a KRW notional and an
+    exchange rate: the notional form asked for 43 % more coin than the book held, which would have been
+    a naked short of the difference.</p>
+
+    <h3>9. The switch: DISARMED start, eight checks to arm, short-first OFF</h3>
+    <p>A live start places nothing. The runner halts every market with reason <code>off</code>, pauses the seed
+    buyer and waits for the operator:</p>
+    <pre><code>        self.seed.pause()
+        for market in self.p.markets:
+            if self.gate.is_halted(market):
+                continue                     # a delisting halt is not ours to mask
+            self.gate.halt(market, OFF_HALT,
+                           {"why": "the book starts disarmed — POST /on arms it",
+                            "at_start": True}, ts)
+        self.log(f"DISARMED: {len(self.p.markets)} market(s) halted, seed buyer "
+                 f"paused, nothing quoted — POST /on to the control endpoint "
+                 f"({self.p.control_bind}:{self.p.control_port}) arms the book")</code></pre>
+    <p class="src">src/arb/fish/runner.py, _arm_at_start</p>
+    <p><code>POST /on</code> runs eight feasibility checks. Every check runs even after one fails, so the
+    operator sees the whole picture in one call, and a single FAIL means no arm. There is no override
+    flag.</p>
+    <pre><code>        for check in (self._check_control, self._check_ticks, self._check_markets,
+                      self._check_delisting, self._check_hedge, self._check_margin,
+                      self._check_krw, self._check_book_depth):
+            try:
+                checks.append(await check())
+            except Exception as exc:                    # noqa: BLE001 - boundary
+                checks.append(self._row(check.__name__.removeprefix("_check_"), FAIL,
+                                        error=f"{type(exc).__name__}: {exc}"))
+        failed = [c["name"] for c in checks if c["status"] == FAIL]</code></pre>
+    <p class="src">src/arb/fish/control.py, Controller.on</p>
+    <p>OFF is the mirror, and its order is the safety. The seed buyer is paused book-wide first (otherwise it
+    would re-place a seed bid on the next step), then each market in sequence: halt, cancel every rung and
+    the seed order, cross out open positions, <strong>close the short</strong>, and only if that succeeded,
+    sell the seed. A market whose short could not be closed is reported <code>pair_kept</code> with its coin
+    still held, because a sold seed beside an open short is a naked short.</p>
+
+    <h3>10. Risk: what stops the book</h3>
+    <p>The caps are judged on <em>realised</em> P&amp;L only, per KST day, and the open mark is never counted.
+    The reasoning is in the docstring: "a four-hour ask hold makes an open mark a price path rather than
+    a loss". The function is pure so the risk stop can be tested without a loop.</p>
+    <pre><code>    over = tuple(sorted(m for m, v in pnl_by_market.items()
+                        if m not in skip and float(v) &lt;= -abs(p.loss_cap(m))))
+    total = float(sum(float(v) for v in pnl_by_market.values()))
+    cap = float(p.book_daily_realised_loss_cap_krw if book_cap is None else book_cap)
+    return over, total, total &lt;= -abs(cap)</code></pre>
+    <p class="src">src/arb/fish/closer.py, check_caps</p>
+    <table>
+      <thead><tr><th>Condition</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Per-market realised loss ≤ −₩900,000 today</td><td>Halt that market until the KST day rolls</td></tr>
+        <tr><td>Book realised loss ≤ −₩600,000 today</td><td>Full OFF (short-first), then exit code 2; the supervisor never restarts a 2</td></tr>
+        <tr><td>Holding and short differ by a seed notional for 30 minutes</td><td>OFF that market: "the hedge failing silently is the risk the cap cannot see"</td></tr>
+        <tr><td>Upbit declares the market for delisting</td><td>Permanent halt; unwound 24 h before termination, when Upbit bulk-cancels the pair</td></tr>
+        <tr><td>Five consecutive uninterpretable order refusals on a side</td><td>Side paused, one probe every 300 s</td></tr>
+        <tr><td>Control port cannot bind</td><td>Exit 3: a book whose operator cannot reach OFF must not run</td></tr>
+        <tr><td>A 유의 ("caution") warning flag on the market</td><td>Nothing. Flags are display-only by policy: "no flag stops the strategy".</td></tr>
+      </tbody>
+    </table>
+
+    <h3>11. How the operator runs it</h3>
+    <p>There is no page and no browser. The book is a host process on the operator's Mac, started in two
+    steps from the repo checkout, and each command is run by the operator, never by an agent:</p>
+    <pre><code>FISH_LIVE=1 FISH_DIR=data/fish-live bin/fish.sh start --mode live \
+    --params research/p15/params/live_six.json      # comes up DISARMED — nothing quoted
+FISH_DIR=data/fish-live bin/fish.sh on              # arms it, after an eight-row checklist
+
+FISH_DIR=data/fish-live bin/fish.sh status          # the daily reads
+FISH_DIR=data/fish-live bin/fish.sh state
+uv run python -m arb.fish report --since-hours 24 --ledger data/fish-live/ledger.sqlite \
+    --params research/p15/params/live_six.json --out data/fish-live/reports</code></pre>
+    <p class="src">docs/current/operations.md, "Operator Runtime" (v0017, P15.REVIEW)</p>
+    <p>Live mode is gated three times before a socket opens: the launcher refuses without
+    <code>FISH_LIVE=1</code> (exit 2), the runner refuses without it or without credentials (exit 3), and the
+    whole preflight runs in-process (exit 1 on any FAIL). <code>research/p15/go_live.sh</code> is the one-command
+    form and deliberately exits leaving the book running. The control endpoint is
+    <code>127.0.0.1:8796</code>, loopback-only and unauthenticated; the bind address is the whole of its
+    access control, so a second runner refuses with exit 3.</p>
+    <div class="callout warn">
+      <h4>The kill switch on a hedged book is <code>off</code> then <code>stop</code>, never <code>kill</code></h4>
+      <p><code>bin/fish.sh kill</code> predates the hedge. It cancels and crosses out on Upbit and leaves the
+      Bybit short open. <code>off</code> closes each short first and confirms it before selling the seed;
+      <code>stop</code> then ends the process. The one screen no agent can read is the Bybit positions page,
+      behind the operator's own login.</p>
+    </div>
+
+    <h3>12. Persistence and tests</h3>
+    <p>Everything lands in a SQLite ledger at <code>$FISH_DIR/ledger.sqlite</code>: runs, orders (with the
+    <code>why</code> of every placement), fills, positions, exits, a per-market heartbeat every 10 seconds,
+    events and a daily table. A restart re-reads today's realised P&amp;L across runs, so a restart is not a
+    way to clear the day's cap, and carries open positions with their original open time.</p>
+    <p>The workspace's rule is to test only what the product cannot afford to get wrong, and
+    <code>tests/test_fish.py</code> holds about fifty such cases. The ones that pin this document's claims:</p>
+    <ul>
+      <li><code>test_the_requote_rule_holds_below_hysteresis_and_replaces_above_it_or_on_age</code></li>
+      <li><code>test_the_nudge_goes_one_tick_ahead_of_a_real_competitor_and_the_floor_binds</code></li>
+      <li><code>test_a_rung_is_rounded_on_its_own_tick_band_and_never_flaps_across_one</code></li>
+      <li><code>test_the_realised_caps_halt_a_market_then_run_off_and_stop_the_run</code>, which first asserts
+          that an underwater open mark trips nothing</li>
+      <li><code>test_off_closes_the_short_first_and_never_sells_a_seed_it_could_not_free</code></li>
+      <li><code>test_the_control_endpoint_is_loopback_only_and_its_on_arms_the_book</code>, over a real socket</li>
+    </ul>
+
+    <div class="callout">
+      <h4>Reading the provenance tags</h4>
+      <p>Comments and docstrings cite decisions like <code>D26</code>, <code>D53</code> or <code>P15.F4</code>. Three
+      different "D" namespaces exist: each phase's notebook restarts its decisions at D1, the deferred-job
+      dashboard has its own D-numbers, and the versioned docs' architecture decision records stop at D21
+      and predate fishing entirely. The current truth about this strategy lives in
+      <code>works/phases/active/P11…P18/phase.md</code>, <code>research/p1x/</code> and the operations and QA docs;
+      the product and architecture docs still describe the maker bots and are stale on this subject.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="quiz">
+    <h2>Quiz</h2>
+    <p>Five questions. Click an answer for immediate feedback.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> KRW-ZIL jumps 6 % in one minute, and in the same minute ZILUSDT on Bybit also
+      rises 5.5 %. Under the P12 definition, is that minute a fish at g = 5 %?</p>
+      <button class="opt" data-correct="false">Yes: Upbit's range exceeded 5 %, so an ask rung at +5 % would have filled.</button>
+      <button class="opt" data-correct="true">No: Upbit's range exceeded the major's by only ~0.5 %, so the move was global, not Upbit-local.</button>
+      <button class="opt" data-correct="false">Yes, but only as a down-fish, because the global market caught up afterwards.</button>
+      <p class="why" hidden>A fish is a minute where Upbit's range exceeds the major's by at least g. A spike the
+      major also made is a shared move; the gate would refuse the side for exactly this reason.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> Why does the live book hold an ask fill for four hours but sell a bid fill back after
+      60 seconds?</p>
+      <button class="opt" data-correct="false">Because the exchange charges lower fees on positions held longer than an hour.</button>
+      <button class="opt" data-correct="false">Because the bid side is unhedged and must be flattened before the hedge rebalances.</button>
+      <button class="opt" data-correct="true">Because P14 measured an up-fish's mark keep improving for hours (+8.06 % at 240 min) while a down-fish's mark turns negative within 15 minutes and keeps falling.</button>
+      <p class="why" hidden>The exit is a direction-split time stop chosen from the measured after-fill paths:
+      an Upbit-local spike upward is usually a premium that converges, a dip usually keeps going.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> The Bybit short is sized as <code>contracts = coin_qty / multiplier</code> rather than from
+      the seed's KRW value and an exchange rate. What went wrong with the KRW-notional approach?</p>
+      <button class="opt" data-correct="false">Bybit rejects orders sized in KRW.</button>
+      <button class="opt" data-correct="true">It asked for about 43 % more coin than the book actually held, which would have left a naked short of the difference.</button>
+      <button class="opt" data-correct="false">It could not be updated more than once every 300 seconds.</button>
+      <p class="why" hidden>Decision D33: the hedge exists to neutralise the coin the book holds, so it must be
+      sized from that coin quantity. A KRW notional divided by a display rate is a different number.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> All three hedged markets are showing an open mark of −₩250,000 each, but no exit has
+      been booked today. What does the ₩600,000 book cap do?</p>
+      <button class="opt" data-correct="false">Runs OFF and exits with code 2, since −₩750,000 is past the cap.</button>
+      <button class="opt" data-correct="false">Halts the two worst markets and keeps the third quoting.</button>
+      <button class="opt" data-correct="true">Nothing: the cap counts realised exits only, and an open mark during a four-hour hold is treated as a price path, not a loss.</button>
+      <p class="why" hidden>P15 replaced the mark-inclusive cap with a realised-only one (D31/D41). The test suite's
+      first assertion for the caps is exactly that an underwater open mark trips nothing.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> The operator wants to shut the live book down for the night. Why is
+      <code>bin/fish.sh off</code> followed by <code>stop</code> the right sequence, and <code>bin/fish.sh kill</code> the
+      wrong one?</p>
+      <button class="opt" data-correct="true"><code>off</code> closes each Bybit short and confirms it before selling the seed; <code>kill</code> only cancels and crosses out on Upbit and leaves the short open.</button>
+      <button class="opt" data-correct="false"><code>kill</code> is refused unless <code>FISH_LIVE=1</code> is set, so it never works on the live book.</button>
+      <button class="opt" data-correct="false"><code>off</code> is faster because it unwinds all five markets in parallel.</button>
+      <p class="why" hidden>Selling the seed while its short is still open turns a delta-neutral pair into a naked
+      short. OFF's order (cancel, close short, then sell seed) exists to prevent exactly that; it also unwinds
+      markets one at a time because Bybit rate-limits cancel-all at 1 req/s.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      var opts = q.querySelectorAll('.opt');
+      opts.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) {
+            why.hidden = false;
+            why.classList.remove('ok', 'no');
+            why.classList.add(right ? 'ok' : 'no');
+            why.textContent = (right ? 'Correct. ' : 'Not quite. ') + why.dataset.text;
+          }
+        });
+      });
+      if (why) { why.dataset.text = why.textContent.trim(); }
+    });
+  </script>
+</body>
+</html>
