@@ -7,7 +7,10 @@
       "Write",
       "Glob",
       "Grep",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(command -v:*)",
+      "Bash(knowledge config:*)",
+      "Bash(knowledge guide:*)"
     ],
     "deny": [
       "Bash(git push:*)",

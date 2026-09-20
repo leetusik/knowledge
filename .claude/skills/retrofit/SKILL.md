@@ -24,11 +24,11 @@ Apply:
      --name "<project>" --summary "<one sentence>"
    ```
 
-   It is non-destructive: it skips files you already have, additively merges `.claude/settings.json` and `CLAUDE.md`/`AGENTS.md` (marked section + `*.workspace.md` sidecar), installs the `docs/`+`works/` subsystems only if absent, and aborts before writing if a foreign `scripts/workflow.py` exists. It installs **no phases** — the workspace starts empty.
+   It is non-destructive: it skips files you already have, additively merges `.claude/settings.json` and `CLAUDE.md` (marked section + `CLAUDE.workspace.md` sidecar) — the only contract file it writes — installs the `docs/`+`works/` subsystems only if absent, and aborts before writing if a foreign `scripts/workflow.py` exists. It installs **no phases** — the workspace starts empty.
 
 Reconcile + verify:
 
-5. If the repo already had `CLAUDE.md`/`AGENTS.md`, the installer kept them and wrote `CLAUDE.workspace.md`/`AGENTS.workspace.md` plus a marked pointer block. Read the sidecar and fold the workspace contract into the project's own contract as appropriate — the project's existing rules win where they disagree.
+5. If the repo already had `CLAUDE.md`, the installer kept it and wrote `CLAUDE.workspace.md` plus a marked pointer block into it. Read the sidecar and fold the workspace contract into the project's own contract as appropriate — the project's existing rules win where they disagree.
 6. Ensure `__pycache__/` and `*.pyc` are git-ignored (the installer never edits `.gitignore`).
 7. Run `python3 scripts/workflow.py validate`, then `python3 scripts/workflow.py next`. `next` reporting "no active slice; create a phase or promote deferred work" is the expected empty-start state, not an error.
 
