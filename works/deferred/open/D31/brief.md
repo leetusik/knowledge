@@ -1,0 +1,14 @@
+# Deferred: D31 Retire round 06's card group label in the Knowledge Base Design System project
+
+## Context
+
+## Why Deferred
+
+Each round's post-approval regroup was deferred (DesignSync has no download-to-disk path, so re-emitting 20-30 KB single-line cards cannot be verified byte-identical) and done in place by the NEXT round's session. Round 06 is the last round, so cards 33-41 keep the working address 'P27.S5 . Document views' with no successor session to retire it to 'Document views'. Purely cosmetic: it blocks nothing and P28 builds from build-prompt.md, not the cards.
+
+## Trigger to Promote
+
+The next DesignSync session that opens project 623bb4ea-8fb7-4d31-9d58-5c6a42709bbe.
+
+## Notes
+

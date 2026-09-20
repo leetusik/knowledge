@@ -891,7 +891,7 @@
       ]
     },
     "operations": {
-      "latest": "v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected",
+      "latest": "v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -1069,6 +1069,15 @@
           "source": "P24.REVIEW",
           "summary": "P24 push runs after the response: new KB_GIT_TIMEOUT_S knob, bring-up asserts push capability from the container log plus git state instead of the retired pushed/push_error fields, publish-on-write flow corrected",
           "previous": "v0021_p20_onboarding_ship_web_public_install.sh_skill.md_served_live_at_install.sh_skill.md_zero_infra_operator-gated_push_web-deploy_cutover_verified_live_no_migration_d11_inert"
+        },
+        {
+          "id": "v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1",
+          "path": "docs/versions/operations/v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1.md",
+          "created_at": "2026-09-21T06:22:04+09:00",
+          "commit": "9dd74c9b56aa7886b6eaea1cb4f4d18c99d9e1b0",
+          "source": "P27.REVIEW",
+          "summary": "P27 operator runtime manifest: how the operator runs and views the web product (dev + production runtimes, acceptance origin, devices/viewports, Aside agent account u1)",
+          "previous": "v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected"
         }
       ]
     },
@@ -1491,5 +1500,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-09-21T02:28:22+09:00"
+  "last_rebuilt_at": "2026-09-21T06:22:23+09:00"
 }

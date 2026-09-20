@@ -1,0 +1,11 @@
+{
+  "id": "D29",
+  "title": "Operator copy decision: adopt round 05's new graph strings, including the Korean halves?",
+  "status": "deferred",
+  "source": "P27.REVIEW",
+  "reason": "Round 05 adds five keyed GRAPH.project.* strings, GRAPH.empty.action and GRAPH.failed, plus three bilingual strings the engine keeps inline (landmark/zoom hint, public gate line, tag-lens line), tabulated in web/design/rounds/05-graph/output/build-prompt.md. The Korean halves are the product's own voice and deserve the operator's eye. Default: adopt verbatim.",
+  "trigger": "When P28 cuts the graph apply slice, before the strings land in web/src/content/graph.ts.",
+  "created_at": "2026-09-21T06:28:27+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

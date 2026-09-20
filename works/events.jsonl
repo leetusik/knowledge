@@ -860,3 +860,15 @@
 {"ts": "2026-09-21T05:30:17+09:00", "type": "slice_status_changed", "slice": "P27.S5", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-09-21T06:19:09+09:00", "type": "slice_status_changed", "slice": "P27.S5", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-09-21T06:19:09+09:00", "type": "slice_status_changed", "slice": "P27.S5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T06:20:18+09:00", "type": "slice_status_changed", "slice": "P27.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-09-21T06:22:05+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:17+09:00", "type": "deferred_created", "deferred": "D26", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:17+09:00", "type": "deferred_created", "deferred": "D27", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:17+09:00", "type": "deferred_created", "deferred": "D28", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:27+09:00", "type": "deferred_created", "deferred": "D29", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:27+09:00", "type": "deferred_created", "deferred": "D30", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:27+09:00", "type": "deferred_created", "deferred": "D31", "source": "P27.REVIEW"}
+{"ts": "2026-09-21T06:28:31+09:00", "type": "slice_status_changed", "slice": "P27.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T06:28:31+09:00", "type": "phase_reviewed", "phase": "P27", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-09-21T06:28:31+09:00", "type": "phase_consolidation_owed", "phase": "P27", "notes": 2}
+{"ts": "2026-09-21T06:28:42+09:00", "type": "phase_consolidated", "phase": "P27"}
