@@ -96,6 +96,16 @@ buildable form is `output/build-prompt.md`. The headline ones:
   inside the 15rem rail track. The map is the first public surface wide enough to expose it. Round 04 is
   signed and is **not** edited; the fix lives here and P28 applies it.
 
+## The regroup — deferred to the round-06 session, as round 04's was
+
+The post-approval regroup (retiring the round address `⏳ P27.S4 · Graph` to the library's own `Graph`) was
+**not** run here, for the reason round 04's SIGNOFF gives: each card is 20–30 KB of dense single-line HTML,
+`DesignSync` has no download-to-disk path, and a re-emission cannot be verified byte-identical afterwards.
+The round-05 session did exactly this for round 04's cards, in place and at no transcription risk, and the
+round-06 handoff asks its session to do the same for these six — as housekeeping, never a design change.
+
+Purely cosmetic: it blocks nothing, and P28 reads `build-prompt.md`, not the cards.
+
 ## Open at close
 
 - **The off-frame screenshot never arrived.** §4.2 of the contract is a behaviour contract, not a
