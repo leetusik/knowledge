@@ -3,14 +3,14 @@
   "phase_id": "P27",
   "name": "Design round 04: console surfaces at three viewports (shell, dashboard, project + documents list, documents, auth, public shell)",
   "kind": "co-work",
-  "status": "pending",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P27.S2"
   ],
   "created_at": "2026-09-21T02:26:35+09:00",
   "started_at": "2026-09-21T04:02:23+09:00",
-  "completed_at": null,
+  "completed_at": "2026-09-21T04:41:12+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 04 signed on the operator's literal 'done': the six console surfaces composed on round 03's kit at 390/768/1180 (10 cards 17-26) — one dashboard order at every width, project name as link + Open, the NEW project documents panel (5 newest, link to the filtered list), Search+Reset in the search bar, trend unchanged, disclosures as blocks with a phone bottom-sheet key reveal, the auth gate as its own kbauth container, public shell capped at 88rem; no token, no string, additive only; record in web/design/rounds/04-console-surfaces/output/ + SIGNOFF.md",
   "validation": {
     "required": [],
     "last_run": null,
