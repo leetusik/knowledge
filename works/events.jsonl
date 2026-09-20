@@ -842,3 +842,5 @@
 {"ts": "2026-09-21T02:30:05+09:00", "type": "acceptance_waived", "phase": "P27"}
 {"ts": "2026-09-21T02:30:58+09:00", "type": "slice_status_changed", "slice": "P27.S1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-09-21T02:33:07+09:00", "type": "slice_status_changed", "slice": "P27.S1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T02:34:02+09:00", "type": "slice_status_changed", "slice": "P27.S2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-09-21T02:35:43+09:00", "type": "slice_status_changed", "slice": "P27.S2", "old_status": "in_progress", "new_status": "pending"}

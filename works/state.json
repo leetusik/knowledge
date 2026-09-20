@@ -2,7 +2,7 @@
   "current_phase": "P27",
   "current_slice": "P27.S2",
   "next_slice": "P27.S3",
-  "waiting_on_operator": null,
-  "mode": "phase",
-  "updated_at": "2026-09-21T02:33:07+09:00"
+  "waiting_on_operator": "P27.S2",
+  "mode": "waiting",
+  "updated_at": "2026-09-21T02:35:43+09:00"
 }
