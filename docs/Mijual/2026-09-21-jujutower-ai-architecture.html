@@ -1,0 +1,1119 @@
+<!--kb
+title: "Read, Verify, Speak — the AI inside 주주의관제탑"
+date: 2026-09-21
+tags:
+  - llm-grounding
+  - citation-verification
+  - agent-loop
+  - dart-disclosure
+  - gemini
+source:
+  project: Mijual
+  repo: Mijual
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read, Verify, Speak — the AI inside 주주의관제탑</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --paper: #fbfbfa;
+    --ink: #1a211f;
+    --ink-soft: #5c6b66;
+    --rule: #dfe3e1;
+    --brand: #1f6b52;
+    --brand-soft: #eaf4f0;
+    --alert: #b03030;
+    --alert-soft: #fbeeee;
+    --code-bg: #f1f3f2;
+    --chip: #e6ebe9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0d1412;
+      --ink: #e4ebe8;
+      --ink-soft: #94a5a0;
+      --rule: #23302c;
+      --brand: #4fbf96;
+      --brand-soft: #12241d;
+      --alert: #e06b6b;
+      --alert-soft: #2a1717;
+      --code-bg: #131e1b;
+      --chip: #1a2724;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0d1412; --ink: #e4ebe8; --ink-soft: #94a5a0; --rule: #23302c;
+    --brand: #4fbf96; --brand-soft: #12241d; --alert: #e06b6b; --alert-soft: #2a1717;
+    --code-bg: #131e1b; --chip: #1a2724;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 47rem; padding: 3rem 1rem 6rem;
+    background: var(--paper); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 17px; line-height: 1.68;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 2.05rem; line-height: 1.22; letter-spacing: -0.02em; margin: 0 0 .5rem; }
+  h2 { font-size: 1.42rem; line-height: 1.3; letter-spacing: -0.01em; margin: 3.2rem 0 .9rem;
+       padding-top: 1.4rem; border-top: 1px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 2.1rem 0 .6rem; letter-spacing: -0.005em; }
+  h4 { font-size: .95rem; margin: 1.5rem 0 .4rem; color: var(--ink-soft);
+       text-transform: uppercase; letter-spacing: .08em; }
+  p { margin: 0 0 1.05rem; }
+  a { color: var(--brand); text-underline-offset: 2px; }
+  .lede { font-size: 1.12rem; color: var(--ink-soft); margin-bottom: 1.6rem; }
+  .meta { font-size: .85rem; color: var(--ink-soft); margin-bottom: 2.2rem;
+          font-variant-numeric: tabular-nums; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: .1em .32em; border-radius: 3px; font-size: .88em; }
+  pre { background: var(--code-bg); padding: .85rem 1rem; border-radius: 6px;
+        border-left: 3px solid var(--rule); overflow-x: auto;
+        white-space: pre-wrap; overflow-wrap: anywhere; font-size: .82rem; line-height: 1.55;
+        margin: 0 0 1.1rem; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .callout { border-left: 3px solid var(--brand); background: var(--brand-soft);
+             padding: .85rem 1.1rem; margin: 1.4rem 0; border-radius: 0 5px 5px 0; }
+  .callout > :last-child { margin-bottom: 0; }
+  .callout .tag { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .1em;
+                  text-transform: uppercase; color: var(--brand); margin-bottom: .35rem; }
+  .warn { border-left-color: var(--alert); background: var(--alert-soft); }
+  .warn .tag { color: var(--alert); }
+  nav.toc { background: var(--chip); border-radius: 7px; padding: 1rem 1.3rem; margin: 0 0 2.6rem; }
+  nav.toc strong { display: block; font-size: .74rem; letter-spacing: .12em;
+                   text-transform: uppercase; color: var(--ink-soft); margin-bottom: .5rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; }
+  nav.toc li { margin: .18rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 1.3rem; font-size: .88rem; }
+  th, td { text-align: left; padding: .45rem .55rem; border-bottom: 1px solid var(--rule);
+           vertical-align: top; }
+  th { font-size: .74rem; letter-spacing: .07em; text-transform: uppercase;
+       color: var(--ink-soft); font-weight: 700; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  figure { margin: 1.8rem 0; }
+  figcaption { font-size: .82rem; color: var(--ink-soft); margin-top: .55rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  .stat-row { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.4rem 0; }
+  .stat { flex: 1 1 8.5rem; background: var(--chip); border-radius: 6px; padding: .7rem .85rem; }
+  .stat b { display: block; font-size: 1.28rem; line-height: 1.2;
+            font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat span { display: block; font-size: .76rem; color: var(--ink-soft); margin-top: .2rem; }
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.35rem; }
+  li { margin: .3rem 0; }
+  .ko { font-size: .96em; }
+  .src { font-size: .8rem; color: var(--ink-soft); margin: -.6rem 0 1.2rem; }
+  .q { border: 1px solid var(--rule); border-radius: 7px; padding: 1rem 1.15rem; margin: 1.1rem 0;
+       background: var(--chip); }
+  .q > p:first-child { margin-bottom: .7rem; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0;
+            padding: .55rem .8rem; cursor: pointer; font: inherit; font-size: .93rem;
+            border: 1px solid var(--rule); border-radius: 5px;
+            background: var(--paper); color: var(--ink); }
+  .q .opt:hover:not([disabled]) { border-color: var(--brand); }
+  .q .opt:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .q .opt.correct { background: var(--brand-soft); border-color: var(--brand); font-weight: 600; }
+  .q .opt.incorrect { background: var(--alert-soft); border-color: var(--alert); }
+  .q .why { margin: .65rem 0 0; font-size: .89rem; color: var(--ink-soft);
+            border-top: 1px solid var(--rule); padding-top: .55rem; }
+  @media (max-width: 480px) {
+    body { font-size: 16px; padding: 2rem 1rem 4rem; }
+    h1 { font-size: 1.62rem; }
+    h2 { font-size: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Read, Verify, Speak</h1>
+<p class="lede">How the AI inside 주주의관제탑 is built so that a language model can help a retail
+investor with money and deadlines — without ever being trusted with either.</p>
+<p class="meta">Repo <code>Mijual</code> · live at jujutower.com · model <code>gemini-3.7-flash</code>
+· figures measured 2026-08-20 unless dated otherwise</p>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background — a domain that punishes a confident guess</a></li>
+    <li><a href="#intuition">Intuition — three layers and three inversions</a></li>
+    <li><a href="#code">Code — the walk through the real modules</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>1. Background — a domain that punishes a confident guess</h2>
+
+<p>주주의관제탑 (<em>"the shareholders' control tower"</em>) watches Korean corporate disclosure for
+<strong>shareholder rights that carry a deadline</strong>, and tells an individual investor what is
+happening to their shares, when it expires, and where in the original filing that statement came
+from. Everything it says is derived from public filings on <strong>DART</strong>, the Financial
+Supervisory Service's electronic disclosure system. There is no price feed and no market-data
+vendor anywhere in the system.</p>
+
+<p>Three rights types ship in the MVP. It is worth knowing what each one actually is, because the
+AI design is a direct response to their shape.</p>
+
+<table>
+<thead><tr><th>Type</th><th>What it is</th><th>What expires</th><th>Reading cost</th></tr></thead>
+<tbody>
+<tr>
+  <td class="ko">① <strong>유상증자 신주인수권</strong></td>
+  <td>In a 주주배정 rights offering, every existing shareholder is issued a 신주인수권증서 — a
+      <em>tradable certificate</em> giving them the right to subscribe to new shares below market
+      price.</td>
+  <td>The 증서 lapses to <strong>₩0</strong> if it is neither exercised nor sold. The on-exchange
+      trading window is typically <strong>five trading days</strong>.</td>
+  <td>Mixed — the only type that needs the model at all</td>
+</tr>
+<tr>
+  <td class="ko">② <strong>전환사채 오버행</strong></td>
+  <td>A convertible bond's conversion terms — conversion price, refixing floor, when conversion
+      requests open, when a lockup releases.</td>
+  <td>Nothing expires for the shareholder; the <em>dilution</em> arrives on a date the filing
+      already announced.</td>
+  <td><strong>Zero LLM</strong> — entirely structured API fields</td>
+</tr>
+<tr>
+  <td class="ko">③ <strong>주식매수청구권</strong></td>
+  <td>Around a merger, a dissenting shareholder can require the company to buy their shares at a
+      set price — a floor under the stock.</td>
+  <td>A <strong>two-step</strong> procedure: written dissent <em>before</em> the shareholder
+      meeting, then the claim itself. Miss step one and step two does not exist for you.</td>
+  <td><strong>Zero LLM</strong> — entirely structured API fields</td>
+</tr>
+</tbody>
+</table>
+
+<p>The founding argument of the project is that this is not an information-scarcity problem. Every
+one of those facts is published, by law, on DART. The gap is between <em>공개</em> (disclosure) and
+<em>전달</em> (delivery): hundreds of filings land per day, the answer a person actually needs
+(<span class="ko">"I hold 500 shares — how much do I pay by when, for how many shares, and what do
+I lose if I don't?"</span>) appears nowhere in the statutory form, and the action window is short
+and irregular.</p>
+
+<div class="stat-row">
+  <div class="stat"><b>▷718.1억원</b><span>estimated 신주인수권 value that lapsed unexercised,
+    2026 YTD, across 32 rights offerings</span></div>
+  <div class="stat"><b>14.02%</b><span>of allotted 증서 (51.25M of 365.53M) neither subscribed nor
+    sold</span></div>
+  <div class="stat"><b>488</b><span>exposable events on the live board — 50 ① / 422 ② / 16 ③</span></div>
+</div>
+
+<h3>Why this domain is unusually hostile to a language model</h3>
+
+<p>Plenty of products let an LLM read documents and summarise them. Four properties of this one
+make that posture unavailable.</p>
+
+<ol>
+<li><strong>The output is an instruction to act, denominated in the reader's own money.</strong>
+Not "here is a summary of the filing" but "you hold 500 shares, you have ₩1,000,000 of value here,
+and the window closes on the 18th."</li>
+<li><strong>Failure is silent and unrecoverable.</strong> A lapsed 증서 cannot be reclaimed
+afterwards. Korea's central securities depository runs a long-standing campaign to return unclaimed
+shares and dividends — cumulative returns have passed <strong>1조원</strong> — but that campaign
+can only return things that still exist. A right that lapsed is simply gone, which is why the
+system's whole posture is <em>prevent before the deadline</em> rather than <em>detect
+afterwards</em>.</li>
+<li><strong>The source is a legal form, not prose.</strong> The value you need is scattered across
+numbered sections, sometimes genuinely absent, and sometimes <em>superseded</em> — a 정정공시
+(amended filing) can move a payment date by a month, which moves the reader's D-day by a month.</li>
+<li><strong>Every won figure is derived, not quoted.</strong> With no price feed, the theoretical
+value of a certificate is recovered by <em>inverting the issuer's own pricing formula</em> from
+the filing. A misread ratio does not produce a wrong sentence; it produces a wrong amount of
+money.</li>
+</ol>
+
+<div class="callout">
+<span class="tag">The governing constraint</span>
+<p class="ko"><strong>AI는 '읽기'와 '말하기'를 하고, '계산'만 결정론이 한다.</strong></p>
+<p style="margin-bottom:0"><em>The AI reads and speaks; only determinism calculates.</em> This one
+sentence, taken from the project's problem brief, is the reason every design decision below looks
+the way it does. It is not a quality target — it is a partition of responsibilities that the code
+is arranged to make checkable.</p>
+</div>
+</section>
+
+<section id="intuition">
+<h2>2. Intuition — three layers and three inversions</h2>
+
+<p>The system splits the model's job in two and puts something that cannot hallucinate between
+them.</p>
+
+<figure>
+<svg viewBox="0 0 700 250" role="img" aria-label="Three layers: read, verify, speak">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,1 L8,4.5 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-family="system-ui, sans-serif" font-size="13" fill="currentColor">
+    <rect x="8" y="34" width="196" height="118" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="106" y="22" text-anchor="middle" font-size="12" opacity=".65">LAYER 1</text>
+    <text x="106" y="60" text-anchor="middle" font-weight="700">읽기 · read</text>
+    <text x="106" y="84" text-anchor="middle" font-size="12" opacity=".8">the model, offline</text>
+    <text x="106" y="106" text-anchor="middle" font-size="11.5" opacity=".8">returns a value</text>
+    <text x="106" y="123" text-anchor="middle" font-size="11.5" opacity=".8">+ a verbatim quote</text>
+    <text x="106" y="142" text-anchor="middle" font-size="11.5" opacity=".55">10 prose fields only</text>
+
+    <rect x="252" y="34" width="196" height="118" rx="7" fill="none" stroke="currentColor" stroke-width="2.5"/>
+    <text x="350" y="22" text-anchor="middle" font-size="12" opacity=".65">LAYER 2</text>
+    <text x="350" y="60" text-anchor="middle" font-weight="700">검증 · verify</text>
+    <text x="350" y="84" text-anchor="middle" font-size="12" opacity=".8">no model at all</text>
+    <text x="350" y="106" text-anchor="middle" font-size="11.5" opacity=".8">locate the quote,</text>
+    <text x="350" y="123" text-anchor="middle" font-size="11.5" opacity=".8">then run a named gate</text>
+    <text x="350" y="142" text-anchor="middle" font-size="11.5" opacity=".55">fail ⇒ never shown</text>
+
+    <rect x="496" y="34" width="196" height="118" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="594" y="22" text-anchor="middle" font-size="12" opacity=".65">LAYER 3</text>
+    <text x="594" y="60" text-anchor="middle" font-weight="700">말하기 · speak</text>
+    <text x="594" y="84" text-anchor="middle" font-size="12" opacity=".8">the model, in-request</text>
+    <text x="594" y="106" text-anchor="middle" font-size="11.5" opacity=".8">an autonomous agent</text>
+    <text x="594" y="123" text-anchor="middle" font-size="11.5" opacity=".8">over gate-passed rows</text>
+    <text x="594" y="142" text-anchor="middle" font-size="11.5" opacity=".55">7 server-side tools</text>
+
+    <line x1="208" y1="93" x2="244" y2="93" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="452" y1="93" x2="488" y2="93" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="252" y="182" width="196" height="46" rx="6" fill="none" stroke="currentColor"
+          stroke-width="1" stroke-dasharray="4 3" opacity=".75"/>
+    <text x="350" y="200" text-anchor="middle" font-size="11.5" opacity=".8">mijual.calc — all 금액,</text>
+    <text x="350" y="216" text-anchor="middle" font-size="11.5" opacity=".8">D-day, 환산 arithmetic</text>
+    <line x1="350" y1="154" x2="350" y2="178" stroke="currentColor" stroke-width="1"
+          stroke-dasharray="4 3" opacity=".75" marker-end="url(#ar)"/>
+  </g>
+</svg>
+<figcaption>Two model-touching layers, with a deterministic one between them. Arithmetic never
+enters a model layer at all — it lives in <code>mijual.calc</code>, LLM-free and unit-tested.</figcaption>
+</figure>
+
+<p>That much is a fairly conventional "extract then validate" shape. What makes this system worth
+studying are three inversions of the usual practice.</p>
+
+<h3>Inversion 1 — ask for the quote, never for the span</h3>
+
+<p>The obvious way to get a citation out of a model is to ask for one: return the value
+<em>and</em> the character offsets where you found it. That is exactly what this system refuses to
+do. The module that does the work says why in its first sentence:</p>
+
+<pre><code>"""Quote → citation span, **deterministically**. The model never supplies one.
+
+This module is the reason the extractor is allowed to exist at all. §3.6's layer
+2 requires a *원문 인용 스팬* per exposed value, and a span invented by a language
+model is not evidence — it is a second thing to verify. So the model is asked for
+one thing only, a **verbatim quote**, and this code finds that string in the
+stored snapshot ...</code></pre>
+<p class="src">— <code>src/mijual/extract/locate.py</code>, module docstring</p>
+
+<p>The asymmetry is the whole point. <strong>A span is a claim; a quote is a testable claim.</strong>
+If a model hands you <code>span_start=4821</code>, you have acquired a second thing to verify and no
+way to verify it except by checking what is actually at 4821 — at which point you may as well have
+searched. If it hands you a string, you run <code>find()</code>. A paraphrase simply fails to
+locate, and the row is recorded as span-unresolved with the model's quote kept for the accuracy
+report.</p>
+
+<figure>
+<svg viewBox="0 0 700 210" role="img" aria-label="Quote to span resolution, four methods">
+  <g font-family="system-ui, sans-serif" font-size="12.5" fill="currentColor">
+    <rect x="8" y="16" width="215" height="78" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="115.5" y="38" text-anchor="middle" font-weight="700" font-size="12.5">model returns</text>
+    <text x="115.5" y="58" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace">{present, value,</text>
+    <text x="115.5" y="74" text-anchor="middle" font-size="11.5" font-family="ui-monospace, monospace">quote, note}</text>
+
+    <rect x="8" y="112" width="215" height="78" rx="6" fill="none" stroke="currentColor"
+          stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="115.5" y="134" text-anchor="middle" font-weight="700" font-size="12.5">stored snapshot</text>
+    <text x="115.5" y="154" text-anchor="middle" font-size="11.5" opacity=".8">the filing body as</text>
+    <text x="115.5" y="170" text-anchor="middle" font-size="11.5" opacity=".8">collected, byte-for-byte</text>
+
+    <text x="272" y="103" text-anchor="middle" font-size="12" opacity=".7">QuoteLocator</text>
+    <path d="M227,55 C250,55 250,96 268,100" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M227,151 C250,151 250,110 268,106" fill="none" stroke="currentColor" stroke-width="1.3"/>
+
+    <line x1="300" y1="103" x2="330" y2="103" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="338" y="14" width="354" height="182" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="356" y="36" font-size="11.5" font-weight="700" font-family="ui-monospace, monospace">exact</text>
+    <text x="440" y="36" font-size="11.5" opacity=".8">substring match → sets span_verified</text>
+    <text x="356" y="72" font-size="11.5" font-weight="700" font-family="ui-monospace, monospace">trimmed</text>
+    <text x="440" y="66" font-size="11.5" opacity=".8">after dropping edge punctuation and a</text>
+    <text x="440" y="81" font-size="11.5" opacity=".8">leading list marker (① rewritten as 1.)</text>
+    <text x="356" y="117" font-size="11.5" font-weight="700" font-family="ui-monospace, monospace">nospace</text>
+    <text x="440" y="111" font-size="11.5" opacity=".8">all whitespace removed both sides —</text>
+    <text x="440" y="126" font-size="11.5" opacity=".8">DART breaks words with &lt;BR/&gt;</text>
+    <text x="356" y="157" font-size="11.5" font-weight="700" font-family="ui-monospace, monospace">head</text>
+    <text x="440" y="157" font-size="11.5" opacity=".8">leading segment before an ellipsis</text>
+    <line x1="350" y1="172" x2="680" y2="172" stroke="currentColor" stroke-width="1" opacity=".35"/>
+    <text x="356" y="188" font-size="11.5" opacity=".8">anything else → <tspan font-family="ui-monospace, monospace">span_unresolved</tspan>, blocked</text>
+  </g>
+</svg>
+<figcaption>Four location methods, tried in order, <strong>all of them exact string matches</strong>
+— no fuzzy scoring and no "closest paragraph". Only <code>exact</code> sets
+<code>span_verified</code>; the other three are resolved but marked as how they were found.</figcaption>
+</figure>
+
+<h3>Inversion 2 — keep the verifier's evidence out of the generator's context</h3>
+
+<p>This one is the most transferable idea in the codebase, and it is easy to get backwards.</p>
+
+<p>A natural instinct when extraction quality is poor is to stuff more of the document into the
+prompt. But one of the ten fields is <span class="ko">청약 취급처</span> (where subscription is
+handled), and its deterministic gate is: <em>the subscription date in the extracted value must
+equal the date printed at 본문 label 11, 청약예정일</em>. If you put 본문 11 into the prompt, the
+model can copy the answer from it — and then the gate is no longer checking the model against the
+document. It is checking the prompt against itself.</p>
+
+<pre><code>Why nothing else goes in the prompt: the deterministic gate for 청약 취급처 is
+"청약일 must equal 본문 11. 청약예정일", so feeding 본문 11's value into the prompt
+would let the model copy the answer and the gate would be checking the prompt
+against itself.</code></pre>
+<p class="src">— paraphrasing <code>src/mijual/extract/prompt.py:5-11</code></p>
+
+<p>Generalised: <strong>an automated check is only worth its cost if its reference value was
+unavailable to the thing it is checking.</strong> If you are building an LLM pipeline with a
+validation layer, the context window and the validator's evidence set should be disjoint by
+construction — and that constraint should be written down next to the prompt, because the natural
+drift of prompt engineering is to add context until the check is vacuous.</p>
+
+<h3>Inversion 3 — make an invalid citation unconstructable, not filtered</h3>
+
+<p>The third layer, the user-facing agent, has to cite too. The usual approach is to let the model
+write references and then filter out the bad ones. This system instead makes bad ones impossible to
+express: <strong>a reference id exists only because a tool call returned it.</strong> The model
+cites <code>c7</code> because a tool result carried <code>c7</code>; there is no id space in which
+it could invent <code>c12</code> and be right. Anything marker-shaped that names nothing is simply
+removed from the prose.</p>
+
+<p>And there are deliberately two id spaces. The model writes <code>[[cite:c7]]</code>; the reader
+sees chip <strong>1</strong>, numbered in reading order and assigned when the answer first rests on
+that source. Same source, same number, without the model having to know or manage the reader's
+numbering.</p>
+
+<h3>The four verdicts, and what reaches a screen</h3>
+
+<p>Every extracted field ends in one of exactly four states, derived from a list of named checks
+rather than written by hand:</p>
+
+<table>
+<thead><tr><th>Verdict</th><th>Meaning</th><th>Shown?</th></tr></thead>
+<tbody>
+<tr><td><code>passed</code></td><td>at least one substantive check ran and none failed</td>
+    <td><strong>yes</strong></td></tr>
+<tr><td><code>tbd</code></td><td>the filing says the schedule is suspended (<span class="ko">추후결정</span>)
+    — a <em>verified</em> citation with null dates</td>
+    <td><strong>yes</strong>, as 추후결정 with <em>no date at all</em></td></tr>
+<tr><td><code>failed</code></td><td>a check failed</td>
+    <td>no — recorded with a reason code</td></tr>
+<tr><td><code>not_evaluable</code></td><td>nothing could be checked: field absent, call errored, or
+    the gate's own reference value does not exist</td>
+    <td>no — the conservative default</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<span class="tag">The rule that makes the rest work</span>
+<p style="margin-bottom:0">A skipped check <strong>is not a pass</strong>. A gate all of whose
+checks were skipped is <code>not_evaluable</code>, not <code>passed</code>. This is the single
+most commonly-inverted default in validation code: "I couldn't check it, so it's fine" quietly
+becomes "it's fine."</p>
+</div>
+
+<h4>A worked example, with made-up but correctly-shaped data</h4>
+
+<p>Take gate #1, <span class="ko">신주인수권증서 상장·매매기간</span> — the window during which the
+certificate can be sold on exchange. Suppose the pipeline has already collected a filing and
+stored its body. The extraction step sends the model one field's instruction plus a slice of that
+body, and gets back:</p>
+
+<pre><code>{
+  "present": true,
+  "value":   {"start": "2026-05-12", "end": "2026-05-18"},
+  "quote":   "① 신주인수권증서의 상장·매매기간은 2026년 5월 12일부터 2026년 5월 18일까지로 하며",
+  "note":    null
+}</code></pre>
+
+<p>Nothing about that is trusted yet. What happens next:</p>
+
+<ol>
+<li><strong>Locate.</strong> The quote starts with <code>①</code>, which the model may well have
+re-rendered from the document's own marker. <code>exact</code> misses; <code>trimmed</code> drops
+the leading list marker and matches. The row gets a real character span, method
+<code>trimmed</code>, <code>span_verified = false</code>.</li>
+<li><strong>Gate.</strong> The citation gate runs <em>first</em> on every field — an unlocatable
+quote is blocked before any arithmetic is attempted. Then the field's own named checks: the dates
+are in order, and the window sits between 배정기준일 and 청약일, both read from evidence the model
+never saw (the deterministic 본문 labels and the stored API detail row).</li>
+<li><strong>Persist.</strong> Verdict <code>passed</code>, written onto the row as
+<code>gate_status</code>, so the serving layer filters exposability in SQL and never re-implements
+the rule.</li>
+<li><strong>Serve.</strong> The detail page shows the window with a <span class="ko">[근거]</span>
+chip that opens the located sentence from the filing. The countdown beside it was computed by
+<code>mijual.calc</code> in KST, with no model involved at any point.</li>
+</ol>
+
+<p>Change one thing — the model paraphrases the sentence instead of copying it — and every one of
+those steps still runs, but the field is recorded <code>span_unresolved</code> and the reader sees
+<em>nothing</em> in that slot. Not a dash, not a placeholder, not "확인 필요". Absence.</p>
+</section>
+
+<section id="code">
+<h2>3. Code — the walk through the real modules</h2>
+
+<p>The backend is one Python package, <code>src/mijual/</code>, about 36k lines. Five of its
+modules matter for the AI story. The pipeline they sit in runs twice daily on Celery beat:</p>
+
+<pre><code>collect  →  bodydoc  →  extract  →  gates  →  reparse  →  snapshot
+(API rows)  (본문+spans) (labels,     (verdicts   (re-read      (serving
+                         then prose)  + exposure)  실적보고서)   precomputation)</code></pre>
+
+<p>Exactly one of those six stages spends money on a model.</p>
+
+<h3>3.1 읽기 — the reading layer</h3>
+
+<h4>A closed registry of ten fields</h4>
+
+<p><code>src/mijual/extract/fields.py</code> holds the model's <em>entire</em> reading job as ten
+<code>FieldSpec</code> entries — <code>warrant_trading_period</code>,
+<code>subscription_agents</code>, <code>forfeited_share_method</code>,
+<code>excess_subscription</code>, <code>issue_price_formula</code>, <code>refixing_terms</code>,
+<code>option_schedule</code>, <code>lockup_release</code>,
+<code>dissent_notice_procedure</code>, <code>correction_interpretation</code>. Everything else the
+product displays is either a structured OpenDART API field or a deterministic
+<code>본문-label</code> row.</p>
+
+<p>That boundary is enforced, not merely intended: a test asserts the LLM registry stays
+<strong>disjoint</strong> from <code>mijual.bodydoc.labels.LABEL_FIELDS</code>. A field that turns
+out to be label-readable belongs in <code>bodydoc</code> and is <em>not allowed</em> to be paid
+for with a model call. The project's own phrasing: <em>anything deterministically readable must
+not be paid for with an LLM call.</em></p>
+
+<p>Each spec carries four things — the JSON schema of the <em>normalized</em> value (ISO dates,
+decimal ratios, enums), a per-field Korean instruction naming the 본문 location the field survey
+measured, the gate that will judge it (carried as documentation, so layer 1 can be read without
+layer 2), and an anchor regex used <em>only</em> to window a large document, never to parse a
+value.</p>
+
+<h4>The prompt is four rules long</h4>
+
+<pre><code>규칙:
+1. 아래 &lt;본문&gt;에 실제로 적혀 있는 내용만 사용한다. 추정·보완·외부지식·계산 금지.
+   해당 항목이 문서에 없으면 present=false, value=null 로 답한다 (빈 값을 지어내지 말 것).
+2. quote 는 &lt;본문&gt; 텍스트에서 **문자 그대로 복사**한다. 요약·교정·줄임·재배열 금지.
+   길이는 20~200자 정도로, 값이 실제로 적힌 부분을 고른다.
+3. 날짜는 YYYY-MM-DD, 비율은 소수(20% -&gt; 0.2), 금액은 숫자만(원 단위)으로 정규화한다.
+4. 확신이 없으면 present=false 로 두고 note 에 이유를 한 줄 적는다. 추측은 오답보다 나쁘다.</code></pre>
+<p class="src">— <code>src/mijual/extract/prompt.py:32-38</code></p>
+
+<p>Rule 1 forbids inference, outside knowledge and <em>calculation</em>. Rule 2 is what makes the
+locator possible. Rule 4 ends with the line worth stealing:
+<strong><span class="ko">추측은 오답보다 나쁘다</span></strong> — <em>a guess is worse than a
+wrong answer</em>. Which is exactly right when a downstream gate exists: a wrong answer gets
+caught and recorded; a plausible guess is engineered to survive.</p>
+
+<h4>The audit row is the real output</h4>
+
+<p>Every call writes an <code>ExtractionCall</code> row (model, model version, schema version,
+prompt version, thinking level, prompt/thoughts/output token counts, ▷ estimated cost, latency,
+attempts, and the raw response), and every field writes an <code>Extraction</code> row keyed
+<code>(filing_version_id, field_key, schema_version)</code> carrying:</p>
+
+<ul>
+<li>the normalized <code>value</code>, and a human-readable <code>value_summary</code></li>
+<li>the <code>quote</code>, plus <code>span_start</code> / <code>span_end</code> /
+    <code>span_status</code> / <code>span_verified</code> / <code>locate_method</code></li>
+<li>the gate verdict: <code>gate_status</code> / <code>gate_reason_code</code> /
+    <code>gate_note</code> / <code>gate_checked_at</code></li>
+</ul>
+
+<p>Note what that schema makes possible: you can ask the database "how often did the model produce
+a quote that is not in the document, by field, by month" without re-running anything. The accuracy
+measurement in §3.5 is a query over rows that already exist.</p>
+
+<h3>3.2 검증 — the layer with no model in it</h3>
+
+<p><code>src/mijual/gates/rules.py</code> implements one named gate per field. Its docstring is
+also the specification:</p>
+
+<pre><code> #   field                                 gate
+===  ====================================  =========================================
+ 1   신주인수권증서 상장·매매기간            date order; between 배정기준일 and 청약일
+ 2   청약 취급처                            청약일 must equal 본문 ``11. 청약예정일``
+ 3   실권주 처리 방식                        enum: 일반공모 / 대표주관회사 인수 / 미발행
+ 4   초과청약 조건                          0 &lt; ratio ≤ 1; 배정주식수 × ratio 산술 검증
+ 5   발행가액 산정방법                       확정발행가 consistency vs 본문 ``6.``
+ 6   리픽싱 세부 조건                        floor == API ``act_mktprcfl_cvprc_lwtrsprc``
+ 7   콜·풋 세부 스케줄                       dates within 발행일 ~ 만기일
+ 8   보호예수 / 전매제한 해제일               ≥ 발행일
+ 9   반대의사 통지 방법·절차                  기한 == API ``mgsc_mgop_rcpd_bgd/_edd``
+10   정정 해석                              정정사항 rows parse; changes subset-consistent</code></pre>
+<p class="src">— <code>src/mijual/gates/rules.py</code>, module docstring</p>
+
+<p>Three rules bind every one of them, and they are the transferable part:</p>
+
+<ol>
+<li><strong>The citation gate runs first, on every field.</strong> A value whose quote could not be
+located is not a citation, so it is blocked before any arithmetic is attempted.</li>
+<li><strong>A gate compares against evidence the model never saw</strong> — deterministic 본문
+labels and the stored API detail row, <em>never against another model output</em>. (This is
+inversion 2, restated as an invariant rather than a prompt-authoring habit.)</li>
+<li><strong>Conservative on absence.</strong> A check whose reference value does not exist is
+skipped, not passed.</li>
+</ol>
+
+<h4>When the corpus beats the spec</h4>
+
+<p>Gate #8 is a good illustration of what a real validation layer does to a written spec. The
+field survey said the lockup release date must be ≥ the issue date. Then the gate met the corpus:
+in <strong>31 of 62</strong> rows a convertible bond states its transfer restriction as a
+<em>duration</em> (<span class="ko">사모발행에 의한 1년간 …</span>), not a date — and the rows
+that <em>did</em> carry a date carried one the model had computed. So the date is now derived
+deterministically from the API's 납입일 via <code>mijual.calc.lockup_release_date</code>, and any
+stated date is checked against it. A model-computed date stopped being an input and became
+something to disagree with.</p>
+
+<h4>The exposure contract</h4>
+
+<p>The verdicts are not consulted at render time by each surface; they are <em>persisted</em>, and
+everything above reads them:</p>
+
+<ul>
+<li>an <strong>event</strong> is exposable iff it is not suppressed, not withdrawn, and carries no
+blocking flag (<code>warrant_conflict</code>, <code>detail_conflict</code>,
+<code>event_key_collision</code>, <code>hint_split_evidence</code>);</li>
+<li>a <strong>field</strong> is renderable iff its gate verdict is <code>passed</code> or
+<code>tbd</code>.</li>
+</ul>
+
+<p>Both live on columns (<code>Event.exposure_state</code>, <code>Extraction.gate_status</code>),
+so the board filters in SQL and no serving layer re-implements exposure. Suppressed events are
+<em>retained</em> with a <code>suppressed_reason</code>, never deleted — so a suppression is
+auditable and reversible.</p>
+
+<div class="callout">
+<span class="tag">The trust promise, and its published price</span>
+<p>"A field that fails its gate is never shown" is cheap to say and expensive to mean. The project
+publishes the bill: <strong>▷49.2억원 — 6.4% of its own headline number — is deliberately left off
+the total</strong>, because three offerings with a citable lapse count had their discount-rate
+extraction fail the citation gate. The headline is smaller than it could be, on purpose, and the
+document says by how much.</p>
+<p style="margin-bottom:0">Verified on the live corpus rather than by test alone: <strong>409
+renderable field instances, 0 of them outside <code>passed</code>/<code>tbd</code>; 0
+<code>tbd</code> fields leaking a value; 0 exposable events in a non-exposable state.</strong></p>
+</div>
+
+<h3>3.3 말하기 — the agent</h3>
+
+<p>The user-facing <span class="ko">AI 질문</span> surface is an autonomous tool-calling agent, and
+that was a binding requirement rather than an implementation choice. The operator's words, recorded
+verbatim in the decision log: <em>"we need to build a agent not just llm chain."</em></p>
+
+<p>What makes that checkable rather than arguable is a control-flow property.</p>
+
+<figure>
+<svg viewBox="0 0 700 260" role="img" aria-label="The agent turn loop">
+  <g font-family="system-ui, sans-serif" font-size="12.5" fill="currentColor">
+    <rect x="18" y="20" width="150" height="44" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="93" y="47" text-anchor="middle" font-weight="700">model.stream()</text>
+
+    <path d="M168,42 L214,42" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="272" y="30" text-anchor="middle" font-size="11.5" opacity=".75">collect text chunks</text>
+    <text x="272" y="46" text-anchor="middle" font-size="11.5" opacity=".75">+ any function calls</text>
+
+    <path d="M330,42 L376,42" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <rect x="384" y="18" width="150" height="48" rx="6" fill="none" stroke="currentColor"
+          stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="459" y="38" text-anchor="middle" font-size="11.5">guard call present?</text>
+    <text x="459" y="55" text-anchor="middle" font-size="11.5" opacity=".7">→ end turn, run nothing</text>
+
+    <path d="M93,64 L93,100" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <rect x="18" y="106" width="150" height="44" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="93" y="126" text-anchor="middle" font-size="11.5">gate.flush()</text>
+    <text x="93" y="142" text-anchor="middle" font-size="11.5" opacity=".7">prose → reader</text>
+
+    <path d="M93,150 L93,186" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <rect x="18" y="192" width="150" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="93" y="212" text-anchor="middle" font-size="11.5">any calls?</text>
+    <text x="93" y="229" text-anchor="middle" font-size="11.5" opacity=".7">no → the turn is over</text>
+
+    <path d="M168,216 L250,216" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <rect x="258" y="192" width="170" height="48" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="343" y="212" text-anchor="middle" font-size="11.5">execute each call</text>
+    <text x="343" y="229" text-anchor="middle" font-size="11.5" opacity=".7">by the name the model gave</text>
+
+    <path d="M428,216 C500,216 520,216 560,216" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M560,216 C600,216 600,42 545,42" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="596" y="130" text-anchor="middle" font-size="11.5" opacity=".75">feed</text>
+    <text x="596" y="146" text-anchor="middle" font-size="11.5" opacity=".75">results</text>
+    <text x="596" y="162" text-anchor="middle" font-size="11.5" opacity=".75">back</text>
+  </g>
+</svg>
+<figcaption><code>run_turn</code>: <code>generate → (function_call? → execute → feed the result
+back) → repeat → answer</code>. A turn ends when the model emits a round with no function
+calls — that is, when <em>it</em> decides it is ready.</figcaption>
+</figure>
+
+<div class="callout">
+<span class="tag">The property, stated so it can be grepped</span>
+<p style="margin-bottom:0"><strong>No tool name appears in the control flow.</strong> Nothing is
+fetched before the model speaks or after it; no tool fires because a question matched a pattern;
+no ordering is imposed on the calls it asks for. <code>call_tool</code> is invoked from exactly
+one place in the whole codebase, dispatching on the name the model supplied. Even the reader's
+current 범위 (which filing they opened the widget from) is resolved with a plain row read and
+placed in the system instruction as <em>context</em> — specifically so that a scoped turn does not
+make one tool call mandatory.</p>
+</div>
+
+<p>There are seven tools: <code>search_events</code>, <code>get_event</code>,
+<code>get_portfolio</code>, <code>save_feedback</code>, <code>get_contact</code>,
+<code>calculate</code> and <code>security_check</code>. The last two are zero-I/O and therefore
+<code>BUDGET_EXEMPT</code> — and note how that exemption is expressed: as a frozenset declared
+<em>beside the tools</em>, which the loop asks about. The loop never names a tool even to exempt
+one.</p>
+
+<p>The same discipline covers the one place where a call ends the turn early. A
+<code>security_check</code> call is a refusal, not a tool, and the loop stops on it — but it
+discovers this by asking <code>security_incident(call.name, call.args)</code> whether <em>this
+call</em> is an incident. The placement is precise and deliberate: after the stream returns and
+calls are collected, <strong>before</strong> the citation gate flushes, <strong>before</strong>
+the tool-budget check, and <strong>before</strong> any tool executes. So no tool of that round
+runs, no <code>ModelMessage</code> is appended (the model gets no second chance to soften its own
+refusal), prose still sitting in the gate's buffer never reaches the reader, and the turn cannot
+end as <code>tool_budget</code> when what happened was a refusal. The incident is logged — category,
+a 200-character excerpt, the anonymous session handle — and stored in no database table. The
+reader never learns a check happened.</p>
+
+<h4>What the loop keeps for itself</h4>
+
+<p>Autonomy is scoped, not total. The model decides <em>what to call</em>; the loop owns
+everything that must not be a model's decision: the visible tool fact rows, the citation gate, the
+signed refusal sentences (recognised, never generated), the answer footer and outbound links
+composed from tool results <em>as data</em> so the model never writes a URL, the structural budget,
+and the spend ledger.</p>
+
+<p>The budget is <code>TurnBudget(max_rounds=20, max_tool_calls=30, max_model_calls=22)</code>,
+with one non-cosmetic invariant pinned by a test: <strong><code>max_model_calls</code> must stay
+≥ <code>max_rounds</code></strong>. The client's own ceiling fires <em>inside</em> a round, so a
+smaller model-call budget would abort reporting <code>call_budget</code> when what actually
+happened was <code>round_budget</code> — a ceiling that lies about which ceiling fired. Every cap
+maps to an honest terminal, and no ceiling is ever rendered as reader-facing copy.</p>
+
+<h4>The citation gate: strip, don't drop</h4>
+
+<p>This is the part of the system that was rebuilt in the light of production, and the story is
+instructive. The first version put a gate on the generation boundary and had it <em>judge</em>: a
+sentence whose markers did not resolve, or that cited nothing, or that stated a number no tool
+returned, was discarded before the reader saw it. Then the operator typed
+<span class="ko">「안녕」</span> — <em>hi</em> — and got back
+<span class="ko">「이 데이터는 검증을 통과하지 못했습니다」</span>. A greeting has nothing to cite,
+so a citation-mandatory gate deleted it and the surface fell back to a refusal.</p>
+
+<p>The boundary stayed; the judgement went. Under <em>strip-don't-drop</em>, the model's text still
+never streams to the reader — it streams into <code>CitationGate</code> — but what leaves is the
+prose the model wrote with everything unverifiable <strong>taken out of it</strong> rather than the
+sentence taken away:</p>
+
+<table>
+<thead><tr><th>Input</th><th>What leaves</th></tr></thead>
+<tbody>
+<tr><td>a marker naming an id a tool returned</td><td>a numbered chip</td></tr>
+<tr><td>a marker naming an id nothing returned, malformed, or cut in half by a dying stream</td>
+    <td>nothing — <em>and the sentence stands</em></td></tr>
+<tr><td>an uncited sentence (a greeting, a confirmation, a meta answer)</td>
+    <td>the sentence, unchanged</td></tr>
+<tr><td>a 공시-shaped figure present in no tool payload</td>
+    <td>the sentence, with the figure marked <span class="ko">「미확인」</span></td></tr>
+<tr><td>a <span class="ko">「…」</span> span occurring verbatim in nothing a tool returned</td>
+    <td>the words, <em>without the quotation marks</em></td></tr>
+</tbody>
+</table>
+
+<p>That last row is the subtlest move in the file, and it generalises well. What the "never
+fabricate a quote" rule protects is not the words — it is the <em>claim of being 원문</em>. So
+strip the claim and let the words through as the assistant's own prose, where their figures are
+then traced like any other. The rule is satisfied, and nothing is silently deleted.</p>
+
+<p>Consistently with that, <code>blocked</code> on the turn terminal counts <strong>removed
+markers, not dropped sentences</strong>. An operator watching that number is watching the model's
+citing behaviour; nothing the reader saw is missing because of it.</p>
+
+<div class="callout warn">
+<span class="tag">The limit the code states about itself</span>
+<p style="margin-bottom:0">The figure check is <strong>membership, not semantics</strong>. A token
+that appears anywhere in any of the turn's tool payloads passes — so a value quoted in the wrong
+unit, or about the wrong field, passes too, and a turn that read a whole filing has a large
+permissible set. What it reliably catches is a figure that exists <em>nowhere upstream</em>, which
+is the shape of every computed, converted or invented one. The docstring says this out loud
+instead of letting the reader infer a stronger guarantee than exists.</p>
+</div>
+
+<h4>Arithmetic is routed, not forbidden</h4>
+
+<p>The first version of the agent simply banned computation. That produced its own defect: a
+reader asking <span class="ko">「계산해 주세요」</span> got a refusal for wanting arithmetic. The
+fix was a <code>calculate</code> tool that is a <em>window</em> onto <code>mijual.calc</code>, never
+a second implementation — an <code>op</code> enum over five existing primitives (배정 신주 ·
+초과청약 한도 · 소멸 증서 · D-day · 전매제한 해제일) plus a clearly-labelled AST-whitelisted
+expression hatch. The system instruction now reads:</p>
+
+<pre><code>ARITHMETIC HAPPENS IN THE TOOL, NEVER IN YOUR PROSE.
+...
+What stays forbidden is doing the arithmetic **yourself** — adding, subtracting,
+multiplying, converting or rounding in your head and writing the result down.
+Nothing downstream computes either: the surface only draws what you and the tools
+produced, so a number that went through no tool exists nowhere and reaches the
+reader marked 「미확인」.</code></pre>
+<p class="src">— <code>src/mijual/agent/instructions.py</code>, <code>_CALCULATOR</code></p>
+
+<p>The estimate family is deliberately <em>not</em> exposed through the calculator: an estimated
+value returned as a "calculation" result would silently lose its <span class="ko">「추정」</span>
+mark. And the reader's screen shows the calculation block drawn <em>before</em> the call runs, from
+the arguments themselves, then replaced in place when the result arrives — because auditability is
+half inputs and half result, and the inputs should be visible while the calculation is still
+pending.</p>
+
+<h4>The system instruction is a cache key</h4>
+
+<p>One more constraint worth copying. <code>instructions._RULEBOOK</code> is assembled <em>once at
+import</em> from static blocks, and <code>system_instruction()</code> appends only the turn's two
+changing values (the reader's 범위, and today's date in KST) at the tail. The prefix is therefore
+byte-identical across every turn of every session — asserted by a test that splits on the
+<code>THIS TURN.</code> seam. Any per-turn value placed above that seam silently defeats implicit
+prompt caching on every turn thereafter.</p>
+
+<p>And the honest part: whether the prefix is actually being credited is <strong>measured, not
+assumed</strong>. The cached-token count rides the spend ledger end to end, and the measurement
+across live passes is <code>cached 0</code> every time, with a roughly 5.5k-token prefix. The
+architecture document records that as an open question rather than as a claim that caching works.</p>
+
+<h3>3.4 The boundaries are tests, not prose</h3>
+
+<p>Through the pipeline-only era, the system's loudest invariant was <em>"no OpenDART call and no
+LLM call happens in a request path"</em> — published in three documents and in the service's own
+OpenAPI description. Then the agent arrived, and an agent streaming over SSE <strong>is</strong> a
+model call in a request path. There is a version of this story where the agent goes into a new
+top-level package, the existing import scans stay literally green, and the published sentence
+quietly becomes false. That was explicitly judged not good enough.</p>
+
+<p>The sentence was rewritten into three clauses, each carried by its own AST import scan:</p>
+
+<ol>
+<li><strong>No OpenDART call happens in any request path.</strong> A test walks every module under
+<code>src/mijual/web/</code> and fails if one imports <code>mijual.dart</code>,
+<code>mijual.collect</code> or <code>mijual.extract</code>; the same scan is applied to the
+derivation layer.</li>
+<li><strong>The model is reached only through <code>mijual.agent</code>.</strong> A test bans
+<code>google</code> / <code>openai</code> / <code>anthropic</code> anywhere under
+<code>src/mijual/web/**</code>, so the credential, the per-turn budget, the citation gate and the
+ledger cannot be bypassed by a handler that talks to the model API itself. It is a <em>routing</em>
+rule, not an absence.</li>
+<li><strong><code>mijual.web</code> speaks HTTP in exactly one file</strong> — and a fourth scan
+keeps spending modules out of <code>mijual.agent</code> too: the agent reads persisted rows, it
+never collects or extracts.</li>
+</ol>
+
+<p>The old absolute wording was corrected everywhere it had been published, including the OpenAPI
+description, which is an outward surface. The reasoning recorded with the change is the part worth
+keeping: <em>an invariant that is enforced by a test everyone trusts, but has silently stopped
+meaning what it says, is worse than no invariant.</em></p>
+
+<p>Two more properties are tests rather than assertions:</p>
+
+<ul>
+<li><strong>"Agent, not chain" is a test.</strong> <code>tests/test_agent_loop.py</code> drives the
+real <code>run_turn</code> with a ~20-line scripted model client. A loop with a hardcoded pre-fetch
+would fail the case that asserts a turn can complete with no tool round at all.</li>
+<li><strong>Anonymity is a schema property.</strong> The two conversation tables carry no account,
+email, IP or user-agent column and no foreign key in either direction — and
+<code>tests/test_web_conversations.py</code> <em>walks both tables' columns and every foreign key
+in the metadata</em> rather than trusting a reviewer. So <span class="ko">「대화는 익명으로
+저장됩니다」</span> moved from <em>trivially true, nothing stored</em> to <em>implemented and
+checkable</em>.</li>
+</ul>
+
+<p>The whole suite — 26 files, around 170 test functions — runs in a few seconds against in-memory
+SQLite with <strong>no network, no database, no API key and no live model call ever</strong>. The
+agent tests run against a scripted model, so they spend nothing.</p>
+
+<h3>3.5 How accuracy is measured — and what the number does not mean</h3>
+
+<p><code>evalset/</code> holds a frozen, stratified sample: <strong>344 (filing, field) rows over
+99 filings</strong>, drawn deterministically and frozen with every row's value, quote, context and
+gate verdict. The report reads two JSON files and <em>never the database</em>, so a label stays
+meaningful after the corpus moves under it.</p>
+
+<div class="stat-row">
+  <div class="stat"><b>98.6%</b><span>strict precision of what the product would show —
+    213/216 random picks, 95% Wilson CI [96–100%]</span></div>
+  <div class="stat"><b>0</b><span><code>wrong</code> labels across all 344 rows
+    (339 correct / 5 partial / 0 skip)</span></div>
+  <div class="stat"><b>12.2%</b><span>corpus-wide gate-block rate, 77 of 633 distinct rows</span></div>
+</div>
+
+<p><strong>Both error directions are measured</strong>, which is rarer than it should be. Precision
+alone is a metric a gate can buy by blocking more, so the report also measures <em>over-blocking</em>:
+how often the gate threw away a reading that was right. The result is uncomfortable and published
+anyway:</p>
+
+<div class="callout warn">
+<span class="tag">Over-blocking: 100%</span>
+<p style="margin-bottom:0"><strong>19/19</strong> blocked rows in the random draw, and
+<strong>48/48</strong> across every pick, were judged correct readings. In this sample the gate
+bought <em>no</em> precision at all: it removed no error and removed 48 true statements. Of those
+48, 30 are blocks the product wants anyway (<code>field_absent</code>,
+<code>superseded_api_reference</code>); 18 are actionable.</p>
+</div>
+
+<p>And the qualifier that governs every use of the accuracy number: <strong>these labels are
+cross-model judgements — Claude judging Gemini's extractions, at the operator's direction — and
+explicitly not human ground truth.</strong> Zero rows have been verified by a person.</p>
+
+<p>That qualifier is <em>mechanised rather than merely written down</em>, which is the part I would
+copy directly. <code>evalset/labels.json</code> carries a <code>judged_by</code> block
+(<code>judge</code> / <code>basis</code> / <code>imported_at</code>);
+<code>Labels.write()</code> refuses to write an unstamped file; the import command requires
+<code>--judged-by</code> and <strong>never inherits it</strong> from the previous file, so a human
+re-judging a handful of rows cannot silently keep a machine's stamp; and the report prints what the
+file says rather than a hardcoded sentence. The decision log adds a prose consequence: no artifact
+may describe these labels as human ground truth, and the phrase "hand-labelled" is forbidden for
+them.</p>
+
+<p>One more thing the report does well: it refuses to let a scary number travel without its split.
+The gate-block rate on ③ is 44%, which reads as "③ is badly extracted" — so the report states that
+of 11 blocked <code>dissent_notice_procedure</code> rows, 8 are
+<code>superseded_api_reference</code>, 1 is <code>api_deadline_absent</code>, 1 is
+<code>field_absent</code>, and exactly <strong>1</strong> is a real extraction mismatch. Likewise,
+all three strict misses turn out to be a single defect class: 실적보고서 figures <em>correctly
+summed</em> from two table rows but cited by one addend. The reading was right; the citation
+contract was too narrow.</p>
+</section>
+
+<section id="best-practices">
+<h2>4. Best practices &amp; next steps</h2>
+
+<p>How much of this is idiosyncratic, and how much is prevailing practice arrived at
+independently? Mostly the latter — with two deliberate divergences worth naming.</p>
+
+<h3>Where it aligns with prevailing practice</h3>
+
+<p><strong>Sentence-level, source-anchored citation is now a first-party feature elsewhere.</strong>
+Anthropic's Citations API chunks source documents into sentences, passes those chunks to the model,
+and produces responses with citations referencing those chunks — with one customer reporting source
+hallucinations falling from 10% to 0% (<a href="https://claude.com/blog/introducing-citations-api">Introducing
+Citations on the Anthropic API</a> — claude.com). Notably, the model references <em>provided
+chunks</em> rather than computing offsets into a document on its own. That is the same insight as
+inversion 1, reached from the other direction: the provider pre-commits the citable units;
+주주의관제탑 lets the model quote freely and then resolves the quote itself. The latter buys
+provider independence — this system runs on Gemini — at the cost of owning the locator.</p>
+
+<p><strong>Schema conformance is understood as shape, not truth.</strong> Constrained decoding
+guarantees a parseable, schema-valid object and nothing about whether the values are right:
+"constrained decoding guarantees well-formed outputs, not well-informed ones"
+(<a href="https://www.aidancooper.co.uk/constrained-decoding/">A Guide to Structured Outputs Using
+Constrained Decoding</a> — aidancooper.co.uk). The extraction layer's <code>FieldSpec.schema</code>
+gets exactly that much credit and no more, which is why a semantic gate sits behind every field.
+Many production pipelines stop at the schema and implicitly treat conformance as validation.</p>
+
+<p><strong>Autonomy with explicit stopping conditions.</strong> Anthropic defines agents as
+"systems where LLMs dynamically direct their own processes and tool usage, maintaining control over
+how they accomplish tasks," notes that "the autonomous nature of agents means higher costs, and the
+potential for compounding errors," and recommends "stopping conditions (such as a maximum number of
+iterations) to maintain control" (<a href="https://www.anthropic.com/research/building-effective-agents">Building
+Effective AI Agents</a> — anthropic.com). <code>TurnBudget(20, 30, 22)</code> is precisely that
+recommendation, with the refinement that each ceiling maps to a distinct, honest terminal reason.</p>
+
+<p><strong>Static prefix, variable tail.</strong> Google's guidance for implicit caching is to "try
+putting large and common contents at the beginning of your prompt" and to keep variable content at
+the end, with documented per-model minimum input token counts (the page lists e.g. 4,096 for Gemini
+3.8 Flash and 2,048 for Gemini 2.5 Flash) and a cached-token count reported in usage metadata
+(<a href="https://ai.google.dev/gemini-api/docs/caching">Context caching</a> — ai.google.dev). The
+<code>_RULEBOOK</code>-then-<code>THIS TURN.</code> arrangement, and the test that splits on that
+seam, implement the guidance as a structural constraint rather than a convention.</p>
+
+<h3>Where it diverges — and why that can be right here</h3>
+
+<p><strong>1. It builds an agent where the same guidance would suggest a workflow.</strong>
+Anthropic's advice is to prefer the simplest pattern that passes evaluation and reserve agents for
+open-ended problems "where it's difficult or impossible to predict the required number of steps."
+Answering "when does this warrant expire and what is it worth at my share count" from gate-passed
+rows is not obviously that problem — a retrieve → prompt → answer chain would plausibly have
+served, and would have been cheaper and lower-latency. The agent shape was an explicit operator
+requirement, adopted knowing the trade. What makes the divergence defensible rather than merely
+expensive is that the named risks are answered structurally: compounding error is bounded by
+budgets that each report which ceiling fired, and an autonomous turn cannot reach anything that
+spends or writes, because the tools are read-only and the import graph is scanned. It is also
+observably doing agentic work — on a search that returned nothing, the model corrected its own
+query and searched again unprompted.</p>
+
+<p><strong>2. Its accuracy number is cross-model, and it says so loudly.</strong> The literature is
+clear that LLM judges carry self-preference bias — one recent study of 20 models finds
+statistically significant bias in 17 of them, and explicitly notes that family effects "are not
+fully disentangled from pure self-preference," making it difficult to separate self-identification
+from shared stylistic and training characteristics
+(<a href="https://arxiv.org/html/2604.22891v4">Quantifying and Mitigating Self-Preference Bias of
+LLM Judges</a> — arxiv.org). Judging across families — Claude on Gemini — is the standard
+mitigation, and it is the right call given the alternative was no measurement. But it mitigates
+rather than eliminates, so the project's insistence that the figure is not ground truth is not
+false modesty; it is an accurate description of what the method supports. Mechanising the
+qualifier so it cannot be stripped downstream goes further than most teams bother to.</p>
+
+<p><strong>3. It intervenes at claim level, not turn level.</strong> The common safety posture is
+to block or regenerate a whole response that fails a check. Strip-don't-drop instead edits the
+response: markers leave, figures get marked, fabricated quotes lose their quotation marks, and the
+sentence survives. That is unusual, and the failure that motivated it — a greeting being answered
+with a verification error — is a good argument that turn-level gates over-trigger on the large
+fraction of traffic that has nothing to cite.</p>
+
+<h3>Next steps</h3>
+
+<ol>
+<li><strong>Buy a human anchor for the accuracy figure.</strong> The machinery is already there:
+overwrite column A of <code>evalset/sheet.csv</code> and re-run the import with a new
+<code>--judged-by</code>, and the report restates the new judge automatically. Even a stratified
+50–80 rows would convert "98.6%, cross-model" into a human-anchored estimate with a stated
+interval, and — given the family-effect caveat above — that is the single highest-value hour
+available to this system's credibility.</li>
+
+<li><strong>Act on over-blocking; it is the measured defect, and precision is not.</strong> The
+sample says the gate removed 48 true readings and zero errors. 18 of those are already diagnosed
+(stale API reference data, single-span citation for multi-line quotes, a quantified 개월 withheld
+for an underived 해제일), and all three strict misses share one root cause: a value correctly
+summed from two table rows cannot be expressed by a citation contract that permits one span.
+<strong>Letting a citation carry more than one span would close the strict-error class and part of
+the over-blocking class at the same time.</strong></li>
+
+<li><strong>Settle the <code>cached 0</code> reading.</strong> The documented prefix rules are
+already satisfied, and the minimums are published per model, so a prefix in the 5.5k range should
+qualify on any current Flash-class entry. Either the measurement is reading the wrong field, the
+turns are too far apart to share a cache, or this model's floor differs — and the answer changes
+per-turn cost on a surface that is free and unlimited. Worth one deliberate experiment (back-to-back
+turns, same scope) rather than leaving it as an open question.</li>
+
+<li><strong>Narrow the figure check from corpus-wide to field-scoped membership.</strong> Today a
+number passes if it appears anywhere in any payload the turn read. Carrying the field key alongside
+each traced value — which the tool results already know — would turn "this number exists upstream"
+into "this number is the value of the field this sentence claims," which is the gap the docstring
+already identifies as the honest limit.</li>
+</ol>
+</section>
+
+<section id="quiz">
+<h2>5. Quiz</h2>
+<p>Five questions on the load-bearing ideas. Click an answer to see whether it holds.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> The extractor asks the model for a verbatim quote and never for character
+  offsets. Why?</p>
+  <button class="opt" data-correct="false">Because quotes are cheaper to transmit than offsets.</button>
+  <button class="opt" data-correct="true">Because an offset from the model is itself an unverified
+    claim, whereas a quote can be checked by string search against the stored document.</button>
+  <button class="opt" data-correct="false">Because the document's character offsets change each
+    time the filing is re-collected.</button>
+  <button class="opt" data-correct="false">Because the citation gate has to run before any
+    arithmetic.</button>
+  <p class="why" hidden>A model-supplied span is "a second thing to verify" — and verifying it means
+  looking at what is actually there, which is the search you were trying to avoid. A quote is a
+  claim the code can test with <code>find()</code>. (Snapshots are content-addressed by SHA-1, so
+  offsets into a stored snapshot are stable.)</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> The extraction prompt deliberately omits the value printed at 본문 label
+  11 (청약예정일), even though it is right there in the document. What breaks if you include it?</p>
+  <button class="opt" data-correct="false">Nothing breaks; it is omitted only to save tokens.</button>
+  <button class="opt" data-correct="false">The model would exceed its structured-output schema.</button>
+  <button class="opt" data-correct="true">The gate for that field compares the answer against 본문 11
+    — so a model that can see it can copy it, and the gate ends up checking the prompt against
+    itself.</button>
+  <button class="opt" data-correct="false">본문 11 is frequently missing, so including it would
+    raise the <code>not_evaluable</code> rate.</button>
+  <p class="why" hidden>A check is only worth its cost if its reference value was unavailable to the
+  thing being checked. The natural drift of prompt engineering — add context until quality improves
+  — is exactly what silently makes a validation layer vacuous.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Under strip-don't-drop, what does the <code>blocked</code> count on a
+  turn's terminal event actually measure?</p>
+  <button class="opt" data-correct="false">Sentences the citation gate discarded before the reader
+    saw them.</button>
+  <button class="opt" data-correct="true">Citation markers that were removed without being
+    honoured — an id no tool returned, a malformed marker, or one cut in half by a dying
+    stream.</button>
+  <button class="opt" data-correct="false">Tool calls refused because the per-turn budget was
+    exhausted.</button>
+  <button class="opt" data-correct="false">Figures that were rendered to the reader with the
+    「미확인」 mark.</button>
+  <p class="why" hidden>The first option describes the <em>previous</em> design, which was retired
+  precisely because it deleted sentences. Under the current gate nothing the reader saw is missing
+  because of <code>blocked</code>; it is a window onto the model's citing behaviour, not a record
+  of censorship.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Which change would actually violate the "agent, not chain" property as the
+  codebase defines it?</p>
+  <button class="opt" data-correct="false">Raising <code>max_rounds</code> from 20 to 40.</button>
+  <button class="opt" data-correct="false">Adding an eighth tool to the declarations.</button>
+  <button class="opt" data-correct="true">Calling <code>search_events</code> once before the
+    model's first round, so the context is already warm when it starts.</button>
+  <button class="opt" data-correct="false">Exempting a new zero-I/O tool from the per-turn tool
+    budget.</button>
+  <button class="opt" data-correct="false">Letting a tool result be rendered as a structured block
+    instead of prose.</button>
+  <p class="why" hidden>The property is stated as a control-flow fact: no tool name appears in the
+  loop, and nothing is fetched before the model speaks. A "just to be safe" pre-fetch would break
+  the decision rather than optimise it — which is why even the reader's current 범위 is injected as
+  context rather than resolved through a mandatory tool call.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> The extraction accuracy figure is 98.6% strict (213/216). What does that
+  number <em>not</em> establish?</p>
+  <button class="opt" data-correct="false">That the extraction schema is enforced on every field.</button>
+  <button class="opt" data-correct="true">That any human has verified a single reading — the labels
+    are one model judging another's output, and the same sample shows the gate blocked 48 readings
+    that were correct.</button>
+  <button class="opt" data-correct="false">That the gate's verdicts are persisted rather than
+    recomputed per request.</button>
+  <button class="opt" data-correct="false">That the report can be regenerated without touching the
+    database.</button>
+  <p class="why" hidden>Zero of the 344 labels are human-verified, and cross-family judging mitigates
+  self-preference bias without eliminating it. The figure is also precision-only: pair it with the
+  over-blocking measurement (48/48 blocked rows judged correct) to see the whole error surface,
+  which is exactly why the report measures both directions.</p>
+</div>
+
+<p style="margin-top:2.4rem; color:var(--ink-soft); font-size:.9rem;">Everything above is drawn from
+the repository as it stands on 2026-09-21. Two figures carry caveats worth repeating if you quote
+them: the ▷718.1억원 lapse total is an estimate with no official statistic behind it, and the 98.6%
+accuracy is a cross-model judgement, not human ground truth.</p>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    var opts = q.querySelectorAll('.opt');
+    opts.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (right) {
+          opts.forEach(function (other) { other.disabled = true; });
+        } else {
+          opts.forEach(function (other) {
+            if (other.dataset.correct === 'true') { other.classList.add('correct'); }
+            other.disabled = true;
+          });
+        }
+        if (why) { why.hidden = false; }
+      });
+    });
+  });
+</script>
+</body>
+</html>
