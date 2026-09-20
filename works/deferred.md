@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `16`
+- Open: `17`
 - Promoted: `5`
 - Dropped: `3`
 
@@ -24,6 +24,7 @@
 | `D22` | `deferred` | Repo-wide prettier drift (51 files at clean HEAD) | P21.REVIEW | Operator decides format:check should become a real gate | `works/deferred/open/D22` |
 | `D23` | `deferred` | Bound the Gemini embed on the publish worker | P24.REVIEW | When adding timeouts/retries to embeddings or touching server/publish.py next | `works/deferred/open/D23` |
 | `D24` | `deferred` | Version durable docs for the automated alembic step in deploy.sh (operations/data/decisions still say manual) | P25.REVIEW | Next phase review (fold into its Doc impact consolidation), or the next deploy-machinery phase | `works/deferred/open/D24` |
+| `D25` | `deferred` | Server-rendered PDF export (headless Chromium) for documents | P28.DECOMP | someone needs a downloadable PDF file or agent/curl access to PDFs, or print output proves inconsistent across browsers | `works/deferred/open/D25` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
