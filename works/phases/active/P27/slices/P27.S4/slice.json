@@ -3,13 +3,13 @@
   "phase_id": "P27",
   "name": "Design round 05: graph at three viewports + legend project click",
   "kind": "co-work",
-  "status": "todo",
+  "status": "pending",
   "order": 4,
   "depends_on": [
     "P27.S3"
   ],
   "created_at": "2026-09-21T02:26:35+09:00",
-  "started_at": null,
+  "started_at": "2026-09-21T04:44:46+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
