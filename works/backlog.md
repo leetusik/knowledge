@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P27`
-- Current slice: `P27.DECOMP`
-- Next slice: `P27.REVIEW`
+- Current slice: `P27.S1`
+- Next slice: `P27.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `17`
 
@@ -21,7 +21,7 @@
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
-| [ ] `P27` | `planned` | `pending` | Console visual redesign — design system + responsive surfaces (design) | `P27.DECOMP` | `works/phases/active/P27` |
+| [ ] `P27` | `planned` | `pending` | Console visual redesign — design system + responsive surfaces (design) | `P27.S1` | `works/phases/active/P27` |
 | [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.DECOMP` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
@@ -96,7 +96,12 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P27.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P27/slices/P27.DECOMP` |
+| [x] `P27.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P27/slices/P27.DECOMP` |
+| [ ] `P27.S1` | `todo` | Seed ## Operator Runtime in the operations doc | `docs` | `works/phases/active/P27/slices/P27.S1` |
+| [ ] `P27.S2` | `todo` | Design round 03: design system re-established in the new account + responsive foundation | `co-work` | `works/phases/active/P27/slices/P27.S2` |
+| [ ] `P27.S3` | `todo` | Design round 04: console surfaces at three viewports (shell, dashboard, project + documents list, documents, auth, public shell) | `co-work` | `works/phases/active/P27/slices/P27.S3` |
+| [ ] `P27.S4` | `todo` | Design round 05: graph at three viewports + legend project click | `co-work` | `works/phases/active/P27/slices/P27.S4` |
+| [ ] `P27.S5` | `todo` | Design round 06: document views + chrome-less HTML-only view + Export PDF print appearance | `co-work` | `works/phases/active/P27/slices/P27.S5` |
 | [ ] `P27.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P27/slices/P27.REVIEW` |
 
 ## Phase P28: Console visual redesign — apply

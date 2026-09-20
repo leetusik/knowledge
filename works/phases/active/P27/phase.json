@@ -14,11 +14,11 @@
     "note": null
   },
   "acceptance": {
-    "required": null,
+    "required": false,
     "walkthrough": null,
     "requested_at": null,
     "cleared_at": null,
-    "note": null
+    "note": "design-only, no mockup: the operator signed the round on the card set"
   },
   "paths": {
     "phase_md": "phase.md",
