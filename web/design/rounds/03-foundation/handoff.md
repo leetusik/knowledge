@@ -9,20 +9,28 @@ back to you in §6 — I answer none of them.
 
 ---
 
-## 0. Before the session — this is a new Claude Design account
+## 0. Before the session — the project on the new account is ready
 
 The earlier rounds (01-landing, 02-onboarding) live in a Design System project on your **previous** account.
 This round re-establishes the system on the **new** account, from the real repo, so that rounds 04–06 can
-build on it there.
+build on it there. **The project already exists** — created on your instruction on 2026-09-21:
 
-1. In Claude Design (claude.ai/design) on the new account, create a **Design System** project (suggested name:
-   *Knowledge Base Design System*).
-2. **Connect GitHub** → `leetusik/knowledge`, branch `main` (I push right before you start, so the repo is
-   current). A local-directory connection also works if you prefer not to connect the repo.
+- **Knowledge Base Design System** · project id `623bb4ea-8fb7-4d31-9d58-5c6a42709bbe`
+- It holds a **`shipped/` baseline**: 15 cards under `Shipped · Foundations / Components / Console Pages`
+  that document the system **as implemented today** — verbatim copies of `kb-tokens.css`, `kb-console.css`
+  and `app-frame.css`, the same vendored fonts, and markup mirroring each React primitive. They are data,
+  not proposals: the "before" this round designs the "after" for. See `bootstrap.md` beside this file.
+
+Steps:
+
+1. Open the project in Claude Design (claude.ai/design) on the new account.
+2. **Connect GitHub** → `leetusik/knowledge`, branch `main`, so the session reads current code (the branch is
+   pushed by you — `git push origin main` — or use a local-directory connection to this checkout, which needs
+   no push).
 3. Give the session this file as its brief: `web/design/rounds/03-foundation/handoff.md`.
-4. When the cards are in the pane and the outputs in §5 are returned, come back here and say **"done"** and
-   give me the **project id** (from the project URL). Your "done" is what signs this round — unless you ask for
-   a runnable mockup first, in which case say so and the round waits on that instead.
+4. When the cards are in the pane and the outputs in §5 are returned, come back here and say **"done"**.
+   Your "done" is what signs this round — unless you ask for a runnable mockup first, in which case say so
+   and the round waits on that instead.
 
 ---
 
