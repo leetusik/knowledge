@@ -3,14 +3,14 @@
   "phase_id": "P27",
   "name": "Design round 06: document views + chrome-less HTML-only view + Export PDF print appearance",
   "kind": "co-work",
-  "status": "pending",
+  "status": "done",
   "order": 5,
   "depends_on": [
     "P27.S4"
   ],
   "created_at": "2026-09-21T02:26:35+09:00",
   "started_at": "2026-09-21T05:30:17+09:00",
-  "completed_at": null,
+  "completed_at": "2026-09-21T06:19:09+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 06 signed on the operator's literal 'done': the document views settled at 390/768/1180 plus paper (9 cards 33-41) — the reading column becomes a text/full grid that finally uses --kb-measure and retires prose.css's 46rem, the framed explainer takes the full 64rem with flat per-tier reserved heights, the actions row becomes two groups with Delete behind a hairline, the chrome-less view is ?view=full for both bodies with an always-visible exit pill mounted as a sibling of .kb-app, and the product gets its first @media print (always light, masthead + colophon, links printing targets, the superseded stamp boxed, page numbers left to the browser). 7 new tokens, additive; prose.css and explainer.css bodies replaced. Record in web/design/rounds/06-document-views/output/ + SIGNOFF.md; contract verified byte-identical to the landed stylesheets; round 05's regroup carried out. 19 new strings filed as an operator question",
   "validation": {
     "required": [],
     "last_run": null,
