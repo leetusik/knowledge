@@ -1,0 +1,196 @@
+/* ==========================================================================
+   Knowledge Base — Console SURFACES layer  (Round 04 · P27.S3)
+   --------------------------------------------------------------------------
+   Sits on top of console-responsive.css (Round 03). Round 03 built the kit —
+   breakpoints on the container, the navbar, the topbar, the table rule, the
+   states. Round 04 composes the six real surfaces out of it, and this file is
+   only what that composition needed and the kit did not already have.
+
+   ADDITIVE ONLY. Nothing above this file is edited: no token name or value
+   changes, no `.kb-*` class is renamed, and console.css / app-frame.css /
+   console-responsive.css are untouched verbatim records of earlier rounds.
+
+   Same structural rule as Round 03: every console query is an `@container`
+   query on `kbapp` (shell) or `kbmain` (content). The auth gate is outside the
+   shell, so it declares a container of its own — `kbauth` on `.kb-authgate` —
+   rather than reaching for the viewport: there are no `@media` rules in this
+   file.
+
+   Load order: kb-tokens.css → kb-console.css → app-frame.css →
+   kb-console-responsive.css → THIS.
+   ========================================================================== */
+
+/* -------- Page flow ------------------------------------------------------- */
+/* Every console page is one vertical stack. Today each panel carries its own
+   `margin-top: var(--kb-space-md)`; one `gap` says it once, and it is what makes
+   the stack's order reviewable in one place. */
+.kb-page-flow { display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.kb-page-flow > .kb-pageframe { margin-bottom: 0; }
+
+/* -------- Panel head ------------------------------------------------------ */
+/* The head carries a heading, optionally a lead or a mono caption, and at most
+   one trigger. Below 40rem it stacks and the trigger goes full width — a 44px
+   target beside a heading leaves the heading nowhere to go. */
+.kb-panel__headmain { min-width: 0; }
+.kb-panel__lead { margin: 0.3rem 0 0; font-size: 0.85rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); max-width: 44rem; text-wrap: pretty; }
+.kb-panel__caption { font-family: var(--kb-font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--kb-hint); white-space: nowrap; flex: none; }
+.kb-panel__head--start { align-items: flex-start; }
+@container kbmain (width < 40rem) {
+  .kb-panel__head { flex-direction: column; align-items: stretch; gap: 0.55rem; }
+  .kb-panel__head > .kb-appbtn, .kb-panel__head > form > .kb-appbtn { width: 100%; }
+  .kb-panel__caption { white-space: normal; }
+}
+
+/* -------- Disclosure forms (DECISION · Q6) -------------------------------- */
+/* One placement at every width: the revealed form is a BLOCK under the head it
+   hangs off, never a sheet, never a modal, never a field squeezed into the head
+   row. The trigger stays visible and keeps `aria-expanded`, so the disclosure
+   never hides the control that opened it and the page never jumps. */
+.kb-inlineform { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--kb-border); max-width: 24rem; }
+/* The page-frame variant (create project) has no panel around it, so it brings
+   its own surface. */
+.kb-inlineform--framed { margin-top: 0; padding-top: 0; border-top: 0; background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); padding: 0.95rem 1rem 1rem; }
+.kb-form-actions--end { justify-content: flex-end; }
+@container kbmain (width < 40rem) {
+  .kb-inlineform { max-width: none; }
+  .kb-form-actions--end { justify-content: stretch; }
+}
+
+/* -------- A field with its own submit beside it --------------------------- */
+/* The Public URL slug field: always visible (not a disclosure), so it cannot sit
+   in the panel head beside the lead — it is a row under the head at every width. */
+.kb-fieldrow { display: flex; align-items: flex-start; gap: 0.6rem; }
+.kb-fieldrow > .kb-field { flex: 1 1 auto; min-width: 0; }
+.kb-fieldrow > .kb-appbtn { flex: none; min-height: 2.85rem; margin-top: 1.55rem; }
+@container kbmain (width < 40rem) {
+  .kb-fieldrow { flex-direction: column; align-items: stretch; }
+  .kb-fieldrow > .kb-appbtn { width: 100%; margin-top: 0.2rem; }
+}
+
+/* -------- Mono hint line under a form ------------------------------------- */
+/* The documents search hint and the slug rule are SENTENCES, so they lose the
+   uppercase transform the mono eyebrow style carries; mono and hint-grey keep
+   them subordinate without shouting two lines of caps at a phone. */
+.kb-hintline { font-family: var(--kb-font-mono); font-size: 0.7rem; line-height: 1.55; color: var(--kb-hint); margin: 0.6rem 0 0; }
+
+/* -------- Search bar: submit + reset (DECISION · Q4) ---------------------- */
+/* A third cell in the bar at 40rem and up; its own row under the bar below it,
+   where Search takes the space and Reset stays the width of its label. */
+.kb-searchbar__actions { display: flex; align-items: center; gap: 0.5rem; flex: none; }
+@container kbmain (width < 40rem) {
+  .kb-searchbar__actions > .kb-appbtn:first-child { flex: 1 1 auto; }
+}
+
+/* -------- Result rows: snippet · tags · pager ----------------------------- */
+.kb-snippet { display: block; margin-top: 0.25rem; font-size: var(--kb-text-caption); line-height: var(--kb-leading-snug); color: var(--kb-hint); }
+.kb-snippet mark { background: var(--kb-accent-soft); color: var(--kb-accent-strong); border-radius: 2px; padding: 0 0.15em; }
+.kb-taglist { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+/* Overflow marker for a row carrying more tags than the cell can show. */
+.kb-chip--more { color: var(--kb-hint); background: transparent; border-color: var(--kb-border); }
+.kb-pager { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: var(--kb-space-md); }
+@container kbmain (width < 40rem) {
+  .kb-pager { justify-content: space-between; }
+  .kb-pager > * { flex: 1 1 0; justify-content: center; min-height: var(--kb-tap); }
+}
+
+/* -------- Two-step confirm inside a row ----------------------------------- */
+/* Revoke and Delete arm in place: the prompt replaces the label and the two
+   buttons sit beside it. In a stacked phone card the prompt takes its own line
+   above them, because "Delete permanently? This can't be undone." is a sentence,
+   not a label. */
+.kb-confirm { display: inline-flex; align-items: center; gap: 0.45rem; }
+.kb-confirm__prompt { font-size: var(--kb-text-caption); line-height: var(--kb-leading-snug); color: var(--kb-status-revoked-ink); }
+@container kbmain (width < 40rem) {
+  .kb-confirm { display: flex; flex-wrap: wrap; width: 100%; gap: 0.4rem; }
+  .kb-confirm__prompt { flex: 1 0 100%; }
+  .kb-dtable tr > td:last-child .kb-confirm .kb-appbtn { width: auto; flex: 1 1 0; }
+}
+
+/* -------- Page frame: the project header's status pair -------------------- */
+/* The Public/Private chip, the toggle that inverts it, and the one-line hint
+   that says what the current state means. */
+.kb-pageframe__status { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; flex: none; }
+.kb-pageframe__hint { font-size: 0.8rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); text-align: right; max-width: 17rem; margin: 0; }
+@container kbmain (width < 40rem) {
+  .kb-pageframe__status { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; }
+  .kb-pageframe__status > .kb-appbtn { flex: 1 1 auto; }
+  .kb-pageframe__hint { order: 3; flex: 1 0 100%; text-align: left; max-width: none; }
+}
+
+/* -------- Public URL line ------------------------------------------------- */
+.kb-urlline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.kb-urlline__label { font-family: var(--kb-font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--kb-hint); }
+.kb-urlline__url { font-family: var(--kb-font-mono); font-size: 0.85rem; color: var(--kb-ink); word-break: break-all; }
+@container kbmain (width < 40rem) { .kb-urlline > .kb-appbtn { width: 100%; } }
+
+/* -------- Recent activity feed -------------------------------------------- */
+/* A mono relative-time column and a sentence with one bolded entity. The time
+   column holds its 4.6rem at every width: it is what makes the feed scannable,
+   and at 390 it still leaves 17rem for the sentence. */
+.kb-activity { list-style: none; margin: 0; padding: 0; }
+.kb-activity__row { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--kb-border); font-size: 0.85rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); }
+.kb-activity__row:last-child { border-bottom: 0; }
+.kb-activity__time { width: 4.6rem; flex: none; font-family: var(--kb-font-mono); font-size: 0.68rem; color: var(--kb-hint); }
+.kb-activity__row b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+
+/* -------- Anonymous public shell (DECISION · Q8) -------------------------- */
+/* No rail, so main would run to the window edge at any width. It is capped at
+   the same 88rem the member console caps at above 90rem and centred — a visitor
+   never gets a wider column than a member. The Sign in action is never hidden. */
+.kb-app--public .kb-app-main { max-width: var(--kb-app-max-w); margin-inline: auto; width: 100%; }
+.kb-topbar__signin { flex: none; }
+
+/* -------- Show-once key reveal on a phone (DECISION · Q6) ----------------- */
+/* The one overlay the console keeps, because dismissing it loses the key. Below
+   40rem it becomes a bottom sheet: the key sits above the thumb, Copy is the
+   full-width primary, and the sheet clears the navbar. */
+@container kbapp (width < 40rem) {
+  .kb-reveal-overlay { align-items: end; padding: 0; }
+  .kb-reveal { width: 100%; border-radius: var(--kb-radius) var(--kb-radius) 0 0; padding: 1.1rem 1.05rem calc(1.15rem + env(safe-area-inset-bottom, 0px)); }
+  .kb-reveal__key { flex-direction: column; align-items: stretch; gap: 0.55rem; }
+  .kb-reveal__key .kb-appbtn { width: 100%; }
+}
+
+/* -------- Auth gate (DECISION · Q7) --------------------------------------- */
+/* The gate is its own stage: no shell, no rail, no page chrome. It is still
+   measured on a CONTAINER, not the viewport — `.kb-authgate` declares `kbauth`
+   and the page padding lives on the wrap inside it, so the rule that governs a
+   390px phone is the same rule a 390px specimen frame proves. `safe center`
+   keeps the card's top reachable when the software keyboard shortens the
+   viewport; plain centring clips it. The card is never full-bleed: the card IS
+   the threshold.
+
+   `.kb-authcard` replaces the component's inline styles one-for-one; no value
+   here is new except where a phone rule says so. */
+.kb-authgate { container: kbauth / inline-size; min-height: 100dvh; display: grid; justify-items: center; align-content: safe center; background: var(--kb-paper); }
+.kb-authgate__wrap { width: min(28rem, 100%); padding: 3.5rem 1.5rem; }
+.kb-authcard { background: linear-gradient(180deg, #26221b, #1f1c16); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); padding: 1.6rem 1.6rem 1.3rem; box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(236, 228, 215, 0.06); }
+.kb-authcard__brand { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.5rem; }
+.kb-authcard__word { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.35rem; color: var(--kb-ink); }
+.kb-authcard__pill { display: inline-flex; align-items: center; gap: 0.4rem; flex: none; font-family: var(--kb-font-mono); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--kb-accent); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-pill); padding: 0.3em 0.6em; }
+.kb-authcard__pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
+.kb-authcard__lead { font-family: var(--kb-font-display); font-weight: var(--kb-weight-semibold); font-size: 1.35rem; line-height: var(--kb-leading-display); color: var(--kb-ink); margin: 0 0 0.2rem; }
+.kb-authcard__sub { font-size: 0.88rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); margin: 0 0 1.3rem; text-wrap: pretty; }
+/* The status-keyed error sits between the last field and the submit, and its
+   box is ALWAYS rendered, so arriving at an error moves nothing. */
+.kb-authcard__error { min-height: 1.15rem; margin: 1rem 0 0.55rem; font-size: 0.82rem; line-height: var(--kb-leading-snug); color: var(--kb-status-revoked-ink); }
+.kb-authcard__submit { width: 100%; }
+.kb-authcard__trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.1rem; margin-top: 1.3rem; padding-top: 1rem; border-top: 1px solid var(--kb-border); }
+.kb-authcard__trustitem { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--kb-font-mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--kb-hint); white-space: nowrap; }
+.kb-authcard__trustitem i { width: 5px; height: 5px; border-radius: 50%; background: var(--kb-accent); flex: none; }
+.kb-authcard__alt { text-align: center; font-size: 0.88rem; color: var(--kb-secondary); margin: 1.3rem 0 0; }
+.kb-authcard__alt a { color: var(--kb-accent); font-weight: var(--kb-weight-semibold); text-decoration: none; }
+.kb-authcard__alt a:hover { color: var(--kb-accent-strong); text-decoration: underline; }
+@container kbauth (width < 40rem) {
+  .kb-authgate__wrap { padding: 2.2rem var(--kb-app-gutter-phone) 2.6rem; }
+  .kb-authcard { padding: 1.15rem 1.15rem 1.05rem; }
+  .kb-authcard__brand { margin-bottom: 1.15rem; }
+  /* Restated for the gate: Round 03's tap floor and 16px inputs live inside
+     `@container kbapp`, and the gate is not inside `.kb-app`. */
+  .kb-authcard .kb-field__input { min-height: var(--kb-tap); font-size: 1rem; }
+  .kb-authcard .kb-appbtn { min-height: var(--kb-tap); }
+  .kb-authcard__trust { gap: 0.35rem 0.85rem; }
+}
+
+/* -------- Specimen-only state aliases (not used in production) ------------ */
+.kb-authcard .kb-field__input.is-focus { border-color: var(--kb-accent); box-shadow: 0 0 0 3px var(--kb-accent-soft); }
