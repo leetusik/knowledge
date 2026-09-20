@@ -1,10 +1,11 @@
 ---
 doc_id: operations
-version: v0022
-created_at: 2026-08-06T00:03:33+09:00
-source: P24.REVIEW
-summary: P24 push runs after the response: new KB_GIT_TIMEOUT_S knob, bring-up asserts push capability from the container log plus git state instead of the retired pushed/push_error fields, publish-on-write flow corrected
-previous: v0021_p20_onboarding_ship_web_public_install.sh_skill.md_served_live_at_install.sh_skill.md_zero_infra_operator-gated_push_web-deploy_cutover_verified_live_no_migration_d11_inert
+version: v0023
+created_at: 2026-09-21T06:22:04+09:00
+commit: 9dd74c9b56aa7886b6eaea1cb4f4d18c99d9e1b0
+source: P27.REVIEW
+summary: P27 operator runtime manifest: how the operator runs and views the web product (dev + production runtimes, acceptance origin, devices/viewports, Aside agent account u1)
+previous: v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected
 ---
 
 # Operations
@@ -20,6 +21,19 @@ Both tracks operational, and **as of P9 the whole site — the human web UI *and
 - Test: `uv run pytest -q`.
 - Run API (host): `uv run uvicorn server.main:app --port 8766`.
 - Reindex (drift repair CLI): `uv run python -m server.reindex` (prints `indexed:/removed:/skipped:/embeddings:/duration_ms:`; never runs git). P4: `uv run python -m server.reindex <rel_path>` reindexes a single path incrementally (reports per-path). The `embeddings:` line reports the content-hash-cached embedding sync (`embedded=… cached=… removed=… skipped_reason=…`).
+
+## Operator Runtime
+
+How the operator runs and views the product, and what any browser-verifying slice must match — the dev runtime and the production build when the two differ, never whichever is most convenient for the executor.
+
+- **Dev runtime:** `pnpm --dir web dev` → `http://127.0.0.1:3030`. The BFF calls the API server-to-server at `KB_API_BASE_URL` (dev default `http://127.0.0.1:8766`, see *Web app local build/run (P12)*); run the API on the host with `uv run uvicorn server.main:app --port 8766` (see *Local Development*).
+- **Production build check:** `pnpm --dir web build` (standalone output). Part of the doc's own gate list — `typecheck · lint · test · build` (see *Web app local build/run (P12)*) — run this locally to catch build-only drift before trusting a dev-only pass.
+- **Production / acceptance origin:** `https://knowledge.hi2vi.com` — container `knowledge-web`, `NEXT_PUBLIC_APP_URL` baked in at image build (see *Web app production deploy (P14)*). **The operator accepts on production.** A slice verifies on dev and additionally in the production build when the two differ.
+- **Devices / browsers:** iPhone (Safari + Chrome), iPad (Safari + Chrome), Mac Chrome.
+- **Viewports:** phone 390×844; tablet 820×1180 portrait and 1024×768 landscape; desktop 1280–1440 wide (1440×900 reference).
+- **Instrument:** Aside, `repl` surface over Bash — `aside repl --account u1 "<js>"`. **Agent account id: `u1`** (operator's word, 2026-09-21). `u0` is the operator's own signed-in profile (Google, `leetusik@gmail.com`) — never drive it. Caveat: `u1` has been seen holding a signed-in admin tab for another product of the operator's; `u2` is a clean, signed-out alternative if the operator asks to switch.
+  - Repl sharp edges: each CLI call is its own session and its tabs close at the end — open the page inside the call, never attach to `tabs[0]` blindly. `page` has `evaluate` / `screenshot` / `goto` / `locator` / `getByRole('button', 'Zoom in')` (string form) / `mouse`, but **no** `setViewportSize` and **no** `waitForTimeout` (use the global `sleep(ms)`). Screenshots take a **relative** path and land under `~/.aside/u/1/sessions/<id>/`. Narrow viewports come from Chrome device emulation or real devices — the app has no width media queries beyond `documents/page.tsx`'s single `min-[720px]:`, so constraining document width only approximates layout.
+  - Fallback when Aside is unavailable: the same checks, at the same viewports, through any real browser — the demands bind, the instrument does not.
 
 ## Deployment (Docker Compose)
 

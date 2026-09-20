@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `17`
+- Open: `23`
 - Promoted: `5`
 - Dropped: `3`
 
@@ -25,6 +25,12 @@
 | `D23` | `deferred` | Bound the Gemini embed on the publish worker | P24.REVIEW | When adding timeouts/retries to embeddings or touching server/publish.py next | `works/deferred/open/D23` |
 | `D24` | `deferred` | Version durable docs for the automated alembic step in deploy.sh (operations/data/decisions still say manual) | P25.REVIEW | Next phase review (fold into its Doc impact consolidation), or the next deploy-machinery phase | `works/deferred/open/D24` |
 | `D25` | `deferred` | Server-rendered PDF export (headless Chromium) for documents | P28.DECOMP | someone needs a downloadable PDF file or agent/curl access to PDFs, or print output proves inconsistent across browsers | `works/deferred/open/D25` |
+| `D26` | `deferred` | Capture the off-frame graph screenshot before P28 implements the graph | P27.REVIEW | Before P28's graph apply slice starts, or the next time the operator sees the defect. If it survives the apply, capture the stored sessionStorage view record and the plate's measured size at first paint before changing anything else. | `works/deferred/open/D26` |
+| `D27` | `deferred` | Decide whether a closing consistency-sweep design round 07 is wanted | P27.REVIEW | If P28's apply reveals cross-round drift the four contracts do not settle; otherwise close as 'no sweep'. | `works/deferred/open/D27` |
+| `D28` | `deferred` | Operator copy decision: adopt round 03 card 14's error / not-found / empty strings verbatim? | P27.REVIEW | When P28 cuts the slice implementing the system-wide states (.kb-editorial / .kb-empty). | `works/deferred/open/D28` |
+| `D29` | `deferred` | Operator copy decision: adopt round 05's new graph strings, including the Korean halves? | P27.REVIEW | When P28 cuts the graph apply slice, before the strings land in web/src/content/graph.ts. | `works/deferred/open/D29` |
+| `D30` | `deferred` | Operator copy decision: adopt round 06's nineteen document/print strings, and should they be bilingual? | P27.REVIEW | When P28 cuts the document-views apply slice, before the strings land in web/src/content/documents.ts. | `works/deferred/open/D30` |
+| `D31` | `deferred` | Retire round 06's card group label in the Knowledge Base Design System project | P27.REVIEW | The next DesignSync session that opens project 623bb4ea-8fb7-4d31-9d58-5c6a42709bbe. | `works/deferred/open/D31` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |

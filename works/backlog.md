@@ -5,11 +5,11 @@
 
 ## Pointer
 
-- Current phase: `P27`
-- Current slice: `P27.REVIEW`
-- Next slice: `none`
+- Current phase: `P28`
+- Current slice: `P28.DECOMP`
+- Next slice: `P28.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `17`
+- Open deferred jobs: `23`
 
 ## Active Phases
 
@@ -21,7 +21,7 @@
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
-| [ ] `P27` | `planned` | `pending` | Console visual redesign — design system + responsive surfaces (design) | `P27.REVIEW` | `works/phases/active/P27` |
+| [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.DECOMP` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
@@ -102,7 +102,7 @@
 | [x] `P27.S3` | `done` | Design round 04: console surfaces at three viewports (shell, dashboard, project + documents list, documents, auth, public shell) | `co-work` | `works/phases/active/P27/slices/P27.S3` |
 | [x] `P27.S4` | `done` | Design round 05: graph at three viewports + legend project click | `co-work` | `works/phases/active/P27/slices/P27.S4` |
 | [x] `P27.S5` | `done` | Design round 06: document views + chrome-less HTML-only view + Export PDF print appearance | `co-work` | `works/phases/active/P27/slices/P27.S5` |
-| [ ] `P27.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P27/slices/P27.REVIEW` |
+| [x] `P27.REVIEW` | `done` | phase review | `review` | `works/phases/active/P27/slices/P27.REVIEW` |
 
 ## Phase P28: Console visual redesign — apply
 
