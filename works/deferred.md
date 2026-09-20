@@ -7,7 +7,6 @@
 - Open: `16`
 - Promoted: `5`
 - Dropped: `3`
-- Rebuilt at: `2026-08-08T04:56:51+09:00`
 
 ## Open
 
