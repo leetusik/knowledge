@@ -80,9 +80,9 @@
       "order": 7,
       "path": "works/phases/active/P27",
       "review_status": "pending",
-      "current_slice": "P27.S1",
+      "current_slice": "P27.S2",
       "slice_count": 7,
-      "done_slice_count": 1
+      "done_slice_count": 2
     },
     {
       "id": "P28",
@@ -100,5 +100,5 @@
   "deferred_open_count": 17,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-09-21T02:30:05+09:00"
+  "last_rebuilt_at": "2026-09-21T02:33:07+09:00"
 }
