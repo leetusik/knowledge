@@ -5,11 +5,11 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P27`
+- Current slice: `P27.DECOMP`
+- Next slice: `P27.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `16`
+- Open deferred jobs: `17`
 
 ## Active Phases
 
@@ -21,6 +21,8 @@
 | [x] `P24` | `done` | `pass` | Upload finish-return timeout | `none` | `works/phases/active/P24` |
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
+| [ ] `P27` | `planned` | `pending` | Console visual redesign — design system + responsive surfaces (design) | `P27.DECOMP` | `works/phases/active/P27` |
+| [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.DECOMP` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
 
@@ -89,3 +91,17 @@
 | [x] `P26.S5` | `done` | Knowledge: why it is this way, and how to change it | `knowledge` | `works/phases/active/P26/slices/P26.S5` |
 | [x] `P26.S6` | `done` | Audit and refresh README.md | `implementation` | `works/phases/active/P26/slices/P26.S6` |
 | [x] `P26.REVIEW` | `done` | phase review | `review` | `works/phases/active/P26/slices/P26.REVIEW` |
+
+## Phase P27: Console visual redesign — design system + responsive surfaces (design)
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P27.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P27/slices/P27.DECOMP` |
+| [ ] `P27.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P27/slices/P27.REVIEW` |
+
+## Phase P28: Console visual redesign — apply
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P28.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P28/slices/P28.DECOMP` |
+| [ ] `P28.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |

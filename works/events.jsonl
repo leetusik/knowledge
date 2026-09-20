@@ -829,3 +829,6 @@
 {"ts": "2026-08-08T04:56:39+09:00", "type": "slice_status_changed", "slice": "P26.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-08-08T04:56:39+09:00", "type": "phase_reviewed", "phase": "P26", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-09-21T00:29:22+09:00", "type": "agents_synced", "changed": [".claude/agents/slice-executor-mid.md", ".claude/agents/slice-executor-high.md"], "config_present": true}
+{"ts": "2026-09-21T02:07:49+09:00", "type": "phase_created", "phase": "P27"}
+{"ts": "2026-09-21T02:07:49+09:00", "type": "phase_created", "phase": "P28"}
+{"ts": "2026-09-21T02:07:49+09:00", "type": "deferred_created", "deferred": "D25", "source": "P28.DECOMP"}

@@ -71,10 +71,34 @@
       "current_slice": null,
       "slice_count": 8,
       "done_slice_count": 8
+    },
+    {
+      "id": "P27",
+      "name": "Console visual redesign — design system + responsive surfaces (design)",
+      "objective": "Re-establish the Knowledge design system in the operator's new Claude Design account from the real repo, then design the responsive (phone/tablet/desktop) console, graph, and document-view surfaces — including the project document list, the chrome-less HTML view, and the PDF export affordance — as signed, immutable rounds; no product code.",
+      "status": "planned",
+      "order": 7,
+      "path": "works/phases/active/P27",
+      "review_status": "pending",
+      "current_slice": "P27.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P28",
+      "name": "Console visual redesign — apply",
+      "objective": "Implement P27's signed design rounds faithfully across the console, graph and document views at phone/tablet/desktop; fix the graph (off-frame default view, id-based node links, anonymous tag bounce, empty-state sizing); add the project document list (project page + graph legend), the chrome-less HTML-only document view, and print-pipeline PDF export; verify in the operator runtime with a real browser.",
+      "status": "planned",
+      "order": 8,
+      "path": "works/phases/active/P28",
+      "review_status": "pending",
+      "current_slice": "P28.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 16,
+  "deferred_open_count": 17,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 3,
-  "last_rebuilt_at": "2026-09-21T00:29:58+09:00"
+  "last_rebuilt_at": "2026-09-21T02:09:10+09:00"
 }
