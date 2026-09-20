@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Knowledge Base — PRINT layer  (Round 06 · P27.S5)
+   --------------------------------------------------------------------------
+   The first `@media print` rule this product has ever had. Verified before the
+   round: no `@page`, no print stylesheet, no export control existed anywhere
+   in `web/src`.
+
+   WHY A SEPARATE FILE FROM docview-r6.css. Paper is a different medium, not a
+   narrow screen: it has no scrolling, no hover, no dark mode, no JavaScript,
+   no accent colour worth spending, and a page break every 297mm. A reviewer
+   should be able to read every rule that governs paper without reading a
+   single screen rule, and an implementer should be able to see, in one file,
+   the complete answer to "what comes out of the printer".
+
+   WHAT THIS FILE IS NOT. PDF export here IS the browser's print (job D25, a
+   server-side renderer, stays deferred). So this file cannot paginate, cannot
+   number pages and cannot run a header — browsers do not implement `@page`
+   margin boxes. Page numbers come from the browser's OWN header/footer, which
+   is on by default in every print dialog; the export dialog copy says so. What
+   this file does own: what is on the sheet, what is dropped, where a break may
+   fall, and what a link looks like when it cannot be clicked.
+
+   Load LAST, after docview-r6.css.
+   ========================================================================== */
+
+@media print {
+  /* -------- The page box ------------------------------------------------- */
+  /* `size: auto` on purpose: the reader's paper is the reader's business, and
+     the design must survive both A4 (210×297mm) and US Letter (216×279mm).
+     Nothing on the sheet is sized from the page height, so the two differ only
+     in where the break falls. The margin is a reading margin, not a printer
+     minimum — 16mm at the top leaves the browser's own header room to sit
+     without touching the masthead. */
+  @page { size: auto; margin: 16mm 15mm 18mm; }
+
+  /* -------- The scheme: paper is always light (DECISION · question 8) ----- */
+  /* Someone printing at night is looking at a dark page, and a dark page on
+     paper is a flooded sheet of toner with hairlines that disappear. Print
+     re-declares the LIGHT palette unconditionally — over the document scheme
+     attribute AND over round 03's `data-kb-scheme="auto"` OS adoption — and
+     drops the warm paper tint to nothing, because most browsers refuse to
+     print backgrounds anyway and a half-printed ivory is worse than none. The
+     ink stays the brand's warm near-black; it is a darker warm than the screen
+     ink, which reads thin at 10.5pt. */
+  :root, .kb-app, .kb-app[data-kb-scheme="auto"], [data-md-color-scheme="slate"] {
+    --kb-paper: #ffffff; --kb-surface: #ffffff; --kb-surface-sunken: #f4f1ea;
+    --kb-border: #c9c2b3; --kb-border-strong: #a9a294;
+    --kb-ink: #1b1714; --kb-secondary: #4a433a; --kb-hint: #6d665a;
+    --kb-accent: #0a544e; --kb-accent-strong: #0a544e; --kb-accent-soft: #e2ece9;
+    --kb-status-idle: #6b5220; --kb-status-idle-soft: #f3ece0; --kb-status-idle-ink: #4f3c16;
+    --kb-shadow-raise: none; --kb-shadow-overlay: none; --kb-shadow-hover: none;
+  }
+  html, body, .kb-app { background: #ffffff !important; color: var(--kb-ink); }
+  .kb-app { min-height: 0; display: block; }
+
+  /* -------- What is dropped (DECISION · question 5) ---------------------- */
+  /* Every piece of chrome, every control, and every navigation aid. A sheet of
+     paper cannot be clicked, so anything whose only purpose is to be clicked
+     is noise on it. The version-history PANEL goes too: it is a list of links
+     into an app, and the one fact it carries that paper needs — which version
+     this is — is in the masthead instead.
+
+     Because print drops the chrome itself, the output is IDENTICAL whether the
+     reader exports from the normal page or from the full-width view. That is
+     the reason Export PDF never has to switch views first. */
+  .kb-topbar, .kb-navbar, .kb-rail, .kb-skip, .kb-docbar, .kb-docversions,
+  .kb-toast-region, .kb-account, .kb-docfull__exit, .kb-explainer__wait,
+  .kb-railtoggle, .kb-pager { display: none !important; }
+
+  /* -------- The layout --------------------------------------------------- */
+  /* Containers, grids and caps all go: the PAGE BOX is now the measure. At A4
+     with 15mm side margins the text column is 180mm ≈ 41rem, which is
+     `--kb-measure` to within a millimetre — the reading column designed for
+     screen turns out to be the shape of a sheet of paper, so the prose grid
+     simply collapses to one column and the bleed track disappears with it. */
+  .kb-app-layout, .kb-app-main { display: block; padding: 0; margin: 0; max-width: none; }
+  .kb-doc { display: block; max-width: none; }
+  .kb-prose { display: block; font-size: 10.5pt; line-height: 1.5; }
+  .kb-prose > * { max-width: none; }
+  .kb-doc__body, .kb-panel { background: transparent; border: 0; border-radius: 0; padding: 0; }
+
+  /* -------- The masthead (print-only, first page) ------------------------ */
+  /* Four facts a printed page must carry that a screen never has to: where it
+     came from, which version it is, when it was taken off the screen, and who
+     made it. Rendered print-only so it never appears in the app. */
+  .kb-printonly { display: block; }
+  .kb-printhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 1.1rem; border-bottom: 0.75pt solid var(--kb-border-strong); padding-bottom: 6pt; margin-bottom: 14pt; font-family: var(--kb-font-mono); font-size: 7.5pt; letter-spacing: 0.04em; text-transform: uppercase; color: var(--kb-hint); }
+  .kb-printhead__word { font-family: var(--kb-font-display); font-size: 11pt; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--kb-ink); margin-right: auto; }
+  .kb-printhead__url { text-transform: none; letter-spacing: 0; color: var(--kb-secondary); overflow-wrap: anywhere; }
+
+  /* -------- The title block ---------------------------------------------- */
+  .kb-dochead { display: block; margin-bottom: 10pt; break-after: avoid; }
+  .kb-dochead .kb-app-eyebrow { font-size: 7.5pt; color: var(--kb-hint); }
+  .kb-dochead .kb-app-title { font-size: 20pt; line-height: 1.2; margin: 3pt 0 0; }
+  .kb-dochead .kb-app-sub { font-size: 8.5pt; margin-top: 3pt; }
+
+  /* -------- The metadata strip ------------------------------------------- */
+  /* It prints, but not as a grid of fields: on paper it is one wrapped
+     definition line, which costs three lines instead of two rows and survives
+     both paper widths. Tags print as plain text, not chips — a soft teal fill
+     at 7pt is a grey smudge. */
+  .kb-docmeta { display: block; border-block: 0.75pt solid var(--kb-border); padding-block: 5pt; margin-bottom: 12pt; font-size: 8.5pt; line-height: 1.6; break-inside: avoid; }
+  .kb-docmeta__field { display: inline; }
+  .kb-docmeta__field + .kb-docmeta__field::before { content: " · "; color: var(--kb-border-strong); }
+  .kb-docmeta__label { display: inline; font-size: 7pt; color: var(--kb-hint); }
+  .kb-docmeta__label::after { content: " "; }
+  .kb-docmeta__value { display: inline; font-size: 8.5pt; }
+  .kb-docmeta__field--tags .kb-docmeta__value { display: inline; }
+  .kb-docmeta .kb-chip { display: inline; background: none; border: 0; padding: 0; color: var(--kb-secondary); font-size: 7.5pt; text-transform: none; letter-spacing: 0.02em; }
+  .kb-docmeta .kb-chip + .kb-chip::before { content: ", "; }
+
+  /* -------- The superseded stamp (DECISION · question 9) ----------------- */
+  /* It prints, and it is the loudest thing on the sheet. A reader holding a
+     piece of paper is the one reader who cannot check whether it is current,
+     and a printed archive body that does not say so is the single most
+     dangerous artefact this product can produce. Boxed, above the title, and
+     never split across a break. */
+  .kb-docnotice { display: block; border: 1.25pt solid var(--kb-status-idle); border-left-width: 4pt; background: transparent; padding: 6pt 8pt; margin-bottom: 12pt; font-size: 9pt; font-weight: 600; color: var(--kb-status-idle-ink); break-inside: avoid; break-after: avoid; }
+  .kb-docnotice .kb-status__dot { display: none; }
+
+  /* -------- Prose on paper ------------------------------------------------ */
+  .kb-prose h1, .kb-prose h2, .kb-prose h3, .kb-prose h4, .kb-prose h5, .kb-prose h6 { break-after: avoid; break-inside: avoid; margin: 16pt 0 5pt; color: #000000; }
+  .kb-prose h1 { font-size: 15pt; }
+  .kb-prose h2 { font-size: 13pt; border-bottom: 0.5pt solid var(--kb-border); padding-bottom: 2pt; }
+  .kb-prose h3 { font-size: 11.5pt; }
+  .kb-prose h4, .kb-prose h5, .kb-prose h6 { font-size: 10.5pt; }
+  .kb-prose p, .kb-prose li { orphans: 3; widows: 3; }
+  .kb-prose p { margin: 6pt 0; }
+  .kb-prose blockquote, .kb-prose figure, .kb-prose img { break-inside: avoid; }
+  .kb-prose pre { break-inside: auto; white-space: pre-wrap; overflow: visible; background: var(--kb-surface-sunken); border: 0.5pt solid var(--kb-border); font-size: 8.5pt; line-height: 1.45; padding: 6pt 8pt; margin: 8pt 0; }
+  .kb-prose code { background: transparent; border: 0; padding: 0; font-size: 9pt; }
+  .kb-prose pre code { font-size: inherit; }
+  /* A code fence is the one block allowed to break, because a 200-line fence
+     that may not break leaves a blank page in front of it. It breaks with a
+     hairline continuation rule instead of silently. */
+  .kb-prose pre { box-decoration-break: clone; }
+
+  /* Tables lose the scroller — there is nothing to scroll — and are allowed to
+     break, repeating their header row, because a wide GFM table is often the
+     reason the document was printed at all. */
+  .kb-prose__wide { overflow: visible; background: none; margin: 8pt 0; }
+  .kb-prose table { min-width: 0; width: 100%; font-size: 8.5pt; break-inside: auto; }
+  .kb-prose thead { display: table-header-group; }
+  .kb-prose tr { break-inside: avoid; }
+  .kb-prose th, .kb-prose td { border: 0.5pt solid var(--kb-border); padding: 3pt 5pt; }
+  .kb-prose th { background: var(--kb-surface-sunken); font-size: 7pt; }
+  .kb-prose tbody tr:nth-child(even) { background: transparent; }
+
+  /* -------- Links on paper (DECISION · question 7) ----------------------- */
+  /* The target is printed after the text, in mono, for every link whose href
+     is not already its own text. A printed link with no URL is a dead end; a
+     printed URL after "here" is the difference between a document and a
+     souvenir. `MarkdownBody` absolutizes relative hrefs against the canonical
+     URL before this rule ever sees them (see the contract) and marks a link
+     whose text IS its href with `data-bare`, which suppresses the repeat. */
+  .kb-prose a { color: var(--kb-ink); border-bottom: 0.5pt solid var(--kb-border-strong); text-decoration: none; }
+  .kb-prose a[href]::after { content: " (" attr(href) ")"; font-family: var(--kb-font-mono); font-size: 7.5pt; color: var(--kb-hint); word-break: break-all; }
+  .kb-prose a[data-bare]::after, .kb-prose a[href^="#"]::after { content: none; }
+
+  /* -------- The explainer on paper (DECISION · question 6) --------------- */
+  /* A framed explainer is someone else's page inside a sandbox we may never
+     reach into: we cannot restyle it for paper, cannot remove its quiz, cannot
+     hint a page break inside it. What we CAN do is be honest about it and get
+     out of the way — the card's border and radius go, and the frame prints at
+     the full height the handshake measured, which is what makes the whole
+     document print rather than its first screenful.
+
+     A document that never reported a height is the one case we cannot print in
+     full, and the note says exactly that instead of printing a clipped page
+     silently. */
+  .kb-explainer { border: 0; border-radius: 0; overflow: visible; background: transparent; break-inside: auto; }
+  .kb-explainer__frame { height: auto; min-height: 0; }
+  .kb-explainer__note { display: block !important; font-size: 7.5pt; color: var(--kb-hint); margin-top: 6pt; }
+  .kb-explainer__note--screen { display: none !important; }
+
+  /* -------- The colophon (print-only, last) ------------------------------ */
+  /* Where this came from and when — repeated from the masthead on purpose,
+     because the first page and the last page get separated. */
+  .kb-printfoot { display: block; margin-top: 16pt; padding-top: 6pt; border-top: 0.75pt solid var(--kb-border); font-family: var(--kb-font-mono); font-size: 7.5pt; line-height: 1.6; color: var(--kb-hint); break-inside: avoid; }
+  .kb-printfoot b { font-weight: 600; color: var(--kb-secondary); }
+  .kb-printfoot span { overflow-wrap: anywhere; }
+
+  /* -------- Motion ------------------------------------------------------- */
+  *, *::before, *::after { animation: none !important; transition: none !important; box-shadow: none !important; }
+}
+
+/* -------- Screen: the print-only blocks are not there -------------------- */
+.kb-printonly, .kb-printhead, .kb-printfoot { display: none; }
