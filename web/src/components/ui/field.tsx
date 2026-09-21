@@ -47,14 +47,15 @@ export interface TextareaProps
     TextareaHTMLAttributes<HTMLTextAreaElement>,
     VariantProps<typeof textareaVariants> {}
 
-export function Textarea({ className, style, ...props }: TextareaProps) {
-  return (
-    <textarea
-      className={cn(textareaVariants(), className)}
-      style={{ minHeight: "7rem", resize: "vertical", ...style }}
-      {...props}
-    />
-  );
+/**
+ * Round 03 §4.7: the inline `minHeight` / `resize` pair is GONE — the responsive
+ * layer's `textarea.kb-field__input` rule owns the box now (min-height 7rem,
+ * vertical resize, its own padding and leading), so there is one source instead
+ * of an inline style that would out-rank it. A caller's `style` still passes
+ * through untouched.
+ */
+export function Textarea({ className, ...props }: TextareaProps) {
+  return <textarea className={cn(textareaVariants(), className)} {...props} />;
 }
 
 export interface CheckboxProps extends Omit<

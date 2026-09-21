@@ -43,10 +43,14 @@ import { RevokeOrgKeyButton } from "./revoke-org-key-button";
 // shell's cached `/auth/me`; no extra round-trip here.
 export const metadata: Metadata = { title: DASHBOARD.title };
 
+// Column priorities are round 03 §4.6's, verbatim: 1 Project + Action · 2 Docs,
+// Visibility, Last used · 3 Keys, Created. `data-pri` rides on every th/td and the
+// responsive layer drops the 3s below 64rem of `kbmain`.
 const columns: DataTableColumn<KbDashboardProject>[] = [
   {
     key: "name",
     header: DASHBOARD.projects.columns.project,
+    priority: 1,
     cell: (project) => (
       <span className="kb-dtable__name">{project.name}</span>
     ),
@@ -54,6 +58,7 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
   {
     key: "documents",
     header: DASHBOARD.projects.columns.documents,
+    priority: 2,
     align: "right",
     className: "num",
     cell: (project) => project.documents.toLocaleString("en-US"),
@@ -61,6 +66,7 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
   {
     key: "keys",
     header: DASHBOARD.projects.columns.keys,
+    priority: 3,
     align: "right",
     className: "num",
     cell: (project) => project.keys.toLocaleString("en-US"),
@@ -70,6 +76,7 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
     // (active=Public / idle=Private reuse the closed Badge status enum, no new CSS).
     key: "visibility",
     header: DASHBOARD.projects.columns.visibility,
+    priority: 2,
     cell: (project) => (
       <Badge status={project.visibility === "public" ? "active" : "idle"}>
         {project.visibility === "public"
@@ -81,18 +88,21 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
   {
     key: "created",
     header: DASHBOARD.projects.columns.created,
+    priority: 3,
     className: "mono",
     cell: (project) => formatCreated(project.created_at),
   },
   {
     key: "last_used",
     header: DASHBOARD.projects.columns.lastUsed,
+    priority: 2,
     className: "mono",
     cell: (project) => relativeTime(project.last_used_at),
   },
   {
     key: "action",
     header: DASHBOARD.projects.columns.action,
+    priority: 1,
     actions: true,
     // The `/projects/[id]` detail route lands in S4 (the next slice); the Open link
     // is the designed affordance and goes live then. Acceptable — the phase is not
@@ -112,6 +122,10 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
 // columns (name / key stub / derived status / created / last used / revoke) at ORG
 // scope: an org key carries `project_id null` and grants the whole org. Revoke rides
 // by credential id alone (no project id).
+// NO priorities here: round 03 §4.6's table covers Projects / Documents /
+// Credentials and never mentions the org-keys table, so every column keeps the
+// primitive's default of 1 — exactly today's behaviour, and no visual decision
+// invented on the designer's behalf. Recorded as an operator question in phase.md.
 const orgKeyColumns: DataTableColumn<KbCredential>[] = [
   {
     key: "name",
@@ -259,18 +273,23 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* .mainhead — eyebrow + title + sub, with the create-project affordance right. */}
-      <div className="mb-[1.3rem] flex items-start justify-between gap-4">
-        <div>
+      {/* Round 03 §4.4 — the shared `.kb-pageframe` replaces the ad-hoc inline flex
+          (the actions used to collide with the title, and stacked badly on a
+          phone). The h1's inline `marginTop` is gone: the frame owns the spacing.
+          The actions slot here is a disclosure form, not a button — §4.4 allows
+          the slot to carry whatever the page's action is, and the phone rule that
+          stretches `> .kb-appbtn` simply does not reach it. */}
+      <div className="kb-pageframe">
+        <div className="kb-pageframe__title-wrap">
           <div className="kb-app-eyebrow">
             {tenantName} · {DASHBOARD.eyebrow}
           </div>
-          <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-            {DASHBOARD.title}
-          </h1>
+          <h1 className="kb-app-title">{DASHBOARD.title}</h1>
           <p className="kb-app-sub">{DASHBOARD.sub}</p>
         </div>
-        <CreateProjectForm />
+        <div className="kb-pageframe__actions">
+          <CreateProjectForm />
+        </div>
       </div>
 
       <StatTiles tiles={tiles} />
@@ -295,7 +314,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* .grid2 — Projects (1.7fr) | Recent activity (1fr). */}
-      <div className="mt-[var(--kb-space-md)] grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-[var(--kb-space-md)]">
+      {/* §4.5 — `.kb-app-cols` replaces the inline 1.7fr/1fr grid, so the stack
+          happens when `kbmain` crosses 64rem (the rail's fold moves that line by
+          15rem) rather than when the WINDOW does. */}
+      <div className="kb-app-cols mt-[var(--kb-space-md)]">
         <div className="kb-panel">
           <div className="kb-panel__head">
             <h2 className="kb-app-h2">{DASHBOARD.projects.heading}</h2>

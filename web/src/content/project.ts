@@ -52,8 +52,13 @@ export const PROJECT = {
   title: "Project",
 
   header: {
-    /** Mono eyebrow above the title. */
-    eyebrow: "Org · Project",
+    /**
+     * Mono eyebrow suffix above the title, rendered as `{tenant} · {eyebrow}` —
+     * the same shape as every other console page. Round 03 §4.4 requires the REAL
+     * org name first (on a phone the eyebrow is the only place the org appears),
+     * so the literal "Org · " prefix this string used to carry is now the tenant.
+     */
+    eyebrow: "Project",
     /** Prefix for the created-date sub-line, rendered as `{prefix} {date}`. */
     createdPrefix: "Created",
   },

@@ -29,10 +29,16 @@ import { VisibilityToggle } from "./visibility-toggle";
 // `cache: "no-store"`, so `generateMetadata` would cost a second uncached fetch.
 export const metadata: Metadata = { title: PROJECT.title };
 
+// Round 03 §4.6's Credentials row is `1 Key, Status · 2 Last used · 3 Created` —
+// it assigns NOTHING to `Name` and nothing to the action column. Both therefore
+// take the primitive's default of 1 (always visible), which is exactly today's
+// behaviour and matches how §4.6 rates the other two tables' action columns. The
+// record gap is on phase.md's `## Operator Questions` rather than guessed at.
 const columns: DataTableColumn<KbCredential>[] = [
   {
     key: "name",
     header: PROJECT.credentials.columns.name,
+    priority: 1,
     cell: (credential) =>
       credential.name === null ? (
         <span className="text-[var(--kb-hint)] italic">
@@ -45,6 +51,7 @@ const columns: DataTableColumn<KbCredential>[] = [
   {
     key: "key",
     header: PROJECT.credentials.columns.key,
+    priority: 1,
     className: "mono",
     // `token_prefix` is a display stub (`"vk_"` + a slice), never a usable
     // credential. The plaintext key exists only in the mint response.
@@ -53,6 +60,7 @@ const columns: DataTableColumn<KbCredential>[] = [
   {
     key: "status",
     header: PROJECT.credentials.columns.status,
+    priority: 1,
     // Derived three-state status (`credential-status.ts`): revoked / active / idle,
     // encoded in FORM as well as color via the `Badge` (WCAG 1.4.1).
     cell: (credential) => {
@@ -63,12 +71,14 @@ const columns: DataTableColumn<KbCredential>[] = [
   {
     key: "created",
     header: PROJECT.credentials.columns.created,
+    priority: 3,
     className: "mono",
     cell: (credential) => formatDate(credential.created_at),
   },
   {
     key: "last_used",
     header: PROJECT.credentials.columns.lastUsed,
+    priority: 2,
     className: "mono",
     // `null` until the key is first used to ingest.
     cell: (credential) =>
@@ -81,6 +91,7 @@ const columns: DataTableColumn<KbCredential>[] = [
     header: (
       <span className="sr-only">{PROJECT.credentials.columns.actions}</span>
     ),
+    priority: 1,
     actions: true,
     // A revoked key has nothing to revoke; its struck badge tells the story.
     // The `project_id !== null` guard is a type narrow, not new behavior: a
@@ -154,7 +165,8 @@ export default async function ProjectPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const { token } = await requireIdentity();
+  const { token, identity } = await requireIdentity();
+  const tenantName = identity.tenant?.name ?? "—";
   const usage = await loadProject(token, projectId);
   const { project, credentials } = usage;
 
@@ -190,31 +202,39 @@ export default async function ProjectPage({
     <>
       {/* .mainhead — eyebrow + Fraunces title (the project name) + created sub, with
           the P19 visibility badge + toggle on the right (the dashboard-header idiom). */}
-      <div className="mb-[1.3rem] flex items-start justify-between gap-4">
-        <div>
-          <div className="kb-app-eyebrow">{PROJECT.header.eyebrow}</div>
-          <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-            {project.name}
-          </h1>
+      <div className="kb-pageframe">
+        <div className="kb-pageframe__title-wrap">
+          {/* §4.4 — the eyebrow carries the ORG first on every page: on a phone
+              the topbar crumb is hidden and this is the only place the org shows.
+              `identity` comes from the page's existing `requireIdentity()` call,
+              which is `cache()`d and shared with the layout, so it costs nothing. */}
+          <div className="kb-app-eyebrow">
+            {tenantName} · {PROJECT.header.eyebrow}
+          </div>
+          <h1 className="kb-app-title">{project.name}</h1>
           <p className="kb-app-sub">
             {PROJECT.header.createdPrefix} {formatDate(project.created_at)}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-[0.5rem]">
-          {/* active=Public / idle=Private reuse the closed Badge status enum (no new
-              CSS); `chip` is the soft-fill header emphasis. */}
-          <Badge
-            status={project.visibility === "public" ? "active" : "idle"}
-            chip
-          >
-            {project.visibility === "public"
-              ? PROJECT.visibility.badge.public
-              : PROJECT.visibility.badge.private}
-          </Badge>
-          <VisibilityToggle
-            projectId={project.id}
-            visibility={project.visibility}
-          />
+        <div className="kb-pageframe__actions">
+          {/* Wrapped as it is — the badge/toggle column keeps its own element so
+              the unlayered `.kb-pageframe__actions` row rule cannot fight it. */}
+          <div className="flex flex-col items-end gap-[0.5rem]">
+            {/* active=Public / idle=Private reuse the closed Badge status enum (no new
+                CSS); `chip` is the soft-fill header emphasis. */}
+            <Badge
+              status={project.visibility === "public" ? "active" : "idle"}
+              chip
+            >
+              {project.visibility === "public"
+                ? PROJECT.visibility.badge.public
+                : PROJECT.visibility.badge.private}
+            </Badge>
+            <VisibilityToggle
+              projectId={project.id}
+              visibility={project.visibility}
+            />
+          </div>
         </div>
       </div>
 

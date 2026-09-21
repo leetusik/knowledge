@@ -9,6 +9,7 @@ import { APP_SHELL } from "@/content";
 import { railCookieString, readRailCookie } from "@/lib/rail-cookie";
 
 import "./app-frame.css";
+import { NavbarNav } from "./navbar-nav";
 import { RAIL_ID, RailNav } from "./rail-nav";
 
 /**
@@ -96,7 +97,10 @@ export function AppFrame({
 
   return (
     <>
-      <header className="kb-topbar sticky top-0 z-20">
+      {/* Sticky/z-index moved OFF the utilities and into the unlayered `.kb-topbar`
+          rule (round 03 §3), so the topbar and the tablet navbar stack against each
+          other from one source instead of two. */}
+      <header className="kb-topbar">
         {/* The accessible NAME is constant and the state rides on `aria-expanded` —
             flipping both would announce "Show navigation, expanded", which contradicts
             itself. `title` is the mouse-only tooltip; `aria-label` wins the name
@@ -119,10 +123,17 @@ export function AppFrame({
         {topbar}
       </header>
 
+      {/* Always immediately after the topbar in the DOM, at every width (§4.1) —
+          the phone placement is a CSS `order`, never a re-mount. */}
+      <NavbarNav />
+
+      {/* NO inline `minHeight` any more: `.kb-app` is now a 100dvh flex column and
+          `.kb-app-layout` is its `flex: 1 1 auto` child (§3), so the old inline
+          `calc(100dvh - topbar)` would out-rank the sheet and, with a sticky phone
+          navbar below, guarantee a permanent scroll of one navbar height. */}
       <div
         className="kb-app-layout"
         data-rail={collapsed ? "collapsed" : "expanded"}
-        style={{ minHeight: "calc(100dvh - var(--kb-app-topbar-h))" }}
       >
         {/* The rail stays MOUNTED when folded — `app-frame.css` hides it — so the no-JS
             floor is the rail in its default expanded state, links and all. */}

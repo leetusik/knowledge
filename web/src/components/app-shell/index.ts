@@ -4,4 +4,5 @@
 export { AppFrame } from "./app-frame";
 export { AppShell } from "./app-shell";
 export { LogoutButton } from "./logout-button";
+export { NavbarNav } from "./navbar-nav";
 export { RAIL_ID, RailNav } from "./rail-nav";
