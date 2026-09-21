@@ -5,8 +5,8 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
+- Current phase: `P28`
+- Current slice: `P28.REVIEW`
 - Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `25`
@@ -22,7 +22,7 @@
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
-| [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
+| [ ] `P28` | `in_progress` | `changes_requested` | Console visual redesign — apply | `P28.REVIEW` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
 
@@ -119,4 +119,4 @@
 | [x] `P28.S8` | `done` | Round 06 apply: print layer + Export PDF control | `implementation` | `works/phases/active/P28/slices/P28.S8` |
 | [x] `P28.S9` | `done` | Fidelity + functional sweep across every changed surface | `qa` | `works/phases/active/P28/slices/P28.S9` |
 | [x] `P28.F1` | `done` | Graph dock: the tag switch measures 0x0 on a small plate | `fix` | `works/phases/active/P28/slices/P28.F1` |
-| [x] `P28.REVIEW` | `done` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
+| [ ] `P28.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
