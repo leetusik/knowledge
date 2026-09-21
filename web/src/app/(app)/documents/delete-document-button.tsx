@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useCallback, useId, useRef, useState } from "react";
 
-import { appButtonClass } from "@/components/ui";
+import { AppButton, appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 
 import { deleteDocumentAction, type DeleteDocumentState } from "./actions";
@@ -39,6 +39,17 @@ export interface DeleteDocumentButtonProps {
  * On the redirecting (read-page) path a success never renders here at all: the
  * redirect throws before the state comes back. Failures always return first, so the
  * error line below still shows.
+ *
+ * P28.S5 — round 04 §4.7/§6. Three changes, all of them the record's:
+ *   - the armed state is the designed `.kb-confirm` (prompt · Cancel · Yes, delete,
+ *     in that order), and focus moves to CANCEL, never to the destructive button;
+ *   - the wrapper `<form>` loses its `inline-flex`. Round 03's phone rule
+ *     `.kb-dtable tr > td:last-child .kb-appbtn { width: 100% }` resolved against
+ *     that shrink-wrapped form, so Delete measured 57.7px in a 390 card instead of
+ *     spanning it (P28.S2's finding). The RULE is right; the wrapper was wrong;
+ *   - busy is `aria-busy` + a spinner and never `disabled` (§6: a disabled control
+ *     drops out of the tab order mid-action), so the double-submit guard moves into
+ *     the form's own `onSubmit` as an early return on the pending flag.
  */
 export function DeleteDocumentButton({
   documentId,
@@ -54,37 +65,63 @@ export function DeleteDocumentButton({
   const errorId = `${useId()}-error`;
   const [confirming, setConfirming] = useState(false);
 
+  // Cancelling unmounts the armed row, which would drop focus onto the document.
+  // A one-shot flag + a callback ref hands it back to the trigger as it remounts —
+  // no `useEffect`, so the repo's `react-hooks/set-state-in-effect` rule is moot.
+  const returnFocus = useRef(false);
+  const triggerRef = useCallback((node: HTMLButtonElement | null) => {
+    if (node && returnFocus.current) {
+      returnFocus.current = false;
+      node.focus();
+    }
+  }, []);
+
   return (
-    <form action={formAction} className="inline-flex flex-col items-end gap-1">
+    <form
+      action={formAction}
+      // §6 — the guard lives here, not on the buttons.
+      onSubmit={(event) => {
+        if (pending) event.preventDefault();
+      }}
+      // NOT `inline-flex`: the phone rule that stretches the action cell's button
+      // resolves against this element (see the header comment).
+      className="w-full"
+    >
       <input type="hidden" name="documentId" value={documentId} />
       {redirectTo ? (
         <input type="hidden" name="redirectTo" value={redirectTo} />
       ) : null}
 
       {confirming ? (
-        <div className="inline-flex items-center gap-2">
-          <span className="text-[0.78rem] text-[var(--kb-secondary)]">
-            {copy.confirmPrompt}
-          </span>
-          <button
+        <span className="kb-confirm">
+          <span className="kb-confirm__prompt">{copy.confirmPrompt}</span>
+          {/* §6: focus lands on Cancel, not on the destructive button. */}
+          <AppButton
+            autoFocus
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              returnFocus.current = true;
+              setConfirming(false);
+            }}
+          >
+            {copy.cancelLabel}
+          </AppButton>
+          <AppButton
             type="submit"
-            className={appButtonClass("danger", "sm")}
-            disabled={pending}
+            variant="danger"
+            size="sm"
+            busy={pending}
             aria-describedby={state.error ? errorId : undefined}
           >
             {pending ? copy.pendingLabel : copy.confirmLabel}
-          </button>
-          <button
-            type="button"
-            className={appButtonClass("ghost", "sm")}
-            onClick={() => setConfirming(false)}
-            disabled={pending}
-          >
-            {copy.cancelLabel}
-          </button>
-        </div>
+          </AppButton>
+        </span>
       ) : (
+        // A plain `<button>`, not `<AppButton>`: the trigger needs a ref and
+        // never needs a busy state (it submits nothing).
         <button
+          ref={triggerRef}
           type="button"
           className={appButtonClass("danger", "sm")}
           onClick={() => setConfirming(true)}
@@ -98,7 +135,7 @@ export function DeleteDocumentButton({
         <p
           id={errorId}
           role="alert"
-          className="text-[0.72rem] text-[var(--kb-status-revoked-ink)]"
+          className="mt-1 text-[0.72rem] text-[var(--kb-status-revoked-ink)]"
         >
           {state.error}
         </p>

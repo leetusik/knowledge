@@ -27,13 +27,20 @@ function errorFor(status: number | null): string {
   }
 }
 
-export function LoginForm() {
+/**
+ * P28.S5 (D18) — `next` is the post-login destination, ALREADY laundered by
+ * `safeNextPath` in `login/page.tsx`. It is threaded through as a plain prop
+ * rather than re-read from the URL here, so the rule for what is acceptable lives
+ * in exactly one place and a client component can never widen it.
+ */
+export function LoginForm({ next }: { next: string }) {
   return (
     <CredentialsForm
       endpoint="/api/auth/login"
       copy={LOGIN_PAGE}
       passwordAutoComplete="current-password"
       errorFor={errorFor}
+      next={next}
     />
   );
 }

@@ -5,13 +5,25 @@ import type { AuthPageCopy } from "@/content";
 
 /**
  * Shared presentation for the login + signup pages (P12.S2, re-skinned P12.S2R) —
- * the Knowledge Base dark "quiet threshold" gate (per the `app-login` specimen):
- * a warm dark gradient card with an inset top-light, a brand row (logo mark +
- * serif wordmark) beside a mono "Secure" pill, the serif lead + sub, the form
- * island, a mono trust-chip footer, and the cross-link to the other auth page.
- * Rendered under the `(auth)` layout's `slate` scheme, so every `--kb-*` token
- * resolves to the dark palette. Server component — only the `children` form is a
- * client island.
+ * the Knowledge Base dark "quiet threshold" gate: a warm dark gradient card with an
+ * inset top-light, a brand row (logo mark + serif wordmark) beside a mono "Secure"
+ * pill, the serif lead + sub, the form island, a mono trust-chip footer, and the
+ * cross-link to the other auth page. Rendered under the `(auth)` layout's `slate`
+ * scheme, so every `--kb-*` token resolves to the dark palette. Server component —
+ * only the `children` form is a client island.
+ *
+ * P28.S5 — round 04 §4.8: **every inline style in this file is deleted.** Each one
+ * is replaced by its `.kb-authcard*` class from §3, value for value — nothing here
+ * is new except what a `@container kbauth (width < 40rem)` rule in that sheet says
+ * (tighter card padding, the 44px/16px field floors round 03 scoped to `kbapp` and
+ * so never reached the gate, and a tighter trust-chip gap). The old wrapper `<div
+ * class="mx-auto" style="width:min(25rem,100%)">` is gone too: `.kb-authgate__wrap`
+ * on the layout's `<main>` is what sizes the column now (`min(28rem, 100%)` less
+ * 1.5rem of padding = the same 25rem card), so this component returns a FRAGMENT —
+ * the card and the alt line are the wrap's two children, exactly as §4.8 draws it.
+ *
+ * The trust chips wrap to as many centred lines as they need and are never
+ * truncated, never scrolled, and never reduced to two of three (§4.8).
  */
 export function AuthCard({
   copy,
@@ -21,156 +33,40 @@ export function AuthCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto" style={{ width: "min(25rem, 100%)" }}>
-      <div
-        style={{
-          background: "linear-gradient(180deg, #26221b, #1f1c16)",
-          border: "1px solid var(--kb-border-strong)",
-          borderRadius: "var(--kb-radius)",
-          padding: "1.6rem 1.6rem 1.3rem",
-          boxShadow:
-            "0 2rem 4rem rgba(0,0,0,.5), inset 0 1px 0 rgba(236,228,215,.06)",
-        }}
-      >
+    <>
+      <div className="kb-authcard">
         {/* Brand row + Secure pill. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <span
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
-          >
+        <div className="kb-authcard__brand">
+          <span className="kb-authcard__word">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={BRAND.logo} alt="" width={24} height={24} />
-            <span
-              style={{
-                fontFamily: "var(--kb-font-display)",
-                fontWeight: 600,
-                fontSize: "1.35rem",
-                color: "var(--kb-ink)",
-              }}
-            >
-              {BRAND.wordmark}
-            </span>
+            {BRAND.wordmark}
           </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              fontFamily: "var(--kb-font-mono)",
-              fontSize: "0.56rem",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--kb-accent)",
-              border: "1px solid var(--kb-border-strong)",
-              borderRadius: "var(--kb-radius-pill)",
-              padding: "0.3em 0.6em",
-            }}
-          >
-            <span
-              aria-hidden
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "var(--kb-accent)",
-                boxShadow: "0 0 0 3px var(--kb-accent-soft)",
-              }}
-            />
+          <span className="kb-authcard__pill">
+            <i aria-hidden="true" />
             {copy.securePill}
           </span>
         </div>
 
-        <h1
-          style={{
-            fontFamily: "var(--kb-font-display)",
-            fontWeight: 600,
-            fontSize: "1.35rem",
-            color: "var(--kb-ink)",
-            margin: "0 0 0.2rem",
-          }}
-        >
-          {copy.lead}
-        </h1>
-        <p
-          style={{
-            fontSize: "0.88rem",
-            color: "var(--kb-secondary)",
-            margin: "0 0 1.3rem",
-          }}
-        >
-          {copy.sub}
-        </p>
+        <h1 className="kb-authcard__lead">{copy.lead}</h1>
+        <p className="kb-authcard__sub">{copy.sub}</p>
 
         {children}
 
         {/* Signed session · SameSite=Strict · Noindex */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: "0.4rem 1.1rem",
-            marginTop: "1.3rem",
-            paddingTop: "1rem",
-            borderTop: "1px solid var(--kb-border)",
-          }}
-        >
+        <div className="kb-authcard__trust">
           {AUTH_TRUST_ITEMS.map((item) => (
-            <span
-              key={item}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontFamily: "var(--kb-font-mono)",
-                fontSize: "0.58rem",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "var(--kb-hint)",
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  width: "5px",
-                  height: "5px",
-                  borderRadius: "50%",
-                  background: "var(--kb-accent)",
-                }}
-              />
+            <span key={item} className="kb-authcard__trustitem">
+              <i aria-hidden="true" />
               {item}
             </span>
           ))}
         </div>
       </div>
 
-      <p
-        style={{
-          textAlign: "center",
-          fontSize: "0.88rem",
-          color: "var(--kb-secondary)",
-          marginTop: "1.3rem",
-        }}
-      >
-        {copy.altPrompt}{" "}
-        <Link
-          href={copy.altHref}
-          style={{
-            color: "var(--kb-accent)",
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          {copy.altLinkLabel}
-        </Link>
+      <p className="kb-authcard__alt">
+        {copy.altPrompt} <Link href={copy.altHref}>{copy.altLinkLabel}</Link>
       </p>
-    </div>
+    </>
   );
 }

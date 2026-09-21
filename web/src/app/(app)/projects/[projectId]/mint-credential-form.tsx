@@ -8,11 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { Plus } from "lucide-react";
 
-import { AppButton, appButtonClass, FieldError, Input, Label } from "@/components/ui";
+import { AppButton, appButtonClass, FieldError, Input } from "@/components/ui";
 import { PROJECT } from "@/content";
 
 import { mintCredentialAction, type MintCredentialState } from "./actions";
@@ -40,7 +41,10 @@ export interface MintCredentialFormProps {
  * (never the server-rendered tree) is what makes it survive `revalidatePath`'s
  * re-render and vanish on the next submit or navigation, with no persistence.
  */
-export function MintCredentialForm({ projectId }: MintCredentialFormProps) {
+export function MintCredentialForm({
+  projectId,
+  children,
+}: MintCredentialFormProps & { children: ReactNode }) {
   const copy = PROJECT.mint;
   const [open, setOpen] = useState(false);
 
@@ -60,6 +64,7 @@ export function MintCredentialForm({ projectId }: MintCredentialFormProps) {
   const nameId = `${baseId}-name`;
   const hintId = `${baseId}-hint`;
   const errorId = `${baseId}-error`;
+  const formId = `${baseId}-form`;
 
   // Dismissal is keyed by the `ok` stamp of the modal that was dismissed, NOT a
   // boolean: a plain `dismissed` flag would stay true and swallow the NEXT minted
@@ -78,59 +83,85 @@ export function MintCredentialForm({ projectId }: MintCredentialFormProps) {
   const showKey =
     state.key !== undefined && state.ok !== undefined && state.ok !== dismissedAt;
 
+  // §4.4 — focus goes back to the trigger on close. The trigger is always mounted
+  // now (it never disappears), so a plain ref is enough.
+  const close = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
   return (
     <>
-      {open ? (
-        <form action={formAction} className="w-[19rem] max-w-full">
-          <Label htmlFor={nameId} className="sr-only">
-            {copy.nameLabel}
-          </Label>
-          {/* No `required`: knowledge defaults an omitted name to `null`, so an
-              unnamed key is a legitimate, first-class case. */}
-          <Input
-            id={nameId}
-            name="name"
-            type="text"
-            placeholder={copy.namePlaceholder}
-            maxLength={200}
-            autoFocus
-            disabled={pending}
-            aria-invalid={invalid}
-            aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
-          />
-          <p id={hintId} className="kb-field__hint">
-            {copy.nameHint}
-          </p>
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              className={appButtonClass("ghost", "sm")}
-              onClick={() => setOpen(false)}
-              disabled={pending}
-            >
-              {copy.cancelLabel}
-            </button>
-            <button
-              type="submit"
-              className={appButtonClass("primary", "sm")}
-              disabled={pending}
-            >
-              {pending ? copy.submitPendingLabel : copy.submitLabel}
-            </button>
-          </div>
-          <FieldError id={errorId}>{state.error ?? undefined}</FieldError>
-        </form>
-      ) : (
+      {/* §4.3/§4.5 — the panel head: heading + lead (server-rendered, arriving as
+          `children`) and the disclosure TRIGGER. */}
+      <div className="kb-panel__head kb-panel__head--start">
+        {children}
         <button
           ref={triggerRef}
           type="button"
-          className={appButtonClass("primary")}
-          onClick={() => setOpen(true)}
+          className={appButtonClass("secondary")}
+          aria-expanded={open}
+          aria-controls={formId}
+          onClick={() => (open ? close() : setOpen(true))}
         >
           <Plus size={16} aria-hidden />
           {copy.newKeyLabel}
         </button>
-      )}
+      </div>
+
+      {open ? (
+        <form
+          id={formId}
+          action={formAction}
+          onSubmit={(event) => {
+            if (pending) event.preventDefault();
+          }}
+          className="kb-inlineform"
+        >
+          {/* P28.S5 — PRE-EXISTING BUG, fixed in passing: `mintCredentialAction`
+              reads `formData.get("projectId")` and returns its generic error when
+              it is missing, but this form never sent it — the `projectId` prop was
+              declared, threaded down from the page, and then never rendered. So
+              minting a PROJECT credential has been failing with "Could not create
+              the key. Please try again." (the org-key form, which needs no id, was
+              unaffected). Caught by actually minting one in the browser; the diff
+              could not have shown it. */}
+          <input type="hidden" name="projectId" value={projectId} />
+          {/* The label is VISIBLE: the form no longer sits inside the head beside
+              the heading that used to stand in for it (the `org-slug-form.tsx`
+              precedent from P28.S4). */}
+          <label className="kb-field" htmlFor={nameId}>
+            <span className="kb-field__label">{copy.nameLabel}</span>
+            {/* No `required`: knowledge defaults an omitted name to `null`, so
+                an unnamed key is a legitimate, first-class case. */}
+            <Input
+              id={nameId}
+              name="name"
+              type="text"
+              placeholder={copy.namePlaceholder}
+              maxLength={200}
+              autoFocus
+              disabled={pending}
+              aria-invalid={invalid}
+              aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
+            />
+          </label>
+          <p id={hintId} className="kb-field__hint">
+            {copy.nameHint}
+          </p>
+          {/* §4.4 — the field's own always-rendered `.kb-field__error` (1.1rem
+              reserved), so arriving at an error moves nothing. */}
+          <FieldError id={errorId}>{state.error ?? undefined}</FieldError>
+          <div className="kb-form-actions kb-form-actions--end">
+            <AppButton variant="ghost" onClick={close}>
+              {copy.cancelLabel}
+            </AppButton>
+            <AppButton type="submit" variant="primary" busy={pending}>
+              {pending ? copy.submitPendingLabel : copy.submitLabel}
+            </AppButton>
+          </div>
+        </form>
+      ) : null}
 
       {showKey && state.key !== undefined ? (
         <ShowOnceKey
@@ -234,56 +265,79 @@ function ShowOnceKey({
   if (typeof document === "undefined") return null;
 
   return createPortal(
+    // P28.S5 — the portal root, and the one piece of this modal that is NOT the
+    // record's markup. It exists because round 04 §4.4's phone sheet and round
+    // 03's `column-reverse` are both written `@container kbapp (width < 40rem)`,
+    // and this dialog portals to `<body>`, OUTSIDE `.kb-app` — so neither rule
+    // could ever match and the sheet would never appear. Portalling INTO
+    // `.kb-app` is not the fix: a container is a containing block for its
+    // `position: fixed` descendants, so the overlay would pin to the document
+    // instead of the screen (the same trap that keeps `.kb-toast-region` a
+    // sibling of `.kb-app` — see `app-shell.tsx`).
+    //
+    // So the wrapper does both jobs: it is the fixed, screen-sized box, and it
+    // re-declares `kbapp` at the VIEWPORT's inline size, which on a phone is the
+    // app's width anyway. `.kb-reveal-overlay` then keeps the record's own
+    // `position: absolute; inset: 0` — the P12-era inline override on it is gone.
     <div
-      className="kb-reveal-overlay"
-      // Override the specimen's `position:absolute` so the modal centers over the
-      // viewport (an inline style beats the unlayered `.kb-*` rule).
-      style={{ position: "fixed", zIndex: 50 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        containerName: "kbapp",
+        containerType: "inline-size",
+      }}
     >
-      <div
-        ref={dialogRef}
-        className="kb-reveal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={warnId}
-      >
-        <h4 id={titleId} className="kb-reveal__title">
-          {copy.heading}
-        </h4>
-        <p id={warnId} className="kb-reveal__warn">
-          <span className="kb-status__dot" aria-hidden />
-          <span>{copy.warning}</span>
-        </p>
-
-        <div className="kb-reveal__key">
-          <code aria-label={copy.keyLabel} className="kb-reveal__code select-all">
-            {value}
-          </code>
-        </div>
-
-        <div className="kb-reveal__actions">
-          <AppButton
-            data-autofocus
-            variant="primary"
-            size="sm"
-            onClick={handleCopy}
-          >
-            {copied ? copy.copiedLabel : copy.copyLabel}
-          </AppButton>
-          <AppButton variant="ghost" size="sm" onClick={onDismiss}>
-            {copy.dismissLabel}
-          </AppButton>
-        </div>
-
-        {copyFailed ? (
-          <p
-            role="alert"
-            className="mt-[0.6rem] text-[0.82rem] text-[var(--kb-status-revoked-ink)]"
-          >
-            {copy.copyFailedLabel}
+      <div className="kb-reveal-overlay">
+        <div
+          ref={dialogRef}
+          className="kb-reveal kb-reveal-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={warnId}
+        >
+          <h2 id={titleId} className="kb-reveal__title">
+            {copy.heading}
+          </h2>
+          <p id={warnId} className="kb-reveal__warn">
+            <span className="kb-status__dot" aria-hidden />
+            <span>{copy.warning}</span>
           </p>
-        ) : null}
+
+          {/* §4.4 — Copy sits INSIDE the key block, beside the code. Below 40rem
+              that block stacks and Copy goes full width beneath it (the
+              `.kb-reveal__key .kb-appbtn { width: 100% }` phone rule, which had
+              nothing to match while Copy lived in the actions row). */}
+          <div className="kb-reveal__key">
+            <code aria-label={copy.keyLabel} className="kb-reveal__code select-all">
+              {value}
+            </code>
+            <AppButton
+              data-autofocus
+              variant="secondary"
+              size="sm"
+              onClick={handleCopy}
+            >
+              {copied ? copy.copiedLabel : copy.copyLabel}
+            </AppButton>
+          </div>
+
+          <div className="kb-reveal__actions">
+            <AppButton variant="ghost" size="sm" onClick={onDismiss}>
+              {copy.dismissLabel}
+            </AppButton>
+          </div>
+
+          {copyFailed ? (
+            <p
+              role="alert"
+              className="mt-[0.6rem] text-[0.82rem] text-[var(--kb-status-revoked-ink)]"
+            >
+              {copy.copyFailedLabel}
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>,
     document.body,
