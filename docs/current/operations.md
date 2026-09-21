@@ -1,11 +1,11 @@
 ---
 doc_id: operations
-version: v0023
-created_at: 2026-09-21T06:22:04+09:00
-commit: 9dd74c9b56aa7886b6eaea1cb4f4d18c99d9e1b0
-source: P27.REVIEW
-summary: P27 operator runtime manifest: how the operator runs and views the web product (dev + production runtimes, acceptance origin, devices/viewports, Aside agent account u1)
-previous: v0022_p24_push_runs_after_the_response_new_kb_git_timeout_s_knob_bring-up_asserts_push_capability_from_the_container_log_plus_git_state_instead_of_the_retired_pushed_push_error_fields_publish-on-write_flow_corrected
+version: v0024
+created_at: 2026-09-21T18:18:18+09:00
+commit: 62c658751d15f6d52c5a84ff6eea600b3e4153c0
+source: P28.REVIEW
+summary: P28 gate: correct the Operator Runtime narrow-viewport caveat (the min-[720px] media query is gone; the console is container-query driven, round 06 adds real viewport @media) and record the true-CSS-viewport harness
+previous: v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1
 ---
 
 # Operations
@@ -32,7 +32,8 @@ How the operator runs and views the product, and what any browser-verifying slic
 - **Devices / browsers:** iPhone (Safari + Chrome), iPad (Safari + Chrome), Mac Chrome.
 - **Viewports:** phone 390×844; tablet 820×1180 portrait and 1024×768 landscape; desktop 1280–1440 wide (1440×900 reference).
 - **Instrument:** Aside, `repl` surface over Bash — `aside repl --account u1 "<js>"`. **Agent account id: `u1`** (operator's word, 2026-09-21). `u0` is the operator's own signed-in profile (Google, `leetusik@gmail.com`) — never drive it. Caveat: `u1` has been seen holding a signed-in admin tab for another product of the operator's; `u2` is a clean, signed-out alternative if the operator asks to switch.
-  - Repl sharp edges: each CLI call is its own session and its tabs close at the end — open the page inside the call, never attach to `tabs[0]` blindly. `page` has `evaluate` / `screenshot` / `goto` / `locator` / `getByRole('button', 'Zoom in')` (string form) / `mouse`, but **no** `setViewportSize` and **no** `waitForTimeout` (use the global `sleep(ms)`). Screenshots take a **relative** path and land under `~/.aside/u/1/sessions/<id>/`. Narrow viewports come from Chrome device emulation or real devices — the app has no width media queries beyond `documents/page.tsx`'s single `min-[720px]:`, so constraining document width only approximates layout.
+  - Repl sharp edges: each CLI call is its own session and its tabs close at the end — open the page inside the call, never attach to `tabs[0]` blindly. `page` has `evaluate` / `screenshot` / `goto` / `locator` / `getByRole('button', 'Zoom in')` (string form) / `mouse`, but **no** `setViewportSize` and **no** `waitForTimeout` (use the global `sleep(ms)`). Screenshots take a **relative** path and land under `~/.aside/u/1/sessions/<id>/` — in some builds `page.screenshot(path)` writes nothing reachable and **returns** the PNG bytes instead, so pipe them out as base64 and decode on the shell side.
+  - **Narrow viewports (corrected at P28).** The repl runs at a fixed 1440×900 and exposes no `setViewportSize` / `emulate*` / CDP handle. The console now responds to its **container** (`.kb-app` → `kbapp`, `.kb-app-main` → `kbmain`), and the app's last width utility (`documents/page.tsx`'s `min-[720px]:`) is **gone** — but round 06 adds real **viewport** `@media` rules (`pointer: coarse`, `width < 40rem`) and an `@page` print box, so narrowing a container is a layout+interaction probe, **never device emulation**. A true CSS viewport comes from a same-origin iframe harness behind a throwaway reverse proxy that serves the harness page and the proxied app from one origin and strips `x-frame-options` / CSP (`GET /__vp?w=&h=&path=`); the session cookie rides across because cookies ignore the port. React does **not** hydrate inside the harness against `next dev` (no HMR websocket) but **does** against the production standalone build, so point a second proxy at that when interaction matters. An anonymous rendering needs the proxy to drop the `Cookie` header — the agent profile is signed in, and a public URL otherwise renders the member branch.
   - Fallback when Aside is unavailable: the same checks, at the same viewports, through any real browser — the demands bind, the instrument does not.
 
 ## Deployment (Docker Compose)

@@ -906,3 +906,15 @@
 {"ts": "2026-09-21T17:37:45+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.F1"}
 {"ts": "2026-09-21T17:37:45+09:00", "type": "slice_status_changed", "slice": "P28.F1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-09-21T17:55:51+09:00", "type": "slice_status_changed", "slice": "P28.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T17:58:35+09:00", "type": "slice_status_changed", "slice": "P28.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-09-21T18:17:54+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:18:18+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0024_p28_gate_correct_the_operator_runtime_narrow-viewport_caveat_the_min-_720px_media_query_is_gone_the_console_is_container-query_driven_round_06_adds_real_viewport_media_and_record_the_true-css-viewport_harness", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:26:12+09:00", "type": "phase_status_changed", "phase": "P28", "old_status": "planned", "new_status": "in_progress"}
+{"ts": "2026-09-21T18:26:12+09:00", "type": "deferred_created", "deferred": "D32", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:26:12+09:00", "type": "deferred_created", "deferred": "D33", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:26:12+09:00", "type": "deferred_created", "deferred": "D34", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:26:12+09:00", "type": "deferred_created", "deferred": "D35", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T18:26:17+09:00", "type": "deferred_dropped", "deferred": "D15", "reason": "Stale: the same job as D21 -- test_documents_list_detail_and_project_bridge failing on a missing 'format' key, fixed in P23 (062c041). P28.S1 and P28.REVIEW both ran the full gated suite green (128 passed, 0 skipped)."}
+{"ts": "2026-09-21T18:26:17+09:00", "type": "deferred_dropped", "deferred": "D21", "reason": "Stale duplicate of D15, same root cause, fixed in P23 (062c041); the full gated suite passed 128/0 in P28.REVIEW."}
+{"ts": "2026-09-21T18:26:22+09:00", "type": "phase_status_changed", "phase": "P28", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-09-21T18:26:22+09:00", "type": "acceptance_opened", "phase": "P28"}

@@ -89,7 +89,7 @@
       "id": "P28",
       "name": "Console visual redesign — apply",
       "objective": "Implement P27's signed design rounds faithfully across the console, graph and document views at phone/tablet/desktop; fix the graph (off-frame default view, id-based node links, anonymous tag bounce, empty-state sizing); add the project document list (project page + graph legend), the chrome-less HTML-only document view, and print-pipeline PDF export; verify in the operator runtime with a real browser.",
-      "status": "planned",
+      "status": "pending",
       "order": 8,
       "path": "works/phases/active/P28",
       "review_status": "pending",
@@ -98,8 +98,8 @@
       "done_slice_count": 11
     }
   ],
-  "deferred_open_count": 22,
+  "deferred_open_count": 24,
   "deferred_promoted_count": 5,
-  "deferred_dropped_count": 4,
-  "last_rebuilt_at": "2026-09-21T17:55:51+09:00"
+  "deferred_dropped_count": 6,
+  "last_rebuilt_at": "2026-09-21T18:26:26+09:00"
 }

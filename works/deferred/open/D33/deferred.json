@@ -1,0 +1,11 @@
+{
+  "id": "D33",
+  "title": "The graph page is not a .kb-page-flow",
+  "status": "deferred",
+  "source": "P28.REVIEW",
+  "reason": "21px between .kb-pageframe and the plate where every other console page uses round 04's 16px. Cosmetic; the fix is a wrapper, not a line.",
+  "trigger": "The next console/graph slice touching (app)/graph/page.tsx",
+  "created_at": "2026-09-21T18:26:12+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

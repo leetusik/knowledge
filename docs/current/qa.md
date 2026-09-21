@@ -1,10 +1,11 @@
 ---
 doc_id: qa
-version: v0015
-created_at: 2026-08-07T17:52:43+09:00
-source: P25.REVIEW
-summary: P25.F3/F4 web baseline 16 files 88 tests, the CDP CPU-throttle repro recipe for client-island hydration races, and running an injected script without jsdom
-previous: v0014_p25_gated_baseline_125_passed_83_42_skipped_web_15_files_85_tests_the_globally-unique-slug_and_route-precedence_probe_techniques_and_0005_migration_validation
+version: v0016
+created_at: 2026-09-21T18:17:54+09:00
+commit: 62c658751d15f6d52c5a84ff6eea600b3e4153c0
+source: P28.REVIEW
+summary: P28 gate: append the phase's headline regression checks (graph fit, dock tag switch, project documents panel, full-width view, print/Export PDF, 390 console, ?next= round trip)
+previous: v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom
 ---
 
 # QA
@@ -239,6 +240,27 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] The `<!-- explain:recent -->` marker + bullet format is byte-intact
       (`server.documents` insert/remove round-trips the live `docs/index.md`).
 - [ ] `python3 scripts/workflow.py validate` passes.
+- [ ] Graph (`/graph` member, `/@{org}/graph` public): the map **fits inside the
+      plate at first paint** — no nodes off the frame — at phone, tablet and
+      desktop plate sizes, on a corpus of ~130 nodes (P28)
+- [ ] Graph dock (a small plate, `kbmain < 40rem`): the "Tags" pill's toggle
+      renders a visible box and turns the tag hubs off and back on (P28)
+- [ ] Project page (`/projects/{id}`): a **Documents** panel lists the five
+      newest documents with an "All documents" link, and a failure of that panel
+      alone leaves the rest of the page up with a working Retry (P28)
+- [ ] Document views: `?view=full` on the member, anonymous and past-version
+      routes hides the rail/topbar/docbar and mounts an exit pill that `Esc`
+      and browser-back also honour (P28)
+- [ ] Print / Export PDF: printing a document produces the **masthead**
+      (wordmark · URL · version · printed date) and the **colophon** on paper,
+      and the Export PDF control shows its hint, goes `Preparing…`, and clears
+      on `afterprint` (P28)
+- [ ] Console at 390: dashboard, documents, project, graph and the document
+      views show the **bottom navbar** and have **no horizontal page scroll**
+      (`documentElement.scrollWidth === 390`) (P28)
+- [ ] `/login?next=/@{org}/{project}/{slug}` returns to that path after sign-in,
+      and a hostile `next` (`//evil.example.com`) falls closed to `/dashboard`
+      (P28)
 
 ## Verifying the Guard Itself (negative-test pattern)
 
