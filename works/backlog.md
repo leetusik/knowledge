@@ -9,7 +9,7 @@
 - Current slice: `P28.S3`
 - Next slice: `P28.S4`
 - Waiting on operator: `none`
-- Open deferred jobs: `23`
+- Open deferred jobs: `22`
 
 ## Active Phases
 

@@ -170,6 +170,33 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
   in round 03 §3) and `.kb-skel`'s `kb-skel-pulse`, which `kb-console.css:172` already switches off under
   `(prefers-reduced-motion: reduce)`. Enumerated live: zero elements animating on the rendered console, and the only
   non-zero transitions are 0.15s colour/background/border/box-shadow/top fades. (P28.S2)
+- **The operator authorised two corrections on 2026-09-21 ("do whatever you recommend"), and record
+  corrections get their own sheet.** (a) **The iOS search-box zoom is fixed** (the `## Operator Questions`
+  entry above): §7 states "Inputs are 16px below 40rem. Non-negotiable" and §3's phone block simply missed
+  `.kb-appsearch__input`, so raising it to 16px **implements the record's own explicit rule** rather than
+  inventing a visual decision — font-size only, no border, no background, no repaint. **`P28.S5` owns it**
+  (it rewrites the documents page). (b) Because every round stylesheet is a **verbatim** record that must not
+  be edited, such corrections live in a new `web/src/app/kb-record-fixes.css`, created by **S5**, imported
+  **last** in the cascade, and every rule carries a comment naming the round and section it corrects, the
+  gap, and the authorisation. Later slices insert their own sheets **before** it. It is for
+  operator-authorised corrections to a signed record **only** — never new design, never a dumping ground.
+  (operator → orchestrator)
+- **The 500 editorial copy is originated here, not recovered — the card copy is unreachable.** D28's default
+  ("adopt the card copy verbatim") cannot be executed for the 500 case: §5.1 ships `{one sentence, Fraunces}`
+  placeholders and the cards live only in the Claude Design project, which P28 has no access to. What **is**
+  recoverable was recovered: the 404 editorial needs **no new copy** (every surface already has
+  `notFound {title, sub, backLabel}` in `web/src/content/*`), empty states need none (§5.3 leaves `.kb-empty`
+  unchanged), and the button labels are in §5.1 itself ("Try again", "Back to dashboard"). Only the 500 block
+  is new. **Use exactly these, and mark them as originated in `result.md`:** title
+  `Something on our side stopped reading.` (**verbatim specimen copy**, quoted in P27's notebook — not
+  originated); code line `Error · 500` (parallels §5.1's own `Not found · 404`); sub `The page did not finish
+  loading. Try again — and if it keeps failing, the reference below tells us where it stopped.`
+  (**originated**). The `ref` line renders **only when `error.digest` exists** — no digest means there is
+  nothing for us to look up, so no fake reference — and its timestamp is written after mount to avoid a
+  hydration mismatch. The review routes the originated sub for the operator's blessing. (operator →
+  orchestrator, for P28.S3)
+- **D26 is closed, satisfied.** The operator supplied both screenshots on 2026-09-21; they are committed under
+  `works/phases/active/P28/diagnostics/` and read into the `P28.S6` note. (orchestrator)
 
 ## Doc impact
 
@@ -225,8 +252,8 @@ _Questions only the operator can answer. Append only; every entry is routed at t
 - **(from P28.S2, for the gate walkthrough — a round 03 record gap)** **iOS will zoom the page when the documents
   search box is focused on a phone.** §7 says "Inputs are 16px below 40rem. Non-negotiable", but §3's phone block
   raises only `.kb-field__input`; the search field is `.kb-appsearch__input` and measures **14.4px** at 390. The
-  project filter beside it is correct at 16px. Fixing it either means a rule in the verbatim sheet or giving the
-  input `.kb-field__input`, which would repaint it with a border and background — a visual decision, not taken.
+  project filter beside it is correct at 16px. **ANSWERED 2026-09-21 — the operator authorised the fix**; `P28.S5` raises the font size only, in the new
+  `kb-record-fixes.css` (see `## Decisions`). Not by giving it `.kb-field__input`, which would repaint it.
 - **(from P28.S2, for the gate walkthrough — a §4.6 record gap)** Round 03 §4.6 rates **three** tables; the repo has
   **four**. The dashboard's **org-keys** table is not listed at all, and the credentials table's **Name** column has
   no priority. Everything the record does not rate was **defaulted to priority 1** (always visible) — exactly today's
@@ -315,13 +342,32 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
   page is a real vulnerability — and honour `next` in **both** the form's post-login navigation and
   `redirectIfAuthenticated`. Round 05's gate line links `/login?next={publicBase}/documents/{id}`, so the
   shapes S6 emits and the shapes S5 accepts must agree; record the accepted shape here when you land it.
-- **(from P28.DECOMP, for P28.S6)** The operator's **off-frame graph was never reproduced** and **D26** is still
-  open, so R05 §4.2 is a *behaviour contract* (fit on first paint; a stored view restored only into a plate of
-  the size it was saved in), not a diagnosis. If the defect survives the apply, capture the stored
-  `sessionStorage` view record and the plate's **measured** size at first paint **before** changing anything
-  else. Round 05 also found a real unreported case: landscape on a 390-tall viewport puts the Fit control below
-  the fold (acceptance check 2). `graph.css` / `graph-tokens.css` stay component-imported and untouched;
-  `graph-r5.css` is already loaded from `globals.css` by S4 — verify, do not re-import.
+- **(from P28.DECOMP + orchestrator, for P28.S6) — D26 IS SATISFIED: the operator's screenshots are in the repo.**
+  `works/phases/active/P28/diagnostics/D26-desktop-graph-mac-chrome.png` (Mac Chrome, `knowledge.hi2vi.com/graph`)
+  and `D26-mobile-graph-iphone.jpeg` (iPhone, same production build). **Both are pre-P28 production**, so they
+  show the defect as it ships today, not as round 03 left it. **Look at them before you touch the engine.**
+  What they show (an orchestrator's read of pixels, not of code — treat it as evidence, not as a diagnosis):
+  **desktop** — the main cluster is roughly centred and legible, but long edges run down and down-right to
+  outlier nodes, at least one doc node sits **on** the plate's bottom edge, and the wires reach the boundary.
+  Mild. **Phone** — the same graph is much worse: the cluster sits up-and-left, wires clearly exit the plate at
+  the **top-left** and the **bottom-right**, and the legend overlays about a third of the plate (which is
+  exactly what R05 §4.3's dock is for). So the symptom is **the periphery, not the centre**: the fit does not
+  contain the outliers, and it degrades sharply as the plate gets shorter.
+  **Ranked hypotheses — measure before changing anything.** (1) **The fit runs before the sim settles**: an
+  early fit, then the force sim keeps pushing weakly-connected outliers outward and nothing re-fits. This
+  predicts precisely "centre fine, periphery out" and is the leading candidate. (2) **The fit is computed on
+  the cluster, not the full node extent** — compare the fitted box against `min/max` over every node at rest.
+  (3) **Aspect ratio / fixed pixel padding**: a fit that pads in px rather than proportionally over-zooms on a
+  short plate, which would explain phone >> desktop. (4) The persisted `sessionStorage` view restored into a
+  differently-sized plate — R05 §4.2 already covers this one, and the operator calls the bad state the
+  *default*, so rank it last. **Consequence for the contract:** if (1) is right, R05 §4.2's "first paint always
+  fits" **does not fix this on its own** — a graph that spreads *after* first paint needs a re-fit (or a fit
+  deferred to settle). That is engine behaviour the record does not forbid; implement what makes the map
+  actually fit, and **record what you found and what you changed**. Capture the stored view record and the
+  plate's **measured** size at first paint as your baseline either way. Round 05 also found a real unreported
+  case: landscape on a 390-tall viewport puts the Fit control below the fold (acceptance check 2).
+  `graph.css` / `graph-tokens.css` stay component-imported and untouched; `graph-r5.css` is loaded from
+  `globals.css` by S4 — verify, do not re-import.
 - **(from P28.DECOMP, for P28.S7)** Three facts from round 06: the exit pill **must** mount as a sibling of
   `.kb-app` (a fixed child of a container pins to the document and the pill vanishes on a long explainer —
   acceptance check 13 is written to catch exactly this); `prose.css` and `explainer.css` are **deleted**, their
