@@ -51,8 +51,14 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
     key: "name",
     header: DASHBOARD.projects.columns.project,
     priority: 1,
+    // §4.3 — the project name IS a link now, so a row can be reached by tapping
+    // the name as well as by the ghost Open button. The ROW itself stays
+    // unclickable and takes no `cursor: pointer`: two real targets, no
+    // row-swallowing click handler.
     cell: (project) => (
-      <span className="kb-dtable__name">{project.name}</span>
+      <Link href={`/projects/${project.id}`} className="kb-dtable__name">
+        {project.name}
+      </Link>
     ),
   },
   {
@@ -122,13 +128,14 @@ const columns: DataTableColumn<KbDashboardProject>[] = [
 // columns (name / key stub / derived status / created / last used / revoke) at ORG
 // scope: an org key carries `project_id null` and grants the whole org. Revoke rides
 // by credential id alone (no project id).
-// NO priorities here: round 03 §4.6's table covers Projects / Documents /
-// Credentials and never mentions the org-keys table, so every column keeps the
-// primitive's default of 1 — exactly today's behaviour, and no visual decision
-// invented on the designer's behalf. Recorded as an operator question in phase.md.
+// PRIORITIES are round 04 §4.3's, which closes the gap P28.S2 recorded: round 03
+// §4.6 never rated this table, so S2 defaulted every column to 1; the later round
+// rates it "Name, Key, Status, Actions = 1 · Last used = 2 · Created = 3" and that
+// answer replaces the default here (the same way round 05 corrects round 04).
 const orgKeyColumns: DataTableColumn<KbCredential>[] = [
   {
     key: "name",
+    priority: 1,
     header: DASHBOARD.orgKeys.columns.name,
     cell: (credential) =>
       credential.name === null ? (
@@ -141,6 +148,7 @@ const orgKeyColumns: DataTableColumn<KbCredential>[] = [
   },
   {
     key: "key",
+    priority: 1,
     header: DASHBOARD.orgKeys.columns.key,
     className: "mono",
     // `token_prefix` is a display stub (`"vk_"` + a slice), never a usable
@@ -149,6 +157,7 @@ const orgKeyColumns: DataTableColumn<KbCredential>[] = [
   },
   {
     key: "status",
+    priority: 1,
     header: DASHBOARD.orgKeys.columns.status,
     // Derived three-state status (`credential-status.ts`): revoked / active / idle,
     // encoded in FORM as well as color via the `Badge` (WCAG 1.4.1).
@@ -161,12 +170,14 @@ const orgKeyColumns: DataTableColumn<KbCredential>[] = [
   },
   {
     key: "created",
+    priority: 3,
     header: DASHBOARD.orgKeys.columns.created,
     className: "mono",
     cell: (credential) => formatCreated(credential.created_at),
   },
   {
     key: "last_used",
+    priority: 2,
     header: DASHBOARD.orgKeys.columns.lastUsed,
     className: "mono",
     // `null` until the key is first used to ingest → `relativeTime` renders "—".
@@ -177,6 +188,7 @@ const orgKeyColumns: DataTableColumn<KbCredential>[] = [
     header: (
       <span className="sr-only">{DASHBOARD.orgKeys.columns.actions}</span>
     ),
+    priority: 1,
     actions: true,
     // A revoked key has nothing to revoke; its struck badge tells the story.
     cell: (credential) =>
@@ -272,7 +284,12 @@ export default async function DashboardPage() {
   const peak = series.length > 0 ? Math.max(...series) : 0;
 
   return (
-    <>
+    // Round 04 §4.1 — every console page is ONE `.kb-page-flow`: the six blocks
+    // below are its direct children in one order at every width, and the flow's
+    // `gap: var(--kb-space-md)` is the page's whole vertical rhythm. Every
+    // block-level `margin-top` the page used to carry is GONE (the record: "the
+    // flow is where a reviewer reads the page's order off one element").
+    <div className="kb-page-flow">
       {/* Round 03 §4.4 — the shared `.kb-pageframe` replaces the ad-hoc inline flex
           (the actions used to collide with the title, and stacked badly on a
           phone). The h1's inline `marginTop` is gone: the frame owns the spacing.
@@ -294,30 +311,33 @@ export default async function DashboardPage() {
 
       <StatTiles tiles={tiles} />
 
-      {/* Trend panel — heading + mono caption + the line/area search trend. */}
-      <div className="kb-panel" style={{ marginTop: "var(--kb-space-md)" }}>
-        <div className="mb-[0.3rem] flex items-baseline justify-between gap-4">
-          <h2 className="kb-app-h2" style={{ fontSize: "1rem" }}>
+      {/* Trend panel — heading + mono caption + the line/area search trend.
+          §4.3: the figure's `h-[120px]` is deleted and the figure wears
+          `.kb-trend-wrap`, whose round 03 clamp — `clamp(6rem, 3.6rem + 9cqi,
+          8.5rem)` — owns the height from here on (136px at desktop, 96px at 390).
+          Nothing in the repo wore that class until now, so the clamp was inert. */}
+      <section className="kb-panel" aria-labelledby="trend-head">
+        <div className="kb-panel__head">
+          <h2 id="trend-head" className="kb-app-h2">
             {DASHBOARD.trend.heading}
           </h2>
-          <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+          <span className="kb-panel__caption">
             {DASHBOARD.trend.caption(usage.totals.searches, peak)}
           </span>
         </div>
-        <figure className="m-0 mt-[0.3rem] block h-[120px]">
+        <figure className="kb-trend-wrap m-0 block">
           <TrendChart
             series={series}
             ariaLabel={DASHBOARD.trend.ariaLabel}
             empty={DASHBOARD.trend.empty}
           />
         </figure>
-      </div>
+      </section>
 
-      {/* .grid2 — Projects (1.7fr) | Recent activity (1fr). */}
       {/* §4.5 — `.kb-app-cols` replaces the inline 1.7fr/1fr grid, so the stack
           happens when `kbmain` crosses 64rem (the rail's fold moves that line by
           15rem) rather than when the WINDOW does. */}
-      <div className="kb-app-cols mt-[var(--kb-space-md)]">
+      <div className="kb-app-cols">
         <div className="kb-panel">
           <div className="kb-panel__head">
             <h2 className="kb-app-h2">{DASHBOARD.projects.heading}</h2>
@@ -339,18 +359,20 @@ export default async function DashboardPage() {
               {DASHBOARD.activity.empty}
             </p>
           ) : (
-            <ul className="m-0 list-none p-0">
+            // §4.3 — `.kb-activity` replaces the inline Tailwind list. The mono
+            // time column holds its 4.6rem at every width (that is what makes the
+            // feed scannable), and the sentence's one bolded entity is styled by
+            // `.kb-activity__row b`, so the <b> carries no utility of its own.
+            <ul className="kb-activity">
               {dashboard.activity.map((event, index) => (
                 <li
                   key={`${event.type}-${event.at}-${index}`}
-                  className="flex items-baseline gap-[0.6rem] border-b border-[var(--kb-border)] py-[0.55rem] text-[0.85rem] last:border-b-0"
+                  className="kb-activity__row"
                 >
-                  <span className="w-[4.6rem] flex-none text-[0.68rem] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+                  <span className="kb-activity__time">
                     {relativeTime(event.at)}
                   </span>
-                  <span className="text-[var(--kb-secondary)]">
-                    {activityBody(event)}
-                  </span>
+                  <span>{activityBody(event)}</span>
                 </li>
               ))}
             </ul>
@@ -358,69 +380,51 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Public URL (P25.S5) — the org slug, structurally a twin of the org-keys
-          panel (heading + lead left, form right). This is how a tenant gets a public
-          identity at all: the operator claims it here after deploy, and every pretty
-          share URL in the product follows from it. Below the form, the resulting
-          public graph URL with a copy button once a slug exists. */}
-      <section
-        className="kb-panel"
-        style={{ marginTop: "var(--kb-space-md)" }}
-        aria-labelledby="org-slug-head"
-      >
-        <div className="mb-[0.9rem] flex items-start justify-between gap-4">
-          <div>
-            <h2
-              id="org-slug-head"
-              className="kb-app-h2"
-              style={{ fontSize: "1.05rem" }}
-            >
+      {/* Public URL (P25.S5) — the org slug. §4.3 takes the field OUT of the panel
+          head: it is always visible (not a disclosure), so it cannot sit beside the
+          lead — it is a `.kb-fieldrow` row under the head at every width, with a
+          VISIBLE label (on a phone the heading is two lines above the input and
+          cannot act as its label). Below the row, the resulting public graph URL
+          with a copy button once a slug exists. */}
+      <section className="kb-panel" aria-labelledby="org-slug-head">
+        <div className="kb-panel__head kb-panel__head--start">
+          <div className="kb-panel__headmain">
+            <h2 id="org-slug-head" className="kb-app-h2">
               {DASHBOARD.orgSlug.heading}
             </h2>
-            <p className="mt-[0.3rem] text-[0.85rem] text-[var(--kb-secondary)]">
-              {DASHBOARD.orgSlug.lead}
-            </p>
+            <p className="kb-panel__lead">{DASHBOARD.orgSlug.lead}</p>
           </div>
-          <OrgSlugForm defaultValue={orgSlug ?? ""} />
         </div>
 
+        <OrgSlugForm defaultValue={orgSlug ?? ""} />
+
         {publicGraphPath ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+          <div className="kb-urlline">
+            <span className="kb-urlline__label">
               {DASHBOARD.orgSlug.graphUrlLabel}
             </span>
-            <code className="text-[0.85rem] text-[var(--kb-ink)] [font-family:var(--kb-font-mono)]">
-              {publicGraphPath}
-            </code>
+            <code className="kb-urlline__url">{publicGraphPath}</code>
             <CopyLinkButton path={publicGraphPath} />
           </div>
         ) : (
-          <p className="text-[0.85rem] text-[var(--kb-secondary)]">
-            {DASHBOARD.orgSlug.empty}
-          </p>
+          <p className="kb-panel__lead">{DASHBOARD.orgSlug.empty}</p>
         )}
       </section>
 
       {/* Org API keys — a full-width panel below the projects/activity grid. The
-          panel head carries the "New key" disclosure; the table lists metadata only
-          (`token_prefix`, never the full key). One org key grants the whole org. */}
-      <section
-        className="kb-panel"
-        style={{ marginTop: "var(--kb-space-md)" }}
-        aria-labelledby="org-keys-head"
-      >
-        <div className="mb-[0.9rem] flex items-start justify-between gap-4">
-          <div>
-            <h2
-              id="org-keys-head"
-              className="kb-app-h2"
-              style={{ fontSize: "1.05rem" }}
-            >
+          panel head carries the heading, the lead and the "New key" disclosure
+          TRIGGER; the table lists metadata only (`token_prefix`, never the full
+          key). One org key grants the whole org.
+          §4.4 (moving the revealed form out of the head into a `.kb-inlineform`
+          block below it) is P28.S5's, so `<MintOrgKeyForm>` stays whole in the head
+          here and S5 splits it — this slice owns the panel structure only. */}
+      <section className="kb-panel" aria-labelledby="org-keys-head">
+        <div className="kb-panel__head kb-panel__head--start">
+          <div className="kb-panel__headmain">
+            <h2 id="org-keys-head" className="kb-app-h2">
               {DASHBOARD.orgKeys.heading}
             </h2>
-            <p className="mt-[0.3rem] text-[0.85rem] text-[var(--kb-secondary)]">
-              {DASHBOARD.orgKeys.lead}
-            </p>
+            <p className="kb-panel__lead">{DASHBOARD.orgKeys.lead}</p>
           </div>
           <MintOrgKeyForm />
         </div>
@@ -432,6 +436,6 @@ export default async function DashboardPage() {
           empty={DASHBOARD.orgKeys.empty}
         />
       </section>
-    </>
+    </div>
   );
 }
