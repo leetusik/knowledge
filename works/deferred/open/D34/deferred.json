@@ -1,0 +1,11 @@
+{
+  "id": "D34",
+  "title": "Landing hero is clipped at phone widths",
+  "status": "deferred",
+  "source": "P28.REVIEW",
+  "reason": "OUTSIDE P28's boundary and not caused by it: the h1 and lede lay out to x=428 in a 390 viewport and are cut mid-word by section.mkt-band's overflow-x: hidden below ~404px. The first page a visitor sees loses text mid-word.",
+  "trigger": "The next marketing/landing design round",
+  "created_at": "2026-09-21T18:26:12+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
