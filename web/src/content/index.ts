@@ -57,3 +57,10 @@ export type { DocumentsCopy } from "./documents";
 // Graph surface (P12.S6) — the in-app knowledge map (page frame + empty state).
 export { GRAPH } from "./graph";
 export type { GraphCopy } from "./graph";
+
+// System states (P28.S3 — round 03 §5) — the cross-surface editorial 500 block,
+// the `Not found · 404` eyebrow the six not-found pages share, and the loading
+// region's accessible name. Cross-surface by nature: `app/error.tsx` catches
+// throws from every console page, so the copy belongs to no single surface.
+export { STATES } from "./states";
+export type { StatesCopy } from "./states";

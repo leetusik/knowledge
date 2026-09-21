@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Round 03 apply: system states (error, loading, not-found, empty, toast)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 3,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:31+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T11:34:13+09:00",
+  "completed_at": "2026-09-21T12:04:44+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 03 §5 applied with no CSS written: a shared Editorial block backs both error boundaries and all six not-found pages (editorial, no longer .kb-empty), four (app) loading.tsx skeletons, and .kb-toast-region as a root-level sibling of .kb-app; added the root app/error.tsx the record omitted (a layout throw escapes its own boundary, proved live) and gave the four (public) failure pages the shell they never had; §8 item 9 verified in dev and the production build, three record gaps reported not filled",
   "validation": {
     "required": [],
     "last_run": null,
