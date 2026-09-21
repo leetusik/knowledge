@@ -16,7 +16,9 @@ import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
 import { Meta } from "../../document-view";
 import { ExplainerFrame } from "../../explainer-frame";
+import { ExportPdfButton } from "../../export-pdf-button";
 import { MarkdownBody } from "../../markdown-body";
+import { PrintColophon, PrintMasthead } from "../../print-blocks";
 
 // P23.S3 — ONE superseded version of a document, read-only, at
 // `/documents/{id}/versions/{v}`. Nested under the optional-identity read page and
@@ -87,8 +89,15 @@ function PastVersion({
   id: number;
 }) {
   const label = DOCUMENTS.versions.label(version.version);
+  // This body's OWN address — a past version is only reachable here, so this is
+  // the link the printed sheet must carry (the live document's pretty path would
+  // hand the reader a different body).
+  const path = `/documents/${id}/versions/${version.version}`;
   return (
     <>
+      {/* Round 06 §4.1/§4.5 — the masthead opens the printed sheet, above the
+          superseded stamp, and carries THIS body's version. */}
+      <PrintMasthead path={path} version={version.version} />
       {/* Round 06 §3.1 — the superseded stamp sits ABOVE the header block (§5) and
           is the ONE piece of chrome the chrome-less view keeps: a reader must never
           mistake an archived body for the live document, least of all when every
@@ -174,6 +183,18 @@ function PastVersion({
           )}
         </div>
       )}
+
+      {/* §4.5's colophon, in its ARCHIVED shape: `currentVersion` is what turns
+          the second line from "this was current when you printed it" into "the
+          current version is v{n}". The boxed stamp says the same thing at the top
+          of the sheet; the two ends are the two places a separated page can be
+          read from. */}
+      <PrintColophon
+        title={version.title}
+        path={path}
+        version={version.version}
+        currentVersion={doc.version}
+      />
     </>
   );
 }
@@ -218,6 +239,9 @@ export default async function DocumentVersionPage({
   // a past version is not a document you can share a pretty URL for or delete.
   const actions = (
     <div className="kb-docbar__actions">
+      {/* §4.1/§5 — Export PDF on every surface, including this one: an archived
+          body is exactly the body a reader is most likely to want on paper. */}
+      <ExportPdfButton />
       <Link
         href={fullWidthHref(fullPath)}
         className={appButtonClass("ghost", "sm")}

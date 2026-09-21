@@ -159,6 +159,32 @@ export const DOCUMENTS = {
         language === null ? "Code block" : `Code block (${language})`,
       table: "Table",
     },
+
+    /**
+     * Round 06 §7's print-only table (P28.S8 · D30 default: the card copy
+     * adopted VERBATIM). These four strings are the ONLY text that exists on
+     * paper and nowhere on screen — the masthead's date line, the colophon's
+     * two variants, and the caveat under a framed explainer.
+     *
+     * `archivedColophon` takes the DATE as well as the current version: §7
+     * writes its key as `print.archivedColophon(current)` but its string
+     * interpolates `{date}` too ("Printed {date}. This is an archived body…"),
+     * so the signature follows the string rather than the key. Reported as a
+     * §7 slip; not a word of the copy changed.
+     */
+    print: {
+      /** The masthead's fourth cell. */
+      printedOn: (date: string): string => `Printed ${date}`,
+      /** The colophon's second line on a live document. */
+      colophon: (date: string): string =>
+        `Printed ${date} from the knowledge console. The version above was current on that date; check the link for the live document.`,
+      /** The colophon's second line on an archived body. */
+      archivedColophon: (date: string, current: number): string =>
+        `Printed ${date}. This is an archived body. The current version is v${current}.`,
+      /** The second explainer note, revealed only by `kb-print.css`. */
+      explainerCaveat:
+        "This explainer is interactive on screen. Its quiz and controls do not work on paper; read it at the address above.",
+    },
   },
 
   /**

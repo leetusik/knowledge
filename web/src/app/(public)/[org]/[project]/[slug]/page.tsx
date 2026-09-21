@@ -5,6 +5,11 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { DocumentView } from "@/app/(public)/documents/[id]/document-view";
+import { ExportPdfButton } from "@/app/(public)/documents/[id]/export-pdf-button";
+import {
+  PrintColophon,
+  PrintMasthead,
+} from "@/app/(public)/documents/[id]/print-blocks";
 import { VersionHistory } from "@/app/(public)/documents/[id]/version-history";
 import { AppShell } from "@/components/app-shell";
 import { CopyLinkButton } from "@/components/copy-link-button";
@@ -184,9 +189,9 @@ export default async function PrettyDocumentPage({
               <CopyLinkButton
                 path={doc.canonical_path ?? `/documents/${doc.id}`}
               />
-              {/* P28.S8 mounts `<ExportPdfButton>` HERE (§4.1's order: Copy link ·
-                  Export PDF · Full width). No Delete on this surface, so §4.1's
-                  hairline never renders here. */}
+              {/* Round 06 §4.1/§5 — Copy link · Export PDF · Full width. No Delete
+                  on this surface, so §4.1's hairline never renders here. */}
+              <ExportPdfButton />
               <Link
                 href={fullWidthHref(fullPath)}
                 className={appButtonClass("ghost", "sm")}
@@ -196,6 +201,13 @@ export default async function PrettyDocumentPage({
               </Link>
             </div>
           </div>
+          {/* Round 06 §4.5's print-only blocks — the same pair as the id page:
+              this is the same document on its durable address, and the printed
+              sheet must not be able to tell which URL it came off. */}
+          <PrintMasthead
+            path={doc.canonical_path ?? fullPath}
+            version={doc.version}
+          />
           <DocumentView doc={doc} id={doc.id} />
           {/* Version history stays id-keyed: its links point at
               `/documents/{id}/versions/{v}`, which is the exact-row addressing the
@@ -206,6 +218,11 @@ export default async function PrettyDocumentPage({
             currentTitle={doc.title}
             versions={history.versions}
             ok={history.ok}
+          />
+          <PrintColophon
+            title={doc.title}
+            path={doc.canonical_path ?? fullPath}
+            version={doc.version}
           />
         </article>
       </AppShell>
@@ -224,6 +241,7 @@ export default async function PrettyDocumentPage({
             this same group. */}
         <div className="kb-docbar">
           <div className="kb-docbar__actions">
+            <ExportPdfButton />
             <Link
               href={fullWidthHref(fullPath)}
               className={appButtonClass("ghost", "sm")}
@@ -233,6 +251,10 @@ export default async function PrettyDocumentPage({
             </Link>
           </div>
         </div>
+        <PrintMasthead
+          path={doc.canonical_path ?? fullPath}
+          version={doc.version}
+        />
         <DocumentView doc={doc} id={doc.id} />
         <VersionHistory
           id={doc.id}
@@ -240,6 +262,11 @@ export default async function PrettyDocumentPage({
           currentTitle={doc.title}
           versions={history.versions}
           ok={history.ok}
+        />
+        <PrintColophon
+          title={doc.title}
+          path={doc.canonical_path ?? fullPath}
+          version={doc.version}
         />
       </article>
     </PublicShell>
