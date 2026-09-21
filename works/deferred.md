@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `24`
+- Open: `25`
 - Promoted: `5`
 - Dropped: `6`
 
@@ -32,6 +32,7 @@
 | `D33` | `deferred` | The graph page is not a .kb-page-flow | P28.REVIEW | The next console/graph slice touching (app)/graph/page.tsx | `works/deferred/open/D33` |
 | `D34` | `deferred` | Landing hero is clipped at phone widths | P28.REVIEW | The next marketing/landing design round | `works/deferred/open/D34` |
 | `D35` | `deferred` | scripts/site_smoke.py fails on a clean checkout | P28.REVIEW | The next docs-site or QA phase | `works/deferred/open/D35` |
+| `D36` | `deferred` | P28 gate decisions were closed at their defaults — nine open rulings, unwalked | P28.REVIEW | The operator's first real walk of the console on a phone/iPad/Safari, or the next console or design phase -- whichever comes first | `works/deferred/open/D36` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
