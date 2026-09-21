@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Round 04 apply: shells, dashboard, project page + documents panel",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 4,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:31+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T12:06:35+09:00",
+  "completed_at": "2026-09-21T12:39:23+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 04 §§3, 4.1-4.3, 4.5, 4.6 applied plus round 05's graph-r5.css landed, both sheets verbatim and imported from globals.css: public shell gained .kb-app--public and the .kb-app-layout it never had, dashboard and project page became one .kb-page-flow, and the project page gained the net-new Documents panel on a second parallel fetch with a router.refresh() Retry proved live; §9 items 1-6, 11, 12 pass in dev and production; found that graph-r5.css loses to graph.css on chunk order and left S6 the measured resolution",
   "validation": {
     "required": [],
     "last_run": null,

@@ -1,15 +1,27 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge, DataTable, type DataTableColumn } from "@/components/ui";
+import { Editorial } from "@/components/states";
+import {
+  appButtonClass,
+  Badge,
+  DataTable,
+  type DataTableColumn,
+} from "@/components/ui";
 import { StatTiles, type StatTileVM, TrendChart } from "@/components/usage";
-import { PROJECT } from "@/content";
+import { DOCUMENTS, PROJECT, STATES } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
-import { getProjectUsage } from "@/lib/knowledge/app";
+import { getDocuments, getProjectUsage } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { credentialStatus } from "@/lib/knowledge/credential-status";
-import type { KbCredential, KbProjectUsage } from "@/lib/knowledge/types";
+import type {
+  KbCredential,
+  KbDocumentListItem,
+  KbProjectUsage,
+} from "@/lib/knowledge/types";
 
+import { DocumentsRetryButton } from "./documents-retry";
 import { MintCredentialForm } from "./mint-credential-form";
 import { RevokeCredentialButton } from "./revoke-credential-button";
 import { VisibilityToggle } from "./visibility-toggle";
@@ -29,11 +41,11 @@ import { VisibilityToggle } from "./visibility-toggle";
 // `cache: "no-store"`, so `generateMetadata` would cost a second uncached fetch.
 export const metadata: Metadata = { title: PROJECT.title };
 
-// Round 03 §4.6's Credentials row is `1 Key, Status · 2 Last used · 3 Created` —
-// it assigns NOTHING to `Name` and nothing to the action column. Both therefore
-// take the primitive's default of 1 (always visible), which is exactly today's
-// behaviour and matches how §4.6 rates the other two tables' action columns. The
-// record gap is on phase.md's `## Operator Questions` rather than guessed at.
+// Round 04 §4.5 CLOSES the gap round 03 §4.6 left here (§4.6 rated `1 Key, Status ·
+// 2 Last used · 3 Created` and assigned nothing to `Name` or to the action column,
+// so P28.S2 defaulted both to 1). The later round rates the whole table — "Name,
+// Key, Status, Actions = 1 · Last used = 2 · Created = 3" — and that is exactly what
+// stands below: the defaults were right, and they are no longer defaults.
 const columns: DataTableColumn<KbCredential>[] = [
   {
     key: "name",
@@ -108,6 +120,53 @@ const columns: DataTableColumn<KbCredential>[] = [
   },
 ];
 
+// Round 04 §4.6 — the project documents panel's three columns, and the three it
+// deliberately does NOT have. Title (priority 1, linking to the document) · Date
+// (2, mono) · Tags (3). NO `Project` column (the panel is already inside one project),
+// NO `Delete` (deleting is a documents-surface action), and no snippet (there is no
+// query here to highlight). Every string is an existing `DOCUMENTS.*` one — this
+// round adds none.
+const documentColumns: DataTableColumn<KbDocumentListItem>[] = [
+  {
+    key: "title",
+    header: DOCUMENTS.list.columns.title,
+    priority: 1,
+    cell: (row) => (
+      <Link href={`/documents/${row.id}`} className="kb-dtable__name">
+        {row.title}
+      </Link>
+    ),
+  },
+  {
+    key: "date",
+    header: DOCUMENTS.list.columns.date,
+    priority: 2,
+    className: "mono",
+    cell: (row) => row.date,
+  },
+  {
+    key: "tags",
+    header: DOCUMENTS.list.columns.tags,
+    priority: 3,
+    cell: (row) =>
+      row.tags.length === 0 ? (
+        <span className="text-[var(--kb-hint)]">{DOCUMENTS.list.noTags}</span>
+      ) : (
+        // §3's `.kb-taglist` replaces the documents page's inline flex wrap. The
+        // three-chips-then-`+n` overflow marker is §4.7's rule for the DOCUMENTS
+        // page and is P28.S5's; §4.6 rates this column and says nothing about
+        // capping it, so nothing is capped here.
+        <span className="kb-taglist">
+          {row.tags.map((tag) => (
+            <span key={tag} className="kb-chip">
+              {tag}
+            </span>
+          ))}
+        </span>
+      ),
+  },
+];
+
 /** `"2026-03-12T09:31:02+00:00"` → `"2026-03-12"` (mono ISO date); unparseable → first 10 chars. */
 function formatDate(iso: string): string {
   const at = new Date(iso);
@@ -135,11 +194,19 @@ function relativeTime(iso: string): string {
  * that would swallow it.
  *
  * 404 (missing OR another tenant's — knowledge answers 404-never-403 so ids cannot
- * be probed) and 400 (not a UUID) both render the SAME branded not-found: a
- * malformed id is effectively not-found, and distinguishing them would leak the
- * shape of what exists. A 401 never reaches here — `requireIdentity` already turned
- * it into a redirect. EVERYTHING ELSE rethrows (an outage should surface, not
- * masquerade as a missing project).
+ * be probed), 400 and **422** all render the SAME branded not-found: a malformed id
+ * is effectively not-found, and distinguishing them would leak the shape of what
+ * exists. A 401 never reaches here — `requireIdentity` already turned it into a
+ * redirect. EVERYTHING ELSE rethrows (an outage should surface, not masquerade as a
+ * missing project).
+ *
+ * The **422** is P28.S3's find and a real pre-existing defect, not a tidy-up: the
+ * endpoint types `project_id` as a UUID (`server/documents_api.py`), so FastAPI
+ * rejects a hand-typed `/projects/not-a-uuid` with 422, NOT the 400 this comment
+ * used to claim — which meant the malformed-id case fell through to the rethrow and
+ * landed on the 500 editorial instead of the designed 404. It was invisible until
+ * round 03 §5 gave the app an error boundary at all. `documents/page.tsx` carries
+ * the same gap on the same `?project=` value and is P28.S5's half.
  */
 async function loadProject(
   token: string,
@@ -150,13 +217,50 @@ async function loadProject(
   } catch (error) {
     if (
       error instanceof ApiError &&
-      (error.status === 404 || error.status === 400)
+      (error.status === 404 || error.status === 400 || error.status === 422)
     ) {
       notFound();
     }
     throw error;
   }
 }
+
+/**
+ * Round 04 §4.6's SECOND, parallel fetch — the project's newest documents, taken
+ * from the same `/app/documents` endpoint the documents surface uses, narrowed to
+ * this project. It rides beside `getProjectUsage` in one `Promise.all`, so it costs
+ * nothing in wall-clock terms.
+ *
+ * **It must not take the page down**, which is the whole reason it has its own
+ * loader: a failure here returns `null` and the panel alone renders §5.2's in-frame
+ * failure block, with the page frame, the tiles, the trend and the credentials table
+ * all still usable. That is the opposite of every other loader on this surface, and
+ * deliberately so — this panel is an addition to a page that already worked.
+ *
+ * The ONE exception is a **401**, which is rethrown rather than swallowed: 401 means
+ * the session died mid-request, it belongs to the page's guard (`requireIdentity`,
+ * which redirects to /login) and not to a panel offering "Try again", and
+ * `loadProject` rethrows it in the same breath — so the two halves of the
+ * `Promise.all` treat a dead session identically instead of one hiding it.
+ */
+async function loadProjectDocuments(
+  token: string,
+  projectId: string,
+): Promise<KbDocumentListItem[] | null> {
+  try {
+    // §4.6, literally: `getDocuments(token, { project: projectId })`, then the
+    // first five of `items`. The endpoint's default order IS newest-first, so the
+    // panel needs no sort control and takes a prefix of the page it is given.
+    const page = await getDocuments(token, { project: projectId });
+    return page.items.slice(0, DOCUMENTS_SHOWN);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) throw error;
+    return null;
+  }
+}
+
+/** §4.6: "Take the first **5** of `items`." No pager, no "show more". */
+const DOCUMENTS_SHOWN = 5;
 
 export default async function ProjectPage({
   params,
@@ -167,7 +271,13 @@ export default async function ProjectPage({
   const { projectId } = await params;
   const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
-  const usage = await loadProject(token, projectId);
+  // §4.6 — the documents panel's fetch is the page's SECOND parallel call. The two
+  // resolve together, so the new panel costs no extra wall-clock time; `documents`
+  // is `null` when its own fetch failed, and only that panel reacts.
+  const [usage, documents] = await Promise.all([
+    loadProject(token, projectId),
+    loadProjectDocuments(token, projectId),
+  ]);
   const { project, credentials } = usage;
 
   // The four tiles. "Active total" is derived (`documents_created − documents_deleted`),
@@ -199,9 +309,17 @@ export default async function ProjectPage({
   const peak = series.length > 0 ? Math.max(...series) : 0;
 
   return (
-    <>
-      {/* .mainhead — eyebrow + Fraunces title (the project name) + created sub, with
-          the P19 visibility badge + toggle on the right (the dashboard-header idiom). */}
+    // Round 04 §4.1 — one `.kb-page-flow`, whose `gap` is the page's whole vertical
+    // rhythm, so every block-level `margin-top` this page carried is gone. §4.5
+    // fixes the order at every width: page frame · tiles · trend · Documents · API
+    // keys.
+    <div className="kb-page-flow">
+      {/* §4.5 — the page frame's right-hand side is a `.kb-pageframe__status`
+          (replacing the generic `__actions` slot): the Public/Private chip, the
+          toggle that inverts it, and a one-line hint saying what the CURRENT state
+          means. Above 40rem that is a right-aligned column with the hint capped at
+          17rem; below it, one full-width row — chip left, toggle taking the rest —
+          with the hint on its own line, left-aligned, `order: 3`. */}
       <div className="kb-pageframe">
         <div className="kb-pageframe__title-wrap">
           {/* §4.4 — the eyebrow carries the ORG first on every page: on a phone
@@ -216,25 +334,26 @@ export default async function ProjectPage({
             {PROJECT.header.createdPrefix} {formatDate(project.created_at)}
           </p>
         </div>
-        <div className="kb-pageframe__actions">
-          {/* Wrapped as it is — the badge/toggle column keeps its own element so
-              the unlayered `.kb-pageframe__actions` row rule cannot fight it. */}
-          <div className="flex flex-col items-end gap-[0.5rem]">
-            {/* active=Public / idle=Private reuse the closed Badge status enum (no new
-                CSS); `chip` is the soft-fill header emphasis. */}
-            <Badge
-              status={project.visibility === "public" ? "active" : "idle"}
-              chip
-            >
-              {project.visibility === "public"
-                ? PROJECT.visibility.badge.public
-                : PROJECT.visibility.badge.private}
-            </Badge>
-            <VisibilityToggle
-              projectId={project.id}
-              visibility={project.visibility}
-            />
-          </div>
+        <div className="kb-pageframe__status">
+          {/* active=Public / idle=Private reuse the closed Badge status enum (no new
+              CSS); `chip` is the soft-fill header emphasis. */}
+          <Badge
+            status={project.visibility === "public" ? "active" : "idle"}
+            chip
+          >
+            {project.visibility === "public"
+              ? PROJECT.visibility.badge.public
+              : PROJECT.visibility.badge.private}
+          </Badge>
+          <VisibilityToggle
+            projectId={project.id}
+            visibility={project.visibility}
+          />
+          <p className="kb-pageframe__hint">
+            {project.visibility === "public"
+              ? PROJECT.visibility.hint.public
+              : PROJECT.visibility.hint.private}
+          </p>
         </div>
       </div>
 
@@ -242,43 +361,81 @@ export default async function ProjectPage({
           page, so no `kb-trend-fill` gradient-id collision). */}
       <StatTiles tiles={tiles} />
 
-      <div className="kb-panel" style={{ marginTop: "var(--kb-space-md)" }}>
-        <div className="mb-[0.3rem] flex items-baseline justify-between gap-4">
-          <h2 className="kb-app-h2" style={{ fontSize: "1rem" }}>
+      {/* §4.5 — the trend figure's `h-[120px]` is deleted here too; the figure wears
+          round 03's `.kb-trend-wrap`, whose clamp owns the height at every width. */}
+      <section className="kb-panel" aria-labelledby="trend-head">
+        <div className="kb-panel__head">
+          <h2 id="trend-head" className="kb-app-h2">
             {PROJECT.trend.heading}
           </h2>
-          <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+          <span className="kb-panel__caption">
             {PROJECT.trend.caption(usage.totals.searches, peak)}
           </span>
         </div>
-        <figure className="m-0 mt-[0.3rem] block h-[120px]">
+        <figure className="kb-trend-wrap m-0 block">
           <TrendChart
             series={series}
             ariaLabel={PROJECT.trend.ariaLabel}
             empty={PROJECT.trend.empty}
           />
         </figure>
-      </div>
+      </section>
 
-      {/* Credentials — the panel head carries the "New key" disclosure; the table
-          lists metadata only (`token_prefix`, never the full key). */}
-      <section
-        className="kb-panel"
-        style={{ marginTop: "var(--kb-space-md)" }}
-        aria-labelledby="credentials-head"
-      >
-        <div className="mb-[0.9rem] flex items-start justify-between gap-4">
-          <div>
-            <h2
-              id="credentials-head"
-              className="kb-app-h2"
-              style={{ fontSize: "1.05rem" }}
+      {/* §4.6 — the project documents panel, the round's one net-new capability and
+          the operator's literal ask ("a list of documents when I click a project").
+          Five newest documents, between the trend and the API keys at every width;
+          the head's ghost link is the way to the rest, so there is no pager and no
+          "show more". No head caption: a count there would read as the project's
+          total, and the panel shows five of an unknown many.
+
+          On failure the panel — and ONLY the panel — becomes round 03 §5.2's
+          in-frame editorial block (`.kb-panel` at zero padding, an `<h2>` at
+          1.15rem, one `sm` Retry). The rest of the page stays usable, which is the
+          point of the separate loader. The Retry's mechanism is `router.refresh()`
+          (see `documents-retry.tsx`); the copy is `STATES.error`, round 03's own
+          failure block, since round 04 adds no string. */}
+      {documents === null ? (
+        <Editorial
+          variant="panel"
+          code={STATES.error.code}
+          title={STATES.error.title}
+          sub={STATES.error.sub}
+          actions={<DocumentsRetryButton />}
+        />
+      ) : (
+        <section className="kb-panel" aria-labelledby="proj-docs-head">
+          <div className="kb-panel__head">
+            <h2 id="proj-docs-head" className="kb-app-h2">
+              {DOCUMENTS.title}
+            </h2>
+            <Link
+              href={`/documents?project=${project.id}`}
+              className={appButtonClass("ghost", "sm")}
             >
+              {DOCUMENTS.read.backLabel}
+            </Link>
+          </div>
+          <DataTable
+            columns={documentColumns}
+            rows={documents}
+            rowKey={(row) => String(row.id)}
+            empty={DOCUMENTS.list.emptyNoDocuments}
+          />
+        </section>
+      )}
+
+      {/* Credentials — the panel head carries the heading, the lead and the "New
+          key" disclosure TRIGGER; the table lists metadata only (`token_prefix`,
+          never the full key). §4.4 (moving the revealed form into a `.kb-inlineform`
+          block below the head) is P28.S5's, so `<MintCredentialForm>` stays whole in
+          the head here and S5 splits it. */}
+      <section className="kb-panel" aria-labelledby="credentials-head">
+        <div className="kb-panel__head kb-panel__head--start">
+          <div className="kb-panel__headmain">
+            <h2 id="credentials-head" className="kb-app-h2">
               {PROJECT.credentials.heading}
             </h2>
-            <p className="mt-[0.3rem] text-[0.85rem] text-[var(--kb-secondary)]">
-              {PROJECT.credentials.lead}
-            </p>
+            <p className="kb-panel__lead">{PROJECT.credentials.lead}</p>
           </div>
           <MintCredentialForm projectId={project.id} />
         </div>
@@ -290,6 +447,6 @@ export default async function ProjectPage({
           empty={PROJECT.credentials.empty}
         />
       </section>
-    </>
+    </div>
   );
 }

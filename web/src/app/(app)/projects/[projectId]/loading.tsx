@@ -23,7 +23,8 @@ export default function ProjectLoading() {
           <div className="kb-skel kb-skel-line w-[7rem]" />
           <div className="kb-skel kb-skel-line w-[9rem]" />
         </div>
-        <SkelBlock className="mt-[0.3rem] h-[120px]" />
+        {/* `.kb-trend-wrap`, not a fixed 120px — see the dashboard skeleton. */}
+        <SkelBlock className="mt-[0.3rem] kb-trend-wrap" />
       </div>
 
       <SkelPanel className="mt-[var(--kb-space-md)]">

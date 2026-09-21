@@ -28,8 +28,11 @@ export default function DashboardLoading() {
           <div className="kb-skel kb-skel-line w-[7rem]" />
           <div className="kb-skel kb-skel-line w-[9rem]" />
         </div>
-        {/* The real figure is `h-[120px]` on both dashboard and project page. */}
-        <SkelBlock className="mt-[0.3rem] h-[120px]" />
+        {/* The real figure wears round 04 §4.3's `.kb-trend-wrap` on both the
+            dashboard and the project page, so the skeleton wears it too: the clamp
+            (136px desktop / 96px at 390) is the height being waited for, and a
+            fixed 120px here would hand back a 16-24px jump on arrival. */}
+        <SkelBlock className="mt-[0.3rem] kb-trend-wrap" />
       </div>
 
       <div className="kb-app-cols mt-[var(--kb-space-md)]">

@@ -1,0 +1,249 @@
+/* ==========================================================================
+   Knowledge Base — GRAPH layer  (Round 05 · P27.S4)
+   --------------------------------------------------------------------------
+   Sits on top of graph-tokens.css + graph.css (the shipped record, copied here
+   verbatim and NOT edited) and on top of round 03's console-responsive.css and
+   round 04's console-r4.css (also not edited).
+
+   ADDITIVE ONLY. No `--kb-*` or `--kb-graph-*` token is renamed or given a new
+   value; every token below is new. No existing class is renamed; existing
+   classes are only extended.
+
+   THE ONE STRUCTURAL DECISION OF THIS ROUND — the overlays respond to the
+   PLATE, not to the page and not to the viewport. `.kb-graph` declares its own
+   container (`kbgraph`), so an overlay rule is written against the box it
+   actually floats over. The plate's HEIGHT is the one thing the plate cannot
+   query itself for, so it is set from `kbmain`, the page's container, exactly
+   as round 03 sets everything else.
+
+   Plate tiers (container `kbgraph`):  < 34rem small · 34–52rem medium ·
+   >= 52rem large. At the round's three review widths the plate measures
+   ~22.4rem (390) · ~45rem (768) · ~56rem (1180 with the rail expanded).
+
+   Load order: kb-tokens.css → kb-console.css → app-frame.css →
+   kb-console-responsive.css → kb-console-r4.css → graph-tokens.css →
+   graph.css → THIS.
+   ========================================================================== */
+
+/* -------- Added tokens ---------------------------------------------------- */
+:root {
+  /* Plate height. Phone and tablet are DETERMINISTIC (a fixed block in the page
+     flow) because `100dvh` minus a bottom bar minus a page header is a sum that
+     was already wrong once; desktop keeps the window-filling behaviour because
+     there the page genuinely fits. */
+  --kb-graph-h-phone: 26rem;
+  --kb-graph-h-tablet: 30rem;
+  --kb-graph-h-chrome: 11.5rem; /* topbar excluded — page frame + main padding */
+  --kb-graph-h-min: 22rem;
+  --kb-graph-h-max: 52rem;
+
+  /* Overlay geometry (0.9rem is graph.css's existing inset, given a name). */
+  --kb-graph-inset: 0.9rem;
+  --kb-graph-panel-w: 17rem;
+  --kb-graph-panel-w-md: 15rem;
+  --kb-graph-sheet-max: 60%;
+  --kb-graph-btn: 1.9rem; /* large plate */
+  --kb-graph-btn-touch: 2.75rem; /* 44px — small + medium plate */
+
+  /* Read by the engine through getComputedStyle, like every other graph token. */
+  --kb-graph-fit-pad: 0.08; /* fraction of the plate kept clear around content */
+  --kb-graph-fit-bias: 0.38; /* selected node parks this far down a sheeted plate */
+  --kb-graph-restore-tol: 0.02; /* plate-size drift that still restores a view */
+  --kb-graph-offmap-min: 0.15; /* below this share of nodes on screen → recenter */
+  --kb-graph-label-zoom: 1.6; /* every label above this zoom */
+  --kb-graph-label-cap: 8; /* always-on hub labels, large + medium plate */
+  --kb-graph-label-cap-sm: 4; /* always-on hub labels, small plate */
+  --kb-graph-docs-shown: 5; /* project documents in the panel, newest first */
+}
+
+/* -------- 1 · The plate (card 27) ----------------------------------------- */
+/* The plate is a container and a plain block in `.kb-page-flow`; it keeps the
+   page's gutter at every width — the map is a surface in the page, not a
+   full-bleed exception to it.
+
+   The HEIGHT is keyed on `kbapp`, the SHELL, not on `kbmain`: "fills the
+   window" is a statement about the window, and `kbmain` is 938px = 58.6rem at
+   a 1180px window with the rail expanded — round 04's number that surprises
+   people. Keyed on `kbmain` the desktop height would never apply at 1180.
+   Width-driven decisions (the dock, and every overlay) stay on the container
+   whose width they are actually about. */
+.kb-graph { container: kbgraph / inline-size; height: clamp(var(--kb-graph-h-min), calc(100dvh - var(--kb-app-topbar-h) - var(--kb-graph-h-chrome)), var(--kb-graph-h-max)); min-height: var(--kb-graph-h-min); }
+@container kbapp (width < 40rem) { .kb-graph { height: var(--kb-graph-h-phone); min-height: 0; } }
+@container kbapp (width >= 40rem) and (width < 64rem) { .kb-graph { height: var(--kb-graph-h-tablet); min-height: 0; } }
+
+/* -------- 2 · Overlays (card 28) ------------------------------------------ */
+/* Shared: an overlay never outgrows the plate it floats over. */
+.kb-graph .kb-graph__ui { max-width: calc(100% - 2 * var(--kb-graph-inset)); max-height: calc(100% - 2 * var(--kb-graph-inset)); }
+.kb-graph .kb-graph-panel { overflow: auto; overscroll-behavior: contain; }
+.kb-graph .kb-graph-legend { overflow: auto; }
+
+/* Legend collapse — the head becomes the toggle; the body is what folds.
+   Present at every width the legend is on the plate; persisted like the lens. */
+.kb-graph .kb-graph-legend__toggle { display: flex; align-items: center; gap: 0.4rem; width: 100%; padding: 0.1rem 0.3rem 0.3rem; border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 0.6rem; font-weight: var(--kb-weight-semibold); letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-hint); }
+.kb-graph .kb-graph-legend__toggle:hover { color: var(--kb-ink); }
+.kb-graph .kb-graph-legend__caret { margin-left: auto; transition: transform var(--kb-ease); }
+.kb-graph .kb-graph-legend__toggle[aria-expanded="false"] .kb-graph-legend__caret { transform: rotate(-90deg); }
+.kb-graph .kb-graph-legend__toggle[aria-expanded="false"] + .kb-graph-legend__body { display: none; }
+
+/* Zoom stack: a touch-sized target below 52rem of plate. */
+@container kbgraph (width < 52rem) {
+  .kb-graph .kb-graph-zoom__btn { width: var(--kb-graph-btn-touch); height: var(--kb-graph-btn-touch); font-size: 1.05rem; }
+}
+
+/* ---- Small plate (< 34rem) ----------------------------------------------- */
+@container kbgraph (width < 34rem) {
+  /* The legend leaves the plate — it is the dock below it (see §3). */
+  .kb-graph .kb-graph-legend { display: none; }
+  /* Pinch and double-tap already zoom. The only control a gesture cannot
+     replace is "I have lost the map", so Fit is the one button that stays. */
+  .kb-graph .kb-graph-zoom { border: 0; background: transparent; }
+  .kb-graph .kb-graph-zoom__btn[data-zoom="in"], .kb-graph .kb-graph-zoom__btn[data-zoom="out"] { display: none; }
+  .kb-graph .kb-graph-zoom__btn[data-zoom="fit"] { border: 1px solid var(--kb-border); border-radius: 50%; background: var(--kb-surface); box-shadow: var(--kb-shadow-raise); }
+  /* No hover on a touch plate; the tooltip never fires and is not rendered. */
+  .kb-graph .kb-graph-tooltip { display: none; }
+  /* The info panel is a sheet on the plate's bottom edge, full width, capped at
+     60% so the map above it stays legible; the engine parks the selected node
+     in the clear part (`--kb-graph-fit-bias`). */
+  .kb-graph .kb-graph-panel { top: auto; right: 0; left: 0; bottom: 0; width: auto; max-width: none; max-height: var(--kb-graph-sheet-max); border-width: 1px 0 0; border-radius: var(--kb-radius) var(--kb-radius) 0 0; padding: 0.85rem 1rem 1rem; box-shadow: var(--kb-shadow-overlay); }
+  .kb-graph .kb-graph-panel__close { min-width: var(--kb-tap); min-height: 2.2rem; font-size: 1rem; }
+  .kb-graph .kb-graph-panel__title { font-size: 1.12rem; }
+  .kb-graph .kb-graph-panel__tags { gap: 0.35rem; }
+  .kb-graph .kb-graph-panel .kb-tag { font-size: 0.75rem; padding: 0.25em 0.7em; }
+  .kb-graph .kb-graph-panel__read { display: inline-flex; align-items: center; min-height: var(--kb-tap); font-size: 0.85rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @container kbgraph (width < 34rem) {
+    .kb-graph .kb-graph-panel { animation: kb-graph-sheet var(--kb-dur-reveal) var(--kb-ease-out) both; }
+  }
+}
+@keyframes kb-graph-sheet { from { transform: translateY(0.9rem); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- Medium plate (34–52rem) --------------------------------------------- */
+@container kbgraph (width >= 34rem) and (width < 52rem) {
+  .kb-graph .kb-graph-panel { width: var(--kb-graph-panel-w-md); }
+  .kb-graph .kb-graph-legend { width: 10rem; }
+}
+
+/* -------- 3 · The dock — the legend off the plate (cards 28, 29) ---------- */
+/* Below 40rem of PAGE the legend is a strip in the page flow under the plate:
+   one scrollable row of project lenses at a 44px target, then the two switches,
+   then the note. It is the same control set in the same order, at a size a
+   thumb can hit, on a surface that covers nothing. */
+.kb-graph-dock { display: none; }
+@container kbmain (width < 40rem) { .kb-graph-dock { display: block; margin-top: 0.55rem; } }
+.kb-graph-dock__scroll { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; padding: 0.15rem 0 0.3rem; -webkit-overflow-scrolling: touch; }
+.kb-graph-dock__scroll::-webkit-scrollbar { display: none; }
+.kb-graph-dock__item { display: inline-flex; align-items: center; gap: 0.45rem; flex: none; min-height: var(--kb-tap); padding: 0.4rem 0.75rem; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill); background: var(--kb-surface); font: inherit; font-size: 0.82rem; color: var(--kb-secondary); cursor: pointer; white-space: nowrap; transition: color var(--kb-ease), border-color var(--kb-ease), background var(--kb-ease); }
+.kb-graph-dock__item .kb-graph-legend__count { margin-left: 0.1rem; font-size: 0.72rem; }
+.kb-graph-dock__item.is-on { color: var(--kb-ink); border-color: var(--kb-accent); background: var(--kb-accent-soft); font-weight: var(--kb-weight-medium); }
+.kb-graph-dock__item.is-off { color: var(--kb-hint); }
+.kb-graph-dock__item.is-off .kb-graph-legend__chip { background: transparent; box-shadow: inset 0 0 0 1.5px var(--chip, var(--kb-graph-node-doc)); }
+.kb-graph-dock__item .kb-graph-switch { margin-left: 0.1rem; }
+.kb-graph-dock__note { margin: 0.1rem 0 0; font-family: var(--kb-font-mono); font-size: 0.62rem; letter-spacing: 0.03em; color: var(--kb-hint); }
+.kb-graph-dock__item:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+
+/* -------- 4 · Project mode in the panel (card 29) ------------------------- */
+/* One click on a project lens does both jobs: the lens on the map, and the
+   project's documents in the panel. Same panel, second mode. */
+.kb-graph .kb-graph-panel__count { font-family: var(--kb-font-mono); font-size: 0.66rem; color: var(--kb-hint); font-variant-numeric: tabular-nums; margin-top: 0.3rem; }
+.kb-graph .kb-graph-panel__list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.kb-graph .kb-graph-panel__doc { display: block; padding: 0.42rem 0; border-top: 1px solid var(--kb-border); text-decoration: none; color: var(--kb-ink); }
+.kb-graph .kb-graph-panel__doc:hover .kb-graph-panel__doctitle { color: var(--kb-accent-strong); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+.kb-graph .kb-graph-panel__doctitle { display: block; font-size: 0.82rem; line-height: var(--kb-leading-snug); color: var(--kb-ink); }
+.kb-graph .kb-graph-panel__docmeta { display: block; margin-top: 0.12rem; font-family: var(--kb-font-mono); font-size: 0.62rem; color: var(--kb-hint); font-variant-numeric: tabular-nums; }
+.kb-graph .kb-graph-panel__foot { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--kb-border); }
+.kb-graph .kb-graph-panel__empty { margin: 0.6rem 0 0; font-size: 0.78rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); }
+@container kbgraph (width < 34rem) {
+  .kb-graph .kb-graph-panel__doc { padding: 0.55rem 0; min-height: var(--kb-tap); }
+  .kb-graph .kb-graph-panel__doctitle { font-size: 0.9rem; }
+  .kb-graph .kb-graph-panel__foot { gap: 0.5rem; }
+  .kb-graph .kb-graph-panel__foot > * { min-height: var(--kb-tap); display: inline-flex; align-items: center; }
+}
+
+/* -------- 5 · The stranger's panel (card 31) ------------------------------ */
+/* The anonymous shell has no rail, and `.kb-app-layout` is a two-column grid
+   whose first track is the rail's 15rem at every width above 64rem. Round 04
+   capped and centred public main but never collapsed the grid, because no
+   public surface had reached a desktop width yet — the map is the first.
+   One column, so main is main. */
+.kb-app--public .kb-app-layout { grid-template-columns: minmax(0, 1fr); }
+
+/* A tag on the public map is a lens on the map, not a link into a member route;
+   it is a <button>, and it carries the pill's shape without its link ink. */
+.kb-graph button.kb-tag { cursor: pointer; font: inherit; font-size: 0.66rem; line-height: 1.5; color: var(--kb-tag-fg); background: var(--kb-tag-bg); }
+.kb-graph button.kb-tag:hover { color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+.kb-graph button.kb-tag[aria-pressed="true"] { border-color: var(--kb-accent); color: var(--kb-accent-strong); background: var(--kb-accent-soft); }
+.kb-graph .kb-graph-panel__gate { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.5rem; margin-top: 0.15rem; font-size: 0.72rem; line-height: var(--kb-leading-snug); color: var(--kb-hint); }
+.kb-graph .kb-graph-panel__gate a { font-weight: var(--kb-weight-medium); color: var(--kb-accent); text-decoration: none; }
+.kb-graph .kb-graph-panel__gate a:hover { color: var(--kb-accent-strong); text-decoration: underline; }
+
+/* -------- 6 · Off-map recenter + states (card 32) ------------------------- */
+/* Shown only when the content has left the plate: a quiet pill at the top of
+   the map with the one action that fixes it. Never shown on first paint —
+   first paint always fits. */
+.kb-graph .kb-graph-recenter { position: absolute; top: var(--kb-graph-inset); left: 50%; transform: translateX(-50%); z-index: 4; display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.35rem 0.3rem 0.75rem; background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-pill); box-shadow: var(--kb-shadow-raise); font-size: 0.72rem; color: var(--kb-secondary); }
+.kb-graph .kb-graph-recenter[hidden] { display: none; }
+.kb-graph .kb-graph-recenter .kb-appbtn { min-height: 1.8rem; padding: 0.2rem 0.7rem; }
+@container kbgraph (width < 34rem) { .kb-graph .kb-graph-recenter .kb-appbtn { min-height: var(--kb-tap); } }
+
+/* graph.css :404-406 tints EVERY `<a>` inside the plate teal, which repaints an
+   `<a class="kb-appbtn">` placed in a plate state — teal label on a teal
+   button. Buttons keep their own ink. */
+.kb-graph a.kb-appbtn--primary, .kb-graph a.kb-appbtn--danger { color: #fbfaf5; }
+.kb-graph a.kb-appbtn--secondary { color: var(--kb-ink); }
+.kb-graph a.kb-appbtn--secondary:hover { color: var(--kb-accent-strong); }
+.kb-graph a.kb-appbtn--ghost { color: var(--kb-secondary); }
+.kb-graph a.kb-appbtn--ghost:hover { color: var(--kb-ink); }
+[data-md-color-scheme="slate"] .kb-graph a.kb-appbtn--primary, [data-md-color-scheme="slate"] .kb-graph a.kb-appbtn--danger { color: #16130f; }
+
+/* The plate's own states sit in the existing `.kb-graph-empty` box: one title,
+   one sentence, at most two actions. The map never borrows the page's
+   editorial state — a failed map is a failed panel, not a failed page. */
+.kb-graph .kb-graph-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; }
+.kb-graph .kb-graph-empty__detail { margin-top: 0.7rem; font-family: var(--kb-font-mono); font-size: 0.62rem; color: var(--kb-hint); }
+.kb-graph .kb-graph-empty--load { color: var(--kb-hint); }
+.kb-graph .kb-graph-skel { display: grid; place-items: center; gap: 0.5rem; }
+.kb-graph .kb-graph-skel__dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--kb-border-strong); }
+@media (prefers-reduced-motion: no-preference) {
+  .kb-graph .kb-graph-skel__dot { animation: kb-graph-pulse 1.4s var(--kb-ease-out) infinite; }
+  @keyframes kb-graph-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+}
+
+/* -------- 7 · Dark scheme adoption (§4 fact 2) ---------------------------- */
+/* graph-tokens.css declares the graph inks on `[data-md-color-scheme]`, which
+   round 03's OS adoption never flips — it re-declares the base `--kb-*` on
+   `.kb-app[data-kb-scheme="auto"]` and leaves the attribute on "default". A
+   custom property that says `var(--kb-accent)` resolves where it is DECLARED,
+   so the graph would keep the light values even inside a dark console. This
+   block re-declares the slate graph set at the same place round 03 re-declares
+   the base set — same values as `[data-md-color-scheme="slate"]`, nothing new,
+   nothing renamed. When a preference control lands and writes `light` | `dark`,
+   this block stops matching exactly as round 03's does. */
+@media (prefers-color-scheme: dark) {
+  .kb-app[data-kb-scheme="auto"] {
+    --kb-graph-canvas: #16130f;
+    --kb-graph-project-1: var(--kb-accent);
+    --kb-graph-project-2: var(--kb-status-idle);
+    --kb-graph-project-3: #c99bc0;
+    --kb-graph-node-doc: var(--kb-graph-project-1);
+    --kb-graph-node-outline: var(--kb-graph-canvas);
+    --kb-graph-node-tag: var(--kb-secondary);
+    --kb-graph-node-ghost: #6b6355;
+    --kb-graph-edge: #6f6759;
+    --kb-graph-edge-related: #9a9081;
+    --kb-graph-edge-active: var(--kb-accent);
+    --kb-graph-focus: var(--kb-accent-strong);
+    --kb-graph-halo: rgba(98, 189, 178, 0.25);
+    --kb-graph-label: var(--kb-ink);
+    --kb-graph-label-muted: var(--kb-secondary);
+    --kb-graph-label-halo: var(--kb-graph-canvas);
+    --kb-graph-dim: 0.22;
+  }
+  .kb-app[data-kb-scheme="auto"] .kb-graph a.kb-appbtn--primary,
+  .kb-app[data-kb-scheme="auto"] .kb-graph a.kb-appbtn--danger { color: #16130f; }
+}
+
+/* -------- 8 · Reduced motion --------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .kb-graph .kb-graph-panel, .kb-graph .kb-graph-skel__dot { animation: none !important; }
+}
