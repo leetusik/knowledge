@@ -15,6 +15,8 @@ import { getDocument, getDocumentVersions } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
+import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
+
 import { DocumentView } from "./document-view";
 import { VersionHistory } from "./version-history";
 
@@ -73,27 +75,46 @@ async function loadDocument(
  * both calls hit the same upstream, so a real outage fails the document read above
  * and surfaces there. A 404 here is not even an error: it is what an id the caller
  * cannot read answers, and that id could not have got this far.
+ *
+ * P28.S7 (round 06 §5): it degrades but no longer LIES. The catch used to return an
+ * empty list, which is also what a document with no history returns — so a failure
+ * rendered as "this document has never been re-published" and nobody was told
+ * otherwise. `ok: false` is that distinction, and the panel says it out loud.
  */
 async function loadVersions(
   token: string | undefined,
   doc: KbDocument,
-): Promise<{ currentVersion: number; versions: KbDocumentVersion[] }> {
+): Promise<{
+  currentVersion: number;
+  versions: KbDocumentVersion[];
+  ok: boolean;
+}> {
   try {
     const page = await getDocumentVersions(token, doc.id);
-    return { currentVersion: page.current_version, versions: page.versions };
+    return {
+      currentVersion: page.current_version,
+      versions: page.versions,
+      ok: true,
+    };
   } catch {
-    // No history to show; the document itself still renders in full.
-    return { currentVersion: doc.version, versions: [] };
+    // The document itself still renders in full; the panel reports its own fault.
+    return { currentVersion: doc.version, versions: [], ok: false };
   }
 }
 
 export default async function DocumentPage({
   params,
+  searchParams,
 }: {
   // Next 16: dynamic route params arrive as a Promise.
   params: Promise<{ id: string }>;
+  // Round 06 §4.4 — `?view=full` is the chrome-less view, a query on this very
+  // URL rather than a route of its own, so the explainer keeps framing the same
+  // sandboxed relay and no new route serves document HTML on our origin.
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: idParam } = await params;
+  const fullWidth = isFullWidth(await searchParams);
   // Doc ids are integers. A non-integer / non-positive id is effectively not-found
   // for everyone (the backend would 422 it) and leaks nothing regardless of auth, so
   // short-circuit to the branded not-found BEFORE reading the session. Outside any
@@ -108,28 +129,56 @@ export default async function DocumentPage({
     const doc = await loadDocument(ctx.token, id, notFound);
     const history = await loadVersions(ctx.token, doc);
     return (
-      <AppShell identity={ctx.identity}>
-        {/* Capped to the reading measure and centered, so folding the rail widens the
-            margins symmetrically instead of stretching the column. Identical in both
-            branches — the same URL must read the same signed in or out, and the
-            anonymous <PublicShell> has no rail at all, so it is the wider case. */}
-        <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
-          {/* Back-link to the list (still member-gated) + the share copy-link. */}
-          <div
-            className="flex flex-wrap items-center gap-3"
-            style={{ marginBottom: "1rem" }}
-          >
-            <Link href="/documents" className={appButtonClass("ghost", "sm")}>
-              <ChevronLeft size={15} aria-hidden />
-              {DOCUMENTS.read.backLabel}
-            </Link>
-            {/* P25.S5 — share the PRETTY URL when the document has one. The member
-                stays on the id URL (the anonymous redirect above is anonymous-only),
-                but what they hand to someone else is the durable
-                `/@{org}/{project}/{slug}` path the backend built once as
-                `canonical_path`. `null` (no org slug claimed) falls back to the id
-                URL, which keeps working forever. */}
-            <CopyLinkButton path={doc.canonical_path ?? `/documents/${id}`} />
+      <AppShell identity={ctx.identity} fullWidth={fullWidth}>
+        {/* Round 06 §3.1/§4.1 — `.kb-doc` replaces the utility cap and supplies the
+            whole article's vertical rhythm with its own `gap`, so no child carries
+            a `marginBottom` any more. `tabIndex={-1}` is §6's focus target when the
+            chrome-less view opens. Identical in both branches — the same URL must
+            read the same signed in or out. */}
+        <article className="kb-doc" tabIndex={-1}>
+          {/* §4.1's actions row: TWO groups — where you came from, and what you can
+              do with this document — plus the claim hint as the sentence it is, on
+              its own line. */}
+          <div className="kb-docbar">
+            <div className="kb-docbar__nav">
+              <Link href="/documents" className={appButtonClass("ghost", "sm")}>
+                <ChevronLeft size={15} aria-hidden />
+                {DOCUMENTS.read.backLabel}
+              </Link>
+            </div>
+            <div className="kb-docbar__actions">
+              {/* P25.S5 — share the PRETTY URL when the document has one. The member
+                  stays on the id URL (the anonymous redirect above is anonymous-only),
+                  but what they hand to someone else is the durable
+                  `/@{org}/{project}/{slug}` path the backend built once as
+                  `canonical_path`. `null` (no org slug claimed) falls back to the id
+                  URL, which keeps working forever. */}
+              <CopyLinkButton path={doc.canonical_path ?? `/documents/${id}`} />
+              {/* P28.S8 MOUNTS `<ExportPdfButton>` HERE — inside
+                  `.kb-docbar__actions`, between Copy link and Full width (§4.1's
+                  own order). Nothing else in this row needs to move for it. */}
+              <Link
+                href={fullWidthHref(`/documents/${id}`)}
+                className={appButtonClass("ghost", "sm")}
+                {...{ [FULL_WIDTH_LINK_ATTR]: "" }}
+              >
+                {DOCUMENTS.read.fullWidthLabel}
+              </Link>
+              {/* The hairline renders only when Delete does (§4.1). */}
+              <span className="kb-docbar__sep" />
+              {/* P21 — the member-only delete, behind that hairline and, below
+                  40rem, on its own full-width row under a rule: it is the one
+                  control that ends the page, so it is never a thumb-width from
+                  Copy link. `.kb-docbar__danger` is `display: contents` above the
+                  phone, so the wrapper is never swapped in JS. */}
+              <div className="kb-docbar__danger">
+                <DeleteDocumentButton
+                  documentId={id}
+                  documentTitle={doc.title}
+                  redirectTo="/documents"
+                />
+              </div>
+            </div>
             {/* P25.F3 — say WHY the button just handed out an id URL. Shown only
                 when the viewer's OWN org has claimed no slug (`tenant.slug === null`,
                 free off the session identity), so the fallback stops being silent.
@@ -141,31 +190,14 @@ export default async function DocumentPage({
                 and permanent, not something the operator can fix. */}
             {ctx.identity.tenant?.slug == null &&
             doc.canonical_path === null ? (
-              <span className="text-[0.8rem] text-[var(--kb-hint)]">
+              <p className="kb-docbar__hint">
                 {SHARE.claimHint.prefix}
-                <Link
-                  href={SHARE.claimHint.href}
-                  className="text-[var(--kb-accent-strong)] underline underline-offset-2"
-                >
+                <Link href={SHARE.claimHint.href}>
                   {SHARE.claimHint.linkLabel}
                 </Link>
                 {SHARE.claimHint.suffix}
-              </span>
+              </p>
             ) : null}
-            {/* P21 — the member-only delete, trailing (`ml-auto`) and two-step. It
-                lives ONLY in this branch: the anonymous branch below and the shared
-                `<DocumentView>` stay auth-free. `redirectTo` sends the caller back to
-                the list, because this very URL 404s the moment the delete lands.
-                A member reading ANOTHER org's public doc also sees it and gets the
-                404 copy on submit — there is no client-side tenant signal to hide it
-                by, and the backend answers 404-never-403 by design. */}
-            <div className="ml-auto">
-              <DeleteDocumentButton
-                documentId={id}
-                documentTitle={doc.title}
-                redirectTo="/documents"
-              />
-            </div>
           </div>
           <DocumentView doc={doc} id={id} />
           {/* P23 — the version-history panel, below the body and identical in both
@@ -177,6 +209,7 @@ export default async function DocumentPage({
             currentVersion={history.currentVersion}
             currentTitle={doc.title}
             versions={history.versions}
+            ok={history.ok}
           />
         </article>
       </AppShell>
@@ -201,14 +234,30 @@ export default async function DocumentPage({
   if (doc.canonical_path) redirect(doc.canonical_path);
   const history = await loadVersions(undefined, doc);
   return (
-    <PublicShell>
-      <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
+    <PublicShell fullWidth={fullWidth}>
+      <article className="kb-doc" tabIndex={-1}>
+        {/* §4.1's row, anonymous shape: no `.kb-docbar__nav`, because the only
+            "where you came from" it draws is the member-gated documents list, and
+            no Copy link or Delete. The right-hand group still carries Full width
+            (§5: "on every surface") and is where P28.S8 mounts Export PDF. */}
+        <div className="kb-docbar">
+          <div className="kb-docbar__actions">
+            <Link
+              href={fullWidthHref(`/documents/${id}`)}
+              className={appButtonClass("ghost", "sm")}
+              {...{ [FULL_WIDTH_LINK_ATTR]: "" }}
+            >
+              {DOCUMENTS.read.fullWidthLabel}
+            </Link>
+          </div>
+        </div>
         <DocumentView doc={doc} id={id} />
         <VersionHistory
           id={id}
           currentVersion={history.currentVersion}
           currentTitle={doc.title}
           versions={history.versions}
+          ok={history.ok}
         />
       </article>
     </PublicShell>

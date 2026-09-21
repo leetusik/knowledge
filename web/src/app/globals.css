@@ -15,6 +15,12 @@
 @import "./(app)/graph/graph-tokens.css";
 @import "./(app)/graph/graph.css";
 @import "./(app)/graph/graph-r5.css";
+/* The document-views record (round 06 §3.1, P28.S7) — the SCREEN half of round
+   06. It sits after `graph-r5.css` and before `kb-record-fixes.css`, which is the
+   chain round 06 §1 states. `kb-print.css` (P28.S8) goes immediately after this
+   line, still before the corrections sheet. It replaces the bodies of the deleted
+   `documents/[id]/prose.css` and `explainer.css`. */
+@import "./kb-docview.css";
 /* Operator-authorised corrections to a SIGNED record, and nothing else (P28.S5 —
    see the charter at the top of the file). It is imported LAST on purpose, so it
    wins at equal specificity over every round sheet above it. Later slices insert

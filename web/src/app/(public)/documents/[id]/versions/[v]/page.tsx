@@ -7,13 +7,13 @@ import { ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PublicShell } from "@/components/public-shell";
 import { appButtonClass } from "@/components/ui";
-import { DOCUMENTS } from "@/content";
+import { DOCUMENTS, SITE } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
+import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
 import { getDocument, getDocumentVersion } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
-import "../../explainer.css";
 import { Meta } from "../../document-view";
 import { ExplainerFrame } from "../../explainer-frame";
 import { MarkdownBody } from "../../markdown-body";
@@ -89,37 +89,35 @@ function PastVersion({
   const label = DOCUMENTS.versions.label(version.version);
   return (
     <>
-      {/* .mainhead — eyebrow (project) + the title THIS body carried + its date. */}
-      <div className="mb-[var(--kb-space-md)]">
+      {/* Round 06 §3.1 — the superseded stamp sits ABOVE the header block (§5) and
+          is the ONE piece of chrome the chrome-less view keeps: a reader must never
+          mistake an archived body for the live document, least of all when every
+          other signal has been hidden. `.kb-docnotice` keeps the idle-status inks
+          and its `role="status"`, and gains the left rule that makes it read as a
+          stamp on the document rather than a notification about the app. */}
+      <div className="kb-docnotice" role="status">
+        <span className="kb-status__dot" aria-hidden />
+        <span>
+          {DOCUMENTS.versions.read.notice(version.version, doc.version)}{" "}
+          <Link href={`/documents/${id}`}>
+            {DOCUMENTS.versions.read.backLabel}
+          </Link>
+        </span>
+      </div>
+
+      {/* §4.1's header block — eyebrow (project) + the title THIS body carried. */}
+      <div className="kb-dochead">
         <div className="kb-app-eyebrow">
           {DOCUMENTS.read.eyebrow(doc.project)}
         </div>
-        <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-          {version.title}
-        </h1>
+        <h1 className="kb-app-title">{version.title}</h1>
         <p className="kb-app-sub">{version.date}</p>
       </div>
 
-      {/* The superseded banner — the one thing a reader must not miss. Built from
-          the existing idle-status tokens (no new visual language, F6); the link is
-          the way back to what the document says today. */}
-      <p
-        className="mb-[var(--kb-space-md)] flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-[var(--kb-radius-sm)] border border-[var(--kb-border)] bg-[var(--kb-status-idle-soft)] px-[0.9rem] py-[0.7rem] text-[0.85rem] text-[var(--kb-status-idle-ink)]"
-        role="status"
-      >
-        <span>
-          {DOCUMENTS.versions.read.notice(version.version, doc.version)}
-        </span>
-        <Link
-          href={`/documents/${id}`}
-          className="underline underline-offset-2"
-        >
-          {DOCUMENTS.versions.read.backLabel}
-        </Link>
-      </p>
-
-      {/* Metadata strip — the values as archived, not the document's current ones. */}
-      <div className="mb-[var(--kb-space-md)] flex flex-wrap items-start gap-x-8 gap-y-3 border-y border-[var(--kb-border)] py-[0.9rem]">
+      {/* §4.2's strip — the values as archived, not the document's current ones.
+          Five fields, in the record's order: Version · Date · Superseded ·
+          Archive · Tags, with Archive on `--mono` and the tag list spanning. */}
+      <div className="kb-docmeta">
         <Meta label={DOCUMENTS.versions.read.fields.version} mono>
           {label}
         </Meta>
@@ -131,25 +129,23 @@ function PastVersion({
         <Meta label={DOCUMENTS.versions.read.fields.superseded} mono>
           {formatDate(version.created_at)}
         </Meta>
-        <Meta label={DOCUMENTS.versions.read.fields.tags}>
-          {version.tags.length === 0 ? (
-            <span className="text-[var(--kb-hint)]">
-              {DOCUMENTS.list.noTags}
-            </span>
-          ) : (
-            <span className="flex flex-wrap gap-[0.3rem]">
-              {version.tags.map((tag) => (
-                <span key={tag} className="kb-chip">
-                  {tag}
-                </span>
-              ))}
-            </span>
-          )}
-        </Meta>
         {/* Provenance: the on-disk archive file. Never a link — the `.versions`
             tree is not served. */}
         <Meta label={DOCUMENTS.versions.read.fields.archive} mono>
           {version.archive_path}
+        </Meta>
+        <Meta
+          label={DOCUMENTS.versions.read.fields.tags}
+          tags
+          empty={version.tags.length === 0}
+        >
+          {version.tags.length === 0
+            ? DOCUMENTS.list.noTags
+            : version.tags.map((tag) => (
+                <span key={tag} className="kb-chip">
+                  {tag}
+                </span>
+              ))}
         </Meta>
       </div>
 
@@ -163,13 +159,18 @@ function PastVersion({
           title={`${version.title} — ${label}`}
         />
       ) : (
-        <div className="kb-panel">
+        <div className="kb-panel kb-doc__body">
           {(version.markdown ?? "").trim() === "" ? (
-            <p className="text-[0.9rem] text-[var(--kb-secondary)]">
-              {DOCUMENTS.versions.read.emptyBody}
-            </p>
+            <div className="kb-prose">
+              <p className="kb-prose__empty">
+                {DOCUMENTS.versions.read.emptyBody}
+              </p>
+            </div>
           ) : (
-            <MarkdownBody markdown={version.markdown ?? ""} />
+            <MarkdownBody
+              markdown={version.markdown ?? ""}
+              baseUrl={`${SITE.url}/documents/${id}/versions/${version.version}`}
+            />
           )}
         </div>
       )}
@@ -179,11 +180,15 @@ function PastVersion({
 
 export default async function DocumentVersionPage({
   params,
+  searchParams,
 }: {
   // Next 16: dynamic route params arrive as a Promise.
   params: Promise<{ id: string; v: string }>;
+  /** Round 06 §4.4 — `?view=full`, the chrome-less view on this same URL. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: idParam, v: versionParam } = await params;
+  const fullWidth = isFullWidth(await searchParams);
   // Both segments are positive integers upstream. A malformed one can never resolve
   // for anyone and leaks nothing regardless of auth, so short-circuit to the branded
   // not-found BEFORE reading the session — outside any try, so the throw survives.
@@ -207,25 +212,41 @@ export default async function DocumentVersionPage({
   );
 
   const body = <PastVersion doc={doc} version={row} id={id} />;
+  const fullPath = `/documents/${id}/versions/${version}`;
+  // §4.1's actions row — read-only, so its right group holds Full width alone
+  // (and, from P28.S8, Export PDF beside it): no copy-link and no delete, because
+  // a past version is not a document you can share a pretty URL for or delete.
+  const actions = (
+    <div className="kb-docbar__actions">
+      <Link
+        href={fullWidthHref(fullPath)}
+        className={appButtonClass("ghost", "sm")}
+        {...{ [FULL_WIDTH_LINK_ATTR]: "" }}
+      >
+        {DOCUMENTS.read.fullWidthLabel}
+      </Link>
+    </div>
+  );
 
   if (ctx) {
     return (
-      <AppShell identity={ctx.identity}>
-        {/* Capped to the reading measure and centered, so folding the rail widens the
-            margins symmetrically instead of stretching the column. Identical in both
-            branches — the same URL must read the same signed in or out. */}
-        <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
-          {/* Back to the live document — the only navigation a past version
-              offers. No copy-link and no delete: this is a read-only view of a
-              superseded body. */}
-          <div style={{ marginBottom: "1rem" }}>
-            <Link
-              href={`/documents/${id}`}
-              className={appButtonClass("ghost", "sm")}
-            >
-              <ChevronLeft size={15} aria-hidden />
-              {DOCUMENTS.versions.read.backLabel}
-            </Link>
+      <AppShell identity={ctx.identity} fullWidth={fullWidth}>
+        {/* Round 06 §3.1 — `.kb-doc`; the same document must read the same signed
+            in or out. */}
+        <article className="kb-doc" tabIndex={-1}>
+          <div className="kb-docbar">
+            {/* Back to the live document — the only navigation a past version
+                offers. */}
+            <div className="kb-docbar__nav">
+              <Link
+                href={`/documents/${id}`}
+                className={appButtonClass("ghost", "sm")}
+              >
+                <ChevronLeft size={15} aria-hidden />
+                {DOCUMENTS.versions.read.backLabel}
+              </Link>
+            </div>
+            {actions}
           </div>
           {body}
         </article>
@@ -234,8 +255,9 @@ export default async function DocumentVersionPage({
   }
 
   return (
-    <PublicShell>
-      <article className="mx-auto w-full max-w-[var(--kb-app-read-w)]">
+    <PublicShell fullWidth={fullWidth}>
+      <article className="kb-doc" tabIndex={-1}>
+        <div className="kb-docbar">{actions}</div>
         {body}
       </article>
     </PublicShell>

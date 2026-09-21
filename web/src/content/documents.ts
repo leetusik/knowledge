@@ -96,6 +96,69 @@ export const DOCUMENTS = {
     noSource: "—",
     /** Shown when a document has no body (empty markdown). */
     emptyBody: "This document has no content.",
+
+    // ── Round 06 §7, the screen/control half (P28.S7 · D30 default: the card
+    //    copy adopted VERBATIM). The print-only strings (`print.*`) are P28.S8's.
+    //    The six `export*` strings are copy for S8's `<ExportPdfButton>`; they
+    //    land here with the rest of their table so one slice owns one table.
+
+    /** The Export PDF control's resting label (§7). */
+    exportLabel: "Export PDF",
+    /** Its `aria-busy` label while the print dialog is being opened. */
+    exportPending: "Preparing…",
+    /** The hint line under the control on a desktop browser. */
+    exportDialog:
+      "Choose Save as PDF as the destination. Keep headers and footers on if you want page numbers.",
+    /** The hint line on iOS, where printing goes through the share sheet. */
+    exportDialogIos: "Print goes to the share sheet — choose Save to Files.",
+    /** `window.print()` threw, or `beforeprint` never fired. */
+    exportFailed:
+      "Couldn't open the print dialog. Use your browser's Print command instead — ⌘P, or Ctrl+P.",
+    /** Shown BEFORE the dialog when the page holds an unmeasured explainer. */
+    exportUnmeasured:
+      "This explainer didn't report its height, so only its first page will print. Open it full width and print from there.",
+
+    /** The control that enters the chrome-less view (`?view=full`). */
+    fullWidthLabel: "Full width",
+    /** The floating exit pill's visible label in that view. */
+    fullWidthExit: "Exit full width",
+    /** The waiting line inside the explainer frame, before its height lands. */
+    explainerLoading: "Loading explainer…",
+    /** The honest footnote under a frame that never reported a height. */
+    explainerUnmeasured:
+      "This explainer didn't report its height, so it scrolls inside its frame. Open it full width for the whole page.",
+
+    /**
+     * The relay's two failure answers, rendered as an editorial INSIDE the
+     * frame's reserved box (§5, `explainer-frame.tsx`). The two sub lines and
+     * `reload` are §7's own; the two mono eyebrows are not in §7 at all —
+     * `notFound` reuses `STATES.notFoundCode` at the call site and
+     * `upstreamCode` is ORIGINATED here as the exact parallel of round 03's
+     * `Error · 500` (reported as a §7 record gap, P28.S7).
+     */
+    explainerError: {
+      notFound:
+        "This explainer's file couldn't be found. Its metadata is above; the body may have been removed from the content plane.",
+      upstream:
+        "The explainer couldn't be loaded right now. Reload the page to try again.",
+      /** ORIGINATED — §7 gives the 404 branch no eyebrow either; that one reuses `STATES.notFoundCode`. */
+      upstreamCode: "Error · 502",
+      reload: "Reload",
+    },
+
+    /**
+     * Accessible names for the two regions in a document body that SCROLL and
+     * therefore must be focusable (§6: "Code block" / "Table"). §6 states both
+     * literals in prose and §7 lists no key for either — reported as a record
+     * gap; the strings themselves are the record's. The language suffix is the
+     * only originated part, and it is what §5's "an aria-label from the fence's
+     * language" asks for.
+     */
+    regions: {
+      code: (language: string | null): string =>
+        language === null ? "Code block" : `Code block (${language})`,
+      table: "Table",
+    },
   },
 
   /**
@@ -153,6 +216,18 @@ export const DOCUMENTS = {
       viewLabel: "View",
       /** Accessible name for that link (the label alone is ambiguous per row). */
       viewAriaPrefix: "View version",
+
+      /**
+       * Round 06 §5 — the panel's FAILURE state. Before this round a history
+       * fetch that threw was indistinguishable from a document with no history
+       * (both drew nothing); `loadVersions` now returns `{ ok: false }` and the
+       * panel says so. The mono eyebrow and the sub line are §7's own; there is
+       * deliberately no button (the page itself is fine — reloading is the
+       * reader's own move). (P28.S7)
+       */
+      failedCode: "Unavailable",
+      failedSub:
+        "Couldn't load this document's history. The document itself is fine — reload to try again.",
     },
 
     read: {
