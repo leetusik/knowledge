@@ -888,3 +888,4 @@
 {"ts": "2026-09-21T09:55:11+09:00", "type": "slice_status_changed", "slice": "P28.S1", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-09-21T09:57:10+09:00", "type": "slice_status_changed", "slice": "P28.S2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-09-21T10:40:32+09:00", "type": "slice_status_changed", "slice": "P28.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T11:32:37+09:00", "type": "deferred_dropped", "deferred": "D26", "reason": "Satisfied, not abandoned: the operator supplied both screenshots on 2026-09-21 (Mac Chrome /graph and iPhone, both pre-P28 production). Committed to works/phases/active/P28/diagnostics/D26-{desktop-graph-mac-chrome.png,mobile-graph-iphone.jpeg} and read into the P28.S6 note in phase.md with ranked hypotheses. The graph apply slice now has the evidence the round-05 design never got."}
