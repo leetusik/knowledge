@@ -1443,7 +1443,14 @@ export function GraphCanvas({
       const p = toScreen(n),
         r = n.r * z;
       const isDoc = n.type === "doc";
-      const size = (isDoc ? T.labelSize : T.labelSizeTag) * z;
+      // P28.S9, orchestrator-authorised: the LANDMARK tier only (§4.5.1's always-on
+      // top-N docs) gets a minimum screen size, because at the now-correct fit zoom
+      // they painted at ~3.7px. 11px is ORIGINATED, never a token, and can never
+      // exceed the record's own 12.5px; every other tier is byte-unchanged.
+      const size = Math.max(
+        (isDoc ? T.labelSize : T.labelSizeTag) * z,
+        isDoc && landmarks[n.id] ? 11 : 0,
+      );
       c.globalAlpha = a;
       c.font = (isDoc ? "500 " : "400 ") + size + "px " + T.font;
       c.textAlign = "center";

@@ -93,13 +93,13 @@
       "order": 8,
       "path": "works/phases/active/P28",
       "review_status": "pending",
-      "current_slice": "P28.S9",
+      "current_slice": "P28.REVIEW",
       "slice_count": 11,
-      "done_slice_count": 9
+      "done_slice_count": 10
     }
   ],
   "deferred_open_count": 22,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 4,
-  "last_rebuilt_at": "2026-09-21T16:40:19+09:00"
+  "last_rebuilt_at": "2026-09-21T17:37:28+09:00"
 }
