@@ -924,3 +924,5 @@
 {"ts": "2026-09-21T18:28:54+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "pass", "reviewer": "slice-executor-high (Claude Opus 5)"}
 {"ts": "2026-09-21T18:28:54+09:00", "type": "phase_consolidation_owed", "phase": "P28", "notes": 14}
 {"ts": "2026-09-21T18:29:07+09:00", "type": "deferred_created", "deferred": "D36", "source": "P28.REVIEW"}
+{"ts": "2026-09-21T19:21:20+09:00", "type": "slice_status_changed", "slice": "P28.REVIEW", "old_status": "done", "new_status": "changes_requested"}
+{"ts": "2026-09-21T19:21:20+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "changes_requested", "reviewer": null}
