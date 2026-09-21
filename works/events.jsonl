@@ -872,3 +872,15 @@
 {"ts": "2026-09-21T06:28:31+09:00", "type": "phase_reviewed", "phase": "P27", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-09-21T06:28:31+09:00", "type": "phase_consolidation_owed", "phase": "P27", "notes": 2}
 {"ts": "2026-09-21T06:28:42+09:00", "type": "phase_consolidated", "phase": "P27"}
+{"ts": "2026-09-21T09:33:11+09:00", "type": "slice_status_changed", "slice": "P28.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-09-21T09:38:31+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S1"}
+{"ts": "2026-09-21T09:38:31+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S2"}
+{"ts": "2026-09-21T09:38:31+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S3"}
+{"ts": "2026-09-21T09:38:31+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S4"}
+{"ts": "2026-09-21T09:38:31+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S5"}
+{"ts": "2026-09-21T09:38:37+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S6"}
+{"ts": "2026-09-21T09:38:37+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S7"}
+{"ts": "2026-09-21T09:38:37+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S8"}
+{"ts": "2026-09-21T09:38:37+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S9"}
+{"ts": "2026-09-21T09:44:37+09:00", "type": "slice_status_changed", "slice": "P28.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T09:44:37+09:00", "type": "acceptance_required", "phase": "P28"}
