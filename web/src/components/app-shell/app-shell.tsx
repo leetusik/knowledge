@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 
+import { FullWidthExit } from "@/app/(public)/documents/[id]/full-width-exit";
 import { ToastRegion } from "@/components/states";
 import { APP_SHELL, BRAND, SKIP_TO_CONTENT } from "@/content";
 import type { KbIdentity } from "@/lib/knowledge/types";
@@ -32,9 +33,17 @@ import { LogoutButton } from "./logout-button";
  */
 export async function AppShell({
   identity,
+  fullWidth,
   children,
 }: {
   identity: KbIdentity;
+  /**
+   * Round 06 §4.4 — the chrome-less document view (`?view=full`). It sets
+   * `data-kb-view="full"` on `.kb-app` and mounts the exit pill; NOTHING is
+   * conditionally unmounted, because `kb-docview.css` is what hides the chrome,
+   * so entering and leaving the view costs no refetch and no remount.
+   */
+  fullWidth?: boolean;
   children: React.ReactNode;
 }) {
   const tenantName = identity.tenant?.name ?? APP_SHELL.noTenant;
@@ -66,6 +75,7 @@ export async function AppShell({
         className="kb-app"
         data-md-color-scheme="default"
         data-kb-scheme="auto"
+        data-kb-view={fullWidth ? "full" : undefined}
       >
         {/* Skip link (§4.1), reusing the marketing header's one `SKIP_TO_CONTENT`
             constant — its href is `#main-content`, which is the id this shell's
@@ -119,6 +129,11 @@ export async function AppShell({
           Empty, and always mounted: an `aria-live` region has to exist before
           the message arrives or the announcement is lost. */}
       <ToastRegion />
+
+      {/* Round 06 §4.4 — the full-width view's exit pill, here for exactly the
+          reason the toast region is here: a `position: fixed` child of `.kb-app`
+          would pin to the document, not the screen. */}
+      {fullWidth ? <FullWidthExit /> : null}
     </>
   );
 }

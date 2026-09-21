@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { DataTable, type DataTableColumn } from "@/components/ui";
+import { Editorial } from "@/components/states";
+import { appButtonClass, DataTable, type DataTableColumn } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 import type { KbDocumentVersion } from "@/lib/knowledge/types";
 
@@ -20,6 +21,14 @@ import type { KbDocumentVersion } from "@/lib/knowledge/types";
 // No new visual language (phase finding F6): `.kb-panel` + `.kb-panel__head` chrome
 // and the existing headless `<DataTable>`, exactly like the project page's
 // credentials table.
+//
+// P28.S7 (round 06 §5) gives it three things: the `.kb-docversions` name the
+// full-width view hides it by, column PRIORITIES (Title 3, Superseded 2 — round
+// 03 §4.6's `data-pri`, emitted by `<DataTable>`), and — the real change — an
+// `ok` prop. Until now a history fetch that THREW was indistinguishable from a
+// document with no history, because `loadVersions` caught the error and returned
+// an empty list: the panel simply vanished and nobody was told. It now returns
+// `{ ok: false }` and this says so.
 
 /** One row of the table, normalized across "the live document" and an archive row. */
 interface VersionRow {
@@ -41,13 +50,46 @@ export function VersionHistory({
   currentVersion,
   currentTitle,
   versions,
+  ok,
 }: {
   id: number;
   currentVersion: number;
   currentTitle: string;
   /** SUPERSEDED versions only, newest first — the server's order, kept verbatim. */
   versions: KbDocumentVersion[];
+  /**
+   * `false` ⇒ the history fetch FAILED (round 06 §5). Absent/`true` ⇒ the list is
+   * the truth, including the empty list, which is the ordinary answer for a
+   * document that has never been re-published.
+   */
+  ok?: boolean;
 }) {
+  // The failure panel: the head, then the editorial, and deliberately NO button —
+  // the document itself loaded, so there is nothing here to retry that reloading
+  // the page would not do better.
+  if (ok === false) {
+    return (
+      <section className="kb-panel kb-docversions" aria-labelledby="version-history-head">
+        <div className="kb-panel__head">
+          <div>
+            <h2
+              id="version-history-head"
+              className="kb-app-h2"
+              style={{ fontSize: "1.05rem" }}
+            >
+              {DOCUMENTS.versions.panel.heading}
+            </h2>
+          </div>
+        </div>
+        <Editorial
+          variant="inline"
+          code={DOCUMENTS.versions.panel.failedCode}
+          sub={DOCUMENTS.versions.panel.failedSub}
+        />
+      </section>
+    );
+  }
+
   // No history ⇒ no panel. `total: 0` is the normal answer for a document that has
   // never been re-published, not an error, so this is the common case.
   if (versions.length === 0) return null;
@@ -80,6 +122,9 @@ export function VersionHistory({
     {
       key: "title",
       header: DOCUMENTS.versions.panel.columns.title,
+      // Round 06 §5 — the one column a narrow console can lose: the version
+      // number and the date already identify a row.
+      priority: 3,
       // An archived row keeps the title that body carried — a retitled document
       // shows its old titles here, which is the point of a history.
       cell: (row) => row.title,
@@ -88,6 +133,7 @@ export function VersionHistory({
       key: "superseded",
       header: DOCUMENTS.versions.panel.columns.superseded,
       className: "mono",
+      priority: 2,
       // When this body was ARCHIVED (i.e. when the next version replaced it) — not
       // when it was authored. The live row has not been superseded at all.
       cell: (row) =>
@@ -106,23 +152,29 @@ export function VersionHistory({
       ),
       actions: true,
       // The current row is the page you are already on, so it links nowhere.
+      // Round 06 §5: a ghost `sm` BUTTON carrying the version in its VISIBLE
+      // label — below 40rem the table stacks into one card per row, where a bare
+      // "View" has no row left to belong to. The visible text is now unambiguous
+      // on its own, so the `aria-label` that used to supply the version is gone
+      // rather than duplicated.
       cell: (row) =>
         row.supersededAt === null ? null : (
           <Link
             href={`/documents/${id}/versions/${row.version}`}
-            className="text-[0.82rem] text-[var(--kb-accent-strong)] underline underline-offset-2"
-            aria-label={`${DOCUMENTS.versions.panel.viewAriaPrefix} ${DOCUMENTS.versions.label(row.version)}`}
+            className={appButtonClass("ghost", "sm")}
           >
-            {DOCUMENTS.versions.panel.viewLabel}
+            {DOCUMENTS.versions.panel.viewLabel}{" "}
+            {DOCUMENTS.versions.label(row.version)}
           </Link>
         ),
     },
   ];
 
   return (
+    // `.kb-docversions` (§3.1) carries no margin of its own — the article's own
+    // `gap` is the rhythm now — and is the name `?view=full` hides the panel by.
     <section
-      className="kb-panel"
-      style={{ marginTop: "var(--kb-space-md)" }}
+      className="kb-panel kb-docversions"
       aria-labelledby="version-history-head"
     >
       <div className="kb-panel__head">

@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Round 06 apply: document views + chrome-less full-width view",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 7,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:37+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T15:09:57+09:00",
+  "completed_at": "2026-09-21T15:57:58+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 06's screen half applied: kb-docview.css landed verbatim between graph-r5 and the corrections sheet, prose.css and explainer.css deleted and the 46rem cap retired so the reading column is the two-track grid (672px identically on member and public), the chrome-less ?view=full view ships on all three routes and both body kinds behind the unchanged sandboxed relay with the exit pill proved on a 14,846px page, and the explainer frame gained its waiting line, per-tier heights, a measured 4s unmeasured state and both relay-failure branches; checks 1-13 and 21-22 pass in dev and production, check 23 reported as a record gap",
   "validation": {
     "required": [],
     "last_run": null,

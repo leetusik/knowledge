@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { FullWidthExit } from "@/app/(public)/documents/[id]/full-width-exit";
 import { appButtonClass } from "@/components/ui";
 import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
 
@@ -40,15 +41,33 @@ import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
  * NO `data-kb-scheme`: the public surfaces stay light in OS dark mode, because the
  * graph engine reads the scheme attribute and rounds 05/06 designed no dark graph.
  * NO toast region either — `AppShell` mounts one as a sibling of `.kb-app`, but round
- * 04 gives the public surfaces nothing to announce, so this shell stays a single root.
+ * 04 gives the public surfaces nothing to announce.
+ *
+ * P28.S7: round 06 §4.4's chrome-less document view is offered to the anonymous
+ * reader too (the same URL must read the same signed in or out), so this shell now
+ * takes the same `fullWidth` prop and, when it is set, returns a FRAGMENT — the exit
+ * pill has to be a sibling of `.kb-app`, never a child, because a container is the
+ * containing block for its `position: fixed` descendants.
  *
  * A SERVER component: it holds no session and makes no fetch, so there is no client
  * boundary to cross. The brand links to `/` (the marketing home) rather than
  * `/dashboard`, because a public visitor has no dashboard.
  */
-export function PublicShell({ children }: { children: React.ReactNode }) {
+export function PublicShell({
+  fullWidth,
+  children,
+}: {
+  /** Round 06 §4.4 — see `AppShell`; the CSS hides the chrome, nothing unmounts. */
+  fullWidth?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="kb-app kb-app--public" data-md-color-scheme="default">
+    <>
+    <div
+      className="kb-app kb-app--public"
+      data-md-color-scheme="default"
+      data-kb-view={fullWidth ? "full" : undefined}
+    >
       <a className="kb-skip" href={SKIP_TO_CONTENT.href}>
         {SKIP_TO_CONTENT.label}
       </a>
@@ -73,5 +92,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    {fullWidth ? <FullWidthExit /> : null}
+    </>
   );
 }
