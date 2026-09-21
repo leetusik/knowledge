@@ -331,11 +331,30 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
       </div>
 
       {/* §4.3 — the honest footnote. ALWAYS in the DOM: `kb-docview.css` reveals it
-          only for `[data-unmeasured]`, and `kb-print.css` (P28.S8) reveals its own
-          second note in the same slot. It must be the IMMEDIATE next sibling of
-          `.kb-explainer` — that adjacency is the rule that shows it. */}
-      <p className="kb-explainer__note">
+          only for `[data-unmeasured]`, and it must be the IMMEDIATE next sibling of
+          `.kb-explainer` — that adjacency is the rule that shows it.
+
+          `--screen` marks it SCREEN-ONLY: `kb-print.css` re-shows every
+          `.kb-explainer__note` on paper and then hides this modifier, and what
+          this sentence says ("it scrolls inside its frame") is true of a screen
+          and meaningless on a sheet of paper. §4.3's markup block puts the
+          modifier on the OTHER note; that is a record slip, and the record's own
+          print rules, §11 of the round result ("prints one caveat line under
+          it") and acceptance check 19 all read the other way. See `result.md`
+          and `phase.md` — P28.S8. */}
+      <p className="kb-explainer__note kb-explainer__note--screen">
         {DOCUMENTS.read.explainerUnmeasured}
+      </p>
+
+      {/* §4.3's second note — the PAPER caveat, hidden on screen (it carries no
+          reveal rule there) and printed under the frame by `kb-print.css`. A
+          framed explainer is someone else's interactive page: we cannot suppress
+          its quiz for paper, so the sheet says so and points at the address the
+          working version lives at. It is in the DOM even when the frame measured
+          cleanly — a measured frame prints in full and STILL has controls that do
+          nothing on paper. */}
+      <p className="kb-explainer__note">
+        {DOCUMENTS.read.print.explainerCaveat}
       </p>
     </>
   );

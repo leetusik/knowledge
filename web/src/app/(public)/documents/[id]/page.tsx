@@ -18,6 +18,8 @@ import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
 
 import { DocumentView } from "./document-view";
+import { ExportPdfButton } from "./export-pdf-button";
+import { PrintColophon, PrintMasthead } from "./print-blocks";
 import { VersionHistory } from "./version-history";
 
 // P19 — one document in full, now on the OPTIONAL-IDENTITY public route group
@@ -154,9 +156,11 @@ export default async function DocumentPage({
                   `canonical_path`. `null` (no org slug claimed) falls back to the id
                   URL, which keeps working forever. */}
               <CopyLinkButton path={doc.canonical_path ?? `/documents/${id}`} />
-              {/* P28.S8 MOUNTS `<ExportPdfButton>` HERE — inside
-                  `.kb-docbar__actions`, between Copy link and Full width (§4.1's
-                  own order). Nothing else in this row needs to move for it. */}
+              {/* Round 06 §4.1/§5 — the print pipeline's one control, between
+                  Copy link and Full width. It takes no props: it prints the page
+                  the reader is already on, and `kb-print.css` drops the chrome,
+                  so there is nothing to prepare and no view to switch to first. */}
+              <ExportPdfButton />
               <Link
                 href={fullWidthHref(`/documents/${id}`)}
                 className={appButtonClass("ghost", "sm")}
@@ -199,6 +203,14 @@ export default async function DocumentPage({
               </p>
             ) : null}
           </div>
+          {/* Round 06 §4.1/§4.5 — print-only, and `display: none` on screen. The
+              masthead opens the printed sheet (the actions row above it is
+              dropped on paper); the colophon closes it, below the version panel
+              that paper never gets. */}
+          <PrintMasthead
+            path={doc.canonical_path ?? `/documents/${id}`}
+            version={doc.version}
+          />
           <DocumentView doc={doc} id={id} />
           {/* P23 — the version-history panel, below the body and identical in both
               branches (it carries no member-only affordance; knowledge scopes the
@@ -210,6 +222,11 @@ export default async function DocumentPage({
             currentTitle={doc.title}
             versions={history.versions}
             ok={history.ok}
+          />
+          <PrintColophon
+            title={doc.title}
+            path={doc.canonical_path ?? `/documents/${id}`}
+            version={doc.version}
           />
         </article>
       </AppShell>
@@ -242,6 +259,7 @@ export default async function DocumentPage({
             (§5: "on every surface") and is where P28.S8 mounts Export PDF. */}
         <div className="kb-docbar">
           <div className="kb-docbar__actions">
+            <ExportPdfButton />
             <Link
               href={fullWidthHref(`/documents/${id}`)}
               className={appButtonClass("ghost", "sm")}
@@ -251,6 +269,10 @@ export default async function DocumentPage({
             </Link>
           </div>
         </div>
+        <PrintMasthead
+          path={doc.canonical_path ?? `/documents/${id}`}
+          version={doc.version}
+        />
         <DocumentView doc={doc} id={id} />
         <VersionHistory
           id={id}
@@ -258,6 +280,11 @@ export default async function DocumentPage({
           currentTitle={doc.title}
           versions={history.versions}
           ok={history.ok}
+        />
+        <PrintColophon
+          title={doc.title}
+          path={doc.canonical_path ?? `/documents/${id}`}
+          version={doc.version}
         />
       </article>
     </PublicShell>

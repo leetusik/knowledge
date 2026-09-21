@@ -39,3 +39,42 @@
 @container kbmain (width < 40rem) {
   .kb-appsearch__input { font-size: 1rem; }
 }
+
+/* ── ROUND 06 §3.2 — the print-only blocks could never print ───────────────────
+   MEASURED, not read: with Chrome's print media emulated on the real page,
+   `.kb-printhead` and `.kb-printfoot` both computed to `display: none`.
+
+   THE CAUSE IS THE RECORD'S OWN SOURCE ORDER, not this repo's cascade. Inside
+   `@media print` the sheet says `.kb-printonly { display: block }` and
+   `.kb-printhead { display: flex; … }`; its LAST line, outside the media query,
+   then says `.kb-printonly, .kb-printhead, .kb-printfoot { display: none }` to
+   keep the blocks off the screen. A media query adds no specificity, so at equal
+   specificity the later rule wins IN PRINT TOO — and the two blocks §4.5 defines,
+   §3.2 comments at length, and acceptance checks 14 and 18 require on the sheet
+   are hidden in the one medium they exist for.
+
+   THE CORRECTION RESTORES THE RECORD'S OWN DECLARATIONS AND ORIGINATES NOTHING —
+   the same `display: block` / `display: flex`, the same selectors, re-stated after
+   the line that accidentally outranks them. Screen is untouched: this is inside
+   `@media print`, so the last line still hides both blocks in the app.
+
+   IT WORKS THE WAY THIS SHEET IS DESIGNED TO WORK — same selectors, same
+   declarations, imported LAST, winning on source order at equal specificity.
+   Verified in BOTH runtimes, because the production minifier could in principle
+   have folded a duplicate `@media print` block back into the record's own one:
+   it does not (the built chunk keeps two print blocks, this one last), and the
+   two blocks compute `flex` / `block` under emulated print media in dev AND in
+   the production build.
+
+   AUTHORISATION: GRANTED by the orchestrator on 2026-09-21, under the operator's
+   standing "do whatever you recommend", on the same reasoning that authorised the
+   iOS input gap above: it is a MISS in the record that defeats the record's own
+   stated intent (§4.5 exists to put provenance on the sheet; §3.2's last line
+   makes that impossible), and no value here is chosen. Flagged in the gate
+   walkthrough so the operator can veto it — deleting these four lines is the
+   whole revert, and the only cost of a veto is that printed pages carry no
+   masthead or colophon. (P28.S8, authorised by the orchestrator) */
+@media print {
+  .kb-printonly { display: block; }
+  .kb-printhead { display: flex; }
+}

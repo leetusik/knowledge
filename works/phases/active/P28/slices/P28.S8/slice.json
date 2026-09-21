@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Round 06 apply: print layer + Export PDF control",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 8,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:37+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T15:59:06+09:00",
+  "completed_at": "2026-09-21T16:40:19+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 06's print half landed: kb-print.css byte-identical and imported after kb-docview.css, the masthead/colophon print blocks on all three surfaces, the Export PDF island between Copy link and Full width, and the four print.* strings verbatim; checks 14-20 and 24 answered on real paper via headless Chromium printed to A4 and US Letter (never calling window.print() in an automated browser), with check 19's engine recorded — Blink prints a content-sized iframe in full, 13 pages — and one record defect corrected so the print blocks can display at all",
   "validation": {
     "required": [],
     "last_run": null,

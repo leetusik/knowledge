@@ -21,6 +21,14 @@
    line, still before the corrections sheet. It replaces the bodies of the deleted
    `documents/[id]/prose.css` and `explainer.css`. */
 @import "./kb-docview.css";
+/* The PRINT layer (round 06 §3.2, P28.S8) — the first `@media print` rule this
+   product has ever had, and the whole answer to "what comes out of the printer".
+   It is a separate file from `kb-docview.css` because paper is a different medium,
+   not a narrow screen (the record's own reasoning, at the top of the file). Its
+   position is the record's: immediately after the screen half, still BEFORE
+   `kb-record-fixes.css`. It also carries the one SCREEN rule the print-only blocks
+   need — `.kb-printonly` is `display: none` outside `@media print`. */
+@import "./kb-print.css";
 /* Operator-authorised corrections to a SIGNED record, and nothing else (P28.S5 —
    see the charter at the top of the file). It is imported LAST on purpose, so it
    wins at equal specificity over every round sheet above it. Later slices insert
