@@ -82,7 +82,13 @@ export default async function PublicGraphPage({
         <p className="kb-app-sub">{GRAPH.sub}</p>
       </div>
 
-      <GraphCanvas data={graph} />
+      {/* Round 05 §4.6 / §9 (P28.S6) — the LEGACY UUID route, reached only by a
+          slug-less org (a slugged one was 307'd to `/@{org}/graph` above). Same
+          stranger's panel; `publicBase` is this route. Note a slug-less org also
+          has `canonical_path: null` on every doc node, so the read links there
+          fall back to `/documents/{id}`, which is the optional-identity read
+          route and works anonymously — nothing is prefixed onto anything. */}
+      <GraphCanvas data={graph} publicBase={`/graph/${org}`} />
     </PublicShell>
   );
 }

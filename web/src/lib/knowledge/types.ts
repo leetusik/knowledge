@@ -434,6 +434,15 @@ export interface KbGraphNode {
   title?: string;
   /** Doc nodes only — the S5 read route `/documents/{db_id}`. */
   url?: string;
+  /**
+   * P28.S1 — doc nodes only, ADDITIVE beside the unchanged `url`: the document's
+   * pretty public path `/@{org-slug}/{project}/{slug}`, or `null` when the tenant
+   * has claimed no slug, the row has no project/slug, or the row is a superseded
+   * duplicate that does not own the dateless path. It already starts with `/@{org}`,
+   * so nothing ever prefixes a `publicBase` onto it. `tag` and `missing` nodes do
+   * not carry the key at all — read it as `node.canonical_path ?? null`.
+   */
+  canonical_path?: string | null;
   date?: string;
   project?: string;
   tags?: string[];

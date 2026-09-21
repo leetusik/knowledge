@@ -5,8 +5,11 @@ import { useEffect, useRef } from "react";
 import { GRAPH } from "@/content";
 import type { KbGraph, KbGraphNode } from "@/lib/knowledge/types";
 
-import "./graph-tokens.css";
-import "./graph.css";
+// P28.S6 — the three graph stylesheets (`graph-tokens.css`, `graph.css`,
+// `graph-r5.css`) are imported from `globals.css`, in that order, NOT from here.
+// A component import compiles into a later document sheet than the globals
+// chunk, which made round 05's sheet lose every same-selector tie to the record
+// it layers on top of. See the note beside those three lines in `globals.css`.
 
 /*
  * GraphCanvas (P12.S6) — a FAITHFUL port of the docs' `docs/javascripts/graph.js`
@@ -66,9 +69,13 @@ interface GNode {
   deg: number;
   r: number;
   url?: string;
+  /** R05 §4.6 / P28.S1 — doc nodes only; `/@{org}/{project}/{slug}` or null. */
+  canonicalPath?: string | null;
   date?: string;
   project?: string;
   tags: string[];
+  /** R05 §4.5.1 — `related`-edge count, the landmark ranking key. */
+  rel: number;
   x: number;
   y: number;
   vx: number;
@@ -154,23 +161,76 @@ interface Tokens {
   driftPeriod: number;
   zoomMin: number;
   zoomMax: number;
+  // ── R05 §2 — the seven engine-read tokens this round adds ──
+  fitPad: number;
+  fitBias: number;
+  restoreTol: number;
+  offmapMin: number;
+  labelZoom: number;
+  labelCap: number;
+  labelCapSm: number;
+  docsShown: number;
 }
 
+/**
+ * R05 §4.2 — the persisted view record. `v` is the shape version: a record written
+ * by an older engine (no `v`, or a different one) is ignored WHOLE and the map
+ * fits, which is also how a tab open across this deploy heals itself. `w`/`h` are
+ * the plate's measured px at capture and `n` the node count; a restore happens only
+ * when all three still match (§4.2's table), so a view captured on a desktop plate
+ * is never replayed into a phone one.
+ */
+const STORE_VERSION = 2;
+
 interface StoredBlob {
+  v?: number;
+  w?: number;
+  h?: number;
+  n?: number;
   rest?: Record<string, [number, number]>;
   view?: { zt: number; pxt: number; pyt: number; auto: boolean };
   tagsVisible?: boolean;
   activeProject?: string | null;
+  /** R05 §4.6 — the tag lens, mutually exclusive with the project lens. */
+  activeTag?: string | null;
   selectedId?: string | null;
+  /** R05 §4.3 — the legend's collapse, default true. */
+  legendOpen?: boolean;
 }
 
-export function GraphCanvas({ data }: { data: KbGraph }) {
+/**
+ * `publicBase` (R05 §4.6) — the anonymous route the visitor is already on
+ * (`/@{org}` for the pretty public graph, `/graph/{org}` for the legacy UUID one).
+ * Member pages pass nothing, and `publicBase == null` is what "this is the member
+ * map" means everywhere below.
+ */
+export function GraphCanvas({
+  data,
+  publicBase,
+  projectIds,
+}: {
+  data: KbGraph;
+  publicBase?: string;
+  /**
+   * R05 §6.3 — project mode's foot is drawn with `/documents?project={id}` and
+   * `/projects/{id}`, and BOTH need a project UUID: the documents filter is
+   * parsed as a UUID server-side, so a name would 422. `/app/graph`'s `projects`
+   * carry only `{name, docs}`, so the member page supplies the map from the
+   * `listProjects` call it can make in parallel — no new endpoint, and §4.4's
+   * "no new fetch" still holds for the ROWS, which come from the payload. Absent
+   * (or a name it does not know) simply drops that one link. Public pages pass
+   * nothing: a stranger has no member foot at all.
+   */
+  projectIds?: Record<string, string>;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
+    const dock = dockRef.current;
     if (!host || !canvas || !canvas.getContext) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -186,6 +246,7 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     let drawRafId = 0;
     let ro: ResizeObserver | null = null;
     let schemeObs: MutationObserver | null = null;
+    let schemeMql: MediaQueryList | null = null;
 
     // ── sim tuning (engineering; unconstrained by the locked visual design) ──
     const REST_RELATED = 150,
@@ -201,8 +262,23 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       ALPHA_MIN = 0.02,
       VEL_DECAY = 0.6;
     const LAYOUT_RADIUS = 400;
-    const FIT_PAD = 64,
-      FIT_Z_MIN = 0.5,
+    /*
+     * R05 §4.2 + the D26 off-frame defect. The shipped fit was
+     * `FIT_PAD = 64` px on every side and `z = clamp(0.5, …, 1.5)`, and the FLOOR
+     * is what put the operator's wires off the plate: measured on a corpus shaped
+     * like theirs (33 docs / 100 tag hubs / 6 projects) the content rests
+     * 1432 x 1866 world units, so a 1121 x 658 plate needs z = 0.284 and a
+     * 322 x 416 phone plate needs z = 0.135 — both below the 0.5 floor, which the
+     * clamp then RAISED, guaranteeing overflow that grows as the plate shortens.
+     * The fixed 64px pad compounded it: on a 322px phone plate it ate 40% of the
+     * width before a single node was drawn.
+     *
+     * So the pad is now `--kb-graph-fit-pad` (8% of the plate per side, §2's own
+     * token, which is proportional by construction) and the floor is a degenerate
+     * guard only. The CEILING stays: a two-node map should not be blown up to fill
+     * a desktop plate, and 1.5 is the shipped value, unchanged.
+     */
+    const FIT_Z_FLOOR = 0.01,
       FIT_Z_MAX = 1.5;
     const EASE_POS = 0.12,
       EASE_ALPHA = 0.18,
@@ -262,6 +338,15 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         driftPeriod: pxf("--kb-graph-drift-period", 9),
         zoomMin: pxf("--kb-graph-zoom-min", 0.5),
         zoomMax: pxf("--kb-graph-zoom-max", 2.5),
+        // R05 §2 — read through the SAME getComputedStyle as every other token.
+        fitPad: pxf("--kb-graph-fit-pad", 0.08),
+        fitBias: pxf("--kb-graph-fit-bias", 0.38),
+        restoreTol: pxf("--kb-graph-restore-tol", 0.02),
+        offmapMin: pxf("--kb-graph-offmap-min", 0.15),
+        labelZoom: pxf("--kb-graph-label-zoom", 1.6),
+        labelCap: pxf("--kb-graph-label-cap", 8),
+        labelCapSm: pxf("--kb-graph-label-cap-sm", 4),
+        docsShown: pxf("--kb-graph-docs-shown", 5),
       };
     }
     let T = readTokens();
@@ -320,15 +405,60 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     const elTooltip = host.querySelector<HTMLElement>(".kb-graph-tooltip");
     const elPanel = host.querySelector<HTMLElement>(".kb-graph-panel");
     const elEmpty = host.querySelector<HTMLElement>(".kb-graph-empty");
+    const elRecenter = host.querySelector<HTMLElement>(".kb-graph-recenter");
     const emptyDefaultHTML = elEmpty ? elEmpty.innerHTML : "";
 
-    function showEmpty(mode: "none" | "empty") {
+    /**
+     * R05 §4.8 — the plate's three states, all inside `.kb-graph-empty`, all with
+     * the page frame intact above them. The map never borrows the page-level
+     * editorial state.
+     */
+    function showEmpty(
+      mode: "none" | "empty" | "load" | "failed",
+      detail?: string,
+    ) {
       if (!elEmpty) return;
+      elEmpty.classList.remove("kb-graph-empty--load");
       if (mode === "none") {
         elEmpty.hidden = true;
         return;
       }
-      elEmpty.innerHTML = emptyDefaultHTML;
+      if (mode === "empty") {
+        // The designed block is already in the JSX; §4.8 adds one primary action.
+        elEmpty.innerHTML =
+          emptyDefaultHTML +
+          '<div class="kb-graph-empty__actions">' +
+          '<a class="kb-appbtn kb-appbtn--primary kb-appbtn--sm" href="/documents">' +
+          esc(GRAPH.empty.action) +
+          "</a></div>";
+      } else if (mode === "load") {
+        elEmpty.classList.add("kb-graph-empty--load");
+        elEmpty.innerHTML =
+          '<div class="kb-graph-skel"><span class="kb-graph-skel__dot"></span></div>' +
+          // §5 keeps this one inline, beside the engine's other bilingual micro-copy.
+          '<div class="kb-graph-empty__sub">Drawing the map · 지도를 그리는 중</div>';
+      } else {
+        elEmpty.innerHTML =
+          '<div class="kb-graph-empty__title">' +
+          esc(GRAPH.failed.title) +
+          "</div>" +
+          '<div class="kb-graph-empty__sub">' +
+          esc(GRAPH.failed.sub) +
+          "</div>" +
+          '<div class="kb-graph-empty__actions">' +
+          '<button class="kb-appbtn kb-appbtn--primary kb-appbtn--sm" type="button" data-graph-retry>' +
+          esc(GRAPH.failed.retry) +
+          "</button>" +
+          '<a class="kb-appbtn kb-appbtn--secondary kb-appbtn--sm" href="/documents">' +
+          esc(GRAPH.failed.back) +
+          "</a></div>" +
+          (detail
+            ? '<div class="kb-graph-empty__detail">' + esc(detail) + "</div>"
+            : "");
+        const retry = elEmpty.querySelector<HTMLElement>("[data-graph-retry]");
+        if (retry)
+          retry.addEventListener("click", () => window.location.reload());
+      }
       elEmpty.hidden = false;
     }
 
@@ -339,6 +469,20 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     let adjacency: Record<string, Record<string, boolean>> = {};
     const projectInk: Record<string, number> = {};
     let activeProject: string | null = null;
+    /** R05 §4.6 — the tag lens; mutually exclusive with `activeProject`. */
+    let activeTag: string | null = null;
+    /** R05 §4.3 — the legend body's collapse, persisted, default open. */
+    let legendOpen = true;
+    /** R05 §4.4 — which mode the panel is currently showing. */
+    let panelMode: "none" | "node" | "project" = "none";
+    /** R05 §4.5.1 — the always-labelled hub set, recomputed on payload + tier. */
+    let landmarks: Record<string, boolean> = {};
+    /** R05 §4.2 — the plate tier at the last fit; a crossing re-fits. */
+    let plateTier: "sm" | "md" | "lg" | null = null;
+    /** R05 §4.1.3 — the plate measured 0; the initial fit is still owed. */
+    let firstFitPending = false;
+    /** R05 §4.2 — the recenter pill is never evaluated on first paint. */
+    let offMapArmed = false;
     let tagAnchor: Record<string, TagAnchor> = {};
     let tagsVisible = true;
     let hoverId: string | null = null,
@@ -388,9 +532,12 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           deg,
           r,
           url: n.url,
+          // Doc nodes only; `tag`/`missing` never carry the key (P28.S1's note).
+          canonicalPath: n.canonical_path ?? null,
           date: n.date,
           project: n.project,
           tags: n.tags || [],
+          rel: 0,
           x: 0,
           y: 0,
           vx: 0,
@@ -425,6 +572,12 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       edges.forEach((e) => {
         adjacency[e.a][e.b] = true;
         adjacency[e.b][e.a] = true;
+        // R05 §4.5.1 — the landmark ranking key, counted once instead of by an
+        // O(edges) scan per node per recompute.
+        if (e.kind === "related") {
+          if (nodeById[e.a]) nodeById[e.a].rel++;
+          if (nodeById[e.b]) nodeById[e.b].rel++;
+        }
       });
 
       seedPositions(projects.length);
@@ -669,11 +822,19 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           rest[n.id] = [Math.round(n.bx * 10) / 10, Math.round(n.by * 10) / 10];
         });
         const blob: StoredBlob = {
+          v: STORE_VERSION,
+          // R05 §4.2 — the plate the view was CAPTURED at, and the node count it
+          // was captured over. A restore is only legal when both still hold.
+          w: W,
+          h: H,
+          n: nodes.length,
           rest,
           view: { zt: view.zt, pxt: view.pxt, pyt: view.pyt, auto: view.auto },
           tagsVisible,
           activeProject,
+          activeTag,
           selectedId,
+          legendOpen,
         };
         window.sessionStorage.setItem(STORE_KEY, JSON.stringify(blob));
       } catch {
@@ -696,6 +857,9 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         return null;
       }
       if (!blob || !blob.rest) return null;
+      // R05 §4.2 "Version mismatch — ignore the whole record and fit()". This is
+      // also what heals a tab left open across a deploy: a v1 record has no `v`.
+      if (blob.v !== STORE_VERSION) return null;
 
       const rest = blob.rest;
       nodes.forEach((n) => {
@@ -715,22 +879,99 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       simStarted = false;
 
       if (typeof blob.tagsVisible === "boolean") tagsVisible = blob.tagsVisible;
+      if (typeof blob.legendOpen === "boolean") legendOpen = blob.legendOpen;
       activeProject =
         blob.activeProject != null && projectInk[blob.activeProject] != null
           ? blob.activeProject
           : null;
+      // R05 §4.6 — the tag lens is mutually exclusive with the project lens, so a
+      // record carrying both (impossible to write, but cheap to survive) keeps the
+      // project one.
+      activeTag =
+        activeProject == null &&
+        blob.activeTag != null &&
+        nodeById["tag:" + blob.activeTag]
+          ? blob.activeTag
+          : null;
       return blob;
     }
+
+    /**
+     * R05 §4.2 — may the stored VIEW be replayed into the plate we have now? The
+     * selection, the lens and the tag switch are restored either way; only the
+     * camera is conditional, because a camera captured on a wide plate is exactly
+     * what put the map off the frame on a narrow one.
+     */
+    function viewRestorable(blob: StoredBlob): boolean {
+      if (!blob.view) return false;
+      if (blob.n !== nodes.length) return false;
+      if (!blob.w || !blob.h || !W || !H) return false;
+      const tol = T.restoreTol;
+      return (
+        Math.abs(blob.w - W) / W <= tol && Math.abs(blob.h - H) / H <= tol
+      );
+    }
+    /**
+     * R05 §4.3 — the legend and the dock are two renderings of ONE state, so every
+     * mutation goes through here rather than through whichever control was clicked.
+     * A lens lit in the legend is lit in the dock.
+     */
     function syncLegendUI() {
-      if (!elLegend) return;
-      const sw = elLegend.querySelector<HTMLElement>(".kb-graph-switch");
-      if (sw) {
-        sw.classList.toggle("is-on", tagsVisible);
-        sw.setAttribute("aria-pressed", tagsVisible ? "true" : "false");
-      }
-      elLegend.querySelectorAll<HTMLElement>(".kb-graph-legend__item").forEach((b) => {
-        b.classList.toggle("is-on", b.getAttribute("data-project") === activeProject);
+      const roots: HTMLElement[] = [];
+      if (elLegend) roots.push(elLegend);
+      if (dock) roots.push(dock);
+      roots.forEach((root) => {
+        root.querySelectorAll<HTMLElement>(".kb-graph-switch").forEach((sw) => {
+          sw.classList.toggle("is-on", tagsVisible);
+          sw.setAttribute("aria-pressed", tagsVisible ? "true" : "false");
+        });
+        root
+          .querySelectorAll<HTMLElement>(
+            ".kb-graph-legend__item, .kb-graph-dock__item[data-project]",
+          )
+          .forEach((b) => {
+            const on = b.getAttribute("data-project") === activeProject;
+            b.classList.toggle("is-on", on);
+            // §6.5: the unlit siblings of a lit lens carry `is-off`.
+            b.classList.toggle("is-off", activeProject != null && !on);
+            if (b.tagName === "BUTTON" && b.hasAttribute("aria-pressed"))
+              b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
       });
+      if (elLegend) {
+        const toggle = elLegend.querySelector<HTMLElement>(
+          ".kb-graph-legend__toggle",
+        );
+        if (toggle)
+          toggle.setAttribute("aria-expanded", legendOpen ? "true" : "false");
+      }
+      // The public panel's tag pills are the tag lens's only UI (§4.6).
+      if (elPanel)
+        elPanel.querySelectorAll<HTMLElement>("button.kb-tag").forEach((b) => {
+          b.setAttribute(
+            "aria-pressed",
+            b.getAttribute("data-tag") === activeTag ? "true" : "false",
+          );
+        });
+    }
+
+    /**
+     * R05 §4.4 / §4.6 — one entry point for both lenses, so "lighting one clears
+     * the other" and the panel's second mode can never disagree with the map.
+     */
+    function setLens(kind: "project" | "tag", name: string | null) {
+      if (kind === "project") {
+        activeProject = name;
+        if (name != null) activeTag = null;
+      } else {
+        activeTag = name;
+        if (name != null) activeProject = null;
+      }
+      // No re-fit: a lens DIMS, it never hides, so the content extent is unchanged
+      // (§4.2's table re-fits on the tag SWITCH, which does change it).
+      syncLegendUI();
+      scheduleDraw();
+      persist();
     }
 
     // ── camera ──
@@ -759,9 +1000,13 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         center.y = (minY + maxY) / 2;
         const bw = Math.max(1, maxX - minX),
           bh = Math.max(1, maxY - minY);
-        z = Math.min((W - 2 * FIT_PAD) / bw, (H - 2 * FIT_PAD) / bh);
+        // R05 §4.2 — "a margin of `--kb-graph-fit-pad` (8%) of the plate on every
+        // side", i.e. PROPORTIONAL: the usable box is (1 - 2 x pad) of the plate.
+        const usable = Math.max(0, 1 - 2 * T.fitPad);
+        z = Math.min((W * usable) / bw, (H * usable) / bh);
         if (!isFinite(z) || z <= 0) z = 1;
-        z = Math.max(FIT_Z_MIN, Math.min(FIT_Z_MAX, z));
+        // Ceiling only. See FIT_Z_FLOOR's note: the old floor was the D26 defect.
+        z = Math.max(FIT_Z_FLOOR, Math.min(FIT_Z_MAX, z));
       }
       view.fitZoom = z;
       view.zt = z;
@@ -773,6 +1018,60 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         view.panY = 0;
       }
     }
+    /** R05 §0 — the plate tiers the overlays switch on: < 34rem · 34–52rem · >= 52rem. */
+    function tierOf(widthPx: number): "sm" | "md" | "lg" {
+      const rem =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const w = widthPx / rem;
+      return w < 34 ? "sm" : w < 52 ? "md" : "lg";
+    }
+
+    /**
+     * R05 §4.5.1 — the always-on landmark labels: the top N doc nodes by
+     * `related`-link count, N = `--kb-graph-label-cap` (8) on a medium or large
+     * plate and `-cap-sm` (4) on a small one. Ties break by date, newest first, so
+     * the set is stable across renders. Recomputed on payload change and on a tier
+     * change — never per frame.
+     */
+    function computeLandmarks() {
+      const cap = Math.max(
+        0,
+        Math.round(plateTier === "sm" ? T.labelCapSm : T.labelCap),
+      );
+      const docs = nodes.filter((n) => n.type === "doc");
+      docs.sort((a, b) => {
+        if (b.rel !== a.rel) return b.rel - a.rel;
+        const da = a.date || "",
+          db = b.date || "";
+        if (da !== db) return da < db ? 1 : -1;
+        return a.id < b.id ? -1 : 1;
+      });
+      landmarks = {};
+      docs.slice(0, cap).forEach((n) => {
+        landmarks[n.id] = true;
+      });
+    }
+
+    /**
+     * R05 §4.2 "Off-map" — the share of DOC nodes whose centre lies inside the
+     * plate. Below `--kb-graph-offmap-min` the recenter pill appears; at or above
+     * it, it hides. Never on first paint, because first paint always fits.
+     */
+    function updateOffMap() {
+      if (!elRecenter) return;
+      const docs = nodes.filter((n) => n.type === "doc" && !isHidden(n));
+      if (!docs.length) {
+        elRecenter.hidden = true;
+        return;
+      }
+      let inside = 0;
+      docs.forEach((n) => {
+        const p = toScreen(n);
+        if (p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H) inside++;
+      });
+      elRecenter.hidden = inside / docs.length >= T.offmapMin;
+    }
+
     function toScreen(n: GNode): { x: number; y: number } {
       return {
         x: W / 2 + (n.x - center.x) * view.z + view.panX,
@@ -850,22 +1149,50 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       if (!id || !nodeById[id] || isHidden(nodeById[id])) return null;
       return id;
     }
+    /**
+     * R05 §4.6 — the TAG lens: the same mechanism as the project lens, keyed on a
+     * tag instead. Doc nodes carrying the tag keep full ink (and so does the tag's
+     * own hub and their edges to it); everything else drops to `--kb-graph-dim`.
+     */
+    function tagKeep(tag: string): Record<string, boolean> {
+      const keep: Record<string, boolean> = {};
+      const hub = "tag:" + tag;
+      if (nodeById[hub]) keep[hub] = true;
+      nodes.forEach((n) => {
+        if (n.type === "doc" && (n.tags || []).indexOf(tag) >= 0) keep[n.id] = true;
+      });
+      return keep;
+    }
     function computeKeep(focus: string | null): Record<string, boolean> | null {
       if (focus) return neighborhood(focus);
       if (activeProject != null) return projectKeep(activeProject);
+      if (activeTag != null) return tagKeep(activeTag);
       return null;
     }
 
-    // ── labels (P22): selection-driven, never a neighborhood and never a zoom
-    // ladder — only the selected node and the single hovered/dragged node
-    // (`currentFocus()`) carry a title, so at most one label is painted at rest ──
-    function labelTarget(
-      n: GNode,
-      keep: Record<string, boolean> | null,
-      focus: string | null,
-    ): number {
-      if (keep && !keep[n.id]) return 0;
+    /*
+     * ── labels ──
+     * R05 §4.5 SUPERSEDES P22's selection-only rule, here and only here. P22's
+     * rule stays as the base (the selected node and the single hovered/dragged
+     * one), and the round adds three more label sources:
+     *   1. landmarks — the top `--kb-graph-label-cap` docs by related-link count,
+     *      always, so the map is readable before anyone touches it;
+     *   2. zoom — above `--kb-graph-label-zoom` (1.6) EVERY doc node;
+     *   3. tag hubs above display zoom 1.2, in `--kb-graph-label-muted`
+     *      (`drawLabel`'s `muted` argument already keys off the node type);
+     *      unresolved nodes label only on hover or selection.
+     * §4.5.5: a dimmed node's label dims WITH it, which is why the old hard
+     * `keep && !keep[n.id] -> 0` gate is gone — `frame()` already paints a label at
+     * `n.al * n.la`, so the lens alpha carries through instead of erasing it.
+     */
+    function labelTarget(n: GNode, focus: string | null): number {
       if (n.id === selectedId || n.id === focus) return 1;
+      const dz = displayZoom();
+      if (n.type === "doc") {
+        if (dz >= T.labelZoom) return 1;
+        return landmarks[n.id] ? 1 : 0;
+      }
+      if (n.type === "tag") return dz >= 1.2 ? 1 : 0;
       return 0;
     }
 
@@ -909,7 +1236,7 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       nodes.forEach((n) => {
         const aT = keep ? (keep[n.id] ? 1 : T.dim) : 1;
         n.al += (aT - n.al) * eA;
-        const lT = labelTarget(n, keep, focus);
+        const lT = labelTarget(n, focus);
         n.la += (lT - n.la) * eA;
       });
       const eV = reduceMotion ? 1 : EASE_VIEW;
@@ -941,6 +1268,18 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       const keep = computeKeep(focus);
       stepAlphaLabelView(time, focus, keep);
       frame(focus);
+
+      // R05 §4.2 "Off-map": evaluated once the camera has SETTLED, so an eased
+      // zoom does not flash the pill on its way to a view that is perfectly fine.
+      if (
+        offMapArmed &&
+        !settling &&
+        !drag &&
+        Math.abs(view.z - view.zt) < 1e-3 &&
+        Math.abs(view.panX - view.pxt) < 0.5 &&
+        Math.abs(view.panY - view.pyt) < 0.5
+      )
+        updateOffMap();
     }
 
     function frame(focus: string | null) {
@@ -1137,16 +1476,66 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     }
 
     // ── chrome ──
+    /**
+     * R05 §4.1 + §4.2's resize rows. Three behaviours the shipped `resize()` did
+     * not have:
+     *  - §4.1.3 a plate that measures 0 never fits; the initial fit is deferred to
+     *    the first non-zero size (a hidden tab, a `display:none` ancestor, or the
+     *    `(app)` route transition all produce one);
+     *  - §4.2 a resize INSIDE a tier keeps the zoom and translates so the content
+     *    centroid stays at the same fraction of the plate — re-fitting on every
+     *    ResizeObserver callback is what made a window drag feel like a reset;
+     *  - §4.2 a resize ACROSS a tier boundary (34rem / 52rem) re-fits, because the
+     *    overlays have just changed shape underneath the map.
+     */
     function resize() {
-      W = host!.clientWidth || 1;
-      H = host!.clientHeight || 1;
+      const prevW = W,
+        prevH = H;
+      const rawW = host!.clientWidth,
+        rawH = host!.clientHeight;
+      W = rawW || 1;
+      H = rawH || 1;
       dpr = window.devicePixelRatio || 1;
       canvas!.width = Math.round(W * dpr);
       canvas!.height = Math.round(H * dpr);
       canvas!.style.width = W + "px";
       canvas!.style.height = H + "px";
-      if (view.auto) fit(true);
+
+      // §4.1.3 — never fit on a zero-sized plate; owe the fit instead.
+      if (!rawW || !rawH) {
+        firstFitPending = true;
+        scheduleDraw();
+        return;
+      }
+
+      const tier = tierOf(W);
+      const tierChanged = plateTier !== null && tier !== plateTier;
+      const first = plateTier === null || firstFitPending;
+      plateTier = tier;
+      if (first || tierChanged) computeLandmarks();
+
+      if (first) {
+        firstFitPending = false;
+        if (view.auto) fit(true);
+      } else if (view.auto) {
+        // An auto view is a fitted view; keep it fitted, tier or no tier.
+        fit(true);
+      } else if (tierChanged) {
+        view.auto = true;
+        fit(true);
+      } else if (prevW && prevH) {
+        // §4.2 "Resize inside a tier": keep the zoom, hold the centroid at the
+        // same fraction of the plate. The centroid sits at (W/2 + pan) today, so
+        // the same fraction of the new plate is (W'/2 + pan') — i.e. the pan
+        // scales with the plate, which is exactly the translation below.
+        view.pxt *= W / prevW;
+        view.pyt *= H / prevH;
+        clampPan();
+        view.panX = view.pxt;
+        view.panY = view.pyt;
+      }
       scheduleDraw();
+      persist();
     }
 
     // ── tooltip ──
@@ -1227,9 +1616,181 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       return "/documents?tag=" + encodeURIComponent(tag);
     }
 
+    /**
+     * R05 §4.6 + the phase's `canonical_path` decision — the ONE read-link builder.
+     * Member: `/documents/{id}`, unchanged. Public: the document's own pretty path
+     * `/@{org}/{project}/{slug}`, falling back to `/documents/{id}` when the server
+     * emitted `null` (a slug-less tenant, an empty project/slug, or a superseded
+     * duplicate). `canonical_path` ALREADY starts with `/@{org}`, so `publicBase`
+     * is never prefixed onto it — §4.6's literal `{publicBase}/documents/{id}` is
+     * not a route this app has (`/@{org}/documents/{id}` resolves as project
+     * "documents" and 404s), which the phase recorded rather than editing the
+     * signed round.
+     */
+    function readHref(n: GNode): string {
+      if (!publicBase) return resolveUrl(n.url);
+      return n.canonicalPath || resolveUrl(n.url);
+    }
+
+    /**
+     * R05 §4.6 — "If the payload does not distinguish public documents, treat every
+     * node in a public payload as public". `/app/graph` carries no visibility field
+     * (P28.S1 confirmed none was added), and the public endpoint already filters to
+     * public projects, so this is `true` today for every node. The gate below is
+     * built and correct; it lights the moment the payload gains a marker. Recorded
+     * as a record gap rather than invented around.
+     */
+    function isPublicDoc(_n: GNode): boolean {
+      return true;
+    }
+
+    /**
+     * §6.4's gate. The `?next=` value is the document's own public read path, NOT
+     * §6.4's literal `{publicBase}/documents/{id}` — same repair as `readHref`, for
+     * the same reason: a `next` that 404s after login is not a return address.
+     * `safeNextPath` (P28.S5) accepts exactly this shape: one leading slash, no
+     * origin, no backslash.
+     */
+    function gateHref(n: GNode): string {
+      return "/login?next=" + encodeURIComponent(readHref(n));
+    }
+
+    /** §4.6 — member tag pills are links; public ones are tag-lens buttons. */
+    function tagPillsHTML(tags: string[]): string {
+      if (!tags.length) return "";
+      const pills = tags
+        .map((t) =>
+          publicBase
+            ? '<li><button class="kb-tag" type="button" data-tag="' +
+              esc(t) +
+              '" aria-pressed="' +
+              (activeTag === t ? "true" : "false") +
+              '">' +
+              esc(t) +
+              "</button></li>"
+            : '<li><a class="kb-tag" href="' +
+              tagHref(t) +
+              '">' +
+              esc(t) +
+              "</a></li>",
+        )
+        .join("");
+      return '<ul class="kb-graph-panel__tags">' + pills + "</ul>";
+    }
+
+    /** Binds whatever interactive parts the freshly written panel HTML contains. */
+    function bindPanel() {
+      if (!elPanel) return;
+      const closeBtn = elPanel.querySelector<HTMLElement>(".kb-graph-panel__close");
+      if (closeBtn) closeBtn.addEventListener("click", deselect);
+      elPanel.querySelectorAll<HTMLElement>("button.kb-tag").forEach((b) => {
+        b.addEventListener("click", () => {
+          const t = b.getAttribute("data-tag");
+          setLens("tag", activeTag === t ? null : t);
+        });
+      });
+    }
+
+    /**
+     * R05 §4.4 — the panel's project mode: the project's documents, newest first,
+     * `--kb-graph-docs-shown` (5) of them, drawn from the graph payload the page
+     * already has. No new endpoint and no new fetch. Ties break by title so the
+     * list is stable. Counts are §4.4's: doc nodes in the project, and `related`
+     * edges with BOTH ends in it.
+     */
+    function openProjectPanel(name: string) {
+      if (!elPanel) return;
+      elPanel.classList.remove("kb-graph-panel--ghost");
+      elPanel.classList.add("kb-graph-panel--project");
+      const ink = (projectInk[name] != null ? projectInk[name] : 0) + 1;
+      const docs = nodes.filter((n) => n.type === "doc" && n.project === name);
+      const inProject: Record<string, boolean> = {};
+      docs.forEach((n) => {
+        inProject[n.id] = true;
+      });
+      const links = edges.filter(
+        (e) => e.kind === "related" && inProject[e.a] && inProject[e.b],
+      ).length;
+      const shown = docs
+        .slice()
+        .sort((a, b) => {
+          const da = a.date || "",
+            db = b.date || "";
+          if (da !== db) return da < db ? 1 : -1;
+          return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
+        })
+        .slice(0, Math.max(0, Math.round(T.docsShown)));
+
+      const rows = shown
+        .map(
+          (n) =>
+            '<li><a class="kb-graph-panel__doc" href="' +
+            readHref(n) +
+            '"><span class="kb-graph-panel__doctitle">' +
+            esc(n.title) +
+            '</span><span class="kb-graph-panel__docmeta">' +
+            esc(n.date || "") +
+            " · " +
+            (n.tags || []).length +
+            " tags</span></a></li>",
+        )
+        .join("");
+
+      // §4.6 — the member foot opens the project; a stranger has no documents list
+      // and no project route, so the round gives them no foot at all.
+      const projectId = projectIds ? projectIds[name] : undefined;
+      const foot = publicBase
+        ? ""
+        : '<div class="kb-graph-panel__foot">' +
+          (projectId
+            ? '<a class="kb-graph-panel__read" href="/documents?project=' +
+              encodeURIComponent(projectId) +
+              '">' +
+              esc(GRAPH.project.all) +
+              "</a>"
+            : "") +
+          (projectId
+            ? '<a class="kb-graph-panel__read" href="/projects/' +
+              encodeURIComponent(projectId) +
+              '">' +
+              esc(GRAPH.project.open) +
+              "</a>"
+            : "") +
+          "</div>";
+
+      elPanel.innerHTML =
+        '<div class="kb-graph-panel__eyebrow"><span class="kb-graph-legend__chip" style="--chip: var(--kb-graph-project-' +
+        ink +
+        ')"></span>' +
+        esc(GRAPH.project.eyebrow) +
+        '<button class="kb-graph-panel__close" type="button" title="Close" aria-label="Close">' +
+        closeGlyph() +
+        "</button></div>" +
+        '<h3 class="kb-graph-panel__title">' +
+        esc(name) +
+        "</h3>" +
+        '<div class="kb-graph-panel__count">' +
+        esc(
+          GRAPH.project.count
+            .replace("{docs}", String(docs.length))
+            .replace("{links}", String(links)),
+        ) +
+        "</div>" +
+        (rows
+          ? '<ul class="kb-graph-panel__list">' + rows + "</ul>"
+          : '<p class="kb-graph-panel__empty">' +
+            esc(GRAPH.project.empty) +
+            "</p>") +
+        foot;
+      elPanel.hidden = false;
+      panelMode = "project";
+      bindPanel();
+    }
+
     function openPanel(n: GNode) {
       if (!elPanel) return;
       elPanel.classList.remove("kb-graph-panel--ghost");
+      elPanel.classList.remove("kb-graph-panel--project");
       let html: string;
       if (n.type === "missing") {
         elPanel.classList.add("kb-graph-panel--ghost");
@@ -1254,12 +1815,7 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           '<span class="kb-graph-panel__badge">no document yet · 문서 없음</span>';
       } else {
         const ink = (projectInk[n.project ?? ""] != null ? projectInk[n.project ?? ""] : 0) + 1;
-        const tags = (n.tags || [])
-          .map(
-            (t) =>
-              '<li><a class="kb-tag" href="' + tagHref(t) + '">' + esc(t) + "</a></li>",
-          )
-          .join("");
+        const tags = tagPillsHTML(n.tags || []);
         const links = relLinkCount(n.id);
         html =
           '<div class="kb-graph-panel__eyebrow"><span class="kb-graph-legend__chip" style="--chip: var(--kb-graph-project-' +
@@ -1279,35 +1835,65 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           " tags · " +
           links +
           " links</div>" +
-          (tags ? '<ul class="kb-graph-panel__tags">' + tags + "</ul>" : "") +
-          '<a class="kb-graph-panel__read" href="' +
-          resolveUrl(n.url) +
-          '">Read the document →</a>';
+          tags +
+          // §4.6 — the read affordance, or §6.4's gate in its place.
+          (isPublicDoc(n)
+            ? '<a class="kb-graph-panel__read" href="' +
+              readHref(n) +
+              '">Read the document →</a>'
+            : '<div class="kb-graph-panel__gate"><span>Members only · 비공개 문서</span>' +
+              '<a href="' +
+              gateHref(n) +
+              '">Sign in to read →</a></div>');
       }
       elPanel.innerHTML = html;
       elPanel.hidden = false;
-      const closeBtn = elPanel.querySelector<HTMLElement>(".kb-graph-panel__close");
-      if (closeBtn) closeBtn.addEventListener("click", deselect);
+      panelMode = "node";
+      bindPanel();
     }
     function closePanel() {
       if (elPanel) {
         elPanel.hidden = true;
         elPanel.innerHTML = "";
+        elPanel.classList.remove("kb-graph-panel--project");
       }
+      panelMode = "none";
     }
     function select(id: string) {
       selectedId = id;
       const n = nodeById[id];
-      if (n && (n.type === "doc" || n.type === "missing")) openPanel(n);
-      else closePanel();
+      if (n && (n.type === "doc" || n.type === "missing")) {
+        // §4.4 — selecting a node while a lens is lit switches the panel to node
+        // mode and LEAVES the lens lit.
+        openPanel(n);
+        parkForSheet(n);
+      } else closePanel();
       scheduleDraw();
       persist();
     }
     function deselect() {
       selectedId = null;
+      // §4.4 — `Esc` (and the close button) closes the panel; the lens stays.
       closePanel();
       scheduleDraw();
       persist();
+    }
+
+    /**
+     * R05 §4.7.1 — on a SMALL plate the panel is a bottom sheet, so a node selected
+     * behind it would be invisible. Pan (never zoom) so the selected node sits at
+     * `--kb-graph-fit-bias` (0.38) of the plate height, in the clear part above the
+     * sheet. On a medium or large plate the panel floats beside the map and nothing
+     * moves.
+     */
+    function parkForSheet(n: GNode) {
+      if (plateTier !== "sm") return;
+      const target = H * T.fitBias;
+      const p = toScreen(n);
+      view.pyt += target - p.y;
+      view.auto = false;
+      clampPan();
+      if (reduceMotion) view.panY = view.pyt;
     }
 
     // ── icons ──
@@ -1323,13 +1909,28 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     }
 
     // ── legend ──
+    /** §6.2's caret. */
+    function caretGlyph(): string {
+      return (
+        '<svg class="kb-graph-legend__caret" width="12" height="12" viewBox="0 0 24 24" ' +
+        'fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
+        'stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'
+      );
+    }
+
+    /**
+     * R05 §4.3 — the legend's head is now a `<button aria-expanded>` and everything
+     * it used to render sits in a `.kb-graph-legend__body` the CSS folds. The rows,
+     * the rule, the tag row, the unresolved row and the note are UNCHANGED, and so
+     * is their copy.
+     */
     function buildLegend(
       projects: { name: string; docs: number }[],
       tagCount: number,
       ghostCount: number,
     ) {
       if (!elLegend) return;
-      let rows = '<div class="kb-graph-legend__head">Projects · 프로젝트</div>';
+      let rows = "";
       projects.forEach((p, i) => {
         const ink = (i % 3) + 1;
         rows +=
@@ -1361,33 +1962,135 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           "</span></div>";
       }
       rows += '<div class="kb-graph-legend__note">Size = connections · 크기=연결 수</div>';
-      elLegend.innerHTML = rows;
+      elLegend.innerHTML =
+        '<button class="kb-graph-legend__toggle" type="button" aria-expanded="' +
+        (legendOpen ? "true" : "false") +
+        '">Projects · 프로젝트' +
+        caretGlyph() +
+        "</button>" +
+        '<div class="kb-graph-legend__body">' +
+        rows +
+        "</div>";
       elLegend.hidden = false;
 
-      elLegend.querySelectorAll<HTMLElement>(".kb-graph-legend__item").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const name = btn.getAttribute("data-project");
-          activeProject = activeProject === name ? null : name;
-          elLegend.querySelectorAll<HTMLElement>(".kb-graph-legend__item").forEach((b) => {
-            b.classList.toggle(
-              "is-on",
-              b.getAttribute("data-project") === activeProject,
-            );
-          });
-          scheduleDraw();
+      const toggle = elLegend.querySelector<HTMLElement>(
+        ".kb-graph-legend__toggle",
+      );
+      if (toggle)
+        toggle.addEventListener("click", () => {
+          legendOpen = !legendOpen;
+          syncLegendUI();
           persist();
         });
+      bindLensControls(elLegend);
+    }
+
+    /**
+     * R05 §4.3 — the dock: the SAME control set, below the plate, at a thumb-sized
+     * target. It is rendered always and CSS shows it only at `kbmain < 40rem`, and
+     * both sets are bound to the same state through `setLens` / `syncLegendUI`, so
+     * a lens lit in one is lit in the other. §6.5's markup, exactly.
+     */
+    function buildDock(
+      projects: { name: string; docs: number }[],
+      tagCount: number,
+      ghostCount: number,
+    ) {
+      if (!dock) return;
+      let html = '<div class="kb-graph-dock__scroll">';
+      projects.forEach((p, i) => {
+        const ink = (i % 3) + 1;
+        html +=
+          '<button class="kb-graph-dock__item" type="button" data-project="' +
+          esc(p.name) +
+          '" aria-pressed="false">' +
+          '<span class="kb-graph-legend__chip" style="--chip: var(--kb-graph-project-' +
+          ink +
+          ')"></span>' +
+          esc(p.name) +
+          '<span class="kb-graph-legend__count">' +
+          (p.docs || 0) +
+          "</span></button>";
       });
-      const sw = elLegend.querySelector<HTMLElement>(".kb-graph-switch");
-      if (sw)
+      html +=
+        '<span class="kb-graph-dock__item">' +
+        '<span class="kb-graph-legend__chip kb-graph-legend__chip--ring"></span>Tags · 태그' +
+        '<span class="kb-graph-legend__count">' +
+        tagCount +
+        "</span>" +
+        '<button class="kb-graph-switch is-on" type="button" data-switch="tags" ' +
+        'aria-label="Toggle tag visibility" aria-pressed="true"></button></span>';
+      if (ghostCount > 0) {
+        html +=
+          '<span class="kb-graph-dock__item">' +
+          '<span class="kb-graph-legend__chip kb-graph-legend__chip--ghost"></span>Unresolved' +
+          '<span class="kb-graph-legend__count">' +
+          ghostCount +
+          "</span></span>";
+      }
+      html +=
+        '</div><p class="kb-graph-dock__note">Size = connections · 크기=연결 수</p>';
+      dock.innerHTML = html;
+      dock.hidden = false;
+      bindLensControls(dock);
+    }
+
+    /** One binding for both control sets — §4.3's "bound to the same state". */
+    function bindLensControls(root: HTMLElement) {
+      root
+        .querySelectorAll<HTMLElement>(
+          ".kb-graph-legend__item, .kb-graph-dock__item[data-project]",
+        )
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const name = btn.getAttribute("data-project");
+            if (activeProject === name) {
+              // §4.4 — the lit control: in project mode it turns the lens off and
+              // closes the panel; in node mode it brings project mode BACK.
+              if (panelMode === "project") {
+                setLens("project", null);
+                closePanel();
+              } else {
+                openProjectPanel(name!);
+              }
+            } else {
+              setLens("project", name);
+              if (name) openProjectPanel(name);
+            }
+            scheduleDraw();
+            persist();
+          });
+        });
+      root.querySelectorAll<HTMLElement>(".kb-graph-switch").forEach((sw) => {
         sw.addEventListener("click", () => {
           tagsVisible = !tagsVisible;
-          sw.classList.toggle("is-on", tagsVisible);
-          sw.setAttribute("aria-pressed", tagsVisible ? "true" : "false");
+          syncLegendUI();
           if (view.auto) fit(true);
           scheduleDraw();
           persist();
         });
+      });
+    }
+
+    /**
+     * R05 §4.2 / §6.6 — the recenter pill. Its button calls the SAME `fit()` the
+     * zoom stack's third button calls; there is one Fit in the engine.
+     */
+    function fitNow() {
+      view.auto = true;
+      fit(reduceMotion);
+      scheduleDraw();
+      persist();
+    }
+    function buildRecenter() {
+      if (!elRecenter) return;
+      elRecenter.innerHTML =
+        // §5 keeps this bilingual pair inline with the engine's other micro-copy.
+        "Off the map · 지도 밖입니다" +
+        '<button type="button" class="kb-appbtn kb-appbtn--secondary kb-appbtn--sm">Fit</button>';
+      elRecenter.hidden = true;
+      const btn = elRecenter.querySelector<HTMLElement>("button");
+      if (btn) btn.addEventListener("click", fitNow);
     }
 
     // ── zoom buttons ──
@@ -1405,12 +2108,7 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           const kind = btn.getAttribute("data-zoom");
           if (kind === "in") zoomAbout(W / 2, H / 2, 1.3);
           else if (kind === "out") zoomAbout(W / 2, H / 2, 1 / 1.3);
-          else {
-            view.auto = true;
-            fit(reduceMotion);
-            scheduleDraw();
-            persist();
-          }
+          else fitNow();
         });
       });
     }
@@ -1570,12 +2268,28 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
     }
 
     // ── scheme ──
+    function rereadScheme() {
+      T = readTokens();
+      scheduleDraw();
+    }
     function observeScheme() {
+      /*
+       * R05 §4.9 — the only engine change the dark round needs. `graph-r5.css` §7
+       * re-declares the slate graph set on `.kb-app[data-kb-scheme="auto"]` inside
+       * `@media (prefers-color-scheme: dark)`, and that media query flips with the
+       * OS while the tab is open — but no ATTRIBUTE changes, so the existing
+       * MutationObserver never fires and the map keeps the light inks in a dark
+       * console. `matchMedia` on the same query, feeding the same re-read, is what
+       * makes it re-ink.
+       */
+      if (window.matchMedia) {
+        schemeMql = window.matchMedia("(prefers-color-scheme: dark)");
+        if (schemeMql.addEventListener)
+          schemeMql.addEventListener("change", rereadScheme);
+        else if (schemeMql.addListener) schemeMql.addListener(rereadScheme);
+      }
       if (!window.MutationObserver) return;
-      schemeObs = new MutationObserver(() => {
-        T = readTokens();
-        scheduleDraw();
-      });
+      schemeObs = new MutationObserver(rereadScheme);
       const opts = { attributes: true, attributeFilter: ["data-md-color-scheme"] };
       schemeObs.observe(document.documentElement, opts);
       schemeObs.observe(document.body, opts);
@@ -1590,6 +2304,23 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       STORE_KEY = computeStoreKey();
       const restored = restoreState();
 
+      /*
+       * R05 §4.1.2 — size the canvas BEFORE the early return. The shipped order
+       * called `showEmpty("empty")` and returned before `resize()` had ever run,
+       * so a plate that later received data painted into a zero-sized backing
+       * store. The ResizeObserver registration moves up with it, for the same
+       * reason: an empty plate that is resized (or first measured) must still be
+       * correctly sized when data arrives.
+       */
+      resize();
+      if (window.ResizeObserver) {
+        ro = new ResizeObserver(() => resize());
+        ro.observe(host!);
+      } else {
+        window.addEventListener("resize", resize);
+      }
+      window.addEventListener("pagehide", flushPersist);
+
       const docNodes = nodes.filter((n) => n.type === "doc");
       if (!docNodes.length) {
         showEmpty("empty");
@@ -1601,19 +2332,12 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       const tagCount = nodes.filter((n) => n.type === "tag").length;
       const ghostCount = nodes.filter((n) => n.type === "missing").length;
       buildLegend(projects, tagCount, ghostCount);
+      buildDock(projects, tagCount, ghostCount);
       buildZoom();
+      buildRecenter();
       bindInteractions();
       observeScheme();
-      if (restored) syncLegendUI();
-
-      resize();
-      if (window.ResizeObserver) {
-        ro = new ResizeObserver(() => resize());
-        ro.observe(host!);
-      } else {
-        window.addEventListener("resize", resize);
-      }
-      window.addEventListener("pagehide", flushPersist);
+      syncLegendUI();
 
       if (document.fonts && document.fonts.ready)
         document.fonts.ready.then(() => {
@@ -1622,8 +2346,20 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         });
 
       if (restored) {
+        /*
+         * R05 §4.2, "First paint, stored record": the camera is replayed ONLY into
+         * a plate of the size it was captured in (within `--kb-graph-restore-tol`)
+         * and over the same node count. Otherwise the stored VIEW is ignored and
+         * the map fits — the selection, the lens and the tag switch are restored
+         * either way, which `restoreState()` has already done. This is the row
+         * that makes "narrow the window past 52rem and reload → the map fits
+         * instead of restoring" true (acceptance check 6), and it is the reason a
+         * desktop camera can no longer be replayed onto a phone plate.
+         */
         fit(true);
+        const canRestore = viewRestorable(restored);
         if (
+          canRestore &&
           restored.view &&
           restored.view.auto === false &&
           isFinite(restored.view.zt)
@@ -1636,8 +2372,20 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
           view.panY = view.pyt;
           view.auto = false;
         }
-        if (restored.selectedId && nodeById[restored.selectedId])
-          select(restored.selectedId);
+        const sel = restored.selectedId;
+        if (sel && nodeById[sel]) {
+          selectedId = sel;
+          const n = nodeById[sel];
+          if (n.type === "doc" || n.type === "missing") {
+            openPanel(n);
+            // Do not fight a camera we just replayed; park only into a fresh fit.
+            if (!canRestore) parkForSheet(n);
+          }
+        } else if (activeProject != null) {
+          // §4.4 — a lens that survives the reload brings its panel back with it.
+          openProjectPanel(activeProject);
+        }
+        syncLegendUI();
         if (reduceMotion) scheduleDraw();
         else rafId = requestAnimationFrame(loop);
       } else if (reduceMotion) {
@@ -1650,9 +2398,28 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         simStarted = true;
         rafId = requestAnimationFrame(loop);
       }
+      // §4.2 — "Never show it on first paint": the pill is only evaluated once the
+      // first fit is behind us.
+      offMapArmed = true;
     }
 
-    start(data);
+    /*
+     * R05 §4.8's FAILED row is written for an engine that fetches its own payload;
+     * this one receives `data` as a prop from a server component, so "the fetch
+     * rejects" is caught by the route's error boundary long before the engine
+     * runs, and §9's collected-edits table says `graph/page.tsx` does not change.
+     * What CAN still fail here is the model build over a malformed payload, and
+     * that is exactly the case §4.8 wants kept out of the page-level editorial
+     * state: the plate reports it, the page frame stays.
+     */
+    try {
+      start(data);
+    } catch (err) {
+      showEmpty(
+        "failed",
+        "GET /app/graph · " + (err instanceof Error ? err.name : "error"),
+      );
+    }
 
     // ── teardown (the critical React-specific work) ──
     return () => {
@@ -1661,6 +2428,12 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
       if (drawRafId) cancelAnimationFrame(drawRafId);
       if (ro) ro.disconnect();
       if (schemeObs) schemeObs.disconnect();
+      if (schemeMql) {
+        if (schemeMql.removeEventListener)
+          schemeMql.removeEventListener("change", rereadScheme);
+        else if (schemeMql.removeListener)
+          schemeMql.removeListener(rereadScheme);
+      }
       window.removeEventListener("resize", resize);
       window.removeEventListener("pagehide", flushPersist);
       host.removeEventListener("keydown", onKeyDown);
@@ -1669,43 +2442,54 @@ export function GraphCanvas({ data }: { data: KbGraph }) {
         persistTimer = null;
       }
     };
-  }, [data]);
+  }, [data, publicBase, projectIds]);
 
   return (
-    <div ref={hostRef} className="kb-graph">
-      <canvas
-        ref={canvasRef}
-        className="kb-graph__canvas"
-        aria-label={GRAPH.canvasLabel}
-        role="img"
-      />
-      <div className="kb-graph__ui kb-graph-legend" hidden />
-      <div className="kb-graph__ui kb-graph-zoom" hidden />
-      <div className="kb-graph-tooltip" hidden />
-      <div className="kb-graph__ui kb-graph-panel" hidden />
-      {/* Hidden by first paint so a populated graph never flashes the empty state;
-          the engine reveals it (showEmpty('empty')) only when there are no docs. */}
-      <div className="kb-graph-empty" hidden>
-        <svg
-          className="kb-graph-empty__icon"
-          viewBox="0 0 24 24"
-          width={24}
-          height={24}
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"
-          />
-        </svg>
-        <div className="kb-graph-empty__title">{GRAPH.empty.title}</div>
-        <div className="kb-graph-empty__sub">{GRAPH.empty.sub}</div>
+    <>
+      <div ref={hostRef} className="kb-graph">
+        <canvas
+          ref={canvasRef}
+          className="kb-graph__canvas"
+          aria-label={GRAPH.canvasLabel}
+          role="img"
+        />
+        <div className="kb-graph__ui kb-graph-legend" hidden />
+        <div className="kb-graph__ui kb-graph-zoom" hidden />
+        <div className="kb-graph-tooltip" hidden />
+        <div className="kb-graph__ui kb-graph-panel" hidden />
+        {/* R05 §6.6 — the off-map recenter pill; the engine fills and reveals it. */}
+        <div className="kb-graph-recenter" hidden />
+        {/* Hidden by first paint so a populated graph never flashes the empty state;
+            the engine reveals it (showEmpty('empty')) only when there are no docs. */}
+        <div className="kb-graph-empty" hidden>
+          <svg
+            className="kb-graph-empty__icon"
+            viewBox="0 0 24 24"
+            width={24}
+            height={24}
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"
+            />
+          </svg>
+          <div className="kb-graph-empty__title">{GRAPH.empty.title}</div>
+          <div className="kb-graph-empty__sub">{GRAPH.empty.sub}</div>
+        </div>
       </div>
-    </div>
+      {/*
+        R05 §4.3 / §6.5 — the dock is a SIBLING of the plate, in the page flow, so
+        the reading order is map → controls (§7). It is rendered at every width and
+        CSS reveals it only at `kbmain < 40rem`; the engine fills it with the same
+        control set the legend carries, bound to the same state.
+      */}
+      <div ref={dockRef} className="kb-graph-dock" hidden />
+    </>
   );
 }

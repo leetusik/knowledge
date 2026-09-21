@@ -19,6 +19,36 @@ export const GRAPH = {
   empty: {
     title: "No documents yet",
     sub: "The map draws itself as documents land in your org. 문서가 추가되면 지도가 그려집니다.",
+    /** Round 05 §4.8 / §5 — the one primary action the empty plate now carries. */
+    action: "Add a document",
+  },
+
+  /**
+   * Round 05 §4.8 / §5 — the plate's FAILED state. It renders inside the plate with
+   * the page frame intact above it; the map never borrows the page-level editorial
+   * state, because a failed map is a failed panel, not a failed page. The failing
+   * request itself goes in `.kb-graph-empty__detail` as `GET /app/graph · {status}`,
+   * which is engine-side formatting, not copy.
+   */
+  failed: {
+    title: "The map didn't load",
+    sub: "Something went wrong fetching the graph. Nothing was changed.",
+    retry: "Try again",
+    back: "Go to documents",
+  },
+
+  /**
+   * Round 05 §4.4 / §5 — the panel's SECOND mode: a project lens lights the map and
+   * fills the panel with that project's newest documents. `count` is a template —
+   * `{docs}` and `{links}` are substituted by the engine.
+   */
+  project: {
+    eyebrow: "Project",
+    count: "{docs} documents · {links} links",
+    all: "All documents →",
+    /** Member only — a stranger has no `/projects/{id}` route to open. */
+    open: "Open project →",
+    empty: "No documents in this project yet.",
   },
 
   /**
