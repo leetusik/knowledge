@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P28`
-- Current slice: `P28.DECOMP`
-- Next slice: `P28.REVIEW`
+- Current slice: `P28.S1`
+- Next slice: `P28.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `23`
 
@@ -22,7 +22,7 @@
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
-| [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.DECOMP` | `works/phases/active/P28` |
+| [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.S1` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
 
@@ -108,5 +108,14 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P28.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P28/slices/P28.DECOMP` |
+| [x] `P28.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P28/slices/P28.DECOMP` |
+| [ ] `P28.S1` | `todo` | Graph server groundwork: canonical_path on doc nodes | `implementation` | `works/phases/active/P28/slices/P28.S1` |
+| [ ] `P28.S2` | `todo` | Round 03 apply: tokens, responsive stylesheet, shell + components | `implementation` | `works/phases/active/P28/slices/P28.S2` |
+| [ ] `P28.S3` | `todo` | Round 03 apply: system states (error, loading, not-found, empty, toast) | `implementation` | `works/phases/active/P28/slices/P28.S3` |
+| [ ] `P28.S4` | `todo` | Round 04 apply: shells, dashboard, project page + documents panel | `implementation` | `works/phases/active/P28/slices/P28.S4` |
+| [ ] `P28.S5` | `todo` | Round 04 apply: disclosures, documents page, auth gate + login next | `implementation` | `works/phases/active/P28/slices/P28.S5` |
+| [ ] `P28.S6` | `todo` | Round 05 apply: graph engine, dock, project lens, public graph | `implementation` | `works/phases/active/P28/slices/P28.S6` |
+| [ ] `P28.S7` | `todo` | Round 06 apply: document views + chrome-less full-width view | `implementation` | `works/phases/active/P28/slices/P28.S7` |
+| [ ] `P28.S8` | `todo` | Round 06 apply: print layer + Export PDF control | `implementation` | `works/phases/active/P28/slices/P28.S8` |
+| [ ] `P28.S9` | `todo` | Fidelity + functional sweep across every changed surface | `qa` | `works/phases/active/P28/slices/P28.S9` |
 | [ ] `P28.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |

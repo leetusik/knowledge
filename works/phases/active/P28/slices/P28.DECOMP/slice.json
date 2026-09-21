@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-09-21T02:07:49+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T09:33:11+09:00",
+  "completed_at": "2026-09-21T09:44:37+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut P28 into nine high-risk middle slices on the four build-prompt contracts' own section seams (bare folders, no plans pre-filled); resolved the three open items — additive canonical_path preferred on the public graph only, graph-r5.css loaded from globals.css and landed in S4 with the round-04 trap it fixes, D18 absorbed into S5+S6 — and recorded the breakdown, build inventory, ten decisions, four operator questions and eleven notes in phase.md",
   "validation": {
     "required": [],
     "last_run": null,
