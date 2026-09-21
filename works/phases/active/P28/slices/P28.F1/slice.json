@@ -1,0 +1,32 @@
+{
+  "id": "P28.F1",
+  "phase_id": "P28",
+  "name": "Graph dock: the tag switch measures 0x0 on a small plate",
+  "kind": "fix",
+  "status": "done",
+  "order": 10,
+  "depends_on": [],
+  "created_at": "2026-09-21T17:37:45+09:00",
+  "started_at": "2026-09-21T17:37:45+09:00",
+  "completed_at": "2026-09-21T17:55:51+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Closed S9's F1 — the graph dock's tag switch measured 0x0 on a small plate — by re-stating graph.css's own four switch rules at .kb-graph-dock .kb-graph-switch in kb-record-fixes.css, the phase's third and final authorised correction, every declaration verbatim and no value originated; the dock switch now renders the record's 24x13.59 box and toggles the 76 tag hubs under mouse and Enter, and the legend's switch was proved byte-identical by deleting the new rules from the live CSSOM and re-measuring",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
