@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Fidelity + functional sweep across every changed surface",
   "kind": "qa",
-  "status": "todo",
+  "status": "done",
   "order": 9,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:37+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T16:41:05+09:00",
+  "completed_at": "2026-09-21T17:37:28+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Swept every surface in the phase boundary at 390x844, 820x1180, 1024x768 and 1440x900 in dev and the production standalone build — zero page-level horizontal overflow, navbar/rail correct at every width, dev and production agreeing surface by surface — plus the live functional pass; landed the one licensed change (an 11px landmark-label floor, originated) and reported four defects with repros, including the graph dock's tag switch measuring 0x0 on a small plate",
   "validation": {
     "required": [],
     "last_run": null,
