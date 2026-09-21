@@ -88,7 +88,12 @@ export default async function PrettyPublicGraphPage({
         <p className="kb-app-sub">{GRAPH.sub}</p>
       </div>
 
-      <GraphCanvas data={graph} />
+      {/* Round 05 §4.6 (P28.S6) — `publicBase` is the anonymous route the visitor
+          is already on, and it is what turns the engine's panel into the
+          stranger's panel: tag pills become tag LENSES instead of links into
+          member routes, the project foot drops (there is no public documents
+          list), and a read link prefers the doc's own `canonical_path`. */}
+      <GraphCanvas data={graph} publicBase={`/@${orgSlug}`} />
     </PublicShell>
   );
 }

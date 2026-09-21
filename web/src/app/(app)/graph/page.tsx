@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { GRAPH, SHARE } from "@/content";
 import { requireIdentity } from "@/lib/auth-guards";
-import { getGraph } from "@/lib/knowledge/app";
+import { getGraph, listProjects } from "@/lib/knowledge/app";
 
 import { GraphCanvas } from "./graph-canvas";
 
@@ -28,7 +28,21 @@ export default async function GraphPage() {
   const { token, identity } = await requireIdentity();
   const tenantName = identity.tenant?.name ?? "—";
   const orgId = identity.tenant?.id ?? null;
-  const graph = await getGraph(token);
+  // Round 05 §6.3 (P28.S6) — the graph payload names projects but carries no ids,
+  // and project mode's foot links need UUIDs (`/documents?project=` is parsed as a
+  // UUID server-side, `/projects/{id}` obviously so). The list rides a SECOND
+  // PARALLEL fetch that cannot take the map down: a failure drops the two foot
+  // links and nothing else, exactly like round 04 §4.6's documents panel. §4.4's
+  // "no new endpoint, no new fetch" is about project mode's ROWS, which still come
+  // from the payload this page already has.
+  const [graph, projects] = await Promise.all([
+    getGraph(token),
+    listProjects(token).catch(() => []),
+  ]);
+  const projectIds: Record<string, string> = {};
+  projects.forEach((p) => {
+    projectIds[p.name] = p.id;
+  });
 
   return (
     <>
@@ -83,7 +97,7 @@ export default async function GraphPage() {
         ) : null}
       </div>
 
-      <GraphCanvas data={graph} />
+      <GraphCanvas data={graph} projectIds={projectIds} />
     </>
   );
 }

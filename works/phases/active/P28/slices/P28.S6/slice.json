@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Round 05 apply: graph engine, dock, project lens, public graph",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 6,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:37+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T13:23:46+09:00",
+  "completed_at": "2026-09-21T14:20:32+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Round 05's graph engine applied after fixing the stylesheet cascade (12 measured collisions to 0, plate 636px to 660px); D26 reproduced first on a seeded 33-doc corpus shaped like the operator's and diagnosed precisely — the off-frame default was fit()'s FIT_Z_MIN=0.5 floor clamping the zoom UP when the corpus needed 0.284 — and replacing it plus the fixed 64px pad with the record's proportional fit pad takes the same corpus to 0 nodes off the plate at the exact 8% margin; all ten §8 checks exercised in dev and production, four record gaps reported not filled",
   "validation": {
     "required": [],
     "last_run": null,

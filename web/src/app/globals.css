@@ -4,6 +4,16 @@
 @import "./kb-console.css";
 @import "./kb-console-responsive.css";
 @import "./kb-console-r4.css";
+/* The graph record (P28.S6). `graph-tokens.css` + `graph.css` were component
+   imports on `graph-canvas.tsx`, which put them in a LATER document sheet than
+   this one — so round 05's `graph-r5.css` lost every same-selector tie to the
+   sheet it is written to layer on top of (twelve of them, measured). Moving
+   both here, unedited, in front of `graph-r5.css`, restores round 05 §3's own
+   stated order inside ONE sheet with no rule duplicated, and is the order round
+   06 §1 already assumes. Cost: the graph's ~29 KB of CSS now loads on every
+   page. Do not reorder these three lines. */
+@import "./(app)/graph/graph-tokens.css";
+@import "./(app)/graph/graph.css";
 @import "./(app)/graph/graph-r5.css";
 /* Operator-authorised corrections to a SIGNED record, and nothing else (P28.S5 —
    see the charter at the top of the file). It is imported LAST on purpose, so it
