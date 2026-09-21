@@ -1,0 +1,1153 @@
+<!--kb
+title: "The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start"
+date: 2026-09-21
+tags:
+  - fishing-strategy
+  - korbit
+  - limit-orders
+  - rung-optimiser
+  - walk-forward
+source:
+  project: arb_upbit_1
+  repo: arb_upbit_1
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #1c1c1c; --muted: #5a5a5a; --paper: #ffffff; --panel: #f4f4f2;
+      --line: #d9d9d4; --accent: #2a6f97; --good: #2f7d4f; --warn: #b8741a; --bad: #a83a3a;
+      --callout: #eef5ee; --callout-line: #4a9a6a; --code: #f3f3f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #e8e8e4; --muted: #a5a5a0; --paper: #141416; --panel: #1f1f23;
+        --line: #35353a; --accent: #7fb3d5; --good: #7cc68f; --warn: #e0a55a; --bad: #e08484;
+        --callout: #1b2a1f; --callout-line: #5fae7a; --code: #1c1c20;
+      }
+    }
+    html { background: var(--paper); }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: var(--ink);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+           line-height: 1.65; font-size: 1.02rem; }
+    h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .5rem; }
+    h2 { font-size: 1.45rem; margin: 2.6rem 0 .8rem; border-bottom: 2px solid var(--line); padding-bottom: .25rem; }
+    h3 { font-size: 1.15rem; margin: 1.8rem 0 .5rem; }
+    h4 { font-size: 1.02rem; margin: 1.3rem 0 .4rem; }
+    p { margin: .7rem 0; }
+    .dek { color: var(--muted); font-size: 1.05rem; margin-bottom: 1.4rem; }
+    nav { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1.2rem; margin: 1.2rem 0 2rem; }
+    nav ol { margin: .3rem 0 0; padding-left: 1.3rem; }
+    a { color: var(--accent); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em;
+           background: var(--code); padding: .05em .3em; border-radius: 4px; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code); border: 1px solid var(--line);
+          padding: .75rem .9rem; border-radius: 6px; font-size: .86rem; line-height: 1.45; }
+    pre code { background: none; padding: 0; font-size: inherit; }
+    .src { color: var(--muted); font-size: .85rem; margin: -.4rem 0 1rem; }
+    .callout { border-left: 4px solid var(--callout-line); background: var(--callout); padding: .75rem 1rem;
+               margin: 1.1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--paper)); }
+    .callout.bad { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--paper)); }
+    .callout > :first-child { margin-top: 0; } .callout > :last-child { margin-bottom: 0; }
+    details { border: 1px solid var(--line); border-radius: 6px; padding: .5rem .9rem; margin: 1rem 0; background: var(--panel); }
+    summary { cursor: pointer; font-weight: 600; }
+    dl { margin: .5rem 0; } dt { font-weight: 600; margin-top: .6rem; } dd { margin: .1rem 0 0 1rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: var(--panel); }
+    td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .fig { border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem; margin: 1.3rem 0; background: var(--panel); }
+    .fig .cap { color: var(--muted); font-size: .88rem; margin-top: .8rem; }
+    /* ladder */
+    .ladder { display: grid; grid-template-columns: 9.5rem 1fr; gap: .3rem .8rem; align-items: center; font-size: .9rem; }
+    .ladder .ref { grid-column: 1 / -1; border-top: 2px dashed var(--accent); padding-top: .3rem; color: var(--accent); font-weight: 600; }
+    .ladder .tag { font-family: ui-monospace, Menlo, monospace; font-size: .84rem; white-space: nowrap; }
+    .ladder .bar { height: 1.05rem; background: color-mix(in srgb, var(--accent) 55%, var(--panel)); border-radius: 3px; position: relative; }
+    .ladder .bar.hit { background: var(--good); }
+    .ladder .bar.thin { background: color-mix(in srgb, var(--accent) 25%, var(--panel)); border: 1px dashed var(--accent); }
+    .ladder .bar span { position: absolute; left: .4rem; top: 0; font-size: .78rem; line-height: 1.05rem; color: var(--ink); white-space: nowrap; }
+    .sweep { margin: .5rem 0 .2rem; color: var(--bad); font-weight: 600; font-size: .9rem; }
+    /* state machine */
+    .sm { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .9rem; }
+    .sm .st { border: 2px solid var(--accent); border-radius: 6px; padding: .35rem .7rem; font-family: ui-monospace, Menlo, monospace; background: var(--paper); }
+    .sm .st.end { border-color: var(--good); } .sm .st.alarm { border-color: var(--warn); border-style: dashed; }
+    .sm .arr { color: var(--muted); white-space: nowrap; }
+    .sm .arr small { display: block; font-size: .75rem; text-align: center; }
+    /* ranked list */
+    .rank { font-family: ui-monospace, Menlo, monospace; font-size: .84rem; }
+    .rank .row { display: grid; grid-template-columns: 3rem 9rem 1fr 7rem; gap: .5rem; align-items: center; padding: .15rem 0; }
+    .rank .cum { height: .9rem; background: color-mix(in srgb, var(--good) 60%, var(--panel)); border-radius: 3px; }
+    .rank .cum.over { background: color-mix(in srgb, var(--bad) 55%, var(--panel)); }
+    .rank .budget { border-top: 2px solid var(--bad); color: var(--bad); font-weight: 600; margin-top: .3rem; padding-top: .2rem; }
+    /* folds */
+    .folds svg { width: 100%; height: auto; display: block; }
+    /* quiz */
+    .q { margin: 1.4rem 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 8px; }
+    .q p { margin: .3rem 0 .6rem; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem; cursor: pointer;
+              border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; line-height: 1.4; }
+    .q .opt:hover { border-color: var(--accent); }
+    .q .opt.correct   { background: color-mix(in srgb, var(--good) 22%, var(--paper)); border-color: var(--good); }
+    .q .opt.incorrect { background: color-mix(in srgb, var(--bad) 18%, var(--paper)); border-color: var(--bad); }
+    .q .why { margin: .5rem 0 0; font-size: .95em; color: var(--muted); }
+    @media (max-width: 600px) {
+      body { font-size: .98rem; }
+      .ladder { grid-template-columns: 7.5rem 1fr; }
+      .rank .row { grid-template-columns: 2.5rem 6.5rem 1fr 5.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start</h1>
+<p class="dek">How the ₩5 M Korbit book went from an assumed 10 / 12.5 / 15 / 20 % rung grid with a
+transfer exit to 61 measured rungs over 20 markets that sell back on the venue itself — and what
+the first fill looked like. Written for a novice programmer, as a sequel to <em>The Fish Ladder</em>.
+Snapshot: 2026-09-21, the day the book went live.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="background">
+<h2>Background</h2>
+
+<p>The earlier explainer in this knowledge base,
+<a href="https://knowledge.hi2vi.com/@leetusik/arb_upbit_1/the-fish-ladder-catching-upbit-local-price-spikes-with-deep-limit-orders">The Fish Ladder</a>,
+ends with a book live on Upbit: five thin markets, rungs on both sides of the price, a Bybit
+perpetual short hedging each seed. That book is still running (port 8796, <code>bin/fish.sh</code>),
+and nothing in this document touches it. This document is about the <em>second</em> book, on a
+different exchange, with a different shape — and about the phase, P20, that replaced its assumed
+parameters with measured ones the day before it went live.</p>
+
+<h3>From the Upbit ladder to a Korbit bid-only book</h3>
+
+<p>Phase P18 screened the other Korean exchanges. Korbit (run by Mirae Asset DigitalX) came out
+interesting for a reason that has nothing to do with signal: its KRW markets are <strong>fee-free</strong>
+(0 % maker, 0 % taker on this account's plan), the minimum order is ₩5,000, the API accepts
+post-only and IOC orders, and there is no sandbox — the first live order is real money. Phase P19
+then built a <strong>buy-only</strong> fish book on it: no seed, no ask ladder, no hedge, only bid
+rungs resting far below the price, at 10 / 12.5 / 15 / 20 %. The idea was the old one — a thin
+book, a large market sell that walks the price down through our resting bid — but the price it
+walks down <em>from</em> is not Korbit's own. It is a <strong>reference</strong>: Upbit's KRW price
+for the same coin, which is the liquid market. A bid 10 % under the reference is a bid 10 % under
+what the coin is worth elsewhere. P19's exit was to rest a sell near the reference for a day and,
+if it never filled, <em>withdraw the coin to Upbit and sell it there</em>. P19 got as far as the
+touch step (four real bids, cancel-and-keep proven) and stopped: the sized start and the transfer
+cycle were deferred to P20.</p>
+
+<h3>The operator's sketch</h3>
+
+<p>Every phase here starts with an operator note. P20's, verbatim from
+<code>works/phases/active/P20/intent.md</code>:</p>
+
+<pre>1. we drop upbit transfer for now, if the price never meet with given time, just clear the
+   position with market order.
+2. we devided 10/12.5/15,20. and Idk if its determined statistically or just intution numbers.
+   let's say, if order book clean, I can order 50% fish since there is no diff btw 20% and 50%
+   if there is no competitor.
+3. calculate current expected monthly return, and maximize the return not by instinct but more
+   scientific way.</pre>
+<p class="src">works/phases/active/P20/intent.md, "Original Input (verbatim)". One clarification
+was resolved before work began: after the rest window, the market sell is <strong>unconditional</strong>,
+never floored at the fill price.</p>
+
+<p>Three sentences, three changes: a new exit, a rung grid to be <em>derived</em> rather than
+chosen, and an expected return to be computed and maximised. Everything below follows from them.</p>
+
+<details>
+<summary>A beginner's primer on the words you need (skip if you know order books and backtests)</summary>
+<dl>
+  <dt>Reference price vs venue price</dt>
+  <dd>The <em>venue</em> is Korbit, where our orders rest. The <em>reference</em> is what the coin is
+  worth on a liquid market: Upbit's KRW price when Upbit lists the coin, else Bybit's USDT price
+  converted through Korbit's own KRW-USDT rate. Every rung is priced off the reference, never off
+  Korbit's own last trade.</dd>
+  <dt>Post-only, IOC, market</dt>
+  <dd>A <em>post-only</em> limit order must rest; if it would execute immediately the exchange
+  rejects it. <em>IOC</em> ("immediate-or-cancel") fills what it can right now and cancels the
+  rest. A <em>market</em> order names no price at all. On Korbit a market order is IOC by rule —
+  that fact shapes the whole exit.</dd>
+  <dt>A wick</dt>
+  <dd>A one-bar excursion: the price traded far below where it opened and closed. On a dead book a
+  modest market sell can print 30 % below the reference and be back within the hour. Our rung is
+  in the wick's path.</dd>
+  <dt>Walk-forward</dt>
+  <dd>The honest backtest: fit the model only on weeks that come <em>before</em> a test block, score
+  it on that block, slide forward, repeat. The number it produces is what the rule set would have
+  earned on data it had never seen.</dd>
+  <dt>Look-ahead</dt>
+  <dd>Any way a "past-only" fit quietly uses the future — a market's later listing age, an event it
+  had not yet printed. Look-ahead makes a backtest optimistic. P20 found and removed one.</dd>
+  <dt>Knapsack</dt>
+  <dd>Given items with a value and a cost and a fixed budget, pick the set worth the most. Here an
+  item is one rung on one market, its cost is the KRW it ties up, its value is expected income per
+  month.</dd>
+</dl>
+</details>
+
+<h3>What P20 learned, in the order it learned it</h3>
+
+<p>The phase ran research first — two slices that only measured and priced, with the build cut
+afterwards from the numbers. The most useful reading of the arc is the same one the fish-ladder
+document used: each step put a number on something the previous one had assumed.</p>
+
+<table>
+<thead><tr><th>Slice</th><th>What it did</th><th>What it found</th></tr></thead>
+<tbody>
+<tr><td>S1<br><small>measure</small></td>
+<td>Re-pulled every Korbit KRW market with a reference (165 of 227; 32 are <code>stopped</code>),
+ran the deep touch census on a 5–75 % grid, sampled live bid depth 24 times over 1.9 hours, and
+read the venue's order rules.</td>
+<td>Korbit keeps <strong>~50,000 × interval</strong> of history whatever the interval, so an
+hourly pull reaches back <strong>365 days</strong> where the 1-minute one stops at 34.7. Only
+<strong>10.4 %</strong> of wicks that reach 20 % go on to 50 % — "the hypothesis does not hold as
+stated" — but the deep rung's capture per fill is 2.5×, so the question is arithmetic, not belief.
+Deeper rungs recover <em>more</em> often. A taker sell costs the standing discount
+(median <strong>2.07 %</strong>), almost nothing of it market impact. Price protection is
+<em>opt-in</em>, a market order is <em>IOC-only</em>, there is no price band on a mature pair.</td></tr>
+<tr><td>S2<br><small>price</small></td>
+<td>Priced the P19 file under both exits, built the exit-cost model from the depth passes, fitted
+two rate models, ran the optimiser and the out-of-sample checks.</td>
+<td>The P19 book would earn ₩384,524/mo with the transfer exit and <strong>₩313,996</strong> with
+the venue-only one: the exit change alone costs −18.4 %. A shrunk (pooled) rate model beats the
+naive per-market one out of sample: naive promised ₩934 K and realised ₩316 K, shrunk promised
+₩608 K and realised ₩508 K. The best rest is <code>m = 0 %, T = 72 h</code>; at one hour every
+depth below 20 % is a loss.</td></tr>
+<tr><td>S3 + F1<br><small>configure</small></td>
+<td>Re-ran the optimiser under the confirmed rules → <code>optimum_v2.csv</code>; F1 removed a
+look-ahead from the walk-forward.</td>
+<td>65 rungs over 20 markets, ₩4.76 M resting. Headline ₩683,899/mo straight, ₩386,529 deepest,
+walk-forward median first read ₩510,842 — then <strong>₩448,042</strong> once each fold re-derived
+its rule inputs from its own window. The look-ahead was worth ₩62,800 a month (−12.29 %).</td></tr>
+<tr><td>S4–S9, S11<br><small>build</small></td>
+<td>Per-market rung maps, Korbit market orders, the <code>rest_then_taker</code> exit, the
+two-venue reference feed, the params generator, preflight and report, runbook and
+<code>go_live.sh</code> v2.</td>
+<td>4,408 lines added across 20 files under <code>src/</code> and <code>tests/</code>; 245 tests;
+every earlier params file byte-identical under the new code. The generator collapsed four KRW-BTT
+rungs that rounded onto one tick: the shipped file rests 61 of the 65.</td></tr>
+<tr><td>S10 + F4<br><small>go live</small></td>
+<td>The operator ran <code>go_live.sh</code>; the executor verified read-only after each step.</td>
+<td>The 09:23 attempt was <strong>refused at ON</strong>: eight markets "missing" because two
+checks asked Upbit about coins Upbit does not list. F4 fixed presence per reference venue; the
+09:56 attempt <strong>ARMED at 09:56:58 KST</strong> with all 61 rungs resting, ΣQ ₩4,719,775.
+First round trip at 10:04, KRW-FLR, +₩802.60.</td></tr>
+</tbody>
+</table>
+<p class="src">Sources: research/p20/census.md, research/p20/decision.md, research/p20/decision_v2.md,
+works/phases/active/P20/phase.md (D10–D16 and the Findings sections), slices/P20.S10/result.md.</p>
+
+<div class="callout">
+<p><strong>Read the numbers honestly.</strong> Every expected return in this document is stated on
+three lines, and the convention is deliberate. The <em>straight sum</em> (₩683,899/month) assumes
+every rung a wick passes through really fills — the ceiling. The <em>deepest-reached</em> reading
+(₩386,529) counts each wick once, at the deepest rung it hit — the floor. The <em>walk-forward
+realised</em> line (₩404–501 K, median <strong>₩448,042</strong>) is what the rule set earned on
+quarters it had not been fitted on, and it is the number the acceptance gate and the runbook quote.
+Realised divided by modelled runs 0.65–0.79: the model is optimistic, and says so. The bootstrap on
+the straight line is ₩565 K / ₩698 K / ₩846 K at p10 / p50 / p90. The generated file, four BTT
+rungs poorer, models ₩654,089 straight. Live so far: one round trip, ₩802.60, in the first ten
+minutes.</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="intuition">
+<h2>Intuition</h2>
+
+<h3>One market, one afternoon: KRW-FLR</h3>
+
+<p>Take the market that actually filled on the first day. KRW-FLR is Bybit-referenced — Upbit does
+not list it — so its reference is <code>FLRUSDT</code> on Bybit times Korbit's own KRW-USDT rate,
+₩8.992378 at 10:04 KST. The shipped file gives FLR a <em>gapped</em> ladder of seven rungs, ₩5,005
+each: three shallow ones at 5 / 7.5 / 10 % and four deep ones at 30 / 40 / 50 / 60 % that the
+optimiser admitted on one event apiece. Priced off that reference before the quoter's tick
+rounding and no-cross cap, the ladder looks like this:</p>
+
+<div class="fig">
+  <div class="ladder">
+    <div class="ref">reference ₩8.992 — Bybit FLRUSDT ÷ 1 × Korbit KRW-USDT 1,367</div>
+    <div class="tag">bid −5 % ≈ 8.543</div><div class="bar hit" style="width:22%"><span>₩5,005 · filled 10:04:35</span></div>
+    <div class="tag">bid −7.5 % ≈ 8.318</div><div class="bar hit" style="width:26%"><span>₩5,005 · filled 10:04:35</span></div>
+    <div class="tag">bid −10 % ≈ 8.093</div><div class="bar" style="width:30%"><span>₩5,005</span></div>
+    <div class="tag">bid −30 % ≈ 6.295</div><div class="bar thin" style="width:52%"><span>₩5,005 · one event in a year</span></div>
+    <div class="tag">bid −40 % ≈ 5.395</div><div class="bar thin" style="width:64%"><span>₩5,005</span></div>
+    <div class="tag">bid −50 % ≈ 4.496</div><div class="bar thin" style="width:76%"><span>₩5,005</span></div>
+    <div class="tag">bid −60 % ≈ 3.597</div><div class="bar thin" style="width:88%"><span>₩5,005</span></div>
+  </div>
+  <p class="sweep">↓ a market sell walks Korbit's thin bids down until it prints through a rung</p>
+  <p class="cap">Figure 1. KRW-FLR's ladder in <code>korbit_v2.json</code>: <code>rungs_pct</code>
+  <code>[5, 7.5, 10, 30, 40, 50, 60]</code>, <code>order_krw</code> ₩5,005 on every rung. The bar length
+  is depth, not size. Green rungs are the two that filled on 2026-09-21; dashed rungs are the
+  "thin" ones the optimiser flags as resting on a single historical event.</p>
+</div>
+
+<p>What the log recorded, from the go-live result (times KST):</p>
+
+<pre>10:04:35.040  fill KRW-FLR bid g=7.5  601.27342623 @ 8.324 = W5,005 (maker, queue_wait 25.1 s)
+10:04:35.040  fill KRW-FLR bid g=5.0  601.20120120 @ 8.325 = W5,005 (maker, queue_wait 27.1 s)
+10:04:35.040  rest_open   x2   {rest_margin_pct: 0.0, rest_s: 259200.0}
+10:04:44.0    rest_placed x2   {price: 8.992, ref: 8.992378, raw: 8.992378, tick: 0.001, margin_pct: 0.0}
+10:04:44.06   ack side=ask tif=po order_type=limit price=8.992   x2   &lt;- the exit legs are post-only too
+10:04:45.765  rest_fill   x2   {price: 8.992, ref: 8.992378, vs_ref_pct: -0.0042, held_h: 0.0}
+                 pos #1 g=7.5  601.27342623 @ 8.992  pnl +W401.65  flat=true   -&gt; CLOSED
+                 pos #2 g=5.0  601.19657377 @ 8.992  pnl +W400.998 flat=false  -&gt; PARTIAL</pre>
+<p class="src">works/phases/active/P20/slices/P20.S10/result.md, "#3 the first exit- sell at the
+reference". The two bids had been resting at 8.324 and 8.325 — where the quoter had last priced
+the 7.5 % and 5 % rungs against the reference and Korbit's own touch — and one sweep took both.</p>
+
+<p>Read the two halves. The entry is <code>ref × (1 − g)</code>: a bid that only fills if someone
+sells into a dead book far below what the coin is worth elsewhere. The exit is stage 1 of the new
+style: nine seconds after the fill, one post-only sell per position at <code>ref × (1 − m)</code>
+with <code>m = 0</code> — at the reference itself, ₩8.992 floored onto the 0.001 tick — and both
+sells filled as makers 1.7 seconds later. Entry 8.324 → exit 8.992 is +8.02 % gross, zero fees on
+either leg, held 10.7 seconds, ₩802.60 realised. Position #2 was left with 0.0046 FLR (₩0.04) —
+under the ₩5,000 minimum, so no further sell can be made of it, and it will close as dust at the
+72-hour mark. Two of the four "never proven live" facts were settled by this one trade: the venue
+accepts eight decimal places of quantity, and a stage-1 sell at the reference really rests and
+fills.</p>
+
+<h3>The exit is a clock, not a price</h3>
+
+<p>P19's exit had a second stage that moved coin off the exchange. P20's second stage stays on
+Korbit and is defined by time alone. After 72 hours of resting at the reference, whatever has not
+sold is sold with market orders <em>at whatever the venue pays</em>. There is no floor. The
+operator's word was "unconditional", and the code carries it as a rule ("no price floor, no
+give-up") rather than a knob.</p>
+
+<div class="fig">
+  <div class="sm">
+    <span class="st">open</span>
+    <span class="arr">→<small>on the fill</small></span>
+    <span class="st">resting_sell</span>
+    <span class="arr">→<small>age ≥ rest_s (72 h)</small></span>
+    <span class="st">taker_selling</span>
+    <span class="arr">→<small>flat</small></span>
+    <span class="st end">closed</span>
+  </div>
+  <div class="sm" style="margin-top:.6rem">
+    <span class="st" style="visibility:hidden">open</span>
+    <span class="arr" style="visibility:hidden">→</span>
+    <span class="st" style="visibility:hidden">resting_sell</span>
+    <span class="arr" style="visibility:hidden">→</span>
+    <span class="arr">↳<small>remainder × bid &lt; ₩5,000</small></span>
+    <span class="st end">closed (dust)</span>
+    <span class="arr">·</span>
+    <span class="st alarm">taker_stuck</span>
+    <span class="arr"><small>20 empty slices: an alarm, the loop continues</small></span>
+  </div>
+  <p class="cap">Figure 2. The position states of <code>exit_style: rest_then_taker</code>. Stage 1
+  rests one post-only sell at the reference, re-pegged every 60 seconds. Stage 2 sends
+  <code>market ioc</code> sells one at a time, at least 5 seconds apart, re-sizing each from what the
+  previous one actually filled, until nothing sellable remains.</p>
+</div>
+
+<div class="callout warn">
+<p><strong>OFF is not "pause the sale".</strong> Turning the book off cancels every resting order
+and keeps every position — nothing is sold at a discount on an operator pause. But the 72-hour
+clock is the position's age, measured from the moment it opened and restored from the ledger on a
+restart. A position that is already overdue when the book comes back is sold on the first eligible
+tick. The runbook puts it in bold: the clock keeps running while the book is off, down, or crashed.</p>
+</div>
+
+<p>Why a loop and not one order? Because of two facts S1 read in the venue's documentation, both
+of which P19 had recorded the other way round. Korbit's price protection (<code>pp</code>) is
+<em>opt-in</em>, not a default 5 % cap — so an unprotected market sell really will walk a dead
+book. And a Korbit market order is <em>IOC-only</em>: whatever the book cannot fill right now is
+cancelled, not rested. So "sell it all, unconditionally" cannot be one request; it is send, read
+<code>filledQty</code>, send the remainder, until flat. That is what <code>taker_selling</code> does.</p>
+
+<h3>Why a 5 % rung does not earn 5 %</h3>
+
+<p>Buying at <code>ref × 0.95</code> and selling at <code>ref</code> is a 5.26 % gain — if the
+reference stands still. It never does. P20 measured the exit <em>per event</em> from the hourly
+panel: for every wick that reached a depth, did the venue's high get back to the reference within
+72 hours (sale at the reference then), or not (sale at the venue's close at 72 hours, less the
+measured taker haircut and a stress margin)? The result, pooled across markets at
+<code>m = 0, T = 72 h</code> and +2 pp stress:</p>
+
+<table>
+<thead><tr><th>Depth</th><th class="n">Events</th><th class="n">Recovered within 72 h</th><th class="n">E[return per fill]</th><th class="n">Sold at a loss</th></tr></thead>
+<tbody>
+<tr><td>5 %</td><td class="n">2,395</td><td class="n">91.1 %</td><td class="n">2.81 %</td><td class="n">8.6 %</td></tr>
+<tr><td>10 %</td><td class="n">849</td><td class="n">92.7 %</td><td class="n">8.16 %</td><td class="n">6.6 %</td></tr>
+<tr><td>20 %</td><td class="n">184</td><td class="n">88.0 %</td><td class="n">16.98 %</td><td class="n">12.0 %</td></tr>
+<tr><td>30 %</td><td class="n">78</td><td class="n">91.0 %</td><td class="n">35.36 %</td><td class="n">7.7 %</td></tr>
+<tr><td>50 %</td><td class="n">26</td><td class="n">96.2 %</td><td class="n">89.70 %</td><td class="n">3.8 %</td></tr>
+<tr><td>75 %</td><td class="n">5</td><td class="n">100 %</td><td class="n">305.12 %</td><td class="n">0.0 %</td></tr>
+</tbody>
+</table>
+<p class="src">research/p20/decision.md, the pooled exit table. "At g = 5 % the arithmetic capture
+of buying at ref × 0.95 and selling at ref would be 5.26 %, and the measured expectation is 2.81 % —
+because the reference falls during the hold of exactly the events that fill a rung."</p>
+
+<div class="callout">
+<p><strong>Key idea: deeper is safer per fill, not just richer.</strong> A rung 50 % under the
+reference is hit only by a wick, and wicks revert: the position is sold at a loss 3.8 % of the
+time, against 8.6 % at 5 %. What kills the deep rungs is not risk but <em>rate</em>: 26 events in a
+year across 165 markets at 50 %, five at 75 %. The operator's "if the book is clean I can order the
+50 % fish" was tested and answered by S1 — a −50 % bid does not catch the same flash sell as a
+−20 % one; only one wick in ten keeps going. The strategy survived the test because the deep rung
+earns 2.5× per fill, and the optimiser is what weighs the two.</p>
+</div>
+
+<p>One more thing the table says. Patience beats price: in the <code>(m, T)</code> grid, the
+margin <code>m</code> is monotonically harmful and <code>T</code> dominates. Resting at
+<code>ref × 0.98</code> instead of at the reference gives away 26 % of the income; cutting the hold
+to 24 hours costs only 3.2 %; cutting it to one hour makes every depth below 20 % negative, because
+"a position that has not recovered in an hour is sold into the same hole that filled it".</p>
+
+<h3>The optimiser: a knapsack walked in rank order</h3>
+
+<p>Now the second sentence of the sketch — is the grid statistical or intuition? — becomes a
+concrete procedure. Every (market, depth) pair is an item. Its value per month is
+<code>rate × Q × E[ret]</code>: how often that depth is touched per month, times the KRW resting
+there, times the expected return per fill from the table above. Its cost is <code>Q</code> plus a
+small reserve for the positions it will hold. The key it is ranked by is <code>rate × E[ret]</code>,
+income per won, which does not depend on <code>Q</code> — so walking items in key order and stopping
+when the budget runs out is the fractional-knapsack optimum. Five rules trim the candidate set
+first, and each is a measurement, not a taste:</p>
+
+<ul>
+  <li><strong>₩250,000 per rung</strong> and <code>Q ≤</code> the 25th percentile of the KRW that
+  actually traded through that depth on the 1-minute panel — a rung cannot be bigger than the
+  wicks that fill it.</li>
+  <li><strong>₩1,000,000 per market</strong> (it bound on exactly one market, KRW-SPACE, and
+  trimmed HYPE from ₩1.12 M).</li>
+  <li><strong>At least 60 days of reference history</strong> — three markets with 10 to 30 days
+  were dropped; they re-enter by themselves at the next regeneration once their history crosses
+  the line.</li>
+  <li><strong>No rung more than one grid step past the deepest depth the market has ever printed
+  a transient event at</strong>, and none where the market's own shape test reads <code>below</code>.</li>
+  <li><strong>A reference that is the wrong coin excludes the market</strong> — KRW-VELO on Korbit
+  is Velodrome; <code>VELOUSDT</code> on Bybit is Velo Protocol; the symbol collision priced it 361 %
+  wrong.</li>
+</ul>
+
+<div class="fig">
+  <div class="rank">
+    <div class="row"><span>rank</span><span>item</span><span>cumulative capital → ₩4.9 M budget</span><span style="text-align:right">yield/mo</span></div>
+    <div class="row"><span>1</span><span>KRW-BTT 5 %</span><div class="cum" style="width:2%"></div><span style="text-align:right">85.16 %</span></div>
+    <div class="row"><span>25</span><span>…</span><div class="cum" style="width:38%"></div><span style="text-align:right">21.98 %</span></div>
+    <div class="row"><span>65</span><span>KRW-GRAM 10 %</span><div class="cum" style="width:98.6%"></div><span style="text-align:right">14.16 %</span></div>
+    <div class="row budget"><span></span><span>budget</span><span>₩4,900,000 — the first item that does not fit ends the book</span><span></span></div>
+    <div class="row"><span>66</span><span>KRW-XLM</span><div class="cum over" style="width:100%"></div><span style="text-align:right">costs ₩250,782</span></div>
+  </div>
+  <p class="cap">Figure 3. The capital curve of <code>research/p20/capital_curve_v2.csv</code>: items
+  in key order, cumulative capital against the ₩4.9 M line (₩5 M minus ₩100 K headroom). The last
+  admitted item is rank 65; rank 66 does not fit and the walk stops there — a <em>prefix</em>, so
+  the rank order is also the order the money reaches the rungs as the deposit grows. Cumulative
+  yield falls from 85 % a month on the first tiny item to 14.16 % at the budget; the same curve
+  continued would read 10.82 % at ₩10 M and 8.97 % at ₩15 M.</p>
+</div>
+
+<div class="callout">
+<p><strong>₩113,038 idles on purpose.</strong> When the venue's tick lattice took four KRW-BTT
+rungs away at generation, the freed capital could not promote KRW-XLM past the line: the prefix
+rule never lets a cheaper rung jump a dearer one, because the prefix is what makes "the order the
+money reaches the rungs" true. The exact multiple-choice knapsack finds 0.93 % more; the gap is
+accepted and reported, not closed. Concentration is reported the same way: 77 % of the modelled
+income comes from five markets, and HYPE + SPACE alone are 43.5 %. The safety rules
+<em>raised</em> concentration, because the 60-day floor removed mid-sized markets while the
+per-market cap only trimmed the biggest.</p>
+</div>
+
+<p>What each rule cost, as a waterfall on the straight line, starting from the unconstrained base
+case of ₩787,160: per-market cap −4.08 %, exposure floor −10.32 %, extrapolation limit
+<strong>+2.38 %</strong> (an exclusion frees capital for the next rung in rank order, so a rule can
+pay), shape test −1.35 %, reference check 0.00 % — to ₩683,899. The departures the operator might
+have asked for: depths of 10 % and deeper only would cost <strong>−25.85 %</strong>; the shallow
+rungs are not the thesis, but at this budget they are the part of it that fits. A +5 pp stress on
+the taker haircut costs −0.22 %; a 0.2 % taker fee −0.02 %. The exit's price, which the phase was
+opened to worry about, barely moves the answer, because the taker leg is reached on only about
+8 % of fills at a 72-hour hold.</p>
+
+<h3>Two panels, and the look-ahead that was worth ₩62,800 a month</h3>
+
+<p>S1's biggest find was accidental. Korbit's candle endpoint keeps a fixed <em>count</em> of
+intervals — about 50,000 — so a 1-minute pull reaches 34.7 days back and an hourly pull reaches a
+year. That gave P20 two panels: panel A, one minute, 34 days, 531 events; panel B, hourly, 365
+days, 4,157 events. At 50 % depth panel A holds three events in total across every market; panel
+B holds 26. So rates and recovery probabilities are fitted on the year, and capacity — how much KRW
+trades through a level in the minute that touches it — comes from the minute panel only. A control
+run showed the two panels differ by <em>epoch</em> (1.16–1.94×, one-signed), not by resolution.</p>
+
+<div class="fig folds">
+  <svg viewBox="0 0 640 150" role="img" aria-label="Walk-forward folds">
+    <defs>
+      <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="1.2" opacity=".55"/>
+      </pattern>
+    </defs>
+    <g font-family="system-ui, sans-serif" font-size="12" fill="currentColor">
+      <text x="0" y="14">365-day hourly panel, three walk-forward folds (fit on the left, score on the right)</text>
+      <!-- fold 1 -->
+      <rect x="0" y="26" width="260" height="20" fill="currentColor" opacity=".18"/>
+      <rect x="260" y="26" width="120" height="20" fill="url(#hatch)"/>
+      <text x="6" y="41">fit</text><text x="266" y="41">score → ₩403,788</text>
+      <!-- fold 2 -->
+      <rect x="0" y="62" width="380" height="20" fill="currentColor" opacity=".18"/>
+      <rect x="380" y="62" width="120" height="20" fill="url(#hatch)"/>
+      <text x="6" y="77">fit</text><text x="386" y="77">score → ₩448,042</text>
+      <!-- fold 3 -->
+      <rect x="0" y="98" width="500" height="20" fill="currentColor" opacity=".18"/>
+      <rect x="500" y="98" width="120" height="20" fill="url(#hatch)"/>
+      <text x="6" y="113">fit</text><text x="506" y="113">score →</text>
+      <text x="506" y="140">₩501,413</text>
+      <text x="0" y="140">rates AND rule inputs (exposure days, deepest printed event, shape) re-derived inside each fit window</text>
+    </g>
+  </svg>
+  <p class="cap">Figure 4. F1's correction. S3's walk-forward re-fitted the <em>rates</em> per fold
+  but took the rule inputs — a market's listing age, the deepest depth it had printed, its shape
+  verdict — from the full year, so a fold knew things about a market's future. Re-deriving them per
+  fold moved the median from ₩510,842 to ₩448,042 (−12.29 %); the extrapolation limit carried most
+  of it, and the in-sample configuration did not change by a byte.</p>
+</div>
+
+<p>Both readings of the model are optimistic in a stated direction: the census treats a touch as a
+fill, and at 5 % the queue ahead of a rung is thickest (a median ₩1.44 M resting above it). That
+is why the first live month's job is to report realised-versus-modelled fills per rung before any
+lever — the ₩500 K per-rung cap, +11 % — is pulled.</p>
+
+<h3>The configuration that shipped</h3>
+
+<table>
+<thead><tr><th>Market</th><th>Rungs (g %)</th><th class="n">Σ Q</th><th class="n">Fills / mo</th><th class="n">Income / mo</th><th class="n">Share</th></tr></thead>
+<tbody>
+<tr><td>KRW-HYPE</td><td>5 / 7.5 / 10 / 12.5</td><td class="n">₩873,768</td><td class="n">10.2</td><td class="n">₩168,087</td><td class="n">24.6 %</td></tr>
+<tr><td>KRW-SPACE</td><td>5 / 7.5 / 10 / 12.5</td><td class="n">₩1,000,000</td><td class="n">7.2</td><td class="n">₩129,228</td><td class="n">18.9 %</td></tr>
+<tr><td>KRW-ONDO</td><td>5 / 7.5 / 10</td><td class="n">₩750,000</td><td class="n">4.9</td><td class="n">₩89,639</td><td class="n">13.1 %</td></tr>
+<tr><td>KRW-TAO</td><td>5 / 7.5 / 10</td><td class="n">₩750,000</td><td class="n">4.7</td><td class="n">₩89,205</td><td class="n">13.0 %</td></tr>
+<tr><td>KRW-GRAM</td><td>5 / 7.5 / 10</td><td class="n">₩518,720</td><td class="n">5.4</td><td class="n">₩51,987</td><td class="n">7.6 %</td></tr>
+<tr><td>KRW-BTT</td><td>5 / 7.5 / 10 / 12.5 / 15 / 20 → 10 / 20 in the file</td><td class="n">₩58,983</td><td class="n">45.4</td><td class="n">₩41,014</td><td class="n">6.0 %</td></tr>
+<tr><td>KRW-CC</td><td>5 / 7.5 / 10</td><td class="n">₩255,723</td><td class="n">4.6</td><td class="n">₩36,071</td><td class="n">5.3 %</td></tr>
+<tr><td>KRW-PUMP</td><td>5 / 7.5 / 10</td><td class="n">₩182,537</td><td class="n">4.4</td><td class="n">₩19,826</td><td class="n">2.9 %</td></tr>
+<tr><td colspan="6"><small>… twelve more markets, among them KRW-FLR's seven gapped rungs on ₩35,035
+and five-rung ladders to 15 % on CROSS, POKT, HNT and BIO. Configuration: 65 rungs, 20 markets,
+Σ Q ₩4,758,651. Shipped file: 61 rungs, Σ Q ₩4,719,775 — KRW-BTT's price (₩0.000453 on a ₩0.0001
+tick) rounds 5 / 7.5 / 10 % onto one price and 12.5 / 15 / 20 % onto another, and the rule keeps the
+deeper of each pair: −₩29,810 a month for a tick.</small></td></tr>
+</tbody>
+</table>
+<p class="src">research/p20/decision_v2.md, the per-market table; research/p20/params/budget_table.md
+for the shipped file. 2.18× the P19 file's straight line under the same exit.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="code">
+<h2>Code</h2>
+
+<p>The strategy is still the <code>src/arb/fish/</code> package the fish-ladder document walked —
+the same runner, ladder, closer and ledger — with a Korbit venue layer under
+<code>src/arb/korbit/</code>. P20 added about 4,400 lines across twenty files. This section walks
+them in the order a fill would meet them: the file that configures the book, the reference the
+rungs are priced from, the quoter, the fill, the two-stage exit, the venue calls it makes, and the
+surface the operator sees. One rule sits above all of it: the live P15 Upbit book and every P13–P19
+params file behave exactly as before — the review proved all eight shipped files byte-identical
+under the new code.</p>
+
+<h3>1. The params file is generated, never hand-edited</h3>
+
+<p><code>research/p20/params/korbit_v2.json</code> is written by
+<code>research/p20/params/make_params.py</code> from the optimiser's table plus four questions
+asked of the venue live (is the pair listed and launched, its minimum order, whether the rungs are
+distinguishable on its tick lattice, the client-id length). The values that matter, condensed:</p>
+
+<pre>"venue": "korbit",
+"sides": "bid",                        // buy-only: no seed, no ask ladder, no hedge
+"exit_style": "rest_then_taker",
+"rest_margin_pct": 0.0,                // m: rest the sell AT the reference
+"rest_s": 259200.0,                    // T: 72 hours, then the taker loop
+"rest_repeg_s": 60.0,
+"rung_cap_pct": 75.0,                  // one grid step above the deepest admitted rung (FLR's 60 %)
+"cap_krw": 1000000.0,                  // per-market exposure cap (D11)
+"min_total_krw": 5000.0,               // the venue's minOrderValue
+"ref_stale_s": 300.0,                  // a reference older than this halts the market
+"fee_pct": 0.0,
+"book_daily_realised_loss_cap_krw": 100000.0,
+"control_port": 8797,
+
+"rungs_pct": { "*": [5.0, 7.5, 10.0],
+               "KRW-FLR":  [5.0, 7.5, 10.0, 30.0, 40.0, 50.0, 60.0],
+               "KRW-HYPE": [5.0, 7.5, 10.0, 12.5], ... },
+"order_krw": { "*": 5000.0,
+               "KRW-FLR":  [5005.0, 5005.0, 5005.0, 5005.0, 5005.0, 5005.0, 5005.0],
+               "KRW-HYPE": [123767.947146, 250000.0, 250000.0, 250000.0], ... },
+"reference": { "KRW-FLR":  {"venue": "bybit", "symbol": "FLRUSDT",  "multiplier": 1.0},
+               "KRW-HYPE": {"venue": "bybit", "symbol": "HYPEUSDT", "multiplier": 1.0}, ... },
+"report":    { "maker_sections": false, "model_csv": "research/p20/optimum_v2.csv" }</pre>
+<p class="src">research/p20/params/korbit_v2.json (20 markets; 12 are absent from
+<code>reference</code>, which means Upbit). Every market is named explicitly in both maps, so
+<code>"*"</code> arms nothing — it is there because the loader requires it.</p>
+
+<p>Four knobs are deliberately <em>not</em> in the file. The generator's comment says why:</p>
+
+<pre>#: D12, settled by P20.S6 — the three keys that differ from P19's ``shared()``.
+#: ``taker_slice_interval_s`` / ``taker_stuck_slices`` and ``ref_bybit_poll_s``
+#: / ``ref_fx_poll_s`` are **deliberately omitted**: they are dataclass fields
+#: with exactly the defaults this book wants, and a key that is not in the file
+#: is a key that cannot drift.</pre>
+<p class="src">research/p20/params/make_params.py:158-163. The defaults: 5 s between taker slices,
+20 empty slices before the alarm, Bybit polled every 3 s, the KRW-USDT rate every 5 s.</p>
+
+<h3>2. Per-market rungs, per-rung sizes</h3>
+
+<p>The fish-ladder book had one <code>rungs_pct</code> list and one <code>order_krw</code> for every
+market. P20 lets both be maps, and everything that reads them goes through accessors — the code's
+own docstring warns that a ladder may be <em>gapped</em>:</p>
+
+<pre>def rungs_pct_for(self, market: str) -&gt; list[float]:
+    """The rungs armed on **one** market (D13): its list, or the default.
+
+    Ascending and distinct, and possibly **gapped** — ``KRW-FLR`` is
+    5 / 7.5 / 10 + 30 / 40 / 50 / 60 — so a caller may index into this list,
+    but must never infer the next depth from a grid.
+    """
+    if isinstance(self.rungs_pct, dict):
+        return [float(g) for g in self.rungs_pct.get(
+            market, self.rungs_pct[RUNGS_PCT_DEFAULT_KEY])]
+    return [float(g) for g in self.rungs_pct]</pre>
+<p class="src">src/arb/fish/params.py:1031-1041</p>
+
+<pre>def order_krw_for(self, market: str, g: float | None = None) -&gt; float:
+    """Q for one market (D26) — and, since P20.S4, for **one rung** (D13)."""
+    value = self._order_krw_entry(market)
+    if not isinstance(value, (list, tuple)):
+        return float(value)
+    if g is None:
+        return min(float(q) for q in value)
+    rungs = self.rungs_pct_for(market)
+    try:
+        i = rungs.index(float(g))
+    except ValueError:
+        raise ValueError(
+            f"order_krw_for({market!r}, {g!r}): {g!r} is not one of this "
+            f"market's rungs {rungs}") from None
+    return float(value[i])</pre>
+<p class="src">src/arb/fish/params.py:1098-1137 (condensed). With no <code>g</code> the answer is the
+market's <em>smallest</em> rung — every caller that asks without a depth is asking "can one order
+be placed at all", so the conservative reading is the right one. <code>ladder_krw</code> became
+Σ Q (params.py:1157-1174), which is the number the ON check's <code>krw</code> row prints.</p>
+
+<p>The <code>reference</code> map is validated with unusual care, because a misspelt key would
+price a rung a thousand times out:</p>
+
+<pre>unknown = sorted(set(spec) - REFERENCE_KEYS)
+if unknown:
+    raise ValueError(
+        f"reference[{market!r}]: unknown key(s) {unknown} — one of "
+        f"{sorted(REFERENCE_KEYS)}")
+...
+if not (multiplier == multiplier) or multiplier &lt;= 0.0:
+    raise ValueError(
+        f"reference[{market!r}]: multiplier {multiplier} must be &gt; 0"
+        f" — it divides the ticker (a 1000X perp is 1000)")</pre>
+<p class="src">src/arb/fish/params.py, _validate_reference (749-800). A file for the Upbit venue
+that carries a <code>reference</code> map is refused outright.</p>
+
+<h3>3. The reference: two legs, fail-closed</h3>
+
+<p>Eight of the twenty markets are not on Upbit, and they carry 48 % of the modelled income. The
+live feed had been Upbit-only, so slice S11 was inserted mid-phase to build the composite. An
+Upbit-referenced market keeps the Upbit WebSocket exactly as before. A Bybit-referenced one is a
+<code>BybitRefState</code> whose price is Bybit's <code>lastPrice</code>, divided by the ticker's
+multiplier (a <code>1000BONK</code> perp is 1,000), times Korbit's own KRW-USDT close:</p>
+
+<pre>def price(self, now: int, stale_s: float) -&gt; float:
+    """``lastPrice / multiplier x fx``, or ``NaN`` if either leg is stale."""
+    if self.stale(now, stale_s):
+        return NAN
+    _, px = self.px
+    _, fx = self.fx
+    out = px * fx
+    return out if (out == out and out &gt; 0) else NAN
+
+def anchor(self, now: int, stale_s: float) -&gt; float:
+    """The reference, or ``NaN`` — a real answer: nothing is placed on it."""
+    return self.price(now, stale_s)
+
+def stale(self, now: int, stale_s: float) -&gt; bool:
+    """True when **either** leg is older than ``stale_s`` or never seen."""
+    r = self.recv_ts
+    return r &lt;= 0 or (now - r) / 1000.0 &gt; float(stale_s)</pre>
+<p class="src">src/arb/fish/reference.py:153-170. The fish-ladder book's <code>MajorFeed</code>
+fails <em>open</em> on a stale major; a reference may not, because a rung is a function of it. A
+<code>NaN</code> anchor halts that market's quotes at <code>ref_stale_s</code> = 300 s.</p>
+
+<pre>if self.venue == KORBIT:
+    self.feed = ReferenceFeed(self.p, depth=self.p.ws_depth,
+                              on_event=self.event, korbit_rest=self.korbit)
+    self.log(f"reference: {self.p.reference_summary()}" + ...)
+else:
+    self.feed = MultiFeed(self.p.markets, depth=self.p.ws_depth,
+                          stale_s=self.p.stale_s)</pre>
+<p class="src">src/arb/fish/runner.py:636-652 (condensed). The Korbit book gets the composite; the
+Upbit book keeps <code>MultiFeed</code> untouched. On the first day the feed reported 12 Upbit
+markets on one socket, 8 Bybit markets over 836 polls with 0 errors, and a KRW-USDT rate of 1,367.</p>
+
+<h3>4. The quoter: a bid below the reference, and never above the venue's ask</h3>
+
+<p>The rung price is the fish-ladder one-liner. What P20 added is the second rule: the rung is a
+function of a <em>foreign</em> reference and does not move with Korbit's own book, so on a book
+that has drifted below the rung a post-only bid would cross the ask and be refused for ever.</p>
+
+<pre>def rung_price(side: str, anchor: float, rung_pct: float) -&gt; float:
+    """``anchor × (1 ∓ g)`` — a bid below the anchor, an ask above it."""
+    g = float(rung_pct) / 100.0
+    return anchor * (1.0 - g) if side == BID else anchor * (1.0 + g)</pre>
+<p class="src">src/arb/fish/ladder.py:123-126</p>
+
+<pre>def no_cross(side: str, raw, book, tick: Decimal):
+    """``raw``, pulled back one tick inside the **venue's own** touch (D13).
+
+    A post-only bid at or above the best ask is refused — for ever, on a book
+    that has drifted below the rung, because the rung's price is a function of a
+    *foreign* reference and does not move with the venue. P19's whole universe is
+    books that sit wide and dead, so this is not a corner case: D13 writes the
+    rung price as ``min(ref × (1 − g), best_ask − 1 tick)`` exactly for it.
+    """</pre>
+<p class="src">src/arb/fish/ladder.py:143-153. On the first day, 0 of 1,796 placements sat at or
+above their reference; the shallowest was exactly 5.0000 % under.</p>
+
+<p>The tick-lattice rule — two rungs that round onto one price collapse to the deeper one — lives in
+the same shared quoter, and is gated so that the Upbit book's placement does not change:</p>
+
+<pre># D13 is a Korbit decision and the collapse is gated to that venue
+# (P20.F2). ``plan_actions`` is shared by both books, and on the Upbit
+# book the same rule would change the live P15 ladder's placement — the
+# operator's running money — so it stays off there until they ask for it
+collapsed = (same_tick_collapse(rungs, [row[5] for row in planned])
+             if p.venue == KORBIT else {})</pre>
+<p class="src">src/arb/fish/ladder.py:509-514. Fix F2 proved the gate on 480 quoter scenarios:
+360 Upbit-venue runs byte-identical to the pre-P20 output, 120 Korbit-venue runs unchanged.</p>
+
+<h3>5. A maker fill opens a position — unless it is our own sell</h3>
+
+<p>The closer's <code>on_fill</code> is where a filled rung becomes a <code>Position</code>. Two
+branches were added for the new exit: a taker fill that belongs to a timeout slice is booked by the
+loop that sent it, and a maker fill on an <code>exit-</code> order is stage 1 <em>closing</em> a
+position, not a rung opening one.</p>
+
+<pre>if getattr(fill, "kind", MAKER) == TAKER:
+    if (self.rest_exit is not None
+            and self.rest_exit.owns_taker(getattr(fill, "identifier", ""))):
+        # P20.S6 / D12: a timeout sale's slice. It is booked by the loop
+        # that sent it, never by ``_finalise`` — which matches on
+        # ``pos.closing`` and would drop every trade of the slice but the
+        # first (P20.S5's finding)
+        return self.rest_exit.on_taker_fill(fill)
+    return self._finalise(fill)
+if getattr(fill, "kind", MAKER) != MAKER:
+    return None
+if self.rest_exit is not None and self.rest_exit.owns(
+        getattr(fill, "identifier", "")):
+    # a maker fill on an ``exit-`` order is stage 1 *closing* a position,
+    # not a rung opening one — the sale, not the purchase (P19.S5)
+    return self.rest_exit.on_fill(fill)
+...
+pos = Position(position_id=pid, market=fill.market, side=fill.side,
+               rung_pct=float(fill.rung_pct or 0.0), opened_ts=ts, size=size,
+               price=float(fill.price), fill_identifier=fill.identifier)
+self.open_positions[pid] = pos
+self.n_opened += 1
+if self.rest_exit is not None:
+    self.rest_exit.on_open(pos, ts)
+return pos</pre>
+<p class="src">src/arb/fish/closer.py:255-287 (condensed). <code>on_open</code> writes the state
+<code>resting_sell</code>; the sell itself goes out on the next tick.</p>
+
+<h3>6. Stage 1: rest at the reference, and one clock</h3>
+
+<p>The module docstring of <code>rest_exit.py</code> draws the state machine; it is the same drawing
+as Figure 2:</p>
+
+<pre>**P20.S6 adds the second half of the fork** (D12), as
+:class:`RestThenTakerExit` — the live Korbit style from P20 on. Stage 1 is
+unchanged in every particular (one post-only sell at ``ref × (1 − m)``, m = 0
+and T = 72 h under the new configuration, re-pegged, cancel-and-keep on OFF,
+the clock running through a stop); what changes is *only* what happens at
+``rest_s``::
+
+    resting_sell ─(age ≥ rest_s)→ taker_selling ─(flat)→ closed
+                                        │
+                                        └─(remainder × bid &lt; minOrderValue)→ closed (dust)</pre>
+<p class="src">src/arb/fish/rest_exit.py:36-49</p>
+
+<p>The timeout is a single comparison inside <code>step</code>, run on every tick — including the
+first tick after a restart, because a position's age is measured from <code>opened_ts</code>,
+which the resume restores from the ledger. That one line is the whole of "an overdue position is
+sold at once on resume":</p>
+
+<pre>def step(self, ts: int) -&gt; list:
+    """Place, re-peg or time out every ``resting_sell`` position. Sells nothing."""
+    for pos in list(self.c.open_positions.values()):
+        state = getattr(pos, "state", OPEN)
+        if state in HANDED_OVER:
+            continue                     # the operator's coin (D20)
+        if state == TAKER_SELLING:
+            # P20.S6: the timeout sale's own loop owns this position now —
+            # and the re-adopt below **must not** reach it, or every tick
+            # would reset it to ``resting_sell`` and rest a sell against
+            # coin that is being sold. A no-op under the transfer style,
+            # which never writes this state
+            self._selling(pos, ts)
+            continue
+        if state != RESTING_SELL:
+            # a position opened before this style was switched on: adopt it
+            self.on_open(pos, ts)
+        if pos.age_s(ts) &gt;= float(self.p.rest_s):
+            self._time_out(pos, ts)
+            continue</pre>
+<p class="src">src/arb/fish/rest_exit.py:251-274 (condensed). The sell price is
+<code>raw = ref * (1.0 - float(self.p.rest_margin_pct) / 100.0)</code> at line 195, rounded down
+onto the band tick and floored one tick above the venue's best bid. The re-peg (lines 333-355)
+cancels only; the next step re-places, so there is never a moment with two live sells against one
+position.</p>
+
+<h3>7. Stage 2: market IOC slices until flat</h3>
+
+<p>At the timeout the resting sell is cancelled and confirmed, the state is written, and the first
+slice goes out on the same tick. The event carries the rule in words:</p>
+
+<pre>self._forget(pos.position_id)
+ident, pos.rest_ident = str(getattr(pos, "rest_ident", "") or ""), ""
+pos.state = TAKER_SELLING
+pos.state_ts = int(ts)
+self.n_timeouts += 1
+if self.c.ledger is not None:
+    self.c.ledger.set_position_state(pos.position_id, TAKER_SELLING, int(ts))
+self.c._event("warn", "taker_selling", pos.market,
+              {"position_id": pos.position_id, "size": pos.size,
+               ...
+               "slice_interval_s": float(self.p.taker_slice_interval_s),
+               "owed": "stage 1 did not fill: the remainder is sold on this "
+                       "venue with market ioc slices until it is flat or "
+                       "dust (D12) — no price floor, no give-up"}, ts)
+self._selling(pos, ts)           # the first slice goes out on this tick</pre>
+<p class="src">src/arb/fish/rest_exit.py:657-673, RestThenTakerExit._time_out (condensed)</p>
+
+<p>Each slice is rate-bounded, sized from the remainder floored to the venue's volume step, and
+preceded by the dust test — the same test the sink itself would refuse on, run first so the dust
+decision is the loop's own and never a guess at a refusal reason:</p>
+
+<pre>last = self._last_slice_ts.get(pid)
+if (last is not None
+        and (ts - last) &lt; float(self.p.taker_slice_interval_s) * 1000.0):
+    return                           # D12's "next tick", rate-bounded
+send = self._sink_fn("taker_market")
+...
+bid = self._best_bid(pos.market)
+min_total = self._min_total(pos.market)
+size = self._size(pos)               # floored to the venue's volume step
+if bid &gt; 0 and (float(size) &lt;= 0 or float(size) * bid &lt; min_total):
+    # exactly ``taker_market``'s own refusal test, run before the send so
+    # the dust decision is ours and never a guess at a refusal reason
+    self._dust_close(pos, ts, bid, min_total)
+    return
+fill = send(pos.market, ASK, float(pos.size), ts)</pre>
+<p class="src">src/arb/fish/rest_exit.py:782-805, _maybe_slice (condensed). On the paper sink there
+is no <code>taker_market</code>; the loop says so once (<code>taker_unsupported</code>) and leaves
+the coin alone rather than crossing it out some other way.</p>
+
+<p>And the alarm, which is explicitly not a stop:</p>
+
+<pre>self._warned_stuck.add(pid)
+self.c._event("warn", "taker_stuck", pos.market,
+              {"position_id": pid, "size": float(pos.size),
+               "empty_slices": self._empty.get(pid, 0),
+               ...
+               "why": f"{bound} consecutive market ioc slices sold nothing. "
+                      "The loop KEEPS GOING (D12: no price floor, no "
+                      "give-up) — this is an alarm, not a stop. Read the "
+                      "book and settle it by hand if it persists"}, ts)</pre>
+<p class="src">src/arb/fish/rest_exit.py:751-769, _warn_stuck (condensed). The style is chosen in
+one place: <code>rest_exit_for(closer)</code> at lines 965-978 returns a
+<code>RestThenTakerExit</code> for <code>rest_then_taker</code>, a plain <code>RestExit</code> for
+<code>rest_then_transfer</code> (still loadable, out of the live path), and <code>None</code> otherwise.</p>
+
+<div class="callout warn">
+<p><strong>Documented, not observed.</strong> Probe (b) — a real minimum-size market sell on the
+account — was waived by the operator ("it will work I guess"). So as of the go-live no market
+order had ever been sent on this account: the slice loop is coded from the venue's documentation,
+and the tests pin the reading, not the venue. The first taker sell is one of the two facts the
+72-hour watch exists for; the earliest it can happen is 2026-09-24 around 10:05 KST. Probe (b)
+stays on file as deferred job D103.</p>
+</div>
+
+<h3>8. The venue layer: a market order is qty or amt, never a price</h3>
+
+<pre>if (qty is None) == (amt is None):
+    raise ValueError(
+        "a market order takes exactly one of qty= (a sell, base currency) / "
+        "amt= (a buy, quote currency)")
+side_s = str(side).strip().lower()
+...
+if (side_s == "sell") != (qty is not None):
+    raise ValueError(
+        f"a market {side_s} is sized by {'qty' if side_s == 'sell' else 'amt'}"
+        f", not {'amt' if side_s == 'sell' else 'qty'} (venue_facts.md 1.1)")
+...
+body: dict[str, Any] = {"symbol": to_symbol(symbol),
+                        "accountSeq": int(account_seq),
+                        "side": side_s, "orderType": "market"}
+if qty is not None:
+    body["qty"] = fmt_decimal(qty)
+else:
+    body["amt"] = fmt_decimal(amt)
+body["timeInForce"] = "ioc"
+body["clientOrderId"] = client_order_id</pre>
+<p class="src">src/arb/korbit/rest.py:203-227, market_order_body. The existing
+<code>place_order</code> now refuses <code>order_type="market"</code> by name (lines 700-706) and
+points at <code>place_market_sell</code> / <code>place_market_buy</code>; there is no
+<code>price</code> key at all, and <code>pp</code> is sent only when a caller asks for it.</p>
+
+<p>The sink's side of the contract is that a slice can be <em>partial</em>, and that the loop must
+size the next one from what actually filled:</p>
+
+<pre>o = self.orders.get(identifier)
+if o is None:
+    return "dead"
+if o.live:
+    self._cmds[o.market].put_nowait(("resolve", identifier))
+    return "pending"
+if o.executed &lt;= DUST:
+    return "dead"
+return "partial" if o.remaining &gt; DUST else "filled"</pre>
+<p class="src">src/arb/korbit/sink.py:893-912, taker_status. <code>taker_filled(identifier)</code>
+(914-929) returns <code>(executed, remaining)</code> after syncing the venue's trade list, because a
+<code>pp</code>-trimmed or IOC-cancelled order still closes with <code>status: "filled"</code> — the
+status word is not the size.</p>
+
+<h3>9. Presence is asked on the market's own reference venue</h3>
+
+<p>This is the fix that turned the 09:23 refusal into the 09:56 arm. Two readers — the runner's
+60-second flag poll and the ON check — tested every market against Upbit's market list. Eight
+markets are not on Upbit by construction, and both readers reported them missing. F4 splits the
+question by reference venue:</p>
+
+<pre>def _apply_flags(self, rows: list, ts: int) -&gt; None:
+    """Upbit's rows, applied to the **Upbit-referenced** markets (P20.F4).
+    ...
+    A Bybit-referenced market has no Upbit row to classify and is never listed
+    there — its presence is :meth:`_apply_korbit_pairs`' question, and
+    reading it out of ``market/all`` is what refused P20's first go-live
+    (2026-09-21 09:23: eight markets halted ``market_missing``).
+    """
+    ...
+    for market in self.p.upbit_markets():</pre>
+<p class="src">src/arb/fish/runner.py:989-1013 (condensed). <code>_apply_korbit_pairs</code>
+(1122-1149) polls Korbit's own <code>GET /v2/currencyPairs</code> for the Bybit-referenced markets
+and halts any whose status is present and not <code>launched</code>.</p>
+
+<pre>upbit_codes = self.p.upbit_markets()
+bybit_codes = self.p.bybit_markets()
+...
+missing = [m for m in upbit_codes if m not in by]
+inactive = sorted(...)
+pairs = await self.r._korbit_pairs() if bybit_codes else None
+missing_korbit = ([m for m in bybit_codes
+                   if not self.r.korbit_tradable(pairs.get(m))]
+                  if pairs is not None else [])
+bad = missing or inactive or missing_korbit
+# the second venue's keys appear only on a book that has one, so every
+# P13-P19 file's row is the row it always was, key for key
+korbit = {} if not bybit_codes else {..., "missing_korbit": missing_korbit, ...}
+return self._row("markets_tradable", FAIL if bad else PASS,
+                 listed=len(by), checked=len(upbit_codes),
+                 missing=missing, inactive=inactive, **korbit)</pre>
+<p class="src">src/arb/fish/control.py:276-301 (condensed). The second go-live's ON row read
+<code>listed: 855, checked: 12, missing: []</code> and <code>korbit_listed: 227, korbit_checked: 8,
+missing_korbit: []</code>.</p>
+
+<h3>10. The operator surface: preflight says what the exit will do</h3>
+
+<p>The Korbit preflight's row list now differs by exit style. On <code>rest_then_taker</code> the
+three withdrawal rows are not run at all — replaced by one INFO line — and a new <code>exit</code>
+row states the mechanics in the operator's language and reads this account's taker fee per symbol
+in one signed request:</p>
+
+<pre>said = (f"{p.exit_style}: a position that has not sold at the reference "
+        f"within rest_s {float(p.rest_s) / 3600.0:,.1f} h is CANCELLED off "
+        f"the book and **sold with market `ioc` slices at any price** — "
+        f"pp OFF, no price floor, no give-up (D12); ...")</pre>
+<p class="src">src/arb/korbit/preflight.py:418-428, check_exit. PASS at or under an assumed 0.2 %
+taker fee, WARN above, FAIL when the policy could not be read; measured 0 on all 20 markets.</p>
+
+<pre>if p.exit_style == REST_THEN_TRANSFER:
+    await withdrawal_readiness(p, cl, report)
+else:
+    cl.add(INFO, "withdrawal rows",
+           f"NOT RUN on exit_style {p.exit_style!r} (D12/D14): the timeout "
+           f"sells on Korbit itself, so no coin is ever withdrawn and no "
+           f"Upbit sale ever happens — ...")</pre>
+<p class="src">src/arb/korbit/preflight.py:804-819. A healthy v2 start is 11 checks, 0 FAIL, 1 WARN —
+the WARN names the four markets whose Q sits at the ₩5,000 minimum, and it came true on KRW-FLR
+within ten minutes as the ₩0.04 dust remainder.</p>
+
+<p>The report gained a section the first live month is for: <code>## Realised vs modelled, per
+rung</code> joins the file's rungs to the optimiser's csv on (market, depth), pro-rates the modelled
+income to the covered days, and prints realised fills and realised KRW beside it. Fix F5 made the
+fills column count <em>entry</em> fills only (stage 1's sell is a maker fill carrying the position's
+rung, so the first version counted one round trip as two) and scoped <code>verify_cycle.py</code>
+to one run — a ledger outlives a cycle, and the unscoped read had judged the live book by P19's
+rungs from the day before.</p>
+
+<h3>11. How the operator runs it</h3>
+
+<p>As with the Upbit book: a Terminal on the operator's Mac, from the repo checkout, every
+lifecycle command typed by the operator and never by an agent. The wrapper's default is still the
+P19 file, so every v2 command names the file:</p>
+
+<pre>env KORBIT_PARAMS=research/p20/params/korbit_v2.json bin/korbit.sh preflight   # 11 rows: 0 FAIL, 1 WARN
+env KORBIT_PARAMS=research/p20/params/korbit_v2.json bin/korbit.sh start       # comes up DISARMED
+env KORBIT_PARAMS=research/p20/params/korbit_v2.json bin/korbit.sh on --reason "go-live"
+env KORBIT_PARAMS=research/p20/params/korbit_v2.json bin/korbit.sh status      # ARMED, 61 bids / 0 asks
+
+research/p20/go_live.sh --reason "go-live"        # the six steps above in one command; --dry-run prints them
+curl -s 127.0.0.1:8797/state                      # GET only — never POST to this port
+uv run python research/p20/verify_cycle.py data/p20/golive/20260921T095617 \
+    --params research/p20/params/korbit_v2.json --ledger &lt;a WAL-aware copy&gt;   # exit 2 = healthy</pre>
+<p class="src">research/p20/runbook.md §0, §5, §6; docs/current/operations.md "Operator Runtime".
+The Korbit book is <code>data/fish-korbit/</code>, port 8797; the Upbit book is
+<code>data/fish-live/</code>, port 8796, and one Korbit book runs at a time.</p>
+
+<p><code>go_live.sh</code> v2 has six steps — check the generated file for drift, preflight, start,
+ON, a 60-second watch then <code>/state</code> and <code>verify_cycle</code>, a first report — and
+its preconditions are the outputs of probe (a), which the operator ran the day before: two post-only
+bids at −50 % and −75 % under the reference, both <em>accepted</em> by the venue, proving there is
+no price band on a mature pair. <code>verify_cycle</code>'s healthy exit code is 2, because four of
+its claims are TODO until the 72-hour clock has run: the crossing-<code>po</code> status word, the
+first taker sell, the slice sequence, and dust. The claim watched for the whole window is
+<code>no_ioc_before_timeout</code> — any IOC on a position younger than 72 hours is a FAIL.</p>
+
+<table>
+<thead><tr><th>Condition</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>Per-market realised loss ≤ −₩10,000 today</td><td>Halt that market until the KST day rolls</td></tr>
+<tr><td>Book realised loss ≤ −₩100,000 today</td><td>Full OFF, then exit code 2; the supervisor never restarts a 2</td></tr>
+<tr><td>Either reference leg older than 300 s</td><td>That market's quotes halt (fail-closed); resume when fresh</td></tr>
+<tr><td>A Bybit-referenced market not <code>launched</code> on Korbit</td><td>Halt, cancel its rungs, close its positions</td></tr>
+<tr><td>20 consecutive taker slices sold nothing</td><td>One <code>taker_stuck</code> warning; the loop continues — "a read, not an OFF"</td></tr>
+<tr><td><code>bin/korbit.sh off</code> / <code>go_live.sh --off</code></td><td>Cancel every rung and resting sell, <strong>keep every position</strong>; the 72-hour clock keeps running</td></tr>
+</tbody>
+</table>
+<p class="src">research/p20/runbook.md §9, "Stop rules"; <code>--close-on-stop</code> is refused.</p>
+
+<h3>12. Tests</h3>
+
+<p>The workspace's rule is to test only what the product cannot afford to get wrong. The suite is
+245 cases; the ones that pin this document's claims:</p>
+
+<ul>
+  <li><code>tests/test_korbit_book.py:766</code> — the taker timeout cancels the rest sell and slices at once</li>
+  <li><code>tests/test_korbit_book.py:894</code> — a resumed <code>taker_selling</code> position slices on the first eligible tick</li>
+  <li><code>tests/test_korbit_book.py:913</code> — slices that sell nothing warn once and the loop never gives up</li>
+  <li><code>tests/test_korbit_book.py:846</code> — a remainder under the minimum closes as dust and sends nothing</li>
+  <li><code>tests/test_korbit_params.py:244</code> — <code>rungs_pct</code> is a list or a map, and <code>order_krw</code> may be one Q per rung</li>
+  <li><code>tests/test_korbit_params.py:314</code> — two rungs on one tick collapse to the deeper rung</li>
+  <li><code>tests/test_korbit.py:191</code> — a market order sends qty or amt and never a price</li>
+  <li><code>tests/test_fish.py:561</code> — a Bybit-referenced market is not missing because Upbit does not list it</li>
+</ul>
+
+<details>
+<summary>Reading the provenance tags</summary>
+<p>Comments cite decisions like D12, D13 or P20.F4. As in the fish-ladder document, three "D"
+namespaces coexist: each phase's notebook restarts its decisions at D1 (P20's picks are D10–D16 in
+<code>works/phases/active/P20/phase.md</code>), the deferred-job dashboard has its own D-numbers
+(P20 filed D96–D105: the Upbit tick collapse, a Korbit notice feed, presence polling for all twenty
+markets, the ₩500 K cap, the 60-day re-admits, <code>T = 24 h</code>, skip-and-continue back-fill,
+probe (b), a stale <code>/state</code> sentence, and the scale-in decision), and the versioned docs'
+architecture records predate fishing. The current truth about this book lives in
+<code>research/p20/</code>, the phase notebook, and the QA doc's regression checklist (v0017); the
+operations doc's runtime section still describes the P19 book and is owed to a docs phase.</p>
+</details>
+</section>
+
+<!-- ============================================================ -->
+<section id="quiz">
+<h2>Quiz</h2>
+<p>Five questions. Click an answer for immediate feedback.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> A rung 5 % under the reference fills and the position later sells at the
+  reference. Buying at <code>ref × 0.95</code> and selling at <code>ref</code> is +5.26 %. Why does
+  the model expect only 2.81 % per fill at this depth?</p>
+  <button class="opt" data-correct="false">Korbit's taker fee and the 60-second re-peg give back about half of the spread.</button>
+  <button class="opt" data-correct="true">The reference itself falls during the hold of exactly the events that fill a rung, and the 9 % of positions that never recover are sold below it at 72 hours.</button>
+  <button class="opt" data-correct="false">The optimiser caps every rung's return at the pooled average across depths.</button>
+  <p class="why" hidden>The exit is measured per event in KRW terms — sale ÷ entry − 1 — so the coin's own drift over the hold is inside the return by construction. At 5 % that drift costs almost half the arithmetic capture; at 50 % it costs almost nothing.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> A position has been resting its sell for 70 hours when the operator runs
+  <code>go_live.sh --off</code>. Ten hours later they turn the book back on. What happens to that
+  position?</p>
+  <button class="opt" data-correct="false">The clock paused at 70 hours; two more hours of resting remain before any taker sell.</button>
+  <button class="opt" data-correct="false">OFF sold it with a market order on the way down, since the timeout was near.</button>
+  <button class="opt" data-correct="true">OFF cancelled the sell and kept the coin; the age kept counting; on the first eligible tick after ON it is 80 hours old, times out, and the market IOC slicing starts at once with no price floor.</button>
+  <p class="why" hidden>The timeout is one comparison in <code>step</code>: <code>pos.age_s(ts) &gt;= rest_s</code>, with age measured from <code>opened_ts</code> as restored from the ledger. The runbook: "OFF is not 'pause the sale'".</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> The operator asked for an unconditional market sell at the timeout. Why
+  does the code implement it as a loop of <code>market ioc</code> orders re-sized from
+  <code>filledQty</code>, rather than one request?</p>
+  <button class="opt" data-correct="false">Korbit limits a single market order to ₩5,000, so a position must be split.</button>
+  <button class="opt" data-correct="true">On Korbit a market order is IOC-only and price protection is opt-in: whatever the book cannot fill right now is cancelled, not rested, so the remainder must be re-sent until nothing sellable is left.</button>
+  <button class="opt" data-correct="false">The runner's order-rate pocket allows one order per tick per market.</button>
+  <p class="why" hidden>S1 read both facts from the venue's documentation — and both corrected P19's notes, which had recorded a default 5 % protection cap. A trimmed or cancelled order still closes <code>status: "filled"</code>, which is why the loop reads sizes, never status words.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> Slice S3 reported the walk-forward median at ₩510,842 a month; fix F1
+  re-stated it at ₩448,042, and the phase adopted the lower number. What changed between the two?</p>
+  <button class="opt" data-correct="false">F1 refitted the rate model on more data, and more data lowered the rates.</button>
+  <button class="opt" data-correct="false">F1 raised the taker stress margin from +2 to +5 percentage points.</button>
+  <button class="opt" data-correct="true">Each fold's rule inputs — a market's exposure days, its deepest printed event, its shape verdict — had come from the full year; F1 re-derived them inside each fold's own training window.</button>
+  <p class="why" hidden>The rates were already fold-local; the rules were not, so a fold knew a market's later listing age and later deep events. Removing that look-ahead was worth ₩62,800 a month, mostly through the extrapolation limit, and changed nothing in sample.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> The first go-live attempt at 09:23 was refused at ON with eight markets
+  reported missing, though all eight were trading normally on Korbit. Why, and what fixed it?</p>
+  <button class="opt" data-correct="true">The ON check and the flag poll asked Upbit's market list about every market, and those eight are Bybit-referenced coins Upbit never lists; F4 tests presence on each market's own reference venue, using Korbit's pair list for the Bybit eight.</button>
+  <button class="opt" data-correct="false">The reference feed was stale on both legs, so their anchors read NaN and the markets halted.</button>
+  <button class="opt" data-correct="false">Korbit's price band refused the deep rungs, and the runner reported the refusals as missing markets.</button>
+  <p class="why" hidden>The preflight's reference row had passed throughout, because it asks the feed rather than a listing. The 09:56 attempt's ON row read <code>missing: []</code> and <code>missing_korbit: []</code>, and the log carried no <code>market_missing</code> at all.</p>
+</div>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    var opts = q.querySelectorAll('.opt');
+    opts.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (right) {
+          opts.forEach(function (b) { if (b !== btn && !b.classList.contains('incorrect')) { b.disabled = true; } });
+        }
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</section>
+
+</body>
+</html>

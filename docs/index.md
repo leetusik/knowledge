@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-09-21 · [The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start](arb_upbit_1/2026-09-21-the-korbit-fish-book-v2-measured-rungs-a-rest-then-taker-exit-and-a-5-m-live-sta.html) — arb_upbit_1
 - 2026-09-21 · [Read, Verify, Speak — the AI inside 주주의관제탑](Mijual/2026-09-21-jujutower-ai-architecture.html) — Mijual
 - 2026-09-19 · [The Fish Ladder: Catching Upbit-Local Price Spikes with Deep Limit Orders](arb_upbit_1/2026-09-19-the-fish-ladder-catching-upbit-local-price-spikes-with-deep-limit-orders.html) — arb_upbit_1
 - 2026-09-13 · [Reading guide: the whole curriculum in order](changple5/2026-09-13-20-reading-guide.html) — changple5
