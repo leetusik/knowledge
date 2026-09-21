@@ -21,7 +21,13 @@ which already decodes each doc's ``related`` + ``tags``). The public mkdocs grap
 The one substitution vs. the hook: a doc node's ``url`` is the S5 read route
 ``/documents/{db_id}`` (the hook used a build-time ``File.url`` with no
 content-store equivalent). That is what makes a node click navigate inside the
-app.
+app. P28.S1 adds a third additive key **on each doc node** — the nullable
+``canonical_path`` (``/@{org-slug}/{project}/{slug}``) — **beside** that unchanged
+``url``: the pretty public address a stranger's link needs, ``null`` whenever the
+owning tenant has claimed no slug or the row does not own its dateless pretty path
+(the P25.F1 round-trip guard, batched here to zero extra queries — see
+``build_tenant_graph``). Which of the two a consumer prefers is the consumer's
+choice; nothing is replaced.
 
 **Scope = per-tenant.** The whole tenant's corpus keys the graph (the rail's
 "Graph" is a top-level surface). The route *accepts* an optional ``project``
@@ -52,7 +58,7 @@ from server.accounts.service import get_accounts_service
 # async generator connection dependency (SQLite must be opened on the handler's
 # own event-loop thread — this handler is ``async def`` because the project
 # bridge awaits the accounts service) and the project UUID -> name bridge.
-from server.documents_api import _resolve_project_name, get_conn
+from server.documents_api import _canonical_path, _resolve_project_name, get_conn
 
 router = APIRouter()
 
@@ -63,7 +69,9 @@ router = APIRouter()
 MAX_DOC_NODES = 2000
 
 
-def build_tenant_graph(docs: list[dict[str, Any]]) -> dict[str, Any]:
+def build_tenant_graph(
+    docs: list[dict[str, Any]], *, org_slug: str | None = None
+) -> dict[str, Any]:
     """Invert a tenant's document dicts into the graph.json data contract.
 
     A server-side twin of ``scripts/graph_hook.py::build_graph`` — the SAME
@@ -74,19 +82,62 @@ def build_tenant_graph(docs: list[dict[str, Any]]) -> dict[str, Any]:
     route ``/documents/{db_id}`` rather than a build-time page URL.
 
     ``docs`` are ``server/db.py`` document dicts (``id``, ``rel_path``,
-    ``project``, ``title``, ``date``, ``tags`` + ``related`` already decoded).
+    ``project``, ``slug``, ``title``, ``date``, ``tags`` + ``related`` already
+    decoded), **in ``list_documents`` order** (``date DESC, id DESC``) — the batch
+    guard below depends on that order.
+
+    ``org_slug`` (P28.S1, keyword-only and defaulted so every existing caller is
+    unchanged) is the owning tenant's claimed org slug. When it is given, each doc
+    node carries the additive, nullable **``canonical_path``** — the document's
+    pretty public path ``/@{org_slug}/{project}/{slug}`` — **beside** its unchanged
+    ``url``. Omit it (or pass ``None``) and every doc node's ``canonical_path`` is
+    ``None``. Tag and missing nodes carry no such key at all: their node shape has
+    never had ``url``/``date``/``project`` either.
+
+    **The round-trip guard, batched to zero extra queries.** A dateless pretty path
+    means "the newest document under this ``(project, slug)``", so only the newest
+    row of a duplicate group owns it — advertising it on a superseded row would 307
+    an already-shared link to a *different* document (P25.F1). ``documents_api``
+    pays one ``find_latest_document_by_slug`` read per document for that check,
+    which at ``MAX_DOC_NODES = 2000`` nodes would be 2000 reads per graph load. It
+    is unnecessary here: ``find_latest_document_by_slug`` resolves
+    ``(project, slug)`` with ``ORDER BY date DESC, id DESC LIMIT 1``, and the single
+    windowed ``list_documents`` this graph is built from orders by the **same**
+    total order with ``OFFSET 0`` — so the window is a *prefix* of the global
+    newest-first order, and the **first** row seen for a ``(project, slug)`` while
+    walking it in order is exactly the row that primitive would return. Every later
+    occurrence is a superseded duplicate and gets ``None``. Truncation at the node
+    cap only drops the *oldest* rows, never a group's newest; the ``project`` /
+    ``projects`` narrowing filters by **project name**, which is part of the key, so
+    they can only remove a group whole, never hide its newest row; and both call
+    sites are single-tenant, matching the primitive's ``tenant_id`` scoping.
     """
 
     records = []
+    seen_groups: set[tuple[str, str]] = set()
     for d in docs:
         rel = str(d["rel_path"])
+        project = str(d.get("project") or "")
+        slug = str(d.get("slug") or "")
+        # First occurrence in this newest-first window == the group's newest row.
+        # An empty project/slug never composes a path (no empty path segments).
+        owns_path = bool(project and slug) and (project, slug) not in seen_groups
+        if project and slug:
+            seen_groups.add((project, slug))
         records.append(
             {
                 "id": rel,
                 "title": str(d.get("title") or rel),
                 "url": f"/documents/{d['id']}",
+                # Additive and nullable: `url` is untouched, and a slug-less tenant
+                # or a superseded duplicate simply has no pretty path yet.
+                "canonical_path": (
+                    _canonical_path(org_slug, {"project": project, "slug": slug})
+                    if owns_path
+                    else None
+                ),
                 "date": str(d.get("date") or ""),
-                "project": str(d.get("project") or ""),
+                "project": project,
                 "tags": [str(t) for t in (d.get("tags") or [])],
                 "related": [str(r) for r in (d.get("related") or [])],
             }
@@ -125,6 +176,7 @@ def build_tenant_graph(docs: list[dict[str, Any]]) -> dict[str, Any]:
                 "type": "doc",
                 "title": r["title"],
                 "url": r["url"],
+                "canonical_path": r["canonical_path"],
                 "date": r["date"],
                 "project": r["project"],
                 "tags": r["tags"],
@@ -164,12 +216,18 @@ async def _build_graph(
     tenant_id: str,
     project_name: str | None,
     projects: list[str] | None,
+    org_slug: str | None = None,
 ) -> dict[str, Any]:
     """Count → single windowed ``list_documents`` → invert → ``truncated`` flag.
 
     Shared by the member and public paths. ``projects`` (a public-project-name
     allowlist) is passed only on the public path; ``None`` on the member path keeps
     the count/list calls byte-identical to the pre-P19 bare call.
+
+    ``org_slug`` is handed straight to ``build_tenant_graph`` for the doc nodes'
+    ``canonical_path`` (P28.S1). Both callers already hold the slug — the session
+    tenant's on the member path, the fetched owner's on the public one — so this
+    adds **no** accounts-plane call and **no** extra Postgres read.
     """
 
     total = db.count_documents(
@@ -184,7 +242,7 @@ async def _build_graph(
         tenant_id=tenant_id,
         projects=projects,
     )
-    graph_data = build_tenant_graph(docs)
+    graph_data = build_tenant_graph(docs, org_slug=org_slug)
     graph_data["truncated"] = total > MAX_DOC_NODES
     return graph_data
 
@@ -277,7 +335,11 @@ async def graph(
             await _resolve_project_name(project, ctx) if project is not None else None
         )
         graph_data = await _build_graph(
-            conn, tenant_id=str(ctx.tenant.id), project_name=project_name, projects=None
+            conn,
+            tenant_id=str(ctx.tenant.id),
+            project_name=project_name,
+            projects=None,
+            org_slug=ctx.tenant.slug,
         )
         # Free on the member path: the slug is already on the session tenant.
         graph_data["canonical_path"] = _graph_canonical_path(ctx.tenant.slug)
@@ -300,7 +362,11 @@ async def graph(
         # alongside the projects call this path already pays for.
         owner = await accounts.get_tenant(org_id)
     graph_data = await _build_graph(
-        conn, tenant_id=str(org_id), project_name=None, projects=public_names
+        conn,
+        tenant_id=str(org_id),
+        project_name=None,
+        projects=public_names,
+        org_slug=owner.slug if owner is not None else None,
     )
     graph_data["canonical_path"] = _graph_canonical_path(
         owner.slug if owner is not None else None
