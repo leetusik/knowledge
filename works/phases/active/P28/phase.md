@@ -329,6 +329,16 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
   phone — Open, Copy link, Revoke, and the panel-head links — therefore measures 38px. Round 04 §9 item 4's
   blanket sentence overreaches it exactly as §8 item 3 did; do not "fix" it in a later slice by adding a utility
   or a rule, and do not re-report it per slice — it is one operator question below. (P28.S4)
+- **The 3.7px landmark labels get a minimum size, and `P28.S9` applies it (orchestrator ruling).** Round 05
+  §4.5.1's intent is that the top eight documents are *always labelled* so a stranger can orient; at the
+  now-correct fit zoom they paint at ~3.7px, which is not a label but noise — the round's own intent is
+  defeated, so this is a **miss in the record**, the same shape as the iOS input gap the operator authorised,
+  not a new decision about how the map should look. **S9 adds a one-line minimum screen-space floor in
+  `drawLabel`** (the landmark tier only — selection/hover/zoom labelling is unchanged and already legible),
+  which fits its "no fix larger than a line" allowance and means the operator walks a sane map at the gate
+  rather than judging everything else through a smudge. **The chosen px value is ORIGINATED, not recorded**:
+  name it in `result.md`, put it in the gate walkthrough as an adjustable number, and let the operator move it
+  or turn landmarks off. Do **not** invent a new token or restyle the label. (orchestrator, on P28.S6's F2)
 
 ## Doc impact
 
