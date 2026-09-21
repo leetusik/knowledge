@@ -78,3 +78,90 @@
   .kb-printonly { display: block; }
   .kb-printhead { display: flex; }
 }
+
+/* ── ROUND 05 §4.3 / §6.5 vs graph.css — the dock's tag switch had no box ─────
+   MEASURED, not read: at a 390 plate (`kbmain < 40rem`) the legend is replaced by
+   `.kb-graph-dock`, and the Tags row's toggle —
+   `<button class="kb-graph-switch is-on" data-switch="tags" aria-label="Toggle tag
+   visibility">` — computed **0 × 0** with no `::after` thumb, a transparent
+   background and `cursor: default`, while staying focusable and in the tab order.
+   On a phone the only control that hides the corpus's tag hubs (76 of them on the
+   `p28s6` fixture) was therefore invisible, un-clickable, and a tab stop that
+   appears to do nothing. In the legend, at the same moment, the same control
+   measures 24 × 13.59 and works.
+
+   THE CAUSE IS A GAP BETWEEN TWO RECORDS, NOT A BUG IN EITHER. All four rules that
+   give the switch its box are scoped as DESCENDANTS of the plate — `graph.css:172`,
+   `:184`, `:196`, `:199` all read `.kb-graph .kb-graph-switch…`. Round 05 §4.3 renders
+   the dock as a SIBLING of `.kb-graph` ("`GraphCanvas` returns a fragment", restated
+   in §9's collected edits; P28.S6 built it exactly so), which moved the element out
+   of the only selector that sizes it. Round 05 plainly expects the switch to be
+   there — §6.5's own markup puts this very `<button class="kb-graph-switch">` inside
+   `.kb-graph-dock__item`, and `graph-r5.css:141` styles it there — but the sheet
+   never re-declares the sizing the move stranded.
+
+   THE CORRECTION RESTATES graph.css's OWN FOUR RULES AT A SELECTOR THAT REACHES THE
+   DOCK, AND ORIGINATES NOTHING — every declaration below is copied verbatim from
+   `graph.css:172-201`; no number, no colour, no size is chosen here. Two deliberate
+   omissions, both of them the record speaking for itself:
+     - `margin-left: auto` (graph.css:174) is NOT restated. It exists to push the
+       switch to the right end of the legend's row, and round 05 replaces it for this
+       placement with `margin-left: 0.1rem` (`graph-r5.css:141`). Restating it here
+       would out-order that line at equal specificity and undo a decision the record
+       makes on purpose.
+     - the focus ring (`graph.css:410`, `.kb-graph button:focus-visible`) is NOT
+       restated either, because the dock is already covered by a RECORD rule of its
+       own: round 03 §3's console-wide `.kb-app button:focus-visible`. Measured on
+       the focused dock switch — `2px solid var(--kb-accent)` at offset 2px, against
+       the legend's offset 1px — so the control is reachable and visibly ringed in
+       both placements with nothing added here.
+
+   WHAT THIS DOES NOT DO: the switch now measures the record's own 24 × 13.59 in the
+   dock, the same box it has in the legend, inside a `.kb-graph-dock__item` pill that
+   is 44px tall (`min-height: var(--kb-tap)`, `graph-r5.css:136`). The TOGGLE itself
+   is therefore still smaller than 44px — exactly as round 05 draws it in the legend.
+   Enlarging it would be choosing a size the record never states, so it is reported
+   on `## Operator Questions`, not decided here.
+
+   THE LEGEND IS UNTOUCHED BY CONSTRUCTION, not by care: `.kb-graph-dock` is a
+   SIBLING of `.kb-graph`, so no element inside the legend can ever match a
+   `.kb-graph-dock …` selector. Measured before and after all the same: legend switch
+   24 × 13.59, `::after` 9.27 × 9.27 at left 12.72, background rgb(15, 111, 102).
+
+   AUTHORISATION: GRANTED by the orchestrator on 2026-09-21, under the operator's
+   standing "do whatever you recommend", on exactly the reasoning that authorised the
+   two corrections above: a MISS in the record that defeats the record's own stated
+   intent (§4.3 puts the same control set in the dock AND makes the dock a sibling of
+   the plate, which is what carries it out of the sizing selector), no value chosen. It stays in the gate walkthrough so
+   the operator can veto it; deleting this block is the whole revert, and the only
+   cost of a veto is that a phone keeps an invisible tag toggle. (P28.F1, authorised
+   by the orchestrator) */
+.kb-graph-dock .kb-graph-switch {
+  flex: none;
+  width: 1.5rem;
+  height: 0.85rem;
+  border: 0;
+  border-radius: var(--kb-radius-pill);
+  cursor: pointer;
+  position: relative;
+  background: var(--kb-border-strong);
+  transition: background var(--kb-ease);
+}
+.kb-graph-dock .kb-graph-switch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  width: 0.58rem;
+  height: 0.58rem;
+  border-radius: 50%;
+  background: var(--kb-surface);
+  transition: left var(--kb-ease);
+}
+.kb-graph-dock .kb-graph-switch.is-on {
+  background: var(--kb-accent);
+}
+.kb-graph-dock .kb-graph-switch.is-on::after {
+  left: calc(100% - 0.58rem - 2px);
+}

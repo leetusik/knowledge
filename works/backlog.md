@@ -118,4 +118,5 @@
 | [x] `P28.S7` | `done` | Round 06 apply: document views + chrome-less full-width view | `implementation` | `works/phases/active/P28/slices/P28.S7` |
 | [x] `P28.S8` | `done` | Round 06 apply: print layer + Export PDF control | `implementation` | `works/phases/active/P28/slices/P28.S8` |
 | [x] `P28.S9` | `done` | Fidelity + functional sweep across every changed surface | `qa` | `works/phases/active/P28/slices/P28.S9` |
+| [x] `P28.F1` | `done` | Graph dock: the tag switch measures 0x0 on a small plate | `fix` | `works/phases/active/P28/slices/P28.F1` |
 | [ ] `P28.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
