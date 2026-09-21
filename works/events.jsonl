@@ -918,3 +918,9 @@
 {"ts": "2026-09-21T18:26:17+09:00", "type": "deferred_dropped", "deferred": "D21", "reason": "Stale duplicate of D15, same root cause, fixed in P23 (062c041); the full gated suite passed 128/0 in P28.REVIEW."}
 {"ts": "2026-09-21T18:26:22+09:00", "type": "phase_status_changed", "phase": "P28", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-09-21T18:26:22+09:00", "type": "acceptance_opened", "phase": "P28"}
+{"ts": "2026-09-21T18:28:46+09:00", "type": "phase_status_changed", "phase": "P28", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-09-21T18:28:46+09:00", "type": "acceptance_cleared", "phase": "P28"}
+{"ts": "2026-09-21T18:28:54+09:00", "type": "slice_status_changed", "slice": "P28.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-09-21T18:28:54+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "pass", "reviewer": "slice-executor-high (Claude Opus 5)"}
+{"ts": "2026-09-21T18:28:54+09:00", "type": "phase_consolidation_owed", "phase": "P28", "notes": 14}
+{"ts": "2026-09-21T18:29:07+09:00", "type": "deferred_created", "deferred": "D36", "source": "P28.REVIEW"}
