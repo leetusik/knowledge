@@ -86,11 +86,15 @@ function renderSnippet(snippet: string): ReactNode[] {
   );
 }
 
+// Column priorities are round 03 §4.6's, verbatim: 1 Title + Actions · 2 Project,
+// Date · 3 Tags. The action column's header is a ReactNode, which is exactly why
+// the primitive keys its `data-label` exemption off `actions`, not off position.
 function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
   return [
     {
       key: "title",
       header: DOCUMENTS.list.columns.title,
+      priority: 1,
       cell: (row) => (
         <div>
           <Link
@@ -110,6 +114,7 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
     {
       key: "project",
       header: DOCUMENTS.list.columns.project,
+      priority: 2,
       cell: (row) => (
         <span className="text-[var(--kb-secondary)]">{row.project}</span>
       ),
@@ -117,12 +122,14 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
     {
       key: "date",
       header: DOCUMENTS.list.columns.date,
+      priority: 2,
       className: "mono",
       cell: (row) => row.date,
     },
     {
       key: "tags",
       header: DOCUMENTS.list.columns.tags,
+      priority: 3,
       cell: (row) =>
         row.tags.length === 0 ? (
           <span className="text-[var(--kb-hint)]">{DOCUMENTS.list.noTags}</span>
@@ -139,6 +146,7 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
     {
       key: "action",
       header: <span className="sr-only">{DOCUMENTS.list.columns.actions}</span>,
+      priority: 1,
       actions: true,
       // The row's only interactive element (P21): a client island that arms an
       // inline confirm before hard-deleting the document. The title is passed for
@@ -223,32 +231,42 @@ function SearchForm({
   );
 
   return (
+    // Round 03 §4.8 + §0 — the single `min-[720px]:` utility (the app's last width
+    // MEDIA query) is DELETED and the row is `.kb-searchbar`, which stacks on
+    // `kbmain`, not on the window. The form element itself keeps `method="GET"`:
+    // the hidden passthrough inputs and the submit/reset pair below are the whole
+    // non-JS search path, so they stay even though §4.8's snippet draws only the
+    // two cells. That third child gets its `.kb-searchbar__actions` class in round
+    // 04 §4.7 (P28.S5) — until then it is deliberately unstyled here, not
+    // patched with a rule the record never wrote.
     <form
       method="GET"
       action="/documents"
-      className="mt-[var(--kb-space-md)] flex flex-col gap-3 min-[720px]:flex-row min-[720px]:items-center"
+      className="kb-searchbar mt-[var(--kb-space-md)]"
     >
       {passthrough.map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={value} />
       ))}
 
       {/* The designed `.kb-appsearch` box: magnifier + a flat search input. */}
-      <label className="kb-appsearch min-[720px]:flex-1">
-        <Search size={16} aria-hidden />
-        <input
-          type="search"
-          name="q"
-          defaultValue={active.q ?? ""}
-          placeholder={DOCUMENTS.search.placeholder}
-          aria-label={DOCUMENTS.search.label}
-          className="kb-appsearch__input"
-        />
-      </label>
+      <div className="kb-searchbar__field">
+        <label className="kb-appsearch">
+          <Search size={16} aria-hidden />
+          <input
+            type="search"
+            name="q"
+            defaultValue={active.q ?? ""}
+            placeholder={DOCUMENTS.search.placeholder}
+            aria-label={DOCUMENTS.search.label}
+            className="kb-appsearch__input"
+          />
+        </label>
+      </div>
 
       {/* Project filter. Value = the project UUID (bridged to a name server-side).
           Blank "All projects" submits as `project=` and is dropped by
           `readActiveParams` — sending it would be a 422. */}
-      <div className="min-[720px]:w-56">
+      <div className="kb-searchbar__filter">
         <select
           name="project"
           defaultValue={active.project ?? ""}
@@ -344,15 +362,17 @@ export default async function DocumentsPage({
 
   return (
     <>
-      {/* .mainhead — eyebrow + Fraunces title + sub. */}
-      <div className="mb-[1.3rem]">
-        <div className="kb-app-eyebrow">
-          {tenantName} · {DOCUMENTS.eyebrow}
+      {/* Round 03 §4.4 — the shared page frame. This page has no actions slot, so
+          the frame is the title wrap alone; the h1's inline `marginTop` is gone
+          (the `.kb-app-sub` / frame rules own the spacing now). */}
+      <div className="kb-pageframe">
+        <div className="kb-pageframe__title-wrap">
+          <div className="kb-app-eyebrow">
+            {tenantName} · {DOCUMENTS.eyebrow}
+          </div>
+          <h1 className="kb-app-title">{DOCUMENTS.title}</h1>
+          <p className="kb-app-sub">{DOCUMENTS.sub}</p>
         </div>
-        <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-          {DOCUMENTS.title}
-        </h1>
-        <p className="kb-app-sub">{DOCUMENTS.sub}</p>
       </div>
 
       <SearchForm active={active} projects={projects} />

@@ -26,7 +26,10 @@ export function RailNav() {
 
   return (
     <aside id={RAIL_ID} className="kb-rail">
-      <nav aria-label={APP_SHELL.navLabel}>
+      {/* `railNavLabel` ("Sections"), NOT `navLabel` ("Primary") — round 03 §4.1
+          gives the navbar the "Primary" name and the rail its own, because both
+          landmarks are in the DOM at every width even though only one shows. */}
+      <nav aria-label={APP_SHELL.railNavLabel}>
         <div className="kb-rail__head kb-app-eyebrow">{APP_SHELL.railHeading}</div>
         <ul className="kb-rail__list">
           {APP_NAV.map((item) => {

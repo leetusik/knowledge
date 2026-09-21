@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "./kb-tokens.css";
 @import "./kb-console.css";
+@import "./kb-console-responsive.css";
 
 /*
  * knowledge design system — Tailwind v4 CSS-first tokens (P12.S2R).

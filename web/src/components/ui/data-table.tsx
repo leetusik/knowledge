@@ -33,6 +33,17 @@ export interface DataTableColumn<T> {
   align?: "left" | "right" | "center";
   /** Marks this as the trailing actions column (right-aligned, tighter). */
   actions?: boolean;
+  /**
+   * Responsive column priority (round 03 §4.6), emitted as `data-pri` on the
+   * `<th>` and on every `<td>`: `1` always · `2` tablet and up · `3` desktop
+   * only. The stylesheet acts on ONE of them — `@container kbmain (width <
+   * 64rem) { .kb-dtable [data-pri="3"] { display: none } }` — because below 40rem
+   * the table stops being a table and stacks into one card per row, where every
+   * cell is wanted; `2` is therefore the record's declared intent carried in the
+   * DOM, not a rule. OPTIONAL, DEFAULTED TO 1: a caller that assigns nothing
+   * keeps exactly today's always-visible behaviour.
+   */
+  priority?: 1 | 2 | 3;
   /** Extra classes applied to this column's header + cells (e.g. `num` / `mono`). */
   className?: string;
 }
@@ -58,6 +69,20 @@ function resolveAlign<T>(col: DataTableColumn<T>): string {
   return alignClass[col.align ?? (col.actions ? "right" : "left")];
 }
 
+/**
+ * The stacked-card label a `<td>` grows below 40rem (`td::before { content:
+ * attr(data-label) }`). Three columns get NONE, and each exemption is the
+ * record's: the FIRST column (it becomes the card's title row) and the ACTION
+ * column (§4.6) — keyed off `col.actions`, not "the last column", because a
+ * header like `<span className="sr-only">Actions</span>` is a ReactNode that
+ * cannot be stringified. Any other non-string header is skipped for the same
+ * reason rather than rendered as "[object Object]".
+ */
+function resolveLabel<T>(col: DataTableColumn<T>, index: number): string | undefined {
+  if (index === 0 || col.actions) return undefined;
+  return typeof col.header === "string" ? col.header : undefined;
+}
+
 export function DataTable<T>({
   columns,
   rows,
@@ -74,6 +99,7 @@ export function DataTable<T>({
               <th
                 key={col.key}
                 scope="col"
+                data-pri={col.priority ?? 1}
                 className={cn(resolveAlign(col), col.className) || undefined}
               >
                 {col.header}
@@ -89,9 +115,11 @@ export function DataTable<T>({
           ) : (
             rows.map((row, i) => (
               <tr key={rowKey(row, i)}>
-                {columns.map((col) => (
+                {columns.map((col, colIndex) => (
                   <td
                     key={col.key}
+                    data-pri={col.priority ?? 1}
+                    data-label={resolveLabel(col, colIndex)}
                     className={cn(resolveAlign(col), col.className) || undefined}
                   >
                     {col.cell(row, i)}

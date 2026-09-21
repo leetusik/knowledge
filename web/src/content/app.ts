@@ -27,8 +27,16 @@ export const APP_NAV: AppNavItem[] = [
 ];
 
 export const APP_SHELL = {
-  /** Accessible name for the rail's <nav> landmark. */
+  /**
+   * Accessible name for the phone/tablet navbar's <nav> landmark (round 03 §4.1
+   * and §4.3). Both navs are always in the DOM — only one is ever visible — so
+   * they must carry DIFFERENT names; the rail uses `railNavLabel` below.
+   */
   navLabel: "Primary",
+  /** Accessible name for the rail's <nav> landmark (round 03 §4.1). */
+  railNavLabel: "Sections",
+  /** Accessible name for the phone topbar's account disclosure (round 03 §4.2). */
+  accountMenuLabel: "Account menu",
   /** Mono-uppercase eyebrow heading over the rail's nav section. */
   railHeading: "Org",
   /**

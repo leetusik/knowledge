@@ -33,22 +33,40 @@ export function appButtonClass(
 export interface AppButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: AppButtonVariant;
   size?: AppButtonSize;
+  /**
+   * The in-flight affordance (round 03 §4.9). Sets `aria-busy="true"` and puts a
+   * leading `.kb-appbtn__spin` ring before the label; the caller supplies the
+   * present-participle label itself ("Creating…", "Minting…"), because only the
+   * caller knows the verb.
+   *
+   * It deliberately does NOT set `disabled`: a disabled button drops out of the
+   * tab order mid-action and moves focus to the document, so the double-submit
+   * guard belongs in the form's own handler (an early return on a pending flag)
+   * rather than in the DOM.
+   */
+  busy?: boolean;
 }
 
 /** A real `<button type="button">` styled as the flat console `.kb-appbtn`. */
 export function AppButton({
   variant,
   size,
+  busy,
   className,
   type = "button",
+  children,
   ...props
 }: AppButtonProps) {
   return (
     <button
       type={type}
+      aria-busy={busy ? "true" : undefined}
       className={cn(appButtonClass(variant, size), className)}
       {...props}
-    />
+    >
+      {busy ? <span className="kb-appbtn__spin" aria-hidden="true" /> : null}
+      {children}
+    </button>
   );
 }
 

@@ -79,7 +79,7 @@
   --kb-space-2xl: 4rem;
 
   /* ---- Motion ---- */
-  --kb-ease: 0.15s ease;
+  --kb-ease: 0.15s ease; /* @kind other */
 
   /* ---- Elevation — the one shadow in the system ---- */
   --kb-shadow-hover: 0 0.25rem 0.9rem rgba(15, 111, 104, 0.1);
@@ -188,4 +188,57 @@
   --kb-delta-up: var(--kb-accent);
   --kb-delta-down: #d68a76;
   --kb-delta-flat: var(--kb-hint);
+}
+
+/* --------------------------------------------------------------------------
+   ROUND 03 (P27.S2) — the responsive foundation. ADDITIVE ONLY: no value above
+   this line changed, so the `shipped/` baseline renders identically. Every name
+   below is new; nothing was renamed.
+
+   The console responds to its CONTAINER, not the viewport (see
+   console-responsive.css) — the rail and its fold change main's width by 15rem,
+   so a viewport query gets the content wrong at exactly the widths that matter.
+   The breakpoints below are therefore measured on `.kb-app` (shell decisions)
+   and `.kb-app-main` (content decisions), and are deliberately the same numbers
+   as Tailwind's `sm` / `lg` / (custom) `2xl` so utilities and the `.kb-*` layer
+   never disagree.
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- Named breakpoints ---- */
+  --kb-bp-tablet: 40rem;  /* 640px — phone ends, tablet begins */
+  --kb-bp-desktop: 64rem; /* 1024px — the rail returns */
+  --kb-bp-wide: 90rem;    /* 1440px — content stops growing, gutters open up */
+
+  /* ---- Layout ---- */
+  --kb-app-gutter: 1.7rem;
+  --kb-app-gutter-phone: 1.05rem;
+  --kb-app-gutter-wide: 2.4rem;
+  --kb-app-max-w: 88rem;
+  --kb-app-navbar-h: 3.6rem;
+  --kb-tap: 2.75rem; /* 44px — the minimum touch target below --kb-bp-tablet */
+
+  /* ---- Fluid display ramp (container-relative; `cqi` resolves on kbmain) ---- */
+  --kb-app-title-size: clamp(1.35rem, 1.05rem + 1.6cqi, 1.65rem);
+  --kb-app-h2-size: clamp(1.02rem, 0.95rem + 0.35cqi, 1.15rem);
+  --kb-tile-num-size: clamp(1.9rem, 1.55rem + 1.9cqi, 2.35rem);
+  --kb-editorial-size: clamp(1.5rem, 1.1rem + 2cqi, 2.2rem);
+
+  /* ---- Focus ring ---- */
+  --kb-focus-w: 2px;
+  --kb-focus-offset: 2px;
+
+  /* ---- Motion (settled state is the CSS default; loops never) ---- */
+  --kb-ease-out: cubic-bezier(0.2, 0.7, 0.3, 1); /* @kind other */
+  --kb-dur-reveal: 0.42s; /* @kind other */
+
+  /* ---- Elevation — two named lifts, replacing the inline rgba() literals ---- */
+  --kb-shadow-raise: 0 0.6rem 1.4rem rgba(38, 33, 28, 0.12);
+  --kb-shadow-overlay: 0 1.4rem 3rem rgba(38, 33, 28, 0.22);
+  --kb-scrim: rgba(38, 33, 28, 0.42);
+}
+
+[data-md-color-scheme="slate"] {
+  --kb-shadow-raise: 0 0.6rem 1.4rem rgba(0, 0, 0, 0.45);
+  --kb-shadow-overlay: 0 1.4rem 3rem rgba(0, 0, 0, 0.6);
+  --kb-scrim: rgba(0, 0, 0, 0.58);
 }
