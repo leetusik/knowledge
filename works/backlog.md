@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P28`
-- Current slice: `P28.S1`
-- Next slice: `P28.S2`
+- Current slice: `P28.S2`
+- Next slice: `P28.S3`
 - Waiting on operator: `none`
 - Open deferred jobs: `23`
 
@@ -22,7 +22,7 @@
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
-| [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.S1` | `works/phases/active/P28` |
+| [ ] `P28` | `planned` | `pending` | Console visual redesign — apply | `P28.S2` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
 
@@ -109,7 +109,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P28.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P28/slices/P28.DECOMP` |
-| [ ] `P28.S1` | `todo` | Graph server groundwork: canonical_path on doc nodes | `implementation` | `works/phases/active/P28/slices/P28.S1` |
+| [x] `P28.S1` | `done` | Graph server groundwork: canonical_path on doc nodes | `implementation` | `works/phases/active/P28/slices/P28.S1` |
 | [ ] `P28.S2` | `todo` | Round 03 apply: tokens, responsive stylesheet, shell + components | `implementation` | `works/phases/active/P28/slices/P28.S2` |
 | [ ] `P28.S3` | `todo` | Round 03 apply: system states (error, loading, not-found, empty, toast) | `implementation` | `works/phases/active/P28/slices/P28.S3` |
 | [ ] `P28.S4` | `todo` | Round 04 apply: shells, dashboard, project page + documents panel | `implementation` | `works/phases/active/P28/slices/P28.S4` |

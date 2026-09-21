@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Graph server groundwork: canonical_path on doc nodes",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 1,
   "depends_on": [],
   "created_at": "2026-09-21T09:38:31+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-09-21T09:46:30+09:00",
+  "completed_at": "2026-09-21T09:55:11+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "/app/graph doc nodes carry an additive, nullable canonical_path beside the unchanged url on both payloads, with the P25.F1 round-trip guard batched to zero extra queries; gated pytest ran for real (128 passed, 0 skipped) and the plugin parity mirror is green",
   "validation": {
     "required": [],
     "last_run": null,

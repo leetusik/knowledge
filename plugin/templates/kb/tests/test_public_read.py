@@ -166,6 +166,10 @@ def test_public_graph_is_org_scoped(documents_client):
     # P25.S4: no org slug claimed yet ⇒ the additive key is present and null, so
     # the legacy /graph/{uuid} page serves exactly as today.
     assert graph["canonical_path"] is None
+    # P28.S1: the same holds for the per-doc-node key on the public payload.
+    pub_node = next(n for n in graph["nodes"] if n["id"] == "pub/2026-01-01-p.md")
+    assert pub_node["canonical_path"] is None
+    assert pub_node["url"].startswith("/documents/")
 
     # A nonexistent org and an org with zero public projects both → 404 (no leak).
     assert client.get("/app/graph", params={"org": str(uuid4())}).status_code == 404
@@ -182,6 +186,13 @@ def test_public_graph_is_org_scoped(documents_client):
     assert by_slug.status_code == 200, by_slug.text
     assert {n["id"] for n in by_slug.json()["nodes"]} == node_ids
     assert by_slug.json()["canonical_path"] == f"/@{org}/graph"
+    # P28.S1: and now every public doc node carries its own pretty path beside the
+    # unchanged /documents/{id} url — this is the link a stranger actually shares.
+    pub_node = next(
+        n for n in by_slug.json()["nodes"] if n["id"] == "pub/2026-01-01-p.md"
+    )
+    assert pub_node["canonical_path"] == f"/@{org}/pub/p"
+    assert pub_node["url"].startswith("/documents/")
     # The UUID form now reports the same pretty path (one org, one canonical URL).
     assert client.get("/app/graph", params={"org": a_tenant}).json()[
         "canonical_path"

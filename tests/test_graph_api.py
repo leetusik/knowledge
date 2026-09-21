@@ -23,6 +23,11 @@ from tests.test_documents_api import (  # noqa: F401
     documents_client,
 )
 
+# Claiming an org slug goes through the real ``PATCH /app/tenant`` surface; the
+# P25 suite already owns that helper (the slug is globally unique, so it must be
+# freshly generated per call) — reuse it rather than writing to accounts by hand.
+from tests.test_public_read import _set_slug
+
 
 def _seed(
     tenant_id: str,
@@ -171,3 +176,67 @@ def test_graph_is_unmetered(documents_client):
 def test_graph_requires_auth(documents_client):
     client, _ = documents_client
     assert client.get("/app/graph").status_code == 401
+
+
+# --- P28.S1: the additive, nullable `canonical_path` on doc nodes -------------
+
+
+def test_doc_nodes_carry_canonical_path_beside_unchanged_url(documents_client):
+    """A slug-claiming tenant's doc nodes carry the pretty public path **beside**
+    the unchanged ``/documents/{id}`` url (P28.S1 — additive, nothing replaced)."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"gcp-{uuid4()}@example.com")
+    org = _set_slug(client, headers)
+    _project(client, headers, "alpha")
+    a_id = _seed(tenant, "alpha", slug="a", title="Doc A", date="2026-01-02")
+
+    graph = client.get("/app/graph", headers=headers).json()
+    node = _by_id(graph["nodes"], "alpha/2026-01-02-a.md")
+    assert node["url"] == f"/documents/{a_id}"  # unchanged
+    assert node["canonical_path"] == f"/@{org}/alpha/a"
+
+    # Tag / missing nodes keep their minimal shape — they carry no url either.
+    assert graph["canonical_path"] == f"/@{org}/graph"  # the P25.S4 graph key
+
+
+def test_doc_nodes_have_null_canonical_path_without_an_org_slug(documents_client):
+    """No claimed org slug ⇒ the key is present and ``null`` on every doc node,
+    and nothing else about the payload moves (``tenants.slug`` is nullable with no
+    backfill, so this is the common case)."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"gnoslug-{uuid4()}@example.com")
+    _project(client, headers, "alpha")
+    a_id = _seed(tenant, "alpha", slug="a", title="Doc A", date="2026-01-02")
+
+    graph = client.get("/app/graph", headers=headers).json()
+    docs = [n for n in graph["nodes"] if n["type"] == "doc"]
+    assert docs and all(n["canonical_path"] is None for n in docs)
+    assert _by_id(graph["nodes"], "alpha/2026-01-02-a.md")["url"] == f"/documents/{a_id}"
+    assert graph["canonical_path"] is None
+
+
+def test_canonical_path_round_trip_guard_only_the_newest_duplicate_owns_it(
+    documents_client,
+):
+    """The P25.F1 guard, batched: two rows share ``(project, slug)`` at different
+    dates (a re-publish without ``new_version`` computes a different rel_path and
+    inserts a second row). The dateless pretty path resolves to the **newest** row,
+    so only it may advertise the path — the older one gets ``None``, or an already
+    shared link would 307 to a *different* document."""
+
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"gdup-{uuid4()}@example.com")
+    org = _set_slug(client, headers)
+    _project(client, headers, "alpha")
+    _seed(tenant, "alpha", slug="dup", title="Older", date="2026-01-01")
+    _seed(tenant, "alpha", slug="dup", title="Newer", date="2026-02-01")
+
+    graph = client.get("/app/graph", headers=headers).json()
+    newer = _by_id(graph["nodes"], "alpha/2026-02-01-dup.md")
+    older = _by_id(graph["nodes"], "alpha/2026-01-01-dup.md")
+    assert newer["canonical_path"] == f"/@{org}/alpha/dup"
+    assert older["canonical_path"] is None
+    # Both rows stay addressable by their own exact-row url.
+    assert older["url"] != newer["url"]
