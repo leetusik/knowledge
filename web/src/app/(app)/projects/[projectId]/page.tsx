@@ -426,19 +426,19 @@ export default async function ProjectPage({
 
       {/* Credentials — the panel head carries the heading, the lead and the "New
           key" disclosure TRIGGER; the table lists metadata only (`token_prefix`,
-          never the full key). §4.4 (moving the revealed form into a `.kb-inlineform`
-          block below the head) is P28.S5's, so `<MintCredentialForm>` stays whole in
-          the head here and S5 splits it. */}
+          never the full key). Round 04 §4.4 (P28.S5) — the disclosure owns the head
+          now: `<MintCredentialForm>` renders `.kb-panel__head` around this
+          server-rendered `__headmain` and puts the revealed `.kb-inlineform` after
+          it, as the head's next sibling. */}
       <section className="kb-panel" aria-labelledby="credentials-head">
-        <div className="kb-panel__head kb-panel__head--start">
+        <MintCredentialForm projectId={project.id}>
           <div className="kb-panel__headmain">
             <h2 id="credentials-head" className="kb-app-h2">
               {PROJECT.credentials.heading}
             </h2>
             <p className="kb-panel__lead">{PROJECT.credentials.lead}</p>
           </div>
-          <MintCredentialForm projectId={project.id} />
-        </div>
+        </MintCredentialForm>
 
         <DataTable
           columns={columns}

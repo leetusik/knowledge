@@ -69,22 +69,24 @@ interface DocRow {
  * `<mark>…</mark>` markers; this splits on those and rebuilds with REAL `<mark>`
  * elements, so every other segment (untrusted document text) renders as an escaped
  * string child — never injected as HTML. No `dangerouslySetInnerHTML`.
+ *
+ * Round 04 §4.7 — the rebuild-from-literal-markers logic is UNCHANGED; only the
+ * styling moves, out of the Tailwind arbitraries and into `.kb-snippet mark` (§3).
  */
 function renderSnippet(snippet: string): ReactNode[] {
   const parts = snippet.split(/<mark>|<\/mark>/);
   return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <mark
-        key={i}
-        className="rounded-[2px] bg-[var(--kb-accent-soft)] px-[0.15em] text-[var(--kb-accent-strong)]"
-      >
-        {part}
-      </mark>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
+    i % 2 === 1 ? <mark key={i}>{part}</mark> : <span key={i}>{part}</span>,
   );
 }
+
+/**
+ * Round 04 §4.7 — at most three chips, then one non-interactive `+{n}` overflow
+ * marker whose `title` lists the hidden tags. §6: the marker must not be the only
+ * place a tag name exists for a screen reader, and it is not — the read page
+ * carries the full list. No tag is ever truncated.
+ */
+const MAX_TAG_CHIPS = 3;
 
 // Column priorities are round 03 §4.6's, verbatim: 1 Title + Actions · 2 Project,
 // Date · 3 Tags. The action column's header is a ReactNode, which is exactly why
@@ -103,10 +105,10 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
           >
             {row.title}
           </Link>
+          {/* §4.7 — the snippet lives INSIDE the title cell, so it stays with the
+              title when the row becomes a card below 40rem. */}
           {searchMode && row.snippet ? (
-            <div className="kb-dtable__sub" style={{ marginTop: "0.2rem" }}>
-              {renderSnippet(row.snippet)}
-            </div>
+            <span className="kb-snippet">{renderSnippet(row.snippet)}</span>
           ) : null}
         </div>
       ),
@@ -130,18 +132,29 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
       key: "tags",
       header: DOCUMENTS.list.columns.tags,
       priority: 3,
-      cell: (row) =>
-        row.tags.length === 0 ? (
-          <span className="text-[var(--kb-hint)]">{DOCUMENTS.list.noTags}</span>
-        ) : (
-          <span className="flex flex-wrap gap-[0.3rem]">
-            {row.tags.map((tag) => (
+      cell: (row) => {
+        if (row.tags.length === 0) {
+          return (
+            <span className="text-[var(--kb-hint)]">{DOCUMENTS.list.noTags}</span>
+          );
+        }
+        const shown = row.tags.slice(0, MAX_TAG_CHIPS);
+        const hidden = row.tags.slice(MAX_TAG_CHIPS);
+        return (
+          <span className="kb-taglist">
+            {shown.map((tag) => (
               <span key={tag} className="kb-chip">
                 {tag}
               </span>
             ))}
+            {hidden.length > 0 ? (
+              <span className="kb-chip kb-chip--more" title={hidden.join(", ")}>
+                +{hidden.length}
+              </span>
+            ) : null}
           </span>
-        ),
+        );
+      },
     },
     {
       key: "action",
@@ -161,10 +174,17 @@ function columns(searchMode: boolean): DataTableColumn<DocRow>[] {
 /**
  * Fetch the page (search OR browse) + the project list, mapping the backend's
  * rejections to the 404 page. 404 (a `project` UUID outside the tenant —
- * 404-never-403 so ids cannot be probed) and 400 (a malformed query) render the SAME
- * not-found: every one means "the page you asked for does not exist". A 401 never
- * reaches here (`requireIdentity` already redirected); EVERYTHING ELSE rethrows — an
- * outage must surface, not masquerade as an empty result.
+ * 404-never-403 so ids cannot be probed), 400 (a malformed query) and 422 render the
+ * SAME not-found: every one means "the page you asked for does not exist". A 401
+ * never reaches here (`requireIdentity` already redirected); EVERYTHING ELSE
+ * rethrows — an outage must surface, not masquerade as an empty result.
+ *
+ * P28.S5 — **422 belongs in that set**, and its absence was a real bug: the API types
+ * the `project` filter as a UUID (`server/documents_api.py`), so FastAPI rejects a
+ * hand-typed non-UUID with 422, not 400. Mapping only 404/400 therefore sent
+ * `/documents?project=not-a-uuid` to the 500 editorial — contradicting this very
+ * comment. `projects/[projectId]/page.tsx` got the same fix in P28.S4; this closes
+ * the other half. A valid-but-unknown UUID still 404s through the 404 branch.
  *
  * The mapping lives here so `notFound()` can never sit inside the `try` that would
  * swallow it (it signals by throwing, like `redirect()`).
@@ -206,7 +226,7 @@ async function loadDocuments(
   } catch (error) {
     if (
       error instanceof ApiError &&
-      (error.status === 404 || error.status === 400)
+      (error.status === 404 || error.status === 400 || error.status === 422)
     ) {
       notFound();
     }
@@ -231,19 +251,20 @@ function SearchForm({
   );
 
   return (
-    // Round 03 §4.8 + §0 — the single `min-[720px]:` utility (the app's last width
-    // MEDIA query) is DELETED and the row is `.kb-searchbar`, which stacks on
-    // `kbmain`, not on the window. The form element itself keeps `method="GET"`:
-    // the hidden passthrough inputs and the submit/reset pair below are the whole
-    // non-JS search path, so they stay even though §4.8's snippet draws only the
-    // two cells. That third child gets its `.kb-searchbar__actions` class in round
-    // 04 §4.7 (P28.S5) — until then it is deliberately unstyled here, not
-    // patched with a rule the record never wrote.
-    <form
-      method="GET"
-      action="/documents"
-      className="kb-searchbar mt-[var(--kb-space-md)]"
-    >
+    // Round 03 §4.8 + §0 — the app's last width-media-query utilities (the
+    // 720px breakpoint trio) are DELETED, and the row is `.kb-searchbar`, which
+    // stacks on `kbmain`, not on the window. Round 04 §9 item 7 greps for that
+    // utility prefix, so it is not spelled out here either. Round 04 §4.7 finishes it: the submit/reset pair
+    // is the bar's THIRD cell, `.kb-searchbar__actions`.
+    //
+    // The form keeps `method="GET"`: the hidden passthrough inputs and that
+    // submit/reset pair are the ENTIRE no-JS search path (round 03 §4.8's snippet
+    // draws only two cells, which is why the third sat unstyled until now). Never
+    // delete them for tidiness.
+    //
+    // The page-level `mt-[var(--kb-space-md)]` is gone — §4.1's `.kb-page-flow`
+    // gap owns the rhythm now.
+    <form method="GET" action="/documents" className="kb-searchbar">
       {passthrough.map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={value} />
       ))}
@@ -282,12 +303,15 @@ function SearchForm({
         </select>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* §4.7 — the third cell. Above 40rem it sits in the row; below it the bar
+          stacks and Search flexes while Reset keeps its intrinsic width (the
+          `:first-child { flex: 1 1 auto }` phone rule in §3). */}
+      <div className="kb-searchbar__actions">
         <button type="submit" className={appButtonClass("primary")}>
           {DOCUMENTS.search.submitLabel}
         </button>
         {/* A link, not `type="reset"`: reset would restore the submitted values,
-            not clear the query. */}
+            not clear the query — and §4.7 restates it ("Reset stays a link"). */}
         <Link href="/documents" className={appButtonClass("ghost")}>
           {DOCUMENTS.search.resetLabel}
         </Link>
@@ -330,11 +354,12 @@ function Pager({
   // Nothing to page through — a single page needs no controls.
   if (prev === null && next === null) return null;
 
+  // §4.7 — `.kb-pager`: right-aligned above 40rem, the two halves splitting the
+  // row at the 44px floor below it. The disabled side keeps its
+  // `pointer-events: none; opacity: .4` (utilities, not `.kb-*` properties — see
+  // the phase's cascade rule).
   return (
-    <nav
-      aria-label={DOCUMENTS.pager.ariaLabel}
-      className="mt-[var(--kb-space-md)] flex items-center justify-end gap-2"
-    >
+    <nav aria-label={DOCUMENTS.pager.ariaLabel} className="kb-pager">
       {link(DOCUMENTS.pager.prevLabel, prev)}
       {link(DOCUMENTS.pager.nextLabel, next)}
     </nav>
@@ -361,7 +386,11 @@ export default async function DocumentsPage({
     : DOCUMENTS.list.emptyNoDocuments;
 
   return (
-    <>
+    // Round 04 §4.1 — one `.kb-page-flow`, the same element every other console
+    // page now wears: the frame, the bar, the hint and the results panel are its
+    // four direct children in one order at every width, and its `gap` replaces the
+    // per-block `mt-[var(--kb-space-md)]` this page used to carry.
+    <div className="kb-page-flow">
       {/* Round 03 §4.4 — the shared page frame. This page has no actions slot, so
           the frame is the title wrap alone; the h1's inline `marginTop` is gone
           (the `.kb-app-sub` / frame rules own the spacing now). */}
@@ -375,15 +404,23 @@ export default async function DocumentsPage({
         </div>
       </div>
 
-      <SearchForm active={active} projects={projects} />
-      <p className="mt-[0.6rem] mb-[0.5rem] text-[0.7rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
-        {DOCUMENTS.search.hint}
-      </p>
+      {/* The bar and the line that explains it are ONE flow block: §4.7 draws the
+          `.kb-hintline` as the form's next sibling and §3 gives it its own
+          `margin-top: 0.6rem`, so letting the flow's gap separate them too would
+          detach the caption from the thing it captions. The wrapper carries no
+          class and draws nothing. */}
+      <div>
+        <SearchForm active={active} projects={projects} />
+        {/* §4.7 + §3 — the hand-rolled mono utilities become `.kb-hintline`
+            (mono, hint-grey, NOT uppercased: it is a sentence). */}
+        <p className="kb-hintline">{DOCUMENTS.search.hint}</p>
+      </div>
 
       <div className="kb-panel">
+        {/* §4.7 — head is the h2 plus the count as a `.kb-panel__caption`. */}
         <div className="kb-panel__head">
           <h2 className="kb-app-h2">{DOCUMENTS.title}</h2>
-          <span className="text-[0.68rem] uppercase tracking-[0.04em] text-[var(--kb-hint)] [font-family:var(--kb-font-mono)]">
+          <span className="kb-panel__caption">
             {DOCUMENTS.count.label(total)}
           </span>
         </div>
@@ -397,6 +434,6 @@ export default async function DocumentsPage({
 
         <Pager active={active} total={total} />
       </div>
-    </>
+    </div>
   );
 }

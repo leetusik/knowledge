@@ -290,13 +290,13 @@ export default async function DashboardPage() {
     // block-level `margin-top` the page used to carry is GONE (the record: "the
     // flow is where a reviewer reads the page's order off one element").
     <div className="kb-page-flow">
-      {/* Round 03 §4.4 — the shared `.kb-pageframe` replaces the ad-hoc inline flex
-          (the actions used to collide with the title, and stacked badly on a
-          phone). The h1's inline `marginTop` is gone: the frame owns the spacing.
-          The actions slot here is a disclosure form, not a button — §4.4 allows
-          the slot to carry whatever the page's action is, and the phone rule that
-          stretches `> .kb-appbtn` simply does not reach it. */}
-      <div className="kb-pageframe">
+      {/* Round 04 §4.4 (P28.S5) — the create-project DISCLOSURE owns the page
+          frame now: its trigger stays in `.kb-pageframe__actions` and the revealed
+          `.kb-inlineform--framed` is the frame's next sibling, so one piece of
+          client state spans both. The title wrap below stays server-rendered — it
+          is passed through as `children` and never crosses into the island. Both
+          elements land as direct children of this `.kb-page-flow`. */}
+      <CreateProjectForm>
         <div className="kb-pageframe__title-wrap">
           <div className="kb-app-eyebrow">
             {tenantName} · {DASHBOARD.eyebrow}
@@ -304,10 +304,7 @@ export default async function DashboardPage() {
           <h1 className="kb-app-title">{DASHBOARD.title}</h1>
           <p className="kb-app-sub">{DASHBOARD.sub}</p>
         </div>
-        <div className="kb-pageframe__actions">
-          <CreateProjectForm />
-        </div>
-      </div>
+      </CreateProjectForm>
 
       <StatTiles tiles={tiles} />
 
@@ -415,19 +412,18 @@ export default async function DashboardPage() {
           panel head carries the heading, the lead and the "New key" disclosure
           TRIGGER; the table lists metadata only (`token_prefix`, never the full
           key). One org key grants the whole org.
-          §4.4 (moving the revealed form out of the head into a `.kb-inlineform`
-          block below it) is P28.S5's, so `<MintOrgKeyForm>` stays whole in the head
-          here and S5 splits it — this slice owns the panel structure only. */}
+          Round 04 §4.4 (P28.S5) — the disclosure owns the head now: `<MintOrgKeyForm>`
+          renders `.kb-panel__head` around this server-rendered `__headmain` and puts
+          the revealed `.kb-inlineform` after it, as the head's next sibling. */}
       <section className="kb-panel" aria-labelledby="org-keys-head">
-        <div className="kb-panel__head kb-panel__head--start">
+        <MintOrgKeyForm>
           <div className="kb-panel__headmain">
             <h2 id="org-keys-head" className="kb-app-h2">
               {DASHBOARD.orgKeys.heading}
             </h2>
             <p className="kb-panel__lead">{DASHBOARD.orgKeys.lead}</p>
           </div>
-          <MintOrgKeyForm />
-        </div>
+        </MintOrgKeyForm>
 
         <DataTable
           columns={orgKeyColumns}

@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { getSession, requireSession } from "./session";
+import { safeNextPath } from "./next-path";
 import { me } from "./knowledge/auth";
 import { ApiError } from "./knowledge/client";
 import type { KbIdentity } from "./knowledge/types";
@@ -12,7 +13,6 @@ import type { KbIdentity } from "./knowledge/types";
 // and `knowledge/auth.ts` (the API calls). `session.ts` deliberately knows nothing
 // about knowledge and vice-versa; this module is where the two meet.
 
-const DASHBOARD_PATH = "/dashboard";
 const LOGIN_PATH = "/login";
 
 export interface AuthenticatedContext {
@@ -91,7 +91,16 @@ export const optionalIdentity = cache(
 );
 
 /**
- * The `(auth)` page bounce: send an already-signed-in visitor to the dashboard.
+ * The `(auth)` page bounce: send an already-signed-in visitor to the dashboard —
+ * or, when the gate was reached with a `?next=` return address, to that instead
+ * (P28.S5 / D18: a visitor who followed "Sign in to read →" from a public surface
+ * and already HAS a session should land on the thing they asked for, not on a
+ * dashboard they did not).
+ *
+ * `next` is the RAW query value and is laundered through `safeNextPath`, which
+ * fails closed to `/dashboard` — see `lib/next-path.ts` for what is accepted and
+ * why an open redirect here would be a real vulnerability. Passing nothing (every
+ * pre-existing caller) is identical to the old behaviour.
  *
  * It VERIFIES the token against knowledge before bouncing, on purpose. Checking
  * only the cookie would ping-pong forever in the revoked-token case: /login sees a
@@ -99,9 +108,11 @@ export const optionalIdentity = cache(
  * → … Verifying breaks that loop — a dead cookie simply renders the login form, and
  * signing in overwrites it.
  */
-export async function redirectIfAuthenticated(): Promise<void> {
+export async function redirectIfAuthenticated(
+  next?: string | string[] | null,
+): Promise<void> {
   const token = await getSession();
   if (!token) return;
   const identity = await me(token).catch(() => null);
-  if (identity) redirect(DASHBOARD_PATH);
+  if (identity) redirect(safeNextPath(next));
 }

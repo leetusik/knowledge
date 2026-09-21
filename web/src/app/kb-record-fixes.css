@@ -1,0 +1,41 @@
+/*
+ * kb-record-fixes.css — OPERATOR-AUTHORISED CORRECTIONS TO A SIGNED DESIGN RECORD.
+ *
+ * Created by P28.S5. Every round stylesheet in `web/design/rounds/*` is a VERBATIM
+ * record and must never be edited, so a gap the operator has authorised closing
+ * lands here instead — imported LAST, after every round sheet, so it wins at equal
+ * specificity without touching a single recorded line.
+ *
+ * THE CHARTER (phase P28 `## Decisions`, operator → orchestrator, 2026-09-21):
+ *   - Operator-authorised corrections ONLY. Never a new visual decision, never a
+ *     convenience override, never a dumping ground. A gap nobody authorised is
+ *     REPORTED on `## Operator Questions`, not fixed here.
+ *   - Every rule carries a comment naming the round and section it corrects, what
+ *     the gap is, and that the operator authorised it (with the date).
+ *   - No width `@media` (the reason round 03 §8 item 11 / round 04 §9 item 11 grep
+ *     for it: the console responds to its CONTAINER, never the viewport).
+ *   - Later slices insert their own round sheets BEFORE this file in globals.css.
+ */
+
+/* ── ROUND 03 §7 vs §3 — the iOS search-box zoom ───────────────────────────────
+   Round 03 §7 states, without qualification: "Inputs are 16px below 40rem.
+   Non-negotiable." §3's phone block implements it for `.kb-field__input` only, and
+   simply missed the one other text input on the console: the documents search box,
+   which is `.kb-appsearch__input` and inherits `font-size: 0.9rem` from
+   kb-console.css — 14.4px at 390, below iOS Safari's 16px threshold, so focusing it
+   ZOOMS the whole page. The project filter sitting beside it in the same bar is
+   already correct at 16px (`.kb-searchbar__filter .kb-field__input`, §3), which is
+   what makes this a miss rather than an intention.
+
+   This implements the record's own explicit rule where §3 missed an element; it is
+   not a new visual decision. OPERATOR AUTHORISED 2026-09-21 ("do whatever you
+   recommend", on P28.S2's reported gap).
+
+   FONT-SIZE ONLY — no border, no background, no padding, no repaint. The at-rule
+   mirrors §3's own search block (`@container kbmain (width < 40rem)`, the same
+   container the sibling filter's 16px rule uses), NOT a width media query. Giving
+   the input `.kb-field__input` instead would have repainted it with a border, a
+   surface and a focus ring the record does not draw on it. */
+@container kbmain (width < 40rem) {
+  .kb-appsearch__input { font-size: 1rem; }
+}
