@@ -928,3 +928,4 @@
 {"ts": "2026-09-21T19:21:20+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "changes_requested", "reviewer": null}
 {"ts": "2026-09-21T21:27:01+09:00", "type": "slice_created", "phase": "P28", "slice": "P28.S10"}
 {"ts": "2026-09-21T21:27:47+09:00", "type": "slice_status_changed", "slice": "P28.S10", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-09-22T05:30:13+09:00", "type": "slice_status_changed", "slice": "P28.S10", "old_status": "in_progress", "new_status": "pending"}
