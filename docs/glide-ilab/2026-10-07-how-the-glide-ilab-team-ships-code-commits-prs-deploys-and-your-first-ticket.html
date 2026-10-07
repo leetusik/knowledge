@@ -1,0 +1,479 @@
+<!--kb
+title: "How the glide-ilab team ships code: commits, PRs, deploys and your first ticket"
+date: 2026-10-07
+tags:
+  - onboarding
+  - git-workflow
+  - pull-requests
+  - deploy
+  - conventional-commits
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the glide-ilab team ships code: commits, PRs, deploys and your first ticket</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fdfdfc; --fg: #1f2328; --muted: #5d6670; --line: #d8dde3;
+    --code-bg: #f3f4f6; --accent: #2f6fb3;
+    --ok-bg: #e8f5ec; --ok-line: #3c9a5f;
+    --warn-bg: #fdf3e2; --warn-line: #c98a1b;
+    --bad-bg: #fbe9e9; --bad-line: #c24848;
+    --info-bg: #eaf1fa; --info-line: #2f6fb3;
+    --box-bg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16191d; --fg: #e4e7eb; --muted: #9aa4ae; --line: #343a42;
+      --code-bg: #20252b; --accent: #79aee6;
+      --ok-bg: #18301f; --ok-line: #4fb878;
+      --warn-bg: #33291a; --warn-line: #e0a63c;
+      --bad-bg: #3a1e1e; --bad-line: #e06a6a;
+      --info-bg: #1b2a3c; --info-line: #79aee6;
+      --box-bg: #1d2126;
+    }
+  }
+  body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.65; }
+  h1 { line-height: 1.25; font-size: 1.9rem; }
+  h2 { margin-top: 3rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+  h3 { margin-top: 2rem; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); font-size: 1.05rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em;
+         background: var(--code-bg); padding: .1em .3em; border-radius: 4px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg);
+        padding: .8rem 1rem; border-radius: 6px; font-size: .88rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  nav { background: var(--code-bg); padding: .8rem 1.2rem; border-radius: 8px; }
+  nav ol { margin: .4rem 0 0; }
+  .callout { border-left: 4px solid var(--ok-line); background: var(--ok-bg); padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+  .callout.info { border-color: var(--info-line); background: var(--info-bg); }
+  .callout.warn { border-color: var(--warn-line); background: var(--warn-bg); }
+  .callout.bad  { border-color: var(--bad-line);  background: var(--bad-bg); }
+  .callout > :first-child { margin-top: 0; } .callout > :last-child { margin-bottom: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; margin: 1rem 0; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: .4rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 6px; padding: .5rem 1rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  /* diagram family: flow boxes */
+  .flow { display: flex; flex-wrap: wrap; gap: .4rem; align-items: stretch; margin: 1.2rem 0; }
+  .flow .step { flex: 1 1 8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--box-bg);
+                padding: .55rem .65rem; font-size: .85rem; line-height: 1.4; }
+  .flow .step b { display: block; font-size: .9rem; margin-bottom: .2rem; }
+  .flow .arrow { align-self: center; color: var(--muted); font-size: 1.2rem; }
+  .flow .step.you { border-color: var(--info-line); }
+  .flow .step.auto { border-color: var(--ok-line); }
+  .flow .step.gate { border-color: var(--warn-line); }
+  .legend { font-size: .82rem; color: var(--muted); }
+  .legend span { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: middle; margin: 0 .25rem 0 .6rem; border: 2px solid; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .85rem; color: var(--muted); margin-top: .4rem; }
+  svg text { fill: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  svg .box { fill: var(--box-bg); stroke: var(--line); stroke-width: 1.5; }
+  svg .box.ok { stroke: var(--ok-line); } svg .box.warn { stroke: var(--warn-line); } svg .box.bad { stroke: var(--bad-line); } svg .box.info { stroke: var(--info-line); }
+  svg .wire { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+  svg .muted { fill: var(--muted); }
+  .checklist li { margin: .45rem 0; }
+  .q { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin: 1.2rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .35rem 0; padding: .55rem .75rem; cursor: pointer;
+            border: 1px solid var(--line); border-radius: 6px; background: var(--box-bg); color: var(--fg); font: inherit; }
+  .q .opt:hover { border-color: var(--accent); }
+  .q .opt.correct   { background: var(--ok-bg); border-color: var(--ok-line); }
+  .q .opt.incorrect { background: var(--bad-bg); border-color: var(--bad-line); }
+  .q .why { margin: .5rem 0 0; font-size: .95em; }
+</style>
+</head>
+<body>
+
+<h1>How the glide-ilab team ships code: commits, PRs, deploys and your first ticket</h1>
+<p class="lede">An onboarding guide built from P1, the research phase that read this repo's whole git history, all 72 pull requests and its deploy configuration (read-only) to work out how the team really works, and then set up your private Claude workspace to match.</p>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="background">
+<h2>Background</h2>
+
+<p>Every team has two rulebooks. One is written down: a README, a pull-request template, an <code>AGENTS.md</code>. The other lives only in habit: how people name branches, whether they squash, who presses the merge button. A newcomer usually learns the second rulebook the slow way, by having a first PR corrected. P1 tried to shortcut that by reading the habit directly out of the history, and that is the story this page tells.</p>
+
+<details>
+<summary>Beginner primer: the five terms this page leans on (skip if you know them)</summary>
+<ul>
+  <li><strong>Commit message convention.</strong> An agreed shape for the first line of a commit. This team uses <em>Conventional Commits</em>: <code>type(scope): summary</code>, e.g. <code>fix(ai-chat): batch ETF summary reads</code>. The <em>type</em> says what kind of change it is (<code>feat</code>, <code>fix</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, <code>docs</code>…); the <em>scope</em> says which part of the code it touches.</li>
+  <li><strong>Pull request (PR).</strong> A request on GitHub to merge your branch into <code>main</code>. It has a title, a body (description) and a list of commits.</li>
+  <li><strong>Squash merge.</strong> One of GitHub's three merge buttons. It folds all of a PR's commits into <em>one</em> new commit on <code>main</code>. The other two keep every commit (merge commit, rebase).</li>
+  <li><strong>CI (continuous integration).</strong> A robot that runs the tests automatically on every push or PR and marks it green or red. <strong>This repo has none on PRs</strong>, which turns out to matter a lot.</li>
+  <li><strong>Trailer.</strong> A <code>Key: value</code> line at the very end of a commit message, such as <code>Co-Authored-By: Someone &lt;email&gt;</code>. Git and GitHub read these to credit co-authors.</li>
+</ul>
+</details>
+
+<h3>The repo at a glance</h3>
+<p><code>glide-ilab/glide-ilab</code> is a <em>monorepo</em>: several independent projects in one git repository. It began on 2026-08-01 with the commit <code>3ad743a Initialize monorepo</code>, and older repositories were imported into it with their history intact. Today three folders are live:</p>
+
+<table>
+  <tr><th>Folder</th><th>What it is</th><th>How it runs</th><th>Commit scope</th></tr>
+  <tr><td><code>ai-chat-backend/</code></td><td>FastAPI tool-chat service (OpenAI Agents SDK, Postgres, Dashboard API). The busiest folder.</td><td>Google Cloud Run, DEV and PROD</td><td><code>ai-chat</code></td></tr>
+  <tr><td><code>ib-research-report-pipeline/</code></td><td>Collects investment-bank research links, captures, summarizes in Korean, judges, publishes to a KB repo and the service DB.</td><td>GitHub Actions, weekly cron</td><td><code>ib-pipeline</code></td></tr>
+  <tr><td><code>deploy/</code></td><td>Cloud Build triggers, build pipeline and Cloud Run service files.</td><td>Read by GCP at build time</td><td><code>deploy</code></td></tr>
+</table>
+
+<p>A fourth folder, <code>data-investment-research-crawling/</code>, was the old crawler; <code>eed0371 chore: remove the retired IB crawling pipeline (#102)</code> deleted it. Despite the commit's wording, it did <em>not</em> remove <code>ib-research-report-pipeline/</code>; that one is very much alive and its Sunday cron runs green.</p>
+
+<div class="callout info">
+<p><strong>The single most useful fact about the people.</strong> Since the monorepo began, every commit on <code>main</code> is by one person: Donggeon Lee (<code>inspirit941</code>). He opened all 43 issues, merged all 62 merged PRs, and triggered all 61 GitHub Actions runs. Earlier imported history is mostly Changhyun Jake OH (<code>och9854</code>), who also holds the newest issue, #114. So "the team's convention" is really one maintainer's consistent habits, which is good news: they are very regular.</p>
+</div>
+
+<h3>What P1 was</h3>
+<p>P1 ("Team coworking workflow onboarding") was a phase in your private, git-excluded Claude workspace (<code>workflow/</code>). It had two halves:</p>
+<ol>
+  <li><strong>Research.</strong> Two research slices read <code>git log</code>, every PR and issue through read-only <code>gh</code> calls, the repo settings, the Actions run history, the Cloud Build check-runs on <code>main</code> commits and every <code>AGENTS.md</code>. They also ran both test suites locally to get a green baseline. Nothing was pushed, posted or dispatched.</li>
+  <li><strong>Alignment.</strong> You answered fourteen questions (Q1–Q14). Your answers were written into places that survive workspace updates: the host commit convention (<code>nested-convention</code>, with trailers <code>forbidden</code>) and the personal section of the root <code>CLAUDE.local.md</code>. No skill file needed editing. The product repo itself was not touched at all: the review recorded 0 host files changed.</li>
+</ol>
+<p>Three questions (Q8 access, Q13 GCP and approvals, Q14 repo hygiene) are things only the team can answer, so they became deferred job <strong>D1</strong>. Hold on to that; it is the first thing on your checklist.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="intuition">
+<h2>Intuition</h2>
+
+<p>If you remember one picture, make it this one: the life of a change, from issue to production, with each step coloured by who is responsible for it.</p>
+
+<div class="flow" role="img" aria-label="Lifecycle of a change">
+  <div class="step you"><b>1. Issue</b>Opened by the lead, usually in Korean. Decide: full fix (<code>Closes</code>) or a part (<code>Refs</code>)?</div>
+  <div class="arrow">→</div>
+  <div class="step you"><b>2. Branch</b><code>task/issue-114-slug</code> or <code>fix/slug</code>, from fresh <code>main</code></div>
+  <div class="arrow">→</div>
+  <div class="step you"><b>3. Commits</b><code>fix(ai-chat): …</code> each one presentable</div>
+  <div class="arrow">→</div>
+  <div class="step gate"><b>4. Your checks</b>Run the folder's tests yourself. No CI will.</div>
+  <div class="arrow">→</div>
+  <div class="step you"><b>5. PR</b>Template + <code>## Verification</code>. English title, no <code>(#N)</code></div>
+  <div class="arrow">→</div>
+  <div class="step gate"><b>6. Squash merge</b>One commit lands on <code>main</code></div>
+  <div class="arrow">→</div>
+  <div class="step auto"><b>7. Robots</b>DEV redeploys, or the Sunday cron runs your pipeline change</div>
+</div>
+<p class="legend">Border: <span style="border-color:var(--info-line)"></span>you <span style="border-color:var(--warn-line)"></span>the only gate (human discipline) <span style="border-color:var(--ok-line)"></span>automatic</p>
+
+<p>Two ideas carry the whole workflow. The first is about history, the second about safety.</p>
+
+<h3>Idea 1: the PR title becomes history, and branch commits become its bullets</h3>
+<p>Squash merging rewrites your branch into one commit. GitHub builds that commit's message from your PR, and that message is what everyone will see in <code>git log</code> forever. Here is a real one, PR #108, which had five branch commits:</p>
+
+<figure>
+<svg viewBox="0 0 720 270" width="100%" role="img" aria-label="Five branch commits squashed into one main commit">
+  <text x="10" y="18" font-size="13" font-weight="600">Branch fix/etf-summary-batching (5 commits)</text>
+  <rect class="box info" x="10" y="28" width="330" height="34" rx="5"/><text x="20" y="50" font-size="11.5">fix(ai-chat): batch ETF summaries and reserve…</text>
+  <rect class="box info" x="10" y="70" width="330" height="34" rx="5"/><text x="20" y="92" font-size="11.5">test(ai-chat): consolidate ETF regressions…</text>
+  <rect class="box info" x="10" y="112" width="330" height="34" rx="5"/><text x="20" y="134" font-size="11.5">docs(ai-chat): ground ETF tool guidance…</text>
+  <rect class="box info" x="10" y="154" width="330" height="34" rx="5"/><text x="20" y="176" font-size="11.5">fix(ai-chat): distinguish missing return dates…</text>
+  <rect class="box info" x="10" y="196" width="330" height="34" rx="5"/><text x="20" y="218" font-size="11.5">test(ai-chat): remove duplicate … rejection case</text>
+  <path class="wire" d="M345 130 L 385 130"/><path class="wire" d="M377 124 L385 130 L377 136"/>
+  <text x="352" y="120" font-size="10" class="muted">squash</text>
+  <text x="392" y="18" font-size="13" font-weight="600">main: 73f28bf (1 commit)</text>
+  <rect class="box ok" x="390" y="28" width="320" height="202" rx="6"/>
+  <text x="400" y="50" font-size="11.5" font-weight="600">fix(ai-chat): batch ETF summary reads and</text>
+  <text x="400" y="66" font-size="11.5" font-weight="600">separate asset details (#108)</text>
+  <text x="400" y="94" font-size="11">* fix(ai-chat): batch ETF summaries and …</text>
+  <text x="400" y="114" font-size="11">* test(ai-chat): consolidate ETF regressions …</text>
+  <text x="400" y="134" font-size="11">* docs(ai-chat): ground ETF tool guidance …</text>
+  <text x="400" y="154" font-size="11">* fix(ai-chat): distinguish missing return …</text>
+  <text x="400" y="174" font-size="11">* test(ai-chat): remove duplicate …</text>
+  <text x="400" y="204" font-size="10.5" class="muted">subject = PR title + " (#108)"</text>
+  <text x="400" y="220" font-size="10.5" class="muted">body = one bullet per branch commit</text>
+  <text x="10" y="258" font-size="11" class="muted">Real data: git show -s 73f28bf</text>
+</svg>
+<figcaption>Your PR title becomes the subject (GitHub appends <code>(#N)</code> itself), and every branch commit subject becomes a bullet. Hence: never put <code>(#N)</code> in a title yourself, and make every branch commit presentable.</figcaption>
+</figure>
+
+<p>Three rules fall straight out of this picture. <strong>Don't write <code>(#N)</code> in a title</strong>: GitHub adds it, and the team has already been bitten by doubles like <code>(#62) (#66)</code> in <code>a6853fc</code>. <strong>Write every branch commit conventionally</strong>, because each one is published as a bullet (427 of 502 branch commits already are). And the subtle one: <strong>on a single-commit PR, GitHub uses the commit's headline, not the PR title</strong>. On #49 the title was renamed 17 seconds before merge, yet <code>61e14e8</code> kept the old commit headline. If your PR has one commit, fix the commit, not the title.</p>
+
+<h3>Idea 2: nothing checks your PR, so your Verification section <em>is</em> the CI</h3>
+<p>Most teams have a robot standing between a PR and <code>main</code>. Here, there is none:</p>
+<ul>
+  <li>none of the three GitHub Actions workflows has a <code>pull_request</code> or <code>push</code> trigger; all three serve the IB pipeline on a schedule or by hand;</li>
+  <li><code>main</code> is unprotected (the protection API answers 404), and no check is required;</li>
+  <li>71 of 72 PRs have an empty check list;</li>
+  <li>no PR has ever had a formal GitHub review; the lead posts AI review reports as comments and merges his own PRs.</li>
+</ul>
+<p>Yet merging to <code>main</code> has real effects. A change under <code>ai-chat-backend/</code> redeploys DEV within minutes; a pipeline change runs for real at the next Sunday cron, writing to the KB and the database. So the guarantee that your change works comes from exactly one place: you ran the tests, and you wrote down what you ran, what you got, on which commit, <em>and what you did not check</em>, in the PR's <code>## Verification</code> section. That last part comes straight from <code>ai-chat-backend/AGENTS.md</code>: "Report verified results, limitations, and checks that did not run separately."</p>
+
+<div class="callout warn">
+<p><strong>A toy Verification section</strong>, in the shape PRs #107 and #108 use:</p>
+<pre><code>## Verification
+- `APP_CONFIG_FILE=/dev/null APP_ENV=dev PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider`
+  on 1a2b3c4: 1317 passed, 1 skipped, 17 deselected
+- `git diff --check`: clean
+- Not verified: live model, real PostgreSQL, DEV deployment, frontend</code></pre>
+</div>
+
+<h3>What happens after you merge</h3>
+<p>The second half of the lifecycle is automatic, and which robot wakes up depends on which files changed. This is the map P1 built from the trigger files in <code>deploy/ai-chat-backend/</code> and the workflow files in <code>.github/workflows/</code>:</p>
+
+<figure>
+<svg viewBox="0 0 720 300" width="100%" role="img" aria-label="Which change triggers which deployment">
+  <rect class="box info" x="10" y="20" width="200" height="56" rx="6"/>
+  <text x="20" y="42" font-size="12" font-weight="600">Merge touching</text>
+  <text x="20" y="60" font-size="11.5">ai-chat-backend/** (not .md)</text>
+  <rect class="box info" x="10" y="96" width="200" height="56" rx="6"/>
+  <text x="20" y="118" font-size="12" font-weight="600">Push tag</text>
+  <text x="20" y="136" font-size="11.5">ai-chat-backend-vX.Y.Z</text>
+  <rect class="box info" x="10" y="172" width="200" height="56" rx="6"/>
+  <text x="20" y="194" font-size="12" font-weight="600">Merge touching</text>
+  <text x="20" y="212" font-size="11.5">deploy/…/prod.service.yaml</text>
+  <rect class="box info" x="10" y="240" width="200" height="50" rx="6"/>
+  <text x="20" y="260" font-size="12" font-weight="600">Merge touching</text>
+  <text x="20" y="278" font-size="11.5">ib-research-report-pipeline/**</text>
+
+  <path class="wire" d="M210 48 L 300 48"/><path class="wire" d="M292 42 L300 48 L292 54"/>
+  <path class="wire" d="M210 124 L 300 124"/><path class="wire" d="M292 118 L300 124 L292 130"/>
+  <path class="wire" d="M210 200 L 300 200"/><path class="wire" d="M292 194 L300 200 L292 206"/>
+  <path class="wire" d="M210 265 L 300 265"/><path class="wire" d="M292 259 L300 265 L292 271"/>
+
+  <rect class="box ok" x="300" y="20" width="410" height="56" rx="6"/>
+  <text x="310" y="42" font-size="12" font-weight="600">DEV build + deploy, automatic</text>
+  <text x="310" y="60" font-size="11">dev.trigger.yaml → Cloud Run ai-chat-backend-dev (minutes)</text>
+  <rect class="box ok" x="300" y="96" width="410" height="56" rx="6"/>
+  <text x="310" y="118" font-size="12" font-weight="600">PROD image build only — nothing deploys</text>
+  <text x="310" y="136" font-size="11">prod.build.trigger.yaml (_DEPLOY: "false")</text>
+  <rect class="box bad" x="300" y="172" width="410" height="56" rx="6"/>
+  <text x="310" y="194" font-size="12" font-weight="600">PROD deploy — needs explicit release approval</text>
+  <text x="310" y="212" font-size="11">prod.deploy.trigger.yaml (_BUILD_IMAGE: "false", _DEPLOY: "true")</text>
+  <rect class="box warn" x="300" y="240" width="410" height="50" rx="6"/>
+  <text x="310" y="260" font-size="12" font-weight="600">Live at the next Sunday cron (kb-db writes)</text>
+  <text x="310" y="278" font-size="11">no build step; "deployed" means "merged to main"</text>
+</svg>
+<figcaption>PROD for <code>ai-chat-backend</code> is a deliberate two-step: a tag builds an image, then a PR that changes the image in <code>prod.service.yaml</code> deploys it. That has never happened since the monorepo began.</figcaption>
+</figure>
+
+<p>The newcomer's mental model, then: <em>you</em> are the only gate before <code>main</code>, and <code>main</code> is wired to DEV and to the production cron. Treat a merge as a deploy, because it is one.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="code">
+<h2>Code</h2>
+<p>Now the details, walked through the real files and the real history. We go in the order you will meet them: commits and branches, the PR, the deploy wiring, the folder rules, and finally what P1 changed in your own workspace.</p>
+
+<h3>1. Commits and branches</h3>
+<p>No document in the repo states a commit convention: there is no root <code>AGENTS.md</code>, no <code>CONTRIBUTING</code>, and the folder <code>AGENTS.md</code> files say nothing about commits. The convention is inferred, but the evidence is overwhelming: 61 of 62 first-parent commits on <code>main</code> are conventional, and the one exception is the initial commit. The last few:</p>
+<pre><code>7225f24 feat(ai-chat): link saved default options to product details (#107)
+73f28bf fix(ai-chat): batch ETF summary reads and separate asset details (#108)
+6d3bf31 fix(ai-chat): ETF 차트의 실제 계산 기간과 결측 결과 전달 (#106)
+5a69cff feat(ai-chat): add explicit linked TDF class search (#100)
+eed0371 chore: remove the retired IB crawling pipeline (#102)</code></pre>
+<p>Notice what is regular: the scope is the <strong>folder</strong> (<code>ai-chat</code> 29 times, <code>ib-pipeline</code> 13, <code>deploy</code> once), and repo-wide work has no scope at all (<code>chore: remove …</code>). Older commits used <code>ai-chat-backend</code> as the scope; it became <code>ai-chat</code> from #48 on. Notice also <code>6d3bf31</code> in Korean. Language followed the period: before PR #82 (2026-09-30), 17 of 45 subjects were Korean; since then 2 of 17. #82 introduced the team PR skill, which says "Write the title and body in English", so the convention you approved is <strong>English</strong> for commits and PRs. Korean is normal in issues and comments.</p>
+
+<p><strong>Trailers:</strong> zero of 62 commits on <code>main</code> carry a <code>Co-Authored-By</code>, and no PR body has an AI footer, even though the team openly uses AI (branch names like <code>codex/…</code>, AI review comments). That is why you chose: you are the sole author of every host commit and PR, with no AI attribution.</p>
+
+<p><strong>Branch names</strong> across all 72 PRs:</p>
+<table>
+  <tr><th>Pattern</th><th>Count</th><th>When</th></tr>
+  <tr><td><code>task/issue-&lt;N&gt;[-&lt;suffix&gt;]</code></td><td>39</td><td>the work has its own issue; suffixes tell several branches apart (<code>-fix2</code>, <code>-phase2</code>)</td></tr>
+  <tr><td><code>issue-&lt;N&gt;-…</code></td><td>13</td><td>older form, no prefix</td></tr>
+  <tr><td><code>fix/&lt;slug&gt;</code></td><td>12</td><td>no dedicated issue, often partial work on umbrella issue #65</td></tr>
+  <tr><td><code>feat/&lt;slug&gt;</code></td><td>3</td><td>same, for features</td></tr>
+</table>
+<p>The base is always <code>main</code>, branches are deleted on merge (<code>deleteBranchOnMerge: true</code>), and to catch up with <code>main</code> the team <em>merges</em> it in rather than rebasing; the squash hides those merge commits anyway.</p>
+
+<h3>2. The pull request</h3>
+<p>The template, <code>.github/pull_request_template.md</code>, verbatim:</p>
+<pre><code>## Summary
+&lt;!-- Describe what this pull request accomplishes. --&gt;
+
+## What is changed
+&lt;!-- List the concrete behavior or code changes. --&gt;
+
+## Why
+&lt;!-- Explain why this change is necessary. --&gt;
+
+## Related issue
+&lt;!-- Use `Closes #123`, `Refs #123`, or `None`. --&gt;</code></pre>
+<p>It arrived in #82 together with the team skill <code>.agents/skills/create-pull-request/SKILL.md</code>, which adds: English; write only from the final diff, commits and issue (no conversation, no abandoned approaches); every section non-empty; pass the body with <code>--body-file</code>. The template has no Verification section, but 15 of the 26 PRs since #82 add one between <em>What is changed</em> and <em>Why</em>, and your rules make it mandatory.</p>
+
+<div class="callout bad">
+<p><strong>Where the written skill and the real practice disagree.</strong> The skill says: if the branch name contains <code>issue-&lt;N&gt;</code>, write <code>Closes #N</code>. But issue #65 is an <em>umbrella</em> with many items, and PRs on <code>task/issue-65-phase2</code> (#95), <code>task/issue-65-tdf-search</code> (#100), <code>-16</code> (#109) and <code>-25</code> (#110) all used <code>Refs #65</code>. Following the skill literally would close the umbrella by accident. Your <code>CLAUDE.local.md</code> overrides it: <code>Closes #N</code> only when the merge fully resolves the issue, otherwise <code>Refs #N — &lt;which part&gt;</code>, even on a <code>task/issue-N</code> branch. #107's body is the model: <code>Refs #65 — item 23 only; this PR does not close the full issue.</code></p>
+</div>
+
+<p><strong>Merging:</strong> 58 of 60 merges into <code>main</code> are squashes. The two merge commits, #1 and #14, are repository imports, which <code>docs/repository-migration.md</code> requires to use "Create a merge commit" so the imported history survives. Rebase merge is enabled but has never been used. Median time from open to merge is 1.1 hours: PRs are usually opened when the work is already done, often as drafts first.</p>
+
+<h3>3. CI and deploy wiring</h3>
+<p>The deploy diagram above comes from three small files. The DEV trigger:</p>
+<pre><code># deploy/ai-chat-backend/dev.trigger.yaml (excerpt)
+name: ai-chat-backend-monorepo-dev-app
+github:
+  push:
+    branch: ^main$
+includedFiles:
+  - ai-chat-backend/**
+ignoredFiles:
+  - ai-chat-backend/**/*.md
+  - ai-chat-backend/.env.example
+substitutions:
+  _BUILD_IMAGE: "true"
+  _DEPLOY: "true"
+  _SERVICE_FILE: deploy/ai-chat-backend/dev.service.yaml</code></pre>
+<p>Read it as a sentence: "on a push to <code>main</code> that touches <code>ai-chat-backend/</code> other than Markdown and <code>.env.example</code>, build an image and deploy it with the DEV service file." Test-only changes count too, so they also redeploy DEV. The two PROD triggers differ only in the switches: <code>prod.build.trigger.yaml</code> fires on a tag <code>^ai-chat-backend-v[0-9]+\.[0-9]+\.[0-9]+$</code> with <code>_DEPLOY: "false"</code>, and <code>prod.deploy.trigger.yaml</code> fires on a <code>main</code> push that touches <code>prod.service.yaml</code>, with <code>_BUILD_IMAGE: "false"</code> and <code>_DEPLOY: "true"</code>. All three run the same <code>cloudbuild.yaml</code>, whose deploy step pins the image by its immutable <code>@sha256</code> digest, runs <code>gcloud run services replace</code>, and then <em>checks</em> that the new revision is Ready, serves that digest and has 100% of traffic, failing the build otherwise.</p>
+
+<p>After you merge, you can see the result on your squash commit:</p>
+<pre><code>gh api repos/glide-ilab/glide-ilab/commits/&lt;squash-sha&gt;/check-runs \
+  --jq '.check_runs[] | [.name, .conclusion] | @tsv'</code></pre>
+<p><code>ai-chat-backend-monorepo-dev-app (etf-searcher)  success</code> means DEV serves your build. You may also see a red <code>data-investment-research-crawling-app</code>: that is a leftover Cloud Build trigger for the deleted crawler, nothing to do with you (it is hygiene finding 1 in D1). <code>authenticate</code> is the daily Codex-auth cron and is unrelated too.</p>
+
+<p>Things a merge does <em>not</em> do: apply database migrations (a person runs <code>python -m scripts.migrate</code>), apply changes to <code>dev.service.yaml</code>, <code>cloudbuild.yaml</code> or trigger files (someone with GCP access applies those with <code>gcloud</code>), or update runtime secrets (<code>update-runtime-secret.sh</code>). If your change needs a DEV migration, agree with the lead <em>before</em> merging who runs it.</p>
+
+<p>The IB pipeline is simpler and, in a way, sharper: <code>.github/workflows/ib-research-report-pipeline.yml</code> runs every Sunday (<code>schedule: "37 0 * * 0"</code>, 09:37 KST nominally; GitHub's cron actually started these runs around 14:20–15:20 KST) from <code>main</code> with <code>publication=kb-db</code>, meaning real writes to the KB repo and the service DB. There is no build step, so <strong>merged means deployed</strong>.</p>
+
+<h3>4. Folder rules (<code>AGENTS.md</code>) and the checks you run</h3>
+<p>Each live folder has an <code>AGENTS.md</code>. Your private <code>CLAUDE.local.md</code> in each folder imports it, so Claude loads those rules when it works there, but they bind you too. The ones a newcomer is most likely to trip over:</p>
+<ul>
+  <li><strong><code>ai-chat-backend/AGENTS.md</code>:</strong> run the smallest relevant test batch while working and the full release gate before pushing code, dependency, schema or runtime-config changes; tests map one-to-one to source files; never edit an applied migration; and "Production migration and release require separate explicit approvals. Code/test approval does not authorize either." A dependency change must update <em>both</em> <code>pyproject.toml</code>/<code>uv.lock</code> and <code>requirements.txt</code>/<code>requirements.lock</code>, because the Docker image installs only the latter.</li>
+  <li><strong><code>ib-research-report-pipeline/AGENTS.md</code>:</strong> "A passing test is not evidence. After writing or changing an assertion, break what it claims to protect and confirm the test fails." Offline tests must not call models; <code>settings.py</code> is the only module that reads the environment.</li>
+  <li><strong><code>deploy/AGENTS.md</code>:</strong> "Do not report a file change as registered or deployed without confirming the GCP state."</li>
+</ul>
+
+<table>
+  <tr><th>Changed</th><th>Run before merge</th><th>Baseline on <code>7225f24</code></th></tr>
+  <tr><td><code>ai-chat-backend/</code></td><td>from the folder: <code>APP_CONFIG_FILE=/dev/null APP_ENV=dev PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider</code></td><td>1317 passed, 1 skipped, 17 deselected</td></tr>
+  <tr><td><code>ib-research-report-pipeline/</code></td><td><code>cd ib-research-report-pipeline &amp;&amp; uv run pytest tests/ -q</code>; break each new assertion once; <code>actionlint</code> for workflow changes</td><td>920 passed, 6 skipped</td></tr>
+  <tr><td><code>deploy/</code></td><td>parse changed YAML, <code>bash -n</code> changed scripts, names match across files, <code>git diff --check</code></td><td>no suite</td></tr>
+  <tr><td><code>.github/</code>, <code>docs/</code>, README</td><td><code>git diff --check</code> + link check (workflow files: also <code>actionlint</code> and the pipeline suite)</td><td>—</td></tr>
+</table>
+<p>No lint, format or type-check tool is configured anywhere in the repo; don't invent one in a PR. And one gotcha: <code>uv sync</code> in the pipeline creates an untracked <code>src/ib_research_report_pipeline.egg-info/</code> that the repo's <code>.gitignore</code> doesn't cover. P1 added it to your private <code>.git/info/exclude</code> so you can't stage it by accident.</p>
+
+<h3>5. What P1 changed in your workspace</h3>
+<p>The answers became two durable settings. First, the host commit convention, which the workspace's <code>/commit</code> skill reads:</p>
+<pre><code>$ python3 workflow/scripts/workflow.py next
+host_commit_convention=confirmed (coauthor_trailers=forbidden)</code></pre>
+<p>Second, a block of rules in the personal section of the root <code>CLAUDE.local.md</code>, headed <em>Team conventions</em>, which explicitly wins over the team PR skill and over Claude's default attribution. Its sections, in short:</p>
+<ul>
+  <li><strong>Authorship:</strong> you are the only author; no <code>Co-Authored-By</code>, no "Generated with Claude Code".</li>
+  <li><strong>Commits:</strong> English <code>type(scope): summary</code> scoped by folder; every branch commit must stand alone.</li>
+  <li><strong>Branches:</strong> <code>task/issue-&lt;N&gt;[-&lt;slug&gt;]</code>, else <code>fix/</code> or <code>feat/&lt;slug&gt;</code>; no workspace IDs.</li>
+  <li><strong>Pull requests:</strong> the title, Verification and <code>Closes</code>/<code>Refs</code> rules above; squash; never push, open, merge or comment unless you ask.</li>
+  <li><strong>Pre-merge checks:</strong> the table above.</li>
+  <li><strong>Deploy guards:</strong> never edit <code>prod.service.yaml</code>, push an <code>ai-chat-backend-v*</code> tag, run the secret script, run <code>gcloud</code> mutations or dispatch the pipeline without your explicit approval.</li>
+</ul>
+<p>One decision worth noticing: for pipeline runtime changes, you chose <strong>local tests only</strong> and to write "not run in Actions" in Verification, rather than dispatching the workflow on your branch. A dispatch would use production secrets (the Actions environment has no protection rules), cost LLM quota and needs write access.</p>
+
+<h3>6. Your first-ticket checklist</h3>
+<ol class="checklist">
+  <li><strong>Sort out access first (D1).</strong> Your <code>gh</code> account <code>leetusik</code> has <strong>READ</strong> on the repo: <code>gh api repos/glide-ilab/glide-ilab --jq .permissions</code> shows <code>"push": false</code>, so you cannot push a branch yet. Ask the lead for write access, and ask who reviews and merges your PRs (today the lead self-merges; nothing says what a new member should do). Ask whether you need GCP <code>etf-searcher</code> access; probably only for <code>deploy/</code> work.</li>
+  <li><strong>Get an issue</strong> from the lead and read it (<code>gh issue view &lt;N&gt;</code>). Decide now: <code>Closes</code> or <code>Refs … — which part</code>.</li>
+  <li><strong>Branch</strong> from fresh <code>main</code>: <code>git switch main &amp;&amp; git pull --ff-only &amp;&amp; git switch -c task/issue-&lt;N&gt;-&lt;slug&gt;</code>.</li>
+  <li><strong>Read the folder's <code>AGENTS.md</code></strong> and get a green baseline. A red baseline on fresh <code>main</code> is not yours to fix silently: tell the lead.</li>
+  <li><strong>Change, test, commit</strong> under the folder rules. Never stage <code>.env</code>, <code>*.egg-info/</code>, <code>runs/</code>, <code>evals/</code> or any <code>CLAUDE.local.md</code>.</li>
+  <li><strong>Run the pre-merge checks</strong> for every folder you touched; note the SHA.</li>
+  <li><strong>Open a draft PR</strong> with the template and Verification (including what you did <em>not</em> verify).</li>
+  <li><strong>Merge</strong> as the team agrees, with Squash and merge. In the dialog, check the subject is your title + <code>(#N)</code> and trim <code>Merge main into …</code> bullets.</li>
+  <li><strong>After the merge</strong>, check the DEV check-run on your squash commit, then clean up with <code>git branch -D &lt;branch&gt;</code> (capital <code>-D</code>, because after a squash git doesn't see your branch as merged).</li>
+</ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="best-practices">
+<h2>Best practices &amp; next steps</h2>
+
+<p>How does this workflow compare with common practice outside the team? Mostly it is deliberate and sound; two gaps stand out.</p>
+
+<h3>Where it aligns</h3>
+<p><strong>Conventional Commits with the folder as scope</strong> is the specification used as intended. The spec defines the scope as "a noun describing a section of the codebase", and lists among its benefits generated changelogs, semantic-version bumps and "a more structured commit history" (<a href="https://www.conventionalcommits.org/en/v1.0.0/">Conventional Commits 1.0.0</a> — conventionalcommits.org). In a monorepo, using the folder as the scope is what makes <code>git log</code> filterable by component. The spec also describes footers such as <code>Refs: #123</code> in git-trailer format, which matches how the team's longer commit bodies end.</p>
+<p><strong>Squash merging for a readable <code>main</code>.</strong> GitHub describes squash as combining a PR's commits "into a single commit", and notes the default message "can include the pull request title, pull request description, or commit information, depending on repository settings and the number of commits" (<a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges">GitHub Docs: About pull request merges</a> — docs.github.com). That dependency on the number of commits is exactly the single-commit-headline gotcha the team hit on #49.</p>
+
+<h3>Where it diverges, and why that can be fine for now</h3>
+<p><strong>No automated build on PRs or on <code>main</code>.</strong> Classic CI practice is that "every time the mainline receives a commit, the CI service checks out the head of the mainline into an integration environment and performs a full build", and that a failing build gets fixed first, often by reverting (<a href="https://martinfowler.com/articles/continuousIntegration.html">Martin Fowler, Continuous Integration</a> — martinfowler.com). This repo replaces the robot with author discipline and a written Verification section. With one active maintainer that is a reasonable trade: the person who merges is the person who ran the tests. With a second contributor it becomes riskier, because <code>main</code> deploys DEV automatically and the pipeline's production cron reads <code>main</code>.</p>
+<p><strong>No branch protection.</strong> GitHub can require approving reviews and require status checks to be "<code>successful</code>, <code>skipped</code>, or <code>neutral</code>" before merging into a protected branch (<a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">GitHub Docs: About protected branches</a> — docs.github.com). This repo uses neither. P1 found the rulesets API refused with "Upgrade to GitHub Pro or make this repository public", so the plan the repo is on may limit what is available; whether classic protection is an option is a question for the lead, not something P1 could check with READ access.</p>
+<p><strong>Reusing a branch after its squash merge.</strong> The team has done this (<code>task/issue-17</code> served #21, #53 and #55). GitHub warns that "if you keep working on the same head branch after a squash merge, later pull requests can include commits that were already squashed into the base branch", making conflicts more likely (<a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges">GitHub Docs: About pull request merges</a> — docs.github.com).</p>
+
+<h3>Concrete next steps</h3>
+<ol>
+  <li><strong>Close D1 before anything else:</strong> write access, who merges, GCP need. No ticket can start until the first is solved.</li>
+  <li><strong>Start every PR from a fresh branch off <code>main</code></strong>, never a branch that was already squash-merged, to avoid the replayed-commits problem above.</li>
+  <li><strong>Offer a small first ticket from the D1 hygiene list</strong>, if the lead likes the idea: for example, fix <code>deploy/ib-research-report-pipeline/README.md</code>, whose test command fails from the repo root and whose secret list omits the two Oxylabs secrets. It is low-risk and exercises the whole flow end to end.</li>
+  <li><strong>Later, propose a minimal PR check:</strong> one GitHub Actions workflow with a <code>pull_request</code> trigger that runs the two offline test suites. Both already run locally without network services (the pipeline suite stubs the DB, <code>gh</code>, Codex and Playwright), which makes them cheap CI candidates. This is a team decision; raise it, don't just open it.</li>
+</ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="quiz">
+<h2>Quiz</h2>
+<p>Click an answer to check it.</p>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> Your PR has exactly one commit, headlined <code>wip etf fix</code>. Just before merging, you rename the PR title to <code>fix(ai-chat): handle missing ETF dates</code> and squash-merge. What lands on <code>main</code>?</p>
+  <button class="opt" data-correct="false">fix(ai-chat): handle missing ETF dates (#N)</button>
+  <button class="opt" data-correct="true">wip etf fix (#N)</button>
+  <button class="opt" data-correct="false">Both lines: the title as subject and the commit as a bullet</button>
+  <button class="opt" data-correct="false">It depends on whether the PR was a draft</button>
+  <p class="why" hidden>On a single-commit PR, GitHub's default squash subject is the commit headline, not the PR title, which is what happened on #49. Fix the commit itself (or edit the subject in the merge dialog).</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> You merge a PR that only changes <code>ai-chat-backend/tests/test_schemas.py</code>. What happens?</p>
+  <button class="opt" data-correct="false">Nothing: test files don't affect the running service</button>
+  <button class="opt" data-correct="true">Cloud Build rebuilds and redeploys DEV</button>
+  <button class="opt" data-correct="false">PROD is redeployed with the same image</button>
+  <button class="opt" data-correct="false">GitHub Actions runs the test suite on main</button>
+  <p class="why" hidden>The DEV trigger includes <code>ai-chat-backend/**</code> and ignores only Markdown and <code>.env.example</code>, so test-only changes redeploy DEV too. No Actions workflow runs tests.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> You're on branch <code>task/issue-65-etf-chart</code>, fixing one item of the umbrella issue #65. What goes in Related issue?</p>
+  <button class="opt" data-correct="false"><code>Closes #65</code>, because the branch name contains issue-65</button>
+  <button class="opt" data-correct="true"><code>Refs #65 — &lt;which item&gt;</code></button>
+  <button class="opt" data-correct="false"><code>None</code>, since it's only partial work</button>
+  <button class="opt" data-correct="false">Put <code>(#65)</code> in the PR title instead</button>
+  <p class="why" hidden><code>Closes</code> would auto-close the whole umbrella. Team practice (#95, #100, #109, #110) and your CLAUDE.local.md override say <code>Refs</code> with a scope note, even on a <code>task/issue-N</code> branch.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> How does a new version of <code>ai-chat-backend</code> reach PROD?</p>
+  <button class="opt" data-correct="false">Any merge to main touching ai-chat-backend/ promotes DEV's image to PROD</button>
+  <button class="opt" data-correct="false">Pushing an <code>ai-chat-backend-vX.Y.Z</code> tag builds and deploys it</button>
+  <button class="opt" data-correct="true">A tag builds the image; then a merged change to <code>prod.service.yaml</code> deploys it, with explicit release approval</button>
+  <button class="opt" data-correct="false">Someone runs <code>update-runtime-secret.sh prod</code></button>
+  <p class="why" hidden>The tag trigger has <code>_DEPLOY: "false"</code>, so it only builds. The PROD deploy trigger fires on a main push touching <code>prod.service.yaml</code>. Both need approval under the AGENTS.md and your deploy guards.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> Why does your PR's <code>## Verification</code> section matter more in this repo than in a typical one?</p>
+  <button class="opt" data-correct="false">Because GitHub blocks the merge until the section is filled in</button>
+  <button class="opt" data-correct="false">Because the lead's AI reviewer parses it to decide whether to approve</button>
+  <button class="opt" data-correct="true">Because no CI or required check runs on PRs, so it is the only record that the change was tested, and of what wasn't</button>
+  <button class="opt" data-correct="false">Because the PR template requires it</button>
+  <p class="why" hidden>Nothing runs on PRs and <code>main</code> is unprotected, yet merging deploys DEV or feeds the production cron. The template doesn't even contain a Verification section; it's a team habit you've adopted as a rule.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        btn.setAttribute('aria-pressed', 'true');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
