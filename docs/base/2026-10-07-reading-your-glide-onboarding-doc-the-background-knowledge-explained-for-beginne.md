@@ -1,6 +1,7 @@
 ---
-title: "Reading Your Glide Onboarding Doc — The Background Knowledge, Explained for Beginners"
+title: "글라이드 온보딩 문서 제대로 읽기 — 입문자를 위한 배경지식 해설"
 date: 2026-10-07
+version: 2
 tags:
   - onboarding
   - research-agent
@@ -11,277 +12,266 @@ source:
   repo: base
 ---
 
-# Reading Your Glide Onboarding Doc — The Background Knowledge, Explained for Beginners
+# 글라이드 온보딩 문서 제대로 읽기 — 입문자를 위한 배경지식 해설
 
-> This is an educational write-up of the background you need to read `onboarding.docx`
-> (「수강님 온보딩 안내: 계약 기간 업무와 평가 방식」, dated 2026-10-05) properly.
-> Written for a novice programmer — every piece of jargon is explained as it appears.
-> The sources of truth are the two documents themselves:
-> `/Users/sugang/projects/glide/base/onboarding.docx` (what is expected of you and how you are scored)
-> and `/Users/sugang/projects/glide/base/research_agent_roadmap.docx` (「글라이드 리서치 에이전트 로드맵」, the design).
-> This file is a teaching companion, not the runbook. Where the two docs disagree, the docs win.
+> 이 글은 `onboarding.docx`(「수강님 온보딩 안내: 계약 기간 업무와 평가 방식」, 2026-10-05)를
+> 제대로 읽는 데 필요한 배경지식을 정리한 교육용 해설입니다.
+> 초보 프로그래머를 위해 썼습니다 — 전문 용어는 처음 나올 때마다 바로 풀어 설명합니다.
+> 기준 문서는 두 개입니다: `/Users/sugang/projects/glide/base/onboarding.docx`(무엇을 기대하고
+> 어떻게 평가하는가)와 `/Users/sugang/projects/glide/base/research_agent_roadmap.docx`
+> (「글라이드 리서치 에이전트 로드맵」, 설계).
+> 이 파일은 학습용 길잡이일 뿐 런북이 아닙니다. 두 문서와 다르면 원문이 맞습니다.
 
-## 1. What it is
+## 1. 이 문서는 무엇인가
 
-The onboarding doc is a short **contract of expectations** (a written agreement of what you will
-deliver, by when, and how it will be judged). It covers your contract period, which ends on
-**December 31**, and it is built around two projects:
+온보딩 문서는 짧은 **기대치 합의서**(무엇을, 언제까지, 어떤 기준으로 평가받는지를 적은 문서)입니다.
+**12월 31일**까지의 계약 기간을 다루고, 두 개의 프로젝트로 구성됩니다.
 
-| Project | Dates | What it is |
+| 프로젝트 | 기간 | 내용 |
 |---|---|---|
-| Project 1 (프로젝트 1) | 10/7 – 11/3 (4 weeks) | Stage 1 of the research agent: global IB signals + weekly email |
-| Project 2 (프로젝트 2) | 11/4 – 12/18 (~7 weeks) | Topic announced near the end of Project 1; **you** draft its scope |
+| 프로젝트 1 | 10/7 – 11/3 (4주) | 리서치 에이전트 1단계: 글로벌 IB 신호 + 주간 이메일 |
+| 프로젝트 2 | 11/4 – 12/18 (약 7주) | 주제는 1차 종료 즈음 공개, 범위 초안은 **본인이** 작성 |
 
-The final evaluation is 12/21–22, and the written decision (convert to full-time / extend / end)
-arrives on 12/24.
+최종 평가는 12/21–22, 서면 판정(전환 / 계약 연장 / 종료)은 12/24입니다.
 
-### Why does it feel hard to read?
+### 왜 읽기가 어렵게 느껴질까?
 
-Because it is written *on top of* the roadmap. Almost every noun in the Project 1 table —
-`signals`, `entity_id`, `theme_id`, `evidence_ref`, `theme_alias`, "candidate theme", "backfill" —
-is defined only in the roadmap. The onboarding doc assumes you already know three layers of
-background:
+이 문서가 로드맵을 **전제로** 쓰였기 때문입니다. 프로젝트 1 표의 명사 대부분 —
+`signals`, `entity_id`, `theme_id`, `evidence_ref`, `theme_alias`, candidate 테마, 백필 — 은
+로드맵에서만 정의됩니다. 온보딩 문서는 세 겹의 배경지식을 이미 안다고 가정합니다.
 
-1. **The product** — what the "research agent" is.
-2. **The data model** — the tables and IDs everything is stored under.
-3. **The engineering practices** — PRs, reviews, runbooks, secrets.
+1. **제품** — "리서치 에이전트"가 무엇인가.
+2. **데이터 모델** — 모든 것이 저장되는 테이블과 ID.
+3. **개발 관행** — PR, 리뷰, 런북, 시크릿.
 
-Plus a fourth layer that is just arithmetic: **the scoring system**. Sections 2–3 walk through
-each layer.
+여기에 네 번째 층, 그냥 산수인 **평가 체계**가 더해집니다. 2–3장에서 하나씩 살펴봅니다.
 
-## 2. Why it exists in this project
+## 2. 이 문서가 존재하는 이유
 
-The doc says it directly: *"평가 기준을 미리 알아야 눈치가 아니라 실력으로 일할 수 있다"* —
-if you know the grading rules in advance, you can work on skill instead of guessing what people
-want. So the doc deliberately publishes:
+문서가 직접 말합니다: *"평가 기준을 미리 알아야 눈치가 아니라 실력으로 일할 수 있다."*
+그래서 일부러 다음을 모두 공개합니다.
 
-- **what** you must deliver (6 required items, 4 optional),
-- **who** you work with (대표 / Jake / Siun),
-- **where** documents live (Google Drive vs. the GitHub repo),
-- **how** you are scored (6 areas, 1–5 points, weighted).
+- **무엇을** 내야 하는지 (필수 6개, 확장 4개),
+- **누구와** 일하는지 (대표 / 제이크 / 시운),
+- 문서를 **어디에** 두는지 (구글 드라이브 vs 깃헙 저장소),
+- **어떻게** 채점하는지 (6개 영역, 1–5점, 가중 평균).
 
-Think of it like a course syllabus: the roadmap is the textbook, the onboarding doc is the
-syllabus that says which chapters are on the exam and how the exam is graded.
+강의 계획서에 비유하면 이해가 쉽습니다. 로드맵은 교과서, 온보딩 문서는 "시험 범위와 채점
+방식"을 적은 강의 계획서입니다.
 
-## 3. How it works here
+## 3. 여기서는 어떻게 돌아가는가
 
-### 3.1 The product: what is a "research agent"?
+### 3.1 제품: "리서치 에이전트"란?
 
-Glide already has screens showing reports from **global investment banks** (**IB** — large
-firms like Goldman Sachs or Jefferies that publish market research), each with an
-**AI RESEARCH SUMMARY** (an LLM-written summary a human reads). The roadmap upgrades this in
-three stages (단계):
+글라이드에는 이미 **글로벌 IB**(골드만삭스, 제프리스처럼 시장 리서치를 내는 대형 투자은행)의
+리포트를 보여주는 화면이 있고, 리포트마다 **AI RESEARCH SUMMARY**(사람이 읽는, LLM이 쓴 요약)가
+붙어 있습니다. 로드맵은 이를 단계별로 확장합니다.
 
-- **Stage 0 (0단계)** — not a separate stage, just first-week prep: agree on shared IDs and tables.
-- **Stage 1 (1단계)** — global IB dashboard + weekly email. **This is your Project 1.**
-- **Stage 2** — Korean research product (Hankyung/Naver reports, analyst track records).
-- **Stage 3** — connect news, global IB, and Korean research.
+- **0단계** — 별도 개발 단계가 아니라 첫 주 준비 작업: 공통 ID와 테이블을 합의.
+- **1단계** — 글로벌 IB 대시보드 + 주간 이메일. **이것이 프로젝트 1입니다.**
+- **2단계** — 한국 리서치 프로덕트 (한경·네이버 리포트, 증권사 트랙레코드).
+- **3단계** — 뉴스·글로벌 IB·국내 리서치 연결.
 
-The key idea is **"signals on top of summaries" (요약 위에 신호)**. A summary is prose for
-humans; a **signal** (신호) is a small structured record a computer can count: *which theme,
-which direction, over what time span, how confident*. Count signals across many reports and you
-can say "this theme is rising" or "the banks disagree about this theme" — which a pile of
-summaries can't tell you.
+핵심 아이디어는 **"요약 위에 신호"** 입니다. 요약은 사람이 읽는 문장이고, **신호**는 컴퓨터가 셀 수
+있는 작은 구조화 레코드입니다: *어떤 테마에 대해, 어느 방향으로, 어떤 기간을, 얼마나 확신하며*.
+많은 리포트의 신호를 세면 "이 테마가 떠오른다", "하우스들 입장이 갈린다"고 말할 수 있습니다.
+요약 더미로는 할 수 없는 일입니다.
 
-### 3.2 The vocabulary of a signal
+### 3.2 신호의 어휘
 
-Each signal extracted from a report has these fields (from the roadmap's extraction step):
+리포트에서 추출한 신호는 다음 필드를 가집니다 (로드맵의 신호 추출 단계 기준).
 
-| Field | Meaning | Example values |
+| 필드 | 의미 | 예시 값 |
 |---|---|---|
-| `theme_raw` | the theme as the report worded it | "AI data-center spend" |
-| `theme_canonical` / `theme_id` | the standard theme it maps to | an ID from `theme_taxonomy` |
-| `stance` (입장) | the direction of the view | `bull` (positive) / `bear` (negative) / `neutral` |
-| `horizon` (기간) | the time span the view is about | `short` / `mid` / `long` |
-| `confidence` | how sure the extractor is | below 0.6 → sent to the review queue |
-| `evidence_ref` | *where* in the report the claim is | a paragraph tag like `p2_para1` |
-| `entities` | companies mentioned | mapped to `entity_id`s |
+| `theme_raw` | 리포트가 쓴 표현 그대로의 테마 | "AI data-center spend" |
+| `theme_canonical` / `theme_id` | 매핑된 표준 테마 | `theme_taxonomy`의 ID |
+| `stance` (입장) | 견해의 방향 | `bull`(강세) / `bear`(약세) / `neutral` |
+| `horizon` (기간) | 견해가 다루는 기간 | `short` / `mid` / `long` |
+| `confidence` (확신도) | 추출기가 얼마나 확신하는가 | 0.6 미만이면 검토 큐로 |
+| `evidence_ref` | 근거가 리포트 *어디에* 있는가 | `p2_para1` 같은 문단 태그 |
+| `entities` | 언급된 종목 | `entity_id`로 매핑 |
 
-Two rules surprise beginners:
+입문자가 놀라는 규칙 두 가지:
 
-- **One sentence can make two signals.** "Short-term bearish, long-term bullish" becomes two
-  signals with different horizons.
-- **Disagreement only counts within the same horizon.** A bank that is short-term bear and one
-  that is long-term bull are *not* in disagreement (불일치) — they're talking about different time spans.
+- **한 문장이 신호 두 개가 될 수 있습니다.** "단기 약세, 장기 강세"는 기간이 다른 신호 둘로 나눕니다.
+- **불일치는 같은 기간 안에서만 셉니다.** 단기 bear 하우스와 장기 bull 하우스는 **불일치**가
+  아닙니다 — 서로 다른 기간을 말하고 있으니까요.
 
-The appendix says a 1–2 score in "domain understanding" means confusing
-**stance · horizon · revision** (리비전 — a change to an analyst's target price or rating, which
-matters mostly in Stage 2). So those three words are worth knowing cold.
+부록의 채점 기준에서 "도메인 이해" 1–2점은 **stance · horizon · 리비전**을 끝까지 헷갈리는
+경우입니다. **리비전**은 애널리스트의 목표가나 투자의견이 바뀌는 것으로, 주로 2단계에서
+중요합니다. 이 세 단어는 확실히 구분해 두세요.
 
-### 3.3 The data model: IDs and tables
+### 3.3 데이터 모델: ID와 테이블
 
-A **table** is like a spreadsheet tab in a database; a **schema** is the list of its columns and
-their types. A **key** (or **primary key**) is the column that uniquely identifies each row.
+**테이블**은 데이터베이스 안의 스프레드시트 탭 같은 것이고, **스키마**는 그 컬럼 목록과 타입입니다.
+**키**(또는 **기본키**)는 각 행을 유일하게 식별하는 컬럼입니다.
 
-The whole roadmap hinges on two IDs being agreed **once**, in week 1:
+로드맵 전체는 첫 주에 **한 번** 합의하는 두 ID에 달려 있습니다.
 
-- **`entity_id`** — one ID per company, in `market:ticker` form, e.g. `KRX:005930` (Samsung
-  Electronics) or `NASDAQ:NVDA`. The market prefix exists because bare tickers collide
-  (e.g. `1810` and `7974` are Hong Kong / Tokyo numeric codes). Korean codes are always
-  **6-character strings**: read `005930` as a number and it becomes `5930`, and every join breaks.
-- **`theme_id`** — one ID per standard theme, from the **theme dictionary** (테마 사전).
+- **`entity_id`** — 종목마다 하나, `market:ticker` 형식. 예: `KRX:005930`(삼성전자),
+  `NASDAQ:NVDA`. 거래소 접두어가 필요한 이유는 티커만으로는 겹치기 때문입니다
+  (1810 샤오미, 7974 닌텐도처럼 숫자만 있는 해외 코드). 국내 종목코드는 항상 **6자리 문자열**:
+  `005930`을 숫자로 읽으면 `5930`이 되어 모든 조인이 깨집니다.
+- **`theme_id`** — **테마 사전**에 있는 표준 테마마다 하나.
 
-Why so strict? Because Stage 3's "connect three sources" is then just a **join** (a database
-operation that matches rows from two tables by a shared column). Agree on IDs now, and Stage 3
-is a query; disagree, and Stage 3 is a rewrite.
+왜 이렇게 엄격할까요? 그래야 3단계의 "세 소스 연결"이 그냥 **조인**(공통 컬럼으로 두 테이블의
+행을 맞붙이는 데이터베이스 연산)이 되기 때문입니다. 지금 ID를 맞춰 두면 3단계는 쿼리 하나,
+안 맞추면 3단계는 재개발입니다.
 
-The tables you will co-design with Jake:
+제이크와 공동 설계할 테이블:
 
-| Table | Role |
+| 테이블 | 역할 |
 |---|---|
-| `entity` | company master — one row per stock |
-| `theme_taxonomy` | the standard themes, each with `status`: `active` / `candidate` / `retired` |
-| `theme_alias` | alternate spellings → `theme_id`; `source` is `seed` (initial) or `reviewed` (a human approved it) |
-| `signals` | every signal from every source, in one format |
-| `theme_trend` | weekly aggregates: rising / cooling / disagreement |
-| `email_log` | what was sent and how it performed (opens, clicks) |
-| `predictions`, `outcomes`, `scores`, `entity_theme` | Stage 2–3 tables (track records, theme links) |
+| `entity` | 종목 마스터 — 종목당 한 행 |
+| `theme_taxonomy` | 표준 테마, `status`는 `active` / `candidate` / `retired` |
+| `theme_alias` | 다른 표현 → `theme_id`; `source`는 `seed`(초기값) 또는 `reviewed`(사람이 승인) |
+| `signals` | 모든 소스의 신호를 한 형식으로 |
+| `theme_trend` | 주간 집계: 떠오름 / 식어감 / 불일치 |
+| `email_log` | 무엇을 보냈고 성과가 어땠는지 (오픈, 클릭) |
+| `predictions`, `outcomes`, `scores`, `entity_theme` | 2–3단계 테이블 (트랙레코드, 테마 연결) |
 
-### 3.4 The pipeline: how a report becomes an email
+### 3.4 파이프라인: 리포트가 이메일이 되기까지
 
-A **pipeline** is a chain of automated steps where each step's output is the next one's input.
+**파이프라인**은 각 단계의 출력이 다음 단계의 입력이 되는 자동화 단계의 사슬입니다.
 
 ```
- Global IB house pages (Goldman Sachs, Jefferies, …)
-        │  weekly scrape; skip already-seen URL + title hash
+ 글로벌 IB 하우스 페이지 (골드만삭스, 제프리스, …)
+        │  주 1회 수집; 이미 본 URL + 제목 해시는 건너뜀
         ▼
- reports  (house, title, issued_at taken from metadata — never guessed, url)
-        │  split into paragraphs, tag each: p2_para1 …
-        ├──────────► AI RESEARCH SUMMARY   (existing prompt — must not change)
+ reports  (하우스, 제목, issued_at — 메타데이터에서 확정, 절대 추정 안 함, url)
+        │  문단 분해, 문단마다 태그: p2_para1 …
+        ├──────────► AI RESEARCH SUMMARY   (기존 프롬프트 — 바꾸면 안 됨)
         │
-        ▼  a second, separate LLM call per report
- signal JSON: theme_raw, stance, horizon, confidence, evidence_ref, entities
-        │  theme mapping: alias dictionary → embedding similarity → else "candidate"
+        ▼  리포트당 별도의 두 번째 LLM 호출
+ 신호 JSON: theme_raw, stance, horizon, confidence, evidence_ref, entities
+        │  테마 매핑: 별칭 사전 → 임베딩 유사도 → 그래도 안 되면 "candidate"
         ▼
-★ signals  (entity_id + theme_id + evidence_ref + url filled by the rules)
+★ signals  (entity_id + theme_id + evidence_ref + url 이 규칙대로 채워짐)
         │
-        ├──► theme_trend ──► dashboard (rising · cooling · disagreement)
-        ├──► customer email, Monday 07:00 KST ──► email_log
-        └──► operator review mail, Friday (candidates, low-confidence, failed sources)
-                  └─ accept / merge / ignore ──► theme_alias (source = reviewed)
+        ├──► theme_trend ──► 대시보드 (떠오름 · 식어감 · 불일치)
+        ├──► 고객 이메일, 월요일 07:00 KST ──► email_log
+        └──► 운영자 검토 메일, 금요일 (candidate 테마, 저확신 신호, 수집 실패)
+                  └─ 편입 / 병합 / 무시 ──► theme_alias (source = reviewed)
 ```
 
-The ★ line is the heart of Project 1: required item #2 says exactly this — `signals` with
-`entity_id·theme_id·evidence_ref·url` filled "규칙대로" (by the Stage 0 rules). Everything
-downstream (dashboard, emails, Stage 3) only works if that row is right.
+★ 줄이 프로젝트 1의 심장입니다. 필수 산출물 2번이 정확히 이것 — `signals`에
+`entity_id·theme_id·evidence_ref·url`이 "규칙대로"(0단계 규칙) 채워짐 — 입니다.
+대시보드, 이메일, 3단계 모두 이 한 행이 맞아야만 돌아갑니다.
 
-A few words from the picture:
+그림 속 용어들:
 
-- **Backfill (백필)** — running the pipeline over *past* data, not just new data. Trends need at
-  least 8 weeks of history, so you extract **6 months** of old reports before launch.
-- **Embedding similarity** — turning text into a list of numbers so "similar meaning" becomes
-  "nearby numbers"; used when the alias dictionary has no exact match.
-- **Review queue (검토 큐)** — a list of items a human must check: low-confidence signals, and
-  reports where the summary's tone and the signal's stance disagree.
-- **Candidate theme** — a new theme the system found but no human has approved yet; the Friday
-  operator mail is where it gets accepted (편입), merged (병합), or ignored (무시).
-- **"No impact on the AI summary" (기존 AI 요약 무영향)** — required item #3. Signal extraction is
-  a *separate* LLM call precisely so the existing summary prompt and output stay identical.
+- **백필** — 새 데이터뿐 아니라 *과거* 데이터에도 파이프라인을 돌리는 것. 추세 계산에는 최소
+  8주가 필요하므로, 출시 전에 **6개월치** 과거 리포트를 추출합니다.
+- **임베딩 유사도** — 텍스트를 숫자 목록으로 바꿔 "의미가 비슷함"을 "숫자가 가까움"으로 만드는 것.
+  별칭 사전에 정확히 일치하는 항목이 없을 때 씁니다.
+- **검토 큐** — 사람이 확인해야 할 항목 목록: 확신도 낮은 신호, 그리고 요약의 톤과 신호의 입장이
+  어긋난 리포트.
+- **candidate 테마** — 시스템이 새로 찾았지만 아직 사람이 승인하지 않은 테마. 금요일 운영자
+  메일에서 편입·병합·무시가 결정됩니다.
+- **기존 AI 요약 무영향** — 필수 산출물 3번. 신호 추출을 *별도* LLM 호출로 하는 이유가 바로
+  기존 요약 프롬프트와 출력을 그대로 두기 위해서입니다.
 
-### 3.5 The accuracy check: what "20건 검증" means
+### 3.5 정확도 검증: "20건 검증"이 뜻하는 것
 
-Required item #1 is to set **accuracy thresholds** (정확도 기준값) for theme mapping and stance
-judgment, plus a procedure for checking a **weekly sample of 20** (주간 표본 20건): pick 20 signals,
-have a human judge whether each theme and stance is correct, and compute the percentage. The
-roadmap's example targets are **theme mapping 90%, stance 85%**, but the real values are set
-after looking at samples — and the CEO (대표) approves them. This number is the gate for "is
-the pipeline good enough?", so it comes first (week 1).
+필수 산출물 1번은 테마 매핑과 입장 판정의 **정확도 기준값**, 그리고 **주간 표본 20건** 검증 절차를
+정하는 것입니다. 신호 20개를 골라 사람이 테마와 입장이 맞는지 판정하고 비율을 계산합니다.
+로드맵의 예시 목표는 **테마 매핑 90%, 입장 판정 85%** 이지만, 실제 값은 표본을 보고 정하며
+대표가 승인합니다. 이 숫자가 "파이프라인이 쓸 만한가?"의 관문이라 첫 주에 먼저 합니다.
 
-### 3.6 The engineering practices
+### 3.6 개발 관행
 
-- **Repository (저장소)** — the GitHub project `research-agent`, holding `schema/`, `pipelines/`,
-  `prompts/`, `taxonomy/`, and `docs/tables/` + `docs/runbooks/`.
-- **PR (pull request)** — a proposed change that others review before it is merged.
-- **`main` branch + branch protection** — `main` is the official version; protection means a PR
-  can't merge without ≥1 approval. **CODEOWNERS** (a GitHub file naming who must review which
-  folders) makes Jake review your code and you review Jake's — the doc's **cross review (교차 리뷰)**.
-- **Table spec (테이블 명세서)** — per table: columns, keys, data source, update cadence, which
-  job fills it, which screen reads it. Updated **in the same PR** as any schema change.
-- **Runbook (런북)** — a step-by-step "how to operate this" document. Yours must cover three operations:
-  - **rerun (재실행)** — run a job again after it failed;
-  - **backfill** — fill in historical data;
-  - **rollback (롤백)** — undo a bad change and return to the last good state.
-  You must perform each **yourself at least once**.
-- **Secrets** — tokens and API keys (passwords for programs) live only in **GitHub Secrets** or
-  server **environment variables** (settings the server injects at run time), never in a
-  notebook or the repo. That's why the week-1 checklist says to strip the token from the
-  Hankyung scraper before moving it to `pipelines/`.
-- **Source of truth for prompts** — the repo. Google Docs only hold *why* a prompt changed and
-  the validation result, with a link to the repo.
+- **저장소** — 깃헙 `research-agent`: `schema/`, `pipelines/`, `prompts/`, `taxonomy/`,
+  `docs/tables/` + `docs/runbooks/`.
+- **PR (pull request)** — 병합 전에 다른 사람이 리뷰하는 변경 제안.
+- **`main` 브랜치 + 브랜치 보호** — `main`은 공식 버전이고, 보호 설정은 승인 1개 이상 없이는
+  병합을 막습니다. **CODEOWNERS**(폴더별 필수 리뷰어를 지정하는 깃헙 파일)로 제이크가 수강님
+  코드를, 수강님이 제이크 코드를 리뷰합니다 — 문서의 **교차 리뷰**.
+- **테이블 명세서** — 테이블마다 컬럼, 키, 데이터 출처, 갱신 주기, 채우는 작업, 읽는 화면.
+  스키마가 바뀌면 **같은 PR**에서 고칩니다.
+- **런북** — "이걸 어떻게 운영하나"를 단계별로 적은 문서. 세 가지 작업을 다뤄야 합니다.
+  - **재실행** — 실패한 작업을 다시 돌리기;
+  - **백필** — 과거 데이터 채우기;
+  - **롤백** — 잘못된 변경을 되돌려 마지막 정상 상태로 복귀.
+  각각을 **직접 한 번 이상** 해 봐야 합니다.
+- **시크릿** — 토큰과 API 키(프로그램용 비밀번호)는 **GitHub Secrets**나 서버 **환경 변수**
+  (서버가 실행 시점에 넣어 주는 설정)로만 다루고, 노트북이나 저장소에 넣지 않습니다. 첫 주
+  체크리스트에 "한경 스크래퍼에서 토큰을 지운 뒤 `pipelines/`로 이전"이 있는 이유입니다.
+- **프롬프트 기준본** — 저장소입니다. 구글 문서에는 *왜* 바꿨는지와 검증 결과만 적고 저장소
+  링크를 답니다.
 
-### 3.7 The scoring system, as arithmetic
+### 3.7 평가 체계를 산수로
 
-Each project is scored on 6 areas, 1–5 points each, then weighted:
+각 프로젝트는 6개 영역을 1–5점으로 채점한 뒤 가중합합니다.
 
-| Area | Weight |
+| 영역 | 비중 |
 |---|---|
-| 1. Delivery | 35% |
-| 2. Quality & principles | 20% |
-| 3. Co-ownership & collaboration | 15% |
-| 4. Documentation & operability | 10% |
-| 5. Judgment & communication | 15% |
-| 6. Domain understanding & learning | 5% |
+| 1. 딜리버리 | 35% |
+| 2. 품질과 원칙 준수 | 20% |
+| 3. 공동 소유와 협업 | 15% |
+| 4. 문서화와 운영 가능성 | 10% |
+| 5. 판단과 커뮤니케이션 | 15% |
+| 6. 도메인 이해와 학습 속도 | 5% |
 
-**3 points = the baseline expected of a full-time hire.** Worked example: scoring 4 on Delivery
-and 3 everywhere else gives `0.35×4 + 0.65×3 = 1.40 + 1.95 = 3.35`.
+**3점 = 정규직에게 기대하는 기본 수준.** 예시: 딜리버리 4점, 나머지 모두 3점이면
+`0.35×4 + 0.65×3 = 1.40 + 1.95 = 3.35`.
 
-The final score is `0.4 × Project 1 + 0.6 × Project 2`. If Project 1 = 3.2 and Project 2 = 3.7:
-`0.4×3.2 + 0.6×3.7 = 1.28 + 2.22 = 3.50`. Conversion is offered only if **all three** hold:
+최종 점수는 `0.4 × 프로젝트 1 + 0.6 × 프로젝트 2`. 프로젝트 1이 3.2, 프로젝트 2가 3.7이면
+`0.4×3.2 + 0.6×3.7 = 1.28 + 2.22 = 3.50`. 정규직 전환은 **세 조건을 모두** 충족할 때 제안됩니다.
 
-1. final score **≥ 3.5**;
-2. **every** Project 2 area **≥ 3** (one weak area blocks it, whatever the average);
-3. the five rules of section 5 (꼭 지켜 주세요) were kept.
+1. 최종 점수 **3.5 이상**;
+2. 프로젝트 2의 **모든** 영역 **3점 이상** (평균이 높아도 한 영역이 약하면 안 됨);
+3. 5장의 원칙(꼭 지켜 주세요)을 지킴.
 
-And for Project 2, the bar for "3" itself rises: same results **with less help**.
+그리고 프로젝트 2에서는 "3점"의 기준 자체가 올라갑니다: 같은 결과를 **더 적은 도움으로**.
 
-## 4. Trade-offs and alternatives
+## 4. 트레이드오프와 대안
 
-### Why is the schedule so tight, and what am I allowed to do about it?
+### 일정이 왜 이렇게 빠듯하고, 나는 무엇을 할 수 있나?
 
-The roadmap packs Stages 1 *and* 2 plus a Stage 3 beta into 4 weeks; the onboarding doc
-narrows your Project 1 to the Stage 1 slice (signals, emails, table co-ownership). Even so, it
-admits *"로드맵 일정 자체가 빠듯합니다"*. The doc's answer is explicit: proposing to cut scope or
-reorder work to protect the required items **is scored as good judgment, not a penalty**
-(area 5, where 4 points = "proposed scope/order changes yourself and kept the required items").
+로드맵은 1·2단계와 3단계 베타를 4주에 몰아 넣었고, 온보딩 문서는 프로젝트 1을 1단계 부분
+(신호, 이메일, 테이블 공동 소유)으로 좁혔습니다. 그래도 *"로드맵 일정 자체가 빠듯합니다"* 라고
+인정합니다. 답도 명시되어 있습니다: 필수 산출물을 지키려고 범위를 줄이거나 순서를 바꾸자고
+제안하는 것은 **감점이 아니라 좋은 판단으로 평가**됩니다 (5번 영역의 4점 = "범위 축소·순서 변경을
+스스로 제안해 필수를 지킴").
 
-### Why "design together" instead of "build alone, then explain"?
+### 왜 "혼자 만들고 설명"이 아니라 "함께 설계"인가?
 
-Building alone is faster in week 1 and slower forever after: only one person can fix it at 3 a.m.
-Co-design, specs, cross review, and Friday walkthroughs (where **you explain first**) trade some
-speed for a system two people can operate — which is literally what area 4's 5-point bar
-describes ("a newcomer can run the pipeline from the docs alone").
+혼자 만들면 첫 주는 빠르지만 그 뒤로는 계속 느립니다. 새벽 3시에 고칠 수 있는 사람이 한 명뿐이니까요.
+공동 설계, 명세서, 교차 리뷰, 금요일 워크스루(**수강님이 먼저 설명**)는 속도를 조금 내주고 두 사람이
+운영할 수 있는 시스템을 얻는 선택입니다 — 4번 영역 5점 기준("처음 온 사람이 문서만으로
+파이프라인을 돌릴 수 있음") 그대로입니다.
 
-### Why does honesty outrank points?
+### 왜 정직함이 점수보다 앞서나?
 
-The section 5 rules sit *outside* the score: share validation results as they are, even below
-the bar; report mistakes immediately. Delays outside your control are not penalized — but log
-them in the decision record (결정 기록). A hidden mistake costs more than a reported one.
+5장의 원칙은 점수 *바깥*에 있습니다: 기준에 못 미친 검증 결과도 그대로 공유하고, 실수는 바로
+알립니다. 통제 밖의 지연은 감점하지 않지만 **결정 기록**에 남겨야 합니다. 숨긴 실수가 알린
+실수보다 훨씬 비쌉니다.
 
-> **The lesson in one sentence:** the onboarding doc is a syllabus for the roadmap — learn the
-> signal vocabulary (stance, horizon, evidence_ref), protect the ★ `signals` row, and remember
-> that early, honest communication is itself one of the things being graded.
+> **한 문장 교훈:** 온보딩 문서는 로드맵의 강의 계획서다 — 신호 어휘(stance, horizon,
+> evidence_ref)를 익히고, ★ `signals` 행을 지키고, 일찍 정직하게 소통하는 것 자체가 채점 대상임을
+> 기억하라.
 
-## Mini-glossary
+## 용어 미니 사전
 
-- **Signal (신호)** — a structured record of one view in a report: theme, stance, horizon, confidence, evidence.
-- **Stance (입장)** — direction of a view: bull, bear, or neutral.
-- **Horizon (기간)** — time span of a view: short, mid, or long.
-- **Revision (리비전)** — a change in an analyst's target price or rating (mainly Stage 2).
-- **evidence_ref** — the paragraph tag (e.g. `p2_para1`) showing where a signal came from.
-- **entity_id** — the one company ID, `market:ticker`, e.g. `KRX:005930`.
-- **theme_id** — the one standard-theme ID from the theme dictionary.
-- **Theme alias (테마 별칭)** — an alternate wording that maps to a `theme_id`.
-- **Candidate theme** — a newly found theme awaiting human accept/merge/ignore.
-- **Global IB** — large international investment banks publishing research.
-- **Backfill (백필)** — running a pipeline over historical data.
-- **Pipeline** — a chain of automated processing steps.
-- **Join** — matching rows from two tables on a shared column.
-- **Schema** — the column definition of a database table.
-- **Review queue (검토 큐)** — items set aside for a human to check.
-- **PR (pull request)** — a proposed code change, reviewed before merging.
-- **Branch protection** — a rule that blocks merging to `main` without approval.
-- **CODEOWNERS** — a GitHub file naming required reviewers per folder.
-- **Runbook (런북)** — step-by-step operating instructions (rerun, backfill, rollback).
-- **Rollback (롤백)** — reverting to the last known-good state.
-- **GitHub Secrets** — encrypted storage for keys and tokens used by automation.
-- **Decision record (결정 기록)** — the shared spreadsheet logging what was decided and why.
+- **신호 (signal)** — 리포트 속 견해 하나를 구조화한 레코드: 테마, 입장, 기간, 확신도, 근거.
+- **입장 (stance)** — 견해의 방향: bull, bear, neutral.
+- **기간 (horizon)** — 견해가 다루는 기간: short, mid, long.
+- **리비전 (revision)** — 애널리스트의 목표가·투자의견 변경 (주로 2단계).
+- **evidence_ref** — 신호의 출처 위치를 가리키는 문단 태그 (예: `p2_para1`).
+- **entity_id** — 종목 단일 ID, `market:ticker` (예: `KRX:005930`).
+- **theme_id** — 테마 사전의 표준 테마 단일 ID.
+- **테마 별칭 (theme alias)** — `theme_id`로 매핑되는 다른 표현.
+- **candidate 테마** — 새로 발견돼 사람의 편입·병합·무시를 기다리는 테마.
+- **글로벌 IB** — 리서치를 내는 대형 해외 투자은행.
+- **백필 (backfill)** — 과거 데이터에 파이프라인을 돌리는 것.
+- **파이프라인 (pipeline)** — 자동 처리 단계의 사슬.
+- **조인 (join)** — 공통 컬럼으로 두 테이블의 행을 맞붙이는 연산.
+- **스키마 (schema)** — 데이터베이스 테이블의 컬럼 정의.
+- **검토 큐 (review queue)** — 사람이 확인하도록 따로 모아 둔 항목.
+- **PR (pull request)** — 병합 전에 리뷰받는 코드 변경 제안.
+- **브랜치 보호 (branch protection)** — 승인 없이 `main` 병합을 막는 규칙.
+- **CODEOWNERS** — 폴더별 필수 리뷰어를 지정하는 깃헙 파일.
+- **런북 (runbook)** — 재실행·백필·롤백 같은 운영 절차서.
+- **롤백 (rollback)** — 마지막 정상 상태로 되돌리기.
+- **GitHub Secrets** — 자동화에 쓰는 키와 토큰을 암호화해 보관하는 곳.
+- **결정 기록** — 무엇을 왜 결정했는지 남기는 공유 스프레드시트.
