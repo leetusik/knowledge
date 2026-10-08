@@ -947,3 +947,9 @@
 {"ts": "2026-10-08T15:50:55+09:00", "type": "slice_status_changed", "slice": "P28.F3", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-08T15:51:38+09:00", "type": "slice_status_changed", "slice": "P28.F4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-08T16:25:13+09:00", "type": "slice_status_changed", "slice": "P28.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-08T16:25:35+09:00", "type": "slice_status_changed", "slice": "P28.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}
+{"ts": "2026-10-08T16:43:59+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p", "source": "P28.REVIEW"}
+{"ts": "2026-10-08T16:47:46+09:00", "type": "phase_status_changed", "phase": "P28", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-08T16:47:46+09:00", "type": "acceptance_opened", "phase": "P28"}
+{"ts": "2026-10-08T16:47:46+09:00", "type": "deferred_created", "deferred": "D39", "source": "P28.F4"}
+{"ts": "2026-10-08T16:47:46+09:00", "type": "deferred_created", "deferred": "D40", "source": "P28.REVIEW"}

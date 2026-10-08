@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0016
-created_at: 2026-09-21T18:17:54+09:00
-commit: 62c658751d15f6d52c5a84ff6eea600b3e4153c0
+version: v0017
+created_at: 2026-10-08T16:43:59+09:00
+commit: e41eb40589d57ec58b227ec8b9d8b7f539fd52f3
 source: P28.REVIEW
-summary: P28 gate: append the phase's headline regression checks (graph fit, dock tag switch, project documents panel, full-width view, print/Export PDF, 390 console, ?next= round trip)
-previous: v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom
+summary: P28 re-review gate: append the framed-explainer checks — no inner scroll range (DPR 2, classic scrollbars, many width changes) and whole-document print from Export PDF and Cmd-P
+previous: v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip
 ---
 
 # QA
@@ -261,6 +261,15 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] `/login?next=/@{org}/{project}/{slug}` returns to that path after sign-in,
       and a hostile `next` (`//evil.example.com`) falls closed to `/dashboard`
       (P28)
+- [ ] Framed explainer (member, anonymous and `?view=full`): **no inner scroll
+      range** — the framed document's maximum `scrollTop` is 0 and a wheel over
+      the frame scrolls the page — at DPR 1 and DPR 2, with classic
+      (always-visible) scrollbars on a document wider than its frame, and after
+      hundreds of width changes (a window or side-docked DevTools drag) (P28)
+- [ ] Print / Export PDF on a framed explainer: **both** Export PDF and ⌘P print
+      it whole — its last paragraph or quiz question and the colophon are on
+      paper — on A4 and US Letter, and the frame returns to its screen height
+      (no inner scroll) after `afterprint` (P28)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

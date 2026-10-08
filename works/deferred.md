@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `27`
+- Open: `29`
 - Promoted: `5`
 - Dropped: `6`
 
@@ -35,7 +35,9 @@
 | `D36` | `deferred` | P28 gate decisions were closed at their defaults — nine open rulings, unwalked | P28.REVIEW | The operator's first real walk of the console on a phone/iPad/Safari, or the next console or design phase -- whichever comes first | `works/deferred/open/D36` |
 | `D37` | `deferred` | Stop Cloudflare rewriting framed explainers: Cache-Control no-transform on the raw relay | P28.S10 | operator picks turning it off at the P28 walkthrough, or the next change to the raw relay | `works/deferred/open/D37` |
 | `D38` | `deferred` | Unmeasured explainer box: 70rem vs round 06's flat per-tier heights | P28.S10 | a document seen stuck [data-unmeasured], or a phone report of an inner scroll on an unmeasured frame | `works/deferred/open/D38` |
+| `D39` | `deferred` | Chrome print slicing of a framed explainer (page-1 gap, near-blank pages) | P28.F4 | an operator complaint about blank pages in a PDF, or the next print-layer change | `works/deferred/open/D39` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
+| `D40` | `deferred` | Explainer reporter: measureAt can loop with a document that mutation-observes <html> | P28.REVIEW | the /explain template or any framed document gaining a MutationObserver, or an explainer seen churning or stale after load | `works/deferred/open/D40` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |

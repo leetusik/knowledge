@@ -1209,7 +1209,7 @@
       ]
     },
     "qa": {
-      "latest": "v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip",
+      "latest": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1340,6 +1340,15 @@
           "source": "P28.REVIEW",
           "summary": "P28 gate: append the phase's headline regression checks (graph fit, dock tag switch, project documents panel, full-width view, print/Export PDF, 390 console, ?next= round trip)",
           "previous": "v0015_p25.f3_f4_web_baseline_16_files_88_tests_the_cdp_cpu-throttle_repro_recipe_for_client-island_hydration_races_and_running_an_injected_script_without_jsdom"
+        },
+        {
+          "id": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p",
+          "path": "docs/versions/qa/v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p.md",
+          "created_at": "2026-10-08T16:43:59+09:00",
+          "commit": "e41eb40589d57ec58b227ec8b9d8b7f539fd52f3",
+          "source": "P28.REVIEW",
+          "summary": "P28 re-review gate: append the framed-explainer checks — no inner scroll range (DPR 2, classic scrollbars, many width changes) and whole-document print from Export PDF and Cmd-P",
+          "previous": "v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip"
         }
       ]
     },
@@ -1518,5 +1527,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-09-21T18:18:34+09:00"
+  "last_rebuilt_at": "2026-10-08T16:44:18+09:00"
 }

@@ -130,3 +130,42 @@ not a pass, the `walkthrough`, the deferred-job candidates (title / reason / tri
 (the qa carve-out only), and `explain: not written — run /explain for this phase`. Write `result.md` from
 scratch, verdict block first (the first review's `result.md` is in git). Edit the notebook per its rules and
 rewrite `## Now` last.
+
+---
+
+# Re-review #2 — plan (orchestrator native plan, auto mode, 2026-10-08)
+
+The first re-review (above) returned `changes_requested` with two findings. Both have since landed, as
+`P28.F3` (horizontal-scrollbar inner scroll, `be9157d`) and `P28.F4` (print truncation, `e41eb40`). Same
+discipline as re-review #1. Its sections *The boundary*, *What to do*, *Walkthrough* and *Return* apply
+unchanged, except for what is listed here. Read `slices/P28.F3/result.md` and `slices/P28.F4/result.md`, and
+the notebook's `## Now`.
+
+- **Boundary** (`41b569e..HEAD`, product files): `web/src/lib/explainer-height.ts`,
+  `web/tests/explainer-reporter.test.ts`, `web/src/app/(public)/documents/[id]/explainer-frame.tsx` and
+  `export-pdf-button.tsx`. The surfaces are unchanged: member page, public page, `?view=full`, print and
+  Export PDF.
+- **Spot-check yourself**, dev and the production build:
+  - F3: classic-scrollbar inner range 0 on a sideways-overflowing explainer, with the wheel moving the page;
+  - F4: Export PDF and ⌘P both print fixture 70 and a docs-30/33-shaped explainer to the last paragraph or
+    question, on A4 and Letter, and the screen is restored exactly after `afterprint`;
+  - a quick re-run of F2's latch, DPR 2 and ×20 cold-load checks.
+  Then judge F4's design. The new `kb-explainer-print` message makes the child force a reflow at 680px after
+  every height post. Is that safe for documents that run their own scripts or animations? Is its cost
+  bounded? Could it flicker, or trigger the child's own `ResizeObserver` or resize listeners in a loop? Any
+  real risk is a finding.
+- **Doc impact:** verify that the F2, F3 and F4 lines together cover the reporter and print contract.
+- **Operator Questions:** route F4's new entry (the post-deploy print check, the four limits, the reused
+  warning text) into the walkthrough, plus the Cloudflare decision. F4's page-breaking paper-waste
+  observation becomes a deferred-job candidate.
+- **Pass-only:** the qa `## Regression Checklist` carve-out now covers both checks: no inner scroll range,
+  including classic scrollbars and DPR 2, and a framed explainer prints whole from Export PDF and ⌘P.
+- **Walkthrough (on pass):**
+  1. The deploy prerequisite.
+  2. On the retina "node" Mac, Chrome "Work" profile: doc 60 has no inner scrollbar, and the wheel scrolls the
+     page.
+  3. Side-docked DevTools drag, or a window drag, then close it: still no inner scrollbar.
+  4. Doc 30 or 33: one PDF from Export PDF and one from ⌘P on A4. Both end with the last quiz question and the
+     colophon.
+  5. The Cloudflare decision.
+  Keep it short.
