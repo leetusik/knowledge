@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Explainer reporter: re-arm the runaway latch on width change and ignore an unlaid-out frame",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 10.5,
   "depends_on": [],
   "created_at": "2026-10-08T14:27:31+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-08T14:28:11+09:00",
+  "completed_at": "2026-10-08T15:01:26+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Fixed the framed-explainer inner scroll in the REPORTER string: measure() takes the ceiling of the fractional body box (DPR 2 maxScrollTop 0.5 -> 0), the 300-post latch re-arms on a width change, a 0x0 frame posts nothing, and kb-explainer-request grants one post while latched; proved before/after live in dev and the production build, five small tests",
   "validation": {
     "required": [],
     "last_run": null,
