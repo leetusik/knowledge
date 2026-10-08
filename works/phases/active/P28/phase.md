@@ -970,6 +970,19 @@ _Questions only the operator can answer. Append only; every entry is routed at t
   `explainer-frame.tsx`. **Three different files, so guessing now is the expensive option.** Please also
   say **which device** — Mac Chrome, iPhone Safari, or iPad: the one change P28 did make to this area is
   ~2× worse on a phone and invisible on a desktop.
+  - **ANSWERED (operator, 2026-10-08, Mac Chrome 1365×929; the fix stays in P28, not a new phase).**
+    Affected: `/documents/60` (private, framed `.html` explainer). Clean: `/documents/59` — a markdown
+    document, the snippet printed `null` (no `.kb-explainer`). Symptom in their words: "the doc 60 had the
+    problem when mouse over the document. the inline scroller" — with the pointer over the document the
+    wheel scrolled the frame's own inner scroller, not the page — "and now it just disappeared". The one
+    snippet line, taken after it had disappeared: `{"measured":"true","unmeasured":null,"frame":"height:
+    13307px;","h":13307,"win":[1365,929],"page":13694,"url":"/documents/60"}` — i.e. a healthy measured
+    load. A second probe minutes later, run (by mistake) in the **top** frame of the same page, read
+    `win [1365,929]`, page `scrollHeight` **2780**, no overflowing scrollers — so at that moment the frame
+    was ~2.4k px for ~13.3k px of content: a **short measured height**, which is the inner-scroller state. **Reading: intermittent** — some loads keep the fallback/short box (inner scroller), a later load
+    measures cleanly; that points at the measure/handshake timing (`explainer-height.ts` ↔
+    `explainer-frame.tsx`, cf. the P25.F4 hydration race), not at a permanently wrong height. Not yet
+    captured: the snippet line *during* a bad load. (orchestrator, recording the operator's answer)
 - **(from P28.S10, for the fix slice and the gate walkthrough — a decision the operator may have to take)**
   If the answer comes back `unmeasured`, restoring the old window-sized box means putting **`100dvh` back
   into `kb-docview.css`**, which contradicts round 06 in two signed places: the token comment "never a
@@ -1073,6 +1086,11 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
   the way to batch (nine production documents in 72 s).
 
 ## Now
+
+**UPDATE 2026-10-08 — the operator answered S10's question** (see the ANSWERED line under it in `## Operator
+Questions`): `/documents/60`, Mac Chrome, an inner scroller under the pointer that later disappeared on its
+own — an intermittent framed-explainer load, not a fixed wrong height. The fix stays in P28. Next: finish
+S10 from that answer and cut the fix slice.
 
 **`P28.S10` is done as research and the slice returns `needs_operator`: the hypothesis it was cut to kill
 is REFUTED for every document anyone here can reach, and the real repro is behind a login.** All nine
