@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P28`
-- Current slice: `P28.F4`
-- Next slice: `P28.REVIEW`
+- Current slice: `P28.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `27`
 
@@ -22,7 +22,7 @@
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
-| [ ] `P28` | `in_progress` | `changes_requested` | Console visual redesign — apply | `P28.F4` | `works/phases/active/P28` |
+| [ ] `P28` | `in_progress` | `changes_requested` | Console visual redesign — apply | `P28.REVIEW` | `works/phases/active/P28` |
 
 ## Phase P21: Web document deletion
 
@@ -122,5 +122,5 @@
 | [x] `P28.S10` | `done` | Why some framed explainers never report a height | `research` | `works/phases/active/P28/slices/P28.S10` |
 | [x] `P28.F2` | `done` | Explainer reporter: re-arm the runaway latch on width change and ignore an unlaid-out frame | `fix` | `works/phases/active/P28/slices/P28.F2` |
 | [x] `P28.F3` | `done` | Explainer reporter: count the horizontal scrollbar so classic scrollbars leave no inner scroll | `fix` | `works/phases/active/P28/slices/P28.F3` |
-| [ ] `P28.F4` | `todo` | Print and Export PDF: a framed explainer prints whole, not cut at its screen height | `fix` | `works/phases/active/P28/slices/P28.F4` |
+| [x] `P28.F4` | `done` | Print and Export PDF: a framed explainer prints whole, not cut at its screen height | `fix` | `works/phases/active/P28/slices/P28.F4` |
 | [ ] `P28.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |

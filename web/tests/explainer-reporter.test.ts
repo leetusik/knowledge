@@ -14,10 +14,19 @@ import { injectHeightReporter } from "@/lib/explainer-height";
 // exception a parent island that hydrated after the frame loaded never hears a
 // height at all and the frame keeps its CSS fallback height forever.
 
-type Post = { type: string; height?: number };
+type Post = { type: string; height?: number; width?: number };
 
-/** Execute the injected reporter against a fake frame; hand back its outbound posts. */
-function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
+/**
+ * Execute the injected reporter against a fake frame; hand back its outbound posts.
+ * `paperBox` (P28.F4) gives the root a `style` the reporter can pin, and returns the
+ * body height laid out at that pinned width; without it the root has no `style` and
+ * the reporter sends no paper message, so every older case sees the posts it always did.
+ */
+function runReporter(
+  height = 400,
+  viewport: [number, number] = [800, 600],
+  paperBox?: (width: number) => number,
+) {
   const posts: Post[] = [];
   const listeners = new Map<string, ((event: unknown) => void)[]>();
   const on = (type: string, fn: (event: unknown) => void) => {
@@ -42,17 +51,41 @@ function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
   let bar = 0;
   let quirks = false;
   const viewportHeight = () => win.innerHeight - bar;
+  let rootStyle: string | null = "color: red";
+  let pinned: number | null = null;
   const root = {
     get clientHeight() {
       return quirks ? 99999 : viewportHeight();
     },
+    ...(paperBox
+      ? {
+          style: {
+            setProperty: (prop: string, value: string, priority: string) => {
+              if (prop === "width" && priority === "important") {
+                pinned = Number.parseFloat(value);
+              }
+            },
+          },
+          getAttribute: () => rootStyle,
+          setAttribute: (_: string, value: string) => {
+            rootStyle = value;
+            pinned = null;
+          },
+          removeAttribute: () => {
+            rootStyle = null;
+            pinned = null;
+          },
+        }
+      : {}),
   };
   // `offsetHeight`/`scrollHeight` are integer-rounded in a real browser; the
   // bounding box is not.
   const body = {
     scrollHeight: Math.round(height),
     offsetHeight: Math.round(height),
-    getBoundingClientRect: () => ({ height }),
+    getBoundingClientRect: () => ({
+      height: pinned !== null && paperBox ? paperBox(pinned) : height,
+    }),
     get clientHeight() {
       return quirks ? viewportHeight() : Math.round(height);
     },
@@ -81,6 +114,8 @@ function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
     posts,
     parent,
     fire,
+    /** The root's `style` attribute as the reporter left it. */
+    rootStyle: () => rootStyle,
     /** Content reflowed to a new height; the reporter hears it as a resize. */
     reflow: (h: number) => {
       height = h;
@@ -233,5 +268,23 @@ describe("the injected explainer height reporter", () => {
 
     reflow(399); // 2px below the last post
     expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 399 });
+  });
+
+  // P28.F4 — print lays the child out at the PAPER column, taller than a desktop
+  // frame, so the frame printed at its screen height lost the document's end.
+
+  it("follows each height with the paper-column height, leaving the root as found", () => {
+    const { posts, reflow, rootStyle } = runReporter(400, [1022, 600], (w) =>
+      w === 680 ? 530.2 : -1,
+    );
+    reflow(500);
+
+    expect(posts).toEqual([
+      { type: "kb-explainer-height", height: 400 },
+      { type: "kb-explainer-print", height: 531, width: 1022 },
+      { type: "kb-explainer-height", height: 500 },
+      { type: "kb-explainer-print", height: 531, width: 1022 },
+    ]);
+    expect(rootStyle()).toBe("color: red");
   });
 });

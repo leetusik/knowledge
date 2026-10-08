@@ -6,6 +6,10 @@ import { createPortal } from "react-dom";
 import { AppButton } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 
+import {
+  prepareExplainersForPrint,
+  releaseExplainersAfterPrint,
+} from "./explainer-frame";
 import { PRINT_DATE_ATTR } from "./print-blocks";
 
 /**
@@ -20,7 +24,9 @@ import { PRINT_DATE_ATTR } from "./print-blocks";
  *
  * WHY IT NEVER SWITCHES VIEWS FIRST (§3.2): print drops the chrome itself, so the
  * printed sheet is identical whether the reader exports from the normal page or
- * from the chrome-less `?view=full` one. The control has nothing to prepare.
+ * from the chrome-less `?view=full` one. The one thing it does prepare is a
+ * framed explainer's PAPER height (P28.F4): the frame is pinned to the paper
+ * column and measured there before `print()`, then put back on `afterprint`.
  *
  * WHAT IT OWES THE READER, and it is all failure honesty:
  *   - the dialog hint, because "Export PDF" that opens a PRINT dialog is a
@@ -141,6 +147,8 @@ export function ExportPdfButton() {
   }, [clearTimer]);
 
   const fail = useCallback(() => {
+    // No dialog means no `afterprint`: put any explainer pinned for paper back.
+    releaseExplainersAfterPrint();
     if (!liveRef.current) return;
     setBusy(false);
     setMessage({ kind: "error", text: DOCUMENTS.read.exportFailed });
@@ -176,6 +184,30 @@ export function ExportPdfButton() {
         : DOCUMENTS.read.exportDialog,
     });
 
+    // P28.F4 — "Preparing…" now really prepares. A framed explainer must be
+    // measured at the PAPER column before the sheet is laid out, or everything
+    // below its screen height is cut off without a word; the frame is pinned to
+    // that column and asked until it answers from there (`explainer-frame.tsx`).
+    // ⌘P cannot wait like this; this control can, so it does.
+    void prepareExplainersForPrint().then((ready) => {
+      if (!liveRef.current) {
+        releaseExplainersAfterPrint();
+        return;
+      }
+      // No height for paper at all: the same honest stop as an unmeasured frame —
+      // say so once, put the frame back, and print on the next click.
+      if (!ready && !warnedRef.current) {
+        warnedRef.current = true;
+        releaseExplainersAfterPrint();
+        setBusy(false);
+        setMessage({ kind: "warn", text: DOCUMENTS.read.exportUnmeasured });
+        return;
+      }
+      openDialog();
+    });
+  }
+
+  function openDialog() {
     clearTimer();
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;

@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Print and Export PDF: a framed explainer prints whole, not cut at its screen height",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 10.7,
   "depends_on": [],
   "created_at": "2026-10-08T15:28:45+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-08T15:51:38+09:00",
+  "completed_at": "2026-10-08T16:25:13+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Framed explainers print whole from Export PDF and Cmd-P: for print the frame is pinned to the 680px paper column at a height measured there (Export PDF awaits a real answer; Cmd-P uses a paper height the reporter volunteers), restored on afterprint; no CSS, no copy, kb-print.css untouched; complete on A4 and Letter in dev and the production build",
   "validation": {
     "required": [],
     "last_run": null,
