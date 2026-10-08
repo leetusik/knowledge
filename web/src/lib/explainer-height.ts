@@ -58,6 +58,24 @@ export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
  * reading I; fixed in P28.F2). `scrollHeight` stays in the `max` for content that
  * overflows the body's own box.
  *
+ * The root's HORIZONTAL SCROLLBAR is added on top: `innerHeight − clientHeight` of the
+ * root (`documentElement`; `body` in quirks mode, where the spec moves the viewport
+ * there). It is 0 with overlay scrollbars and 0 when nothing overflows sideways. When
+ * scrollbars take layout space (Windows Chrome; a Mac set to "always show") and the
+ * document is wider than its frame (a wide table or `pre`, a frame narrowed by a
+ * side-docked DevTools), that bar sits inside the frame and eats ~15px of its height,
+ * which left a 14px VERTICAL inner scroll range the wheel latched onto while the page
+ * stayed put (P28.REVIEW, finding 1; fixed in P28.F3). The sideways scroll itself is
+ * legitimate content behaviour and is left alone. The term cannot ratchet: whether the
+ * bar exists depends on the frame's WIDTH, not its height. The one coupling — a
+ * vertical bar narrowing the viewport just enough to overflow it — settles in two
+ * posts (+bar, then −bar once the taller frame drops the vertical bar), never a loop.
+ * A bar that APPEARS at a constant width without the body box changing (content wider
+ * than a fixed-width body) is caught because the vertical bar it forces narrows the
+ * root, so the `ResizeObserver` watches `documentElement` as well as `body`. One that
+ * DISAPPEARS that way fires nothing at all; the frame is then up to one bar too tall —
+ * blank space, never a scroll range — until the next trigger.
+ *
  * Three things the measured behaviour of a sandboxed frame forced:
  *   - the debounce is a `setTimeout`, NOT `requestAnimationFrame`. A frame that is
  *     not being rendered — a hidden or background tab, an offscreen frame — runs no
@@ -85,8 +103,12 @@ export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
  * makes a height message that nobody was listening for unrecoverable, so a parent that
  * hydrated late gets one chance to ask again. It resets `last` so the answer goes out
  * even though the height has not changed, and it is the ONLY trigger that bypasses the
- * dedupe; every other one (load, resize, ResizeObserver, fonts) still needs a real ≥2px
- * change, which is what keeps a parent→child→parent feedback loop impossible. It also
+ * dedupe. Every other one (load, resize, ResizeObserver, fonts) posts any GROWTH, even
+ * of 1px — a frame left 1px short is a 1px inner scroll range (P28.F3; until then every
+ * change under 2px was dropped) — but a SHRINK only of 2px or more. Since a sub-2px
+ * change can only ever move the frame up, a parent→child→parent oscillation between two
+ * nearly equal heights is impossible, and a 1px-per-post creep is a runaway like any
+ * other: viewport-dependent content, latched by the per-width budget. It also
  * grants exactly ONE post when the budget is spent — an un-wedge lever for the parent —
  * but never refills the budget: the parent asks at most twice per mount, so a runaway
  * stays bounded.
@@ -101,10 +123,12 @@ const REPORTER = `
     var b = document.body;
     if (!b) return 0;
     var s = window.getComputedStyle(b);
+    var root = document.compatMode === 'BackCompat' ? b : document.documentElement;
+    var bar = root ? Math.max(0, window.innerHeight - root.clientHeight) : 0;
     return Math.ceil(
       Math.max(b.getBoundingClientRect().height, b.scrollHeight) +
         px(s.marginTop) + px(s.marginBottom)
-    );
+    ) + bar;
   }
   function post() {
     queued = false;
@@ -113,7 +137,7 @@ const REPORTER = `
     if (w !== lastW) { lastW = w; budget = BUDGET; }
     if (budget <= 0 && !grant) return;
     var h = measure();
-    if (h > 0 && Math.abs(h - last) >= 2) {
+    if (h > 0 && (h > last || last - h >= 2)) {
       if (budget > 0) budget--;
       grant = false;
       last = h;
@@ -141,7 +165,9 @@ const REPORTER = `
     schedule();
   });
   if (window.ResizeObserver && document.body) {
-    new ResizeObserver(schedule).observe(document.body);
+    var ro = new ResizeObserver(schedule);
+    ro.observe(document.body);
+    if (document.documentElement) ro.observe(document.documentElement);
   }
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(schedule).catch(function () {});
