@@ -1,0 +1,11 @@
+{
+  "id": "D38",
+  "title": "Unmeasured explainer box: 70rem vs round 06's flat per-tier heights",
+  "status": "deferred",
+  "source": "P28.S10",
+  "reason": "an explainer that never reports a height keeps the 70rem (1120px) fallback with an inner scroll, ~2x the old box on a phone; record-compatible alternative is 26/32/40rem; 100dvh would break round 06 §8 check 8; default keeps 70rem as signed",
+  "trigger": "a document seen stuck [data-unmeasured], or a phone report of an inner scroll on an unmeasured frame",
+  "created_at": "2026-10-08T15:28:45+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
