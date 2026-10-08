@@ -1,7 +1,7 @@
 <!--kb
 title: "P8: Stage 1 Fact-Check and the Project-1 Plan"
 date: 2026-10-08
-version: 2
+version: 1
 tags:
   - stage-1
   - research-agent
@@ -117,7 +117,7 @@ source:
 </head>
 <body>
   <h1>P8: Stage 1 Fact-Check and the Project-1 Plan</h1>
-  <p class="lede">A research explainer of workspace phase P8 (2026-10-08): what the team's Stage 1, 글로벌 IB 대시보드 + 주간 이메일, really is today, where the documents and the system disagree, and the eight-phase plan P8 proposes for the operator's first project. 한국어판: <a href="https://knowledge.hi2vi.com/@leetusik/glide-ilab/p8-stage-1-fact-check-and-the-project-1-plan-ko">P8: 1단계 사실 확인과 1차 프로젝트 계획</a> (knowledge.hi2vi.com).</p>
+  <p class="lede">A research explainer of workspace phase P8 (2026-10-08): what the team's Stage 1, 글로벌 IB 대시보드 + 주간 이메일, really is today, where the documents and the system disagree, and the eight-phase plan P8 proposes for the operator's first project.</p>
 
   <nav aria-label="Contents">
     <strong>Contents</strong>
@@ -458,7 +458,7 @@ source:
     <h2>8. Assessment</h2>
     <div class="callout assess">
       <h4>Assessment (the author's judgment, not a finding of the phase)</h4>
-      <p><strong>The fact-check is unusually well grounded.</strong> Three independent instruments agreeing house by house on the number 347 (page footer, API total, and a DB query) is the kind of triangulation most audits never reach, and the review's 36 spot-checks all held. A reader can trust the as-is map.</p>
+      <p><strong>The fact-check is unusually well grounded.</strong> Four independent instruments agreeing house by house on the number 347 (page footer, API total, and a DB query) is the kind of triangulation most audits never reach, and the review's 36 spot-checks all held. A reader can trust the as-is map.</p>
       <p><strong>The plan is honest about time, which is its main virtue and its main warning.</strong> Every PP row carries a “realistic from 10/8” date that is later than the documents want, and the realistic dates themselves assume Jake answers the P1 questions inside week 1. If F-4 (migrations and staging), F-7 (the prototype's status) or F-29 (the email tool) slips past 10/16, the SC-2 and SC-3 variants are not pessimism but the plan.</p>
       <p><strong>Access, not engineering, is the critical path.</strong> Five of the five blocking rows are about access and ownership (a merge path, invisible repos, no staging DB, no email tool, no repo location). Sending the 25-item block before the Friday walkthrough is therefore the single highest-leverage action this week, and it is the one that needs no code.</p>
       <p><strong>Where I would weigh the evidence differently from the documents:</strong> the roadmap's “Sunday collection, Monday 07:00 email” is written as if the pipeline finished Sunday morning. The observed afternoon starts plus multi-hour runs make an early-Monday aggregation (S5's default for F-21) the safer design, and GitHub's own guidance that scheduled runs can be delayed under load supports not relying on the nominal minute.</p>
@@ -481,7 +481,6 @@ source:
       <li><code>slices/P8.S5/result.md</code> — the operator-facing deliverable: §0 executive summary, §A as-is map, §B 44 discrepancies, §D phases PP-1…8, §E Q6–Q10, §F 36 questions for Jake and the 25-item block.</li>
       <li><code>slices/P8.REVIEW/result.md</code> — validation, 36 evidence spot-checks, question routing, deferred jobs J-A…J-D, observations J-E…J-G.</li>
       <li>Repository files quoted directly: <code>.github/workflows/ib-research-report-pipeline.yml</code> line 57 (the cron), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/collection/registry.py</code> (the nine adapters), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/storage/supabase.py</code> lines 439–449 (the publish UPDATE).</li>
-      <li>Korean edition: <a href="https://knowledge.hi2vi.com/@leetusik/glide-ilab/p8-stage-1-fact-check-and-the-project-1-plan-ko">P8: 1단계 사실 확인과 1차 프로젝트 계획</a> — knowledge.hi2vi.com. The same explainer in Korean, written the same day from the same sources.</li>
     </ul>
     <p>External sources, each opened on 2026-10-08:</p>
     <ul>
