@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-10-08 · [P8: 1단계 사실 확인과 1차 프로젝트 계획](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html) — glide-ilab
 - 2026-10-08 · [P8: Stage 1 Fact-Check and the Project-1 Plan](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html) — glide-ilab
 - 2026-10-07 · [How the glide-ilab team ships code: commits, PRs, deploys and your first ticket](glide-ilab/2026-10-07-how-the-glide-ilab-team-ships-code-commits-prs-deploys-and-your-first-ticket.html) — glide-ilab
 - 2026-10-07 · [Reading Your Glide Onboarding Doc — The Background Knowledge, Explained for Beginners](base/2026-10-07-reading-your-glide-onboarding-doc-the-background-knowledge-explained-for-beginne.md) — base
