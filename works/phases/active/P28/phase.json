@@ -2,7 +2,7 @@
   "id": "P28",
   "name": "Console visual redesign — apply",
   "objective": "Implement P27's signed design rounds faithfully across the console, graph and document views at phone/tablet/desktop; fix the graph (off-frame default view, id-based node links, anonymous tag bounce, empty-state sizing); add the project document list (project page + graph legend), the chrome-less HTML-only document view, and print-pipeline PDF export; verify in the operator runtime with a real browser.",
-  "status": "in_progress",
+  "status": "pending",
   "order": 8,
   "created_at": "2026-09-21T02:07:49+09:00",
   "started_at": "2026-09-21T18:26:12+09:00",
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "On production, retina 'node' Mac, Chrome 'Work' profile (always-visible scrollbars). 1) PREREQUISITE: the fixes reach https://knowledge.hi2vi.com only after main is pushed (with your permission) and Production Deploy is green. 2) Sign in, open /documents/60, wait ~2s: no scrollbar inside the document box; the wheel over the document scrolls the page. 3) Dock DevTools to the side, drag its edge back and forth ~10s (or drag the window edge), close DevTools: still no inner scrollbar, wheel still scrolls the page. 4) Open doc 30 (/@leetusik/knowledge/knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts) or doc 33 (/@leetusik/knowledge/why-knowledge-is-this-way-and-how-to-change-it): one PDF via Export PDF -> Save as PDF (A4), one via Cmd-P -> Save as PDF (A4); both end with the quiz's LAST question and the colophon. Expected, not a defect: page 1 holds only masthead/title/metadata; the explainer re-wraps behind the open print dialog and snaps back after. 5) DECISION, Cloudflare (D37): its edge injects an analytics beacon (reports private document views by id) and email obfuscation into every framed explainer - keep it, turn it off for the relay only via Cache-Control: no-transform (recommended), or off zone-wide. FYI only: Cmd-P can still clip an explainer that sizes itself by screen width (none of yours do); Letter/landscape lay the explainer out 680px wide; A5/large margins clip as before; Safari/iOS, a physical printer and a real DPR 2 screen are unverified; the 'only its first page will print' warning text is reused; the 2s Preparing timeout is F4's value. Clear with: accept-gate P28 --clear; failures -> review-phase P28 --verdict changes_requested --note 'operator-reported: ...'",
+    "requested_at": "2026-10-08T16:47:46+09:00",
     "cleared_at": null,
     "note": "Cleared on the operator's explicit instruction to close the phase (2026-09-21). No device walk was reported, so the walkthrough's nine decisions stand at the defaults the review proposed and are carried forward as a deferred job rather than lost: the stylesheets win the 44px question, the three record corrections stay, the three originated values stand (incl. the 11px landmark floor), the card copy stays verbatim, the three structural choices stand, the two open gaps stay open, and the member graph read link stays /documents/{id}. Touch, Safari (Mac + iOS), a physical printer and DPR>1 remain unverified by anyone."
   },

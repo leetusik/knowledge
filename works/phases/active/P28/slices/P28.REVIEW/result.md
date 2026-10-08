@@ -1,137 +1,191 @@
-# P28.REVIEW — result (re-review, 2026-10-08; the first review's result is in git at `41b569e`)
+# P28.REVIEW — result (re-review #2, 2026-10-08; re-review #1's result is in git at `640eb15`, the first review's at `41b569e`)
 
 - **status:** done
-- **review_verdict:** `changes_requested`
-- **summary:** Re-reviewed the framed-explainer fix inside its boundary (`41b569e..HEAD`: `web/src/lib/explainer-height.ts` + its test; surfaces = every framed explainer: member, public, `?view=full`, print). Gates green, and F2's three headline claims hold when I re-ran them myself in dev and the production build. That covers the latch re-arm after 360 posts, DPR 2 `maxScrollTop` 0 on fractional bodies, and no post below 120 under CPU ×20. But on the same surfaces I found two real defects that make the operator's acceptance unsafe: **(1)** with layout-taking (classic) scrollbars, an explainer that overflows sideways still gets a **14px vertical inner scroller**, and a wheel over it scrolled the frame, not the page (the operator's exact symptom). **(2)** **Printing / Export PDF silently cuts off the end of a framed explainer** whenever the paper column is narrower than the screen frame. This was reproduced on the live production site (docs 30 and 33 lose their last quiz questions) and on a local fixture (paragraphs 102–119 of 120 lost, A4 and Letter).
-- **findings → proposed fix slices:**
-  1. **P28.F3**: reporter, `measure()` ignores the root's horizontal scrollbar → add `innerHeight − documentElement.clientHeight` (fix / high).
-  2. **P28.F4**: print, a framed explainer prints at its *screen*-measured height and is clipped when it reflows taller on paper (fix / high; may need an operator call on the ⌘P path).
-- **validation:** `pnpm --dir web typecheck` 0 · `lint` 0 · `test` 0 (17 files, 118 tests) · `build` 0 · `prettier --check` on both touched files: clean (no `--write`) · `python3 scripts/workflow.py validate`: passed (pre-existing advisories only) · pytest **not run**: no server file changed since `41b569e` (`git diff --stat 41b569e..HEAD -- server tests` is empty).
-- **deviations:** (a) the verdict is not the expected pass, so no qa carve-out version and no walkthrough were written (both pass-only). (b) Fixture **doc 70** (`p28review-reflow-probe`, synthetic) is **kept** in the dev DB for F3/F4 to reproduce on (named in `phase.md`). Its credential `p28review-repro` was revoked (204). (c) The latch repro used alternating widths (500–506 ↔ 780) rather than a monotone sweep: the sweep gave only 9 posts in Aside, which never spends the budget.
-- **doc_versions:** none (not a pass; the qa carve-out waits for the passing re-review).
-- **doc_impact verification:** F2's line covers the reporter contract change in full. S10 rightly left none. The review adds none (no durable truth changed). F3/F4 will owe their own lines.
-- **walkthrough:** none (not a pass). The routing that the next walkthrough inherits is below and in `phase.md` → `## Operator Questions`.
+- **review_verdict:** `pass`
+- **summary:** I re-reviewed the framed-explainer work inside its boundary (`41b569e..HEAD`, four product files: the reporter, its test, `explainer-frame.tsx` and `export-pdf-button.tsx`). All gates are green. I re-ran every headline claim of F2, F3 and F4 myself in dev `:3030` and the production standalone build `:3040`. **F3:** a real 15px classic scrollbar leaves `maxTop 0`, and the wheel moves the page. **F4:** 32 of 32 PDFs print whole, covering fixture 70 and the shapes of production docs 30 and 33, by both Export PDF and ⌘P, on A4 and Letter, plus `?view=full` and a 390 window, and the screen is restored exactly. **F2:** the latch, DPR 2 and CPU ×20 checks all hold. I judged F4's design by probing it with a synthetic child document. It is safe for documents that run ordinary scripts and animations. Its one side channel is a `MutationObserver` on `<html>` attributes that changes layout in response, which can make the reporter loop until the per-width latch catches it. No existing explainer and nothing in the `/explain` template does this, so I record it as a deferred-job candidate, not a finding. The orchestrator may overrule that call; the reasoning is under "F4 design judgment".
+- **findings:** none.
+- **validation:**
+  - `pnpm --dir web typecheck`: 0
+  - `lint`: 0
+  - `test`: 0 (17 files, 122 tests)
+  - `build`: 0
+  - `prettier --check` on the 4 touched files: the reporter and the test are clean. The two `.tsx` files carry drift that is **byte-identical at `41b569e`**, on lines F4 did not touch (diffed, no `--write`).
+  - `python3 scripts/workflow.py validate`: passed, with pre-existing advisories only.
+  - pytest **not run**: `git diff --stat 41b569e..HEAD -- server tests plugin` is empty.
+  - Live checks: the tables below.
+- **deviations:**
+  - (a) I ran the docs-30/33 shapes by intercepting fixture 70's relay request in the test browser only, fulfilling it with the production HTML of those docs plus the local reporter (F4's method). Production's own injected reporter was stripped. Nothing was written anywhere.
+  - (b) I added a synthetic side-effect probe (static pages served from the session scratchpad) to answer the plan's "is it safe for documents with their own scripts" question. It was deleted with the scratchpad, and no product file was touched.
+  - (c) Fixture doc 70 is **kept** for any operator-reported fix. Delete it at phase close (named in `phase.md`).
+- **doc_versions:** **qa v0017** (`docs/versions/qa/v0017_p28_re-review_gate_append_the_framed-explainer_checks_…md`). Only `## Regression Checklist` was edited: two lines appended. Then `rebuild-docs`. `## Operator Runtime` was left alone: nothing about how the operator runs or views the product changed, and the harness recipes belong in slice logs. Everything else is deferred to a docs phase.
+- **doc_impact verification:** the F2, F3 and F4 lines together cover the reporter and print contract. One wording slip in F4's line was corrected by an appended addendum: on timeout, Export PDF prints at the volunteered paper height when one exists, and warns only when there is none. I also appended one line recording qa v0017. S10 rightly left none.
+- **walkthrough:** see the return block. It is also summarised in `phase.md` → `## Now`.
 - **explain:** not written — run /explain for this phase
-- **files_changed:** this file; `works/phases/active/P28/phase.md`.
+- **files_changed:**
+  - this file
+  - `works/phases/active/P28/phase.md`
+  - `docs/versions/qa/v0017_…md` (new)
+  - `docs/current/qa.md` and `docs/index.json` (regenerated by `rebuild-docs`)
 
 ---
 
 ## Boundary
 
-`git diff --stat 41b569e..HEAD -- web server tests` → exactly `web/src/lib/explainer-height.ts` (+67/−23 incl. header comment) and `web/tests/explainer-reporter.test.ts` (+108). The reporter is injected by the raw relay into every framed explainer, so the surfaces are: member `/documents/{id}`, public `/@org/project/slug`, `?view=full` on both, the past-version route (markdown for the probe used, so only its full-view chrome applies), and print. `phase-scope P28` was context only.
+`git diff --stat 41b569e..HEAD -- web/` shows four files:
 
-I also read the diff as code. `post()` returns before touching state on a 0×0 viewport. `lastW` re-arms `budget` per width. `grant` is set only by `kb-explainer-request` and cleared only on an actual post, and it never refills `budget`. The 2px dedupe and the 16ms debounce are unchanged. One theoretical case: a runaway whose width alternates (e.g. a parent scrollbar toggling) would re-arm forever. The parent's 40,000 clamp bounds it, so it is not a finding.
+| file | change |
+|---|---|
+| `explainer-frame.tsx` | +246 |
+| `export-pdf-button.tsx` | +34 |
+| `explainer-height.ts` | +165 |
+| `explainer-reporter.test.ts` | +219 |
+
+The surfaces they feed are every framed explainer: member `/documents/{id}`, public `/@org/project/slug`, `?view=full` on both, and print / Export PDF. The past-version route mounts the same island, but no local explainer has a past version (F4 found the same). `phase-scope P28` (37 commits, 111 product files) was context only.
 
 ## Instruments
 
-- **Aside `u1`** (`aside repl --account u1`, DPR 1, 1440×900) for the member/public/full-view passes, the latch repro, the wheel tests, Export PDF and back/Esc.
-- **Chrome for Testing 148, `--headless=new --force-device-scale-factor=2`**, raw CDP over Node 24's `WebSocket`, port 9555, for DPR 2, CPU ×20 cold loads, the 390×844 mobile viewport (own browser context, signed in through the real `/login` form), print-to-PDF (A4 + Letter) and sideways-overflow scans. Text was extracted with `pdftotext`.
-- Runtimes: dev `next dev :3030` (already up) and the production standalone build `:3040`. I started it after `pnpm build`, linked `.next/static` + `public/*` beside `server.js`, checked that the CSS chunk answers 200, and confirmed that the relay serves the F2 reporter (`lastW = w; budget = BUDGET`, `grant = true` both present in `/api/documents/66/raw`). Both servers and Chrome for Testing were stopped afterwards; `:3030` and `:8766` were left as found.
-- Production `https://knowledge.hi2vi.com` was **read** anonymously (public docs 25–33 raw + two public document pages printed to PDF). Nothing was written there.
+- **Aside `u1`** (`aside repl --account u1`, 1440×900, DPR 1, signed in as `p28s5`). Used for:
+  - the F2 latch repro on member `/documents/70`;
+  - the Export PDF real-click lifecycle with `window.print` stubbed (no real dialog);
+  - the ⌘P route via dispatched `beforeprint`/`afterprint`;
+  - the wheel checks;
+  - Esc out of `?view=full`.
+- **Chrome for Testing 148**, `--headless=new`, raw CDP over Node 24's `WebSocket`. Used for:
+  - real classic scrollbars (`-AppleShowScrollBars Always`; a native bar measured 15px inside the child);
+  - DPR 2 (`--force-device-scale-factor=2`);
+  - CPU ×20 cold loads (the throttle is applied to the OOPIF child via `Target.setAutoAttach {waitForDebuggerOnStart}`, cache disabled);
+  - `Page.printToPDF` (which fires `beforeprint`/`afterprint`, so it is the ⌘P route as-is), with `pdftotext` for reading the output;
+  - a true 390×844 mobile viewport.
+- **Runtimes:**
+  - dev `next dev :3030`, already up.
+  - The production standalone build `:3040`, from this review's own `pnpm build`. I linked `static` and `public` beside `server.js`, both CSS chunks answered 200, and both relays served the F4 reporter (`kb-explainer-print` present in `/api/documents/70/raw`).
+- **Production `knowledge.hi2vi.com`** was only read anonymously (public docs 25–33 raw, and two 307 lookups).
 
-## F2's headline claims, re-run (all hold)
+## F3: classic scrollbars (real native bar, anonymous public fixture 70)
 
-**Latch repro** (Aside; fixture 70, 48rem body, 16,918px at a 1022px frame). Method: 360 width steps on `.kb-explainer`, one `page.evaluate` per step + `sleep(70)`, then release, narrow to 560, then wheel 600 over the frame.
+Method: frame narrowed to 600px, an 8-column `nowrap` table injected into the child, then the page scrolled to 600 and a 300px wheel sent over the frame.
 
-| runtime | posts during steps | released: frame / child sh | narrowed 560: frame / child sh | wheel: page / inner |
-|---|---|---|---|---|
-| dev :3030 | **360** (> the old 300 budget) | 16,918 / 16,918 | 22,869 / 22,869 | 514 → **1114** / 0 |
-| prod :3040 | **360** | 16,918 / 16,918 | 22,869 / 22,869 | 514 → **1114** / 0 |
+| runtime | native bar | frame | child ih / clientHeight / sh | maxTop | maxLeft | wheel: page / inner |
+|---|---|---|---|---|---|---|
+| dev | 15px | 22,936 | 22,936 / 22,921 / 22,921 | **0** | 2,012 | 600 → **900** / 0 |
+| prod | 15px | 22,936 | 22,936 / 22,921 / 22,921 | **0** | 2,012 | 600 → **900** / 0 |
 
-A monotone 470→799→470 sweep (660 steps, `sleep(35)`) gave only 9 posts in Aside. That never reaches the budget, though frame == child and the wheel moved the page there too.
+The frame is one bar taller than the content, and the sideways scroll is kept, as F3 intends.
 
-**DPR 2** (CfT headless DPR 2, anonymous public route; `body.style.paddingBottom` set in the child to make the body fractional; read by `scrollTop = 1e6`):
+## F4: print matrix (32 PDFs, all complete)
 
-| pad | body box | frame | `maxScrollTop` (dev) | (prod) |
-|---|---|---|---|---|
-| 0 | 16,853.156 | 16,918 | 0 | 0 |
-| 0.5px | 16,869.656 | 16,934 | 0 | 0 |
-| 0.6px | 16,869.75 | 16,934 | 0 | 0 |
-| 0.25px | 16,869.406 | 16,934 | **0** | **0** |
+"Complete" means the final marker is in the PDF text and so is the colophon ("…from the knowledge console…"). The markers:
 
-The .406 row is the case the old rounding would have under-reported (16,869 + 64 = 16,933 < 16,933.41).
+- fixture 70: `Paragraph 119.`
+- doc 30 shape: "SQLite is retired"
+- doc 33 shape: "template exactly"
 
-**CPU ×20 cold loads** (throttle + a `getComputedStyle` diag applied per child session via `Target.setAutoAttach`): prod ×3 and dev ×1. Every post was 16,918 (the request re-post included). Zero `measure()` calls at `innerWidth 0`, and nothing below 120. As F2 found, a promptly rendering headless child never measures at 0, so the 0×0 guard itself is evidenced by its unit case and F2's windowed readings, not by this run.
+For the Export route I clicked the real control with `window.print` stubbed to record the frame's style, then took the PDF.
 
-## First-time-user pass over each surface (prod :3040, 1440×900, Aside)
+| content | route | A4 | Letter | style at print | prepare (dev / prod) | screen after |
+|---|---|---|---|---|---|---|
+| fixture 70 | ⌘P | ✓ 23 pp | ✓ 23 pp | `height: 19893px; width: 680px` | — | `height: 16918px`, child sh 16,918, maxTop 0 |
+| fixture 70 | Export | ✓ | ✓ | same, already pinned at `print()` | 43,41 / 41,37 ms | restored, button back to "Export PDF" |
+| doc 30 shape | ⌘P | ✓ 16 pp | ✓ 16 pp | `13436px; 680px` | — | `12707px`, maxTop 0 |
+| doc 30 shape | Export | ✓ | ✓ | same | 43,49 / 34,26 ms | restored |
+| doc 33 shape | ⌘P | ✓ 11 pp | ✓ 12 pp | `8893px; 680px` | — | `8506px`, maxTop 0 |
+| doc 33 shape | Export | ✓ | ✓ | same | 48,38 / 37,42 ms | restored |
 
-| path | frame | child max scroll (top / left) | wheel 500 over frame: page / inner |
-|---|---|---|---|
-| `/documents/70` | 16,918 | 0 / 0 | 800 → 1300 / 0 |
-| `/documents/70?view=full` | 16,918 (1440 wide, top 0, exit pill) | 0 / 0 | 800 → 1300 / 0 |
-| `/@p28s5/research/p28review-reflow-probe` | 16,918 | 0 / 0 | 800 → 1300 / 0 |
-| same `?view=full` | 16,918 | 0 / 0 | 800 → 1300 / 0 |
+Each row holds identically in dev and prod (24 PDFs). Eight more PDFs, also identical in dev and prod:
 
-At a **true 390×844** (CfT mobile, DPR 3): `scrollWidth 390` on all of anonymous public, public `?view=full`, member `/documents/70`, member `?view=full`, `/documents/67/versions/1?view=full` and `/documents/66`. On the member views the navbar is shown. `?view=full` hides navbar/topbar and shows the exit pill. Esc on `/documents/70?view=full` → `/documents/70`. `history.back()` from the full view → `/documents/70` (Aside).
+- fixture 70 `?view=full`: Export A4 and ⌘P Letter, complete;
+- fixture 70 at a **390×844 window**: ⌘P A4 complete, 23 pp, screen restored to the phone height 37,797;
+- doc 30 shape at 390: Export A4 complete, 16 pp, restored to 22,646.
 
-**Export PDF lifecycle** (Aside; `window.print` **stubbed** to fire `beforeprint` then `afterprint` 1.5s later, so no real dialog was opened): `Export PDF` → click → `Preparing…` with `aria-busy="true"` and the hint "Choose Save as PDF as the destination. Keep headers and footers on…" → after `afterprint`: back to `Export PDF`, hint cleared. One print call.
+The masthead (wordmark · URL · version) and the colophon are on paper.
 
-## Finding 1: classic scrollbars + a sideways-overflowing explainer leave a vertical inner scroller (P28.F3)
+**Aside, member `/documents/70`, dev and prod:**
 
-`measure()` returns the body box. When the framed document overflows **horizontally** and the reader's scrollbars take layout space (Windows Chrome by default; a Mac set to "always show scroll bars", which is the operator's "node" Mac Work profile), the root's horizontal scrollbar takes ~15px of the frame's viewport height. The content then overflows **vertically** by that much, and a vertical scrollbar appears beside the horizontal one.
+- A real click on Export PDF shows "Preparing…" plus the dialog hint. `print()` is reached once, with the frame pinned `height: 19893px; width: 680px`.
+- After `afterprint` the frame is back to `height: 16918px`, the label is back to "Export PDF", the hint is cleared, the child's `<html>` `style` is `null`, and inner maxTop is 0.
+- ⌘P route from mid-document (`scrollY 8000`): pinned on `beforeprint`, restored on `afterprint`, `scrollY` still 8000.
+- A 500px wheel over the frame afterwards moved the **page** 800 → 1300, with the inner scroll at 0.
 
-- CfT headless, prod, fixture 70 with `::-webkit-scrollbar{width:15px;height:15px}` in the child (S10's sanctioned stand-in for classic scrollbars) plus one 3000px-wide block: `sbH 15`, `ih 16,944`, `sh 16,943`, **`maxTop 14`** (`maxLeft 2112`). The same without the scrollbar styling: `maxTop 0`. That one is the overlay case.
-- Aside, prod `/documents/70`, `.kb-explainer` at 600px, the same scrollbar styling plus an 8-column `nowrap` table inserted into the child: frame 22,924, child `clientHeight` 22,909, **`maxTop 14`**. `mouse.wheel(0, 300)` over the frame: **page `scrollY` 600 → 600, inner `scrollY` 0 → 14.** The wheel latched into the frame and did not chain to the page. That is the operator's complaint, reproduced.
-- How live it is: sideways-overflow scan of the nine public production explainers (CfT, frame-width sweep 1000→358 by 10). Doc 25 starts overflowing at **510**px (a table), doc 26 at **550** (table), doc 27 at **640** (`code`). Docs 28–33 never do. A side-docked DevTools drag on a ~1365px window, which is in the plan's own walkthrough, easily takes the frame below 640.
-- It predates P28 (the body-based measure is P25's), and F2 neither caused nor fixed it. It is inside this boundary (the changed file, the reported symptom, the acceptance machine). It may also be what the original report meant by "both vertical **and horizontal**": in this state both bars show.
-- **Fix (P28.F3, `fix`/`high`):** in the `REPORTER` string, add the root's horizontal-scrollbar height, `Math.max(0, innerHeight − document.documentElement.clientHeight)`, to `measure()`. It depends on width, not height, so it cannot ratchet. Add one test case (a fake `clientHeight` 15 short → +15). Prove it live with the `::-webkit-scrollbar` stand-in at a frame narrower than the overflow (fixture 70 + an injected wide table) in dev and prod: `maxTop 0` and the wheel moves the page. Optionally fold in F2's residual (the 2px dedupe can leave a frame 1px short after a sub-2px growth) if it is cheap and safe.
+**Something a reader will see (not a defect, now in the walkthrough):** while the print dialog is open, the explainer behind it is laid out at 680px inside its full-width card. In a screenshot taken during the pin, the text wraps at about 680px with blank space to its right. It snaps back on `afterprint`.
 
-## Finding 2: printing a framed explainer silently drops its end (P28.F4)
+## F2: re-run
 
-`kb-print.css` sets `.kb-explainer__frame { height: auto }`, but the island's inline `height: <measured>px` wins. On paper the frame keeps the **screen**-measured height, while the paper column is narrower than a desktop frame (1022px at 1440). The child reflows taller and everything below the screen height is **cut off**, with no warning: the caveat only says the quiz does not work on paper. Round 06's own comment says the full measured height "is what makes the whole document print", and S8's check 19 ("prints in FULL") was answered on fixture 66, whose height barely depends on width (650↔700px). That is why it passed.
+| check | dev | prod |
+|---|---|---|
+| Latch (Aside `u1`, member `/documents/70`): 360 alternating width steps (500–506 ↔ 780, one `evaluate` + `sleep(70)` each) | **360** posts; released 16,918 == child 16,918; narrowed to 560: 22,869 == 22,869, maxTop 0; wheel: page 600 → 1200, inner 0 | identical |
+| DPR 2 (CfT, also with real classic scrollbars): child `body.paddingBottom` 0 / .25 / .5 / .6px (body 16,853.16 / 16,869.41 / .66 / .75) | maxTop **0** in all four | same |
+| CPU ×20 cold loads (3 each, cache disabled, every parent-received post recorded) | posts `[16918, p19893@1022]` (one load re-posted once on the parent's request); nothing below 120; frame == child | identical |
 
-| what was printed (CfT headless, `Page.printToPDF`) | frame | pages | result |
-|---|---|---|---|
-| local prod, fixture 70 public, A4 | 16,918 | 19 | last paragraph printed **101** of 0–119 |
-| same, `?view=full`, A4 | 16,918 | 19 | **101** |
-| same, US Letter | 16,918 | — | **101** |
-| control: loaded at a 600px window (frame measured 22,869), A4 | 22,869 | 26 | **119**, complete |
-| **production** doc 30 (`/@leetusik/knowledge/knowledge-system-internals-…`), A4 | 12,710 | 15 | quiz stops **mid-question 3 of 5** |
-| **production** doc 33 (`/@leetusik/knowledge/why-knowledge-is-this-way-…`), A4 | 8,508 | 11 | quiz stops at **question 4 of 5** |
-
-The control row proves the mechanism: when the measured height belongs to a width no wider than the paper column, nothing is lost. This defect is in P28 itself (round 06's print half, `P28.S8`). It is live on production now, and it defeats one of the four things the operator asked for ("PDF export") on exactly the content that most needs it.
-
-**Fix (P28.F4, `fix`/`high`; the orchestrator may cut a short research step first):** the measured height must belong to the paper column before print layout happens. The Export PDF island already has a `Preparing…` phase and one animation frame before `print()`, so the natural hook is: size the frame to the print column, request a height (`kb-explainer-request`), await it, then `print()`, then restore on `afterprint`. The ⌘P path cannot await a child post (`beforeprint` is synchronous), so it needs its own answer. One option is an over-estimate at `beforeprint`, at the cost of trailing blank space. Another is to print at the screen width scaled to the column. Another is an honest caveat that says "use Export PDF". Any new or changed paper copy or visual treatment is an **operator decision** (RESPECT THE DESIGN; `kb-print.css` is verbatim, so CSS corrections go only to `kb-record-fixes.css` with authorisation). Validate on real paper: A4 + Letter, fixture 70 and a production-shaped explainer, last line present.
-
-## Regression Checklist (qa `## Regression Checklist`, 11 lines)
+## The regression-checklist lines inside this boundary (qa `## Regression Checklist`, 11 lines before the append)
 
 | block | lines | inside / outside | result |
 |---|---|---|---|
-| `docker compose run --rm kb build` / `site_smoke.py` / `explain:recent` marker | 3 | outside: the mkdocs site and `server.documents`; neither is in the diff | not re-run |
+| mkdocs build · `site_smoke.py` · `explain:recent` marker | 3 | outside (the docs site / `server.documents`, not in the diff) | not re-run |
 | `workflow.py validate` | 1 | inside (always) | pass |
-| Graph fit · graph dock tag switch | 2 | outside: `graph-canvas.tsx` / css not in the diff | not re-run |
+| Graph fit · dock tag switch | 2 | outside | not re-run |
 | Project page Documents panel | 1 | outside | not re-run |
-| Document views `?view=full` (member, anonymous, past version; exit pill; Esc; back) | 1 | **inside** | pass (all three routes; Esc and back) |
-| Print / Export PDF (masthead + colophon on paper; hint → `Preparing…` → clears on `afterprint`) | 1 | **inside** | **the line itself passes** (masthead `knowledge` · URL · version · printed date, and the colophon, are on paper; lifecycle with stubbed print). **But the paper body is truncated: Finding 2.** |
-| Console at 390, no horizontal page scroll | 1 | inside for its document-view part (the reporter feeds those frames) | pass on the doc views (`scrollWidth 390`, navbar on member views); the dashboard/documents/project/graph parts are outside |
+| Document views `?view=full` (exit pill, Esc, back) | 1 | **inside** (the frame renders there) | pass: measured frame + exit pill at 390 in dev and prod; Esc → `/documents/70` (Aside, prod) |
+| Print / Export PDF (masthead, colophon, hint → `Preparing…` → clears on `afterprint`) | 1 | **inside** | pass: the matrix above, plus the Aside lifecycle |
+| Console at 390, no horizontal scroll | 1 | inside for its document-view part | pass on the doc views: `scrollWidth 390` on public, public `?view=full` and fixture 66, dev and prod, with inner maxTop 0. The dashboard/documents/project/graph parts are outside |
 | `/login?next=` round trip | 1 | outside | not re-run |
 
-Outside: **7 lines**, by count. The proof is the diff above, which touches only the reporter and its test.
+**Outside: 7 lines, by count.** The proof is the four-file diff above. Appended (qa v0017): the two framed-explainer lines, "no inner scroll range" and "prints whole from Export PDF and ⌘P".
 
-## Operator Questions: routing of the entries added since the first review
+## F4 design judgment: is the `kb-explainer-print` reflow safe?
 
-The first review's routing (nine walkthrough decisions, cleared 2026-09-21) stands and is not re-litigated.
+After every height post the reporter runs `measureAt(680)`. It writes `width: 680px !important` inline on the child's `<html>`, forces a layout, reads the body box, and restores the `style` attribute and any clamped scroll offset, all inside one task. I probed it with a synthetic child carrying a `ResizeObserver` on `<html>`, a `resize` listener, a `matchMedia('(max-width: 700px)')` listener, an element whose width and colour **transition** under a `@container (max-width: 700px)` rule (so the 680px layout flips its computed values), a CSS `@keyframes` animation, a `requestAnimationFrame` loop that samples the root's width every frame, and a `MutationObserver` on `<html>` attributes. I loaded it, then grew it ten times. I compared the F3 reporter (`be9157d`, before F4) with HEAD:
+
+| child | posts | own RO callbacks | `resize` | transitions started | MQ changes | painted frames at 680 (of ~1,080) | MO callbacks (records) |
+|---|---|---|---|---|---|---|---|
+| ordinary doc, F3 reporter | 11 | 11 | 11 | 0 | 0 | 0 | 0 |
+| ordinary doc, **F4** | 22 (11 height + 11 print) | **11** | **11** | **0** | **0** | **0** | 11 (22) |
+| pathological doc (its MO toggles a class that changes height), F3 reporter | 11 | 11 | 11 | 0 | 0 | 0 | 0 |
+| pathological doc, **F4** | **600** in under 12 s, then latched | 311 | 300 | 0 | 0 | 0 | 300 (600) |
+
+Reading the table:
+
+- **Ordinary scripts and animations are safe.** The child's own `ResizeObserver` and `resize` listeners fire exactly as often as without F4. The `resize` count is the parent applying each height, not `measureAt`. No transition is started by the forced 680px style flush, even where a container query flips computed values. No media-query listener fires, because the viewport never changes. The 680px layout never reaches a painted frame (0 of about 1,080 sampled), so nothing can flicker.
+- **The cost is bounded.** `measureAt` runs only after a posted height, so it inherits the dedupe and the 300-per-width budget. F4 measured 1.8–5.2ms per call. During a drag it roughly doubles the reporter's layout work, still debounced to one post per 16ms.
+- **The one side channel is `MutationObserver`.** The reporter used to be read-only, and now it writes `<html style>` twice per post. A document whose `MutationObserver` watches `<html>` attributes (unfiltered, or including `style`) **and changes layout in response** closes a loop: post → `measureAt` → mutation → its layout change → `ResizeObserver` → post. In the probe it ran 300 posts in under 12s, latched, and then a real growth at that width left the frame stale with **`maxTop 374`**: the exact symptom this phase fixed. A width change re-arms it, and it churns again. The reporter's header claims nothing is observable except by `ResizeObserver`, and it does not mention `MutationObserver`.
+- **Why it is not a finding.** None of the nine public production explainers (docs 25–33) contains a `MutationObserver`, a `@container` rule, `matchMedia` or a root-style write. I grepped the raw HTML; the only `ResizeObserver` hits are the reporter's own. The `/explain` skill's `SKILL.md` contains none of those APIs either. Every framed document today comes from that skill, so the trigger is a constructed case, not a document anyone has. A cheap guard exists if it ever matters: a small per-width cap on `measureAt` separate from the posting budget, or skipping `measureAt` when the previous post landed within one debounce of the last one. I list it as a deferred-job candidate with a concrete trigger. If the orchestrator reads "any real risk is a finding" more strictly, the fix slice is: **P28.F5, reporter: cap `measureAt` per width so a document observing `<html>` mutations cannot spend the height budget (fix / high).**
+- **A robustness note, not tested:** Export PDF settles on an answer whose `width === 680`. Under a browser page zoom where the child's `innerWidth` rounds to 679, that never matches. Export would then wait the 2s timeout and print at the reporter's volunteered (emulated) height, the same as ⌘P. That degrades gracefully, never a hang.
+
+## Operator Questions: routing (entries added since re-review #1)
 
 | entry | route |
 |---|---|
-| S10 "THE ONE THING BLOCKING THE SCROLL FIX" (doc 60 repro) | **consumed**: answered 2026-10-08, the fix is F2 (already marked). |
-| S10 `100dvh` / 26-32-40rem vs 70rem (unmeasured box) + its "no longer on the fix's path" follow-up | **deferred-job candidate** (below). Default: leave round 06's 70rem as signed. It needs a walkthrough line only if the operator wants to take it now. |
-| S10 Cloudflare beacon + email obfuscation in every framed explainer | **walkthrough decision at the next passing review** (keep / `no-transform` on the relay / zone-wide off; recommended: relay only), plus a **deferred-job candidate** for the header change so it is not lost if the walkthrough is skipped again. New fact: the relay already answers `cache-control: no-store`, so the change is adding `no-transform` to that header on the raw relay and the versions raw route. |
+| F4: "PRINT A LONG EXPLAINER, BOTH WAYS": the two-PDF check, limits (a)–(d), the reused `exportUnmeasured` copy | **walkthrough** step 4 plus a one-line FYI on the limits. The reused copy is a decision offered there, default "keep". |
+| S10 Cloudflare beacon / email obfuscation | **walkthrough decision** (step 5). Already filed as **D37** with the recommended relay-only `no-transform`. |
+| S10 `100dvh` / 70rem, and its follow-up | already routed and filed as **D38** (default: leave 70rem as signed). |
+| S10 doc-60 repro question | consumed (F2). |
+| `PRINT_PREPARE_TIMEOUT_MS = 2000`, originated by F4 (not on the list; it is an internal wait, not a visual value) | surfaced in the walkthrough FYI so the operator sees it as originated, like the first review's `RELAY_PROBE_GRACE_MS`. |
 
-## Deferred-job candidates (for the orchestrator to file; I did not run `defer-job`)
+The first review's nine routed decisions stand (D36). Nothing is unrouted.
 
-1. **Title:** Stop Cloudflare rewriting framed explainers: `Cache-Control: no-transform` on the raw relay. **Reason:** Cloudflare edge-injects its Web Analytics beacon (third-party script, runs inside the sandbox, reports private document views by id) and Email Address Obfuscation into `/api/documents/{id}/raw`, so readers do not get the author's byte-exact document. The relay already sends `no-store`; appending `no-transform` there and on the versions raw route is the origin-side lever (unverified against Cloudflare's docs). **Trigger:** the operator picks option (b) at the P28 walkthrough, or the next change to the raw relay routes. **Source:** P28.S10.
-2. **Title:** Unmeasured explainer box: 70rem vs round 06's flat per-tier heights. **Reason:** a framed explainer that never reports a height keeps the 70rem (1120px) fallback with an internal scroll, about 2× the old box on a phone. The record-compatible alternative (26/32/40rem) overrules only the token; `100dvh` would contradict round 06 §8 check 8. **Trigger:** a document observed staying `[data-unmeasured]`, or a phone report of an inner scroll on an unmeasured frame. **Source:** P28.S10.
+## Deferred-job candidates (for the orchestrator to file; I ran no `defer-job`)
 
-No outside-boundary observations this round.
+1. **Title:** Chrome print slicing of a framed explainer (page-1 gap, near-blank pages).
+   - **Reason:** an iframe is monolithic, so page 1 carries only the masthead, title and metadata, and the frame starts on page 2. A frame ending about 7–20px past a page foot yields a near-blank page, and some documents get a blank page after the colophon. This is cosmetic paper waste. It is pre-existing: F4 reproduced it on the unfixed path. It is not a truncation.
+   - **Trigger:** an operator complaint about blank pages in an exported PDF, or the next print-layer change.
+   - **Source:** P28.F4.
+2. **Title:** Explainer reporter: `measureAt` can loop with a document that mutation-observes `<html>`.
+   - **Reason:** the F4 paper emulation writes `<html style>` inline twice per post. A framed document whose `MutationObserver` watches `<html>` attributes and changes layout in response loops the reporter until the 300-per-width budget latches. A later same-width growth then leaves a stale frame with an inner scroll (probe: 300 posts in under 12s, then `maxTop 374`). No current explainer or `/explain` template does this.
+   - **Fix:** a per-width cap on `measureAt` separate from the posting budget, and a header-comment correction (it claims only `ResizeObserver` could observe the emulation).
+   - **Trigger:** the `/explain` template or any framed document gaining a `MutationObserver`, or an explainer seen churning or stale after load.
+   - **Source:** P28.REVIEW (re-review #2).
 
 ## Runtime left behind
 
 - Up, as found: `kb-p28s2-pg`, uvicorn `:8766`, `next dev :3030`.
-- Stopped: the `:3040` standalone server and Chrome for Testing (`:9555`). The scratch profile and PDFs are in the session scratchpad only.
-- Dev DB: fixture **doc 70** `p28review-reflow-probe` (p28s5 / research, public, synthetic lorem, `commit: false`) **kept** for F3/F4. Credential `p28review-repro` **revoked**. `web/.next` holds this build, with `static`/`public` links in `standalone/` (gitignored).
-- Repo: no product file touched. `git status` shows only `works/` files.
+- Stopped: the `:3040` standalone server, all Chrome for Testing instances, and the probe's static server. Their profiles, PDFs and scripts are in the session scratchpad only.
+- `web/.next` holds this review's build, with `static`/`public` links inside `standalone/` (gitignored).
+- Dev DB unchanged. Fixture doc 70 is kept, and no credential was minted.
+- Repo: no product file touched.
 
 ## Notebook edits (`phase.md`)
 
-`## Decisions`: two measured lines (findings 1 and 2). `## Operator Questions`: one appended routing line. `## Notes for later slices`: F2's review note consumed and replaced by one F3/F4 repro note. `## Now`: rewritten. `## Doc impact`: nothing added (no durable truth changed).
+- `## Decisions`: the re-review #1 line was replaced by the re-review #2 line, and one F4-safety line was added.
+- `## Doc impact`: two appended lines (the F4 wording addendum, and qa v0017).
+- `## Operator Questions`: one appended routing line.
+- `## Notes for later slices`: the two "for the next re-review" notes were consumed and replaced by one short fixture/harness pointer.
+- `## Now`: rewritten.
