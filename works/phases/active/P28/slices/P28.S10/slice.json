@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Why some framed explainers never report a height",
   "kind": "research",
-  "status": "pending",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "created_at": "2026-09-21T21:27:01+09:00",
   "started_at": "2026-09-21T21:27:47+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-08T14:27:31+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Found the durable inner scroller: the child reporter's lifetime budget=300 latch (predates P28) stops re-posting, so after enough width changes (resize, side-docked DevTools) a framed explainer keeps a stale height and the wheel scrolls inside it until reload; also bogus heights from an unlaid-out frame; doc 60 itself measures cleanly; Cloudflare edge injects a beacon into framed raw documents (operator question)",
   "validation": {
     "required": [],
     "last_run": null,
