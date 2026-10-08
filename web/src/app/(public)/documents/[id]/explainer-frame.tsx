@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { Editorial } from "@/components/states";
 import { AppButton } from "@/components/ui";
 import { DOCUMENTS, STATES } from "@/content";
+import { PRINT_COLUMN_PX } from "@/lib/explainer-height";
 
 /**
  * The explainer height handshake — PARENT half.
@@ -36,7 +38,67 @@ import { DOCUMENTS, STATES } from "@/content";
  *     scrolls internally (the old pre-handshake behaviour, now a decision) plus an
  *     honest note under it;
  *   - the relay's own two failures, rendered inside the reserved box.
+ *
+ * P28.F4 adds the PAPER size, because the screen size was printing a truncated
+ * document. The inline `height` beats `kb-print.css`'s `height: auto` (and an iframe
+ * has no content-auto height anyway), so the frame printed at its SCREEN height while
+ * the child re-laid itself out at the narrower paper column — taller — and the rest
+ * was cut off silently: fixture 70 lost paragraphs 102–119 of 120, and production
+ * docs 30/33 their last quiz questions. For print the frame is therefore PINNED to
+ * the paper column (`PRINT_COLUMN_PX`) at a height measured at that width, and put
+ * back on `afterprint`. Two routes in, because they can wait for different things:
+ *   - Export PDF asks first (`prepareExplainersForPrint`): the frame is pinned on
+ *     screen, the child is asked until it answers FROM that width, and only then
+ *     does the control call `print()` — a real measurement of the real layout.
+ *   - ⌘P (or the browser's menu) gives us `beforeprint` and nothing else: print
+ *     layout follows it synchronously, so no answer can be awaited. The frame is
+ *     pinned there and then, at the paper-column height the child already
+ *     volunteered with its last height message (`kb-explainer-print`).
+ * Nothing on the sheet changes but its completeness: no new rule, no copy, the frame
+ * still has no border on paper. On US Letter (a 702px column) the explainer is laid
+ * out 22px narrower than the column instead of leaving blank space after it.
  */
+
+/** Ask every framed explainer on the page to size itself for paper. */
+export const PRINT_PREPARE_EVENT = "kb-explainer-print-prepare";
+/** Put every framed explainer back to its screen size (Export PDF gave up). */
+export const PRINT_RELEASE_EVENT = "kb-explainer-print-release";
+
+type PrintPrepareDetail = { waitUntil: (ready: Promise<boolean>) => void };
+
+/**
+ * How long a frame waits for its document to answer from the paper column.
+ *
+ * ORIGINATED (P28.F4). Measured: the answer lands in tens of milliseconds — one
+ * relayout of the child, its 16ms debounce, one `postMessage` — so this is about
+ * two orders of magnitude of headroom, and still short enough that a dead frame
+ * costs the reader one brief "Preparing…" rather than a hang.
+ */
+const PRINT_PREPARE_TIMEOUT_MS = 2000;
+
+/** How often an unanswered frame is asked again while it is pinned for paper. */
+const PRINT_REQUEST_INTERVAL_MS = 250;
+
+/**
+ * Export PDF's half of the paper handshake: pin every framed explainer to the paper
+ * column and resolve once each has a height measured there. Resolves `false` when a
+ * frame had nothing to offer within its timeout — neither a real answer nor a
+ * paper-column height volunteered earlier — so the caller can warn before printing.
+ * A page with no framed explainer resolves `true` at once.
+ */
+export function prepareExplainersForPrint(): Promise<boolean> {
+  const waits: Promise<boolean>[] = [];
+  const detail: PrintPrepareDetail = {
+    waitUntil: (ready) => waits.push(ready),
+  };
+  window.dispatchEvent(new CustomEvent(PRINT_PREPARE_EVENT, { detail }));
+  return Promise.all(waits).then((all) => all.every(Boolean));
+}
+
+/** Undo `prepareExplainersForPrint` without printing. `afterprint` does it otherwise. */
+export function releaseExplainersAfterPrint(): void {
+  window.dispatchEvent(new Event(PRINT_RELEASE_EVENT));
+}
 
 /** Frame height bounds. Below the floor is unreadable; the ceiling caps a rogue doc. */
 const MIN_HEIGHT = 120;
@@ -60,7 +122,13 @@ const RELAY_PROBE_GRACE_MS = 200;
 
 type ExplainerMessage =
   | { type: "kb-explainer-height"; height: number }
+  | { type: "kb-explainer-print"; height: number; width: number }
   | { type: "kb-explainer-anchor"; top: number };
+
+/** The parent's clamp, applied to every height the child sends, screen or paper. */
+function clampHeight(raw: number): number {
+  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(raw)));
+}
 
 /** What the relay answered, as far as this island needs to care. */
 type RelayVerdict = "ok" | "notFound" | "upstream";
@@ -71,6 +139,17 @@ function parseMessage(data: unknown): ExplainerMessage | null {
   const msg = data as Record<string, unknown>;
   if (msg.type === "kb-explainer-height" && Number.isFinite(msg.height)) {
     return { type: "kb-explainer-height", height: msg.height as number };
+  }
+  if (
+    msg.type === "kb-explainer-print" &&
+    Number.isFinite(msg.height) &&
+    Number.isFinite(msg.width)
+  ) {
+    return {
+      type: "kb-explainer-print",
+      height: msg.height as number,
+      width: msg.width as number,
+    };
   }
   if (msg.type === "kb-explainer-anchor" && Number.isFinite(msg.top)) {
     return { type: "kb-explainer-anchor", top: msg.top as number };
@@ -156,6 +235,29 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
   const liveRef = useRef(true);
   // The relay's answer, asked for AT MOST ONCE per mount.
   const relayRef = useRef<RelayVerdict | null>(null);
+  // The verdict as a ref too, for the print listeners registered once per mount.
+  const verdictRef = useRef(verdict);
+  useEffect(() => {
+    verdictRef.current = verdict;
+  }, [verdict]);
+
+  // ── Paper (P28.F4) ──────────────────────────────────────────────────────
+  // The child's latest paper-column height and the width it was sent FROM. Only a
+  // `width` equal to `PRINT_COLUMN_PX` is a real measurement of the real layout;
+  // any other is the reporter's emulation, good enough for ⌘P.
+  const paperRef = useRef<{ height: number; width: number } | null>(null);
+  // `null` = screen layout. Otherwise the frame is PINNED to the paper column, at
+  // `height` when one is known (else its CSS height stands).
+  const [pin, setPin] = useState<{ height: number | null } | null>(null);
+  const pinnedRef = useRef(false);
+  // The screen height at the moment of pinning, put back on release so the screen
+  // returns exactly as it was (the child's posts from the paper width say nothing
+  // about the screen).
+  const screenHeightRef = useRef<number | null>(null);
+  // Export PDF's pending waiters, resolved by a real answer, a timeout or a release.
+  const waitersRef = useRef<((ready: boolean) => void)[]>([]);
+  const askTimerRef = useRef<number | null>(null);
+  const giveUpTimerRef = useRef<number | null>(null);
 
   const measured = height !== null;
 
@@ -183,6 +285,48 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
     if (answer === "ok" || answer === null) setVerdict("unmeasured");
   }, [probeRelay]);
 
+  /** Settle every Export PDF waiter and stop asking. */
+  const settleWaiters = useCallback((ready: boolean) => {
+    if (askTimerRef.current !== null) {
+      window.clearInterval(askTimerRef.current);
+      askTimerRef.current = null;
+    }
+    if (giveUpTimerRef.current !== null) {
+      window.clearTimeout(giveUpTimerRef.current);
+      giveUpTimerRef.current = null;
+    }
+    const waiters = waitersRef.current;
+    waitersRef.current = [];
+    waiters.forEach((resolve) => resolve(ready));
+  }, []);
+
+  /**
+   * Pin the frame to the paper column. SYNCHRONOUS on purpose (`flushSync`): from
+   * `beforeprint` the DOM must carry the new size before this handler returns,
+   * because print layout runs right after it — a scheduled render would land on
+   * the screen after the sheet had already been laid out at the old size.
+   */
+  const pinForPaper = useCallback((paperHeight: number | null) => {
+    if (!pinnedRef.current) screenHeightRef.current = heightRef.current;
+    pinnedRef.current = true;
+    flushSync(() => setPin({ height: paperHeight }));
+  }, []);
+
+  /** Back to the screen size, and ask the child for its screen height again. */
+  const releasePaper = useCallback(() => {
+    settleWaiters(false);
+    if (!pinnedRef.current) return;
+    pinnedRef.current = false;
+    const screen = screenHeightRef.current;
+    screenHeightRef.current = null;
+    setPin(null);
+    if (screen !== null) {
+      heightRef.current = screen;
+      setHeight(screen);
+    }
+    requestHeight(frameRef.current);
+  }, [settleWaiters]);
+
   useEffect(() => {
     liveRef.current = true;
 
@@ -194,14 +338,28 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
       if (!msg) return;
 
       if (msg.type === "kb-explainer-height") {
-        const next = Math.min(
-          MAX_HEIGHT,
-          Math.max(MIN_HEIGHT, Math.round(msg.height)),
-        );
+        const next = clampHeight(msg.height);
         heightRef.current = next;
         setHeight(next);
         // A late height beats every verdict: the document answered after all.
         setVerdict("waiting");
+        return;
+      }
+      if (msg.type === "kb-explainer-print") {
+        const paper = { height: clampHeight(msg.height), width: msg.width };
+        paperRef.current = paper;
+        if (!pinnedRef.current) return;
+        if (paper.width === PRINT_COLUMN_PX) {
+          // The child answered FROM the paper column: this is the height the
+          // sheet will have. Applied synchronously so a `print()` queued behind
+          // the waiters can never run against the previous size.
+          flushSync(() => setPin({ height: paper.height }));
+          settleWaiters(true);
+        } else if (waitersRef.current.length > 0) {
+          // It answered from its old width — the resize had not reached it yet.
+          // Ask again; the next answer comes from the pinned width.
+          requestHeight(frame);
+        }
         return;
       }
       // An in-page "Contents" link. A content-height frame has nothing left to
@@ -220,7 +378,62 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
       window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
     }
 
+    // Export PDF: pin now, then ask until the child answers from the paper column.
+    function onPrepare(event: Event) {
+      const detail = (event as CustomEvent<PrintPrepareDetail>).detail;
+      // Nothing to measure: a relay failure prints its editorial in the reserved
+      // box, and an `unmeasured` frame has already been warned about by the
+      // control. Neither is helped by waiting.
+      const v = verdictRef.current;
+      if (v === "notFound" || v === "upstream" || v === "unmeasured") {
+        detail.waitUntil(Promise.resolve(true));
+        return;
+      }
+      detail.waitUntil(
+        new Promise<boolean>((resolve) => waitersRef.current.push(resolve)),
+      );
+      // Already pinned and answered (a second click while the dialog is open)?
+      // Settle at once with what we have.
+      if (pinnedRef.current && paperRef.current?.width === PRINT_COLUMN_PX) {
+        settleWaiters(true);
+        return;
+      }
+      // Pin at the best height in hand so the screen does not jump twice; the
+      // real answer replaces it.
+      pinForPaper(paperRef.current?.height ?? null);
+      requestHeight(frameRef.current);
+      if (askTimerRef.current === null) {
+        askTimerRef.current = window.setInterval(
+          () => requestHeight(frameRef.current),
+          PRINT_REQUEST_INTERVAL_MS,
+        );
+      }
+      if (giveUpTimerRef.current === null) {
+        giveUpTimerRef.current = window.setTimeout(() => {
+          giveUpTimerRef.current = null;
+          // No answer from the paper column. A paper height the child sent
+          // earlier is still a real offer (the same one ⌘P uses); with none at
+          // all, the caller is told so it can warn before printing.
+          settleWaiters(paperRef.current !== null);
+        }, PRINT_PREPARE_TIMEOUT_MS);
+      }
+    }
+
+    // ⌘P / the browser's menu: no waiting possible, so use the paper height the
+    // child already volunteered. A frame that never reported one keeps today's
+    // behaviour — there is nothing better to print it at.
+    function onBeforePrint() {
+      if (pinnedRef.current) return; // Export PDF already sized it.
+      const paper = paperRef.current;
+      if (paper === null || heightRef.current === null) return;
+      pinForPaper(paper.height);
+    }
+
     window.addEventListener("message", onMessage);
+    window.addEventListener(PRINT_PREPARE_EVENT, onPrepare);
+    window.addEventListener(PRINT_RELEASE_EVENT, releasePaper);
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", releasePaper);
     // Now that we can hear an answer, ask — the frame may have loaded (and posted
     // its only height message) long before this island hydrated.
     requestHeight(frameRef.current);
@@ -233,9 +446,30 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
     return () => {
       liveRef.current = false;
       window.clearTimeout(timer);
+      settleWaiters(false);
       window.removeEventListener("message", onMessage);
+      window.removeEventListener(PRINT_PREPARE_EVENT, onPrepare);
+      window.removeEventListener(PRINT_RELEASE_EVENT, releasePaper);
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", releasePaper);
     };
-  }, [settle]);
+  }, [settle, settleWaiters, pinForPaper, releasePaper]);
+
+  // Screen: the measured height (or the record's CSS height until one arrives).
+  // Paper: the column width, at the paper height when one is known.
+  const frameStyle =
+    pin !== null
+      ? {
+          width: `${PRINT_COLUMN_PX}px`,
+          ...(pin.height !== null
+            ? { height: `${pin.height}px` }
+            : height !== null
+              ? { height: `${height}px` }
+              : {}),
+        }
+      : height === null
+        ? undefined
+        : { height: `${height}px` };
 
   const failed = verdict === "notFound" || verdict === "upstream";
 
@@ -312,7 +546,7 @@ export function ExplainerFrame({ src, title }: { src: string; title: string }) {
           title={title}
           className="kb-explainer__frame"
           referrerPolicy="no-referrer"
-          style={height === null ? undefined : { height: `${height}px` }}
+          style={frameStyle}
           onLoad={(event) => {
             requestHeight(event.currentTarget);
             // §5's "a `load` handler that treats a non-HTML relay answer as a

@@ -18,9 +18,14 @@
  * outward; the parent (`explainer-frame.tsx`) validates the sender, the shape, and
  * clamps the value, so a hostile document can do no more than mis-size its own frame.
  *
- * Two messages travel parent-ward:
+ * Three messages travel parent-ward:
  *   - `kb-explainer-height` — the document's content height, so the frame can grow to
  *     it and the PAGE does the scrolling instead of the frame.
+ *   - `kb-explainer-print` — sent right after each height message: the content height
+ *     the document WOULD have at the paper column (`PRINT_COLUMN_PX`), plus the
+ *     frame's current width. Print layout happens synchronously after `beforeprint`,
+ *     so a ⌘P can never wait for a fresh answer; the parent keeps this one in hand
+ *     instead (P28.F4).
  *   - `kb-explainer-anchor` — a "Contents" link's target offset. A content-height
  *     frame has nothing left to scroll, so in-page anchors would otherwise be inert;
  *     the parent scrolls the real page to them instead.
@@ -38,6 +43,23 @@
 
 /** Marker the raw-route tests assert on, and a grep handle in a served document. */
 export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
+
+/**
+ * The paper column a framed explainer is laid out at for print, in CSS px (P28.F4).
+ *
+ * DERIVED, not chosen: `kb-print.css` (round 06 §3.2) prints with
+ * `@page { size: auto; margin: 16mm 15mm 18mm }`, so the text column is the paper
+ * width less 30mm — A4 210mm → 180mm = 680.3px, US Letter 8.5in → 185.9mm = 702.6px —
+ * and this is the NARROWER of the two, floored, so the frame fits either sheet.
+ * (S8 measured the A4 ink at x 42.75–553.95pt, i.e. a 681px column.)
+ *
+ * Why it exists: on paper the frame keeps whatever inline height the screen measured,
+ * but the child re-lays itself out at the paper column — narrower than a desktop frame,
+ * so taller — and everything below the screen height was cut off without a word
+ * (P28.REVIEW finding 2). So the frame is printed at THIS width, at a height measured
+ * at this width. Both halves of the handshake read this one constant.
+ */
+export const PRINT_COLUMN_PX = 680;
 
 /**
  * The injected reporter, as source text.
@@ -112,23 +134,57 @@ export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
  * grants exactly ONE post when the budget is spent — an un-wedge lever for the parent —
  * but never refills the budget: the parent asks at most twice per mount, so a runaway
  * stays bounded.
+ *
+ * The PRINT height (P28.F4) is measured without changing anything the reader can see:
+ * `measureAt()` pins the root's width to the paper column inline, reads the body box,
+ * and puts the root's `style` attribute back, all inside one task — no frame is
+ * painted in between and no `ResizeObserver` sees it (observations are taken at the
+ * next rendering step, by which time the size is back). It is the same body-box sum
+ * as `measure()` minus the scrollbar term, because paper has no scrollbars. A
+ * scroll offset the narrower layout clamped is restored. Measured against a frame
+ * really pinned to that width it is exact (fixture 70 and the shapes of production
+ * docs 30/33, at 680 and 703px) and costs 2–5ms per post. It is an EMULATION of a
+ * 680px viewport, so a document that styles itself by viewport media queries or `vw`
+ * can differ; that is why the Export PDF control does not trust it, but pins the real
+ * frame and waits for a print message whose `width` IS the column. It is posted only
+ * after a height message, so it inherits that message's dedupe and per-width budget,
+ * and a document without a root `style` (the test harness) simply sends none.
  */
 const REPORTER = `
 (function () {
   if (window.parent === window) return;
-  var BUDGET = 300;
+  var BUDGET = 300, PRINT_W = ${PRINT_COLUMN_PX};
   var last = -1, lastW = -1, queued = false, budget = BUDGET, grant = false;
   function px(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
-  function measure() {
-    var b = document.body;
-    if (!b) return 0;
+  function box(b) {
     var s = window.getComputedStyle(b);
-    var root = document.compatMode === 'BackCompat' ? b : document.documentElement;
-    var bar = root ? Math.max(0, window.innerHeight - root.clientHeight) : 0;
     return Math.ceil(
       Math.max(b.getBoundingClientRect().height, b.scrollHeight) +
         px(s.marginTop) + px(s.marginBottom)
-    ) + bar;
+    );
+  }
+  function measure() {
+    var b = document.body;
+    if (!b) return 0;
+    var root = document.compatMode === 'BackCompat' ? b : document.documentElement;
+    var bar = root ? Math.max(0, window.innerHeight - root.clientHeight) : 0;
+    return box(b) + bar;
+  }
+  function measureAt(w) {
+    var r = document.documentElement, b = document.body;
+    if (!b || !r || !r.style || !r.getAttribute) return 0;
+    var prev = r.getAttribute('style'), sx = window.scrollX, sy = window.scrollY, h = 0;
+    try {
+      r.style.setProperty('width', w + 'px', 'important');
+      h = box(b);
+    } finally {
+      // Read before removing: Blink serialises a CSSOM-written inline style lazily,
+      // and a removeAttribute that skips the read comes back as style="".
+      if (prev === null) { r.getAttribute('style'); r.removeAttribute('style'); }
+      else r.setAttribute('style', prev);
+      if (window.scrollX !== sx || window.scrollY !== sy) window.scrollTo(sx, sy);
+    }
+    return h;
   }
   function post() {
     queued = false;
@@ -142,6 +198,10 @@ const REPORTER = `
       grant = false;
       last = h;
       window.parent.postMessage({ type: 'kb-explainer-height', height: h }, '*');
+      var p = measureAt(PRINT_W);
+      if (p > 0) {
+        window.parent.postMessage({ type: 'kb-explainer-print', height: p, width: w }, '*');
+      }
     }
   }
   function schedule() {
