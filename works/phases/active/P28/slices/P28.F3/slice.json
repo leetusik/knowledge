@@ -3,12 +3,12 @@
   "phase_id": "P28",
   "name": "Explainer reporter: count the horizontal scrollbar so classic scrollbars leave no inner scroll",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 10.6,
   "depends_on": [],
   "created_at": "2026-10-08T15:28:44+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-08T15:29:35+09:00",
+  "completed_at": "2026-10-08T15:50:55+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "The reporter now counts the root's horizontal scrollbar (innerHeight - clientHeight), observes documentElement too, and posts any growth while still dropping sub-2px shrinks; classic-scrollbar inner range 14/15px -> 0 and the wheel moves the page, in dev and the production build, F2's checks intact",
   "validation": {
     "required": [],
     "last_run": null,

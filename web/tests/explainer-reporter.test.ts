@@ -36,15 +36,33 @@ function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
     innerWidth: viewport[0],
     innerHeight: viewport[1],
   };
+  // The root's horizontal scrollbar is `innerHeight − clientHeight` (0 = overlay
+  // scrollbars, or nothing overflowing sideways). In quirks mode the viewport's
+  // `clientHeight` moves to `body`, and the root reports its content height instead.
+  let bar = 0;
+  let quirks = false;
+  const viewportHeight = () => win.innerHeight - bar;
+  const root = {
+    get clientHeight() {
+      return quirks ? 99999 : viewportHeight();
+    },
+  };
   // `offsetHeight`/`scrollHeight` are integer-rounded in a real browser; the
   // bounding box is not.
   const body = {
     scrollHeight: Math.round(height),
     offsetHeight: Math.round(height),
     getBoundingClientRect: () => ({ height }),
+    get clientHeight() {
+      return quirks ? viewportHeight() : Math.round(height);
+    },
   };
   const doc = {
     readyState: "complete",
+    get compatMode() {
+      return quirks ? "BackCompat" : "CSS1Compat";
+    },
+    documentElement: root,
     body,
     addEventListener: () => {},
     getElementById: () => null,
@@ -74,6 +92,12 @@ function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
     margin: (top: string, bottom: string) => {
       margins.marginTop = top;
       margins.marginBottom = bottom;
+    },
+    /** A classic scrollbar of `px` appeared (or went) along the root's bottom edge. */
+    scrollbar: (px: number, inQuirksMode = false) => {
+      bar = px;
+      quirks = inQuirksMode;
+      fire("resize", {});
     },
     /** The frame's viewport changed (no event fired — pair it with `reflow`). */
     viewport: (w: number, h: number) => {
@@ -179,5 +203,35 @@ describe("the injected explainer height reporter", () => {
     reflow(1000.3);
 
     expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 1065 });
+  });
+
+  // P28.F3 — with layout-taking (classic) scrollbars, a document wider than its frame
+  // draws a horizontal bar INSIDE the frame; uncounted, it left a 14px inner scroll.
+
+  it("adds a classic horizontal scrollbar to the posted height", () => {
+    const { posts, scrollbar } = runReporter(400);
+    scrollbar(15);
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 415 });
+
+    scrollbar(0); // the sideways overflow went away
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 400 });
+  });
+
+  it("reads the scrollbar off body in quirks mode", () => {
+    const { posts, scrollbar } = runReporter(400);
+    scrollbar(15, true);
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 415 });
+  });
+
+  it("posts a 1px growth but not a 1px shrink", () => {
+    const { posts, reflow } = runReporter(400);
+    reflow(401);
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 401 });
+
+    reflow(400);
+    expect(posts).toHaveLength(2);
+
+    reflow(399); // 2px below the last post
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 399 });
   });
 });
