@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-10-08 · [P8: Stage 1 Fact-Check and the Project-1 Plan](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html) — glide-ilab
 - 2026-10-07 · [How the glide-ilab team ships code: commits, PRs, deploys and your first ticket](glide-ilab/2026-10-07-how-the-glide-ilab-team-ships-code-commits-prs-deploys-and-your-first-ticket.html) — glide-ilab
 - 2026-10-07 · [Reading Your Glide Onboarding Doc — The Background Knowledge, Explained for Beginners](base/2026-10-07-reading-your-glide-onboarding-doc-the-background-knowledge-explained-for-beginne.md) — base
 - 2026-09-21 · [The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start](arb_upbit_1/2026-09-21-the-korbit-fish-book-v2-measured-rungs-a-rest-then-taker-exit-and-a-5-m-live-sta.html) — arb_upbit_1

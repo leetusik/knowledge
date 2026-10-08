@@ -1,0 +1,557 @@
+<!--kb
+title: "P8: Stage 1 Fact-Check and the Project-1 Plan"
+date: 2026-10-08
+tags:
+  - stage-1
+  - research-agent
+  - fact-check
+  - project-plan
+  - glide-ilab
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P8: Stage 1 Fact-Check and the Project-1 Plan</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff; --fg: #1d1d1f; --muted: #5b5f66;
+      --panel: #f4f5f7; --line: #d9dde3;
+      --accent: #2f6f4f; --accent-bg: #eef7f1;
+      --warn: #b3541e; --warn-bg: #fdf2ea;
+      --info: #2b5fa8; --info-bg: #edf3fc;
+      --ok-bg: #d6f5d6; --bad-bg: #f7d6d6;
+      --box: #ffffff; --box-dim: #f0f1f3; --dash: #8a8f98;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121417; --fg: #e8e9eb; --muted: #a2a7ae;
+        --panel: #1c2026; --line: #343a43;
+        --accent: #7fc7a1; --accent-bg: #16271e;
+        --warn: #f0a16a; --warn-bg: #2d1f14;
+        --info: #8fb4ee; --info-bg: #15202f;
+        --ok-bg: #1f4a25; --bad-bg: #5a2323;
+        --box: #1a1e24; --box-dim: #242931; --dash: #6c727c;
+      }
+    }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+           line-height: 1.6; }
+    h1 { font-size: 1.9rem; line-height: 1.25; margin-bottom: .25rem; }
+    h2 { margin-top: 2.5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+    h3 { margin-top: 1.6rem; }
+    .lede { color: var(--muted); margin-top: 0; }
+    nav ol { padding-left: 1.3rem; }
+    a { color: var(--info); }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); padding: .75rem; border-radius: 6px;
+           font-size: .9em; border: 1px solid var(--line); }
+    code { background: var(--panel); padding: .05rem .3rem; border-radius: 4px; font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid var(--accent); background: var(--accent-bg); padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+    .callout.assess { border-left-color: var(--info); background: var(--info-bg); }
+    .callout h4 { margin: 0 0 .4rem; font-size: 1em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; vertical-align: top; text-align: left; }
+    th { background: var(--panel); }
+    .num { text-align: right; white-space: nowrap; }
+    .ev { color: var(--muted); font-size: .86em; }
+    .ev::before { content: "evidence: "; }
+    .fig { margin: 1.25rem 0; }
+    .fig figcaption { font-size: .88em; color: var(--muted); margin-top: .4rem; }
+    /* flow diagrams */
+    .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .5rem; }
+    .flow .node { flex: 1 1 10rem; background: var(--box); border: 1px solid var(--line); border-radius: 8px; padding: .55rem .7rem; font-size: .88em; }
+    .flow .node b { display: block; }
+    .flow .node.store { background: var(--box-dim); border-style: solid; }
+    .flow .node.dormant { border-style: dashed; border-color: var(--dash); color: var(--muted); }
+    .flow .node.ext { border-color: var(--warn); }
+    .flow .arrow { align-self: center; color: var(--muted); font-size: 1.2em; padding: 0 .1rem; }
+    .lane { border: 1px dashed var(--line); border-radius: 10px; padding: .6rem .7rem .7rem; margin: .6rem 0; }
+    .lane .lane-title { font-size: .8em; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: .4rem; }
+    /* stacked bar */
+    .bar { display: flex; width: 100%; height: 2.2rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); font-size: .8em; }
+    .bar div { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+    .bar .a { background: #4f8f6f; color: #fff; }
+    .bar .b { background: #c98a3a; color: #fff; }
+    .bar .c { background: var(--box-dim); color: var(--muted); }
+    .legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; font-size: .86em; margin-top: .4rem; }
+    .legend span::before { content: ""; display: inline-block; width: .8em; height: .8em; border-radius: 2px; margin-right: .35em; vertical-align: -1px; }
+    .legend .la::before { background: #4f8f6f; } .legend .lb::before { background: #c98a3a; } .legend .lc::before { background: var(--box-dim); border: 1px solid var(--line); }
+    /* ui mock */
+    .ui { border: 1px solid var(--line); border-radius: 10px; background: var(--box); padding: .8rem; font-size: .9em; }
+    .ui .crumb { color: var(--muted); font-size: .85em; }
+    .ui .card { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem; margin: .5rem 0; background: var(--bg); }
+    .ui .badge { display: inline-block; font-size: .78em; padding: .05rem .45rem; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); }
+    .ui .head { font-weight: 600; margin: .25rem 0 .15rem; }
+    .ui .teaser { color: var(--muted); font-size: .92em; }
+    .ui .date { font-size: .82em; color: var(--muted); margin-top: .25rem; }
+    .ui .footer { text-align: center; color: var(--muted); font-size: .85em; margin-top: .5rem; }
+    .ui .dark { background: #1d2330; color: #e8ecf3; border-radius: 8px; padding: .6rem .75rem; margin: .5rem 0; }
+    .ui .dark .lbl { font-size: .75em; letter-spacing: .06em; color: #9fb3d1; }
+    .ui .field { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78em; color: var(--info); }
+    /* schedule grid */
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+    .grid .wk { background: var(--box-dim); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; font-size: .84em; }
+    .grid .wk b { display: block; margin-bottom: .3rem; }
+    .grid .pp { display: block; background: var(--box); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; padding: .25rem .45rem; margin: .3rem 0; }
+    .grid .pp.milestone { border-left-color: var(--warn); }
+    @media (max-width: 40rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    /* quiz */
+    .q { margin: 1.25rem 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem; cursor: pointer;
+              background: var(--box); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    .q .opt:focus-visible { outline: 2px solid var(--info); }
+    .q .opt.correct   { background: var(--ok-bg); }
+    .q .opt.incorrect { background: var(--bad-bg); }
+    .q .why { margin: .4rem 0 0; font-size: .95em; }
+    .small { font-size: .88em; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>P8: Stage 1 Fact-Check and the Project-1 Plan</h1>
+  <p class="lede">A research explainer of workspace phase P8 (2026-10-08): what the team's Stage 1, 글로벌 IB 대시보드 + 주간 이메일, really is today, where the documents and the system disagree, and the eight-phase plan P8 proposes for the operator's first project.</p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#the-question">The question and the short answer</a></li>
+      <li><a href="#how-p8-worked">How P8 checked the facts</a></li>
+      <li><a href="#stage-1-today">Stage 1 as it actually runs</a></li>
+      <li><a href="#signal-prototype">The dormant signal prototype</a></li>
+      <li><a href="#discrepancies">Where the documents and reality disagree</a></li>
+      <li><a href="#the-plan">The proposed plan: eight phases in four weeks</a></li>
+      <li><a href="#decisions-and-questions">What the operator decides, and what to ask Jake</a></li>
+      <li><a href="#assessment">Assessment</a></li>
+      <li><a href="#sources">Sources</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="the-question">
+    <h2>1. The question and the short answer</h2>
+    <p>The operator, 수강, joined the team as its new research-agent engineer and was handed a first project: improve <em>Stage 1</em> of the research-agent roadmap, the <strong>글로벌 IB 대시보드 + 주간 이메일</strong> (a dashboard of global investment-bank research plus a weekly email), due 11/3. Before building anything, P8 was created to find out what Stage 1 actually is. The operator's own words, from <code>intent.md</code>:</p>
+    <blockquote>
+      <p>“I'm very new to this repo and team. and My first job is to improve the stage 1: 글로벌 IB 대시보드 + 주간 이메일. I heard that the feature it self is already built and running in production. […] The phase's purpose is factcheck for first project( the stage 1 ). the latest version of the repo, supabase db, and the two onboarding and roadmap docs. and listup what to do for project 1. […] the running website is :"https://dashboard.glide-path.org/global-ib-research" our project 1 will include this page improvement too. using themes and signals. like user click certain themes, show what's the new on the themes, and market condition(bull, bear, etc..) showing conflict if opinions are splitted and sutff.”</p>
+    </blockquote>
+    <p>At the confirmation gate the operator added two things: the local pipeline run was moved out to a later phase (“local pipeline run will be done later phase.”), and a consolidated list of questions for Jake was added as a deliverable (“you also need to list up the questions for the jake. in order to complete the first project”). <span class="ev">intent.md, Clarifications Resolved</span></p>
+
+    <div class="callout">
+      <h4>The short answer</h4>
+      <p><strong>Stage 1 today is a weekly summarization pipeline and a read-only list page. Nothing else from the roadmap runs.</strong> A GitHub Actions job collects links from 9 investment houses every Sunday, summarizes each report with Codex, and writes eight summary columns into one table, <code>research_documents</code> (878 rows, 872 summarized, 72 consecutive weeks of history). A Next.js page owned by another team lists 347 of those rows. There is <strong>no theme, signal, stance or conflict anywhere on the page</strong>, and <strong>no weekly email exists in any repo, table or schedule</strong>. <span class="ev">P8.S5 result §0; P8.S2 §0–§1; P8.S3 §1; P8.S4 §1–§2</span></p>
+    </div>
+
+    <p>Five findings change the plan more than any other (S5 §0):</p>
+    <ol>
+      <li><strong>The roadmap's signal layer already exists as a dormant prototype.</strong> An unmerged July 2026 branch created five live tables and filled them once, on 2026-07-08: 201 signals from 3 documents, 120 themes, 644 aliases, 95 entities. Nothing has written to them since. “Stage 0” is therefore <em>adopt or migrate populated tables</em>, and signal extraction is a <em>port-or-rebuild</em> choice. <span class="ev">S2 §9; S3 §2</span></li>
+      <li><strong>There is no email anywhere.</strong> No code, no dependency, no schedule, no recipient list. The only email table, <code>mk_email_logs</code>, holds 30 payment and cancellation mails, the last on 2026-04-07. Both email deliverables are greenfield. <span class="ev">S2 §0; S3 DB-13; S4 §6</span></li>
+      <li><strong>The page lives in another team's repositories, and its tail is junk.</strong> <code>dashboard-frontend</code> and <code>dashboard-backend</code> are invisible to the operator's GitHub account. The last pages of the list show 12 Deutsche Bank disclaimer pages and 2023 J.P. Morgan articles as research, and 60.2 % of the summarized history cannot be listed at all. <span class="ev">S2 §1.3; S4 §1.6–§1.8</span></li>
+      <li><strong>The “Hankyung ≥ 1 year” table covers six months.</strong> <code>reports</code> holds 2,270 rows from 2026-01-02 to 06-25, loaded once. <span class="ev">S3 DB-6</span></li>
+      <li><strong>The operator cannot write anywhere.</strong> READ on the monorepo only, a read-only DB role with no staging copy, no GCP access, no CI on pull requests and no CODEOWNERS. Every code phase needs a merge path before it can finish. <span class="ev">S2 §0; S3 DB-20/21</span></li>
+    </ol>
+    <p>Out of these facts P8 proposes eight phases (PP-1 to PP-8), recommends porting the prototype selectively, drafts a scope-cut proposal for 대표, puts ten decisions to the operator (Q1–Q10), and hands Jake a 25-item Korean question block. The review passed with 36 evidence spot-checks and zero product files changed. <span class="ev">phase.json review note; P8.REVIEW result §3</span></p>
+  </section>
+
+  <section id="how-p8-worked">
+    <h2>2. How P8 checked the facts</h2>
+    <p>A fact-check is only as good as its evidence discipline, so it is worth seeing how the phase was cut. P8 was decomposed into five <em>research</em> slices that ran strictly in order, each on a different instrument, followed by a review. No slice wrote product code, no slice wrote to the database, and the GitHub Actions workflow was never dispatched. The whole phase ran between 10:26 and 13:45 KST on 2026-10-08. <span class="ev">phase.json created_at / completed_at; phase.md ## Decisions, Breakdown</span></p>
+
+    <figure class="fig">
+      <div class="flow">
+        <div class="node"><b>S1 · docs</b>Roadmap and onboarding .docx → a register of 138 claims (C-1…C-138), the deliverable ids R1–R6 / X1–X4, 17 vocabulary hypotheses, 22 doc-vs-doc discrepancies</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S2 · repo</b>glide-ilab at <code>7225f24</code>, every branch, read-only <code>gh</code> → 46 claims checked with <code>path:line</code>, 23 discrepancies DR-1…23</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S3 · production DB</b>140 logged read-only queries through a SELECT-only role → 48 claims checked, 22 discrepancies DB-1…22</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S4 · live page</b>17 captures (page text, interactive tree, network calls, API bodies, two screenshots) taken by the orchestrator → 11 claims, DP-1…11</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S5 · synthesis</b>As-is map, 44 merged discrepancies covering all 78 ids, 8 proposed phases, Q6–Q10, 36 questions for Jake</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>REVIEW</b>36 evidence spot-checks, number reconciliation across slices, question routing → <code>pass</code></div>
+      </div>
+      <figcaption>The six slices of P8 and what each produced. Claims flowed one way: the docs said what Stage 1 should be (S1); the repo, the DB and the page said what it is (S2–S4); S5 compared them.</figcaption>
+    </figure>
+
+    <p><strong>Claims before facts.</strong> S1 went first and turned the two Korean documents into a numbered register, each claim tagged with where it could be verified: <em>repo</em>, <em>DB</em> or <em>page</em>. Later slices then had a checklist rather than a vague mandate, and the review could count coverage mechanically: the 46 repo-verifiable, 48 DB-verifiable and 11 page-verifiable claims each got a row. <span class="ev">phase.md ## Slices; P8.REVIEW result §1</span></p>
+
+    <p><strong>Read-only by construction.</strong> The database was reached through a Postgres role named <code>agent_readonly</code> that holds only a SELECT grant, over Supabase's session pooler. Every public table has Row Level Security (RLS) turned on, which matters because Postgres applies a <em>default-deny</em> rule to such tables: “If no policy exists for the table, a default-deny policy is used, meaning that no rows are visible or can be modified” (<a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL documentation, Row Security Policies</a> — postgresql.org). The operator therefore added a <code>for select … using (true)</code> policy for that role on all 351 public tables, cleared with Jake first. A write attempt returned “permission denied”, and a table created later reads as zero rows until the policy is added to it too, which is one of the questions for Jake (F-4). <span class="ev">intent.md Clarifications; S3 DB-20</span></p>
+
+    <div class="callout warn">
+      <h4>One deliberate exception</h4>
+      <p>The page is behind a login. The operator allowed the orchestrator to drive <em>their own</em> Chrome, already signed in with a Pro subscription, through the Claude in Chrome extension: navigate, read text, screenshot, nothing else. The workspace contract normally forbids driving the operator's profile; this was an explicit, P8-only, read-only override, and the review insists it is recorded as “how the operator views the Dashboard”, never as an agent verification runtime. Executors never touched a browser; they analysed the capture files. <span class="ev">intent.md, Access and instruments; P8.REVIEW result §5</span></p>
+    </div>
+
+    <p><strong>What the review checked.</strong> Beyond re-running each slice's own validation, the reviewer opened 36 evidence pointers at random: workflow lines, the publish SQL, the query log rows behind the headline counts, the capture files behind the page facts, and the extracted document lines behind the deliverable list. All 36 held. It also reconciled the numbers across slices and found no contradiction, listing the few early leads that later slices corrected: a news-table count of 4,985 in <code>intent.md</code> against 4,988 in S3 (different read times), a stale <code>reltuples</code> estimate of 0 candidates against the real 26, and a capture note's “32 undated” that S4 re-summed to 35. <span class="ev">P8.REVIEW result §3</span></p>
+  </section>
+
+  <section id="stage-1-today">
+    <h2>3. Stage 1 as it actually runs</h2>
+    <p>Here is the system as the four sources agree it exists. Dashed boxes are things that exist but do not run; orange borders mark components outside the monorepo.</p>
+
+    <figure class="fig">
+      <div class="lane">
+        <div class="lane-title">Monorepo · ib-research-report-pipeline · GitHub Actions, Sundays</div>
+        <div class="flow">
+          <div class="node"><b>9 house sites</b>Goldman Sachs, J.P. Morgan, Morgan Stanley, Merrill, Bank of America Institute, Vanguard Investor, Vanguard Advisors, HSBC US, Jefferies</div>
+          <div class="arrow">→</div>
+          <div class="node"><b>collect → register</b>new links become <code>research_documents</code> rows with <code>crawl_status='discovered'</code>; one <code>research_crawl_runs</code> row per source</div>
+          <div class="arrow">→</div>
+          <div class="node"><b>capture → extract → summarize / judge / arbiter / derive</b>Codex CLI, <code>gpt-6-luna</code> for the summary, <code>gpt-5.6-terra</code> for judge and arbiter; up to ~40 min per document</div>
+          <div class="arrow">→</div>
+          <div class="node store"><b>publish</b>8 summary columns on <code>research_documents</code>, plus a branch and PR on the KB repo <code>glide-llm-wiki-kb</code></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Production Supabase (Postgres)</div>
+        <div class="flow">
+          <div class="node store"><b>research_documents</b>878 rows · 872 summarized · 35 undated · newest 2026-10-04</div>
+          <div class="node store"><b>research_sources</b>12 codes: the 9 houses plus 3 leftovers from a June crawl</div>
+          <div class="node store"><b>research_crawl_runs</b>per-source run log; Merrill has failed every run since 2026-09-13</div>
+          <div class="node dormant"><b>5 signal tables</b>filled once on 2026-07-08 by the prototype; never refreshed (section 4)</div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Other team's repos · invisible to the operator</div>
+        <div class="flow">
+          <div class="node ext"><b>dashboard-backend</b><code>GET /api/v1/research/articles?page&amp;page_size[&amp;source_code]</code> and <code>/{uuid}</code>; filters on <code>summary_short_ko is not null</code>, ~183-day window, undated rows last</div>
+          <div class="arrow">→</div>
+          <div class="node ext"><b>dashboard-frontend</b>Next.js page <code>/global-ib-research</code>: 15 cards per page, “전체 347건 · 1 / 24 페이지”</div>
+        </div>
+      </div>
+      <figcaption>Stage 1 as found. The monorepo owns only the pipeline. The page and its API are other repositories, named in issue #65. <span class="ev">S5 §A.1; S2 §1–§2; S3 §1; S4 §1.5</span></figcaption>
+    </figure>
+
+    <h3>3.1 The weekly job and its clock</h3>
+    <p>The only scheduled Stage-1 work on <code>main</code> is the workflow <code>.github/workflows/ib-research-report-pipeline.yml</code>. Its trigger, quoted from the file:</p>
+<pre><code>schedule:
+  - cron: "37 0 * * 0"</code></pre>
+    <p>GitHub evaluates cron in UTC (“By default, scheduled workflows run in UTC” — <a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">GitHub Docs, Events that trigger workflows</a> — docs.github.com), so <code>37 0 * * 0</code> is Sunday 00:37 UTC, which is Sunday 09:37 KST. The team's roadmap says collection happens on Sunday, and that much is true. But the last three scheduled runs were <em>created</em> at 14:21, 14:41 and 15:17 KST and then ran for hours. GitHub's documentation warns that “the schedule event can be delayed during periods of high loads of GitHub Actions workflow runs” and that high-load times include the start of every hour (same page). Whether load explains a gap of five hours is not established by the phase; what the plan does is treat the <em>observed</em> afternoon start as the fact to design around, which is why the weekly aggregation slot becomes a question for Jake (F-21) instead of an assumption. <span class="ev">S2 §1.1 and §0 (gh run list); S5 B-25</span></p>
+    <p>Two more clock facts: a second workflow refreshes the Codex authentication token daily at <code>24 19 * * *</code> UTC, which is 04:24 KST; and scheduled link collection has only existed since pull request #78 on 2026-09-28, so the first scheduled registration of new links was 2026-10-04. Each job is bounded by GitHub's limit that “each job in a workflow can run for up to 6 hours of execution time” (<a href="https://docs.github.com/en/actions/reference/limits">GitHub Docs, Actions limits</a> — docs.github.com), and the workflow file itself records a single document taking 40m45s, which is why adding a signal-extraction step raises a budget question (PP-4 risk 6). <span class="ev">S2 §1.1; P8.REVIEW spot-checks 1–4</span></p>
+
+    <h3>3.2 What publish writes, and what it never writes</h3>
+    <p>The “AI RESEARCH SUMMARY” users see is produced entirely by this pipeline. Its publish step runs one UPDATE, quoted from <code>storage/supabase.py</code> (lines 439–449):</p>
+<pre><code>update public.research_documents
+   set title_ko = %(title_ko)s,
+       summary_short_ko = %(summary_short_ko)s,
+       summary_detailed_ko = %(summary_detailed_ko)s,
+       summary_status = %(summary_status)s,
+       summary_model = %(summary_model)s,
+       summary_prompt_version = %(summary_prompt_version)s,
+       summary_generated_at = now(),
+       updated_at = now()</code></pre>
+    <p>Eight columns, nothing more. In particular the pipeline <strong>never stores the report body</strong>: <code>text_content</code>, <code>content_hash</code>, <code>storage_uri</code> and friends were written by a crawler that was retired in pull request #102 and are untouched since. The body exists only on the Actions runner during the run. This single fact drives much of the plan: the roadmap's principle of 원문 비저장 (do not store the original text) is honoured by today's code, but 822 legacy rows still hold 6.6 million characters of body text from the old crawler, and any signal-extraction step must either run <em>inside</em> the weekly run, where the body still exists, or re-capture the pages. <span class="ev">S2 §2; S3 DB-3, DB-4; S5 B-14</span></p>
+
+    <p>Three fields reach the page from this step. <code>title_ko</code> is the headline, the five bullets of <code>summary_short_ko</code> are the “AI RESEARCH SUMMARY” panel (bullet 1 doubles as the list card's teaser), and <code>summary_detailed_ko</code> is the paragraph section “리서치 본문 요약”. The prompt labels are <code>inline-materials-v1+derive-v1</code> on 766 rows, while 106 rows still carry the retired crawler's labels (104 of them <code>v7_reader_tone</code>), and 6 rows have no summary at all. Deliverable R3, “no effect on the existing AI summary”, therefore has to freeze three fields, two prompt files, the labels and the models, and accept that the baseline is already mixed. <span class="ev">S2 §3; S3 DB-17; S4 DP-4; S5 B-26</span></p>
+
+    <h3>3.3 What the page shows</h3>
+    <p>The captures let us draw the page faithfully. The list is one mixed feed; each card has a house badge, a Korean headline, a one-sentence teaser and a date. The detail page adds the original link and the two summary sections. Below is the first card of page 1 as captured on 2026-10-08, with the API field behind each element.</p>
+
+    <figure class="fig">
+      <div class="ui">
+        <div class="crumb">도구 › 글로벌 IB 리서치</div>
+        <div class="head" style="font-size:1.05em">글로벌 IB 리서치</div>
+        <div class="card">
+          <span class="badge">Vanguard Advisors</span> <span class="field">source_name</span>
+          <div class="head">오늘날 시장에 맞게 채권 포트폴리오를 구성했는가? <span class="field">title_ko</span></div>
+          <div class="teaser">뱅가드는 현금과 고수익 신용채권에 치우친 포트폴리오가 경기 둔화 때 안전자산 수요에 대응하지 못하거나 기회를 놓칠 수 있다고 본다. <span class="field">summary_short_ko[0]</span></div>
+          <div class="date">2026.10.02 <span class="field">published_at</span></div>
+        </div>
+        <div class="card" style="opacity:.75">
+          <span class="badge">J.P. Morgan</span>
+          <div class="head">차분한 지수, 들썩이는 시장</div>
+          <div class="teaser">J.P.모건 프라이빗뱅크는 인플레이션 불확실성과 예상보다 강한 성장, AI 데이터센터 투자 확대로 … </div>
+          <div class="date">2026.10.02</div>
+        </div>
+        <div class="footer">전체 347건 · 1 / 24 페이지</div>
+      </div>
+      <figcaption>The list page, page 1, redrawn from capture 01. Fifteen such cards per page; no filter, search, theme or signal control exists anywhere on it. <span class="ev">S4 captures 01, 02, 03</span></figcaption>
+    </figure>
+
+    <figure class="fig">
+      <div class="ui">
+        <div class="crumb">← 목록으로</div>
+        <span class="badge">Vanguard Advisors</span>
+        <div class="head">오늘날 시장에 맞게 채권 포트폴리오를 구성했는가?</div>
+        <div class="date">Vanguard Advisors | 발행일 2026.10.02 &nbsp;·&nbsp; 원문 링크 ↗ <span class="field">canonical_url</span></div>
+        <div class="dark">
+          <div class="lbl">AI RESEARCH SUMMARY <span class="field" style="color:#9fb3d1">summary_short_ko · 5 bullets</span></div>
+          • 뱅가드는 현금과 고수익 신용채권에 치우친 포트폴리오가 …<br>• 2026년 중반 관찰한 채권 포트폴리오 962개 중 약 3분의 2는 …<br>• … (three more bullets)
+        </div>
+        <div class="head" style="font-size:.95em">리서치 본문 요약 <span class="field">summary_detailed_ko</span></div>
+        <div class="teaser">뱅가드는 현금과 고수익 신용채권에 치우친 채권 포트폴리오가 경기 둔화 시 … (three paragraphs)</div>
+        <div class="card" style="text-align:center">글로벌 리서치, 내 포트폴리오에는 어떤 의미일까요? · <b>내 자산 진단하기</b></div>
+        <div class="small">※ 본 콘텐츠는 AI가 데이터를 분석해 작성한 참고용 리포트로 …</div>
+      </div>
+      <figcaption>The detail page for the same article, redrawn from capture 05. Deep-linkable by the API item's uuid. Never shown: the English <code>title</code>, <code>source_code</code>, <code>doc_type</code>, <code>pdf_url</code>, <code>summary_generated_at</code>, and any mark of date quality. <span class="ev">S4 §1.2–§1.4, U-8–U-10</span></figcaption>
+    </figure>
+
+    <h3>3.4 Why the footer says 347</h3>
+    <p>The database holds 872 summarized documents, but the page says 347. S4 explained the number exactly, house by house: the list shows the 312 dated items whose <code>published_at</code> falls in a window of about 183 days (the oldest listed item, 2026-04-10, was 181 days before the capture), ordered newest first, and then <strong>all 35 undated rows, sorted last</strong>: Deutsche Bank 13, Merrill 12, J.P. Morgan 9, Goldman Sachs 1. The remaining 525 summarized rows, 60.2 % of the history, cannot be reached from the page at all. <span class="ev">S4 §1.6–§1.7, captures 10, 14, 16; S3 Q2ak</span></p>
+
+    <figure class="fig">
+      <div class="bar" role="img" aria-label="872 summarized rows: 312 dated and listed, 35 undated and listed last, 525 not listable">
+        <div class="a" style="width:35.8%">312 dated, listed</div>
+        <div class="b" style="width:4.0%">35</div>
+        <div class="c" style="width:60.2%">525 summarized but not listable</div>
+      </div>
+      <div class="legend"><span class="la">in the ~183-day window</span><span class="lb">undated, appended last</span><span class="lc">older than the window</span></div>
+      <figcaption>The 872 summarized rows of <code>research_documents</code> as the page exposes them. 312 + 35 = 347.</figcaption>
+    </figure>
+
+    <p>That undated tail is where the page embarrasses itself. It presents, as research, 12 Deutsche Bank link-disclaimer pages, 5 J.P. Morgan articles from 2023, one listing page and 13 evergreen pages, and it buries 4 genuinely current undated pieces behind them. One Morgan Stanley summary repeats the same sentence. Two of the eleven houses on the page, BlackRock Investment Institute and Deutsche Bank, are not in the pipeline's registry at all; they come from a one-off crawl on 2026-06-30 and have not been collected since. Dates carry no quality mark even though the collectors infer many of them: at least 736 of 843 dates have day precision only, and 73 of Bank of America's 107 dates fall on the 18th or the 30th. <span class="ev">S4 §1.8 U-1–U-13, DP-2, DP-3, DP-7; S3 DB-1, DB-5</span></p>
+
+    <div class="callout">
+      <h4>Vocabulary: the roadmap's names versus the live names</h4>
+      <p>The roadmap writes <code>reports</code>, <code>signals</code>, <code>theme_taxonomy</code>, <code>theme_alias</code>, <code>entity</code>, <code>email_log</code> and <code>theme_trend</code>. In the live database these are, respectively, <code>research_documents</code>, <code>research_signals</code>, <code>signal_topics</code>, <code>theme_aliases</code>, <code>signal_entity_registry</code>, <em>nothing</em> and <em>nothing</em>. A table literally named <code>reports</code> does exist, but it holds the Hankyung consensus data, not IB research. S1 wrote these as 17 hypotheses and S2–S4 settled each one. <span class="ev">phase.md ## Decisions, Vocabulary map V-1…V-17</span></p>
+    </div>
+  </section>
+
+  <section id="signal-prototype">
+    <h2>4. The dormant signal prototype</h2>
+    <p>The most consequential discovery was not on <code>main</code>. S2 searched every branch and found <code>origin/data-investment-research-crawling/feat/new-tasks</code>, six commits from 2026-06-25 to 07-08, never merged into any <code>main</code> or <code>develop</code>, and dropped silently when its component was removed in pull request #102. It contains the roadmap's whole signal layer in prototype form: migrations 002–005 that created the five live tables, an extraction prompt labelled <code>v3_taxonomy_constrained</code> calling <code>gpt-5.5</code> through the OpenAI API, an embedding-based theme remap, and a trend / house / mismatch engine that renders a three-layer “signal board” from a CLI. S3 then confirmed from the data that this prototype ran exactly once. <span class="ev">S2 §9.1–§9.5; S3 §2</span></p>
+
+    <table>
+      <thead><tr><th>Live table</th><th>Roadmap name</th><th class="num">Rows</th><th>State as of 2026-10-08</th></tr></thead>
+      <tbody>
+        <tr><td><code>signal_topics</code></td><td><code>theme_taxonomy</code></td><td class="num">120</td><td>themes in 17 categories, seeded from a CSV on 2026-07-07; <code>is_active</code> flag instead of a status vocabulary; embeddings on all 120</td></tr>
+        <tr><td><code>theme_aliases</code></td><td><code>theme_alias</code></td><td class="num">644</td><td>all <code>source='seed'</code>; none ever marked <code>reviewed</code></td></tr>
+        <tr><td><code>signal_entity_registry</code></td><td><code>entity</code></td><td class="num">95</td><td>26 Korean + 69 foreign tickers (the roadmap says 27 / 68); bare-ticker key, no <code>market:ticker</code> id</td></tr>
+        <tr><td><code>research_signals</code></td><td><code>signals</code></td><td class="num">201</td><td>from 3 documents (J.P. Morgan 128, Vanguard Investor 52, Goldman Sachs 21), written 2026-07-08 16:19–16:26</td></tr>
+        <tr><td><code>signal_topic_candidates</code></td><td>(candidates)</td><td class="num">26</td><td>never embedded, merged or reviewed</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §A.3; S3 §2.2–§2.3, queries Q3a–Q3v, Q8m</p>
+
+    <p>What the 201 signals look like tells you what a port would inherit. Stance is bull 149, bear 39, neutral 13. Confidence runs from 0.62 to 0.98 with a mean of 0.847, so the roadmap's “below 0.6 goes to review” gate would filter nothing. Every row has an <code>evidence_ref</code>, but the page numbers are synthetic; every row's <code>evidence_text</code> is empty, and the actual evidence sentence sits in <code>topic_raw</code> (190 of 201 occur verbatim in the stored body). Only 2 of 430 entity mentions link to a registry ticker, because matching is an exact match on <code>name_keys</code>. And of the 39 documents the run marked <code>success</code>, 36 produced no signal rows at all: a silent failure nobody has explained. <span class="ev">S3 §2.2, DB-9–DB-12</span></p>
+
+    <div class="callout warn">
+      <h4>Why this changes the plan</h4>
+      <p>The onboarding doc describes Stage 0 as “create the shared tables” and R2 as “build signal extraction and backfill six months”. Both premises are off. The tables exist and hold data, with foreign keys and <code>ON DELETE CASCADE</code>, so Stage 0 becomes a <em>migration of populated tables</em> (PP-2). The document backfill also already exists: 318 dated documents sit in the last 183 days and 72 consecutive ISO weeks of history are in the table, from the retired crawler's 2026-05-18 run. What does not exist is the <em>signal</em> backfill, so R2 becomes “extract signals over existing rows”, not “collect six months of reports”. <span class="ev">S5 B-7, B-11, B-28; S3 Q2aa, Q2as</span></p>
+    </div>
+
+    <h3>Port or rebuild</h3>
+    <p>S5 lays out two options and a default. <strong>Option A, port selectively</strong>: keep the live tables after migration, keep the seeded dictionaries, keep the v3 prompt and its JSON schema as the starting prompt, and move the extraction call into the pipeline as a new stage running on the pipeline's Codex runtime over the captured text inside the run; re-implement the aggregation rules from R1's numbers rather than from the prototype's engine. <strong>Option B, rebuild</strong>: write extraction fresh inside the pipeline from the roadmap's steps and take only the seed data. Six facts decide between them: the prototype reads stored <code>text_content</code> that the pipeline never writes; its trend rules differ from the roadmap's (a 24-week slope with fixed thresholds 0.3 / −0.1 and no house minimum, against the roadmap's 4-week slope, two-house rule and a logarithmic disagreement formula); its schema lacks the Stage-0 ids; its rows carry no evidence sentence; the 36 empty successes; and the 2-of-430 entity linking. The recommended default is A, flipping to B if Jake says the prototype was rejected on purpose, if the empty successes are a model failure, if Codex cannot carry JSON-schema extraction at acceptable cost, or if PP-2 chooses fresh tables. <span class="ev">S5 §D.2; S2 §9.4, DR-19–DR-22</span></p>
+  </section>
+
+  <section id="discrepancies">
+    <h2>5. Where the documents and reality disagree</h2>
+    <p>S1–S4 produced 78 discrepancy ids; S5 merged them into 44 rows, each with evidence, an impact on project 1 and a severity. Five are <strong>blocking</strong> (a phase cannot start or finish without them), 23 are <strong>must-decide</strong> (someone chooses before or inside a named phase) and 16 are <strong>informational</strong>. The review verified that every one of the 78 ids lands in exactly one row. <span class="ev">S5 §B, §B.7; P8.REVIEW result §1</span></p>
+
+    <h3>The five blocking rows</h3>
+    <table>
+      <thead><tr><th>Row</th><th>The documents say</th><th>The facts say</th><th>Blocks</th></tr></thead>
+      <tbody>
+        <tr><td>B-1</td><td>Stage-1 work lives in a standalone <code>research-agent</code> repo with <code>schema/</code>, <code>prompts/</code>, <code>taxonomy/</code>, <code>docs/tables/</code>, <code>docs/runbooks/</code>, CODEOWNERS and branch protection</td><td>No such repo is visible or referenced. The code is the monorepo's <code>ib-research-report-pipeline/</code>, whose schema is a dump (<code>db_schema.sql</code>) with no migrations and none of those folders</td><td>Where every migration, spec, runbook, prompt and CSV goes: PP-2, PP-4, PP-7</td></tr>
+        <tr><td>B-5</td><td>Screens are 시운's and the API contract is Jake's; the API service is unnamed</td><td>The page is <code>dashboard-frontend</code>, the API <code>dashboard-backend</code>; both invisible to the operator, owners unconfirmed</td><td>Every theme or signal field, endpoint or filter: PP-8</td></tr>
+        <tr><td>B-36</td><td>A Monday 07:00 KST customer email and a Friday operator mail go out through a sending tool, with <code>email_log</code> recording opens and clicks</td><td>No mail code, dependency, schedule or data in any ref or table; 5 marketing opt-ins and no research-email recipient list</td><td>The tool, recipients, scheduler and log: PP-5, PP-6</td></tr>
+        <tr><td>B-38</td><td>Cross review, one approval before deploy, CODEOWNERS, protected <code>main</code></td><td>No CI check runs on pull requests, no CODEOWNERS, and the operator's account is READ-only, so it cannot push a branch or merge</td><td>A merge path for every code phase</td></tr>
+        <tr><td>B-39</td><td>One shared DB in which 수강 can build, backfill and roll back</td><td>No dev or staging copy of <code>research_*</code>; the read-only role sees a new table only after a select policy; who applies migrations is unknown</td><td>PP-2's target and PP-7's rollback drill</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §B.1–§B.6, rows B-1, B-5, B-36, B-38, B-39</p>
+
+    <h3>Must-decide rows that shape the data work</h3>
+    <ul>
+      <li><strong>B-12, the signal definitions have holes.</strong> The roadmap defines 떠오름 (rising: a 4-week slope “among the highest”, ≥ 2 houses), 식어감 (cooling: “clearly” below the 12-week mean), 불일치 (disagreement: a bull and a bear house on the same horizon within 8 weeks, with a strength formula) and 신규 테마 (new theme), but leaves the thresholds, the mention unit, and the formula's <em>n</em> and log base open, and uses “new theme” for both a candidate and a promoted theme. PP-1 drafts the numbers. <span class="ev">S1 DD-10, DD-11, DD-13; S2 DR-20</span></li>
+      <li><strong>B-14, 원문 비저장 versus 6.6 million stored characters.</strong> Today's pipeline stores no body, but the legacy rows, the news tables (268 million characters) and the chatbot chunks do. The principle's scope has to be stated, and whether the backfill may read the 271 legacy bodies inside the window is a question for Jake (F-10). <span class="ev">S2 DR-5, DR-6, DR-19; S3 DB-3, DB-4</span></li>
+      <li><strong>B-20, dates are inferred but shown as 발행일.</strong> The adapters have four inference paths; 36 rows are dated <em>after</em> they were first seen. Weekly windows and the email week inherit these dates, so PP-4 needs a date-quality mark. <span class="ev">S2 §4, DR-7; S3 DB-5; S4 DP-7</span></li>
+      <li><strong>B-21, duplicates.</strong> Only the canonical URL is unique; Jefferies has 24 titles stored twice (48 rows). Trend counts would double-count them without a dedup key. <span class="ev">S2 DR-4; S3 DB-16</span></li>
+      <li><strong>B-22 and B-23, what counts as the corpus.</strong> The junk tail (disclaimer pages, 2023 articles, evergreen pages) is also R2's extraction corpus, and three source codes outside the registry are live in the data. A content-quality rule comes before extraction. <span class="ev">S4 DP-2, DP-3; S3 DB-1</span></li>
+      <li><strong>B-25, the Sunday clock.</strong> Nominal 09:37 KST, real 14:21–15:17 KST plus hours of runtime, so a “Sunday afternoon aggregation, Monday 07:00 send” plan needs its slot chosen deliberately. <span class="ev">S2 DR-12; S3 DB-14</span></li>
+      <li><strong>B-32, the 183-day window.</strong> Six-month trends sit exactly at the window's edge, and email deep links to older evidence may hit a 404 on the detail API (reported secondhand in issue #65, not verified). <span class="ev">S2 DR-13; S4 DP-1</span></li>
+    </ul>
+
+    <p>One more row deserves a sentence because it corrects a premise of the phase itself. The decomposition assumed the pipeline's Codex “allowed email” guard gates every Codex call, which would make the account used for a local run a code problem. S2 found the guard runs only in the development eval CLI (<code>evals/cli.py:83</code>); the weekly chain calls Codex with whatever account its <code>CODEX_HOME</code> holds, unchecked. The question (Q2) is therefore one of policy, whose quota and terms, and the deploy README's rule that the CI refresh token must not be shared with a local login argues against copying the team's secret. <span class="ev">S2 §6.1, DR-16; S5 B-29; P8.REVIEW spot-checks 5 and 12</span></p>
+  </section>
+
+  <section id="the-plan">
+    <h2>6. The proposed plan: eight phases in four weeks</h2>
+    <p>Project 1 has fixed dates from the onboarding document: kickoff Wed 10/7, mid feedback Fri 10/16, demo and first evaluation Tue 11/3. The six required deliverables R1–R6 and four extension items X1–X4 are the scorecard. S5 maps them onto eight proposed phases, numbered PP-1 to PP-8 so they do not collide with workspace phase ids, each with a paste-ready objective for <code>/create-phase</code>. Nothing in this section is decided; the operator decides, and several items wait on Jake. <span class="ev">S1 §2, §3; S5 §D</span></p>
+
+    <table>
+      <thead><tr><th>Phase</th><th>Closes</th><th>What it delivers</th><th>Docs want</th><th>Realistic from 10/8</th></tr></thead>
+      <tbody>
+        <tr><td><b>PP-1</b> Accuracy validation standard</td><td>R1</td><td>Theme-mapping and stance thresholds, the weekly 20-sample procedure, and the signal-definition numbers the roadmap leaves open, approved by 대표. Needs no access.</td><td>W1</td><td>Draft by 10/13, approval at the 10/16 mid feedback</td></tr>
+        <tr><td><b>PP-2</b> Stage-0 adoption</td><td>RM-0, R6 specs, X4 stretch</td><td>Bring the five prototype tables to the Stage-0 shape (<code>market:ticker</code> ids, a theme status vocabulary, alias sources, signal columns for source type, entity, theme, evidence), with a spec per table in the same PR</td><td>W1</td><td>W2, if Jake answers F-4, F-7, F-32 by 10/13; otherwise W3 with PP-4 writing into the prototype shape first</td></tr>
+        <tr><td><b>PP-3</b> Local pipeline run</td><td>enabler for R2, R6</td><td>Run the pipeline on the operator's machine in <code>--publication preview</code> mode for one source, limit 1; runbook-style record; no KB push, no DB write, no workflow dispatch</td><td>—</td><td>W2, once the KB-access or stand-in question (F-5) is settled</td></tr>
+        <tr><td><b>PP-4</b> Signal extraction + 6-month signal backfill</td><td>R2, R3, X3 stretch</td><td>Signals for the 318 in-window documents and for each new weekly report, inside the weekly run; corpus rules (junk, dedup, date mark); the R3 freeze proof; a review queue for summary–signal mismatches</td><td>by 10/20</td><td>Build in W2, backfill and validation by Tue 10/27, first scheduled weekly run Sun 10/25 or 11/1</td></tr>
+        <tr><td><b>PP-5</b> Email path + Friday operator mail</td><td>R5</td><td>The sending path project 1 uses, proven first on an internal mail listing candidate themes, low-confidence signals, mismatches and failed sources (Merrill, today); decisions recorded in the dictionary; <code>email_log</code></td><td>W2–3</td><td>First mail Fri 10/23 if the tool is known by 10/16, else 10/30</td></tr>
+        <tr><td><b>PP-6</b> Weekly customer email</td><td>R4</td><td>Aggregation by the signal definitions, an LLM draft constrained to the signals and summaries, the quality filter, sending, <code>email_log</code>; two internal test sends reviewed by 대표</td><td>W2–4</td><td>Test sends by Mon 10/26 and 11/2; automatic Monday 07:00 send shown as <em>configured</em> at the demo, first unattended send 11/9</td></tr>
+        <tr><td><b>PP-7</b> Co-ownership runbooks and drill</td><td>R6</td><td>Specs accumulated from PP-2 on, runbooks for rerun / backfill / rollback, and 수강 running each once</td><td>W1–4</td><td>Specs throughout; drill in W4, reviewed Fri 10/30; needs a staging target (F-4)</td></tr>
+        <tr><td><b>PP-8</b> Page data and API for themes, market condition, conflict</td><td>no R/X row</td><td>Per listed report its themes and stance; per theme what is new, the houses' stance split by horizon and the disagreements; delivered as DB data plus an API contract agreed with the <code>dashboard-backend</code> owner, with 시운 building the screens (default framing)</td><td>—</td><td>W4 at the earliest for data and contract; shipped screens by 11/3 unlikely while the repos are invisible</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §D.3, §D.4, §D.6</p>
+
+    <figure class="fig">
+      <div class="grid">
+        <div class="wk"><b>W1 · 10/7–10/13</b><span class="pp">PP-1 draft R1</span><span class="pp milestone">Send Jake the 25 questions</span><span class="pp milestone">Record the kickoff (Q3)</span></div>
+        <div class="wk"><b>W2 · 10/14–10/20</b><span class="pp milestone">Fri 10/16 mid feedback: R1 approval, scope proposal</span><span class="pp">PP-2 migrations + specs</span><span class="pp">PP-3 local preview run</span><span class="pp">PP-4 starts: freeze baseline, corpus rules</span></div>
+        <div class="wk"><b>W3 · 10/21–10/27</b><span class="pp">PP-4 backfill + 20-sample validation by 10/27</span><span class="pp">PP-5 first operator mail Fri 10/23</span><span class="pp">PP-6 template, test send 1 Mon 10/26</span></div>
+        <div class="wk"><b>W4 · 10/28–11/3</b><span class="pp">PP-6 test send 2 Mon 11/2, auto-send configured</span><span class="pp">PP-7 drill, reviewed Fri 10/30</span><span class="pp">X3, X4 stretch · PP-8 data + contract</span><span class="pp milestone">Demo Tue 11/3</span></div>
+      </div>
+      <figcaption>S5's week-by-week view. Project weeks run Wednesday to Tuesday. Phases run one at a time in this nested install, so the sequence inside a week is strict. <span class="ev">S5 §D.6, §D.7</span></figcaption>
+    </figure>
+
+    <h3>Coverage of the scorecard</h3>
+    <p>R1–R6 are all covered; R2 lands about a week later than the documents want and R4's “switched to automatic sending” can only be shown as configured, because at most one automatic Monday (11/2) falls inside the project. X3 (validating the match / mismatch rule) fits as PP-4's last slice, and X4 (alias fixes such as 에코프로 and the two-letter keys <code>lg</code>, <code>kt</code>, <code>ms</code>, <code>ti</code>, <code>ge</code>, plus five domestic candidate themes) fits as PP-2's last slice. <strong>X1 and X2 do not fit</strong>: X1 needs a domestic industry-report source that neither S2 nor S3 found, and X2 needs predictions and outcomes tables (absent), a track-record design document (location unknown) and a year of Hankyung data where six months exist. The onboarding's own scoring gives a 3 for every required row met and a 4 for one or two extensions on top, so R1–R6 plus X3 and X4 aims at 4. <span class="ev">S5 §D.4; S1 C-120</span></p>
+
+    <h3>The scope-cut option</h3>
+    <p>The onboarding document invites a proposed scope cut when it protects the required deliverables and grades it as judgment rather than penalty. S5 drafts three variants for 대표 and leaves the choice to the operator (Q8). <strong>SC-1</strong>, recommended as is: keep R1–R6 with R4 and R5 staged (test sends internal, the automatic send configured, review decisions recorded through a PR or Jake's SQL instead of links in the mail), drop X1 and X2, keep X3 and X4 as stretch, and move the page screens to 시운 or to project 2. <strong>SC-2</strong> applies only if the merge path or the access answers are not in by 10/16: the backfill covers documents with an available body first and PP-8 moves to project 2. <strong>SC-3</strong> applies only if the email tool and recipients are unknown by 10/20: both test sends go internal in W4 and the “automatic switch” criterion moves to project 2's first week. <span class="ev">S5 §D.5; S1 C-117</span></p>
+
+    <h3>How the earlier plan was re-validated</h3>
+    <p>Before P8, the workspace held six phases drafted straight from the onboarding list; the operator had them deleted so the plan could be rebuilt from facts. S5 then checked each old intent against what was found: the Stage-0 schema phase <em>changed</em> (migrate populated tables, not create empty ones), the accuracy phase was <em>kept</em> with two additions (the open definition numbers and calibration on labelled samples, since model confidence never drops below 0.62), the extraction phase <em>changed</em> (the document backfill exists; the signal backfill does not; port or rebuild), the operator-mail phase <em>changed and moved ahead</em> of the customer mail so that an internal mail proves the sending path first, the customer-mail phase was <em>kept but staged</em>, and the co-ownership drill was <em>kept and re-cut</em> with the specs shipping inside the schema phases. Nothing was dropped. <span class="ev">S5 §D.1; intent.md, Deleted before creation</span></p>
+  </section>
+
+  <section id="decisions-and-questions">
+    <h2>7. What the operator decides, and what to ask Jake</h2>
+    <p>Because P8 was research-only, its acceptance gate was waived, which means no walkthrough carries the decisions. The review therefore routed every open item into one of four deferred jobs so nothing is lost when the phase closes. <span class="ev">P8.REVIEW result §6</span></p>
+
+    <h3>Ten operator questions, with S5's defaults</h3>
+    <table>
+      <thead><tr><th>Q</th><th>Decision</th><th>Default proposed</th><th>Due</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>KB repo read access for the later local run (enumerate clones the whole KB even in preview)</td><td>Ask Jake (F-5); fall back to an operator-owned stand-in repo via <code>IB_RESEARCH_REPORT_PIPELINE_KB_REPO</code>, untested</td><td>before PP-3</td></tr>
+        <tr><td>Q2</td><td>Which Codex account the local run uses</td><td>The operator's own login, never a copy of the CI secret</td><td>before PP-3</td></tr>
+        <tr><td>Q3</td><td>What the 10/7 kickoff adjusted in the deliverable list</td><td>Write the kickoff record in the 결정 기록 this week</td><td>before the first <code>/create-phase</code></td></tr>
+        <tr><td>Q4 → Q6</td><td>Is the page improvement a project-1 deliverable?</td><td>Option (c): 시운 builds the screens; the operator supplies data and an API contract proposal; mention it to 대표 in the scope proposal</td><td>before the first <code>/create-phase</code></td></tr>
+        <tr><td>Q5 → Q6</td><td>Who owns the page-quality fixes</td><td>Split: data-side exclusions, dedup and date mark inside PP-4; the display rule reported in writing to Jake and the Dashboard team</td><td>same</td></tr>
+        <tr><td>Q7</td><td>Port-or-rebuild default to put to Jake</td><td>Option A, port selectively</td><td>same</td></tr>
+        <tr><td>Q8</td><td>Propose a scope cut to 대표, and when</td><td>SC-1 in writing by the 10/16 mid feedback</td><td>Fri 10/16</td></tr>
+        <tr><td>Q9</td><td>Which Jake questions go out before Friday, and how</td><td>Send the 25-item block, or the 11 priority-1 items plus the access line, or bring it to the walkthrough; confirm the walkthrough date first</td><td>before Fri 10/9</td></tr>
+        <tr><td>Q10</td><td>Which phase to create first, in what order</td><td>PP-1 now (needs no access), then PP-2, PP-3, PP-4 as Jake's answers arrive, PP-3 before PP-4 if extraction runs inside the pipeline</td><td>now</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">phase.md ## Operator Questions Q1–Q10; S5 §E</p>
+
+    <p>Q9's calendar note is real: 2026-10-09 is 한글날, listed as a public holiday on a Friday (<a href="https://publicholidays.co.kr/ko/hangeul-day/">publicholidays.co.kr, 한글날 2026</a> — publicholidays.co.kr), so the first Friday walkthrough may have to move. S5 flagged this as the one fact in the phase that came from outside S1–S4. <span class="ev">S5 §D.7 item 2, deviations 3</span></p>
+
+    <h3>The questions for Jake</h3>
+    <p>S1–S4 each ended with candidate questions, 62 in all. S5 merged them with six of its own into 36 entries, graded P1 (blocks project 1 now, 11 items), P2 (needed before a named phase, 16) and P3 (nice to know, 9), each with the Korean question text, why it matters, what is already known and a default if it goes unanswered. The paste-ready first block holds every P1 item, 13 P2 items and one line for the merge-path and GCP questions that an earlier deferred job already carried: 25 items. The eleven priority-1 questions, paraphrased: <span class="ev">S5 §F.0–§F.9</span></p>
+    <ol>
+      <li>Who owns <code>dashboard-frontend</code> and <code>dashboard-backend</code>, and can the operator get read access? (F-1)</li>
+      <li>Whose Codex account and quota does the weekly pipeline use, and may extraction and a 318-document backfill run on it? (F-2)</li>
+      <li>Does the roadmap's Google Drive folder and work-record template exist? The path in the document is garbled. (F-3)</li>
+      <li>Who applies migrations, to which database, is there a staging copy, and will new tables get the read-only select policy? (F-4)</li>
+      <li>Who reviews and merges the operator's PRs, given a READ-only account, and who approves GCP, dispatch, PROD and migrations? (the deferred-job line)</li>
+      <li>Who asked for the July signal-board prototype, why was it never merged, and may it be the basis for Stage 1? (F-7)</li>
+      <li>Where are the design documents (“Doc 1” source list, “Doc 2” backend design, the track-record design) and the three seed CSVs? (F-8)</li>
+      <li>May signal extraction become a new stage inside the weekly Actions run, within the 6-hour limit and cost, owned by 수강 and reviewed by Jake? (F-19)</li>
+      <li>Is adding theme click, market condition and house conflict to the page on 시운's schedule, and is the operator's part data and API or screens too? (F-24, for 시운 and 대표)</li>
+      <li>What tool sends customer email today, who should receive the weekly research email, can opens and clicks be tracked, and may the backend's internal email API be used? (F-29)</li>
+      <li>Is there a separate <code>research-agent</code> repo or does Stage 1 live in the monorepo, and where do migrations, specs, runbooks, prompts and CSVs go? (F-32); and when does 대표 approve the accuracy standard, starting from the document's example thresholds of 90 % and 85 %? (F-33)</li>
+    </ol>
+
+    <h3>Four deferred jobs and three observations</h3>
+    <p>The review proposed filing <strong>J-A</strong> (settle the local-run prerequisites: Q1 and Q2), <strong>J-B</strong> (decide the project-1 plan: Q3 and Q6–Q10, with Q9 due before 10/9 and Q8 before 10/16), <strong>J-C</strong> (ask Jake the questions and record the answers; it also fires the older deferred job that carried the merge-path and GCP questions) and <strong>J-D</strong> (report the page-quality findings to Jake and the Dashboard team, if Q5 resolves as a report or a split). Three things outside the phase's boundary were recorded as observations rather than findings: the chat backend's client model types <code>published_at</code> as a required string while the live API returns null on 35 items, which will break once its research tools are re-enabled; Merrill link collection has failed on every run since 2026-09-13 with ReadTimeouts and one run stuck in <code>running</code>; and the blank architecture and data docs could be backfilled from P8's verified map. <span class="ev">P8.REVIEW result §6, §9</span></p>
+  </section>
+
+  <section id="assessment">
+    <h2>8. Assessment</h2>
+    <div class="callout assess">
+      <h4>Assessment (the author's judgment, not a finding of the phase)</h4>
+      <p><strong>The fact-check is unusually well grounded.</strong> Four independent instruments agreeing house by house on the number 347 (page footer, API total, and a DB query) is the kind of triangulation most audits never reach, and the review's 36 spot-checks all held. A reader can trust the as-is map.</p>
+      <p><strong>The plan is honest about time, which is its main virtue and its main warning.</strong> Every PP row carries a “realistic from 10/8” date that is later than the documents want, and the realistic dates themselves assume Jake answers the P1 questions inside week 1. If F-4 (migrations and staging), F-7 (the prototype's status) or F-29 (the email tool) slips past 10/16, the SC-2 and SC-3 variants are not pessimism but the plan.</p>
+      <p><strong>Access, not engineering, is the critical path.</strong> Five of the five blocking rows are about access and ownership (a merge path, invisible repos, no staging DB, no email tool, no repo location). Sending the 25-item block before the Friday walkthrough is therefore the single highest-leverage action this week, and it is the one that needs no code.</p>
+      <p><strong>Where I would weigh the evidence differently from the documents:</strong> the roadmap's “Sunday collection, Monday 07:00 email” is written as if the pipeline finished Sunday morning. The observed afternoon starts plus multi-hour runs make an early-Monday aggregation (S5's default for F-21) the safer design, and GitHub's own guidance that scheduled runs can be delayed under load supports not relying on the nominal minute.</p>
+      <p><strong>Two things remain unverified and should stay labelled so:</strong> the detail API's 404 beyond the 183-day window is secondhand from issue #65, and the cause of the five-hour cron gap was not investigated. Neither changes the plan today.</p>
+    </div>
+
+    <p>Where sources conflicted, the later slice wins and the correction is on record: the news-table count (4,985 vs 4,988, different read times), the candidate count (0 from a stale planner estimate vs 26 counted), the undated count (32 mis-summed vs 35), and the “exactly five bullets” claim (S3) refined by S4 into five on pipeline rows and six on three legacy rows. The Korean / foreign split of the entity registry, 26 / 69 against the roadmap's 27 / 68, is left as a check against the CSV once it is found (F-8). <span class="ev">P8.REVIEW result §3; S5 B-9</span></p>
+  </section>
+
+  <section id="sources">
+    <h2>9. Sources</h2>
+    <p>Internal sources are files in the private workflow workspace, all read on 2026-10-08. “S<i>n</i> §<i>k</i>” in the text means section <i>k</i> of that slice's <code>result.md</code>; “Q<i>xx</i>” is a query id in S3's log; “capture <i>nn</i>” is a file under S4's <code>captures/</code>.</p>
+    <ul>
+      <li><code>workflow/works/phases/active/P8/intent.md</code> — the operator's verbatim request, the confirmed intent, the access decisions, the scope change and the added deliverable F.</li>
+      <li><code>workflow/works/phases/active/P8/phase.json</code> and <code>phase.md</code> — status, review note, the Decisions notebook (vocabulary map V-1…V-17, pipeline footprint, live vs leftover tables, page facts, plan proposal), Doc impact, Operator Questions Q1–Q10.</li>
+      <li><code>slices/P8.S1/result.md</code> — the 138-claim register, the deliverable table R1–R6 / X1–X4 (§2), the timeline (§3), DD-1…22, J-1…18.</li>
+      <li><code>slices/P8.S2/result.md</code> — repo map at <code>7225f24</code>, the pipeline's DB footprint (§2), the summary chain (§3), local-run prerequisites (§6), the prototype branch (§9), DR-1…23, J2-1…20.</li>
+      <li><code>slices/P8.S3/result.md</code> — 140 read-only queries, live vs leftover tables (§1), the signal layer (§2), DB-1…22, J3-1…14.</li>
+      <li><code>slices/P8.S4/result.md</code> and <code>captures/00…17</code> — page text, interactive tree, network calls and API bodies of the list and detail pages, DP-1…11, U-1…13, J4-1…10.</li>
+      <li><code>slices/P8.S5/result.md</code> — the operator-facing deliverable: §0 executive summary, §A as-is map, §B 44 discrepancies, §D phases PP-1…8, §E Q6–Q10, §F 36 questions for Jake and the 25-item block.</li>
+      <li><code>slices/P8.REVIEW/result.md</code> — validation, 36 evidence spot-checks, question routing, deferred jobs J-A…J-D, observations J-E…J-G.</li>
+      <li>Repository files quoted directly: <code>.github/workflows/ib-research-report-pipeline.yml</code> line 57 (the cron), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/collection/registry.py</code> (the nine adapters), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/storage/supabase.py</code> lines 439–449 (the publish UPDATE).</li>
+    </ul>
+    <p>External sources, each opened on 2026-10-08:</p>
+    <ul>
+      <li><a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">Events that trigger workflows — the <code>schedule</code> event</a> — docs.github.com. Scheduled workflows run in UTC, only on the default branch, and “can be delayed during periods of high loads”.</li>
+      <li><a href="https://docs.github.com/en/actions/reference/limits">GitHub Actions limits</a> — docs.github.com. “Each job in a workflow can run for up to 6 hours of execution time.”</li>
+      <li><a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL documentation: Row Security Policies</a> — postgresql.org. Default-deny when no policy exists; superusers, <code>BYPASSRLS</code> roles and table owners bypass row security.</li>
+      <li><a href="https://supabase.com/docs/guides/database/postgres/row-level-security">Supabase docs: Row Level Security</a> — supabase.com. “Once RLS is enabled, no data is accessible through the API when using a publishable key, until you create policies”, and a warning that a <code>to anon using (true)</code> policy grants every visitor read access.</li>
+      <li><a href="https://publicholidays.co.kr/ko/hangeul-day/">한글날 2026, 2027 과 2028</a> — publicholidays.co.kr. 2026: 10월 9일, 금요일, public holiday.</li>
+    </ul>
+  </section>
+
+  <section id="quiz">
+    <h2>10. Quiz</h2>
+    <p class="small">Five questions on the findings and the reasoning. Click an answer to check it.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> The page footer says “전체 347건” while the database holds 872 summarized documents. Which statement explains the 347?</p>
+      <button class="opt" data-correct="false">347 is the number of documents the pipeline summarized this quarter; older summaries were deleted by the one-year purge.</button>
+      <button class="opt" data-correct="true">The API lists the 312 dated items inside a window of about 183 days, then appends all 35 undated rows last; the other 525 summarized rows are outside the window and cannot be listed.</button>
+      <button class="opt" data-correct="false">347 is the count of rows with <code>is_visible = true</code>; the rest were hidden by the Dashboard team.</button>
+      <button class="opt" data-correct="false">The page shows only the 9 registry houses, and 347 is their total; BlackRock and Deutsche Bank rows are excluded.</button>
+      <p class="why" hidden>S4 matched the page to the DB house by house: 312 dated (2026-10-02 back to 04-10) + 35 undated = 347, and 525 rows (60.2 %) are unreachable. All 878 rows have <code>is_visible = true</code>, the purge functions touch only the news tables, and BlackRock and Deutsche Bank <em>are</em> on the page.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> Why does P8 reframe Stage 0 from “create the shared tables” to “adopt or migrate populated tables”?</p>
+      <button class="opt" data-correct="false">Because the roadmap's table names were renamed in the onboarding document, so the schema has to be written twice.</button>
+      <button class="opt" data-correct="false">Because the production database has no dev copy, so tables can only be adopted, never created.</button>
+      <button class="opt" data-correct="true">Because an unmerged July prototype branch already created the five signal tables in production and filled them once (201 signals, 120 themes, 644 aliases, 95 entities), with foreign keys and cascades that a migration must respect.</button>
+      <button class="opt" data-correct="false">Because the pipeline's publish step already writes signal columns on <code>research_documents</code>, which makes separate tables redundant.</button>
+      <p class="why" hidden>S2 §9 found the branch and its migrations 002–005; S3 §2 confirmed the tables are live, seeded, written once on 2026-07-08 and never refreshed. The publish step writes only eight summary columns, and the missing dev copy is a separate blocking row (B-39), not the reason for the reframing.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> The pipeline never stores a report's body. What consequence does the plan draw from this?</p>
+      <button class="opt" data-correct="true">Signal extraction must run inside the weekly run, where the captured text still exists, or re-capture pages; a port of the prototype saves its prompt and schema but not its plumbing, because the prototype read stored <code>text_content</code>.</button>
+      <button class="opt" data-correct="false">The 6-month backfill is impossible, so R2 is dropped from the scope proposal.</button>
+      <button class="opt" data-correct="false">The pipeline must be changed to store bodies first, in a phase before extraction.</button>
+      <button class="opt" data-correct="false">Summaries can no longer be verified, so R3 is waived.</button>
+      <p class="why" hidden>S5 B-14 and D.2 fact 1: both options move extraction into the run. The backfill either re-captures the 318 in-window documents or, only if Jake allows it (F-10), reads the 271 legacy bodies. Storing bodies would contradict the 원문 비저장 principle the plan is trying to honour.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> S5 orders the Friday operator review mail (PP-5) <em>before</em> the weekly customer email (PP-6), reversing the documents' order. Why?</p>
+      <button class="opt" data-correct="false">Because the operator mail needs no signals and can be sent in week 1 from today's data.</button>
+      <button class="opt" data-correct="true">Because no email path exists anywhere yet, so an internal mail proves the sending tool, scheduler and <code>email_log</code> first, and the customer mail's test sends then reuse that path.</button>
+      <button class="opt" data-correct="false">Because the roadmap gives the customer mail to 시운, who is busy with screens until W4.</button>
+      <button class="opt" data-correct="false">Because 대표 must review the operator mail before any customer mail may be drafted.</button>
+      <p class="why" hidden>S5 D.1 and PP-5: email is greenfield (B-36), so the internal mail de-risks the path. The candidate-theme and low-confidence sections of the operator mail do need PP-4's signals; only the failed-source section works on today's data (Merrill).</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Which of these was classified as <strong>blocking</strong> rather than must-decide or informational, and why?</p>
+      <button class="opt" data-correct="false">Jefferies storing 24 titles twice, because trend counts would double-count them.</button>
+      <button class="opt" data-correct="false">Bank of America dates clustering on the 18th and 30th, because the email week inherits wrong dates.</button>
+      <button class="opt" data-correct="true">The absence of CI on pull requests, of CODEOWNERS and of write access for the operator's account, because no code phase can finish without a merge path.</button>
+      <button class="opt" data-correct="false">The cron starting at 14:21–15:17 KST instead of 09:37, because the Monday 07:00 send would miss its data.</button>
+      <p class="why" hidden>B-38 is one of the five blocking rows (with B-1, B-5, B-36, B-39): “blocking” means a phase cannot start or finish without it. The dedup key (B-21), the date-quality mark (B-20) and the aggregation slot (B-25) are decisions to take inside PP-4 or PP-6, so they are must-decide.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
