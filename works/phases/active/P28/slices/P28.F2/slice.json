@@ -1,0 +1,32 @@
+{
+  "id": "P28.F2",
+  "phase_id": "P28",
+  "name": "Explainer reporter: re-arm the runaway latch on width change and ignore an unlaid-out frame",
+  "kind": "fix",
+  "status": "todo",
+  "order": 10.5,
+  "depends_on": [],
+  "created_at": "2026-10-08T14:27:31+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

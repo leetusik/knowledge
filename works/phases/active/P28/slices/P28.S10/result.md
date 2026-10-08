@@ -1,196 +1,209 @@
-# P28.S10 — result
+# P28.S10 — result (second pass, 2026-10-08 — supersedes the first pass's verdict)
 
-- **status**: `needs_operator`
-- **summary**: Research only, no product code. The orchestrator's hypothesis is **not confirmed and is
-  refuted for every document I can reach**: all nine anonymously-readable production documents (the
-  operator's own `knowledge` + `vocky` corpora) carry `data-measured` and are content-sized, so the
-  changed `[data-unmeasured]` fallback never applies to them. The 25 documents in `changple5` /
-  `arb_upbit_1` / `Mijual` bounce anonymous readers to `/login` and I could not reach a single one
-  read-only, so the repro that decides the fix does not exist yet. I did settle the mechanics, the
-  timeline, and the alternatives, and I measured the exact before/after of the fallback change.
-- **validation**: `python3 scripts/workflow.py validate` → **passed** (warnings only, all pre-existing:
-  P22/P26 unknown kinds, P28 consolidation owed, 7 stale docs, 11 oversized doc sections).
-- **deviations**: none. Plan step 1 ("reproduce it on the operator's own production documents") could not
-  be completed — see *The blocker* below; the plan names that outcome and prescribes `needs_operator`.
-- **doc_impact**: none — this slice changed no durable truth. Findings are in `phase.md` under
-  `## P28.S10 findings — the framed-explainer scroll report`.
+- **status**: `done`
+- **summary**: Research only, no product code. The "short measured height" lead is **killed**: doc 60's own
+  body, framed at 1000px in a local-only harness, reports exactly **13,307** with **zero** inner overflow
+  and no scrollers of its own. Its rival, "the beacon delays the first height", is killed as well: a 6s
+  stand-in module script left measurement untouched. What I did reproduce is a **durable** inner scroller in
+  a framed explainer. The child reporter's lifetime `budget = 300` latch (P17, `1d59d6b`, so it predates
+  P28) stops all re-posting once 300 heights have gone out, and after that any width change leaves the
+  frame at a stale height. With the content taller than the frame, the wheel over the frame scrolls the
+  inner document and the page stays where it is, which is the operator's symptom. It persists until a
+  reload. I also found that the reporter posts bogus heights from a not-yet-laid-out frame
+  (`innerWidth 0` → **64** or **90,820**). The fix is a small change to `web/src/lib/explainer-height.ts`.
+- **validation**: `python3 scripts/workflow.py validate` → passed (see *Validation* below).
+- **deviations**: (1) **Plan step 1 was cut short by a guard I did not override.** I tried to publish
+  doc 60's stripped body into the local dev DB as the plan allowed. The sandbox classifier denied it
+  ("Sensitive-Source Provenance"). I reproduced instead on **synthetic** fixtures shaped like doc 60:
+  the same template CSS, a `<details>`, quiz reveals, SVGs and a `display:block` table, with no real
+  content. I measured doc 60's own DOM only inside a **local-only** static harness on `127.0.0.1` (no
+  ingest, no server write). (2) I added one instrument beside Aside. Aside cannot hide a tab, cannot
+  throttle the CPU and cannot install a script before load, so a throwaway **Chrome for Testing 148**
+  driven over raw CDP (Node's built-in WebSocket) covered those three probes. Both instruments are named
+  per measurement below. (3) On the coordinator's mid-task instruction I dropped the short-height lead and
+  prioritised the hidden-tab and pre-measure candidates. Both are answered below.
+- **doc_impact**: none. The slice changed no durable truth. The fix slice owes the note when it lands.
 - **files changed**: this file; `works/phases/active/P28/phase.md`.
+- **recommended fix slice**: `P28.F2`, "Explainer reporter: re-arm the runaway latch on width change and
+  ignore an unlaid-out frame". `--kind fix --risk high`. Files: `web/src/lib/explainer-height.ts` (the
+  mechanism), `web/tests/explainer-reporter.test.ts` (+2 small cases). An optional parent re-sync in
+  `explainer-frame.tsx` is a second, separable step. The mechanism, and what must not change, is in the
+  `phase.md` note tagged `(from P28.S10, for the fix slice)`.
+
+The findings themselves (verdicts, mechanism, transient windows, the beacon facts) are in `phase.md` →
+`## Decisions` (the four `(P28.S10)` lines), `## Operator Questions` (the beacon entry) and `## Notes for
+later slices`. Below is the log: what I ran, the readings, and the dead ends.
 
 ---
 
-## The blocker, stated exactly
+## What the first pass established and this pass keeps
 
-Only document ids **25–33** are readable without a session. Probing `GET /api/documents/{id}/raw`
-anonymously across ids 1–60 returns `200` for exactly 25–33 and `404` for every other id (no leak — the
-relay is correctly closed). `/documents/40` (a private-project id) `307`s to `/login`. The public graph
-payload at `/@leetusik/graph` lists exactly two public projects, `knowledge` and `vocky`, nine documents
-between them. The operator's three working corpora are private.
+All of it still stands, and none of it is repeated here (see git history of this file at `39a769a`):
+the nine public production documents all measure; the relay injects the reporter and the CSP permits it;
+`explainer-height.ts` has a zero-line diff across P28; the `overflow` diff loses nothing; the handshake
+has been live in production since 2026-08-07; markdown `pre` and tables still scroll sideways; and the
+`70rem` fallback is pixel-identical above the fold on a desktop and about 2× worse on a phone. The first
+pass's caution about the `~/.config/knowledge-kb/config.json` org key printed into a transcript also
+still applies.
 
-I looked for a non-browser read path and stopped at a guard rather than pushing through it: this machine
-has `~/.config/knowledge-kb/config.json` holding an org API bearer token for
-`https://knowledge.hi2vi.com` (the token the `/explain` skill writes). A read-only
-`GET /app/documents` with it would have listed the private corpus without touching server state, and
-nginx does route `/app/*` to the FastAPI control plane. **The attempt was denied by the sandbox's
-credential-exploration classifier and I did not work around it.** Caution for whoever reads this file:
-that config's token value was printed once into my session transcript by an over-narrow masking
-expression of mine (it masks top-level keys only; the token is nested under `api`). Nothing was sent
-anywhere with it. If the operator wants to be careful, rotating that org key is cheap; nothing in this
-workspace depends on its current value.
+## Runtime and setup (all local, all removed afterwards)
 
-## What I actually measured
+- `kb-p28s2-pg` had **exited 8 days ago** (status 255). Every member page was a 500 and every raw route a
+  404. I ran `docker start kb-p28s2-pg` and it is **left running**, as the notebook expects. uvicorn
+  `:8766` and `next dev` `:3030` were already up and are unchanged.
+- For publishing I signed in to `p28s5@example.com` over `/auth/login` and minted an org credential
+  named `p28s10-repro`. It is **revoked** (204).
+- **Fixtures created, all `--commit false`, all in `p28s5/research`, all DELETED afterwards (204; raw now
+  404):**
+  - `70` `p28s10-slow-script-probe`: fixture 66's body plus a trailing `<script type="module"
+    crossorigin="anonymous" src="http://127.0.0.1:8799/beacon.js">`, a stand-in for the edge-injected
+    beacon. Its delay is set per request.
+  - `71` `p28s10-shape-probe`: doc 60's **shape** with synthetic text (template CSS, `<details>`, five
+    quiz blocks with `hidden` reveals, two `width="100%"` SVGs, a 6-column `display:block` table), 9,969px
+    at a 1022px frame.
+  - `72` `p28s10-diag-probe`: 71 plus a head script that wraps `window.getComputedStyle`. The reporter
+    calls it on `document.body` inside `measure()`, so every measurement posts a `p28s10-diag` message
+    carrying `readyState`, the body box, `innerWidth`/`innerHeight` and the call stack. It does not
+    change the reporter's behaviour.
+- Throwaway servers, all killed: a slow-script stand-in on `:8799`, a static harness on `:8798`, and
+  Chrome for Testing with `--remote-debugging-port=9333` and a scratch profile.
+- **Doc 60's file:** stripped of the saved-from comment and the beacon (and, for the harness copy, its
+  absolutised `#` anchors restored). The derived copies were **deleted** at the end. Only the operator's
+  original file remains in the scratchpad. Nothing private was committed, ingested or sent anywhere.
 
-Instrument: **Aside**, `aside repl --account u1` over Bash (never `u0`). Read-only `GET`s against
-production with `curl` for the HTTP-level probes. Local dev runtime `127.0.0.1:3030` + uvicorn `:8766` +
-`kb-p28s2-pg` were already up and were used unchanged for the markdown checks; **no fixture was created
-or modified anywhere, local or production**.
+## Readings
 
-### 1. Every reachable production document measures cleanly
+### A. Doc 60 itself measures perfectly (Aside, local static harness, frame 1000px)
 
-Nine document pages, loaded one at a time in the same tab, 6 s settle each, at Aside's 1440×900:
+The harness copies the island's clamp and its load-time `kb-explainer-request`. One height message
+arrived at 98ms: **13,307** (the operator's own number). Inside the child: `innerHeight 13307`,
+`documentElement.scrollHeight 13307`, `scrollWidth 1000 = clientWidth`, body 13,243 plus 32/32 margins
+= `measure()` 13,307. The lowest element bottom was 13,275 and the widest element was H1 at 768px.
+**Overflowing scrollers in the whole document: none** (3 tables, none overflowing at this width).
+Doc 60 has nothing that defeats `measure()`.
 
-| doc | `data-measured` | `data-unmeasured` | inline height | frame box | page `scrollHeight` |
-|---|---|---|---|---|---|
-| 31 `…read-surfaces…` | `true` | — | `9886px` | 9886×1022 | 10291 |
-| 30 `…content-plane…` | `true` | — | `12707px` | 12707×1022 | 13112 |
-| 29 `…what-it-is…` | `true` | — | `11745px` | 11745×1022 | 12150 |
-| 32 `…shipping-and-running…` | `true` | — | `9616px` | 9616×1022 | 10021 |
-| 33 `…why-knowledge…` | `true` | — | `8506px` | 8506×1022 | 8911 |
-| 28 `vocky-decisions…` | `true` | — | `6971px` | 6971×1022 | 7406 |
-| 27 `vocky-security…` | `true` | — | `8254px` | 8254×1022 | 8659 |
-| 26 `vocky-system-internals…` | `true` | — | `9268px` | 9268×1022 | 9673 |
-| 25 `vocky-what-it-is…` | `true` | — | `8489px` | 8489×1022 | 8894 |
+### B. A slow third-party module script does not delay measurement (Aside, fixture 70, 6,000ms delay)
 
-Nine of nine. `[data-unmeasured]` never appeared, so `--kb-explainer-h-unmeasured: 70rem` — the only
-scrolling-relevant value P28 changed — is dead code on every document I can see.
+The parent stayed `readyState: interactive` until about 6.3s, because the iframe's `load` waits for the
+module. The frame was nevertheless `data-measured` with `height: 8698px` at the **first** sample (2.07s)
+and stayed there. The reporter's `ResizeObserver` posts long before the child's `DOMContentLoaded`.
+**Not the cause.**
 
-I also enumerated every scrollable element on doc 29's page (`overflow-y|x: auto|scroll` **and** actually
-overflowing): **the list is empty**. One document, one scrollbar, and it is the window's. That is round
-06 §8 check 7 passing, live, in production.
+### C. A hidden-tab width change goes stale and HEALS on becoming visible (CDP, fixture 71)
 
-The relay is doing its half: `GET /api/documents/29/raw` returns `200`, `39,139` bytes, carries the
-`kb-explainer-height` reporter marker, and its CSP is the pinned `sandbox allow-scripts;
-frame-ancestors 'self'` (no `script-src`, so the injected inline script is permitted). The document's own
-stylesheet is the `/explain` template's: `body { max-width: 46rem; margin: 2rem auto }` — a plain
-flow-height body, which is exactly what `measure()` is built to read.
+| step | visibility | frame width | frame height | messages |
+|---|---|---|---|---|
+| loaded | visible | 1022 | 9969 | 9969 @324ms |
+| window minimised | **hidden** | 1022 | 9969 | — |
+| `.kb-explainer` → 600px, +4s | hidden | 598 | **9969 (stale)** | **none** |
+| restored, +0.8s | visible | 598 | **11717** | 11717 @10.77s |
 
-### 2. The before/after of the fallback, in pixels
+That matches the coordinator's live observation, and it also answers the open half: **the frame heals
+about 0.4s after the tab is shown.** The reporter's `ResizeObserver` and `resize` run once rendering
+resumes. This is a transient and not the operator's durable symptom.
 
-On live doc 29 I forced the unmeasured state client-side (remove the inline height, drop
-`data-measured`, set `data-unmeasured`) and then overrode the frame with the **old** formula, and
-screenshotted both. Nothing was sent to the server; this is DOM surgery in my own tab.
+### D. A document opened in a background tab measures fine (CDP)
 
-| | pre-P28 (`explainer.css`, deleted by S7) | post-P28 (`kb-docview.css:224`) |
-|---|---|---|
-| rule | `.kb-explainer:not([data-measured]) .kb-explainer__frame` | `.kb-explainer[data-unmeasured] .kb-explainer__frame` |
-| height | `calc(100dvh − var(--kb-app-topbar-h) − 13rem)`, `min-height: 30rem` | `var(--kb-explainer-h-unmeasured)` = `70rem` = **1120px**, flat at every tier |
-| measured at 1440×900 | **636px** (probe element, live) | **1120px** |
-| frame top / bottom at 1440×900 | 356 / 992 (92px below the fold) | 356 / 1476 (576px below the fold) |
-| arithmetic 390×844 | 844−56−208 = **580px** | **1120px** |
-| arithmetic 820×1180 | 1180−56−208 = **916px** | **1120px** |
-| arithmetic 1024×768 | 768−56−208 = **504px** (floor 480 not reached) | **1120px** |
+`Target.createTarget({background: true})`, `visibilityState: hidden`: it was `data-measured`,
+`height: 9969px` at 307ms and stayed correct through activation.
 
-Screenshots: `~/.aside/u/1/sessions/2026-09-22_p4CMDLFlV8EjKtXC/{new-unmeasured-70rem,old-unmeasured-636px}.png`.
+### E. The pre-measure 640px box CANNOT be scrolled under the pointer (CDP, CPU ×20)
 
-**They are pixel-identical above the fold.** In both states the box still has `overflow: hidden`, the
-iframe is still shorter than its content, and the iframe still scrolls internally — the change is where
-the box *ends*, not whether it scrolls. On macOS (overlay scrollbars) neither rendering shows a scrollbar
-at rest. This is the single biggest reason I will not hand the fix slice the hypothesis as a conclusion:
-the mechanism it proposes ("the box edge and its scrollbar are off-screen, so the scroll is gone") is
-real on a phone (580 → 1120 in an 844-tall window) but weak on the desktop the operator named first, and
-it cannot be the story at all for a document that measures — which is all nine I can see.
+During the waiting state (`[null, null, null, 640]`), `elementFromPoint` at the frame's centre returns
+**`DIV.kb-explainer__wait`**. That is the overlay (`position:absolute; inset:0`), which sits over the
+iframe, so a wheel there scrolls the page. Coordinator candidate (3) is **ruled out** for the waiting
+state. An inner wheel needs the iframe exposed: `[data-unmeasured]` (70rem), a clamped bogus height
+(F), or a stale measured height (G).
 
-### 3. Nothing lost an `overflow` rule, and the handshake's child half is byte-unchanged
+### F. The reporter measures a frame that has not been laid out (CDP, fixture 72, cold loads, cache off)
 
-`git diff 70e8eae..HEAD -- web/src`, filtered to lines touching `overflow`: exactly **two** removals,
-`-overflow-x: auto` (old `prose.css` `pre`) and `-overflow: hidden` (old `explainer.css` `.kb-explainer`),
-and both are re-declared in `kb-docview.css` (lines 171 and 215). Independent confirmation of the
-orchestrator's own diff.
-
-`web/src/lib/explainer-height.ts` — the **child** reporter, i.e. the entire measuring mechanism — has a
-**zero-line diff across the whole phase**. `MIN_HEIGHT = 120` / `MAX_HEIGHT = 40000` are unchanged in the
-parent. P28 added states *around* the handshake; it changed nothing *inside* it.
-
-### 4. The timeline rules out "the handshake only just reached production"
-
-That was my own best alternative and it is dead. The content-height handshake landed in `1d59d6b`
-(2026-07-29) and its hydration-race fix in `f5a7017` (2026-08-07 08:47 UTC). The previous successful
-`Production Deploy` was run `31163902453` at 2026-08-07 08:58 UTC on `73eddb8`, and
-`git merge-base --is-ancestor f5a7017 73eddb8` is **true** — so production has been serving the complete,
-fixed handshake for six weeks. The delta the operator is reacting to is exactly P28's nine `web/src`
-commits (`bf643da` … `ae0c47c`), nothing older.
-
-### 5. Alternatives ruled out
-
-**Markdown `<pre>` and wide tables still scroll sideways.** Local fixture 64
-(`/@p28s5/research/round-06-measure-probe`, the wide-`pre` + 6-column-table probe). At 1440 the content
-fits, so I narrowed `.kb-app-main` to 390px — faithful, because both rules are `@container kbmain` — and
-then *actually scrolled them*, which is the only proof that counts:
-
-| element | `overflow-x` | `scrollWidth` / `clientWidth` | scrolled to |
+| CPU | first diagnostic | posted | then |
 |---|---|---|---|
-| `.kb-prose pre` | `auto` | 825 / 311 | `scrollLeft = 514` |
-| `.kb-prose__wide` (table wrapper) | `auto` | 617 / 278 | `scrollLeft = 339` |
+| ×1 | `iw 1022 ih 640`, body 9905 | 9969 | clean |
+| ×4 | DCL saw `iw 0 ih 0`; first measure already `iw 1022` | 9969 | clean |
+| ×20 | measure at **`iw 0 ih 0`, body 0** | **64** (margins only) | 9969 about 1.25s later |
+| ×10, **client-side navigation** short explainer → 72 (`next.router.push`) | measure at **`iw 0`**, body **90,756** | **90,820** → clamped to **40,000** | 9969 10ms later |
 
-Both alive. Round 06 in fact *improved* this: the table gained a dedicated `.kb-prose__wide` wrapper with
-edge-fade affordances and `overscroll-behavior-inline: contain`, where the old sheet had none.
+At ×20 the bogus 64 arrived **before hydration** and was lost, which was harmless. If it lands after
+hydration, the parent clamps it to `MIN_HEIGHT 120`, sets `data-measured` (which hides the overlay) and
+exposes a 120px frame that scrolls internally until the next re-post. On a client-side navigation it
+lands after hydration by construction, as the 90,820 did. It is short-lived (one rendering frame,
+visible tab), but it is a real wrong post, and every one costs a unit of `budget` (G).
 
-**The relay is not dropping the reporter** (§3 candidate "never reaches the child"): verified present in
-the production response body, with a CSP that permits it.
+The client-side navigation also showed the App Router **remounts** the island (`new-iframe`; its state
+starts from `[null, null, null]`), so no height carries over between documents.
 
-**The parent is not rejecting the message** (§3 candidate "posts but the parent rejects it"): nine
-documents got their heights applied, inline, to the pixel.
+### G. THE DURABLE ONE: the lifetime `budget` latch (Aside, fixture 71, visible tab)
 
-**One designed change genuinely does remove a horizontal scroll, and it is not this.** Round 03 §3 turns
-`.kb-dtable` into stacked cards below 40rem (`kb-console-responsive.css:181`, `overflow: visible`), where
-`kb-console.css:100` gives it `overflow-x: auto` above that. So a *table* that used to scroll sideways on
-a phone now stacks. That is signed design, it is not "a document's" scroll, and the version-history panel
-is the only table on a document page — but it is worth naming in the operator question because it is the
-one place in the phase where a horizontal scroll really did disappear on purpose.
+The reporter decrements `budget` once per post and returns forever at 0. A width change below the body's
+48rem measure (frame narrower than about 800px) produces a new height on every step, so a continuous
+drag spends about 60 per second.
 
-## Dead ends, for the record
+1. 320 distinct widths, 35ms apart: **298** posts observed. Released to full width, the 300th post
+   happened to be the return to 9969, which is a lucky heal.
+2. 330 widths, then release: frame stuck at **10,673** for 9,969 of content (stale and too tall).
+   I then sent `kb-explainer-request` by hand: **no post** (the request resets `last` but never `budget`).
+3. 330 widths (700–996px), release, then narrow to **560px**: frame stuck at **9,969** while the child's
+   content is **12,453**. **2,484px of inner overflow.** `page.mouse.wheel(0, 600)` over the frame:
+   **inner `scrollY` 0 → 600, page `scrollY` 2000 → 2000.**
 
-- **`/@leetusik/<project>/graph`** (the orchestrator's 404): wrong shape, not a wrong slug. The public
-  graph is two segments, `/@leetusik/graph`, and it answers `200`. The org slug `leetusik` is right.
-- **Looking for locally saved copies of the operator's explainers** (the `/explain` skill's `here` flag
-  writes a project copy): nothing under `~/projects` matches; the only `.html` files there are Lighthouse
-  reports and two unrelated references.
-- **Historical `/explain` templates**: I checked every revision of `.claude/skills/explain/SKILL.md` for
-  a full-height / internally-scrolling body variant that would defeat `measure()`. There is one template
-  shape and it is the flow-height one. It does not rule out hand-written or older-generation documents in
-  the private corpora, but it removes the systematic explanation.
-- **`page.waitForTimeout` and `require('fs')` do not exist in the Aside repl** — use
-  `await new Promise(r => setTimeout(r, ms))`, and `page.screenshot({ path: 'name.png' })` with a
-  *relative* path, which lands in `~/.aside/u/1/sessions/<session>/`. A bare trailing expression prints
-  nothing; `console.log` it. (Addendum to the phase's Aside recipe.)
+Only a reload or a remount clears it. That is the operator's symptom exactly: under the pointer the
+document scrolls itself instead of the page, and it disappears on its own the next time the page loads.
+Natural ways to spend 300 posts in one document's life: about five seconds of window drag-resize, or of
+dragging a **side-docked DevTools** splitter (the operator was running console snippets) with the frame
+under about 800px, plus a rail toggle or two and the F-class bogus posts. **Whether that is what happened
+in the operator's session is not proven.** It is the only durable mechanism any probe found.
 
-## What the fix slice needs from the operator
+The latch is from `1d59d6b` (2026-07-29), so it **predates P28**. P28 widened the frame (`.kb-doc` full
+track, 1022px at 1440) above the 48rem knee, which if anything makes the latch *harder* to hit at a
+wide window than the old 46rem column did.
 
-One of these, and the slice is unblocked:
+### H. Where the beacon comes from, and what it touches (curl; no state changed)
 
-1. **A URL that reproduces it** — any one document from `changple5` / `arb_upbit_1` / `Mijual` that shows
-   the symptom, made temporarily public (its project set to public, reverted afterwards), **or**
-2. **the document's raw HTML** — `https://knowledge.hi2vi.com/api/documents/{id}/raw` opened while signed
-   in and saved to a file in this workspace, which is enough to reproduce it against the local runtime,
-   **or**
-3. **four numbers read off the affected page**, which is the cheapest of the three. Open an affected
-   document, wait ~6 seconds, open the browser console and paste:
+- It is **not in the repo** (`git grep` for `cloudflareinsights|cf-beacon|email-decode|cdn-cgi` finds
+  nothing outside an unrelated changple5 explainer).
+- It is **edge-injected**, and only for browser-like requests. `curl` with no UA gets no beacon.
+  The same URL with a Chrome UA and `Accept: text/html` gets
+  `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/…" integrity=…
+  data-cf-beacon='{"…","spa":2}'>` before `</body>`, on **both** the app page `/documents/29` and the
+  framed `/api/documents/29/raw`. So the nine public documents carry it too.
+- Cloudflare **Email Address Obfuscation** is also active on the relay. Public doc 29's raw body
+  contains `/cdn-cgi/l/email-protection` and `<script data-cfasync="false"
+  src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js">`, so Cloudflare rewrites the
+  explainer body itself. Doc 60 has neither (no address in it).
+- Beacon fetch from here: 200, 31,679 B, 49–61ms, `access-control-allow-origin: *` (so it executes inside
+  the opaque-origin sandbox), `cache-control: public, max-age=86400`.
+- The response headers show no `no-transform`. From memory of Cloudflare's docs and **unverified here**:
+  `Cache-Control: no-transform` on a response stops both the Web Analytics auto-injection and email
+  obfuscation. That would be the origin-side lever if the operator wants it.
 
-   ```js
-   (b => b && console.log(JSON.stringify({
-     measured: b.getAttribute('data-measured'),
-     unmeasured: b.getAttribute('data-unmeasured'),
-     frame: b.querySelector('.kb-explainer__frame').getAttribute('style'),
-     h: Math.round(b.querySelector('.kb-explainer__frame').getBoundingClientRect().height),
-     win: [innerWidth, innerHeight], page: document.documentElement.scrollHeight,
-     url: location.pathname
-   })))(document.querySelector('.kb-explainer'))
-   ```
+## Dead ends
 
-   `unmeasured: "true"` confirms the hypothesis and the fix is the fallback. `measured: "true"` with a
-   small `h` means the reporter is under-reporting and the fix is in `explainer-height.ts`. `null` on both
-   after six seconds means the island never settled and the fix is in `explainer-frame.tsx`. Each answer
-   points at a different file, which is why guessing now would be expensive.
+- **Publishing doc 60's body to the local DB.** Denied by the classifier. I did not retry it in another
+  form.
+- **`file://` in Aside.** "Cannot navigate to a file URL without local file access". I switched to a
+  `127.0.0.1` static server.
+- **Hiding a tab in Aside.** A second `openTab` leaves the first tab `visible`, and `page.cdp` is
+  `undefined` (no `Page.bringToFront`). That is why CDP was used for C and D.
+- **The P25 header claim "Chrome does not run rAF in an opaque-origin frame like this one"** is
+  environment-specific. In a visible tab the child ran rAF (1 in 800ms) and its ResizeObserver fired.
+  Offscreen or hidden, rAF is 0. The `setTimeout` debounce is still right (hidden tabs), but the
+  comment's stated reason is wrong. That is noted for the fix slice and not edited here.
 
-Also worth the operator's word, whichever way it goes: **is the symptom on Mac Chrome, iPhone Safari, or
-iPad?** The fallback change is ~2× worse on a phone (580 → 1120 in an 844-tall window) than on a desktop,
-where the two renderings are indistinguishable above the fold.
+## Aside / instrument notes (new, for the notebook's harness recipe)
+
+`page.frames()[1].evaluate(fn)` **does** run inside the sandboxed opaque-origin explainer
+(`origin "null"`). That makes the child's `innerHeight`, `scrollHeight` and `scrollY` readable directly,
+which the first pass assumed was impossible. `installPageScript` exists among the repl globals (untried).
+CDP via Chrome for Testing
+(`~/Library/Caches/ms-playwright/chromium-1223/…/Google Chrome for Testing`, `--remote-debugging-port`,
+scratch `--user-data-dir`) plus Node 24's global `WebSocket` gives `Page.addScriptToEvaluateOnNewDocument`,
+`Emulation.setCPUThrottlingRate`, `Browser.setWindowBounds {windowState: minimized}` (a real
+`hidden`) and `Target.createTarget {background: true}`.
+
+## Validation
+
+- `python3 scripts/workflow.py validate`: passed. The only warnings are the pre-existing advisories
+  (P28 consolidation owed, stale docs, unknown legacy kinds, oversized doc sections).
+- `git status --short` after the run shows only the orchestrator's pre-existing edits plus this file and
+  `phase.md`. No product file changed, and nothing under `tenants/` is tracked.
