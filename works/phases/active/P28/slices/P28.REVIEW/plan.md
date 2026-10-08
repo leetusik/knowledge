@@ -57,3 +57,76 @@ A structured verdict carrying `review_verdict`, the fixed pointer `explain: not 
 - Write `result.md` verdict-block-first.
 
 You never commit and never transition slice or phase status. **`accept-gate` is mine, not yours** — you return the walkthrough, I open the gate.
+
+---
+
+# Re-review — plan (orchestrator native plan, auto mode, 2026-10-08)
+
+**A re-review after the operator-reported `changes_requested` (the framed-explainer inner scroll).** Executor:
+`slice-executor-high`. Everything above is the first review's plan; its verdict and its routed walkthrough
+decisions stand and are **not** re-litigated. The gate is still `required: true`. It was cleared on
+2026-09-21 and then reset by the `changes_requested` record, so this review returns a fresh `walkthrough`.
+
+Read `phase.md` whole (its `## Now` is the F2 handoff), `intent.md`, `slices/P28.S10/result.md` (§I root cause,
+G latch, H beacon) and `slices/P28.F2/result.md`.
+
+## The boundary of this re-review
+
+What changed since the passing review (`41b569e..HEAD`, product files only): exactly
+`web/src/lib/explainer-height.ts` (the injected `REPORTER` string) and `web/tests/explainer-reporter.test.ts`.
+The reporter is injected into **every framed HTML explainer** by the BFF raw relay, so the surfaces it feeds
+are every place an explainer is framed: the member document page, the public document page, the chrome-less
+HTML-only / full view, and the print path (round 06 check 19: Blink prints a content-sized iframe in full).
+The whole phase's `phase-scope P28` (34 commits, 111 product files) is the context, **not** the re-run list.
+Re-run only the `## Regression Checklist` lines that touch those surfaces; record the other lines by count,
+with the diff as the proof. Anything outside is a deferred-job candidate, never a finding.
+
+## What to do
+
+1. **Gates:** `pnpm --dir web typecheck · lint · test · build` (never `prettier --write`), and
+   `python3 scripts/workflow.py validate`. No server code changed, so pytest is not required. Say so.
+2. **Spot-check F2's headline claims yourself**, in the manifest runtime (dev `:3030` and the production
+   standalone build), never on F2's report alone:
+   - the latch repro: step the frame width through hundreds of values, then narrow, and confirm frame height ==
+     the child's `scrollHeight` and that a wheel over the frame moves the **page** (Aside `u1`,
+     `page.frames()[1].evaluate`);
+   - DPR 2 `maxScrollTop == 0` on a fractional body (Chrome for Testing headless, per F2's harness note);
+   - no post below 120 on a slowed cold load.
+   Then a quick first-time-user pass over one framed explainer on each surface above: member, public,
+   HTML-only view, and print preview via headless print-to-PDF (never `window.print()`). Report anything dead,
+   confusing or annoying in the walkthrough, never as silent fixes. Synthetic local fixtures only; remove
+   them or name them.
+3. **Doc impact:** verify F2's line covers the reporter's contract change, and that S10 rightly left none.
+4. **Operator Questions:** route every entry added since the first review into the walkthrough as a decision,
+   or into a deferred-job candidate for the orchestrator to file:
+   - the S10 Cloudflare beacon / email-obfuscation entry. Recommended route: a walkthrough decision, with a
+     deferred-job candidate for the `Cache-Control: no-transform` change;
+   - the 70rem / `100dvh` entry, now off the fix's path. Recommended route: strike, or defer;
+   - the answered S10 repro question: mark it consumed.
+   An unrouted entry is a finding.
+5. **Gate section carve-out:** append this fix's headline check to the qa doc's `## Regression Checklist`
+   through `doc-new-version --doc qa` (that section only), then run `rebuild-docs`. Something like: "a framed
+   explainer has no inner scroll range at DPR 1 and 2, including after many width changes; a wheel over it
+   scrolls the page".
+
+## Walkthrough (return it with a passing verdict)
+
+**The operator accepts on production**, so the walkthrough must start with the deploy prerequisite: this fix
+reaches `https://knowledge.hi2vi.com` only after the orchestrator pushes `main`, with the operator's
+permission, and the Production Deploy run is green. Then, concretely, on the **retina "node" Mac, Chrome
+"Work" profile**, which uses classic always-visible scrollbars:
+- open `/documents/60` and wait for it to load: no scrollbar inside the document box, and a wheel over the
+  document scrolls the page;
+- dock DevTools to the side and drag its edge for ~10 s, or drag the window edge, then close it: still no
+  inner scrollbar;
+- one more long framed explainer, and its HTML-only view.
+Plus the two routed decisions (Cloudflare, 70rem). Keep it short; the first review's nine decisions are
+already settled.
+
+## Return
+
+`review_verdict` (`pass | changes_requested | blocked`), numbered findings with proposed fix slices if it is
+not a pass, the `walkthrough`, the deferred-job candidates (title / reason / trigger / source), `doc_versions`
+(the qa carve-out only), and `explain: not written — run /explain for this phase`. Write `result.md` from
+scratch, verdict block first (the first review's `result.md` is in git). Edit the notebook per its rules and
+rewrite `## Now` last.
