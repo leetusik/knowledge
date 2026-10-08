@@ -49,43 +49,73 @@ export const HEIGHT_REPORTER_MARKER = "kb-explainer-height";
  * `body { margin: 2rem auto }`) collapse out of that box, so they are added back
  * explicitly rather than inferred.
  *
- * Two things the measured behaviour of a sandboxed frame forced:
- *   - the debounce is a `setTimeout`, NOT `requestAnimationFrame`. Chrome does not
- *     run rAF callbacks in an opaque-origin frame like this one — `DOMContentLoaded`
- *     and `load` fire, rAF never does — so an rAF debounce silently reports nothing
- *     and every explainer keeps the CSS fallback height;
- *   - `budget` latches a runaway. Nothing the `explain` template emits can trigger it,
- *     but a document whose content height depends on the VIEWPORT height (a `100vh`
- *     block, `html { height: 100% }`) grows every time the parent applies the number
- *     we sent. The clamp on the parent bounds it; this stops the thrash getting there.
+ * The box is read FRACTIONALLY (`getBoundingClientRect().height`) and the sum is
+ * rounded UP once, at the end. `offsetHeight` and `scrollHeight` are integer-rounded,
+ * so a body of 13,200.4766px read through them reports up to 0.5px LESS than the
+ * content. At DPR 1 Chrome snaps that half-pixel away; at DPR 2 (a retina Mac) it
+ * leaves a real 0.5px scroll range inside a correctly measured frame, which a classic
+ * scrollbar draws as a full-height thumb and a wheel gesture can latch onto (P28.S10,
+ * reading I; fixed in P28.F2). `scrollHeight` stays in the `max` for content that
+ * overflows the body's own box.
+ *
+ * Three things the measured behaviour of a sandboxed frame forced:
+ *   - the debounce is a `setTimeout`, NOT `requestAnimationFrame`. A frame that is
+ *     not being rendered — a hidden or background tab, an offscreen frame — runs no
+ *     rAF callbacks at all, while timers still fire, so an rAF debounce would report
+ *     nothing there. (In a visible tab the frame does run rAF — measured at P28.S10;
+ *     the original P25 note that Chrome "never" runs it here was environment-bound.)
+ *   - `budget` latches a runaway, and it is a budget PER VIEWPORT WIDTH. Nothing the
+ *     `explain` template emits can trigger a runaway, but a document whose content
+ *     height depends on the VIEWPORT height (a `100vh` block, `html { height: 100% }`)
+ *     grows every time the parent applies the number we sent. That thrash happens at
+ *     a CONSTANT width, so `budget` (300 posts) stops it there; the parent's clamp
+ *     bounds it too. Legitimate reflow is the opposite case — it always arrives with
+ *     a new width (a window drag, a side-docked DevTools splitter, a rail toggle) — so
+ *     a width change re-arms the budget. Until P28.F2 the budget was for the frame's
+ *     whole lifetime: ~5s of dragging below the body's measure spent it, and every
+ *     later width change left the frame at a stale height, scrolling the document
+ *     inside its own box until a reload (P28.S10, reading G).
+ *   - a frame that has not been laid out yet (`innerWidth`/`innerHeight` 0 — seen on
+ *     cold loads under CPU throttling and on client-side navigations) measures junk:
+ *     margins only (64) or an unwrapped body (90,820). Nothing is posted from a 0×0
+ *     viewport and no state is touched; `resize`, the `ResizeObserver` and `load`
+ *     fire again once the frame has a size.
  *
  * The `kb-explainer-request` handler is the other half of that dedupe's cost: `last`
  * makes a height message that nobody was listening for unrecoverable, so a parent that
- * hydrated late gets one chance to ask again. It resets `last` (never `budget` — a
- * runaway stays latched) so the answer goes out even though the height has not
- * changed, and it is the ONLY trigger that bypasses the dedupe; every other one
- * (load, resize, ResizeObserver, fonts) still needs a real ≥2px change, which is what
- * keeps a parent→child→parent feedback loop impossible.
+ * hydrated late gets one chance to ask again. It resets `last` so the answer goes out
+ * even though the height has not changed, and it is the ONLY trigger that bypasses the
+ * dedupe; every other one (load, resize, ResizeObserver, fonts) still needs a real ≥2px
+ * change, which is what keeps a parent→child→parent feedback loop impossible. It also
+ * grants exactly ONE post when the budget is spent — an un-wedge lever for the parent —
+ * but never refills the budget: the parent asks at most twice per mount, so a runaway
+ * stays bounded.
  */
 const REPORTER = `
 (function () {
   if (window.parent === window) return;
-  var last = -1, queued = false, budget = 300;
+  var BUDGET = 300;
+  var last = -1, lastW = -1, queued = false, budget = BUDGET, grant = false;
   function px(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
   function measure() {
     var b = document.body;
     if (!b) return 0;
     var s = window.getComputedStyle(b);
     return Math.ceil(
-      Math.max(b.scrollHeight, b.offsetHeight) + px(s.marginTop) + px(s.marginBottom)
+      Math.max(b.getBoundingClientRect().height, b.scrollHeight) +
+        px(s.marginTop) + px(s.marginBottom)
     );
   }
   function post() {
     queued = false;
-    if (budget <= 0) return;
+    var w = window.innerWidth, vh = window.innerHeight;
+    if (!(w > 0) || !(vh > 0)) return;
+    if (w !== lastW) { lastW = w; budget = BUDGET; }
+    if (budget <= 0 && !grant) return;
     var h = measure();
     if (h > 0 && Math.abs(h - last) >= 2) {
-      budget--;
+      if (budget > 0) budget--;
+      grant = false;
       last = h;
       window.parent.postMessage({ type: 'kb-explainer-height', height: h }, '*');
     }
@@ -107,6 +137,7 @@ const REPORTER = `
     var d = e.data;
     if (!d || typeof d !== 'object' || d.type !== 'kb-explainer-request') return;
     last = -1;
+    grant = true;
     schedule();
   });
   if (window.ResizeObserver && document.body) {

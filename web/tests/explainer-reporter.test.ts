@@ -17,7 +17,7 @@ import { injectHeightReporter } from "@/lib/explainer-height";
 type Post = { type: string; height?: number };
 
 /** Execute the injected reporter against a fake frame; hand back its outbound posts. */
-function runReporter(height = 400) {
+function runReporter(height = 400, viewport: [number, number] = [800, 600]) {
   const posts: Post[] = [];
   const listeners = new Map<string, ((event: unknown) => void)[]>();
   const on = (type: string, fn: (event: unknown) => void) => {
@@ -25,17 +25,27 @@ function runReporter(height = 400) {
   };
 
   const parent = { postMessage: (data: Post) => posts.push(data) };
+  const margins = { marginTop: "0px", marginBottom: "0px" };
   const win = {
     parent,
     addEventListener: on,
     setTimeout: (fn: () => void) => (fn(), 0), // synchronous: the debounce is not under test
-    getComputedStyle: () => ({ marginTop: "0px", marginBottom: "0px" }),
+    getComputedStyle: () => margins,
     scrollY: 0,
     location: { hash: "" },
+    innerWidth: viewport[0],
+    innerHeight: viewport[1],
+  };
+  // `offsetHeight`/`scrollHeight` are integer-rounded in a real browser; the
+  // bounding box is not.
+  const body = {
+    scrollHeight: Math.round(height),
+    offsetHeight: Math.round(height),
+    getBoundingClientRect: () => ({ height }),
   };
   const doc = {
     readyState: "complete",
-    body: { scrollHeight: height, offsetHeight: height },
+    body,
     addEventListener: () => {},
     getElementById: () => null,
     getElementsByName: () => [],
@@ -46,13 +56,35 @@ function runReporter(height = 400) {
     .replace(/<\/script>$/, "");
   new Function("window", "document", source)(win, doc);
 
+  const fire = (type: string, event: unknown) =>
+    (listeners.get(type) ?? []).forEach((fn) => fn(event));
+
   return {
     posts,
     parent,
-    fire: (type: string, event: unknown) =>
-      (listeners.get(type) ?? []).forEach((fn) => fn(event)),
+    fire,
+    /** Content reflowed to a new height; the reporter hears it as a resize. */
+    reflow: (h: number) => {
+      height = h;
+      body.scrollHeight = Math.round(h);
+      body.offsetHeight = Math.round(h);
+      fire("resize", {});
+    },
+    /** The body's collapsed margins (the template's `margin: 2rem auto`). */
+    margin: (top: string, bottom: string) => {
+      margins.marginTop = top;
+      margins.marginBottom = bottom;
+    },
+    /** The frame's viewport changed (no event fired — pair it with `reflow`). */
+    viewport: (w: number, h: number) => {
+      win.innerWidth = w;
+      win.innerHeight = h;
+    },
   };
 }
+
+/** The runaway latch's size, mirrored from the reporter source. */
+const BUDGET = 300;
 
 describe("the injected explainer height reporter", () => {
   it("reports once and then dedupes an unchanged height", () => {
@@ -81,5 +113,71 @@ describe("the injected explainer height reporter", () => {
     fire("message", { source: parent, data: { type: "kb-explainer-height" } });
 
     expect(posts).toHaveLength(1);
+  });
+
+  // P28.F2 — the runaway latch counted legitimate width-driven reflow, so after a
+  // few seconds of window drag the frame was stuck at a stale height for good.
+
+  it("still latches a runaway that grows at a CONSTANT width", () => {
+    const { posts, reflow } = runReporter(400);
+    for (let i = 1; i <= BUDGET + 50; i++) reflow(400 + i * 10);
+
+    expect(posts).toHaveLength(BUDGET);
+  });
+
+  it("re-arms the latch when the viewport WIDTH changes", () => {
+    const { posts, reflow, viewport } = runReporter(400);
+    for (let i = 1; i < BUDGET; i++) reflow(400 + i * 10);
+    expect(posts).toHaveLength(BUDGET);
+
+    reflow(9000); // spent at this width
+    expect(posts).toHaveLength(BUDGET);
+
+    viewport(560, 600);
+    reflow(12000);
+    expect(posts.at(-1)).toEqual({
+      type: "kb-explainer-height",
+      height: 12000,
+    });
+  });
+
+  it("posts nothing from a 0x0 viewport and spends no budget there", () => {
+    const { posts, reflow, viewport } = runReporter(64, [0, 0]);
+    reflow(90820);
+    expect(posts).toEqual([]);
+
+    viewport(800, 600);
+    for (let i = 1; i <= BUDGET - 1; i++) reflow(400 + i * 10);
+    viewport(0, 0);
+    for (let i = 1; i <= 20; i++) reflow(64 + i * 10);
+    viewport(800, 600); // same width as before: no re-arm
+    reflow(7777);
+
+    expect(posts).toHaveLength(BUDGET);
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 7777 });
+  });
+
+  it("answers a parent request with exactly ONE post while latched", () => {
+    const { posts, parent, fire, reflow } = runReporter(400);
+    for (let i = 1; i < BUDGET; i++) reflow(400 + i * 10);
+    reflow(9000);
+    expect(posts).toHaveLength(BUDGET);
+
+    fire("message", { source: parent, data: { type: "kb-explainer-request" } });
+    expect(posts).toHaveLength(BUDGET + 1);
+
+    reflow(9500);
+    expect(posts).toHaveLength(BUDGET + 1);
+  });
+
+  // P28.F2 — integer-rounded offsetHeight/scrollHeight under-reported a fractional
+  // body box by up to 0.5px, a real inner scroll range at DPR 2.
+
+  it("rounds the FRACTIONAL body box up, margins included", () => {
+    const { posts, margin, reflow } = runReporter(400);
+    margin("32px", "32px");
+    reflow(1000.3);
+
+    expect(posts.at(-1)).toEqual({ type: "kb-explainer-height", height: 1065 });
   });
 });

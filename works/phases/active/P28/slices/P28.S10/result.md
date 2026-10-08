@@ -1,37 +1,51 @@
 # P28.S10 — result (second pass, 2026-10-08 — supersedes the first pass's verdict)
 
 - **status**: `done`
-- **summary**: Research only, no product code. The "short measured height" lead is **killed**: doc 60's own
-  body, framed at 1000px in a local-only harness, reports exactly **13,307** with **zero** inner overflow
-  and no scrollers of its own. Its rival, "the beacon delays the first height", is killed as well: a 6s
-  stand-in module script left measurement untouched. What I did reproduce is a **durable** inner scroller in
-  a framed explainer. The child reporter's lifetime `budget = 300` latch (P17, `1d59d6b`, so it predates
-  P28) stops all re-posting once 300 heights have gone out, and after that any width change leaves the
-  frame at a stale height. With the content taller than the frame, the wheel over the frame scrolls the
-  inner document and the page stays where it is, which is the operator's symptom. It persists until a
-  reload. I also found that the reporter posts bogus heights from a not-yet-laid-out frame
-  (`innerWidth 0` → **64** or **90,820**). The fix is a small change to `web/src/lib/explainer-height.ts`.
+- **summary**: Research only, no product code. **Root cause, proved by the numbers:** the child
+  reporter's `measure()` (`web/src/lib/explainer-height.ts`) reads the body through integer-**rounded**
+  `offsetHeight`/`scrollHeight`, so it falls short of the real content by up to 0.5 CSS px whenever the
+  body's fractional height is under .5. On a **DPR 2** (retina) display Blink snaps scrolling to
+  half-CSS-pixel device units, so a shortfall of about 0.25px or more leaves the framed document a **real
+  0.5px scroll range** inside the correctly measured frame. Overlay scrollbars hide it at rest. Classic
+  scrollbars draw it as a full-height thumb, which is the operator's screenshot. Chrome's wheel latching
+  then hands the gesture to the iframe instead of the page. **Doc 60 at DPR 2:** body 13,200.4766px →
+  reported 13,264 → content ends at 13,264.48 → **`maxScrollTop = 0.5`**, measured twice. All nine public
+  explainers at DPR 2: 0. Doc 60 at DPR 1: body 13,242.89 rounds up, so no range, and that is why every
+  check here (Aside and this machine run at DPR 1) passed. The rounding dates from `1d59d6b`
+  (2026-07-29), so it **predates P28**. Two real secondary defects in the same file: the lifetime
+  `budget = 300` latch (once spent, any width change leaves a stale height, a *durable* inner scroller,
+  reproduced) and posts from an unlaid-out frame (`innerWidth 0` → 64 or 90,820). Killed on the way: a
+  short measured height, the slow beacon, a hidden tab (it heals), a background tab, and the 640px
+  pre-measure box (its overlay takes the wheel).
 - **validation**: `python3 scripts/workflow.py validate` → passed (see *Validation* below).
-- **deviations**: (1) **Plan step 1 was cut short by a guard I did not override.** I tried to publish
-  doc 60's stripped body into the local dev DB as the plan allowed. The sandbox classifier denied it
-  ("Sensitive-Source Provenance"). I reproduced instead on **synthetic** fixtures shaped like doc 60:
-  the same template CSS, a `<details>`, quiz reveals, SVGs and a `display:block` table, with no real
-  content. I measured doc 60's own DOM only inside a **local-only** static harness on `127.0.0.1` (no
-  ingest, no server write). (2) I added one instrument beside Aside. Aside cannot hide a tab, cannot
-  throttle the CPU and cannot install a script before load, so a throwaway **Chrome for Testing 148**
-  driven over raw CDP (Node's built-in WebSocket) covered those three probes. Both instruments are named
-  per measurement below. (3) On the coordinator's mid-task instruction I dropped the short-height lead and
-  prioritised the hidden-tab and pre-measure candidates. Both are answered below.
-- **doc_impact**: none. The slice changed no durable truth. The fix slice owes the note when it lands.
+- **deviations**: (1) **Doc 60 was never ingested.** The sandbox classifier denied publishing its
+  body into the local dev DB ("Sensitive-Source Provenance") and I did not retry in another form. Its DOM
+  was measured only inside a **local-only** static harness on `127.0.0.1` (no ingest, no server write),
+  and the timing probes ran on **synthetic** doc-60-shaped fixtures. (2) **Instruments.** Aside for
+  everything at DPR 1. A throwaway **Chrome for Testing 148** over raw CDP (Node's global `WebSocket`) for
+  hidden tabs, CPU throttling, pre-load scripts and **`--force-device-scale-factor=2`**. Its out-of-process
+  sandboxed frame never received frame-rect updates in an unrendered window, so the DPR 2 readings run
+  with `--disable-features=IsolateSandboxedIframes` (process placement only; layout and snapping are
+  per-frame and unchanged). Its wheel dispatch hangs without a compositor frame, so **the latching half
+  is standard Chrome behaviour, not demonstrated here**. A first classic-scrollbar attempt
+  (`AppleShowScrollBars Always` in Chrome for Testing's *own* defaults domain, since removed) crashed and
+  gave frozen readings, so it is discarded. (3) **Mid-task course changes from the coordinator**, taken
+  in order: drop the short-height lead, then try the hidden-tab and pre-measure candidates (both
+  answered, neither durable), then the screenshot lead, sub-pixel overflow in a measured frame
+  (confirmed, §I).
+- **doc_impact**: none. The slice changed no durable truth. The fix slice owes the note.
 - **files changed**: this file; `works/phases/active/P28/phase.md`.
-- **recommended fix slice**: `P28.F2`, "Explainer reporter: re-arm the runaway latch on width change and
-  ignore an unlaid-out frame". `--kind fix --risk high`. Files: `web/src/lib/explainer-height.ts` (the
-  mechanism), `web/tests/explainer-reporter.test.ts` (+2 small cases). An optional parent re-sync in
-  `explainer-frame.tsx` is a second, separable step. The mechanism, and what must not change, is in the
-  `phase.md` note tagged `(from P28.S10, for the fix slice)`.
+- **recommended fix slice**: `P28.F2`, "Explainer reporter: measure the content height exactly, and
+  stop latching on reflow". `--kind fix --risk high`. Files: `web/src/lib/explainer-height.ts` (the
+  `REPORTER` string), `web/tests/explainer-reporter.test.ts` (+3 small cases). Mechanism, in priority
+  order: (1) `measure()` returns `Math.ceil` of the **fractional** body box,
+  `Math.max(b.getBoundingClientRect().height, b.scrollHeight)` plus margins. It stays viewport-independent,
+  so there is no ratchet. (2) The budget re-arms on a viewport-**width** change. (3) Nothing is posted
+  from a 0×0 viewport. Full detail, and what must not change, is in the `phase.md` note tagged
+  `(from P28.S10, for the scroll fix slice)`.
 
 The findings themselves (verdicts, mechanism, transient windows, the beacon facts) are in `phase.md` →
-`## Decisions` (the four `(P28.S10)` lines), `## Operator Questions` (the beacon entry) and `## Notes for
+`## Decisions` (the `(P28.S10)` lines), `## Operator Questions` (the beacon entry) and `## Notes for
 later slices`. Below is the log: what I ran, the readings, and the dead ends.
 
 ---
@@ -67,6 +81,8 @@ still applies.
     change the reporter's behaviour.
 - Throwaway servers, all killed: a slow-script stand-in on `:8799`, a static harness on `:8798`, and
   Chrome for Testing with `--remote-debugging-port=9333` and a scratch profile.
+- **Public raw copies** of docs 25–33 (anonymous GETs) were served from the same local harness for the
+  DPR 2 comparison and deleted with it.
 - **Doc 60's file:** stripped of the saved-from comment and the beacon (and, for the harness copy, its
   absolutised `#` anchors restored). The derived copies were **deleted** at the end. Only the operator's
   original file remains in the scratchpad. Nothing private was committed, ingested or sent anywhere.
@@ -80,7 +96,8 @@ arrived at 98ms: **13,307** (the operator's own number). Inside the child: `inne
 `documentElement.scrollHeight 13307`, `scrollWidth 1000 = clientWidth`, body 13,243 plus 32/32 margins
 = `measure()` 13,307. The lowest element bottom was 13,275 and the widest element was H1 at 768px.
 **Overflowing scrollers in the whole document: none** (3 tables, none overflowing at this width).
-Doc 60 has nothing that defeats `measure()`.
+Doc 60 has no structural feature that defeats `measure()`. **That is true at DPR 1 only.** At DPR 2
+the rounding in `measure()` does leave a half-pixel scroll range (§I).
 
 ### B. A slow third-party module script does not delay measurement (Aside, fixture 70, 6,000ms delay)
 
@@ -147,12 +164,12 @@ drag spends about 60 per second.
    content is **12,453**. **2,484px of inner overflow.** `page.mouse.wheel(0, 600)` over the frame:
    **inner `scrollY` 0 → 600, page `scrollY` 2000 → 2000.**
 
-Only a reload or a remount clears it. That is the operator's symptom exactly: under the pointer the
-document scrolls itself instead of the page, and it disappears on its own the next time the page loads.
-Natural ways to spend 300 posts in one document's life: about five seconds of window drag-resize, or of
-dragging a **side-docked DevTools** splitter (the operator was running console snippets) with the frame
-under about 800px, plus a rail toggle or two and the F-class bogus posts. **Whether that is what happened
-in the operator's session is not proven.** It is the only durable mechanism any probe found.
+Only a reload or a remount clears it. This is a real *durable* inner scroller, but it is **not the
+operator's screenshot**. There the frame is the full measured box with a sliver of overflow (§I), whereas
+a latched frame is stale by hundreds or thousands of pixels and would draw a visibly shorter thumb. It
+stays in the fix as the second item because natural actions can spend 300 posts in one document's life:
+about five seconds of window drag, or of dragging a side-docked DevTools splitter, with the frame under
+about 800px.
 
 The latch is from `1d59d6b` (2026-07-29), so it **predates P28**. P28 widened the frame (`.kb-doc` full
 track, 1022px at 1440) above the 48rem knee, which if anything makes the latch *harder* to hit at a
@@ -176,6 +193,62 @@ wide window than the old 46rem column did.
 - The response headers show no `no-transform`. From memory of Cloudflare's docs and **unverified here**:
   `Cache-Control: no-transform` on a response stops both the Web Analytics auto-injection and email
   obfuscation. That would be the origin-side lever if the operator wants it.
+
+### I. THE ROOT CAUSE — `measure()` rounds, and at DPR 2 the shortfall survives as a scroll range
+
+The lead came from the operator's screenshot (`scratchpad/doc60/shot.png`, read as data). It is
+`/documents/60` on a retina Mac (3104 px wide for a ~1550 CSS px window, so DPR 2) with **classic**
+scrollbars. A dark thumb runs down the frame's inner right edge from its top past the bottom of the
+window. A thumb that long means a scroller whose range is tiny next to its height, which is a measured
+frame with a sliver of overflow. It is neither the 640px box (whose iframe the overlay covers, and whose
+thumb would be about 30px) nor a short frame.
+
+The probe (identical in every frame): fractional body box from `getBoundingClientRect()`, the content bottom
+(`body` bottom + `marginBottom`), what `measure()` returns, and **the real scroll range**:
+`scrollingElement.scrollTop = 1e6`, read back, restored.
+
+**Controlled fractions** (a 1000.x px block in the template's body, the real reporter, the island's clamp):
+
+| block | DPR 1 (Aside): shortfall → range | DPR 2 (CfT): shortfall → range |
+|---|---|---|
+| 1000.09 | 0.09 → **0** | 0.09 → **0** |
+| 1000.30 | 0.30 → **0** | 0.30 → **0.5** |
+| 1000.44 | 0.44 → **0** | 0.45 → **0.5** |
+| 1000.55 | rounds up → 0 | rounds up → 0 |
+| 1000.89 | rounds up → 0 | rounds up → 0 |
+
+At DPR 1 Chrome snaps a sub-pixel overflow away entirely. With layout-taking `::-webkit-scrollbar`
+styling, which stands in for classic scrollbars in Aside, no scrollbar appears for 0.09–0.44 either.
+At DPR 2 the scroll range is in **half-pixel** units, so a shortfall of about 0.25 or more becomes a real
+0.5px range.
+
+**Doc 60**, local-only harness, frame 1022px:
+
+| DPR | body box | `measure()` | content bottom | shortfall | `maxScrollTop` |
+|---|---|---|---|---|---|
+| 1 (Aside) | 13,242.8906 | 13,307 | 13,306.89 | rounds up | **0** (all 15 widths 1022→390: shortfalls -0.36…+0.375, range always 0) |
+| 2 (CfT, two separate runs) | 13,200.4766 | 13,264 | 13,264.48 | **0.4766** | **0.5** |
+
+The body box differs between the two DPRs (13,242.89 vs 13,200.48) because text shaping differs at 2×,
+so whether a document hits this depends on the document, the width, the DPR and the fonts. That is the
+operator's "not all the docs has one" and "intermittent". It also explains why the orchestrator saw a
+clean 13,307 on the operator's main machine: that is the DPR 1 layout, which rounds up.
+
+**The nine public explainers at DPR 2** (frame 1022): ranges all **0**. Shortfalls are 0.06 (25) and
+0.125 (28), both under a device pixel and snapped away. The other seven round up. Doc 60 is the only
+document in the sample that crosses the threshold, which is why every check on the public set passed.
+
+**Not demonstrated:** the wheel latching onto a 0.5px range. CDP `Input.dispatchMouseEvent` hangs in
+this unrendered window and Aside runs at DPR 1. It is standard Chrome scroll-latching behaviour (a gesture
+latches to the first scroller that can move in its direction, and the remainder does not chain to the
+page mid-gesture), and it matches the operator's words. Flagged as inference.
+
+**Why the fix is `ceil` of the fractional box rather than `documentElement.scrollHeight`:** the header's
+ratchet warning still holds, because `documentElement.scrollHeight` is floored by the frame's own height.
+`getBoundingClientRect()` on the **body** has no such floor, and it is fractional, so
+`Math.ceil(rect.height + margins)` can never fall short and never grows with the frame. The
+`Math.max(..., b.scrollHeight)` keeps today's coverage of descendants that overflow the body box. The .55
+and .89 rows above are the proof that a frame at least as tall as the true content leaves range 0.
 
 ## Dead ends
 
