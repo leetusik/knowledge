@@ -1,0 +1,792 @@
+<!--kb
+title: "P9: The Stage-1 System, Explained"
+date: 2026-10-10
+tags:
+  - ib-research-pipeline
+  - stage-1
+  - knowledge-base
+  - codex
+  - github-actions
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P9: The Stage-1 System, Explained</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1b1b1b; --muted: #5a5a5a; --bg: #ffffff;
+      --border: #d4d4d4; --bg-code: #f4f4f4; --bg-node: #fafafa;
+      --bg-callout: #f0f8f4; --callout-edge: #4a7;
+      --bg-warn: #fff6e5; --warn-edge: #d98c00;
+      --bg-assess: #eef3fb; --assess-edge: #3b6fd1;
+      --bg-llm: #ffe9d6; --bg-store: #e8f0fe; --bg-cron: #ececec;
+      --arrow: #8a8a8a; --tag: #555; --link: #1a5fb4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fg: #e6e6e6; --muted: #a8a8a8; --bg: #141414;
+        --border: #3a3a3a; --bg-code: #1f1f1f; --bg-node: #1c1c1c;
+        --bg-callout: #15291f; --callout-edge: #5fb57a;
+        --bg-warn: #2d2410; --warn-edge: #e0a030;
+        --bg-assess: #16213a; --assess-edge: #6f9be8;
+        --bg-llm: #3a2614; --bg-store: #182438; --bg-cron: #262626;
+        --arrow: #777; --tag: #bbb; --link: #7fb0ff;
+      }
+    }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: var(--fg); background: var(--bg);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+           line-height: 1.6; }
+    a { color: var(--link); }
+    h1 { font-size: 1.9rem; line-height: 1.25; margin-bottom: .3rem; }
+    h2 { font-size: 1.45rem; margin-top: 2.6rem; border-bottom: 1px solid var(--border); padding-bottom: .25rem; }
+    h3 { font-size: 1.12rem; margin-top: 1.8rem; }
+    .lede { color: var(--muted); margin-top: 0; }
+    .meta { font-size: .9em; color: var(--muted); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em;
+           background: var(--bg-code); padding: .05rem .3rem; border-radius: 4px; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-code);
+           padding: .75rem; border-radius: 6px; line-height: 1.45; }
+    pre code { background: none; padding: 0; }
+    nav ol { padding-left: 1.4rem; }
+    .callout { border-left: 4px solid var(--callout-edge); background: var(--bg-callout);
+               padding: .75rem 1rem; margin: 1.2rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: var(--warn-edge); background: var(--bg-warn); }
+    .callout.assess { border-left-color: var(--assess-edge); background: var(--bg-assess); }
+    .callout p:first-child { margin-top: 0; } .callout p:last-child { margin-bottom: 0; }
+    .callout ol, .callout ul { margin: .4rem 0; }
+    .takeaway { font-style: italic; color: var(--muted); }
+    .scroll { overflow-x: auto; margin: 1rem 0; }
+    table { border-collapse: collapse; width: 100%; font-size: .9em; }
+    th, td { border: 1px solid var(--border); padding: .4rem .55rem; vertical-align: top; text-align: left; }
+    th { background: var(--bg-node); }
+    td.n, th.n { text-align: right; white-space: nowrap; }
+    figure { margin: 1.4rem 0; }
+    figcaption { font-size: .88em; color: var(--muted); margin-top: .5rem; }
+    .flow { display: flex; flex-direction: column; align-items: stretch; }
+    .node { border: 1px solid var(--border); border-radius: 8px; padding: .55rem .8rem; background: var(--bg-node); }
+    .node.cron { background: var(--bg-cron); }
+    .node.store { background: var(--bg-store); }
+    .node.llmnode { background: var(--bg-llm); }
+    .node small { color: var(--muted); }
+    .tag { display: inline-block; font-size: .78em; letter-spacing: .02em; text-transform: uppercase;
+           color: var(--tag); border: 1px solid var(--border); border-radius: 999px; padding: 0 .5rem; margin-right: .4rem; }
+    .arr { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent;
+           border-top: 12px solid var(--arrow); margin: .35rem auto; }
+    .sub { font-size: .92em; margin: .35rem 0; }
+    .chain { display: flex; flex-wrap: wrap; gap: .3rem; margin: .4rem 0; }
+    .chain span { border: 1px solid var(--border); border-radius: 999px; padding: .08rem .6rem; font-size: .85em; background: var(--bg); }
+    .chain span.llm { background: var(--bg-llm); }
+    .chain span.opt { border-style: dashed; }
+    .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    .branch { font-size: .9em; margin: .25rem 0 .25rem 1.2rem; color: var(--muted); }
+    .branch .lbl { display: inline-block; border: 1px solid var(--border); border-radius: 4px; padding: 0 .35rem; color: var(--fg); background: var(--bg); }
+    .branch b { color: var(--fg); }
+    ul.tree, ul.tree ul { list-style: none; padding-left: 1.1rem; margin: .2rem 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; }
+    ul.tree li { border-left: 1px solid var(--border); padding-left: .6rem; margin: .15rem 0; }
+    ul.tree .note { font-family: system-ui, sans-serif; color: var(--muted); }
+    ul.tree .hot { font-weight: 600; }
+    .q { border: 1px solid var(--border); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem; cursor: pointer;
+              border: 1px solid var(--border); border-radius: 6px; background: var(--bg-node); color: var(--fg); font: inherit; }
+    .q .opt.correct   { background: #d6f5d6; color: #10361a; }
+    .q .opt.incorrect { background: #f7d6d6; color: #4a1010; }
+    .q .why { margin: .4rem 0 0; font-size: .95em; }
+    .src { white-space: nowrap; }
+    @media (max-width: 40rem) { .lanes { grid-template-columns: 1fr; } h1 { font-size: 1.55rem; } }
+  </style>
+</head>
+<body>
+  <h1>P9: The Stage-1 System, Explained</h1>
+  <p class="lede">How the weekly IB research pipeline turns a bank's web page into a judged Korean summary, what the knowledge-base repository keeps, and how the result reaches the dashboard.</p>
+  <p class="meta">Written 2026-10-10 from phase P9's research. The code was read at host commit <code>7225f24</code> and the KB at commit <code>c7583f3</code>; nothing was run. Each citation links the file and lines on GitHub; the conventions are in <a href="#sources">Sources</a>.</p>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#the-question">The question and the short answer</a></li>
+      <li><a href="#the-shape">The shape of the system, and one Sunday run</a></li>
+      <li><a href="#evidence-stages">The evidence stages: from a URL to evidence</a></li>
+      <li><a href="#judgment-stages">The judgment stages: from evidence to a judged summary</a></li>
+      <li><a href="#selection-and-the-kb">Selection and the knowledge base</a></li>
+      <li><a href="#kb-to-page">From the KB to the database and the page</a></li>
+      <li><a href="#quality-today">Quality today: what the numbers say</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#sources">Sources</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <section id="the-question">
+    <h2>1. The question and the short answer</h2>
+    <p>The request, in the operator's words: <em>"llm wiki kb access received. you may clone it and /create-phase for /explain the system. so that i can do well on project 1."</em> "The system" is Stage 1 of the research agent (글로벌 IB 대시보드 + 주간 이메일): the pipeline that produces the Korean summaries on the global IB research page, together with the newly readable knowledge-base repository (the KB) where its results live.</p>
+
+    <p><strong>The short answer.</strong> Stage 1 is one weekly GitHub Actions workflow in the monorepo folder <code>ib-research-report-pipeline/</code>. Every Sunday it collects new report links from nine investment houses (수집), renders each page in a headless browser (캡처), separates the article from the page's navigation (경계), gathers the PDFs, images and tables that belong to the article (자료), extracts the text of PDFs (추출), has an OpenAI Codex model write a Korean summary (요약), has a second model judge that summary against the source (판정), derives a Korean title and five bullets from the summary (파생), and publishes the result (발행) (<a class="src" data-p="AGENTS.md" data-l="17-40">AGENTS.md:17–40</a>; <a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="53-57">yml:53–57</a>). The result goes to two places: the KB, a git repository (<code>glide-llm-wiki-kb</code>) with one folder per document holding the summary, the verdict and the reports, and the <code>research_documents</code> table in the Supabase database, which the <code>global-ib-research</code> page reads.</p>
+
+    <p>Three facts organise everything else. First, <strong>which documents run is a pure function of what the DB and the KB already hold</strong>: the <code>enumerate</code> step gives each of the 878 DB rows one action (PROCESS, SYNC, SKIP or BLOCKED), and the Sunday run's <code>new</code> mode processes only rows that have no result anywhere (<a class="src" data-p="selection.py" data-l="102-155">selection.py:102–155</a>). Second, <strong>each document ends <code>complete</code>, <code>partial</code> or <code>failed</code>, decided only by "severe" findings from the judge and by gaps in the evidence</strong>; the judge's 0–5 scores are written down but never read by any code (<a class="src" data-p="stages/judge/status.py" data-l="17-45">stages/judge/status.py:17–45</a>). Third, <strong>the KB holds results, not sources</strong>: no article body, PDF or image survives the Actions runner, and the KB keeps only the checksums that identify the evidence (<a class="src" data-p="AGENTS.md" data-l="169-175">AGENTS.md:169–175</a>).</p>
+
+    <p>Publication is one commit on a fresh <code>kb/batch/&lt;UTC&gt;</code> branch of the KB, a push, six summary columns written into the DB, and then a pull request that a teammate merges by hand between 19 hours and 7 days later (<a class="src" data-p="storage/factory.py" data-l="57-225">storage/factory.py:57–225</a>). The DB therefore runs ahead of the KB's <code>main</code> branch, and both <code>partial</code> and <code>complete</code> reach the DB as <code>summary_status = success</code> (<a class="src" data-p="stages/publish/promote.py" data-l="62">stages/publish/promote.py:62</a>). Today the KB holds 874 documents (338 complete, 474 partial, 62 failed) from 21 batch commits; only one batch, on 2026-10-04, came from the cron, and scheduled runs take minutes, not hours.</p>
+
+    <div class="callout">
+      <p><strong>Three things to remember</strong></p>
+      <ol>
+        <li><strong>The KB holds results, not sources.</strong> No article body, PDF or image from a run survives the runner. The only stored bodies anywhere are the retired crawler's <code>text_content</code> rows in the DB, extracted differently and hashed differently (<a class="src" data-p="/.gitignore" data-l="11">/.gitignore:11</a>; <a class="src" data-p="AGENTS.md" data-l="169-175">AGENTS.md:169–175</a>).</li>
+        <li><strong>Only <code>severe</code> findings gate a document; the 0–5 scores gate nothing.</strong> In today's KB every <code>partial</code> comes from the evidence stages and every <code>failed</code> failed before the judge ran (<a class="src" data-p="stages/judge/status.py" data-l="17-45">stages/judge/status.py:17–45</a>).</li>
+        <li><strong>The weekly run is short, takes only <code>missing</code> documents, and writes the DB before anyone merges the KB.</strong> Retries and syncs happen only when someone dispatches the workflow by hand (<a class="src" data-p="selection.py" data-l="142-155">selection.py:142–155</a>; <a class="src" data-p="stages/publish/promote.py" data-l="62">promote.py:62</a>).</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="the-shape">
+    <h2>2. The shape of the system, and one Sunday run</h2>
+    <p class="takeaway">Takeaway: five parts, one workflow. The pipeline code lives in the monorepo and runs on GitHub Actions; the KB repo stores results; the Supabase DB holds the rows the page reads; Codex CLI on the runner makes every model call. A Sunday run is two jobs that take about seventeen minutes.</p>
+
+    <h3>2.1 The parts</h3>
+    <ul>
+      <li><strong>The pipeline code</strong>: <code>ib-research-report-pipeline/</code> in the <code>glide-ilab</code> monorepo, about 15,700 lines of Python under <code>src/ib_research_report_pipeline/</code>, with 18 prompt files under <code>prompts/</code> and 73 test modules that act as its executable specification. The workflow file <code>.github/workflows/ib-research-report-pipeline.yml</code> (488 lines) runs it.</li>
+      <li><strong>The KB</strong>: the repository <code>glide-ilab/glide-llm-wiki-kb</code>. It has no code and no README, only <code>runs/&lt;source_code&gt;/&lt;document_id8&gt;/</code> folders, where <code>id8</code> is the first eight characters of the document's UUID. The pipeline clones it fresh for every read and every publish (<a class="src" data-p="storage/git_storage.py" data-l="109-129">storage/git_storage.py:109–129</a>).</li>
+      <li><strong>The DB</strong>: three Supabase tables, <code>research_sources</code> (the houses), <code>research_crawl_runs</code> (one row per collection attempt) and <code>research_documents</code> (878 rows: URL, title, date, and six summary columns the pipeline fills).</li>
+      <li><strong>The page</strong>: <code>global-ib-research</code> in the dashboard, which reads <code>research_documents</code> through an API and shows the Korean title, the five bullets and the summary paragraph.</li>
+      <li><strong>Codex CLI</strong>: OpenAI's coding agent, which the README describes as "a coding agent from OpenAI that runs locally on your computer" (<a href="https://github.com/openai/codex">openai/codex README</a>, github.com). The runner installs it, signs in with a CI account's saved credential, and the pipeline calls it as a subprocess for every summarize, judge and derive call (<a class="src" data-p="agents/runtime.py" data-l="82-127">agents/runtime.py:82–127</a>).</li>
+    </ul>
+
+    <figure class="fig">
+      <div class="flow">
+        <div class="node cron"><span class="tag">trigger</span> Sunday cron <code>37 0 * * 0</code> = 09:37 KST nominal<br><small>the one cron batch so far was created 5 h 40 m late</small></div>
+        <div class="arr"></div>
+        <div class="node"><span class="tag">job 1: collect</span> nine registered houses over plain HTTP, 14-day window → new rows in <code>research_documents</code> (20 rows on 10-04)</div>
+        <div class="arr"></div>
+        <div class="node"><span class="tag">job 2: process-and-publish</span>
+          <div class="sub"><strong>enumerate</strong>: every DB row × the KB (all <code>kb/*</code> branches and <code>main</code>) → PROCESS / SYNC / SKIP / BLOCKED; the cron's <code>new</code> mode takes PROCESS <code>missing</code> only</div>
+          <div class="sub">per document, in waves of four workers:</div>
+          <div class="chain">
+            <span>capture</span><span>boundary</span><span>components</span><span>extract</span>
+            <span class="llm">summarize</span><span class="llm">judge</span><span class="llm opt">correction → arbiter → repair</span>
+            <span>status</span><span class="llm">derive</span>
+          </div>
+          <div class="sub"><strong>publish</strong>: result-only bundle → one commit on <code>kb/batch/&lt;UTC&gt;</code> → push → six DB columns → pull request</div>
+        </div>
+        <div class="arr"></div>
+        <div class="lanes">
+          <div class="node store"><span class="tag">store</span> KB repo <code>glide-llm-wiki-kb</code><br><small>the branch is pushed now; a teammate merges the PR by hand 19 h to 7 d later; unmerged branches still count</small></div>
+          <div class="node store"><span class="tag">store</span> DB <code>research_documents</code><br><small>written right after the push and before the PR; <code>partial</code> and <code>complete</code> both become <code>success</code></small></div>
+        </div>
+        <div class="arr"></div>
+        <div class="node"><span class="tag">surface</span> the <code>global-ib-research</code> page: <code>title_ko</code> as the headline, the five derive bullets as "AI RESEARCH SUMMARY", the judged paragraph as "리서치 본문 요약"</div>
+      </div>
+      <figcaption>Orange pills are Codex calls; the dashed one runs only when the judge leaves a severe finding. Sources: <a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="64-488">yml:64–488</a>, <a class="src" data-p="orchestration/runner.py" data-l="1003-1039">orchestration/runner.py:1003–1039</a>, <a class="src" data-p="storage/factory.py" data-l="57-225">storage/factory.py:57–225</a>.</figcaption>
+    </figure>
+
+    <h3>2.2 One Sunday run, minute by minute</h3>
+    <p>The only batch the cron has produced so far is run #37 of 2026-10-04, at host commit <code>bc49f4a</code>. Its clock, reconstructed from the Actions record, the KB commit and the DB timestamps (times in UTC; add nine hours for KST):</p>
+    <div class="scroll">
+    <table>
+      <tr><th>Clock</th><th>Step</th><th>What happens</th><th>How long</th><th>If it fails</th></tr>
+      <tr><td>00:37</td><td>cron (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="53-57">yml:53–57</a>)</td><td>nominal Sunday 09:37 KST</td><td>—</td><td>—</td></tr>
+      <tr><td><strong>06:17:19</strong></td><td>run created</td><td>GitHub's schedule delay. The last three scheduled runs were created at 14:21, 14:41 and 15:17 KST.</td><td>+5 h 40 m</td><td>outside the team's control</td></tr>
+      <tr><td>06:17–06:24</td><td>job <code>collect</code> (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="64-195">yml:64–195</a>)</td><td>nine houses over HTTP with <code>--register-links</code>, a 14-day window; 20 new rows</td><td>7 m 10 s</td><td>exit 1 (a source partly failed) still lets processing run; exit 2 blocks it (<a class="src" data-p="stages/collect/service.py" data-l="102-114">stages/collect/service.py:102–114</a>). Each source's outcome lands in <code>research_crawl_runs</code></td></tr>
+      <tr><td>06:24 →</td><td>setup (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="231-318">yml:231–318</a>)</td><td><code>uv sync</code>, Chromium, Codex CLI, the pinned <code>humanize-korean</code> skill, the Codex credential (<code>CODEX_AUTH_JSON</code> → <code>auth.json</code>; <code>codex login status</code> must say "Logged in"), the KB git identity</td><td>≈ 1–2 min</td><td>a failed login turns the job red and nothing is processed</td></tr>
+      <tr><td>≈ 06:25</td><td>enumerate (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="320-369">yml:320–369</a>)</td><td>one DB read plus a full KB clone, then one plan per row (<a href="#selection-and-the-kb">§5</a>)</td><td>seconds</td><td>exit 2 (DB, KB or config error) is red; exit 3 or 4 ends green with no work and prints "Nothing retryable remains" even when retries exist outside the mode (<a class="src" data-p="stages/enumerate/service.py" data-l="199-207">stages/enumerate/service.py:199–207</a>)</td></tr>
+      <tr><td>06:26:30 → 06:33:50</td><td>capture and evaluate (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="374-390">yml:374–390</a>)</td><td>each document runs capture → … → derive, four at a time</td><td>7.3 min for 20 documents</td><td>a document's failure is recorded in its <code>chain-report.json</code> and the batch goes on; three consecutive Codex-stage failures abort the batch with exit 4 (<a class="src" data-p="orchestration/runner.py" data-l="1287-1344">orchestration/runner.py:1287–1344</a>)</td></tr>
+      <tr><td>06:33:50 → 06:34:38</td><td>publish (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="403-418">yml:403–418</a>)</td><td>branch <code>kb/batch/20261004T063350Z</code>; commit 06:34:21; DB rows written by 06:34:36; PR #42 opened 06:34:38</td><td>≈ 50 s</td><td>a push failure is exit 3 and no DB write; a promotion failure exit 6; a PR failure exit 7 (<a class="src" data-p="stages/publish/service.py" data-l="28-40">stages/publish/service.py:28–40</a>)</td></tr>
+      <tr><td>06:34:3x–4x</td><td>report; save rotated credential; remove it (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="423-488">yml:423–488</a>)</td><td>markdown into the step summary; <code>auth.json</code> written back to the secret only if Codex rotated it</td><td>seconds</td><td>credential trouble shows up later as Codex failures</td></tr>
+      <tr><td>06:34:42</td><td>job ends</td><td>—</td><td>job 10 m 06 s; <strong>run 17 m 24 s</strong></td><td>—</td></tr>
+      <tr><td>10-05 03:24:05</td><td>PR #42 merged by hand</td><td>KB <code>main</code> catches up with the DB</td><td>+20 h 50 m</td><td>until the merge the DB is ahead of <code>main</code>; a branch nobody merges still counts for selection</td></tr>
+    </table>
+    </div>
+    <p>A second, daily workflow (<code>ib-research-report-pipeline-codex-auth.yml</code>) refreshes the Codex credential at 19:24 UTC and shares the weekly run's concurrency group, so the two never overlap (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="59-61">yml:59–61</a>).</p>
+
+    <h3>2.3 How long runs take</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Run</th><th>Kind</th><th class="n">Documents</th><th>Duration</th></tr>
+      <tr><td>#32 (09-20), #35 (09-27)</td><td>schedule; collecting on the cron was added only on 09-28, so nothing was <code>missing</code></td><td class="n">0</td><td>1 m 32 s, 1 m 9 s</td></tr>
+      <tr><td>#37 (10-04)</td><td>schedule: collect, <code>new</code>, <code>kb-db</code>, 4 workers</td><td class="n">20</td><td>17 m 24 s</td></tr>
+      <tr><td>#30 (09-13), #36 (09-28)</td><td>manual dispatch: collect, <code>new</code>, <code>kb-db</code>, limit 50</td><td class="n">7, 13</td><td>10 m 13 s, 11 m 46 s</td></tr>
+      <tr><td>#34 (09-21)</td><td>manual dispatch, <code>sync</code> to the DB, no KB commit</td><td class="n">25 rows</td><td>7 m 1 s</td></tr>
+      <tr><td>#23 attempt 2 (09-11)</td><td>backfill dispatch: <code>refresh</code>, limit 100, 4 workers</td><td class="n">100</td><td>51 m 37 s</td></tr>
+    </table>
+    </div>
+    <p>So a document costs about 25–30 seconds of wall time at four or five workers, a 20-document week needs about ten minutes of processing, and the job's 360-minute limit would hold roughly 700 documents. The late start is GitHub's, not the pipeline's: the Actions documentation says "The <code>schedule</code> event can be delayed during periods of high loads of GitHub Actions workflow runs" and "High load times include the start of every hour" (<a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">GitHub Docs, events that trigger workflows</a>, docs.github.com). The only stated per-document upper bound is a workflow comment, "One document can consume 40m45s" (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="210">yml:210</a>), whose source is not recorded; the measured median from summary to derive is 28 seconds.</p>
+    <div class="callout warn">
+      <p><strong>Minutes, not hours.</strong> Earlier notes in this workspace (phase P8) said the Sunday run "runs for hours". The late start is right; the hours are wrong. Only the 09-08 → 09-11 backfill dispatches ran for hours, and those were not weekly runs. Only one KB batch so far came from the cron.</p>
+    </div>
+  </section>
+
+  <section id="evidence-stages">
+    <h2>3. The evidence stages: from a URL to evidence (수집 → 캡처 → 경계 → 자료 → 추출)</h2>
+    <p class="takeaway">Takeaway: the deterministic half of the pipeline turns a DB row (URL, title, date) into exactly two model inputs, fingerprinted together as <code>evidence_sha256</code>: a <em>reference text</em> (the article body the boundary selected) and a <em>notes list</em> (PDF extractions, article images, HTML tables). The fingerprint reaches the KB and binds every later model call, but the evidence itself never leaves the runner. A document becomes <code>partial</code> here when a selected input should have worked and did not; 470 of today's 474 partials are exactly that, mostly from code that no longer runs.</p>
+
+    <h3>3.1 Collect (수집): the houses that work today</h3>
+    <p><code>collect</code> reads fixed listing pages, feeds or APIs for each registered house over plain HTTP, with Oxylabs and urllib fallbacks and no browser (<a class="src" data-p="collection/registry.py" data-l="17-29">collection/registry.py:17–29</a>; <a class="src" data-p="collection/http.py" data-l="35-68">collection/http.py:35–68</a>). It keeps links dated inside the window (14 days on the cron) and, with <code>--register-links</code>, inserts URL, title, date and listing metadata into <code>research_documents</code>, filling only empty fields (<a class="src" data-p="storage/supabase.py" data-l="233-267">storage/supabase.py:233–267</a>). Everything downstream is driven by those rows, not by the registry: enumerate reads every <code>research_documents</code> row of every registered source code (<a class="src" data-p="storage/supabase.py" data-l="86-111">storage/supabase.py:86–111</a>).</p>
+    <p>"A source that works today" therefore means: registered in the code, collected weekly, and processed by <code>new</code>. That is exactly nine houses. Two more appear in the KB only because their legacy DB rows were handed to a backfill, and one DB source has no documents at all.</p>
+    <div class="scroll">
+    <table>
+      <tr><th>House</th><th>Collected today</th><th>KB documents: complete / partial / failed</th><th>Quirk</th></tr>
+      <tr><td>goldman_sachs</td><td>yes</td><td>160: 14 / 143 / 3</td><td>keeps only curated and two tagged feed topics (<a class="src" data-p="collection/adapters.py" data-l="49-74">collection/adapters.py:49–74</a>)</td></tr>
+      <tr><td>jp_morgan</td><td>yes</td><td>159: 131 / 19 / 9</td><td>three <code>partial_failure</code> collections on a page-2 grid</td></tr>
+      <tr><td>morgan_stanley</td><td>yes</td><td>117: 2 / 109 / 6</td><td><strong>text-only</strong>: 803 of 804 selected images were <code>live_image_unavailable</code></td></tr>
+      <tr><td>merrill</td><td>yes</td><td>76: 48 / 1 / 27</td><td>7 of 7 collections ended non-success on <code>ReadTimeout</code>; rows still arrive</td></tr>
+      <tr><td>bank_of_america_institute</td><td>yes</td><td>107: 4 / 103 / 0</td><td>date comes from the sitemap's <code>lastmod</code>; its partials are from the early era (§3.7)</td></tr>
+      <tr><td>vanguard_investor</td><td>yes</td><td>8: 5 / 3 / 0</td><td>low volume</td></tr>
+      <tr><td>vanguard_advisors</td><td>yes</td><td>90: 22 / 64 / 4</td><td>a deterministic eligibility filter (<a class="src" data-p="collection/vanguard.py" data-l="16-110">collection/vanguard.py:16–110</a>)</td></tr>
+      <tr><td>hsbc_us</td><td>yes</td><td>19: 19 / 0 / 0</td><td>direct PDFs only; no new row since 09-13</td></tr>
+      <tr><td>jefferies</td><td>yes</td><td>95: 64 / 31 / 0</td><td>walks every page of three categories every week with no date stop (<a class="src" data-p="collection/adapters.py" data-l="1250-1292">adapters.py:1250–1292</a>); recent partials are image pixel budgets</td></tr>
+      <tr><td>blackrock_bii</td><td><strong>no</strong></td><td>30: 29 / 1 / 0</td><td>only its 30 legacy PDF rows were backfilled; no new document can arrive</td></tr>
+      <tr><td>deutsche_bank</td><td><strong>no</strong></td><td>13: 0 / 0 / 13</td><td>all 13 legacy rows fail with <code>no_article_content</code></td></tr>
+      <tr><td>rbc_capital_markets</td><td><strong>no</strong></td><td>not in the KB</td><td>a <code>research_sources</code> row with zero documents</td></tr>
+    </table>
+    </div>
+    <p>The boundary and capture code also carry narrow rules for houses such as Federated Hermes, T. Rowe Price and Partners Group. They are parsing leftovers of a pull request that deferred onboarding those providers (<code>a16fc1b</code>, "defer provider onboarding and retain parsing fixes"); none of those houses is registered, has a DB row or appears in the KB, so none can reach the scheduled pipeline (<a class="src" data-p="AGENTS.md" data-l="81-82">AGENTS.md:81–82</a>).</p>
+
+    <h3>3.2 The run directory lives only on the runner</h3>
+    <p>Each evidence stage writes into two per-document trees under <code>runs/</code>, keyed on the <code>id8</code>. File names are checksum-addressed, <code>&lt;kind&gt;-&lt;sha256[:16]&gt;.&lt;ext&gt;</code> (<a class="src" data-p="stages/capture/service.py" data-l="76-80">stages/capture/service.py:76–80</a>). The tree is gitignored and the workflow uploads no artifact, so it dies with the runner.</p>
+    <ul class="tree">
+      <li>runs/
+        <ul>
+          <li>collection/…, queue/enumerate-manifest.json <span class="note">collect and enumerate</span></li>
+          <li>capture/&lt;id8&gt;/
+            <ul>
+              <li>render-packet.json <span class="note">run_id, toolchain</span></li>
+              <li>canonical-&lt;sha16&gt;.bytes | .pdf, dom-&lt;sha16&gt;.html</li>
+              <li>image-… <span class="note">the browser's own image responses; SVG/AVIF originals plus PNG representations</span></li>
+              <li>boundary-packet.json</li>
+              <li class="hot">article-text-&lt;sha16&gt;.txt <span class="note">the reference text</span></li>
+              <li>capture-failed.json <span class="note">the only file after a failed capture</span></li>
+            </ul>
+          </li>
+          <li>pipeline/&lt;id8&gt;/
+            <ul>
+              <li>pdf-reference.txt <span class="note">for a direct PDF</span>, components/, understanding/</li>
+              <li class="hot">component-notes.json <span class="note">the notes list: every non-text model input</span></li>
+              <li>summary.txt, summary-packet.json, verdict.json, verdict-history/, correction.json</li>
+              <li class="hot">derive-packet.json, chain-report.json, publish-report.json <span class="note">together with the row above, the only files ever published</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>3.3 Capture (캡처) and boundary (경계)</h3>
+    <ul>
+      <li><strong>Capture</strong> opens a fresh headless Chromium. The main document's raw bytes are held at the browser's route layer, so navigating to a PDF cannot turn into a download, a pitfall the docstring credits to the pipeline's reference-only predecessor (<a class="src" data-p="stages/capture/service.py" data-l="256-284">stages/capture/service.py:256–284</a>). In PDF mode it checks for <code>%PDF</code> and stops. In HTML mode it waits for network idle, scrolls to the real bottom within 20 seconds, waits for the text to settle, snapshots the DOM, keeps the browser's own image responses and records PDF links (<a class="src" data-p="stages/capture/service.py" data-l="332-452">:332–452</a>).</li>
+      <li><strong>Fallback.</strong> When the browser captured no body, a plain <code>httpx</code> GET supplies the server's HTML instead. The code names Morgan Stanley's web application firewall as the reason (<a class="src" data-p="stages/capture/service.py" data-l="456-468">:456–468</a>), which is the likely cause of its text-only evidence, although that is unconfirmed.</li>
+      <li><strong>Fail fast.</strong> HTTP status 400 or above, or a body over 50 MiB, fails the capture before any Codex call, leaving only <code>capture-failed.json</code> (<a class="src" data-p="stages/capture/batch.py" data-l="59-103">stages/capture/batch.py:59–103</a>).</li>
+      <li><strong>Capture identity.</strong> <code>run_id</code> is sha256 of the URL, the raw-bytes hash and the tool versions, cut to 16 characters (<a class="src" data-p="stages/capture/service.py" data-l="83-85">:83–85</a>).</li>
+      <li><strong>Boundary</strong> is a deterministic DOM heuristic, recomputed from the saved DOM on every run (<a class="src" data-p="stages/boundary/service.py" data-l="239-297">stages/boundary/service.py:239–297</a>). It tries site-specific fragments first, then an <code>&lt;h1&gt;</code> anchor against the largest landmark, then paragraph density. "Chrome" means <code>nav</code>, <code>header</code>, <code>footer</code> and <code>aside</code> plus observed publisher classes. Each PDF link gets a relation and a reason per occurrence: <code>one_hop_cited</code> and <code>embedded</code> are evidence; everything else is chrome (<a class="src" data-p="stages/boundary/service.py" data-l="434-503">:434–503</a>).</li>
+    </ul>
+
+    <h3>3.4 Components and materials (자료)</h3>
+    <ul>
+      <li><strong>Supported</strong>: raster PNG, JPEG and WebP taken from the browser's response, never refetched (<a class="src" data-p="stages/components/materials.py" data-l="436-450">stages/components/materials.py:436–450</a>); external SVG and AVIF, kept as originals with a bounded PNG representation; HTML tables, as JSON notes; single-slide Flourish embeds.</li>
+      <li><strong>PDFs</strong> are re-fetched over HTTP, with one browser retry when the bytes are not a PDF (<a class="src" data-p="stages/components/service.py" data-l="247-326">stages/components/service.py:247–326</a>).</li>
+      <li><strong>Unsupported</strong> inline <code>&lt;svg&gt;</code>, <code>&lt;canvas&gt;</code> and other iframes are recorded as <code>unsupported</code>. That is not a failure (<a class="src" data-p="stages/components/materials.py" data-l="636-639">materials.py:636–639</a>).</li>
+      <li><strong>Budgets</strong>: 8 images, 10 MiB each, 20 million pixels each. An image over budget is <code>budget_exceeded</code>, never downsampled (<a class="src" data-p="stages/components/materials.py" data-l="21-34">materials.py:21–34</a>).</li>
+    </ul>
+
+    <h3>3.5 Extract (추출): PDF text only</h3>
+    <p>On the weekly path, "understanding" a component means pdfplumber text and tables, on at most 60 pages and 400 blocks, with no model, no OCR and no rasterisation (<a class="src" data-p="stages/extract/service.py" data-l="121-157">stages/extract/service.py:121–157</a>). pdfplumber's own README says it "works best on machine-generated, rather than scanned, PDFs" and lists optical character recognition among the things it does not provide (<a href="https://github.com/jsvine/pdfplumber">jsvine/pdfplumber README</a>, github.com). A scanned PDF, or a chart inside a PDF, therefore yields no evidence.</p>
+    <ul>
+      <li>One note per unique PDF bytes, carrying every occurrence (<a class="src" data-p="orchestration/runner.py" data-l="628-730">orchestration/runner.py:628–730</a>). A direct PDF's text reaches the model twice, as the article and inside its note; that applies to 50 KB documents (BlackRock 30, HSBC 19, J.P. Morgan 1).</li>
+      <li><strong>Images are never sent to a separate "understand" call.</strong> The runner calls <code>understand_component</code> only for PDF candidates (<a class="src" data-p="orchestration/runner.py" data-l="619-625">runner.py:619–625</a>). Each available image becomes an <code>article_image</code> note with its path and sha256, and <code>InlineEvidence</code> attaches the image files to the summarize, judge, correction and arbiter calls themselves (<a class="src" data-p="inline_evidence.py" data-l="52-76">inline_evidence.py:52–76</a>). An image branch of the extractor exists but only a developer CLI reaches it (<a class="src" data-p="stages/extract/service.py" data-l="228-277">extract/service.py:228–277</a>).</li>
+    </ul>
+
+    <h3>3.6 The evidence identities (근거 identity)</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Identity</th><th>Definition</th><th>Stored in the KB at</th></tr>
+      <tr><td><code>reference_sha256</code></td><td>sha256 of the reference text (<code>article-text-*.txt</code>, or <code>pdf-reference.txt</code> for a direct PDF)</td><td><code>summary-packet.json</code>, <code>verdict.json</code></td></tr>
+      <tr><td><code>component_notes_sha256</code></td><td>the notes JSON with local image paths removed and image sha256 kept (<a class="src" data-p="inline_evidence.py" data-l="22-31">inline_evidence.py:22–31</a>)</td><td><code>summary-packet.json</code> <code>self_check</code>, <code>verdict.json</code></td></tr>
+      <tr><td><code>evidence_sha256</code></td><td><code>sha256(sha256(reference_text) + "|" + notes_identity)</code> (<a class="src" data-p="inline_evidence.py" data-l="73">inline_evidence.py:73</a>)</td><td><code>chain-report.json</code>, <code>summary-packet.json</code> <code>self_check</code>, <code>verdict.json</code></td></tr>
+      <tr><td><code>run_id</code></td><td>the capture identity: URL + raw bytes + versions</td><td>every packet, <code>publish-report.json</code></td></tr>
+      <tr><td><code>summary_sha256</code></td><td>sha256 of the summary body; binds the judge and derive to one body</td><td><code>verdict.json</code>, <code>derive-packet.json</code></td></tr>
+    </table>
+    </div>
+    <div class="callout warn">
+      <p><strong>Two identity spaces for the same document.</strong> The KB stores these identities but not the evidence they name. Re-capturing reproduces an identity only if the page bytes and the DOM are unchanged. Separately, the only durable bodies are the retired crawler's <code>research_documents.text_content</code> (822 rows), extracted over plain HTTP with no rendered DOM, no boundary, and no images or tables, and hashed as <code>content_hash</code>. So <code>text_content</code>/<code>content_hash</code> and <code>reference_sha256</code> describe the same document in different spaces, and no single reference can span both.</p>
+    </div>
+
+    <h3>3.7 What fails here, and what <code>partial</code> means</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Stage</th><th>Failure</th><th>Document status</th><th>Read back as</th><th>Next run</th></tr>
+      <tr><td>collect</td><td>a category, page or item failed</td><td>not a document event</td><td><code>research_crawl_runs.status</code> <code>partial_failure</code> / <code>failed</code></td><td>processing continues; next week's 14-day window re-discovers the links</td></tr>
+      <tr><td>capture</td><td>HTTP ≥ 400, no DOM body, oversize, non-<code>%PDF</code>, browser error</td><td>failed; every later stage <code>skipped</code></td><td><code>capture_failed</code>, non-retryable</td><td><strong>BLOCKED</strong> for good (<a class="src" data-p="selection.py" data-l="130-131">selection.py:130–131</a>)</td></tr>
+      <tr><td>boundary</td><td>DOM checksum mismatch, no region, no article text</td><td>failed</td><td><code>unknown</code></td><td>PROCESS <code>retry</code>, only in a <code>retry-failed</code> dispatch</td></tr>
+      <tr><td>components (PDF)</td><td><code>http_error</code>, <code>non_pdf_response</code>, <code>oversized_component</code></td><td><strong>partial</strong> ("component failure: N")</td><td>usable result</td><td><strong>never reprocessed</strong> (<a class="src" data-p="selection.py" data-l="95-99">selection.py:95–99</a>)</td></tr>
+      <tr><td>understand (PDF)</td><td>extraction failure, no content, the 60-page or 400-block cap</td><td>partial ("limit hit: truncated-content")</td><td>usable</td><td>never reprocessed</td></tr>
+      <tr><td>materials</td><td><code>acquisition_failed</code> (including <code>live_image_unavailable</code>), <code>invalid_image</code>, <code>budget_exceeded</code></td><td>partial</td><td>usable</td><td>never reprocessed</td></tr>
+      <tr><td>materials</td><td><code>unsupported</code> (inline SVG, canvas, generic iframe)</td><td>unchanged, not counted</td><td>—</td><td>—</td></tr>
+      <tr><td>inline evidence</td><td>image checksum or descriptor error</td><td>failed</td><td><code>unknown</code></td><td><code>retry-failed</code></td></tr>
+    </table>
+    </div>
+    <p>A document is <code>partial</code> when <code>component_failures &gt; 0</code> or any limit was hit (<a class="src" data-p="stages/judge/status.py" data-l="33-38">stages/judge/status.py:33–38</a>). In the KB, 470 of the 474 partials carry a component failure (423 of them that alone), and 51 carry a limit hit. Which code produced them matters, because the KB was built in two eras:</p>
+    <div class="scroll">
+    <table>
+      <tr><th>Era</th><th class="n">Documents</th><th>complete / partial / failed</th><th class="n">Image-format failures</th><th class="n">PNG representations</th></tr>
+      <tr><td>published 09-08 → 09-11 (the backfill, before PR #42's AVIF/SVG support)</td><td class="n">822</td><td>299 / 463 / 60</td><td class="n">960</td><td class="n">0</td></tr>
+      <tr><td>published from 09-13</td><td class="n">52</td><td>39 / 11 / 2</td><td class="n">0</td><td class="n">53</td></tr>
+    </table>
+    </div>
+    <p>So most KB partials record image formats that the code of 09-11 could not read, and that code no longer runs. Today's partials come from Morgan Stanley pages whose images are never available and from Jefferies image budgets. A worked pair makes the point: <a href="https://github.com/glide-ilab/glide-llm-wiki-kb/tree/c7583f3/runs/goldman_sachs/7209b918"><code>goldman_sachs/7209b918</code></a> is partial only because 3 of its 6 selected images were in a format the 09-11 code could not read; its sibling <a href="https://github.com/glide-ilab/glide-llm-wiki-kb/tree/c7583f3/runs/goldman_sachs/8afecb3d"><code>8afecb3d</code></a>, from the same batch and page template, is complete with 5 available images and the same unsupported inline SVG. One more structural fact: <code>publish-report.json</code>'s <code>model_image_artifacts_complete</code> is <code>false</code> on all 525 documents with images, because it lists every image the model saw and publish never ships images; it is not what makes a document partial.</p>
+  </section>
+
+  <section id="judgment-stages">
+    <h2>4. The judgment stages: from evidence to a judged summary (요약 → 판정 → 교정 → 상태 → 파생)</h2>
+    <p class="takeaway">Takeaway: every model role crosses one boundary, <code>codex exec</code> on the CI account. The weekly chain is summarize → a single judge → a correction loop when a severe finding remains → the status rule → derive. The judge scores five axes from 0 to 5, but no code reads the scores: only severe findings decide, with accuracy and boundary fatal and the other axes degrading a document to partial. No published verdict keeps a severe finding, so every <code>failed</code> in the KB failed before judging and every <code>partial</code> came from the evidence stages.</p>
+
+    <h3>4.1 The Codex runtime</h3>
+    <p>One call is one subprocess: <code>codex exec -m &lt;model&gt; --sandbox read-only --ephemeral … --cd &lt;stable empty dir&gt;</code>. Images are passed as checksummed read-only snapshots with <code>--image</code>, and roles that must answer in JSON add <code>--output-schema</code> (<a class="src" data-p="agents/runtime.py" data-l="82-127">agents/runtime.py:82–127</a>; <a class="src" data-p="codex_exec.py" data-l="176-184">codex_exec.py:176–184</a>). The fixed empty working directory keeps the server-side prompt-cache prefix stable (<a class="src" data-p="codex_runtime.py" data-l="3-20">codex_runtime.py:3–20</a>).</p>
+    <ul>
+      <li><strong>Retries</strong> depend on the failure class (<a class="src" data-p="codex_exec.py" data-l="268-402">codex_exec.py:268–402</a>): infrastructure errors (capacity, connection, 5xx, timeouts) get up to three attempts, 5 s and then 15 s apart; a quota error gets exactly one more attempt on the fallback model <code>gpt-reserve</code>; a quality error is never retried.</li>
+      <li><strong>The quota breaker</strong>: three consecutive document failures in a Codex stage abort the batch with exit 4. Infrastructure failures and <code>no_article_content</code> do not count (<a class="src" data-p="contracts.py" data-l="121">contracts.py:121</a>; <a class="src" data-p="orchestration/runner.py" data-l="1287-1305">orchestration/runner.py:1287–1305</a>).</li>
+      <li><strong>The account guard runs only in the developer evaluation CLI.</strong> <code>verify_account()</code>, an e-mail allow-list check, is called only there, on a path the weekly chain never takes. On Actions the only check is <code>codex login status</code> (<a class="src" data-p="codex_auth.py" data-l="56-79">codex_auth.py:56–79</a>; <a class="src" data-p="evals/cli.py" data-l="83">evals/cli.py:83</a>).</li>
+      <li><strong>Cost.</strong> A clean document costs three calls (summarize, judge, derive), a corrected one five, a repaired one up to eight, before retries; the KB mean is about 3.5. Token counts are parsed and discarded (<a class="src" data-p="agents/runtime.py" data-l="43">agents/runtime.py:43</a>). Judge plus derive take a median of 28 seconds (26 s with no correction, 68 s corrected, 109 s repaired).</li>
+    </ul>
+    <div class="scroll">
+    <table>
+      <tr><th>Role</th><th>Model in the code (<a class="src" data-p="contracts.py" data-l="68-73">contracts.py:68–73</a>)</th><th>What the KB packets say</th></tr>
+      <tr><td>summarize, correction</td><td><code>gpt-6-luna</code> (since PR #60, 09-25)</td><td><code>gpt-5.6-luna</code> 758, <code>gpt-6-luna</code> 32, <code>gpt-5.6-terra</code> 22 (the repaired summaries)</td></tr>
+      <tr><td>judge, re-judge</td><td><code>gpt-5.6-terra</code></td><td>812 of 812</td></tr>
+      <tr><td>arbiter, repair</td><td><code>gpt-5.6-terra</code></td><td>the <code>model</code> of the 22 repaired summaries</td></tr>
+      <tr><td>derive</td><td><code>gpt-6-luna</code></td><td><code>gpt-5.6-luna</code> 776, <code>gpt-6-luna</code> 32</td></tr>
+      <tr><td>quota fallback</td><td><code>gpt-reserve</code></td><td><strong>never stamped</strong>: packets record the model that was requested, so a fallback answer is invisible (<a class="src" data-p="stages/summarize/service.py" data-l="111">stages/summarize/service.py:111</a>)</td></tr>
+    </table>
+    </div>
+
+    <h3>4.2 Summarize (요약)</h3>
+    <p>The summarizer receives the reference text in an <code>&lt;article&gt;</code> block, every note in a <code>&lt;material-components&gt;</code> block, the images, and the system prompt <code>summarize_system.txt</code> with its scope and multimodal sections (<a class="src" data-p="agents/summary.py" data-l="31-40">agents/summary.py:31–40</a>). Its output schema is exactly <code>{summary, content_found}</code>. The six numbered rules of the prompt (<a class="src" data-p="prompts/summarize_system.txt" data-l="4-34">prompts/summarize_system.txt:4–34</a>):</p>
+    <div class="scroll">
+    <table>
+      <tr><th>#</th><th>Rule</th><th>Gist, quoted</th></tr>
+      <tr><td>1</td><td>완전성 (completeness)</td><td>"중심 주장·핵심 논거·핵심 수치를 salience(발행기관의 구조적 강조 × 투자 판단 관련성) 순으로 반영."</td></tr>
+      <tr><td>2</td><td>정확성 (accuracy)</td><td>"숫자·통화·날짜·등급·기간·단위·고유명사는 원문과 그대로 — 재계산·반올림·변환 금지."</td></tr>
+      <tr><td>3</td><td>경계·귀속 (boundary and attribution)</td><td>"페이지 chrome(내비게이션·메뉴·related article·광고·구독 유도)은 절대 포함 금지." Facts are kept apart from outlook, and every view names its subject.</td></tr>
+      <tr><td>4</td><td>자연스러움 (fluency)</td><td>natural Korean; "원화 환산 금지"</td></tr>
+      <tr><td>5</td><td>압축 (compression)</td><td>"원문 전체 번역이 아니다. … 목표 길이는 고정하지 않는다" (the median summary is 1,193 characters)</td></tr>
+      <tr><td>6</td><td>materiality</td><td>component conclusions only when they bear on the article</td></tr>
+    </table>
+    </div>
+    <ul>
+      <li><strong>The content gate.</strong> When the model answers <code>content_found=false</code> (an intro or player page, a promotion, navigation, or a video or webinar page without substance), the summarize CLI exits 7 with <code>no_article_content</code> and writes nothing (<a class="src" data-p="stages/summarize/service.py" data-l="88-96">stages/summarize/service.py:88–96</a>). In the KB, 33 of the 34 summarize failures are this.</li>
+      <li><strong><code>summary-packet.json</code></strong> binds the summary to its inputs: <code>reference_sha256</code>, a <code>self_check</code> holding <code>component_notes_sha256</code> and <code>evidence_sha256</code> (identities, not a model self-assessment), the model, the prompt version and the <code>run_id</code>. Its own <code>status</code> is always <code>"complete"</code>; the graded status lives in <code>chain-report.json</code> (<a class="src" data-p="stages/summarize/service.py" data-l="101-119">stages/summarize/service.py:101–119</a>).</li>
+      <li>A style skill, <code>$humanize-korean</code>, is pinned at a fixed commit by the workflow and is used for style only.</li>
+    </ul>
+
+    <h3>4.3 Judge (판정): the rubric, and why the scores gate nothing</h3>
+    <p>The weekly judge is the <em>single</em> judge: one <code>gpt-5.6-terra</code> call with <code>single_judge_system.txt</code>, producing a <code>single-verdict/v1</code> (812 of 812 in the KB). A blind <em>paired</em> judge, which compares a baseline against the candidate in both orders, runs only when a local, gitignored golden set exists, so it is developer-only (<a class="src" data-p="orchestration/runner.py" data-l="874-899">orchestration/runner.py:874–899</a>). The rubric scores integers from 0 to 5 on five axes, with anchors at 5, 3, 1 and 0 (<a class="src" data-p="prompts/single_judge_system.txt" data-l="12-42">prompts/single_judge_system.txt:12–42</a>):</p>
+    <div class="scroll">
+    <table>
+      <tr><th>Axis</th><th>Question</th><th>What counts as <strong>severe</strong> (quoted)</th></tr>
+      <tr><td><code>completeness</code> 완전성</td><td>central claims, arguments, numbers and component conclusions, by salience</td><td>"salience 상위 material 컴포넌트의 결론 누락 / 중심 논거 절반 이상 누락"</td></tr>
+      <tr><td><code>accuracy</code> 정확성</td><td>numbers, currency, dates, ratings, periods, units and proper nouns match the evidence</td><td>"source fact와 불일치하는 숫자/날짜/등급/고유명사 1건이라도 존재"</td></tr>
+      <tr><td><code>boundary</code> 경계·귀속</td><td>fact kept apart from outlook; no chrome</td><td>"chrome(related/nav/ad) 내용 유입 / 귀속 왜곡"</td></tr>
+      <tr><td><code>fluency</code> 자연스러움</td><td>natural Korean</td><td>"severe 없음 (gate 전용 축)"</td></tr>
+      <tr><td><code>compression_salience</code> 압축·salience</td><td>neither a full translation nor a title-level summary</td><td>"원문 전체 번역 / title-level generic summary / salience 상위 정보 대량 유실"</td></tr>
+    </table>
+    </div>
+    <p>A severe finding must quote the concrete number, date or wording behind it; <code>[semantic]</code> marks a meaning distortion and <code>[numeric-only]</code> a mechanical claim that a number string is absent (<a class="src" data-p="prompts/single_judge_system.txt" data-l="56-74">:56–74</a>). The judge writes its rationale first, comparing "요약 표현 → 실제 원문 표현 → 대상/범위/조건/귀속의 일치 여부", and scores afterwards (<a class="src" data-p="prompts/single_judge_system.txt" data-l="77-84">:77–84</a>).</p>
+    <div class="callout">
+      <p><strong>The scores gate nothing.</strong> <code>determine_status</code> reads only the map of severe findings (<a class="src" data-p="stages/judge/status.py" data-l="17-45">stages/judge/status.py:17–45</a>). A search for <code>scores</code> across publish, storage, selection, status and the runner finds only a console print (<a class="src" data-p="orchestration/runner.py" data-l="1088-1091">orchestration/runner.py:1088–1091</a>). A completeness score of 1 with no severe finding is still <code>complete</code>. Even the derive docstring's phrase "the 5-axis gate already ran" (<a class="src" data-p="orchestration/runner.py" data-l="1034">runner.py:1034</a>) means the per-axis severe map, not a score threshold.</p>
+    </div>
+
+    <h3>4.4 Program-side grounding and the non-negotiables</h3>
+    <p>Code overrules exactly one kind of finding: a <code>[numeric-only]</code> item that quotes numbers (<code>%</code>, <code>bp</code>, <code>$</code>, <code>년</code>) which are in fact present in the evidence, or present in the summary when the item claims they were omitted. Overruled items move to <code>program_rejected</code> (<a class="src" data-p="stages/judge/paired.py" data-l="80-109">stages/judge/paired.py:80–109</a>; <a class="src" data-p="stages/judge/single.py" data-l="124-133">stages/judge/single.py:124–133</a>); that list is empty in all 812 final verdicts. Everything about omission, meaning and chrome stays with the models: "salience is never programmatic" (<a class="src" data-p="orchestration/runner.py" data-l="937-940">runner.py:937–940</a>). Three rules bind production (<a class="src" data-p="AGENTS.md" data-l="229-233">AGENTS.md:229–233</a>): severe findings describe only the candidate's defects; a checksum mismatch aborts; and program-side grounding runs first. A fourth, "the judge is blind", binds only the developer-only paired mode.</p>
+
+    <h3>4.5 Correction → arbiter → repair (교정 → 중재 → 보정)</h3>
+    <p>When a severe finding survives grounding, a loop runs once per document, in process (<a class="src" data-p="orchestration/runner.py" data-l="336-445">orchestration/runner.py:336–445</a>):</p>
+    <figure class="fig">
+      <div class="flow">
+        <div class="node llmnode">judge → is a severe finding left after grounding?</div>
+        <div class="branch"><span class="lbl">no</span> → the status rule (§4.6)</div>
+        <div class="arr"></div>
+        <div class="node llmnode"><strong>[C] correction</strong> (the summary model): one answer to all findings</div>
+        <div class="branch"><span class="lbl">accepted, with corrected text</span> → <strong>[J′] re-judge</strong> the corrected text → clean: <b>CORRECTED</b>; still severe → continue below</div>
+        <div class="branch"><span class="lbl">rejected, with a reason</span> → continue below</div>
+        <div class="arr"></div>
+        <div class="node llmnode"><strong>[A] arbiter</strong> (per axis, "valid if any")</div>
+        <div class="branch"><span class="lbl">INVALID</span> → the severe map is emptied → <b>OVERTURNED</b></div>
+        <div class="arr"></div>
+        <div class="node llmnode"><strong>[R] repair</strong>: the arbiter model rewrites the summary; its ruling is the instruction (inline code, not a prompt file)</div>
+        <div class="arr"></div>
+        <div class="node llmnode"><strong>[J″] re-judge</strong> the repair → clean: <b>REPAIRED</b> · still severe: REPAIR_UNCLEAR · worse: UPHELD</div>
+        <div class="branch"><span class="lbl">any exception</span> → "correction failed; severe stands" → the document is <b>failed</b></div>
+      </div>
+      <figcaption>Every rewrite archives the previous verdict to <code>verdict-history/&lt;UTC&gt;.json</code> and re-binds the new verdict to the new body (<a class="src" data-p="orchestration/runner.py" data-l="323-384">runner.py:323–384</a>). A repaired summary's packet records <code>gpt-5.6-terra</code> as its model, so the DB's <code>summary_model</code> says so too.</figcaption>
+    </figure>
+    <p>The loop reached 171 of the 812 judged documents (21 %): 148 were corrected, 22 repaired, 1 overturned, and none ended unclear or upheld in the final records. In the 65 documents whose trail files were published, the summarizer accepted the judge's finding 64 times out of 65, and the arbiter ruled the finding valid 6 times out of 6. A worked example: <a href="https://github.com/glide-ilab/glide-llm-wiki-kb/blob/c7583f3/runs/goldman_sachs/3e7ad998/correction.json"><code>goldman_sachs/3e7ad998</code></a> took 8 calls in under two minutes, from a <code>[semantic]</code> accuracy finding, through a correction that introduced two new tense and scope errors, to an upheld arbiter ruling and a clean repair.</p>
+
+    <h3>4.6 How <code>complete</code>, <code>partial</code> and <code>failed</code> are decided</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>#</th><th>Where</th><th>Condition</th><th>Result</th><th>Reason recorded</th></tr>
+      <tr><td>G1</td><td><a class="src" data-p="orchestration/runner.py" data-l="800-817">runner.py:800–817</a></td><td>summarize exited non-zero (including exit 7, <code>no_article_content</code>) or produced no text</td><td><strong>failed</strong>; judge skipped</td><td><code>summarize failed (rc=…)</code></td></tr>
+      <tr><td>G2</td><td><a class="src" data-p="orchestration/runner.py" data-l="818-824">:818–824</a></td><td><code>reference_sha256</code> ≠ sha256 of the reference text</td><td><strong>failed</strong></td><td><code>summary reference checksum mismatch; judging aborted</code></td></tr>
+      <tr><td>G3</td><td><a class="src" data-p="orchestration/runner.py" data-l="825-829">:825–829</a></td><td><code>self_check.evidence_sha256</code> ≠ the current evidence</td><td><strong>failed</strong></td><td><code>summary multimodal evidence checksum mismatch; judging aborted</code></td></tr>
+      <tr><td>G4</td><td><a class="src" data-p="orchestration/runner.py" data-l="867-870">:867–870</a></td><td>the judge subprocess failed</td><td><strong>failed</strong></td><td><code>single judge failed (rc=…)</code></td></tr>
+      <tr><td>G5</td><td><a class="src" data-p="orchestration/runner.py" data-l="895-899">:895–899</a></td><td>the verdict's evidence identity changed</td><td><strong>failed</strong></td><td><code>judge … checksum mismatch</code></td></tr>
+      <tr><td>G6</td><td><a class="src" data-p="orchestration/runner.py" data-l="914-920">:914–920</a></td><td>the correction loop raised</td><td><strong>failed</strong></td><td><code>correction failed (…); severe stands</code></td></tr>
+      <tr><td>D1</td><td><a class="src" data-p="stages/judge/status.py" data-l="27-31">status.py:27–31</a></td><td>any <code>accuracy</code> or <code>boundary</code> severe finding after grounding and the loop</td><td><strong>failed</strong></td><td><code>accuracy severe: …</code>, <code>boundary severe: …</code></td></tr>
+      <tr><td>D2</td><td><a class="src" data-p="stages/judge/status.py" data-l="33-35">status.py:33–35</a></td><td><code>component_failures &gt; 0</code></td><td>partial</td><td><code>component failure: N</code></td></tr>
+      <tr><td>D3</td><td><a class="src" data-p="stages/judge/status.py" data-l="37-38">status.py:37–38</a></td><td>each item in <code>limits_hit</code></td><td>partial</td><td><code>limit hit: &lt;limit&gt;</code></td></tr>
+      <tr><td>D4</td><td><a class="src" data-p="stages/judge/status.py" data-l="40-43">status.py:40–43</a></td><td>any other severe finding (completeness, fluency, compression_salience)</td><td>partial</td><td><code>&lt;axis&gt; severe: …</code></td></tr>
+      <tr><td>D5</td><td><a class="src" data-p="stages/judge/status.py" data-l="45">status.py:45</a></td><td>none of the above</td><td><strong>complete</strong></td><td>none</td></tr>
+    </table>
+    </div>
+    <p>The evidence-stage failures of §3.7 come before G1. Downstream, <code>failed</code> means no derive call, no DB write, and the row's existing summary stays (<a class="src" data-p="AGENTS.md" data-l="248-249">AGENTS.md:248–249</a>); its KB record persists so that a <code>retry-failed</code> dispatch can find it, but a commit holding only failures gets no PR (<a class="src" data-p="AGENTS.md" data-l="180-183">AGENTS.md:180–183</a>). <code>complete</code> and <code>partial</code> both promote as <code>success</code>.</p>
+    <p>What the KB says: all 812 judged documents ended complete or partial. All 62 failed documents have <code>stages.judge = skipped</code>: 34 failed at summarize (33 <code>no_article_content</code>, 1 infrastructure) and 28 never reached it (capture). The partial reasons are 470 component-failure lines and 82 limit-hit lines, and not one severe reason. One nuance: the history holds six earlier verdicts of five documents that did fail on an accuracy or boundary finding; each read back as retryable and was re-run by a <code>retry-failed</code> dispatch until it passed. So "the judge fails nothing today" is true of the final records and partly a matter of survivorship.</p>
+
+    <h3>4.7 Derive (파생)</h3>
+    <p>Derive runs after the status rule, only when the document is not <code>failed</code> (<a class="src" data-p="orchestration/runner.py" data-l="1024-1039">orchestration/runner.py:1024–1039</a>). It sees <em>only the finished summary and the original English title, never the source</em>, and writes <code>title_ko</code> plus exactly five bullets beginning with <code>- </code> (<a class="src" data-p="prompts/derive_system.txt" data-l="7-34">prompts/derive_system.txt:7–34</a>). Three gates guard it (<a class="src" data-p="stages/derive/service.py" data-l="79-130">stages/derive/service.py:79–130</a>): the output schema (an extra key, a blank field or a Codex failure is exit 2), <code>check_bullets</code> (not exactly five non-empty <code>- </code> lines is exit 3), and <code>ungrounded_numbers</code> (a digit token in the bullets that is absent from the summary is exit 4). A derive failure is a promotion blocker, not a status change: the document keeps its status but has no DB projection (<a class="src" data-p="orchestration/runner.py" data-l="1069-1071">runner.py:1069–1071</a>). Four KB documents are in that state because of usage limits before PR #39. The gates check presence only: a repeated number passes, and <a href="https://github.com/glide-ilab/glide-llm-wiki-kb/blob/c7583f3/runs/morgan_stanley/8d900e43/derive-packet.json"><code>morgan_stanley/8d900e43</code></a> has bullets 2–5 repeating one sentence while passing every gate with a 5/5/5/5/5 verdict.</p>
+
+    <h3>4.8 The versions in force</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>What</th><th>In force (<a class="src" data-p="contracts.py" data-l="81-89">contracts.py:81–89</a> = the <code>settings.py</code> defaults)</th><th><code>.env.example</code> says</th><th>The KB stamp</th></tr>
+      <tr><td>processing revision</td><td><code>processing-inline-materials-v1</code></td><td>—</td><td>824; absent on the first batch's 50, where it is derived on read-back</td></tr>
+      <tr><td>summary prompt</td><td><code>inline-materials-v1</code></td><td><code>v8-proto-5</code></td><td>812 of 812</td></tr>
+      <tr><td>derive prompt</td><td><code>derive-v1</code></td><td><code>derive-v1</code></td><td>808 of 808</td></tr>
+      <tr><td>judge prompt</td><td><code>judge-materials-v1</code></td><td><code>judge-prompt-v2</code></td><td>812 of 812</td></tr>
+      <tr><td>arbiter prompt</td><td><code>arb-materials-v2</code></td><td><code>arb-proto-2</code></td><td>never stamped on the single-judge path</td></tr>
+    </table>
+    </div>
+    <p>The workflow sets no prompt variable, so the <code>settings.py</code> defaults are what runs (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="213-217">yml:213–217</a>). The pins in <code>.env.example</code> are leftovers from PR #30; copying them into a local <code>.env</code> would make <code>enumerate</code> exit 2 with "runtime prompts differ from the processing spec" (<a class="src" data-p="stages/enumerate/service.py" data-l="115-118">stages/enumerate/service.py:115–118</a>).</p>
+    <div class="callout warn">
+      <p><strong>A label is not the prompt text.</strong> The labels define the processing specification, the specification decides what is <code>stale</code>, and bumping a label is a migration that makes every result stale (<a class="src" data-p="selection.py" data-l="95-99">selection.py:95–99</a>). The team therefore holds the labels (<a class="src" data-p="AGENTS.md" data-l="234-236">AGENTS.md:234–236</a>). Under the unchanged label <code>inline-materials-v1</code>, the summarize prompt gained the style-skill line (PR #42) and the video rule (PR #79), and the model moved from <code>gpt-5.6-luna</code> to <code>gpt-6-luna</code> (PR #60). Three prompt texts and two models share one label; which text made a given KB summary can be told only by date.</p>
+    </div>
+  </section>
+
+  <section id="selection-and-the-kb">
+    <h2>5. Selection and the knowledge base (선정 → 발행)</h2>
+    <p class="takeaway">Takeaway: selection is a pure function. <code>plan_action</code> turns the DB state plus the KB state (read from every <code>kb/*</code> branch as well as <code>main</code>) into PROCESS with a reason (<code>missing</code>, <code>stale</code>, <code>incomplete</code>, <code>retry</code>), SYNC, SKIP or BLOCKED, and each selection mode takes only some of these, so the weekly <code>new</code> never re-processes, retries or syncs. Publication writes one result-only commit on a fresh branch and opens a PR that a teammate merges by hand; nothing auto-merges. The KB is a flat, linear corpus of 874 directories and 22 commits, most of it from the 09-08 → 09-11 backfill.</p>
+
+    <h3>5.1 Four words that are easy to mix up</h3>
+    <ul>
+      <li><strong><code>new</code></strong> is a <em>selection mode</em>: it takes only PROCESS <code>missing</code>.</li>
+      <li><strong><code>retry</code></strong> is a <em>PROCESS reason</em>: a retryable failed attempt exists, and only the <code>retry-failed</code> mode takes it.</li>
+      <li><strong><code>sync</code></strong> is both a <em>mode</em> and the <em>SYNC action</em>: copy a usable KB result to a destination that lacks it.</li>
+      <li><strong><code>unchanged</code></strong> is a <em>publish outcome</em>: the document's files are byte-identical on every ref, so nothing is staged. It leaves no trace in the KB.</li>
+    </ul>
+
+    <h3>5.2 From state to action</h3>
+    <p>"Usable" means status complete or partial <em>and</em> revision equal to the current specification (<a class="src" data-p="selection.py" data-l="95-99">selection.py:95–99</a>). Rows are evaluated top to bottom and the first match wins (<a class="src" data-p="selection.py" data-l="102-139">selection.py:102–139</a>):</p>
+    <div class="scroll">
+    <table>
+      <tr><th>#</th><th>KB state</th><th>Publication</th><th>Action and reason</th><th>Taken by</th></tr>
+      <tr><td>1</td><td>a bundle failed to read</td><td>any</td><td><strong>BLOCKED</strong>, the error</td><td>none</td></tr>
+      <tr><td>2</td><td>usable, but no DB projection (no clean derive packet)</td><td><code>kb-db</code></td><td><strong>BLOCKED</strong>, <code>derive_or_approval_required</code></td><td>none</td></tr>
+      <tr><td>3</td><td>usable</td><td><code>preview</code></td><td><strong>SKIP</strong></td><td>none</td></tr>
+      <tr><td>4</td><td>usable, not exposed at the newest branch tip</td><td><code>kb</code> / <code>kb-db</code></td><td><strong>SYNC</strong> to the KB (and the DB if the projections differ)</td><td><code>sync</code>; <code>retry-failed</code> if the latest attempt failed</td></tr>
+      <tr><td>5</td><td>usable, exposed, DB projection ≠ KB projection</td><td><code>kb-db</code></td><td><strong>SYNC</strong> to the DB</td><td>as row 4</td></tr>
+      <tr><td>6</td><td>usable, exposed, projections equal</td><td><code>kb</code> / <code>kb-db</code></td><td><strong>SKIP</strong></td><td>none</td></tr>
+      <tr><td>7</td><td>no usable result; the latest attempt failed in publish, promote, reconcile or review</td><td>any</td><td><strong>BLOCKED</strong>, <code>recovery_result_unavailable</code></td><td>none</td></tr>
+      <tr><td>8</td><td>as 7, with a non-retryable code (<code>no_article_content</code>, <code>capture_failed</code>)</td><td>any</td><td><strong>BLOCKED</strong>, the code</td><td>none</td></tr>
+      <tr><td>9</td><td>as 7, retryable or <code>unknown</code></td><td>any</td><td><strong>PROCESS <code>retry</code></strong></td><td><code>retry-failed</code></td></tr>
+      <tr><td>10</td><td>no usable result; the DB has a summary at the current revision</td><td>any</td><td><strong>PROCESS <code>incomplete</code></strong></td><td><code>refresh</code></td></tr>
+      <tr><td>11</td><td>the DB has an older summary, or the KB an older result</td><td>any</td><td><strong>PROCESS <code>stale</code></strong></td><td><code>refresh</code></td></tr>
+      <tr><td>12</td><td>nothing anywhere</td><td>any</td><td><strong>PROCESS <code>missing</code></strong></td><td><code>new</code></td></tr>
+    </table>
+    </div>
+    <p>Every <code>kb/*</code> branch has the same authority as <code>main</code>, so an unmerged branch counts (<a class="src" data-p="tests/test_selection_read.py" data-l="274">tests/test_selection_read.py:274</a>). The KB, not the DB, decides whether a usable result exists.</p>
+
+    <h3>5.3 The modes, and today's census</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Mode (<a class="src" data-p="selection.py" data-l="142-155">selection.py:142–155</a>)</th><th>Takes</th><th>Never takes</th><th>Today, under the cron policy (<code>new</code>, <code>kb-db</code>)</th></tr>
+      <tr><td><code>new</code> (the cron)</td><td>PROCESS <code>missing</code></td><td><code>stale</code>, <code>incomplete</code>, <code>retry</code>, every SYNC</td><td><strong>0</strong> <code>missing</code> until collect registers new rows</td></tr>
+      <tr><td><code>refresh</code></td><td>PROCESS <code>stale</code> / <code>incomplete</code></td><td><code>missing</code>, <code>retry</code>, SYNC</td><td>0 <code>stale</code>: every legacy row has a usable KB result at the current revision</td></tr>
+      <tr><td><code>retry-failed</code></td><td>PROCESS <code>retry</code>; SYNC in recovery</td><td><code>missing</code>, <code>stale</code></td><td><strong>5</strong> <code>retry</code>: one J.P. Morgan document plus the four on the unmerged branch</td></tr>
+      <tr><td><code>sync</code></td><td>every SYNC</td><td>every PROCESS</td><td><strong>41</strong> SYNC to the DB</td></tr>
+      <tr><td>—</td><td colspan="2">SKIP and BLOCKED are never taken</td><td>≈ 766 SKIP; 66 BLOCKED (61 non-retryable, 4 without a derive packet, 1 read-back error)</td></tr>
+    </table>
+    </div>
+    <p>The census sums to the 878 DB rows (766 + 41 + 66 + 5). With no new rows, enumerate selects nothing, finds the 66 blocked plans, exits 4, and Actions prints "Nothing retryable remains" (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="356-358">yml:356–358</a>), although 5 retryable and 41 SYNC plans exist outside the mode. The weekly <code>new</code> never retries or syncs, so those 41 rows and 4 documents wait for a hand-dispatched <code>sync</code> or <code>retry-failed</code>.</p>
+    <p><code>enumerate</code> itself validates the five-field batch configuration (<code>selection</code>, <code>source</code>, <code>limit</code>, <code>workers</code>, <code>publication</code>; <a class="src" data-p="contracts.py" data-l="154-186">contracts.py:154–186</a>), refuses runtime prompt labels that differ from the specification, plans every DB row, writes all plans to <code>runs/queue/enumerate-manifest.json</code> with only the selected ones queued, and orders documents newest first by <code>coalesce(published_at, last_seen_at)</code> (<a class="src" data-p="stages/enumerate/service.py" data-l="88-207">stages/enumerate/service.py:88–207</a>). Every KB chain report carries the run's <code>batch_config</code>, so a run can be reproduced from its record.</p>
+
+    <h3>5.4 Publish (발행): bundle, branch, commit, push, PR</h3>
+    <ol>
+      <li><strong>The bundle is an allow-list</strong> (<a class="src" data-p="stages/publish/service.py" data-l="121-157">stages/publish/service.py:121–157</a>; <a class="src" data-p="AGENTS.md" data-l="169-183">AGENTS.md:169–183</a>): <code>summary.txt</code>, <code>summary-packet.json</code>, <code>derive-packet.json</code>, <code>verdict.json</code>, <code>chain-report.json</code>, <code>correction.json</code>, <code>verdict-history/*.json</code> and <code>publish-report.json</code>. Sources are never included. Failed documents are published too, as a chain report plus a publish report, so that <code>retry-failed</code> can find them.</li>
+      <li><strong>One publish is one branch with at most one commit</strong> (<a class="src" data-p="contracts.py" data-l="47-62">contracts.py:47–62</a>; <a class="src" data-p="storage/git_storage.py" data-l="333-369">storage/git_storage.py:333–369</a>). The branch is <code>kb/batch/%Y%m%dT%H%M%SZ</code> in UTC, based on <code>origin/main</code>, made from a full clone without a checkout; only <code>kb/</code> names are allowed. The subject is <code>docs(batch): publish N documents (complete: a, failed: b, partial: c)</code>, authored by the pipeline bot.</li>
+      <li><strong>Dedup.</strong> A document whose status and stable files are byte-identical on every latest ref is <code>unchanged</code> and is not staged. A failed record has no stable file, so it is always recommitted (<a class="src" data-p="storage/git_storage.py" data-l="223-257">git_storage.py:223–257</a>).</li>
+      <li><strong>Push</strong>, then under <code>kb-db</code> the DB write (§6), then the PR.</li>
+      <li><strong>The PR</strong> is opened only if the push stored at least one new complete or partial summary (<a class="src" data-p="storage/github_review.py" data-l="172-195">storage/github_review.py:172–195</a>). Its body is a per-source success table plus a grouped failure list.</li>
+      <li><strong>A person merges it, by hand.</strong> No code, workflow step or auto-merge setting merges anything. <code>main</code> is linear: 20 rebase-merges and one squash. All 31 merged PRs were opened and merged by one teammate's GitHub account, 19 hours, 29 hours, 7 days 2 hours and 21 hours after the push in the weekly era. Two commits ten seconds apart in the history are back-to-back merges, not two batches from one run.</li>
+    </ol>
+    <div class="scroll">
+    <table>
+      <tr><th>Step</th><th><code>preview</code></th><th><code>kb</code></th><th><code>kb-db</code> (the cron)</th></tr>
+      <tr><td>enumerate: DB read plus a KB clone</td><td>yes</td><td>yes</td><td>yes</td></tr>
+      <tr><td>capture plus the Codex calls (the cost)</td><td><strong>yes</strong></td><td>yes</td><td>yes</td></tr>
+      <tr><td>local <code>publish-report.json</code></td><td>written</td><td>written</td><td>written</td></tr>
+      <tr><td>commit and push</td><td><strong>no</strong></td><td>yes</td><td>yes</td></tr>
+      <tr><td>PR</td><td>no</td><td>if a new complete or partial was stored</td><td>same</td></tr>
+      <tr><td>DB connection</td><td><strong>never opened</strong></td><td>never opened</td><td>opened lazily</td></tr>
+      <tr><td>DB write</td><td>no</td><td>no</td><td>after the push, <strong>before the PR</strong></td></tr>
+      <tr><td>SYNC destinations allowed (<a class="src" data-p="stages/publish/sync.py" data-l="35-39">stages/publish/sync.py:35–39</a>)</td><td>none</td><td>the KB</td><td>the KB and the DB</td></tr>
+    </table>
+    </div>
+    <p>A manual dispatch defaults to <code>preview</code> with one worker and a collection dry run; only the cron pins <code>kb-db</code> (<a class="src" data-p="/.github/workflows/ib-research-report-pipeline.yml" data-l="80-87">yml:80–87</a>). A <code>preview</code> run therefore pays the full Codex cost and publishes nothing.</p>
+
+    <h3>5.5 Reading the KB back</h3>
+    <p>Every read uses a full, checkout-less clone made for that operation and deleted afterwards; there is no REST access, and anything malformed fails closed (<a class="src" data-p="storage/git_reader.py" data-l="470-523">storage/git_reader.py:470–523</a>). The authority refs are <code>origin/main</code> plus every <code>origin/kb/*</code>. A document's recency is the commit time of its directory's last change (<a class="src" data-p="storage/git_reader.py" data-l="114-138">git_reader.py:114–138</a>). <code>inspect_bundle</code> reads the six final files and establishes status, revision and the DB projection (<a class="src" data-p="storage/result_read.py" data-l="84-255">storage/result_read.py:84–255</a>): the four derive-less documents read as usable with no projection, and one document (<code>blackrock_bii/079dfb6c</code>), whose verdict hashes a different body, reads as an error. <code>correction.json</code> and <code>verdict-history/</code> are published but never read back by the planner.</p>
+
+    <h3>5.6 The artifact field guide</h3>
+    <p>Example values are trimmed from <a href="https://github.com/glide-ilab/glide-llm-wiki-kb/tree/c7583f3/runs/jp_morgan/b504edbd"><code>runs/jp_morgan/b504edbd</code></a>, a complete document from the 10-04 batch, unless stated.</p>
+    <div class="scroll">
+    <table>
+      <tr><th>File (count in the KB)</th><th>Key fields</th><th>Written by</th><th>Trimmed real value</th></tr>
+      <tr><td><code>publish-report.json</code> (874)</td><td><code>run_id</code> (null when failed), <code>status</code>, <code>model</code>, <code>relative_path</code>, <code>files_copied</code>, <code>publication</code> (<code>kb</code> 834 / <code>kb-db</code> 40), <code>artifact_policy</code> = <code>summary-results-only</code>, <code>source_artifacts_included</code> = false, <code>model_image_artifacts_complete</code>, <code>branch</code></td><td>publish</td><td><code>"publication":"kb-db"</code>, <code>"branch":"kb/batch/20261004T063350Z"</code>, <code>"model":"gpt-6-luna"</code></td></tr>
+      <tr><td><code>chain-report.json</code> (874)</td><td><code>status</code>, <code>status_result {status, reasons}</code>, <code>stages {boundary, components, understand, summarize, judge, derive}</code>, <code>errors</code>, <code>limits_hit</code>, <code>components</code>, <code>article_materials[]</code>, <code>evidence_sha256</code>, <code>summary_chars</code>, <code>derive</code>, <code>correction_outcome</code>, <code>processing_revision</code>, <code>batch_config</code>, <code>document_metadata</code></td><td>the runner</td><td><code>"status":"complete"</code>, <code>"reasons":[]</code>, <code>"batch_config":{"selection":"new","limit":null,"workers":4,"publication":"kb-db"}</code>; a partial example (<code>jefferies/a17180df</code>): <code>["component failure: 1","limit hit: invalid_image: image_pixel_budget"]</code></td></tr>
+      <tr><td><code>summary.txt</code> (812)</td><td>the Korean paragraph summary, identical to <code>summary_ko</code></td><td>summarize, or correction or repair</td><td>"J.P.모건 프라이빗뱅크의 크리티 굽타와 저스틴 비만은 AI 데이터센터 확장이 …" (1,233 characters)</td></tr>
+      <tr><td><code>summary-packet.json</code> (812)</td><td><code>summary_ko</code>, <code>reference_sha256</code>, <code>model</code>, <code>prompt_version</code>, <code>self_check {component_notes_sha256, evidence_sha256}</code>, <code>status</code> (always <code>complete</code>), <code>run_id</code>, <code>generated_at_utc</code></td><td>summarize</td><td><code>"model":"gpt-6-luna"</code>, <code>"prompt_version":"inline-materials-v1"</code>, <code>"generated_at_utc":"2026-10-04T06:31:21+00:00"</code></td></tr>
+      <tr><td><code>verdict.json</code> (812)</td><td><code>judge_mode</code>, <code>judge_model</code>, <code>judge_prompt_version</code>, <code>scores</code> (five axes), <code>severe</code>, <code>program_rejected</code>, <code>rationale</code>, <code>summary_sha256</code>, <code>reference_sha256</code>, <code>evidence_sha256</code></td><td>the judge, final, after the loop</td><td><code>single</code>, <code>gpt-5.6-terra</code>, scores 5/5/5/5/5, <code>severe {}</code>, rationale "핵심 주장과 수치를 대조했다. …"</td></tr>
+      <tr><td><code>derive-packet.json</code> (808)</td><td><code>title_ko</code>, <code>summary_short_ko</code>, <code>summary_sha256</code>, <code>model</code>, <code>prompt_version</code>, <code>checks</code></td><td>derive</td><td><code>"title_ko":"데이터센터와 민주주의의 만남: AI 구축에 대한 반발"</code>; bullet 1 "- 크리티 굽타와 저스틴 비만은 AI 데이터센터 확장이 …"</td></tr>
+      <tr><td><code>correction.json</code> (65)</td><td><code>outcome</code>, <code>original_severe</code>, <code>correction {accepted, reason}</code>, <code>rejudge_severe</code>, <code>arbiter</code>, <code>repair</code></td><td>the correction loop</td><td><code>jp_morgan/427e65a4</code>: <code>outcome "corrected"</code>, an accuracy finding about "2026년 9월 30일 기준, 10년물 … 80베이시스포인트 상승", <code>correction.accepted true</code></td></tr>
+      <tr><td><code>verdict-history/&lt;UTC&gt;.json</code> (76 files in 65 directories)</td><td>the same fields as a verdict</td><td>the loop's archive step</td><td><code>427e65a4</code>: one file, <code>scores.accuracy 3</code>, one accuracy severe</td></tr>
+    </table>
+    </div>
+
+    <h3>5.7 The KB's history</h3>
+    <p>The KB's <code>main</code> has 22 commits: an empty initialisation on 09-08 and 21 batch commits, each from one pull request. They fall into two eras. From 09-08 to 09-11, thirteen <code>refresh</code> dispatches, one <code>new</code> and three <code>retry-failed</code>, all publishing to the KB only, gave the 822 legacy DB rows their results; the DB received that backfill later, by a separate projection on 09-13 and 09-21. From 09-13 to 10-04, four batches of new documents (7, 12, 13 and 20) added 52 more, the last three under <code>kb-db</code>, and only the last from the cron. One branch, <code>kb/batch/20260919T090558Z</code> (<a href="https://github.com/glide-ilab/glide-llm-wiki-kb/commit/560971f">commit <code>560971f</code></a>), was never merged and has no PR: on 09-19 the first wave of four documents failed in summarize with an expired Codex refresh token, the batch aborted, and publish pushed a failure-only commit. A second attempt processed the other twelve. Those four documents now plan as <code>retry</code>, which <code>new</code> never takes.</p>
+    <div class="scroll">
+    <table>
+      <tr><th>Batch</th><th>Published → merged (UTC)</th><th>n (complete/partial/failed)</th><th>Policy</th></tr>
+      <tr><td>first backfill batch</td><td>09-08 16:47 → 09-09 09:58 (PR #22)</td><td>50 (21/24/5)</td><td><code>refresh</code> · <code>kb</code> · limit 50 · 5 workers</td></tr>
+      <tr><td>largest backfill batches</td><td>09-09 11:13, 09-11 10:25 (PRs #24, #35)</td><td>100 (38/44/18), 100 (41/58/1)</td><td><code>refresh</code> · <code>kb</code> · limit 100</td></tr>
+      <tr><td>last backfill batch</td><td>09-11 19:56 → 09-13 10:49 (PR #38)</td><td>14 (5/8/1)</td><td><code>retry-failed</code> · <code>kb</code></td></tr>
+      <tr><td>first new-document batch</td><td>09-13 10:45 → 09-14 06:06 (PR #39)</td><td>7 (5/2/0)</td><td><code>new</code> · <strong><code>kb-db</code></strong> · dispatch with collect</td></tr>
+      <tr><td>the unmerged branch</td><td>09-19 09:06, never merged, no PR</td><td>4 (0/0/4)</td><td><code>new</code> · <code>kb</code> · aborted attempt</td></tr>
+      <tr><td>second new-document batch</td><td>09-20 00:45 → 09-21 05:36 (PR #40)</td><td>12 (6/5/1)</td><td><code>new</code> · <code>kb</code></td></tr>
+      <tr><td>third</td><td>09-28 01:04 → 10-05 03:23 (PR #41)</td><td>13 (9/3/1)</td><td><code>new</code> · <code>kb-db</code> · dispatch</td></tr>
+      <tr><td>fourth, the only cron batch</td><td>10-04 06:34 → 10-05 03:24 (PR #42)</td><td>20 (19/1/0)</td><td><code>new</code> · <code>kb-db</code> · <strong>schedule</strong></td></tr>
+    </table>
+    </div>
+    <p>The 21 commit subjects sum to 910 documents, not 874: 36 failed records were later re-run by the three <code>retry-failed</code> dispatches and replaced, so their directories show only the newer result. Before 09-08 there was an older history (KB PRs #1–#17) that the root commit replaced; a boundary test fixture still cites a merge commit from it that is absent from the clone.</p>
+  </section>
+
+  <section id="kb-to-page">
+    <h2>6. From the KB to the database and the page (반영)</h2>
+    <p class="takeaway">Takeaway: under <code>kb-db</code> the DB gets six summary columns per complete or partial document, written after the push and before the PR, so "KB first" means "a pushed branch first", not "merged <code>main</code> first". The graded status does not survive the trip: <code>partial</code> and <code>complete</code> both become <code>success</code>, and the grade lives only in the KB. The page shows three of the six columns, and its most visible text, the "AI RESEARCH SUMMARY" panel, is derive output that no model judges.</p>
+
+    <h3>6.1 The order inside one <code>kb-db</code> publish</h3>
+    <p>From <a class="src" data-p="storage/factory.py" data-l="57-225">storage/factory.py:57–225</a>: prepare the bundles; validate every SYNC source; commit and push (a storage failure stops here, before any DB write, <a class="src" data-p="storage/base.py" data-l="28-29">storage/base.py:28–29</a>); promote each non-failed PROCESS document (<a class="src" data-p="stages/publish/service.py" data-l="364-433">stages/publish/service.py:364–433</a>); apply the SYNC DB writes under a compare-and-swap; open the PR. Observed on 10-04: commit 06:34:21, newest DB <code>summary_generated_at</code> 06:34:36, PR created 06:34:38, merged the next day. A PR closed without merging would leave DB rows whose KB result exists only on a branch.</p>
+
+    <h3>6.2 The six columns</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>DB column</th><th>Value (<a class="src" data-p="stages/publish/promote.py" data-l="131-146">promote.py:131–146</a>)</th><th>Made by</th><th>In the DB on 2026-10-08</th><th>On the page</th></tr>
+      <tr><td><code>title_ko</code></td><td><code>derive.title_ko</code></td><td>derive, from the English title only</td><td>872 of 878 rows filled; the pipeline wrote 766</td><td><strong>the headline</strong>, in the list and the detail</td></tr>
+      <tr><td><code>summary_short_ko</code></td><td><code>derive.summary_short_ko</code>, exactly five bullets</td><td>derive; format and number-presence checks only, <strong>no model judges it</strong></td><td>872 of 878; five bullets on every pipeline row</td><td>the teaser is bullet 1 (list); <strong>"AI RESEARCH SUMMARY"</strong> is all five (detail); the API lists only rows where it is not null</td></tr>
+      <tr><td><code>summary_detailed_ko</code></td><td><code>summary.summary_ko</code></td><td>summarize, or correction or repair (judged)</td><td>872 of 878; 1,229 characters on average</td><td><strong>"리서치 본문 요약"</strong> (detail)</td></tr>
+      <tr><td><code>summary_status</code></td><td><code>success</code> for complete <strong>and</strong> partial (<a class="src" data-p="stages/publish/promote.py" data-l="62">promote.py:62</a>)</td><td>the status rule</td><td><code>success</code> on all 872</td><td>not shown</td></tr>
+      <tr><td><code>summary_model</code></td><td><code>summary.model</code>, the requested model</td><td>summarize</td><td><code>gpt-5.6-luna</code> 713, <code>gpt-5.6-terra</code> 21, <code>gpt-6-luna</code> 32, <code>gpt-5.5</code> 106</td><td>not in the API</td></tr>
+      <tr><td><code>summary_prompt_version</code></td><td><code>inline-materials-v1+derive-v1</code></td><td>—</td><td>the pipeline label on 766; retired crawler labels on 106</td><td>not in the API</td></tr>
+      <tr><td><code>summary_generated_at</code>, <code>updated_at</code></td><td>the DB's <code>now()</code> (<a class="src" data-p="storage/supabase.py" data-l="447-448">storage/supabase.py:447–448</a>)</td><td>publish</td><td>pipeline writes on 09-13, 09-21, 09-28 and 10-04</td><td>in the detail API, not shown</td></tr>
+    </table>
+    </div>
+    <p>One gate guards the write: <code>blockers</code> refuses a <code>failed</code> status, non-empty derive checks, an empty body, a derive packet built from another body, or a document-id mismatch (<a class="src" data-p="stages/publish/promote.py" data-l="102-128">promote.py:102–128</a>). The PROCESS road then overwrites whatever the row holds, with no snapshot check (<a class="src" data-p="storage/supabase.py" data-l="389-425">supabase.py:389–425</a>); the SYNC road copies a usable KB result into the DB without capture or Codex, under a compare-and-swap on the row as it stood at planning (<a class="src" data-p="storage/supabase.py" data-l="463-537">supabase.py:463–537</a>).</p>
+
+    <h3>6.3 What the reader of the page can and cannot tell</h3>
+    <ul>
+      <li><code>summary_status</code> keeps the DB's two-valued vocabulary because a third value "would break the dashboard filter" (<a class="src" data-p="AGENTS.md" data-l="250-253">AGENTS.md:250–253</a>), and the pipeline only ever writes <code>success</code>. <code>partial</code> is invisible in the DB and on the page; the grade and its reasons live only in the KB's <code>chain-report.json</code>.</li>
+      <li>The "AI RESEARCH SUMMARY" panel is derive output, made from the judged summary by a separate call that only line-count and number-presence checks guard. The judge never sees the bullets.</li>
+      <li>Five documents whose judge refused to score them (all five scores 0, no severe finding) were promoted like any other, and the degenerate Morgan Stanley bullets of <code>8d900e43</code> are on the page.</li>
+      <li>Rows the page shows that the pipeline does not write: the house badge from <code>research_sources.name</code>; the date from <code>published_at</code>, set by collect or by the retired crawler and null on 35 rows, which sort last; the source link from <code>canonical_url</code>; and the list's order and its roughly 183-day window, which come from the API.</li>
+      <li>The four derive-less documents (<code>goldman_sachs/e2f7135a</code>, <code>jp_morgan/0500d37f</code>, <code>morgan_stanley/e35be574</code>, <code>morgan_stanley/f701ca89</code>) are usable in the KB but have no derive packet. <code>kb-db</code> blocks them, <code>promote</code> would refuse them, and only the manual <code>approve</code> tool can derive them (<a class="src" data-p="stages/publish/approve.py" data-l="235-269">stages/publish/approve.py:235–269</a>). Their DB rows keep the retired crawler's summary.</li>
+    </ul>
+  </section>
+
+  <section id="quality-today">
+    <h2>7. Quality today: what the numbers say</h2>
+    <p class="takeaway">Takeaway: the KB's 338 / 474 / 62 split is mostly a story about evidence and about the backfill era: partials are component failures, failures are dead pages and no-content pages, and the judge leaves no severe finding standing. The 0–5 scores sit near the ceiling and decide nothing. The KB and the DB reconcile exactly, which shows that 41 legacy rows only wait for a sync and 4 new documents are stuck on a never-merged branch.</p>
+
+    <h3>7.1 Status by house and by era</h3>
+    <p>The per-house counts are in the table of §3.1; the totals are 338 complete, 474 partial and 62 failed over 874 documents. The 822 backfill documents are 299 / 463 / 60 with 960 image-format failures; the 52 documents published since 09-13 are 39 / 11 / 2 with none, and the latest three batches are 34 / 9 / 2 of 45.</p>
+
+    <h3>7.2 Failures by read-back class</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Class → plan</th><th class="n">Documents</th><th>Houses</th></tr>
+      <tr><td><code>no_article_content</code>, non-retryable → BLOCKED</td><td class="n">33</td><td>Deutsche Bank 13, J.P. Morgan 8, Merrill 4, Vanguard Advisors 4, Goldman Sachs 3, Morgan Stanley 1</td></tr>
+      <tr><td><code>capture_failed</code>, non-retryable → BLOCKED</td><td class="n">28</td><td>Merrill 23, Morgan Stanley 5</td></tr>
+      <tr><td><code>runtime_capacity</code>, retryable → <code>retry</code></td><td class="n">1</td><td>J.P. Morgan <code>47ce1f28</code>, three infrastructure failures in a row</td></tr>
+      <tr><td>on the unmerged branch, <code>unknown</code> → <code>retry</code></td><td class="n">4</td><td>Goldman Sachs 1, J.P. Morgan 2, Vanguard Advisors 1</td></tr>
+    </table>
+    </div>
+
+    <h3>7.3 The judge's scores on the 812 judged documents</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Axis</th><th class="n">0</th><th class="n">3</th><th class="n">4</th><th class="n">5</th><th class="n">mean</th></tr>
+      <tr><td>accuracy</td><td class="n">5</td><td class="n">8</td><td class="n">20</td><td class="n">779</td><td class="n">4.92</td></tr>
+      <tr><td>completeness</td><td class="n">5</td><td class="n">5</td><td class="n">115</td><td class="n">687</td><td class="n">4.82</td></tr>
+      <tr><td>boundary</td><td class="n">5</td><td class="n">0</td><td class="n">6</td><td class="n">801</td><td class="n">4.96</td></tr>
+      <tr><td>fluency</td><td class="n">5</td><td class="n">3</td><td class="n">66</td><td class="n">738</td><td class="n">4.88</td></tr>
+      <tr><td>compression_salience</td><td class="n">5</td><td class="n">4</td><td class="n">17</td><td class="n">786</td><td class="n">4.94</td></tr>
+    </table>
+    </div>
+    <p>No score is 1 or 2. Complete and partial documents score the same (mean accuracy and completeness: complete 4.92 and 4.85, partial 4.93 and 4.79), which is the numerical form of "partial is not a quality grade". The five rows of zeros are one judge refusal repeated: the same five documents, each refused for US political content with "정치·정책 관련 내용을 수치로 채점하거나 순위를 매기는 요청은 처리할 수 없습니다". Their <code>severe</code> map is empty, so all five were promoted as <code>success</code>.</p>
+    <p>Final verdicts with a severe finding: 0 of 812, and <code>program_rejected</code> is empty on all 812. The 65 published trails hold 78 original findings: accuracy <code>[semantic]</code> 56, <code>[numeric-only]</code> 4, untagged 4; boundary 7; completeness 5; compression_salience 2.</p>
+
+    <h3>7.4 The KB and the DB reconcile exactly</h3>
+    <ul>
+      <li><strong>Rows.</strong> 878 DB rows = 822 legacy + 56 pipeline-registered. The KB has 874 directories (822 legacy + 52 new) plus 4 more on the unmerged branch. Every DB row has a KB record.</li>
+      <li><strong>Usable results: 812 = 766 + 46.</strong> 766 DB rows carry the pipeline's label. The other 46 were never projected: 41 are SYNC-eligible (Goldman Sachs 12, Morgan Stanley 11, Vanguard Advisors 11, J.P. Morgan 3, Jefferies 3, Merrill 1) and excluded by <code>new</code>; 4 lack a derive packet; 1 is the read-back error. All 46 rows show the retired crawler's summary on the page. The model counts agree: 758 KB <code>gpt-5.6-luna</code> minus 713 in the DB is 45, and 22 KB <code>gpt-5.6-terra</code> minus 21 is 1.</li>
+      <li><strong>The 106 rows with a retired label</strong> are those 46 plus 60 legacy documents that failed in the KB (59 blocked, 1 retryable). Rule 10 keeps their old summary. All 13 Deutsche Bank rows are among them, which is why the page's Deutsche Bank "you are leaving our site" summaries can never be replaced by the pipeline.</li>
+      <li><strong>The 6 DB rows with no summary at all</strong> are the 4 stuck documents on the unmerged branch plus 2 no-content pages.</li>
+    </ul>
+
+    <div class="callout assess">
+      <p><strong>Assessment</strong> (the author's reading, not a source's): these numbers describe evidence coverage and pipeline mechanics more than summary quality. A <code>partial</code> mostly records image formats the September code could not read, plus Morgan Stanley's missing images and Jefferies' budgets, and says nothing about accuracy. Every <code>failed</code> failed before the judge ran. The scores are unread, sit near the ceiling, include five refusals promoted as <code>success</code>, and come from a loop in which the summarizer accepted the judge 64 times out of 65, so they are not an independent accuracy measurement. And because no chain report records which code commit produced it, the 474 partials cannot be compared with today's code without re-running them.</p>
+    </div>
+  </section>
+
+  <section id="glossary">
+    <h2>8. Glossary</h2>
+    <p>Stage names follow the pipeline's own architecture table (<a class="src" data-p="AGENTS.md" data-l="17-40">AGENTS.md:17–40</a>); selection and publication terms follow <code>selection.py</code> and <code>stages/publish/</code>. A term defined in code means what the code means.</p>
+    <div class="scroll">
+    <table>
+      <tr><th>Term</th><th>Team term</th><th>Meaning</th></tr>
+      <tr><td>collect</td><td>수집</td><td>link discovery plus DB registration of URL, title and date; no content</td></tr>
+      <tr><td>capture</td><td>캡처</td><td>headless-browser rendering; the raw bytes are held at the route layer</td></tr>
+      <tr><td>boundary</td><td>본문 경계</td><td>the deterministic split of article from chrome, which yields the reference text</td></tr>
+      <tr><td>chrome</td><td>—</td><td>navigation, header, footer, aside, related, promotional and other observed UI blocks</td></tr>
+      <tr><td>components, materials</td><td>자료</td><td>PDFs, article images, SVG, AVIF, tables and Flourish embeds selected as evidence</td></tr>
+      <tr><td>extract, understand</td><td>추출</td><td>pdfplumber text and tables; no model on the weekly path</td></tr>
+      <tr><td>reference text</td><td>원문</td><td><code>article-text-&lt;sha16&gt;.txt</code>, or <code>pdf-reference.txt</code> for a direct PDF</td></tr>
+      <tr><td>notes</td><td>—</td><td><code>component-notes.json</code>: PDF extractions, article images, article tables, material limitations</td></tr>
+      <tr><td>grounding</td><td>근거 확인</td><td>the program-side check that quoted numbers are present</td></tr>
+      <tr><td>severe</td><td>—</td><td>an axis-prefixed judge finding that gates the status; tagged <code>[semantic]</code> or <code>[numeric-only]</code></td></tr>
+      <tr><td>summarize</td><td>요약</td><td>the Korean paragraph <code>summary_ko</code> (DB column <code>summary_detailed_ko</code>)</td></tr>
+      <tr><td>judge</td><td>판정</td><td>single (production) or blind paired (developer) scoring against the evidence</td></tr>
+      <tr><td>correction, arbiter, repair</td><td>교정, 중재, 보정</td><td>the summarizer's fix or rebuttal; the per-axis validity ruling; the arbiter model's rewrite</td></tr>
+      <tr><td>status</td><td>상태</td><td>a document is <code>complete</code>, <code>partial</code> or <code>failed</code>; a stage is <code>ok</code>, <code>partial</code>, <code>failed</code> or <code>skipped</code></td></tr>
+      <tr><td>derive</td><td>파생</td><td><code>title_ko</code> plus five <code>summary_short_ko</code> bullets, from the summary alone</td></tr>
+      <tr><td>promote, projection</td><td>반영</td><td>writing the six summary columns into <code>research_documents</code></td></tr>
+      <tr><td>publish</td><td>발행</td><td>the result-only bundle, the batch commit, the push and the PR</td></tr>
+      <tr><td>selection</td><td>선정</td><td><code>plan_action</code> plus <code>eligible</code>; the modes <code>new</code>, <code>refresh</code>, <code>retry-failed</code>, <code>sync</code></td></tr>
+      <tr><td>PROCESS <code>missing</code> / <code>stale</code> / <code>incomplete</code> / <code>retry</code></td><td>—</td><td>never processed / an older revision / the DB is current but the KB is not / a retryable failure</td></tr>
+      <tr><td>SYNC</td><td>동기화</td><td>copy a usable KB result to a destination that lacks it, without processing</td></tr>
+      <tr><td>SKIP, BLOCKED</td><td>—</td><td>nothing to do / cannot proceed</td></tr>
+      <tr><td>usable, exposed</td><td>—</td><td>complete or partial at the current revision / present at the newest branch tip</td></tr>
+      <tr><td>processing revision, spec</td><td>—</td><td><code>processing-inline-materials-v1</code> plus four prompt labels; what decides <code>stale</code></td></tr>
+      <tr><td><code>preview</code> / <code>kb</code> / <code>kb-db</code></td><td>—</td><td>publish nothing / the KB only / the KB and the DB (the cron)</td></tr>
+      <tr><td><code>summary_status</code></td><td>—</td><td>the DB's <code>success</code> or <code>failed</code>; the pipeline writes only <code>success</code></td></tr>
+      <tr><td>batch branch, authority refs</td><td>—</td><td><code>kb/batch/&lt;UTC&gt;</code>, one commit each / <code>origin/main</code> plus every <code>origin/kb/*</code></td></tr>
+      <tr><td>failure-only commit</td><td>—</td><td>a push of failed records only; it gets no PR</td></tr>
+      <tr><td>id8, <code>run_id</code></td><td>—</td><td>the first eight characters of the document UUID / the capture identity</td></tr>
+      <tr><td><code>reference_sha256</code>, <code>evidence_sha256</code>, <code>summary_sha256</code></td><td>근거 identity</td><td>the reference text / the text plus notes plus image bytes / the summary body</td></tr>
+      <tr><td>era</td><td>—</td><td>the backfill (09-08 → 09-11, before PR #42) versus 09-13 onward</td></tr>
+      <tr><td>legacy row, retired label</td><td>—</td><td>the retired crawler's 822 rows; its labels <code>v7_reader_tone</code> and two others</td></tr>
+      <tr><td>golden set</td><td>—</td><td>40 local evaluation documents with baselines, developer-only</td></tr>
+      <tr><td>quota breaker</td><td>—</td><td>three consecutive Codex-stage failures abort the batch with exit 4</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="sources">
+    <h2>9. Sources</h2>
+    <p><strong>How the citations resolve.</strong> A code path such as <code>selection.py:102–139</code> is relative to <code>ib-research-report-pipeline/src/ib_research_report_pipeline/</code> in the <code>glide-ilab</code> monorepo at commit <code>7225f24</code> (the <code>prompts/</code> files live there too); <code>AGENTS.md</code>, <code>README.md</code>, <code>.env.example</code> and <code>tests/</code> are relative to <code>ib-research-report-pipeline/</code>; a leading <code>/</code> is the monorepo root, and <code>yml:</code> is <code>/.github/workflows/ib-research-report-pipeline.yml</code>. KB paths <code>runs/&lt;house&gt;/&lt;id8&gt;/&lt;file&gt;</code> are in <code>glide-ilab/glide-llm-wiki-kb</code> at commit <code>c7583f3</code>. Both repositories are private; the links open for members. Every number in this page was measured by one of the read-only commands recorded in the phase's research logs, or taken from the earlier phase P8's database and page checks of 2026-10-08.</p>
+    <ul>
+      <li><strong>Host code, read at <code>7225f24</code></strong> (<a href="https://github.com/glide-ilab/glide-ilab/tree/7225f24/ib-research-report-pipeline">glide-ilab/glide-ilab, ib-research-report-pipeline</a>, github.com): <code>collection/</code>, <code>stages/{collect,capture,boundary,components,extract,summarize,judge,derive,enumerate,publish}/</code>, <code>inline_evidence.py</code>, <code>codex_exec.py</code>, <code>codex_runtime.py</code>, <code>codex_auth.py</code>, <code>agents/</code>, <code>orchestration/runner.py</code>, <code>contracts.py</code>, <code>settings.py</code> (names and defaults only), <code>selection.py</code>, <code>storage/</code>, <code>evals/cli.py</code>, the 18 <code>prompts/*.txt</code>, <code>AGENTS.md</code>, <code>.env.example</code>, <code>/.gitignore</code>, and the tests cited. Commits referenced: <code>a16fc1b</code> (PR #42), <code>b962894</code> (#39), <code>fc95760</code> (#60), <code>f5697bc</code> (#79), <code>0941719</code> (#78), <code>9140948</code> (#30), <code>eed0371</code> (#102, the retired crawler's removal), <code>bc49f4a</code> (the 10-04 run).</li>
+      <li><strong>Workflows</strong>: <a href="https://github.com/glide-ilab/glide-ilab/blob/7225f24/.github/workflows/ib-research-report-pipeline.yml"><code>ib-research-report-pipeline.yml</code></a> (488 lines) and <a href="https://github.com/glide-ilab/glide-ilab/blob/7225f24/.github/workflows/ib-research-report-pipeline-codex-auth.yml"><code>ib-research-report-pipeline-codex-auth.yml</code></a> (github.com).</li>
+      <li><strong>The KB at <code>c7583f3</code></strong> (<a href="https://github.com/glide-ilab/glide-llm-wiki-kb/tree/c7583f3">glide-ilab/glide-llm-wiki-kb</a>, github.com): the 22 commits of <code>main</code>, the unmerged commit <code>560971f</code>, pull requests #22–#42, and the documents <code>goldman_sachs/{7209b918, 8afecb3d, 3e7ad998}</code>, <code>jp_morgan/{b504edbd, 427e65a4, 47ce1f28}</code>, <code>jefferies/a17180df</code>, <code>blackrock_bii/079dfb6c</code>, <code>morgan_stanley/8d900e43</code>, the four derive-less documents and the five refusals.</li>
+      <li><strong>Workspace research logs</strong> (private, in the operator's workflow repository): phase P9's slice results S1 (the evidence stages), S2 (the LLM stages), S3 (selection, publication and the KB) and S4 (the synthesis this page condenses), each with its numbered read-only commands; phase P8's results S2 (the component map), S3 (the DB census of 2026-10-08), S4 (the page) and S5 (the as-is map).</li>
+      <li><strong>Web pages opened on 2026-10-10</strong>:
+        <ul>
+          <li><a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">Events that trigger workflows, section "schedule"</a>, GitHub Docs (docs.github.com): scheduled workflows run in UTC and can be delayed under load.</li>
+          <li><a href="https://github.com/openai/codex">openai/codex README</a> (github.com): what Codex CLI is and how it signs in.</li>
+          <li><a href="https://github.com/jsvine/pdfplumber">jsvine/pdfplumber README</a> (github.com): text, line and table extraction; works best on machine-generated PDFs; no OCR.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section id="quiz">
+    <h2>10. Quiz</h2>
+    <p>Five questions. Click an answer to check it.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> A document in today's KB has status <code>partial</code>. What does that most likely tell you?</p>
+      <button class="opt" data-correct="false">The judge found a severe accuracy problem in the summary.</button>
+      <button class="opt" data-correct="true">An evidence-stage problem, such as an image the code could not read, while the summary itself was judged clean.</button>
+      <button class="opt" data-correct="false">The summary scored below 3 on completeness.</button>
+      <button class="opt" data-correct="false">The derive step failed, so the document has no title and bullets.</button>
+      <p class="why" hidden>Partial is set by component failures and limit hits (D2, D3). 470 of the 474 partials carry a component failure, no final verdict keeps a severe finding, and a derive failure leaves the status alone.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> The Sunday cron runs in <code>new</code> mode with <code>kb-db</code>. Which documents does it process?</p>
+      <button class="opt" data-correct="false">Every document whose DB summary is older than the current processing revision.</button>
+      <button class="opt" data-correct="false">Documents whose last attempt failed for a retryable reason.</button>
+      <button class="opt" data-correct="true">Only documents with no result in the DB and on no KB branch, merged or not.</button>
+      <button class="opt" data-correct="false">Documents whose KB result has not yet been copied into the DB.</button>
+      <p class="why" hidden><code>eligible</code> lets <code>new</code> take only PROCESS <code>missing</code>; <code>stale</code> and <code>incomplete</code> belong to <code>refresh</code>, <code>retry</code> to <code>retry-failed</code>, and every SYNC to <code>sync</code>.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> In a <code>kb-db</code> publish, in what order do the KB and the DB get written?</p>
+      <button class="opt" data-correct="false">The DB is written first, then the KB branch is committed from the DB rows.</button>
+      <button class="opt" data-correct="false">The PR is opened first and the DB is written when a teammate merges it.</button>
+      <button class="opt" data-correct="true">Commit and push to a <code>kb/batch/</code> branch, then the six DB columns, then the PR.</button>
+      <button class="opt" data-correct="false">The KB and the DB are written in one transaction at the end of the run.</button>
+      <p class="why" hidden><code>storage/factory.py</code> pushes first (a storage failure stops before any DB write), promotes, applies SYNC writes, and only then opens the PR. The DB is ahead of KB <code>main</code> until the hand merge.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> You need the article text a summary was written from. Where is it?</p>
+      <button class="opt" data-correct="false">In the KB, next to the summary, as <code>article-text-&lt;sha16&gt;.txt</code>.</button>
+      <button class="opt" data-correct="false">In the DB row's <code>text_content</code>, which the pipeline fills on every run.</button>
+      <button class="opt" data-correct="true">Nowhere: the run directory dies with the Actions runner and the KB keeps only checksums such as <code>reference_sha256</code>.</button>
+      <button class="opt" data-correct="false">In the pull request body of the batch that published it.</button>
+      <p class="why" hidden>The publish allow-list excludes sources, <code>runs/</code> is gitignored and never uploaded, and the only stored bodies are the retired crawler's <code>text_content</code> rows, a different extraction in a different hash space.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> The judge gives a summary a completeness score of 1 but lists no severe finding. What happens?</p>
+      <button class="opt" data-correct="false">The document becomes <code>partial</code> because a score is below 3.</button>
+      <button class="opt" data-correct="false">The correction loop runs and the summary is rewritten.</button>
+      <button class="opt" data-correct="true">Nothing changes: the document is <code>complete</code>, is derived and is promoted, because no code reads the scores.</button>
+      <button class="opt" data-correct="false">The document is <code>failed</code> and keeps its old DB summary.</button>
+      <p class="why" hidden><code>determine_status</code> reads only the severe map; the loop starts only on a severe finding that survives grounding; the scores appear in one console print and nowhere else.</p>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var HOST = 'https://github.com/glide-ilab/glide-ilab/blob/7225f24/';
+      var KB = 'https://github.com/glide-ilab/glide-llm-wiki-kb/blob/c7583f3/';
+      var PKG = 'ib-research-report-pipeline/';
+      var SRC = PKG + 'src/ib_research_report_pipeline/';
+      var pkgFiles = /^(AGENTS\.md|README\.md|\.env\.example|db_schema\.sql|pyproject\.toml|scripts\/|tests\/)/;
+      document.querySelectorAll('a[data-p], a[data-kb]').forEach(function (a) {
+        var p = a.getAttribute('data-p'), kb = a.getAttribute('data-kb'), l = a.getAttribute('data-l') || '';
+        var url;
+        if (kb) { url = KB + kb; }
+        else if (p.charAt(0) === '/') { url = HOST + p.slice(1); }
+        else if (pkgFiles.test(p)) { url = HOST + PKG + p; }
+        else { url = HOST + SRC + p; }
+        var m = l.match(/^(\d+)(?:-(\d+))?$/);
+        if (m) { url += '#L' + m[1] + (m[2] ? '-L' + m[2] : ''); }
+        a.href = url;
+      });
+      document.querySelectorAll('.q').forEach(function (q) {
+        var why = q.querySelector('.why');
+        q.querySelectorAll('.opt').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var right = btn.dataset.correct === 'true';
+            btn.classList.add(right ? 'correct' : 'incorrect');
+            if (why) why.hidden = false;
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
