@@ -1,0 +1,748 @@
+<!--kb
+title: "The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo"
+date: 2026-10-14
+tags:
+  - pull-requests
+  - database-migrations
+  - ib-pipeline
+  - squash-merge
+  - team-conventions
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1f23; --muted: #5d636d; --bg: #ffffff; --panel: #f5f6f8; --line: #d9dde3;
+    --accent: #2f6fb3; --ok: #2e7d4f; --warn: #a86400; --code: #f4f4f4;
+    --callout: #eef6f1; --callout-line: #3f9f6b; --note: #fff6e6; --note-line: #d08b16;
+    --csv: #8fb3d9; --spec: #9ccc9c; --sql: #e3a86b; --other: #b9a3d6; --plain: #9aa3ad;
+    --good: #d6f5d6; --bad: #f7d6d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6e8eb; --muted: #a3a9b2; --bg: #15171a; --panel: #1f2226; --line: #343a42;
+      --accent: #7fb2ec; --ok: #6cc892; --warn: #e6a94a; --code: #22262b;
+      --callout: #18271f; --callout-line: #4fb07c; --note: #2a2214; --note-line: #c58a2a;
+      --good: #1f3a26; --bad: #45232a;
+    }
+  }
+  body { max-width: 50rem; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+         line-height: 1.65; }
+  h1 { line-height: 1.25; }
+  h2 { margin-top: 2.6rem; border-bottom: 1px solid var(--line); padding-bottom: .3rem; }
+  h3 { margin-top: 1.8rem; }
+  a { color: var(--accent); }
+  code { background: var(--code); padding: .05rem .3rem; border-radius: 4px; font-size: .92em; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code);
+        padding: .75rem; border-radius: 6px; font-size: .88em; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .callout { border-left: 4px solid var(--callout-line); background: var(--callout);
+             padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+  .note { border-left: 4px solid var(--note-line); background: var(--note);
+          padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+  .muted { color: var(--muted); }
+  .small { font-size: .9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+  th, td { border: 1px solid var(--line); padding: .4rem .55rem; vertical-align: top; text-align: left; }
+  th { background: var(--panel); }
+  .scroll { overflow-x: auto; }
+  nav ol ol { margin: .2rem 0; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+
+  /* bar chart */
+  .bars { margin: 1rem 0; }
+  .bar-row { display: grid; grid-template-columns: 9.5rem 1fr 4.5rem; gap: .5rem; align-items: center; margin: .3rem 0; font-size: .9em; }
+  .bar-track { background: var(--panel); border-radius: 4px; height: 1.1rem; display: flex; overflow: hidden; }
+  .seg { height: 100%; }
+  .seg.plain { background: var(--plain); }
+  .seg.csv { background: var(--csv); } .seg.spec { background: var(--spec); }
+  .seg.sql { background: var(--sql); } .seg.other { background: var(--other); }
+  .legend { display: flex; flex-wrap: wrap; gap: .8rem; font-size: .85em; margin-top: .4rem; }
+  .legend span::before { content: ""; display: inline-block; width: .8rem; height: .8rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; background: var(--c); }
+
+  /* flow diagram */
+  .flow { display: grid; gap: .5rem; margin: 1rem 0; }
+  .flow .box { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; background: var(--panel); }
+  .flow .box h4 { margin: 0 0 .3rem; font-size: .95em; }
+  .flow .box .tag { font-size: .75em; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .flow .arrow { text-align: center; color: var(--muted); font-size: 1.1em; line-height: 1; }
+  .flow .box.dict { border-left: 5px solid var(--csv); }
+  .flow .box.ext { border-left: 5px solid var(--sql); }
+  .flow .box.agg { border-left: 5px solid var(--spec); }
+  .flow .box.old { border-left: 5px solid var(--plain); }
+  .mini { width: 100%; font-size: .85em; margin: .3rem 0 0; }
+  .mini td, .mini th { padding: .2rem .4rem; }
+
+  /* mock PR page */
+  .gh { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 1.2rem 0; }
+  .gh-head { padding: .9rem 1rem .6rem; border-bottom: 1px solid var(--line); }
+  .gh-title { font-size: 1.25em; font-weight: 600; margin: 0 0 .4rem; }
+  .gh-title .num { color: var(--muted); font-weight: 400; }
+  .pill { display: inline-block; background: #2e7d4f; color: #fff; border-radius: 2rem; padding: .1rem .7rem; font-size: .82em; margin-right: .5rem; }
+  .branch { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code); padding: .05rem .35rem; border-radius: 4px; font-size: .85em; }
+  .gh-tabs { display: flex; gap: 1.2rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); font-size: .9em; flex-wrap: wrap; }
+  .gh-tabs b { border-bottom: 2px solid var(--note-line); }
+  .gh-body { padding: .6rem 1rem 1rem; }
+  .gh-body h5 { font-size: 1.05em; margin: 1rem 0 .3rem; border-bottom: 1px solid var(--line); padding-bottom: .15rem; }
+  .gh-body p, .gh-body li { font-size: .92em; }
+  .fake-link { color: var(--accent); text-decoration: underline; }
+  .elide { color: var(--muted); font-style: italic; }
+
+  /* commits */
+  .commits { list-style: none; padding: 0; margin: .6rem 0; font-size: .9em; }
+  .commits li { padding: .35rem .5rem; border-bottom: 1px dashed var(--line); display: grid; grid-template-columns: 4.6rem 1fr 5.6rem; gap: .5rem; }
+  .commits .sha { font-family: ui-monospace, Menlo, monospace; color: var(--muted); }
+  .commits .keep { color: var(--ok); font-weight: 600; font-size: .85em; }
+  .commits .trim { color: var(--muted); font-size: .85em; text-decoration: line-through; }
+
+  /* quiz */
+  .q { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .9rem; margin: 1rem 0; }
+  .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem; cursor: pointer;
+            border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); font: inherit; }
+  .q .opt.correct   { background: var(--good); }
+  .q .opt.incorrect { background: var(--bad); }
+  .q .why { margin: .4rem 0 0; font-size: .95em; }
+  @media (max-width: 560px) {
+    .bar-row { grid-template-columns: 6.5rem 1fr 3.6rem; }
+    .commits li { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo</h1>
+
+<p class="muted small">Written 2026-10-14, before the pull request is opened. The branch is
+<span class="branch">feat/signal-tables-schema</span> at <code>3dfc9e8</code>: 9 commits on <code>main</code> <code>7225f24</code>, local only.
+Every number here was measured from the branch, the PR body draft, or <code>gh</code> against
+<code>glide-ilab/glide-ilab</code> on the same morning.</p>
+
+<div class="callout">
+<strong>Your four questions, and where each is answered</strong>
+<ol>
+  <li><em>How does it compare with the other PRs in this repo?</em> → <a href="#compare">1.2 Compared with the repo's other PRs</a></li>
+  <li><em>How will the PR look?</em> → <a href="#looks">3.2 How the PR will look</a> (a mock of the PR page, the commit list, the squash result and the Slack line)</li>
+  <li><em>What does the PR cover?</em> → <a href="#covers">3.1 What the PR covers</a>, with the idea behind it in <a href="#intuition">2 Intuition</a></li>
+  <li><em>How do we follow this repo's PR convention?</em> → <a href="#convention">3.3 Following the repo's PR convention</a>, rule by rule</li>
+</ol>
+</div>
+
+<nav aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#background">Background</a>
+      <ol>
+        <li><a href="#background-repo">The repo, the pipeline and how PRs ship here</a></li>
+        <li><a href="#compare">Compared with the repo's other PRs</a></li>
+      </ol>
+    </li>
+    <li><a href="#intuition">Intuition</a></li>
+    <li><a href="#code">Code</a>
+      <ol>
+        <li><a href="#covers">What the PR covers</a></li>
+        <li><a href="#looks">How the PR will look</a></li>
+        <li><a href="#convention">Following the repo's PR convention</a></li>
+      </ol>
+    </li>
+    <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ===================================================================== -->
+<section id="background">
+<h2>1. Background</h2>
+
+<section id="background-repo">
+<h3>1.1 The repo, the pipeline and how PRs ship here</h3>
+
+<p><em>If you already know the monorepo and the research pipeline, skip to <a href="#compare">1.2</a>.</em></p>
+
+<p><code>glide-ilab/glide-ilab</code> is a private monorepo with three working folders: <code>ai-chat-backend/</code>
+(the chat agent), <code>ib-research-report-pipeline/</code> (this PR's folder) and <code>deploy/</code>. The pipeline collects research
+reports from global investment banks, writes Korean summaries grounded in each report's text, PDFs, images and tables, and publishes
+the checked result to a knowledge base. Its database is a Supabase PostgreSQL instance. Until now its whole shape lived in a single
+file, <code>db_schema.sql</code>, and the pipeline's README says it plainly: <em>"런타임은 DDL을 실행하지 않는다"</em>: the running code
+never creates or alters tables. A person does.</p>
+
+<p>In July a prototype added five tables for <strong>signals</strong>: short structured readings pulled from each report, such as
+"this bank is bullish on AI capital spending over the medium term". The design review called DEC-004 replaced that prototype with a
+cleaner family of twelve tables that the dashboard's screens can read. Three later decisions shape <em>how</em> the replacement ships:</p>
+
+<ul>
+  <li><strong>DEC-010, the apply procedure.</strong> A migration and its table specs travel in one PR. The SQL is first applied to a
+  local database restored from a production dump, and the commands and results go into the PR body. After cross-review and merge,
+  the approved applier, Jake, applies it to production on request and records it in a ledger.</li>
+  <li><strong>DEC-013, the placement (option A, "A안").</strong> Numbered migrations go in <code>schema/</code> and one spec per table in
+  <code>docs/tables/</code>. <code>0001</code> is reserved for a later baseline that will replace <code>db_schema.sql</code>.</li>
+  <li><strong>DEC-017.</strong> X4, the clean-up of the theme dictionary, is on hold, so this PR moves the dictionary as the prototype had it.</li>
+</ul>
+
+<p>How code reaches <code>main</code> here is a matter of habit as much as of written rules. The team's own write-up of that habit
+("How the glide-ilab team ships code") makes the central fact plain: since the monorepo began, one maintainer, Donggeon Lee
+(<code>inspirit941</code>), has opened every PR, and the write-up found he merged every one. PRs are <strong>squash-merged</strong>: GitHub folds a PR's commits into a
+single commit on <code>main</code>. A PR template has existed since 2026-09-30 (#82, "chore: add pull request skill and template"). No
+CI runs the tests for you; you run the folder's tests yourself.</p>
+
+<div class="callout"><strong>Definition: migration.</strong> A numbered SQL file that changes the database's shape (tables,
+columns, constraints) from one known state to the next. Numbering gives an order, and a ledger records which files have run where.
+This PR introduces the repo's first numbered migrations: <code>0002</code>, <code>0003</code> and a draft <code>0004</code>.</div>
+</section>
+
+<section id="compare">
+<h3>1.2 Compared with the repo's other PRs</h3>
+
+<p>The repo has 73 merged PRs. Put next to them, this one is ordinary in its <em>form</em> (template, English title, squash) and
+unusual in <em>who</em>, <em>what</em> and <em>how much</em>.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th></th><th>The repo's PRs</th><th>This PR</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Author</strong></td><td>Every PR in the repo is by <code>inspirit941</code>.</td>
+        <td><code>leetusik</code>: the first PR from another account.</td></tr>
+    <tr><td><strong>Review</strong></td><td>None of the 73 merged PRs carries a formal GitHub review. Some carry re-review comments posted
+        from the maintainer's account, headed "재검토 — GPT-6 Astra" (#104, #111).</td>
+        <td>Opened for a person's cross-review, Jake's, as DEC-010 requires before production.</td></tr>
+    <tr><td><strong>Size</strong></td><td>Median merged PR: 14 files, +490 lines. Earlier pipeline PRs: #78 5 files +51; #79 7 files +53;
+        #60 7 files +503; #56 22 files +543; #42 40 files +3,078.</td>
+        <td>24 files, +2,561 / −1. Of those lines, 862 are generated CSV and 824 are Korean spec prose.</td></tr>
+    <tr><td><strong>What changes</strong></td><td>Mostly Python and tests.</td>
+        <td>No Python and no tests change. 692 lines of SQL, applied by a person; one 47-line export script.</td></tr>
+    <tr><td><strong>Title</strong></td><td>English <code>type(scope): summary</code> since late September (earlier pipeline titles were
+        often Korean, e.g. #79 "fix(ib-pipeline): 영상 소개 페이지 판정과 수집 기간 입력").</td>
+        <td><code>feat(ib-pipeline): add the signal table migrations, specs and taxonomy export</code></td></tr>
+    <tr><td><strong>Body sections</strong></td><td>Since #82: Summary / What is changed / Why / Related issue. Verification is written
+        <em>inside</em> Why, e.g. #136's "Independent verification:" list. Before the template, pipeline PRs used Korean headings
+        (#60: 목적과 상태, 구현한 변경, 검증한 범위, …).</td>
+        <td>The four template sections, plus a fifth, <code>## Verification</code>, after Related issue.</td></tr>
+    <tr><td><strong>Body length</strong></td><td>1,202–6,319 characters across ten sampled PRs; #122 is the longest.</td>
+        <td>9,799 characters, the longest of the sample. Most of it is the Verification recipe that DEC-010 asks for.</td></tr>
+    <tr><td><strong>Related issue</strong></td><td>Every sampled PR links one: #136 "Refs #123 (items 5 and 6; partial issue scope)",
+        #122 "Closes #114", #102 "Closes #101".</td>
+        <td><code>None</code>. No GitHub issue tracks this work. Its decisions live in the decision-log sheet, which the body links instead.</td></tr>
+    <tr><td><strong>Squash result</strong></td><td>PR title + <code>(#N)</code>, then one bullet per branch commit (#136 lists 4).</td>
+        <td>Title + <code>(#N)</code>, then 3 bullets; the 6 correction commits are trimmed at merge (see 3.2).</td></tr>
+    <tr><td><strong>Base</strong></td><td>Branch from fresh <code>main</code>.</td>
+        <td>Branched from <code>7225f24</code>. <code>main</code> has moved 11 commits since, all in <code>ai-chat</code>. None touches
+        the pipeline folder, and <code>git merge-tree</code> reports a clean merge.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The size difference is easier to judge as a picture. The bars show lines added; this PR's bar is split by what those lines are.</p>
+
+<div class="bars" role="img" aria-label="Lines added: PR 78 51, PR 79 53, median 490, PR 60 503, PR 56 543, this PR 2561, PR 42 3078">
+  <div class="bar-row"><span>#78 pipeline cron</span><div class="bar-track"><div class="seg plain" style="width:1.66%"></div></div><span>+51</span></div>
+  <div class="bar-row"><span>#79 pipeline fix</span><div class="bar-track"><div class="seg plain" style="width:1.72%"></div></div><span>+53</span></div>
+  <div class="bar-row"><span>repo median</span><div class="bar-track"><div class="seg plain" style="width:15.9%"></div></div><span>+490</span></div>
+  <div class="bar-row"><span>#60 pipeline fix</span><div class="bar-track"><div class="seg plain" style="width:16.3%"></div></div><span>+503</span></div>
+  <div class="bar-row"><span>#56 pipeline fix</span><div class="bar-track"><div class="seg plain" style="width:17.6%"></div></div><span>+543</span></div>
+  <div class="bar-row"><span><strong>this PR</strong></span><div class="bar-track">
+      <div class="seg csv" style="width:28.0%" title="CSV 862"></div><div class="seg spec" style="width:26.8%" title="specs 824"></div>
+      <div class="seg sql" style="width:22.5%" title="SQL 692"></div><div class="seg other" style="width:5.9%" title="READMEs and script 183"></div></div><span>+2,561</span></div>
+  <div class="bar-row"><span>#42 pipeline</span><div class="bar-track"><div class="seg plain" style="width:100%"></div></div><span>+3,078</span></div>
+  <div class="legend">
+    <span style="--c:var(--csv)">generated CSV 862</span><span style="--c:var(--spec)">Korean specs 824</span>
+    <span style="--c:var(--sql)">SQL 692</span><span style="--c:var(--other)">READMEs + script 183</span>
+    <span style="--c:var(--plain)">other PRs (code and tests)</span>
+  </div>
+</div>
+
+<div class="note"><strong>What the comparison says.</strong> By raw lines this is a large PR, about five times the repo's median.
+But a third of it is data a script exported, and another third is prose a reviewer reads rather than executes. The part that
+<em>changes production</em> is the SQL, and none of it runs on merge: it runs only when Jake applies it, one file at a time. The two
+real departures from the repo's habit are social, not technical. It is the first PR from someone other than the maintainer, and the
+first that waits on a person's review before anything happens.</div>
+</section>
+</section>
+
+<!-- ===================================================================== -->
+<section id="intuition">
+<h2>2. Intuition</h2>
+
+<p>Think of the twelve tables as three shelves. The <strong>dictionary</strong> says what can be talked about: themes, the
+words that point to them, and the companies. <strong>Extraction</strong> records what each report said, one row per reading.
+The <strong>weekly aggregates</strong> condense a week of readings into what the dashboard draws. The existing report table,
+<code>research_documents</code>, stays where it is and is joined in. Here is a toy week flowing through the shelves. The numbers are
+made up for illustration, but the column names are the real ones.</p>
+
+<div class="flow">
+  <div class="box dict">
+    <div class="tag">dictionary · moved from the prototype by 0003</div>
+    <h4><code>research_themes</code>, <code>research_theme_aliases</code>, <code>research_entities</code></h4>
+    <table class="mini"><tr><th>theme_id</th><th>theme_canonical</th><th>a few aliases</th></tr>
+      <tr><td><code>thm_ai_capex</code></td><td>AI 자본지출</td><td><code>ai capex</code>, <code>ai capex cycle</code>, <code>ai 인프라 투자</code></td></tr></table>
+  </div>
+  <div class="arrow">↓ a report arrives (existing table, unchanged)</div>
+  <div class="box old">
+    <div class="tag">existing · research_documents</div>
+    <h4>Three reports this week: two by J.P. Morgan (A, B), one by Goldman Sachs (C)</h4>
+    <span class="small muted">Publish date, title and link live <em>only</em> here. No signal table copies them.</span>
+  </div>
+  <div class="arrow">↓ extraction (empty today; a later PR builds it)</div>
+  <div class="box ext">
+    <div class="tag">extraction · research_signal_runs → research_signals</div>
+    <h4>Five signals from the three reports</h4>
+    <table class="mini"><tr><th>report</th><th>theme_id</th><th>stance</th><th>horizon</th><th>evidence_ref</th></tr>
+      <tr><td>A (JPM)</td><td>thm_ai_capex</td><td>bull</td><td>mid</td><td>p2_para5</td></tr>
+      <tr><td>B (JPM)</td><td>thm_ai_capex</td><td>bull</td><td>mid</td><td>p1_para3</td></tr>
+      <tr><td>B (JPM)</td><td>thm_ai_capex</td><td>bull</td><td>long</td><td>p4_para1</td></tr>
+      <tr><td>C (GS)</td><td>thm_ai_capex</td><td>bull</td><td>mid</td><td>p3_para2</td></tr>
+      <tr><td>C (GS)</td><td>thm_ai_capex</td><td>neutral</td><td>short</td><td>p5_para4</td></tr></table>
+    <span class="small muted">Each row may also carry <code>evidence_text</code>: one sentence of at most 400 characters, which must appear in the report body.</span>
+  </div>
+  <div class="arrow">↓ weekly aggregation (empty today; a later PR builds it)</div>
+  <div class="box agg">
+    <div class="tag">weekly aggregates · research_aggregation_runs → research_theme_weekly, …</div>
+    <h4>One current run for the week starting Monday 2026-10-05</h4>
+    <table class="mini"><tr><th>theme_id</th><th>reports</th><th>houses</th><th>signals</th><th>votes</th><th>bull</th><th>bear</th><th>neutral</th></tr>
+      <tr><td>thm_ai_capex</td><td>3</td><td>2</td><td>5</td><td>4</td><td>4</td><td>0</td><td>1</td></tr></table>
+    <span class="small muted"><code>votes</code> counts each house × horizon once: JPM-mid, JPM-long, GS-mid, GS-short = 4. JPM's two
+    "bull, mid" signals give one vote, so a bank cannot shout louder by publishing twice.</span>
+  </div>
+</div>
+
+<p>Four ideas carry the whole design, and each shows up in the diff:</p>
+<ol>
+  <li><strong>Dates and links are joined, never copied.</strong> No signal or aggregate table has a publish date or URL. If a report's
+  date is corrected, nothing needs re-extracting; the join simply reads the new value.</li>
+  <li><strong>Every signal says where its evidence is.</strong> It records <code>evidence_ref</code> (a position), <code>evidence_space</code>
+  (which body text the position indexes) and <code>evidence_hash</code> (a hash of that body). Since this morning the spec also says
+  the evidence sentence is shown on screen. 대표 approved that as an exception to the rule that report text is not stored.</li>
+  <li><strong>One current aggregation run per week, guaranteed by the database.</strong> A recompute first switches the old run off,
+  then inserts the new one, in one transaction.</li>
+  <li><strong>A person applies the SQL, one file at a time.</strong> Merging the PR changes no database. That is why the PR body has to
+  carry the proof: what was run on a production copy, and what came out.</li>
+</ol>
+
+<p>Why ship all of this as one PR rather than five? DEC-010 binds a migration to its specs: the reviewer should never see a table
+without its written meaning, or a spec without the SQL that makes it true. The CSV export rides along because it is the dictionary
+made readable without database access. And the one piece that <em>can</em> stand alone, moving <code>db_schema.sql</code> into a
+<code>0001</code> baseline, is deliberately left for the next PR.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="code">
+<h2>3. Code</h2>
+
+<section id="covers">
+<h3>3.1 What the PR covers</h3>
+
+<p>All 24 files sit under <code>ib-research-report-pipeline/</code>. Grouped by role:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Group</th><th>Files</th><th>Lines</th><th>Runs when?</th></tr></thead>
+  <tbody>
+    <tr><td>Migrations</td><td><code>schema/0002_signal_tables.sql</code>, <code>0003_signal_prototype_data.sql</code>, <code>0004_drop_signal_prototype.sql</code> (draft)</td><td>403 + 146 + 20</td><td>Only when Jake applies them; <code>0004</code> not in this round</td></tr>
+    <tr><td>Checks</td><td><code>schema/checks/0002_0003_verify.sql</code>: 48 read-only checks</td><td>123</td><td>After an apply, read-only</td></tr>
+    <tr><td>Procedure</td><td><code>schema/README.md</code>: file rules, apply procedure, ledger</td><td>63</td><td>Read by people</td></tr>
+    <tr><td>Specs</td><td><code>docs/tables/README.md</code> + 12 table specs, in Korean, marked final (확정)</td><td>824</td><td>Read by people</td></tr>
+    <tr><td>Taxonomy</td><td><code>taxonomy/theme_taxonomy.csv</code>, <code>theme_alias.csv</code>, <code>entity.csv</code>, <code>README.md</code></td><td>121 + 645 + 96 + 70</td><td>Generated by the script</td></tr>
+    <tr><td>Script</td><td><code>scripts/export-taxonomy.sh</code></td><td>47</td><td>By hand, against a database you name</td></tr>
+    <tr><td>Pointer</td><td><code>README.md</code>: the schema sentence now names <code>schema/</code></td><td>+3 / −1</td><td>—</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>The migration's header states its own rules</h4>
+<p><code>0002</code> opens by saying what it does and which rules the schema carries. A reviewer can check every later line against this:</p>
+<pre><code>-- What it does:
+--   1. Renames the July prototype's five tables to &lt;name&gt;_prototype (data kept,
+--      untouched; 0003 copies their dictionary, a later file drops them after review).
+--   2. Creates the new research_* signal family: dictionary (themes, aliases,
+--      entities), extraction (signal runs, signals, signal entities) and the
+--      weekly aggregates written by the pipeline.
+--   3. Adds the flag research_sources.is_registered (등록 하우스) to that existing
+--      table and sets it for the houses in the pipeline's collection registry.
+--
+-- Rules carried by the schema:
+--   - No publish date and no URL on any signal or aggregate table. Dates and
+--     links are joins on research_documents.published_at / canonical_url
+...
+-- File conventions: the file owns BEGIN/COMMIT and is safe to run twice
+-- (IF NOT EXISTS, guarded renames, a guarded fill). Apply as the table owner (postgres).</code></pre>
+
+<h4>A signal row, and the constraints that keep it honest</h4>
+<p>An excerpt from <code>research_signals</code>. The comments say what each evidence column means. The <code>CHECK</code>
+constraints make sure the database refuses a malformed row, whatever the code above it gets wrong:</p>
+<pre><code>CREATE TABLE IF NOT EXISTS public.research_signals (
+    signal_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id          uuid NOT NULL REFERENCES public.research_documents (id) ON DELETE RESTRICT,
+    ...
+    stance               text NOT NULL,
+    horizon              text NOT NULL,
+    confidence           numeric(4,3) NOT NULL,
+    evidence_ref         text NOT NULL,         -- position inside the body named below
+    evidence_space       text NOT NULL,         -- which body the ref indexes
+    evidence_hash        text NOT NULL,         -- content_hash or reference_sha256 of that body
+    evidence_text        text,                  -- one sentence, ≤ 400 chars; must appear in the body
+                                                -- (whitespace-normalized), else review_reason = evidence_mismatch
+    ...
+    CONSTRAINT research_signals_stance_check
+        CHECK (stance IN ('bull', 'bear', 'neutral')),
+    CONSTRAINT research_signals_evidence_hash_check
+        CHECK (evidence_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT research_signals_evidence_text_check
+        CHECK (evidence_text IS NULL OR length(evidence_text) &lt;= 400),
+    CONSTRAINT research_signals_review_reason_check
+        CHECK (review_reason IN ('low_confidence', 'tone_mismatch', 'unmapped', 'manual',
+                                 'evidence_mismatch')),</code></pre>
+
+<h4>"One current run per week" is an index, not a promise</h4>
+<pre><code>-- One current run per week, guaranteed by the DB ...
+-- A recompute switches in ONE transaction: first set that week's old current run
+-- to is_current = false, then insert the new run with is_current = true and its
+-- result rows. The order matters: a unique index cannot be deferred, so inserting first fails.
+CREATE UNIQUE INDEX IF NOT EXISTS research_aggregation_runs_current_idx
+    ON public.research_aggregation_runs (week_start) WHERE is_current;</code></pre>
+<div class="callout"><strong>Definition: partial unique index.</strong> A uniqueness rule that applies only to rows matching a
+<code>WHERE</code>. Here, among rows with <code>is_current</code> true, no two can share a <code>week_start</code>. Old, switched-off
+runs can pile up as history without breaking the rule.</div>
+
+<h4>One existing table changes: a flag on the house list</h4>
+<pre><code>ALTER TABLE public.research_sources
+    ADD COLUMN IF NOT EXISTS is_registered boolean NOT NULL DEFAULT false;
+...
+UPDATE public.research_sources SET is_registered = true
+WHERE code IN ('bank_of_america_institute', 'goldman_sachs', 'hsbc_us', 'jefferies', 'jp_morgan',
+               'merrill', 'morgan_stanley', 'vanguard_advisors', 'vanguard_investor')
+  AND NOT is_registered;</code></pre>
+<p>It is filled by code rather than by row id, so the same file is correct on the local copy and in production. The
+<code>AND NOT is_registered</code> makes a second run a no-op. That is the "safe to run twice" rule in action.</p>
+
+<h4><code>0003</code> moves only the dictionary</h4>
+<p>Following Jake's written answer, <code>0003</code> copies 120 themes, 644 aliases and 95 companies into the new tables. The
+prototype's 201 signals are <em>not</em> migrated; they stay in <code>research_signals_prototype</code> until <code>0004</code>, and
+the backfill re-extracts those reports. The companies follow one listing rule. A foreign company takes its NYSE or NASDAQ listing
+(ADR included) if it has one, otherwise its home exchange, and never an OTC quote. Korean companies stay on KRX. That rule moved
+five IDs, for example <code>TSE:6758</code> → <code>NYSE:SONY</code> and <code>OTC:TCEHY</code> → <code>HKEX:0700</code>, with the
+old codes kept as match keys:</p>
+<pre><code>entity_id,ticker,market,country,name_ko,name_en,aliases,sector,benchmark
+HKEX:0700,0700,HKEX,CN,텐센트,,tencent|텐센트|tcehy,인터넷,
+NYSE:SONY,SONY,NYSE,JP,소니,,sony|소니|6758,IT하드웨어,</code></pre>
+
+<h4>The checks file is the reviewer's shortcut</h4>
+<p>Each of the 48 checks prints the measured value, the expected value and whether they match. It selects no text column, so it
+can be run against production after the apply without exposing report content:</p>
+<pre><code>(1,  'themes',            (SELECT count(*) FROM public.research_themes), 120),
+(6,  'aliases',           (SELECT count(*) FROM public.research_theme_aliases), 644),
+(11, 'entities NYSE',     (SELECT count(*) FROM public.research_entities WHERE market = 'NYSE'), 35),</code></pre>
+
+<h4>The procedure, written down where the SQL lives</h4>
+<p><code>schema/README.md</code> turns DEC-010 into four steps. In English: (1) the migration and its specs go in one PR; (2) apply
+it to a local database restored from a production dump and put the commands and results in the PR body; (3) merge after
+cross-review; (4) the approved applier, Jake, applies it to production on request and adds a line to the ledger. Then the one
+sentence that matters most for safety:</p>
+<pre><code>운영에는 적용 기록이 승인한 파일만 한 번에 하나씩 적용한다.
+"아직 적용 안 된 파일 전부"를 한 번에 적용하지 않는다.</code></pre>
+<p class="small muted">"Production gets only the files the ledger approves, one at a time, never 'everything not yet applied' at once."</p>
+
+<h4>The specs: meaning next to the SQL</h4>
+<p>Each of the 12 Korean specs lists role, columns, keys, data source, update cadence, writers, the screens that read the table and
+the access rules. The index states the date rule once, for all nine signal and aggregate tables. The latest commit,
+<code>3dfc9e8</code> from this morning, changed one spec in three lines: <code>research_signals.md</code> now says the evidence
+sentence is shown on screen by 대표's approval of 2026-10-14, where it used to say the display waited for that approval.</p>
+
+<h4>The taxonomy export</h4>
+<p>The CSVs are not edited by hand: the database is the source of truth, and the script re-exports it. The script refuses to run
+without its own connection variable and forces a read-only session:</p>
+<pre><code>export PGOPTIONS='-c default_transaction_read_only=on'
+...
+\copy (SELECT theme_id, theme_canonical, theme_group, status, merged_into, excluded_from_aggregates
+       FROM public.research_themes ORDER BY theme_id COLLATE "C") TO 'taxonomy/theme_taxonomy.csv' WITH (FORMAT csv, HEADER)</code></pre>
+
+<div class="note"><strong>What the PR does <em>not</em> cover:</strong> no runtime code, no tests, no GitHub Actions workflow, and
+no change to <code>db_schema.sql</code>. Nothing is applied to production. The extraction stage and the weekly aggregation that will
+fill these tables come in later PRs.</div>
+</section>
+
+<section id="looks">
+<h3>3.2 How the PR will look</h3>
+
+<p>Below is a mock of the PR page as <code>gh pr create</code> would produce it from the body draft. Text is quoted from the draft;
+long passages are elided and marked. The six "Related documents" render as links to the Drive briefs and the decision-log rows;
+their addresses are left out here. The number is unknown until GitHub assigns it.</p>
+
+<div class="gh">
+  <div class="gh-head">
+    <p class="gh-title">feat(ib-pipeline): add the signal table migrations, specs and taxonomy export <span class="num">#N</span></p>
+    <span class="pill">Open</span><span class="small"><strong>leetusik</strong> wants to merge 9 commits into <span class="branch">main</span> from <span class="branch">feat/signal-tables-schema</span></span>
+  </div>
+  <div class="gh-tabs"><b>Conversation</b><span>Commits 9</span><span>Files changed 24</span><span class="muted">+2,561 −1</span></div>
+  <div class="gh-body">
+    <h5>Summary</h5>
+    <p>Add the DEC-004 signal tables to <code>ib-research-report-pipeline</code> as numbered migrations, one spec per table, and a CSV
+    export of the three dictionary tables, laid out as option A (A안) of DEC-013 confirmed at the 2026-10-13 meeting. The design
+    follows Jake's written answers of 2026-10-13, and the specs are final (확정). The files are for cross-review: nothing in this PR is
+    applied to production.</p>
+    <h5>What is changed</h5>
+    <ul>
+      <li><code>schema/</code>: <code>0002_signal_tables.sql</code> renames the five July prototype tables to <code>*_prototype</code> and
+      creates the twelve <code>research_*</code> signal tables … <span class="elide">(plus 0003, 0004, the checks file, README)</span></li>
+      <li><code>docs/tables/</code>: twelve Korean table specs, final (확정) … and an index with the date rule …</li>
+      <li><code>taxonomy/</code> and <code>scripts/export-taxonomy.sh</code>: three CSVs exported from the dictionary tables …</li>
+      <li><code>README.md</code>: the schema sentence points to <code>schema/</code> …</li>
+      <li><code>db_schema.sql</code>, the runtime code and the GitHub Actions workflows are unchanged.</li>
+    </ul>
+    <h5>Why</h5>
+    <p>DEC-004 replaces the prototype's signal tables with a family the dashboard screens can read, with dates and links taken by join
+    and never copied. … The design follows Jake's written answers of 2026-10-13: <span class="elide">(seven bullets: dictionary only;
+    SET NULL on <code>last_document_id</code>; one listing ID per company; <code>is_registered</code>; <code>evidence_mismatch</code>;
+    one current run per week; <code>votes</code>)</span></p>
+    <p><span class="elide">(the listing note with the five moved IDs; the X4 note; the GCP jobs being off; the baseline PR coming next;
+    "The production apply is Jake's, on request, after review (DEC-010).")</span></p>
+    <p>Related documents:</p>
+    <ul>
+      <li><span class="fake-link">DEC-004 brief: signal table redesign</span></li>
+      <li><span class="fake-link">DEC-013 brief: placement of docs and code in the repository</span></li>
+      <li><span class="fake-link">Decision log, DEC-004 / DEC-010 / DEC-013 / DEC-017</span> <span class="elide">(four links, one per row)</span></li>
+    </ul>
+    <h5>Related issue</h5>
+    <p>None</p>
+    <h5>Verification</h5>
+    <p>Every command below runs from <code>ib-research-report-pipeline/</code>.<br>Tested at <code>3dfc9e8f02e52660b9a967a6ffd357fb9fad572a</code>.</p>
+<pre><code>psql "$LOCAL_DB_URL" -X -v ON_ERROR_STOP=1 -f schema/0002_signal_tables.sql
+psql "$LOCAL_DB_URL" -X -v ON_ERROR_STOP=1 -f schema/0003_signal_prototype_data.sql
+PGOPTIONS='-c default_transaction_read_only=on' psql "$LOCAL_DB_URL" -X -f schema/checks/0002_0003_verify.sql</code></pre>
+    <ul>
+      <li><code>0002</code> then <code>0003</code> applied; verify (read-only): 48/48 <code>ok</code>, <code>failed checks (of 48) = 0</code>.</li>
+      <li>Both files applied again: 21 <code>already exists, skipping</code> notices and <code>UPDATE 0</code>; <code>INSERT 0 0</code> three times.</li>
+      <li><span class="elide">(a row-count table; behaviour probes in rolled-back transactions; specs checked against the catalog: 132 columns,
+      12 primary keys, 18 foreign keys, 31 checks, 0 mismatches; the export run twice, byte-identical)</span></li>
+      <li><code>uv run pytest tests/ -q -p no:cacheprovider</code>: 920 passed, 6 skipped. <code>git diff --check main...HEAD</code> and <code>bash -n</code>: both exit 0.</li>
+    </ul>
+    <p>Not run or not verified: <span class="elide">(the production apply; <code>0004</code>; GitHub Actions; the optional PostgreSQL tests;
+    any vector query; any export from production; the not-yet-written extraction and aggregation; the default privileges of
+    <code>anon</code> and <code>authenticated</code>)</span></p>
+  </div>
+</div>
+
+<h4>The Commits tab, and what survives the squash</h4>
+<p>The branch carries nine commits: the three that built the PR, then six that applied review rounds and the team's written answers.
+At merge, the squash message keeps only the first three as bullets. The six later ones reworked the PR's own earlier commits after
+review and Jake's answers. On <code>main</code>, where all nine arrive as one commit, they would describe edits to work nobody ever saw
+on its own.</p>
+<ul class="commits">
+  <li><span class="sha">bf943fb</span><span>feat(ib-pipeline): add the signal table migrations and the schema apply procedure</span><span class="keep">kept</span></li>
+  <li><span class="sha">418137f</span><span>docs(ib-pipeline): add the twelve signal table specs</span><span class="keep">kept</span></li>
+  <li><span class="sha">8b1934e</span><span>feat(ib-pipeline): export the taxonomy CSVs from the signal tables</span><span class="keep">kept</span></li>
+  <li><span class="sha">c7483e7</span><span>docs(ib-pipeline): correct the foreign-key and check-file notes in the migration headers</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">8f7e3fd</span><span>feat(ib-pipeline): apply the design review to the signal tables</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">5e16b36</span><span>feat(ib-pipeline): list foreign entities on their US exchange listing, never OTC</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">513b9d5</span><span>docs(ib-pipeline): align the schema and taxonomy notes with the roadmap's document rules</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">dfbe4fe</span><span>docs(ib-pipeline): state the roadmap's short-alias matching rule in the alias and entity specs</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">3dfc9e8</span><span>docs(ib-pipeline): record the approved on-screen display of the evidence sentence</span><span class="trim">trimmed</span></li>
+</ul>
+
+<p>For a PR with two or more commits, GitHub's default squash message is the PR title plus a list of the commits. That is exactly the
+shape #136 shows on <code>main</code>. After the trim, <code>main</code> will read:</p>
+<pre><code>feat(ib-pipeline): add the signal table migrations, specs and taxonomy export (#N)
+
+* feat(ib-pipeline): add the signal table migrations and the schema apply procedure
+
+* docs(ib-pipeline): add the twelve signal table specs
+
+* feat(ib-pipeline): export the taxonomy CSVs from the signal tables</code></pre>
+
+<h4>The message that goes with it</h4>
+<p>Once the PR exists, you post the Slack note to Jake with its link filled in. It is six Korean lines, drafted to match the body.
+It ends by noting that his written answers are already applied and that the baseline PR comes next:</p>
+<pre><code>제이크, DEC-004 신호 테이블 PR 올렸습니다. &lt;PR 링크&gt;
+- 내용: 신호 테이블 마이그레이션(0002·0003, 0004는 삭제 초안)·테이블 명세 12개·taxonomy 내보내기입니다. …
+- 읽는 순서: `schema/README.md` → `schema/0002_signal_tables.sql` → `docs/tables/README.md`
+- 로컬 사본 검증 결과(확인 48/48, 2회 적용)는 PR 본문 Verification에 적었습니다.
+- 질문 3의 상장 기준을 해외 종목 전체에 적용해서 추천 목록과 ID가 다섯 개 달라졌습니다(…).
+- 서면 답은 이 PR에 반영했습니다. baseline PR(…)은 다음에 별도 PR로 올리겠습니다.</code></pre>
+
+<div class="callout"><strong>The life of this PR, in order.</strong> Your word → the branch is pushed and
+<code>gh pr create --base main</code> runs with the body file → you send the Slack line → Jake reviews; any change he asks for
+becomes another commit and a refreshed "Tested at" → squash-merge with the trimmed message → Jake applies <code>0002</code>, then
+<code>0003</code>, to production on request and fills the ledger rows → the 48 checks run read-only against production.</div>
+</section>
+
+<section id="convention">
+<h3>3.3 Following the repo's PR convention</h3>
+
+<p>The convention has three sources, and they agree. The written ones are the PR template (<code>.github/pull_request_template.md</code>)
+and the team's PR skill. The habit came from reading the repo's history: the team write-up, plus the convention record approved for
+this checkout. Rule by rule:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Rule</th><th>This PR</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>Branch <code>task/issue-&lt;N&gt;</code> when there is an issue, else <code>feat/&lt;slug&gt;</code> or <code>fix/&lt;slug&gt;</code>, from <code>main</code>, no internal IDs</td>
+        <td><code>feat/signal-tables-schema</code> from <code>7225f24</code>; no issue exists</td><td class="ok">✓</td></tr>
+    <tr><td>Commit subjects: English Conventional Commits <code>type(scope): summary</code>, scope = folder, imperative, lowercase after the colon, no period, no <code>(#N)</code></td>
+        <td>9/9: four <code>feat(ib-pipeline)</code>, five <code>docs(ib-pipeline)</code>. The <code>docs</code> type marks the spec-only commits.</td><td class="ok">✓</td></tr>
+    <tr><td>Every subject stands alone, because squash turns each into a bullet on <code>main</code></td>
+        <td>Each reads on its own; the six correction bullets are trimmed at merge anyway</td><td class="ok">✓</td></tr>
+    <tr><td>The operator is the only author; no <code>Co-Authored-By</code>, no AI attribution in commits, title or body</td>
+        <td>9/9 by <code>leetusik</code>; 0 trailers; no AI footer in the body draft</td><td class="ok">✓</td></tr>
+    <tr><td>PR title: English <code>type(scope): summary</code>, no issue number, no <code>(#N)</code></td>
+        <td><code>feat(ib-pipeline): add the signal table migrations, specs and taxonomy export</code></td><td class="ok">✓</td></tr>
+    <tr><td>Body: the template's four sections, each with content</td><td>Summary, What is changed, Why, Related issue</td><td class="ok">✓</td></tr>
+    <tr><td>Body: <code>## Verification</code> with the commands, results with counts and the tested SHA, and what was <em>not</em> run</td>
+        <td>Present; Tested at <code>3dfc9e8…</code>; an explicit "Not run or not verified" list</td><td class="ok">✓</td></tr>
+    <tr><td>Related issue: <code>Closes #N</code> only when merging fully resolves it, else <code>Refs #N — part</code>, else <code>None</code></td>
+        <td><code>None</code>; the decision rows are linked in Why instead</td><td class="ok">✓</td></tr>
+    <tr><td>Write the body only from the final diff: no abandoned approaches, no review back-and-forth</td>
+        <td>The body describes the end state; the review rounds appear nowhere in it</td><td class="ok">✓</td></tr>
+    <tr><td>Pipeline pre-merge check: <code>uv run pytest tests/ -q</code></td><td>920 passed, 6 skipped at the tested SHA</td><td class="ok">✓</td></tr>
+    <tr><td>Workflow-file changes need <code>actionlint</code>; runtime changes say "not run in Actions"</td><td>No workflow file and no runtime code changed</td><td class="muted">n/a</td></tr>
+    <tr><td>Deploy guards: no <code>prod.service.yaml</code> edit, no release tag, no secret script, no <code>gcloud</code> mutation, no workflow dispatch</td>
+        <td>None of these touched</td><td class="ok">✓</td></tr>
+    <tr><td>No internal workspace IDs or files in commits, title or body</td><td>Swept: 0 hits over the 24 files and both drafts</td><td class="ok">✓</td></tr>
+    <tr><td>DEC-010: migration and specs in one PR; the local-copy commands and results in the body</td><td>Both</td><td class="ok">✓</td></tr>
+    <tr><td>Merge: squash and merge; subject = final title + <code>(#N)</code>; trim "Merge main into …" bullets</td>
+        <td>Planned; also trimming the six correction bullets</td><td class="warn">at merge</td></tr>
+    <tr><td>Never push, open, merge or comment without the operator's word</td><td>Nothing pushed or opened; waits on your word</td><td class="ok">✓</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Where the PR follows the <em>written</em> convention but not the maintainer's everyday <em>habit</em>, it helps to know before
+Jake asks:</p>
+<ul>
+  <li><strong>A separate <code>## Verification</code> heading.</strong> Recent PRs keep verification inside Why. The convention record
+  asks for its own heading, and DEC-010 makes the verification the point of a migration PR. Expect it to look slightly different
+  from #136, not wrong.</li>
+  <li><strong><code>Related issue: None</code>.</strong> Every sampled PR links an issue. This work is tracked in the decision log, not
+  in GitHub issues, and the rule allows <code>None</code> when no issue exists.</li>
+  <li><strong>A trimmed squash body.</strong> The maintainer's merges keep every commit bullet; this one keeps three. That was your
+  decision, made so <code>main</code> shows what landed rather than how the review went.</li>
+</ul>
+</section>
+</section>
+
+<!-- ===================================================================== -->
+<section id="best-practices">
+<h2>4. Best practices &amp; next steps</h2>
+
+<p>Outside this repo, three bodies of practice speak to a PR like this one: how big a change should be, what its description should
+carry, and how squash merging and commit messages fit together.</p>
+
+<h3>Where the PR aligns</h3>
+<ul>
+  <li><strong>A standalone, imperative first line.</strong> Google's review guide asks that a change's first line be "a short, specific
+  summary", written "as though it were an order", that stands alone in history
+  (<a href="https://google.github.io/eng-practices/review/developer/cl-descriptions.html">Google Engineering Practices: Writing good CL descriptions</a> — google.github.io).
+  Every commit subject and the PR title follow that form.</li>
+  <li><strong>The why and the context in the body, not only links.</strong> The same guide warns that links can become inaccessible
+  and asks for "enough context for reviewers and future readers" in the description itself (same source). The body restates each of
+  Jake's answers it applies, rather than pointing at the sheet alone.</li>
+  <li><strong>Re-read the description after review changes.</strong> The guide notes that changes evolve during review, so the
+  description should be re-checked to confirm it "still reflects what the CL does" (same source). Each fix refreshed "Tested at"
+  and the counts.</li>
+  <li><strong>Scope as a section of the codebase.</strong> Conventional Commits defines scope as a noun naming a section of the codebase,
+  and allows types beyond <code>feat</code> and <code>fix</code>, such as <code>docs</code>
+  (<a href="https://www.conventionalcommits.org/en/v1.0.0/">Conventional Commits 1.0.0</a> — conventionalcommits.org). The folder
+  scope and the <code>docs</code> type on the spec-only commits match.</li>
+  <li><strong>Split by stacking.</strong> Google's small-changes guide suggests sending one change and building the next on it
+  (<a href="https://google.github.io/eng-practices/review/developer/small-cls.html">Google Engineering Practices: Small CLs</a> — google.github.io).
+  The baseline that replaces <code>db_schema.sql</code> is held back as the next PR.</li>
+</ul>
+
+<h3>Where it deliberately diverges</h3>
+<ul>
+  <li><strong>Size.</strong> The same guide calls about 100 lines reasonable and 1,000 usually too large, and says file count matters
+  too (Small CLs — google.github.io). This PR is +2,561 across 24 files. The divergence is defensible: DEC-010 binds a migration
+  to its specs, a third of the lines are generated CSV, and the guide's own last resort for a change that cannot be split is to get the
+  reviewer's consent in advance. DEC-010, in Jake's own words, asks for the migration and its specs in one PR.</li>
+  <li><strong>The squash body.</strong> GitHub's default squash message for a multi-commit PR is "the pull request title and a list of
+  commits" (<a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests">GitHub Docs: Configuring commit squashing</a> — docs.github.com).
+  Trimming that list by hand departs from the default and from the maintainer's habit. Conventional Commits notes that in a squash
+  workflow the merged message can be rewritten at merge time (Conventional Commits — conventionalcommits.org), which is what the trim does.</li>
+</ul>
+
+<h3>Next steps</h3>
+<ol>
+  <li><strong>Lead the reviewer through the size.</strong> The Slack line already gives a read order (<code>schema/README.md</code> →
+  <code>0002</code> → <code>docs/tables/README.md</code>). If Jake pushes back on size, the clean split is the CSV export: it is
+  generated, and can be re-exported from the dictionary tables once they exist.</li>
+  <li><strong>Edit the squash message on purpose at merge.</strong> GitHub pre-fills the title and all nine bullets. Check that the
+  subject is the title + <code>(#N)</code>, and keep only the three bullets.</li>
+  <li><strong>Ask, don't assume, about an issue.</strong> If Jake expects work tracked in GitHub issues, a <code>Refs #N</code> can be
+  added to the body later. This is a question for him, not a change to make unasked.</li>
+  <li><strong>Keep the next PR small and stacked.</strong> The baseline PR has one job, <code>db_schema.sql</code> →
+  <code>schema/0001_baseline.sql</code> with the existing tables' specs. It should look more like the repo's median than like this one.</li>
+</ol>
+</section>
+
+<!-- ===================================================================== -->
+<section id="quiz">
+<h2>5. Quiz</h2>
+
+<div class="q" id="q1">
+  <p><strong>1.</strong> The PR is merged on a Friday afternoon. What changes in the production database at that moment?</p>
+  <button class="opt" data-correct="false">The twelve tables are created, because the merge triggers a deploy of the pipeline folder.</button>
+  <button class="opt" data-correct="false"><code>0002</code>, <code>0003</code> and <code>0004</code> run in order, because they are numbered.</button>
+  <button class="opt" data-correct="true">Nothing. Jake applies <code>0002</code>, then <code>0003</code>, by hand on request, and records each in the ledger.</button>
+  <button class="opt" data-correct="false">Only <code>0002</code> runs; <code>0003</code> waits for the backfill.</button>
+  <p class="why" hidden>The runtime never runs DDL, and DEC-010 makes the apply a person's act, one approved file at a time. <code>0004</code> is a draft and is not applied in this round.</p>
+</div>
+
+<div class="q" id="q2">
+  <p><strong>2.</strong> After the squash merge, what is the subject line of the new commit on <code>main</code>?</p>
+  <button class="opt" data-correct="false">The first branch commit's subject, <code>feat(ib-pipeline): add the signal table migrations and the schema apply procedure</code>.</button>
+  <button class="opt" data-correct="true">The PR title plus <code>(#N)</code>, followed by a body that keeps three commit bullets.</button>
+  <button class="opt" data-correct="false">The last commit's subject, because it is the newest.</button>
+  <button class="opt" data-correct="false">Nine separate commits land, one per branch commit.</button>
+  <p class="why" hidden>With two or more commits, GitHub's default squash message is the PR title and a list of commits; the plan trims the list to the three building commits. Only a single-commit PR takes its commit's headline as the subject.</p>
+</div>
+
+<div class="q" id="q3">
+  <p><strong>3.</strong> Why does the body carry a separate <code>## Verification</code> section that recent PRs in the repo do not?</p>
+  <button class="opt" data-correct="false">The PR template has five sections and recent PRs skipped one.</button>
+  <button class="opt" data-correct="true">The convention record asks for it, and for a migration DEC-010 makes the local-copy commands and results the core of the review.</button>
+  <button class="opt" data-correct="false">GitHub requires it for PRs that add SQL files.</button>
+  <button class="opt" data-correct="false">It replaces the Why section, which a migration does not need.</button>
+  <p class="why" hidden>The template has four sections; recent PRs put verification inside Why. Merging changes no database here, so the proof of what the SQL does has to travel in the body.</p>
+</div>
+
+<div class="q" id="q4">
+  <p><strong>4.</strong> A report's publish date in <code>research_documents</code> is corrected from 10/03 to 10/06. What has to happen to its signals?</p>
+  <button class="opt" data-correct="false">Re-extract them, because each signal stores the report's date.</button>
+  <button class="opt" data-correct="false">Update <code>published_at</code> on each signal row by hand.</button>
+  <button class="opt" data-correct="true">Nothing to the signals. Dates are read by joining <code>research_documents</code>, and the next weekly aggregation buckets the report by the new date.</button>
+  <button class="opt" data-correct="false">Delete the report; <code>ON DELETE RESTRICT</code> then removes the signals.</button>
+  <p class="why" hidden>No signal or aggregate table has a date or URL column. <code>week_start</code> is an aggregation bucket recomputed each week from the joined <code>published_at</code>. And <code>RESTRICT</code> refuses a delete; it never cascades.</p>
+</div>
+
+<div class="q" id="q5">
+  <p><strong>5.</strong> A weekly recompute must replace the current run for the week of 2026-10-05. Which order works?</p>
+  <button class="opt" data-correct="false">Insert the new run with <code>is_current = true</code>, then switch the old one off, in one transaction.</button>
+  <button class="opt" data-correct="true">Switch the old run to <code>is_current = false</code>, then insert the new run, in one transaction.</button>
+  <button class="opt" data-correct="false">Delete the old run first; <code>CASCADE</code> then makes room for the new one.</button>
+  <button class="opt" data-correct="false">Either order works, because the transaction defers the uniqueness check to <code>COMMIT</code>.</button>
+  <p class="why" hidden>The partial unique index on <code>(week_start) WHERE is_current</code> is checked row by row and cannot be deferred, so inserting first fails. Switching off first keeps the old run as history.</p>
+</div>
+</section>
+
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var right = btn.dataset.correct === 'true';
+        btn.classList.add(right ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
