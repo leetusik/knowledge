@@ -1,6 +1,7 @@
 <!--kb
 title: "The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo"
 date: 2026-10-14
+version: 2
 tags:
   - pull-requests
   - database-migrations
@@ -124,7 +125,7 @@ source:
 <h1>The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo</h1>
 
 <p class="muted small">Written 2026-10-14, before the pull request is opened. The branch is
-<span class="branch">feat/signal-tables-schema</span> at <code>3dfc9e8</code>: 9 commits on <code>main</code> <code>7225f24</code>, local only.
+<span class="branch">feat/signal-tables-schema</span> at <code>8727ab2</code>: 3 commits on <code>main</code> <code>7225f24</code>, local only.
 Every number here was measured from the branch, the PR body draft, or <code>gh</code> against
 <code>glide-ilab/glide-ilab</code> on the same morning.</p>
 
@@ -233,7 +234,7 @@ unusual in <em>who</em>, <em>what</em> and <em>how much</em>.</p>
         #122 "Closes #114", #102 "Closes #101".</td>
         <td><code>None</code>. No GitHub issue tracks this work. Its decisions live in the decision-log sheet, which the body links instead.</td></tr>
     <tr><td><strong>Squash result</strong></td><td>PR title + <code>(#N)</code>, then one bullet per branch commit (#136 lists 4).</td>
-        <td>Title + <code>(#N)</code>, then 3 bullets; the 6 correction commits are trimmed at merge (see 3.2).</td></tr>
+        <td>Title + <code>(#N)</code>, then 3 bullets. The branch was cut to three subject-only commits before pushing, so GitHub's default gives exactly this (see 3.2).</td></tr>
     <tr><td><strong>Base</strong></td><td>Branch from fresh <code>main</code>.</td>
         <td>Branched from <code>7225f24</code>. <code>main</code> has moved 11 commits since, all in <code>ai-chat</code>. None touches
         the pipeline folder, and <code>git merge-tree</code> reports a clean merge.</td></tr>
@@ -452,8 +453,8 @@ sentence that matters most for safety:</p>
 
 <h4>The specs: meaning next to the SQL</h4>
 <p>Each of the 12 Korean specs lists role, columns, keys, data source, update cadence, writers, the screens that read the table and
-the access rules. The index states the date rule once, for all nine signal and aggregate tables. The latest commit,
-<code>3dfc9e8</code> from this morning, changed one spec in three lines: <code>research_signals.md</code> now says the evidence
+the access rules. The index states the date rule once, for all nine signal and aggregate tables. The last change,
+made this morning, touched one spec in three lines: <code>research_signals.md</code> now says the evidence
 sentence is shown on screen by 대표's approval of 2026-10-14, where it used to say the display waited for that approval.</p>
 
 <h4>The taxonomy export</h4>
@@ -479,9 +480,9 @@ their addresses are left out here. The number is unknown until GitHub assigns it
 <div class="gh">
   <div class="gh-head">
     <p class="gh-title">feat(ib-pipeline): add the signal table migrations, specs and taxonomy export <span class="num">#N</span></p>
-    <span class="pill">Open</span><span class="small"><strong>leetusik</strong> wants to merge 9 commits into <span class="branch">main</span> from <span class="branch">feat/signal-tables-schema</span></span>
+    <span class="pill">Open</span><span class="small"><strong>leetusik</strong> wants to merge 3 commits into <span class="branch">main</span> from <span class="branch">feat/signal-tables-schema</span></span>
   </div>
-  <div class="gh-tabs"><b>Conversation</b><span>Commits 9</span><span>Files changed 24</span><span class="muted">+2,561 −1</span></div>
+  <div class="gh-tabs"><b>Conversation</b><span>Commits 3</span><span>Files changed 24</span><span class="muted">+2,561 −1</span></div>
   <div class="gh-body">
     <h5>Summary</h5>
     <p>Add the DEC-004 signal tables to <code>ib-research-report-pipeline</code> as numbered migrations, one spec per table, and a CSV
@@ -513,7 +514,7 @@ their addresses are left out here. The number is unknown until GitHub assigns it
     <h5>Related issue</h5>
     <p>None</p>
     <h5>Verification</h5>
-    <p>Every command below runs from <code>ib-research-report-pipeline/</code>.<br>Tested at <code>3dfc9e8f02e52660b9a967a6ffd357fb9fad572a</code>.</p>
+    <p>Every command below runs from <code>ib-research-report-pipeline/</code>.<br>Tested at <code>8727ab214210243a40b328c3fdedee3be5d4700e</code>.</p>
 <pre><code>psql "$LOCAL_DB_URL" -X -v ON_ERROR_STOP=1 -f schema/0002_signal_tables.sql
 psql "$LOCAL_DB_URL" -X -v ON_ERROR_STOP=1 -f schema/0003_signal_prototype_data.sql
 PGOPTIONS='-c default_transaction_read_only=on' psql "$LOCAL_DB_URL" -X -f schema/checks/0002_0003_verify.sql</code></pre>
@@ -530,25 +531,19 @@ PGOPTIONS='-c default_transaction_read_only=on' psql "$LOCAL_DB_URL" -X -f schem
   </div>
 </div>
 
-<h4>The Commits tab, and what survives the squash</h4>
-<p>The branch carries nine commits: the three that built the PR, then six that applied review rounds and the team's written answers.
-At merge, the squash message keeps only the first three as bullets. The six later ones reworked the PR's own earlier commits after
-review and Jake's answers. On <code>main</code>, where all nine arrive as one commit, they would describe edits to work nobody ever saw
-on its own.</p>
+<h4>The Commits tab, and what lands on <code>main</code></h4>
+<p>The branch carries three commits, one per part of the PR. It was built in nine: the three that built the PR, then six that
+applied review rounds and Jake's answers. GitHub's squash merge trims nothing by itself. Its default would have put all nine subjects
+on <code>main</code>, plus the bodies of four commits. So before pushing, the branch was rewritten into the three original commits,
+each subject-only. The final files are byte-identical: the same git tree, <code>843cd8a…</code>, and the same tests.</p>
 <ul class="commits">
-  <li><span class="sha">bf943fb</span><span>feat(ib-pipeline): add the signal table migrations and the schema apply procedure</span><span class="keep">kept</span></li>
-  <li><span class="sha">418137f</span><span>docs(ib-pipeline): add the twelve signal table specs</span><span class="keep">kept</span></li>
-  <li><span class="sha">8b1934e</span><span>feat(ib-pipeline): export the taxonomy CSVs from the signal tables</span><span class="keep">kept</span></li>
-  <li><span class="sha">c7483e7</span><span>docs(ib-pipeline): correct the foreign-key and check-file notes in the migration headers</span><span class="trim">trimmed</span></li>
-  <li><span class="sha">8f7e3fd</span><span>feat(ib-pipeline): apply the design review to the signal tables</span><span class="trim">trimmed</span></li>
-  <li><span class="sha">5e16b36</span><span>feat(ib-pipeline): list foreign entities on their US exchange listing, never OTC</span><span class="trim">trimmed</span></li>
-  <li><span class="sha">513b9d5</span><span>docs(ib-pipeline): align the schema and taxonomy notes with the roadmap's document rules</span><span class="trim">trimmed</span></li>
-  <li><span class="sha">dfbe4fe</span><span>docs(ib-pipeline): state the roadmap's short-alias matching rule in the alias and entity specs</span><span class="trim">trimmed</span></li>
-  <li><span class="sha">3dfc9e8</span><span>docs(ib-pipeline): record the approved on-screen display of the evidence sentence</span><span class="trim">trimmed</span></li>
+  <li><span class="sha">e1ed196</span><span>feat(ib-pipeline): add the signal table migrations and the schema apply procedure</span><span class="keep">6 files</span></li>
+  <li><span class="sha">b38bde0</span><span>docs(ib-pipeline): add the twelve signal table specs</span><span class="keep">13 files</span></li>
+  <li><span class="sha">8727ab2</span><span>feat(ib-pipeline): export the taxonomy CSVs from the signal tables</span><span class="keep">5 files</span></li>
 </ul>
 
 <p>For a PR with two or more commits, GitHub's default squash message is the PR title plus a list of the commits. That is exactly the
-shape #136 shows on <code>main</code>. After the trim, <code>main</code> will read:</p>
+shape #136 shows on <code>main</code>, and the repo uses GitHub's default squash setting. So whoever presses the button, <code>main</code> will read, with no editing:</p>
 <pre><code>feat(ib-pipeline): add the signal table migrations, specs and taxonomy export (#N)
 
 * feat(ib-pipeline): add the signal table migrations and the schema apply procedure
@@ -565,11 +560,11 @@ It ends by noting that his written answers are already applied and that the base
 - 읽는 순서: `schema/README.md` → `schema/0002_signal_tables.sql` → `docs/tables/README.md`
 - 로컬 사본 검증 결과(확인 48/48, 2회 적용)는 PR 본문 Verification에 적었습니다.
 - 질문 3의 상장 기준을 해외 종목 전체에 적용해서 추천 목록과 ID가 다섯 개 달라졌습니다(…).
-- 서면 답은 이 PR에 반영했습니다. baseline PR(…)은 다음에 별도 PR로 올리겠습니다.</code></pre>
+- 10/13 목업 미팅 질문 답은 이 PR에 반영했습니다. baseline PR(…)은 다음에 별도 PR로 올리겠습니다.</code></pre>
 
 <div class="callout"><strong>The life of this PR, in order.</strong> Your word → the branch is pushed and
 <code>gh pr create --base main</code> runs with the body file → you send the Slack line → Jake reviews; any change he asks for
-becomes another commit and a refreshed "Tested at" → squash-merge with the trimmed message → Jake applies <code>0002</code>, then
+becomes another commit and a refreshed "Tested at" → squash-merge with GitHub's default message, whoever merges → Jake applies <code>0002</code>, then
 <code>0003</code>, to production on request and fills the ledger rows → the 48 checks run read-only against production.</div>
 </section>
 
@@ -587,16 +582,16 @@ this checkout. Rule by rule:</p>
     <tr><td>Branch <code>task/issue-&lt;N&gt;</code> when there is an issue, else <code>feat/&lt;slug&gt;</code> or <code>fix/&lt;slug&gt;</code>, from <code>main</code>, no internal IDs</td>
         <td><code>feat/signal-tables-schema</code> from <code>7225f24</code>; no issue exists</td><td class="ok">✓</td></tr>
     <tr><td>Commit subjects: English Conventional Commits <code>type(scope): summary</code>, scope = folder, imperative, lowercase after the colon, no period, no <code>(#N)</code></td>
-        <td>9/9: four <code>feat(ib-pipeline)</code>, five <code>docs(ib-pipeline)</code>. The <code>docs</code> type marks the spec-only commits.</td><td class="ok">✓</td></tr>
+        <td>3/3: two <code>feat(ib-pipeline)</code>, one <code>docs(ib-pipeline)</code>. The <code>docs</code> type marks the spec-only commit.</td><td class="ok">✓</td></tr>
     <tr><td>Every subject stands alone, because squash turns each into a bullet on <code>main</code></td>
-        <td>Each reads on its own; the six correction bullets are trimmed at merge anyway</td><td class="ok">✓</td></tr>
+        <td>Each reads on its own and has no body, so the squash body is exactly three bullets</td><td class="ok">✓</td></tr>
     <tr><td>The operator is the only author; no <code>Co-Authored-By</code>, no AI attribution in commits, title or body</td>
-        <td>9/9 by <code>leetusik</code>; 0 trailers; no AI footer in the body draft</td><td class="ok">✓</td></tr>
+        <td>3/3 by <code>leetusik</code>; 0 trailers; no AI footer in the body draft</td><td class="ok">✓</td></tr>
     <tr><td>PR title: English <code>type(scope): summary</code>, no issue number, no <code>(#N)</code></td>
         <td><code>feat(ib-pipeline): add the signal table migrations, specs and taxonomy export</code></td><td class="ok">✓</td></tr>
     <tr><td>Body: the template's four sections, each with content</td><td>Summary, What is changed, Why, Related issue</td><td class="ok">✓</td></tr>
     <tr><td>Body: <code>## Verification</code> with the commands, results with counts and the tested SHA, and what was <em>not</em> run</td>
-        <td>Present; Tested at <code>3dfc9e8…</code>; an explicit "Not run or not verified" list</td><td class="ok">✓</td></tr>
+        <td>Present; Tested at <code>8727ab2…</code>; an explicit "Not run or not verified" list</td><td class="ok">✓</td></tr>
     <tr><td>Related issue: <code>Closes #N</code> only when merging fully resolves it, else <code>Refs #N — part</code>, else <code>None</code></td>
         <td><code>None</code>; the decision rows are linked in Why instead</td><td class="ok">✓</td></tr>
     <tr><td>Write the body only from the final diff: no abandoned approaches, no review back-and-forth</td>
@@ -608,7 +603,7 @@ this checkout. Rule by rule:</p>
     <tr><td>No internal workspace IDs or files in commits, title or body</td><td>Swept: 0 hits over the 24 files and both drafts</td><td class="ok">✓</td></tr>
     <tr><td>DEC-010: migration and specs in one PR; the local-copy commands and results in the body</td><td>Both</td><td class="ok">✓</td></tr>
     <tr><td>Merge: squash and merge; subject = final title + <code>(#N)</code>; trim "Merge main into …" bullets</td>
-        <td>Planned; also trimming the six correction bullets</td><td class="warn">at merge</td></tr>
+        <td>GitHub's default already reads title + <code>(#N)</code> + three bullets; no merge commit exists on the branch</td><td class="ok">✓</td></tr>
     <tr><td>Never push, open, merge or comment without the operator's word</td><td>Nothing pushed or opened; waits on your word</td><td class="ok">✓</td></tr>
   </tbody>
 </table>
@@ -622,8 +617,9 @@ Jake asks:</p>
   from #136, not wrong.</li>
   <li><strong><code>Related issue: None</code>.</strong> Every sampled PR links an issue. This work is tracked in the decision log, not
   in GitHub issues, and the rule allows <code>None</code> when no issue exists.</li>
-  <li><strong>A trimmed squash body.</strong> The maintainer's merges keep every commit bullet; this one keeps three. That was your
-  decision, made so <code>main</code> shows what landed rather than how the review went.</li>
+  <li><strong>Three commits, cut before pushing.</strong> The maintainer's PRs keep their working commits, and every one lands as a
+  bullet. This branch was built in nine and rewritten into three before anyone saw it. That was your decision, so <code>main</code>
+  shows what landed rather than how the review went, whoever merges.</li>
 </ul>
 </section>
 </section>
@@ -664,8 +660,9 @@ carry, and how squash merging and commit messages fit together.</p>
   reviewer's consent in advance. DEC-010, in Jake's own words, asks for the migration and its specs in one PR.</li>
   <li><strong>The squash body.</strong> GitHub's default squash message for a multi-commit PR is "the pull request title and a list of
   commits" (<a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests">GitHub Docs: Configuring commit squashing</a> — docs.github.com).
-  Trimming that list by hand departs from the default and from the maintainer's habit. Conventional Commits notes that in a squash
-  workflow the merged message can be rewritten at merge time (Conventional Commits — conventionalcommits.org), which is what the trim does.</li>
+  The maintainer's habit is to let every working commit become a bullet. Conventional Commits notes that in a squash workflow the
+  message can be rewritten at merge time (Conventional Commits — conventionalcommits.org). Here the branch was cut to three
+  commits before pushing instead, so the default itself is the intended message and nobody has to edit it at merge.</li>
 </ul>
 
 <h3>Next steps</h3>
@@ -673,8 +670,9 @@ carry, and how squash merging and commit messages fit together.</p>
   <li><strong>Lead the reviewer through the size.</strong> The Slack line already gives a read order (<code>schema/README.md</code> →
   <code>0002</code> → <code>docs/tables/README.md</code>). If Jake pushes back on size, the clean split is the CSV export: it is
   generated, and can be re-exported from the dictionary tables once they exist.</li>
-  <li><strong>Edit the squash message on purpose at merge.</strong> GitHub pre-fills the title and all nine bullets. Check that the
-  subject is the title + <code>(#N)</code>, and keep only the three bullets.</li>
+  <li><strong>Merge with the default message.</strong> GitHub pre-fills the title + <code>(#N)</code> and the three bullets, which
+  is the intended message. The only thing to check is that no "Merge main into …" bullet has appeared. That happens only if
+  someone merges <code>main</code> into the branch during review.</li>
   <li><strong>Ask, don't assume, about an issue.</strong> If Jake expects work tracked in GitHub issues, a <code>Refs #N</code> can be
   added to the body later. This is a question for him, not a change to make unasked.</li>
   <li><strong>Keep the next PR small and stacked.</strong> The baseline PR has one job, <code>db_schema.sql</code> →
@@ -698,10 +696,10 @@ carry, and how squash merging and commit messages fit together.</p>
 <div class="q" id="q2">
   <p><strong>2.</strong> After the squash merge, what is the subject line of the new commit on <code>main</code>?</p>
   <button class="opt" data-correct="false">The first branch commit's subject, <code>feat(ib-pipeline): add the signal table migrations and the schema apply procedure</code>.</button>
-  <button class="opt" data-correct="true">The PR title plus <code>(#N)</code>, followed by a body that keeps three commit bullets.</button>
+  <button class="opt" data-correct="true">The PR title plus <code>(#N)</code>, followed by three bullets, one per branch commit.</button>
   <button class="opt" data-correct="false">The last commit's subject, because it is the newest.</button>
-  <button class="opt" data-correct="false">Nine separate commits land, one per branch commit.</button>
-  <p class="why" hidden>With two or more commits, GitHub's default squash message is the PR title and a list of commits; the plan trims the list to the three building commits. Only a single-commit PR takes its commit's headline as the subject.</p>
+  <button class="opt" data-correct="false">Three separate commits land, one per branch commit.</button>
+  <p class="why" hidden>With two or more commits, GitHub's default squash message is the PR title and a list of commits. The branch has exactly three subject-only commits, so the default is the intended message. Only a single-commit PR takes its commit's headline as the subject.</p>
 </div>
 
 <div class="q" id="q3">
