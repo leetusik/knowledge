@@ -24,6 +24,7 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-10-15 · [P17 and P18: Signal Extraction and the Weekly Aggregation, Explained](glide-ilab/2026-10-15-p17-and-p18-signal-extraction-and-the-weekly-aggregation-explained.html) — glide-ilab
 - 2026-10-14 · [The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo](glide-ilab/2026-10-14-the-signal-tables-pr-explained-what-it-covers-how-it-looks-and-how-it-fits-the-r.html) — glide-ilab
 - 2026-10-10 · [P9: The Stage-1 System, Explained](glide-ilab/2026-10-10-p9-the-stage-1-system-explained.html) — glide-ilab
 - 2026-10-08 · [P8: 1단계 사실 확인과 1차 프로젝트 계획](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html) — glide-ilab
