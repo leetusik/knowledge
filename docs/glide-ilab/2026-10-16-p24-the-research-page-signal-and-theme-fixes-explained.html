@@ -1,0 +1,966 @@
+<!--kb
+title: "P24: The Research Page Signal and Theme Fixes, Explained"
+date: 2026-10-16
+tags:
+  - research-dashboard
+  - theme-dictionary
+  - weekly-aggregation
+  - data-collection
+  - llm-evaluation
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P24: The Research Page Signal and Theme Fixes, Explained</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff; --fg: #1d2026; --muted: #5d6573; --line: #d9dde3;
+      --code-bg: #f4f5f7; --chip-bg: #f0f2f5;
+      --callout-bg: #eef7f1; --callout-line: #3f9a63;
+      --note-bg: #eef3fb; --note-line: #3b6fc4;
+      --warn-bg: #fff6e5; --warn-line: #d98e04;
+      --rise: #1f8a4c; --cool: #2f6fd0; --conf: #c2410c; --grey: #8a909a;
+      --band-a: #f3f5f8; --band-b: #e8ecf2;
+      --ok-bg: #d6f5d6; --bad-bg: #f7d6d6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #15171a; --fg: #e5e8ec; --muted: #a3aab5; --line: #343a43;
+        --code-bg: #1f2328; --chip-bg: #23272e;
+        --callout-bg: #16271d; --callout-line: #4cb27a;
+        --note-bg: #16213a; --note-line: #6b9ae6;
+        --warn-bg: #2b2414; --warn-line: #e0a526;
+        --rise: #4cc37f; --cool: #6aa2f0; --conf: #f08a4b; --grey: #7d838d;
+        --band-a: #1c1f24; --band-b: #232830;
+        --ok-bg: #1d3a24; --bad-bg: #3d1f22;
+      }
+    }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+           line-height: 1.65; background: var(--bg); color: var(--fg); }
+    h1 { line-height: 1.25; margin-bottom: .4rem; }
+    h2 { margin-top: 2.6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+    h3 { margin-top: 1.8rem; }
+    a { color: var(--note-line); }
+    .lede { color: var(--muted); }
+    nav ol { padding-left: 1.3rem; }
+    nav ol ol { margin: .15rem 0 .35rem; }
+    nav li { margin: .1rem 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em;
+           background: var(--code-bg); padding: .05rem .3rem; border-radius: 4px; overflow-wrap: anywhere; }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85em; line-height: 1.5;
+           background: var(--code-bg); padding: .75rem; border-radius: 6px; }
+    pre code { background: none; padding: 0; font-size: 1em; }
+    .callout { border-left: 4px solid var(--callout-line); background: var(--callout-bg);
+               padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.note { border-left-color: var(--note-line); background: var(--note-bg); }
+    .callout.warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+    .callout > :first-child { margin-top: 0; }
+    .callout > :last-child { margin-bottom: 0; }
+    .tablewrap { overflow-x: auto; margin: 1rem 0; }
+    table { border-collapse: collapse; width: 100%; font-size: .92em; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+    th { background: var(--code-bg); }
+    figure { margin: 1.4rem 0; }
+    figcaption { color: var(--muted); font-size: .9em; margin-top: .4rem; }
+    svg text { fill: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    svg .muted { fill: var(--muted); }
+    svg .axis { stroke: var(--grey); stroke-width: 1; }
+    svg .bar-rise { fill: var(--rise); }
+    svg .bar-cool { fill: var(--cool); }
+    svg .bar-grey { fill: var(--grey); }
+    svg .fit { stroke: var(--conf); stroke-width: 2; fill: none; }
+    svg .dash { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; }
+    svg .band-a { fill: var(--band-a); }
+    svg .band-b { fill: var(--band-b); }
+    svg .ci { stroke: var(--note-line); stroke-width: 3; stroke-linecap: round; }
+    svg .pt { fill: var(--note-line); }
+    svg .bar90 { stroke: var(--conf); stroke-width: 1.5; stroke-dasharray: 5 3; }
+    svg .mk-good { fill: var(--rise); }
+    svg .mk-bad { fill: var(--conf); }
+    svg .mk-mid { fill: var(--cool); }
+    .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .35rem; margin: 1rem 0; }
+    .flow .step { flex: 1 1 8.5rem; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem;
+                  background: var(--code-bg); font-size: .86em; line-height: 1.4; }
+    .flow .step b { display: block; font-size: 1.02em; }
+    .flow .step em { display: block; color: var(--muted); font-style: normal; margin-top: .3rem; }
+    .flow .arrow { align-self: center; color: var(--muted); }
+    .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .5rem; margin: 1rem 0; }
+    .states div { border: 1px solid var(--line); border-radius: 8px; padding: .55rem .65rem; font-size: .88em; line-height: 1.45; }
+    .states div b { display: block; }
+    .chipcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .75rem; margin: 1rem 0; }
+    .chipcols > div { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem; }
+    .chipcols h4 { margin: 0 0 .4rem; font-size: .92em; }
+    .lbl { display: block; font-size: .78em; color: var(--muted); margin: .45rem 0 .15rem; }
+    .chip { display: inline-block; font-size: .82em; padding: .1rem .5rem; margin: .12rem .1rem; border-radius: 999px;
+            background: var(--chip-bg); border: 1px solid var(--line); }
+    .chip.r { border-color: var(--rise); }
+    .chip.c { border-color: var(--cool); }
+    .chip.k { border-color: var(--conf); }
+    .chip.none { color: var(--muted); border-style: dashed; }
+    .funnel .row { display: flex; align-items: center; gap: .6rem; margin: .3rem 0; font-size: .9em; }
+    .funnel .bar { height: 1.35rem; background: var(--cool); border-radius: 3px; flex: none; }
+    .funnel .bar.dim { background: var(--grey); }
+    .funnel .bar.lost { background: var(--conf); }
+    .mockpair { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; margin: 1rem 0; }
+    .mockcard { border: 1px solid var(--line); border-radius: 10px; padding: .6rem .7rem; font-size: .85em; background: var(--code-bg); }
+    .mockcard .title { font-weight: 700; }
+    .mockcard .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem;
+                      border-top: 1px solid var(--line); margin-top: .6rem; padding-top: .45rem; }
+    .mockcard .houses { white-space: nowrap; color: var(--muted); }
+    .mockcard .count { margin-left: auto; white-space: nowrap; }
+    .mockcard .up { color: var(--rise); }
+    .mockcard .down { color: var(--conf); }
+    .q { border: 1px solid var(--line); border-radius: 8px; padding: .4rem .9rem .8rem; margin: 1rem 0; }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0;
+              padding: .5rem .75rem; cursor: pointer; font: inherit; color: var(--fg);
+              background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; }
+    .q .opt:hover { border-color: var(--note-line); }
+    .q .opt.correct   { background: var(--ok-bg); }
+    .q .opt.incorrect { background: var(--bad-bg); }
+    .q .why { margin: .4rem 0 0; font-size: .95em; }
+    .small { font-size: .9em; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>P24: The Research Page Signal and Theme Fixes, Explained</h1>
+
+  <p class="lede">Written 2026-10-16 at about 08:30 KST, in the middle of the phase. P24 set out to make the IB research page's weekly section, 이번 주 시그널, both fuller and truer. It also set out to fix how the page treats themes nobody has reviewed yet. This page explains what the phase has done so far: what it found, what it built and why. Every number comes from the phase's four local branches in three repositories, from their test suites, or from runs on local copies of the production database. Nothing has been pushed, and production has not been touched. Theme labels and house names are real. No report text appears here.</p>
+
+  <div class="callout note">
+    <p><strong>The phase in six lines</strong></p>
+    <ul>
+      <li><strong>The 10/5 week</strong> (the latest one judged) shows 1 rising, 0 cooling and 1 conflict in production. The dictionary and the cooling floor make it 2/2/1. A rehearsed catch-up of the reports our collector missed makes it 7/2/1, which fills all five rising cards.</li>
+      <li><strong>The week is thin mostly because of collection:</strong> the houses published about 17 in-scope reports that week, and we collected 8.</li>
+      <li><strong>Candidate themes</strong>, the ones nobody has reviewed, are now hidden the way retired themes are, in both the API and the screens.</li>
+      <li><strong>Two layout bugs</strong> in the rising cards are fixed, and bigger extraction models did not beat the current one.</li>
+      <li><strong>Spend:</strong> $1.91 of the phase's $10 budget.</li>
+      <li><strong>Waiting on 대표's answer:</strong> the merges and the production data steps.</li>
+    </ul>
+  </div>
+
+  <nav aria-label="Contents">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#background">Background</a>
+        <ol>
+          <li><a href="#bg-system">The system in one picture</a></li>
+          <li><a href="#bg-dictionary">The theme dictionary, and half the signals in limbo</a></li>
+          <li><a href="#bg-purpose">What 이번 주 시그널 is for</a></li>
+          <li><a href="#bg-phase">How the phase was run</a></li>
+        </ol>
+      </li>
+      <li><a href="#intuition">Intuition</a>
+        <ol>
+          <li><a href="#in-votes">One house, one vote</a></li>
+          <li><a href="#in-leaks">Three leaks and one thing that was not a leak</a></li>
+          <li><a href="#in-honest">Filling honestly: what was tried and turned down</a></li>
+          <li><a href="#in-dictionary">The dictionary supplement</a></li>
+          <li><a href="#in-hiding">Hiding the candidates</a></li>
+          <li><a href="#in-dates">Dates are data: HSBC and Merrill</a></li>
+          <li><a href="#in-rehearsal">The rehearsal: what catching up really changes</a></li>
+          <li><a href="#in-model">Would a smarter model help?</a></li>
+          <li><a href="#in-cooling">Cooling and conflicts: fine as they are</a></li>
+          <li><a href="#in-layout">Two small layout bugs</a></li>
+        </ol>
+      </li>
+      <li><a href="#code">Code</a>
+        <ol>
+          <li><a href="#code-map">Where the code is</a></li>
+          <li><a href="#code-migration">The migration, 0005</a></li>
+          <li><a href="#code-collect">HSBC's dates and Merrill's timeout</a></li>
+          <li><a href="#code-be">The backend: one set of hidden ids</a></li>
+          <li><a href="#code-fe">The frontend: one status check and two CSS rows</a></li>
+          <li><a href="#code-verify">How it was verified, and what it cost</a></li>
+          <li><a href="#code-next">What happens next</a></li>
+        </ol>
+      </li>
+      <li><a href="#best-practices">Best practices &amp; next steps</a></li>
+      <li><a href="#quiz">Quiz</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <section id="background">
+    <h2>1. Background</h2>
+
+    <h3 id="bg-system">1.1 The system in one picture</h3>
+    <p><em>If you already know how a report becomes a card on the research page, skip to 1.2.</em></p>
+    <p>The IB research page follows what investment banks and asset managers publish. In this codebase each of them is a <strong>house</strong>: HSBC US, Merrill, Morgan Stanley, Goldman Sachs, J.P. Morgan, Jefferies, Vanguard and a few more. Houses publish <strong>reports</strong>: articles, PDFs and podcast pages. A chain of programs turns those reports into the page. Each step below shows its real numbers for the week of 10/5.</p>
+
+    <div class="flow" role="img" aria-label="Pipeline from collection to the page">
+      <div class="step"><b>collect</b>finds report links and dates on each house's public pages and registers them<em>10/5 week: 8 reports, 6 houses</em></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>summarize</b>captures each report and writes a Korean summary<em>a report reaches the lists only after this step</em></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>extract signals</b>an LLM reads each report and records the house's views, with evidence checked against the text<em>one model call per report</em></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>map to themes</b>each signal joins a theme in the theme dictionary<em>active, candidate, merged or retired</em></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>aggregate weekly</b>counts the votes and judges rising, cooling and conflicts<em>no model call; six tables</em></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>API → page</b>the backend serves the tables; the frontend draws 이번 주 시그널<em>production on 10/5: 1 / 0 / 1</em></div>
+    </div>
+
+    <p>The first five steps live in the <strong>pipeline</strong> (<code>ib-research-report-pipeline/</code> in the glide-ilab repo). The <strong>backend</strong> (<code>dashboard-backend</code>, a Django app) reads the pipeline's tables and serves the research API. The <strong>frontend</strong> (<code>withdrawal-planner-fe</code>, a Next.js app) draws the screens under <code>/dev/global-ib-research</code>. One fact shaped how this phase handled data: the backend's dev and production servers <strong>share one database</strong>. A data change is live for both the moment it is written; only code changes wait for a deploy.</p>
+
+    <div class="callout">
+      <p><strong>Four words used everywhere below</strong></p>
+      <ul>
+        <li><strong>Signal:</strong> one house's view on one theme over one <em>horizon</em> (short, mid or long), with a <em>stance</em> (bull, bear or neutral). Each signal carries a short evidence quote that a program checks against the report.</li>
+        <li><strong>Theme:</strong> a named topic in the theme dictionary, such as 기업 실적·이익 (corporate earnings). Each theme belongs to a group, such as 섹터.</li>
+        <li><strong>Vote:</strong> a house counts at most once a week for each theme and horizon, however many reports it publishes.</li>
+        <li><strong>Week:</strong> Monday to Sunday, Korean time (KST). "The 10/5 week" runs from Monday 10/5 to Sunday 10/11.</li>
+      </ul>
+    </div>
+
+    <h3 id="bg-dictionary">1.2 The theme dictionary, and half the signals in limbo</h3>
+    <p>The extractor does not invent the page's vocabulary. It maps each signal to a theme in a dictionary table, <code>research_themes</code>. Every theme there is in one of four states, and the state decides where its signals can appear:</p>
+
+    <div class="states">
+      <div><b>active</b>Reviewed, with a Korean name and a group. Counted by the aggregation and shown on the page.</div>
+      <div><b>candidate</b>Created automatically when a signal matched no active theme. Not reviewed: the name is the model's own, and several candidates often mean the same thing.</div>
+      <div><b>merged</b>Points at another theme through <code>merged_into</code>. Its signals count under that theme.</div>
+      <div><b>retired</b>Hidden everywhere. Its signals never show.</div>
+    </div>
+
+    <p>The signal backfill loaded into production on 10/15 (1,457 signals from 6 runs) brought <strong>422 candidate themes</strong> with it. Some signals are eligible to count: they come from registered houses, were accepted, and were extracted with enough confidence. Of those, <strong>511 sat on active themes and 514 on candidates</strong>. The aggregation writes rows only for active themes, so half of the usable signals never reached 이번 주 시그널.</p>
+    <p>The opposite problem showed on the screens. The backend hid only retired themes, so candidate labels did appear: as chips on the report list, as cards on report pages, and on theme pages whose trend lines were all zeros (no aggregate rows exist for candidates). The review that approved the backend's first research pull request asked for candidates to be hidden before the production release.</p>
+
+    <h3 id="bg-purpose">1.3 What 이번 주 시그널 is for</h3>
+    <p>The section has three lists:</p>
+    <ul>
+      <li><strong>떠오르는 테마</strong> (rising): up to five cards;</li>
+      <li><strong>식는 테마</strong> (cooling): up to five;</li>
+      <li><strong>갈리는 테마</strong> (conflicts): up to three.</li>
+    </ul>
+    <p>The signed design shows them full, 5/5/3. On 10/15, production showed the 10/5 week as <strong>1/0/1</strong>: one rising theme (기업 실적·이익), no cooling theme, and one conflict (인플레이션 재가속, short horizon).</p>
+    <p>Before changing anything, the phase's first research step pinned down what the section is <em>for</em>, from the roadmap and the signed design. Its answer: <strong>it says what changed this week.</strong> That means themes turning up, themes turning down, and themes that split the houses, each judged as of the latest week. Five constraints follow from that purpose, and everything after was judged against them:</p>
+    <ol>
+      <li>No status that this week's run contradicts: nothing stale passed off as news.</li>
+      <li>No cooling caused by a house falling silent: a theme cools only when houses that are still publishing talk about it less.</li>
+      <li>Conflicts use the 8-week window. That window is a roadmap rule, so changing it is an explicit ask.</li>
+      <li>신규 (new) only for themes that really emerged.</li>
+      <li>Thin weeks stay honest: show what exists, and don't pad it.</li>
+    </ol>
+    <p>You added the phase's own version of this rule at its start: <em>"not only fill the 이번주 시그널, but make it reasonable, and not cross purpose of it."</em> Filling the counts was never enough.</p>
+
+    <h3 id="bg-phase">1.4 How the phase was run</h3>
+    <p>P24 covers all three apps at once. Its deadlines: a proposal to 대표 (the CEO) by Friday 10/16 at 09:00 KST, then an update of our code and data to 대표's direction by 15:00 the same day. A few ground rules held throughout:</p>
+    <ul>
+      <li><strong>Local first.</strong> Every change was built on a local branch and verified by running it locally against data identical to production. Nothing is pushed, opened as a PR or merged before 대표 answers: <em>"merge will done after proposal approval".</em></li>
+      <li><strong>Rehearse, then hand over.</strong> Every data change was rehearsed on a local copy of the production database. You run the production steps yourself. Claude never connects to production.</li>
+      <li><strong>Paid calls are capped.</strong> Each model call that costs money was gated at first. At about 03:25 you lifted the gate for this phase, with a $10 budget and a hard cap on every run.</li>
+      <li><strong>English</strong> everywhere, including the proposal.</li>
+    </ul>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>When (KST)</th><th>Step</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>10/15 evening</td><td>Research: what the section is for, which rules fill it honestly</td><td>Keep the one-week view; add the dictionary; lower the cooling floor to 0.5</td></tr>
+        <tr><td>10/16 ~00:30</td><td>The dictionary migration, double-checked and rehearsed</td><td>33 themes promoted, 229 merged, 160 left as candidates</td></tr>
+        <tr><td>10/16 ~00:50</td><td>Backend and frontend: hide the candidates</td><td>Candidates behave like retired themes everywhere</td></tr>
+        <tr><td>10/16 ~01:00</td><td>The real FE and BE run locally; before/after images</td><td>1/0/1 → 2/2/1 on screen; 0 console errors in 30 page loads</td></tr>
+        <tr><td>10/16 ~01:50</td><td>The proposal page and email draft (version 1)</td><td>Three answer boxes for 대표; re-shot at actual size in version 2</td></tr>
+        <tr><td>10/16 ~02:20</td><td>Fix: the rising card's trend line</td><td>Stays inside the card at every width</td></tr>
+        <tr><td>10/16 ~03:00</td><td>Research: why the week is thin</td><td>Collection, not extraction: 8 of about 17 reports collected</td></tr>
+        <tr><td>10/16 ~03:00–04:40</td><td>A model test, the HSBC/Merrill collection fix, the foot-count fix</td><td>Keep the current model; collection fixed; card fixed</td></tr>
+        <tr><td>10/16 ~05:00</td><td>Rehearsal of the 10/5 catch-up; research on cooling and conflicts</td><td>7/2/1; cooling and conflicts fine as they are</td></tr>
+        <tr><td>10/16 ~05:30</td><td>The proposal page, version 4</td><td>Cooling paragraph corrected; after-catch-up screen added</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="intuition">
+    <h2>2. Intuition</h2>
+
+    <h3 id="in-votes">2.1 One house, one vote</h3>
+    <p>Everything on the page starts from one counting rule. A house gets <strong>at most one vote a week for each theme and horizon</strong>. If House X publishes three reports in a week that all say something long-term about Theme A, that is still one vote. This keeps a prolific house from drowning out the rest. Three tests are then run on the votes.</p>
+
+    <p><strong>Rising</strong> needs two things over the last four weeks:</p>
+    <ul>
+      <li>the votes trend upward: the least-squares slope is positive. For four weeks it is <code>(−3·y₀ − y₁ + y₂ + 3·y₃) / 10</code>;</li>
+      <li>at least two houses voted in those four weeks.</li>
+    </ul>
+    <p>Take 기업 실적·이익 in the 10/5 week. Its votes ran 1, 2, 1, 3 over 9/14 to 10/5, from four houses. The slope is (−3 − 2 + 1 + 9) / 10 = +0.5, so it rises.</p>
+
+    <figure>
+      <svg viewBox="0 0 330 92" width="100%" style="max-width:330px" role="img" aria-label="Four weekly bars 1, 2, 1, 3 with an upward fitted line">
+        <line class="axis" x1="6" y1="64" x2="160" y2="64"/>
+        <rect class="bar-rise" x="14" y="49" width="24" height="15"/>
+        <rect class="bar-rise" x="46" y="34" width="24" height="30"/>
+        <rect class="bar-rise" x="78" y="49" width="24" height="15"/>
+        <rect class="bar-rise" x="110" y="19" width="24" height="45"/>
+        <line class="fit" x1="26" y1="49" x2="122" y2="26.5"/>
+        <text x="26" y="46" font-size="10" text-anchor="middle">1</text>
+        <text x="58" y="31" font-size="10" text-anchor="middle">2</text>
+        <text x="90" y="46" font-size="10" text-anchor="middle">1</text>
+        <text x="122" y="16" font-size="10" text-anchor="middle">3</text>
+        <text class="muted" x="26" y="77" font-size="9" text-anchor="middle">9/14</text>
+        <text class="muted" x="58" y="77" font-size="9" text-anchor="middle">9/21</text>
+        <text class="muted" x="90" y="77" font-size="9" text-anchor="middle">9/28</text>
+        <text class="muted" x="122" y="77" font-size="9" text-anchor="middle">10/5</text>
+        <text x="172" y="30" font-size="11">기업 실적·이익</text>
+        <text class="muted" x="172" y="46" font-size="10">slope +0.5, 4 houses</text>
+        <text class="muted" x="172" y="60" font-size="10">→ rising</text>
+      </svg>
+      <figcaption>Votes per week (bars) and the least-squares line (orange). A positive slope plus at least two houses makes a rising theme.</figcaption>
+    </figure>
+
+    <p><strong>Cooling</strong> compares the last 4 weeks with the last 12. A theme cools when two things hold:</p>
+    <ul>
+      <li>its 12-week average is at least a <em>floor</em>: 1.0 vote a week today, and 0.5 in the proposal;</li>
+      <li>its 4-week average is at most half its 12-week average.</li>
+    </ul>
+    <p>The floor exists so that a theme that was barely discussed cannot "cool". It also explains why production almost never showed cooling. A floor of 1.0 means at least 12 votes in 12 weeks, and few themes get that many. Here is a toy theme to make that concrete:</p>
+
+    <figure>
+      <svg viewBox="0 0 330 100" width="100%" style="max-width:330px" role="img" aria-label="Twelve weekly bars of a toy theme with averages">
+        <rect class="band-b" x="200" y="6" width="98" height="64"/>
+        <line class="axis" x1="6" y1="64" x2="300" y2="64"/>
+        <rect class="bar-grey" x="12" y="49" width="16" height="15"/>
+        <rect class="bar-grey" x="36" y="49" width="16" height="15"/>
+        <rect class="bar-grey" x="84" y="34" width="16" height="30"/>
+        <rect class="bar-grey" x="108" y="49" width="16" height="15"/>
+        <rect class="bar-grey" x="132" y="49" width="16" height="15"/>
+        <rect class="bar-grey" x="156" y="49" width="16" height="15"/>
+        <rect class="bar-grey" x="180" y="49" width="16" height="15"/>
+        <rect class="bar-cool" x="252" y="49" width="16" height="15"/>
+        <line class="dash" x1="8" y1="52.75" x2="298" y2="52.75"/>
+        <line class="fit" x1="202" y1="60.25" x2="298" y2="60.25"/>
+        <text class="muted" x="12" y="80" font-size="9">12 weeks</text>
+        <text class="muted" x="204" y="80" font-size="9">last 4 weeks</text>
+        <text x="8" y="94" font-size="10">12-week avg 0.75 (dashed) · 4-week avg 0.25 (orange)</text>
+      </svg>
+      <figcaption>A toy theme with 9 votes over 12 weeks, only 1 of them in the last 4. 0.25 is under half of 0.75, so it cools at a floor of 0.5. At 1.0 it never qualifies, because 0.75 is below the floor.</figcaption>
+    </figure>
+
+    <p><strong>A conflict</strong> looks at the last 8 weeks, one theme and one horizon at a time:</p>
+    <ul>
+      <li>each house takes its most frequent stance in those weeks. Neutral and a tie take no side;</li>
+      <li>a conflict needs at least one bull house, at least one bear house and at least two reports in total.</li>
+    </ul>
+    <p>A short-term bull against a long-term bear is <em>not</em> a conflict, because the two houses are talking about different horizons.</p>
+
+    <div class="callout note">
+      <p>The windows (4, 12 and 8 weeks) and the thresholds come from R1, the aggregation rules 대표 approved. The code labels each value either 규칙 (a rule fixed by a source such as the roadmap) or 출발값 (a starting value chosen for the stage). Either way, a change is an ask, not a quiet edit. That is why the cooling floor appears in the proposal as a question.</p>
+    </div>
+
+    <h3 id="in-leaks">2.2 Three leaks and one thing that was not a leak</h3>
+    <p>Why did the 10/5 week show only one rising theme? Following a week's reports from publication to the page, the phase found three places where real material leaked away.</p>
+
+    <figure class="funnel">
+      <div class="row"><div class="bar dim" style="width:12.5rem"></div><span>≈21 items published by registered houses</span></div>
+      <div class="row"><div class="bar dim" style="width:10.1rem"></div><span>≈17 of them in scope</span></div>
+      <div class="row"><div class="bar" style="width:4.8rem"></div><span><strong>8 collected</strong>, from 6 houses (≈45 %)</span></div>
+      <div class="row"><div class="bar lost" style="width:2.4rem"></div><span>≈ half their usable signals on candidates, so not counted</span></div>
+      <figcaption>The 10/5 week, from publication to the page. The widths are to scale for the first three rows; the last row is illustrative.</figcaption>
+    </figure>
+
+    <ol>
+      <li><strong>The dictionary leak.</strong> Half the usable signals sat on candidates (1.2). The aggregation ignores candidates, so those votes never counted.</li>
+      <li><strong>The floor leak.</strong> At 1.0 vote a week, cooling almost never fires. Over 26 weeks production showed cooling twice (26-week totals: 107 rising, 2 cooling, 114 conflicts).</li>
+      <li><strong>The collection leak.</strong> The registered houses published about 17 in-scope reports in the 10/5 week; we collected 8. Where the rest went:
+        <ul>
+          <li><strong>HSBC US</strong>, the biggest single gap, looked silent but wasn't. Its October monthly went up on 10/9, and the 10/11 run found nothing on the listing. A special report from 9/17 also went uncollected (2.6 explains both).</li>
+          <li><strong>Merrill</strong>'s 10/11 crawl failed outright on timeouts, missing its 10/5 weekly market outlook (CMO).</li>
+          <li><strong>Morgan Stanley</strong>'s <em>Thoughts on the Market</em> (about five a week, with full transcripts) is excluded by design.</li>
+          <li><strong>Goldman Sachs</strong>: a topic allowlist drops its Markets articles.</li>
+        </ul>
+      </li>
+    </ol>
+    <p><strong>Not a leak: extraction.</strong> In the last four weeks, 17 reports produced no signals:</p>
+    <ul>
+      <li>11 had nothing to extract;</li>
+      <li>2 were missed, both Merrill CMOs whose extraction input held only the web teaser, not the linked PDF;</li>
+      <li>3 were borderline;</li>
+      <li>1 was a failure.</li>
+    </ul>
+    <p>No prompt or threshold change would raise the yield truthfully. The 10/5 week is thin because few reports came in, not because the model read them badly.</p>
+
+    <h3 id="in-honest">2.3 Filling honestly: what was tried and turned down</h3>
+    <p>The easy way to fill a page is to loosen the rules until it is full. The phase judged each variant by the <em>lists</em> it would show, not by its counts, and asked of every item: is this really this week's news? Here is what passed, with the figures from the local copies:</p>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Rule set</th><th>26 weeks: rising / cooling / conflicts</th><th>10/5 week</th></tr></thead>
+      <tbody>
+        <tr><td>Production today</td><td>107 / 2 / 114</td><td>1 / 0 / 1</td></tr>
+        <tr><td>+ the dictionary supplement</td><td>131 / 3 / 117</td><td>2 / 0 / 1</td></tr>
+        <tr><td>+ cooling floor 0.5</td><td>131 / 55 / 117</td><td><strong>2 / 2 / 1</strong></td></tr>
+        <tr><td>+ the rehearsed catch-up of missed reports</td><td>141 / 53 / 117</td><td><strong>7 / 2 / 1</strong> (5 shown)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>And here is what was turned down, each for a reason you can check against the five constraints in 1.3:</p>
+    <ul>
+      <li><strong>A four-week view</strong> (each theme's latest status within four weeks). It would show 15 rising items. But by 10/5, 13 of them had already been re-judged stable with falling votes, such as AI 자본지출 at 3·2·1·0. That is stale news shown as this week's.</li>
+      <li><strong>A 12-week conflict window.</strong> It shows pairs 7 to 11 weeks old and pushes this week's real pair down the list. The 8-week window is also a roadmap rule.</li>
+      <li><strong>A looser cooling ratio (two-thirds instead of half).</strong> Its only addition at 10/5, 미국증시 전망 at −40 %, is noise.</li>
+      <li><strong>A lower floor (0.34 or 0.25).</strong> These give 75 or 183 coolings over 26 weeks, mostly chance (see the callout).</li>
+      <li><strong>Rising with a single house.</strong> It shows 14 rising themes in one week: one house's report would be enough to make a "trend".</li>
+    </ul>
+
+    <div class="callout warn">
+      <p><strong>Why a low floor fills the page with noise.</strong> Take a theme that got 3 votes in 8 weeks, about 0.375 a week. If nothing changed at all, the chance it gets 0 votes in the next four weeks is about e<sup>−1.5</sup> ≈ 0.22. About 49 themes sit at that level, so roughly 10 of them would "cool" in any given week by luck alone. The proposed floor of 0.5 sits near the edge: 6 votes in 8 weeks followed by 4 silent weeks happens by chance only about 5 % of the time (e<sup>−3</sup>).</p>
+    </div>
+
+    <h3 id="in-dictionary">2.4 The dictionary supplement</h3>
+    <p>The biggest honest gain was to <strong>review the candidates</strong> and fold them into the dictionary. A gap list from 10/15 proposed new themes and aliases for the most-used candidates. Before writing the migration, the phase double-checked it item by item, with one strict test. An item fails if either:</p>
+    <ul>
+      <li>its stance would flip on the target, or</li>
+      <li>its subject differs from the target's: a cause, an effect, a neighbouring market, or a relative regional call.</li>
+    </ul>
+    <p>A failed item stays a candidate. Nothing was rerouted to some other theme, and nothing was invented.</p>
+
+    <div class="callout note">
+      <p><strong>What a sign flip looks like (a toy example).</strong> Say a candidate is "Treasury yields rise", and a house is <em>bull</em> on it: it expects yields to go up. Merge that candidate into a theme called 국채금리 하락 ("Treasury yields fall"), and the same vote now reads as bullish on <em>falling</em> yields. The house's view is reversed. Checks like this are why some aliases stayed out.</p>
+    </div>
+
+    <p>Real examples of items that stayed candidates:</p>
+    <ul>
+      <li>Venezuelan oil production was not merged into the oil outlook;</li>
+      <li>a Bank of Japan hold was not merged into Japan's policy normalization;</li>
+      <li>AI ecosystem valuations were not merged into the AI bubble;</li>
+      <li>two whole proposed themes, AI 고용 영향 and 관세·통상정책, stayed candidates, because their members used opposite stance conventions.</li>
+    </ul>
+
+    <p>The result, as migration <code>0005</code>:</p>
+    <ul>
+      <li><strong>33 candidates promoted</strong> to active themes, 10 of them in a new group, 섹터 (equity sector views), so there are now 18 groups;</li>
+      <li><strong>229 merged</strong>: 147 into the new themes and 82 into 28 existing ones, each straight to its final theme;</li>
+      <li><strong>160 left as candidates.</strong> These are 22 in eight deferred proposals (five BlackRock-only themes and three single-house themes), 67 that failed the check, and 71 single-signal candidates the list never placed.</li>
+    </ul>
+    <p>About 448 signals now resolve to an active theme, 357 of them eligible to count. No embedding call was needed: each promoted theme keeps its candidate's vector.</p>
+
+    <p><strong>A subtle part: the 신규 badge.</strong> 신규 marks a theme as new. It needs two things:</p>
+    <ul>
+      <li>a promotion date (<code>promoted_at</code>) in the run's week or the week before;</li>
+      <li>at least two reports in those weeks.</li>
+    </ul>
+    <p>Stamp the 33 promotions with today's date, and the next runs would mark many of them 신규: a flood of "new" badges for topics the reports had been discussing for months. The migration therefore dates each promotion <strong>two weeks before the week of the theme's first report</strong>. That makes 신규 impossible for them, past or future, by construction. Had each promotion been dated in the week of its first report instead, 8 rows in the 26 weeks would have shown 신규. The themes are new to the dictionary, not to the reports.</p>
+
+    <h3 id="in-hiding">2.5 Hiding the candidates</h3>
+    <p>The backend now treats a candidate exactly like a retired theme. Its signals leave every surface:</p>
+    <ul>
+      <li>list chips and the "+n more" count;</li>
+      <li>detail cards and bullet chips;</li>
+      <li>matched stocks;</li>
+      <li>the marks on a theme page.</li>
+    </ul>
+    <p>A theme filter naming only candidates matches nothing. A candidate's theme page answers with its status and empty parts, and the frontend shows the signed "not found" screen. Why hide them like this, rather than show them with a "draft" badge? The aggregation writes no rows for candidates. A candidate's theme page would always show an empty trend, so hiding it is the only state that stays consistent everywhere.</p>
+    <p>One report shows the effect well: a 9/1 Bank of America Institute report. Before, it had <strong>6 signal cards</strong>, most of them on candidates. Hiding alone left <strong>2</strong>. Hiding plus the dictionary gave <strong>3</strong>, because four restaurant candidates were aliased to 소비 지출 동향 (consumer spending). The dictionary also keeps hiding from emptying the screens:</p>
+    <ul>
+      <li>with hiding alone, 3 reports in the 10/5 week (62 over 26 weeks) would lose every chip;</li>
+      <li>with the dictionary, 0 in the 10/5 week (19 over 26 weeks).</li>
+    </ul>
+
+    <div class="callout warn">
+      <p><strong>One gap was left open on purpose, and gets fixed in the update.</strong> A <code>stance</code> or <code>horizon</code> filter on its own can still match a report through a hidden candidate signal. On the untouched copy, 63 of the 198 reports matching <code>stance=bull</code> show no bull chip; after the dictionary, 18 do.</p>
+      <p>Excluding candidates by listing them in the URL would take about 14,600 characters for 422 ids, and the client library already warns at 8,000. The fix filters on the signal's own theme status instead. It was verified on the local copy (198 → 180 results, gap 18 → 0), and you chose to ship it in the update.</p>
+    </div>
+
+    <h3 id="in-dates">2.6 Dates are data: HSBC and Merrill</h3>
+    <p>The weekly collector runs every Sunday at 09:37 KST and looks back 14 days. A report's <em>date</em> decides which week it counts in, and whether the collector keeps it at all. HSBC US lists its reports as PDF links with labels in three shapes:</p>
+    <ul>
+      <li>a day label, such as "17 September 2026";</li>
+      <li>a month-only label, such as "October 2026";</li>
+      <li>no date at all, such as "HSBC Perspectives Q4 2026 – …".</li>
+    </ul>
+    <p>The old code had a fault for each shape:</p>
+    <ol>
+      <li><strong>Month-only labels were dated on the crawl day.</strong> The date parser (<code>dateutil</code>) fills any missing field from a default, and its default is <em>today</em>. On this machine, on 10/16, <code>parse("October 2026")</code> returns <code>2026-10-16</code>. The September monthly, crawled on 9/13, is stored as 9/13. If the old code had found the October monthly on the 10/18 run, it would have dated it 10/18, in the following week. Collection never corrects a stored date, so that wrong week would have stuck.</li>
+      <li><strong>Labels with no date were dropped.</strong> With no date, the 14-day window check throws the item away, so HSBC's quarterly outlook was never collected.</li>
+      <li><strong>Listing lag.</strong> HSBC often lists a PDF days after its date. The 9/17 special was not on the listing on 9/28, and by 10/4 it was older than the 14-day cutoff. It was never collected.</li>
+    </ol>
+
+    <figure>
+      <svg viewBox="0 0 360 132" width="100%" style="max-width:360px" role="img" aria-label="Timeline of three KST weeks with the candidate dates for HSBC's October monthly">
+        <rect class="band-a" x="12" y="20" width="112" height="44"/>
+        <rect class="band-b" x="124" y="20" width="112" height="44"/>
+        <rect class="band-a" x="236" y="20" width="112" height="44"/>
+        <text class="muted" x="68" y="14" font-size="9" text-anchor="middle">week of 9/28</text>
+        <text x="180" y="14" font-size="9" text-anchor="middle" font-weight="700">week of 10/5</text>
+        <text class="muted" x="292" y="14" font-size="9" text-anchor="middle">week of 10/12</text>
+        <line class="axis" x1="12" y1="64" x2="348" y2="64"/>
+        <circle class="mk-mid" cx="68" cy="42" r="5"/>
+        <circle class="mk-good" cx="196" cy="42" r="6"/>
+        <circle class="mk-bad" cx="340" cy="42" r="5"/>
+        <text class="muted" x="68" y="78" font-size="9" text-anchor="middle">10/1</text>
+        <text class="muted" x="196" y="78" font-size="9" text-anchor="middle">10/9</text>
+        <text class="muted" x="336" y="78" font-size="9" text-anchor="middle">10/18</text>
+        <text x="8" y="98" font-size="9.5"><tspan class="mk-good">●</tspan> 10/9: the PDF's Last-Modified, inside October: the new date</text>
+        <text x="8" y="112" font-size="9.5"><tspan class="mk-mid">●</tspan> 10/1: the fallback when Last-Modified is missing or outside the month</text>
+        <text x="8" y="126" font-size="9.5"><tspan class="mk-bad">●</tspan> 10/18: the crawl day the old code would have stamped</text>
+      </svg>
+      <figcaption>HSBC's October monthly: only the green date lands in the week the report belongs to.</figcaption>
+    </figure>
+
+    <p>The fix keeps a day label as it is. For the other two shapes it asks the server one cheap question: one <code>HEAD</code> request for the PDF's <code>Last-Modified</code> header.</p>
+    <ul>
+      <li><strong>Month-only label:</strong> use that header's date when it falls inside the labelled month, otherwise the 1st of the month. Never the crawl day.</li>
+      <li><strong>Undated label:</strong> use the header, or drop the item as before.</li>
+      <li><strong>The window:</strong> HSBC's is now at least 45 days, whatever the cron says.</li>
+      <li><strong>Provenance:</strong> each date records where it came from, in <code>metadata.published_at_source</code>.</li>
+    </ul>
+    <p>A failed <code>HEAD</code> never fails the run; it only selects the fallback. Seeing an old item again is harmless, because registration matches on the house and the canonical URL and keeps fields that are already filled.</p>
+    <p>Run live with the cron's 14-day window, the old code returned only the October monthly, dated on the crawl day. The fixed code returns four items:</p>
+    <ul>
+      <li>the October monthly, dated 10/9;</li>
+      <li>the 17 September special;</li>
+      <li>Perspectives Q4, dated 10/13;</li>
+      <li>the September monthly.</li>
+    </ul>
+
+    <p><strong>Merrill's problem was patience, not dates.</strong> Its category pages took 4.4 to 13.5 seconds to answer, against a global timeout of 10 seconds with two attempts. Its link collection failed or partly failed in each of the last five runs. The fix gives Merrill's own requests 30 seconds and leaves every other house at 10.</p>
+    <p>At 30 s, a test run loaded 3 of the 5 category pages plus the CMO hub, which is where the weekly CMOs are. At 60 s all five loaded, so 60 s was suggested. 30 s was kept for three reasons:</p>
+    <ul>
+      <li>the same pages had answered in 4–14 s earlier that night, and the slowness came after a 49-minute crawl from the same machine, which looks like throttling;</li>
+      <li>the two pages that still timed out hold mostly evergreen planning articles;</li>
+      <li>60 s would double the worst case on a slow day.</li>
+    </ul>
+    <p>If the weekly runs still show Merrill failures, the fix is one constant.</p>
+
+    <h3 id="in-rehearsal">2.7 The rehearsal: what catching up really changes</h3>
+    <p>Fixing the collector helps from the next Sunday on. But you asked a sharper question: <em>"after gathering, run the pipeline for them, and see would it fix the problem."</em> So the whole catch-up was rehearsed on a fresh local copy that already had the dictionary:</p>
+    <ol>
+      <li>collect with the fixed code;</li>
+      <li>extract the new reports' signals;</li>
+      <li>re-run 26 weeks of aggregation at floor 0.5.</li>
+    </ol>
+    <ul>
+      <li><strong>Collected.</strong> HSBC registered its three missed reports:
+        <ul>
+          <li>the October monthly (10/9, the 10/5 week);</li>
+          <li>the 17 September special (the 9/14 week);</li>
+          <li>Perspectives Q4 (10/13, the 10/12 week).</li>
+        </ul>
+        Merrill's crawl hit the rehearsal's 30-minute limit and registered nothing. The earlier research had already shown that Merrill changes no 10/5 list.</li>
+      <li><strong>Extracted.</strong> $0.18 against a $1.50 cap. That gave 45 signals: 43 on active themes, 38 with verified evidence, and 7 waiting for review.</li>
+      <li><strong>Re-aggregated.</strong> The 10/5 week went from 2/2/1 to <strong>7/2/1</strong>.</li>
+    </ul>
+
+    <div class="chipcols">
+      <div>
+        <h4>Production today · 1 / 0 / 1</h4>
+        <span class="lbl">rising</span><span class="chip r">기업 실적·이익</span>
+        <span class="lbl">cooling</span><span class="chip none">none</span>
+        <span class="lbl">conflicts</span><span class="chip k">인플레이션 재가속 · 단기</span>
+      </div>
+      <div>
+        <h4>Dictionary + floor 0.5 · 2 / 2 / 1</h4>
+        <span class="lbl">rising</span><span class="chip r">기업 실적·이익</span><span class="chip r">글로벌 채권 자산군뷰</span>
+        <span class="lbl">cooling</span><span class="chip c">글로벌 주식 자산군뷰 −100 %</span><span class="chip c">일본주식 강세 −50 %</span>
+        <span class="lbl">conflicts</span><span class="chip k">인플레이션 재가속 · 단기</span>
+      </div>
+      <div>
+        <h4>+ the catch-up · 7 / 2 / 1 (5 shown)</h4>
+        <span class="lbl">rising</span><span class="chip r">IT·기술 섹터</span><span class="chip r">유가 전망</span><span class="chip r">기업 실적·이익</span><span class="chip r">필수소비재 섹터</span><span class="chip r">유틸리티 섹터</span>
+        <span class="lbl">cooling</span><span class="chip c">글로벌 주식 자산군뷰 −57 %</span><span class="chip c">일본주식 강세 −50 %</span>
+        <span class="lbl">conflicts</span><span class="chip k">인플레이션 재가속 · 단기</span>
+      </div>
+    </div>
+
+    <p>Four things in that picture are worth slowing down for.</p>
+    <p><strong>First, the fill leans on the dictionary.</strong> Three of the five rising themes shown are 섹터 themes that exist only after migration 0005. Each new item pairs HSBC's October monthly with one other house, and four of the five sit exactly at the rule's minimum: two houses and an average of 0.5 votes a week.</p>
+    <p><strong>Second, a rising theme can be neutral.</strong> 유가 전망 rises on two <em>neutral</em> votes. Rising measures attention, not direction.</p>
+    <p><strong>Third, more data can also remove an item.</strong> 글로벌 채권 자산군뷰 left the rising list. The 17 September special added a vote in the 9/14 week, which turned its four weeks from 1·0·1·1 (slope +0.1) into 2·0·1·1 (slope −0.2). The same arithmetic that adds items also takes them away.</p>
+
+    <figure>
+      <svg viewBox="0 0 330 90" width="100%" style="max-width:330px" role="img" aria-label="Two four-week bar charts for 글로벌 채권 자산군뷰, before and after the special report">
+        <line class="axis" x1="6" y1="64" x2="150" y2="64"/>
+        <rect class="bar-rise" x="12" y="49" width="22" height="15"/>
+        <rect class="bar-rise" x="76" y="49" width="22" height="15"/>
+        <rect class="bar-rise" x="108" y="49" width="22" height="15"/>
+        <line class="fit" x1="23" y1="55" x2="119" y2="50.5"/>
+        <text class="muted" x="78" y="80" font-size="9" text-anchor="middle">before: 1·0·1·1, slope +0.1</text>
+        <line class="axis" x1="176" y1="64" x2="320" y2="64"/>
+        <rect class="bar-grey" x="182" y="34" width="22" height="30"/>
+        <rect class="bar-grey" x="246" y="49" width="22" height="15"/>
+        <rect class="bar-grey" x="278" y="49" width="22" height="15"/>
+        <line class="fit" x1="193" y1="44.5" x2="289" y2="53.5"/>
+        <text class="muted" x="248" y="80" font-size="9" text-anchor="middle">after: 2·0·1·1, slope −0.2</text>
+      </svg>
+      <figcaption>One extra vote in the oldest of the four weeks flips the slope, and the theme becomes stable.</figcaption>
+    </figure>
+
+    <p><strong>Fourth, cooling did not change, and that corrected the proposal.</strong> Earlier research had used HSBC's September monthly as a stand-in for the missing October one, and estimated up to 9/2/1 with 일본주식 강세 gone from cooling. Version 3 of the proposal said so. The real report behaved differently:</p>
+    <ul>
+      <li>일본주식 강세's only vote in the four weeks is one other house's vote in the 9/14 week;</li>
+      <li>HSBC's October report gives no Japan equity view we could read. A local check of the public PDF found Japan only as an earnings driver, as a table row whose stance is a glyph, and in a bond line.</li>
+    </ul>
+    <p>So the theme still cools at −50 %. Now that HSBC is publishing again, that cooling is consistent with the rule against cooling from a silent house. Version 4 of the proposal says so. The rising estimate held and the cooling estimate did not. A stand-in like that is an upper bound, not a forecast.</p>
+
+    <div class="callout note">
+      <p>The dashboard check on the rehearsal shows 5/2/1. The 10/5 report <em>list</em> still shows 8 reports, because the backend lists only reports whose summary succeeded, and the rehearsal skipped summaries. In production, the catch-up must run the normal processing (summaries included) before the new reports appear in the list.</p>
+    </div>
+
+    <h3 id="in-model">2.8 Would a smarter model help?</h3>
+    <p>The team's quality bar for signal extraction asks that at least <strong>18 of 20</strong> sampled signals carry the right theme. The current model, <code>gpt-5.6-terra</code>, scored 16 of 20 in the earlier pilot. The phase re-ran the same 29 reports on two larger models:</p>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Model</th><th>Theme right</th><th>95 % Wilson interval</th><th>Cost (cap)</th></tr></thead>
+      <tbody>
+        <tr><td><code>gpt-5.6-terra</code> (today)</td><td>16 / 20</td><td>58 – 92 %</td><td>—</td></tr>
+        <tr><td><code>gpt-6.1-sol</code></td><td>15 / 18 (11 reports gave no signals, leaving the sample 2 short)</td><td>61 – 94 %</td><td>$0.43 ($2.00)</td></tr>
+        <tr><td><code>gpt-5.6-sol</code></td><td>15 / 20</td><td>53 – 89 %</td><td>$1.30 ($3.00)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 380 140" width="100%" style="max-width:380px" role="img" aria-label="Wilson intervals for the three models against the 90 percent bar">
+        <line class="axis" x1="40" y1="112" x2="340" y2="112"/>
+        <text class="muted" x="40" y="126" font-size="9" text-anchor="middle">50 %</text>
+        <text class="muted" x="100" y="126" font-size="9" text-anchor="middle">60 %</text>
+        <text class="muted" x="160" y="126" font-size="9" text-anchor="middle">70 %</text>
+        <text class="muted" x="220" y="126" font-size="9" text-anchor="middle">80 %</text>
+        <text class="muted" x="280" y="126" font-size="9" text-anchor="middle">90 %</text>
+        <text class="muted" x="340" y="126" font-size="9" text-anchor="middle">100 %</text>
+        <line class="bar90" x1="280" y1="10" x2="280" y2="112"/>
+        <text x="284" y="18" font-size="9">18/20 bar</text>
+        <text x="40" y="26" font-size="10">terra 16/20</text>
+        <line class="ci" x1="90.4" y1="34" x2="291.4" y2="34"/>
+        <circle class="pt" cx="220" cy="34" r="4"/>
+        <text x="40" y="58" font-size="10">6.1-sol 15/18</text>
+        <line class="ci" x1="104.8" y1="66" x2="305.2" y2="66"/>
+        <circle class="pt" cx="239.8" cy="66" r="4"/>
+        <text x="40" y="90" font-size="10">5.6-sol 15/20</text>
+        <line class="ci" x1="58.6" y1="98" x2="272.8" y2="98"/>
+        <circle class="pt" cx="190" cy="98" r="4"/>
+      </svg>
+      <figcaption>Each line is the range of true accuracy the result is compatible with. They overlap almost entirely: 20 samples cannot tell these models apart.</figcaption>
+    </figure>
+
+    <p>Twenty samples are very few. Even a model that is truly right 90 % of the time clears 18 of 20 only about <strong>68 %</strong> of the time. Its chance of 18, 19 or 20 successes in 20 tries is 0.677. The paired look was more telling:</p>
+    <ul>
+      <li>both larger models fixed the same 8 of the 11 items terra still got wrong;</li>
+      <li>but they broke 11 and 7 of the 36 items terra had right.</li>
+    </ul>
+    <p>A bigger model changed <em>which</em> errors were made, not how many. The phase recommends keeping terra. <code>gpt-5.6-sol</code> costs 2.33 times as much for no gain. <code>gpt-6.1-sol</code> is 23 % cheaper, but it loses recall on short reports. This test was the largest single cost of the phase, $1.73.</p>
+
+    <h3 id="in-cooling">2.9 Cooling and conflicts: fine as they are</h3>
+    <p>With rising explained, you asked the same of the other two lists: <em>"research how we can increase cooling and conflict also. if it's not possible, fine as is."</em> The answer was <strong>fine as is.</strong></p>
+    <ul>
+      <li><strong>Cooling.</strong> At 10/5 only 6 themes reach the 0.5 floor at all. Every near-miss is either the HSBC gap (21 of 27) or a 3 → 0 drop of the kind chance produces about one time in five (2.3). Over 26 weeks, cooling fills all five slots in 3 weeks, and in none of the last 9. The only honest lever is the HSBC fix already made.</li>
+      <li><strong>Conflicts.</strong> The near-misses are of two kinds:
+        <ul>
+          <li>opposite stances on different horizons (7);</li>
+          <li>bull or bear against neutral (9).</li>
+        </ul>
+        The roadmap's "same theme and horizon" rule excludes both, rightly. The dictionary adds no conflicts. Neutral is 8.5 % of signals, mostly HSBC's genuinely neutral table cells, and not overused. The two-report filter has never removed a pair. Conflicts fill all three slots in 16 of 26 weeks and in 4 of the last 9. They fell after July because HSBC, J.P. Morgan and Jefferies took fewer bull or bear sides, not because of a rule.</li>
+    </ul>
+    <p>The research found one optional change, called K1. Each house's side in a conflict would come from its <strong>latest report</strong> in the 8-week window, instead of its 8-week majority. At 10/5 that would add AI 자본지출 · 장기: HSBC US and Morgan Stanley bull, against Goldman Sachs and J.P. Morgan, whose newest reports turned bear on 9/23 and 10/1. That is the roadmap's own example of a split. Conflicts at 10/5 would go 1 → 2, and over 26 weeks 117 → 127 (20 added, 10 removed). It makes the list more current, not fuller. It changes a value 대표 approved, so it is not part of today's update.</p>
+
+    <h3 id="in-layout">2.10 Two small layout bugs</h3>
+    <p>Two bugs in the large rising card were found while taking the proposal's images. Both were fixed in CSS alone, without JavaScript measurement.</p>
+    <ul>
+      <li><strong>The trend line left its card.</strong> The line was a fixed 96 × 32 drawing in a row that could neither shrink nor wrap. On narrow cards it ran past the right edge: 5.5 px at 1280 px wide, 73.8 px at 1024, and at every width from 768 to 1296. Now the drawing scales with its box. It is 96 px where there is room, shrinks to 48 px beside its label, and then wraps under the label.</li>
+      <li><strong>The ▲/▼ count left its card</strong>, by up to 39 px on pages 768–880 and 1024–1104 px wide. At 768 it slid under the next card. The foot row now wraps, and the count carries an auto left margin. Where both fit, nothing moves. Where they don't, the count drops under 하우스 n곳, right-aligned. The proposal's widths, 1280 and 390, stayed pixel-identical, so its images stayed true.</li>
+    </ul>
+    <p>The two mock cards below use the real rule (<code>flex-wrap</code> plus <code>margin-left: auto</code>). Only their widths differ:</p>
+    <div class="mockpair">
+      <div class="mockcard" style="width:15rem">
+        <div class="title">기업 실적·이익</div>
+        <div class="foot"><span class="houses">하우스 4곳</span><span class="count"><span class="up">▲5</span> <span class="down">▼2</span></span></div>
+      </div>
+      <div class="mockcard" style="width:6.6rem">
+        <div class="title">기업 실적·이익</div>
+        <div class="foot"><span class="houses">하우스 4곳</span><span class="count"><span class="up">▲5</span> <span class="down">▼2</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="code">
+    <h2>3. Code</h2>
+
+    <h3 id="code-map">3.1 Where the code is</h3>
+    <p>Four local branches across three repositories. Each commit is authored by you, and none is pushed.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Repo · branch (base)</th><th>Commits</th></tr></thead>
+      <tbody>
+        <tr><td>pipeline · <code>feat/theme-dictionary-supplement</code> (main <code>e75b8b1</code>)</td><td><code>a549610</code> feat(ib-pipeline): add the theme dictionary supplement migration<br><code>3c71206</code> docs(ib-pipeline): re-export the taxonomy after the dictionary supplement</td></tr>
+        <tr><td>pipeline · <code>fix/hsbc-merrill-collection</code> (main <code>e75b8b1</code>)</td><td><code>751861e</code> fix(ib-pipeline): give Merrill's category and item pages a 30 s timeout<br><code>cdf2939</code> fix(ib-pipeline): date HSBC US reports from the PDF and widen its window</td></tr>
+        <tr><td>backend · <code>feat/research-hide-candidate-themes</code> (dev <code>d7753ba</code>)</td><td><code>2583a95</code> feat(research): hide candidate themes on the research dashboard<br><code>f4684be</code> test(research): pin the empty side URL as null in conflicts</td></tr>
+        <tr><td>frontend · <code>feat/research-candidate-themes</code> (develop <code>a4c5e71</code>)</td><td><code>6cea966</code> fix: show candidate themes as not found on the research theme page<br><code>4facd78</code> feat: state the 0.5 a week cooling floor in the research tooltip<br><code>05ff782</code> fix: keep the rising card's trend line inside its card<br><code>1d10427</code> fix: keep the rising card's foot count inside its card</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p><code>4facd78</code> only changes the cooling tooltip from "주당 1 이상" to "주당 0.5 이상". It sits on the branch so that the "after" images read true, and it is dropped unless 대표 approves the floor.</p>
+
+    <h3 id="code-migration">3.2 The migration, 0005</h3>
+    <p><code>schema/0005_theme_dictionary_supplement.sql</code> is 544 lines, most of them its two lists. It runs in a single transaction with the same steps every time:</p>
+    <ol>
+      <li>load the lists into temporary tables;</li>
+      <li>check that the database is in the state the file expects;</li>
+      <li>change the themes;</li>
+      <li>move the aliases;</li>
+      <li>check the result;</li>
+      <li>commit.</li>
+    </ol>
+    <p>If any check fails, it raises an error and nothing is written.</p>
+<pre><code>BEGIN;
+
+CREATE TEMPORARY TABLE supplement_promote (
+    theme_id        text PRIMARY KEY,
+    theme_canonical text NOT NULL,
+    theme_group     text NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO supplement_promote (theme_id, theme_canonical, theme_group) VALUES
+    ...
+    ('thm_global_information_technology_7c432a',     'IT·기술 섹터', '섹터'),
+    ...
+
+-- Guard: the database is in the state this file expects
+DO $$ ...
+    -- each theme to merge is a candidate, or already merged into its target
+    ...
+    IF bad &gt; 0 THEN
+        RAISE EXCEPTION '0005: % theme(s) to merge are missing or in an unexpected state', bad;
+    END IF;
+... $$;</code></pre>
+    <p>Every <code>UPDATE</code> is filtered by the row's current state (<code>AND t.status = 'candidate'</code>), so a second run changes nothing. Here is the promotion, with the backdated <code>promoted_at</code>: the Monday of the first report's KST week, minus 14 days.</p>
+<pre><code>UPDATE public.research_themes t
+   SET status          = 'active',
+       theme_canonical = p.theme_canonical,
+       theme_group     = p.theme_group,
+       promoted_at     = f.promoted_at,
+       updated_at      = now()
+  FROM supplement_promote p
+  JOIN (SELECT c.promoted_id,
+               (date_trunc('week', min(d.published_at) AT TIME ZONE 'Asia/Seoul')
+                - interval '14 days') AT TIME ZONE 'Asia/Seoul' AS promoted_at
+          FROM ...   -- the theme's own signals plus those of candidates merged into it
+         GROUP BY c.promoted_id) f ON f.promoted_id = p.theme_id
+ WHERE t.theme_id = p.theme_id
+   AND t.status = 'candidate';</code></pre>
+    <p>The merge points each candidate straight at its final active theme, never at another merged theme. Its <code>auto</code> alias moves with it and becomes <code>reviewed</code>. That matters because the signal stage ignores an alias whose theme is merged; it does not follow <code>merged_into</code>. The aggregation does follow <code>merged_into</code> when it reads, so re-running past weeks picks up the change without rewriting a single signal. The final check refuses to commit unless three things hold:</p>
+    <ul>
+      <li>every promoted theme is active, with a date and an embedding;</li>
+      <li>every merged theme points at an active one;</li>
+      <li>no alias still points at a merged theme.</li>
+    </ul>
+    <p>A separate file, <code>checks/0005_verify.sql</code>, holds 31 read-only checks to run after the apply.</p>
+
+    <h3 id="code-collect">3.3 HSBC's dates and Merrill's timeout</h3>
+    <p>The HSBC fix is one new method in <code>HsbcUsSource</code> (<code>collection/adapters.py</code>), plus two helpers. It reads like the rules in 2.6:</p>
+<pre><code>def _publication_date(
+    self, http_client: HttpClient, url: str, label: str,
+) -&gt; tuple[datetime | None, str | None]:
+    date_text = self._extract_date_text(label)
+    if date_text and date_text[0].isdigit():  # "17 September 2026", not "September 2026"
+        published_at = parse_datetime(date_text)
+        if published_at is not None:
+            return published_at, "label_day"
+    last_modified = self._last_modified(http_client, url)
+    month_span = self._month_span(date_text) if date_text else None
+    if month_span is None:
+        return (last_modified, "last_modified") if last_modified else (None, None)
+    start, end = month_span
+    if last_modified is not None and start &lt;= last_modified &lt; end:
+        return last_modified, "last_modified"
+    return start, "label_month_start"</code></pre>
+    <p>The leading-digit test is what keeps <code>dateutil</code> away from month-only labels, so it never gets the chance to fill in today. <code>_last_modified</code> makes one <code>HEAD</code> request and returns <code>None</code> on any failure. That way a slow or broken server only selects the fallback and never changes the run's exit code. The window is one override:</p>
+<pre><code>min_window_days = 45
+
+def resolve_window_days(self) -&gt; int:
+    return max(super().resolve_window_days(), self.min_window_days)</code></pre>
+    <p>Merrill's fix is a class attribute and a keyword argument on its four kinds of requests: category pages, the CMO hub page, its JSON pages, and item pages. The global <code>HTTP_TIMEOUT_SECONDS</code> stays 10.</p>
+<pre><code>class MerrillSource(SourceAdapter):
+    ...
+    # ml.com's category pages answer in 4-14 s; the global 10 s timeout failed most runs.
+    request_timeout_seconds = 30
+    ...
+        html = http_client.get(category_url, timeout=self.request_timeout_seconds).text</code></pre>
+
+    <h3 id="code-be">3.4 The backend: one set of hidden ids</h3>
+    <p>The backend change in <code>app/research/dashboard/reads.py</code> works because the retired-theme rule already sat in one place. The dictionary class gains a candidate set defined exactly like the retired one, by the <em>end</em> of a theme's merge chain, plus their union:</p>
+<pre><code>def candidate_ids(self) -&gt; Set[str]:
+    if self._candidate is None:
+        self._candidate = {
+            theme_id
+            for theme_id, target in self._resolved.items()
+            if self._rows[target].get("status") == "candidate"
+        }
+    return set(self._candidate)
+
+def hidden_ids(self) -&gt; Set[str]:
+    """Ids whose signals the dashboard never shows: `retired_ids()` plus `candidate_ids()`."""
+    return self.retired_ids() | self.candidate_ids()</code></pre>
+    <p>The one read that decides which signals are visible swaps <code>retired</code> for <code>hidden</code>. Because every screen draws from that read, the chips, cards, bullet chips, matched stocks and theme-page marks all change together:</p>
+<pre><code>hidden = themes.hidden_ids()
+signals: List[Dict[str, Any]] = []
+for row in raw:
+    resolved = themes.resolve(row.get("theme_id"))
+    if resolved is None or row.get("theme_id") in hidden:
+        continue
+    signals.append({**row, "resolved_theme_id": resolved})</code></pre>
+    <p>Two smaller changes complete it:</p>
+    <ul>
+      <li>the report list's <code>theme</code> filter subtracts <code>hidden_ids()</code>;</li>
+      <li>the theme page sends hidden themes to <code>_hidden_theme_page</code> (renamed from <code>_retired_theme_page</code>), which answers 200 with the real status and empty parts, so links in mails never break.</li>
+    </ul>
+    <p>A theme merged <em>into</em> a candidate still answers <code>merged_into</code>. A candidate merged into an active theme counts under that theme. The docstring of <code>signal_filtered_documents</code> records the stance/horizon gap from 2.5 and why a <code>not.in</code> list was not used.</p>
+
+    <h3 id="code-fe">3.5 The frontend: one status check and two CSS rows</h3>
+    <p>The theme page's screen state comes from <code>classifyTheme</code> in <code>lib/research/theme.ts</code>. It already checked <code>status</code> before <code>run</code>, because retired themes and not-yet-aggregated themes both have a null <code>run</code>. The change widens one test:</p>
+<pre><code>function isHiddenStatus(status: ThemeStatus): boolean {
+  return status === "retired" || status === "candidate";
+}
+
+export function classifyTheme(response: ThemeResponse): ThemeView {
+  if (isMergedTheme(response)) {
+    if (isHiddenStatus(response.merged_into.status)) return { kind: "unavailable" };
+    return { kind: "merged", source: response.theme, target: response.merged_into };
+  }
+  if (isHiddenStatus(response.theme.status)) return { kind: "unavailable" };
+  ...</code></pre>
+    <p>Both card fixes live in <code>components/research/RankedThemes.tsx</code>, with one new prop in <code>Sparkline.tsx</code>. The trend row and the foot row both gain <code>flex-wrap</code>. <code>Sparkline</code> gains an opt-in <code>fluid</code> prop: it keeps a 96:32 aspect ratio and takes whatever width its CSS gives it, between 48 and 96 px. The foot row's count is pushed right by an auto margin:</p>
+<pre><code>&lt;div className="border-line flex flex-wrap items-center justify-between gap-2 border-t pt-2.5"&gt;
+  &lt;span className="text-ink-soft text-xs whitespace-nowrap tabular-nums"&gt;하우스 {item.houses}곳&lt;/span&gt;
+  &lt;DistributionCount bull={item.bull} bear={item.bear} className="ml-auto" /&gt;
+&lt;/div&gt;</code></pre>
+
+    <h3 id="code-verify">3.6 How it was verified, and what it cost</h3>
+    <ul>
+      <li><strong>Pipeline, collection branch:</strong> 993 tests pass, 4 of them new. Each new assertion was broken once on purpose and watched to fail, as the folder's rules require (11 mutations). Both HSBC and Merrill were also run live against their public pages, before and after the fix.</li>
+      <li><strong>Pipeline, dictionary branch:</strong> the migration was applied to clones of the production copy, its 31 checks were run, and 26 weeks were re-aggregated under both floors. Every difference from the earlier simulations traces to an item the double-check dropped.</li>
+      <li><strong>Backend:</strong> 104 unit tests pass, and each of 4 deliberate mutations of the new code was caught. The real API also ran locally against the copies.</li>
+      <li><strong>Frontend:</strong> lint (0 errors), the type check, 898 tests and the production build. The layout fixes were measured in a headless browser at 11 named widths and every 4 px from 320 to 1600.</li>
+      <li><strong>End to end:</strong> the real frontend and backend ran on this machine against the copies, at 1280 and 390 px. The frontend ran from a throwaway checkout with a local-only login bypass you applied, which never left that checkout. Across 30 page loads there were 0 console errors, and the screens matched the API's numbers.</li>
+      <li><strong>Spend:</strong> $1.73 for the model test and $0.18 for the catch-up extraction, $1.91 of the $10 budget. Every paid run had a hard <code>--max-spend-usd</code> cap.</li>
+    </ul>
+
+    <h3 id="code-next">3.7 What happens next</h3>
+    <p>The proposal page (version 4) asks 대표 three things, each with its own answer box:</p>
+    <ul>
+      <li>approve the dictionary supplement;</li>
+      <li>approve the cooling floor change from 1.0 to 0.5;</li>
+      <li>give feedback on the direction: the one-week view, with fewer and truer items, and more coverage to fill it.</li>
+    </ul>
+    <p>You edit and send it with a short email. After the answer, the code merges to the backend's <code>dev</code>, the frontend's <code>develop</code> and the pipeline's <code>main</code>, and the stance/horizon filter fix joins the backend branch. The production data steps were written down in order, and you run each one yourself:</p>
+    <ol>
+      <li>Apply 0005 first, because new signals map to the dictionary in force when they are extracted.</li>
+      <li>Merge the collection fix before the 10/18 cron, so the old code never stamps the October monthly with a crawl day.</li>
+      <li>Run a read-only pre-check.</li>
+      <li>Dispatch collection for HSBC US, then Merrill. Each dispatch needs your approval, and Merrill may take over an hour.</li>
+      <li>Extract signals for the new reports: estimate first, then run with a $0.50 cap.</li>
+      <li>Re-run the 26-week aggregation, with the 0.5 floor only if 대표 approves it.</li>
+      <li>Run the read-only checks.</li>
+    </ol>
+    <p>The phase then ends with a review, including your walkthrough of the dev page.</p>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="best-practices">
+    <h2>4. Best practices &amp; next steps</h2>
+    <p>How does this work compare with common practice outside this codebase? Each claim below links a page that was opened for this explainer.</p>
+
+    <h3>Where it lines up</h3>
+    <ul>
+      <li><strong>All-or-nothing, self-checking migrations.</strong> PostgreSQL's documentation says <code>RAISE EXCEPTION</code> "raises an error (which normally aborts the current transaction)" (<a href="https://www.postgresql.org/docs/current/plpgsql-errors-and-messages.html">PostgreSQL docs: Errors and Messages</a> — postgresql.org). 0005 puts every change between <code>BEGIN</code> and <code>COMMIT</code> and guards it with such checks. A failed guard leaves production exactly as it was, and a second run is a no-op. That is what makes it safe for you to apply by hand.</li>
+      <li><strong>A per-request timeout for one slow host.</strong> HTTPX lets you "set timeouts for an individual request", and a timeout set on a client is used "as the default" (<a href="https://www.python-httpx.org/advanced/timeouts/">HTTPX docs: Timeouts</a> — python-httpx.org). Merrill gets 30 s on its own calls. Every other house still fails fast at 10 s.</li>
+      <li><strong>An auto margin instead of measuring.</strong> MDN explains that <code>margin-left: auto</code> "consumes all the space it can in its axis", pushing an item away from its neighbours (<a href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Aligning_items_in_a_flex_container">MDN: Aligning items in a flex container</a> — developer.mozilla.org). On one line it keeps the count at the right edge, as before. Once <code>flex-wrap</code> moves the count to its own line, the same margin right-aligns it there, with no JavaScript.</li>
+      <li><strong>Not trusting a parser's defaults.</strong> dateutil's documentation says missing elements "are taken from the <code>datetime.datetime</code> object passed to the parameter <code>default</code>" (<a href="https://dateutil.readthedocs.io/en/stable/parser.html">dateutil docs: parser</a> — dateutil.readthedocs.io). When no default is passed, the source sets it to <code>datetime.datetime.now().replace(hour=0, minute=0, …)</code> (<a href="https://raw.githubusercontent.com/dateutil/dateutil/master/src/dateutil/parser/_parser.py">dateutil source: parser.parse</a> — raw.githubusercontent.com). That one line is the whole HSBC month-label bug. The fix decides by the label's shape first, and lets the parser see only labels that carry a day.</li>
+    </ul>
+
+    <h3>Where it deliberately departs</h3>
+    <ul>
+      <li><strong>A file date standing in for a publication date.</strong> MDN describes <code>Last-Modified</code> as the time "when the origin server believes the resource was last modified", and as "less accurate than an ETag" (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Last-Modified">MDN: Last-Modified</a> — developer.mozilla.org). It is a file's date, not a publication date: a re-upload moves it. The fix accepts it only inside the month the label names, and otherwise falls back to the 1st. That is a reasonable trade here:
+        <ul>
+          <li>the label already bounds the month;</li>
+          <li>the collector may not download report content (the capture stage owns that);</li>
+          <li>one <code>HEAD</code> request per PDF is cheap.</li>
+        </ul>
+      </li>
+      <li><strong>Deciding a model choice on 20 samples.</strong> Statisticians prefer the Wilson score interval for small samples because it "can be safely employed with small samples and skewed observations" (<a href="https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval">Wikipedia: Binomial proportion confidence interval</a> — en.wikipedia.org). Terra's 16/20 is compatible with a true rate from about 58 % to 92 %. The phase kept terra because the evidence could not separate the models and terra costs less, not because the models were shown to be equal.</li>
+    </ul>
+
+    <h3>Next steps</h3>
+    <ol>
+      <li><strong>Read the new date field.</strong> Every HSBC date now records its source: <code>label_day</code>, <code>last_modified</code> or <code>label_month_start</code>. A rising share of <code>label_month_start</code> in the weekly runs would be the first sign that HSBC changed its labels or re-uploads its files.</li>
+      <li><strong>Count what houses publish, not only what we collect.</strong> The thin week was explained only by counting each house's output by hand (about 17 in scope, 8 collected). A per-house published-versus-collected count in the weekly report would surface the next silent gap within a week.</li>
+      <li><strong>Use larger labelled samples before model decisions.</strong> At 20 samples, a model that is truly right 90 % of the time fails an 18-of-20 bar about one time in three. A few times more labelled signals would narrow the intervals enough to tell a real gain from luck (<a href="https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval">Wikipedia: Binomial proportion confidence interval</a> — en.wikipedia.org).</li>
+    </ol>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="quiz">
+    <h2>5. Quiz</h2>
+    <p class="small">Click an answer to see whether it is right and why.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> Before the fix, why would HSBC's October monthly have landed in the wrong week?</p>
+      <button class="opt" data-correct="false">The collector used the PDF's Last-Modified date, which is the upload time.</button>
+      <button class="opt" data-correct="true">The label "October 2026" has no day, and dateutil fills a missing day from today, so the report got the crawl day.</button>
+      <button class="opt" data-correct="false">The weekly cron runs in UTC, so every date shifts by nine hours into the next week.</button>
+      <button class="opt" data-correct="false">HSBC publishes its monthlies in the week after their date.</button>
+      <p class="why" hidden>dateutil's default for missing fields is today at midnight. "October 2026" parsed on 10/16 gives 10/16; found on the 10/18 run, the monthly would have been dated 10/18. Collection never corrects a stored date.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> Migration 0005 dates each promotion two weeks before the week of the theme's first report. What is that for?</p>
+      <button class="opt" data-correct="false">It lets the aggregation count the theme's older signals.</button>
+      <button class="opt" data-correct="false">It keeps the promoted themes' embeddings valid.</button>
+      <button class="opt" data-correct="true">It stops the 신규 badge from firing. 신규 needs a promotion in the run's week or the week before, and these topics were not new.</button>
+      <button class="opt" data-correct="false">PostgreSQL rejects a promotion date later than the theme's signals.</button>
+      <p class="why" hidden>The aggregation follows merges whatever the date. The backdate only keeps 신규 from lighting up for 33 themes the reports had been discussing for months.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> In the rehearsed catch-up, rising filled to five but 일본주식 강세 stayed in cooling. Why?</p>
+      <button class="opt" data-correct="false">The collector failed to register HSBC's October monthly.</button>
+      <button class="opt" data-correct="true">HSBC's October report gives no readable Japan equity view, so the theme's only vote in the four weeks is still one other house's vote in the 9/14 week.</button>
+      <button class="opt" data-correct="false">The cooling floor was set back to 1.0 for the rehearsal.</button>
+      <button class="opt" data-correct="false">The Japan theme was merged into a candidate and hidden.</button>
+      <p class="why" hidden>The October monthly was registered and extracted. It just says nothing readable about Japanese equities, so the drop stands, now from houses that are publishing, which the rules allow.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> Why not lower the cooling floor to 0.25 to fill the cooling list?</p>
+      <button class="opt" data-correct="false">It would need a paid re-extraction of six months of reports.</button>
+      <button class="opt" data-correct="false">The backend can show at most two cooling items.</button>
+      <button class="opt" data-correct="true">At low vote rates, a drop to zero happens by chance about one time in five, so the list would fill with noise (183 coolings over 26 weeks).</button>
+      <button class="opt" data-correct="false">The roadmap forbids any floor other than 1.0.</button>
+      <p class="why" hidden>A theme with 3 votes in 8 weeks goes silent for 4 weeks with probability about e^−1.5 ≈ 0.22 even if nothing changed. With about 49 such themes, roughly 10 would "cool" each week by luck.</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> Terra scored 16/20 on theme accuracy and gpt-5.6-sol scored 15/20. What does that show?</p>
+      <button class="opt" data-correct="false">gpt-5.6-sol is the worse model.</button>
+      <button class="opt" data-correct="false">Terra meets the 18-of-20 bar.</button>
+      <button class="opt" data-correct="true">Nothing firm. The intervals (about 58–92 % and 53–89 %) overlap almost entirely, so the choice rests on cost and on which errors change.</button>
+      <button class="opt" data-correct="false">The extraction prompt has to change before any model can pass.</button>
+      <p class="why" hidden>With 20 samples, the 95 % Wilson intervals are about 35 points wide. Both larger models fixed some of terra's errors and broke others, so terra stays, for its lower cost.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
