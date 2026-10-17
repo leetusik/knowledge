@@ -5,10 +5,10 @@
 
 ## Pointer
 
-- Current phase: `P28`
-- Current slice: `none`
-- Next slice: `none`
-- Waiting on operator: `P28`
+- Current phase: `P29`
+- Current slice: `P29.DECOMP`
+- Next slice: `P29.REVIEW`
+- Waiting on operator: `none`
 - Open deferred jobs: `29`
 
 ## Active Phases
@@ -22,7 +22,7 @@
 | [x] `P25` | `done` | `pass` | Pretty public share URLs | `none` | `works/phases/active/P25` |
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
-| [~] `P28` | `pending` | `changes_requested` | Console visual redesign — apply | `P28.REVIEW` | `works/phases/active/P28` |
+| [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [ ] `P29` | `planned` | `pending` | Learning reader — book model, chapter format + reader surfaces (design) | `P29.DECOMP` | `works/phases/active/P29` |
 | [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.DECOMP` | `works/phases/active/P30` |
 
@@ -125,7 +125,7 @@
 | [x] `P28.F2` | `done` | Explainer reporter: re-arm the runaway latch on width change and ignore an unlaid-out frame | `fix` | `works/phases/active/P28/slices/P28.F2` |
 | [x] `P28.F3` | `done` | Explainer reporter: count the horizontal scrollbar so classic scrollbars leave no inner scroll | `fix` | `works/phases/active/P28/slices/P28.F3` |
 | [x] `P28.F4` | `done` | Print and Export PDF: a framed explainer prints whole, not cut at its screen height | `fix` | `works/phases/active/P28/slices/P28.F4` |
-| [ ] `P28.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
+| [x] `P28.REVIEW` | `done` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
 
 ## Phase P29: Learning reader — book model, chapter format + reader surfaces (design)
 
