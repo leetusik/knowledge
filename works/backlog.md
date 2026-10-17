@@ -23,6 +23,8 @@
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [~] `P28` | `pending` | `changes_requested` | Console visual redesign — apply | `P28.REVIEW` | `works/phases/active/P28` |
+| [ ] `P29` | `planned` | `pending` | Learning reader — book model, chapter format + reader surfaces (design) | `P29.DECOMP` | `works/phases/active/P29` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.DECOMP` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -124,3 +126,17 @@
 | [x] `P28.F3` | `done` | Explainer reporter: count the horizontal scrollbar so classic scrollbars leave no inner scroll | `fix` | `works/phases/active/P28/slices/P28.F3` |
 | [x] `P28.F4` | `done` | Print and Export PDF: a framed explainer prints whole, not cut at its screen height | `fix` | `works/phases/active/P28/slices/P28.F4` |
 | [ ] `P28.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P28/slices/P28.REVIEW` |
+
+## Phase P29: Learning reader — book model, chapter format + reader surfaces (design)
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P29.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P29/slices/P29.DECOMP` |
+| [ ] `P29.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
+
+## Phase P30: Learning reader — apply
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P30.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P30/slices/P30.DECOMP` |
+| [ ] `P30.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |

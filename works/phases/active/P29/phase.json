@@ -1,0 +1,33 @@
+{
+  "id": "P29",
+  "name": "Learning reader — book model, chapter format + reader surfaces (design)",
+  "objective": "Design half of the learning-reader pair: research and settle the book/chapter model (codebase books from phases, subject books for general learning, versioned chapters, Korean/English variants), a native chapter format (refined diagrams, images, multi-column figures, quiz blocks) with a legacy path for existing HTML explainers, then design the reader-first surfaces - library, book page, reader, review - in Claude Design for phone, iPad and desktop, signed round by round.",
+  "status": "planned",
+  "order": 9,
+  "created_at": "2026-10-17T18:36:36+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "reviewer": null,
+    "note": null
+  },
+  "acceptance": {
+    "required": null,
+    "walkthrough": null,
+    "requested_at": null,
+    "cleared_at": null,
+    "note": null
+  },
+  "paths": {
+    "phase_md": "phase.md",
+    "intent_md": "intent.md",
+    "slices_dir": "slices"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
