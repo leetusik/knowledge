@@ -953,3 +953,5 @@
 {"ts": "2026-10-08T16:47:46+09:00", "type": "acceptance_opened", "phase": "P28"}
 {"ts": "2026-10-08T16:47:46+09:00", "type": "deferred_created", "deferred": "D39", "source": "P28.F4"}
 {"ts": "2026-10-08T16:47:46+09:00", "type": "deferred_created", "deferred": "D40", "source": "P28.REVIEW"}
+{"ts": "2026-10-17T18:36:36+09:00", "type": "phase_created", "phase": "P29"}
+{"ts": "2026-10-17T18:36:36+09:00", "type": "phase_created", "phase": "P30"}

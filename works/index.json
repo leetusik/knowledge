@@ -97,10 +97,34 @@
       "slice_count": 16,
       "done_slice_count": 15,
       "consolidation": "pending"
+    },
+    {
+      "id": "P29",
+      "name": "Learning reader — book model, chapter format + reader surfaces (design)",
+      "objective": "Design half of the learning-reader pair: research and settle the book/chapter model (codebase books from phases, subject books for general learning, versioned chapters, Korean/English variants), a native chapter format (refined diagrams, images, multi-column figures, quiz blocks) with a legacy path for existing HTML explainers, then design the reader-first surfaces - library, book page, reader, review - in Claude Design for phone, iPad and desktop, signed round by round.",
+      "status": "planned",
+      "order": 9,
+      "path": "works/phases/active/P29",
+      "review_status": "pending",
+      "current_slice": "P29.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
+    },
+    {
+      "id": "P30",
+      "name": "Learning reader — apply",
+      "objective": "Apply half of the learning-reader pair: build P29's signed design and decisions - books, chapters, image assets and per-reader state (resume position, bookmarks, highlights and notes, quiz results, spaced-repetition review) on the server; the library, book page and reader with one scroller and no iframe height handshake (legacy HTML explainers full-screen); the new chapter format in this repo's /explain copies - verified in the operator runtime on phone, iPad and desktop, closing with the handoff note for the bootstrap workspace repo's /explain.",
+      "status": "planned",
+      "order": 10,
+      "path": "works/phases/active/P30",
+      "review_status": "pending",
+      "current_slice": "P30.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 29,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 6,
-  "last_rebuilt_at": "2026-10-08T16:47:47+09:00"
+  "last_rebuilt_at": "2026-10-17T18:36:45+09:00"
 }
