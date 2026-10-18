@@ -917,6 +917,27 @@ _Questions only the operator can answer. Append only; every entry is routed at t
      no longer exists anywhere, and a deleted document looks exactly like a private one (404-never-403).
    - **Cost:** a reader loses notes they wrote. The alternative (keep them as orphans with the quoted
      text) keeps copies of deleted content in other users' accounts.
+9. **(P29.S4) The reader round's open design decisions** (round `01-reader/01-reader`, asked at its
+   PENDING #1; the drafter's answer to each is drawn or argued in
+   `docs/reference/design/jobs/01-reader/rounds/01-reader/result.md` → *Open questions, for the operator*).
+   The operator's words settle them; the review routes any their words leave open.
+   - **The drafter's ten:**
+     1. ASCII art on a phone scrolls sideways inside its block.
+     2. Wide tables keep round 06's scroll box, with a fade and a hint, not cards.
+     3. No Copy link and no Print in the reader's chrome.
+     4. The reader gets a chrome of its own, with no app shell.
+     5. The Hangul face: Pretendard, or a Korean serif such as Noto Serif KR?
+     6. Wrap Hangul runs inside English in `lang="ko"` at render time?
+     7. "Sign in" in Sign in to save is a secondary button.
+     8. Do sepia, Literata, the five sizes and the syntax roles enter the `kb` system, or stay
+        reader-scoped?
+     9. The reader's own 13/15 px interface steps, or the console's sizes?
+     10. Mark as unread holds until Mark as finished. The alternative: a fresh read to the end finishes
+         it again, which needs a server `max_fraction` reset.
+   - **The critic's taste notes:**
+     - Literata is a fourth face.
+     - At 1440 the bars run edge to edge while the text sits in a 36rem column.
+     - The Warning, Note, Skip and Definition callouts are four near-identical beige grounds.
 
 ## Notes for later slices
 
@@ -970,10 +991,11 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
     refined diagrams, mobile, ipad friendly, image available, multi column image or diagram input also
     possible, and more quizs available etc.." (`:25`); "reader first fine." (`:26`); "good. but fixed
     column width." (`:29`).
-  - **The three taste questions are still open:** (1) the mood for long reading; (2) readers the operator
-    likes (Apple Books, Kindle, Readwise Reader, iA Writer, anything else); (3) anything to avoid. The
-    operator approved DECOMP2 with no text, so the orchestrator asks them at S4's opening, before any
-    drafting. No taste answer is recorded.
+  - **The three taste questions, answered 2026-10-18 at S4's opening** (verbatim, in the run session):
+    (1) the mood for long reading: "good."; (2) readers the operator likes: "kindle like"; (3) anything to
+    avoid: "non". Asked whether to promote the bar candidate, the operator did not, so `bar.md` stays
+    `none beyond the shipped bar`. All three are quoted in `01-reader/rounds/01-reader/handoff.md` →
+    *Collected taste*, and every later handoff carries them forward.
 - **(from P29.S2 and P29.S3, split by P29.DECOMP2, for P29.S4)** **What the `reader` job must draw**
   (contracts in `## Decisions` → *Native chapter format* and *Reader state and review*), at phone, iPad
   and desktop, in light, dark and sepia:
@@ -1085,19 +1107,19 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
 
 _≤ 15 lines, rewritten by every slice at its end: what is done, what the next slice must know, what is open. Last on purpose._
 
-- **Landed (P29.DECOMP2):** the design cut. Three `co-work / high` waves, nine jobs: `P29.S4` `reader`
-  (critic+judge); `P29.S5` `figures`, `diagrams` (critic+judge), `quiz`, `annotations`; `P29.S6`
-  `library` (critic+judge), `book-page`, `review`, `legacy-and-print` (the rest `critic`). The final build
-  inventory (25 lines, each mapped to its job), the canvas content rule, `new visual direction: no`, Q4–Q8
-  as working assumptions and the four accepted research amendments (written into the contracts in place)
-  are in `## Decisions` and the breakdown. The notes are split per wave.
-- **In progress: `P29.S4`, `pending` on the three taste questions.** Setup landed: the Design System
-  Artifact "knowledge" (https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md, version `1792321604-e214`,
-  namespace `kb`, read-only route, no components), `bar.md` = `none beyond the shipped bar`, and job
-  `01-reader` round `01-reader` open (`critic+judge`) with its canvas
-  https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY (empty until the first publish). On the operator's
-  answers: write the handoff (taste quoted literally; the bar candidate goes into `bar.md` only on their
-  word), then drafter → critic → judge → publish → **PENDING #1**. Only their literal words sign the job.
-- **Open:** Q1 (tenant #1 content public on GitHub — a live exposure), Q2, Q3 (parity FAILS until
-  answered) for P30; Q4–Q8 open on their working assumptions; all eight are routed at `P29.REVIEW`. P30
-  waits for P29 `done`; P28 still owes its docs-phase consolidation.
+- **Landed (P29.DECOMP2):** the design cut (three waves, nine jobs), the final build inventory, the
+  canvas content rule, `new visual direction: no`, Q4–Q8 as working assumptions and the four accepted
+  amendments, all in `## Decisions` and the breakdown.
+- **`P29.S4` is `pending` at PENDING #1.** Round `01-reader/01-reader` is drafted, critiqued and
+  published: https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY, version `1792340688-1a72`, system `kb`
+  `1792321604-e214`. Record: `docs/reference/design/jobs/01-reader/rounds/01-reader/` (`handoff.md`,
+  `result.md`, `build-prompt.md`, `critique-01.md`). One answer pass fixed all five of the critique's
+  must-fix items (C01–C05), rebutting none. Nothing was escalated, so no judge ran. Nothing in the round
+  binds a later slice until the operator signs it in literal words; its open decisions are Q9.
+- **On their return:** read the canvas back (`out_dir`, diff against `canvas/project/`) and copy the
+  threads into `feedback.md`. Literal approval → `SIGNOFF.md`, `design-close 01-reader/01-reader
+  --words`, the signed decisions land here, `finish-slice P29.S4`. Anything else → `design-close
+  --superseded` and a superseding round.
+- **Open:** Q1 (a live exposure), Q2 and Q3 (parity fails until it is answered) for P30; Q4–Q8 on their
+  working assumptions; Q9. All are routed at `P29.REVIEW`. P30 waits for P29 `done`; P28 owes its docs
+  consolidation.

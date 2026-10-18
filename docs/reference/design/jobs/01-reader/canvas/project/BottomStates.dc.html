@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Chapter bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Chapter bar</p>
+<p class="rd-board__lead">Previous, the chapter list and next, at the bottom where a thumb reaches. The first chapter has no previous; the last chapter's way on is the book. Titles show from 40rem; the middle always says where you are.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ReaderBottom" n="{{ c.n }}" total="{{ c.total }}" pct="{{ c.pct }}" prev-title="{{ c.prevTitle }}" next-title="{{ c.nextTitle }}" book-title="{{ c.bookTitle }}" panel="{{ c.panel }}" theme="{{ c.theme }}" hint-size="100%,60px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":707}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const mg = RD.books['maintainer-guide'].chapters.map((k) => RD.titleOf(k, 'en').text);
+    const tw = RD.books['tidewater'].chapters.map((k) => RD.titleOf(k, 'en').text);
+    const B = (cap, w, n, o) => Object.assign({ cap, st: px(w), n, total: 5, pct: 38, prevTitle: mg[n - 2] || '', nextTitle: mg[n] || '', bookTitle: 'The knowledge maintainer guide', panel: null, theme: 'light' }, o);
+    const rows = [
+      { title: 'Desktop · 1200 wide', cells: [B('First chapter · no previous', 1200, 1, { pct: 0 }), B('Middle chapter', 1200, 2, {}), B('Last chapter · back to the book', 1200, 5, { pct: 100 })] },
+      { title: 'iPad · 820', cells: [B('Contents open · dark', 820, 2, { panel: 'contents', theme: 'dark' }), B('A 20-chapter book · sepia', 820, 11, { total: 20, pct: 46, prevTitle: tw[9], nextTitle: tw[11], bookTitle: 'Tidewater, from the inside', theme: 'sepia' })] },
+      { title: 'Phone · 390', cells: [B('Middle chapter', 390, 2, {}), B('First chapter', 390, 1, { pct: 0 }), B('Last chapter · sepia', 390, 5, { theme: 'sepia', pct: 100 }), B('Contents open · dark', 390, 2, { panel: 'contents', theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

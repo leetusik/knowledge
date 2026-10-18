@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Table</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Table</p>
+<p class="rd-board__lead">Tables use the interface face at a step below the text. A wide table scrolls inside a focusable box that says so; a long table keeps its header row in view; numbers are right-aligned as the source's alignment row asks.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ProseTable" block="{{ c.block }}" theme="{{ c.theme }}" hint-size="100%,300px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":2768}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const bl = RD.read('maintainer-guide/internals', 'en').blocks.filter((b) => b.isTable);
+    const wide = bl.find((b) => b.wide), long = bl.find((b) => b.long), num = bl.find((b) => !b.wide && !b.long);
+    const K = (cap, w, b, o) => Object.assign({ cap, st: px(w), block: b, theme: 'light' }, o);
+    const rows = [
+      { title: 'Wide · 8 columns', cells: [K('Phone · scrolls inside, says so', 390, wide, {}), K('iPad · 820', 820, wide, {}), K('Phone · dark', 390, wide, { theme: 'dark' })] },
+      { title: 'Numeric · right-aligned', cells: [K('Light', 600, num, {}), K('Dark', 600, num, { theme: 'dark' }), K('Sepia', 600, num, { theme: 'sepia' })] },
+      { title: 'Long · 34 rows · the header stays in view while the reader scrolls', cells: [K('Light · 720', 720, long, {}), K('Sepia · phone · scrolls in its box, the header stays', 390, long, { theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

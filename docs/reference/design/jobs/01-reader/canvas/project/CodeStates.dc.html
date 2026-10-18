@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Code block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Code block</p>
+<p class="rd-board__lead">Code sits on the sunken ground in the mono face; a title reads as the block's label with its language beside it. Long lines wrap with a hanging indent and the page never scrolls sideways. An ASCII drawing keeps its alignment and scrolls inside its own box.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="CodeBlock" block="{{ c.block }}" theme="{{ c.theme }}" hint-size="100%,240px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1618}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const bl = RD.read('maintainer-guide/internals', 'en').blocks.filter((b) => b.isCode);
+    const titled = bl.find((b) => b.title === 'server/reindex.py');
+    const long = bl.find((b) => b.title === 'server/publish.py');
+    const plain = bl.find((b) => !b.hasTitle && !b.art);
+    const art = bl.find((b) => b.art);
+    const K = (cap, w, b, o) => Object.assign({ cap, st: px(w), block: b, theme: 'light' }, o);
+    const rows = [
+      { title: 'Light · 720 wide', cells: [K('With a title', 720, titled, {}), K('No title', 720, plain, {}), K('A long line wraps', 720, long, {})] },
+      { title: 'Phone · 390', cells: [K('A long line wraps · no sideways scroll', 390, long, {}), K('ASCII drawing · scrolls inside its box', 390, art, {}), K('ASCII drawing · sepia', 390, art, { theme: 'sepia' })] },
+      { title: 'Dark and sepia', cells: [K('With a title · dark', 720, titled, { theme: 'dark' }), K('With a title · sepia', 720, titled, { theme: 'sepia' }), K('ASCII drawing · dark · fits at 820', 820, art, { theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
