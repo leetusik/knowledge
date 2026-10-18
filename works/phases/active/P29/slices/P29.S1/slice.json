@@ -3,12 +3,12 @@
   "phase_id": "P29",
   "name": "Research: book and chapter model",
   "kind": "research",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "created_at": "2026-10-18T16:33:48+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-18T16:37:11+09:00",
+  "completed_at": "2026-10-18T16:44:37+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Settled the book/chapter model: chapters are entries in on-disk book manifests pointing at one document per language, each on its own P23 chain; content-addressed images behind the /raw gate; phase -> book 'phases' key p<N>; html->native re-explain as a format-migration version; all compatibility additive; D13 stays deferred; 42 docs mapped to 4 books (33 chapters) + 8 loose; 2 operator questions (tenant #1 private content public on GitHub; images in git)",
   "validation": {
     "required": [],
     "last_run": null,
