@@ -3,7 +3,7 @@
   "phase_id": "P29",
   "name": "Design wave 1 — the reader",
   "kind": "co-work",
-  "status": "in_progress",
+  "status": "pending",
   "order": 50,
   "depends_on": [
     "P29.DECOMP2"

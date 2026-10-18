@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "job": "01-reader",
+  "slice": "P29.S4",
+  "title": "The reader",
+  "canvas": {
+    "url": "https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY",
+    "version": null,
+    "published": []
+  },
+  "status": "open"
+}
