@@ -973,3 +973,6 @@
 {"ts": "2026-10-18T16:37:11+09:00", "type": "slice_status_changed", "slice": "P29.S1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-18T16:44:37+09:00", "type": "executor_dispatched", "slice": "P29.S1", "phase": "P29", "kind": "research", "risk": "high", "route": "research", "tier": "high", "agent": "slice-executor-high", "model": "opus", "effort": "medium", "attribution": "Claude Opus 5.5", "attempt": 1, "verdict": "done", "duration_ms": 413702, "tokens": 129420, "tool_uses": 38, "note": null}
 {"ts": "2026-10-18T16:44:37+09:00", "type": "slice_status_changed", "slice": "P29.S1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-18T16:51:32+09:00", "type": "slice_status_changed", "slice": "P29.S2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-18T17:05:15+09:00", "type": "executor_dispatched", "slice": "P29.S2", "phase": "P29", "kind": "research", "risk": "high", "route": "research", "tier": "high", "agent": "slice-executor-high", "model": "opus", "effort": "medium", "attribution": "Claude Opus 5.5", "attempt": 1, "verdict": "done", "duration_ms": 780030, "tokens": 194317, "tool_uses": 62, "note": null}
+{"ts": "2026-10-18T17:05:15+09:00", "type": "slice_status_changed", "slice": "P29.S2", "old_status": "in_progress", "new_status": "done"}
