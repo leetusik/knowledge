@@ -42,10 +42,11 @@ _Answers given during intent capture, word-for-word (the same request created P2
 ## Confirmed Intent (refined + clarified)
 
 **This is the apply half of the `design-only` pair (P29 design → P30 apply).** It runs only after P29 is
-`done`: research settled and every round signed. Its `DECOMP` reads two things as the implementation
-contract, under **RESPECT THE DESIGN** — never drop, simplify, restyle or "improve" an approved element:
-P29's findings in P29's `phase.md`, and each landed round's record (the round's `output/build-prompt.md`,
-or Claude Design's own handoff bundle).
+`done`: research settled and every design job signed. Its `DECOMP` reads two things as the
+implementation contract, under **RESPECT THE DESIGN** — never drop, simplify, restyle or "improve" an
+approved element: P29's findings in P29's `phase.md`, and each signed job's record under
+`docs/reference/design/jobs/<job>/` (the signed round's canvas snapshot and its `build-prompt.md`; refined
+2026-10-18 for the v60 `drafter` loop).
 
 **What to build** — for `DECOMP` to cut, not pre-cut here. Order: backing first, then the design
 implementation surface by surface, then the fidelity and functional sweep.
@@ -116,12 +117,16 @@ implementation surface by surface, then the fidelity and functional sweep.
   - no stopgap scroll phase.
 - Q: Who carries the `/explain` change to the bootstrap workspace repo? — A: the operator relays this
   phase's handoff note to that repo's agent.
+- Q (2026-10-18, asked at P29's start after the workspace update v43 → v60): re-confirm the pair on the
+  `drafter` design loop, refining this phase's implementation-contract line to read each signed job's
+  record under `docs/reference/design/jobs/`? — A: "yes to all" (see P29's `intent.md`).
 
 ## Design Style
 
 `design-only` — this is the apply phase of the pair. P29 holds the research findings and the signed
 rounds, and this phase's `DECOMP` cuts the build from them.
 Mockup: on request
+Design tool: drafter
 
 ## Notes
 

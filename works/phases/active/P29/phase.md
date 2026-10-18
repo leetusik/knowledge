@@ -4,7 +4,7 @@ _Intent: see [intent.md](intent.md)._
 
 ## Objective
 
-Design half of the learning-reader pair: research and settle the book/chapter model (codebase books from phases, subject books for general learning, versioned chapters, Korean/English variants), a native chapter format (refined diagrams, images, multi-column figures, quiz blocks) with a legacy path for existing HTML explainers, then design the reader-first surfaces - library, book page, reader, review - in Claude Design for phone, iPad and desktop, signed round by round.
+Design half of the learning-reader pair: research and settle the book/chapter model (codebase books from phases, subject books for general learning, versioned chapters, Korean/English variants), a native chapter format (refined diagrams, images, multi-column figures, quiz blocks) with a legacy path for existing HTML explainers, then design the reader-first surfaces - library, book page, reader, review - on drafter canvases for phone, iPad and desktop, each job signed on its canvas.
 
 ## Slices
 

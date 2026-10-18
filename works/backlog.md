@@ -9,7 +9,7 @@
 - Current slice: `P29.DECOMP`
 - Next slice: `P29.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `29`
+- Open deferred jobs: `28`
 
 ## Streams
 

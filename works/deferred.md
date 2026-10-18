@@ -4,9 +4,9 @@
 
 ## Summary
 
-- Open: `29`
+- Open: `28`
 - Promoted: `5`
-- Dropped: `6`
+- Dropped: `7`
 
 ## Open
 
@@ -27,7 +27,6 @@
 | `D28` | `deferred` | Operator copy decision: adopt round 03 card 14's error / not-found / empty strings verbatim? | P27.REVIEW | When P28 cuts the slice implementing the system-wide states (.kb-editorial / .kb-empty). | `works/deferred/open/D28` |
 | `D29` | `deferred` | Operator copy decision: adopt round 05's new graph strings, including the Korean halves? | P27.REVIEW | When P28 cuts the graph apply slice, before the strings land in web/src/content/graph.ts. | `works/deferred/open/D29` |
 | `D30` | `deferred` | Operator copy decision: adopt round 06's nineteen document/print strings, and should they be bilingual? | P27.REVIEW | When P28 cuts the document-views apply slice, before the strings land in web/src/content/documents.ts. | `works/deferred/open/D30` |
-| `D31` | `deferred` | Retire round 06's card group label in the Knowledge Base Design System project | P27.REVIEW | The next DesignSync session that opens project 623bb4ea-8fb7-4d31-9d58-5c6a42709bbe. | `works/deferred/open/D31` |
 | `D32` | `deferred` | Member auth guard bounces to /login with no return address | P28.REVIEW | The next auth/session phase, or the first operator complaint | `works/deferred/open/D32` |
 | `D33` | `deferred` | The graph page is not a .kb-page-flow | P28.REVIEW | The next console/graph slice touching (app)/graph/page.tsx | `works/deferred/open/D33` |
 | `D34` | `deferred` | Landing hero is clipped at phone widths | P28.REVIEW | The next marketing/landing design round | `works/deferred/open/D34` |
@@ -61,4 +60,5 @@
 | `D21` | `dropped` | Fix pre-existing format-key failure in test_documents_list_detail_and_project_bridge | Stale duplicate of D15, same root cause, fixed in P23 (062c041); the full gated suite passed 128/0 in P28.REVIEW. | `works/deferred/dropped/D21` |
 | `D26` | `dropped` | Capture the off-frame graph screenshot before P28 implements the graph | Satisfied, not abandoned: the operator supplied both screenshots on 2026-09-21 (Mac Chrome /graph and iPhone, both pre-P28 production). Committed to works/phases/active/P28/diagnostics/D26-{desktop-graph-mac-chrome.png,mobile-graph-iphone.jpeg} and read into the P28.S6 note in phase.md with ranked hypotheses. The graph apply slice now has the evidence the round-05 design never got. | `works/deferred/dropped/D26` |
 | `D3` | `dropped` | Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree | Completed by the operator (2026-07-15): ran 'gh repo deploy-key delete 157264706' (orphan knowledge-api@oci revoked) and removed ./knowledge_deploy_key* from the working tree. The box authenticates with the separate on-box key knowledge-api@oci-box (157267945). No key material remains in the repo. Closed as done, not abandoned. | `works/deferred/dropped/D3` |
+| `D31` | `dropped` | Retire round 06's card group label in the Knowledge Base Design System project | Dropped on the operator's word at P29's start (2026-10-18): the workspace update to v60 retired Claude Design / DesignSync, so the trigger (the next DesignSync session on project 623bb4ea) cannot fire. | `works/deferred/dropped/D31` |
 | `D6` | `dropped` | Paid-plan retriever endpoint for external AI agents | Superseded by P15 (Agent-facing retrieval MCP service). P15 builds the external-agent retriever surface D6 anticipated — an MCP search/fetch_document service over Streamable-HTTP, vk_-scoped per project, dual-reachable (internal service-name + public edge). The retriever interface now exists. D6's remaining aspect — actually charging for it (a paid plan / gating the MCP surface) — is a separate business + billing decision P15 does not build; the P11 usage-event metering is the substrate for it when the operator introduces a paid plan. That monetization step is re-captured as a new, narrower deferred job. | `works/deferred/dropped/D6` |
