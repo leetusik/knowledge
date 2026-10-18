@@ -4,16 +4,192 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import posixpath
 import re
+import shlex
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
+# Nested personal install (P28). The marker `.agentic-nested.json` beside `scripts/` says the engine and all
+# workflow state live in a nested repo (`<host>/workflow`, ROOT) inside a host repo the operator does
+# not own (HOST_ROOT): product code, git history for phase-scope, and `.claude/agents` are the
+# host's, while works/, docs/, executors.toml and the templates stay under ROOT. EVERY nested
+# branch below is gated on that marker: with no `.agentic-nested.json`, NESTED is None, HOST_ROOT is None and
+# behaviour and output are byte-for-byte the at-root engine's. A marker that exists but is malformed
+# is never read as at-root mode -- `validate` reports it as an error and every other command refuses
+# (see `main`). The installer writes the marker; this file owns its schema (NESTED_* below).
+NESTED_MARKER = ".agentic-nested.json"
+NESTED_SCHEMA = 1
+NESTED_KEYS = ("schema", "host_root", "commit_convention", "renames")
+NESTED_CONVENTION_KEYS = ("inferred", "confirmed", "text", "coauthor_trailers")
+NESTED_TRAILERS = ("allowed", "forbidden", "unknown")
+NESTED_RENAME_KINDS = ("skills", "agents")
+# Optional, but strict when present: the installer's record of which host-side skill directories
+# and agent files are the workspace's own (so `--update --nested` never mistakes them for a clash).
+NESTED_OPTIONAL_KEYS = ("installed",)
+# P35: a nested phase worktree is a pair, and its host half needs a branch the operator names.
+NESTED_HOST_BRANCH_REQUIRED = (
+    "parallel-start in a nested install needs --host-branch <name>: the host repo's branch for this phase's product commits, "
+    "named by the host's own convention for branches (see nested-convention), with no workspace phase/slice IDs in it; "
+    "an existing branch is reused when no host worktree has it checked out -- nothing was written")
+# phase.json `host_anchors` (nested only): the host HEAD at new-phase and at the passing review --
+# phase-scope's range in the host repo, whose commits the nested repo never sees.
+HOST_ANCHOR_KEYS = ("created", "review_pass")
+
+
+def nested_marker_problems(data) -> list:
+    """Every way a parsed `.agentic-nested.json` breaks schema 1 -- empty when it is well-formed.
+
+        {"schema": 1,
+         "host_root": "..",                       # relative to the engine root; the host repo's root
+         "commit_convention": {"inferred": "<text>" | null, "confirmed": false,
+                               "text": "<text>" | null, "coauthor_trailers": "allowed" | "forbidden" | "unknown"},
+         "renames": {"skills": {"<original>": "<installed>"}, "agents": {"<original>": "<installed>"}},
+         "installed": {"skills": ["<installed>", ...], "agents": ["<installed>", ...]}}   # optional
+
+    A confirmed convention carries its text and a decided trailer rule; an installed name is a bare
+    file/directory name. `installed` (written by the installer) lists the host-side skill directories
+    and agent files that are the workspace's own; when present it has exactly those two lists of
+    distinct bare names, and every renamed name appears in it. Other unknown top-level keys are not
+    problems (`validate` warns about them)."""
+    if not isinstance(data, dict):
+        return [f"{NESTED_MARKER} is not a JSON object"]
+    problems = []
+    missing = [k for k in NESTED_KEYS if k not in data]
+    if missing:
+        problems.append(f"missing field(s) {', '.join(missing)}")
+    if "schema" in data and (data["schema"] is True or data["schema"] != NESTED_SCHEMA):
+        problems.append(f"schema {data['schema']!r} is not {NESTED_SCHEMA}")
+    if "host_root" in data:
+        raw = data["host_root"]
+        if not (isinstance(raw, str) and raw.strip()) or os.path.isabs(raw):
+            problems.append(f"host_root {raw!r} must be a non-empty path relative to the engine root (normally \"..\")")
+        else:
+            host = (ROOT / raw).resolve()
+            if not host.is_dir():
+                problems.append(f"host_root {raw!r} resolves to {host}, which is not a directory")
+            elif host == ROOT or host not in ROOT.parents:
+                problems.append(f"host_root {raw!r} resolves to {host}, which does not contain the engine root {ROOT}")
+    if "commit_convention" in data:
+        conv = data["commit_convention"]
+        if not isinstance(conv, dict):
+            problems.append("commit_convention is not an object")
+        else:
+            gone = [k for k in NESTED_CONVENTION_KEYS if k not in conv]
+            if gone:
+                problems.append(f"commit_convention: missing field(s) {', '.join(gone)}")
+            for key in ("inferred", "text"):
+                if key in conv and conv[key] is not None and not isinstance(conv[key], str):
+                    problems.append(f"commit_convention.{key} must be a string or null")
+            if "confirmed" in conv and not isinstance(conv["confirmed"], bool):
+                problems.append("commit_convention.confirmed must be true or false")
+            if "coauthor_trailers" in conv and conv["coauthor_trailers"] not in NESTED_TRAILERS:
+                problems.append(f"commit_convention.coauthor_trailers {conv['coauthor_trailers']!r} is not one of {', '.join(NESTED_TRAILERS)}")
+            if conv.get("confirmed") is True:
+                if not (isinstance(conv.get("text"), str) and conv["text"].strip()):
+                    problems.append("commit_convention: a confirmed convention records its text")
+                if conv.get("coauthor_trailers") not in ("allowed", "forbidden"):
+                    problems.append("commit_convention: a confirmed convention records coauthor_trailers allowed or forbidden")
+    if "renames" in data:
+        renames = data["renames"]
+        if not isinstance(renames, dict):
+            problems.append("renames is not an object")
+        else:
+            for kind in NESTED_RENAME_KINDS:
+                table = renames.get(kind)
+                if not isinstance(table, dict):
+                    problems.append(f"renames.{kind} must be an object mapping an original name to its installed name")
+                    continue
+                for original, installed in table.items():
+                    if not (original and _bare_installed_name(installed)):
+                        problems.append(f"renames.{kind}: {original!r} -> {installed!r} is not a bare installed name")
+    if "installed" in data:
+        inst = data["installed"]
+        if not isinstance(inst, dict) or sorted(inst) != sorted(NESTED_RENAME_KINDS):
+            problems.append(f"installed must be an object with exactly {' and '.join(NESTED_RENAME_KINDS)} (lists of installed names)")
+        else:
+            for kind in NESTED_RENAME_KINDS:
+                names = inst[kind]
+                if not isinstance(names, list):
+                    problems.append(f"installed.{kind} must be a list of installed names")
+                    continue
+                bad = [n for n in names if not _bare_installed_name(n)]
+                if bad:
+                    problems.append(f"installed.{kind}: {', '.join(repr(n) for n in bad)} is not a bare installed name")
+                elif len(set(names)) != len(names):
+                    problems.append(f"installed.{kind} lists a name twice")
+                table = data.get("renames", {}).get(kind) if isinstance(data.get("renames"), dict) else None
+                if isinstance(table, dict) and not bad:
+                    missing = sorted(v for v in table.values() if isinstance(v, str) and v not in names)
+                    if missing:
+                        problems.append(f"installed.{kind} does not list the renamed {', '.join(missing)}")
+    return problems
+
+
+def _bare_installed_name(name) -> bool:
+    """A skill directory or agent file stem as installed in the host: one plain path segment."""
+    return (isinstance(name, str) and bool(name.strip()) and name == name.strip()
+            and "/" not in name and "\\" not in name and not name.startswith("."))
+
+
+def _load_nested() -> tuple:
+    """(marker, problems): (None, []) when ROOT holds no `.agentic-nested.json` -- at-root mode, the only
+    case that touches nothing. A marker that cannot be read or parsed comes back as `{}` with its
+    problem, so it still counts as nested (never silently at-root)."""
+    path = ROOT / NESTED_MARKER
+    if not os.path.lexists(path):
+        return None, []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {}, [f"cannot be read as JSON ({exc})"]
+    return (data if isinstance(data, dict) else {}), nested_marker_problems(data)
+
+
+NESTED, NESTED_PROBLEMS = _load_nested()
+HOST_ROOT = None
+if NESTED is not None and isinstance(NESTED.get("host_root"), str) and NESTED["host_root"].strip() and not os.path.isabs(NESTED["host_root"]):
+    HOST_ROOT = (ROOT / NESTED["host_root"]).resolve()
+# The command prefix every printed hint uses: from the host root when nested (cwd = <host>), from
+# the workspace root otherwise -- so at root it is exactly the literal the hints always printed. A
+# nested marker too broken to name its host gets the absolute path, right from any cwd.
+if HOST_ROOT is not None:
+    WORKFLOW_CMD = f"python3 {Path(os.path.relpath(ROOT, HOST_ROOT)).as_posix()}/scripts/workflow.py"
+elif NESTED is not None:
+    WORKFLOW_CMD = f"python3 {ROOT / 'scripts' / 'workflow.py'}"
+else:
+    WORKFLOW_CMD = "python3 scripts/workflow.py"
+# Appended to every printed `parallel-start <P>` hint: a nested install's start needs the host branch
+# (P35), which the operator names; at root it is empty, so the hints print exactly as before.
+NESTED_HOST_BRANCH_ARG = " --host-branch <name>" if NESTED is not None else ""
+
+
+def shown(path: Path) -> str:
+    """A path as the operator's shell must type it: relative to the host root when nested (so
+    `workflow/works/...` resolves from a session started at the host), else today's ROOT-relative
+    string. OUTPUT ONLY -- a path persisted into index.json, slice.json, phase.json or events.jsonl
+    stays ROOT-relative, because the state it points into lives in the nested repo."""
+    if HOST_ROOT is not None:
+        return os.path.relpath(path, HOST_ROOT)
+    if NESTED is not None:  # a marker too broken to name its host: absolute, right from any cwd
+        return str(path)
+    return str(path.relative_to(ROOT))
+
+
+def shown_rel(rel: str) -> str:
+    """`shown` for a ROOT-relative string read back from stored state (an index or phase path):
+    host-relative when nested, and at root the stored string itself, untouched."""
+    return shown(ROOT / rel) if HOST_ROOT is not None else rel
+
+
 WORKS = ROOT / "works"
 DOCS = ROOT / "docs"
 ACTIVE = WORKS / "phases" / "active"
@@ -36,21 +212,23 @@ SLICE_STATUSES = {"todo", "ready", "in_progress", "in_review", "changes_requeste
 DEFERRED_STATUSES = {"deferred", "ready", "promoted", "done", "dropped"}
 REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
 # Closed set of slice kinds (workspace v34). `kind` routes real behavior -- `co-work` in
-# particular means orchestrator-inline with DesignSync, so a typo like `cowork` used to
-# create a slice that read as ordinary implementation and got dispatched to an executor
-# with no DesignSync. Enforced asymmetrically on purpose: a HARD ERROR at creation
+# particular means orchestrator-inline (the round's lifecycle and the operator's words
+# stay on the main thread), so a typo like `cowork` used to create a slice that read as
+# ordinary implementation and got dispatched to an executor that cannot run a design
+# round. Enforced asymmetrically on purpose: a HARD ERROR at creation
 # (`new-slice`, `promote-deferred`), only a WARNING in `validate()`, so an adopting repo
 # carrying an invented kind in its history survives an update instead of failing validate
 # on slices it cannot change. Note `--risk` next door is deliberately NOT validated:
 # unrecognized values route to the high tier, which is the safe direction -- do not
 # "fix" that asymmetry for symmetry's sake.
-# Three kinds route to `slice-executor-high` by KIND, whatever `risk` says:
-# `decomposition`, `review`, and `research` (added in workspace v36). A `research`
-# slice is findings-only -- it writes no product code, and what it learned lands in
-# the phase notebook for the `DECOMP2` that usually follows -- so a weak read is
-# expensive and it must never be routable to the mid tier by a `low` rating. Set
-# `--risk high` on one so the recorded rating cannot contradict the routing; if the
-# two ever disagree, the kind wins.
+# Kinds route by KIND before `risk` is read (`slice_route`; `executor-route <slice>` prints the
+# decision): `decomposition`, `review` and `co-work` (its mockup span) to the `high` row, and
+# `research` (added in workspace v36) to the `research` row -- both on `slice-executor-high`, never
+# the mid or cheap rows. A `research` slice is findings-only -- it writes no product code, and what
+# it learned lands in the phase notebook for the `DECOMP2` that usually follows -- so a weak read
+# is expensive and it must never be routable to the mid tier by a `low` rating. Set `--risk high`
+# on one so the recorded rating cannot contradict the routing; if the two ever disagree, the kind
+# wins.
 SLICE_KINDS = {"implementation", "review", "decomposition", "research", "fix", "docs", "qa", "co-work"}
 # Phase-notebook budget (v35; re-shaped in v39): ONE generous byte cap, ~100k tokens of
 # text. The v35 pair (200 lines / 16 KB) was measured in P21 and the line half never bound
@@ -98,26 +276,99 @@ BUSY_PHASE_STATUSES = ("in_progress", "in_review", "pending", "blocked")
 # Regenerated from works/phases/** and docs/versions/** by `parallel-merge-finish`;
 # never merged by hand (see .gitattributes).
 GENERATED_FILES = ("works/state.json", "works/index.json", "works/backlog.md", "works/deferred.md", "docs/current/*.md")
-CLAUDE_AGENTS = ROOT / ".claude" / "agents"
+# The executor agent files Claude Code loads: the host's `.claude/agents` when nested (Claude Code
+# finds agents walking up from the session's cwd, the host root), the workspace's otherwise.
+# executors.toml and .env stay at ROOT either way.
+
+
+def _main_host_checkout_agents(host: Path) -> Path:
+    """Nested only (P35): the MAIN host checkout's `.claude/agents`, even when HOST_ROOT is a host
+    worktree. A phase worktree pair has no `.claude/` of its own (Claude Code reads agents and
+    skills through from the main checkout), so `<host-wt>/.claude/agents` never exists. The main
+    checkout is the parent of the host's common git dir when that dir is a plain `.git`; anything
+    else (no git, a submodule's `.git/modules/<name>`, a separate GIT_DIR) falls back to `host`."""
+    try:
+        proc = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                              cwd=str(host), capture_output=True, text=True, timeout=10)
+    except Exception:  # noqa: BLE001 - git is optional; the host's own folder is the honest fallback
+        return host / ".claude" / "agents"
+    common = Path(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip() else None
+    if common is None or common.name != ".git":
+        return host / ".claude" / "agents"
+    return common.parent / ".claude" / "agents"
+
+
+CLAUDE_AGENTS = _main_host_checkout_agents(HOST_ROOT) if HOST_ROOT is not None else (HOST_ROOT or ROOT) / ".claude" / "agents"
 EXECUTOR_TIERS = ("mid", "high")
 RETIRED_EXECUTOR_TIERS = ("low",)  # dropped in workspace v23 — routing is two-tier (mid/high)
-# Shipped presets for the slice-executor tiers. A top-level mode = "<preset>" key in
-# the repo-root executors.toml picks one (absent file or key -> economy); per-tier
-# [claude.<tier>] tables with model/effort keys override the active preset field by
-# field; apply with `sync-agents`. An empty effort means "write no effort line" — the
-# escape hatch for models that reject the effort parameter (e.g. haiku). Models may
-# not be empty.
-DEFAULT_EXECUTOR_MODE = "economy"
-EXECUTOR_PRESETS = {
-    "flex": {
-        "mid": {"model": "sonnet", "effort": "xhigh"},
-        "high": {"model": "opus", "effort": "xhigh"},
-    },
-    "economy": {
-        "mid": {"model": "sonnet", "effort": "high"},
-        "high": {"model": "opus", "effort": "high"},
-    },
+# The executor route table (workspace v53): ONE table, owned here, that the orchestrator dispatches
+# from. A row is a (model, effort) pair the dispatch passes per call; `executor-route` prints the
+# resolved row for a slice and `sync-agents` writes the rows that own an agent file into that
+# file's frontmatter, which is only the fallback. Each row is overridable, key by key, under
+# [claude.<row>] in the repo-root executors.toml. `cheap` has no defaults of its own: it inherits
+# the RESOLVED mid row for every key it does not override, so an unset cheap row is the mid row.
+# `explore` is the read-only lookup agent (.claude/agents/Explore.md), not a slice route.
+# `design` is the design subagent's own row (.claude/agents/design-drafter.md, workspace v60): not a
+# slice tier and never a slice's route -- only `executor-route --drafter` dispatches on it.
+# `critic` and `judge` (workspace v60) are the design critic's two modes: `critic` owns
+# .claude/agents/design-critic.md and judges each drafted round; `judge` runs that same file in judge
+# mode, with its model passed per call, and rules only on the items the critic escalated. Neither is a
+# tier; `executor-route --critic` / `--judge` dispatch them. Both must be a different model from the
+# design row's (CRITIC_ROWS: a critic never judges its own model's drafting).
+# `research` and `cheap` run another row's agent file (slice-executor-high / -mid) with their model
+# passed per call, and the Agent tool's `model` is an enum, so those rows (and `judge`) take an alias
+# only; a full model id or "inherit" works only on mid, high, design, critic and explore, whose
+# frontmatter carries it.
+# effort = "" is the escape hatch for a model that rejects the parameter: no effort line in the
+# agent file and no per-dispatch effort. Rows, never tiers: two tiers stay (EXECUTOR_TIERS), and the
+# cheap row runs the mid file -- which supersedes v46's "haiku is never an executor tier". The
+# named modes of v29-v52 (a top-level `mode` key) are retired; read_executors_toml refuses one.
+EXECUTOR_ROUTES = ("high", "research", "design", "critic", "judge", "mid", "cheap", "explore")  # print order
+ROUTE_DEFAULTS = {
+    "high": {"model": "opus", "effort": "high"},
+    "research": {"model": "opus", "effort": "medium"},
+    "design": {"model": "opus", "effort": "xhigh"},
+    "critic": {"model": "sonnet", "effort": "max"},
+    "judge": {"model": "fable", "effort": "high"},
+    "mid": {"model": "sonnet", "effort": "high"},
+    "cheap": None,  # inherits the resolved mid row
+    "explore": {"model": "haiku", "effort": "high"},
 }
+ROUTE_TIER = {"high": "high", "research": "high", "design": None, "critic": None, "judge": None,
+              "mid": "mid", "cheap": "mid", "explore": None}
+# Rows that own an agent file (sync-agents writes their frontmatter). research and cheap dispatch
+# to another row's file, so their model must be an Agent-tool alias the dispatch can pass. The
+# design row owns design-drafter: it is not a tier and follows no other row, so one [claude.design]
+# override governs it alone (before v60 it followed the high row). The critic row owns design-critic;
+# the judge row borrows that file (ROUTE_BORROWS), like research and cheap borrow a tier's.
+ROUTE_AGENT = {"high": "slice-executor-high", "mid": "slice-executor-mid", "design": "design-drafter",
+               "critic": "design-critic", "explore": "Explore"}
+ROUTE_BORROWS = {"judge": "critic"}  # a non-tier row that runs another row's agent file
+# The rows that judge the design row's drafting: each must resolve to a different model family.
+CRITIC_ROWS = ("critic", "judge")
+# (label, canonical agent name, row) for the five agent files sync-agents manages, in print order.
+MANAGED_AGENT_FILES = (
+    ("mid", ROUTE_AGENT["mid"], "mid"),
+    ("high", ROUTE_AGENT["high"], "high"),
+    ("design-drafter", ROUTE_AGENT["design"], "design"),
+    ("design-critic", ROUTE_AGENT["critic"], "critic"),
+    ("Explore", ROUTE_AGENT["explore"], "explore"),
+)
+AGENT_MODEL_ALIASES = ("opus", "sonnet", "haiku", "fable")  # the Agent tool's `model` enum
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")  # the Agent tool's `effort` enum
+# Commit attribution follows the model a slice actually ran on; anything else prints verbatim.
+MODEL_ATTRIBUTION = {"opus": "Claude Opus 5.5", "sonnet": "Claude Sonnet 5.5",
+                     "haiku": "Claude Haiku 5.5", "fable": "Claude Fable 5.1"}
+# A loopback ANTHROPIC_BASE_URL is a local proxy (ocx's Kiro sidecar listens on 127.0.0.1:10100)
+# that serves no Haiku 5.5: there the cheap row falls back to the mid row's model and the explore
+# row to EXPLORE_PROXY_MODEL, printed as a `fallback=` line by executor-route.
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+EXPLORE_PROXY_MODEL = "sonnet"
+# The same proxy serves no Fable either. The judge row does NOT fall back: a judge is the stronger
+# second opinion, so a substitute would be a weaker one. On Fable behind a loopback proxy
+# `executor-route --judge` prints a `skip=yes` line instead: the orchestrator dispatches no judge and
+# the escalated items reach the operator marked low confidence.
+JUDGE_PROXY_SKIP_FAMILY = "fable"
 
 
 def now_iso() -> str:
@@ -173,78 +424,107 @@ def strip_frontmatter(text: str) -> str:
     return text
 
 
-def read_executors_toml() -> tuple:
-    """(mode, {(tier, key): value}) from the repo-root executors.toml.
+def read_executors_toml() -> dict:
+    """{(row, key): value} from the repo-root executors.toml: the per-row overrides of the route table.
 
-    Strict subset of TOML — an optional top-level mode = "<preset>" line (before
-    any section) plus [claude.<tier>] tables holding model/effort keys with
-    double-quoted string values; '#' comments and blanks ignored. Anything else
-    is an error, so typos surface instead of silently keeping a default."""
+    Strict subset of TOML -- [claude.<row>] tables (a row of EXECUTOR_ROUTES) holding model/effort
+    keys with double-quoted string values; '#' comments and blanks ignored. Anything else is an
+    error naming its line, so a typo surfaces instead of silently keeping a default. A retired shape
+    (the v29-v52 `mode` key, [claude.low], [codex.*]) is refused with its migration."""
     path = ROOT / "executors.toml"
-    mode = None
     values: dict = {}
     if not path.exists():
-        return mode, values
+        return values
     section = None
+    rows = ", ".join(sorted(EXECUTOR_ROUTES))
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        m = re.match(r'^mode\s*=\s*"([^"]*)"\s*(?:#.*)?$', line)
-        if m:
-            if section is not None:
-                raise SystemExit(f"executors.toml line {n}: mode must be set at the top level, before any [claude.*] section")
-            if mode is not None:
-                raise SystemExit(f"executors.toml line {n}: duplicate mode")
-            if m.group(1) not in EXECUTOR_PRESETS:
-                raise SystemExit(f"executors.toml line {n}: unknown mode {m.group(1)!r} (valid: {', '.join(sorted(EXECUTOR_PRESETS))})")
-            mode = m.group(1)
-            continue
-        m = re.match(r"^\[\s*claude\s*\.\s*(mid|high)\s*\]\s*(?:#.*)?$", line)
-        if m:
-            section = m.group(1)
-            continue
-        m = re.match(r"^\[\s*claude\s*\.\s*(" + "|".join(RETIRED_EXECUTOR_TIERS) + r")\s*\]\s*(?:#.*)?$", line)
-        if m:
+        if re.match(r"^mode\s*=", line):
             raise SystemExit(
-                f"executors.toml line {n}: the {m.group(1)} executor tier was retired in workspace v23 — "
-                "routing is two-tier now, so drop this section or move its settings to [claude.mid]"
+                f"executors.toml line {n}: the economy/flex presets were retired in workspace v53 — delete this line; "
+                "the route table replaces them (flex was xhigh on both tiers: set effort = \"xhigh\" under [claude.mid] "
+                f"and [claude.high] to keep it); run: {WORKFLOW_CMD} executor-route"
             )
         if re.match(r"^\[\s*codex\s*\.\s*[^\]]*\]\s*(?:#.*)?$", line):
             raise SystemExit(
                 f"executors.toml line {n}: Codex support was removed in workspace v31 — "
                 "this workspace ships Claude Code only, so drop this section"
             )
+        m = re.match(r"^\[\s*claude\s*\.\s*([^\]\s]*)\s*\]\s*(?:#.*)?$", line)
+        if m:
+            name = m.group(1)
+            if name in RETIRED_EXECUTOR_TIERS:
+                raise SystemExit(
+                    f"executors.toml line {n}: the {name} executor tier was retired in workspace v23 — "
+                    "routing is two-tier now, so drop this section or move its settings to [claude.mid]"
+                )
+            if name not in EXECUTOR_ROUTES:
+                raise SystemExit(f"executors.toml line {n}: unknown route {name} (valid: {rows})")
+            section = name
+            continue
         m = re.match(r'^(model|effort)\s*=\s*"([^"]*)"\s*(?:#.*)?$', line)
         if m:
+            key, value = m.group(1), m.group(2)
             if section is None:
-                raise SystemExit(f"executors.toml line {n}: key outside a section — put it under [claude.<tier>]")
-            key = (section, m.group(1))
-            if key in values:
-                raise SystemExit(f"executors.toml line {n}: duplicate {m.group(1)} for [claude.{section}]")
-            values[key] = m.group(2)
+                raise SystemExit(f"executors.toml line {n}: key outside a section — put it under [claude.<row>] ({rows})")
+            if (section, key) in values:
+                raise SystemExit(f"executors.toml line {n}: duplicate {key} for [claude.{section}]")
+            if key == "model" and not value:
+                raise SystemExit(f"executors.toml line {n}: [claude.{section}] model must not be empty (efforts may be empty; models may not)")
+            if key == "effort" and value and value not in EFFORT_LEVELS:
+                raise SystemExit(
+                    f"executors.toml line {n}: [claude.{section}] effort must be one of {', '.join(EFFORT_LEVELS)} "
+                    f"— or \"\" to write no effort line (got {value!r})"
+                )
+            if key == "model" and section not in ROUTE_AGENT and value not in AGENT_MODEL_ALIASES:
+                raise SystemExit(
+                    f"executors.toml line {n}: [claude.{section}] model {value!r}: route {section} dispatches to another row's "
+                    f"agent file, so its model must be an Agent-tool alias ({', '.join(AGENT_MODEL_ALIASES)}); a full model id "
+                    f"or inherit works only on {', '.join(r for r in EXECUTOR_ROUTES if r in ROUTE_AGENT)}, whose agent files carry it"
+                )
+            values[(section, key)] = value
             continue
-        if re.match(r"^(model|effort|mode)\s*=", line):
-            raise SystemExit(f'executors.toml line {n}: values must be double-quoted TOML strings, e.g. model = "haiku"')
-        raise SystemExit(f"executors.toml line {n}: cannot parse {line!r} (expected mode = \"...\", [claude.<mid|high>], or model/effort = \"...\")")
-    return mode, values
+        if re.match(r"^(model|effort)\s*=", line):
+            raise SystemExit(f'executors.toml line {n}: values must be double-quoted TOML strings, e.g. model = "sonnet" under [claude.<row>]')
+        raise SystemExit(f"executors.toml line {n}: cannot parse {line!r} (expected [claude.<row>] with row one of {rows}, or model/effort = \"...\")")
+    return values
 
 
-def executor_config() -> dict:
-    """The active preset (top-level mode in executors.toml; default economy) overlaid with any per-tier overrides; values pass through verbatim."""
-    mode, overrides = read_executors_toml()
-    preset = EXECUTOR_PRESETS[mode or DEFAULT_EXECUTOR_MODE]
-    config = {tier: dict(preset[tier]) for tier in EXECUTOR_TIERS}
-    for (tier, key), value in overrides.items():
-        config[tier][key] = value
-    for tier in EXECUTOR_TIERS:
-        if not config[tier]["model"]:
-            raise SystemExit(f"executors.toml: [claude.{tier}] model must not be empty (efforts may be empty; models may not)")
-    return config
+def resolve_routes(overrides=None) -> dict:
+    """{row: {model, effort, model_source, effort_source}} in EXECUTOR_ROUTES order: the engine
+    defaults overlaid key by key with executors.toml. A source is `default`, `executors.toml`, or
+    -- for a cheap key it does not override -- `mid row`; cheap resolves after mid, from mid's
+    resolved values, so a [claude.mid] override carries over to an unset cheap row."""
+    if overrides is None:
+        overrides = read_executors_toml()
+    resolved: dict = {}
+    for row in sorted(EXECUTOR_ROUTES, key=lambda r: ROUTE_DEFAULTS[r] is None):  # inheriting rows last
+        default = ROUTE_DEFAULTS[row]
+        entry: dict = {}
+        for key in ("model", "effort"):
+            if (row, key) in overrides:
+                entry[key], entry[f"{key}_source"] = overrides[(row, key)], "executors.toml"
+            elif default is None:
+                entry[key], entry[f"{key}_source"] = resolved["mid"][key], "mid row"
+            else:
+                entry[key], entry[f"{key}_source"] = default[key], "default"
+        resolved[row] = entry
+    return {row: resolved[row] for row in EXECUTOR_ROUTES}
+
+
+def route_source(entry: dict) -> str:
+    """One source for a resolved row, or `model <s> / effort <s>` when its two keys differ."""
+    if entry["model_source"] == entry["effort_source"]:
+        return entry["model_source"]
+    return f"model {entry['model_source']} / effort {entry['effort_source']}"
 
 
 def _patched_agent_md(text: str, model: str, effort: str) -> str:
-    """Rewrite only the model:/effort: frontmatter lines of a .claude agent file."""
+    """Rewrite only the model:/effort: frontmatter lines of a .claude agent file. Every other line
+    is kept verbatim -- `name:` included, which for a renamed agent in a nested install is its
+    installed name (the `subagent_type`), so sync-agents never undoes a rename."""
     if not text.startswith("---\n"):
         raise SystemExit("agent file has no frontmatter")
     end = text.find("\n---\n", 4)
@@ -256,38 +536,68 @@ def _patched_agent_md(text: str, model: str, effort: str) -> str:
     return "---\n" + "\n".join(lines) + text[end:]
 
 
-def executor_agent_files(config: dict) -> list:
-    """(tier, path, model, effort) for the 2 tier agent files."""
+def installed_agent_name(name: str) -> str:
+    """The name a managed agent is installed under: its canonical name, or -- in a nested install
+    whose host already has an agent of that name -- the rename the installer recorded in
+    `.agentic-nested.json` `renames.agents`. The installed file is `<installed name>.md` and its `name:`
+    frontmatter (the `subagent_type`) is the installed name too; the installer writes both."""
+    if NESTED is None:
+        return name
+    renames = NESTED.get("renames")
+    table = renames.get("agents") if isinstance(renames, dict) else None
+    installed = table.get(name) if isinstance(table, dict) else None
+    return installed if isinstance(installed, str) and installed else name
+
+
+def executor_agent_files(routes: dict) -> list:
+    """(label, path, model, effort) for the 5 managed agent files (MANAGED_AGENT_FILES): the two
+    slice-executor tiers from the mid and high rows, design-drafter from its own design row and
+    design-critic from the critic row (neither is a tier), and Explore from the explore row.
+    research, cheap and judge own no file. Labels stay canonical;
+    paths resolve through the nested rename map (`installed_agent_name`)."""
     return [
-        (tier, CLAUDE_AGENTS / f"slice-executor-{tier}.md", config[tier]["model"], config[tier]["effort"])
-        for tier in EXECUTOR_TIERS
+        (label, CLAUDE_AGENTS / f"{installed_agent_name(agent)}.md", routes[row]["model"], routes[row]["effort"])
+        for label, agent, row in MANAGED_AGENT_FILES
     ]
 
 
-def sync_agents(args: argparse.Namespace) -> None:
-    config = executor_config()
-    config_present = (ROOT / "executors.toml").exists()
-    mode, overrides = read_executors_toml()
-    override_count = len(overrides)
-    legacy_env = ROOT / ".env"
-    if legacy_env.exists() and "SLICE_EXECUTOR" in legacy_env.read_text(encoding="utf-8"):
-        print("warning: .env holds SLICE_EXECUTOR_* keys, but tier config moved to executors.toml in v8 — .env is no longer read")
+def executor_agent_drift(routes: dict) -> tuple:
+    """([(path, desired text)] for agent files that disagree with the routes, [missing paths]); writes nothing."""
     changed, missing = [], []
-    for tier, path, model, effort in executor_agent_files(config):
+    for _label, path, model, effort in executor_agent_files(routes):
         if not path.exists():
-            missing.append(str(path.relative_to(ROOT)))
+            missing.append(path)
             continue
         current = path.read_text(encoding="utf-8")
         desired = _patched_agent_md(current, model, effort)
         if desired != current:
-            changed.append(str(path.relative_to(ROOT)))
-            if not args.check:
-                write_text(path, desired)
-    for tier in EXECUTOR_TIERS:
-        cfg = config[tier]
-        print(f"{tier:<5} {cfg['model']} @ {cfg['effort'] or '(no effort line)'}")
-    mode_str = f"mode {mode}" if mode else f"mode {DEFAULT_EXECUTOR_MODE} (default)"
-    print(f"config source: {f'executors.toml ({mode_str}, {override_count} override(s))' if config_present else f'{DEFAULT_EXECUTOR_MODE} defaults (no executors.toml)'}")
+            changed.append((path, desired))
+    return changed, missing
+
+
+def sync_agents(args: argparse.Namespace) -> None:
+    """Write the resolved route table into the five managed agent files' model/effort frontmatter:
+    slice-executor-mid/-high from the mid/high rows, design-drafter from the design row, design-critic
+    from the critic row (the judge row borrows that file, its model passed per call), Explore from
+    the explore row (--check: report drift, write nothing, exit 1 when out of sync)."""
+    overrides = read_executors_toml()
+    routes = resolve_routes(overrides)
+    config_present = (ROOT / "executors.toml").exists()
+    legacy_env = ROOT / ".env"
+    if legacy_env.exists() and "SLICE_EXECUTOR" in legacy_env.read_text(encoding="utf-8"):
+        print("warning: .env holds SLICE_EXECUTOR_* keys, but tier config moved to executors.toml in v8 — .env is no longer read")
+    drift, missing_paths = executor_agent_drift(routes)
+    if not args.check:
+        for path, desired in drift:
+            write_text(path, desired)
+    # Agent files live in the host when nested, so they are named from there (identical at root).
+    changed = [shown(path) for path, _ in drift]
+    missing = [shown(path) for path in missing_paths]
+    for row in EXECUTOR_ROUTES:
+        entry = routes[row]
+        value = f"{entry['model']} @ {entry['effort'] or '(no effort line)'}"
+        print(f"{row:<9} {value:<16} ({route_source(entry)})")
+    print(f"config source: {f'executors.toml ({len(overrides)} override(s))' if config_present else 'defaults (no executors.toml)'}")
     for m in missing:
         print(f"missing agent file: {m}")
     if args.check:
@@ -307,6 +617,339 @@ def sync_agents(args: argparse.Namespace) -> None:
         print("already in sync; nothing written")
     if missing:
         raise SystemExit(1)
+
+
+def _loopback_base_url():
+    """ANTHROPIC_BASE_URL when its host is loopback (a local proxy such as ocx's Kiro sidecar), else None."""
+    url = os.environ.get("ANTHROPIC_BASE_URL", "").strip()
+    if not url:
+        return None
+    try:
+        host = urlparse(url if "://" in url else f"http://{url}").hostname
+    except ValueError:
+        return None
+    return url if host in LOOPBACK_HOSTS else None
+
+
+def _route_fallback(row: str, model: str, routes: dict, proxy):
+    """(model to dispatch, `fallback=` line or None) for one row under the environment: behind a
+    loopback proxy (no Haiku 5.5) cheap takes the mid row's model and explore EXPLORE_PROXY_MODEL."""
+    if proxy is None or row not in ("cheap", "explore"):
+        return model, None
+    target = routes["mid"]["model"] if row == "cheap" else EXPLORE_PROXY_MODEL
+    if target == model:
+        return model, None
+    return target, f"fallback={row} model {model} -> {target} (loopback ANTHROPIC_BASE_URL {proxy}: ocx/Kiro serves no Haiku 5.5)"
+
+
+def model_family(model: str):
+    """The model family a row's model names, for the critic fairness rule: an alias is its own family;
+    a full id names one (`claude-opus-5-5`, a provider id such as `us.anthropic.claude-opus-…`, a
+    `[1m]` suffix -> opus). `inherit` and an id naming no family are None: unknown here."""
+    m = (model or "").strip().lower()
+    if m in AGENT_MODEL_ALIASES:
+        return m
+    found = re.search(r"(?<![a-z])(" + "|".join(AGENT_MODEL_ALIASES) + r")(?![a-z])", m)
+    return found.group(1) if found else None
+
+
+def critic_fairness(row: str, routes: dict) -> tuple:
+    """(refusal, warning) for a critic row (CRITIC_ROWS) against the design row. The operator's rule
+    (P36): "using same model for critique and draft is not fair", so the critic and the judge must
+    each resolve to a different model from the drafter's. Models compare by family, so an alias and
+    its full id (`opus`, `claude-opus-5-5`) are the same model, and so are two versions of one family.
+    refusal: a message when they are the same; warning: a `warning=` line when one side cannot be
+    told (`inherit` -- the session's model -- against anything but `inherit`, or an unknown id)."""
+    mine, drafter = routes[row]["model"], routes["design"]["model"]
+    if mine.strip().lower() == drafter.strip().lower():
+        same = True
+    else:
+        a, d = model_family(mine), model_family(drafter)
+        if a is None or d is None:
+            return None, (f"warning=fairness: cannot tell whether the {row} row ({mine}) and the design row ({drafter}) "
+                          "are different models; make sure the design critic never runs on the drafter's model")
+        same = a == d
+    if not same:
+        return None, None
+    prefer = ("sonnet", "opus", "fable") if row == "critic" else ("fable", "opus", "sonnet")
+    d = model_family(drafter)
+    hint = next(m for m in prefer if m != d)
+    return (f"the {row} row ({mine}) is the design row's model ({drafter}): the design critic never judges its own "
+            f"model's drafting (\"using same model for critique and draft is not fair\"). Set [claude.{row}] "
+            f"model = \"{hint}\" in executors.toml (or move the drafter's [claude.design] row)"), None
+
+
+def _judge_proxy_skip(routes: dict, proxy):
+    """The `skip=` line for a judge dispatch behind a loopback proxy that serves no Fable, else None."""
+    if proxy is None or model_family(routes["judge"]["model"]) != JUDGE_PROXY_SKIP_FAMILY:
+        return None
+    return (f"skip=yes reason=loopback ANTHROPIC_BASE_URL {proxy} serves no Fable: dispatch no judge; "
+            "the escalated items reach the operator marked low confidence")
+
+
+def _route_env_warnings() -> list:
+    """`warning=` lines for the environment variables that outrank a per-dispatch model or effort."""
+    lines = []
+    level = os.environ.get("CLAUDE_CODE_EFFORT_LEVEL", "").strip()
+    if level:
+        lines.append(f"warning=CLAUDE_CODE_EFFORT_LEVEL={level} is set and outranks every per-dispatch effort "
+                     "(and every agent file's effort line); unset it for the route table's efforts to apply")
+    force = os.environ.get("CLAUDE_CODE_SUBAGENT_MODEL_FORCE", "").strip()
+    if force and force.lower() not in ("0", "false", "no"):
+        lines.append(f"warning=CLAUDE_CODE_SUBAGENT_MODEL_FORCE={force} is set and overrides every model "
+                     "(per-dispatch and frontmatter alike); unset it for the route table's models to apply")
+    return lines
+
+
+def slice_route(kind, risk, retry: bool) -> tuple:
+    """(row, reason) for one dispatch: kind first, then risk, then attempt -- bump up, never down.
+    A second attempt is always the high row; review, decomposition and co-work (the mockup span)
+    route high by kind and research to the research row, whatever `risk` says; otherwise only a
+    risk of exactly `low` reaches the mid row (implementation, fix) or the cheap row (docs, qa)."""
+    if retry:
+        return "high", "second attempt"
+    if kind in ("review", "decomposition", "co-work"):
+        return "high", f"kind {kind}"
+    if kind == "research":
+        return "research", "kind research"
+    if risk != "low":
+        return "high", f"risk {risk if risk not in (None, '') else 'unset'} (not low)"
+    if kind in ("implementation", "fix"):
+        return "mid", f"kind {kind} rated low"
+    if kind in ("docs", "qa"):
+        return "cheap", f"kind {kind} rated low"
+    return "high", f"unknown kind {kind if kind not in (None, '') else 'unset'}"
+
+
+def _dispatch_lines(row: str, routes: dict, proxy) -> tuple:
+    """(the model..attribution lines for one dispatch on `row`, its fallback line or None)."""
+    entry = routes[row]
+    model, fallback = _route_fallback(row, entry["model"], routes, proxy)
+    effort = entry["effort"]
+    lines = [
+        f"model={model}",
+        f"pass_model={'yes' if model in AGENT_MODEL_ALIASES else 'no'}",
+        f"effort={effort}",
+        f"pass_effort={'yes' if effort else 'no'}",
+        f"attribution={MODEL_ATTRIBUTION.get(model, model)}",
+    ]
+    return lines, fallback
+
+
+def cmd_executor_route(args: argparse.Namespace) -> None:
+    """Print the deterministic routing decision the orchestrator dispatches from, one key=value per
+    line: bare, the resolved route table and the agent files' sync state; with a slice id, that
+    slice's route (--retry: its second attempt); --drafter / --critic / --judge / --explore, the
+    design subagent's (the design row), the design critic's two modes (the critic and judge rows,
+    both running design-critic) and the lookup agent's (the explore row), all tier -.
+
+    The critic and the judge must be a different model from the drafter's: --critic / --judge exit 1
+    on an equal pair (critic_fairness) and the bare table prints a warning= line for it. Behind a
+    loopback proxy (no Fable) --judge on Fable prints `skip=yes reason=…` and exits 0: unlike a
+    `fallback=` line, which names a substitute model to dispatch, `skip=` means dispatch nothing.
+    Reads executors.toml (a malformed one errors here) and writes nothing."""
+    forms = [f for f, on in (("<slice_id>", args.slice is not None), ("--drafter", args.drafter), ("--critic", args.critic),
+                             ("--judge", args.judge), ("--explore", args.explore)) if on]
+    if len(forms) > 1:
+        raise SystemExit(f"executor-route: {' and '.join(forms)} are mutually exclusive; give at most one")
+    if args.retry and args.slice is None:
+        raise SystemExit("executor-route: --retry needs a <slice_id> (a second attempt is a slice's)")
+    routes = resolve_routes()
+    proxy = _loopback_base_url()
+    if args.slice is not None:
+        sdata = read_json(require_slice(args.slice) / "slice.json")
+        kind, risk = sdata.get("kind"), sdata.get("risk")
+        row, reason = slice_route(kind, risk, args.retry)
+        tier = ROUTE_TIER[row]
+        lines, fallback = _dispatch_lines(row, routes, proxy)
+        print(f"slice={args.slice}")
+        print(f"phase={args.slice.split('.', 1)[0]}")
+        print(f"kind={kind if kind not in (None, '') else 'unset'}")
+        print(f"risk={risk if risk not in (None, '') else 'unset'}")
+        print(f"attempt={2 if args.retry else 1}")
+        print(f"route={row}")
+        print(f"reason={reason}")
+        print(f"tier={tier}")
+        print(f"subagent_type={installed_agent_name(ROUTE_AGENT[tier])}")
+        print("\n".join(lines))
+        extra = [fallback] if fallback else []
+    elif args.drafter or args.critic or args.judge or args.explore:
+        row = "design" if args.drafter else "critic" if args.critic else "judge" if args.judge else "explore"
+        agent = ROUTE_AGENT[ROUTE_BORROWS.get(row, row)]
+        skip = _judge_proxy_skip(routes, proxy) if row == "judge" else None
+        if row in CRITIC_ROWS and skip is None:
+            refusal, _warning = critic_fairness(row, routes)
+            if refusal:
+                raise SystemExit(f"executor-route: {refusal}")
+        lines, fallback = _dispatch_lines(row, routes, proxy)
+        print(f"agent={agent}")
+        print(f"route={row}")
+        print(f"tier={ROUTE_TIER[row] or '-'}")
+        print(f"subagent_type={installed_agent_name(agent)}")
+        print("\n".join(lines))
+        extra = [fallback] if fallback else []
+        if row in CRITIC_ROWS and skip is None:
+            extra += [w for w in (critic_fairness(row, routes)[1],) if w]
+        if skip:
+            extra.append(skip)
+    else:
+        table = [("route", "tier", "model", "effort", "source")] + [
+            (row, ROUTE_TIER[row] or "-", routes[row]["model"], routes[row]["effort"] or "(no effort line)", route_source(routes[row]))
+            for row in EXECUTOR_ROUTES
+        ]
+        widths = [max(len(r[i]) for r in table) for i in range(4)]
+        for r in table:
+            print("  ".join(c.ljust(w) for c, w in zip(r, widths)) + "  " + r[4])
+        drift, missing = executor_agent_drift(routes)
+        stale = [shown(path) for path, _ in drift] + [f"{shown(path)} (missing)" for path in missing]
+        if stale:
+            print(f"agent files: out of sync: {', '.join(stale)} (run: {WORKFLOW_CMD} sync-agents)")
+        else:
+            print("agent files: in sync")
+        extra = [f for f in (_route_fallback(row, routes[row]["model"], routes, proxy)[1] for row in EXECUTOR_ROUTES) if f]
+        for row in CRITIC_ROWS:
+            refusal, warning = critic_fairness(row, routes)
+            if refusal:
+                extra.append(f"warning=fairness: {refusal}; executor-route --{row} refuses it")
+            elif warning:
+                extra.append(warning)
+        judge_skip = _judge_proxy_skip(routes, proxy)
+        if judge_skip:
+            extra.append(judge_skip.replace("skip=yes ", "skip=judge ", 1))
+        if proxy is None:
+            extra.insert(0, "proxy=none")
+        else:
+            extra.insert(0, f"proxy={proxy} (loopback)")
+    for line in extra + _route_env_warnings():
+        print(line)
+
+
+def cmd_record_dispatch(args: argparse.Namespace) -> None:
+    """Append one `executor_dispatched` event to works/events.jsonl: the route, model and effort an
+    executor ran on (copied from `executor-route`), the measured duration / tokens / tool uses from the
+    Agent completion notification, and its verdict. A record, never a route validation: nothing else is
+    written, no state changes."""
+    sdata = read_json(require_slice(args.slice) / "slice.json")
+    if not args.model.strip():
+        raise SystemExit("record-dispatch: --model must be a non-empty model (the model= line executor-route printed)")
+    tier = ROUTE_TIER[args.route] if args.tier is None else (None if args.tier == "-" else args.tier)
+    if args.agent is not None:
+        agent = args.agent
+    elif tier is not None:
+        agent = installed_agent_name(ROUTE_AGENT[tier])
+    else:
+        agent = installed_agent_name(ROUTE_AGENT[ROUTE_BORROWS.get(args.route, args.route)])
+    rec = {
+        "slice": args.slice, "phase": sdata.get("phase_id") or args.slice.split(".", 1)[0],
+        "kind": sdata.get("kind"), "risk": sdata.get("risk"),
+        "route": args.route, "tier": tier, "agent": agent,
+        "model": args.model, "effort": args.effort,
+        "attribution": MODEL_ATTRIBUTION.get(args.model, args.model),
+        "attempt": args.attempt, "verdict": args.verdict,
+        "duration_ms": args.duration_ms, "tokens": args.tokens, "tool_uses": args.tool_uses,
+        "note": args.note,
+    }
+    append_event("executor_dispatched", **rec)
+    print("recorded=executor_dispatched")
+    for key in ("slice", "route", "tier", "model", "effort", "attempt", "verdict", "duration_ms", "tokens", "tool_uses"):
+        v = rec[key]
+        print(f"{key}={'' if v is None else v}")
+
+
+_DISPATCH_VERDICTS = ("done", "escalate", "needs_operator", "blocked", "failed")
+
+
+def _dispatch_agg(records: list) -> dict:
+    """Counts and sums over a group of executor_dispatched records."""
+    durs = [r["duration_ms"] for r in records if isinstance(r.get("duration_ms"), (int, float))]
+    toks = [r["tokens"] for r in records if isinstance(r.get("tokens"), (int, float))]
+    agg = {"n": len(records)}
+    for v in _DISPATCH_VERDICTS:
+        agg[v] = sum(1 for r in records if r.get("verdict") == v)
+    agg["retries"] = sum(1 for r in records if isinstance(r.get("attempt"), int) and r["attempt"] >= 2)
+    agg["mean_min"] = round(sum(durs) / len(durs) / 60000, 1) if durs else None
+    agg["total_min"] = round(sum(durs) / 60000, 1) if durs else None
+    agg["tokens"] = sum(toks) if toks else None
+    return agg
+
+
+def _dispatch_groups(records: list, keyfn, order=None) -> dict:
+    groups: dict = {}
+    for r in records:
+        groups.setdefault(keyfn(r), []).append(r)
+    keys = [k for k in order if k in groups] if order else sorted(groups, key=lambda k: (-len(groups[k]), str(k)))
+    return {k: _dispatch_agg(groups[k]) for k in keys}
+
+
+def _dispatch_table(title: str, groups: dict, cols: list) -> list:
+    header = [title] + [c[0] for c in cols]
+    rows = [header]
+    for key, agg in groups.items():
+        rows.append([str(key)] + [("-" if agg[c[1]] is None else str(agg[c[1]])) for c in cols])
+    widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
+    return ["  ".join(c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(r, widths))).rstrip() for r in rows]
+
+
+def cmd_dispatch_summary(args: argparse.Namespace) -> None:
+    """Read works/events.jsonl back: the executor_dispatched records by route, by model @ effort and by
+    kind (or, with --slice, one line per attempt). Read-only; blank and malformed lines are skipped."""
+    records: list = []
+    skipped = 0
+    ev = WORKS / "events.jsonl"
+    if ev.exists():
+        for line in ev.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except ValueError:
+                skipped += 1
+                continue
+            if isinstance(obj, dict) and obj.get("type") == "executor_dispatched":
+                records.append(obj)
+    if args.phase is not None:
+        known = (ACTIVE / args.phase).is_dir() or any(r.get("phase") == args.phase for r in records) \
+            or (ARCHIVED.is_dir() and any(ARCHIVED.glob(f"**/{args.phase}")))
+        if not known:
+            raise SystemExit(f"dispatch-summary: no such phase: {args.phase}")
+        records = [r for r in records if r.get("phase") == args.phase]
+    if args.slice is not None:
+        if not any(r.get("slice") == args.slice for r in records) and not (ACTIVE / args.slice.split(".", 1)[0] / "slices" / args.slice).is_dir():
+            raise SystemExit(f"dispatch-summary: no such slice: {args.slice}")
+        records = [r for r in records if r.get("slice") == args.slice]
+    by_route = _dispatch_groups(records, lambda r: r.get("route") or "?", order=EXECUTOR_ROUTES)
+    by_model = _dispatch_groups(records, lambda r: f"{r.get('model') or '?'} @ {r.get('effort') or '(none)'}")
+    by_kind = _dispatch_groups(records, lambda r: r.get("kind") or "unset")
+    if args.json:
+        print(json.dumps({"records": len(records), "by_route": by_route, "by_model_effort": by_model, "by_kind": by_kind,
+                          "skipped_lines": skipped}, ensure_ascii=False, indent=2))
+        return
+    phases = sorted({r.get("phase") for r in records if r.get("phase")})
+    stamps = [r.get("ts") for r in records if r.get("ts")]
+    print(f"records={len(records)}")
+    if not records:
+        if skipped:
+            print(f"skipped_lines={skipped}")
+        print(f"hint=record a dispatch with: {WORKFLOW_CMD} record-dispatch <slice_id> --route … --model … --effort … --verdict …")
+        return
+    print(f"phases={','.join(phases)}")
+    print(f"since={stamps[0] if stamps else '-'}")
+    print(f"until={stamps[-1] if stamps else '-'}")
+    if skipped:
+        print(f"skipped_lines={skipped}")
+    if args.slice is not None:
+        for r in records:
+            print(f"attempt={r.get('attempt')} route={r.get('route')} model={r.get('model')} effort={r.get('effort') or '(none)'} "
+                  f"verdict={r.get('verdict')} duration_ms={r.get('duration_ms')} tokens={r.get('tokens')} ts={r.get('ts')}")
+        return
+    full = [("n", "n"), ("done", "done"), ("escalate", "escalate"), ("needs_op", "needs_operator"), ("blocked", "blocked"),
+            ("failed", "failed"), ("retries", "retries"), ("mean_min", "mean_min"), ("total_min", "total_min"), ("tokens", "tokens")]
+    short = [("n", "n"), ("done", "done"), ("escalate", "escalate"), ("retries", "retries"), ("tokens", "tokens")]
+    for label, title, groups, cols in (("by route", "route", by_route, full), ("by model @ effort", "model @ effort", by_model, full),
+                                       ("by kind", "kind", by_kind, short)):
+        print()
+        print(f"[{label}]")
+        print("\n".join(_dispatch_table(title, groups, cols)))
 
 
 def doc_index() -> dict:
@@ -351,9 +994,12 @@ def head_commit() -> str:
     semantics: this is the commit the version was *created at* -- the version file itself lands
     in a later commit -- so the sha is provenance, while `created_at` and `source` are the
     staleness keys a reader actually judges by.
+
+    Nested install: the HOST's HEAD -- the product state the doc describes -- never the nested
+    repo's, which only holds workflow state. The same helper stamps a nested phase's host anchors.
     """
     try:
-        proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True, timeout=10)
+        proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(HOST_ROOT or ROOT), capture_output=True, text=True, timeout=10)
     except Exception:  # noqa: BLE001 - git is optional; a doc version must still be writable without it
         return ""
     sha = proc.stdout.strip()
@@ -424,8 +1070,8 @@ def new_doc_version(args: argparse.Namespace) -> None:
     rebuild_docs()
     append_event("doc_version_created", doc=doc_id, version=version_id, source=args.source)
     print(f"created doc version {doc_id}/{version_id}")
-    print(f"edit_path={rel}")
-    print("after editing, run: python3 scripts/workflow.py rebuild-docs")
+    print(f"edit_path={shown(dest)}")
+    print(f"after editing, run: {WORKFLOW_CMD} rebuild-docs")
     # The split can only happen in a new version, and this is one -- so say it here, not only in
     # `validate`, where the reader is nowhere near an editable file.
     hint = oversized_sections_line(oversized_doc_sections([doc_id]))
@@ -442,7 +1088,7 @@ def cmd_docs(args: argparse.Namespace) -> None:
     for doc_id in sorted(index["docs"]):
         info = index["docs"][doc_id]
         latest = next(v for v in info["versions"] if v["id"] == info["latest"])
-        print(f"{doc_id}: latest={info['latest']} current={info['current_path']} latest_path={latest['path']}")
+        print(f"{doc_id}: latest={info['latest']} current={shown_rel(info['current_path'])} latest_path={shown_rel(latest['path'])}")
         line = f"  {doc_marker(latest)}"
         owed = stale.get(doc_id)
         if owed:
@@ -652,6 +1298,10 @@ def phase_execution(data) -> dict:
           "consolidation": "pending"       # "pending" until the post-merge doc consolidation, then "done"
         }
 
+    A nested install (P35) adds the host half of the worktree pair: `host_worktree`, `host_branch`,
+    `host_base`, `host_base_sha`, `host_branch_created` and `base_branch`; there `worktree` is the
+    NESTED worktree (`<host_worktree>/workflow`). See `_nested_execution_problems`.
+
     Read the block only through this helper so every caller agrees on what "parallel" means.
     """
     if not isinstance(data, dict):
@@ -660,6 +1310,68 @@ def phase_execution(data) -> dict:
     if not isinstance(execution, dict) or execution.get("mode") not in EXECUTION_MODES:
         return None
     return execution
+
+
+def phase_in_flight(data) -> bool:
+    """True when a phase is stamped for its own worktree and is still running there (P35.S7, closes D57).
+
+    It has a parallel execution block (`phase_execution`) AND either still holds a worktree
+    (`execution.worktree` is not null: running, or merged but not yet torn down) or has not reached
+    `done`. A stamped phase that is `done` with its worktree torn down is history: it is not in
+    flight, so `## Streams` and `next`'s `parallel_phases_elsewhere` skip it. Accepts a phase record
+    or a `works/index.json` entry; both carry `status` and `execution`.
+    """
+    execution = phase_execution(data)
+    if not execution:
+        return False
+    return execution.get("worktree") is not None or data.get("status") != "done"
+
+
+NESTED_EXECUTION_HOST_KEYS = ("host_worktree", "host_branch", "host_base", "host_base_sha", "host_branch_created")
+
+
+def _nested_execution_problems(phase_id: str, execution: dict) -> list:
+    """`validate`'s checks on the host half of a parallel execution block (P35), [] when sound.
+
+    A nested `parallel-start` stamps five host keys -- `host_worktree` (the host worktree; null once
+    torn down), `host_branch`, `host_base` (the ref as resolved), `host_base_sha`, `host_branch_created`
+    -- plus `base_branch` (the nested repo's branch at start). The five appear together, and only in a
+    nested install; `base_branch` comes with them there, and is otherwise only type-checked (a root
+    stamp of it is additive). `worktree` is the nested worktree: `<host_worktree>/<workflow>` while
+    both are set. A block without any of them (every at-root block, and a legacy one) is untouched."""
+    problems = []
+    present = [k for k in NESTED_EXECUTION_HOST_KEYS if k in execution]
+    if "base_branch" in execution:
+        value = execution.get("base_branch")
+        if value is not None and not (isinstance(value, str) and value.strip()):
+            problems.append(f"phase {phase_id} has invalid execution.base_branch {value!r}; expected the nested repo's branch name or null")
+    if not present:
+        return problems
+    if NESTED is None:
+        problems.append(f"phase {phase_id} has nested-only execution keys ({', '.join(present)}) in an at-root install; they are written only by a nested parallel-start")
+        return problems
+    missing = [k for k in (*NESTED_EXECUTION_HOST_KEYS, "base_branch") if k not in execution]
+    if missing:
+        problems.append(f"phase {phase_id} has a partial nested execution block: missing {', '.join(missing)} (parallel-start writes all six together)")
+    for key in ("host_branch", "host_base"):
+        value = execution.get(key)
+        if key in execution and not (isinstance(value, str) and value.strip()):
+            problems.append(f"phase {phase_id} has invalid execution.{key} {value!r}; expected a non-empty string")
+    sha = execution.get("host_base_sha")
+    if "host_base_sha" in execution and not (isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{7,64}", sha)):
+        problems.append(f"phase {phase_id} has invalid execution.host_base_sha {sha!r}; expected a host commit sha")
+    created = execution.get("host_branch_created")
+    if "host_branch_created" in execution and not isinstance(created, bool):
+        problems.append(f"phase {phase_id} has invalid execution.host_branch_created {created!r}; expected true or false")
+    host_wt = execution.get("host_worktree")
+    if host_wt is not None and not isinstance(host_wt, str):
+        problems.append(f"phase {phase_id} has invalid execution.host_worktree {host_wt!r}; expected a path string or null")
+    worktree = execution.get("worktree")
+    if isinstance(host_wt, str) and isinstance(worktree, str) and HOST_ROOT is not None:
+        expected = os.path.normpath(os.path.join(host_wt, os.path.relpath(ROOT, HOST_ROOT)))
+        if os.path.normpath(worktree) != expected:
+            problems.append(f"phase {phase_id} has execution.worktree {worktree!r}, but the nested worktree of host_worktree {host_wt!r} is {expected!r}")
+    return problems
 
 
 def phase_pinned(data) -> bool:
@@ -761,6 +1473,58 @@ def consolidation_command(phase) -> str:
     return "parallel-consolidated" if phase_execution(phase) else "docs-consolidated"
 
 
+def phase_consolidates(data) -> list:
+    """The phase ids a docs phase declared it pays: the optional top-level `"consolidates"` list that
+    `new-phase --consolidates` writes (v51), `[]` when the key is absent or malformed (`validate`
+    reports a malformed one). It is the ONLY marker of a docs phase -- nothing reads a phase's name
+    or intent text to guess -- and a phase that carries none is simply not one, so no phase.json
+    needs migrating."""
+    value = data.get("consolidates") if isinstance(data, dict) else None
+    if not isinstance(value, list):
+        return []
+    return [v for v in value if isinstance(v, str)]
+
+
+def consolidation_cover(phases: list) -> dict:
+    """`{debt_phase_id: [covering phase, ...]}` -- which live docs phase already pays which phase's
+    debt: every active, not-`done` phase whose `consolidates` names it. A finished docs phase covers
+    nothing (it either paid the debt or it did not), so rotate proposes again rather than trusting
+    it. Read by `docs-debt` ("paid by") and `rotate-backlog` (no duplicate docs phase)."""
+    cover = {}
+    for phase in phases:
+        if phase.get("status") == "done":
+            continue
+        for pid in phase_consolidates(phase):
+            cover.setdefault(pid, []).append(phase)
+    return cover
+
+
+def next_phase_id() -> str:
+    """`P<n>`, one above the highest phase number across the active AND archived phases: an archived
+    id is spent, so reusing it would collide in history. Archived phases are read from their
+    `archive_manifest.json` `phase_id`, falling back to the `_P<N>_` in the folder name."""
+    numbers = []
+    for pdir in phase_dirs():
+        match = re.fullmatch(r"P([0-9]+)", str(read_json(pdir / "phase.json").get("id", "")))
+        if match:
+            numbers.append(int(match.group(1)))
+    if ARCHIVED.exists():
+        for adir in ARCHIVED.iterdir():
+            if not adir.is_dir():
+                continue
+            pid = ""
+            manifest = adir / "archive_manifest.json"
+            if manifest.exists():
+                try:
+                    pid = str(read_json(manifest).get("phase_id", ""))
+                except (ValueError, OSError):
+                    pid = ""
+            match = re.fullmatch(r"P([0-9]+)", pid) or re.search(r"_P([0-9]+)_", adir.name)
+            if match:
+                numbers.append(int(match.group(1)))
+    return f"P{max(numbers, default=0) + 1}"
+
+
 def stale_docs(phases=None) -> dict:
     """`{doc: {phase_id: note_count}}` -- every durable doc named by a `## Doc impact` note that no
     consolidation has paid yet. The doc-side view of the same debt `consolidation_debt_line` states
@@ -822,7 +1586,9 @@ def consolidation_debt_line(phases: list) -> str:
     Accepts either phase records or `works/index.json` entries; both are read through
     `phase_consolidation()` / `phase_execution()`, never off a raw field.
     """
-    owing = phases_owing_consolidation(phases)
+    # A stamped phase still running (not `done`) has stamped `execution.consolidation: "pending"` since
+    # parallel-start but owes nothing until its review passes (P35.S7); a `done` one owes, as before.
+    owing = [p for p in phases_owing_consolidation(phases) if not (phase_execution(p) and p.get("status") != "done")]
     if len(owing) < CONSOLIDATION_DEBT_MIN_PHASES:
         return ""
     ids = ", ".join(p["id"] for p in owing)
@@ -903,6 +1669,9 @@ def current_stream(phases: list) -> str:
     `execution.branch` -- which works identically in a `git worktree` and in a plain
     clone on another machine, and needs no marker file. Git is consulted only when at
     least one active phase is actually opted in, so an untouched workspace never shells out.
+    In a nested install (P35) the key is the NESTED repo's branch -- `git_current_branch()` reads
+    ROOT, the repo that owns the state -- never the host's, whose branch names follow the host's
+    custom and carry no workspace IDs.
     """
     branches = set()
     for phase in phases:
@@ -966,7 +1735,10 @@ def operator_wait_target(phases: list, current_phase, current_slice):
 
 SLICES_BEGIN = "<!-- slices:begin -->"
 SLICES_END = "<!-- slices:end -->"
-SLICES_GUIDANCE = "_Generated by `python3 scripts/workflow.py rebuild` from each slice's `slice.json`; never hand-edit this block._"
+# WORKFLOW_CMD is the literal `python3 scripts/workflow.py` at root (so this line stays byte-identical to
+# works/templates/phase.md); a nested install's template is installed with the host-relative prefix, so
+# its regenerated line carries the same one.
+SLICES_GUIDANCE = f"_Generated by `{WORKFLOW_CMD} rebuild` from each slice's `slice.json`; never hand-edit this block._"
 
 
 def render_slices_block(pdir: Path, phase: dict) -> str:
@@ -1069,6 +1841,106 @@ def rebuild_index_and_state() -> None:
         refresh_phase_md_slices(ROOT / p["path"], p)
 
 
+def _phase_progress(phase_like: dict, slices: list) -> tuple:
+    """`(current slice id or "none", "n/m")` for one phase as read from some source."""
+    slices = slices or []
+    cur = next((x.get("id") for x in slices if x.get("status") != "done"), None)
+    return (cur or "none", f"{sum(1 for x in slices if x.get('status') == 'done')}/{len(slices)}")
+
+
+def streams_section(phases: list, state: dict) -> list:
+    """The `## Streams` table for `works/backlog.md` (P35.S7): the default stream plus every stamped
+    phase still in flight, each read live from where its slices actually advance.
+
+    A parallel phase's slice progress lives on its own branch, so the stamp-time copy in the
+    `## Active Phases` table stands still until the merge. Rows: this checkout's own stream first
+    when it is a parallel one (from its working tree), then the `default` row (this checkout's
+    pointer on the default stream; on a parallel stream the base branch's pointer, from
+    `execution.base_branch`, else the local copy), then one row per other in-flight phase, read
+    from its branch, then `origin/<branch>`, else the local copy -- labelled so. Git is touched
+    only when a stamped phase is in flight (the same gate as `current_stream`); with none, this is
+    a single working-tree default row and no git call is made. The Host branch column is nested only.
+    """
+    nested = NESTED is not None
+    stream = state.get("stream")
+    own = next((p for p in phases if stream and (phase_execution(p) or {}).get("branch") == stream), None)
+    others = [p for p in phases if phase_in_flight(p) and p is not own]
+    use_git = bool((own or others) and _git_available())
+    rows = []
+
+    base_dir = str(HOST_ROOT or ROOT)
+
+    def where(worktree):  # the default homes sit under the checkout's root: print them relative to it, keeping the tracked file free of home paths
+        if worktree and os.path.isabs(worktree) and os.path.commonpath([base_dir, worktree]) == base_dir:
+            return os.path.relpath(worktree, base_dir)
+        return worktree
+
+    def add(stream_cell, phase_id, status, cur, done, host, worktree, source):
+        worktree = where(worktree)
+        cells = [f"`{clean_cell(stream_cell)}`", f"`{clean_cell(phase_id)}`" if phase_id else "-", clean_cell(status) or "-",
+                 f"`{clean_cell(cur)}`" if cur else "-", done or "-"]
+        if nested:
+            cells.append(f"`{clean_cell(host)}`" if host else "-")
+        cells += [f"`{clean_cell(worktree)}`" if worktree else "-", clean_cell(source)]
+        rows.append("| " + " | ".join(cells) + " |")
+
+    if own is not None:
+        execution = phase_execution(own)
+        cur, done = _phase_progress(own, own["slices"])
+        short = _parallel_verdict_pair(own["id"], own.get("status"), (own.get("review") or {}).get("status"), own["slices"],
+                                       phase_consolidation(own), None, False, True)[0]
+        add(stream, own["id"], short, cur, done, execution.get("host_branch"), execution.get("worktree"), "working tree")
+
+    # The default row.
+    if own is None:
+        pid, cur_slice = state.get("current_phase"), state.get("current_slice")
+        phase = next((p for p in phases if p["id"] == pid), None)
+        if phase is None:
+            add("default", None, "idle", None, None, None, None, "working tree")
+        else:
+            _, done = _phase_progress(phase, phase["slices"])
+            add("default", pid, phase.get("status"), cur_slice or "none", done, None, None, "working tree")
+    else:
+        base = (phase_execution(own) or {}).get("base_branch")
+        plist, source = None, "local copy"
+        if base and use_git:
+            plist = _phases_at_ref(base)
+            if plist is not None:
+                source = f"branch {base}"
+        sel = stream_phases(plist if plist is not None else phases, None)
+        target = next((q for q in sel if q.get("status") != "done"), None)
+        if target is None:
+            add("default", None, "idle", None, None, None, None, source)
+        else:
+            if plist is not None:
+                target["slices"] = _slices_at_ref(base, target["id"]) or []
+            cur_slice = resolve_current([target])[1]
+            _, done = _phase_progress(target, target["slices"])
+            add("default", target["id"], target.get("status"), cur_slice or "none", done, None, None, source)
+
+    for p in others:
+        execution = phase_execution(p)
+        branch = execution.get("branch")
+        data, slices, source = p, p["slices"], "local copy"
+        branch_gone, merged = False, None
+        if use_git and branch:
+            for candidate in (branch, f"origin/{branch}"):
+                found = _phase_json_at_ref(candidate, p["id"])
+                if found is not None:
+                    data, slices, source = found, _slices_at_ref(candidate, p["id"]) or [], f"branch {candidate}"
+                    break
+            branch_gone = not _branch_exists(branch)
+            if not branch_gone:
+                merged = _git(["merge-base", "--is-ancestor", branch, "HEAD"], check=False).returncode == 0
+        short = _parallel_verdict_pair(p["id"], data.get("status"), (data.get("review") or {}).get("status"), slices,
+                                       phase_consolidation(p), merged, branch_gone, False)[0]
+        cur, done = _phase_progress(data, slices)
+        add(branch or "-", p["id"], short, cur, done, execution.get("host_branch"), execution.get("worktree"), source)
+
+    head = ["Stream", "Phase", "Status", "Current slice", "Done"] + (["Host branch"] if nested else []) + ["Worktree", "Source"]
+    return ["## Streams", "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)] + rows + [""]
+
+
 def rebuild_backlog(phases: list, state: dict, index: dict) -> None:
     lines = [
         "# Backlog", "", "> Generated dashboard. Do not put detailed task context here; edit phase/slice/deferred folders instead.",
@@ -1083,6 +1955,7 @@ def rebuild_backlog(phases: list, state: dict, index: dict) -> None:
         lines.append(f"- Stream: `{clean_cell(state['stream'])}` (parallel phase checkout; the pointer above is scoped to it)")
     lines += [
         f"- Open deferred jobs: `{index.get('deferred_open_count', 0)}`", "",
+        *streams_section(phases, state),
         "## Active Phases", "", "| Phase | Status | Review | Name | Current Slice | Path |", "|---|---|---|---|---|---|",
     ]
     if not phases:
@@ -1132,6 +2005,11 @@ def validate() -> int:
         # this field existed, and every phase whose `## Doc impact` list was empty).
         if "consolidation" in p and p.get("consolidation") not in CONSOLIDATION_STATES:
             errors.append(f"phase {p['id']} has invalid consolidation {p.get('consolidation')!r}; expected one of {sorted(CONSOLIDATION_STATES)}")
+        # Optional docs-phase marker (v51): the active phases a docs phase pays. Absent = not a docs phase.
+        if "consolidates" in p:
+            paid = p.get("consolidates")
+            if not (isinstance(paid, list) and paid and all(isinstance(v, str) and re.fullmatch(r"P[0-9]+", v) for v in paid)):
+                errors.append(f"phase {p['id']} has invalid consolidates {paid!r}; expected a non-empty list of phase ids such as [\"P26\", \"P27\"] (written by new-phase --consolidates)")
         # Optional parallel-execution block. Absent = default stream = nothing to check.
         # A phase that merged `done` while its doc consolidation is still pending
         # (`consolidation: "pending"`) is a legitimate state and passes cleanly here.
@@ -1159,6 +2037,7 @@ def validate() -> int:
                     consolidation = execution.get("consolidation")
                     if consolidation is not None and consolidation not in CONSOLIDATION_STATES:
                         errors.append(f"phase {p['id']} has invalid execution.consolidation {consolidation!r}; expected one of {sorted(CONSOLIDATION_STATES)} or null")
+                    errors.extend(_nested_execution_problems(p["id"], execution))
         # Optional operator acceptance gate. Absent = legacy phase = nothing to check and
         # NO warning: nagging every pre-v32 phase on every run would clutter the dashboards.
         if "acceptance" in p:
@@ -1175,6 +2054,18 @@ def validate() -> int:
                         errors.append(f"phase {p['id']} has invalid acceptance.{field} {value!r}; expected a string or null")
                 if p["status"] == "done" and required is True and not acceptance.get("cleared_at"):
                     errors.append(f"phase {p['id']} is done but its operator acceptance gate was never cleared; the operator must walk the running product (accept-gate {p['id']} --open/--clear)")
+        # Optional host anchors (P28): written only by a nested install's new-phase / passing review.
+        # Absent = an at-root or pre-nested phase = nothing to check.
+        if "host_anchors" in p:
+            anchors = p.get("host_anchors")
+            if not isinstance(anchors, dict):
+                errors.append(f"phase {p['id']} has a non-object host_anchors block: {anchors!r}")
+            else:
+                for key, value in anchors.items():
+                    if key not in HOST_ANCHOR_KEYS:
+                        errors.append(f"phase {p['id']} has unknown host_anchors.{key}; expected only {', '.join(HOST_ANCHOR_KEYS)}")
+                    elif value is not None and not (isinstance(value, str) and re.fullmatch(r"[0-9a-f]{7,64}", value)):
+                        errors.append(f"phase {p['id']} has invalid host_anchors.{key} {value!r}; expected a host commit sha or null")
         if not (ACTIVE / p["id"] / "intent.md").exists():
             warnings.append(f"phase {p['id']} has no intent.md (expected {p['id']}/intent.md); capture operator intent via the create-phase skill")
         # Bounded notebook (v35). Warnings only: `validate` prints them and still exits 0.
@@ -1219,13 +2110,13 @@ def validate() -> int:
                 continue
             djson = ddir / "deferred.json"
             if not djson.exists():
-                errors.append(f"missing deferred.json: {ddir.relative_to(ROOT)}")
+                errors.append(f"missing deferred.json: {shown(ddir)}")
                 continue
             data = read_json(djson)
             if data.get("status") not in DEFERRED_STATUSES:
                 errors.append(f"invalid deferred status {data.get('id')}: {data.get('status')}")
             if data.get("status") not in allowed:
-                errors.append(f"deferred job in wrong folder: {data.get('id')} status {data.get('status')} under {base.relative_to(ROOT)}")
+                errors.append(f"deferred job in wrong folder: {data.get('id')} status {data.get('status')} under {shown(base)}")
     # Deferred doc consolidation. A WARNING, never an error: the debt is expected operator-paced
     # state (a passing review defers consolidation to a docs phase), so it must not fail CI or
     # block the loop -- it must only stop being silent.
@@ -1245,19 +2136,38 @@ def validate() -> int:
     oversized = oversized_sections_line(oversized_doc_sections())
     if oversized:
         warnings.append(oversized)
-    # Executor-tier drift is advisory only: warn (never error, never crash) when the agent
-    # files disagree with executors.toml/defaults, so a foreign or partial workspace still validates.
+    # Agent-file drift is advisory only: warn (never error, never crash) when the five managed agent
+    # files disagree with the route table (executors.toml/defaults), so a foreign or partial
+    # workspace still validates. Skipped when a broken nested marker names no host: the agent files
+    # live there, not under ROOT.
     try:
-        for tier, path, model, effort in executor_agent_files(executor_config()):
+        for _label, path, model, effort in ([] if NESTED is not None and HOST_ROOT is None else executor_agent_files(resolve_routes())):
             if not path.exists():
-                warnings.append(f"missing executor agent file: {path.relative_to(ROOT)} (run: python3 scripts/workflow.py sync-agents)")
+                warnings.append(f"missing executor agent file: {shown(path)} (run: {WORKFLOW_CMD} sync-agents)")
                 continue
             current = path.read_text(encoding="utf-8")
             desired = _patched_agent_md(current, model, effort)
             if desired != current:
-                warnings.append(f"executor agent file out of sync with executors.toml/defaults: {path.relative_to(ROOT)} (run: python3 scripts/workflow.py sync-agents)")
+                warnings.append(f"executor agent file out of sync with executors.toml/defaults: {shown(path)} (run: {WORKFLOW_CMD} sync-agents)")
     except (SystemExit, Exception) as exc:  # noqa: BLE001 - advisory check must not fail validate
         warnings.append(f"executor tier config check failed: {exc}")
+    # Nested personal install (P28): a malformed marker is an ERROR, so a broken nested install is
+    # never mistaken for at-root mode; the host must be a git work tree (phase-scope and the
+    # product commits read it). Silent at root -- no marker, nothing checked.
+    if NESTED is not None:
+        marker = shown(ROOT / NESTED_MARKER)
+        errors.extend(f"{marker}: {problem}" for problem in NESTED_PROBLEMS)
+        unknown = sorted(set(NESTED) - set(NESTED_KEYS) - set(NESTED_OPTIONAL_KEYS))
+        if unknown:
+            warnings.append(f"{marker}: unknown field(s) {', '.join(unknown)} (schema {NESTED_SCHEMA} reads only {', '.join(NESTED_KEYS + NESTED_OPTIONAL_KEYS)})")
+        if HOST_ROOT is not None and HOST_ROOT.is_dir():
+            try:
+                proc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=str(HOST_ROOT), capture_output=True, text=True, timeout=10)
+            except Exception:  # noqa: BLE001 - no git binary: say so, never fail on it
+                warnings.append(f"git is not available, so the nested install's host {HOST_ROOT} cannot be confirmed as a git work tree")
+            else:
+                if proc.returncode != 0 or proc.stdout.strip() != "true":
+                    errors.append(f"nested install: the host {HOST_ROOT} is not a git work tree (phase-scope and the host product commits need one)")
     validate_docs(errors)
     for w in warnings:
         print(f"warning: {w}")
@@ -1326,7 +2236,7 @@ _Questions only the operator can answer. Append only; every entry is routed at t
 
 ## Notes for later slices
 
-_Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`._
+_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`._
 
 ## Now
 
@@ -1376,6 +2286,52 @@ def create_slice(phase_id: str, slice_id: str, name: str, kind: str, order, risk
     return sdir
 
 
+def _with_host_anchors(data: dict, anchors: dict) -> dict:
+    """`data` with `anchors` merged into its `host_anchors` block, the block placed right after
+    `acceptance` (or appended) when it is new, so phase.json keeps reading naturally."""
+    current = data.get("host_anchors")
+    merged = dict(current) if isinstance(current, dict) else {}
+    merged.update(anchors)
+    if "host_anchors" in data:
+        data["host_anchors"] = merged
+        return data
+    ordered = {}
+    for key, value in data.items():
+        ordered[key] = value
+        if key == "acceptance":
+            ordered["host_anchors"] = merged
+    ordered.setdefault("host_anchors", merged)
+    data.clear()
+    data.update(ordered)
+    return data
+
+
+def _parse_consolidates(raw) -> list:
+    """`new-phase --consolidates P26,P27` -> `["P26", "P27"]`: comma-separated, spaces tolerated,
+    duplicates dropped in order. Refuses (before `new-phase` writes anything) when the flag names
+    nothing, or names an id that is not an ACTIVE phase still owing doc consolidation -- a docs phase
+    can only pay debt that stands. `None` (flag absent) is `[]`."""
+    if raw is None:
+        return []
+    ids = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part and part not in ids:
+            ids.append(part)
+    if not ids:
+        raise SystemExit("--consolidates needs at least one phase id (e.g. --consolidates P26,P27)")
+    active = {p["id"]: p for p in all_active_phases()}
+    bad = []
+    for pid in ids:
+        if pid not in active:
+            bad.append(f"{pid} (not an active phase)")
+        elif phase_consolidation(active[pid]) != "pending":
+            bad.append(f"{pid} (owes no doc consolidation: consolidation is {phase_consolidation(active[pid])!r})")
+    if bad:
+        raise SystemExit(f"--consolidates refused, nothing was written: {'; '.join(bad)}. It names only active phases that still owe doc consolidation (see: {WORKFLOW_CMD} docs-debt).")
+    return ids
+
+
 def new_phase(args: argparse.Namespace) -> None:
     phase_id = args.phase
     if not re.fullmatch(r"P[0-9]+", phase_id):
@@ -1383,6 +2339,7 @@ def new_phase(args: argparse.Namespace) -> None:
     pdir = ACTIVE / phase_id
     if pdir.exists():
         raise SystemExit(f"phase already exists: {phase_id}")
+    consolidates = _parse_consolidates(getattr(args, "consolidates", None))  # refuses before anything is written
     order = _clean_order(args.order) if args.order is not None else max([read_json(p / "phase.json").get("order", 0) for p in phase_dirs()], default=0) + 1
     phase_data = {
         "id": phase_id, "name": args.name, "objective": args.objective, "status": "planned", "order": order,
@@ -1392,6 +2349,13 @@ def new_phase(args: argparse.Namespace) -> None:
         "paths": {"phase_md": "phase.md", "intent_md": "intent.md", "slices_dir": "slices"},
         "archive": {"archived": False, "archived_at": None, "archive_path": None},
     }
+    if consolidates:
+        # v51: the one marker of a docs phase -- the owing phases it pays. Absent without the flag.
+        phase_data["consolidates"] = consolidates
+    if NESTED is not None:
+        # The nested repo never sees the host's commits, so phase-scope's base is the host HEAD now
+        # (null while the host has no commit). At root this key is never written.
+        phase_data = _with_host_anchors(phase_data, {"created": head_commit() or None})
     write_json(pdir / "phase.json", phase_data)
     # Seed the notebook from the template: fixed sections plus an empty generated ## Slices
     # block, which the rebuild at the end of this function fills immediately.
@@ -1401,16 +2365,19 @@ def new_phase(args: argparse.Namespace) -> None:
     create_slice(phase_id, f"{phase_id}.REVIEW", "phase review", "review", 9999, "high", source={"type": "new_phase", "id": phase_id})
     append_event("phase_created", phase=phase_id)
     rebuild_index_and_state()
-    print(f"created phase {phase_id}: {pdir.relative_to(ROOT)}")
+    print(f"created phase {phase_id}: {shown(pdir)}")
+    if consolidates:
+        print(f"consolidates={', '.join(consolidates)} (docs phase: pays the doc debt of those phases; docs-debt shows it as 'paid by {phase_id}')")
     # v43: a phase runs on this stream unless the operator asks for a worktree, so creation
     # stamps nothing and says nothing -- except where a worktree would actually buy something.
     if getattr(args, "on_main", False):
         print(f"note: --on-main is a no-op since v43 -- the default stream IS the default, so {phase_id} already runs here; nothing was stamped")
     # Proactive opt-in suggestion: a phase created while another one is mid-flight is the
     # first of the two moments a worktree becomes relevant. Suggestion only, never a default.
+    # In a nested install (P35) the command also names the host branch the operator must choose.
     busy = next((p for p in all_active_phases() if p["id"] != phase_id and p.get("status") == "in_progress" and phase_execution(p) is None), None)
     if busy:
-        print(f"hint: {busy['id']} is in progress -- this phase can run in parallel on its own branch: python3 scripts/workflow.py parallel-start {phase_id}")
+        print(f"hint: {busy['id']} is in progress -- this phase can run in parallel on its own branch: {WORKFLOW_CMD} parallel-start {phase_id}{NESTED_HOST_BRANCH_ARG}")
 
 
 def _clean_order(value):
@@ -1432,7 +2399,7 @@ def new_slice(args: argparse.Namespace) -> None:
     sdir = create_slice(args.phase, args.slice, args.name, args.kind, order, args.risk, source={"type": "manual", "id": None}, depends_on=args.depends_on or [])
     append_event("slice_created", phase=args.phase, slice=args.slice)
     rebuild_index_and_state()
-    print(f"created slice {args.slice}: {sdir.relative_to(ROOT)}")
+    print(f"created slice {args.slice}: {shown(sdir)}")
 
 
 def _set_slice_status(sdir: Path, status: str) -> str:
@@ -1509,7 +2476,7 @@ def _require_acceptance_cleared(phase_id: str, data: dict) -> None:
     acceptance = phase_acceptance(data)
     if acceptance is None:
         if "acceptance" in data:
-            print(f"acceptance: phase {phase_id} has a malformed gate block -- treated as legacy (run: python3 scripts/workflow.py validate)")
+            print(f"acceptance: phase {phase_id} has a malformed gate block -- treated as legacy (run: {WORKFLOW_CMD} validate)")
         else:
             print("acceptance: legacy phase (no gate block) -- pass recorded without an operator acceptance gate")
         return
@@ -1517,13 +2484,13 @@ def _require_acceptance_cleared(phase_id: str, data: dict) -> None:
     if required is None:
         raise SystemExit(
             f"phase {phase_id} has not declared whether the operator must accept it; a pass cannot be recorded yet:\n"
-            f"  python3 scripts/workflow.py accept-gate {phase_id} --require                     (operator-visible: the operator walks the running product)\n"
-            f"  python3 scripts/workflow.py accept-gate {phase_id} --waive --note \"why\"          (nothing the operator can see)")
+            f"  {WORKFLOW_CMD} accept-gate {phase_id} --require                     (operator-visible: the operator walks the running product)\n"
+            f"  {WORKFLOW_CMD} accept-gate {phase_id} --waive --note \"why\"          (nothing the operator can see)")
     if required is True and not acceptance.get("cleared_at"):
         raise SystemExit(
             f"phase {phase_id} requires operator acceptance and the gate is not cleared; show the operator the running product first:\n"
-            f"  python3 scripts/workflow.py accept-gate {phase_id} --open --walkthrough \"...\"    (orchestrator, after the review executor's validation and judgment)\n"
-            f"  python3 scripts/workflow.py accept-gate {phase_id} --clear --note \"...\"          (after the operator walks it; --note is optional)")
+            f"  {WORKFLOW_CMD} accept-gate {phase_id} --open --walkthrough \"...\"    (orchestrator, after the review executor's validation and judgment)\n"
+            f"  {WORKFLOW_CMD} accept-gate {phase_id} --clear --note \"...\"          (after the operator walks it; --note is optional)")
 
 
 def review_phase(args: argparse.Namespace) -> None:
@@ -1547,6 +2514,9 @@ def review_phase(args: argparse.Namespace) -> None:
     if new_status == "done":
         data["completed_at"] = now_iso()
     data["status"] = new_status
+    if args.verdict == "pass" and NESTED is not None:
+        # The end of the phase's host range: phase-scope reads base..review_pass in the host.
+        _with_host_anchors(data, {"review_pass": head_commit() or None})
     write_json(pdir / "phase.json", data)
     # Drive the phase's REVIEW slice from the same verdict so the phase and its
     # review slice never diverge (a pass no longer leaves REVIEW stuck in_progress).
@@ -1560,7 +2530,7 @@ def review_phase(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     print(f"phase {args.phase} review: {args.verdict} (status -> {new_status})")
     if args.verdict == "changes_requested":
-        print("create fix slices, e.g.: python3 scripts/workflow.py new-slice --phase {0} --slice {0}.F1 --name \"...\" --kind fix".format(args.phase))
+        print(f"create fix slices, e.g.: {WORKFLOW_CMD} new-slice --phase {args.phase} --slice {args.phase}.F1 --name \"...\" --kind fix")
     elif args.verdict == "pass":
         notes = phase_doc_impact_notes(pdir)
         if notes:
@@ -1574,9 +2544,9 @@ def review_phase(args: argparse.Namespace) -> None:
             done_cmd = "parallel-consolidated" if phase_execution(data) else "docs-consolidated"
             print(f"docs: {len(notes)} '## Doc impact' note(s) recorded -- durable docs are NOT versioned here.")
             print("  consolidation is deferred: the operator creates a docs phase for it (doc-new-version per note, then rebuild-docs).")
-            print(f"  when those versions land: python3 scripts/workflow.py {done_cmd} {args.phase}   (until then {args.phase} is held out of archiving)")
+            print(f"  when those versions land: {WORKFLOW_CMD} {done_cmd} {args.phase}   (until then {args.phase} is held out of archiving)")
         print(f"phase {args.phase} is done and stays in active/. Do NOT archive a single phase now.")
-        print("Archive all phases together with `archive-all` only once every active phase is done (the last review slice is complete).")
+        print("Archive done phases later, whole phases only: `rotate-backlog` (it pays the doc debt first, then archives every done phase), or `archive-all` once every active phase is done.")
 
 
 def _ensure_acceptance(data: dict) -> dict:
@@ -1604,7 +2574,7 @@ def _print_acceptance(phase_id: str, acceptance) -> None:
     print(f"phase={phase_id}")
     if acceptance is None:
         print("acceptance=none (legacy phase: no gate block, so review-phase --verdict pass is allowed)")
-        print(f"declare one with: python3 scripts/workflow.py accept-gate {phase_id} --require | --waive --note \"why\"")
+        print(f"declare one with: {WORKFLOW_CMD} accept-gate {phase_id} --require | --waive --note \"why\"")
         return
     print(f"required={json.dumps(acceptance.get('required'))}")
     print(f"requested_at={acceptance.get('requested_at') or 'none'}")
@@ -1628,7 +2598,7 @@ def accept_gate(args: argparse.Namespace) -> None:
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
     if args.walkthrough is not None and not args.open_gate:
-        raise SystemExit(f"--walkthrough belongs to --open: python3 scripts/workflow.py accept-gate {args.phase} --open --walkthrough \"...\"")
+        raise SystemExit(f"--walkthrough belongs to --open: {WORKFLOW_CMD} accept-gate {args.phase} --open --walkthrough \"...\"")
     if not (args.require or args.waive or args.open_gate or args.clear):
         _print_acceptance(args.phase, phase_acceptance(data))  # show only: writes nothing
         return
@@ -1651,7 +2621,7 @@ def accept_gate(args: argparse.Namespace) -> None:
         if acceptance is None or acceptance.get("required") is not True:
             raise SystemExit(
                 f"phase {args.phase} has not declared that the operator must accept it; declare it first:\n"
-                f"  python3 scripts/workflow.py accept-gate {args.phase} --require")
+                f"  {WORKFLOW_CMD} accept-gate {args.phase} --require")
         if not (args.walkthrough or "").strip():
             raise SystemExit(f"accept-gate {args.phase} --open requires --walkthrough \"the concrete script: URLs to open, actions to try, in the operator runtime\"")
         acceptance["walkthrough"] = args.walkthrough
@@ -1662,7 +2632,7 @@ def accept_gate(args: argparse.Namespace) -> None:
         if acceptance is None or not acceptance.get("requested_at"):
             raise SystemExit(
                 f"phase {args.phase} has no open acceptance gate (requested_at is unset); nothing to clear:\n"
-                f"  python3 scripts/workflow.py accept-gate {args.phase} --open --walkthrough \"...\"")
+                f"  {WORKFLOW_CMD} accept-gate {args.phase} --open --walkthrough \"...\"")
         acceptance["cleared_at"] = now_iso()
         if args.note:
             acceptance["note"] = args.note
@@ -1679,7 +2649,7 @@ def accept_gate(args: argparse.Namespace) -> None:
         print(f"phase {args.phase}: acceptance gate OPEN -- phase is pending [~]; do not start, finish, or advance past it")
         print("WALKTHROUGH (the operator runs this against the running product):")
         print(args.walkthrough)
-        print(f"Then clear it: python3 scripts/workflow.py accept-gate {args.phase} --clear")
+        print(f"Then clear it: {WORKFLOW_CMD} accept-gate {args.phase} --clear")
         print("Add --note \"...\" to record what the operator reported.")
     elif args.clear:
         print(f"phase {args.phase}: acceptance gate CLEARED -- phase is in_progress again; review-phase --verdict pass is now allowed")
@@ -1710,44 +2680,56 @@ def _branch_exists(branch: str) -> bool:
     return _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"], check=False).returncode == 0
 
 
-def _git_available() -> bool:
-    """True when this workspace sits inside a usable git work tree. Never raises: a
-    workspace without git (or outside a repo) must keep working exactly as before."""
+def _git_available(cwd=None) -> bool:
+    """True when this workspace (or `cwd`: a nested install's host) sits inside a usable git work
+    tree. Never raises: a workspace without git (or outside a repo) must keep working exactly as before."""
     try:
-        proc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=str(ROOT), capture_output=True, text=True)
+        proc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=str(cwd or ROOT), capture_output=True, text=True)
     except Exception:  # noqa: BLE001 - git is optional
         return False
     return proc.returncode == 0 and proc.stdout.strip() == "true"
 
 
-def _git_dir(common: bool = False) -> Path:
+def _git_dir(common: bool = False, cwd=None) -> Path:
     """This checkout's git dir (per-worktree state: HEAD, index, MERGE_HEAD, rebase-*) or, with
     `common`, the dir every worktree shares (refs, info/exclude). Absolute either way: git prints
     `.git` relative to the cwd in the main checkout and an absolute path from a linked worktree,
-    and joining onto ROOT is right in both cases."""
+    and joining onto the cwd (ROOT, or `cwd`: a nested install's host) is right in both cases."""
     flag = "--git-common-dir" if common else "--git-dir"
-    return (ROOT / _git(["rev-parse", flag]).stdout.strip()).resolve()
+    base = Path(cwd) if cwd is not None else ROOT
+    return (base / _git(["rev-parse", flag], cwd=cwd).stdout.strip()).resolve()
 
 
-def _git_operation_in_progress():
+def _git_operation_in_progress(cwd=None):
     """'merge' / 'rebase' while this checkout is mid-operation, else None. `git commit -- <paths>`
-    refuses a partial commit during either, so the stamp commit needs a plain HEAD."""
-    gd = _git_dir()
+    refuses a partial commit during either, so the stamp commit needs a plain HEAD. With `cwd` (a
+    nested install's host, P35) a cherry-pick or a bisect counts too: the host is never touched
+    mid-operation, and its branch and worktree are cut only from a plain HEAD."""
+    gd = _git_dir(cwd=cwd)
     if (gd / "MERGE_HEAD").exists():
         return "merge"
     if (gd / "rebase-merge").exists() or (gd / "rebase-apply").exists():
         return "rebase"
+    if cwd is not None:
+        if (gd / "CHERRY_PICK_HEAD").exists():
+            return "cherry-pick"
+        if (gd / "BISECT_LOG").exists():
+            return "bisect"
     return None
 
 
-def _ensure_worktrees_excluded() -> None:
+def _ensure_worktrees_excluded(cwd=None) -> None:
     """Put `.claude/worktrees/` in the common `info/exclude` once, so a nested phase worktree never
     shows as untracked (or gets swept into `git add -A` as an embedded repo) in any checkout of this
-    repo. Never `.gitignore`: that file is the adopter's, tracked, and theirs to edit."""
-    exclude = _git_dir(common=True) / "info" / "exclude"
-    line = f"{WORKTREES_DIR}/"
+    repo. Never `.gitignore`: that file is the adopter's, tracked, and theirs to edit.
+
+    With `cwd` (a nested install's host, P35) the line goes into the HOST's common exclude, anchored
+    as `/.claude/worktrees/` like the installer's managed block, and either form counts as present."""
+    exclude = _git_dir(common=True, cwd=cwd) / "info" / "exclude"
+    line = f"{WORKTREES_DIR}/" if cwd is None else f"/{WORKTREES_DIR}/"
+    present = {line} if cwd is None else {line, f"{WORKTREES_DIR}/"}
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
-    if line in {l.strip() for l in existing.splitlines()}:
+    if present & {l.strip() for l in existing.splitlines()}:
         return
     sep = "" if not existing or existing.endswith("\n") else "\n"
     exclude.parent.mkdir(parents=True, exist_ok=True)
@@ -1859,13 +2841,24 @@ def parallel_start(args: argparse.Namespace) -> None:
     files go in, everything else stays behind in this checkout, and the worktree is cut from that
     commit ("start from the latest commit"). Stamping and asking the operator to commit cannot
     achieve that by construction; this can.
+
+    In a nested personal install (P35) the phase gets a worktree PAIR instead -- see
+    `_parallel_start_nested`; `--host-branch` is required there and refused at root.
     """
+    host_branch = getattr(args, "host_branch", None)
+    host_base = getattr(args, "host_base", None)
+    if NESTED is None:
+        if host_branch is not None or host_base is not None:
+            raise SystemExit("--host-branch and --host-base are for a nested personal install only (they name the host repo's branch and base); "
+                             "at root the phase branch is the only branch -- nothing was written")
+    elif not (host_branch or "").strip():
+        raise SystemExit(NESTED_HOST_BRANCH_REQUIRED)
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
     if data.get("status") != "planned":
         raise SystemExit(f"phase {args.phase} is {data.get('status')!r}; a phase enters its worktree before it starts (parallel-start needs status 'planned') -- a phase already in flight finishes on this stream")
     if phase_pinned(data):
-        raise SystemExit(f"phase {args.phase} carries v42's legacy pin to the default stream (execution.mode=default, written by the old parallel-skip / new-phase --on-main); it was pinned deliberately, so un-pin it by hand: delete the execution block from {pdir.relative_to(ROOT)}/phase.json first")
+        raise SystemExit(f"phase {args.phase} carries v42's legacy pin to the default stream (execution.mode=default, written by the old parallel-skip / new-phase --on-main); it was pinned deliberately, so un-pin it by hand: delete the execution block from {shown(pdir)}/phase.json first")
     if data.get("execution") is not None:
         raise SystemExit(f"phase {args.phase} already carries an execution block: {json.dumps(data['execution'], ensure_ascii=False)}")
     _require_git_repo()
@@ -1883,6 +2876,9 @@ def parallel_start(args: argparse.Namespace) -> None:
         execution = phase_execution(p)
         if execution and execution.get("branch") == branch:
             raise SystemExit(f"branch {branch} is already stamped on phase {p['id']}")
+    if NESTED is not None:
+        _parallel_start_nested(args, pdir, data, branch, host_branch.strip(), host_base)
+        return
     if args.worktree:
         worktree = Path(os.path.abspath(str(Path(args.worktree).expanduser())))
         if not worktree.parent.exists():
@@ -1897,7 +2893,9 @@ def parallel_start(args: argparse.Namespace) -> None:
     if not args.worktree:
         worktree.parent.mkdir(parents=True, exist_ok=True)
 
-    data["execution"] = {"mode": "parallel", "branch": branch, "worktree": str(worktree), "consolidation": "pending"}
+    # base_branch (P35.S7, additive): the branch the stamp commit lands on, so a worktree checkout's
+    # Streams view can read the default stream's row from it.
+    data["execution"] = {"mode": "parallel", "branch": branch, "worktree": str(worktree), "consolidation": "pending", "base_branch": git_current_branch()}
     write_json(pdir / "phase.json", data)
     append_event("phase_parallel_started", phase=args.phase, branch=branch, worktree=str(worktree))
     rebuild_index_and_state()
@@ -1914,11 +2912,178 @@ def parallel_start(args: argparse.Namespace) -> None:
     print(f"phase {args.phase} now runs in its own worktree")
     print(f"branch={branch}")
     print(f"worktree={worktree}")
-    print(f"stamp committed here: chore(works): opt {args.phase} into parallel execution -- only {pdir.relative_to(ROOT)}/ plus the regenerated works/ files "
+    print(f"stamp committed here: chore(works): opt {args.phase} into parallel execution -- only {shown(pdir)}/ plus the regenerated works/ files "
           f"(a phase not yet committed goes in whole); everything else dirty or staged stayed behind in this checkout, uncommitted")
     print(f"the worktree starts from that commit (HEAD); {WORKTREES_DIR}/ is excluded via the repo's .git/info/exclude")
     print(f"next: enter the worktree in this session (Claude Code: EnterWorktree with path={worktree}) or open a session there, run next, and drive the phase from that checkout")
-    print(f"this stream's pointer now skips {args.phase}; after the branch is merged back, run: python3 scripts/workflow.py parallel-teardown {args.phase}")
+    print(f"this stream's pointer now skips {args.phase}; after the branch is merged back, run: {WORKFLOW_CMD} parallel-teardown {args.phase}")
+
+
+def _worktree_entries(cwd=None) -> list:
+    """`[(path, ref-or-None)]` for every worktree git registers in the repo at `cwd` (ROOT by default),
+    from `git worktree list --porcelain`; `ref` is `refs/heads/<name>`, or None when detached/bare."""
+    entries, path, ref = [], None, None
+    for line in _git(["worktree", "list", "--porcelain"], cwd=cwd).stdout.splitlines() + [""]:
+        if line.startswith("worktree "):
+            path, ref = line[len("worktree "):], None
+        elif line.startswith("branch "):
+            ref = line[len("branch "):]
+        elif not line.strip() and path is not None:
+            entries.append((path, ref))
+            path, ref = None, None
+    return entries
+
+
+def _resolve_host_base(host: Path, explicit):
+    """`(ref, sha)` for the host worktree's base (P35, Decision 19), resolved inside the host repo
+    with no fetch: `--host-base` when given; else `origin/HEAD`'s target, else `init.defaultBranch`
+    when that branch exists locally, else a local `main`, then `master`. Refuses (nothing written)
+    when nothing resolves to a commit."""
+    def local_branch(name):
+        return bool(name) and _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{name}"], cwd=host, check=False).returncode == 0
+
+    if explicit is not None:
+        ref = explicit.strip()
+        sha = _rev_parse(ref, cwd=host) if ref else None
+        if not sha:
+            raise SystemExit(f"--host-base {explicit!r} does not resolve to a commit in the host repo {host} "
+                             f"(the engine never fetches: fetch first if the ref is remote) -- nothing was written")
+        return ref, sha
+    ref = None
+    proc = _git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"], cwd=host, check=False)
+    if proc.returncode == 0 and proc.stdout.strip():
+        ref = proc.stdout.strip()
+    if ref is None:
+        configured = _git(["config", "--get", "init.defaultBranch"], cwd=host, check=False).stdout.strip()
+        if local_branch(configured):
+            ref = configured
+    if ref is None:
+        ref = next((cand for cand in ("main", "master") if local_branch(cand)), None)
+    sha = _rev_parse(ref, cwd=host) if ref else None
+    if not sha:
+        tried = f"{ref!r} does not resolve to a commit" if ref else "no origin/HEAD, no local init.defaultBranch, main or master"
+        raise SystemExit(f"cannot resolve the host's default branch for the host worktree's base ({tried}); "
+                         f"pass --host-base <ref> (e.g. --host-base HEAD, or another phase's host branch to stack on it) -- nothing was written")
+    return ref, sha
+
+
+def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, branch: str, host_branch: str, host_base_arg) -> None:
+    """`parallel-start` in a nested personal install (P35): a host worktree with the nested worktree inside.
+
+    The pair is `<host>/.claude/worktrees/P<N>-<slug>` on `host_branch` (the operator names it, by the
+    host's custom), with `<host-wt>/workflow` on `phase/P<N>-<slug>` in the nested repo, which owns the
+    state and the stream key. Order (P35.S2 (a)): every guard first; the host's common exclude; the
+    execution block plus the re-stamped `host_anchors.created`, rebuilt; the nested stamp commit; the
+    host worktree; the nested worktree; the copied `CLAUDE.local.md`. Nothing is ever created under
+    `<host-wt>/.claude/` (Claude Code reads skills, agents and settings.local.json through from the main
+    checkout), and nothing is fetched. A failure after the stamp commit prints the exact remaining
+    commands. `execution.worktree` is the NESTED worktree, so removal stays in the repo that owns it."""
+    host = HOST_ROOT
+    if host is None or not _git_available(cwd=host):
+        raise SystemExit(f"the nested install's host {host} is not a git work tree; parallel-start cuts a host worktree, so it needs one -- nothing was written")
+    busy = _git_operation_in_progress(cwd=host)
+    if busy:
+        raise SystemExit(f"a {busy} is in progress in the host checkout {host}; finish or abort it first -- nothing was written")
+    if host_branch.startswith("-") or _git(["check-ref-format", "--branch", host_branch], cwd=host, check=False).returncode != 0:
+        raise SystemExit(f"--host-branch {host_branch!r} is not a valid branch name in the host repo -- nothing was written")
+    host_entries = _worktree_entries(cwd=host)
+    holder = next((path for path, ref in host_entries if ref == f"refs/heads/{host_branch}"), None)
+    if holder:
+        raise SystemExit(f"host branch {host_branch} is checked out in {holder}; a branch lives in one worktree at a time, so pick another --host-branch "
+                         f"or switch that checkout off it -- nothing was written")
+    host_branch_created = _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{host_branch}"], cwd=host, check=False).returncode != 0
+    rel = Path(os.path.relpath(ROOT, host))
+    if args.worktree:
+        host_wt = Path(os.path.abspath(str(Path(args.worktree).expanduser())))
+        if not host_wt.parent.exists():
+            raise SystemExit(f"worktree parent directory does not exist: {host_wt.parent}")
+    else:
+        host_wt = host / WORKTREES_DIR / branch.split("/", 1)[1]  # P<N>-<slug>: the phase branch's own tail
+    nested_wt = host_wt / rel
+    if host_wt.exists():
+        raise SystemExit(f"host worktree path already exists: {host_wt} (pass --slug or --worktree to pick another path) -- nothing was written")
+    registered = {os.path.realpath(path) for path, _ref in host_entries} | {os.path.realpath(path) for path, _ref in _worktree_entries()}
+    for path in (host_wt, nested_wt):
+        if os.path.realpath(str(path)) in registered:
+            raise SystemExit(f"{path} is still registered as a git worktree (a stale entry); run `git worktree prune` in that repo first -- nothing was written")
+    base_ref, base_sha = _resolve_host_base(host, host_base_arg)
+    if host_branch_created:
+        anchor = base_sha
+    else:
+        proc = _git(["merge-base", base_sha, f"refs/heads/{host_branch}"], cwd=host, check=False)
+        anchor = proc.stdout.strip()
+        if proc.returncode != 0 or not anchor:
+            raise SystemExit(f"host branch {host_branch} shares no history with the base {base_ref} ({base_sha}); pass another --host-base -- nothing was written")
+    base_branch = git_current_branch()
+
+    # Every guard is above this line. The exclude line is not repo content and is idempotent.
+    _ensure_worktrees_excluded(cwd=host)
+    if not args.worktree:
+        host_wt.parent.mkdir(parents=True, exist_ok=True)
+    data["execution"] = {
+        "mode": "parallel", "branch": branch, "worktree": str(nested_wt), "consolidation": "pending",
+        "host_worktree": str(host_wt), "host_branch": host_branch, "host_base": base_ref, "host_base_sha": base_sha,
+        "host_branch_created": host_branch_created, "base_branch": base_branch,
+    }
+    # phase-scope's base must be where the host worktree starts, not the host HEAD at new-phase
+    # (P35.S2 (f)); stamped before the commit so both branches carry it.
+    data = _with_host_anchors(data, {"created": anchor})
+    write_json(pdir / "phase.json", data)
+    append_event("phase_parallel_started", phase=args.phase, branch=branch, worktree=str(nested_wt),
+                 host_branch=host_branch, host_worktree=str(host_wt))
+    rebuild_index_and_state()
+    stamp_paths = [str(pdir.relative_to(ROOT)), *STAMP_WORKS_FILES]
+    _git(["add", "--", *stamp_paths])
+    _git(["commit", "--only", "-m", f"chore(works): opt {args.phase} into parallel execution", "--", *stamp_paths])
+
+    q = shlex.quote
+    host_add = (["worktree", "add", "-b", host_branch, str(host_wt), base_sha] if host_branch_created
+                else ["worktree", "add", str(host_wt), host_branch])
+    steps = [
+        (["git", "-C", str(host), *host_add], host),
+        (["git", "-C", str(ROOT), "worktree", "add", "-b", branch, str(nested_wt), "HEAD"], ROOT),
+    ]
+    local_md = host / "CLAUDE.local.md"
+    copy_cmd = f"cp {q(str(local_md))} {q(str(host_wt / 'CLAUDE.local.md'))}"
+
+    def remaining(i):
+        cmds = [" ".join(q(part) for part in cmd) for cmd, _cwd in steps[i:]]
+        if local_md.is_file():
+            cmds.append(copy_cmd)
+        return "\n".join(f"  {c}" for c in cmds)
+
+    for i, (cmd, cwd) in enumerate(steps):
+        proc = _git(cmd[3:], cwd=cwd, check=False)
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout).strip() or f"exit {proc.returncode}"
+            undo = (f"\nor give up on the pair: git -C {q(str(host))} worktree remove {q(str(host_wt))}, then un-stamp {args.phase} by hand "
+                    f"(delete the execution block from {shown(pdir)}/phase.json and commit)" if i == 1 else "")
+            raise SystemExit(
+                f"{' '.join(cmd[3:5])} failed: {detail}\n"
+                f"the stamp for {args.phase} is already committed in the nested repo; fix the cause and finish by hand, in this order:\n"
+                f"{remaining(i)}{undo}")
+    copied = False
+    if local_md.is_file():
+        try:
+            shutil.copyfile(local_md, host_wt / "CLAUDE.local.md")
+            copied = True
+        except OSError as exc:
+            raise SystemExit(f"copying CLAUDE.local.md failed: {exc}\nboth worktrees exist; without the copy a session there loads no workspace contract. Finish by hand:\n  {copy_cmd}")
+    print(f"phase {args.phase} now runs in its own worktree pair (nested install)")
+    print(f"branch={branch}")
+    print(f"worktree={nested_wt}")
+    print(f"host_worktree={host_wt}")
+    print(f"host_branch={host_branch} ({'created by parallel-start' if host_branch_created else 'reused: it existed and was not checked out'})")
+    print(f"host_base={base_ref} ({base_sha})")
+    print(f"host_anchors.created={anchor} ({'the base' if host_branch_created else 'merge-base of the base and the reused branch'}) -- phase-scope's base")
+    print(f"stamp committed in the nested repo: chore(works): opt {args.phase} into parallel execution -- only {shown(pdir)}/ plus the regenerated works/ files; "
+          f"everything else dirty or staged stayed behind, uncommitted")
+    print(f"the nested worktree starts from that commit (HEAD); /{WORKTREES_DIR}/ is excluded via the host's .git/info/exclude")
+    print("CLAUDE.local.md copied into the host worktree" if copied else f"note: no {local_md} to copy -- a session in the host worktree loads no workspace contract")
+    print(f"next: enter the host worktree in this session (Claude Code: EnterWorktree with path={host_wt}) or open a session there, run "
+          f"{WORKFLOW_CMD} next (it prints stream={branch}), and drive the phase from that checkout")
+    print(f"there: product commits go to {host_branch} in the host worktree; workflow commits go to git -C {rel.as_posix()} (the nested worktree, on {branch})")
+    print(f"this stream's pointer now skips {args.phase}; the host branch is integrated by the host's own custom (nested-convention), never merged by the engine")
 
 
 def parallel_skip(args: argparse.Namespace) -> None:
@@ -1940,12 +3105,12 @@ def parallel_skip(args: argparse.Namespace) -> None:
     print(f"note: parallel-skip is a no-op since v43 -- the default stream IS the default; nothing was stamped and nothing was written")
     if execution:
         print(f"phase {args.phase} is not on the default stream: it runs in its own worktree on {execution.get('branch')} (asked for with parallel-start)")
-        print(f"to bring it back here, merge and retire it: python3 scripts/workflow.py parallel-teardown {args.phase}")
+        print(f"to bring it back here, merge and retire it: {WORKFLOW_CMD} parallel-teardown {args.phase}")
     elif phase_pinned(data):
         print(f"phase {args.phase} carries v42's legacy pin (execution.mode=default) and runs on the default stream -- as it would with no block at all")
     else:
         print(f"phase {args.phase} already runs on the default stream")
-        print(f"to run it in its own worktree instead, ask for one: python3 scripts/workflow.py parallel-start {args.phase}")
+        print(f"to run it in its own worktree instead, ask for one: {WORKFLOW_CMD} parallel-start {args.phase}{NESTED_HOST_BRANCH_ARG}")
 
 
 def parallel_teardown(args: argparse.Namespace) -> None:
@@ -1953,7 +3118,14 @@ def parallel_teardown(args: argparse.Namespace) -> None:
 
     Refuses while the branch is unmerged (merging is a separate step). Keeps `mode`/`branch`/
     `consolidation` as history and only nulls `worktree`, which is informational anyway.
+
+    In a nested personal install (P35) the phase has a worktree PAIR -- see `_parallel_teardown_nested`;
+    `--discard-ignored` belongs to it and is refused at root.
     """
+    discard_ignored = getattr(args, "discard_ignored", False)
+    if NESTED is None and discard_ignored:
+        raise SystemExit("--discard-ignored is for a nested personal install's paired teardown only; "
+                         "at root, teardown removes the worktree as it always has -- nothing was removed")
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
     execution = phase_execution(data)
@@ -1967,7 +3139,10 @@ def parallel_teardown(args: argparse.Namespace) -> None:
         raise SystemExit(f"this checkout is on {branch}; run parallel-teardown from the default stream (a worktree cannot remove itself)")
     branch_exists = _branch_exists(branch)
     if branch_exists and _git(["merge-base", "--is-ancestor", branch, "HEAD"], check=False).returncode != 0:
-        raise SystemExit(f"branch {branch} is not merged into HEAD; merge it first, then run: python3 scripts/workflow.py parallel-teardown {args.phase}")
+        raise SystemExit(f"branch {branch} is not merged into HEAD; merge it first, then run: {WORKFLOW_CMD} parallel-teardown {args.phase}")
+    if NESTED is not None:
+        _parallel_teardown_nested(args, pdir, data, execution, branch, branch_exists, discard_ignored)
+        return
     removed = []
     worktree = execution.get("worktree")
     if worktree and Path(worktree).exists():
@@ -1996,6 +3171,184 @@ def parallel_teardown(args: argparse.Namespace) -> None:
     print("phase.json changed -- commit it with the rest of the merge cleanup")
 
 
+def _ignored_worktree_files(path, skip=()) -> list:
+    """The ignored, worktree-only files and directories in the checkout at `path`, as git lists them
+    (`ls-files --others --ignored --exclude-standard --directory`), minus the entries in `skip`.
+    `git worktree remove` deletes these without asking, so the paired teardown lists them first.
+    git also lists a directory holding only ignored entries beside those entries; the directory
+    line is dropped then, so each path is named once."""
+    proc = _git(["ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"], cwd=path)
+    entries = [entry for entry in proc.stdout.split("\0") if entry and entry not in skip]
+    return [entry for entry in entries
+            if not (entry.endswith("/") and any(other != entry and other.startswith(entry) for other in entries))]
+
+
+def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, execution: dict,
+                              branch: str, branch_exists: bool, discard_ignored: bool) -> None:
+    """`parallel-teardown` in a nested personal install (P35): retire the host + nested worktree pair.
+
+    Run from the default stream of the nested repo, after `phase/...` is merged there (the caller
+    checked it). Order (P35.S2 (d), (e); Decisions 11, 19):
+
+    1. every guard first, in one combined report, with nothing touched: uncommitted work in the
+       nested worktree; ignored, worktree-only files in either worktree (`git worktree remove`
+       deletes them silently, so they are listed and refused unless `--discard-ignored`); uncommitted
+       work in the host worktree; a detached host worktree holding commits no ref keeps (orphaned
+       at removal);
+    2. the nested worktree, ALWAYS first -- removing the host worktree first exits 0 and silently
+       deletes the nested worktree inside it, untracked state included;
+    3. the host worktree;
+    4. the host branch: deleted (`-D`; `-d` measures against HEAD) only when the engine created it
+       and it has 0 commits beyond `host_base_sha`; otherwise kept -- it is the operator's, integrated
+       by the host's own custom (Decision 18), and the engine never pushes, opens or merges it;
+    5. the nested `phase/...` branch, as at root; a registration left in either repo is pruned.
+
+    `worktree` and `host_worktree` become null; the other host keys and `base_branch` stay as
+    history. A failure after the first removal prints the exact remaining commands; a re-run of
+    this command resumes too, since every step skips what is already gone."""
+    q = shlex.quote
+    host = HOST_ROOT
+    nested_wt = execution.get("worktree")
+    host_wt = execution.get("host_worktree")
+    host_branch = execution.get("host_branch")
+    base_sha = execution.get("host_base_sha")
+    created = execution.get("host_branch_created") is True
+    nested_live = bool(nested_wt) and Path(nested_wt).exists()
+    host_live = bool(host_wt) and Path(host_wt).exists()
+    host_git = host is not None and _git_available(cwd=host)
+    if (host_live or host_branch) and not host_git:
+        raise SystemExit(f"the nested install's host {host} is not a git work tree; the paired teardown needs it to retire the host worktree "
+                         f"and branch -- nothing was removed")
+
+    # 1. Every guard, before anything is removed.
+    problems, ignored = [], []
+    if nested_live:
+        dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=nested_wt).stdout.splitlines()
+        if dirty:
+            problems.append(f"the nested worktree {nested_wt} has uncommitted work (commit it on {branch} and merge again, or discard it):\n"
+                            + "\n".join(f"      {line}" for line in dirty))
+        ignored += [(nested_wt, entry) for entry in _ignored_worktree_files(nested_wt)]
+    if host_live:
+        rel = os.path.relpath(ROOT, host)
+        skip = {"CLAUDE.local.md", f"{Path(rel).as_posix().rstrip('/')}/"}  # the engine's copy; the nested worktree (step 2)
+        ignored += [(host_wt, entry) for entry in _ignored_worktree_files(host_wt, skip)]
+        dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=host_wt).stdout.splitlines()
+        if dirty:
+            problems.append(f"the host worktree {host_wt} has uncommitted work (commit it on {host_branch}, or move or discard it):\n"
+                            + "\n".join(f"      {line}" for line in dirty))
+        if _git(["symbolic-ref", "-q", "HEAD"], cwd=host_wt, check=False).returncode != 0:
+            keep = [base_sha] if base_sha else []
+            proc = _git(["rev-list", "--count", "HEAD", "--not", *keep, "--branches", "--tags", "--remotes"], cwd=host_wt, check=False)
+            orphans = int(proc.stdout.strip() or 0) if proc.returncode == 0 else 0
+            if orphans:
+                head = _git(["rev-parse", "--short", "HEAD"], cwd=host_wt, check=False).stdout.strip()
+                problems.append(f"the host worktree {host_wt} is detached at {head} with {orphans} commit(s) beyond the base that no branch, tag or "
+                                f"remote ref holds; removing it would orphan them -- put them on a branch first "
+                                f"(git -C {q(host_wt)} switch -c <name>, or switch {host_branch} to them)")
+    if ignored and not discard_ignored:
+        problems.append("ignored, worktree-only files would be deleted with the worktrees (git worktree remove does not ask):\n"
+                        + "\n".join(f"      {os.path.join(where, entry)}" for where, entry in ignored)
+                        + f"\n    move them out first, or re-run with --discard-ignored to delete them: {WORKFLOW_CMD} parallel-teardown {args.phase} --discard-ignored")
+    if problems:
+        lines = [f"parallel-teardown {args.phase} refused -- nothing was removed:"]
+        lines += [f"{i}. {problem}" for i, problem in enumerate(problems, 1)]
+        raise SystemExit("\n".join(lines))
+
+    # The host branch's fate is decided before any removal (its commits do not change).
+    delete_host_branch, keep_reason = False, None
+    host_branch_exists = bool(host_branch) and host_git and _git(
+        ["rev-parse", "--verify", "--quiet", f"refs/heads/{host_branch}"], cwd=host, check=False).returncode == 0
+    if host_branch_exists:
+        holders = [path for path, ref in _worktree_entries(cwd=host) if ref == f"refs/heads/{host_branch}"
+                   and not (host_wt and os.path.realpath(path) == os.path.realpath(host_wt))]
+        ahead = None
+        if base_sha:
+            proc = _git(["rev-list", "--count", f"{base_sha}..refs/heads/{host_branch}"], cwd=host, check=False)
+            ahead = int(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip().isdigit() else None
+        if holders:
+            keep_reason = f"it is checked out in {holders[0]}"
+        elif not created:
+            keep_reason = "it existed before parallel-start, which reused it"
+        elif ahead is None:
+            keep_reason = f"its commits beyond the base {base_sha} could not be counted"
+        elif ahead:
+            keep_reason = f"it has {ahead} commit(s) beyond its base {execution.get('host_base')} ({base_sha[:12]})"
+        else:
+            delete_host_branch = True
+
+    # 2-5. The removals, nested half first. Each entry: (label, git args, cwd). A worktree already
+    # gone from disk but still registered is pruned instead, before the branches: a stale
+    # registration still holds its branch, so `branch -D`/`-d` would refuse.
+    def registered(repo, path):
+        return any(os.path.realpath(p) == os.path.realpath(path) for p, _ref in _worktree_entries(cwd=repo))
+
+    steps = []
+    if nested_live:
+        steps.append((f"nested worktree {nested_wt}", ["worktree", "remove", str(nested_wt)], ROOT))
+    elif nested_wt and registered(ROOT, nested_wt):
+        steps.append((f"the stale registration of {nested_wt} (git worktree prune in {ROOT})", ["worktree", "prune"], ROOT))
+    if host_live:
+        steps.append((f"host worktree {host_wt}", ["worktree", "remove", str(host_wt)], host))
+    elif host_wt and host_git and registered(host, host_wt):
+        steps.append((f"the stale registration of {host_wt} (git worktree prune in {host})", ["worktree", "prune"], host))
+    if delete_host_branch:
+        steps.append((f"host branch {host_branch} (created by parallel-start, no commits beyond its base)",
+                      ["branch", "-D", host_branch], host))
+    if branch_exists:
+        steps.append((f"branch {branch}", ["branch", "-d", branch], ROOT))  # -d refuses an unmerged branch: a free second check
+
+    def command(git_args, cwd):
+        return f"git -C {q(str(cwd))} " + " ".join(q(part) for part in git_args)
+
+    removed = []
+    for i, (label, git_args, cwd) in enumerate(steps):
+        proc = _git(git_args, cwd=cwd, check=False)
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout).strip() or f"exit {proc.returncode}"
+            done = "".join(f"\nremoved {item}" for item in removed) or "\nnothing was removed yet"
+            rest = "\n".join(f"  {command(a, c)}" for _l, a, c in steps[i:])
+            raise SystemExit(
+                f"{command(git_args, cwd)} failed: {detail}{done}\n"
+                f"fix the cause, then re-run {WORKFLOW_CMD} parallel-teardown {args.phase} (it resumes), or finish by hand, in this order:\n{rest}\n"
+                f"  then set execution.worktree and execution.host_worktree to null in {shown(pdir)}/phase.json")
+        removed.append(label)
+
+    pruned = []  # a registration a successful `worktree remove` still left behind
+    for repo, path in ((ROOT, nested_wt), (host, host_wt)):
+        if not path or (repo is host and not host_git):
+            continue
+        if registered(repo, path):
+            _git(["worktree", "prune"], cwd=repo, check=False)
+            pruned.append(str(repo))
+
+    data["execution"]["worktree"] = None
+    data["execution"]["host_worktree"] = None
+    write_json(pdir / "phase.json", data)
+    append_event("phase_parallel_torndown", phase=args.phase, branch=branch, host_branch=host_branch)
+    rebuild_index_and_state()
+    print(f"phase {args.phase} parallel checkout pair retired (nested install)")
+    for item in removed:
+        print(f"removed {item}")
+    if not removed:
+        print("nothing to remove (both worktrees and the branch were already gone)")
+    for repo in pruned:
+        print(f"pruned a stale worktree registration in {repo}")
+    if ignored:
+        print(f"deleted {len(ignored)} ignored, worktree-only path(s) with the worktrees (--discard-ignored)")
+    if host_branch and not delete_host_branch:
+        if host_branch_exists:
+            print(f"kept host branch {host_branch}: {keep_reason}")
+            print(f"the host side follows the host's own custom (nested-convention): the branch is yours for the PR; "
+                  f"the engine pushed, opened and merged nothing")
+        else:
+            print(f"host branch {host_branch} is already gone; nothing to keep")
+    print(f"execution.worktree=null, execution.host_worktree=null; mode/branch/consolidation and host_branch/host_base/host_base_sha/"
+          f"host_branch_created/base_branch kept as history (branch={branch}, host_branch={host_branch}, consolidation={phase_consolidation(data)})")
+    if phase_consolidation(data) == "pending":
+        print(f"warning: {args.phase} doc consolidation is still 'pending' -- run the post-merge consolidation on this stream (teardown does not gate on it)")
+    print("phase.json changed -- commit it in the nested repo with the rest of the merge cleanup")
+
+
 def parallel_gate(args: argparse.Namespace) -> None:
     """The quiet-point gate: may this parallel phase's branch be merged into the default stream now?
 
@@ -2007,6 +3360,7 @@ def parallel_gate(args: argparse.Namespace) -> None:
       `done`. Merging into a live phase is what this gate exists to prevent.
 
     Read-only and CI-shaped: `GATE OPEN` + exit 0, or `GATE CLOSED` + numbered reasons + exit 1.
+    In a nested install (P35) both sides are read in the nested repo, which owns the state.
     """
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
@@ -2086,7 +3440,7 @@ def parallel_gate(args: argparse.Namespace) -> None:
             print(f"{i}. {reason}")
         raise SystemExit(1)
     print("GATE OPEN")
-    print(f"next: merge {branch_ref} into the default stream, then run: python3 scripts/workflow.py parallel-merge-finish")
+    print(f"next: merge {branch_ref} into the default stream, then run: {WORKFLOW_CMD} parallel-merge-finish")
 
 
 def parallel_merge_finish(args: argparse.Namespace) -> None:
@@ -2097,14 +3451,16 @@ def parallel_merge_finish(args: argparse.Namespace) -> None:
     them is resolved by taking either side and regenerating here -- which is why parallel mode
     needs no custom git merge driver (a driver would need per-clone `git config` and would not
     travel with the repo). Makes no commit: the regenerated files belong to the merge commit's
-    cleanup, which the orchestrator owns.
+    cleanup, which the orchestrator owns. In a nested install (P35) it runs in the nested repo,
+    where `phase/...` was merged (`git -C workflow merge`), and never touches the host repo: the
+    host branch is integrated by the host's own custom, never by the engine.
     """
     git_ok = _git_available()
     if git_ok and _git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], check=False).returncode == 0:
         raise SystemExit(
             "this checkout is mid-merge (MERGE_HEAD exists) -- finish the merge first, then re-run.\n"
             f"generated files ({', '.join(GENERATED_FILES)}) are regenerated by this command, so resolve any conflict in them by taking EITHER side.\n"
-            "then: python3 scripts/workflow.py parallel-merge-finish")
+            f"then: {WORKFLOW_CMD} parallel-merge-finish")
     phases = all_active_phases()
     stream = current_stream(phases)
     if stream:
@@ -2117,22 +3473,19 @@ def parallel_merge_finish(args: argparse.Namespace) -> None:
         execution = phase_execution(p)
         if not execution or p.get("status") != "done":
             continue
-        branch = execution.get("branch")
-        merged = True  # a deleted branch means the phase was already merged and torn down
-        if git_ok and branch and _branch_exists(branch):
-            merged = _git(["merge-base", "--is-ancestor", branch, "HEAD"], check=False).returncode == 0
-        if merged:
+        # a deleted branch means the phase was already merged and torn down
+        if _parallel_branch_merged(execution, git_ok):
             awaiting.append((p, execution))
     if not awaiting:
         print("no merged phase awaits doc consolidation (merged parallel phases only -- next/validate name every phase that owes)")
     else:
         print(f"{len(awaiting)} merged phase(s) await doc consolidation -- do them ONE AT A TIME, on this stream (doc versions are allocated from a single index):")
         for p, execution in awaiting:
-            print(f"- {p['id']}: doc impact notes in {p['path']}/phase.md (section '## Doc impact')")
-            print(f"    per note: python3 scripts/workflow.py doc-new-version --doc <doc> --summary \"...\" --source {p['id']}.REVIEW -> edit the returned edit_path -> python3 scripts/workflow.py rebuild-docs")
-            print(f"    when that phase's notes are all consolidated: python3 scripts/workflow.py parallel-consolidated {p['id']}")
+            print(f"- {p['id']}: doc impact notes in {shown_rel(p['path'])}/phase.md (section '## Doc impact')")
+            print(f"    per note: {WORKFLOW_CMD} doc-new-version --doc <doc> --summary \"...\" --source {p['id']}.REVIEW -> edit the returned edit_path -> {WORKFLOW_CMD} rebuild-docs")
+            print(f"    when that phase's notes are all consolidated: {WORKFLOW_CMD} parallel-consolidated {p['id']}")
             if execution.get("worktree") or (git_ok and execution.get("branch") and _branch_exists(execution["branch"])):
-                print(f"    then retire its branch + worktree: python3 scripts/workflow.py parallel-teardown {p['id']}")
+                print(f"    then retire its branch + worktree: {WORKFLOW_CMD} parallel-teardown {p['id']}")
     print("no commit made -- commit the regenerated files with the merge cleanup")
 
 
@@ -2141,13 +3494,14 @@ def parallel_consolidated(args: argparse.Namespace) -> None:
 
     The engine cannot write the prose: an agent runs `doc-new-version` per "Doc impact" note on the
     default stream and then calls this to flip `execution.consolidation` to "done", which is also
-    what unblocks archiving the phase.
+    what unblocks archiving the phase. In a nested install (P35) the same flip runs on the nested
+    repo's default stream; the host repo is not read or written.
     """
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
     execution = phase_execution(data)
     if not execution:
-        raise SystemExit(f"phase {args.phase} is not running in its own worktree (no parallel execution block); record its consolidation with: python3 scripts/workflow.py docs-consolidated {args.phase}")
+        raise SystemExit(f"phase {args.phase} is not running in its own worktree (no parallel execution block); record its consolidation with: {WORKFLOW_CMD} docs-consolidated {args.phase}")
     stream = current_stream(all_active_phases())
     if stream:
         raise SystemExit(f"this checkout is on parallel stream {stream}; run parallel-consolidated on the default stream, after the branch is merged")
@@ -2169,7 +3523,7 @@ def parallel_consolidated(args: argparse.Namespace) -> None:
     print("phase.json changed -- commit it together with the new doc versions")
     branch = execution.get("branch")
     if execution.get("worktree") or (branch and _git_available() and _branch_exists(branch)):
-        print(f"next: python3 scripts/workflow.py parallel-teardown {args.phase}")
+        print(f"next: {WORKFLOW_CMD} parallel-teardown {args.phase}")
     print(f"{args.phase} is now archivable (archive-phase/rotate-backlog no longer block on pending consolidation)")
 
 
@@ -2200,13 +3554,16 @@ def docs_debt(args: argparse.Namespace) -> None:
         notes_total += len(notes)
         blocks.append((phase, notes))
     docs_hit = sorted(d for d in per_doc if d != UNASSIGNED_DOC)
+    cover = consolidation_cover(phases)
     print(f"docs_debt={', '.join(p['id'] for p in owing)} ({len(owing)} phase(s), {notes_total} note(s), {len(docs_hit)} doc(s))")
     for phase, notes in blocks:
         print()
-        print(f"{phase['id']} {phase.get('name', '')} -- {phase['path']}/phase.md '## Doc impact'")
+        print(f"{phase['id']} {phase.get('name', '')} -- {shown_rel(phase['path'])}/phase.md '## Doc impact'")
         pay = consolidation_command(phase)
         tail = "   (merged parallel phase)" if pay == "parallel-consolidated" else ""
-        print(f"  pay: python3 scripts/workflow.py {pay} {phase['id']}{tail}")
+        print(f"  pay: {WORKFLOW_CMD} {pay} {phase['id']}{tail}")
+        for docs_phase in cover.get(phase["id"], []):  # a live docs phase already pays this one (v51)
+            print(f"  paid by: {docs_phase['id']} ({str(docs_phase.get('status', '')).replace('_', ' ')})")
         if not notes:
             print("  - (no notes in the notebook; the debt was stamped from a list since compressed -- check git history)")
         for note in notes:
@@ -2220,8 +3577,8 @@ def docs_debt(args: argparse.Namespace) -> None:
     if UNASSIGNED_DOC in per_doc:
         print(f"  {UNASSIGNED_DOC} = the note names no doc from the known set; read it in the notebook and decide")
     print()
-    print('per note: python3 scripts/workflow.py doc-new-version --doc <doc> --summary "..." --source <P>.REVIEW')
-    print("          -> edit only the returned edit_path -> python3 scripts/workflow.py rebuild-docs")
+    print(f'per note: {WORKFLOW_CMD} doc-new-version --doc <doc> --summary "..." --source <P>.REVIEW')
+    print(f"          -> edit only the returned edit_path -> {WORKFLOW_CMD} rebuild-docs")
     print("per phase, once all of its notes are consolidated: the pay command above (that is also what unblocks archiving)")
     print("read-only: this command wrote nothing")
 
@@ -2263,8 +3620,14 @@ def _parallel_verdict(phase_id: str, status, review, slices, consolidation, merg
     trivially contains its own branch); `branch_gone` means the branch was deleted, which implies
     the phase was merged first -- `parallel-teardown` refuses an unmerged branch.
     """
+    return _parallel_verdict_pair(phase_id, status, review, slices, consolidation, merged, branch_gone, own_stream)[1]
+
+
+def _parallel_verdict_pair(phase_id: str, status, review, slices, consolidation, merged, branch_gone: bool, own_stream: bool) -> tuple:
+    """`(short, long)`: the cell `## Streams` shows, and the sentence `parallel-status` prints. One
+    decision tree, so the dashboard and the command can never disagree about where a phase stands."""
     if status is None:
-        return "unknown -- neither the phase branch nor a local copy could be read"
+        return ("unknown", "unknown -- neither the phase branch nor a local copy could be read")
     slices = slices or []
     total = len(slices)
     done = sum(1 for s in slices if s.get("status") == "done")
@@ -2273,23 +3636,26 @@ def _parallel_verdict(phase_id: str, status, review, slices, consolidation, merg
     if status == "done" and review == "pass":
         if consolidation == "pending":
             if integrated:
-                return (f"merged, docs still awaiting consolidation -- run on the default stream: "
+                return ("merged \u2014 awaiting consolidation",
+                        f"merged, docs still awaiting consolidation -- run on the default stream: "
                         f"parallel-merge-finish, then parallel-consolidated {phase_id}")
-            return f"ready to merge -- check the quiet point first: parallel-gate {phase_id} (from the default stream)"
+            return ("ready to merge",
+                    f"ready to merge -- check the quiet point first: parallel-gate {phase_id} (from the default stream)")
         if integrated:
             if not branch_gone:
-                return f"merged + consolidated -- retire the branch and worktree: parallel-teardown {phase_id}"
-            return f"merged, consolidated and torn down -- nothing left but archiving ({phase_id} is archivable)"
-        return f"ready to merge -- check the quiet point first: parallel-gate {phase_id} (from the default stream)"
+                return ("merged + consolidated", f"merged + consolidated -- retire the branch and worktree: parallel-teardown {phase_id}")
+            return ("torn down", f"merged, consolidated and torn down -- nothing left but archiving ({phase_id} is archivable)")
+        return ("ready to merge",
+                f"ready to merge -- check the quiet point first: parallel-gate {phase_id} (from the default stream)")
     if status == "done":
-        return f"slices done but review is {review!r} -- record a passing review on its branch (review-phase {phase_id} --verdict pass)"
+        return ("review not passed", f"slices done but review is {review!r} -- record a passing review on its branch (review-phase {phase_id} --verdict pass)")
     if status == "pending":
-        return "waiting on the operator (phase is pending [~]) -- it halts only its own stream"
+        return ("pending", "waiting on the operator (phase is pending [~]) -- it halts only its own stream")
     if status == "blocked":
-        return "blocked on its own stream -- resolve the impediment there"
+        return ("blocked", "blocked on its own stream -- resolve the impediment there")
     where = " on this checkout's own stream" if own_stream else " on its branch"
     tail = f"; current slice {open_slice}" if open_slice else ""
-    return f"in flight{where} -- {done}/{total} slices done{tail}"
+    return (f"in flight {done}/{total}", f"in flight{where} -- {done}/{total} slices done{tail}")
 
 
 def parallel_status(args: argparse.Namespace) -> None:
@@ -2319,7 +3685,7 @@ def parallel_status(args: argparse.Namespace) -> None:
     parallel = [(p, phase_execution(p)) for p in phases if phase_execution(p)]
     if not parallel:
         print("no phase is in its own worktree right now -- every active phase runs on the default stream, which is where a phase runs unless asked otherwise")
-        print("to run one in its own worktree instead, ask for it: python3 scripts/workflow.py parallel-start <P>")
+        print(f"to run one in its own worktree instead, ask for it: {WORKFLOW_CMD} parallel-start <P>{NESTED_HOST_BRANCH_ARG}")
         return
     if not _git_available():
         raise SystemExit(
@@ -2362,6 +3728,13 @@ def parallel_status(args: argparse.Namespace) -> None:
         print(f"== {pid}: {phase.get('name', '')} ==")
         print(f"  branch={branch or '- (stamped parallel with no branch; fix phase.json)'}")
         print(f"  worktree={worktree or '- (plain clone, or already torn down)'}")
+        if NESTED is not None:  # P35: the host half of the pair, as stamped at parallel-start
+            if execution.get("host_branch"):
+                print(f"  host_branch={execution['host_branch']}" + (" (created by parallel-start)" if execution.get("host_branch_created") else " (reused)"))
+                print(f"  host_base={execution.get('host_base') or '-'} ({execution.get('host_base_sha') or '-'})")
+                print(f"  host_worktree={execution.get('host_worktree') or '- (already torn down)'}")
+            else:
+                print("  host_branch=- (no host half stamped: an execution block written at root, before the nested pair)")
         print(f"  consolidation={phase_consolidation(phase) or '-'}")
         print(f"  source={source}")
         if note:
@@ -2386,7 +3759,8 @@ def parallel_start_hint(state: dict, index: dict) -> str:
     is still `planned` -- exactly the moment a second phase would otherwise queue behind a live
     one. Suggestion only, never a default: the ordinary one-phase-at-a-time run stays silent,
     and so does a worktree checkout. v42's trigger (every planned phase, because the worktree
-    was the default) is gone with the default that justified it.
+    was the default) is gone with the default that justified it. In a nested install (P35) the
+    printed command also carries `--host-branch <name>`, which the operator names.
     """
     if state.get("stream"):
         return None
@@ -2402,7 +3776,7 @@ def parallel_start_hint(state: dict, index: dict) -> str:
     if not waiting:
         return None
     return (f"hint: {waiting['id']} is waiting behind {current} -- it can run in parallel on its own branch: "
-            f"python3 scripts/workflow.py parallel-start {waiting['id']}")
+            f"{WORKFLOW_CMD} parallel-start {waiting['id']}{NESTED_HOST_BRANCH_ARG}")
 
 
 # ---------------------------------------------------------------------------
@@ -2472,14 +3846,14 @@ def _default_branch():
     return None
 
 
-def _rev_parse(ref: str):
-    proc = _git(["rev-parse", "-q", "--verify", f"{ref}^{{commit}}"], check=False)
+def _rev_parse(ref: str, cwd=None):
+    proc = _git(["rev-parse", "-q", "--verify", f"{ref}^{{commit}}"], cwd=cwd, check=False)
     return proc.stdout.strip() if proc.returncode == 0 and proc.stdout.strip() else None
 
 
-def _diff_product_files(base: str, head: str) -> list:
+def _diff_product_files(base: str, head: str, cwd=None, pathspec=PRODUCT_PATHSPEC) -> list:
     """`[{status, path[, from]}]` for the product files that differ between two commits."""
-    proc = _git(["diff", "--name-status", "--relative", "-M", base, head, "--", *PRODUCT_PATHSPEC], check=False)
+    proc = _git(["diff", "--name-status", "--relative", "-M", base, head, "--", *pathspec], cwd=cwd, check=False)
     files = []
     for line in proc.stdout.splitlines():
         parts = line.split("\t")
@@ -2493,10 +3867,11 @@ def _diff_product_files(base: str, head: str) -> list:
     return files
 
 
-def _status_product_files() -> list:
-    """`[{status, path}]` for the uncommitted product changes in this checkout (untracked included)."""
-    proc = _git(["status", "--porcelain", "--untracked-files=all", "--", *PRODUCT_PATHSPEC], check=False)
-    prefix = _repo_prefix()
+def _status_product_files(cwd=None, pathspec=PRODUCT_PATHSPEC) -> list:
+    """`[{status, path}]` for the uncommitted product changes in this checkout (untracked included).
+    Porcelain paths are repo-root-relative, so the prefix of the directory measured is stripped."""
+    proc = _git(["status", "--porcelain", "--untracked-files=all", "--", *pathspec], cwd=cwd, check=False)
+    prefix = _repo_prefix() if cwd is None else _git(["rev-parse", "--show-prefix"], cwd=cwd, check=False).stdout.strip()
     files = []
     for line in proc.stdout.splitlines():
         if len(line) < 4:
@@ -2550,6 +3925,9 @@ def phase_scope(args: argparse.Namespace) -> None:
                 print(ln)
 
     header = [f"phase={args.phase} status={data.get('status')} archived={str(archived).lower()}"]
+    if NESTED is not None:
+        _phase_scope_nested(args, data, out, header, emit)
+        return
     if not _git_available():
         out["mode"] = "no-git"
         out["hint"] = "phase-scope: no git history readable here -- derive the boundary from the slices' result.md files"
@@ -2641,9 +4019,178 @@ def phase_scope(args: argparse.Namespace) -> None:
     emit(lines)
 
 
+def _host_pathspec() -> list:
+    """The host's product: everything but the nested workflow repo. Unlike at root, the host's own
+    works/ or docs/ ARE product, so only the nested repo's folder is excluded."""
+    return [".", f":(exclude){Path(os.path.relpath(ROOT, HOST_ROOT)).as_posix()}"]
+
+
+def _phase_scope_nested(args: argparse.Namespace, data: dict, out: dict, header: list, emit) -> None:
+    """phase-scope in a nested install: the same answer in the same format, read from the HOST repo.
+
+    The nested repo holding works/ never sees the host's commits, so the range comes from the host
+    anchors `new-phase` and the passing review stamped into phase.json: base = `--base`, else
+    `host_anchors.created` (the host HEAD at creation, so base..head with no `^`); head = `--head`,
+    else `host_anchors.review_pass` once the review passed, else the host HEAD. A phase with no
+    usable anchor lists the host working tree only, mirroring the uncommitted-phase path at root."""
+    host = HOST_ROOT
+    spec = _host_pathspec()
+    nested_dir = spec[1].split(")", 1)[1]
+    out["mode"] = "nested"
+    if not _git_available(cwd=host):
+        out["mode"] = "no-git"
+        out["hint"] = f"phase-scope: no git history readable in the host {host} -- derive the boundary from the slices' result.md files"
+        emit([out["hint"]])
+        return
+    anchors = data.get("host_anchors") if isinstance(data.get("host_anchors"), dict) else {}
+    created = anchors.get("created")
+    out["creation_commit"] = created
+    base = base_kind = None
+    missing = None
+    if args.base:
+        base = _rev_parse(args.base, cwd=host)
+        if not base:
+            raise SystemExit(f"--base {args.base}: not a commit in the host repo {host}")
+        base_kind = f"from --base {args.base}"
+    elif created:
+        base = _rev_parse(created, cwd=host)
+        if base:
+            base_kind = "the host HEAD when the phase was created (or the host worktree's base after parallel-start): phase.json host_anchors.created"
+        else:
+            missing = f"host_anchors.created {created} is not a commit in the host repo (rewritten history, or a shallow clone)"
+    elif "created" in anchors:  # recorded as null: the host had no commit yet when the phase was created
+        if _rev_parse("HEAD", cwd=host):
+            base, base_kind = EMPTY_TREE, "the empty tree: the host had no commit when the phase was created"
+        else:
+            missing = "the host had no commit when the phase was created, and still has none"
+    else:
+        missing = "phase.json carries no host_anchors.created (a phase created at root, or before the nested engine)"
+    if base is None:
+        out["uncommitted"] = _status_product_files(cwd=host, pathspec=spec)
+        lines = header + [f"mode={out['mode']}",
+                          f"creation_commit=none ({missing} -- pass --base <host-sha> to measure a range)",
+                          f"uncommitted_product_files={len(out['uncommitted'])} (host working tree; {nested_dir}/ excluded)"]
+        lines += [f"  {f['status']} {f['path']}" for f in out["uncommitted"]]
+        lines += [f"note: {n}" for n in out["notes"]] + [SCOPE_HINT]
+        emit(lines)
+        return
+    host_head = _rev_parse("HEAD", cwd=host)
+    if args.head:
+        head = _rev_parse(args.head, cwd=host)
+        if not head:
+            raise SystemExit(f"--head {args.head}: not a commit in the host repo {host}")
+        head_kind = f"from --head {args.head}"
+    else:
+        head, head_kind = None, None
+        passed = anchors.get("review_pass")
+        if (data.get("review") or {}).get("status") == "pass" and passed:
+            head = _rev_parse(passed, cwd=host)
+            if head:
+                head_kind = "the host HEAD when the review passed: phase.json host_anchors.review_pass; pass --head HEAD to read to the tip"
+            else:
+                out["notes"].append(f"host_anchors.review_pass {passed} is not a commit in the host repo -- read to the host's tip instead")
+        if not head:
+            head, head_kind = host_head, "the tip of the host's HEAD"
+    if not head:
+        raise SystemExit(f"cannot resolve the host's HEAD to a commit in {host}")
+    rng = head if base == EMPTY_TREE else f"{base}..{head}"
+    count = _git(["rev-list", "--count", rng], cwd=host, check=False).stdout.strip() or "0"
+    files = _diff_product_files(base, head, cwd=host, pathspec=spec)
+    uncommitted = _status_product_files(cwd=host, pathspec=spec) if head == host_head else []
+    out.update({"base": base, "base_kind": base_kind, "head": head, "head_kind": head_kind,
+                "range": f"{base[:7]}..{head[:7]}", "commits": int(count), "files": files, "uncommitted": uncommitted})
+    tally = {k: sum(1 for f in files if f["status"] == k) for k in ("A", "M", "D", "R")}
+    lines = header + [f"mode={out['mode']}"]
+    if created:
+        lines.append(f"creation_commit={created}  (the host HEAD at new-phase, or the host worktree's base after parallel-start)")
+    elif "created" in anchors and not args.base:
+        lines.append("creation_commit=none (the host had no commit at new-phase)")
+    else:
+        lines.append("creation_commit=none (measured from --base)")
+    lines.append(f"base={base} ({base_kind})")
+    lines.append(f"head={head} ({head_kind})")
+    lines.append(f"range={out['range']} commits={count}")
+    lines.append(f"product_files={len(files)} (added {tally['A']}, modified {tally['M']}, deleted {tally['D']}, renamed {tally['R']}; read from the host repo, {nested_dir}/ excluded)")
+    for f in files:
+        lines.append(f"  {f['status']} {f['from']} -> {f['path']}" if f.get("from") else f"  {f['status']} {f['path']}")
+    if uncommitted:
+        lines.append(f"uncommitted_product_files={len(uncommitted)} (host working tree, not in the range above)")
+        lines += [f"  {f['status']} {f['path']}" for f in uncommitted]
+    lines += [f"note: {n}" for n in out["notes"]] + [SCOPE_HINT]
+    emit(lines)
+
+
+def _one_line(text) -> str:
+    """A stored free-text value collapsed onto one printable line."""
+    return " ".join(str(text).split())
+
+
+def nested_next_lines() -> list:
+    """`next`'s nested-install lines: the host, and the host conventions' state (commits, branches, PRs) -- loud
+    while it is unconfirmed, because the first product commit must wait for the operator. Empty
+    at root, so an at-root `next` prints exactly what it always printed."""
+    if NESTED is None:
+        return []
+    conv = NESTED.get("commit_convention") if isinstance(NESTED.get("commit_convention"), dict) else {}
+    lines = [f"nested_host={HOST_ROOT}"]
+    if conv.get("confirmed") is True:
+        lines.append(f"host_commit_convention=confirmed (coauthor_trailers={conv.get('coauthor_trailers')}) "
+                     f"-- follow it for host commits, branches and pull requests; read it with: {WORKFLOW_CMD} nested-convention")
+    else:
+        inferred = _one_line(conv.get("inferred")) if conv.get("inferred") else "nothing"
+        lines.append(f"host_commit_convention=UNCONFIRMED (inferred: {inferred}) -- confirm the host's conventions (commits, branches and pull requests) with the operator before the first product commit, "
+                     f"then: {WORKFLOW_CMD} nested-convention --confirm --text \"<conventions>\" --trailers allowed|forbidden")
+    return lines
+
+
+def cmd_nested_convention(args: argparse.Namespace) -> None:
+    """Show (bare) or record (--confirm) a nested install's host conventions for commits, branches and pull requests.
+
+    The installer cannot ask (it runs non-interactively), so it records what it inferred from the
+    host's git log and CONTRIBUTING with `confirmed: false`; the orchestrator asks the operator
+    before the first product commit and records the answer here -- the convention text and whether
+    Claude `Co-Authored-By` trailers are allowed in the host repo. Writes only `.agentic-nested.json`."""
+    if NESTED is None:
+        raise SystemExit(f"nested-convention: refused -- this is not a nested personal install (no {NESTED_MARKER} beside scripts/); "
+                         "commits here follow the workspace's own Commit Convention")
+    if (args.text is not None or args.trailers is not None) and not args.confirm:
+        raise SystemExit(f"--text and --trailers belong to --confirm: {WORKFLOW_CMD} nested-convention --confirm --text \"...\" --trailers allowed|forbidden")
+    path = ROOT / NESTED_MARKER
+    if args.confirm:
+        if not (args.text or "").strip():
+            raise SystemExit("nested-convention --confirm needs --text \"<the host's conventions for commits, branches and pull requests, as the operator confirmed them>\"")
+        if args.trailers is None:
+            raise SystemExit("nested-convention --confirm needs --trailers allowed|forbidden (may Claude Co-Authored-By trailers appear in host commits?)")
+        data = read_json(path)
+        previous = dict(data["commit_convention"])
+        data["commit_convention"] = dict(previous, text=args.text, confirmed=True, coauthor_trailers=args.trailers)
+        problems = nested_marker_problems(data)
+        if problems:  # cannot happen from a valid marker, but never write a marker validate would reject
+            raise SystemExit(f"nested-convention: refused -- the result would be malformed: {'; '.join(problems)}")
+        write_json(path, data)
+        append_event("nested_convention_confirmed", coauthor_trailers=args.trailers, previously_confirmed=previous.get("confirmed") is True)
+        print(f"nested-convention: confirmed{' (replacing the earlier confirmation)' if previous.get('confirmed') is True else ''} -- written to {shown(path)}")
+        conv = data["commit_convention"]
+    else:
+        conv = NESTED["commit_convention"]
+    print(f"nested_host={HOST_ROOT}")
+    print(f"commit_convention={'confirmed' if conv.get('confirmed') is True else 'UNCONFIRMED'}")
+    print(f"coauthor_trailers={conv.get('coauthor_trailers')}")
+    print("inferred:")
+    print(conv.get("inferred") or "(nothing inferred)")
+    print("text:")
+    print(conv.get("text") or "(none -- not confirmed yet)")
+    if conv.get("confirmed") is not True:
+        print(f"confirm the host's conventions (commits, branches and pull requests) with the operator before the first product commit, then: {WORKFLOW_CMD} nested-convention --confirm --text \"<conventions>\" --trailers allowed|forbidden")
+
+
 def cmd_next(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     state = read_json(WORKS / "state.json")
+    # Nested install: name the host, and hold the first product commit until the operator has
+    # confirmed the host's commit convention. Printed before every return below; silent at root.
+    for line in nested_next_lines():
+        print(line)
     # Stream context. Both lines are silent on the default stream with no parallel
     # phases, so an untouched workspace sees exactly the output it saw before.
     stream = state.get("stream")
@@ -2653,7 +4200,7 @@ def cmd_next(args: argparse.Namespace) -> None:
     elsewhere = [
         f"{p['id']}:{p['execution'].get('branch')}"
         for p in index.get("active_phases", [])
-        if p.get("execution") and p["execution"].get("branch") != stream
+        if phase_in_flight(p) and p["execution"].get("branch") != stream
     ]
     if elsewhere:
         print(f"parallel_phases_elsewhere={', '.join(elsewhere)} (not in this stream; each runs from its own branch)")
@@ -2682,7 +4229,7 @@ def cmd_next(args: argparse.Namespace) -> None:
             print(f"acceptance_gate=open (requested_at={gate.get('requested_at')}) -- the operator must walk the running product before this phase's review can pass.")
             print("WALKTHROUGH:")
             print(gate.get("walkthrough") or "(none recorded)")
-        print(f"After the operator approves, clear it: python3 scripts/workflow.py {clear}")
+        print(f"After the operator approves, clear it: {WORKFLOW_CMD} {clear}")
         if gate:
             print("Add --note \"...\" to record what the operator reported.")
         return
@@ -2697,20 +4244,284 @@ def cmd_next(args: argparse.Namespace) -> None:
     sdir = require_slice(current_slice)
     print(f"current_phase={current_slice.split('.', 1)[0]}")
     print(f"current_slice={current_slice}")
-    print(f"slice_path={sdir.relative_to(ROOT)}")
+    print(f"slice_path={shown(sdir)}")
     print(f"next_slice={state.get('next_slice') or 'none'}")
     hint = parallel_start_hint(state, index)
     if hint:
         print(hint)
 
 
+# Boundary-gated compaction (P34, v55). Two hook commands: `compact-gate` (the PreCompact hook, matcher
+# `auto`) vetoes an auto-compaction while a slice is open or the tree is dirty, so compaction lands at a
+# slice boundary; `compact-resume` (the SessionStart hook, matcher `compact`) re-injects the pointer and a
+# resume line after one. The gate FAILS OPEN: every path exits 0, a block is only ever the stdout JSON
+# `{"decision": "block", ...}` (exit 2 would also block, so it is never used), anything unexpected allows,
+# and two fail-safes bound the veto -- the fill ceiling (the transcript's last usage) and the cap on
+# consecutive blocks per session. It writes nothing in the tree (a counter there would itself be dirt).
+COMPACT_CEILING_ENV = "AGENTIC_COMPACT_CEILING"
+COMPACT_CAP_ENV = "AGENTIC_COMPACT_BLOCK_CAP"
+COMPACT_CEILING_1M = 850_000   # 85% of a 1M window
+COMPACT_CEILING_200K = 170_000  # 85% of a 200k window
+COMPACT_BLOCK_CAP = 8
+# The 1M-window family: every Claude 5 model id as the transcript records it (`claude-opus-5-5`,
+# `claude-fable-5-1`, `claude-opus-5`, `claude-haiku-5-5`, `claude-opus-5-5[1m]`); anything else
+# (a Claude 4 id, `<synthetic>`) gets the 200k ceiling. A wrong guess only moves the ceiling: the cap
+# still releases the veto.
+COMPACT_1M_MODEL_RE = re.compile(r"^claude-[a-z]+-5(?:[-\[]|$)")
+# Generated files a read-only command (next, rebuild) may rewrite with no real change; they never make
+# the tree dirty for the gate. `docs/index.json` because `rebuild`/`rebuild-docs` restamp its
+# `last_rebuilt_at` on every run; a real doc change also writes docs/versions/ and docs/current/.
+COMPACT_DIRTY_EXCLUDE = ("works/state.json", "works/index.json", "works/backlog.md", "works/deferred.md", "docs/index.json")
+COMPACT_TRANSCRIPT_TAIL = 4 * 1024 * 1024
+COMPACT_RESUME_LINE = (
+    "Context was compacted. Re-read the running skill's SKILL.md from disk (.claude/skills/<name>/SKILL.md -- only "
+    "its first 5,000 tokens were re-injected), the active slice folder (plan.md, result.md) and phase.md's `## Now`; "
+    "executors still running are listed by the harness."
+)
+# The hooks follow the session (P35): `$CLAUDE_PROJECT_DIR` stays at the main checkout after EnterWorktree,
+# but the hook's stdin `cwd` follows the session into the worktree. So each hook first walks up from that
+# `cwd` to the engine that owns it -- `d/workflow/scripts/workflow.py` (nested) or `d/scripts/workflow.py`
+# (at root), with `works/` beside it -- and, when that is another copy of the engine, re-runs it with the
+# same stdin and relays its output. The env var is the recursion guard; every failure falls back to today.
+HOOK_REDIRECT_ENV = "AGENTIC_HOOK_REDIRECTED"
+HOOK_REDIRECT_TIMEOUT = 12  # the hooks' own timeout is 15 s
+
+
+def _hook_owning_engine(cwd: str):
+    """(engine, run_dir) for the first ancestor of `cwd` (itself included) that holds a workspace engine with
+    `works/` beside it -- nested (`workflow/`) checked before at root at each level -- or None."""
+    start = Path(cwd).resolve()
+    if not start.is_dir():
+        return None
+    for d in (start, *start.parents):
+        for base in (d / "workflow", d):
+            engine = base / "scripts" / "workflow.py"
+            if engine.is_file() and (base / "works").is_dir():
+                return engine, d
+    return None
+
+
+def _hook_stdin_or_redirect(subcommand: str):
+    """Read the hook's stdin once. Return its text for this engine to handle, or None when the engine that
+    owns the hook's `cwd` is another copy and already answered (its stdout/stderr relayed unchanged). Never
+    raises: a missing or bad `cwd`, no engine, this engine, the guard set, a timeout, an error or a
+    non-zero exit all return the text, and the caller carries on as before."""
+    try:
+        raw = sys.stdin.read()
+    except Exception:  # noqa: BLE001 - the hooks never fail
+        return ""
+    try:
+        if os.environ.get(HOOK_REDIRECT_ENV):
+            return raw
+        hook = json.loads(raw or "null")
+        cwd = hook.get("cwd") if isinstance(hook, dict) else None
+        if not isinstance(cwd, str) or not cwd.strip():
+            return raw
+        found = _hook_owning_engine(cwd)
+        if found is None or found[0].resolve() == Path(__file__).resolve():
+            return raw
+        engine, run_dir = found
+        proc = subprocess.run([sys.executable, str(engine), subcommand], input=raw, capture_output=True, text=True,
+                              cwd=str(run_dir), env={**os.environ, HOOK_REDIRECT_ENV: "1"}, timeout=HOOK_REDIRECT_TIMEOUT)
+        if proc.returncode != 0:
+            return raw
+        sys.stdout.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        return None
+    except Exception:  # noqa: BLE001 - fail open: this engine answers instead
+        return raw
+
+
+def _compact_env_int(name: str):
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def _compact_last_usage(transcript_path):
+    """(fill, model) from the last main-thread assistant line in the transcript that carries a non-zero
+    `message.usage`, or (None, None) when the file or the usage cannot be read. Reads the file's tail
+    first (transcripts run to tens of MB) and the whole file only when the tail holds no such line."""
+    if not transcript_path or not isinstance(transcript_path, str):
+        return None, None
+    path = Path(transcript_path)
+    try:
+        size = path.stat().st_size
+        starts = [max(0, size - COMPACT_TRANSCRIPT_TAIL)] + ([0] if size > COMPACT_TRANSCRIPT_TAIL else [])
+        for start in starts:
+            with path.open("rb") as f:
+                f.seek(start)
+                lines = f.read().splitlines()
+            if start:
+                lines = lines[1:]  # the first line of a tail read is cut mid-way
+            for raw in reversed(lines):
+                try:
+                    entry = json.loads(raw)
+                except ValueError:
+                    continue
+                if not isinstance(entry, dict) or entry.get("type") != "assistant" or entry.get("isSidechain") is True:
+                    continue
+                message = entry.get("message")
+                usage = message.get("usage") if isinstance(message, dict) else None
+                if not isinstance(usage, dict):
+                    continue
+                fill = 0
+                for key in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"):
+                    value = usage.get(key)
+                    fill += value if isinstance(value, int) else 0
+                if fill <= 0:  # a synthetic or errored turn: no reading, keep looking
+                    continue
+                model = message.get("model")
+                return fill, (model if isinstance(model, str) else "")
+    except OSError:
+        return None, None
+    return None, None
+
+
+def _compact_counter_path(hook: dict) -> Path:
+    """The per-session block counter: never inside the tree (an untracked file there is dirt)."""
+    sid = re.sub(r"[^A-Za-z0-9_.-]", "_", str(hook.get("session_id") or "")) or "nosession"
+    base = hook.get("scratchpad_dir")
+    base = Path(base) if isinstance(base, str) and base.strip() and Path(base).is_dir() else Path(tempfile.gettempdir())
+    return base / f"agentic-compact-gate-{sid}.json"
+
+
+def _compact_read_blocks(path: Path) -> int:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8")).get("blocks")
+    except (OSError, ValueError, AttributeError):
+        return 0
+    return value if isinstance(value, int) and value > 0 else 0
+
+
+def _compact_dirty_count():
+    """How many files are uncommitted where the workspace lives, or None when there is no git to ask.
+    At root: this repo, minus the generated dashboards. Nested: the workspace repo the same way, plus the
+    host's product (everything but the nested folder)."""
+    checks = []
+    if _git_available(cwd=ROOT):
+        checks.append((ROOT, [".", *(f":(exclude){p}" for p in COMPACT_DIRTY_EXCLUDE)]))
+    if HOST_ROOT is not None and _git_available(cwd=HOST_ROOT):
+        checks.append((HOST_ROOT, _host_pathspec()))
+    if not checks:
+        return None
+    paths = set()
+    for cwd, spec in checks:
+        proc = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", *spec],
+                              cwd=str(cwd), capture_output=True, text=True, timeout=10)
+        if proc.returncode != 0:
+            continue
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=str(cwd), capture_output=True, text=True, timeout=10).stdout.strip()
+        paths.update(f"{top}/{line[3:]}" for line in proc.stdout.splitlines() if len(line) > 3)
+    return len(paths)
+
+
+def cmd_compact_gate(args: argparse.Namespace) -> None:
+    """PreCompact hook: block an auto-compaction mid-slice, allow it at a clean slice boundary.
+    Decision order: (a) not `auto` -> allow; (a') fired inside a subagent (`agent_id`) -> allow; (b) fill >=
+    ceiling -> allow; (c) consecutive blocks >= cap -> allow; (d) current slice in_progress/in_review -> block,
+    dirty tree -> block, else allow. A block prints the JSON and counts (a block it cannot count allows
+    instead); an allow prints nothing and resets the count. Fails open: exit 0 always."""
+    trace = {"decision": "allow", "rule": "error", "slice": "-", "status": "-", "dirty": "-", "fill": "-", "ceiling": "-"}
+    cap, blocks, counter, reason, error = COMPACT_BLOCK_CAP, 0, None, None, None
+    raw = _hook_stdin_or_redirect("compact-gate")
+    if raw is None:  # the engine that owns the session's cwd answered
+        return
+    try:
+        try:
+            hook = json.loads(raw or "null")
+        except ValueError:
+            hook = None
+        if not isinstance(hook, dict):
+            raise ValueError("stdin is not a hook JSON object")
+        cap = _compact_env_int(COMPACT_CAP_ENV) or COMPACT_BLOCK_CAP
+        counter = _compact_counter_path(hook)
+        blocks = _compact_read_blocks(counter)
+        if hook.get("trigger") != "auto":  # (a) a manual /compact is never blocked
+            trace["rule"] = "manual"
+        elif isinstance(hook.get("agent_id"), str) and hook["agent_id"].strip():
+            # (a') a subagent's own compaction (an executor, an Explore lookup): its slice is in_progress for
+            # its whole life, so the veto would only defer it to the cap -- the boundary is the main thread's.
+            # It leaves the main thread's block count alone (the subagent shares the session id).
+            trace["rule"], counter = "subagent", None
+        else:
+            fill, model = _compact_last_usage(hook.get("transcript_path"))  # (b)
+            ceiling = _compact_env_int(COMPACT_CEILING_ENV) or (COMPACT_CEILING_1M if model and COMPACT_1M_MODEL_RE.match(model) else COMPACT_CEILING_200K)
+            trace["fill"], trace["ceiling"] = ("-" if fill is None else fill), ceiling
+            if fill is not None and fill >= ceiling:
+                trace["rule"] = "ceiling"
+            elif blocks >= cap:  # (c)
+                trace["rule"] = "cap"
+            else:  # (d) the pointer `next` prints, read without next's rewrite of the dashboards
+                phases = all_active_phases()
+                _phase, current, _next = resolve_current(stream_phases(phases, current_stream(phases)))
+                status = None
+                if current:
+                    status = next((s.get("status") for p in phases for s in p["slices"] if s.get("id") == current), None)
+                    trace["slice"], trace["status"] = current, status or "-"
+                release = (f"block {blocks + 1}/{cap}; compaction is allowed at a clean slice boundary, "
+                           f"above {ceiling} tokens, or after {cap} blocks in a row")
+                if status in ("in_progress", "in_review"):
+                    trace["rule"], trace["decision"] = "slice_in_progress", "block"
+                    reason = f"slice {current} {status} -- compaction waits for the slice boundary ({release})"
+                else:
+                    dirty = _compact_dirty_count()
+                    trace["dirty"] = "-" if dirty is None else dirty
+                    if dirty:
+                        trace["rule"], trace["decision"] = "dirty", "block"
+                        reason = (f"dirty: {dirty} file{'s' if dirty != 1 else ''} uncommitted (your own uncommitted work counts too) "
+                                  f"-- compaction waits for a committed boundary ({release})")
+                    else:
+                        trace["rule"] = "boundary"
+    except Exception as exc:  # noqa: BLE001 - the gate fails open, always
+        trace.update(decision="allow", rule="error")
+        reason, error = None, f"{type(exc).__name__}: {exc}"
+    try:
+        if trace["decision"] == "block":
+            try:
+                counter.write_text(json.dumps({"blocks": blocks + 1, "updated_at": now_iso()}) + "\n", encoding="utf-8")
+                blocks += 1
+            except Exception as exc:  # noqa: BLE001 - a block the cap cannot count could repeat forever: allow
+                trace.update(decision="allow", rule="error")
+                error = f"block counter unwritable ({type(exc).__name__}: {exc})"
+        if trace["decision"] == "block":
+            print(json.dumps({"decision": "block", "reason": reason}))
+        elif counter is not None:  # every allow resets the count, bar a subagent's
+            blocks = 0
+            try:
+                counter.unlink()
+            except Exception:  # noqa: BLE001 - nothing to reset
+                pass
+        line = "compact-gate: " + " ".join(f"{k}={v}" for k, v in trace.items()) + f" blocks={blocks}/{cap}"
+        if error:
+            line += f" error={_one_line(error)}"
+        print(line, file=sys.stderr)
+    except Exception:  # noqa: BLE001 - never fail the request
+        pass
+
+
+def cmd_compact_resume(args: argparse.Namespace) -> None:
+    """SessionStart hook (source `compact`): print the pointer and the resume line as facts. Always exit 0."""
+    if _hook_stdin_or_redirect("compact-resume") is None:  # the engine that owns the session's cwd answered
+        return
+    print("compaction=done source=compact")
+    try:
+        cmd_next(args)
+    except BaseException as exc:  # noqa: BLE001 - SystemExit included: the hook must never fail
+        print(f"pointer unavailable: {_one_line(str(exc)) or type(exc).__name__}")
+    print(COMPACT_RESUME_LINE)
 def cmd_deferred(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     groups = deferred_jobs()
     print(f"open={len(groups.get('open', []))}")
     print(f"promoted={len(groups.get('promoted', []))}")
     print(f"dropped={len(groups.get('dropped', []))}")
-    print("dashboard=works/deferred.md")
+    print(f"dashboard={shown(WORKS / 'deferred.md')}")
 
 
 def next_deferred_id() -> str:
@@ -2739,7 +4550,7 @@ def defer_job(args: argparse.Namespace) -> None:
     write_text(ddir / "brief.md", text)
     append_event("deferred_created", deferred=did, source=args.source)
     rebuild_index_and_state()
-    print(f"created deferred job {did}: {ddir.relative_to(ROOT)}")
+    print(f"created deferred job {did}: {shown(ddir)}")
 
 
 def promote_deferred(args: argparse.Namespace) -> None:
@@ -2768,11 +4579,11 @@ def promote_deferred(args: argparse.Namespace) -> None:
     write_json(ddir / "deferred.json", data)
     target = DEFERRED_PROMOTED / did
     if target.exists():
-        raise SystemExit(f"promoted destination already exists: {target.relative_to(ROOT)}")
+        raise SystemExit(f"promoted destination already exists: {shown(target)}")
     shutil.move(str(ddir), str(target))
     append_event("deferred_promoted", deferred=did, phase=args.phase, slice=args.slice)
     rebuild_index_and_state()
-    print(f"promoted {did} -> {args.slice}: {sdir.relative_to(ROOT)}")
+    print(f"promoted {did} -> {args.slice}: {shown(sdir)}")
 
 
 def drop_deferred(args: argparse.Namespace) -> None:
@@ -2786,31 +4597,60 @@ def drop_deferred(args: argparse.Namespace) -> None:
     write_json(ddir / "deferred.json", data)
     target = DEFERRED_DROPPED / did
     if target.exists():
-        raise SystemExit(f"dropped destination already exists: {target.relative_to(ROOT)}")
+        raise SystemExit(f"dropped destination already exists: {shown(target)}")
     shutil.move(str(ddir), str(target))
     append_event("deferred_dropped", deferred=did, reason=args.reason)
     rebuild_index_and_state()
-    print(f"dropped {did}: {target.relative_to(ROOT)}")
+    print(f"dropped {did}: {shown(target)}")
 
 
-def _phase_blockers(pdir: Path) -> list:
-    """Reasons a phase is not cleanly archivable; empty list means ready."""
+def _phase_blocker_kinds(pdir: Path) -> list:
+    """Reasons a phase is not cleanly archivable, typed: `[(kind, text)]`, kind one of "slices",
+    "review" or "consolidation". Empty list means ready. `_phase_blockers` is this list's text, so
+    every refusal prints exactly what it always did; the kind lets `rotate-backlog` ask "is the
+    doc debt the ONLY thing holding this phase?" without matching strings."""
     phase = read_json(pdir / "phase.json")
     slices = [read_json(s / "slice.json") for s in slice_dirs(pdir)]
     reasons = []
     not_done = [s["id"] for s in slices if s.get("status") != "done"]
     if not_done:
-        reasons.append(f"unfinished slices: {', '.join(not_done)}")
+        reasons.append(("slices", f"unfinished slices: {', '.join(not_done)}"))
     review_status = phase.get("review", {}).get("status")
     if review_status != "pass":
-        reasons.append(f"review is {review_status!r}, not pass")
+        reasons.append(("review", f"review is {review_status!r}, not pass"))
     # The phase still owes its deferred doc consolidation. Archiving would move its
     # `## Doc impact` list -- the sole input to that consolidation -- out of active/, so it
     # blocks (parallel teardown only warns, because teardown is reversible).
     if phase_consolidation(phase) == "pending":
         cmd = consolidation_command(phase)
-        reasons.append(f"docs not consolidated -- run a docs phase over its '## Doc impact' notes, then: python3 scripts/workflow.py {cmd} {phase['id']}")
+        reasons.append(("consolidation", f"docs not consolidated -- run a docs phase over its '## Doc impact' notes, then: {WORKFLOW_CMD} {cmd} {phase['id']}"))
     return reasons
+
+
+def _phase_blockers(pdir: Path) -> list:
+    """Reasons a phase is not cleanly archivable; empty list means ready."""
+    return [text for _, text in _phase_blocker_kinds(pdir)]
+
+
+def _parallel_branch_merged(execution: dict, git_ok: bool = None) -> bool:
+    """True when a parallel phase's branch is merged into HEAD. No branch, a deleted branch (merged
+    and torn down) and a workspace without git all count as merged; otherwise the branch must be an
+    ancestor of HEAD. The one test `parallel-merge-finish` and `rotate-backlog` share."""
+    git_ok = _git_available() if git_ok is None else git_ok
+    branch = execution.get("branch")
+    if git_ok and branch and _branch_exists(branch):
+        return _git(["merge-base", "--is-ancestor", branch, "HEAD"], check=False).returncode == 0
+    return True
+
+
+def _debt_only(pdir: Path) -> bool:
+    """True when doc consolidation is the ONLY thing holding this phase from archiving: every slice
+    done, review `pass`, `consolidation: pending`. A parallel phase whose branch is not yet merged is
+    never debt-only -- its docs cannot be consolidated until the merge lands."""
+    if [kind for kind, _ in _phase_blocker_kinds(pdir)] != ["consolidation"]:
+        return False
+    execution = phase_execution(read_json(pdir / "phase.json"))
+    return execution is None or _parallel_branch_merged(execution)
 
 
 def _archive_one(pdir: Path, forced: bool) -> Path:
@@ -2851,7 +4691,7 @@ def archive_phase(args: argparse.Namespace) -> None:
             raise SystemExit(f"phase {args.phase} is not archivable ({'; '.join(reasons)}). Finish/review it, or use --force for exceptional cleanup.")
     dest = _archive_one(pdir, forced=args.force)
     rebuild_index_and_state()
-    print(f"archived phase {args.phase}: {dest.relative_to(ROOT)}")
+    print(f"archived phase {args.phase}: {shown(dest)}")
 
 
 def archive_all(args: argparse.Namespace) -> None:
@@ -2880,14 +4720,140 @@ def archive_all(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     print(f"archived {len(archived)} phase(s):")
     for phase_id, dest in archived:
-        print(f"- {phase_id}: {dest.relative_to(ROOT)}")
+        print(f"- {phase_id}: {shown(dest)}")
 
 
-def rotate_backlog(args: argparse.Namespace) -> None:
-    # Partial rotation: archive every phase that is cleanly archivable right now
-    # (all slices done with a passing review) and leave the rest active, then
-    # rebuild the dashboards. This is the partial sweep archive-all cannot do,
-    # since archive-all refuses unless EVERY active phase is done.
+def _phase_range_label(ids: list) -> str:
+    """`P26`, the en-dash range `P26–P29` when the numbers run consecutively, else `P26, P28, P29`."""
+    if len(ids) == 1:
+        return ids[0]
+    numbers = [int(i[1:]) for i in ids]
+    if all(b - a == 1 for a, b in zip(numbers, numbers[1:])):
+        return f"{ids[0]}\u2013{ids[-1]}"
+    return ", ".join(ids)
+
+
+def _shell_arg(text: str) -> str:
+    """One command argument, copy-pasteable. Double quotes keep the generated name and objective
+    readable (the objective carries `'## Doc impact'`); `shlex.quote` takes over for any text a
+    double-quoted shell word would expand or break on."""
+    if re.search(r'["$`\\!]', text):
+        return shlex.quote(text)
+    return f'"{text}"'
+
+
+# v54 (P33): `rotate-backlog` is the one resumable step of the one-shot /rotate-backlog chain. These
+# are the boundary statuses its mid-flight check reads: a default-stream slice outside the first set,
+# or a phase in the second, is running or waiting on someone, and the docs phase never interleaves.
+ROTATE_BOUNDARY_SLICE_STATUSES = ("todo", "ready", "done")
+ROTATE_MIDFLIGHT_PHASE_STATUSES = ("pending", "blocked", "in_review")
+
+
+def _live_docs_phases(phases: list) -> list:
+    """The docs phases `rotate-backlog` resumes, in phase order: every not-`done` DEFAULT-stream phase
+    whose `consolidates` is non-empty. Keyed on the marker itself, not through the debt it covers, so
+    a docs phase that has already paid every phase it names but has not passed its own review yet
+    still resumes. A docs phase stamped onto a parallel stream is never live here."""
+    return [p for p in stream_phases(phases, None) if p.get("status") != "done" and phase_consolidates(p)]
+
+
+def _midflight(phases: list, live: list) -> list:
+    """`<id>:<status>` for everything on the default stream that is not at a boundary -- a phase that
+    is pending, blocked or in_review, then each of its slices whose status is not todo, ready or
+    done -- in phase order. The live docs phases and their slices are left out (resuming them IS the
+    run, and their own stops end it); parallel streams are never counted."""
+    skip = {p["id"] for p in live}
+    found = []
+    for phase in stream_phases(phases, None):
+        if phase["id"] in skip:
+            continue
+        if phase.get("status") in ROTATE_MIDFLIGHT_PHASE_STATUSES:
+            found.append(f"{phase['id']}:{phase.get('status')}")
+        found.extend(f"{s['id']}:{s.get('status')}" for s in phase["slices"] if s.get("status") not in ROTATE_BOUNDARY_SLICE_STATUSES)
+    return found
+
+
+def _open_orders(phases: list, exclude: str = None) -> list:
+    """The orders of the not-`done` default-stream phases (but `exclude`); a missing order counts as
+    999999, where `phase_dirs` sorts it."""
+    return [p.get("order", 999999) for p in stream_phases(phases, None) if p.get("status") != "done" and p["id"] != exclude]
+
+
+def _queue_jump_order(phases: list, exclude: str = None):
+    """The order that sorts a docs phase ahead of every other not-`done` default-stream phase:
+    `min(their orders) - 1`, `_clean_order`-normalised (0 and negative orders are valid and
+    round-trip; the rounding only trims float noise such as 1.3 - 1), or None when there is no such
+    phase. `next` then selects the docs phase first -- the queue jump is an order, not a new state."""
+    orders = _open_orders(phases, exclude)
+    return _clean_order(round(min(orders) - 1, 6)) if orders else None
+
+
+def _reassert_queue_jump(docs_phase: dict, phases: list):
+    """Re-assert the queue jump on a live docs phase that does not already sort strictly first among
+    the not-`done` default-stream phases (one created before the jump existed carries the default
+    `max + 1`, behind planned work). One `order` write in its phase.json, logged as
+    `phase_reordered`, then a rebuild. Returns `(old, new)` when it wrote, None when it did not."""
+    others = _open_orders(phases, exclude=docs_phase["id"])
+    old = docs_phase.get("order")
+    if not others or docs_phase.get("order", 999999) < min(others):
+        return None
+    new = _queue_jump_order(phases, exclude=docs_phase["id"])
+    pjson = ROOT / docs_phase["path"] / "phase.json"
+    data = read_json(pjson)
+    data["order"] = new
+    write_json(pjson, data)
+    append_event("phase_reordered", phase=docs_phase["id"], old_order=old, new_order=new, reason="rotate-backlog queue jump")
+    rebuild_index_and_state()
+    return old, new
+
+
+def _docs_debt_split(phases: list) -> tuple:
+    """`(covered_by, uncovered)` over the CURRENT active set, from the phases held back ONLY by doc
+    debt (`_debt_only`): `{covering docs phase id: [the debt-only ids it pays]}` -- every not-`done`
+    phase whose `consolidates` names one, whatever its stream -- and the debt-only phases no such
+    docs phase covers yet, sorted by number."""
+    debt_only = [p for p in phases if _debt_only(ROOT / p["path"])]
+    cover = consolidation_cover(phases)
+    covered_by = {}
+    for p in debt_only:
+        for docs_phase in cover.get(p["id"], []):
+            covered_by.setdefault(docs_phase["id"], []).append(p["id"])
+    uncovered = sorted((p for p in debt_only if not cover.get(p["id"])), key=lambda p: int(p["id"][1:]))
+    return covered_by, uncovered
+
+
+def _print_docs_phase_covered(covered_by: dict) -> None:
+    for docs_phase_id, pays in covered_by.items():
+        print(f"docs_phase_covered={docs_phase_id} (pays {', '.join(pays)})")
+
+
+def _print_docs_phase_proposal(uncovered: list, order) -> None:
+    """The one docs phase to create for the uncovered debt-only phases, printed as the block
+    `/rotate-backlog` runs as is: the invocation is the operator's yes (create-phase's docs-phase
+    route), so the `create:` line is the whole command, its `--order` the queue jump (omitted when no
+    other phase is open), written before `--consolidates`. Prints, never writes."""
+    ids = [p["id"] for p in uncovered]
+    docs = sorted(d for d in stale_docs(uncovered) if d != UNASSIGNED_DOC)
+    listing = ", ".join(ids)
+    name = f"Consolidate the doc impact of {_phase_range_label(ids)}"
+    objective = (f"consolidate the '## Doc impact' notes from {listing} into new versions of "
+                 f"{', '.join(docs) if docs else 'the docs their notes name'}")
+    phase_id = next_phase_id()
+    order_arg = f" --order {order}" if order is not None else ""
+    print(f"docs_phase_proposal={listing}")
+    print(f"phase={phase_id}")
+    print(f"name={name}")
+    print(f"objective={objective}")
+    print(f"create: {WORKFLOW_CMD} new-phase --phase {phase_id} --name {_shell_arg(name)} --objective {_shell_arg(objective)}{order_arg} --consolidates {','.join(ids)}")
+    print(f"scope: {WORKFLOW_CMD} docs-debt")
+    print("proposal only: nothing was created -- /rotate-backlog runs the create: line as is (the invocation is the operator's yes; create-phase's docs-phase route)")
+
+
+def _rotate_sweep() -> None:
+    """The archive sweep: archive every phase that is cleanly archivable right now (every slice done,
+    review `pass`, no consolidation owed) and leave the rest active, then rebuild. Whole phases, never
+    forced, archive-phase's manifest -- the partial sweep archive-all cannot do, since archive-all
+    refuses unless EVERY active phase is done. Its output is `--archive-only`'s, verbatim."""
     pdirs = phase_dirs()
     if not pdirs:
         print("no active phases to rotate")
@@ -2907,9 +4873,2521 @@ def rotate_backlog(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     print(f"rotated {len(archived)} done phase(s) to archived:")
     for phase_id, dest in archived:
-        print(f"- {phase_id}: {dest.relative_to(ROOT)}")
+        print(f"- {phase_id}: {shown(dest)}")
     if blocked:
         print(f"left {len(blocked)} phase(s) active: {', '.join(p for p, _ in blocked)}")
+
+
+def rotate_backlog(args: argparse.Namespace) -> None:
+    # v54 (P33): the one resumable step of the one-shot /rotate-backlog chain. The doc debt is
+    # checked FIRST and nothing is archived while it stands; the skill branches on the first stdout
+    # line, `rotate=<branch>`, chosen in this precedence:
+    #   refused         a parallel-stream checkout: writes nothing, exits non-zero.
+    #   archive         nothing owes (no uncovered debt-only phase, no live docs phase): the sweep,
+    #                   then `docs_phase=none`. Archiving interleaves with nothing, so mid-flight work
+    #                   does not hold it.
+    #   stop_midflight  debt stands and default-stream work is off a boundary: writes nothing.
+    #   resume          a live docs phase exists (it beats create: uncovered debt waits for it);
+    #                   re-asserts its queue-jump order, the only write outside the sweep.
+    #   create          the docs-phase proposal, its `create:` line carrying the queue-jump --order;
+    #                   writes nothing -- the skill runs that line as is.
+    # --archive-only is the sweep alone, output unchanged since v51 (no rotate= line, no docs line).
+    if getattr(args, "archive_only", False):
+        _rotate_sweep()
+        return
+    phases = all_active_phases()
+    stream = current_stream(phases)
+    if stream is not None:
+        print(f"rotate=refused stream={stream}")
+        raise SystemExit("rotate-backlog wrote nothing: doc consolidation and archiving run on the default stream only -- run it from the main checkout, not this phase's worktree")
+    live = _live_docs_phases(phases)
+    covered_by, uncovered = _docs_debt_split(phases)
+    if not live and not uncovered:
+        # Nothing owes here. Debt covered with no live docs phase can only be paid by a docs phase
+        # stamped onto another stream -- not this stream's to pay, so it never holds the sweep.
+        print("rotate=archive")
+        _rotate_sweep()
+        for docs_phase_id, pays in covered_by.items():
+            print(f"docs_phase_elsewhere={docs_phase_id} (pays {', '.join(pays)}; on another stream, not resumed here)")
+        print("docs_phase=none")
+        return
+    owing = ", ".join(p["id"] for p in uncovered)
+    midflight = _midflight(phases, live)
+    if midflight:
+        print(f"rotate=stop_midflight midflight={', '.join(midflight)}")
+        print(f"stopped_before=resume docs_phase={live[0]['id']}" if live else f"stopped_before=create owing={owing}")
+        print("nothing was archived, created or reordered: the docs phase never interleaves with running work -- "
+              "re-run rotate-backlog once every listed slice is todo, ready or done and no listed phase is pending, blocked or in_review")
+        return
+    if live:
+        docs_phase = live[0]
+        print(f"rotate=resume docs_phase={docs_phase['id']}")
+        moved = _reassert_queue_jump(docs_phase, phases)
+        if moved:
+            print(f"docs_phase_order={docs_phase['id']} {moved[0]} -> {moved[1]}")
+        _print_docs_phase_covered(covered_by)
+        if uncovered:
+            print(f"docs_debt_waiting={owing} (no docs phase pays it yet; rotate-backlog proposes one once {docs_phase['id']} is done)")
+        return
+    print("rotate=create")
+    _print_docs_phase_covered(covered_by)
+    _print_docs_phase_proposal(uncovered, _queue_jump_order(phases))
+
+
+# ---------------------------------------------------------------------------
+# The design contract, schema 2 (workspace v60; v47 started the contract). A product repo keeps its
+# visual design as plain files under DESIGN_ROOT_REL: a project manifest (design.json, which also
+# records the product's Design System Artifact), and one JOB per `co-work` slice -- jobs/<NN-slug>/
+# with job.json, the job's Design canvas as its publish root's project/ tree (canvas/project/:
+# canvas.json plus one .dc.html per artboard), and the job's rounds (rounds/<NN-slug>/, each
+# snapshotting the tree at close). The orchestrator publishes canvas/ to the job's own canvas Artifact
+# as a plain copy; the engine only prints that plan (design-publish-plan) and never calls claude.ai.
+# The contract is written out in design-cowork/SKILL.md "The design record"; that section and these
+# commands must move together. The commands are the only writers of the machine-readable parts
+# (design.json, job.json, round.json, the close-time snapshots), and `design-check` enforces the
+# rest. Stdlib only. Two legacy records sit beside the live one and the scan never reads them:
+# claude-design/ (the retired claude-design tool's pre-v47 record; `design-migrate` moves it there)
+# and schema1/ (the v47 card record -- numbered cards/, tokens.css, rounds/; `design-migrate --to 2`
+# moves it there). Both moves are moves only, all-or-nothing, never a delete, never git. Schema 2 is
+# the only writable schema: a schema-1 design.json is recognised only to steer it to the migration.
+DESIGN_ROOT_REL = "docs/reference/design"
+# The design root as printed: under the nested repo when nested (`workflow/docs/reference/design`,
+# where the record stays -- private workflow files, never the host's docs/), identical at root.
+DESIGN_ROOT_SHOWN = shown_rel(DESIGN_ROOT_REL)
+# The retired `claude-design` tool's legacy record home, in the pre-v47 layout, never read by the engine.
+DESIGN_LEGACY_DIR = "claude-design"
+# The v47 card record's legacy home after `design-migrate --to 2`, never read by the engine.
+DESIGN_SCHEMA1_DIR = "schema1"
+DESIGN_SCHEMA = 2
+DESIGN_JOB_STATUSES = ("open", "signed", "implemented")
+DESIGN_ROUND_STATUSES = ("open", "signed", "superseded")
+DESIGN_MANIFEST_KEYS = ("schema", "id", "name", "system")
+DESIGN_SYSTEM_KEYS = ("artifact", "namespace", "version", "source", "files")
+DESIGN_JOB_KEYS = ("schema", "job", "slice", "title", "canvas", "status")
+DESIGN_JOB_CANVAS_KEYS = ("url", "version", "published")
+# Optional job.json canvas key (v60): `system`, the system version the last publish installed -- the
+# version the job's canvas.json pinned (designSystems[], the record of design.json's namespace) when
+# design-canvas --version ran, or null when it pinned none. design-publish-plan re-sends the system
+# copies only when that pin has changed since. A job published before v60 has no `system`, and it reads
+# as "the version canvas.json pins now": its first publish already installed the system.
+DESIGN_JOB_CANVAS_OPTIONAL_KEYS = ("system",)
+DESIGN_ROUND_KEYS = ("schema", "round", "title", "slice", "status", "opened_at", "closed_at",
+                     "supersedes", "signoff_words", "canvas_version")
+# Optional round.json keys: `critique`, the round's critique level (design-open --critique). A round
+# written before waves (P36.S5C) has none, and it reads as "off".
+DESIGN_ROUND_OPTIONAL_KEYS = ("critique",)
+DESIGN_CRITIQUE_LEVELS = ("off", "critic", "critic+judge")
+# A wave: one co-work slice holds several jobs (about 3-4), each with its own open round, drafted in
+# parallel. design-open warns past DESIGN_WAVE_OPEN_MAX open rounds in one slice; never a refusal.
+DESIGN_WAVE_OPEN_MAX = 4
+# One job is one surface, sized for one review sitting: design-check warns when an open job's canvas
+# holds more than DESIGN_JOB_PAGES_MAX Pages (boards with expand: "fill") or DESIGN_JOB_BOARDS_MAX boards.
+# A board another board mounts with <dc-import name="..."> (a flow board's screen, a component gap's
+# one-instance board) is reviewed through the board that mounts it, so the board count leaves it out
+# (v60, P36.S8C): the flow-board recipe draws each screen twice, alone and in its flow.
+DESIGN_JOB_PAGES_MAX = 6
+DESIGN_JOB_BOARDS_MAX = 16
+# design-check's static lint on a canvas's boards (warnings, never problems; v60, P36.S8C): a link that
+# leaves the prototype, and a repeated list whose every row links to the same board.
+DESIGN_FONT_CSS = ("https://fonts.googleapis.com/", "https://fonts.gstatic.com/")  # Google Fonts: the one outside href allowed
+DESIGN_HREF_RE = re.compile(r"""\bhref\s*=\s*["']([^"']*)["']""", re.I)
+DESIGN_DC_IMPORT_RE = re.compile(r"""<dc-import\b[^>]*?\bname\s*=\s*["']([^"'{}]+)["']""", re.I)
+DESIGN_SC_FOR_RE = re.compile(r"<(/?)sc-for\b", re.I)
+DESIGN_ROW_LINK_RE = re.compile(r"""<(?:a|x-import|dc-import)\b[^>]*?\bhref\s*=\s*["']([^"'{}]+?\.dc\.html[^"'{}]*)["']""", re.I)
+# The keys the Design canvas type requires of project/canvas.json (its index).
+DESIGN_CANVAS_INDEX_KEYS = ("v", "boards", "order", "createdOnFiles")
+DESIGN_SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
+DESIGN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+DESIGN_SLUG_RE = re.compile(rf"^{DESIGN_SLUG}$")
+DESIGN_NN_RE = re.compile(rf"^(\d{{2,}})-({DESIGN_SLUG})$")  # a job folder or a round folder
+DESIGN_SLICE_RE = re.compile(r"^P\d+\.[A-Z][A-Z0-9]*$")
+# An Artifact address as the Artifact tool takes it: https, claude.ai or claude.com (preview. allowed),
+# /artifact/<id> or /code/artifact/<id>, and nothing after the id (the type's "cut after its id").
+DESIGN_ARTIFACT_RE = re.compile(r"^https://(?:preview\.)?claude\.(?:ai|com)/(?:code/)?artifact/[A-Za-z0-9_-]+$")
+# The type's folder rule for a design system's namespace under project/ds/ (else the page skips it).
+DESIGN_NAMESPACE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+DESIGN_VERSION_RE = re.compile(r"^\S{1,200}$")  # an Artifact version id, e.g. 1791963598-b7da
+# The type's path rule for a canvas file: each segment starts with a letter, digit or _, then only
+# those and . - (no spaces); an artboard's path ends .dc.html and its stem is unique.
+DESIGN_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
+DESIGN_BOARD_SUFFIX = ".dc.html"
+DESIGN_ENTRY_BOARD = "Main.dc.html"
+DESIGN_SUPPORT_LINE = '<script src="./support.js"></script>'  # the type's runtime, served by the canvas
+# Reading order lives in board titles, never in canvas.json `order` (that is z-order, back to front):
+# every board's title starts with its two-digit reading number, "01 · Sign-in".
+DESIGN_TITLE_RE = re.compile(r"^(\d{2,}) · \S")
+DESIGN_REF_RE = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']*)["']|url\(\s*["']?([^"')]+?)["']?\s*\)""", re.I)
+# What a canvas file may reference besides a relative path inside project/ (ds/<ns>/... included): an
+# in-page `#` fragment (inline SVG's url(#id) / <use href="#id"> rely on it), `data:`, an absolute
+# `https:` URL, and the canvas's own uploads at /_blob/<id>. Nothing else: a protocol-relative
+# `//host/x` and plain `http:` are named, an absolute filesystem path or any other scheme is refused,
+# and a relative path that climbs out of project/ with `..` escapes the publish root.
+DESIGN_ALLOWED_REFS = ("#", "data:", "https://", "/_blob/")
+DESIGN_REF_WHY = (("//", "protocol-relative: it does not resolve inside the canvas"),
+                  ("http://", "plain http, not https"))
+DESIGN_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+
+
+def design_root() -> Path:
+    return ROOT / DESIGN_ROOT_REL
+
+
+def design_legacy_record(root: Path) -> list:
+    """The pre-v47 (Claude Design) record's parts in a design root: rounds/<name>/ folders without a
+    round.json, the root SIGNOFF.md and grounding/ -- design-migrate's own rule for a root that has a
+    design.json, so the hints, design-init's refusal and the migration cannot disagree. Empty for a
+    root with no design.json whose rounds/ holds a schema-1 round: design-migrate refuses that root
+    until design-init restores the manifest, so the steer to design-migrate must stay out of its way."""
+    rounds_dir = root / "rounds"
+    entries = sorted(rounds_dir.iterdir()) if rounds_dir.is_dir() else []
+    if not (root / "design.json").exists() and any((e / "round.json").exists() for e in entries):
+        return []
+    parts = [e for e in entries if not e.name.startswith(".") and e.is_dir() and not (e / "round.json").exists()]
+    return parts + [root / name for name in ("SIGNOFF.md", "grounding") if os.path.lexists(root / name)]
+
+
+def design_legacy_hint(root: Path) -> str:
+    """One line steering a root that holds a pre-v47 record to design-migrate (ahead of design-init),
+    or "" when it holds none."""
+    if not design_legacy_record(root):
+        return ""
+    then = "" if (root / "design.json").exists() else ", then design-init if this repo will use the drafter"
+    return f"pre-v47 record: run {WORKFLOW_CMD} design-migrate (dry run first){then}"
+
+
+def design_schema1_hint() -> str:
+    """The steer for an unmigrated schema-1 (v47 card) record, the same pattern as design_legacy_hint."""
+    return (f"schema-1 record (numbered cards): run {WORKFLOW_CMD} design-migrate --to 2 (dry run first), "
+            f"which moves cards/, tokens.css and rounds/ into {DESIGN_SCHEMA1_DIR}/ and rewrites design.json to schema {DESIGN_SCHEMA}")
+
+
+def design_is_schema(data, number: int) -> bool:
+    return isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == number
+
+
+def design_number(text: str):
+    """The integer behind a canonical NN prefix (01, 42, 100), or None for 0, 1-digit or extra zeros."""
+    number = int(text)
+    return number if number >= 1 and f"{number:02d}" == text else None
+
+
+def design_artifact_problem(url) -> str:
+    """"" for an Artifact address the Artifact tool takes, else why not."""
+    if isinstance(url, str) and DESIGN_ARTIFACT_RE.match(url):
+        return ""
+    return (f"{url!r} is not an Artifact address (https://claude.ai/artifact/<id> or https://claude.ai/code/artifact/<id>; "
+            "claude.ai or claude.com, preview. allowed; nothing after the id)")
+
+
+def design_path_ok(rel) -> bool:
+    """A relative canvas path whose every segment follows the type's rule (no `.`/`..`, no spaces)."""
+    return isinstance(rel, str) and bool(rel) and all(DESIGN_SEGMENT_RE.match(part) for part in rel.split("/"))
+
+
+def design_null_system() -> dict:
+    return {key: ([] if key == "files" else None) for key in DESIGN_SYSTEM_KEYS}
+
+
+def design_system_problems(system) -> list:
+    if not isinstance(system, dict):
+        return [f"design.json: system must be an object ({', '.join(DESIGN_SYSTEM_KEYS)})"]
+    missing = [k for k in DESIGN_SYSTEM_KEYS if k not in system]
+    extra = sorted(set(system) - set(DESIGN_SYSTEM_KEYS))
+    problems = []
+    if missing:
+        problems.append(f"design.json: system is missing field(s) {', '.join(missing)}")
+    if extra:
+        problems.append(f"design.json: system has unknown field(s) {', '.join(extra)} (schema {DESIGN_SCHEMA} is closed)")
+    if missing:
+        return problems
+    artifact, namespace, version, source, files = (system[k] for k in DESIGN_SYSTEM_KEYS)
+    if artifact is not None and design_artifact_problem(artifact):
+        problems.append(f"design.json: system.artifact {design_artifact_problem(artifact)}")
+    if namespace is not None and not (isinstance(namespace, str) and DESIGN_NAMESPACE_RE.match(namespace)):
+        problems.append(f"design.json: system.namespace {namespace!r} does not fit [a-z0-9][a-z0-9_-]{{0,63}}")
+    if version is not None and not (isinstance(version, str) and DESIGN_VERSION_RE.match(version)):
+        problems.append(f"design.json: system.version {version!r} is not a version id (non-empty, no spaces)")
+    if source is not None and not (isinstance(source, str) and source.strip()):
+        problems.append("design.json: system.source is null or a non-empty string")
+    if len({artifact is None, namespace is None, version is None}) != 1:
+        problems.append("design.json: system.artifact, namespace and version are set together (design-system) or all null")
+    if not (isinstance(files, list) and all(design_path_ok(f) for f in files)):
+        problems.append("design.json: system.files must be a list of paths relative to the system's project/ (e.g. tokens.css, components/bundle.js)")
+    elif len(set(files)) != len(files):
+        problems.append("design.json: system.files lists a path twice")
+    elif files and artifact is None:
+        problems.append("design.json: system.files names the files of a system that is not set")
+    return problems
+
+
+def design_manifest_problems(data) -> list:
+    if not isinstance(data, dict):
+        return ["design.json is not a JSON object"]
+    problems = []
+    missing = [k for k in DESIGN_MANIFEST_KEYS if k not in data]
+    extra = sorted(set(data) - set(DESIGN_MANIFEST_KEYS))
+    if missing:
+        problems.append(f"design.json: missing field(s) {', '.join(missing)}")
+    if extra:
+        problems.append(f"design.json: unknown field(s) {', '.join(extra)} (schema {DESIGN_SCHEMA} is closed)")
+    if "schema" in data and not design_is_schema(data, DESIGN_SCHEMA):
+        problems.append(f"design.json: schema {data['schema']!r} is not {DESIGN_SCHEMA}")
+    if "id" in data and not (isinstance(data["id"], str) and DESIGN_ID_RE.match(data["id"])):
+        problems.append(f"design.json: id {data['id']!r} is not lowercase [a-z0-9-], starting alphanumeric, at most 63 characters")
+    if "name" in data and not (isinstance(data["name"], str) and data["name"].strip()):
+        problems.append("design.json: name must be a non-empty string")
+    if "system" in data:
+        problems.extend(design_system_problems(data["system"]))
+    return problems
+
+
+def design_job_problems(jid: str, data) -> list:
+    """Problems with one job's job.json, read as `data`."""
+    if not isinstance(data, dict):
+        return ["job.json is not a JSON object"]
+    missing = [k for k in DESIGN_JOB_KEYS if k not in data]
+    extra = sorted(set(data) - set(DESIGN_JOB_KEYS))
+    problems = []
+    if missing:
+        problems.append(f"job.json: missing field(s) {', '.join(missing)}")
+    if extra:
+        problems.append(f"job.json: unknown field(s) {', '.join(extra)} (schema {DESIGN_SCHEMA} is closed)")
+    if missing:
+        return problems
+    if not design_is_schema(data, DESIGN_SCHEMA):
+        problems.append(f"job.json: schema {data['schema']!r} is not {DESIGN_SCHEMA}")
+    if data["job"] != jid:
+        problems.append(f"job.json: job {data['job']!r} does not match its folder name")
+    if not (isinstance(data["slice"], str) and DESIGN_SLICE_RE.match(data["slice"])):
+        problems.append(f"job.json: slice {data['slice']!r} is not a slice id (P<N>.<ID>)")
+    if not (isinstance(data["title"], str) and data["title"].strip()):
+        problems.append("job.json: title must be a non-empty string")
+    if data["status"] not in DESIGN_JOB_STATUSES:
+        problems.append(f"job.json: status {data['status']!r} is not one of {', '.join(DESIGN_JOB_STATUSES)}")
+    canvas = data["canvas"]
+    if not (isinstance(canvas, dict) and set(DESIGN_JOB_CANVAS_KEYS) <= set(canvas)
+            <= set(DESIGN_JOB_CANVAS_KEYS + DESIGN_JOB_CANVAS_OPTIONAL_KEYS)):
+        problems.append(f"job.json: canvas must be an object with exactly {', '.join(DESIGN_JOB_CANVAS_KEYS)}"
+                        f" (plus optionally {', '.join(DESIGN_JOB_CANVAS_OPTIONAL_KEYS)})")
+        return problems
+    if canvas.get("system") is not None and not (isinstance(canvas["system"], str) and DESIGN_VERSION_RE.match(canvas["system"])):
+        problems.append(f"job.json: canvas.system {canvas['system']!r} is not a version id (non-empty, no spaces) or null")
+    if canvas["url"] is not None and design_artifact_problem(canvas["url"]):
+        problems.append(f"job.json: canvas.url {design_artifact_problem(canvas['url'])}")
+    if canvas["version"] is not None and not (isinstance(canvas["version"], str) and DESIGN_VERSION_RE.match(canvas["version"])):
+        problems.append(f"job.json: canvas.version {canvas['version']!r} is not a version id (non-empty, no spaces)")
+    if canvas["version"] is not None and canvas["url"] is None:
+        problems.append("job.json: canvas.version is recorded but canvas.url is null")
+    published = canvas["published"]
+    if not (isinstance(published, list) and all(isinstance(p, str) and p.startswith("project/") and design_path_ok(p) for p in published)):
+        problems.append("job.json: canvas.published must be a list of project/<path> canvas paths")
+    return problems
+
+
+def design_round_problems(rid: str, data, rdir: Path) -> list:
+    """Problems with one round folder, its round.json read as `data`."""
+    if not isinstance(data, dict):
+        return ["round.json is not a JSON object"]
+    missing = [k for k in DESIGN_ROUND_KEYS if k not in data]
+    extra = sorted(set(data) - set(DESIGN_ROUND_KEYS) - set(DESIGN_ROUND_OPTIONAL_KEYS))
+    problems = []
+    if missing:
+        problems.append(f"round.json: missing field(s) {', '.join(missing)}")
+    if extra:
+        problems.append(f"round.json: unknown field(s) {', '.join(extra)} (schema {DESIGN_SCHEMA} is closed)")
+    if missing:
+        return problems
+    status = data["status"]
+    if not design_is_schema(data, DESIGN_SCHEMA):
+        problems.append(f"round.json: schema {data['schema']!r} is not {DESIGN_SCHEMA}")
+    if data["round"] != rid:
+        problems.append(f"round.json: round {data['round']!r} does not match its folder name")
+    if not (isinstance(data["title"], str) and data["title"].strip()):
+        problems.append("round.json: title must be a non-empty string")
+    if not (isinstance(data["slice"], str) and DESIGN_SLICE_RE.match(data["slice"])):
+        problems.append(f"round.json: slice {data['slice']!r} is not a slice id (P<N>.<ID>)")
+    if status not in DESIGN_ROUND_STATUSES:
+        problems.append(f"round.json: status {status!r} is not one of {', '.join(DESIGN_ROUND_STATUSES)}")
+    if not (isinstance(data["opened_at"], str) and data["opened_at"]):
+        problems.append("round.json: opened_at must be an ISO-8601 string")
+    closed = status in ("signed", "superseded")
+    if closed and not (isinstance(data["closed_at"], str) and data["closed_at"]):
+        problems.append(f"round.json: a {status} round needs closed_at")
+    if status == "open" and data["closed_at"] is not None:
+        problems.append("round.json: an open round has closed_at null")
+    words = data["signoff_words"]
+    if status == "signed" and not (isinstance(words, str) and words.strip()):
+        problems.append("round.json: a signed round records the operator's literal signoff_words")
+    if status != "signed" and words is not None:
+        problems.append("round.json: signoff_words is null unless the round is signed")
+    version = data["canvas_version"]
+    if version is not None and not (isinstance(version, str) and DESIGN_VERSION_RE.match(version)):
+        problems.append(f"round.json: canvas_version {version!r} is not a version id (non-empty, no spaces)")
+    if status == "open" and version is not None:
+        problems.append("round.json: an open round has canvas_version null (design-close records it)")
+    sup = data["supersedes"]
+    if not (isinstance(sup, list) and all(isinstance(s, str) and DESIGN_NN_RE.match(s) for s in sup)):
+        problems.append("round.json: supersedes must be a list of round ids (NN-slug)")
+    if "critique" in data and data["critique"] not in DESIGN_CRITIQUE_LEVELS:
+        problems.append(f"round.json: critique {data['critique']!r} is not one of {', '.join(DESIGN_CRITIQUE_LEVELS)} (absent reads as off)")
+    if not (rdir / "handoff.md").exists():
+        problems.append("handoff.md missing (every round has its brief)")
+    if status == "signed" and not (rdir / "SIGNOFF.md").exists():
+        problems.append("SIGNOFF.md missing (a signed round records the operator's literal words)")
+    if status == "signed" and not (rdir / "canvas" / "project" / "canvas.json").is_file():
+        problems.append("snapshot canvas/project/canvas.json missing (a signed round keeps the canvas tree as it was at close)")
+    return problems
+
+
+def design_tree_files(project: Path) -> list:
+    """Every file of a canvas tree as a path under project/, sorted: ds/ (the design system the
+    publish installs server-side, or a local preview's copy of it) and dot-entries left out."""
+    if not project.is_dir():
+        return []
+    files = []
+    for path in project.rglob("*"):
+        parts = path.relative_to(project).parts
+        if parts[0] == "ds" or any(part.startswith(".") for part in parts) or not path.is_file():
+            continue
+        files.append("/".join(parts))
+    return sorted(files)
+
+
+def design_reference_problems(text: str, rel: str) -> list:
+    """A canvas file's src/href/url() references stay inside project/ (ds/<ns>/... included)."""
+    base = posixpath.dirname(rel)
+    problems = set()
+    for first, second in DESIGN_REF_RE.findall(text):
+        ref = (first or second).strip()
+        low = ref.lower()
+        if not ref or "{{" in ref or low.startswith(DESIGN_ALLOWED_REFS):  # {{hole}}: filled at render
+            continue
+        why = next((text for prefix, text in DESIGN_REF_WHY if low.startswith(prefix)), "")
+        if not why:
+            if ref.startswith(("/", "\\")):
+                why = "an absolute path: only the canvas's /_blob/<id> uploads are absolute"
+            elif DESIGN_SCHEME_RE.match(ref):
+                why = "a scheme other than https: or data:"
+            else:
+                path = re.split(r"[?#]", ref, maxsplit=1)[0]
+                resolved = posixpath.normpath(posixpath.join(base, path)) if path else "."
+                if resolved != ".." and not resolved.startswith("../"):
+                    continue
+                why = "`..` climbs out of project/"
+        problems.add(f"references {ref!r} ({why}): only a relative path inside project/ (ds/<ns>/… included), "
+                     "an in-page `#` fragment, `data:`, an https URL or /_blob/<id> may be referenced")
+    return sorted(problems)
+
+
+def design_sc_for_bodies(text: str) -> list:
+    """The bodies of the outermost <sc-for> loops of a board (nested loops stay inside their parent's)."""
+    bodies, depth, start = [], 0, 0
+    for match in DESIGN_SC_FOR_RE.finditer(text):
+        if match.group(1):
+            if depth:
+                depth -= 1
+                if not depth:
+                    bodies.append(text[start:match.start()])
+        else:
+            if not depth:
+                start = match.end()
+            depth += 1
+    if depth:
+        bodies.append(text[start:])
+    return bodies
+
+
+def design_board_lint(text: str, rel: str) -> list:
+    """The static lint of one board, as design-check warnings: leaves-canvas (an https href other than
+    Google Fonts CSS: Play would leave the prototype) and same-target-list (a link with a literal
+    .dc.html target inside a <sc-for>: every row opens the same board, which cannot know the row)."""
+    found = []
+    outside = sorted({ref for ref in (m.group(1).strip() for m in DESIGN_HREF_RE.finditer(text))
+                      if ref.lower().startswith("https://") and "{{" not in ref and not ref.lower().startswith(DESIGN_FONT_CSS)})
+    if outside:
+        count = sum(1 for m in DESIGN_HREF_RE.finditer(text) if m.group(1).strip() in outside)
+        found.append(f"{rel}: {count} link(s) leave the prototype (check=leaves-canvas): {', '.join(outside[:4])}"
+                     + (f" (+{len(outside) - 4} more)" if len(outside) > 4 else "")
+                     + " -- point each at a board or an in-canvas state, or leave it out")
+    targets = sorted({m.group(1) for body in design_sc_for_bodies(text) for m in DESIGN_ROW_LINK_RE.finditer(body)})
+    for target in targets:
+        found.append(f"{rel}: every row of a <sc-for> list links to {target} (check=same-target-list) -- a linked board "
+                     "cannot know which row was clicked; carry the item in a flow board's state")
+    return found
+
+
+def design_canvas_problems(project: Path, system: dict) -> tuple:
+    """(problems, warnings, board count, Page count, lint, mounted count) for one job's canvas tree,
+    each path under project/. A Page is a board with expand: "fill". lint is the static board lint
+    (design_board_lint); mounted counts the boards another board <dc-import>s."""
+    files = design_tree_files(project)
+    if "canvas.json" not in files:
+        return ["canvas.json missing (the canvas index: v, boards, order, createdOnFiles)"], [], 0, 0, [], 0
+    try:
+        index = read_json(project / "canvas.json")
+    except (ValueError, OSError) as exc:
+        return [f"canvas.json is not valid JSON: {exc}"], [], 0, 0, [], 0
+    if not isinstance(index, dict):
+        return ["canvas.json is not a JSON object"], [], 0, 0, [], 0
+    problems, warnings = [], []
+    missing = [k for k in DESIGN_CANVAS_INDEX_KEYS if k not in index]
+    if missing:
+        problems.append(f"canvas.json: missing field(s) {', '.join(missing)} (the type requires {', '.join(DESIGN_CANVAS_INDEX_KEYS)})")
+    boards, order = index.get("boards", {}), index.get("order", [])
+    if not isinstance(boards, dict):
+        problems.append("canvas.json: boards must be an object keyed by each artboard's path under project/")
+        boards = {}
+    if not (isinstance(order, list) and all(isinstance(o, str) for o in order)):
+        problems.append("canvas.json: order must be a list of board paths (z-order, back to front)")
+        order = []
+    present = [f for f in files if f.endswith(DESIGN_BOARD_SUFFIX)]
+    stems: dict = {}
+    for rel in files:
+        if not design_path_ok(rel):
+            problems.append(f"{rel}: a path segment breaks the type's rule (start with a letter, digit or _, then only those and . -; no spaces)")
+    for rel in present:
+        stem = rel.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)]
+        if stem in stems:
+            problems.append(f"{rel}: stem {stem!r} is also {stems[stem]}'s (stems are unique)")
+        else:
+            stems[stem] = rel
+        if rel not in boards:
+            problems.append(f"{rel}: not listed in canvas.json boards (every .dc.html outside ds/ is a board)")
+        if rel not in order:
+            problems.append(f"{rel}: not listed in canvas.json order")
+    for key in boards:
+        if not key.endswith(DESIGN_BOARD_SUFFIX):
+            problems.append(f"canvas.json: board {key!r} does not end {DESIGN_BOARD_SUFFIX}")
+        elif key.split("/", 1)[0] == "ds":
+            problems.append(f"canvas.json: board {key!r} is under ds/, which only the system install writes")
+        elif key not in present:
+            problems.append(f"canvas.json: board {key!r} is listed but its file is missing")
+    for key in sorted(set(order) - set(boards)):
+        problems.append(f"canvas.json: order lists {key!r}, which is not a board")
+    if len(set(order)) != len(order):
+        problems.append("canvas.json: order lists a board twice")
+    if DESIGN_ENTRY_BOARD not in present:
+        problems.append(f"{DESIGN_ENTRY_BOARD} missing (the canvas's entry artboard)")
+    # Reading order: the titles' NN form 01..N as a set (the layout is free; the numbers are not).
+    numbers: dict = {}
+    for key, board in boards.items():
+        title = board.get("title") if isinstance(board, dict) else None
+        match = DESIGN_TITLE_RE.match(title) if isinstance(title, str) else None
+        number = design_number(match.group(1)) if match else None
+        if not isinstance(board, dict):
+            problems.append(f"canvas.json: board {key!r} is not an object (x, y, w, h, title, …)")
+        elif number is None:
+            problems.append(f"canvas.json: board {key!r} title {title!r} does not start with its reading number \"NN · \" (01 · …)")
+        elif number in numbers:
+            problems.append(f"canvas.json: board {key!r} repeats reading number {number:02d} (also {numbers[number]!r})")
+        else:
+            numbers[number] = key
+    problems.extend(f"gap in the board titles' reading numbers: no board titled \"{n:02d} · …\""
+                    for n in range(1, max(numbers, default=0) + 1) if n not in numbers)
+    lint, mounts = [], set()
+    for rel in files:
+        if not rel.lower().endswith((".html", ".htm", ".css")):
+            continue
+        text = (project / rel).read_bytes().decode("utf-8", errors="replace")
+        if rel.endswith(DESIGN_BOARD_SUFFIX) and not any(line.strip() == DESIGN_SUPPORT_LINE for line in text.splitlines()):
+            problems.append(f"{rel}: missing the exact line {DESIGN_SUPPORT_LINE} (the type's runtime)")
+        problems.extend(f"{rel}: {p}" for p in design_reference_problems(text, rel))
+        if rel.endswith(DESIGN_BOARD_SUFFIX):
+            lint.extend(design_board_lint(text, rel))
+            stem = rel.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)]
+            mounts.update(name.strip() for name in DESIGN_DC_IMPORT_RE.findall(text) if name.strip() != stem)
+    records = index.get("designSystems", [])
+    if not isinstance(records, list):
+        problems.append("canvas.json: designSystems must be a list of install records")
+    elif system.get("version"):
+        for rec in records:
+            pinned = rec.get("version") if isinstance(rec, dict) else None
+            if pinned != system["version"]:
+                name = rec.get("namespace") if isinstance(rec, dict) else rec
+                warnings.append(f"canvas.json: designSystems {name!r} pins version {pinned!r}, but design.json's system is "
+                                f"{system['version']!r} (reinstall when the round changes the look)")
+    pages = sum(1 for board in boards.values() if isinstance(board, dict) and board.get("expand") == "fill")
+    mounted = sum(1 for key in boards if key.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)] in mounts)
+    return problems, warnings, len(boards), pages, lint, mounted
+
+
+def design_read_job(entry: Path, number: int, system: dict) -> dict:
+    """One job folder: job.json, its rounds and its canvas tree, each with its own problems."""
+    rel = f"jobs/{entry.name}"
+    job = {"id": entry.name, "number": number, "path": entry, "data": None, "rounds": [],
+           "problems": [], "warnings": [], "lint": [], "boards": 0, "pages": 0, "drafted": False}
+    problems = job["problems"]
+    jpath = entry / "job.json"
+    if not jpath.is_file():
+        problems.append(f"{rel}: job.json missing")
+    else:
+        try:
+            data = read_json(jpath)
+        except (ValueError, OSError) as exc:
+            problems.append(f"{rel}: job.json is not valid JSON: {exc}")
+        else:
+            found = design_job_problems(entry.name, data)
+            problems.extend(f"{rel}: {p}" for p in found)
+            if not found:
+                job["data"] = data
+    rnumbers: dict = {}
+    rounds_dir = entry / "rounds"
+    for rentry in sorted(rounds_dir.iterdir()) if rounds_dir.is_dir() else []:
+        if rentry.name.startswith("."):
+            continue
+        rrel = f"{rel}/rounds/{rentry.name}"
+        match = DESIGN_NN_RE.match(rentry.name)
+        rnumber = design_number(match.group(1)) if match else None
+        if not rentry.is_dir() or rnumber is None:
+            problems.append(f"{rrel}: not a round folder (a job's rounds/ holds NN-slug/ folders only)")
+            continue
+        if rnumber in rnumbers:
+            problems.append(f"{rrel}: duplicate round number {rnumber:02d} (also {rnumbers[rnumber]})")
+            continue
+        rnumbers[rnumber] = rrel
+        rnd = {"number": rnumber, "id": rentry.name, "path": rentry, "data": None}
+        rpath = rentry / "round.json"
+        if not rpath.is_file():
+            problems.append(f"{rrel}: round.json missing")
+        else:
+            try:
+                rdata = read_json(rpath)
+            except (ValueError, OSError) as exc:
+                problems.append(f"{rrel}: round.json is not valid JSON: {exc}")
+            else:
+                found = design_round_problems(rentry.name, rdata, rentry)
+                problems.extend(f"{rrel}: {p}" for p in found)
+                if not any(p.startswith("round.json:") for p in found):
+                    rnd["data"] = rdata
+                    if job["data"] and rdata["slice"] != job["data"]["slice"]:
+                        problems.append(f"{rrel}: round.json slice {rdata['slice']!r} is not its job's ({job['data']['slice']})")
+        job["rounds"].append(rnd)
+    problems.extend(f"{rel}: gap in the round numbering: no round numbered {n:02d}"
+                    for n in range(1, max(rnumbers, default=0) + 1) if n not in rnumbers)
+    known = {r["id"]: r["number"] for r in job["rounds"]}
+    for rnd in job["rounds"]:
+        for sid in (rnd["data"] or {}).get("supersedes", []):
+            if known.get(sid, rnd["number"]) >= rnd["number"]:
+                problems.append(f"{rel}/rounds/{rnd['id']}: supersedes {sid!r}, which is not an earlier round of this job")
+    opened = [r["id"] for r in job["rounds"] if r["data"] and r["data"]["status"] == "open"]
+    if len(opened) > 1:  # several jobs may be open at once (a wave), but one job has one open round
+        problems.append(f"{rel}: more than one open round: {', '.join(opened)} (at most one round is open per job)")
+    if job["data"] and job["data"]["status"] != "open" and opened:
+        problems.append(f"{rel}: job.json status is {job['data']['status']} but a round is open (an open round belongs to an open job)")
+    project = entry / "canvas" / "project"
+    if project.is_dir():
+        job["drafted"] = True
+        found, warned, job["boards"], job["pages"], lint, mounted = design_canvas_problems(project, system)
+        problems.extend(f"{rel}/canvas/project/{p}" if not p.startswith("gap ") else f"{rel}: {p}" for p in found)
+        job["warnings"].extend(f"{rel}/canvas/project/{w}" for w in warned)
+        job["lint"] = [f"{rel}/canvas/project/{w}" for w in lint]
+        counted = job["boards"] - mounted  # a board another board mounts is reviewed through it
+        if (job["data"] or {}).get("status") == "open" and (job["pages"] > DESIGN_JOB_PAGES_MAX or counted > DESIGN_JOB_BOARDS_MAX):
+            more = f" (+{mounted} mounted by another board, not counted)" if mounted else ""
+            job["warnings"].append(f"job {entry.name} has {job['pages']} Pages / {counted} boards{more} — too big for one review; "
+                                   "split it into jobs by surface")
+    elif job["data"] and job["data"]["status"] != "open":
+        problems.append(f"{rel}: a {job['data']['status']} job has no canvas tree (canvas/project/)")
+    return job
+
+
+def design_scan(root: Path, only: str = None) -> dict:
+    """Read the whole design root once: the manifest, the jobs with their rounds and canvas trees, and
+    every problem and warning -- or, with `only` (a job id), the manifest's and that job's alone."""
+    problems: list = []
+    warnings: list = []
+    scan = {"manifest": None, "schema1": False, "jobs": [], "problems": problems, "warnings": warnings}
+    if not root.is_dir():
+        problems.append(f"no design root at {DESIGN_ROOT_SHOWN}/ (run: {WORKFLOW_CMD} design-init)")
+        return scan
+    mpath = root / "design.json"
+    hint = design_legacy_hint(root)  # said once, on the first legacy-related problem
+    if not mpath.exists():
+        problems.append(f"design.json missing; {hint}" if hint else f"design.json missing (run: {WORKFLOW_CMD} design-init)")
+        hint = ""
+    else:
+        try:
+            manifest = read_json(mpath)
+        except (ValueError, OSError) as exc:
+            problems.append(f"design.json is not valid JSON: {exc}")
+        else:
+            if design_is_schema(manifest, 1):  # recognised only to steer it to the migration
+                scan["schema1"] = True
+                problems.append(f"design.json is schema 1; {design_schema1_hint()}")
+                return scan
+            found = design_manifest_problems(manifest)
+            problems.extend(found)
+            if not found:
+                scan["manifest"] = manifest
+    system = (scan["manifest"] or {}).get("system") or {}
+    jobs_dir = root / "jobs"
+    jnumbers: dict = {}
+    loose: list = []
+    for entry in sorted(jobs_dir.iterdir()) if jobs_dir.is_dir() else []:
+        if entry.name.startswith("."):
+            continue
+        match = DESIGN_NN_RE.match(entry.name)
+        number = design_number(match.group(1)) if match else None
+        if not entry.is_dir() or number is None:
+            loose.append(f"jobs/{entry.name}: not a job folder (jobs/ holds NN-slug/ folders only)")
+            continue
+        if number in jnumbers:
+            loose.append(f"jobs/{entry.name}: duplicate job number {number:02d} (also {jnumbers[number]})")
+            continue
+        jnumbers[number] = f"jobs/{entry.name}"
+        scan["jobs"].append(design_read_job(entry, number, system))
+    # The board lint is said for an open job, or for any job named by id: a signed canvas is history, and
+    # the all-jobs check would repeat its lines forever.
+    if only is not None:
+        job = next((j for j in scan["jobs"] if j["id"] == only), None)
+        if job is None:
+            problems.append(f"no job {only!r} under {DESIGN_ROOT_SHOWN}/jobs/")
+        else:
+            problems.extend(job["problems"])
+            warnings.extend(job["warnings"] + job["lint"])
+        return scan
+    problems.extend(loose)
+    for job in scan["jobs"]:
+        problems.extend(job["problems"])
+        warnings.extend(job["warnings"] + (job["lint"] if (job["data"] or {}).get("status") == "open" else []))
+    problems.extend(f"gap in the job numbering: no job numbered {n:02d}"
+                    for n in range(1, max(jnumbers, default=0) + 1) if n not in jnumbers)
+    # A co-work slice may hold several jobs (a wave), each with at most one open round (design_read_job).
+    # Parts that are not schema 2: a pre-v47 record, and a schema-1 record left outside schema1/.
+    if hint:
+        problems.append(f"pre-v47 parts at the root; {hint}")
+    leftovers = [name for name in ("cards", "tokens.css") if os.path.lexists(root / name)]
+    rounds_dir = root / "rounds"
+    if rounds_dir.is_dir() and any((e / "round.json").exists() for e in rounds_dir.iterdir()):
+        leftovers.append("rounds")
+    problems.extend(f"{name}: a schema-1 part outside {DESIGN_SCHEMA1_DIR}/ (schema {DESIGN_SCHEMA} keeps no card library, "
+                    f"root tokens or root rounds; move it into {DESIGN_SCHEMA1_DIR}/ by hand)" for name in leftovers)
+    for page in sorted(root.rglob("*.htm*")):
+        parts = page.relative_to(root).parts
+        if parts[0] in (DESIGN_LEGACY_DIR, DESIGN_SCHEMA1_DIR):  # legacy records, whatever they hold
+            continue
+        if any(part.startswith(".") for part in parts) or page.suffix.lower() not in (".html", ".htm"):
+            continue
+        if parts[0] == "jobs" and len(parts) >= 5 and parts[2:4] == ("canvas", "project"):
+            continue
+        if parts[0] == "jobs" and len(parts) >= 7 and parts[2] == "rounds" and parts[4:6] == ("canvas", "project"):
+            continue
+        problems.append(f"{'/'.join(parts)}: HTML outside a job's canvas tree -- a stray page (artboards live in jobs/<job>/canvas/project/)")
+    return scan
+
+
+def design_open_rounds(scan: dict) -> list:
+    return [(job, rnd) for job in scan["jobs"] for rnd in job["rounds"] if rnd["data"] and rnd["data"]["status"] == "open"]
+
+
+def design_address(job: dict, rnd: dict) -> str:
+    """A round's unambiguous address: <job>/<round> (rounds number inside their job)."""
+    return f"{job['id']}/{rnd['id']}"
+
+
+def design_check(args: argparse.Namespace) -> int:
+    scan = design_scan(design_root(), args.job)
+    problems, warnings = scan["problems"], scan["warnings"]
+    where = f"{DESIGN_ROOT_SHOWN}/" + (f"jobs/{args.job}/" if args.job else "")
+    for warning in warnings:
+        print(f"design-check: warning: {warning}")
+    if problems:
+        print(f"design-check: {len(problems)} problem(s) in {where}")
+        for problem in problems:
+            print(f"- {problem}")
+        return 1
+    jobs = [j for j in scan["jobs"] if args.job is None or j["id"] == args.job]
+    opened = [design_address(j, r) for j, r in design_open_rounds(scan) if j in jobs]
+    print(f"design-check: OK -- {len(jobs)} job(s), {sum(len(j['rounds']) for j in jobs)} round(s), "
+          f"{sum(j['boards'] for j in jobs)} board(s), open rounds: {', '.join(opened) if opened else 'none'}"
+          + (f", {len(warnings)} warning(s)" if warnings else ""))
+    return 0
+
+
+def design_write_bytes(path: Path, data: bytes) -> None:
+    """Atomic like write_text, and keeps the file's permission bits (mkstemp would leave 0600)."""
+    mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp_", suffix=path.name)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        if mode is not None:
+            os.chmod(tmp, mode)
+        os.replace(tmp, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def design_require(scan: dict, what: str) -> None:
+    if scan["problems"]:
+        lines = "\n".join(f"- {p}" for p in scan["problems"])
+        raise SystemExit(f"{what}: refused -- design-check finds {len(scan['problems'])} problem(s):\n{lines}")
+
+
+def design_require_manifest(scan: dict, root: Path, what: str) -> None:
+    """Schema 2 is the only writable schema: a schema-1 root is steered to design-migrate --to 2, a
+    root with no valid manifest to design-migrate (pre-v47) or design-init."""
+    if scan["schema1"]:
+        raise SystemExit(f"{what}: refused -- {DESIGN_ROOT_SHOWN}/design.json is schema 1; {design_schema1_hint()}")
+    if scan["manifest"] is None:
+        hint = design_legacy_hint(root)
+        raise SystemExit(f"{what}: refused -- no valid {DESIGN_ROOT_SHOWN}/design.json; {hint}" if hint else
+                         f"{what}: refused -- no valid {DESIGN_ROOT_SHOWN}/design.json (run: {WORKFLOW_CMD} design-init)")
+
+
+def design_find_job(scan: dict, jid: str, what: str) -> dict:
+    job = next((j for j in scan["jobs"] if j["id"] == jid), None)
+    if job is None:
+        raise SystemExit(f"{what}: no job {jid!r} under {DESIGN_ROOT_SHOWN}/jobs/")
+    if job["data"] is None:
+        raise SystemExit(f"{what}: refused -- jobs/{jid}/job.json is not well-formed (run design-check {jid})")
+    return job
+
+
+def design_init(args: argparse.Namespace) -> None:
+    root = design_root()
+    mpath = root / "design.json"
+    rel = f"{DESIGN_ROOT_SHOWN}/design.json"
+    if not mpath.exists() and design_legacy_hint(root):  # a refusal only: nothing moves, nothing is written
+        raise SystemExit(f"design-init: refused -- {design_legacy_hint(root)}")
+    if mpath.exists():
+        try:
+            current = read_json(mpath)
+        except (ValueError, OSError) as exc:
+            raise SystemExit(f"design-init: {rel} is not valid JSON ({exc}); fix it by hand")
+        if design_is_schema(current, 1):
+            raise SystemExit(f"design-init: refused -- {rel} is schema 1; {design_schema1_hint()}")
+        wanted = dict(current)
+    else:
+        current = None
+        repo = HOST_ROOT or ROOT  # nested: the project is the host, not the `workflow` folder
+        default_id = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-")[:63].strip("-") or "design"
+        wanted = {"schema": DESIGN_SCHEMA, "id": default_id, "name": repo.name, "system": design_null_system()}
+    if args.id:
+        wanted["id"] = args.id
+    if args.name:
+        wanted["name"] = args.name
+    problems = design_manifest_problems(wanted)
+    if problems:
+        raise SystemExit("design-init: refused -- " + "; ".join(problems))
+    if wanted == current:
+        print(f"design-init: {rel} unchanged (id={wanted['id']})")
+        return
+    write_json(mpath, wanted)
+    print(f"design-init: {'updated' if current is not None else 'wrote'} {rel}")
+    print(json.dumps(wanted, ensure_ascii=False, indent=2))
+
+
+def design_system(args: argparse.Namespace) -> None:
+    """Record the product's Design System Artifact in design.json (the orchestrator's sync procedure)."""
+    root = design_root()
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-system")
+    manifest = scan["manifest"]
+    system = dict(manifest["system"], artifact=args.artifact, namespace=args.namespace, version=args.version)
+    if args.source is not None:
+        system["source"] = args.source
+    if args.files is not None:
+        files = [f.strip() for f in args.files.split(",") if f.strip()]
+        system["files"] = list(dict.fromkeys(files))
+    wanted = dict(manifest, system=system)
+    problems = design_system_problems(system)
+    if problems:
+        raise SystemExit("design-system: refused -- " + "; ".join(problems))
+    rel = f"{DESIGN_ROOT_SHOWN}/design.json"
+    if wanted == manifest:
+        print(f"design-system: {rel} unchanged (system version {system['version']})")
+        return
+    write_json(root / "design.json", wanted)
+    print(f"design-system: updated {rel}")
+    print(json.dumps(system, ensure_ascii=False, indent=2))
+
+
+def design_open_target(scan: dict, args: argparse.Namespace):
+    """The job a design-open opens its round in, or None for a new job. A slice may hold several
+    jobs (a wave): --job names one of them, --new-job asks for another, and with neither the slice's
+    only job is reused (its first round creates it). Returns (job, note): note says why a --new-job
+    resumes an existing job (a half-landed open, or a re-run)."""
+    mine = [j for j in scan["jobs"] if j["data"]["slice"] == args.slice]
+    if args.job is not None:
+        job = next((j for j in scan["jobs"] if j["id"] == args.job), None)
+        if job is None:
+            raise SystemExit(f"design-open: no job {args.job!r} under {DESIGN_ROOT_SHOWN}/jobs/"
+                             + (f" ({args.slice} has {', '.join(j['id'] for j in mine)})" if mine else ""))
+        if job["data"]["slice"] != args.slice:
+            raise SystemExit(f"design-open: refused -- job {args.job} belongs to {job['data']['slice']}, not {args.slice}")
+        return job
+    if args.new_job:
+        same = [j for j in mine if j["id"].split("-", 1)[1] == args.slug]
+        if not same:
+            return None
+        job = same[-1]
+        if job["rounds"] and not any(r["data"]["status"] == "open" and r["id"].split("-", 1)[1] == args.slug for r in job["rounds"]):
+            raise SystemExit(f"design-open: refused -- {args.slice} already has job {job['id']}; open its next round with "
+                             f"--job {job['id']}, or give the new job another --slug")
+        return job  # a re-run (its round is open: nothing written) or a half-landed open (no round yet)
+    if len(mine) > 1:
+        raise SystemExit(f"design-open: refused -- {args.slice} has {len(mine)} jobs ({', '.join(j['id'] for j in mine)}); "
+                         f"name the one this round belongs to with --job <job>, or pass --new-job for another")
+    return mine[0] if mine else None
+
+
+def design_open(args: argparse.Namespace) -> None:
+    root = design_root()
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-open")
+    if not DESIGN_SLUG_RE.match(args.slug):
+        raise SystemExit(f"design-open: --slug {args.slug!r} is not lowercase words joined by hyphens")
+    if not DESIGN_SLICE_RE.match(args.slice):
+        raise SystemExit(f"design-open: --slice {args.slice!r} is not a slice id (P<N>.<ID>)")
+    if args.critique not in DESIGN_CRITIQUE_LEVELS:
+        raise SystemExit(f"design-open: --critique {args.critique!r} is not one of {', '.join(DESIGN_CRITIQUE_LEVELS)}")
+    broken = [f"jobs/{j['id']}" for j in scan["jobs"] if j["data"] is None]
+    broken += [f"jobs/{j['id']}/rounds/{r['id']}" for j in scan["jobs"] for r in j["rounds"] if r["data"] is None]
+    if broken:
+        raise SystemExit(f"design-open: refused -- {', '.join(broken)} have no well-formed job.json / round.json (run design-check)")
+    job = design_open_target(scan, args)
+    # One open round per job; other jobs' rounds (the rest of a wave) may be open at the same time.
+    opened = [r for r in (job or {}).get("rounds", []) if r["data"]["status"] == "open"]
+    for rnd in opened:
+        if rnd["id"].split("-", 1)[1] == args.slug:
+            print(f"design-open: {design_address(job, rnd)} is already open for {args.slice} (nothing written)")
+            return
+    if opened:
+        address = design_address(job, opened[0])
+        raise SystemExit(f"design-open: refused -- {address} is open; close it first "
+                         f"(design-close {address} --words \"…\" when signed, --superseded when a design question replaces it)")
+    if job is not None and job["data"]["status"] == "implemented":
+        raise SystemExit(f"design-open: refused -- job {job['id']} of {args.slice} is implemented (built, its canvas history); "
+                         f"new design work is a new job (--new-job, or a new co-work slice)")
+    title = args.title or args.slug.replace("-", " ")
+    if job is None:  # a new job: written before its round so a half-landed open resumes
+        number = max((j["number"] for j in scan["jobs"]), default=0) + 1
+        jid = f"{number:02d}-{args.slug}"
+        jdata = {"schema": DESIGN_SCHEMA, "job": jid, "slice": args.slice, "title": title,
+                 "canvas": {"url": None, "version": None, "published": []}, "status": "open"}
+        write_json(root / "jobs" / jid / "job.json", jdata)
+        job = {"id": jid, "path": root / "jobs" / jid, "data": jdata, "rounds": []}
+        print(f"design-open: created job {DESIGN_ROOT_SHOWN}/jobs/{jid}/ for {args.slice}")
+    elif job["data"]["status"] == "signed":  # a revision after signoff: a superseding round of the same job
+        write_json(job["path"] / "job.json", dict(job["data"], status="open"))
+        print(f"design-open: job {job['id']} reopened (signed -> open) for a superseding round")
+    rounds = sorted(job["rounds"], key=lambda r: r["number"])
+    rid = f"{(rounds[-1]['number'] if rounds else 0) + 1:02d}-{args.slug}"
+    data = {
+        "schema": DESIGN_SCHEMA, "round": rid, "title": title, "slice": args.slice, "status": "open",
+        "opened_at": now_iso(), "closed_at": None, "supersedes": [rounds[-1]["id"]] if rounds else [],
+        "signoff_words": None, "canvas_version": None, "critique": args.critique,
+    }
+    write_json(job["path"] / "rounds" / rid / "round.json", data)
+    print(f"design-open: opened {DESIGN_ROOT_SHOWN}/jobs/{job['id']}/rounds/{rid}/ for {args.slice}"
+          + (f" (supersedes {rounds[-1]['id']})" if rounds else "") + f", critique {args.critique}")
+    print(f"next: write jobs/{job['id']}/rounds/{rid}/handoff.md (with the line critique: {args.critique}); the drafter writes "
+          f"the canvas tree in jobs/{job['id']}/canvas/project/; close with design-close {job['id']}/{rid}")
+    wave = [design_address(j, r) for j, r in design_open_rounds(scan)
+            if j["data"]["slice"] == args.slice and j["id"] != job["id"]] + [f"{job['id']}/{rid}"]
+    if len(wave) > DESIGN_WAVE_OPEN_MAX:
+        print(f"design-open: warning: {args.slice} now has {len(wave)} open rounds ({', '.join(wave)}) -- a wave is about "
+              f"3-4 jobs; consider drafting the rest in a later wave")
+
+
+def design_find_round(scan: dict, ref: str) -> tuple:
+    """(job, round) for `<job>/<round>`, or for a bare round id when exactly one job has it."""
+    jid, _, rid = ref.rpartition("/")
+    found = [(j, r) for j in scan["jobs"] if not jid or j["id"] == jid for r in j["rounds"] if r["id"] == rid]
+    if not found:
+        raise SystemExit(f"design-close: no round {ref!r} under {DESIGN_ROOT_SHOWN}/jobs/*/rounds/")
+    if len(found) > 1:
+        raise SystemExit(f"design-close: round {ref!r} is in more than one job; name it as "
+                         + " or ".join(design_address(j, r) for j, r in found))
+    return found[0]
+
+
+def design_close(args: argparse.Namespace) -> None:
+    root = design_root()
+    status = "signed" if args.words is not None else "superseded"
+    if args.words is not None and not args.words.strip():
+        raise SystemExit("design-close: --words must carry the operator's literal words")
+    if args.canvas_version is not None and not DESIGN_VERSION_RE.match(args.canvas_version):
+        raise SystemExit(f"design-close: --canvas-version {args.canvas_version!r} is not a version id (non-empty, no spaces)")
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-close")
+    job, rnd = design_find_round(scan, args.round)
+    address = design_address(job, rnd)
+    if job["data"] is None or rnd["data"] is None:
+        raise SystemExit(f"design-close: refused -- jobs/{job['id']} or its round {rnd['id']} has no well-formed job.json / round.json (run design-check {job['id']})")
+    data, jdata = rnd["data"], job["data"]
+    latest = max(job["rounds"], key=lambda r: r["number"]) is rnd
+    if data["status"] == status:
+        if status == "signed" and latest and jdata["status"] == "open":  # a half-landed close: finish the job
+            write_json(job["path"] / "job.json", dict(jdata, status="signed"))
+            print(f"design-close: {address} is already signed; job {job['id']} marked signed")
+            return
+        print(f"design-close: {address} is already {status} (nothing written)")
+        return
+    if data["status"] != "open":
+        raise SystemExit(f"design-close: {address} is already {data['status']}; a closed round is immutable")
+    rdir, project = rnd["path"], job["path"] / "canvas" / "project"
+    if status == "signed":
+        if not (rdir / "SIGNOFF.md").is_file():
+            raise SystemExit(f"design-close: write jobs/{job['id']}/rounds/{rnd['id']}/SIGNOFF.md (the operator's literal words) first")
+        design_require(design_scan(root, job["id"]), "design-close")
+        if not (project / "canvas.json").is_file():
+            raise SystemExit(f"design-close: jobs/{job['id']}/canvas/project/ holds no canvas; nothing to sign")
+    # 1. The snapshot: the canvas tree as the operator reviewed it (ds/ left out), byte for byte.
+    files = design_tree_files(project)
+    snap = rdir / "canvas" / "project"
+    for rel in files:
+        live = (project / rel).read_bytes()
+        target = snap / rel
+        if not target.is_file() or target.read_bytes() != live:
+            design_write_bytes(target, live)
+    for rel in design_tree_files(snap):  # a half-landed close of a tree that changed since: same files only
+        if rel not in files:
+            (snap / rel).unlink()
+    # 2. The round, then the job (a re-run of a half-landed signed close finishes the job above).
+    version = args.canvas_version or jdata["canvas"]["version"]
+    write_json(rdir / "round.json", dict(data, status=status, closed_at=now_iso(), canvas_version=version,
+                                         signoff_words=args.words if status == "signed" else None))
+    if status == "signed":
+        write_json(job["path"] / "job.json", dict(jdata, status="signed"))
+    print(f"design-close: {address} {status} -- {len(files)} file(s) snapshotted to "
+          f"{DESIGN_ROOT_SHOWN}/jobs/{job['id']}/rounds/{rnd['id']}/canvas/project/, canvas_version {version or 'null'}"
+          + (f"; job {job['id']} signed" if status == "signed" else "; the job's next round supersedes it"))
+
+
+def design_canvas(args: argparse.Namespace) -> None:
+    """Record a job's canvas Artifact: its url after creation, its version after each publish (with
+    the published file list the next publish plan diffs against), and `implemented` once built."""
+    if args.url is None and args.version is None and not args.implemented:
+        raise SystemExit("design-canvas: name at least one of --url, --version, --implemented")
+    root = design_root()
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-canvas")
+    job = design_find_job(scan, args.job, "design-canvas")
+    jdata = job["data"]
+    canvas = dict(jdata["canvas"])
+    status = jdata["status"]
+    if (args.url is not None or args.version is not None) and status == "implemented":
+        raise SystemExit(f"design-canvas: refused -- job {args.job} is implemented; its canvas record is history")
+    if args.url is not None:
+        if design_artifact_problem(args.url):
+            raise SystemExit(f"design-canvas: --url {design_artifact_problem(args.url)}")
+        canvas["url"] = args.url
+    if args.version is not None:
+        if not DESIGN_VERSION_RE.match(args.version):
+            raise SystemExit(f"design-canvas: --version {args.version!r} is not a version id (non-empty, no spaces)")
+        if canvas["url"] is None:
+            raise SystemExit(f"design-canvas: refused -- job {args.job} has no canvas url yet (pass --url)")
+        files = design_tree_files(job["path"] / "canvas" / "project")
+        if "canvas.json" not in files:
+            raise SystemExit(f"design-canvas: refused -- jobs/{args.job}/canvas/project/ holds no canvas to have published")
+        canvas["version"], canvas["published"] = args.version, [f"project/{f}" for f in files]
+        # the system version this publish installed: the pin the next publish plan compares against
+        canvas["system"] = design_canvas_pinned_system(job["path"] / "canvas" / "project",
+                                                       scan["manifest"]["system"].get("namespace"))
+    if args.implemented and status != "implemented":
+        if status != "signed":
+            raise SystemExit(f"design-canvas: refused -- job {args.job} is {status}; only a signed job is marked implemented")
+        status = "implemented"
+    wanted = dict(jdata, canvas=canvas, status=status)
+    if wanted == jdata:
+        print(f"design-canvas: jobs/{args.job}/job.json unchanged")
+        return
+    write_json(job["path"] / "job.json", wanted)
+    print(f"design-canvas: updated {DESIGN_ROOT_SHOWN}/jobs/{args.job}/job.json")
+    print(json.dumps({"canvas": canvas, "status": status}, ensure_ascii=False, indent=2))
+
+
+def design_canvas_pinned_system(project: Path, namespace) -> "str | None":
+    """The system version a canvas tree's canvas.json pins for `namespace` (its designSystems record of
+    that namespace), or None when it pins none or the index is unreadable."""
+    try:
+        index = read_json(project / "canvas.json")
+    except (OSError, ValueError):
+        return None
+    records = index.get("designSystems") if isinstance(index, dict) else None
+    for rec in records if isinstance(records, list) else []:
+        if isinstance(rec, dict) and namespace and rec.get("namespace") == namespace:
+            version = rec.get("version")
+            return version if isinstance(version, str) and version else None
+    return None
+
+
+def design_publish_plan(args: argparse.Namespace) -> int:
+    """Print the Artifact publish call's {url, root, file_path, files} for a job's canvas -- read-only."""
+    root = design_root()
+    scan = design_scan(root, args.job)
+    design_require_manifest(scan, root, "design-publish-plan")
+    job = design_find_job(scan, args.job, "design-publish-plan")
+    canvas = job["data"]["canvas"]
+    if canvas["url"] is None:
+        raise SystemExit(f"design-publish-plan: refused -- job {args.job} has no canvas url "
+                         f"(create the canvas, then design-canvas {args.job} --url <url>)")
+    design_require(scan, "design-publish-plan")
+    publish_root = job["path"] / "canvas"
+    live = [f"project/{f}" for f in design_tree_files(publish_root / "project")]
+    files: dict = {path: path for path in live if path != "project/canvas.json"}
+    for path in canvas["published"]:  # removed since the last publish
+        if path not in live and not path.startswith("project/ds/"):
+            files[path] = None
+    system = scan["manifest"]["system"]
+    # The server copies the system's files into the canvas (the install) -- only on the job's first
+    # publish, or when the version its canvas.json pins differs from the one the last publish installed
+    # (canvas.system; absent on a pre-v60 job, which reads as the pin now). Files left out of a publish are
+    # kept by the server, and re-sending them every round was refused as unseen server-side copies (P36.S8).
+    pinned = design_canvas_pinned_system(publish_root / "project", system.get("namespace"))
+    install = canvas["version"] is None or canvas.get("system", pinned) != pinned
+    if system["artifact"] and install:
+        for name in system["files"]:
+            files[f"project/ds/{system['namespace']}/{name}"] = {"artifact": system["artifact"], "path": f"project/{name}"}
+    print(json.dumps({"url": canvas["url"], "root": str(publish_root.resolve()),
+                      "file_path": str((publish_root / "project" / "canvas.json").resolve()), "files": files},
+                     ensure_ascii=False, indent=2))
+    return 0
+
+
+# design-preview (v60): the drafter's own eyes on a job's canvas, so its render -> critique -> revise
+# loop never touches the published (private) canvas. It serves the job's canvas/project/ tree read-only
+# over http on 127.0.0.1 -- the tree's files as they are, its ds/<namespace>/ system cache, and the Design
+# canvas type's real runtime (artifact-type/dc-runtime.js, which the orchestrator saves per job and the
+# engine never vendors) as ./support.js -- and screenshots each board in a throwaway headless
+# Chrome/Chromium profile. The real runtime renders standalone, with no editor frame around it:
+# x-import, dc-import, {{holes}} from data-props defaults and renderVals(), sc-if/sc-for and <helmet> all
+# run (P36.S4), so no stand-in shim ships. http, never file://: a <dc-import> fetches its sibling board,
+# which a file:// page cannot. The browser is driven over the DevTools protocol on a pipe
+# (--remote-debugging-pipe, fds 3/4; no port is opened): the CLI's --window-size/--screenshot cannot give
+# an exact viewport (a headless window is at least 500 px wide and its page ~100 px shorter than the
+# window, so a 390 px render came out as a 500 px layout cropped), while Emulation.setDeviceMetricsOverride
+# can. With no browser it prints an honest skip and writes nothing.
+DESIGN_PREVIEW_BROWSER_ENV = "AGENTIC_DESIGN_BROWSER"
+DESIGN_PREVIEW_BROWSERS = (
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "~/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+)
+DESIGN_PREVIEW_PATH_NAMES = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser")
+DESIGN_PREVIEW_PHONE = (390, 844)  # the phone render: 390 px wide, at least 844 tall, growing to its content
+DESIGN_PREVIEW_MAX = 8000  # the type's largest frame side; a longer page is cut there (and said so)
+DESIGN_PREVIEW_SETTLE = 8.0  # seconds a board gets to settle (fonts, images, the runtime's mounts)
+DESIGN_PREVIEW_TIMEOUT = 30.0  # seconds for one protocol reply
+# Polled until it repeats: the DOM, the content size and the images stop changing once fonts are in.
+DESIGN_PREVIEW_SETTLED_JS = ("(async()=>{await document.fonts.ready;const d=document.documentElement;"
+                             "return [d.outerHTML.length,d.scrollWidth,d.scrollHeight,"
+                             "[...document.images].every(i=>i.complete)].join(',');})()")
+# What the runtime leaves in the DOM when a part does not render: an x-import whose global is missing,
+# or a dc-import whose board is missing, stays a .sc-placeholder titled with its name; a throwing
+# renderVals() shows its message in a .sc-logic-error overlay.
+DESIGN_PREVIEW_MEASURE_JS = ("(()=>{const d=document.documentElement,b=document.body;const t=e=>(e.textContent||'').trim().slice(0,300);"
+                             "return {w:Math.max(d.scrollWidth,b?b.scrollWidth:0),h:Math.max(d.scrollHeight,b?b.scrollHeight:0),"
+                             "unmounted:[...document.querySelectorAll('.sc-placeholder')].map(e=>e.getAttribute('title')||'?'),"
+                             "errors:[...document.querySelectorAll('.sc-logic-error,.sc-placeholder-error')].map(t)};})()")
+DESIGN_PREVIEW_TARGET = 44  # px: the smallest box an interactive element may have (WCAG 2.5.5, Apple's HIG)
+DESIGN_PREVIEW_STATES = 48  # --click: at most this many states per board and view (the initial one included)
+DESIGN_PREVIEW_DEPTH = 8  # --click: at most this many clicks from the initial state
+DESIGN_PREVIEW_CLICKS = 300  # --click: at most this many clicks (and typed fields) per board and view
+DESIGN_PREVIEW_BOARD_SECONDS = 120  # --click: a board's click-through stops after this long (and says so)
+DESIGN_PREVIEW_SHIFT = 4  # px: a control resized, or a header/nav/main moved, by more than this is a layout shift
+DESIGN_PREVIEW_LIST_SAMPLE = 4  # --click: a list of this many rows or more is sampled (first, second, last), not clicked row by row
+# The check names the measured pass gives its issue lines (beside the render's own: load, settle,
+# too-tall, frame-clip, page-clip, overflow, unmounted, runtime-error, script-error, not-found,
+# screenshot, size, browser; and --click's unreachable, click-error, click, layout-shift, same-target,
+# hover-contrast).
+DESIGN_PREVIEW_CHECKS = ("contrast", "unmeasured", "target", "clipped", "dead-link", "image", "name", "checks")
+# Shared by the two in-page scripts below: a short element label (<= 40 chars), the text a control
+# shows (aria-hidden text left out), and the interactive set (the target check, and the click set).
+DESIGN_PREVIEW_JS_HELPERS = r"""
+const cs = e => getComputedStyle(e);
+const clip = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return n < 2 ? '' : s.length > n ? s.slice(0, n - 1) + '…' : s; };
+const shown = e => e.checkVisibility ? e.checkVisibility({visibilityProperty: true}) || cs(e).display === 'contents' : true;
+const boxed = e => e.getClientRects().length > 0 && cs(e).visibility === 'visible' && shown(e);
+const hiddenIn = (e, root) => { const h = e.closest('[aria-hidden="true"]'); return !!h && (!root || root.contains(h)); };
+const textOf = root => { let t = ''; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (w.nextNode()) { const p = w.currentNode.parentElement;
+    if (!p || p.closest('script,style,template') || (p !== root && hiddenIn(p, root))) continue;
+    if (!shown(p) || (!p.getClientRects().length && cs(p).display !== 'contents')) continue;
+    t += ' ' + w.currentNode.data; }
+  return t.replace(/\s+/g, ' ').trim(); };
+const tagOf = e => { let t = e.tagName.toLowerCase(); const c = typeof e.className === 'string' ? e.className.trim().split(/\s+/)[0] : '';
+  if (e.id) t += '#' + e.id; else if (c) t += '.' + c; return clip(t, 18); };
+const label = (e, text) => { const t = tagOf(e), s = clip(text, 40 - t.length - 3); return s ? t + ' "' + s + '"' : t; };
+const desc = e => label(e, textOf(e) || e.getAttribute('aria-label') || e.getAttribute('title') || e.getAttribute('placeholder') || e.getAttribute('src') || '');
+const SEL = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=checkbox],[role=radio],[role=switch],[role=tab],[role=menuitem]';
+const off = e => e.disabled || e.getAttribute('aria-disabled') === 'true' || !!e.closest('[inert]');
+const controls = () => [...document.querySelectorAll(SEL + ',[tabindex]')].filter(e =>
+  (e.matches(SEL) || parseInt(e.getAttribute('tabindex'), 10) >= 0) && !e.closest('head') && boxed(e) && !off(e));
+"""
+# The contrast pass, shared by the measured checks (the whole body) and the hover pass (one hovered
+# control): contrastIn(root, out) pushes each failing text run under root into out.contrast, each run it
+# cannot measure into out.unmeasured, and counts the runs in out.texts.
+DESIGN_PREVIEW_CONTRAST_JS = r"""
+const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+const cx = cv.getContext('2d', {willReadFrequently: true}); const memo = new Map();
+const color = c => { if (memo.has(c)) return memo.get(c); let v = null;
+  const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,\/]\s*([\d.]+%?))?\s*\)$/.exec(c);
+  if (m) v = [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : +m[4]];
+  else { cx.fillStyle = '#010203'; cx.fillStyle = c;
+    if (cx.fillStyle !== '#010203' || /^#010203$/i.test(c)) { cx.clearRect(0, 0, 1, 1); cx.fillRect(0, 0, 1, 1);
+      const d = cx.getImageData(0, 0, 1, 1).data; v = [d[0], d[1], d[2], d[3] / 255]; } }
+  memo.set(c, v); return v; };
+const over = (s, d) => { const a = s[3] + d[3] * (1 - s[3]);
+  return a <= 0 ? [0, 0, 0, 0] : [0, 1, 2].map(i => (s[i] * s[3] + d[i] * d[3] * (1 - s[3])) / a).concat([a]); };
+const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+const hex = c => '#' + c.slice(0, 3).map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+const contrastIn = (root, out) => {
+const seen = new Set(), range = document.createRange(), walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+while (walker.nextNode()) {
+  const n = walker.currentNode, e = n.parentElement;
+  if (!e || !n.data.trim() || seen.has(e) || e.closest('script,style,template,noscript,svg,head') || hiddenIn(e)) continue;
+  range.selectNodeContents(n); const r = range.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) continue;
+  const s = cs(e); if (s.visibility !== 'visible' || !shown(e)) continue;
+  seen.add(e);
+  const chain = []; for (let a = e; a; a = a.parentElement) chain.push(a);
+  let why = '', see = true, total = 1;
+  for (const a of chain) { const t = cs(a); total *= +t.opacity;
+    if (!see) continue;
+    if (t.backgroundImage !== 'none') why = why || 'a background image or gradient';
+    if (t.filter !== 'none' || t.mixBlendMode !== 'normal') why = why || 'a filter or blend mode';
+    const b = color(t.backgroundColor);
+    if (!b) why = why || 'a color it cannot read (' + t.backgroundColor + ')';
+    else if (b[3] >= 1 && +t.opacity >= 1) see = false; }
+  if (total <= 0) continue;
+  const fc = color(s.webkitTextFillColor || s.color);
+  if (!fc) why = why || 'a color it cannot read (' + s.color + ')';
+  const size = parseFloat(s.fontSize), weight = parseInt(s.fontWeight, 10) || 400;
+  const large = size >= 24 || (size >= 18.66 && weight >= 700);
+  const item = {el: label(e, n.data), size: Math.round(size * 10) / 10, weight: weight, need: large ? 3 : 4.5};
+  out.texts++;
+  if (why) { item.why = why; out.unmeasured.push(item); continue; }
+  let layer = [255, 255, 255, 1]; const groups = [];
+  for (let i = chain.length - 1; i >= 0; i--) { const t = cs(chain[i]), o = +t.opacity;
+    if (o < 1) { groups.push([layer, o]); layer = [0, 0, 0, 0]; }
+    layer = over(color(t.backgroundColor), layer); }
+  let fg = over(fc, layer), bg = layer;
+  while (groups.length) { const g = groups.pop();
+    fg = over([fg[0], fg[1], fg[2], fg[3] * g[1]], g[0]); bg = over([bg[0], bg[1], bg[2], bg[3] * g[1]], g[0]); }
+  const l1 = lum(fg), l2 = lum(bg), ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  if (ratio < item.need) out.contrast.push(Object.assign(item, {ratio: Math.floor(ratio * 100) / 100, fg: hex(fg), bg: hex(bg)}));
+} };
+"""
+# The measured checks, run on the settled page right before its screenshot. Raw facts only; the engine
+# words them. contrast: every visible text run (one per element) against the background its ancestors
+# paint under it, alpha-composited (color alpha, background alpha, ancestor opacity) over the white
+# canvas; colors in any syntax are read by painting them on a 1x1 canvas. A background image, gradient,
+# filter or blend mode in the way makes it unmeasured, never a guess. The canvas-only prototype chrome
+# ([data-proto]: the state bar, the board-link strip) is exempt from the target check, never from the
+# others: it must still read, name its buttons and link somewhere real.
+DESIGN_PREVIEW_CHECKS_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + DESIGN_PREVIEW_CONTRAST_JS + r"""
+const out = {contrast: [], unmeasured: [], target: [], clipped: [], links: [], images: [], names: [], texts: 0, targets: 0, fields: 0};
+contrastIn(document.body, out);
+const inRun = e => { if (!e.matches('a[href],[role=link]') || cs(e).display !== 'inline') return false;
+  let p = e.parentElement; while (p && cs(p).display === 'inline') p = p.parentElement;
+  return !!p && (p.innerText || '').replace(e.innerText || '', '').trim().length > 0; };
+for (const e of controls()) {
+  out.targets++;
+  if (inRun(e) || e.closest('[data-proto]')) continue;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const b of [e, ...(e.labels || [])]) { const r = b.getBoundingClientRect(); if (!r.width && !r.height) continue;
+    x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
+  const w = x1 - x0, h = y1 - y0;
+  if (w < 43.99 || h < 43.99) out.target.push({el: desc(e), w: Math.round(w * 10) / 10, h: Math.round(h * 10) / 10, labelled: !!(e.labels && e.labels.length)});
+}
+const ownText = e => [...e.childNodes].some(c => c.nodeType === 3 && c.data.trim())
+  || (e.children.length > 0 && [...e.children].every(c => cs(c).display === 'inline') && !!e.textContent.trim());
+for (const e of document.body.querySelectorAll('*')) {
+  if (e.closest('script,style,template,noscript,svg')) continue;
+  const s = cs(e), ox = /^(hidden|clip)$/.test(s.overflowX), oy = /^(hidden|clip)$/.test(s.overflowY);
+  if (!(ox || oy) || s.display === 'inline' || s.display === 'contents' || !boxed(e) || !ownText(e)) continue;
+  const w = ox && e.scrollWidth > e.clientWidth + 1 && s.textOverflow !== 'ellipsis';
+  const h = oy && e.scrollHeight > e.clientHeight + 1 && (s.webkitLineClamp || 'none') === 'none';
+  if (w || h) out.clipped.push({el: desc(e), sw: e.scrollWidth, sh: e.scrollHeight, cw: e.clientWidth, ch: e.clientHeight, axis: w && h ? 'both' : w ? 'x' : 'y'});
+}
+for (const a of document.querySelectorAll('a[href]')) { const h = a.getAttribute('href').trim(), item = {el: desc(a), href: h};
+  if (h === '' || h === '#') item.anchor = 'placeholder';
+  else if (h.startsWith('#')) { let id = h.slice(1); try { id = decodeURIComponent(id); } catch (x) {}
+    item.anchor = id === 'top' || document.getElementById(id) || document.getElementsByName(id).length ? 'ok' : 'missing'; }
+  out.links.push(item); }
+for (const i of document.images) if (i.complete && i.naturalWidth === 0) out.images.push({el: desc(i), src: clip(i.getAttribute('src') || '', 80)});
+const byIds = e => (e.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean).some(id => { const r = document.getElementById(id); return !!r && !!textOf(r); });
+for (const e of document.querySelectorAll('button,a[href],[role=button],[role=link]')) {
+  if (!boxed(e) || hiddenIn(e)) continue;
+  const named = byIds(e) || !!(e.getAttribute('aria-label') || '').trim() || !!textOf(e) || !!(e.getAttribute('title') || '').trim()
+    || [...e.querySelectorAll('img[alt]')].some(i => i.getAttribute('alt').trim());
+  if (!named) out.names.push({el: desc(e), kind: e.matches('a[href],[role=link]') ? 'link' : 'button'}); }
+for (const e of document.querySelectorAll('input,select,textarea')) {
+  if (e.matches('input[type=hidden],input[type=submit],input[type=button],input[type=reset],input[type=image]') || !boxed(e) || hiddenIn(e)) continue;
+  if (e.matches('textarea,input:not([type]),input[type=text],input[type=email],input[type=password],input[type=search],input[type=tel],input[type=url],input[type=number]')) out.fields++;
+  const named = [...(e.labels || [])].some(l => !!textOf(l)) || !!(e.getAttribute('aria-label') || '').trim() || byIds(e);
+  if (!named) out.names.push({el: desc(e), kind: 'field', placeholder: clip(e.getAttribute('placeholder') || '', 30)}); }
+return out; })()"""
+# --click: the visible DOM's identity (each shown element's tag, class, style, its open/expanded/
+# selected/current/disabled attributes and every shown text run, hashed; a checkbox's checked state and
+# a field's value are left out: a state is a different screen, not a different value, so independent
+# toggles do not multiply into combinations -- the one bit kept is whether every visible text field
+# holds text, since a complete form leads somewhere an empty one does not) and the controls a click can try: the interactive set
+# minus links that leave the board (a link is not a state) and fields that need typing or a native
+# picker, each visible, enabled, inside the viewport and topmost at its centre. Beside them (v60, P36.S8C):
+# - page: which page of the board is on screen, so a click that moves to another screen of a flow board
+#   is told apart from a state change on the same page. It is the name of the visible group in the
+#   canvas-only state bar ([data-proto="state-bar"] [role=group], by aria-label or aria-labelledby),
+#   else the text of the first visible h1 outside [data-proto], else "" (one page);
+# - anchors: the document position of each visible header, nav and main (by element or role) outside
+#   [data-proto], for the layout-shift check;
+# - each click's box (w, h), tag and first class (t), whether it is prototype chrome (proto) or a state-bar preset (bar), and
+#   its list: a control repeated in three or more alike siblings (same tag and class, as a <sc-for>
+#   renders them) carries the list's id, its index and the list's length, so rows can be sampled and
+#   compared;
+# - fields: the visible, enabled text fields outside [data-proto] the type pass fills, each with a
+#   realistic sample string chosen from its type, autocomplete, name and label, and whether it is empty.
+DESIGN_PREVIEW_STATE_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + r"""
+const range = document.createRange(), parts = [];
+const walk = e => { for (const c of e.childNodes) {
+  if (c.nodeType === 3) { if (c.data.trim() && shown(e)) { range.selectNodeContents(c); if (range.getClientRects().length) parts.push('"' + c.data.trim()); } continue; }
+  if (c.nodeType !== 1 || /^(SCRIPT|STYLE|TEMPLATE|HEAD)$/.test(c.tagName)) continue;
+  const s = cs(c); if (s.display === 'none') continue;
+  if (c.getClientRects().length && shown(c)) parts.push('<' + c.tagName + '|' + (c.getAttribute('class') || '') + '|' + (c.getAttribute('style') || '') + '|' + s.visibility + '|'
+    + ['aria-expanded', 'aria-selected', 'aria-current', 'open', 'disabled'].map(a => c.hasAttribute(a) ? a + '=' + c.getAttribute(a) : '').join(','));
+  walk(c); parts.push('>'); } };
+walk(document.body);
+const key = e => { const p = []; for (; e && e.parentElement; e = e.parentElement) p.unshift([...e.parentElement.children].indexOf(e)); return p.join('.'); };
+const proto = e => !!e.closest('[data-proto]');
+const nameOf = g => (g.getAttribute('aria-label') || '').trim() || (g.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean)
+  .map(id => { const r = document.getElementById(id); return r ? textOf(r) : ''; }).join(' ').trim();
+let page = '';
+for (const g of document.querySelectorAll('[data-proto="state-bar"] [role=group]')) if (boxed(g) && nameOf(g)) { page = 'bar:' + clip(nameOf(g), 60); break; }
+if (!page) { const t = [...document.querySelectorAll('h1')].find(e => boxed(e) && !proto(e)); if (t) page = 'h1:' + clip(textOf(t), 60); }
+const anchors = [];
+for (const e of document.querySelectorAll('header,nav,main,[role=banner],[role=navigation],[role=main]')) {
+  if (proto(e) || !boxed(e)) continue;
+  const r = e.getBoundingClientRect();
+  anchors.push({key: key(e), el: tagOf(e), x: Math.round(r.left + scrollX), y: Math.round(r.top + scrollY)}); }
+const sig = a => a.tagName + '.' + (a.getAttribute('class') || '');
+const listOf = e => { for (let a = e; a.parentElement && a !== document.body; a = a.parentElement) {
+    const p = a.parentElement, s = sig(a), alike = [...p.children].filter(c => sig(c) === s);
+    if (alike.length < 3) continue;
+    const rel = []; for (let x = e; x !== a; x = x.parentElement) rel.unshift([...x.parentElement.children].indexOf(x));
+    return {list: key(p) + '/' + s + '/' + rel.join('.'), idx: alike.indexOf(a), of: alike.length}; }
+  return null; };
+const topAt = e => { const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return 'outside';
+  const top = document.elementFromPoint(x, y); return top && (top === e || e.contains(top)) ? [x, y, r] : 'covered'; };
+const skip = 'a[href]:not([href^="#"]),select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image])';
+const clicks = []; let covered = 0, outside = 0;
+for (const e of controls()) {
+  if (e.matches(skip) || e.closest('a[href]:not([href^="#"])')) continue;
+  const at = topAt(e);
+  if (at === 'outside') { outside++; continue; }
+  if (at === 'covered') { covered++; continue; }
+  const [x, y, r] = at, chrome = proto(e);
+  const named = textOf(e) || [...(e.labels || [])].map(textOf).join(' ') || e.getAttribute('aria-label') || e.getAttribute('title')
+    || (e.matches('input[type=submit],input[type=button],input[type=reset]') ? e.value : '') || tagOf(e) + (e.type ? '[' + e.type + ']' : '');
+  const c = {key: key(e), label: clip(named, 32).replace(/"/g, "'"), x: x, y: y, w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
+             t: e.tagName + '.' + ((e.getAttribute('class') || '').trim().split(/\s+/)[0] || ''), proto: chrome, bar: chrome && !!e.closest('[data-proto="state-bar"]')};
+  const l = chrome || e.matches('input,label') || e.closest('label') ? null : listOf(e);
+  if (l) Object.assign(c, l);
+  clicks.push(c); }
+const word = () => { for (const li of document.querySelectorAll('li,[role=listitem],[role=row]')) { if (!boxed(li) || proto(li)) continue;
+    const m = /[\p{L}]{4,}/u.exec(textOf(li)); if (m) return m[0].slice(0, 4).toLowerCase(); } return 'a'; };
+const sample = e => { const t = (e.getAttribute('type') || 'text').toLowerCase();
+  const h = [e.getAttribute('name'), e.id, e.getAttribute('autocomplete'), e.getAttribute('placeholder'), e.getAttribute('aria-label'),
+             ...[...(e.labels || [])].map(textOf)].join(' ').toLowerCase();
+  if (t === 'email' || /e-?mail/.test(h)) return 'sam.okafor@example.com';
+  if (t === 'tel' || /phone|mobile|\btel\b/.test(h)) return '020 7946 0958';
+  if (t === 'number') return '2';
+  if (t === 'url' || /website|\burl\b/.test(h)) return 'https://example.com';
+  if (t === 'password') return 'correct-horse-7';
+  if (t === 'search' || e.getAttribute('role') === 'searchbox' || /search|find|filter/.test(h)) return word();
+  if (/post|zip/.test(h)) return '10115';
+  if (/name/.test(h)) return 'Sam Okafor';
+  if (e.tagName === 'TEXTAREA') return 'Could I pick it up after work, around six?';
+  return 'Sample text'; };
+const fields = []; let pickers = 0;
+for (const e of controls()) {
+  if (proto(e) || e.readOnly) continue;
+  if (e.matches('select,input[type=date],input[type=time],input[type=datetime-local],input[type=month],input[type=week],input[type=color],input[type=file],input[type=range]')) { pickers++; continue; }
+  if (!e.matches('textarea,input:not([type]),input[type=text],input[type=email],input[type=password],input[type=search],input[type=tel],input[type=url],input[type=number]')) continue;
+  const at = topAt(e); if (!Array.isArray(at)) continue;
+  const named = [...(e.labels || [])].map(textOf).join(' ') || e.getAttribute('aria-label') || e.getAttribute('placeholder') || tagOf(e);
+  fields.push({key: key(e), label: clip(named, 32).replace(/"/g, "'"), x: at[0], y: at[1], text: sample(e), empty: !e.value}); }
+if (fields.length && fields.every(f => !f.empty)) parts.push('|every field filled');
+const str = parts.join('\n'); let h1 = 0x811c9dc5, h2 = 0x9747b28c;
+for (let i = 0; i < str.length; i++) { const k = str.charCodeAt(i); h1 = Math.imul(h1 ^ k, 0x01000193); h2 = Math.imul(h2 ^ k, 0x5bd1e995); h2 ^= h2 >>> 15; }
+return {hash: (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16) + ':' + str.length, clicks: clicks, fields: fields, pickers: pickers,
+        page: page, anchors: anchors, covered: covered, outside: outside};
+})()"""
+# The hover pass (with --click, on PAGE boards, in the frame view): list the buttons and links a pointer
+# can rest on (visible, enabled, outside [data-proto], inside the viewport and topmost at the centre),
+# each with a signature (tag, class, text) so a control seen in an earlier state is hovered once, and
+# the contrast failures its text already has. Transitions are switched off for the pass, so the hover
+# style is the computed style at once; DESIGN_PREVIEW_HOVER_DONE_JS switches them back.
+DESIGN_PREVIEW_HOVER_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + DESIGN_PREVIEW_CONTRAST_JS + r"""
+const key = e => { const p = []; for (; e && e.parentElement; e = e.parentElement) p.unshift([...e.parentElement.children].indexOf(e)); return p.join('.'); };
+const byKey = k => { let e = document.documentElement; for (const i of k.split('.')) { if (i === '') continue; e = e && e.children[+i]; } return e || null; };
+const fails = e => { const out = {contrast: [], unmeasured: [], texts: 0}; contrastIn(e, out); return out.contrast; };
+window.__dcHover = k => { const e = byKey(k); return e ? fails(e) : []; };
+if (!document.getElementById('__dc-hover-style')) { const st = document.createElement('style'); st.id = '__dc-hover-style';
+  st.textContent = '*,*::before,*::after{transition:none!important;animation-duration:0s!important}'; document.head.appendChild(st); }
+const out = [];
+for (const e of document.querySelectorAll('a[href],button,[role=button],[role=link],summary')) {
+  if (!boxed(e) || off(e) || e.closest('[data-proto]') || hiddenIn(e)) continue;
+  const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+  const top = document.elementFromPoint(x, y); if (!top || !(top === e || e.contains(top))) continue;
+  out.push({key: key(e), el: desc(e), sig: e.tagName + '|' + (e.getAttribute('class') || '') + '|' + clip(textOf(e), 40), x: x, y: y,
+            before: fails(e).map(f => f.el + '|' + f.fg + '|' + f.bg)}); }
+return out; })()"""
+DESIGN_PREVIEW_HOVER_DONE_JS = "(()=>{const s=document.getElementById('__dc-hover-style');if(s)s.remove();delete window.__dcHover;return 1;})()"
+# The type pass: focus the field with this key and select its text, so the sample typed next replaces it.
+DESIGN_PREVIEW_FOCUS_JS = ("(k=>{let e=document.documentElement;for(const i of k.split('.')){if(i==='')continue;e=e&&e.children[+i];}"
+                           "if(!e)return 0;e.focus();if(e.select)e.select();return 1;})")
+# Run after every load in --click: a mark that tells a navigation away apart, and a form submit that
+# never leaves the board (the design's own submit handler still runs).
+DESIGN_PREVIEW_GUARD_JS = ("(()=>{window.__dcPreview=1;if(!window.__dcGuard){window.__dcGuard=1;"
+                           "addEventListener('submit',e=>e.preventDefault(),true);}return 1;})()")
+# --click, installed before each load's scripts: tracks the short timers (30 ms to 3 s) a page sets, so
+# a click that schedules its outcome (a fake save: "Saving..." then "Saved") is waited for; a ticking
+# clock's timers set before the click are not waited on.
+DESIGN_PREVIEW_TIMERS_JS = r"""(() => { if (window.__dcTimers) return;
+const st = window.setTimeout, ct = window.clearTimeout, live = new Map(); let seq = 0;
+window.__dcTimers = {seq: () => seq, after: m => [...live.values()].filter(n => n > m).length};
+window.setTimeout = function (f, d, ...a) { if (typeof f !== 'function') return st(f, d, ...a);
+  const ms = Number(d) || 0; let id; id = st(function () { live.delete(id); return f.apply(this, arguments); }, d, ...a);
+  if (ms >= 30 && ms <= 3000) live.set(id, ++seq); return id; };
+window.clearTimeout = function (id) { live.delete(id); return ct(id); }; })()"""
+# A click's state is settled when the DOM stops changing, the short timers the click set have fired (up
+# to 3 s), and its finite animations (a fade, a slide) have run (up to a second).
+DESIGN_PREVIEW_ANIMATIONS_JS = ("Promise.race([Promise.all(document.getAnimations().filter(a=>a.effect&&"
+                                "a.effect.getComputedTiming().endTime!==Infinity).map(a=>a.finished.catch(()=>0))),"
+                                "new Promise(r=>setTimeout(r,1000))]).then(()=>1)")
+
+
+def design_preview_browser(given):
+    """The browser executable: --browser, else $AGENTIC_DESIGN_BROWSER (either one, when named, is the
+    only candidate: a named browser that is not there is no browser), else the known Chrome/Chromium
+    paths on macOS and Linux, else chromium/google-chrome on PATH. None when there is none."""
+    for value in (given, os.environ.get(DESIGN_PREVIEW_BROWSER_ENV)):
+        if value:
+            path = os.path.expanduser(value)
+            return shutil.which(path) or (path if os.path.isfile(path) and os.access(path, os.X_OK) else None)
+    for candidate in DESIGN_PREVIEW_BROWSERS:
+        path = os.path.expanduser(candidate)
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    for name in DESIGN_PREVIEW_PATH_NAMES:
+        if shutil.which(name):
+            return shutil.which(name)
+    return None
+
+
+def design_preview_server(project: Path, runtime: bytes, misses: list):
+    """A read-only http server for one canvas tree on 127.0.0.1 at a free port: any */support.js is the
+    runtime, everything else is the tree's file as it is; a missing file is noted in `misses`."""
+    import http.server
+    import threading
+    from urllib.parse import unquote
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(project), **kwargs)
+
+        def log_message(self, *args):
+            pass
+
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-store")
+            super().end_headers()
+
+        def do_GET(self):
+            path = unquote(urlparse(self.path).path)
+            if posixpath.basename(path) == "support.js":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                self.send_header("Content-Length", str(len(runtime)))
+                self.end_headers()
+                self.wfile.write(runtime)
+                return
+            if not Path(self.translate_path(self.path)).exists() and path != "/favicon.ico":
+                misses.append(path)
+            super().do_GET()
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+class DesignBrowser:
+    """A headless Chrome/Chromium in a throwaway profile, driven over the DevTools protocol on a pipe:
+    the browser reads commands on its fd 3 and writes replies on fd 4, each a JSON message ended by NUL.
+    Spawned with posix_spawn (no fork with live threads); one page, one session."""
+
+    def __init__(self, browser: str, profile: str):
+        import fcntl
+        ends = []
+        for fd in os.pipe() + os.pipe():  # cmd_r, cmd_w, resp_r, resp_w -- moved above fd 9 so the dup2s cannot collide
+            high = fcntl.fcntl(fd, fcntl.F_DUPFD_CLOEXEC, 10)
+            os.close(fd)
+            ends.append(high)
+        cmd_r, self.cmd_w, self.resp_r, resp_w = ends
+        args = [browser, "--headless=new", "--remote-debugging-pipe", f"--user-data-dir={profile}", "--no-first-run",
+                "--no-default-browser-check", "--disable-extensions", "--disable-sync", "--mute-audio",
+                "--hide-scrollbars", "--force-device-scale-factor=1", "about:blank"]
+        if sys.platform.startswith("linux") and os.geteuid() == 0:
+            args.insert(1, "--no-sandbox")  # Chromium refuses to run as root otherwise (a CI container)
+        actions = [(os.POSIX_SPAWN_OPEN, 0, os.devnull, os.O_RDONLY, 0),
+                   (os.POSIX_SPAWN_OPEN, 1, os.devnull, os.O_WRONLY, 0),
+                   (os.POSIX_SPAWN_OPEN, 2, os.devnull, os.O_WRONLY, 0),
+                   (os.POSIX_SPAWN_DUP2, cmd_r, 3), (os.POSIX_SPAWN_DUP2, resp_w, 4)]
+        try:
+            self.pid = os.posix_spawn(browser, args, dict(os.environ), file_actions=actions)
+        finally:
+            os.close(cmd_r)
+            os.close(resp_w)
+        self.buffer, self.events, self.next_id, self.session = b"", [], 0, None
+        target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+        self.session = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+        for domain in ("Page.enable", "Runtime.enable"):
+            self.call(domain)
+
+    def read(self, deadline: float) -> dict:
+        import select
+        while b"\0" not in self.buffer:
+            left = deadline - time.monotonic()
+            if left <= 0 or not select.select([self.resp_r], [], [], left)[0]:
+                raise RuntimeError("the browser did not answer in time")
+            chunk = os.read(self.resp_r, 1 << 20)
+            if not chunk:
+                raise RuntimeError("the browser exited")
+            self.buffer += chunk
+        message, self.buffer = self.buffer.split(b"\0", 1)
+        return json.loads(message.decode("utf-8", errors="replace"))
+
+    def call(self, method: str, params: dict = None, timeout: float = DESIGN_PREVIEW_TIMEOUT) -> dict:
+        self.next_id += 1
+        message = {"id": self.next_id, "method": method, "params": params or {}}
+        if self.session:
+            message["sessionId"] = self.session
+        data = json.dumps(message).encode("utf-8") + b"\0"
+        while data:
+            data = data[os.write(self.cmd_w, data):]
+        deadline = time.monotonic() + timeout
+        while True:
+            reply = self.read(deadline)
+            if reply.get("id") == self.next_id:
+                if "error" in reply:
+                    raise RuntimeError(f"{method}: {reply['error'].get('message', reply['error'])}")
+                return reply.get("result", {})
+            if "method" in reply:
+                self.events.append(reply)
+
+    def wait_event(self, method: str, timeout: float) -> bool:
+        deadline = time.monotonic() + timeout
+        while True:
+            if any(e["method"] == method for e in self.events):
+                return True
+            try:
+                reply = self.read(deadline)
+            except RuntimeError:
+                return False
+            if "method" in reply:
+                self.events.append(reply)
+
+    def evaluate(self, expression: str):
+        result = self.call("Runtime.evaluate", {"expression": expression, "returnByValue": True, "awaitPromise": True})
+        if "exceptionDetails" in result:
+            raise RuntimeError(result["exceptionDetails"].get("text", "evaluate failed"))
+        return result.get("result", {}).get("value")
+
+    def settle(self, poll: float = 0.15, need: int = 2) -> bool:
+        """Wait until the page stops changing: the same DOM size, content size and image state on `need`
+        polls running after the first (0.15 s apart, three alike, after a render; --click's quick settle
+        is two alike 0.04 s apart, since a click's update is in the DOM when its event ends)."""
+        deadline, last, same = time.monotonic() + DESIGN_PREVIEW_SETTLE, None, 0
+        while time.monotonic() < deadline:
+            now = self.evaluate(DESIGN_PREVIEW_SETTLED_JS)
+            same = same + 1 if now == last else 0
+            if same >= need:
+                return True
+            last = now
+            time.sleep(poll)
+        return False
+
+    def errors(self) -> list:
+        """The page's uncaught exceptions and console.error lines since the last navigation."""
+        found = []
+        for event in self.events:
+            params = event.get("params", {})
+            if event["method"] == "Runtime.exceptionThrown":
+                details = params.get("exceptionDetails", {})
+                found.append((details.get("exception") or {}).get("description") or details.get("text", "exception"))
+            elif event["method"] == "Runtime.consoleAPICalled" and params.get("type") == "error":
+                found.append(" ".join(str(a.get("value", a.get("description", ""))) for a in params.get("args", [])))
+        lines = [line.strip().splitlines()[0][:300] if line.strip() else "(empty)" for line in found]
+        return list(dict.fromkeys(lines))  # once each, in order
+
+    def close(self) -> None:
+        try:
+            self.session = None
+            self.call("Browser.close", timeout=5)
+        except (RuntimeError, OSError, ValueError):
+            pass
+        for _ in range(50):
+            if os.waitpid(self.pid, os.WNOHANG)[0]:
+                break
+            time.sleep(0.1)
+        else:
+            try:
+                os.kill(self.pid, 9)
+                os.waitpid(self.pid, 0)
+            except OSError:
+                pass
+        for fd in (self.cmd_w, self.resp_r):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
+def design_preview_capture(page: "DesignBrowser", width: int, height: int, grow: bool, settled: bool) -> dict:
+    """Measure the settled page, grow the viewport to a taller content when the view grows (relayout,
+    settle again), run the measured checks and take the screenshot."""
+    shape = page.evaluate(DESIGN_PREVIEW_MEASURE_JS)
+    if grow and shape["h"] > height:
+        height = min(shape["h"], DESIGN_PREVIEW_MAX)
+        page.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+        settled = page.settle() and settled
+        shape = page.evaluate(DESIGN_PREVIEW_MEASURE_JS)
+    try:
+        checks = page.evaluate(DESIGN_PREVIEW_CHECKS_JS)
+    except RuntimeError as exc:  # the checks never block a screenshot; their failure is said
+        checks = {"failed": str(exc)}
+    import base64
+    png = base64.b64decode(page.call("Page.captureScreenshot", {"format": "png"})["data"])
+    return {"png": png, "width": width, "height": height, "shape": shape, "settled": settled, "checks": checks,
+            "errors": page.errors()}
+
+
+def design_preview_render(page: "DesignBrowser", url: str, width: int, height: int, grow: bool) -> dict:
+    """Lay the board out in an exact width x height viewport, let it settle, measure it, and -- when it
+    grows (a PAGE, or the phone render) and its content is taller -- relayout at the content height."""
+    page.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+    page.events.clear()
+    page.call("Page.navigate", {"url": url})
+    loaded = page.wait_event("Page.loadEventFired", DESIGN_PREVIEW_SETTLE)
+    shot = design_preview_capture(page, width, height, grow, page.settle())
+    shot["loaded"] = loaded
+    return shot
+
+
+def design_preview_link(rel: str, href: str, boards: dict, project: Path) -> tuple:
+    """Classify one <a href> on board `rel`: (kind, target) with kind board | dead | file | anchor |
+    external. Never fetched: an absolute URL (https:, mailto:, ...) is only listed as external."""
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", href) or href.startswith("//"):
+        return "external", href
+    from urllib.parse import unquote
+    path = unquote(urlparse(href).path)
+    if not path:
+        return "anchor", href
+    target = posixpath.normpath(path.lstrip("/") if path.startswith("/") else posixpath.join(posixpath.dirname(rel), path))
+    if target.endswith(DESIGN_BOARD_SUFFIX):
+        return ("board" if target in boards else "dead"), target
+    return ("file" if (project / target).is_file() else "dead"), target
+
+
+def design_preview_fold(message: str) -> str:
+    """An issue message without its "(+N more like it)" count, to tell a repeated finding apart."""
+    return re.sub(r" \(\+\d+ more like it\)$", "", message)
+
+
+def design_preview_num(value) -> str:
+    return f"{float(value):g}"
+
+
+def design_preview_measured(ctx: dict, rel: str, checks: dict) -> list:
+    """Word the in-page measurements as (check, message, count) issues, identical findings folded into
+    one line (the first element named, the rest counted; preview.json keeps every one)."""
+    if "failed" in checks:
+        return [("checks", f"the measured checks did not run: {checks['failed']}", 1)]
+    found = []
+    for c in checks.get("contrast", []):
+        weight = " bold" if c["weight"] >= 700 else ""
+        found.append(("contrast", f"{c['fg']} on {c['bg']}|{c['need']}",
+                      f"{c['el']} is {c['ratio']:.2f}:1, needs {design_preview_num(c['need'])}:1 "
+                      f"({design_preview_num(c['size'])}px{weight} text {c['fg']} on {c['bg']})"))
+    unmeasured = checks.get("unmeasured", [])
+    if unmeasured and rel not in ctx["unmeasured"]:  # once per board: judge those on the PNG
+        ctx["unmeasured"].add(rel)
+        first = unmeasured[0]
+        found.append(("unmeasured", "-", f"{len(unmeasured)} text run(s) sit on {first['why']} (first: {first['el']}): "
+                                         "contrast not measured; judge it on the PNG"))
+    for t in checks.get("target", []):
+        what = " with its label" if t.get("labelled") else ""
+        found.append(("target", f"{t['w']}x{t['h']}",
+                      f"{t['el']} is {design_preview_num(t['w'])}x{design_preview_num(t['h'])}px{what}, "
+                      f"under {DESIGN_PREVIEW_TARGET}x{DESIGN_PREVIEW_TARGET}"))
+    for c in checks.get("clipped", []):
+        found.append(("clipped", c["el"], f"{c['el']} has text cut off: content {c['sw']}x{c['sh']} in a {c['cw']}x{c['ch']} box "
+                                          "that hides overflow, with no ellipsis or line clamp"))
+    for link in checks.get("links", []):
+        kind, target = design_preview_link(rel, link["href"], ctx["boards"], ctx["project"])
+        if link.get("anchor") == "placeholder":
+            found.append(("dead-link", link["href"], f"{link['el']} href=\"{link['href']}\" goes nowhere (a placeholder)"))
+        elif link.get("anchor") == "missing":
+            found.append(("dead-link", link["href"], f"{link['el']} href=\"{link['href']}\": no element with that id on this board"))
+        elif kind == "dead":
+            what = "board in canvas.json" if target.endswith(DESIGN_BOARD_SUFFIX) else "file in the canvas tree"
+            found.append(("dead-link", link["href"], f"{link['el']} href=\"{link['href']}\": no {what} named {target}"))
+    for i in checks.get("images", []):
+        src = f"src=\"{i['src']}\"" if i["src"] else "no src"
+        found.append(("image", i["src"], f"{i['el']} ({src}) did not load or decode (naturalWidth 0)"))
+    for n in checks.get("names", []):
+        if n["kind"] == "field":
+            hint = f" (its placeholder \"{n['placeholder']}\" is not a label)" if n.get("placeholder") else ""
+            found.append(("name", n["el"], f"{n['el']}: a form field with no label (label for=, a wrapping label, "
+                                           f"aria-label or aria-labelledby){hint}"))
+        else:
+            found.append(("name", n["el"], f"{n['el']}: a {n['kind']} with no accessible name (no text, aria-label, "
+                                           "aria-labelledby, title or img alt)"))
+    folded: dict = {}
+    for check, key, message in found:
+        entry = folded.setdefault((check, key), [message, 0])
+        entry[1] += 1
+    return [(check, message, count) for (check, _), (message, count) in folded.items()]
+
+
+def design_preview_issues(ctx: dict, rel: str, shot: dict, grow: bool, height: int, clip_h: int = None) -> list:
+    """Every (check, message) issue of one screenshot: the render's own (load, settle, size, mounts,
+    errors, files not found) and the measured checks. clip_h is a PAGE's frame h in the frame view: the
+    render grows a PAGE to its content, but the canvas frame does not, so a state taller than h is cut
+    there (page-clip)."""
+    shape, issues = shot["shape"], []
+    if not shot.get("loaded", True):
+        issues.append(("load", "the page never fired its load event (a script or file that never arrived?)"))
+    if not shot["settled"]:
+        issues.append(("settle", f"the page was still changing after {DESIGN_PREVIEW_SETTLE:g}s (an animation, or a slow font or image)"))
+    if grow and shape["h"] > DESIGN_PREVIEW_MAX:
+        issues.append(("too-tall", f"the page is {shape['h']}px tall: the screenshot stops at {DESIGN_PREVIEW_MAX}px"))
+    elif not grow and shape["h"] > height:
+        issues.append(("frame-clip", f"content is {shape['h']}px tall in a {height}px frame: the canvas clips the rest"))
+    if clip_h and shape["h"] > clip_h + 1:
+        issues.append(("page-clip", f"content is {shape['h']}px tall but the PAGE frame h is {clip_h}px: the canvas cuts the rest "
+                                    "(h holds the tallest state a click reaches)"))
+    if shape["w"] > shot["width"]:
+        issues.append(("overflow", f"content is {shape['w']}px wide at {shot['width']}px: it does not fit the width (clipped, or a sideways scroll)"))
+    unmounted = shape["unmounted"]
+    for title in sorted(set(unmounted)):
+        issues.append(("unmounted", f"not mounted: {title} x{unmounted.count(title)} (an x-import whose system global is missing, "
+                                    "or a dc-import whose board is missing)"))
+    issues.extend(("runtime-error", f"runtime error: {text}") for text in shape["errors"])
+    issues.extend(("script-error", f"script error: {text}") for text in shot["errors"])
+    for miss in sorted(set(ctx["misses"])):
+        why = " (a canvas upload; it is not on disk)" if miss.startswith("/_blob/") else \
+            " (the system cache lacks it)" if miss.startswith("/ds/") else ""
+        issues.append(("not-found", f"not found: {miss}{why}"))
+    for check, message, count in design_preview_measured(ctx, rel, shot["checks"]):
+        issues.append((check, message + (f" (+{count - 1} more like it)" if count > 1 else "")))
+    return issues
+
+
+def design_preview_view(ctx: dict, rel: str, board: dict, view: str) -> int:
+    """Render one board in one view and print its line and its issues; returns the issue count, or -1
+    when no screenshot came out. frame = the board's w x h (a PAGE grows to its content), phone = 390
+    wide, growing to its content."""
+    page_board = board.get("expand") == "fill"
+    width, height = (board["w"], board["h"]) if view == "frame" else DESIGN_PREVIEW_PHONE
+    grow = page_board or view == "phone"
+    png = ctx["out"] / f"{rel[:-len(DESIGN_BOARD_SUFFIX)].replace('/', '__')}.{view}.png"
+    record = ctx["report"]["boards"][rel]
+    ctx["misses"].clear()
+    try:
+        shot = design_preview_render(ctx["page"], f"{ctx['base']}/{rel}", width, height, grow)
+    except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+        print(f"board={rel} png=none w={width} h={height} view={view} error=browser")
+        print(f"issue board={rel} view={view} check=screenshot: no screenshot: {exc}")
+        record["views"][view] = {"png": None, "w": width, "h": height,
+                                  "issues": [{"check": "screenshot", "message": f"no screenshot: {exc}"}]}
+        return -1
+    png.write_bytes(shot["png"])
+    shape = shot["shape"]
+    issues = design_preview_issues(ctx, rel, shot, grow, height, height if page_board and view == "frame" else None)
+    repeated = 0
+    if view != "frame" and "frame" in record["views"]:  # a measured finding the frame view already named is not repeated
+        named = {(i["check"], design_preview_fold(i["message"])) for i in record["views"]["frame"]["issues"]}
+        kept = [(c, m) for c, m in issues if c not in DESIGN_PREVIEW_CHECKS or (c, design_preview_fold(m)) not in named]
+        issues, repeated = kept, len(issues) - len(kept)
+    print(f"board={rel} png={png} w={shot['width']} h={shot['height']} view={view} content={shape['w']}x{shape['h']} "
+          f"unmounted={len(shape['unmounted'])} errors={len(shape['errors']) + len(shot['errors'])} issues={len(issues)}")
+    for check, message in issues:
+        print(f"issue board={rel} view={view} check={check}: {message}")
+    if repeated:
+        print(f"note board={rel} view={view}: {repeated} measured issue(s) as in the frame view, not repeated")
+    record["views"][view] = {"png": str(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
+                             "issues": [{"check": c, "message": m} for c, m in issues], "as_in_frame": repeated,
+                             "measured": shot["checks"]}
+    for link in shot["checks"].get("links", []):
+        design_preview_edge(ctx, rel, link["href"])
+    return len(issues)
+
+
+def design_preview_edge(ctx: dict, rel: str, href: str) -> None:
+    """Note one link of board `rel` for the link graph (preview.json always; link lines with --click)."""
+    kind, target = design_preview_link(rel, href, ctx["boards"], ctx["project"])
+    if kind in ("board", "external"):
+        ctx["edges"].setdefault(rel, {})[target] = kind
+
+
+def design_preview_click(page: "DesignBrowser", x: float, y: float) -> None:
+    """A real left click at (x, y): move, press, release (Input.dispatchMouseEvent), then the pointer
+    leaves for the top-left corner, so no hover style stays on the clicked control."""
+    page.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y})
+    page.call("Input.dispatchMouseEvent", {"type": "mousePressed", "x": x, "y": y, "button": "left", "buttons": 1, "clickCount": 1})
+    page.call("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": x, "y": y, "button": "left", "buttons": 0, "clickCount": 1})
+    page.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 0, "y": 0})
+
+
+def design_preview_note(ctx: dict, rel: str, view: str, state, check: str, message: str) -> None:
+    """Print and record one --click finding that belongs to a move between states, not to one
+    screenshot (layout-shift, same-target, hover-contrast): preview.json keeps it on the board and in
+    its issues list, and it counts in issues=."""
+    where = f" state={state:02d}" if state is not None else ""
+    print(f"issue board={rel} view={view}{where} check={check}: {message}")
+    item = {"view": view, "state": state, "check": check, "message": message}
+    ctx["report"]["boards"][rel].setdefault("interaction", []).append(item)
+    ctx["report"]["issues"].append(dict(item, board=rel))
+
+
+def design_preview_hover(ctx: dict, rel: str, view: str, state: int, hovered: set) -> int:
+    """The hover pass on the page as it stands: rest the pointer on each button and link not hovered
+    yet on this board (by its signature), and re-run the contrast check on the hovered control's own
+    text. A run that newly fails is a hover-contrast issue (the "green-out": a skeleton a:hover color
+    beating a system Button rendered as <a>). Returns the issue count."""
+    page, found = ctx["page"], 0
+    try:
+        targets = page.evaluate(DESIGN_PREVIEW_HOVER_JS) or []
+        for t in targets:
+            if t["sig"] in hovered:
+                continue
+            hovered.add(t["sig"])
+            page.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": t["x"], "y": t["y"]})
+            now = page.evaluate(f"window.__dcHover({json.dumps(t['key'])})") or []
+            for f in now:
+                if f"{f['el']}|{f['fg']}|{f['bg']}" in t["before"]:
+                    continue
+                design_preview_note(ctx, rel, view, state, "hover-contrast",
+                                    f"hovering {t['el']} turns {f['el']} to {f['ratio']:.2f}:1, needs "
+                                    f"{design_preview_num(f['need'])}:1 (text {f['fg']} on {f['bg']}; keep hover restrained "
+                                    "and scope page link colors to text links, e.g. a:not([class]))")
+                found += 1
+                break
+        page.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 0, "y": 0})
+        page.evaluate(DESIGN_PREVIEW_HOVER_DONE_JS)
+    except (RuntimeError, KeyError, TypeError) as exc:
+        design_preview_note(ctx, rel, view, state, "click", f"the hover pass stopped: {exc}")
+        found += 1
+    return found
+
+
+def design_preview_shifts(before: dict, after: dict, control: dict) -> list:
+    """Layout-shift messages for one click that stayed on the same page: a control (outside
+    [data-proto]) whose box changed by more than DESIGN_PREVIEW_SHIFT px -- matched by its place and
+    label, and the clicked one also by its place, tag and first class when its label changed ("Send"
+    to "Sending...") -- and a header, nav or main that moved."""
+    limit, out = DESIGN_PREVIEW_SHIFT, []
+    old = {(c["key"], c["label"]): c for c in before["clicks"] if not c.get("proto")}
+    for c in after["clicks"]:
+        if c.get("proto"):
+            continue
+        was = old.get((c["key"], c["label"]))
+        if was is None and c["key"] == control["key"]:
+            was = next((o for o in before["clicks"] if o["key"] == c["key"] and o.get("t") == c.get("t") and not o.get("proto")), None)
+        if was and (abs(was["w"] - c["w"]) > limit or abs(was["h"] - c["h"]) > limit):
+            name = f"'{c['label']}'" if was["label"] == c["label"] else f"'{was['label']}' (now '{c['label']}')"
+            out.append(f"clicking '{control['label']}' resizes {name} {was['w']:g}x{was['h']:g} -> {c['w']:g}x{c['h']:g}px "
+                       "(a control keeps its size when it shows its state)")
+    moved = []
+    old_anchors = {a["key"]: a for a in before.get("anchors", [])}
+    for a in after.get("anchors", []):
+        was = old_anchors.get(a["key"])
+        if was and was["el"] == a["el"] and (abs(was["x"] - a["x"]) > limit or abs(was["y"] - a["y"]) > limit):
+            axis = f"y {was['y']}->{a['y']}" if abs(was["y"] - a["y"]) > limit else f"x {was['x']}->{a['x']}"
+            moved.append(f"{a['el']} {axis}")
+    if moved:
+        out.append(f"clicking '{control['label']}' moves the page: {', '.join(moved[:4])}"
+                   + (f" (+{len(moved) - 4} more)" if len(moved) > 4 else "")
+                   + " (the header and content stay put while the page shows a state)")
+    return out
+
+
+def design_preview_explore(ctx: dict, rel: str, board: dict, view: str = "frame") -> int:
+    """--click on an interactive board, in one view (frame, or phone with --phone): from the settled
+    initial state, try each control (breadth first) and record every state whose visible DOM is new,
+    with its screenshot, its line and its issues. A state's path is a recipe from a fresh load, and its
+    screenshot is taken on exactly that recipe: a click is tried on the page as it stands when it
+    already shows the state's DOM (most clicks change nothing, so this saves a reload each), else after
+    a reload and a replay of the path; and a new state reached with other clicks behind it (a ticked box
+    the DOM identity ignores) is replayed from a fresh load before its screenshot, so no leftover value
+    leaks into it.
+
+    v60 (P36.S8C), for the flow-board recipe:
+    - the canvas-only state bar's presets are tried first, once per page: a preset sets the page's
+      complete state, so trying them from a second state of the same page gives nothing new; a state
+      on a page not met before is explored ahead of the rest, so every page's presets are reached;
+    - a list of DESIGN_PREVIEW_LIST_SAMPLE rows or more is sampled (its first, second and last row);
+      rows of one list that open the same state of another page are a same-target issue;
+    - every visible text field gets a realistic sample typed into it, a step of the path like a click,
+      and a form with two or more empty fields is also filled whole in one step;
+    - every move that stays on the same page compares the boxes of the controls and the positions of
+      the header, nav and main (layout-shift); a move to another page (the state bar's page name, else
+      the h1, changes) is navigation, never a shift;
+    - a PAGE's states are checked against its frame h (page-clip), and in the frame view each PAGE
+      state gets the hover pass.
+    Returns the issue count of the states."""
+    page, url = ctx["page"], f"{ctx['base']}/{rel}"
+    if view == "phone":
+        width, height, grow = DESIGN_PREVIEW_PHONE[0], DESIGN_PREVIEW_PHONE[1], True
+    else:
+        width, height, grow = board["w"], board["h"], board.get("expand") == "fill"
+    page_board = board.get("expand") == "fill"
+    clip_h = height if page_board and view == "frame" else None
+    record = ctx["report"]["boards"][rel]
+    fold = design_preview_fold
+    frame = {(i["check"], fold(i["message"])) for i in record["views"].get(view, {}).get("issues", [])}
+    stem = rel[:-len(DESIGN_BOARD_SUFFIX)].replace("/", "__")
+
+    history: list = []  # the steps since the last load
+    quick = {"poll": 0.04, "need": 1}  # a replay that misses its state is retried once with the render's settle
+
+    def load() -> None:
+        history.clear()
+        page.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+        page.events.clear()
+        page.call("Page.navigate", {"url": url})
+        page.wait_event("Page.loadEventFired", DESIGN_PREVIEW_SETTLE)
+        page.settle(**quick)
+        page.evaluate(DESIGN_PREVIEW_GUARD_JS)
+
+    def look() -> dict:
+        return page.evaluate(DESIGN_PREVIEW_STATE_JS)
+
+    def press(target: dict):
+        """Click the control (or type the sample into the field) with this key and label in the current
+        page; the look before it, or None when it is not there."""
+        before = look()
+        if target.get("fill"):
+            here = [f for f in before["fields"] if f["empty"]] or None
+        else:
+            pool = before["fields"] if "text" in target else before["clicks"]
+            here = next((c for c in pool if c["key"] == target["key"] and c["label"] == target["label"]), None)
+        if here is None:
+            return None
+        page.events.clear()
+        mark = page.evaluate("window.__dcTimers ? window.__dcTimers.seq() : 0")
+        step = {"key": target["key"], "label": target["label"]}
+        if target.get("fill"):  # every empty field gets its sample, as one step
+            for f in here:
+                if page.evaluate(f"{DESIGN_PREVIEW_FOCUS_JS}({json.dumps(f['key'])})"):
+                    page.call("Input.insertText", {"text": f["text"]})
+            step["fill"] = True
+        elif "text" in target:
+            if not page.evaluate(f"{DESIGN_PREVIEW_FOCUS_JS}({json.dumps(target['key'])})"):
+                return None
+            page.call("Input.insertText", {"text": target["text"]})
+            step["text"] = target["text"]
+        else:
+            design_preview_click(page, here["x"], here["y"])
+        history.append(step)
+        page.settle(**quick)
+        if page.evaluate(f"window.__dcTimers ? window.__dcTimers.after({int(mark)}) : 0"):
+            timed.add(target["label"])
+            page.evaluate(f"new Promise(r => {{ const t0 = Date.now(), f = () => !window.__dcTimers.after({int(mark)}) "
+                          "|| Date.now() - t0 > 3000 ? r(1) : setTimeout(f, 25); f(); })")
+            page.settle(**quick)
+        try:
+            page.evaluate(DESIGN_PREVIEW_ANIMATIONS_JS)
+        except RuntimeError:
+            pass
+        return before
+
+    def replay(path: list, want: str = None) -> str:
+        """Reload and run `path` again; the DOM identity it ends on, or "" when a step is missing. When
+        it does not end on `want`, it is tried once more with the render's slower settle."""
+        for slow in (False, True):
+            quick.update(poll=0.15, need=2) if slow else quick.update(poll=0.04, need=1)
+            load()
+            got = look()["hash"] if all(press(step) for step in path) else ""
+            quick.update(poll=0.04, need=1)
+            if want is None or got == want:
+                break
+        return got
+
+    def reach(state: dict) -> bool:
+        """Put the page in `state`: as it is when its DOM already matches, else reload and replay."""
+        try:
+            if page.evaluate("!!window.__dcPreview") and look()["hash"] == state["hash"]:
+                return True
+        except RuntimeError:
+            pass
+        return replay(state["path"], state["hash"]) == state["hash"]
+
+    def shown_path(path: list) -> str:
+        return " > ".join(f"{step['label']} <- \"{step['text']}\"" if "text" in step else step["label"] for step in path)
+
+    timed: set = set()  # controls whose click set a short timer that was waited for
+    hovered: set = set()  # the signatures of the controls the hover pass has rested on
+    issues = 0
+    if view == "phone":
+        replay([])
+    else:
+        page.evaluate(DESIGN_PREVIEW_GUARD_JS)  # the frame view just rendered: this is the initial state
+        if not page.evaluate("!!window.__dcTimers"):  # the timer watch starts with the first load after it
+            replay([])
+    if page_board and view == "frame":
+        before_hover = look()["hash"]
+        issues += design_preview_hover(ctx, rel, view, 0, hovered)
+        if look()["hash"] != before_hover:  # a hover handler changed the page: start again from a fresh load
+            replay([])
+    first = look()
+    states = [{"n": 0, "path": [], "hash": first["hash"], "page": first["page"]}]
+    seen, queue, ahead, clicks = {first["hash"]: 0}, [], [0], 0
+    pages_met, pages_preset = {first["page"]}, set()
+    notes, skipped, left, unreproduced, thrown = [], {"covered": 0, "outside": 0}, set(), 0, set()
+    said, lists_said, sampled_out, typed, pickers = set(), set(), 0, set(), 0
+    capped_states = capped_depth = capped_clicks = False
+    deadline = time.monotonic() + DESIGN_PREVIEW_BOARD_SECONDS
+
+    def say(state_n: int, check: str, message: str) -> int:
+        if (check, message) in said:
+            return 0
+        said.add((check, message))
+        design_preview_note(ctx, rel, view, state_n, check, message)
+        return 1
+
+    while (ahead or queue) and not capped_clicks:
+        state = states[(ahead or queue).pop(0)]
+        if len(state["path"]) >= DESIGN_PREVIEW_DEPTH:
+            capped_depth = True
+            continue
+        if not reach(state):
+            unreproduced += 1
+            continue
+        here = look()
+        skipped["covered"] += here["covered"]
+        skipped["outside"] += here["outside"]
+        pickers = max(pickers, here.get("pickers", 0))
+        presets = [c for c in here["clicks"] if c.get("bar")]
+        if here["page"] in pages_preset:
+            presets = []
+        elif presets:
+            pages_preset.add(here["page"])
+        rest = [c for c in here["clicks"] if not c.get("bar")]
+        lists: dict = {}
+        for c in rest:
+            if c.get("list"):
+                lists.setdefault(c["list"], []).append(c)
+        drop = set()
+        for members in lists.values():
+            if len(members) >= DESIGN_PREVIEW_LIST_SAMPLE:
+                members.sort(key=lambda c: c.get("idx", 0))
+                keep = {id(members[0]), id(members[1]), id(members[-1])}
+                drop.update(id(c) for c in members if id(c) not in keep)
+        sampled_out += len(drop)
+        fields = here.get("fields", [])
+        actions = presets + [c for c in rest if id(c) not in drop] + [dict(f) for f in fields]
+        if sum(1 for f in fields if f["empty"]) >= 2:  # and the whole form at once, so its submit is reached filled
+            actions.append({"key": "*", "label": "fill every field", "fill": True})
+        opened: dict = {}  # list id -> [(label, state hash, page)] for the rows clicked from this state
+        for control in actions:
+            if clicks >= DESIGN_PREVIEW_CLICKS or time.monotonic() > deadline:
+                capped_clicks = True
+                break
+            if not reach(state):
+                unreproduced += 1
+                break
+            clicks += 1
+            before = press(control)
+            if not before:
+                continue
+            if "text" in control:
+                typed.add(control["label"])
+            path = state["path"] + [dict({"key": control["key"], "label": control["label"]},
+                                         **({"text": control["text"]} if "text" in control else {}),
+                                         **({"fill": True} if control.get("fill") else {}))]
+            shown = shown_path(path)
+            try:
+                navigated = not page.evaluate("!!window.__dcPreview")
+            except RuntimeError:
+                navigated = True
+            if navigated:  # a click that left the board is a link, not a state
+                left.add(control["label"])
+                continue
+            errors = page.errors()
+            now = look()
+            after = now["hash"]
+            if before["page"] == now["page"]:
+                for message in design_preview_shifts(before, now, control):
+                    issues += say(state["n"], "layout-shift", message)
+            if control.get("list") and "text" not in control:
+                opened.setdefault(control["list"], []).append((control["label"], after, now["page"]))
+            if now["page"] not in pages_met:
+                pages_met.add(now["page"])
+                first_of_page = True
+            else:
+                first_of_page = False
+            if after in seen or len(states) >= DESIGN_PREVIEW_STATES:
+                capped_states = capped_states or after not in seen
+                where = seen.get(after, state["n"])
+                for text in errors:
+                    if (control["label"], text) in thrown:  # said once per control and error
+                        continue
+                    thrown.add((control["label"], text))
+                    message = f"clicking \"{shown}\" threw: {text}"
+                    print(f"issue board={rel} view={view} state={where:02d} check=click-error: {message}")
+                    record["click_errors"].append({"state": where, "view": view, "path": [s["label"] for s in path], "message": text})
+                    issues += 1
+                if first_of_page and after not in seen:
+                    pages_met.discard(now["page"])  # not recorded: let a later move to that page count as its first
+                continue
+            if history != path:  # other steps are behind this page: take the screenshot on the path alone
+                actual = list(history)
+                if replay(path, after) != after:  # the shortest path does not give it from a fresh load: keep the real one
+                    path, shown = actual, shown_path(actual)
+                    if replay(path, after) != after:
+                        unreproduced += 1
+                        continue
+            new = {"n": len(states), "path": path, "hash": after, "page": now["page"]}
+            states.append(new)
+            seen[after] = new["n"]
+            (ahead if first_of_page else queue).append(new["n"])
+            page.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+            ctx["misses"].clear()
+            shot = design_preview_capture(page, width, height, grow, page.settle(**quick))
+            shot["errors"] = []  # the click's errors, said once below as click-error
+            png = ctx["out"] / f"{stem}.{view}.state-{new['n']:02d}.png"
+            png.write_bytes(shot["png"])
+            found = [(c, m) for c, m in design_preview_issues(ctx, rel, shot, grow, height, clip_h) if (c, fold(m)) not in frame]
+            found += [("click-error", f"clicking \"{shown}\" threw: {text}") for text in errors
+                      if (control["label"], text) not in thrown]
+            thrown.update((control["label"], text) for text in errors)
+            shape = shot["shape"]
+            print(f"state board={rel} view={view} n={new['n']:02d} path=\"{shown}\" png={png} w={shot['width']} "
+                  f"h={shot['height']} content={shape['w']}x{shape['h']} issues={len(found)}")
+            for check, message in found:
+                print(f"issue board={rel} view={view} state={new['n']:02d} check={check}: {message}")
+            issues += len(found)
+            record["states"].append({"n": new["n"], "view": view, "page": new["page"], "path": [shown_path([s]) for s in path],
+                                     "png": str(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
+                                     "issues": [{"check": c, "message": m} for c, m in found], "measured": shot["checks"]})
+            for link in shot["checks"].get("links", []):
+                design_preview_edge(ctx, rel, link["href"])
+            if page_board and view == "frame":
+                issues += design_preview_hover(ctx, rel, view, new["n"], hovered)
+        for list_id, rows in opened.items():
+            if list_id in lists_said:  # said once per list
+                continue
+            alike: dict = {}
+            for label, after, where in rows:
+                if after != state["hash"] and where != state["page"]:
+                    alike.setdefault(after, []).append(label)
+            for after, labels in alike.items():
+                if len(set(labels)) >= 2 and list_id not in lists_said:
+                    lists_said.add(list_id)
+                    names = ", ".join(f"'{label}'" for label in sorted(set(labels))[:3])
+                    issues += say(state["n"], "same-target",
+                                  f"rows {names} of one list all open the same state (n={seen.get(after, '?')}): "
+                                  "each item opens its own item")
+    if capped_states:
+        notes.append(f"state cap {DESIGN_PREVIEW_STATES} reached: more states exist")
+    if capped_depth:
+        notes.append(f"depth cap {DESIGN_PREVIEW_DEPTH} reached: states deeper than {DESIGN_PREVIEW_DEPTH} steps were not explored")
+    if capped_clicks:
+        notes.append(f"click cap ({DESIGN_PREVIEW_CLICKS} steps or {DESIGN_PREVIEW_BOARD_SECONDS}s) reached: some controls were not tried")
+    if unreproduced:
+        notes.append(f"{unreproduced} state(s) did not come back on replay (a timer, or randomness): their controls were not all tried")
+    if skipped["covered"] or skipped["outside"]:
+        notes.append(f"controls not clicked: {skipped['covered']} covered by another element, "
+                     f"{skipped['outside']} outside the {width}x{height} frame (counted per state)")
+    if sampled_out:
+        notes.append(f"list rows sampled: {sampled_out} row click(s) skipped (each list of {DESIGN_PREVIEW_LIST_SAMPLE}+ rows "
+                     "tries its first, second and last row)")
+    if pages_preset:
+        notes.append(f"state-bar presets tried on {len(pages_preset)} page(s)")
+    if left:
+        notes.append(f"clicks that left the board (a link, not a state): {', '.join(sorted(left))}")
+    if timed:
+        notes.append(f"waited for the timers of {', '.join(sorted(timed))}: a state shown only while a timer runs "
+                     "(Saving...) is passed through, and the state recorded is the one after it")
+    if typed:
+        notes.append(f"typed a sample into {len(typed)} field(s): {', '.join(sorted(typed))}")
+    if pickers:
+        notes.append(f"{pickers} field(s) need a native picker (select, date, file, range): states behind them are not explored")
+    if hovered:
+        notes.append(f"hovered {len(hovered)} control(s)")
+    print(f"note board={rel} view={view}: {len(states) - 1} state(s) beyond the initial one, {clicks} step(s)"
+          + "".join(f"; {n}" for n in notes))
+    record.setdefault("click", {})[view] = {"states": len(states) - 1, "clicks": clicks, "notes": notes}
+    ctx["states"] += len(states) - 1
+    return issues
+
+
+def design_preview(args: argparse.Namespace) -> int:
+    """Render each board of a job's canvas locally and print where the screenshots are."""
+    started = time.monotonic()
+    if args.phone_click:
+        args.click = True
+    root = design_root()
+    scan = design_scan(root, args.job)
+    design_require_manifest(scan, root, "design-preview")
+    job = design_find_job(scan, args.job, "design-preview")
+    project = job["path"] / "canvas" / "project"
+    try:
+        index = read_json(project / "canvas.json")
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"design-preview: refused -- jobs/{args.job}/canvas/project/canvas.json is not readable "
+                         f"({exc}); the drafter writes the canvas tree first")
+    boards = index.get("boards") if isinstance(index, dict) else None
+    if not isinstance(boards, dict) or not boards:
+        raise SystemExit(f"design-preview: refused -- jobs/{args.job}/canvas/project/canvas.json lists no boards")
+    unknown = [b for b in args.board or [] if b not in boards]
+    if unknown:
+        raise SystemExit(f"design-preview: no board {', '.join(map(repr, unknown))} in canvas.json "
+                         f"(boards: {', '.join(sorted(boards))})")
+    runtime = Path(args.runtime).expanduser()
+    if not runtime.is_file():
+        raise SystemExit(f"design-preview: refused -- no runtime at {runtime} (the orchestrator saves the Design canvas "
+                         "type's artifact-type/dc-runtime.js for the job; pass that path)")
+    out = Path(args.out).expanduser().resolve() if args.out else None
+    if out is not None:
+        try:
+            out.relative_to(root.resolve())
+        except ValueError:
+            pass
+        else:
+            raise SystemExit(f"design-preview: refused -- --out {out} is inside {DESIGN_ROOT_SHOWN}/; screenshots stay out of the design record")
+    browser = design_preview_browser(args.browser)
+    if browser is None:  # an honest skip: a verdict, not an error, and never a claimed render
+        print("preview=skipped reason=no-browser")
+        print(f"hint: nothing was rendered or written; install Chrome or Chromium, or name one with --browser or ${DESIGN_PREVIEW_BROWSER_ENV}")
+        return 0
+    if not hasattr(os, "posix_spawn"):  # the DevTools pipe needs posix_spawn's fd mapping (macOS, Linux)
+        print("preview=skipped reason=unsupported-platform")
+        print("hint: nothing was rendered or written; design-preview drives the browser over a pipe that needs os.posix_spawn")
+        return 0
+    runtime_bytes = runtime.read_bytes()
+    if b"DCLogic" not in runtime_bytes:
+        print(f"warning: {runtime} does not look like the Design canvas runtime (no DCLogic in it)")
+    if job["problems"]:
+        print(f"warning: design-check finds {len(job['problems'])} problem(s) in this job (run: {WORKFLOW_CMD} design-check {args.job})")
+    ds = project / "ds"
+    if ds.is_dir() and not (ds / ".gitignore").exists():  # the system cache is never committed
+        (ds / ".gitignore").write_text("*\n", encoding="utf-8")
+        print(f"wrote {DESIGN_ROOT_SHOWN}/jobs/{args.job}/canvas/project/ds/.gitignore (the system cache stays out of git)")
+    system = scan["manifest"]["system"]
+    for rec in index.get("designSystems") or []:
+        ns = rec.get("namespace") if isinstance(rec, dict) else None
+        if not isinstance(ns, str) or not ns:
+            continue
+        if not (ds / ns).is_dir():
+            print(f"warning: system {ns} not cached -- x-import components will not mount "
+                  f"(the orchestrator saves the system's files under canvas/project/ds/{ns}/)")
+        elif ns == system.get("namespace"):
+            for name in system.get("files") or []:
+                if not (ds / ns / name).is_file():
+                    print(f"warning: system {ns} cache lacks {name}")
+    if out is None:
+        out = Path(tempfile.mkdtemp(prefix=f"design-preview-{args.job}-"))
+    out.mkdir(parents=True, exist_ok=True)
+
+    def reading(key):
+        title = boards[key].get("title") if isinstance(boards[key], dict) else None
+        match = DESIGN_TITLE_RE.match(title) if isinstance(title, str) else None
+        return (design_number(match.group(1)) if match else 10 ** 6, key)
+
+    print(f"runtime=real path={runtime}")
+    misses: list = []
+    report = {"schema": 1, "job": args.job, "runtime": str(runtime), "click": bool(args.click), "phone": bool(args.phone),
+              "phone_click": bool(args.phone_click),
+              "boards": {}, "links": [], "issues": [], "totals": {}}
+    profile = tempfile.mkdtemp(prefix="design-preview-profile-")
+    try:
+        page = DesignBrowser(browser, profile)
+    except (RuntimeError, OSError, ValueError, KeyError) as exc:
+        shutil.rmtree(profile, ignore_errors=True)
+        print(f"issue check=browser: the browser {browser} did not start under the DevTools pipe: {exc}")
+        print(f"preview=failed pngs=0 failed=1 issues=1 states=0 out={out}")
+        return 1
+    server = design_preview_server(project, runtime_bytes, misses)
+    ctx = {"page": page, "out": out, "misses": misses, "base": f"http://127.0.0.1:{server.server_address[1]}",
+           "boards": boards, "project": project, "report": report, "unmeasured": set(), "edges": {}, "states": 0}
+    shots = issues = failed = 0
+    rendered = []
+    try:
+        for rel in sorted(args.board or boards, key=reading):
+            board = boards[rel]
+            entry = board if isinstance(board, dict) else {}
+            report["boards"][rel] = {"title": entry.get("title"), "page": entry.get("expand") == "fill",
+                                     "interactive": entry.get("is_interactive") is True, "views": {}, "states": [],
+                                     "click_errors": []}
+            try:
+                w, h = int(board["w"]), int(board["h"])
+            except (KeyError, TypeError, ValueError):
+                w = h = 0
+            if not (1 <= w <= DESIGN_PREVIEW_MAX and 1 <= h <= DESIGN_PREVIEW_MAX):
+                message = f"canvas.json gives no usable w/h (1..{DESIGN_PREVIEW_MAX}); not rendered"
+                print(f"issue board={rel} check=size: {message}")
+                report["issues"].append({"board": rel, "check": "size", "message": message})
+                issues += 1
+                continue
+            rendered.append(rel)
+            board = dict(board, w=w, h=h)
+            views = ["frame"] + (["phone"] if board.get("expand") == "fill" or args.phone else [])
+            for view in views:
+                found = design_preview_view(ctx, rel, board, view)
+                if found < 0:
+                    failed += 1
+                else:
+                    shots += 1
+                    issues += found
+                if found < 0 or not args.click:
+                    continue
+                phone_walk = view == "phone" and args.phone_click and board.get("expand") == "fill"
+                if board.get("is_interactive") is True and (view == "frame" or phone_walk):
+                    try:  # --click: the frame view always; --phone-click: a PAGE's phone view too
+                        script = page.call("Page.addScriptToEvaluateOnNewDocument", {"source": DESIGN_PREVIEW_TIMERS_JS})
+                        try:
+                            issues += design_preview_explore(ctx, rel, board, view)
+                        finally:  # the next render loads without the timer watch
+                            page.call("Page.removeScriptToEvaluateOnNewDocument", {"identifier": script["identifier"]})
+                    except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+                        print(f"issue board={rel} view={view} check=click: the click-through stopped: {exc}")
+                        report["boards"][rel].setdefault("click", {}).setdefault(view, {})["stopped"] = str(exc)
+                        issues += 1
+                elif view == "frame" and board.get("expand") == "fill":  # a PAGE nobody clicks through still gets the hover pass
+                    issues += design_preview_hover(ctx, rel, view, 0, set())
+    finally:
+        page.close()
+        server.shutdown()
+        server.server_close()
+        shutil.rmtree(profile, ignore_errors=True)
+    for rel in sorted(ctx["edges"]):
+        for target, kind in sorted(ctx["edges"][rel].items()):
+            report["links"].append({"from": rel, "to": target, "external": kind == "external"})
+            if args.click:
+                print(f"link from={rel} to={target}" + (" external" if kind == "external" else ""))
+    if args.click:
+        main = "Main" + DESIGN_BOARD_SUFFIX
+        if args.board:
+            print("note: the link graph covers only the boards rendered (--board), so no board is called unreachable")
+        elif main in boards:
+            reached, todo = {main}, [main]
+            while todo:
+                for target, kind in ctx["edges"].get(todo.pop(), {}).items():
+                    if kind == "board" and target not in reached:
+                        reached.add(target)
+                        todo.append(target)
+            for rel in rendered:
+                if rel not in reached and report["boards"][rel]["page"]:
+                    message = f"no chain of links from {main} reaches this page"
+                    print(f"issue board={rel} check=unreachable: {message}")
+                    report["issues"].append({"board": rel, "check": "unreachable", "message": message})
+                    issues += 1
+    seconds = round(time.monotonic() - started, 1)
+    report["totals"] = {"pngs": shots, "failed": failed, "issues": issues, "states": ctx["states"], "seconds": seconds}
+    (out / "preview.json").write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"preview={'failed' if failed and not shots else 'done'} pngs={shots} failed={failed} issues={issues} "
+          f"states={ctx['states']} seconds={seconds:g} out={out}")
+    return 1 if failed else 0
+
+
+def design_migrate(args: argparse.Namespace) -> None:
+    if args.to == "2":
+        design_migrate_schema2(args)
+        return
+    design_migrate_pre_v47(args)
+
+
+def design_migrate_schema2(args: argparse.Namespace) -> None:
+    """Move a schema-1 (v47 card) record -- cards/, tokens.css, rounds/ with every snapshot under them
+    -- into DESIGN_SCHEMA1_DIR, unchanged, then rewrite design.json to schema 2 (id and name kept, a
+    null-filled system). Every check runs before the first move (a refusal moves nothing); a dry run
+    unless --apply; all-or-nothing; never a delete, never git."""
+    root = design_root()
+    mpath = root / "design.json"
+    rel = lambda p: Path(shown(p)).as_posix()
+    if not mpath.is_file():
+        raise SystemExit(f"design-migrate --to 2: refused -- no {DESIGN_ROOT_SHOWN}/design.json; nothing to migrate "
+                         f"(a new design record starts on schema {DESIGN_SCHEMA} with design-init)")
+    try:
+        manifest = read_json(mpath)
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"design-migrate --to 2: refused -- design.json is not valid JSON ({exc}); fix it by hand")
+    if design_is_schema(manifest, DESIGN_SCHEMA):
+        print(f"design-migrate --to 2: design.json is already schema {DESIGN_SCHEMA}; nothing to migrate")
+        return
+    if not design_is_schema(manifest, 1):
+        schema = manifest.get("schema") if isinstance(manifest, dict) else None
+        raise SystemExit(f"design-migrate --to 2: refused -- design.json schema {schema!r} is not 1")
+    target = root / DESIGN_SCHEMA1_DIR
+    rounds_dir = root / "rounds"
+    problems = []
+    if design_legacy_record(root):
+        problems.append(f"a pre-v47 record is still at the root; run {WORKFLOW_CMD} design-migrate (no --to) first, which moves it into {DESIGN_LEGACY_DIR}/")
+    if os.path.lexists(target):
+        problems.append(f"{rel(target)} already exists (a schema-1 record was migrated before; move it aside by hand)")
+    opened = []
+    for entry in sorted(rounds_dir.iterdir()) if rounds_dir.is_dir() else []:
+        try:
+            if (entry / "round.json").is_file() and read_json(entry / "round.json").get("status") == "open":
+                opened.append(entry.name)
+        except (ValueError, OSError, AttributeError):
+            problems.append(f"{rel(entry / 'round.json')} is not readable JSON; fix it by hand")
+    if opened:
+        problems.append(f"schema-1 round(s) {', '.join(opened)} still open: close each with the engine it was opened on before "
+                        f"updating, or, if abandoned, set its round.json status to \"superseded\" with a closed_at by hand")
+    wanted = {"schema": DESIGN_SCHEMA, "id": manifest.get("id"), "name": manifest.get("name"), "system": design_null_system()}
+    problems.extend(design_manifest_problems(wanted))
+    if problems:
+        raise SystemExit("design-migrate --to 2: refused -- nothing moved:\n" + "\n".join(f"- {p}" for p in problems))
+    moves = [(root / name, target / name) for name in ("cards", "tokens.css", "rounds") if os.path.lexists(root / name)]
+    keep = {"design.json", "cards", "tokens.css", "rounds", "jobs", DESIGN_LEGACY_DIR, DESIGN_SCHEMA1_DIR}
+    stayed = [f"design-migrate --to 2: left in place {rel(e)} (not part of the schema-1 record; move it by hand if it belongs there)"
+              for e in sorted(root.iterdir()) if e.name not in keep and not e.name.startswith(".")]
+    if not args.apply:
+        print("\n".join([f"design-migrate --to 2: would move {rel(src)} -> {rel(dst)}" for src, dst in moves]
+                        + [f"design-migrate --to 2: would rewrite {rel(mpath)} to schema {DESIGN_SCHEMA} (id and name kept, system null)"]
+                        + stayed + ["design-migrate --to 2: dry run -- nothing moved; re-run with --apply"]))
+        return
+    done, made = [], False
+    try:
+        if moves:
+            target.mkdir()
+            made = True
+        for src, dst in moves:
+            os.replace(src, dst)
+            done.append((src, dst))
+        write_json(mpath, wanted)
+    except OSError as exc:  # all-or-nothing: put back what already moved, then drop the folder made here
+        undo = []
+        for src, dst in reversed(done):
+            try:
+                os.replace(dst, src)
+            except OSError as again:
+                undo.append(f"- could not move {rel(dst)} back to {rel(src)}: {again}")
+        if made:
+            try:
+                target.rmdir()
+            except OSError:
+                pass
+        raise SystemExit(f"design-migrate --to 2: failed -- {exc}; " + (
+            "rolled back, nothing moved" if not undo else "rollback incomplete:\n" + "\n".join(undo)))
+    for src, dst in moves:
+        print(f"design-migrate --to 2: moved {rel(src)} -> {rel(dst)}")
+    print(f"design-migrate --to 2: rewrote {rel(mpath)} to schema {DESIGN_SCHEMA}")
+    if stayed:
+        print("\n".join(stayed))
+    print("commit the move yourself (git sees it as renames)")
+
+
+def design_migrate_pre_v47(args: argparse.Namespace) -> None:
+    """Move a pre-v47 design record into DESIGN_LEGACY_DIR, unchanged. With no design.json the whole
+    root is the old record, so every top-level entry moves (dot-entries stay); with design.json the
+    repo already uses the drafter, so only the old record's parts move -- rounds without round.json,
+    the root SIGNOFF.md and grounding/. Every check runs before the first move (a refusal moves
+    nothing); a dry run unless --apply; never a delete (only an empty rounds/ is rmdir'ed), never git."""
+    root = design_root()
+    if not root.is_dir():
+        raise SystemExit(f"design-migrate: refused -- no design root at {DESIGN_ROOT_SHOWN}/; nothing to migrate")
+    legacy = root / DESIGN_LEGACY_DIR
+    rounds_dir = root / "rounds"
+    rel = lambda p: Path(shown(p)).as_posix()
+    moves, left, problems = [], [], []
+    outside = "not part of either contract; move it by hand if it belongs to the old record"
+    if not (root / "design.json").exists():
+        mixed = [e.name for e in sorted(rounds_dir.iterdir()) if (e / "round.json").exists()] if rounds_dir.is_dir() else []
+        if mixed:
+            problems.append(f"{rel(rounds_dir)} holds schema-1 round(s) {', '.join(mixed)} (they carry a round.json) but there is "
+                            f"no design.json; if this repo uses the drafter, restore it with design-init first")
+        jobs_dir = root / "jobs"
+        if jobs_dir.is_dir() and any((e / "job.json").exists() for e in jobs_dir.iterdir()):
+            problems.append(f"{rel(jobs_dir)} holds schema-{DESIGN_SCHEMA} job(s) but there is no design.json; restore it with design-init first")
+        for entry in sorted(root.iterdir()):
+            if entry.name in (DESIGN_LEGACY_DIR, DESIGN_SCHEMA1_DIR):
+                continue
+            if entry.name.startswith("."):
+                left.append((entry, "a dot-entry"))
+                continue
+            moves.append((entry, legacy / entry.name))
+    else:
+        left.extend((e, outside) for e in (sorted(rounds_dir.iterdir()) if rounds_dir.is_dir() else [])
+                    if not e.name.startswith(".") and not e.is_dir())
+        moves.extend((part, legacy / part.relative_to(root)) for part in design_legacy_record(root))
+        if moves and (root / "tokens.css").is_file():  # schema 1's own file: kept, but said out loud
+            left.append((root / "tokens.css", "kept as schema 1's tokens.css (design-migrate --to 2 moves it into schema1/); "
+                                              "if it belongs to the old record, move it into claude-design/ by hand"))
+        contract = {"design.json", "cards", "tokens.css", "rounds", "jobs", DESIGN_LEGACY_DIR, DESIGN_SCHEMA1_DIR,
+                    "SIGNOFF.md", "grounding"}
+        left.extend((e, outside) for e in sorted(root.iterdir()) if e.name not in contract and not e.name.startswith("."))
+    folders = [legacy] + ([legacy / "rounds"] if any(dst.parent == legacy / "rounds" for _, dst in moves) else [])
+    for folder in folders:
+        if os.path.lexists(folder) and not folder.is_dir():
+            problems.append(f"{rel(folder)} exists and is not a folder")
+    started = ("; a claude-design round was started first -- move each legacy round into claude-design/rounds/ by hand, "
+               "renumbering after the existing ones, remove the emptied rounds/, then re-run")
+    problems.extend(f"{rel(dst)} already exists" + (started if dst == legacy / "rounds" else "")
+                    for _, dst in moves if os.path.lexists(dst))
+    if problems:
+        raise SystemExit("design-migrate: refused -- nothing moved:\n" + "\n".join(f"- {p}" for p in problems))
+    stayed = [f"design-migrate: left in place {rel(path)} ({why})" for path, why in left]
+    if not moves:
+        print("\n".join(stayed + ["design-migrate: nothing to migrate"]))
+        return
+    if not args.apply:
+        print("\n".join([f"design-migrate: would move {rel(src)} -> {rel(dst)}" for src, dst in moves] + stayed
+                        + ["design-migrate: dry run -- nothing moved; re-run with --apply"]))
+        return
+    created, done = [], []
+    try:
+        for src, dst in moves:
+            for folder in folders:
+                if folder in dst.parents and not folder.is_dir():
+                    folder.mkdir()
+                    created.append(folder)
+            os.replace(src, dst)
+            done.append((src, dst))
+    except OSError as exc:  # all-or-nothing: put back what already moved, then drop only the folders made here
+        undo = []
+        for src, dst in reversed(done):
+            try:
+                os.replace(dst, src)
+            except OSError as again:
+                undo.append(f"- could not move {rel(dst)} back to {rel(src)}: {again}")
+        for folder in reversed(created):
+            try:
+                folder.rmdir()
+            except OSError:
+                pass
+        raise SystemExit(f"design-migrate: failed -- {exc}; " + (
+            "rolled back, nothing moved" if not undo else "rollback incomplete:\n" + "\n".join(undo)))
+    for src, dst in moves:
+        print(f"design-migrate: moved {rel(src)} -> {rel(dst)}")
+    if any(src.parent == rounds_dir for src, _ in moves) and rounds_dir.is_dir():
+        try:
+            rounds_dir.rmdir()  # only ever succeeds on a truly empty folder
+            print(f"design-migrate: removed the now-empty {rel(rounds_dir)}/")
+        except OSError:
+            pass
+    if stayed:
+        print("\n".join(stayed))
+    print("commit the move yourself (git sees it as renames)"
+          + ("" if (root / "design.json").exists() else "; run design-init only if this repo will use the drafter"))
 
 
 def main(argv=None) -> int:
@@ -2934,12 +7412,48 @@ def main(argv=None) -> int:
     p = sub.add_parser("validate", help="Validate workflow and docs structure")
     p.set_defaults(func=lambda args: sys.exit(validate()))
 
-    p = sub.add_parser("sync-agents", help="Apply the repo-root executors.toml executor-tier config (models/efforts) to the slice-executor agent files")
+    p = sub.add_parser("sync-agents", help="Write the route table's rows (engine defaults overlaid by the repo-root executors.toml) into the model/effort frontmatter of the five managed agent files: slice-executor-mid, slice-executor-high, design-drafter (its own design row), design-critic (the critic row; the judge row runs it with its model passed per call) and Explore (the explore row)")
     p.add_argument("--check", action="store_true", help="Report drift without writing; exit 1 if out of sync")
     p.set_defaults(func=sync_agents)
 
+    p = sub.add_parser("executor-route", help="Print the executor routing decision, one key=value per line, writing nothing: bare, the resolved route table (high, research, design, critic, judge, mid, cheap, explore) and the agent files' sync state; with a slice id, the route, tier, subagent_type, model, effort and attribution its dispatch uses (kind first, then risk, then attempt); --drafter / --critic / --judge / --explore, a non-slice agent's dispatch; plus fallback=, skip= and warning= lines for the environment. --critic and --judge exit 1 when their row is the design row's model")
+    p.add_argument("slice", nargs="?", help="the slice to route; omit for the table")
+    p.add_argument("--retry", action="store_true", help="the slice's second attempt (an escalation, a failed or empty return, a fix of mid-row work): always the high row")
+    p.add_argument("--drafter", action="store_true", help="the design-drafter's dispatch (its own design row, [claude.design]; not a slice tier)")
+    p.add_argument("--critic", action="store_true", help="the design-critic's dispatch in critic mode (the critic row, [claude.critic]); exit 1 when it is the drafter's model")
+    p.add_argument("--judge", action="store_true", help="the design-critic's dispatch in judge mode (the judge row, [claude.judge], alias only); exit 1 when it is the drafter's model; skip=yes behind a loopback proxy that serves no Fable")
+    p.add_argument("--explore", action="store_true", help="the read-only Explore lookup agent's dispatch (the explore row)")
+    p.set_defaults(func=cmd_executor_route)
+
+    p = sub.add_parser("record-dispatch", help="Append one executor_dispatched record to works/events.jsonl (slice, kind, risk, route, tier, agent, model, effort, attribution, attempt, verdict, and the measured duration / tokens / tool uses from the Agent completion notification); copy route / model / effort from executor-route; writes nothing else")
+    p.add_argument("slice", help="the slice that was dispatched")
+    p.add_argument("--route", required=True, choices=EXECUTOR_ROUTES, help="the route row dispatched on (the route= line executor-route printed)")
+    p.add_argument("--model", required=True, help="the model the dispatch ran on (the model= line)")
+    p.add_argument("--effort", required=True, help="the effort the dispatch ran on (the effort= line; empty when none was passed)")
+    p.add_argument("--verdict", required=True, choices=_DISPATCH_VERDICTS, help="how the executor returned; failed = an empty or failed return")
+    p.add_argument("--attempt", type=int, default=1, help="1 for the first dispatch, 2 for the retry (default 1)")
+    p.add_argument("--tier", choices=EXECUTOR_TIERS + ("-",), help="the tier (default: the route's tier; none for design, critic, judge and explore; - is none, as executor-route prints it)")
+    p.add_argument("--agent", help="the subagent_type dispatched (default: the route's installed agent -- the tier's, design-drafter for design, design-critic for critic and judge)")
+    p.add_argument("--duration-ms", type=int, dest="duration_ms", help="duration_ms from the completion notification")
+    p.add_argument("--tokens", type=int, help="subagent_tokens from the completion notification")
+    p.add_argument("--tool-uses", type=int, dest="tool_uses", help="tool_uses from the completion notification")
+    p.add_argument("--note", help="free text, e.g. back-filled from the completion notification")
+    p.set_defaults(func=cmd_record_dispatch)
+
+    p = sub.add_parser("dispatch-summary", help="Read-only: summarize the executor_dispatched records in works/events.jsonl by route, by model @ effort and by kind (dispatches, verdict counts, retries, mean / total minutes, tokens); --slice lists one slice's attempts; --json for tooling")
+    p.add_argument("--phase", help="keep one phase's records")
+    p.add_argument("--slice", help="keep one slice's records (its attempts, in order) and print them one per line")
+    p.add_argument("--json", action="store_true", help="print the aggregates as one JSON object")
+    p.set_defaults(func=cmd_dispatch_summary)
+
     p = sub.add_parser("next", help="Print the current phase/slice selection")
     p.set_defaults(func=cmd_next)
+
+    p = sub.add_parser("compact-gate", help="The PreCompact hook (matcher auto): read the hook JSON on stdin and veto an auto-compaction while this checkout's current slice is in_progress or in_review or the tree is dirty, so compaction lands at a slice boundary; fails open -- a manual /compact, a fill at or above the ceiling (AGENTIC_COMPACT_CEILING), the cap of consecutive blocks (AGENTIC_COMPACT_BLOCK_CAP) and any error all allow, a block is only the stdout {\"decision\": \"block\"} JSON, and it always exits 0 (one trace line on stderr)")
+    p.set_defaults(func=cmd_compact_gate)
+
+    p = sub.add_parser("compact-resume", help="The SessionStart hook (matcher compact): print the next pointer and the resume line (re-read the running skill, the active slice folder and phase.md's ## Now) after a compaction; never fails, always exits 0")
+    p.set_defaults(func=cmd_compact_resume)
 
     p = sub.add_parser("deferred", help="Rebuild and print deferred jobs dashboard summary")
     p.set_defaults(func=cmd_deferred)
@@ -2948,19 +7462,21 @@ def main(argv=None) -> int:
     p.add_argument("--phase", required=True)
     p.add_argument("--name", required=True)
     p.add_argument("--objective", required=True)
-    p.add_argument("--order", type=float)
+    p.add_argument("--order", type=float, help="sort position among phases; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering")
     p.add_argument("--on-main", action="store_true", dest="on_main",
                    help="no-op since v43 (the default stream is the default); accepted so v42 habits and scripts keep working")
+    p.add_argument("--consolidates", metavar="P26,P27",
+                   help="docs phase: the comma-separated ids of active phases whose doc consolidation debt this phase pays; refused (nothing written) for an id that is not an active phase owing consolidation. Stored as `consolidates` in phase.json -- the only docs-phase marker; `docs-debt` shows it as 'paid by' and `rotate-backlog` proposes no second docs phase for what it covers")
     p.set_defaults(func=new_phase)
 
     p = sub.add_parser("new-slice", help="Create a new slice folder with slice.json + markdown files")
     p.add_argument("--phase", required=True)
     p.add_argument("--slice", required=True)
     p.add_argument("--name", required=True)
-    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to slice-executor-high")
-    p.add_argument("--risk", default="high", help="low (a one-line code edit or docs -> slice-executor-mid) or high (everything else -> slice-executor-high); unrecognized values route to high; kind decomposition, review and research route to high whatever this says")
-    p.add_argument("--order", type=float)
-    p.add_argument("--depends-on", action="append")
+    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row on slice-executor-high")
+    p.add_argument("--risk", default="high", help="low (the mid row for implementation and fix, the cheap row for docs and qa -- both on slice-executor-mid, the default tier since v46, real code included) or high (the high row on slice-executor-high: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
+    p.add_argument("--order", type=float, help="sort position within the phase; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering (default: 10 past the last non-review slice)")
+    p.add_argument("--depends-on", action="append", help="advisory: validate checks only that the named slice exists; selection still follows --order")
     p.set_defaults(func=new_slice)
 
     p = sub.add_parser("start-slice", help="Mark a slice in_progress")
@@ -3011,6 +7527,8 @@ def main(argv=None) -> int:
     p.add_argument("phase")
     p.add_argument("--worktree", default=None, help="worktree path (default: <repo>/.claude/worktrees/P<N>-<slug>, which EnterWorktree can enter in the same session; elsewhere means opening a second session there)")
     p.add_argument("--slug", default=None, help="branch slug override (default: slugified phase name); branch is phase/<phase>-<slug>")
+    p.add_argument("--host-branch", default=None, help="nested install only, and required there: the host repo's branch for this phase's product commits, named by the host's convention (no workspace IDs); reused when it exists and no host worktree has it checked out. In nested the pair is <host>/.claude/worktrees/P<N>-<slug> on this branch, with the nested worktree inside it (--worktree overrides the host worktree's path)")
+    p.add_argument("--host-base", default=None, help="nested install only: the host ref the host branch starts from (default: origin/HEAD, else init.defaultBranch if it exists locally, else main, then master; never fetched)")
     p.set_defaults(func=parallel_start)
 
     p = sub.add_parser("parallel-skip", help="No-op since v43 (the default stream is the default, so there is nothing to pin): reports where the phase runs and writes nothing")
@@ -3035,7 +7553,14 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("parallel-teardown", help="Retire a merged parallel phase's worktree and branch; run from the default stream")
     p.add_argument("phase")
+    p.add_argument("--discard-ignored", action="store_true", help="nested install only: delete the ignored, worktree-only files the paired teardown lists (it refuses without this flag)")
     p.set_defaults(func=parallel_teardown)
+
+    p = sub.add_parser("nested-convention", help="Nested personal install only: show the host repo's conventions for commits, branches and pull requests (bare), or record the operator's confirmation of them -- the text and whether Claude Co-Authored-By trailers are allowed in host commits (--confirm --text ... --trailers allowed|forbidden); refuses outside a nested install")
+    p.add_argument("--confirm", action="store_true", help="record the operator-confirmed conventions (needs --text and --trailers)")
+    p.add_argument("--text", default=None, help="the host's conventions as the operator confirmed them: commit subjects and trailers; branch naming and base (e.g. from fresh main); PR shape (one per ticket or per phase) and who merges")
+    p.add_argument("--trailers", default=None, choices=("allowed", "forbidden"), help="may Claude Co-Authored-By trailers appear in host product commits")
+    p.set_defaults(func=cmd_nested_convention)
 
     p = sub.add_parser("phase-scope", help="Read-only: the phase's boundary from git -- creation commit, base..head range and the product files it changed (works/ and docs/ excluded); advisory, exit 0 without git")
     p.add_argument("phase")
@@ -3043,6 +7568,89 @@ def main(argv=None) -> int:
     p.add_argument("--head", default=None, help="use this ref as the range head (default: HEAD, or the commit that recorded a passing review on a done phase)")
     p.add_argument("--json", action="store_true", help="print the same answer as one JSON object")
     p.set_defaults(func=phase_scope)
+
+    # The design contract, schema 2 (v60): the on-disk layout lives in design-cowork/SKILL.md "The design record".
+    p = sub.add_parser("design-init", help=f"Write the design project manifest {DESIGN_ROOT_REL}/design.json (schema {DESIGN_SCHEMA}: id, name, a null-filled system); idempotent -- an unchanged manifest is not rewritten; a schema-1 manifest is refused (design-migrate --to 2)",
+                       description=f"Create or update {DESIGN_ROOT_REL}/design.json, the one design project this repo holds. Defaults: id = the repo folder's name, slugified; name = the folder's name. The system record stays as it is (design-system sets it).")
+    p.add_argument("--id", default=None, help="the project id: lowercase [a-z0-9-], starting alphanumeric, at most 63 characters")
+    p.add_argument("--name", default=None, help="the project display name")
+    p.set_defaults(func=design_init)
+
+    p = sub.add_parser("design-system", help=f"Record the product's Design System Artifact in {DESIGN_ROOT_REL}/design.json (system: artifact, namespace, version, source, files); the orchestrator runs it after each system sync; idempotent",
+                       description="--artifact is the system's address (https://claude.ai/artifact/<id> or /code/artifact/<id>, on claude.ai or claude.com, preview. allowed, nothing after the id). --namespace is the folder a canvas installs it under, project/ds/<namespace>/ ([a-z0-9][a-z0-9_-]{0,63}). --files names the system files a canvas installs, relative to the system's project/ (e.g. tokens.json,tokens.css,components/bundle.js,components/bundle.css); omitted, the recorded list is kept.")
+    p.add_argument("--artifact", required=True, help="the Design System Artifact's address")
+    p.add_argument("--namespace", required=True, help="the install folder under a canvas's project/ds/")
+    p.add_argument("--version", required=True, help="the system version id the repo is synced to")
+    p.add_argument("--source", default=None, help="where the system came from (e.g. the code path it was synced from)")
+    p.add_argument("--files", default=None, help="comma-separated system files a canvas installs (replaces the recorded list)")
+    p.set_defaults(func=design_system)
+
+    p = sub.add_parser("design-open", help=f"Open the next design round of a job in a co-work slice: {DESIGN_ROOT_REL}/jobs/NN-<slug>/ (job.json, created on the slice's first round, or by --new-job for another job of the slice) and jobs/<job>/rounds/NN-<slug>/round.json, status open, with its critique level; refuses only while the target job has an open round",
+                       description=f"A co-work slice holds one job or several (a wave, about 3-4, drafted in parallel), each with at most one open round; rounds of different jobs may be open at once. The target: with neither flag, the slice's only job (its first round creates it; two or more jobs refuse and ask for --job); --new-job creates another job for the slice (re-running it with the same --slug resumes that job); --job <job> opens the next round of that job, which must belong to --slice. A later round supersedes the job's previous one (a signed job is reopened; an implemented one refuses). Rounds number inside the job. Re-running an open with the open round's slug writes nothing. --critique records the round's critique level in round.json (absent in an older round reads as off). More than {DESIGN_WAVE_OPEN_MAX} open rounds in one slice prints a warning, never a refusal. The orchestrator writes the round's handoff.md next (with a critique: line); the drafter writes the canvas tree in jobs/<job>/canvas/project/.")
+    p.add_argument("--slug", required=True, help="the round's slug (and the job's, when the round creates its job): lowercase words joined by hyphens")
+    p.add_argument("--slice", required=True, help="the co-work slice that owns the job (e.g. P48.S1)")
+    p.add_argument("--title", default=None, help="display title (default: the slug)")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--new-job", action="store_true", help="create another job for a slice that already has one (a wave's next surface)")
+    g.add_argument("--job", default=None, help="open the next round of this job (e.g. 02-settings); it must belong to --slice")
+    p.add_argument("--critique", default="off", metavar="{" + ",".join(DESIGN_CRITIQUE_LEVELS) + "}", help=f"the round's critique level: {' | '.join(DESIGN_CRITIQUE_LEVELS)} (default off)")
+    p.set_defaults(func=design_open)
+
+    p = sub.add_parser("design-check", help=f"Check {DESIGN_ROOT_REL}/ against the design contract -- well-formed design.json, job.json and round.json (a critique level, when present, is off, critic or critic+judge), at most one open round per job, and each job's canvas tree (canvas.json keys, boards listed and present, Main.dc.html, path rules, the ./support.js line, board titles numbered 01..N, references inside project/), no stray HTML; warnings exit 0, problems exit 1",
+                       description=f"Read-only. With a job id, only design.json and that job. Board titles start \"NN · \" with NN forming 01..N as a set (the layout is free). A canvas pinning another system version than design.json's is a warning, and so is an open job past {DESIGN_JOB_PAGES_MAX} Pages (boards with expand: fill) or {DESIGN_JOB_BOARDS_MAX} boards (one job is one surface, sized for one review; a board another board mounts with <dc-import name=...>, a flow board's screen or a gap component's one-instance board, is not counted). Board lint, also warnings, for an open job or a job named by id: check=leaves-canvas (an href to an https URL other than Google Fonts CSS: the link leaves the prototype) and check=same-target-list (a link with a literal .dc.html target inside a <sc-for>: every row opens the same board). A co-work slice may hold several jobs. The OK line lists every open round. {DESIGN_LEGACY_DIR}/ and {DESIGN_SCHEMA1_DIR}/ are legacy records and never read.")
+    p.add_argument("job", nargs="?", default=None, help="a job id, e.g. 01-signin (default: every job)")
+    p.set_defaults(func=design_check)
+
+    p = sub.add_parser("design-canvas", help="Record a job's canvas Artifact in its job.json: --url after creating it, --version after each publish (also records the published file list), --implemented once the signed job is built",
+                       description="--url takes the same Artifact address rule as design-system. --version records canvas.version and sets canvas.published to the files under canvas/project/ (ds/ left out), which the next design-publish-plan diffs against, and canvas.system to the system version canvas.json pins for design.json's namespace (null when it pins none): the version that publish installed. --implemented needs the job signed.")
+    p.add_argument("job", help="the job id, e.g. 01-signin")
+    p.add_argument("--url", default=None, help="the canvas Artifact's address")
+    p.add_argument("--version", default=None, help="the version id the last publish returned")
+    p.add_argument("--implemented", action="store_true", help="mark the signed job implemented (its design is built)")
+    p.set_defaults(func=design_canvas)
+
+    p = sub.add_parser("design-publish-plan", help="Read-only: print the Artifact publish call for a job's canvas as JSON -- {url, root, file_path, files}: canvas.json as file_path, every other project/ file mapped to itself, files removed since the last publish mapped to null, and the system install entries on a first publish or a changed system pin; refuses without a canvas url or on a failing design-check",
+                       description="The engine never calls claude.ai: the orchestrator passes this JSON to its Artifact publish. root is the job's canvas/ folder (it holds project/); ds/ is never sent from disk -- with design.json's system set, each system file maps as \"project/ds/<namespace>/<file>\": {\"artifact\": <system>, \"path\": \"project/<file>\"}, a server-side copy. Those copies are in the plan only on the job's first publish (canvas.version null) or when the version canvas.json pins for that namespace differs from job.json canvas.system, the version the last publish installed (absent on a job published before v60, which reads as the pin now); files left out of a publish are kept by the server.")
+    p.add_argument("job", help="the job id, e.g. 01-signin")
+    p.set_defaults(func=design_publish_plan)
+
+    p = sub.add_parser("design-preview", help="Render each board of a job's canvas locally for the drafter's self-check: serve canvas/project/ (its ds/ system cache included) with the Design canvas type's real runtime as ./support.js over http on 127.0.0.1, screenshot every board in an exact viewport with a throwaway headless Chrome/Chromium profile driven over the DevTools pipe (no port), print one board=<file> png=<path> w= h= line per screenshot plus its issues; no browser prints preview=skipped reason=no-browser, writes nothing and exits 0",
+                       description=f"Never views the published canvas and never calls claude.ai. --runtime is the type's artifact-type/dc-runtime.js, which the orchestrator saves per job (never vendored); it renders standalone, so no stand-in ships. A board renders at its canvas.json w x h; a PAGE (expand: fill) grows to its content and also renders {DESIGN_PREVIEW_PHONE[0]} px wide (--phone: every board). Each line also gives the content size, unmounted parts (an x-import whose system global is missing, a dc-import whose board is missing), script errors and the issue count; issue lines name a clipped frame, a sideways overflow, runtime errors and files not found. Browser: --browser, else ${DESIGN_PREVIEW_BROWSER_ENV} (a named one is the only candidate), else the known Chrome/Chromium paths, else chromium/google-chrome on PATH. Writes only the PNGs and preview.json (outside the design record) and, once, canvas/project/ds/.gitignore (*) when ds/ exists; a system the canvas installs but ds/<namespace>/ lacks is a warning (the engine never fetches it). Exit 1 only when a screenshot failed. "
+                                   f"MEASURED CHECKS, in every view and state; every issue line reads 'issue board=<file> [view=<v>] [state=NN] check=<name>: ...'. "
+                                   f"contrast: each visible text run (one per element; aria-hidden, invisible and zero-size text skipped) against the background its ancestors paint, color alpha, background alpha and ancestor opacity composited over white, colors in any CSS syntax; WCAG 4.5:1, or 3:1 for text >= 24px or >= 18.66px bold. A background image, gradient, filter or blend mode in the way makes the text 'unmeasured' (one line per board: judge it on the PNG), never a guess; not seen: a positioned sibling or <img> under the text, text-shadow, placeholder and field-value text, SVG text. "
+                                   f"target: an a[href], button, input, select, textarea, summary, ARIA button/link/checkbox/radio/switch/tab/menuitem or tabindex>=0 element (visible, enabled) whose box is under {DESIGN_PREVIEW_TARGET}x{DESIGN_PREVIEW_TARGET}px, a field's <label> counted with it; a link inside a run of text is exempt (WCAG's inline exception). "
+                                   "clipped: an element's own text cut off by overflow hidden/clip, unless it ends in an ellipsis or a line clamp. "
+                                   "dead-link: an <a href> to a .dc.html that is no canvas.json board, to another relative file not in the tree, to an #id with no element, or a bare # placeholder; absolute URLs (https:, mailto:) are listed as external, never fetched. "
+                                   "image: an <img> that loaded with naturalWidth 0 (background images are not checked). "
+                                   "name: a button or link with no accessible name (text, aria-label, aria-labelledby, title or an inner img alt), a form field with no label (label for=, a wrapping label, aria-label, aria-labelledby; a placeholder is not one). "
+                                   "The canvas-only prototype chrome ([data-proto]: the state bar, the board-link strip) is exempt from target, layout-shift and hover-contrast, and is never sampled as a list. "
+                                   "Identical findings fold into one line ('+N more like it'); the phone view and the states repeat none the frame view named. The render's own issues are check=load, settle, too-tall, frame-clip, page-clip (a PAGE's state taller than its frame h, in the frame view: the render grows a PAGE, the canvas frame does not), overflow, unmounted, runtime-error, script-error, not-found, screenshot, size and browser. "
+                                   f"--click: link lines and check=unreachable (a PAGE board, expand: fill, that no chain of links from Main.dc.html reaches; a Components board is not expected to be linked); on each is_interactive board, real mouse clicks (Input.dispatchMouseEvent) at each visible, enabled, uncovered control's centre, breadth first from the settled initial state, never a link that leaves the board. A state is a new visible DOM (shown elements with their class, style and open/expanded/selected/current/disabled attributes, and shown text, plus whether every visible text field holds text); a ticked box or a typed value alone is not a state. The state bar's presets ([data-proto=\"state-bar\"] buttons) are tried first, once per page (a preset sets its page's complete state), and a state on a page not met before is explored ahead of the rest; the page on screen is the bar's visible [role=group] name, else the first h1. A list of {DESIGN_PREVIEW_LIST_SAMPLE}+ alike rows is sampled: its first, second and last row. The type pass types a realistic sample into each visible text field (email, phone, name, postcode, search from the listed text, ...) and fills a form of two or more empty fields whole in one step, each a step of the path; select, date and other native pickers are not explored. After a step the page settles, the short timers it set are waited for (up to 3s: 'Saving...' is passed through to 'Saved') and its animations end. Each state's PNG is taken on its path replayed from a fresh load. A click that throws is check=click-error, once per control. check=layout-shift: a step that stays on the same page and resizes a control (outside [data-proto]) by more than {DESIGN_PREVIEW_SHIFT}px, or moves a header, nav or main by more than {DESIGN_PREVIEW_SHIFT}px; a step to another page is navigation, never a shift. check=same-target: two or more sampled rows of one list open the same state of another page. check=hover-contrast (PAGE boards, frame view, each state): the pointer rests on each button and link once per board (transitions off), and a text run of the hovered control that newly fails contrast is an issue (the a:hover color beating a system Button rendered as <a>). Frame view only, unless --phone-click; at most {DESIGN_PREVIEW_STATES} states, {DESIGN_PREVIEW_DEPTH} steps deep, {DESIGN_PREVIEW_CLICKS} steps and {DESIGN_PREVIEW_BOARD_SECONDS}s per board and view, each cap said on the board's note line. "
+                                   "preview.json: {schema, job, runtime, click, phone, phone_click, boards: {<file>: {title, page, interactive, views: {frame|phone: {png, w, h, content, issues: [{check, message}], as_in_frame, measured}}, states: [{n, view, page, path, png, w, h, content, issues, measured}], click_errors, interaction: [{view, state, check, message}], click: {frame|phone: {states, clicks, notes}}}}, links: [{from, to, external}], issues: [board-level {board, check, message} and every interaction finding {board, view, state, check, message}], totals: {pngs, failed, issues, states, seconds}}; measured holds every raw finding (contrast: el, size, weight, need, ratio, fg, bg; target: el, w, h; clipped; links; images; names) and the counts texts, targets, fields.")
+    p.add_argument("job", help="the job id, e.g. 01-signin")
+    p.add_argument("--runtime", required=True, help="the path of the Design canvas type's runtime (artifact-type/dc-runtime.js) the orchestrator saved for this job")
+    p.add_argument("--out", default=None, help="the folder for the PNGs (default: a fresh temp folder); never inside the design root")
+    p.add_argument("--browser", default=None, help=f"the Chrome/Chromium executable (default: ${DESIGN_PREVIEW_BROWSER_ENV}, then the known paths)")
+    p.add_argument("--board", action="append", default=None, help="render only this board (its canvas.json key, e.g. Main.dc.html); repeatable")
+    p.add_argument("--phone", action="store_true", help=f"also render every board {DESIGN_PREVIEW_PHONE[0]} px wide (a PAGE always is)")
+    p.add_argument("--phone-click", action="store_true", help=f"with --click (implied), also click through each interactive PAGE at {DESIGN_PREVIEW_PHONE[0]} px wide (<stem>.phone.state-NN.png); about doubles the time")
+    p.add_argument("--click", action="store_true", help=f"also click through: print the link graph (link from= to= lines; a PAGE no link chain from Main.dc.html reaches is an issue) and, on each is_interactive board, try the state-bar presets first, then every control (list rows sampled) and a sample typed into each text field, breadth first, and screenshot each new state (state lines, <stem>.frame.state-NN.png), checking layout-shift, same-target, page-clip and, on PAGE boards, hover-contrast; at most {DESIGN_PREVIEW_STATES} states, {DESIGN_PREVIEW_DEPTH} steps deep, {DESIGN_PREVIEW_CLICKS} steps and {DESIGN_PREVIEW_BOARD_SECONDS}s per board, in the frame view only (--phone-click: also at {DESIGN_PREVIEW_PHONE[0]} px)")
+    p.set_defaults(func=design_preview)
+
+    p = sub.add_parser("design-close", help="Close an open design round of a job: snapshot the job's canvas tree (ds/ left out) into the round folder, record canvas_version, then with --words mark the round and its job signed, or with --superseded mark the round superseded; idempotent",
+                       description="--words needs jobs/<job>/rounds/<round>/SIGNOFF.md written first and a passing design-check of the job. --canvas-version defaults to the job's recorded canvas.version. Re-run a half-landed close; a closed round is never rewritten.")
+    p.add_argument("round", help="the round: <job>/<round> (e.g. 01-signin/02-revise), or the bare round id when only one job has it")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--words", default=None, help="the operator's literal signoff words, recorded verbatim in round.json")
+    g.add_argument("--superseded", action="store_true", help="a design question replaces the round before it is signed: snapshot and close it")
+    p.add_argument("--canvas-version", default=None, help="the canvas version id the operator reviewed (default: job.json canvas.version)")
+    p.set_defaults(func=design_close)
+
+    p = sub.add_parser("design-migrate", help=f"Move a legacy design record aside, unchanged; a dry run unless --apply. Two migrations: with no --to, a pre-v47 (Claude Design) record into {DESIGN_ROOT_REL}/{DESIGN_LEGACY_DIR}/ (with no design.json every top-level entry, else only rounds without round.json, SIGNOFF.md and grounding/); with --to 2, a schema-1 (v47 card) record -- cards/, tokens.css, rounds/ -- into {DESIGN_ROOT_REL}/{DESIGN_SCHEMA1_DIR}/, rewriting design.json to schema 2",
+                       description=f"All-or-nothing: every check runs before the first move, and a refusal moves nothing. Never deletes (only an emptied rounds/ is rmdir'ed), never runs git. Without --to (pre-v47 -> {DESIGN_LEGACY_DIR}/): an existing destination, or a design.json-less root whose rounds/ holds a round.json, refuses; dot-entries, and with design.json anything outside the contracts, are listed as left in place; design.json is never written (design-init stays separate). With --to 2 (schema 1 -> {DESIGN_SCHEMA1_DIR}/): refuses while a schema-1 round is open, while a pre-v47 record is at the root (migrate it first), or when {DESIGN_SCHEMA1_DIR}/ exists; keeps design.json's id and name and adds a null-filled system. The engine never reads {DESIGN_LEGACY_DIR}/ or {DESIGN_SCHEMA1_DIR}/.")
+    p.add_argument("--to", choices=["2"], default=None, help="2: migrate a schema-1 record to schema 2 (default: the pre-v47 move into claude-design/)")
+    p.add_argument("--apply", action="store_true", help="perform the moves (default: print them and move nothing)")
+    p.set_defaults(func=design_migrate)
 
     p = sub.add_parser("defer-job", help="Create a deferred job folder")
     p.add_argument("--id")
@@ -3057,10 +7665,10 @@ def main(argv=None) -> int:
     p.add_argument("--phase", required=True)
     p.add_argument("--slice", required=True)
     p.add_argument("--name")
-    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to slice-executor-high")
-    p.add_argument("--risk", default="high", help="low (a one-line code edit or docs -> slice-executor-mid) or high (everything else -> slice-executor-high); unrecognized values route to high; kind decomposition, review and research route to high whatever this says")
-    p.add_argument("--order", type=float)
-    p.add_argument("--depends-on", action="append")
+    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row on slice-executor-high")
+    p.add_argument("--risk", default="high", help="low (the mid row for implementation and fix, the cheap row for docs and qa -- both on slice-executor-mid, the default tier since v46, real code included) or high (the high row on slice-executor-high: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
+    p.add_argument("--order", type=float, help="sort position within the phase; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering (default: 10 past the last non-review slice)")
+    p.add_argument("--depends-on", action="append", help="advisory: validate checks only that the named slice exists; selection still follows --order")
     p.add_argument("--create-phase", action="store_true")
     p.add_argument("--phase-name")
     p.add_argument("--phase-objective")
@@ -3080,10 +7688,16 @@ def main(argv=None) -> int:
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=archive_all)
 
-    p = sub.add_parser("rotate-backlog", help="Archive every currently-done phase and leave in-progress phases active, then rebuild (partial archive-all)")
+    p = sub.add_parser("rotate-backlog", help="The one resumable step of /rotate-backlog: checks the doc debt FIRST and prints its decision as the first line, rotate=<refused|archive|stop_midflight|resume|create>. archive: nothing owes, so archive every currently-done phase (whole phases, the partial archive-all) and rebuild. While debt stands it archives nothing: stop_midflight when default-stream work is off a boundary, resume the live docs phase (re-asserting its queue-jump order), or print the docs phase to create, its create: line carrying the queue-jump --order. refused (writes nothing, non-zero exit) on a parallel stream")
+    p.add_argument("--archive-only", action="store_true", dest="archive_only",
+                   help="archive only: the sweep of every currently-done phase and its report, with no rotate= line and no docs-phase line (unchanged since v51)")
     p.set_defaults(func=rotate_backlog)
 
     args = parser.parse_args(argv)
+    if NESTED is not None and NESTED_PROBLEMS and args.cmd not in ("validate", "compact-gate", "compact-resume"):  # the hooks fail open
+        # Never fall back to at-root mode on a broken marker: refuse, and let validate list it all.
+        raise SystemExit(f"{shown(ROOT / NESTED_MARKER)} is malformed, so this nested install cannot run {args.cmd}: "
+                         f"{'; '.join(NESTED_PROBLEMS)} -- fix the file (run: {WORKFLOW_CMD} validate)")
     result = args.func(args)
     if isinstance(result, tuple):
         return 0

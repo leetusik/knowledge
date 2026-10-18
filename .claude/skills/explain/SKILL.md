@@ -1,7 +1,7 @@
 ---
 name: explain
-description: Research a topic or code change in the current repo/conversation and save a single self-contained interactive HTML explainer — Background, Intuition, Code, a cited "Best practices & next steps" section, and a 5-question quiz — into your personal knowledge base, setting one up on first use if none is configured. Use ONLY when the operator wants an explanation persisted as a document (explain and document, write this up, document what we just changed) — NOT for ordinary questions that deserve a normal chat answer.
-argument-hint: <topic or change-ref> [here] [research|no-research]
+description: Research a topic, a code change, or a general (non-code) question and save a single self-contained interactive HTML explainer — for code, Background, Intuition, Code, a cited "Best practices & next steps" section and a 5-question quiz; for general research, a free-form outline fitted to the question with every claim cited, a Sources list and the quiz — into your personal knowledge base, setting one up on first use if none is configured. Use ONLY when the operator wants an explanation persisted as a document (explain and document, write this up, document what we just changed) — NOT for ordinary questions that deserve a normal chat answer.
+argument-hint: <topic, change-ref or question> [general] [here] [research|no-research]
 allowed-tools: Read, Grep, Glob, Write, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(command -v:*), Bash(knowledge:*), Bash(uv tool install:*), Bash(mkdir -p:*), Bash(rm -f:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*)
 disable-model-invocation: true
 ---
@@ -14,23 +14,27 @@ disable-model-invocation: true
      workspace v31 this workspace ships Claude Code only, so upstream's two Codex notes
      (the `workspace-write` network caveat in step 2a and the `<noreply@openai.com>`
      attribution parenthetical) are dropped too.
-     Nothing syncs the two copies — re-vendor by hand. -->
+     Workspace-local addition (workspace v52, not upstream): research mode — a third mode for
+     general, non-code research with a free-form outline (steps 1, 3, 4.2a, 7).
+     Nothing syncs the two copies — re-vendor by hand, and keep research mode when you do. -->
 
 Produce an educational explainer — a single **self-contained interactive HTML page**
 (spec in step 4) — about a topic **or a code change** in the current repo or
-conversation, and file it in **your** personal knowledge base (configured on this
+conversation, **or a general research question** that is not about this repo's code, and file it in **your** personal knowledge base (configured on this
 machine; step 2a sets one up on first use if none exists). This skill produces a
 **saved document**: if the operator only asked a question and did not ask for anything
 to be saved, answer normally in chat and write no files.
 
-There is one output format everywhere: both modes — explaining a topic and explaining a
-code change/diff/phase — emit the same interactive HTML explainer.
+There is one output format everywhere: all three modes — explaining a topic, explaining a
+code change/diff/phase, and general research — emit the same kind of interactive HTML
+explainer. Only research mode trades the fixed code-shaped outline for a free-form one.
 
 ## 1. Resolve the topic and the mode
 
 **Arguments** = the skill arguments: $ARGUMENTS. First, strip any of these **trailing
 standalone words** (they compose — any combination, any order) and remember each flag:
 
+- `general` → MODE=research (force research mode, skipping the detection below).
 - `here` → PROJECT_COPY=yes (also write a copy into the current project, step 6).
 - `research` → force the "Best practices & next steps" web-research section **ON** (skip
   the judgment gate in step 3; still degrade gracefully offline).
@@ -50,11 +54,19 @@ appears, the section is **default-on through the judgment gate** (step 3).
 - **Topic mode** — anything else: the arguments name a concept, tool, subsystem, or file
   to explain. Also topic mode when the arguments are empty and the recent conversation is
   an analysis/discussion rather than a change you just made.
-- **Empty and neither fits** → ask the user what to explain (a topic or a change), then
-  continue.
+- **Research mode** — the subject is a question about the world rather than this repo's
+  code: a market, a technology landscape, a product or vendor comparison, a domain
+  concept, a decision with options, the findings of a research phase or slice. Detect it
+  when the subject has **no meaningful grounding in this repo's code** — a "Code" section
+  would be empty or forced. `general` forces it. A workspace phase or slice whose work is
+  research (a `research` slice, a phase whose intent is a question rather than a change)
+  is research mode, not change mode; a phase that changed code stays change mode.
+- **Empty and none fits** → ask the user what to explain (a topic, a change or a
+  question), then continue.
 
-Both modes produce the **same document**, with the same four content sections (step 4).
-Only the lens differs, and step 3 says how.
+Topic and change mode produce the **same document**, with the same fixed content sections
+(§4.2); only the lens differs, and step 3 says how. Research mode keeps the same page
+contract (§4.1) but writes a **free-form outline** fitted to the question (§4.2a).
 
 ## 2. Resolve the knowledge base configuration
 
@@ -201,8 +213,8 @@ other knowledge base, self-hosted or otherwise, via the `KB_API_BASE_URL` and
 
 Ground **every** claim in reality — never invent paths, commands, config snippets, or
 behavior; quote them from real files. Reuse conclusions already established in this
-conversation rather than re-deriving them. Audience: novice programmer, unless the user
-says otherwise.
+conversation rather than re-deriving them. Audience: novice programmer (research mode: a
+smart reader new to the domain), unless the user says otherwise.
 
 **Repo research — by mode:**
 
@@ -213,6 +225,12 @@ says otherwise.
   in the real diff and real files.
 - **Topic mode:** read the real code, configs, compose files, and scripts that make the
   topic work here, exactly as before — walk the actual implementation.
+- **Research mode:** start from what is already known before searching. In a workspace
+  (`scripts/workflow.py` exists) and the subject is a phase or slice, read that phase's
+  `intent.md` (the question as the operator asked it), its `phase.md`, and the `result.md`
+  of each slice that researched it — those findings and their cited pages are your first
+  sources. Reuse what this conversation already established too. Then run the web
+  research described below as the **body** of the document, not an add-on.
 
 **Knowledge-base research — is this an update to an existing document?**
 
@@ -256,8 +274,9 @@ not a diff): keep what still holds, correct what changed, add what is new.
 
 **Web research — the "Best practices & next steps" section (default-on):**
 
-This is the one part that reaches *beyond* the codebase: how the implementation compares
-to prevailing external practice. Decide whether to run it:
+In topic and change mode this is the one part that reaches *beyond* the codebase: how the
+implementation compares to prevailing external practice. (**Research mode** works
+differently: see the end of this subsection.) Decide whether to run it:
 
 1. **Forced?** If `no-research` was given (step 1), skip it — go to step 4 with no
    best-practices section. If `research` was given, run it (skip the judgment gate below)
@@ -282,6 +301,24 @@ to prevailing external practice. Decide whether to run it:
 Remember the outcome for the report (step 7): **included**, **skipped-by-judgment**
 (purely-internal / trivial), or **skipped-offline** (tools unavailable or errored). A
 failed research step **never** blocks the save.
+
+**Research mode — web research is the body.** There is no judgment gate: the research is
+the document. Search broadly enough to map the question (the main options or positions,
+the evidence for each, where sources disagree), and **open every page you cite**
+(WebFetch) — the same rule as above, now applied to every claim in the document. Prefer
+primary sources (official docs, papers, filings, the vendor's own pricing page) over
+summaries of them, and note each source's date when the subject moves fast.
+
+- `no-research` in research mode → run **no new** web searches; build the document only
+  from the material already gathered (this conversation, the phase/slice results and the
+  pages they cite). `research` is a no-op here.
+- **Offline / tools erroring** → same rule as point 4 above: stop trying, and fall back to
+  the material already gathered. If that material is too thin to ground the document,
+  **STOP** and report that research mode needs either web access or prior findings —
+  never write an ungrounded research document.
+
+Remember the outcome for step 7 as **included** (web research ran), **prior-only**
+(`no-research`, or offline with enough prior material), or **stopped-offline**.
 
 ## 4. Write the document — one interactive HTML explainer
 
@@ -310,7 +347,8 @@ blocked and there is no `allow-forms` / `allow-popups`**. So:
   `<meta name="viewport" content="width=device-width, initial-scale=1">`, and a
   `<title>` matching the document's H1.
 - One long page (**no tab navigation**) with a **table of contents** at the top linking
-  each section by `id`. Sections in this fixed order:
+  each section by `id`. In topic and change mode, sections in this fixed order (research
+  mode: §4.2a instead):
 
   1. **Background** — change mode: the system as it was before this change, plus context;
      topic mode: what this is and why it exists here. Offer a deeper beginner background
@@ -341,6 +379,34 @@ blocked and there is no `allow-forms` / `allow-popups`**. So:
   engaging, novice-friendly by default. **No length cap** — as long as the teaching needs
   (typical explainers run a few hundred lines of HTML).
 
+### 4.2a Research mode — a free-form outline
+
+Research mode keeps every rule in §4.1 and §4.2 **except the fixed section list**: there is
+no Background / Intuition / Code / Best-practices sequence. Instead:
+
+- **Design the outline from the question.** Pick 3–8 sections whose headings name what the
+  reader learns, in the order the reasoning needs. Examples of shapes, not templates: a
+  landscape (*The question → How the field is organised → The main players → What
+  separates them → Where it is heading*); a decision memo (*What we need → Options →
+  Compared on the criteria that matter → Recommendation → Risks and open questions*); a
+  concept explainer (*Why it matters → The core idea → How it works in practice → Common
+  misconceptions*). Merge, split or invent sections as the material demands.
+- **Fixed bookends only:** the H1 and the table of contents at the top; at the bottom a
+  **Sources** section (`id="sources"`) and then the **Quiz** (`id="quiz"`, §4.4). Every
+  section, bookends included, gets a ToC entry and a kebab-case `id`.
+- **Open with the answer.** The first section states the question as asked (for a phase,
+  in the operator's words from `intent.md`) and the short answer or main findings, so a
+  reader who stops there still leaves with the conclusion.
+- **Comparisons are tables or diagrams**, with the real figures, not prose lists. A
+  decision document ends its body with a clear recommendation and what would change it.
+- **Separate fact from judgment.** Mark your own inference or recommendation as such
+  (e.g. a callout titled *Assessment*), distinct from what the sources say. Where sources
+  conflict, show both and say which you weigh more and why.
+- **Citations everywhere.** §4.3's rules — every claim links a page you opened, with the
+  source's name and bare domain kept in plain text — apply to the **whole** document, not
+  one section. **Sources** lists every cited page once: title, domain, and the date
+  published or accessed.
+
 ### 4.3 The "Best practices & next steps" section (when present)
 
 - Cover three things: where the implementation **aligns** with prevailing practice, where
@@ -359,6 +425,8 @@ blocked and there is no `allow-forms` / `allow-popups`**. So:
 
 ### 4.4 The quiz
 
+- Every mode includes it; in research mode the questions test the findings and the
+  reasoning behind them, not trivia from a source.
 - **5 medium-difficulty multiple-choice questions** that test substantive understanding
   — hard enough that you must actually understand the subject to answer, but not gotchas.
 - Show each question's options as plain buttons/divs. On click, give **immediate
@@ -367,7 +435,9 @@ blocked and there is no `allow-forms` / `allow-popups`**. So:
 
 Use the **structural skeleton and one worked quiz item below as the spec** — generate all
 the real teaching content and all five real questions in this shape. It is a contract,
-not a literal template to paste:
+not a literal template to paste. In research mode, replace the four content sections and
+their ToC entries with your own outline (§4.2a) and add a `#sources` section before the
+quiz; the head, styles and quiz script stay the same:
 
     <!DOCTYPE html>
     <html lang="en">
@@ -622,5 +692,7 @@ Tell the user:
   that success normally.
 - The **research-section outcome**, one line: **included**, **skipped-by-judgment**
   (purely-internal subject / trivial fix), or **skipped-offline** (research tools
-  unavailable or errored) — with a short why.
+  unavailable or errored) — with a short why. In research mode, say it was research mode
+  and give the outcome as **included**, **prior-only** or **stopped-offline**, with the
+  number of sources cited.
 - The project copy path, if one was made.
