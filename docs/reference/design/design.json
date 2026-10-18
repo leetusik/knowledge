@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "id": "knowledge",
+  "name": "knowledge",
+  "system": {
+    "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+    "namespace": "kb",
+    "version": "1792321604-e214",
+    "source": "web/src/app/kb-tokens.css",
+    "files": [
+      "tokens.json",
+      "tokens.css",
+      "fonts/Fraunces.woff2",
+      "fonts/SourceSans3.woff2",
+      "fonts/JetBrainsMono.woff2"
+    ]
+  }
+}

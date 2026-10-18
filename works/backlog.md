@@ -142,7 +142,7 @@
 | [x] `P29.S2` | `done` | Research: native chapter format and legacy path | `research` | `works/phases/active/P29/slices/P29.S2` |
 | [x] `P29.S3` | `done` | Research: reader state and spaced-repetition review | `research` | `works/phases/active/P29/slices/P29.S3` |
 | [x] `P29.DECOMP2` | `done` | Re-cut: design waves from the research findings | `decomposition` | `works/phases/active/P29/slices/P29.DECOMP2` |
-| [ ] `P29.S4` | `todo` | Design wave 1 — the reader | `co-work` | `works/phases/active/P29/slices/P29.S4` |
+| [ ] `P29.S4` | `in_progress` | Design wave 1 — the reader | `co-work` | `works/phases/active/P29/slices/P29.S4` |
 | [ ] `P29.S5` | `todo` | Design wave 2 — chapter blocks and annotations | `co-work` | `works/phases/active/P29/slices/P29.S5` |
 | [ ] `P29.S6` | `todo` | Design wave 3 — library, book page, review, legacy and print | `co-work` | `works/phases/active/P29/slices/P29.S6` |
 | [ ] `P29.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
