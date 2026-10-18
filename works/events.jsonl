@@ -961,3 +961,12 @@
 {"ts": "2026-10-17T18:46:06+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-10-17T18:46:06+09:00", "type": "phase_consolidation_owed", "phase": "P28", "notes": 19}
 {"ts": "2026-10-18T16:24:14+09:00", "type": "deferred_dropped", "deferred": "D31", "reason": "Dropped on the operator's word at P29's start (2026-10-18): the workspace update to v60 retired Claude Design / DesignSync, so the trigger (the next DesignSync session on project 623bb4ea) cannot fire."}
+{"ts": "2026-10-18T16:32:38+09:00", "type": "slice_status_changed", "slice": "P29.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-18T16:33:48+09:00", "type": "slice_created", "phase": "P29", "slice": "P29.S1"}
+{"ts": "2026-10-18T16:33:49+09:00", "type": "slice_created", "phase": "P29", "slice": "P29.S2"}
+{"ts": "2026-10-18T16:33:49+09:00", "type": "slice_created", "phase": "P29", "slice": "P29.S3"}
+{"ts": "2026-10-18T16:33:49+09:00", "type": "slice_created", "phase": "P29", "slice": "P29.DECOMP2"}
+{"ts": "2026-10-18T16:35:39+09:00", "type": "executor_dispatched", "slice": "P29.DECOMP", "phase": "P29", "kind": "decomposition", "risk": "high", "route": "high", "tier": "high", "agent": "slice-executor-high", "model": "opus", "effort": "high", "attribution": "Claude Opus 5.5", "attempt": 1, "verdict": "done", "duration_ms": 162318, "tokens": 82739, "tool_uses": 28, "note": null}
+{"ts": "2026-10-18T16:35:40+09:00", "type": "slice_status_changed", "slice": "P29.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-18T16:35:40+09:00", "type": "acceptance_waived", "phase": "P29"}
+{"ts": "2026-10-18T16:35:40+09:00", "type": "deferred_dropped", "deferred": "D27", "reason": "Closed as 'no sweep', the trigger's own default: P29.DECOMP read P28.REVIEW and found no unsettled cross-round drift (the five round stylesheets landed byte-identical; the three kb-record-fixes.css corrections restate record values; the one 44px vs 38px disagreement is already D36 (1)), and P29's reader-first redesign supersedes a round-07 sweep."}

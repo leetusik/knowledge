@@ -1,11 +1,11 @@
 {
   "id": "D27",
   "title": "Decide whether a closing consistency-sweep design round 07 is wanted",
-  "status": "deferred",
+  "status": "dropped",
   "source": "P27.REVIEW",
   "reason": "Asked at P27.DECOMP with a default of no. The phase review found no cross-round drift a sweep would resolve: rounds 05 and 06 each corrected their predecessor in the later round, and the only annotation error found (round 03's card 04) is cosmetic and already carried to P28. The default looks right on the evidence.",
   "trigger": "If P28's apply reveals cross-round drift the four contracts do not settle; otherwise close as 'no sweep'.",
   "created_at": "2026-09-21T06:28:17+09:00",
   "promoted_to": null,
-  "dropped_reason": null
+  "dropped_reason": "Closed as 'no sweep', the trigger's own default: P29.DECOMP read P28.REVIEW and found no unsettled cross-round drift (the five round stylesheets landed byte-identical; the three kb-record-fixes.css corrections restate record values; the one 44px vs 38px disagreement is already D36 (1)), and P29's reader-first redesign supersedes a round-07 sweep."
 }

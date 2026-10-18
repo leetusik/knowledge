@@ -3,12 +3,12 @@
   "phase_id": "P29",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-17T18:36:36+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-18T16:32:38+09:00",
+  "completed_at": "2026-10-18T16:35:40+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut P29 into three findings-only research slices (S1 book and chapter model, S2 native chapter format and legacy path, S3 reader state and spaced-repetition review) plus a DECOMP2 design re-cut; breakdown, provisional build inventory, decisions, deferred routing and verified per-slice notes in phase.md; D27 found no unsettled cross-round drift",
   "validation": {
     "required": [],
     "last_run": null,
