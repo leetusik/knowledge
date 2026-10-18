@@ -1,6 +1,6 @@
 ---
 name: parallel-phase
-description: Run a phase in its own git worktree when the operator asks for one, and integrate it back: quiet-point gate, local merge, the review's two gate sections, teardown; push → PR is the remote variant.
+description: "Run a phase in its own git worktree when the operator asks for one, and integrate it back: quiet-point gate, local merge, the review's two gate sections, teardown; push → PR is the remote variant."
 allowed-tools: Bash(python3 scripts/workflow.py:*), Read, Edit, Write, Glob, Grep, Bash
 disable-model-invocation: true
 ---
@@ -21,7 +21,7 @@ one of three things:
 
 v42 briefly made the worktree the default and v43 put it back, because one phase at a time is the
 normal shape of this workspace and a branch per phase made every ordinary run pay for parallelism it
-never used. What v42 built stays — the dirty-tree stamp commit, the nested worktree home, the local
+never used. What v42 built stays — the dirty-tree stamp commit, the in-repo worktree home (`.claude/worktrees/`), the local
 merge, the gate-section notes — it is simply reached on request now.
 
 The unit of parallelism is the **phase**. Slices inside a phase stay strictly sequential — they build
@@ -41,7 +41,9 @@ the detail lives here.
    never does. A phase already carrying the stamp is entered without asking again.
 2. **Where** — `<repo>/.claude/worktrees/P<N>-<slug>` on branch `phase/P<N>-<slug>` (`--worktree`
    overrides); the engine puts `.claude/worktrees/` in `.git/info/exclude` (common dir), never in
-   `.gitignore`.
+   `.gitignore`. **Nested install:** a pair — the host worktree `<host>/.claude/worktrees/P<N>-<slug>`
+   on the operator-confirmed host branch, with the nested worktree at its `workflow/` on
+   `phase/P<N>-<slug>`; the engine adds `/.claude/worktrees/` to the host's `info/exclude`.
 3. **The stamp commit** — the engine's one fixed-message commit (the stamp must exist on both branches)
    contains exactly the phase folder plus the five regenerated `works/` files
    (`git add -- <paths>` + `git commit --only -- <paths>`); a phase not yet committed goes in whole.
@@ -50,7 +52,8 @@ the detail lives here.
 5. **What still refuses** — the phase is not `planned`; it already carries an `execution` block
    (parallel or pinned); no git repo; the checkout is on a parallel stream; a merge or rebase is in
    progress; the branch exists or is stamped on another phase; the worktree path exists; an overridden
-   path's parent is missing.
+   path's parent is missing. **Nested install**, also: no `--host-branch` (nothing is written); the
+   host branch is checked out elsewhere; the host base cannot be resolved (pass `--host-base`).
 6. **Enter and exit** — the orchestrator calls `EnterWorktree` with the printed path in the same
    session, re-runs `next` (`stream=phase/…`), and works there; background Agents dispatched from there
    run in the worktree. `ExitWorktree` `keep` returns to the default checkout for integration and never
@@ -58,6 +61,10 @@ the detail lives here.
    `execution.branch`, never a marker file, so a plain clone of the branch works too. (Fallback if the
    session cannot switch: drive the default checkout's engine by absolute path,
    `python3 <repo>/scripts/workflow.py …`, since `ROOT` derives from the script's own location.)
+   **In a nested install** `EnterWorktree` takes the printed **host** worktree path, and the engine
+   runs from there as `python3 workflow/scripts/workflow.py …`. `CLAUDE.local.md` is copied into the
+   host worktree; skills, agents and settings read through from the main checkout, so never create
+   `<host-wt>/.claude/`.
 7. **The merge** — after `parallel-gate <P>` is OPEN (branch phase `done` + review `pass`, default
    stream not busy; never past a closed gate): `ExitWorktree keep` → `git pull --ff-only` only if
    `main` tracks a remote → if anything is staged, or a file the merge touches is uncommitted (typically
@@ -96,12 +103,13 @@ A phase already stamped gets no hint, and neither does a worktree checkout.
 python3 scripts/workflow.py parallel-start <P> [--worktree <path>] [--slug <slug>]
 ```
 
-Run it from the default stream, before the phase's first `start-slice` (the do-* skills do this for
-you when `next` prints the hint). It refuses when: the phase is not `planned`; it already carries an
-`execution` block (parallel or pinned); the checkout is not inside a git work tree; the checkout is on
-a parallel stream; a merge or rebase is in progress; the branch name exists or is stamped on another
-phase; the worktree path exists; an overridden path's parent is missing. Every guard runs before any
-mutation, so a refusal leaves no partial state.
+Run it from the default stream, before the phase's first `start-slice`, and only on the operator's
+word (rule 1): when `next` prints the hint, the do-* skills relay it and run nothing. It refuses when:
+the phase is not `planned`; it already carries an `execution` block (parallel or pinned); the
+checkout is not inside a git work tree; the checkout is on a parallel stream; a merge or rebase is in
+progress; the branch name exists or is stamped on another phase; the worktree path exists; an
+overridden path's parent is missing. Every guard runs before any mutation, so a refusal leaves no
+partial state.
 
 **A dirty tree does not block it.** The commit is made with `git add -- <paths>` and
 `git commit --only -- <paths>`, so it contains exactly the phase folder plus `works/state.json`,
@@ -128,6 +136,23 @@ Agents dispatched from there run in the worktree. A teammate can instead clone t
 branch out — from that point on the two are identical, because stream membership is read from the
 current git branch versus the stamped `execution.branch`, never from a marker file.
 
+### Starting in a nested install
+
+The host side follows the host's own custom, so the orchestrator prepares the start, and the engine
+stays policy-neutral:
+
+1. Read the recorded custom: `python3 scripts/workflow.py nested-convention` (its scope is commits,
+   branches and pull requests).
+2. Propose a host branch name in that custom — never with workspace phase or slice IDs.
+3. The operator confirms or changes it. The engine never invents a name.
+4. The base defaults to the host's default branch (`origin/HEAD`, else the local `init.defaultBranch`,
+   else `main`, then `master`, else it refuses and asks for `--host-base`). Pass `--host-base <ref>`
+   to stack on another phase's branch or on `HEAD`.
+5. When the custom says to branch from fresh main, run `git fetch` in the host first; the engine
+   itself never fetches.
+6. Run `python3 scripts/workflow.py parallel-start <P> --host-branch <name> [--host-base <ref>]`, then
+   `EnterWorktree` with the printed host worktree path.
+
 ## 3. Work — in the worktree, as normal
 
 Nothing about slice work changes. Inside the worktree, run the usual skills; from anywhere, use
@@ -146,8 +171,16 @@ What *is* stream-scoped:
   `· parallel: <branch>`), but main's backlog cannot show the branch's slice progress until the
   merge — that is what `parallel-status` is for.
 
+`works/backlog.md`'s `## Streams` table lists the default stream and every in-flight worktree phase,
+read live from its branch (with the host branch in a nested install); `parallel-status` gives the
+detail.
+
+**A worktree isolates files only.** Docker containers, ports, local databases and caches stay shared,
+so coordinate them across streams.
+
 Commits land on the phase branch; do not merge or rebase against `main` mid-phase unless the operator
-asks. Generated files (`works/state.json`, `works/index.json`, `works/backlog.md`,
+asks. **Nested install:** product commits go to the host branch in the host worktree, in the host's
+convention and with no workspace IDs; workflow commits run `git -C workflow …` there. Generated files (`works/state.json`, `works/index.json`, `works/backlog.md`,
 `works/deferred.md`, `docs/current/*.md`) are **regenerated, not merged** — never hand-fix them.
 
 **`phase.md` is not one of them.** The notebook is hand-written prose with one generated region
@@ -260,7 +293,37 @@ the twin for a phase that never left the default stream.
 Afterwards the phase is `done` and archivable the normal way (`archive-phase <P>`, `rotate-backlog`,
 `archive-all`) — archiving is still manual and still blocked while `consolidation` is `"pending"`.
 
+### Integrating in a nested install
+
+The nested repo (`workflow/`) is the workspace's own, so its integration is the local merge above,
+run with `git -C workflow` from the main host checkout. The host side is the host's: the engine
+never pushes, opens a PR or merges into the host's default branch.
+
+1. `python3 scripts/workflow.py parallel-gate <P>` from the host worktree; `GATE OPEN` continues.
+2. `ExitWorktree` with `action: "keep"`.
+3. In the main host checkout: `git -C workflow pull --ff-only` only if it tracks a remote; the same
+   staged/uncommitted STOP rule as step 4 above (in the nested repo); then
+   `git -C workflow merge --no-ff phase/P<N>-<slug> -m "merge(P<N>): <phase name>"`.
+4. `python3 scripts/workflow.py parallel-merge-finish`.
+5. The tagged gate-section notes (`doc-new-version` + `rebuild-docs`), as in step 6.
+6. `git -C workflow commit` the follow-up.
+7. **The host side, by the recorded custom.** Never merge into the host's default branch, and never
+   push, open or merge without the operator's word; where the custom is silent, ask.
+   - **One PR per phase:** on the operator's word, push the host branch and open its PR.
+   - **A ticket's phases folded into one PR:** rebase or cherry-pick each phase's host commits onto
+     the ticket branch (no merge commits: a squash-merging host publishes every branch subject);
+     re-run the host's pre-merge checks on the combined commit; keep each phase's host branch until
+     the PR merges (its review recorded host commit ranges by sha).
+8. `python3 scripts/workflow.py parallel-teardown <P>` (add `--discard-ignored` only to delete ignored
+   worktree-only files the refusal listed). It checks first and refuses in one report — uncommitted
+   work in either worktree, ignored worktree-only files, orphaned detached host commits — then removes
+   the nested worktree, then the host worktree. The host branch is kept unless the engine created it
+   and it holds no commits; a failed step prints the remaining commands, and a re-run resumes.
+9. `git -C workflow commit` the `phase.json` change.
+
 ### The remote variant — push → PR → CI → `gh pr merge`
+
+(At-root installs; a nested install's host side is step 7 above.)
 
 Only when the operator asks or the repo's policy requires it. It replaces steps 2-4 above:
 
@@ -293,3 +356,5 @@ Only when the operator asks or the repo's policy requires it. It replaces steps 
 - Slice-level parallelism inside a phase stays out of scope.
 - The phase branch and the stamp commit are part of executing a phase; pushing is not — push only
   when asked.
+- Nested install: never merge a host branch into the host's default branch, and never push, open a
+  PR or merge on the host without the operator's word; the host's custom decides the shape.

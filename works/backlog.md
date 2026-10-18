@@ -11,6 +11,12 @@
 - Waiting on operator: `none`
 - Open deferred jobs: `29`
 
+## Streams
+
+| Stream | Phase | Status | Current slice | Done | Worktree | Source |
+|---|---|---|---|---|---|---|
+| `default` | `P29` | planned | `P29.DECOMP` | 0/2 | - | working tree |
+
 ## Active Phases
 
 | Phase | Status | Review | Name | Current Slice | Path |

@@ -26,7 +26,7 @@ _Questions only the operator can answer. Append only; every entry is routed at t
 
 ## Notes for later slices
 
-_Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`._
+_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`._
 
 ## Now
 
