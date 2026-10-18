@@ -970,3 +970,6 @@
 {"ts": "2026-10-18T16:35:40+09:00", "type": "slice_status_changed", "slice": "P29.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-18T16:35:40+09:00", "type": "acceptance_waived", "phase": "P29"}
 {"ts": "2026-10-18T16:35:40+09:00", "type": "deferred_dropped", "deferred": "D27", "reason": "Closed as 'no sweep', the trigger's own default: P29.DECOMP read P28.REVIEW and found no unsettled cross-round drift (the five round stylesheets landed byte-identical; the three kb-record-fixes.css corrections restate record values; the one 44px vs 38px disagreement is already D36 (1)), and P29's reader-first redesign supersedes a round-07 sweep."}
+{"ts": "2026-10-18T16:37:11+09:00", "type": "slice_status_changed", "slice": "P29.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-18T16:44:37+09:00", "type": "executor_dispatched", "slice": "P29.S1", "phase": "P29", "kind": "research", "risk": "high", "route": "research", "tier": "high", "agent": "slice-executor-high", "model": "opus", "effort": "medium", "attribution": "Claude Opus 5.5", "attempt": 1, "verdict": "done", "duration_ms": 413702, "tokens": 129420, "tool_uses": 38, "note": null}
+{"ts": "2026-10-18T16:44:37+09:00", "type": "slice_status_changed", "slice": "P29.S1", "old_status": "in_progress", "new_status": "done"}

@@ -106,9 +106,9 @@
       "order": 9,
       "path": "works/phases/active/P29",
       "review_status": "pending",
-      "current_slice": "P29.S1",
+      "current_slice": "P29.S2",
       "slice_count": 6,
-      "done_slice_count": 1
+      "done_slice_count": 2
     },
     {
       "id": "P30",
@@ -126,5 +126,5 @@
   "deferred_open_count": 27,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 8,
-  "last_rebuilt_at": "2026-10-18T16:35:40+09:00"
+  "last_rebuilt_at": "2026-10-18T16:44:37+09:00"
 }
