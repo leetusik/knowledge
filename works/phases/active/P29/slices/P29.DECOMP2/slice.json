@@ -3,14 +3,14 @@
   "phase_id": "P29",
   "name": "Re-cut: design waves from the research findings",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 40,
   "depends_on": [
     "P29.S3"
   ],
   "created_at": "2026-10-18T16:33:49+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-18T19:45:05+09:00",
+  "completed_at": "2026-10-18T19:51:09+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Three co-work waves, nine jobs (S4 reader; S5 figures, diagrams, quiz, annotations; S6 library, book-page, review, legacy-and-print); final 25-line build inventory; four research amendments accepted in place",
   "validation": {
     "required": [],
     "last_run": null,
