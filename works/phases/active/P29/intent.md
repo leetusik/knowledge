@@ -141,6 +141,12 @@ the operator is studying (AI, English, Finance, …). Codebase knowledge stays a
 - Q: A separate stopgap phase for the inline scroll before P30 lands? — not answered; the recommended
   default was stated in the confirmation and confirmed with "good": no stopgap phase. P28 stays `pending`
   until the operator pushes `main` and walks its gate.
+- Q (2026-10-18, before `P29.DECOMP`, after the workspace update v43 → v60 retired the Claude Design /
+  DesignSync loop): re-confirm the phase on `drafter` (each surface a job whose canvas the drafter writes
+  into the repo, published to its own Design canvas in the Claude app and signed there by the operator's
+  words in the session), with the objective, design-record and gate-note lines refined to match, P30's
+  matching line refined in the same edit, and D31 dropped? — A: "yes to all". The research-first shape,
+  `design-only` and `Mockup: on request` are unchanged.
 
 ## Design Style
 
@@ -148,6 +154,7 @@ the operator is studying (AI, English, Finance, …). Codebase knowledge stays a
 type needs designing, and the reader and review surfaces at three viewports), and the build is bigger
 (server model, format pipeline, reader, skill), so the apply work is its own phase, P30.
 Mockup: on request
+Design tool: drafter
 
 ## Notes
 
@@ -188,19 +195,23 @@ Mockup: on request
     chapters.
   - Everything stays free, with no plan gating.
 - **Acceptance gate** — declared right after `finish-slice P29.DECOMP`: waive with the fixed note
-  `design-only, no mockup: the operator signed the round on the card set`. Re-declare `--require` if the
+  `design-only, no mockup: the operator signed each job on its canvas`. Re-declare `--require` if the
   operator asks for a mockup in any round.
-- **Design record.** Continue the repo's round tree after the last landed round, 06:
-  `web/design/rounds/<NN>-<slug>/` holding `handoff.md`, read-only `output/` and `SIGNOFF.md`. The Claude
-  Design project from P27 is `623bb4ea-8fb7-4d31-9d58-5c6a42709bbe` (Knowledge Base Design System).
-  Whether this phase's rounds live there is the first handoff's question for the operator.
+- **Design record (v60, schema 2; refined 2026-10-18).** This phase's design jobs live under
+  `docs/reference/design/jobs/<NN>-<slug>/` (`design-init` writes the root on the first job). Before the
+  first job, a Design System Artifact is synced from the live code — P27's system as P28 shipped it. The
+  old round tree `web/design/` (rounds 01–06 with their `handoff.md`, `output/` and `SIGNOFF.md`; the
+  canvas and `APP_BRIEF.md`) **stays where it is** as read-only design memory: code comments and the
+  durable docs cite it by path, and the engine never reads it. The P27 Claude Design project
+  (`623bb4ea-8fb7-4d31-9d58-5c6a42709bbe`) is retired with that tool and not used.
 - **Runtime manifest.** `## Operator Runtime` (operations doc) exists: iPhone and iPad in Safari and
   Chrome, Mac Chrome, Aside agent account `u1`.
 - **Related deferred jobs**, for `DECOMP` to route:
   - D36 (P28 gate rulings closed at defaults) — its trigger, "the next console or design phase", is this
     phase.
   - D27 (a closing consistency-sweep round 07) — likely superseded by this redesign.
-  - D31 (retire round 06's card group label) — due at the next DesignSync session on the P27 project.
+  - D31 (retire round 06's card group label) — dropped on the operator's word (2026-10-18): DesignSync
+    was retired with v60, so its trigger cannot fire.
   - D37 / D38 / D39 / D40 (explainer reporter, framing and print) — the legacy-path decision may absorb or
     obsolete them.
   - D25 (server-rendered PDF) — the native format changes the print picture.

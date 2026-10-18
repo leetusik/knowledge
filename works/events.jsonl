@@ -960,3 +960,4 @@
 {"ts": "2026-10-17T18:46:06+09:00", "type": "slice_status_changed", "slice": "P28.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-17T18:46:06+09:00", "type": "phase_reviewed", "phase": "P28", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-10-17T18:46:06+09:00", "type": "phase_consolidation_owed", "phase": "P28", "notes": 19}
+{"ts": "2026-10-18T16:24:14+09:00", "type": "deferred_dropped", "deferred": "D31", "reason": "Dropped on the operator's word at P29's start (2026-10-18): the workspace update to v60 retired Claude Design / DesignSync, so the trigger (the next DesignSync session on project 623bb4ea) cannot fire."}
