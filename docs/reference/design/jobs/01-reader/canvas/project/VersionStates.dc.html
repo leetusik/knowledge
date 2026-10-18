@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Version history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Version history</p>
+<p class="rd-board__lead">The versions of the variant being read, newest first, with their dates; the newest is labelled Current and the one on screen says Reading now. Any other version opens with View.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="VersionList" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" fail="{{ c.fail }}" theme="{{ c.theme }}" hint-size="100%,240px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1500,"height":785}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const I = 'maintainer-guide/internals';
+    const V = (cap, o) => Object.assign({ cap, st: px(420), doc: I, lang: 'en', ver: undefined, fail: false, theme: 'light' }, o);
+    const rows = [
+      { title: 'History', cells: [V('English · reading the newest', {}), V('English · reading v1 · sepia', { ver: 1, theme: 'sepia' }), V('한국어 · translated from English v1 · dark', { lang: 'ko', theme: 'dark' })] },
+      { title: 'Edges', cells: [V('Three versions', { doc: 'maintainer-guide/why' }), V('One version only', { doc: 'maintainer-guide/what-it-is' }), V('History failed to load', { fail: true })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

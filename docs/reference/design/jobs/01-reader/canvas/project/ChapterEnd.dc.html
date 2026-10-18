@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter end</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-flow">
+<div class="rd-end" data-end="1">
+<p class="rd-end__mark"><span>End of {{ noun }}</span></p>
+<div class="rd-status">
+<div class="rd-status__text" aria-live="polite"><sc-for list="{{ lines }}" as="l" hint-placeholder-count="1"><p class="{{ l.cls }}"><span class="rd-status__state">{{ l.word }}</span><span class="rd-status__sub">{{ l.sub }}</span></p></sc-for></div>
+<sc-if value="{{ offerUnread }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-btn rd-btn--secondary rd-status__btn" onclick="{{ unread }}">Mark as unread</button></sc-if>
+<sc-if value="{{ offerFinish }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--secondary rd-status__btn" aria-expanded="{{ promptOpen }}" onclick="{{ finish }}">Mark as finished</button></sc-if>
+</div>
+<sc-if value="{{ promptOpen }}" hint-placeholder-val="{{ false }}"><div class="rd-end__prompt"><dc-import name="SignInToSave" bare="{{ true }}" place="{{ noun }}" on-sign-in="{{ onSignIn }}" on-dismiss="{{ onDismiss }}" hint-size="100%,170px"></dc-import></div></sc-if>
+<sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}"><div class="rd-next"><p class="rd-next__label">Next · Chapter {{ next.n }}</p><p class="rd-next__title" lang="{{ next.lang }}">{{ next.title }}</p><sc-if value="{{ next.hasSummary }}" hint-placeholder-val="{{ true }}"><p class="rd-next__lede" lang="{{ next.lang }}">{{ next.summary }}</p></sc-if><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ goNext }}">Read next →</a></div></sc-if>
+<sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}"><div class="rd-next"><p class="rd-next__label">Last chapter</p><p class="rd-next__title">You've reached the end of this book.</p><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ goBook }}">Back to the book →</a></div></sc-if>
+<sc-if value="{{ loose }}" hint-placeholder-val="{{ false }}"><div class="rd-next"><a class="rd-btn rd-btn--secondary" href="#top" onclick="{{ goLibrary }}"><span aria-hidden="true">‹</span> Back to the library</a></div></sc-if>
+<sc-if value="{{ hasList }}" hint-placeholder-val="{{ true }}"><div class="rd-end__list"><div class="rd-end__listhead"><h2 class="rd-end__listtitle">In this book</h2><span class="rd-end__count">{{ countText }}</span></div><dc-import name="ChapterList" bare="{{ true }}" book="{{ book }}" cur="{{ doc }}" prog="{{ prog }}" member="{{ member }}" lang="{{ lang }}" on-open="{{ onOpen }}" hint-size="100%,320px"></dc-import></div></sc-if>
+</div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":null},"lang":{"editor":null},"prog":{"editor":null},"member":{"editor":null},"prompt":{"editor":null},"onMark":{"editor":null},"onOpen":{"editor":null},"onBook":{"editor":null},"onLibrary":{"editor":null},"onPrompt":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":820,"height":869}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { localPrompt: false }; }
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const bare = !!P.bare;
+    const doc = P.doc || 'maintainer-guide/internals';
+    const lang = P.lang || 'en';
+    const member = P.member === undefined ? true : !!P.member;
+    const prog = P.prog || Object.assign({}, RD.progress, { [doc]: { s: 'finished', on: RD.newest(doc, 'en') } });
+    const ctx = RD.ctx(doc);
+    const loose = !!ctx.loose;
+    const noun = loose ? 'document' : 'chapter';
+    const st = RD.stateOf(prog, doc);
+    const prompt = P.prompt === undefined ? this.state.localPrompt : !!P.prompt;
+    /* Every sentence a member can toggle between is rendered in one grid cell; only the current one shows, so the
+       row is always as tall as the longest and pressing the button moves nothing. */
+    const LINES = member ? [
+      ['finished', 'Finished', 'Saved to your progress.'],
+      ['updated', 'Finished', 'You finished an earlier version. This ' + noun + ' has been updated since.'],
+      ['unread', 'Not finished', 'Marked as unread. It stays that way until you mark it finished.'],
+      ['started', 'Not finished yet', 'Reaching this point marks the ' + noun + ' finished.'],
+    ] : [['anon', 'Not saved', "Signed-out reading isn't saved. Your display settings stay on this device."]];
+    const curLine = !member ? 'anon' : (st === 'finished' || st === 'updated' || st === 'unread') ? st : 'started';
+    const lines = LINES.map(([k, word, sub]) => ({ word, sub, cls: 'rd-status__line' + (k === curLine ? '' : ' is-off') }));
+    const finishedNow = member && (st === 'finished' || st === 'updated');
+    const nextKey = !loose && ctx.next;
+    let next = null;
+    if (nextKey) {
+      const t = RD.titleOf(nextKey, lang);
+      const nd = RD.docs[nextKey];
+      const nr = nd.variants ? RD.read(nextKey, t.lang) : null;
+      next = { key: nextKey, n: nd.n, title: RD.display(t.text), lang: t.lang, summary: nr ? nr.summary : '', hasSummary: !!(nr && nr.summary) };
+    }
+    const done = loose ? 0 : RD.finishedCount(ctx.bookKey, prog);
+    const act = (fn) => (e) => { if (e && e.preventDefault) e.preventDefault(); fn(); };
+    return {
+      noun, lines, loose, doc, lang, prog, member,
+      offerUnread: finishedNow,
+      offerFinish: !finishedNow,
+      promptOpen: !member && prompt,
+      hasNext: !!next,
+      next: next || { n: 0, title: '', lang: 'en', summary: '', hasSummary: false },
+      isLast: !loose && !nextKey,
+      bookTitle: loose ? '' : ctx.bookTitle,
+      book: loose ? '' : ctx.bookKey,
+      hasList: !loose,
+      countText: loose ? '' : member ? done + ' of ' + ctx.total + ' finished' : ctx.total + ' chapters',
+      unread: act(() => P.onMark && P.onMark(false)),
+      finish: act(() => {
+        if (!member) { if (P.onPrompt) P.onPrompt(true); else this.setState({ localPrompt: true }); return; }
+        if (P.onMark) P.onMark(true);
+      }),
+      goNext: act(() => P.onOpen && next && P.onOpen(next.key)),
+      goBook: act(() => P.onBook && P.onBook()),
+      goLibrary: act(() => P.onLibrary && P.onLibrary()),
+      onOpen: P.onOpen,
+      onSignIn: P.onSignIn,
+      onDismiss: () => { if (P.onPrompt) P.onPrompt(false); else this.setState({ localPrompt: false }); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
