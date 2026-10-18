@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P29`
-- Current slice: `P29.DECOMP2`
-- Next slice: `P29.REVIEW`
+- Current slice: `P29.S4`
+- Next slice: `P29.S5`
 - Waiting on operator: `none`
 - Open deferred jobs: `27`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P29` | planned | `P29.DECOMP2` | 4/6 | - | working tree |
+| `default` | `P29` | planned | `P29.S4` | 5/9 | - | working tree |
 
 ## Active Phases
 
@@ -29,7 +29,7 @@
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
-| [ ] `P29` | `planned` | `pending` | Learning reader — book model, chapter format + reader surfaces (design) | `P29.DECOMP2` | `works/phases/active/P29` |
+| [ ] `P29` | `planned` | `pending` | Learning reader — book model, chapter format + reader surfaces (design) | `P29.S4` | `works/phases/active/P29` |
 | [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.DECOMP` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
@@ -141,7 +141,10 @@
 | [x] `P29.S1` | `done` | Research: book and chapter model | `research` | `works/phases/active/P29/slices/P29.S1` |
 | [x] `P29.S2` | `done` | Research: native chapter format and legacy path | `research` | `works/phases/active/P29/slices/P29.S2` |
 | [x] `P29.S3` | `done` | Research: reader state and spaced-repetition review | `research` | `works/phases/active/P29/slices/P29.S3` |
-| [ ] `P29.DECOMP2` | `todo` | Re-cut: design waves from the research findings | `decomposition` | `works/phases/active/P29/slices/P29.DECOMP2` |
+| [x] `P29.DECOMP2` | `done` | Re-cut: design waves from the research findings | `decomposition` | `works/phases/active/P29/slices/P29.DECOMP2` |
+| [ ] `P29.S4` | `todo` | Design wave 1 — the reader | `co-work` | `works/phases/active/P29/slices/P29.S4` |
+| [ ] `P29.S5` | `todo` | Design wave 2 — chapter blocks and annotations | `co-work` | `works/phases/active/P29/slices/P29.S5` |
+| [ ] `P29.S6` | `todo` | Design wave 3 — library, book page, review, legacy and print | `co-work` | `works/phases/active/P29/slices/P29.S6` |
 | [ ] `P29.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
 
 ## Phase P30: Learning reader — apply
