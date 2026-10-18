@@ -4,9 +4,9 @@
 
 ## Summary
 
-- Open: `28`
+- Open: `27`
 - Promoted: `5`
-- Dropped: `7`
+- Dropped: `8`
 
 ## Open
 
@@ -23,7 +23,6 @@
 | `D23` | `deferred` | Bound the Gemini embed on the publish worker | P24.REVIEW | When adding timeouts/retries to embeddings or touching server/publish.py next | `works/deferred/open/D23` |
 | `D24` | `deferred` | Version durable docs for the automated alembic step in deploy.sh (operations/data/decisions still say manual) | P25.REVIEW | Next phase review (fold into its Doc impact consolidation), or the next deploy-machinery phase | `works/deferred/open/D24` |
 | `D25` | `deferred` | Server-rendered PDF export (headless Chromium) for documents | P28.DECOMP | someone needs a downloadable PDF file or agent/curl access to PDFs, or print output proves inconsistent across browsers | `works/deferred/open/D25` |
-| `D27` | `deferred` | Decide whether a closing consistency-sweep design round 07 is wanted | P27.REVIEW | If P28's apply reveals cross-round drift the four contracts do not settle; otherwise close as 'no sweep'. | `works/deferred/open/D27` |
 | `D28` | `deferred` | Operator copy decision: adopt round 03 card 14's error / not-found / empty strings verbatim? | P27.REVIEW | When P28 cuts the slice implementing the system-wide states (.kb-editorial / .kb-empty). | `works/deferred/open/D28` |
 | `D29` | `deferred` | Operator copy decision: adopt round 05's new graph strings, including the Korean halves? | P27.REVIEW | When P28 cuts the graph apply slice, before the strings land in web/src/content/graph.ts. | `works/deferred/open/D29` |
 | `D30` | `deferred` | Operator copy decision: adopt round 06's nineteen document/print strings, and should they be bilingual? | P27.REVIEW | When P28 cuts the document-views apply slice, before the strings land in web/src/content/documents.ts. | `works/deferred/open/D30` |
@@ -59,6 +58,7 @@
 | `D15` | `dropped` | Fix pre-existing P16-era gated failure: documents list projection format key (test_documents_api) | Stale: the same job as D21 -- test_documents_list_detail_and_project_bridge failing on a missing 'format' key, fixed in P23 (062c041). P28.S1 and P28.REVIEW both ran the full gated suite green (128 passed, 0 skipped). | `works/deferred/dropped/D15` |
 | `D21` | `dropped` | Fix pre-existing format-key failure in test_documents_list_detail_and_project_bridge | Stale duplicate of D15, same root cause, fixed in P23 (062c041); the full gated suite passed 128/0 in P28.REVIEW. | `works/deferred/dropped/D21` |
 | `D26` | `dropped` | Capture the off-frame graph screenshot before P28 implements the graph | Satisfied, not abandoned: the operator supplied both screenshots on 2026-09-21 (Mac Chrome /graph and iPhone, both pre-P28 production). Committed to works/phases/active/P28/diagnostics/D26-{desktop-graph-mac-chrome.png,mobile-graph-iphone.jpeg} and read into the P28.S6 note in phase.md with ranked hypotheses. The graph apply slice now has the evidence the round-05 design never got. | `works/deferred/dropped/D26` |
+| `D27` | `dropped` | Decide whether a closing consistency-sweep design round 07 is wanted | Closed as 'no sweep', the trigger's own default: P29.DECOMP read P28.REVIEW and found no unsettled cross-round drift (the five round stylesheets landed byte-identical; the three kb-record-fixes.css corrections restate record values; the one 44px vs 38px disagreement is already D36 (1)), and P29's reader-first redesign supersedes a round-07 sweep. | `works/deferred/dropped/D27` |
 | `D3` | `dropped` | Revoke orphan GitHub deploy key 157264706 (knowledge-api@oci) + delete its stray private half from the repo working tree | Completed by the operator (2026-07-15): ran 'gh repo deploy-key delete 157264706' (orphan knowledge-api@oci revoked) and removed ./knowledge_deploy_key* from the working tree. The box authenticates with the separate on-box key knowledge-api@oci-box (157267945). No key material remains in the repo. Closed as done, not abandoned. | `works/deferred/dropped/D3` |
 | `D31` | `dropped` | Retire round 06's card group label in the Knowledge Base Design System project | Dropped on the operator's word at P29's start (2026-10-18): the workspace update to v60 retired Claude Design / DesignSync, so the trigger (the next DesignSync session on project 623bb4ea) cannot fire. | `works/deferred/dropped/D31` |
 | `D6` | `dropped` | Paid-plan retriever endpoint for external AI agents | Superseded by P15 (Agent-facing retrieval MCP service). P15 builds the external-agent retriever surface D6 anticipated — an MCP search/fetch_document service over Streamable-HTTP, vk_-scoped per project, dual-reachable (internal service-name + public edge). The retriever interface now exists. D6's remaining aspect — actually charging for it (a paid plan / gating the MCP surface) — is a separate business + billing decision P15 does not build; the P11 usage-event metering is the substrate for it when the operator introduces a paid plan. That monetization step is re-captured as a new, narrower deferred job. | `works/deferred/dropped/D6` |
