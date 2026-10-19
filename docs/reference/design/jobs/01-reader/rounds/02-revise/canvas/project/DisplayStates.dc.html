@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Display panel</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Display panel</p>
+<p class="rd-board__lead">Text size in five steps and the theme: System (the default), Light, Dark or Sepia. Each current choice is marked by a ring and a fill, and read out in words. No column-width control. Saved on this device only.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="DisplayPanel" size="{{ c.size }}" theme-choice="{{ c.themeChoice }}" os="{{ c.os }}" theme="{{ c.theme }}" hint-size="100%,360px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1500,"height":1037}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const D = (cap, o) => Object.assign({ cap, st: px(400), size: 3, themeChoice: 'system', os: 'light', theme: 'light' }, o);
+    const rows = [
+      { title: 'Defaults and System', cells: [D('Defaults · System, device light', {}), D('System · device dark', { os: 'dark', theme: 'dark' })] },
+      { title: 'Each choice', cells: [D('Light · smallest size', { themeChoice: 'light', size: 1 }), D('Dark · size 4', { themeChoice: 'dark', theme: 'dark', size: 4 }), D('Sepia · largest size', { themeChoice: 'sepia', theme: 'sepia', size: 5 })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

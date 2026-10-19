@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Callout</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Callout</p>
+<p class="rd-board__lead">Six types, each named in words: Note, Important, Warning, Caution, Skip and Definition, with a title and without. A collapsed callout shows its title and opens by click, Enter or Space. Nested lists and code keep their own styling.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Callout" block="{{ c.block }}" open="{{ c.open }}" theme="{{ c.theme }}" hint-size="100%,160px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3200,"height":2632}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const bl = RD.read('maintainer-guide/internals', 'en').blocks.filter((b) => b.isCallout);
+    const TYPES = ['NOTE', 'IMPORTANT', 'WARNING', 'CAUTION', 'SKIP', 'DEFINITION'];
+    const titled = TYPES.map((t) => bl.find((b) => b.type === t && b.hasTitle && !b.collapsed));
+    const plain = TYPES.map((t) => bl.find((b) => b.type === t && !b.hasTitle));
+    const fold = bl.find((b) => b.collapsed);
+    const C = (cap, b, o) => Object.assign({ cap: cap, st: px(480), block: b, open: undefined, theme: 'light' }, o);
+    const word = (b) => b.typeWord + (b.hasTitle ? ' · with a title' : ' · no title');
+    const rows = [
+      { title: 'Light · with a title', cells: titled.map((b) => C(word(b) + (b.body.some((x) => x.isCode) ? ', a list and code' : ''), b, {})) },
+      { title: 'Light · no title', cells: plain.map((b) => C(word(b), b, {})) },
+      { title: 'Collapsed', cells: [C('Closed · shows its title', fold, {}), C('Open', fold, { open: true }), C('Open · dark', fold, { open: true, theme: 'dark' }), C('Closed · sepia', fold, { theme: 'sepia' })] },
+      { title: 'Dark · with a title', cells: titled.map((b) => C(word(b), b, { theme: 'dark' })) },
+      { title: 'Sepia · with a title', cells: titled.map((b) => C(word(b), b, { theme: 'sepia' })) },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

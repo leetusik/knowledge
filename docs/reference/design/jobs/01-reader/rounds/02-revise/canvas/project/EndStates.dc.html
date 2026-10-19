@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Chapter end</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Chapter end</p>
+<p class="rd-board__lead">Reaching the end marks the chapter finished with no press, and offers Mark as unread. Mark as unread sets the chapter back to the start, so reading it to the end again finishes it again. The next chapter is named and opens with one press; the last chapter leads back to the book. The book's chapters close the chapter with their states.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ChapterEnd" doc="{{ c.doc }}" lang="{{ c.lang }}" prog="{{ c.prog }}" member="{{ c.member }}" prompt="{{ c.prompt }}" theme="{{ c.theme }}" hint-size="100%,640px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3300,"height":2341}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const I = 'maintainer-guide/internals', W = 'maintainer-guide/why';
+    const p = (k, rec) => Object.assign({}, RD.progress, { [k]: rec });
+    const E = (cap, w, o) => Object.assign({ cap, st: px(w), doc: I, lang: 'en', prog: p(I, { s: 'finished', on: 2 }), member: true, prompt: false, theme: 'light' }, o);
+    const rows = [
+      { title: 'iPad · 720', cells: [E('Member reached the end · finished', 720, {}), E('Last chapter · back to the book · sepia', 720, { doc: W, prog: p(W, { s: 'finished', on: 3 }), theme: 'sepia' }), E('A loose document · no next, no chapter list', 720, { doc: 'doc/field-notes/sqlite-wal', prog: p('doc/field-notes/sqlite-wal', { s: 'finished', on: 2 }) })] },
+      { title: 'Phone · 390', cells: [E('Marked as unread · back to the start · Mark as finished', 390, { prog: p(I, { s: 'started', pct: 0, at: null, unread: true }) }), E('Signed out · Mark as finished answers Sign in to save · dark', 390, { member: false, prompt: true, theme: 'dark' }), E('Finished an earlier version · Updated', 390, { doc: W, prog: RD.progress }), E('Not finished yet · dark', 390, { prog: RD.progress, theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

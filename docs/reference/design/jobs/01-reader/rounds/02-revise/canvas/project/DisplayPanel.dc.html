@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Display panel</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-disp">
+<fieldset class="rd-disp__group"><legend class="rd-disp__label">Text size</legend>
+<div class="rd-sizes"><sc-for list="{{ sizes }}" as="z" hint-placeholder-count="5"><button type="button" class="rd-opt" aria-pressed="{{ z.pressed }}" aria-label="{{ z.aria }}" onclick="{{ z.pick }}"><span class="rd-opt__a" style="{{ z.style }}" aria-hidden="true">A</span></button></sc-for></div>
+<p class="rd-disp__readout">Size <b>{{ size }} of 5</b>{{ sizeNote }}</p>
+</fieldset>
+<fieldset class="rd-disp__group"><legend class="rd-disp__label">Theme</legend>
+<div class="rd-themes"><sc-for list="{{ themes }}" as="t" hint-placeholder-count="4"><button type="button" class="rd-opt" aria-pressed="{{ t.pressed }}" onclick="{{ t.pick }}"><span class="rd-swatch" aria-hidden="true"><sc-for list="{{ t.halves }}" as="h" hint-placeholder-count="1"><span class="rd-swatch__half" data-theme="{{ h }}">Aa</span></sc-for></span><span>{{ t.label }}</span></button></sc-for></div>
+<p class="rd-disp__readout"><b>{{ themeName }}</b>{{ themeNote }}</p>
+</fieldset>
+<p class="rd-disp__note">Saved on this device. Your other devices keep their own.</p>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"size":{"editor":null},"themeChoice":{"editor":null},"os":{"editor":null},"onSize":{"editor":null},"onTheme":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":363}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { size: null, choice: null }; }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const size = this.state.size || P.size || 3;
+    const choice = this.state.choice || P.themeChoice || 'system';
+    const os = P.os || 'light';
+    const PX = [15, 16.5, 18, 20, 22];
+    const NOTE = { 1: ' · smallest', 3: ' · default', 5: ' · largest' };
+    const pickSize = (n) => () => { if (P.onSize) P.onSize(n); else this.setState({ size: n }); };
+    const pickTheme = (k) => () => { if (P.onTheme) P.onTheme(k); else this.setState({ choice: k }); };
+    const T = [
+      { key: 'system', label: 'System', halves: ['light', 'dark'] },
+      { key: 'light', label: 'Light', halves: ['light'] },
+      { key: 'dark', label: 'Dark', halves: ['dark'] },
+      { key: 'sepia', label: 'Sepia', halves: ['sepia'] },
+    ];
+    const NAME = { system: 'System', light: 'Light', dark: 'Dark', sepia: 'Sepia' };
+    return {
+      size,
+      sizeNote: NOTE[size] || '',
+      sizes: PX.map((px, i) => ({
+        pressed: size === i + 1,
+        aria: 'Text size ' + (i + 1) + ' of 5' + (NOTE[i + 1] ? ', ' + NOTE[i + 1].slice(3) : ''),
+        style: 'font-size: ' + px + 'px',
+        pick: pickSize(i + 1),
+      })),
+      themes: T.map((t) => ({ label: t.label, halves: t.halves, pressed: choice === t.key, pick: pickTheme(t.key) })),
+      themeName: NAME[choice],
+      themeNote: choice === 'system' ? ' · follows this device, ' + os + ' now' : choice === 'sepia' ? ' · warm paper, for long reading' : '',
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-panel',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
