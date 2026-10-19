@@ -1,8 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Noto+Serif+KR:wght@200..900&display=swap");
 
-/* The reader (job 01-reader, round 01). Proposed additions to the kb system:
-   the reading face, five text-size steps, the sepia theme, syntax roles, the reader's
-   measure and wide track, and motion. Everything else resolves to kb-* tokens. */
+/* The reader (job 01-reader, rounds 01 and 02). Proposed additions to the kb system:
+   the reading face and its Korean serif, five text-size steps, the sepia theme, syntax roles,
+   the reader's measure (one column for text, tables and code), and motion. Everything else
+   resolves to kb-* tokens. */
 
 /* ---------- Sepia: the third reading theme (reader-scoped, proposed) ---------- */
 [data-theme="sepia"] {
@@ -51,7 +52,10 @@ html, body { margin: 0; }
 
 /* ---------- The reader frame ---------- */
 .rd-frame {
-  --font-reading: "Literata", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  /* Hangul in the reading face and the display face is set in one Korean serif, Noto Serif KR (OFL); Latin stays in
+     Literata and Fraunces. The interface (--font-body) keeps Pretendard for Hangul. */
+  --font-reading: "Literata", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif;
   --rd-fs: 1.125rem;
   --rd-k: 1.125;
   --rd-lead: 1.65;
@@ -59,7 +63,6 @@ html, body { margin: 0; }
      the same value as the interface's 15 px step there. */
   --rd-fs-s: calc(var(--rd-fs) * 0.8333);
   --rd-measure: 36rem;
-  --rd-wide: 48rem;
   --rd-top-h: 3.5rem;
   --rd-bot-h: 3.75rem;
   --rd-line: 3px;
@@ -87,6 +90,8 @@ html, body { margin: 0; }
 .rd-in { display: contents; }
 .rd-pad { padding: var(--kb-space-lg); }
 .rd-standalone { overflow: visible; }
+/* A Components board draws a code block or a table alone: it takes the text column's width, as it does in the reader. */
+.rd-standalone > :is(.rd-code, .rd-table) { max-width: var(--rd-measure); margin-inline: auto; }
 @container rd (min-width: 40rem) { .rd-in { --rd-gut: var(--kb-app-gutter); } }
 @container rd (min-width: 90rem) { .rd-in { --rd-gut: var(--kb-app-gutter-wide); } }
 
@@ -222,26 +227,28 @@ html, body { margin: 0; }
   .rd-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 13rem) minmax(0, 1fr); }
 }
 
-/* ---------- The scroller and the article's tracks ---------- */
+/* ---------- The scroller and the article's track ---------- */
+/* The canvas scrolls inside the frame, from its top edge, as the product scrolls the window. The canvas-only state bar
+   is the scroller's first child, so it scrolls away with the page; the progress line and the top bar ride in a sticky
+   wrapper under it, so they stay at the top of the frame once the bar has gone. */
 .rd-scroll {
-  position: absolute; top: var(--rd-line); left: 0; right: 0; bottom: 0;
+  position: absolute; inset: 0;
   overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
-  padding-top: var(--rd-top-h); padding-bottom: var(--rd-bot-h);
+  padding-bottom: var(--rd-bot-h);
   scroll-behavior: auto;
 }
 .rd-scroll--nobottom { padding-bottom: 0; }
+.rd-topwrap { position: sticky; top: 0; z-index: 20; height: calc(var(--rd-line) + var(--rd-top-h)); pointer-events: none; }
+.rd-topwrap .rd-top, .rd-topwrap .rd-skip { pointer-events: auto; }
+/* One track: text, tables, code, callouts and figures all share the text column's two edges, at every width. */
 .rd-flow {
   display: grid;
   grid-template-columns:
     [full-start] minmax(var(--rd-gut), 1fr)
-    [wide-start] minmax(0, calc((var(--rd-wide) - var(--rd-measure)) / 2))
     [text-start] min(100% - 2 * var(--rd-gut), var(--rd-measure))
-    [text-end] minmax(0, calc((var(--rd-wide) - var(--rd-measure)) / 2))
-    [wide-end] minmax(var(--rd-gut), 1fr) [full-end];
+    [text-end] minmax(var(--rd-gut), 1fr) [full-end];
 }
 .rd-flow > * { grid-column: text; min-width: 0; }
-.rd-flow > .rd-w { grid-column: wide; }
-@container rd (max-width: 39.99rem) { .rd-flow > .rd-bleed { grid-column: full; } }
 
 /* ---------- The chapter opening (the bold move: a book's chapter page) ---------- */
 .rd-head { padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
@@ -310,13 +317,20 @@ html, body { margin: 0; }
 .rd-prose strong, .rd-callout strong { font-weight: 650; }
 .rd-prose em, .rd-callout em { font-style: italic; }
 /* Hangul has no italic: a Korean quote stays upright, Korean emphasis is set semibold */
-.rd-quote:lang(ko) { font-style: normal; }
-.rd-prose em:lang(ko), .rd-callout em:lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+.rd-quote:lang(ko), .rd-quote :lang(ko) { font-style: normal; }
+.rd-prose em:lang(ko), .rd-callout em:lang(ko), .rd-prose em :lang(ko), .rd-callout em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+.rd-callout :lang(ko) { word-break: keep-all; }
+/* Korean in a table cell keeps its words whole: no emergency break either, so a narrow column grows to its longest
+   word and the table scrolls in its box instead (the prose rule above would let a cell break mid-word). */
+.rd-t :lang(ko) { word-break: keep-all; overflow-wrap: normal; }
 .rd-prose del, .rd-callout del { text-decoration-thickness: 1px; color: var(--kb-secondary); }
 .rd-ic {
   font-family: var(--font-mono); font-size: 0.8333em; line-height: 1; padding: 0.12em 0.32em;
   background: var(--kb-surface-sunken); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm);
-  overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  overflow-wrap: anywhere;
+  /* A chip that wraps is cut open at the line break (slice). With clone, each piece gets its end padding and border,
+     which the browser does not count when it breaks the line, so a piece ending at the column's edge overhung it. */
+  -webkit-box-decoration-break: slice; box-decoration-break: slice;
 }
 .rd-list { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding-left: 1.4em; }
 .rd-list .rd-list { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
@@ -354,7 +368,7 @@ ul.rd-list ul.rd-list { list-style-type: circle; }
 .rd-callout .rd-p { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
 .rd-callout .rd-list { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
 .rd-callout .rd-code { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
-.rd-callout .rd-code__pre { background: var(--kb-surface); }
+.rd-callout .rd-code { --rd-code-bg: var(--kb-surface); }
 .rd-callout--fold { padding-block: 0; }
 .rd-callout__sum {
   display: flex; align-items: center; gap: var(--kb-space-sm); min-height: var(--kb-tap); padding-block: 0.35rem;
@@ -374,26 +388,36 @@ details[open] > .rd-callout__sum .rd-callout__toggle-closed { display: none; }
 .rd-code__bar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--kb-space-sm); padding: 0.5rem 1rem; border: 1px solid var(--kb-border); border-bottom: 0; border-radius: var(--kb-radius) var(--kb-radius) 0 0; background: var(--kb-surface); }
 .rd-code__title { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-ink); overflow-wrap: anywhere; }
 .rd-code__lang { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); flex: none; }
+.rd-code { --rd-code-bg: var(--kb-surface-sunken); }
+.rd-code__wrap { position: relative; }
 .rd-code__pre {
-  margin: 0; padding: 0.9rem 1rem; background: var(--kb-surface-sunken); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
+  margin: 0; padding: 0.9rem 1rem; background: var(--rd-code-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
   font-family: var(--font-mono); font-size: var(--rd-fs-s); line-height: 1.6; color: var(--kb-ink);
   white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
 }
+/* The browser's own `code { font-family: monospace }` would otherwise set every code line in the platform mono face.
+   Code shows the characters as typed: no ligatures (JetBrains Mono would draw "->" as one arrow). */
+.rd-code__pre code { font: inherit; font-variant-ligatures: none; }
 .rd-code__bar + .rd-code__pre { border-radius: 0 0 var(--kb-radius) var(--kb-radius); }
 .rd-code__ln { display: block; padding-left: 2ch; text-indent: -2ch; min-height: 1.6em; }
-.rd-code--art .rd-code__pre { white-space: pre; overflow-wrap: normal; overflow-x: auto; overscroll-behavior-inline: contain; line-height: 1.35; }
-.rd-code--art .rd-code__ln { padding-left: 0; text-indent: 0; min-height: 1.35em; }
+/* An ASCII drawing keeps every line and column: no wrapping, and a line height no taller than the mono face's "|"
+   (0.94em in JetBrains Mono), so vertical strokes join from line to line. Wider than the column, it scrolls inside its
+   own box, with the fade and the hint, at every width. */
+.rd-code--art { --rd-art-lead: 0.93; }
+.rd-code--art .rd-code__pre { white-space: pre; overflow-wrap: normal; overflow-x: auto; overscroll-behavior-inline: contain; line-height: var(--rd-art-lead); }
+.rd-code--art .rd-code__ln { padding-left: 0; text-indent: 0; min-height: calc(var(--rd-art-lead) * 1em); }
+.rd-code__fade { display: none; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 2rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--rd-code-bg)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; opacity: 0; transition: opacity var(--rd-ease); }
+.rd-code__fade--l { right: auto; left: 1px; background: linear-gradient(to left, transparent, var(--rd-code-bg)); border-radius: var(--kb-radius) 0 0 var(--kb-radius); }
 .rd-code__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-code--art.is-over .rd-code__fade, .rd-code--art.is-over .rd-code__hint { display: block; }
+/* The fade is a cue that more remains, so it shows only on a side where it does (measured from the scroll position):
+   scrolled to the end, the last column and the right border are at full strength. It takes no layout. */
+.rd-code.is-more-r .rd-code__fade--r, .rd-code.is-more-l .rd-code__fade--l { opacity: 1; }
 .rd-code .t-kw { color: var(--rd-syn-kw); }
 .rd-code .t-fn { color: var(--rd-syn-fn); }
 .rd-code .t-st { color: var(--rd-syn-st); }
 .rd-code .t-nu { color: var(--rd-syn-nu); }
 .rd-code .t-cm { color: var(--rd-syn-cm); font-style: italic; }
-@container rd (max-width: 39.99rem) {
-  .rd-bleed .rd-code__pre, .rd-bleed .rd-code__bar { border-radius: 0; border-inline: 0; padding-inline: var(--rd-gut); }
-  .rd-bleed .rd-code__hint { padding-inline: var(--rd-gut); }
-  .rd-code--art .rd-code__hint { display: block; }
-}
 
 /* ---------- Tables ---------- */
 .rd-table { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; position: relative; }
@@ -410,19 +434,28 @@ details[open] > .rd-callout__sum .rd-callout__toggle-closed { display: none; }
 .rd-t .is-c { text-align: center; }
 .rd-t .rd-ic { font-size: 1em; white-space: nowrap; overflow-wrap: normal; }
 .rd-table--wide .rd-t { min-width: 44rem; }
+/* A long table that fits the column has no box of its own: its header row sticks to the top of the reading area while
+   the chrome is hidden (just under the progress line), and flush under the top bar while it shows. The canvas scroller
+   starts at the frame's top edge like the product's window, so these are the product's values. */
 .rd-table--long .rd-table__scroll { overflow: visible; }
-/* The long table's header sticks to the top of the reading area while the chrome is hidden, and under the top bar while
-   it shows. The canvas's scroller carries the top bar's height as padding-top, and a sticky offset counts from inside
-   that padding, so the canvas offsets are one bar lower than the product's: hidden -bar (the product's 0), shown 0
-   (the product's --rd-top-h). The product scrolls the window and uses 0 and --rd-top-h (build prompt, 9). */
-.rd-table--long thead th { position: sticky; top: calc(-1 * var(--rd-top-h)); z-index: 2; box-shadow: 0 1px 0 var(--kb-border-strong); transition: top var(--rd-ease); }
-.rd-frame:not(.rd-chrome-hidden) .rd-table--long thead th { top: 0; }
+.rd-table--long thead th { position: sticky; top: var(--rd-line); z-index: 2; box-shadow: 0 1px 0 var(--kb-border-strong); transition: top var(--rd-ease); }
+.rd-frame:not(.rd-chrome-hidden) .rd-table--long thead th { top: calc(var(--rd-line) + var(--rd-top-h)); }
 /* A standalone frame (a Components board) has no inner scroller: the page scrolls, so the header sticks at the top. */
 .rd-standalone .rd-table--long thead th, .rd-frame.rd-standalone:not(.rd-chrome-hidden) .rd-table--long thead th { top: 0; }
-.rd-table__fade { display: none; position: absolute; top: 0; right: 0; bottom: 0; width: 2rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--kb-surface)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; }
-.rd-table__hint { display: none; margin: var(--kb-space-xs) 0 0; font-size: 0.8125rem; color: var(--kb-secondary); }
-/* A wide table runs past its track at every width on the canvas: the fade and the hint always show. Product: show them only when scrollWidth > clientWidth. */
-.rd-table--wide .rd-table__fade, .rd-table--wide .rd-table__hint { display: block; }
+.rd-table__fade { display: none; position: absolute; top: 0; right: 0; bottom: 0; width: 2rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--kb-surface)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; opacity: 0; transition: opacity var(--rd-ease); }
+.rd-table__fade--l { right: auto; left: 0; background: linear-gradient(to left, transparent, var(--kb-surface)); border-radius: var(--kb-radius) 0 0 var(--kb-radius); }
+/* Shown (where the box can scroll) only on a side where more of the table remains, from the measured scroll position. */
+.rd-table.is-more-r .rd-table__fade--r, .rd-table.is-more-l .rd-table__fade--l { opacity: 1; }
+.rd-table__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+/* Wider than the column (measured: the table's width is more than its box's), a table scrolls sideways inside its own
+   box at every width, with the fade and the hint. */
+.rd-table.is-over .rd-table__fade, .rd-table.is-over .rd-table__hint { display: block; }
+/* A long table wider than the column cannot keep a page-level sticky header (a sticky cell sticks to its nearest
+   scrolling box): it takes the phone's box, both ways, at every width, its header row sticky at the box's top. */
+.rd-table--long.is-over .rd-table__scroll { overflow: auto; max-height: 30rem; }
+.rd-table--long.is-over thead th, .rd-frame:not(.rd-chrome-hidden) .rd-table--long.is-over thead th { top: 0; }
+/* In its own box, as on a phone, cells keep one line so the rows stay even. */
+.rd-table--long.is-over .rd-t td { white-space: nowrap; }
 @container rd (max-width: 39.99rem) {
   .rd-table--long .rd-table__fade { display: block; }
   .rd-table--long .rd-table__hint { display: block; }
@@ -453,6 +486,7 @@ details[open] > .rd-callout__sum .rd-callout__toggle-closed { display: none; }
 .rd-next__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
 .rd-next__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.25; color: var(--kb-ink); text-wrap: balance; }
 .rd-next__lede { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; }
+.rd-next__title:lang(ko), .rd-next__lede:lang(ko) { word-break: keep-all; }
 .rd-next .rd-btn { margin-top: var(--kb-space-xs); }
 .rd-end__list { margin-top: var(--kb-space-xl); }
 .rd-end__listhead { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--kb-space-xs) var(--kb-space-md); }
@@ -474,6 +508,8 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-ch__n { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
 .rd-ch__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .rd-ch__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; overflow-wrap: break-word; text-wrap: pretty; }
+/* A Korean title or section wraps only at the spaces between its words, as in the chapter opening. */
+.rd-ch__title:lang(ko), .rd-ch__sec:lang(ko) { word-break: keep-all; }
 .rd-ch__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
 .rd-ch__now { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
 .rd-ch__secs { list-style: none; margin: 0; padding: 0 0 var(--kb-space-xs) calc(2.4rem + var(--kb-space-sm) + 0.5rem); }
@@ -482,9 +518,9 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-ch__sec[aria-current] { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
 
 /* ---------- Sheets (Contents, Display, Version history) ---------- */
-.rd-scrim { position: absolute; inset: 0; z-index: 35; border: 0; padding: 0; margin: 0; background: var(--kb-scrim); cursor: pointer; }
+.rd-scrim { position: absolute; inset: 0; top: var(--rd-barvis, 0px); z-index: 35; border: 0; padding: 0; margin: 0; background: var(--kb-scrim); cursor: pointer; }
 .rd-sheet {
-  position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; max-height: 88%;
+  position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; max-height: min(88%, calc(100% - var(--rd-barvis, 0px) - var(--rd-line)));
   display: flex; flex-direction: column;
   background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-overlay);
   border-radius: var(--kb-radius) var(--kb-radius) 0 0; border-top: 1px solid var(--kb-border);
@@ -494,7 +530,7 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-sheet__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
 .rd-sheet__body { overflow-y: auto; overscroll-behavior: contain; padding: var(--kb-space-md) var(--rd-gut) var(--kb-space-xl); }
 @container rd (min-width: 40rem) {
-  .rd-sheet { top: var(--rd-line); bottom: 0; max-height: none; width: min(26rem, 88%); border-radius: 0; border-top: 0; }
+  .rd-sheet { top: calc(var(--rd-barvis, 0px) + var(--rd-line)); bottom: 0; max-height: none; width: min(26rem, 88%); border-radius: 0; border-top: 0; }
   .rd-sheet--left { left: 0; right: auto; border-right: 1px solid var(--kb-border); }
   .rd-sheet--right { right: 0; left: auto; border-left: 1px solid var(--kb-border); }
   .rd-sheet__body { padding-inline: var(--kb-space-lg); }
@@ -641,8 +677,10 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-tapzone { cursor: text; }
 .rd-art-scale { display: none; }
 
-/* The stand-ins for other jobs' screens (canvas only, never built) */
-.rd-away { position: absolute; inset: 0; overflow-y: auto; display: grid; place-items: center; padding: 2rem 1.2rem; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+/* The stand-ins for other jobs' screens (canvas only, never built). In the flow, the state bar is the stand-in's first
+   row and scrolls with it, as on the reader. */
+.rd-away { position: absolute; inset: 0; overflow-y: auto; display: flex; flex-direction: column; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+.rd-away__main { flex: 1 0 auto; display: grid; place-items: center; padding: 2rem 1.2rem; }
 .rd-away__card { display: flex; flex-direction: column; gap: 12px; max-width: 34rem; width: 100%; padding: 28px; border: 1px dashed #8a8a86; border-radius: 6px; background: #fbfaf7; }
 .rd-away__kind { margin: 0; font: 600 12px/1.3 ui-monospace, "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #4f4a42; }
 .rd-away__title { margin: 0; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1.2; color: #26211c; text-wrap: balance; }
@@ -655,6 +693,29 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-away__btn--main:hover { background: #000; }
 .rd-away__btn:focus-visible { outline: 2px solid #26211c; outline-offset: 2px; }
 
+/* The diagram slot (canvas only, never built): a stand-in for the diagrams job's block (P29.S5). It shows the diagram's
+   kind and its text alternative (title and caption), in the canvas chrome's neutral greys and system type, so it never
+   reads as the diagram's design. Light and sepia share the light chrome; dark has its own. */
+.rd-dgm {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+  border: 1px dashed #7a7a75; border-radius: 6px; background: #ececea; color: #1d1d1d;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif; scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem);
+}
+.rd-dgm__kind { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #444; }
+.rd-dgm__what { margin: 0; color: #2b2b2b; max-width: 34rem; }
+.rd-dgm__code { font: 600 12px/1.3 ui-monospace, "SF Mono", Menlo, monospace; padding: 0 3px; border-radius: 3px; background: #dcdcd8; color: #1d1d1d; }
+.rd-dgm__alt { margin: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px dashed #b9b9b4; }
+.rd-dgm__pair { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0 10px; align-items: baseline; }
+.rd-dgm__alt dt { font-size: 12px; font-weight: 700; color: #444; }
+.rd-dgm__alt dd { margin: 0; color: #1d1d1d; overflow-wrap: break-word; }
+.rd-dgm__pair:first-child dd { font-weight: 600; }
+.rd-dgm :lang(ko), .rd-dgm:lang(ko) { word-break: keep-all; }
+[data-theme="dark"] .rd-dgm { background: #2c2c2a; color: #ececea; border-color: #8a8a86; }
+[data-theme="dark"] .rd-dgm__kind, [data-theme="dark"] .rd-dgm__alt dt { color: #c4c4c0; }
+[data-theme="dark"] .rd-dgm__what, [data-theme="dark"] .rd-dgm__alt dd { color: #ececea; }
+[data-theme="dark"] .rd-dgm__code { background: #3d3d3a; color: #ececea; }
+[data-theme="dark"] .rd-dgm__alt { border-top-color: #6f6f6b; }
+
 /* Flow board shell (canvas only) */
 .rd-proto { display: flex; flex-direction: column; min-height: 100vh; background: #f4f3ef; }
 .rd-proto__stage { position: relative; flex: 1 1 auto; min-height: 44rem; }
@@ -663,7 +724,8 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-sk__lede2 { width: 60%; margin-top: var(--kb-space-xs); }
 .rd-sk__w100 { width: 100%; } .rd-sk__w95 { width: 95%; } .rd-sk__w70 { width: 70%; } .rd-sk__w60 { width: 60%; } .rd-sk__w55 { width: 55%; } .rd-sk__w45 { width: 45%; } .rd-sk__w40 { width: 40%; }
 .rd-sk .rd-skel { display: block; }
-/* The flow stage mirrors each reference viewport's height: phone 844, iPad 1180, desktop 900 */
+/* The flow stage mirrors each reference viewport's height: phone 844, iPad 1180, desktop 900. The state bar is inside
+   the stage, at the top of the reader's scrolled page, so it scrolls away with the chapter. */
 .rd-proto__stage { flex: none; min-height: 0; height: 52.75rem; }
 @media (min-width: 40rem) { .rd-proto__stage { height: 73.75rem; } }
 @media (min-width: 64rem) { .rd-proto__stage { height: 56.25rem; } }
@@ -687,6 +749,9 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-found__sample--ui { font-family: var(--font-body); font-size: 16px; font-weight: 600; }
 .rd-found__sample--mono { font-family: var(--font-mono); font-size: 18px; }
 .rd-found__meta { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--kb-secondary); }
+.rd-found__card--stack { display: flex; flex-direction: column; gap: 10px; }
+.rd-found__sample:lang(ko), .rd-found__sample :lang(ko) { word-break: keep-all; }
+.rd-found__card--stack .rd-found__meta { margin: 0; }
 .rd-found__col { width: calc(36rem + 48px); }
 .rd-found__para { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); }
 .rd-found__steps { width: calc(36rem + 48px); display: flex; flex-direction: column; }

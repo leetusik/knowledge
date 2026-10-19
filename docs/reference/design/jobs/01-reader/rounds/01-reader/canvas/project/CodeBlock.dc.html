@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Code block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<figure class="rd-code {{ artCls }}">
+<sc-if value="{{ b.hasTitle }}" hint-placeholder-val="{{ true }}"><figcaption class="rd-code__bar"><span class="rd-code__title">{{ b.title }}</span><span class="rd-code__lang">{{ b.langLabel }}</span></figcaption></sc-if>
+<pre class="rd-code__pre" tabindex="{{ tab }}" role="{{ role }}" aria-label="{{ aria }}"><code><sc-for list="{{ b.lines }}" as="ln" hint-placeholder-count="4"><span class="rd-code__ln"><sc-for list="{{ ln.toks }}" as="t" hint-placeholder-count="2"><span class="{{ t.c }}">{{ t.v }}</span></sc-for></span></sc-for></code></pre>
+<sc-if value="{{ b.art }}" hint-placeholder-val="{{ false }}"><p class="rd-code__hint">Scroll sideways to see the whole drawing →</p></sc-if>
+</figure>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":381}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const b = this.props.block || RD.read('maintainer-guide/internals', 'en').blocks.find((x) => x.isCode && x.hasTitle);
+    const bare = !!this.props.bare;
+    return {
+      b,
+      artCls: b.art ? 'rd-code--art' : '',
+      tab: b.art ? 0 : undefined,
+      role: b.art ? 'region' : undefined,
+      aria: b.art ? 'Drawing, scrolls sideways' : undefined,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (this.props.size || 3) + ' rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (this.props.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

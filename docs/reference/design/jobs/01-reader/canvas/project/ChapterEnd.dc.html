@@ -48,7 +48,7 @@ class Component extends DCLogic {
     const LINES = member ? [
       ['finished', 'Finished', 'Saved to your progress.'],
       ['updated', 'Finished', 'You finished an earlier version. This ' + noun + ' has been updated since.'],
-      ['unread', 'Not finished', 'Marked as unread. It stays that way until you mark it finished.'],
+      ['unread', 'Not finished', 'Marked as unread. Read it to the end again to finish it.'],
       ['started', 'Not finished yet', 'Reaching this point marks the ' + noun + ' finished.'],
     ] : [['anon', 'Not saved', "Signed-out reading isn't saved. Your display settings stay on this device."]];
     const curLine = !member ? 'anon' : (st === 'finished' || st === 'updated' || st === 'unread') ? st : 'started';

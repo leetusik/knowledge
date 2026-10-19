@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Sign in to save</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Sign in to save</p>
+<p class="rd-board__lead">One pattern for every place a signed-out reader tries to keep something: what signing in keeps, that the reader comes back to the same place, and a way to dismiss it. Wave 2 and 3 jobs reuse it by changing only what is kept.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="SignInToSave" what="{{ c.what }}" place="{{ c.place }}" raised="{{ c.raised }}" theme="{{ c.theme }}" hint-size="100%,170px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1700,"height":810}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const S = (cap, o) => Object.assign({ cap, st: px(480), what: undefined, place: 'chapter', raised: false, theme: 'light' }, o);
+    const rows = [
+      { title: 'In the chapter end', cells: [S('Finished chapters · light', {}), S('Dark', { theme: 'dark' }), S('Sepia', { theme: 'sepia' })] },
+      { title: 'Reused by later jobs (the noun changes, nothing else)', cells: [S('Bookmarks · raised over the text', { what: 'bookmarks', raised: true }), S('Highlights and notes', { what: 'highlights and notes' }), S('Quiz answers', { what: 'quiz answers' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -12,11 +12,11 @@
 <x-dc>
 <div class="rd-board">
 <p class="rd-board__title">Component — Prose kit</p>
-<p class="rd-board__lead">The chapter's own text, cut from the main sample chapter: three heading levels, paragraphs with emphasis, strong, strikethrough and inline code, every kind of link and the missing link, nested ordered and unordered lists, a plain blockquote, a thematic break, and Korean terms inside English.</p>
+<p class="rd-board__lead">The chapter's own text, cut from the main sample chapter: three heading levels, paragraphs with emphasis, strong, strikethrough and inline code, every kind of link and the missing link, nested ordered and unordered lists, a plain blockquote, a thematic break, the diagram's place (a canvas-only stand-in until the diagrams job draws it), and Korean terms inside English, each Hangul run marked as Korean so it sets in the Korean serif.</p>
 <div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,1200px"></dc-import></div></div></sc-for></div></div></sc-for></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":5535}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":6180}}'>
 class Component extends DCLogic {
   renderVals() {
     const RD = window.RD;
@@ -29,7 +29,7 @@ class Component extends DCLogic {
       const hangul = (b) => b.isP && /[\uac00-\ud7a3]/.test(b.runs.map((r) => r.v).join(''));
       const out = [f((b) => b.isH2), f((b) => b.isP), f((b) => b.isH3), f((b) => runs(b, 'isDel')) || f((b) => runs(b, 'isCode')),
         f((b) => b.isOl && b.items.some((i) => i.hasSub)), f((b) => b.isH4), f((b) => b.isUl && b.items.some((i) => i.hasSub)),
-        f((b) => runs(b, 'isExt')), f((b) => b.isQuote), f((b) => b.isHr)];
+        f((b) => runs(b, 'isExt')), f((b) => b.isQuote), f((b) => b.isHr), f((b) => b.isDiagram)];
       if (lang === 'en') out.push(f((b, i) => hangul(b)));
       const kept = JSON.parse(JSON.stringify(out.filter(Boolean)));
       const ids = new Set(kept.filter((b) => b.id).map((b) => b.id));
