@@ -3,13 +3,13 @@
   "round": "02-revise",
   "title": "revise",
   "slice": "P29.S4",
-  "status": "open",
+  "status": "signed",
   "opened_at": "2026-10-19T16:42:15+09:00",
-  "closed_at": null,
+  "closed_at": "2026-10-20T00:18:44+09:00",
   "supersedes": [
     "01-reader"
   ],
-  "signoff_words": null,
-  "canvas_version": null,
+  "signoff_words": "everything looks good. moveon",
+  "canvas_version": "1792405111-eccf",
   "critique": "critic+judge"
 }

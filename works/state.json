@@ -1,8 +1,8 @@
 {
   "current_phase": "P29",
-  "current_slice": "P29.S4",
-  "next_slice": "P29.S5",
-  "waiting_on_operator": "P29.S4",
-  "mode": "waiting",
-  "updated_at": "2026-10-19T19:22:50+09:00"
+  "current_slice": "P29.S5",
+  "next_slice": "P29.S6",
+  "waiting_on_operator": null,
+  "mode": "phase",
+  "updated_at": "2026-10-20T00:20:07+09:00"
 }

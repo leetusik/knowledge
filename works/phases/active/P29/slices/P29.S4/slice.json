@@ -3,14 +3,14 @@
   "phase_id": "P29",
   "name": "Design wave 1 — the reader",
   "kind": "co-work",
-  "status": "pending",
+  "status": "done",
   "order": 50,
   "depends_on": [
     "P29.DECOMP2"
   ],
   "created_at": "2026-10-18T19:45:26+09:00",
   "started_at": "2026-10-18T19:51:39+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-20T00:20:07+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Signed the reader job (01-reader/02-revise) on the operator's words after one superseding round: reading faces Literata + Noto Serif KR, one 36rem column, five sizes, light/dark/sepia, the reader's own chrome, Sign in to save, and the Mark as unread reset amended into S3's progress contract",
   "validation": {
     "required": [],
     "last_run": null,

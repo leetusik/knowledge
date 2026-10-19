@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Table</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Table</p>
+<p class="rd-board__lead">Tables use the interface face at a step below the text and take the text column's width, the same two edges as the paragraphs. A table wider than the column scrolls sideways inside a focusable box that says so, at every width. A long table keeps its header row in view: on the page while it fits the column, inside its own box when it does not. Numbers are right-aligned as the source's alignment row asks.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ProseTable" block="{{ c.block }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,300px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2320,"height":2788}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const bl = RD.read('maintainer-guide/internals', 'en').blocks.filter((b) => b.isTable);
+    const wide = bl.find((b) => b.wide), long = bl.find((b) => b.long), num = bl.find((b) => !b.wide && !b.long);
+    /* A 720 frame (a tablet's container) with the block in the 576 px text column (36rem), centred as in the reader. */
+    const COL = 720;
+    const K = (cap, w, b, o) => Object.assign({ cap, st: px(w), block: b, theme: 'light', size: 3 }, o);
+    const rows = [
+      { title: 'Wide · 8 columns · wider than the column at every width, so it scrolls in its box', cells: [K('Phone · 390 · scrolls inside, says so', 390, wide, {}), K('In the text column · 576 · the same box from a tablet up', COL, wide, {}), K('Phone · dark', 390, wide, { theme: 'dark' })] },
+      { title: 'Numeric · right-aligned · fits the column', cells: [K('Light', COL, num, {}), K('Dark', COL, num, { theme: 'dark' }), K('Sepia', COL, num, { theme: 'sepia' })] },
+      { title: 'Long · 34 rows · the header stays in view while the reader scrolls', cells: [K('In the text column · size 3 · fits, the header sticks on the page', COL, long, {}), K('In the text column · size 5 · wider than the column, so it takes its own box', COL, long, { size: 5 }), K('Sepia · phone · scrolls in its box, the header stays', 390, long, { theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
