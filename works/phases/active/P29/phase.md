@@ -938,6 +938,43 @@ _Questions only the operator can answer. Append only; every entry is routed at t
      - Literata is a fourth face.
      - At 1440 the bars run edge to edge while the text sits in a 36rem column.
      - The Warning, Note, Skip and Definition callouts are four near-identical beige grounds.
+   - **Answered 2026-10-19** at PENDING #1, in the operator's words and confirmed with their "ok"
+     (verbatim, with the reading they confirmed: `jobs/01-reader/rounds/01-reader/feedback.md`). Round
+     `01-reader/02-revise` draws the answers; they bind once that round is signed.
+     1. "ASCII art you mean the "one FastAPI process, one uvicorn worker" this trash already in pc": in a
+        native chapter such a drawing is a `diagram` block (the `diagrams` job); plain ASCII art stays
+        only for old Markdown documents, drawn with its lines joined.
+     2. "make the tables, and text bodies got same width. wide table scroll on mobile is fine.": tables
+        and code blocks take the text column's width; wider content scrolls in its own box.
+     3. "no ok.", 4. "agree", 7. "yeah", 9. "yes": as drawn.
+     5. "fine": a Korean serif (Noto Serif KR the accepted example) for chapter text, Pretendard for the
+        interface.
+     6. "yes": the renderer wraps Hangul runs inside English in `lang="ko"`.
+     8. "don't care": the default path; the values are built into the code in P30 and reach the `kb`
+        system at the next sync from code.
+     10. "yes": a re-read to the end finishes the chapter again; Mark as unread resets that chapter's
+         `max_fraction`, an exception to S3's "only grows" for P30 to build.
+     - **Taste notes:** not taken up; Literata, the edge-to-edge bars and the callout grounds stay.
+     - **The state bar** ("prototype state too big. which is fine. but just make it doesn't follow
+       scroll."): scrolls away with the page, on every canvas (`docs/reference/design/bar.md`, rule 1).
+10. **(P29.S4) Round `01-reader/02-revise`'s open design decisions** (asked at its PENDING #1; each is
+    drawn as the drafter's answer in `docs/reference/design/jobs/01-reader/rounds/02-revise/result.md` →
+    *Open questions, for the operator*, and the critic's notes are in `critique-01.md` → *2b notes*).
+    The operator's words settle them; the review routes any their words leave open.
+    1. **The chapter list's and the Contents sheet's titles: interface face or reading face?** Drawn in
+       the interface face (Pretendard for Hangul), while the same title in the chapter opening is set in
+       Noto Serif KR (departure 24). The round's handoff listed these titles among the reading-face
+       places. That was the orchestrator's error, and the drafter kept round 01's face.
+    2. **A `diagram` block built before the diagrams job's look exists:** drawn as the slot only, a figure
+       with its title and caption. Likely moot, because P30 starts only after P29 is `done`.
+    3. **Ligatures in code:** drawn off in every code block. The alternative is on in code and off only in
+       `text` drawings.
+    4. **A wrapped code line's hang:** drawn as a fixed 2ch from the block's edge, not from the line's own
+       indent, but the Code block board's caption says "wraps under its own indent".
+    5. **A chapter marked unread** reads "Started", which is what the server holds. The other word is
+       "Not started".
+    6. **Page 03's three state bars:** there is one per frame, and each scrolls away with its own chapter
+       under rule 1. Until the phone frame's bar is scrolled off, it takes 239 of the frame's 844 px.
 
 ## Notes for later slices
 
@@ -1110,16 +1147,16 @@ _≤ 15 lines, rewritten by every slice at its end: what is done, what the next 
 - **Landed (P29.DECOMP2):** the design cut (three waves, nine jobs), the final build inventory, the
   canvas content rule, `new visual direction: no`, Q4–Q8 as working assumptions and the four accepted
   amendments, all in `## Decisions` and the breakdown.
-- **`P29.S4` is `pending` at PENDING #1.** Round `01-reader/01-reader` is drafted, critiqued and
-  published: https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY, version `1792340688-1a72`, system `kb`
-  `1792321604-e214`. Record: `docs/reference/design/jobs/01-reader/rounds/01-reader/` (`handoff.md`,
-  `result.md`, `build-prompt.md`, `critique-01.md`). One answer pass fixed all five of the critique's
-  must-fix items (C01–C05), rebutting none. Nothing was escalated, so no judge ran. Nothing in the round
-  binds a later slice until the operator signs it in literal words; its open decisions are Q9.
-- **On their return:** read the canvas back (`out_dir`, diff against `canvas/project/`) and copy the
-  threads into `feedback.md`. Literal approval → `SIGNOFF.md`, `design-close 01-reader/01-reader
-  --words`, the signed decisions land here, `finish-slice P29.S4`. Anything else → `design-close
-  --superseded` and a superseding round.
+- **`P29.S4` is `pending` at PENDING #1 for round `01-reader/02-revise`.** This is wave 1's second stop,
+  for a superseding round. Canvas: https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY at
+  `1792405111-eccf`.
+  - Round `01-reader` closed superseded on 2026-10-19 (`rounds/01-reader/feedback.md`). Round 02 draws
+    only what that feedback asked.
+  - Critique 01 found two must-fix items. Both are fixed, nothing was rebutted, and nothing escalated,
+    so no judge ran.
+- **On return:** read the operator's in-app edits and comments first. Literal approval signs `01-reader`
+  (no mockup was asked for). Anything else is feedback and opens round 03. Operator Questions 9 and 10
+  hold what their words settle. Nothing binds a later slice before the job is signed.
 - **Open:** Q1 (a live exposure), Q2 and Q3 (parity fails until it is answered) for P30; Q4–Q8 on their
-  working assumptions; Q9. All are routed at `P29.REVIEW`. P30 waits for P29 `done`; P28 owes its docs
+  working assumptions. All are routed at `P29.REVIEW`. P30 waits for P29 `done`; P28 owes its docs
   consolidation.

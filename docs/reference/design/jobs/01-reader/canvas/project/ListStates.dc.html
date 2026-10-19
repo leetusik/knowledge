@@ -12,11 +12,11 @@
 <x-dc>
 <div class="rd-board">
 <p class="rd-board__title">Component — Chapter list</p>
-<p class="rd-board__lead">Every chapter with its state in words: Not started, Started with how far, Finished, and Finished with Updated when a newer version is out. The current chapter is marked and lists its sections. A signed-out reader sees no progress.</p>
+<p class="rd-board__lead">Every chapter with its state in words: Not started, Started with how far, Finished, and Finished with Updated when a newer version is out. A chapter marked as unread is back at the start, so it reads Started with no percentage until the reader moves on in it. The current chapter is marked and lists its sections. A signed-out reader sees no progress. A Korean title or section wraps only between its words.</p>
 <div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ChapterList" book="{{ c.book }}" cur="{{ c.cur }}" prog="{{ c.prog }}" member="{{ c.member }}" lang="{{ c.lang }}" sections="{{ c.sections }}" sec="{{ c.sec }}" theme="{{ c.theme }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1900,"height":2468}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1900,"height":2488}}'>
 class Component extends DCLogic {
   renderVals() {
     const RD = window.RD;
@@ -26,8 +26,8 @@ class Component extends DCLogic {
     const secs = (k) => RD.read(k, 'en').toc.map((e) => ({ id: e.id, text: e.text }));
     const L = (cap, o) => Object.assign({ cap, st: px(420), book: 'maintainer-guide', cur: I, prog: RD.progress, member: true, lang: 'en', sections: secs(I), sec: 'the-write-path', theme: 'light' }, o);
     const rows = [
-      { title: 'One book, every state', cells: [L('Member · all four states · current chapter open', {}), L('Signed out · no progress shown', { member: false }), L('Member · dark · reading the last chapter, Updated', { cur: 'maintainer-guide/why', sections: secs('maintainer-guide/why'), sec: 'honest-inventory', theme: 'dark' }), L('Member · reading in 한국어 · sepia', { lang: 'ko', theme: 'sepia', sections: RD.read(I, 'ko').toc.map((e) => ({ id: e.id, text: e.text })) })] },
-      { title: 'A 20-chapter book', cells: [L('Member · sepia · chapter 11 open · the reading guide closes the list', { book: 'tidewater', cur: 'tidewater/storm-surge', sections: secs('tidewater/storm-surge'), sec: 'noticing', theme: 'sepia' }), L('Member · light', { book: 'tidewater', cur: 'tidewater/storm-surge', sections: secs('tidewater/storm-surge'), sec: 'noticing' })] },
+      { title: 'One book, every state', cells: [L('Member · all four states · current chapter open', {}), L('Signed out · no progress shown', { member: false }), L('Member · dark · reading the last chapter, Updated', { cur: 'maintainer-guide/why', sections: secs('maintainer-guide/why'), sec: 'honest-inventory', theme: 'dark' }), L('Member · reading in 한국어 · sepia · 390 wide', { lang: 'ko', theme: 'sepia', st: px(390), sections: RD.read(I, 'ko').toc.map((e) => ({ id: e.id, text: e.text })) })] },
+      { title: 'A 20-chapter book', cells: [L('Member · sepia · chapter 11 open · the reading guide closes the list', { book: 'tidewater', cur: 'tidewater/storm-surge', sections: secs('tidewater/storm-surge'), sec: 'noticing', theme: 'sepia' }), L('Member · light', { book: 'tidewater', cur: 'tidewater/storm-surge', sections: secs('tidewater/storm-surge'), sec: 'noticing' }), L('Member · the open chapter marked as unread · Started, back at the start', { prog: Object.assign({}, RD.progress, { [I]: { s: 'started', pct: 0, at: null, unread: true } }) })] },
     ];
     return { rows };
   }

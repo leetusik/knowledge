@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reader — the flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+<script src="flow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-proto">
+<div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div>
+<div class="rd-proto__stage">
+<sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,900px"></dc-import></sc-if>
+<sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,900px"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><a href="Reader.dc.html">The chapter screen alone</a><a href="Widths.dc.html">The reader at 390, 820 and 1440</a><a href="Elsewhere.dc.html">The stand-in for another job's screen</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1017}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RD.flow.initial('top', { themeChoice: 'system', size: 3 });
+    this.a = window.RD.flow.api(this);
+  }
+  renderVals() {
+    const F = window.RD.flow, s = this.state;
+    const none = { kind: 'library', where: '', detail: '', legacyTitle: '', onBack: null, onContinue: null };
+    return {
+      groups: F.bar(this, this.a),
+      inReader: !s.away,
+      isAway: !!s.away,
+      r: F.readerProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>

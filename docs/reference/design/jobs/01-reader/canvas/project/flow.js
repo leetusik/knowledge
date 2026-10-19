@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   var RD = window.RD;
-  var MG = "maintainer-guide/", TW = "tidewater/", WAL = "doc/field-notes/sqlite-wal";
+  var MG = "maintainer-guide/", TW = "tidewater/", WAL = "doc/field-notes/sqlite-wal", MDN = "doc/field-notes/wal-files";
   var INT = MG + "internals";
   var seq = 0;
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -46,7 +46,7 @@
     { key: "versions", page: "chapter", label: "Version history", make: function () { return scene({ panel: "versions" }); } },
     { key: "verfail", page: "chapter", label: "Version history · failed", make: function () { return scene({ panel: "versions", verFail: true }); } },
     { key: "endfin", page: "chapter", label: "End · finished", make: function () { return scene({ prog: progWith(INT, { s: "finished", on: 2 }), jump: jump("chapter-end") }); } },
-    { key: "endunread", page: "chapter", label: "End · marked unread", make: function () { return scene({ prog: progWith(INT, { s: "started", pct: 100, unread: true, at: "what-changed" }), hold: INT, jump: jump("chapter-end") }); } },
+    { key: "endunread", page: "chapter", label: "End · marked unread", make: function () { return scene({ prog: progWith(INT, { s: "started", pct: 0, unread: true, at: null }), hold: INT, jump: jump("chapter-end") }); } },
     { key: "last", page: "chapter", label: "Last chapter · end", make: function () { return scene({ doc: MG + "why", prog: progWith(MG + "why", { s: "finished", on: 3 }), jump: jump("chapter-end") }); } },
     { key: "nosummary", page: "chapter", label: "No summary", make: function () { return scene({ doc: MG + "read-surfaces" }); } },
     { key: "onesection", page: "chapter", label: "One section · no contents", make: function () { return scene({ doc: MG + "shipping" }); } },
@@ -63,6 +63,7 @@
     { key: "wresume", page: "loose", label: "Reopened at saved section", make: function () { return scene({ doc: WAL, resumed: true, jump: jump("checkpoints") }); } },
     { key: "wend", page: "loose", label: "End of document", make: function () { return scene({ doc: WAL, prog: progWith(WAL, { s: "finished", on: 2 }), jump: jump("chapter-end") }); } },
     { key: "wanon", page: "loose", label: "Signed out", make: function () { return scene({ doc: WAL, member: false }); } },
+    { key: "mdart", page: "loose", label: "Plain Markdown · ASCII drawing", make: function () { return scene({ doc: MDN, jump: jump("the-three-files") }); } },
     { key: "abook", page: "book", label: "Book page", make: function () { return scene({ away: away("book", FROM, "The knowledge maintainer guide") }); } },
     { key: "alib", page: "library", label: "Library", make: function () { return scene({ away: away("library", FROM) }); } },
     { key: "asign", page: "signin", label: "Sign in", make: function () { return scene({ member: false, away: away("signin", { doc: INT, lang: "en", ver: null, member: false, sec: "the-write-path" }) }); } },
@@ -140,45 +141,54 @@
         var s = S();
         if (l === s.lang) return;
         var to = landing(s.doc, s.lang, s.ver, s.sec, l, null);
-        put({ lang: l, ver: null, panel: null, resumed: false, prompt: false, jump: jump(to, 0), sec: to });
+        put({ lang: l, ver: null, panel: null, resumed: false, prompt: false, hold: null, jump: jump(to, 0), sec: to });
       },
       version: function (n) {
         var s = S();
         var v = n === RD.newest(s.doc, s.lang) ? null : n;
-        put({ ver: v, panel: null, resumed: false, prompt: false, jump: jump(null, 0), sec: null });
+        put({ ver: v, panel: null, resumed: false, prompt: false, hold: null, jump: jump(null, 0), sec: null });
       },
       theme: function (c) { comp.setState({ themeChoice: c }); },
       size: function (n) { comp.setState({ size: n }); },
       panel: function (name) { put({ panel: name || null }); },
       chrome: function (v) { if (S().chrome !== v) put({ chrome: v }); },
+      /* Mark as finished sets finished. Mark as unread resets the chapter: started, furthest-read 0 (the server's
+         max_fraction), and no saved place, so it reopens at the top. The press is made at the end, so the chapter is
+         then held: reaching the end does not finish it, and no reading is counted, until the reader has left the end. */
       mark: function (finished) {
         var s = S();
         if (!s.member) { put({ prompt: true }); return; }
-        var prog = clone(s.prog), p = prog[s.doc] || {};
+        var prog = clone(s.prog);
         if (finished) prog[s.doc] = { s: "finished", on: RD.newest(s.doc, "en") };
-        else prog[s.doc] = { s: "started", pct: p.pct || 100, at: p.at || s.sec, unread: true };
+        else prog[s.doc] = { s: "started", pct: 0, at: null, unread: true };
         put({ prog: prog, hold: finished ? null : s.doc });
       },
+      /* The end came into view: it finishes the chapter (round 01's rule), unless it is held or already finished. */
       end: function () {
         var s = S();
         if (!s.member || s.hold === s.doc || s.status !== "ready") return;
         var st = RD.stateOf(s.prog, s.doc);
-        /* Mark as unread holds until Mark as finished: reaching the end again does not undo the press. */
-        if (st === "finished" || st === "unread") return;
+        if (st === "finished" || st === "updated") return;
         var prog = clone(s.prog);
         prog[s.doc] = { s: "finished", on: RD.newest(s.doc, "en") };
         comp.setState({ prog: prog });
       },
+      /* The end left the view (the reader went back into the chapter): a hold from Mark as unread lifts. */
+      endLeft: function () {
+        var s = S();
+        if (s.hold && s.hold === s.doc) comp.setState({ hold: null });
+      },
       reading: function (r) {
         var s = S();
         var over = { sec: r.sec };
-        if (s.member && !s.ver) {
+        if (s.member && !s.ver && s.hold !== s.doc) {
           var p = s.prog[s.doc];
           if (!p || p.s !== "finished") {
             var prog = clone(s.prog), cur = prog[s.doc] || { s: "started", pct: 0 };
             cur.s = "started";
             cur.pct = Math.max(cur.pct || 0, r.pct);
             cur.at = r.sec;
+            delete cur.unread;
             prog[s.doc] = cur;
             over.prog = prog;
           }
@@ -225,7 +235,7 @@
       member: s.member, chrome: s.chrome, panel: s.panel, status: s.status, prog: s.prog, jump: s.jump, prompt: s.prompt,
       resumed: s.resumed, verFail: s.verFail, hold: s.hold,
       onOpen: a.open, onLang: a.lang, onVersion: a.version, onTheme: a.theme, onSize: a.size, onPanel: a.panel,
-      onChrome: a.chrome, onMark: a.mark, onEnd: a.end, onReading: a.reading, onAway: a.away, onRetry: a.retry,
+      onChrome: a.chrome, onMark: a.mark, onEnd: a.end, onEndLeft: a.endLeft, onReading: a.reading, onAway: a.away, onRetry: a.retry,
       onPrompt: a.prompt, onFromTop: a.fromTop, onDismissResume: a.dismissResume
     };
   }
@@ -250,7 +260,7 @@
       var on = p.key === cur ? pressedKey(s, keys) : null;
       return {
         key: p.key, name: p.name, off: p.key !== cur, cls: p.key !== cur ? "pb-group is-off" : "pb-group",
-        only: keys.length === 1,
+        only: keys.length === 1, hasExtra: false, extraLabel: "", extra: [],
         presets: keys.map(function (k) { return { key: k, label: BY[k].label, pressed: on === k, pick: function () { a.pick(k); } }; })
       };
     });

@@ -12,11 +12,12 @@
 <x-dc>
 <div class="rd-board rd-found">
 <p class="rd-board__title">Foundations — the reader's proposed additions to the system</p>
-<p class="rd-board__lead">A reading face, five text sizes, one fixed column, the sepia theme and syntax roles. Everything else is the system's own tokens. Contrast is measured against each theme's reading ground (WCAG 2, text at least 4.5:1).</p>
+<p class="rd-board__lead">A reading face and its Korean serif, five text sizes, one fixed column, the sepia theme and syntax roles. Everything else is the system's own tokens. Contrast is measured against each theme's reading ground (WCAG 2, text at least 4.5:1).</p>
 <div class="rd-board__rows">
 <div class="rd-board__group"><p class="rd-board__rowtitle">Faces</p><div class="rd-row">
-<div class="rd-cell rd-found__face"><p class="rd-cap">Reading text · Literata (new, OFL)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--read">Where a document actually lives, and what happens after an agent publishes one.</p><p class="rd-found__meta">Body, ledes and the size buttons. Hangul falls back to Pretendard, then the system's Hangul face.</p></div></div>
-<div class="rd-cell rd-found__face"><p class="rd-cap">Titles and headings · Fraunces (system)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--disp">The write path</p><p class="rd-found__meta">Chapter title, h2–h4, callout titles, panel titles.</p></div></div>
+<div class="rd-cell rd-found__face"><p class="rd-cap">Reading text · Literata (new, OFL)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--read">Where a document actually lives, and what happens after an agent publishes one.</p><p class="rd-found__meta">Body, ledes and the size buttons. Hangul in them sets in Noto Serif KR.</p></div></div>
+<div class="rd-cell rd-found__face"><p class="rd-cap">Titles and headings · Fraunces (system)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--disp">The write path</p><p class="rd-found__meta">Chapter title, h2–h4, callout titles, panel titles. Hangul in them sets in Noto Serif KR.</p></div></div>
+<div class="rd-cell rd-found__face"><p class="rd-cap">Korean text · Noto Serif KR (new, OFL)</p><div class="rd-frame rd-standalone rd-found__card rd-found__card--stack" data-theme="light"><p class="rd-found__sample rd-found__sample--read" lang="ko">문서가 실제로 어디에 사는지, 에이전트가 문서를 발행한 직후에 무슨 일이 일어나는지.</p><p class="rd-found__sample rd-found__sample--read">The write path (<span lang="ko">쓰기 경로</span>) runs before the lock.</p><p class="rd-found__meta">Hangul in the text, titles and headings, in a Korean chapter and inside English, on the Latin baseline. For the reader in place of the system's Nanum Myeongjo: weights 200 to 900. The interface keeps Pretendard.</p></div></div>
 <div class="rd-cell rd-found__face"><p class="rd-cap">Interface · Source Sans 3 (system)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--ui">Contents · Chapter 2 of 5 · 38%</p><p class="rd-found__meta">Bars, panels, buttons, tables.</p></div></div>
 <div class="rd-cell rd-found__face"><p class="rd-cap">Code and labels · JetBrains Mono (system)</p><div class="rd-frame rd-standalone rd-found__card" data-theme="light"><p class="rd-found__sample rd-found__sample--mono">reindex()</p><p class="rd-found__meta">Code, callout types, small uppercase labels.</p></div></div>
 </div></div>
@@ -42,7 +43,7 @@
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":2190}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":2300}}'>
 class Component extends DCLogic {
   renderVals() {
     const PX = ['15', '16.5', '18', '20', '22'];

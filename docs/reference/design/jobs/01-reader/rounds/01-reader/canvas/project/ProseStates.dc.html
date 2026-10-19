@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Prose kit</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Prose kit</p>
+<p class="rd-board__lead">The chapter's own text, cut from the main sample chapter: three heading levels, paragraphs with emphasis, strong, strikethrough and inline code, every kind of link and the missing link, nested ordered and unordered lists, a plain blockquote, a thematic break, and Korean terms inside English.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,1200px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":5535}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const pick = (lang) => {
+      const bl = RD.read('maintainer-guide/internals', lang).blocks;
+      const f = (p) => bl.find(p);
+      const runs = (b, k) => b.isP && b.runs.some((r) => r[k]);
+      const hangul = (b) => b.isP && /[\uac00-\ud7a3]/.test(b.runs.map((r) => r.v).join(''));
+      const out = [f((b) => b.isH2), f((b) => b.isP), f((b) => b.isH3), f((b) => runs(b, 'isDel')) || f((b) => runs(b, 'isCode')),
+        f((b) => b.isOl && b.items.some((i) => i.hasSub)), f((b) => b.isH4), f((b) => b.isUl && b.items.some((i) => i.hasSub)),
+        f((b) => runs(b, 'isExt')), f((b) => b.isQuote), f((b) => b.isHr)];
+      if (lang === 'en') out.push(f((b, i) => hangul(b)));
+      const kept = JSON.parse(JSON.stringify(out.filter(Boolean)));
+      const ids = new Set(kept.filter((b) => b.id).map((b) => b.id));
+      const walk = (o) => {
+        if (Array.isArray(o)) { o.forEach(walk); return; }
+        if (!o || typeof o !== 'object') return;
+        if (o.isLink && typeof o.href === 'string' && o.href !== '#top' && !ids.has(o.href.slice(1))) o.href = '#top';
+        Object.keys(o).forEach((k) => walk(o[k]));
+      };
+      walk(kept);
+      return kept;
+    };
+    const en = pick('en'), ko = pick('ko');
+    const P = (cap, w, o) => Object.assign({ cap, st: px(w), blocks: en, lang: 'en', theme: 'light', size: 3 }, o);
+    const rows = [
+      { title: 'Three themes · size 3 of 5 · 600 wide', cells: [P('Light', 600, {}), P('Dark', 600, { theme: 'dark' }), P('Sepia', 600, { theme: 'sepia' })] },
+      { title: 'Phone · 390', cells: [P('Smallest size (1 of 5)', 390, { size: 1 }), P('Largest size (5 of 5) · sepia', 390, { size: 5, theme: 'sepia' }), P('한국어 · keep-all, never mid-word · dark', 390, { blocks: ko, lang: 'ko', theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

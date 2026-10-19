@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter list</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<ol class="rd-chs" aria-label="Chapters">
+<sc-for list="{{ items }}" as="c" hint-placeholder-count="5"><li class="rd-chs__item">
+<a class="rd-ch" href="#top" data-doc="{{ c.key }}" aria-current="{{ c.cur }}" onclick="{{ c.open }}"><span class="rd-ch__n">{{ c.n }}</span><span class="rd-ch__body"><span class="rd-ch__title" lang="{{ c.lang }}">{{ c.title }}</span><sc-if value="{{ c.hasMeta }}" hint-placeholder-val="{{ true }}"><span class="rd-ch__meta"><sc-if value="{{ c.isNow }}" hint-placeholder-val="{{ false }}"><span class="rd-ch__now">Reading now</span></sc-if><sc-if value="{{ c.sep }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true">·</span></sc-if><sc-if value="{{ c.hasWord }}" hint-placeholder-val="{{ true }}"><span>{{ c.word }}</span></sc-if><sc-if value="{{ c.isUpdated }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--accent rd-ch__tag">Updated</span></sc-if><sc-if value="{{ c.isLegacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain rd-ch__tag">Original layout</span></sc-if></span></sc-if></span></a>
+<sc-if value="{{ c.showSecs }}" hint-placeholder-val="{{ false }}"><ol class="rd-ch__secs" aria-label="Sections of this chapter"><sc-for list="{{ secs }}" as="x" hint-placeholder-count="3"><li><a class="rd-ch__sec" href="{{ x.href }}" lang="{{ x.lang }}" aria-current="{{ x.cur }}" onclick="{{ x.go }}">{{ x.text }}</a></li></sc-for></ol></sc-if>
+</li></sc-for>
+</ol>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"cur":{"editor":null},"prog":{"editor":null},"member":{"editor":null},"lang":{"editor":null},"sections":{"editor":null},"sec":{"editor":null},"onOpen":{"editor":null},"onSection":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":428}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const bare = !!P.bare;
+    const book = P.book || 'maintainer-guide';
+    const cur = P.cur === undefined ? 'maintainer-guide/internals' : P.cur;
+    const member = P.member === undefined ? true : !!P.member;
+    const prog = P.prog || RD.progress;
+    const lang = P.lang || 'en';
+    const rows = RD.rows(book, cur, prog, member, lang);
+    const WORD = { none: 'Not started', finished: 'Finished', updated: 'Finished', unread: 'Started' };
+    const items = rows.map((c) => {
+      const word = member ? (c.st === 'started' ? (c.pct ? 'Started · ' + c.pct + '%' : 'Started') : WORD[c.st]) : '';
+      const isNow = c.isCurrent;
+      return {
+        key: c.key, n: c.n, title: c.title, lang: c.lang,
+        cur: isNow ? 'page' : undefined,
+        isNow, hasWord: !!word, word, sep: isNow && !!word,
+        isUpdated: member && c.st === 'updated',
+        isLegacy: c.isLegacy,
+        hasMeta: isNow || !!word || c.isLegacy,
+        showSecs: isNow && !!P.sections && P.sections.length > 1,
+        open: (e) => {
+          if (e && e.preventDefault) e.preventDefault();
+          if (P.onOpen) P.onOpen(c.key);
+        },
+      };
+    });
+    const secs = (P.sections || []).map((s) => ({
+      id: s.id, text: s.text, lang,
+      href: bare ? '#' + s.id : '#top',
+      cur: s.id === P.sec ? 'location' : undefined,
+      go: (e) => {
+        if (!P.onSection) return;
+        if (e && e.preventDefault) e.preventDefault();
+        P.onSection(s.id);
+      },
+    }));
+    return {
+      items, secs,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-panel',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
