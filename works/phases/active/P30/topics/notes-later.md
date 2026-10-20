@@ -51,3 +51,26 @@ python3 scripts/publish_fixture_book.py --base-url http://127.0.0.1:8767
 ```
 Legacy (single-tenant) mode with no `KB_API_TOKEN` on the server accepts any bearer; the script sends a throwaway one and an empty CLI config home. It refuses non-local hosts and stops when the book exists unless `--force`. Reset by pointing at a fresh `KB_ROOT`. Chapter URLs: `/api/books/fixtures/fixture-guide`, documents `1` (all-blocks), `2`/`3` (write-lock en/ko), `4` (legacy), `5` (loose) on fresh state.
 For a tenant-mode stack (Postgres) use a `vk_` key from the stack as `--token`.
+
+## (from P30.S11, for S13, S22 and every surface that links into the reader) URLs and the sign-in return address
+
+- **Build every reader and book URL with `web/src/lib/reader-href.ts`**, never by hand:
+  - `orgSegment(tenant)` = the slug, else the tenant id (OQ42);
+  - `readerHref({kind: "chapter", org, project, book, chapter}, {lang?, version?, section?})` →
+    `/@{org}/{project}/books/{book}/{chapter}?lang=&v=#section`; `{kind: "document", id, canonicalPath}`
+    → `canonical_path`, else `/documents/{id}`;
+  - `bookHref(...)` → `/@{org}/{project}/books/{book}`;
+  - "Sign in to save" and the top bar's "Sign in" link to `signInToSaveHref(target, place)` (= `loginHref(readerHref(...))`),
+    with the current lang, version (omit for the newest) and the section in view.
+- **S13's route** `[org]/[project]/books/[book]/[chapter]` must accept `@{tenant-id}` as well as `@{slug}`:
+  the server's book route resolves both. Keep the `[org]` pages' `@` guard.
+- **Login:** `/login?next=` and `/signup?next=` are laundered once by `safeNextPath` and honoured after
+  sign-in (hash included, the browser keeps it). Any guard that refuses a page should redirect to
+  `loginHref(path)`, or rely on `requireSession`/`requireIdentity`, which read the proxy's
+  `x-kb-request-path`. Public reads never redirect; only a save action prompts.
+- **S22:** the default landing is `DEFAULT_NEXT_PATH` in `web/src/lib/next-path.ts` (`/dashboard`); moving
+  it to `/library` there moves every fallback at once (`loginHref` then also omits `next=/library`).
+- **Live checks after S11:** a second `next dev` in `web/` is refused while the standing `:3030` runs
+  (Next 16's one-dev-server lock). Clone `web/` (minus `.next`) with `cp -Rc` into the scratchpad and
+  run it there on a spare port; `next build` and `next start -p <spare>` from `web/` are fine
+  (dev output lives in `.next/dev`).

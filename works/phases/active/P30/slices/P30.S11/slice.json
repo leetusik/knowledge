@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Sign-in return address (D18, D32) and reader URLs on the org slug",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 110,
   "depends_on": [
     "P30.S10"
   ],
   "created_at": "2026-10-21T00:14:39+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T04:44:34+09:00",
+  "completed_at": "2026-10-21T04:57:53+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Sign-in return address: proxy.ts stamps the path, hardened safeNextPath, login/signup/anonymous-miss honour next; reader-href helpers on orgSegment; book route resolves a tenant id; D18/D32 shipped; web 161, server 223",
   "validation": {
     "required": [],
     "last_run": null,

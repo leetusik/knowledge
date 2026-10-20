@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AUTH_TRUST_ITEMS, BRAND } from "@/content";
 import type { AuthPageCopy } from "@/content";
+import { DEFAULT_NEXT_PATH, safeNextPath } from "@/lib/next-path";
 
 /**
  * Shared presentation for the login + signup pages (P12.S2, re-skinned P12.S2R) —
@@ -24,14 +25,26 @@ import type { AuthPageCopy } from "@/content";
  *
  * The trust chips wrap to as many centred lines as they need and are never
  * truncated, never scrolled, and never reduced to two of three (§4.8).
+ *
+ * P30.S11 (D18) — `next`, the gate's laundered return address, rides on the
+ * cross-link (`/signup?next=…` ⇄ `/login?next=…`) so switching between the two
+ * forms never drops where the visitor was going. Only the href changes; nothing
+ * visible does.
  */
 export function AuthCard({
   copy,
+  next,
   children,
 }: {
   copy: AuthPageCopy;
+  next?: string;
   children: React.ReactNode;
 }) {
+  const safeNext = safeNextPath(next);
+  const altHref =
+    safeNext === DEFAULT_NEXT_PATH
+      ? copy.altHref
+      : `${copy.altHref}?next=${encodeURIComponent(safeNext)}`;
   return (
     <>
       <div className="kb-authcard">
@@ -65,7 +78,7 @@ export function AuthCard({
       </div>
 
       <p className="kb-authcard__alt">
-        {copy.altPrompt} <Link href={copy.altHref}>{copy.altLinkLabel}</Link>
+        {copy.altPrompt} <Link href={altHref}>{copy.altLinkLabel}</Link>
       </p>
     </>
   );

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_NEXT_PATH, safeNextPath } from "@/lib/next-path";
+import {
+  DEFAULT_NEXT_PATH,
+  loginHref,
+  MAX_NEXT_PATH_LENGTH,
+  safeNextPath,
+} from "@/lib/next-path";
 
 // P28.S5 (D18) — the `?next=` guard on /login. "Which redirect targets are
 // accepted" is core behaviour on a security boundary (an open redirect on a login
@@ -18,6 +23,11 @@ describe("safeNextPath — accepts same-origin relative paths", () => {
     ["/@acme/handbook/onboarding"],
     ["/documents/41?view=full"],
     ["/documents?q=a%20b&project=x#top"],
+    // P30.S11 — path, query and hash survive together (a reader place).
+    ["/a/b?c#d"],
+    ["/@acme/handbook/books/phases/p8?lang=ko&v=2#s-intro"],
+    // An encoded slash in the QUERY is data, not a path.
+    ["/documents?q=a%2F%2Fb"],
   ])("keeps %s", (path) => {
     expect(safeNextPath(path)).toBe(path);
   });
@@ -51,6 +61,14 @@ describe("safeNextPath — fails closed", () => {
     ["/signup"],
     // Nothing to honour.
     [""],
+    // P30.S11 — encoded bypasses: what a decoding layer would see.
+    ["/%2F%2Fevil.example"],
+    ["/%2f%2fevil.example"],
+    ["/%5Cevil.example"],
+    ["/%252F%252Fevil.example"],
+    ["/%0Aevil"],
+    ["/a//evil.example"],
+    ["/%E0%A4%A"],
   ])("rejects %j", (raw) => {
     expect(safeNextPath(raw)).toBe(DEFAULT_NEXT_PATH);
   });
@@ -68,5 +86,29 @@ describe("safeNextPath — fails closed", () => {
 
   it("does not mistake a path that merely starts with /login for the gate", () => {
     expect(safeNextPath("/loginsomething")).toBe("/loginsomething");
+  });
+});
+
+describe("safeNextPath — length cap (P30.S11)", () => {
+  it("keeps a path at the cap and rejects one past it", () => {
+    const at = `/${"a".repeat(MAX_NEXT_PATH_LENGTH - 1)}`;
+    expect(safeNextPath(at)).toBe(at);
+    expect(safeNextPath(`${at}a`)).toBe(DEFAULT_NEXT_PATH);
+  });
+});
+
+describe("loginHref — the sign-in URL that returns to a path (P30.S11)", () => {
+  it("encodes a safe path, hash included, into ?next=", () => {
+    const href = loginHref("/documents/41?view=full#s-2");
+    expect(href).toBe("/login?next=%2Fdocuments%2F41%3Fview%3Dfull%23s-2");
+    const back = new URL(href, "https://kb.test").searchParams.get("next");
+    expect(safeNextPath(back)).toBe("/documents/41?view=full#s-2");
+  });
+
+  it("is a bare /login for a missing, unsafe or default return address", () => {
+    expect(loginHref(undefined)).toBe("/login");
+    expect(loginHref("//evil.example")).toBe("/login");
+    expect(loginHref("https://evil.example/x")).toBe("/login");
+    expect(loginHref(DEFAULT_NEXT_PATH)).toBe("/login");
   });
 });
