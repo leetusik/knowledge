@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { READER } from "@/content";
+import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 import type { ChapterRow, ReaderHeading } from "@/lib/reader/types";
 
 /**
@@ -56,7 +57,7 @@ export function ChapterList({
               <span className="rd-ch__n">{row.n}</span>
               <span className="rd-ch__body">
                 <span className="rd-ch__title" lang={row.lang}>
-                  {row.title}
+                  {hangulRuns(row.title, !isKorean(row.lang))}
                 </span>
                 {hasMeta ? (
                   <span className="rd-ch__meta">
@@ -97,7 +98,7 @@ export function ChapterList({
                       }
                       onClick={() => onSection?.(s.id)}
                     >
-                      {s.text}
+                      {hangulRuns(s.text, !isKorean(lang))}
                     </a>
                   </li>
                 ))}

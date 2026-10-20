@@ -30,6 +30,7 @@ import {
   TAP_IGNORE,
   type ChromeScroll,
 } from "@/lib/reader/chrome";
+import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 import type { ReaderView } from "@/lib/reader/types";
 
 import { ChapterList } from "./chapter-list";
@@ -416,7 +417,7 @@ export function ReaderFrame({
                     ‹
                   </span>
                   <span className="rd-bnav__sub" lang={prev.lang}>
-                    {prev.title}
+                    {hangulRuns(prev.title, !isKorean(prev.lang))}
                   </span>
                 </Link>
               ) : null}
@@ -448,7 +449,7 @@ export function ReaderFrame({
                     →
                   </span>
                   <span className="rd-bnav__sub" lang={next.lang}>
-                    {next.title}
+                    {hangulRuns(next.title, !isKorean(next.lang))}
                   </span>
                 </Link>
               ) : null}
@@ -509,7 +510,9 @@ export function ReaderFrame({
               <div className="rd-sheet__body">
                 {panel === "contents" && book ? (
                   <>
-                    <p className="rd-sheet__booktitle">{book.title}</p>
+                    <p className="rd-sheet__booktitle">
+                      {hangulRuns(book.title, true)}
+                    </p>
                     <p className="rd-sheet__bookmeta">
                       {READER.sheets.bookMeta(
                         book.n,

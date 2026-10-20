@@ -19,7 +19,9 @@ import "server-only";
 
 import { createElement, Fragment, type ReactNode } from "react";
 
+import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
+import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 
 import { highlight } from "./highlight";
 import {
@@ -28,7 +30,7 @@ import {
   resolveLink,
   type LinkContext,
 } from "./links";
-import type { ChapterFormat } from "./parse";
+import { plainText, type ChapterFormat } from "./parse";
 import {
   allowedSvgElement,
   svgAttrsToProps,
@@ -67,10 +69,17 @@ export function ChapterView({
   checked,
   lang,
   links,
+  omitTitle,
 }: {
   checked: CheckedChapter;
   lang?: string;
   links: LinkContext;
+  /**
+   * The document's title, when the reader's chapter opening already shows it: an `md`
+   * body starts at its own H1, which is then left out (only that first H1, and only
+   * when its text is this title).
+   */
+  omitTitle?: string | null;
 }) {
   if (checked.refused) {
     return (
@@ -85,11 +94,22 @@ export function ChapterView({
       </div>
     );
   }
-  const r = new Renderer(links);
+  // §6a: in text whose language is not Korean, each Hangul run is wrapped in `lang="ko"`.
+  const r = new Renderer(links, lang !== undefined && !isKorean(lang));
+  const first = checked.blocks.find((b) => b.block !== null);
+  const skip =
+    omitTitle &&
+    first &&
+    !first.refused &&
+    first.block?.type === "heading" &&
+    first.block.level === 1 &&
+    plainText(first.block.content).trim() === omitTitle.trim()
+      ? first
+      : null;
   return (
     <div className="kb-ch" data-format={checked.format} lang={lang}>
       {checked.blocks.map((entry, i) =>
-        entry.refused ? (
+        entry === skip ? null : entry.refused ? (
           <div
             key={i}
             className="kb-ch-unshowable"
@@ -140,7 +160,16 @@ const tone = (v: unknown): string =>
   typeof v === "string" && KNOWN_TONES.has(v) ? v : "default";
 
 class Renderer {
-  constructor(private readonly links: LinkContext) {}
+  constructor(
+    private readonly links: LinkContext,
+    /** Wrap each Hangul run in `lang="ko"` (the text's language is not Korean). */
+    private readonly wrap: boolean = false,
+  ) {}
+
+  /** Text with its Hangul runs wrapped (§6a). Never used for code or attributes. */
+  text(value: string): ReactNode {
+    return hangulRuns(value, this.wrap);
+  }
 
   // --- inline ------------------------------------------------------------------
 
@@ -152,7 +181,7 @@ class Renderer {
   inlineNode(node: Inline, key: number): ReactNode {
     switch (node.type) {
       case "text":
-        return <Fragment key={key}>{node.text}</Fragment>;
+        return <Fragment key={key}>{this.text(node.text)}</Fragment>;
       case "code":
         return <code key={key}>{node.text}</code>;
       case "em":
@@ -237,6 +266,7 @@ class Renderer {
           data-link="external"
         >
           {children}
+          <span className="kb-ch-link__ext">{CHAPTER.newTab}</span>
         </a>
       );
     }
@@ -315,6 +345,16 @@ class Renderer {
     const label = CHAPTER.calloutLabel[kind];
     const title =
       block.title && block.title.length ? this.inline(block.title) : null;
+    // §7 the head: the type word in mono, then the title, on one wrapping baseline row.
+    // An untitled callout still shows its type word.
+    const head = (Tag: "div" | "span") => (
+      <Tag className="kb-ch-callout__head">
+        <span className="kb-ch-callout__type">
+          {CHAPTER.calloutWord[kind]}
+        </span>
+        {title ? <span className="kb-ch-callout__title">{title}</span> : null}
+      </Tag>
+    );
     if (block.collapsed) {
       return (
         <details
@@ -322,8 +362,18 @@ class Renderer {
           data-kind={kind.toLowerCase()}
           data-collapsed=""
         >
-          <summary className="kb-ch-callout__title">{title ?? label}</summary>
-          {this.blocks(block.blocks)}
+          <summary className="kb-ch-callout__sum">
+            {head("span")}
+            <span className="kb-ch-callout__toggle" aria-hidden="true">
+              <span className="kb-ch-callout__toggle-closed">
+                {CHAPTER.calloutShow}
+              </span>
+              <span className="kb-ch-callout__toggle-open">
+                {CHAPTER.calloutHide}
+              </span>
+            </span>
+          </summary>
+          <div className="kb-ch-callout__body">{this.blocks(block.blocks)}</div>
         </details>
       );
     }
@@ -333,31 +383,48 @@ class Renderer {
         data-kind={kind.toLowerCase()}
         aria-label={label}
       >
-        {title ? <p className="kb-ch-callout__title">{title}</p> : null}
-        {this.blocks(block.blocks)}
+        {head("div")}
+        <div className="kb-ch-callout__body">{this.blocks(block.blocks)}</div>
       </aside>
     );
   }
 
   table(block: Extract<Block, { type: "table" }>): ReactNode {
+    const cols = block.head.length;
+    const rows = block.rows.length;
+    // §9: 8 columns or more is wide; more than 20 rows is long.
+    const wide = cols >= 8;
+    const long = rows > 20;
     return (
-      <div
-        className="kb-ch-table"
-        tabIndex={0}
-        role="region"
-        aria-label={CHAPTER.regions.table}
+      <TableBox
+        wide={wide}
+        long={long}
+        ariaLabel={
+          long
+            ? CHAPTER.tableBox.ariaLong(cols, rows)
+            : CHAPTER.tableBox.ariaSideways(cols)
+        }
+        hint={
+          long
+            ? CHAPTER.tableBox.hintLong(rows, cols)
+            : CHAPTER.tableBox.hintSideways(cols)
+        }
       >
         <table>
           <thead>
             <tr>
               {block.head.map((cell, i) => (
-                <th key={i} data-align={block.align[i] ?? undefined}>
+                <th
+                  key={i}
+                  scope="col"
+                  data-align={block.align[i] ?? undefined}
+                >
                   {this.inline(cell)}
                 </th>
               ))}
             </tr>
           </thead>
-          {block.rows.length ? (
+          {rows ? (
             <tbody>
               {block.rows.map((row, r) => (
                 <tr key={r}>
@@ -371,45 +438,70 @@ class Renderer {
             </tbody>
           ) : null}
         </table>
-      </div>
+      </TableBox>
     );
   }
 
   code(block: Extract<Block, { type: "code" }>): ReactNode {
     const lines = highlight(block.text, block.lang);
-    const body = lines
-      ? lines.map((line, i) => (
-          <Fragment key={i}>
-            {i > 0 ? "\n" : null}
-            {line.map((tok, j) =>
-              tok.className ? (
-                <span key={j} className={tok.className}>
-                  {tok.text}
-                </span>
-              ) : (
-                <Fragment key={j}>{tok.text}</Fragment>
-              ),
-            )}
-          </Fragment>
-        ))
-      : block.text;
+    // One block per source line: a wrapped line hangs 2ch under its first (§8), and an
+    // ASCII drawing keeps each line whole.
+    const plain: { text: string; className?: string }[][] = block.text
+      .split("\n")
+      .map((t) => [{ text: t }]);
+    const body = (lines ?? plain).map(
+      (line, i) => (
+        <span key={i} className="kb-ch-code__ln">
+          {line.map((tok, j) =>
+            tok.className ? (
+              <span key={j} className={tok.className}>
+                {tok.text}
+              </span>
+            ) : (
+              <Fragment key={j}>{tok.text}</Fragment>
+            ),
+          )}
+        </span>
+      ),
+    );
+    const id = block.id ?? undefined;
+    const lang = block.lang ?? undefined;
+    // §8 the title bar, when a title is given: the title and the language.
+    const bar = block.title ? (
+      <figcaption className="kb-ch-code__bar">
+        <span className="kb-ch-code__title">{block.title}</span>
+        {block.lang ? (
+          <span className="kb-ch-code__lang">{block.lang}</span>
+        ) : null}
+      </figcaption>
+    ) : null;
+    // §8 ASCII drawings: a `text` fence is drawn as art wherever it appears.
+    if (block.lang?.toLowerCase() === "text") {
+      return (
+        <ArtBox
+          id={id}
+          lang={lang}
+          bar={bar}
+          ariaLabel={CHAPTER.drawing.aria}
+          hint={CHAPTER.drawing.hint}
+        >
+          {body}
+        </ArtBox>
+      );
+    }
     return (
       <figure
         className="kb-ch-code"
-        id={block.id ?? undefined}
-        data-block={block.id ?? undefined}
-        data-lang={block.lang ?? undefined}
+        id={id}
+        data-block={id}
+        data-lang={lang}
       >
-        {block.title ? (
-          <figcaption className="kb-ch-code__title">{block.title}</figcaption>
-        ) : null}
-        <pre
-          tabIndex={0}
-          role="region"
-          aria-label={CHAPTER.regions.code(block.lang)}
-        >
-          <code>{body}</code>
-        </pre>
+        {bar}
+        <div className="kb-ch-code__wrap">
+          <pre className="kb-ch-code__pre">
+            <code>{body}</code>
+          </pre>
+        </div>
       </figure>
     );
   }
@@ -430,6 +522,7 @@ class Renderer {
             id={id}
             data-block={id}
             data-kind={str(block.kind) ?? undefined}
+            aria-label={str(block.title) ?? undefined}
           >
             {this.diagramBody(block)}
             {this.caption(inl(block.caption))}
@@ -560,7 +653,12 @@ class Renderer {
    */
   diagramBody(d: Rec): ReactNode {
     const kind = str(d.kind);
-    const title = <p className="kb-ch-diagram__title">{str(d.title)}</p>;
+    const dTitle = str(d.title);
+    const title = (
+      <p className="kb-ch-diagram__title">
+        {dTitle === null ? null : this.text(dTitle)}
+      </p>
+    );
     let body: ReactNode = null;
     if (kind === "flow" || kind === "state") {
       const labels = new Map(
