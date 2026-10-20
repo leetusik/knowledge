@@ -16,7 +16,7 @@ Turn an operator request for new work into one or more phases — or a deferred 
 
 2. **Clarify.** Ask the operator about anything ambiguous before acting: scope and boundaries, whether this is one phase or several, a sensible name and objective for each, and whether the work should start now (a phase) or be parked for later (a deferred job). Wait for answers. Do not run any `workflow.py` command yet.
 
-   **If the work touches product visual design, one of those questions is the design style** — read the `design-cowork` skill (`## Shape — three styles`) and ask which of the three the work wants. **You suggest one and give the reason; the operator confirms or overrides.** It is never your decision alone and never left implicit:
+   **If the work touches product visual design, one of those questions is the design style** — read the `design-cowork` skill (its `reference/shape.md`, `## Shape — three styles`) and ask which of the three the work wants. **You suggest one and give the reason; the operator confirms or overrides.** It is never your decision alone and never left implicit:
 
    - **`build-after`** — one phase, two decomposition passes: `DECOMP` → groundwork → design round(s) → `DECOMP2` → build slices. Choose it when the whole design should land before any of it is built and the build fits in the same phase.
    - **`design-only`** — a *design* phase, then a separate *apply* phase; both keep the single pass. Choose it when the design is big.
@@ -47,7 +47,7 @@ Turn an operator request for new work into one or more phases — or a deferred 
    2. Fill `works/phases/active/P<N>/intent.md`:
       - leave **Origin** as `operator`;
       - paste the operator's request **word-for-word** under *Original Input (verbatim)* — do not fix grammar or wording;
-      - write the confirmed, refined wording under *Confirmed Intent (refined + clarified)*;
+      - write the confirmed, refined wording under *Confirmed Intent (refined + clarified)*: what the operator wants (objective, scope, constraints, in their terms), **never workflow mechanics** (which tools, hooks or design loop run). The skills own those and can retire them;
       - record any clarifying Q/A under *Clarifications Resolved*;
       - **for a visual-design phase only**, append a `## Design Style` section naming the confirmed
         style (`build-after` / `design-only` / `paired`) and the one-line reason, then a second line

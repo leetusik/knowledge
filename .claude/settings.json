@@ -19,18 +19,6 @@
     ]
   },
   "hooks": {
-    "PreCompact": [
-      {
-        "matcher": "auto",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 scripts/workflow.py compact-gate || true",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "matcher": "compact",
@@ -44,5 +32,5 @@
       }
     ]
   },
-  "autoCompactWindow": 500000
+  "autoCompactWindow": 300000
 }

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import bisect
+import difflib
 import json
 import os
 import posixpath
@@ -209,6 +211,17 @@ DOC_TYPES = {"product", "experience", "architecture", "frontend", "backend", "da
 DOC_SECTION_WARN_BYTES = 10 * 1024
 PHASE_STATUSES = {"planned", "in_progress", "in_review", "pending", "blocked", "done"}
 SLICE_STATUSES = {"todo", "ready", "in_progress", "in_review", "changes_requested", "pending", "blocked", "done"}
+# The typed pending record (v61): every operator stop says what kind it is and what the operator's words on
+# return will do. Stored on the slice as `pending: {kind, on_words, since}` while it is `pending`, and
+# cleared whenever it leaves `pending`. A closed set; `other` is the escape hatch.
+SLICE_STOP_KINDS = {
+    "wave": "a design wave stop (the jobs are published; the operator reviews them)",
+    "mockup": "the mockup gate (the operator walks the requested mockup)",
+    "decision": "a question only the operator answers (DECOMP's design style, a needs_operator)",
+    "operator-action": "the operator must run or provide something",
+    "limit": "a usage limit with no reset time",
+    "other": "anything else",
+}
 DEFERRED_STATUSES = {"deferred", "ready", "promoted", "done", "dropped"}
 REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
 # Closed set of slice kinds (workspace v34). `kind` routes real behavior -- `co-work` in
@@ -230,15 +243,13 @@ REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
 # on one so the recorded rating cannot contradict the routing; if the two ever disagree, the kind
 # wins.
 SLICE_KINDS = {"implementation", "review", "decomposition", "research", "fix", "docs", "qa", "co-work"}
-# Phase-notebook budget (v35; re-shaped in v39): ONE generous byte cap, ~100k tokens of
-# text. The v35 pair (200 lines / 16 KB) was measured in P21 and the line half never bound
-# while the byte half squeezed four slices into compressing unrelated notes -- so the line
-# ceiling is gone and the byte ceiling is a soft sanity cap, not a working constraint: a
-# notebook should stop compressing to fit and simply carry what the next slice needs.
-# Still a WARNING, never an error: a hard cap invites truncating exactly the notes that
-# matter, so the fix is always to rewrite (state stays in phase.md, detail moves to the
-# slice's result.md), never to delete under duress.
-PHASE_MD_BUDGET = 400 * 1024
+# Phase-notebook budget (v35; an index since v61): phase.md is read and written ONE SECTION at a
+# time (`phase-section`), so it is an index of what the next slice needs, not a store. Long
+# material -- a contract, a signed-design summary -- lives in `topics/<slug>.md` beside it,
+# linked by one line. 40 KB is a soft cap: still a WARNING, never an error, because a hard cap
+# invites truncating exactly the notes that matter; the warning names the biggest sections
+# so the fix is a move to `topics/` or to the slice's `result.md`, never a deletion.
+PHASE_MD_BUDGET = 40 * 1024
 # Execution streams (workspace v24; opt-in again since v43). A phase.json MAY carry an
 # optional `execution` block. `mode: "parallel"` = the phase runs on its own branch +
 # worktree, stamped by `parallel-start` -- which a phase gets ONLY when the operator asks
@@ -328,7 +339,7 @@ ROUTE_DEFAULTS = {
     "high": {"model": "opus", "effort": "high"},
     "research": {"model": "opus", "effort": "medium"},
     "design": {"model": "opus", "effort": "xhigh"},
-    "critic": {"model": "sonnet", "effort": "max"},
+    "critic": {"model": "sonnet", "effort": "high"},
     "judge": {"model": "fable", "effort": "high"},
     "mid": {"model": "sonnet", "effort": "high"},
     "cheap": None,  # inherits the resolved mid row
@@ -825,42 +836,35 @@ def cmd_executor_route(args: argparse.Namespace) -> None:
 
 
 def cmd_record_dispatch(args: argparse.Namespace) -> None:
-    """Append one `executor_dispatched` event to works/events.jsonl: the route, model and effort an
-    executor ran on (copied from `executor-route`), the measured duration / tokens / tool uses from the
-    Agent completion notification, and its verdict. A record, never a route validation: nothing else is
-    written, no state changes."""
+    """Append one `executor_dispatched` event to works/events.jsonl: the verdict a slice dispatch
+    returned (v61). What a span ran on and what it cost is metered from Claude Code's transcripts by
+    `dispatch-summary`, so the pre-v61 flags (route, model, effort, tier, agent and the notification's
+    numbers) still parse and are ignored, named on one line. A record, nothing else: no state changes."""
     sdata = read_json(require_slice(args.slice) / "slice.json")
-    if not args.model.strip():
-        raise SystemExit("record-dispatch: --model must be a non-empty model (the model= line executor-route printed)")
-    tier = ROUTE_TIER[args.route] if args.tier is None else (None if args.tier == "-" else args.tier)
-    if args.agent is not None:
-        agent = args.agent
-    elif tier is not None:
-        agent = installed_agent_name(ROUTE_AGENT[tier])
-    else:
-        agent = installed_agent_name(ROUTE_AGENT[ROUTE_BORROWS.get(args.route, args.route)])
+    ignored = [flag for flag, dest in _RECORD_DISPATCH_RETIRED if getattr(args, dest, None) is not None]
+    if ignored:
+        print(f"ignored: {' '.join(ignored)} (v61 meters spans from transcripts)")
     rec = {
         "slice": args.slice, "phase": sdata.get("phase_id") or args.slice.split(".", 1)[0],
         "kind": sdata.get("kind"), "risk": sdata.get("risk"),
-        "route": args.route, "tier": tier, "agent": agent,
-        "model": args.model, "effort": args.effort,
-        "attribution": MODEL_ATTRIBUTION.get(args.model, args.model),
-        "attempt": args.attempt, "verdict": args.verdict,
-        "duration_ms": args.duration_ms, "tokens": args.tokens, "tool_uses": args.tool_uses,
-        "note": args.note,
+        "attempt": args.attempt, "verdict": args.verdict, "note": args.note,
     }
     append_event("executor_dispatched", **rec)
     print("recorded=executor_dispatched")
-    for key in ("slice", "route", "tier", "model", "effort", "attempt", "verdict", "duration_ms", "tokens", "tool_uses"):
-        v = rec[key]
-        print(f"{key}={'' if v is None else v}")
+    for key in ("slice", "attempt", "verdict"):
+        print(f"{key}={rec[key]}")
 
 
 _DISPATCH_VERDICTS = ("done", "escalate", "needs_operator", "blocked", "failed")
+# The pre-v61 record-dispatch flags: still parsed (an old prompt or script keeps working), never stored.
+_RECORD_DISPATCH_RETIRED = (("--route", "route"), ("--tier", "tier"), ("--agent", "agent"), ("--model", "model"),
+                            ("--effort", "effort"), ("--duration-ms", "duration_ms"), ("--tokens", "tokens"),
+                            ("--tool-uses", "tool_uses"))
 
 
 def _dispatch_agg(records: list) -> dict:
-    """Counts and sums over a group of executor_dispatched records."""
+    """Counts and sums over a group of executor_dispatched records. `tokens` is what pre-v61 records
+    stored: the span's final context from the completion notification, not the volume it processed."""
     durs = [r["duration_ms"] for r in records if isinstance(r.get("duration_ms"), (int, float))]
     toks = [r["tokens"] for r in records if isinstance(r.get("tokens"), (int, float))]
     agg = {"n": len(records)}
@@ -886,14 +890,685 @@ def _dispatch_table(title: str, groups: dict, cols: list) -> list:
     rows = [header]
     for key, agg in groups.items():
         rows.append([str(key)] + [("-" if agg[c[1]] is None else str(agg[c[1]])) for c in cols])
-    widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
+    return _meter_columns(rows)
+
+
+# ---------------------------------------------------------------------------------------------------
+# The transcript meter (workspace v61). `dispatch-summary` -- and nothing else: no hook, no other
+# command -- reads Claude Code's own session transcripts, `<config>/projects/<slug>/<session>.jsonl`
+# (the main thread) and `<session>/subagents/agent-*.jsonl` + `.meta.json` (one file per span), and
+# meters what each actually processed:
+# - a request is an assistant entry, counted ONCE per `message.id` (else `requestId`): Claude Code
+#   writes one entry per content block, the usage repeating with a growing `output_tokens`, so the
+#   entry with the largest output is kept (the first undercounts output ~20x);
+# - most subagent requests never log a final usage (`stop_reason` stays null, `output_tokens` 2-20):
+#   those are counted per group (`no_final`), their output and $ are FLOORS (marked `>=`, never
+#   estimated), the main thread's share is an upper bound, and context and cache are exact;
+# - `message.model == "<synthetic>"` is an API error, not a request; when its text or error names a
+#   usage / rate limit it is a limit hit, and a span whose LAST assistant entry is one ended on it;
+# - cache writes split by `usage.cache_creation` into 5 m and 1 h (the main thread writes 1 h,
+#   subagents 5 m); no split counts as 5 m;
+# - context = input + cache read + cache write per request: volume processed, not window size.
+# Spans go to slices by their first prompt (a `slice:` line, then a known slice id, then a design
+# round address through its round.json), then by time; main-thread requests go by time into slice
+# windows from `slice_status_changed` -- a slice's window runs from the previous slice's finish to its
+# own finish, so planning time counts toward the slice it plans.
+#
+# List prices in $/MTok per model id: (input, 5 m cache write, 1 h cache write, cache read, output).
+# Source: https://platform.claude.com/docs/en/about-claude/pricing (fetched 2026-10-20). A model not
+# listed is never guessed: it is shown unpriced as `?`.
+PRICES = {
+    "claude-fable-5-1": (10.0, 12.5, 20.0, 0.25, 50.0),
+    "claude-fable-5": (10.0, 12.5, 20.0, 1.0, 50.0),
+    "claude-opus-5-5": (4.0, 5.0, 8.0, 0.20, 20.0),
+    "claude-opus-5": (5.0, 6.25, 10.0, 0.50, 25.0),
+    "claude-sonnet-5-5": (2.0, 2.5, 4.0, 0.10, 10.0),
+    "claude-sonnet-5": (2.0, 2.5, 4.0, 0.20, 10.0),
+    "claude-haiku-5-5": (0.10, 0.125, 0.20, 0.01, 0.50),
+    "claude-haiku-4-5": (1.0, 1.25, 2.0, 0.10, 5.0),
+}
+# Priced by prompt length (same source): a request whose prompt -- input + cache read + cache write --
+# is over the threshold pays the second row, cache hit or not.
+PRICES_LONG_PROMPT = {"claude-haiku-5-5": (100_000, (0.50, 0.625, 1.0, 0.05, 2.50))}
+METER_PRICES_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing, fetched 2026-10-20"
+METER_SLICE_ID_RE = re.compile(r"\bP\d+\.[A-Z][A-Z0-9]*\b")
+METER_SLICE_LINE_RE = re.compile(r"(?im)^[\s>*`-]*slice[`*]*\s*:\s*[`*]*(P\d+\.[A-Za-z][A-Za-z0-9]*)")
+METER_ROUND_RE = re.compile(r"\b(\d{2}-[a-z0-9][a-z0-9-]*)/(\d{2}-[a-z0-9][a-z0-9-]*)\b")
+METER_LIMIT_RE = re.compile(r"(?i)\b(usage|rate|spend|session|weekly|monthly|daily|5-hour)\b[^.\n]{0,24}\blimit|\blimit (reached|exceeded)")
+METER_RESET_RE = re.compile(r"(?i)\bresets?\s+(?:at\s+)?([^·\n]+?)\s*(?:·|$)")
+METER_VERDICT_RE = re.compile(r"(?im)^[\s>*-]*[`*_]*(status|verdict)[`*_]*\s*:\s*[`*_]*([a-z][a-z_]*)")
+METER_JUDGE_RE = re.compile(r"(?im)^\s*mode\s*:\s*judge\b")
+
+
+def _meter_ts(value) -> "float | None":
+    """An ISO-8601 timestamp (transcripts write `...Z`, events `+09:00`) as epoch seconds, else None."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value).timestamp()
+    except ValueError:
+        return None
+
+
+def _meter_price(model) -> "tuple | None":
+    """The PRICES row for a transcript model id (a `[1m]` tag and a `-YYYYMMDD` date stripped), else None."""
+    if not isinstance(model, str):
+        return None
+    mid = re.sub(r"-\d{8}$", "", re.sub(r"\[[^\]]*\]$", "", model.strip()))
+    return PRICES.get(mid)
+
+
+def _meter_new() -> dict:
+    return {"requests": 0, "input": 0, "cache_read": 0, "cache_write_5m": 0, "cache_write_1h": 0,
+            "output": 0, "cost": 0.0, "unpriced": 0, "limit_hits": 0, "no_final": 0}
+
+
+def _meter_add(agg: dict, other: dict) -> dict:
+    for k in agg:
+        agg[k] += other.get(k, 0)
+    return agg
+
+
+def _meter_request(agg: dict, model, usage: dict, final: bool = True) -> None:
+    """Add one deduplicated request's usage (and list-price cost) into `agg`. `final` = some entry of
+    the request carried a stop_reason; without one its output (and so $) is a floor."""
+    def num(v):
+        return v if isinstance(v, (int, float)) else 0
+    inp = num(usage.get("input_tokens"))
+    cr = num(usage.get("cache_read_input_tokens"))
+    cw = num(usage.get("cache_creation_input_tokens"))
+    out = num(usage.get("output_tokens"))
+    split = usage.get("cache_creation") if isinstance(usage.get("cache_creation"), dict) else {}
+    w1h = num(split.get("ephemeral_1h_input_tokens"))
+    w5 = num(split.get("ephemeral_5m_input_tokens"))
+    w5 += max(cw - w1h - w5, 0)  # no split (or a short one): the rest is a 5 m write
+    agg["requests"] += 1
+    agg["no_final"] += 0 if final else 1
+    agg["input"] += inp
+    agg["cache_read"] += cr
+    agg["cache_write_5m"] += w5
+    agg["cache_write_1h"] += w1h
+    agg["output"] += out
+    price = _meter_price(model)
+    if price is None:
+        agg["unpriced"] += 1
+        return
+    long_prompt = PRICES_LONG_PROMPT.get(re.sub(r"-\d{8}$", "", re.sub(r"\[[^\]]*\]$", "", model.strip())))
+    if long_prompt and inp + cr + w5 + w1h > long_prompt[0]:
+        price = long_prompt[1]
+    agg["cost"] += (inp * price[0] + w5 * price[1] + w1h * price[2] + cr * price[3] + out * price[4]) / 1e6
+
+
+def _meter_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(x.get("text", "") for x in content if isinstance(x, dict) and x.get("type") == "text")
+    return ""
+
+
+def _meter_limit(entry: dict, text: str) -> bool:
+    err = " ".join(str(entry.get(k) or "") for k in ("error", "apiError"))
+    return bool(METER_LIMIT_RE.search(text)) or "limit" in err.lower()
+
+
+def _meter_scan(path: Path, span: bool) -> dict:
+    """One transcript file read once: its deduplicated requests and limit hits, and for a span its
+    first prompt, resume count, final report and first / last timestamps. Unreadable lines are skipped."""
+    reqs: dict = {}   # key -> [ts, model, usage, saw a stop_reason]
+    limits: list = []  # (ts, reset text)
+    out = {"reqs": reqs, "limits": limits, "prompt": None, "resumes": 0, "final": None, "first": None, "last": None,
+           "last_limit": None, "models": {}}
+    last_asst = None
+    try:
+        fh = path.open(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    with fh:
+        for line in fh:
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(d, dict):
+                continue
+            kind = d.get("type")
+            if kind not in ("assistant", "user"):
+                continue
+            if not span and d.get("isSidechain") is True:
+                continue  # an older transcript's inline sidechain: never the main thread's
+            ts = _meter_ts(d.get("timestamp"))
+            if span and ts is not None:
+                out["first"] = ts if out["first"] is None else min(out["first"], ts)
+                out["last"] = ts if out["last"] is None else max(out["last"], ts)
+            msg = d.get("message") if isinstance(d.get("message"), dict) else {}
+            if kind == "user":
+                if not span or d.get("isCompactSummary"):
+                    continue
+                content = msg.get("content")
+                if isinstance(content, list) and any(isinstance(x, dict) and x.get("type") == "tool_result" for x in content):
+                    continue
+                origin = d.get("origin") if isinstance(d.get("origin"), dict) else {}
+                if origin.get("kind") == "coordinator":
+                    out["resumes"] += 1  # a SendMessage from the orchestrator continuing this span
+                elif not d.get("isMeta") and _meter_text(content).strip():
+                    if out["prompt"] is None:
+                        out["prompt"] = _meter_text(content)
+                    else:
+                        out["resumes"] += 1
+                continue
+            model = msg.get("model")
+            if model == "<synthetic>":
+                text = _meter_text(msg.get("content"))
+                hit = _meter_limit(d, text)
+                if hit:
+                    m = METER_RESET_RE.search(text)
+                    limits.append((ts, m.group(1).strip() if m else None))
+                last_asst = ("limit", limits[-1][1]) if hit else ("synthetic", None)
+                continue
+            last_asst = ("request", None)
+            if span:
+                for block in msg.get("content") or []:
+                    if not isinstance(block, dict):
+                        continue
+                    if block.get("type") == "text" and block.get("text", "").strip():
+                        out["final"] = block["text"]
+                    elif block.get("type") == "tool_use" and block.get("name") == "SubagentHandback":
+                        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+                        if isinstance(inp.get("message"), str):
+                            out["final"] = inp["message"]
+            usage = msg.get("usage")
+            if not isinstance(usage, dict):
+                continue
+            key = msg.get("id") or d.get("requestId") or d.get("uuid")
+            prev = reqs.get(key)
+            final = msg.get("stop_reason") is not None
+            if prev is None:
+                reqs[key] = [ts, model, usage, final]
+            else:
+                prev[3] = prev[3] or final
+                if (usage.get("output_tokens") or 0) > (prev[2].get("output_tokens") or 0):
+                    prev[2] = usage
+    if last_asst and last_asst[0] == "limit":
+        out["last_limit"] = last_asst[1] or ""
+    for _ts, model, _u, _f in reqs.values():
+        out["models"][model] = out["models"].get(model, 0) + 1
+    return out
+
+
+def _meter_session_range(path: Path) -> tuple:
+    """(first, last) timestamp of a session file from its head and its tail -- never a full read."""
+    first = last = None
+    try:
+        with path.open("rb") as fh:
+            for _ in range(200):
+                line = fh.readline()
+                if not line:
+                    break
+                try:
+                    first = _meter_ts(json.loads(line).get("timestamp"))
+                except (ValueError, AttributeError):
+                    continue
+                if first is not None:
+                    break
+            size = path.stat().st_size
+            fh.seek(max(0, size - 1_048_576))
+            for line in reversed(fh.read().splitlines()):
+                try:
+                    last = _meter_ts(json.loads(line).get("timestamp"))
+                except (ValueError, AttributeError):
+                    continue
+                if last is not None:
+                    break
+    except OSError:
+        return None, None
+    if last is None:
+        try:
+            last = path.stat().st_mtime
+        except OSError:
+            pass
+    return first, last if last is not None else first
+
+
+def _meter_project_dirs(explicit) -> tuple:
+    """(project dirs to read, how they were found). `--transcripts` overrides discovery; otherwise the
+    session root's slug under `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/`, plus its worktree sessions'."""
+    if explicit:
+        return [Path(p).expanduser() for p in explicit], "--transcripts"
+    base = Path(os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude").expanduser() / "projects"
+    slug = re.sub(r"[^A-Za-z0-9]", "-", str(HOST_ROOT or ROOT))
+    dirs = []
+    if base.is_dir():
+        for d in sorted(base.iterdir()):
+            if d.is_dir() and (d.name == slug or d.name.startswith(slug + "--claude-worktrees-")):
+                dirs.append(d)
+    return dirs, str(base / slug)
+
+
+def _meter_known_slices(events: list) -> tuple:
+    """({slice id: kind or None}) from the phase folders (active and archived) and the events."""
+    kinds: dict = {}
+    for root in (ACTIVE, ARCHIVED):
+        if not root.is_dir():
+            continue
+        for sj in root.glob("*/slices/*/slice.json"):
+            try:
+                kinds[sj.parent.name] = read_json(sj).get("kind")
+            except (OSError, ValueError):
+                kinds.setdefault(sj.parent.name, None)
+    for ev in events:
+        sid = ev.get("slice")
+        if isinstance(sid, str) and sid:
+            if kinds.get(sid) is None and ev.get("kind"):
+                kinds[sid] = ev.get("kind")
+            kinds.setdefault(sid, None)
+    return kinds
+
+
+class _MeterWindows:
+    """Slice windows from `slice_status_changed`: each finished slice owns (previous finish, own finish];
+    the first finished slice starts at its own start; after the last finish, the latest-started open
+    slice owns the time. `at(t)` is the slice id, or None outside every window."""
+
+    def __init__(self, events: list):
+        st: dict = {}
+        for ev in events:
+            if ev.get("type") != "slice_status_changed" or not isinstance(ev.get("slice"), str):
+                continue
+            t = _meter_ts(ev.get("ts"))
+            if t is None:
+                continue
+            s = st.setdefault(ev["slice"], {"start": None, "done": None, "status": None})
+            if ev.get("new_status") == "in_progress" and s["start"] is None:
+                s["start"] = t
+            if ev.get("new_status") == "done":
+                s["done"] = t
+            s["status"] = ev.get("new_status")
+        self.finished = sorted((s["done"], sid) for sid, s in st.items() if s["status"] == "done" and s["done"] is not None)
+        self.ends = [f for f, _ in self.finished]
+        self.open = sorted((s["start"], sid) for sid, s in st.items() if s["status"] != "done" and s["start"] is not None)
+        self.first_start = None
+        if self.finished:
+            s0 = st[self.finished[0][1]]["start"]
+            self.first_start = s0 if s0 is not None else self.finished[0][0]
+        self.bounds: dict = {}
+        prev = self.first_start
+        for end, sid in self.finished:
+            self.bounds[sid] = (prev, end)
+            prev = end
+        # The open slices that own the time after the last finish: those started since it (a slice
+        # left open long before is stale), else every open one.
+        last = self.ends[-1] if self.ends else float("-inf")
+        self.current = [(start, sid) for start, sid in self.open if start >= last] or self.open
+        for start, sid in self.current:
+            self.bounds[sid] = (self.ends[-1] if self.ends else start, None)
+
+    def at(self, t) -> "str | None":
+        if t is None:
+            return None
+        i = bisect.bisect_left(self.ends, t)
+        if i < len(self.ends):
+            if i == 0 and self.first_start is not None and t < self.first_start:
+                return None
+            return self.finished[i][1]
+        if not self.current:
+            return None
+        live = [sid for start, sid in self.current if start <= t]
+        return live[-1] if live else self.current[0][1]  # before its start-slice: planning it
+
+
+def _meter_round_slice(job: str, rnd: str) -> "str | None":
+    """The slice a design round belongs to: its round.json `slice`, else its job.json `slice`."""
+    jobs = ROOT / DESIGN_ROOT_REL / "jobs" / job
+    for path in (jobs / "rounds" / rnd / "round.json", jobs / "job.json"):
+        try:
+            sid = read_json(path).get("slice")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(sid, str) and sid:
+            return sid
+    return None
+
+
+def _meter_attribute(prompt: str, start, known: dict, windows: _MeterWindows) -> tuple:
+    """(slice id or 'unattributed', how) for a span from its first prompt, then its start time."""
+    prompt = prompt or ""
+    m = METER_SLICE_LINE_RE.search(prompt)
+    if m:
+        return m.group(1), "slice-line"
+    for sid in METER_SLICE_ID_RE.findall(prompt):
+        if sid in known:
+            return sid, "named"
+    for job, rnd in METER_ROUND_RE.findall(prompt):
+        sid = _meter_round_slice(job, rnd)
+        if sid:
+            return sid, "round"
+    sid = windows.at(start)
+    if sid:
+        return sid, "window"
+    return "unattributed", "none"
+
+
+def _meter_route(agent: str, prompt: str, model, kind) -> str:
+    """The route row a span most likely ran on, for the means: the agent type, the judge mode, the
+    slice kind (research) and the cheap row's haiku. Approximate by nature; other agents keep their name."""
+    if agent == "design-drafter":
+        return "design"
+    if agent == "design-critic":
+        return "judge" if METER_JUDGE_RE.search(prompt or "") else "critic"
+    if agent == "Explore":
+        return "explore"
+    if agent == "slice-executor-high":
+        return "research" if kind == "research" else "high"
+    if agent == "slice-executor-mid":
+        return "cheap" if isinstance(model, str) and "haiku" in model else "mid"
+    return agent or "?"
+
+
+def _meter_verdict(agent: str, final) -> str:
+    """The `status:` line (design spans: `verdict:` first) of a span's final report, else `?`."""
+    found = {}
+    for key, value in METER_VERDICT_RE.findall(final or ""):
+        found.setdefault(key.lower(), value.lower())
+    if agent.startswith("design-") and "verdict" in found:
+        return found["verdict"]
+    return found.get("status") or found.get("verdict") or "?"
+
+
+def _meter_collect(dirs: list, known: dict, windows: "_MeterWindows", selected, lo, hi) -> dict:
+    """Read the sessions overlapping [lo, hi] (None = unbounded) and meter them. `selected(slice)` says
+    whether a slice is in the report; everything else is `before`, `after` or `other`."""
+    canon = {installed_agent_name(a): a for a in ROUTE_AGENT.values()}
+    res = {"sessions": [], "main": {}, "spans": [], "outside": {}, "found": 0, "windows": windows, "kinds": known}
+    for d in dirs:
+        for path in sorted(d.glob("*.jsonl")):
+            res["found"] += 1
+            first, last = _meter_session_range(path)
+            if first is None or (lo is not None and last is not None and last < lo) or (hi is not None and first > hi):
+                continue
+            sess = {"session": path.stem, "dir": d.name, "first": first, "last": last, "main": _meter_new(), "spans": 0}
+            scan = _meter_scan(path, span=False)
+            for ts, model, usage, final in scan["reqs"].values():
+                if model == "<synthetic>":
+                    continue
+                one = _meter_new()
+                _meter_request(one, model, usage, final)
+                _meter_add(sess["main"], one)
+                _meter_main_bucket(res, windows.at(ts), ts, selected, lo, hi, one)
+            for ts, _reset in scan["limits"]:
+                one = _meter_new()
+                one["limit_hits"] = 1
+                _meter_add(sess["main"], one)
+                _meter_main_bucket(res, windows.at(ts), ts, selected, lo, hi, one)
+            for jl in sorted((path.parent / path.stem / "subagents").glob("agent-*.jsonl")):
+                meta = {}
+                mp = jl.with_name(jl.name[:-len(".jsonl")] + ".meta.json")
+                if mp.exists():
+                    try:
+                        meta = json.loads(mp.read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        meta = {}
+                sp = _meter_scan(jl, span=True)
+                agent = canon.get(meta.get("agentType"), meta.get("agentType") or "?")
+                sid, how = _meter_attribute(sp["prompt"], sp["first"], known, windows)
+                agg = _meter_new()
+                for _ts, model, usage, final in sp["reqs"].values():
+                    if model != "<synthetic>":
+                        _meter_request(agg, model, usage, final)
+                agg["limit_hits"] = len(sp["limits"])
+                model = meta.get("model") or (max(sp["models"], key=sp["models"].get) if sp["models"] else None)
+                if sp["last_limit"] is not None:
+                    outcome = "limit"
+                elif meta and meta.get("finished") is not True:
+                    outcome = "running"
+                else:
+                    outcome = _meter_verdict(agent, sp["final"])
+                minutes = round((sp["last"] - sp["first"]) / 60, 1) if sp["first"] is not None and sp["last"] is not None else None
+                span = {"id": jl.stem[len("agent-"):], "session": path.stem, "agent": agent, "model": model,
+                        "effort": meta.get("effort"), "route": _meter_route(agent, sp["prompt"], model, known.get(sid)),
+                        "slice": sid, "attributed_by": how, "start": sp["first"], "minutes": minutes,
+                        "resumes": sp["resumes"], "outcome": outcome, "reset": sp["last_limit"] or None,
+                        "usage": agg}
+                sess["spans"] += 1
+                if selected(sid):
+                    res["spans"].append(span)
+            res["sessions"].append(sess)
+    return res
+
+
+def _meter_main_bucket(res: dict, sid, ts, selected, lo, hi, one: dict) -> None:
+    """One main-thread request into its slice's row, else `before` / `after` the selected windows, or
+    `other` (inside them, in another stream's slice)."""
+    if sid is not None and selected(sid) and sid != "unattributed":
+        _meter_add(res["main"].setdefault(sid, _meter_new()), one)
+        return
+    lo = lo if lo is not None else res["windows"].first_start
+    where = "before" if (lo is not None and ts is not None and ts < lo) else "after" if (hi is None or ts is None or ts > hi) else "other"
+    _meter_add(res["outside"].setdefault(where, _meter_new()), one)
+
+
+def _meter_ctx(agg: dict) -> int:
+    return agg["input"] + agg["cache_read"] + agg["cache_write_5m"] + agg["cache_write_1h"]
+
+
+def _meter_tok(n) -> str:
+    if n >= 1e6:
+        return f"{n / 1e6:.2f}M"
+    if n >= 1e3:
+        return f"{n / 1e3:.1f}k"
+    return str(int(n))
+
+
+def _meter_cost(agg: dict) -> str:
+    if agg["requests"] and agg["unpriced"] == agg["requests"]:
+        return "?"
+    return f"{agg['cost']:.2f}" + ("+?" if agg["unpriced"] else "")
+
+
+def _meter_fl(agg: dict) -> str:
+    """`>=` for a group with requests that never logged a final usage: its output and $ are floors."""
+    return "≥" if agg.get("no_final") else ""
+
+
+def _meter_out(agg: dict) -> str:
+    return _meter_fl(agg) + _meter_tok(agg["output"])
+
+
+def _meter_usd(agg: dict) -> str:
+    c = _meter_cost(agg)
+    return c if c.startswith("?") else _meter_fl(agg) + c
+
+
+def _meter_flagged(agg: dict) -> dict:
+    """A copy of a usage group for --json, with `output_floor` true when its output and $ are floors."""
+    return {**agg, "output_floor": bool(agg.get("no_final"))}
+
+
+def _meter_columns(rows: list) -> list:
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
     return ["  ".join(c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(r, widths))).rstrip() for r in rows]
 
 
+def _meter_row(label: str, n, agg: dict, minutes=None, verdicts: str = "") -> list:
+    return [label, "-" if n is None else str(n), str(agg["requests"]), _meter_tok(_meter_ctx(agg)), _meter_out(agg),
+            _meter_usd(agg), "-" if minutes is None else f"{minutes:.1f}", str(agg["limit_hits"]), verdicts or "-"]
+
+
+_METER_HEAD = ["row", "n", "requests", "context", "output", "$", "min", "limits", "verdicts"]
+
+
+def _meter_report(res: dict, slices: list) -> dict:
+    """The per-slice rows, the per-phase totals and the means, as plain data (the --json body)."""
+    by_slice: dict = {}
+    for sid in slices:
+        by_slice[sid] = {"main": res["main"].get(sid, _meter_new()), "spans": [s for s in res["spans"] if s["slice"] == sid]}
+    unattributed = [s for s in res["spans"] if s["slice"] not in by_slice]
+    phases: dict = {}
+    for sid, row in by_slice.items():
+        ph = phases.setdefault(sid.split(".", 1)[0], {"main": _meter_new(), "by_agent": {}, "span_total": _meter_new()})
+        _meter_add(ph["main"], row["main"])
+        for s in row["spans"]:
+            _meter_add(ph["by_agent"].setdefault(s["agent"], _meter_new()), s["usage"])
+            _meter_add(ph["span_total"], s["usage"])
+    for s in unattributed:
+        ph = phases.setdefault("unattributed", {"main": _meter_new(), "by_agent": {}, "span_total": _meter_new()})
+        _meter_add(ph["by_agent"].setdefault(s["agent"], _meter_new()), s["usage"])
+        _meter_add(ph["span_total"], s["usage"])
+    # means: per route (per span) and per slice kind (per slice, main thread included)
+    routes: dict = {}
+    for s in res["spans"]:
+        r = routes.setdefault(s["route"], {"spans": 0, "minutes": 0.0, "cost": 0.0, "unpriced": 0})
+        r["spans"] += 1
+        r["minutes"] += s["minutes"] or 0.0
+        r["cost"] += s["usage"]["cost"]
+        r["unpriced"] += s["usage"]["unpriced"]
+    kinds: dict = {}
+    for sid, row in by_slice.items():
+        if not row["spans"] and not row["main"]["requests"]:
+            continue
+        k = kinds.setdefault(res["kinds"].get(sid) or "unset", {"slices": 0, "spans": 0, "minutes": 0.0, "cost": 0.0})
+        k["slices"] += 1
+        k["spans"] += len(row["spans"])
+        k["minutes"] += sum(s["minutes"] or 0.0 for s in row["spans"])
+        k["cost"] += row["main"]["cost"] + sum(s["usage"]["cost"] for s in row["spans"])
+    means = {
+        "by_route": {r: {"spans": v["spans"], "min_per_span": round(v["minutes"] / v["spans"], 1),
+                         "usd_per_span": round(v["cost"] / v["spans"], 2), "unpriced_requests": v["unpriced"]}
+                     for r, v in sorted(routes.items(), key=lambda kv: (EXECUTOR_ROUTES.index(kv[0]) if kv[0] in EXECUTOR_ROUTES else 99, kv[0]))},
+        "by_kind": {k: {"slices": v["slices"], "spans_per_slice": round(v["spans"] / v["slices"], 1),
+                        "span_min_per_slice": round(v["minutes"] / v["slices"], 1), "usd_per_slice": round(v["cost"] / v["slices"], 2)}
+                    for k, v in sorted(kinds.items())},
+    }
+    return {"slices": by_slice, "unattributed": unattributed, "phases": phases, "means": means}
+
+
+def _meter_floor_note(res: dict):
+    """The one `note=` line saying which requests never logged a final usage (None when none lack it)."""
+    sp = [0, 0]
+    for s in res["spans"]:
+        sp[0] += s["usage"]["no_final"]
+        sp[1] += s["usage"]["requests"]
+    mn = [sum(v["no_final"] for v in res["main"].values()), sum(v["requests"] for v in res["main"].values())]
+    if not sp[0] and not mn[0]:
+        return None
+    pct = f" ({100 * sp[0] / sp[1]:.0f}%)" if sp[1] else ""
+    return (f"output_floor spans={sp[0]}/{sp[1]}{pct} main={mn[0]}/{mn[1]} — these requests never logged a final "
+            "usage: their output and $ are floors (≥); context and cache are exact; the main thread's share is an upper bound")
+
+
+def _meter_floor_json(res: dict) -> dict:
+    sp_n = sum(s["usage"]["requests"] for s in res["spans"])
+    sp_f = sum(s["usage"]["no_final"] for s in res["spans"])
+    mn_n = sum(v["requests"] for v in res["main"].values())
+    mn_f = sum(v["no_final"] for v in res["main"].values())
+    return {"spans": {"requests": sp_n, "no_final": sp_f, "floor": sp_f > 0},
+            "main": {"requests": mn_n, "no_final": mn_f, "floor": mn_f > 0},
+            "note": _meter_floor_note(res)}
+
+
+def _meter_print(res: dict, rep: dict, dirs: list) -> None:
+    def hhmm(t):
+        return datetime.fromtimestamp(t).astimezone().strftime("%Y-%m-%d %H:%M") if t else "-"
+    print(f"transcripts={','.join(str(d) for d in dirs)}")
+    print(f"sessions_read={len(res['sessions'])} of {res['found']}  spans={len(res['spans'])}")
+    for s in res["sessions"]:
+        m = s["main"]
+        print(f"  session {s['session'][:8]} {hhmm(s['first'])} -> {hhmm(s['last'])}  main requests={m['requests']} "
+              f"context={_meter_tok(_meter_ctx(m))} output={_meter_out(m)} ${_meter_usd(m)} limits={m['limit_hits']}  spans={s['spans']}")
+    for pid, ph in rep["phases"].items():
+        total = _meter_add(_meter_add(_meter_new(), ph["main"]), ph["span_total"])
+        if not total["requests"] and not total["limit_hits"]:
+            continue  # a phase none of the sessions read worked on
+        rows = [["group", "requests", "context", "cache_read", "cache_write", "output", "$", "share"]]
+
+        def line(label, agg):
+            share = f"{100 * agg['cost'] / total['cost']:.0f}%" if total["cost"] else "-"
+            if share != "-" and total["no_final"] and agg is not total:
+                # the missing output sits in the spans: their share is a floor, the main thread's an upper bound
+                share = ("≥" if agg["no_final"] else "≤" if agg is ph["main"] else "") + share
+            return [label, str(agg["requests"]), _meter_tok(_meter_ctx(agg)), _meter_tok(agg["cache_read"]),
+                    _meter_tok(agg["cache_write_5m"] + agg["cache_write_1h"]), _meter_out(agg), _meter_usd(agg), share]
+        rows.append(line("main thread", ph["main"]))
+        rows.append(line("spans", ph["span_total"]))
+        for agent, agg in sorted(ph["by_agent"].items(), key=lambda kv: -kv[1]["cost"]):
+            rows.append(line(f"  {agent}", agg))
+        rows.append(line("total", total))
+        print()
+        print(f"[{pid}: main thread beside spans]")
+        print("\n".join(_meter_columns(rows)))
+    for sid, row in rep["slices"].items():
+        if not row["spans"] and not row["main"]["requests"]:
+            continue
+        b = res["windows"].bounds.get(sid)
+        window = f"  window {hhmm(b[0])} -> {hhmm(b[1]) if b[1] else 'open'}" if b else ""
+        rows = [_METER_HEAD, _meter_row("main", None, row["main"])]
+        groups: dict = {}
+        for s in row["spans"]:
+            label = s["agent"] + ("/judge" if s["route"] == "judge" else "")
+            groups.setdefault(label, []).append(s)
+        for label, spans in groups.items():
+            agg = _meter_new()
+            for s in spans:
+                _meter_add(agg, s["usage"])
+            outcomes: dict = {}
+            for s in spans:
+                outcomes[s["outcome"]] = outcomes.get(s["outcome"], 0) + 1
+            verdicts = " ".join(f"{k}={v}" for k, v in sorted(outcomes.items()))
+            resumes = sum(s["resumes"] for s in spans)
+            if resumes:
+                verdicts += f" resumes={resumes}"
+            resets = [s["reset"] for s in spans if s["outcome"] == "limit" and s["reset"]]
+            if resets:
+                verdicts += f" (resets {resets[-1]})"
+            rows.append(_meter_row(label, len(spans), agg, sum(s["minutes"] or 0.0 for s in spans), verdicts))
+        print()
+        print(f"[{sid}] {res['kinds'].get(sid) or ''}{window}")
+        print("\n".join(_meter_columns(rows)))
+    if rep["unattributed"]:
+        print()
+        print(f"[unattributed spans] {len(rep['unattributed'])}: " + ", ".join(f"{s['agent']} {s['id'][:8]}" for s in rep["unattributed"]))
+    if res["outside"]:
+        print()
+        print("[main thread outside the selected windows, in the sessions read]")
+        rows = [_METER_HEAD] + [_meter_row(k, None, v) for k, v in res["outside"].items()]
+        print("\n".join(_meter_columns(rows)))
+    means = rep["means"]
+    if means["by_route"] or means["by_kind"]:
+        print()
+        print("[means] (metered; a DECOMP estimates from these)")
+        rows = [["route", "spans", "min/span", "$/span"]] + [
+            [r, str(v["spans"]), f"{v['min_per_span']:.1f}", f"{v['usd_per_span']:.2f}" + ("+?" if v["unpriced_requests"] else "")]
+            for r, v in means["by_route"].items()]
+        print("\n".join(_meter_columns(rows)))
+        rows = [["kind", "slices", "spans/slice", "span-min/slice", "$/slice"]] + [
+            [k, str(v["slices"]), f"{v['spans_per_slice']:.1f}", f"{v['span_min_per_slice']:.1f}", f"{v['usd_per_slice']:.2f}"]
+            for k, v in means["by_kind"].items()]
+        print("\n".join(_meter_columns(rows)))
+    print()
+    floor = _meter_floor_note(res)
+    if floor:
+        print(f"note={floor}")
+    for note in _METER_NOTES:
+        print(f"note={note}")
+
+
+_METER_NOTES = (
+    "context = input + cache read + cache write per request (volume processed, not window size); "
+    "one request per message id, its largest output kept; <synthetic> API errors are not requests",
+    f"$ = list price per model (PRICES: {METER_PRICES_SOURCE}); ? = a model PRICES does not list, never guessed",
+    "compaction summaries are not in the transcript and are not counted: a main thread that compacted cost "
+    "somewhat more than shown",
+    "min = a span's first to last entry, wall clock (a limit wait included); limits = usage-limit hits; "
+    "running = a span whose .meta.json lacks finished: true",
+)
+
+
 def cmd_dispatch_summary(args: argparse.Namespace) -> None:
-    """Read works/events.jsonl back: the executor_dispatched records by route, by model @ effort and by
-    kind (or, with --slice, one line per attempt). Read-only; blank and malformed lines are skipped."""
+    """What a phase really cost: the main thread beside its subagent spans, metered from Claude Code's
+    transcripts (deduplicated, attributed to slices, priced at list price), then the recorded
+    executor_dispatched verdicts. Read-only; no transcripts found is one line, never a failure."""
     records: list = []
+    events: list = []
     skipped = 0
     ev = WORKS / "events.jsonl"
     if ev.exists():
@@ -905,7 +1580,10 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
             except ValueError:
                 skipped += 1
                 continue
-            if isinstance(obj, dict) and obj.get("type") == "executor_dispatched":
+            if not isinstance(obj, dict):
+                continue
+            events.append(obj)
+            if obj.get("type") == "executor_dispatched":
                 records.append(obj)
     if args.phase is not None:
         known = (ACTIVE / args.phase).is_dir() or any(r.get("phase") == args.phase for r in records) \
@@ -917,12 +1595,69 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
         if not any(r.get("slice") == args.slice for r in records) and not (ACTIVE / args.slice.split(".", 1)[0] / "slices" / args.slice).is_dir():
             raise SystemExit(f"dispatch-summary: no such slice: {args.slice}")
         records = [r for r in records if r.get("slice") == args.slice]
-    by_route = _dispatch_groups(records, lambda r: r.get("route") or "?", order=EXECUTOR_ROUTES)
-    by_model = _dispatch_groups(records, lambda r: f"{r.get('model') or '?'} @ {r.get('effort') or '(none)'}")
+
+    # --- metered, from the transcripts ---
+    dirs, where = _meter_project_dirs(args.transcripts)
+    dirs = [d for d in dirs if d.is_dir()]
+    windows = _MeterWindows(events)
+    known = _meter_known_slices(events)
+    if args.slice is not None:
+        slices = [args.slice]
+    else:
+        slices = [s for s in sorted(known, key=_meter_slice_order(windows)) if args.phase is None or s.split(".", 1)[0] == args.phase]
+    selected_set = set(slices)
+    lo = hi = None
+    if args.phase is not None or args.slice is not None:
+        bounds = [windows.bounds[s] for s in slices if s in windows.bounds]
+        lo = min((b[0] for b in bounds if b[0] is not None), default=None)
+        hi = None if any(b[1] is None for b in bounds) else max((b[1] for b in bounds), default=None)
+        if not bounds:
+            lo = hi = float("inf")  # never worked on: no session can overlap
+    metered = None
+    if dirs:
+        everything = args.phase is None and args.slice is None
+        res = _meter_collect(dirs, known, windows, lambda s: everything or s in selected_set or s == "unattributed", lo, hi)
+        if args.phase is None and args.slice is None:
+            slices = sorted(set(slices) | set(res["main"]) | {s["slice"] for s in res["spans"] if s["slice"] != "unattributed"},
+                            key=_meter_slice_order(windows))
+        rep = _meter_report(res, slices)
+        metered = (res, rep)
+    if args.json:
+        body = {"records": len(records)}
+        if metered:
+            res, rep = metered
+            body["metered"] = {
+                "transcripts": [str(d) for d in dirs], "sessions_found": res["found"],
+                "sessions": [{k: v for k, v in s.items()} for s in res["sessions"]],
+                "slices": {sid: {"main": _meter_flagged(row["main"]),
+                                 "spans": [{**s, "usage": _meter_flagged(s["usage"])} for s in row["spans"]]}
+                           for sid, row in rep["slices"].items()},
+                "unattributed": [{**s, "usage": _meter_flagged(s["usage"])} for s in rep["unattributed"]],
+                "phases": {pid: {"main": _meter_flagged(ph["main"]), "span_total": _meter_flagged(ph["span_total"]),
+                                 "by_agent": {a: _meter_flagged(g) for a, g in ph["by_agent"].items()}}
+                           for pid, ph in rep["phases"].items()},
+                "outside": {k: _meter_flagged(v) for k, v in res["outside"].items()},
+                "output_floor": _meter_floor_json(res),
+                "means": rep["means"], "prices_source": METER_PRICES_SOURCE, "notes": list(_METER_NOTES)}
+        else:
+            body["metered"] = None
+            body["transcripts"] = f"none found under {where}"
+    else:
+        if metered:
+            _meter_print(metered[0], metered[1], dirs)
+        else:
+            print(f"transcripts=none found under {where} (pass --transcripts <projects/slug dir>); recorded verdicts only")
+        print()
+        print("[recorded verdicts] (executor_dispatched; tokens = a pre-v61 record's final context, not volume)")
+
+    # --- recorded verdicts (executor_dispatched) ---
+    legacy = [r for r in records if r.get("route")]
+    by_route = _dispatch_groups(legacy, lambda r: r.get("route") or "?", order=EXECUTOR_ROUTES)
+    by_model = _dispatch_groups(legacy, lambda r: f"{r.get('model') or '?'} @ {r.get('effort') or '(none)'}")
     by_kind = _dispatch_groups(records, lambda r: r.get("kind") or "unset")
     if args.json:
-        print(json.dumps({"records": len(records), "by_route": by_route, "by_model_effort": by_model, "by_kind": by_kind,
-                          "skipped_lines": skipped}, ensure_ascii=False, indent=2))
+        body.update({"by_route": by_route, "by_model_effort": by_model, "by_kind": by_kind, "skipped_lines": skipped})
+        print(json.dumps(body, ensure_ascii=False, indent=2))
         return
     phases = sorted({r.get("phase") for r in records if r.get("phase")})
     stamps = [r.get("ts") for r in records if r.get("ts")]
@@ -930,7 +1665,7 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
     if not records:
         if skipped:
             print(f"skipped_lines={skipped}")
-        print(f"hint=record a dispatch with: {WORKFLOW_CMD} record-dispatch <slice_id> --route … --model … --effort … --verdict …")
+        print(f"hint=record a slice dispatch's verdict with: {WORKFLOW_CMD} record-dispatch <slice_id> --verdict …")
         return
     print(f"phases={','.join(phases)}")
     print(f"since={stamps[0] if stamps else '-'}")
@@ -939,17 +1674,32 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
         print(f"skipped_lines={skipped}")
     if args.slice is not None:
         for r in records:
-            print(f"attempt={r.get('attempt')} route={r.get('route')} model={r.get('model')} effort={r.get('effort') or '(none)'} "
-                  f"verdict={r.get('verdict')} duration_ms={r.get('duration_ms')} tokens={r.get('tokens')} ts={r.get('ts')}")
+            print(f"attempt={r.get('attempt')} verdict={r.get('verdict')} route={r.get('route') or '-'} model={r.get('model') or '-'} "
+                  f"effort={r.get('effort') or '(none)'} duration_ms={r.get('duration_ms')} tokens={r.get('tokens')} ts={r.get('ts')}")
         return
     full = [("n", "n"), ("done", "done"), ("escalate", "escalate"), ("needs_op", "needs_operator"), ("blocked", "blocked"),
-            ("failed", "failed"), ("retries", "retries"), ("mean_min", "mean_min"), ("total_min", "total_min"), ("tokens", "tokens")]
-    short = [("n", "n"), ("done", "done"), ("escalate", "escalate"), ("retries", "retries"), ("tokens", "tokens")]
-    for label, title, groups, cols in (("by route", "route", by_route, full), ("by model @ effort", "model @ effort", by_model, full),
-                                       ("by kind", "kind", by_kind, short)):
+            ("failed", "failed"), ("retries", "retries"), ("mean_min", "mean_min"), ("total_min", "total_min"), ("final_ctx", "tokens")]
+    short = [("n", "n"), ("done", "done"), ("escalate", "escalate"), ("needs_op", "needs_operator"), ("blocked", "blocked"),
+             ("failed", "failed"), ("retries", "retries")]
+    tables = [("by kind", "kind", by_kind, short)]
+    if legacy:
+        tables = [("by route, pre-v61 records", "route", by_route, full),
+                  ("by model @ effort, pre-v61 records", "model @ effort", by_model, full)] + tables
+    for label, title, groups, cols in tables:
         print()
         print(f"[{label}]")
         print("\n".join(_dispatch_table(title, groups, cols)))
+
+
+def _meter_slice_order(windows: "_MeterWindows"):
+    """A sort key for slice ids: phase number, then the order they were worked (window end, an open
+    window last), then never-worked slices by name."""
+    def key(sid: str) -> tuple:
+        m = re.match(r"P(\d+)\.", sid)
+        b = windows.bounds.get(sid)
+        when = (0, b[1]) if b and b[1] is not None else (1, b[0] or 0.0) if b else (2, 0.0)
+        return (int(m.group(1)) if m else 10 ** 9, when, sid)
+    return key
 
 
 def doc_index() -> dict:
@@ -1799,6 +2549,174 @@ def phase_md_size(pdir: Path) -> tuple:
     return (len(text.splitlines()), len(text.encode("utf-8")))
 
 
+def notebook_sections_hint(pdir: Path, limit: int = 3) -> str:
+    """`biggest sections: ## A 12345 B, ...; move long material to topics/<slug>.md` for a notebook
+    that is over budget, or "" when it cannot be read. Shared by `validate` and `finish-slice`."""
+    path = pdir / "phase.md"
+    if not path.exists():
+        return ""
+    sections = sorted(h2_sections(path.read_text(encoding="utf-8")), key=lambda item: -item[1])[:limit]
+    if not sections:
+        return ""
+    named = ", ".join(f"{heading} {size} B" for heading, size in sections)
+    return f"biggest sections: {named}; move long material (contracts, signed-design summaries) to topics/<slug>.md, linked by one line, or to the slice's result.md"
+
+
+def h2_spans(lines: list) -> list:
+    """`(heading text, first line, end line)` for every `## ` section of a split notebook; the same
+    fence-aware boundaries as `h2_sections`, in line numbers so a section can be spliced in place."""
+    fenced, starts = False, []
+    for i, line in enumerate(lines):
+        if line.startswith("```") or line.startswith("~~~"):
+            fenced = not fenced
+        elif not fenced and line.startswith("## "):
+            starts.append(i)
+    return [(lines[i][3:].strip(), i, starts[j + 1] if j + 1 < len(starts) else len(lines)) for j, i in enumerate(starts)]
+
+
+PHASE_SECTION_APPEND_ONLY = {"doc impact": "--append", "operator questions": "--append (or --resolve OQ<n> --pointer <ref>)"}
+OQ_ENTRY = re.compile(r"^- \*\*OQ(\d+)\b")
+OQ_PARTS = re.compile(r"^- \*\*OQ\d+[^*]*\*\*:?\s*(.*)$")
+
+
+def _phase_section_body(args: argparse.Namespace) -> str:
+    """The text for --replace / --append: `--file`, else stdin."""
+    if args.file:
+        try:
+            body = Path(args.file).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise SystemExit(f"cannot read --file {args.file}: {exc}")
+    else:
+        body = sys.stdin.read()
+    return body
+
+
+def _clean_section_body(body: str, heading: str) -> list:
+    """The body as lines. A `## ` heading line inside it is refused (it would split the section),
+    except the section's own heading as a first line, which is dropped."""
+    lines = body.strip("\n").split("\n") if body.strip() else []
+    if lines and lines[0].strip().lower() == f"## {heading}".lower():
+        lines = lines[1:]
+        while lines and not lines[0].strip():
+            lines = lines[1:]
+    if not lines:
+        raise SystemExit("empty text: nothing to write")
+    if h2_spans(lines):
+        raise SystemExit("the text contains a `## ` heading line, which would split the section; use deeper headings (### ) or write the other section with its own call")
+    return lines
+
+
+def phase_section(args: argparse.Namespace) -> None:
+    """Read or write ONE `## ` section of a phase's phase.md (v61): the notebook is an index, so a
+    reader prints a section and a writer replaces or appends to one, never the whole file.
+
+    No name prints the index (a line per heading with its bytes, then the total). `--replace`
+    keeps the heading and every other byte of the file; the generated `Slices` section and the
+    two append-only sections refuse it and name the right flag. `--resolve OQ<n> --pointer <ref>`
+    collapses one Operator Questions entry to a single resolved line (entries are never deleted).
+    A write happens only when the text changes; an archived phase is read-only.
+    """
+    pdir, archived = _find_phase_dir(args.phase)
+    path = pdir / "phase.md"
+    if not path.exists():
+        raise SystemExit(f"phase {args.phase} has no phase.md")
+    text = path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+    spans = h2_spans(lines)
+    name = " ".join(args.name).strip().lstrip("#").strip() if args.name else ""
+    modes = [flag for flag, on in (("--replace", args.replace), ("--append", args.append), ("--resolve", bool(args.resolve))) if on]
+    if len(modes) > 1:
+        raise SystemExit(f"choose one of {', '.join(modes)}")
+    headings = ", ".join(f"`{h}`" for h, _, _ in spans)
+
+    def find(wanted: str):
+        for heading, i, e in spans:
+            if heading.lower() == wanted.lower():
+                return heading, i, e
+        print(f"unknown section: {wanted!r}; the headings are {headings}", file=sys.stderr)
+        raise SystemExit(1)
+
+    if not modes:
+        if not name:
+            sizes = h2_sections(text)
+            for heading, size in sizes:
+                print(f"{size:>8}  {heading}")
+            print(f"{len(text.encode('utf-8')):>8}  total (budget {PHASE_MD_BUDGET})")
+            return
+        _, i, e = find(name)
+        sec = lines[i:e]
+        while sec and not sec[-1].strip():
+            sec.pop()
+        print("\n".join(sec))
+        return
+    if archived:
+        raise SystemExit(f"phase {args.phase} is archived; its notebook is read-only")
+    if args.resolve:
+        if name and name.lower() != "operator questions":
+            raise SystemExit("--resolve works on `Operator Questions` only; omit the section name")
+        if not args.pointer:
+            raise SystemExit("--resolve needs --pointer <ref> (where the answer landed: a Decisions line, a deferred job, a slice)")
+        heading, i, e = find("Operator Questions")
+        want = re.fullmatch(r"OQ(\d+)", args.resolve.strip(), re.I)
+        if not want:
+            raise SystemExit(f"--resolve takes OQ<n>, got {args.resolve!r}")
+        n = want.group(1)
+        entry = None
+        for k in range(i + 1, e):
+            m = OQ_ENTRY.match(lines[k])
+            if m and m.group(1) == n:
+                entry = k
+                break
+        if entry is None:
+            have = ", ".join(f"OQ{OQ_ENTRY.match(ln).group(1)}" for ln in lines[i + 1:e] if OQ_ENTRY.match(ln)) or "none"
+            raise SystemExit(f"no Operator Questions entry OQ{n}; entries: {have}")
+        if re.match(r"^- \*\*OQ\d+\*\* \(resolved", lines[entry]):
+            raise SystemExit(f"OQ{n} is already resolved")
+        end = entry + 1
+        while end < e and not lines[end].startswith("- "):
+            end += 1
+        block = lines[entry:end]
+        while len(block) > 1 and not block[-1].strip():  # blank separators stay where they were
+            block.pop()
+            end -= 1
+        parts = OQ_PARTS.match(block[0])
+        question = (parts.group(1).strip() if parts else "")
+        if not question:
+            question = next((ln.strip() for ln in block[1:] if ln.strip()), "")
+        if len(question) > 160:
+            question = question[:157].rstrip() + "..."
+        lines[entry:end] = [f"- **OQ{n}** (resolved \u2192 {args.pointer}): {question}"]
+        updated, label = "\n".join(lines), f"OQ{n}"
+        old_size = len("\n".join(block).encode("utf-8"))
+        new_size = len(lines[entry].encode("utf-8"))
+    else:
+        if not name:
+            raise SystemExit(f"{modes[0]} needs a section name; the headings are {headings}")
+        heading, i, e = find(name)
+        key = heading.lower()
+        if key == "slices":
+            raise SystemExit("`Slices` is generated from each slice.json by `rebuild`; never write it")
+        if args.replace and key in PHASE_SECTION_APPEND_ONLY:
+            raise SystemExit(f"`{heading}` is append-only: use {PHASE_SECTION_APPEND_ONLY[key]}, never --replace")
+        body = _clean_section_body(_phase_section_body(args), heading)
+        old_section = lines[i:e]
+        if args.replace:
+            new_section = [lines[i], ""] + body + [""]
+        else:
+            new_section = list(old_section)
+            while new_section and not new_section[-1].strip():
+                new_section.pop()
+            new_section += body + [""]
+        lines[i:e] = new_section
+        updated, label = "\n".join(lines), heading
+        old_size = len("\n".join(old_section).encode("utf-8"))
+        new_size = len("\n".join(new_section).encode("utf-8"))
+    if updated != text:
+        write_text(path, updated)
+    verb = "replaced" if args.replace else "appended" if args.append else "resolved"
+    print(f"{verb}={label} bytes={old_size}->{new_size} phase_md={len(updated.encode('utf-8'))}")
+
+
 def rebuild_index_and_state() -> None:
     phases = all_active_phases()
     # Selection (pointer + operator halt) is scoped to this checkout's stream; the
@@ -2075,7 +2993,7 @@ def validate() -> int:
         notebook = ACTIVE / p["id"] / "phase.md"
         lines_n, bytes_n = phase_md_size(notebook.parent)
         if p["status"] != "done" and bytes_n > PHASE_MD_BUDGET:
-            warnings.append(f"phase {p['id']}: phase.md is {lines_n} lines / {bytes_n} bytes, over the notebook budget of {PHASE_MD_BUDGET} bytes; rewrite it under budget (state to phase.md, detail to the slice's result.md)")
+            warnings.append(f"phase {p['id']}: phase.md is {lines_n} lines / {bytes_n} bytes, over the notebook budget of {PHASE_MD_BUDGET} bytes; {notebook_sections_hint(notebook.parent)}")
         # Heading-line check, not a substring search: notebooks legitimately quote both
         # spellings in prose (this very rule, for one).
         if notebook.exists() and any(re.match(r"## Doc Impact\b", ln) for ln in notebook.read_text(encoding="utf-8").split("\n")):
@@ -2094,6 +3012,19 @@ def validate() -> int:
                 warnings.append(f"slice {s['id']} has unknown kind {s.get('kind')!r}; expected one of {sorted(SLICE_KINDS)} -- edit slice.json to one of them")
             if s["status"] == "ready" and not (ROOT / s["path"] / "plan.md").exists():
                 errors.append(f"slice {s['id']} is ready but has no plan.md; ready asserts an operator-approved plan exists")
+            if "pending" in s:  # the typed pending record (v61): {kind, on_words, since}, only while pending
+                record = s.get("pending")
+                if s["status"] != "pending":
+                    errors.append(f"slice {s['id']} is {s['status']} but carries a pending record; set-slice-status clears it when a slice leaves pending -- remove the key")
+                elif not isinstance(record, dict) or set(record) != {"kind", "on_words", "since"}:
+                    errors.append(f"slice {s['id']} has a malformed pending record {record!r}; expected {{kind, on_words, since}} (set-slice-status {s['id']} pending --stop-kind ... --on-words ...)")
+                else:
+                    if record.get("kind") not in SLICE_STOP_KINDS:
+                        errors.append(f"slice {s['id']} has unknown pending kind {record.get('kind')!r}; expected one of {list(SLICE_STOP_KINDS)}")
+                    if not isinstance(record.get("on_words"), str) or not record["on_words"].strip():
+                        errors.append(f"slice {s['id']}'s pending record has no on_words (what the operator's words will do)")
+                    if not isinstance(record.get("since"), str) or not record["since"].strip():
+                        errors.append(f"slice {s['id']}'s pending record has no since timestamp")
             for dep in s.get("depends_on", []):
                 if dep not in all_slice_ids:
                     errors.append(f"missing dependency for {s['id']}: {dep}")
@@ -2224,7 +3155,7 @@ _Generated by `python3 scripts/workflow.py rebuild` from each slice's `slice.jso
 
 ## Decisions
 
-_Durable cross-slice decisions. Replace a superseded line; never stack versions._
+_Durable cross-slice decisions, one line each. Replace a superseded line; never stack versions. Contracts and signed-design summaries go to `topics/<slug>.md` beside this file, linked by one line._
 
 ## Doc impact
 
@@ -2232,11 +3163,11 @@ _One line per durable-truth change: `- <doc>.md: <what changed> (<slice>)`. Appe
 
 ## Operator Questions
 
-_Questions only the operator can answer. Append only; every entry is routed at the review — folded into the acceptance walkthrough or filed with `defer-job`. An unrouted entry is a review finding._
+_Questions only the operator can answer, one entry each: `- **OQ<n> (<slice>):** <question>`. Append only (`phase-section <P> "Operator Questions" --append`); an answered entry collapses with `phase-section <P> --resolve OQ<n> --pointer <ref>`, never deleted. Every entry is routed at the review — folded into the acceptance walkthrough, filed with `defer-job`, or resolved. An unrouted entry is a review finding._
 
 ## Notes for later slices
 
-_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`._
+_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`. This file is an index read and written one section at a time (`phase-section <P>`); keep it under 40 KB._
 
 ## Now
 
@@ -2402,10 +3333,16 @@ def new_slice(args: argparse.Namespace) -> None:
     print(f"created slice {args.slice}: {shown(sdir)}")
 
 
-def _set_slice_status(sdir: Path, status: str) -> str:
+def _set_slice_status(sdir: Path, status: str, pending=None) -> str:
+    """Write the status; `pending` (a {kind, on_words, since} record) is stored only with status `pending`.
+    Leaving `pending` clears the record; a bare `pending` keeps one only when the slice was already pending."""
     data = read_json(sdir / "slice.json")
     old = data.get("status")
     data["status"] = status
+    if status == "pending" and pending is not None:
+        data["pending"] = pending
+    elif status != "pending" or old != "pending":
+        data.pop("pending", None)
     if status == "in_progress" and not data.get("started_at"):
         data["started_at"] = now_iso()
     if status == "done":
@@ -2414,13 +3351,33 @@ def _set_slice_status(sdir: Path, status: str) -> str:
     return old
 
 
-def set_slice_status(slice_id: str, status: str) -> None:
+def set_slice_status(slice_id: str, status: str, pending=None) -> None:
     if status not in SLICE_STATUSES:
         raise SystemExit(f"invalid slice status: {status}")
     sdir = require_slice(slice_id)
-    old = _set_slice_status(sdir, status)
-    append_event("slice_status_changed", slice=slice_id, old_status=old, new_status=status)
+    old = _set_slice_status(sdir, status, pending)
+    extra = {"stop_kind": pending["kind"]} if pending else {}
+    append_event("slice_status_changed", slice=slice_id, old_status=old, new_status=status, **extra)
     rebuild_index_and_state()
+
+
+def cmd_set_slice_status(args: argparse.Namespace) -> None:
+    """set-slice-status: a `pending` stop is typed with --stop-kind and --on-words (both, and only with
+    `pending`); a bare `pending` still works, with one warning line."""
+    stop_kind, on_words = getattr(args, "stop_kind", None), getattr(args, "on_words", None)
+    on_words = _one_line(on_words) if on_words is not None else None
+    pending = None
+    if args.status != "pending":
+        if stop_kind or on_words is not None:
+            raise SystemExit(f"set-slice-status: --stop-kind/--on-words type a pending stop; refused with status {args.status!r}")
+    elif stop_kind or on_words is not None:
+        if not stop_kind or not on_words:
+            raise SystemExit("set-slice-status: a typed pending stop needs both --stop-kind <kind> and --on-words \"<what the operator's words will do>\"")
+        pending = {"kind": stop_kind, "on_words": on_words, "since": now_iso()}
+    set_slice_status(args.slice, args.status, pending)
+    print(f"slice {args.slice}: {args.status}" + (f" (stop_kind={stop_kind})" if pending else ""))
+    if args.status == "pending" and pending is None:
+        print(f"warning: untyped pending stop -- add --stop-kind <{'|'.join(SLICE_STOP_KINDS)}> --on-words \"<what the operator's words will do>\"")
 
 
 def start_slice(args: argparse.Namespace) -> None:
@@ -2443,6 +3400,8 @@ def finish_slice(args: argparse.Namespace) -> None:
     if lines_n or bytes_n:  # the notebook is where the next slice reads its state; keep it in view
         over = " \u2014 OVER BUDGET" if bytes_n > PHASE_MD_BUDGET else ""  # bytes judge; lines are informational
         print(f"phase.md: {lines_n} lines / {bytes_n} bytes (budget {PHASE_MD_BUDGET} bytes){over}")
+        if bytes_n > PHASE_MD_BUDGET:
+            print(f"  {notebook_sections_hint(sdir.parents[1])}")
 
 
 def _set_phase_status(pdir: Path, status: str) -> str:
@@ -4186,6 +5145,9 @@ def cmd_nested_convention(args: argparse.Namespace) -> None:
 
 def cmd_next(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
+    if getattr(args, "card", False):  # the resume card alone: what compact-resume prints after a compaction
+        print(resume_card())
+        return
     state = read_json(WORKS / "state.json")
     # Nested install: name the host, and hold the first product commit until the operator has
     # confirmed the host's commit convention. Printed before every return below; silent at root.
@@ -4224,6 +5186,16 @@ def cmd_next(args: argparse.Namespace) -> None:
         print(f"current_phase={state.get('current_phase')}")
         print(f"waiting_on_operator={waiting}")
         print(f"WAITING ON OPERATOR: {kind} {waiting} is pending [~] -- operator co-work needed (validation or an operator-run action).")
+        if kind == "slice":
+            try:
+                record = read_json(require_slice(waiting) / "slice.json").get("pending")
+            except (OSError, ValueError, SystemExit):
+                record = None
+            if isinstance(record, dict):
+                print(f"stop_kind={record.get('kind')}")
+                print(f"on_words={_one_line(record.get('on_words') or '')}")
+            else:
+                print("stop_kind=untyped (set it with --stop-kind/--on-words)")
         print("Do not start, finish, or advance past it. Report what you need, then wait for the operator.")
         if gate:
             print(f"acceptance_gate=open (requested_at={gate.get('requested_at')}) -- the operator must walk the running product before this phase's review can pass.")
@@ -4251,33 +5223,14 @@ def cmd_next(args: argparse.Namespace) -> None:
         print(hint)
 
 
-# Boundary-gated compaction (P34, v55). Two hook commands: `compact-gate` (the PreCompact hook, matcher
-# `auto`) vetoes an auto-compaction while a slice is open or the tree is dirty, so compaction lands at a
-# slice boundary; `compact-resume` (the SessionStart hook, matcher `compact`) re-injects the pointer and a
-# resume line after one. The gate FAILS OPEN: every path exits 0, a block is only ever the stdout JSON
-# `{"decision": "block", ...}` (exit 2 would also block, so it is never used), anything unexpected allows,
-# and two fail-safes bound the veto -- the fill ceiling (the transcript's last usage) and the cap on
-# consecutive blocks per session. It writes nothing in the tree (a counter there would itself be dirt).
-COMPACT_CEILING_ENV = "AGENTIC_COMPACT_CEILING"
-COMPACT_CAP_ENV = "AGENTIC_COMPACT_BLOCK_CAP"
-COMPACT_CEILING_1M = 850_000   # 85% of a 1M window
-COMPACT_CEILING_200K = 170_000  # 85% of a 200k window
-COMPACT_BLOCK_CAP = 8
-# The 1M-window family: every Claude 5 model id as the transcript records it (`claude-opus-5-5`,
-# `claude-fable-5-1`, `claude-opus-5`, `claude-haiku-5-5`, `claude-opus-5-5[1m]`); anything else
-# (a Claude 4 id, `<synthetic>`) gets the 200k ceiling. A wrong guess only moves the ceiling: the cap
-# still releases the veto.
-COMPACT_1M_MODEL_RE = re.compile(r"^claude-[a-z]+-5(?:[-\[]|$)")
-# Generated files a read-only command (next, rebuild) may rewrite with no real change; they never make
-# the tree dirty for the gate. `docs/index.json` because `rebuild`/`rebuild-docs` restamp its
-# `last_rebuilt_at` on every run; a real doc change also writes docs/versions/ and docs/current/.
-COMPACT_DIRTY_EXCLUDE = ("works/state.json", "works/index.json", "works/backlog.md", "works/deferred.md", "docs/index.json")
-COMPACT_TRANSCRIPT_TAIL = 4 * 1024 * 1024
-COMPACT_RESUME_LINE = (
-    "Context was compacted. Re-read the running skill's SKILL.md from disk (.claude/skills/<name>/SKILL.md -- only "
-    "its first 5,000 tokens were re-injected), the active slice folder (plan.md, result.md) and phase.md's `## Now`; "
-    "executors still running are listed by the harness."
-)
+# Pure compaction (P37, v61). Compaction is Claude Code's own: the workspace ships no PreCompact hook (the
+# v55-v60 `compact-gate` boundary veto is retired). After a compaction the SessionStart hook (matcher
+# `compact`) runs `compact-resume`, which prints the resume card -- computed here from state at print time,
+# never stored -- and `next --card` prints the same card on demand. The card names files, never their
+# contents, and is at most RESUME_CARD_MAX bytes.
+RESUME_CARD_MAX = 2048
+RESUME_CARD_SPANS = 4      # running spans listed by name; the rest are `+N more`
+RESUME_CARD_FIELD = 160    # a free-text field (a span description, the operator's words) is cut to this
 # The hooks follow the session (P35): `$CLAUDE_PROJECT_DIR` stays at the main checkout after EnterWorktree,
 # but the hook's stdin `cwd` follows the session into the worktree. So each hook first walks up from that
 # `cwd` to the engine that owns it -- `d/workflow/scripts/workflow.py` (nested) or `d/scripts/workflow.py`
@@ -4334,187 +5287,172 @@ def _hook_stdin_or_redirect(subcommand: str):
         return raw
 
 
-def _compact_env_int(name: str):
-    raw = os.environ.get(name, "").strip()
-    try:
-        value = int(raw)
-    except ValueError:
+def _card_cut(text, limit: int = RESUME_CARD_FIELD) -> str:
+    text = _one_line(text or "")
+    return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
+
+
+def _card_session_dir(transcript_path=None):
+    """The session folder whose `subagents/` the card reads: the hook's `transcript_path` minus `.jsonl`,
+    or, on demand, the newest session found by the meter's discovery. None when there is none."""
+    if isinstance(transcript_path, str) and transcript_path.strip():
+        path = Path(transcript_path).expanduser()
+        return path.with_suffix("") if path.suffix == ".jsonl" else None
+    dirs, _where = _meter_project_dirs(None)
+    newest, newest_t = None, None
+    for d in dirs:
+        for f in d.glob("*.jsonl"):
+            try:
+                t = f.stat().st_mtime
+            except OSError:
+                continue
+            if newest_t is None or t > newest_t:
+                newest, newest_t = f, t
+    return newest.with_suffix("") if newest is not None else None
+
+
+def _card_running_spans(session_dir):
+    """['agentType: description', ...] for the session's spans whose `.meta.json` lacks `finished: true`,
+    oldest first -- from those small files only, never a transcript read (that is `dispatch-summary`'s).
+    None when no session folder was found."""
+    if session_dir is None:
         return None
-    return value if value > 0 else None
-
-
-def _compact_last_usage(transcript_path):
-    """(fill, model) from the last main-thread assistant line in the transcript that carries a non-zero
-    `message.usage`, or (None, None) when the file or the usage cannot be read. Reads the file's tail
-    first (transcripts run to tens of MB) and the whole file only when the tail holds no such line."""
-    if not transcript_path or not isinstance(transcript_path, str):
-        return None, None
-    path = Path(transcript_path)
-    try:
-        size = path.stat().st_size
-        starts = [max(0, size - COMPACT_TRANSCRIPT_TAIL)] + ([0] if size > COMPACT_TRANSCRIPT_TAIL else [])
-        for start in starts:
-            with path.open("rb") as f:
-                f.seek(start)
-                lines = f.read().splitlines()
-            if start:
-                lines = lines[1:]  # the first line of a tail read is cut mid-way
-            for raw in reversed(lines):
-                try:
-                    entry = json.loads(raw)
-                except ValueError:
-                    continue
-                if not isinstance(entry, dict) or entry.get("type") != "assistant" or entry.get("isSidechain") is True:
-                    continue
-                message = entry.get("message")
-                usage = message.get("usage") if isinstance(message, dict) else None
-                if not isinstance(usage, dict):
-                    continue
-                fill = 0
-                for key in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"):
-                    value = usage.get(key)
-                    fill += value if isinstance(value, int) else 0
-                if fill <= 0:  # a synthetic or errored turn: no reading, keep looking
-                    continue
-                model = message.get("model")
-                return fill, (model if isinstance(model, str) else "")
-    except OSError:
-        return None, None
-    return None, None
-
-
-def _compact_counter_path(hook: dict) -> Path:
-    """The per-session block counter: never inside the tree (an untracked file there is dirt)."""
-    sid = re.sub(r"[^A-Za-z0-9_.-]", "_", str(hook.get("session_id") or "")) or "nosession"
-    base = hook.get("scratchpad_dir")
-    base = Path(base) if isinstance(base, str) and base.strip() and Path(base).is_dir() else Path(tempfile.gettempdir())
-    return base / f"agentic-compact-gate-{sid}.json"
-
-
-def _compact_read_blocks(path: Path) -> int:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8")).get("blocks")
-    except (OSError, ValueError, AttributeError):
-        return 0
-    return value if isinstance(value, int) and value > 0 else 0
-
-
-def _compact_dirty_count():
-    """How many files are uncommitted where the workspace lives, or None when there is no git to ask.
-    At root: this repo, minus the generated dashboards. Nested: the workspace repo the same way, plus the
-    host's product (everything but the nested folder)."""
-    checks = []
-    if _git_available(cwd=ROOT):
-        checks.append((ROOT, [".", *(f":(exclude){p}" for p in COMPACT_DIRTY_EXCLUDE)]))
-    if HOST_ROOT is not None and _git_available(cwd=HOST_ROOT):
-        checks.append((HOST_ROOT, _host_pathspec()))
-    if not checks:
-        return None
-    paths = set()
-    for cwd, spec in checks:
-        proc = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", *spec],
-                              cwd=str(cwd), capture_output=True, text=True, timeout=10)
-        if proc.returncode != 0:
+    metas = []
+    for meta in (Path(session_dir) / "subagents").glob("*.meta.json"):
+        try:
+            data = json.loads(meta.read_text(encoding="utf-8"))
+            t = meta.stat().st_mtime
+        except (OSError, ValueError):
             continue
-        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=str(cwd), capture_output=True, text=True, timeout=10).stdout.strip()
-        paths.update(f"{top}/{line[3:]}" for line in proc.stdout.splitlines() if len(line) > 3)
-    return len(paths)
+        if isinstance(data, dict) and data.get("finished") is not True:
+            metas.append((t, f"{data.get('agentType') or '?'}: {data.get('description') or '-'}"))
+    return [name for _t, name in sorted(metas)]
 
 
-def cmd_compact_gate(args: argparse.Namespace) -> None:
-    """PreCompact hook: block an auto-compaction mid-slice, allow it at a clean slice boundary.
-    Decision order: (a) not `auto` -> allow; (a') fired inside a subagent (`agent_id`) -> allow; (b) fill >=
-    ceiling -> allow; (c) consecutive blocks >= cap -> allow; (d) current slice in_progress/in_review -> block,
-    dirty tree -> block, else allow. A block prints the JSON and counts (a block it cannot count allows
-    instead); an allow prints nothing and resets the count. Fails open: exit 0 always."""
-    trace = {"decision": "allow", "rule": "error", "slice": "-", "status": "-", "dirty": "-", "fill": "-", "ceiling": "-"}
-    cap, blocks, counter, reason, error = COMPACT_BLOCK_CAP, 0, None, None, None
-    raw = _hook_stdin_or_redirect("compact-gate")
+def _card_next_action(sid: str, sdata: dict, sdir: Path, spans) -> str:
+    """The slice's next action, derived from its status and which of plan.md / result.md exist."""
+    status, kind = sdata.get("status"), sdata.get("kind")
+    start = f"start-slice {sid}, then " if status in ("todo", "ready") else ""
+    if status == "blocked":
+        return "blocked: report the blocker (result.md) to the operator; nothing advances until it clears"
+    if (sdir / "result.md").is_file():
+        return f"read result.md's verdict head, then finish-slice {sid} --outcome \"<its summary>\", validate, commit"
+    if not (sdir / "plan.md").is_file():
+        return f"{start}plan it: write plan.md" + ("" if kind == "co-work" else f" and pin `executor-route {sid}` as its ## Dispatch")
+    if kind == "co-work":
+        return f"{start}continue the design-cowork loop inline from the round on disk; a running span below is its drafter, critic or mockup -- wait for it"
+    if spans:
+        return "an executor is running (see spans): wait for its notification, never re-dispatch"
+    if spans is None:
+        return (f"{start}dispatch from plan.md's ## Dispatch -- unless an executor dispatched before the compaction "
+                "is still running: then wait for its notification, never re-dispatch")
+    return f"{start}dispatch from plan.md's ## Dispatch (the prompt's first line: slice: {sid})"
+
+
+def resume_card(transcript_path=None) -> str:
+    """The resume card: the pointer, the next action (or the typed stop), the open gates, the running spans
+    and the slice's file paths -- computed from state now, read-only, at most RESUME_CARD_MAX bytes."""
+    phases = all_active_phases()
+    stream = current_stream(phases)
+    phase_id, sid, _next = resolve_current(stream_phases(phases, stream))
+    lines = [f"resume card (computed from state; files are named, not quoted; commands run as `{WORKFLOW_CMD} <command>`)"]
+    if stream:
+        lines.append(f"stream={stream}")
+    if not phase_id:
+        lines.append("pointer: no active phase")
+        lines.append("next action: create a phase (/create-phase) or promote deferred work")
+        return _card_fit(lines)
+    phase = next(p for p in phases if p["id"] == phase_id)
+    pdir = ACTIVE / phase_id
+    sdata = next((s for s in phase["slices"] if s.get("id") == sid), None) if sid else None
+    sdir = ACTIVE / phase_id / "slices" / sid if sid else None
+    pointer = f"pointer: phase {phase_id} {phase.get('status')}"
+    if sdata:
+        pointer += f"; slice {sid} {sdata.get('status')} ({sdata.get('kind') or '?'}/{sdata.get('risk') or '?'})"
+    lines.append(pointer)
+    try:
+        spans = _card_running_spans(_card_session_dir(transcript_path))
+    except Exception:  # noqa: BLE001 - spans are best-effort; the rest of the card still prints
+        spans = None
+    acceptance = phase_acceptance(phase)
+    gate_open = acceptance_gate_is_open(phase)
+    record = sdata.get("pending") if sdata and sdata.get("status") == "pending" else None
+    if gate_open:
+        lines.append(f"stop: phase {phase_id} acceptance gate open -- relay the walkthrough (`accept-gate {phase_id}` prints it); "
+                     f"the operator's words clear it with accept-gate {phase_id} --clear")
+    elif phase.get("status") == "pending":
+        lines.append(f"stop: phase {phase_id} pending -- report what you need; the operator's words clear it with set-phase-status {phase_id} in_progress")
+    elif phase.get("status") == "blocked":
+        lines.append(f"stop: phase {phase_id} blocked -- report the blocker to the operator")
+    elif sdata and sdata.get("status") == "pending":
+        if isinstance(record, dict):
+            lines.append(f"stop: {record.get('kind')} (since {record.get('since')}) -- the operator's words will: {_card_cut(record.get('on_words'))}")
+        else:
+            lines.append("stop: untyped pending -- say what you need and what the operator's words will do")
+        lines.append(f"next action: wait for the operator; their words clear it with set-slice-status {sid} in_progress")
+    elif sdata:
+        lines.append(f"next action: {_card_next_action(sid, sdata, sdir, spans)}")
+    else:
+        lines.append("next action: no open slice -- review or archive the phase")
+    gates = []
+    if acceptance is None:
+        gates.append("acceptance=legacy (no gate)")
+    else:
+        required = acceptance.get("required")
+        state = ("open" if gate_open else "cleared" if acceptance.get("cleared_at") else "not opened") if required is True else None
+        gates.append(f"acceptance={'required, ' + state if required is True else 'waived' if required is False else 'UNDECLARED'}")
+    execution = phase_execution(phase)
+    if execution:
+        gates.append(f"parallel={execution.get('branch')} (merge only past parallel-gate {phase_id})")
+    lines.append("gates: " + "; ".join(gates))
+    if spans is None:
+        lines.append("running spans: unknown (no session transcript found)")
+    elif not spans:
+        lines.append("running spans: none")
+    else:
+        shown_spans = [_card_cut(s, 80) for s in spans[:RESUME_CARD_SPANS]]
+        more = f" +{len(spans) - RESUME_CARD_SPANS} more" if len(spans) > RESUME_CARD_SPANS else ""
+        lines.append("running spans: " + "; ".join(shown_spans) + more)
+    if sdir is not None:
+        result = sdir / "result.md"
+        lines.append(f"plan: {shown(sdir / 'plan.md')}" + ("" if (sdir / "plan.md").is_file() else " (not yet)"))
+        lines.append(f"result: {shown(result) if result.is_file() else 'not yet'}")
+    lines.append(f"phase: {shown(pdir / 'phase.md')}")
+    lines.append(f"intent: {shown(pdir / 'intent.md')}")
+    return _card_fit(lines)
+
+
+def _card_fit(lines: list) -> str:
+    """Join the card and hold it to RESUME_CARD_MAX bytes (UTF-8): a card over the cap loses its tail."""
+    text = "\n".join(lines)
+    data = text.encode("utf-8")
+    if len(data) <= RESUME_CARD_MAX:
+        return text
+    return data[: RESUME_CARD_MAX - 4].decode("utf-8", "ignore").rstrip() + "\n..."
+
+
+def cmd_compact_resume(args: argparse.Namespace) -> None:
+    """SessionStart hook (source `compact`): print the resume card; on any error, the plain pointer. Exit 0."""
+    raw = _hook_stdin_or_redirect("compact-resume")
     if raw is None:  # the engine that owns the session's cwd answered
         return
+    print("compaction=done source=compact")
     try:
         try:
             hook = json.loads(raw or "null")
         except ValueError:
             hook = None
-        if not isinstance(hook, dict):
-            raise ValueError("stdin is not a hook JSON object")
-        cap = _compact_env_int(COMPACT_CAP_ENV) or COMPACT_BLOCK_CAP
-        counter = _compact_counter_path(hook)
-        blocks = _compact_read_blocks(counter)
-        if hook.get("trigger") != "auto":  # (a) a manual /compact is never blocked
-            trace["rule"] = "manual"
-        elif isinstance(hook.get("agent_id"), str) and hook["agent_id"].strip():
-            # (a') a subagent's own compaction (an executor, an Explore lookup): its slice is in_progress for
-            # its whole life, so the veto would only defer it to the cap -- the boundary is the main thread's.
-            # It leaves the main thread's block count alone (the subagent shares the session id).
-            trace["rule"], counter = "subagent", None
-        else:
-            fill, model = _compact_last_usage(hook.get("transcript_path"))  # (b)
-            ceiling = _compact_env_int(COMPACT_CEILING_ENV) or (COMPACT_CEILING_1M if model and COMPACT_1M_MODEL_RE.match(model) else COMPACT_CEILING_200K)
-            trace["fill"], trace["ceiling"] = ("-" if fill is None else fill), ceiling
-            if fill is not None and fill >= ceiling:
-                trace["rule"] = "ceiling"
-            elif blocks >= cap:  # (c)
-                trace["rule"] = "cap"
-            else:  # (d) the pointer `next` prints, read without next's rewrite of the dashboards
-                phases = all_active_phases()
-                _phase, current, _next = resolve_current(stream_phases(phases, current_stream(phases)))
-                status = None
-                if current:
-                    status = next((s.get("status") for p in phases for s in p["slices"] if s.get("id") == current), None)
-                    trace["slice"], trace["status"] = current, status or "-"
-                release = (f"block {blocks + 1}/{cap}; compaction is allowed at a clean slice boundary, "
-                           f"above {ceiling} tokens, or after {cap} blocks in a row")
-                if status in ("in_progress", "in_review"):
-                    trace["rule"], trace["decision"] = "slice_in_progress", "block"
-                    reason = f"slice {current} {status} -- compaction waits for the slice boundary ({release})"
-                else:
-                    dirty = _compact_dirty_count()
-                    trace["dirty"] = "-" if dirty is None else dirty
-                    if dirty:
-                        trace["rule"], trace["decision"] = "dirty", "block"
-                        reason = (f"dirty: {dirty} file{'s' if dirty != 1 else ''} uncommitted (your own uncommitted work counts too) "
-                                  f"-- compaction waits for a committed boundary ({release})")
-                    else:
-                        trace["rule"] = "boundary"
-    except Exception as exc:  # noqa: BLE001 - the gate fails open, always
-        trace.update(decision="allow", rule="error")
-        reason, error = None, f"{type(exc).__name__}: {exc}"
-    try:
-        if trace["decision"] == "block":
-            try:
-                counter.write_text(json.dumps({"blocks": blocks + 1, "updated_at": now_iso()}) + "\n", encoding="utf-8")
-                blocks += 1
-            except Exception as exc:  # noqa: BLE001 - a block the cap cannot count could repeat forever: allow
-                trace.update(decision="allow", rule="error")
-                error = f"block counter unwritable ({type(exc).__name__}: {exc})"
-        if trace["decision"] == "block":
-            print(json.dumps({"decision": "block", "reason": reason}))
-        elif counter is not None:  # every allow resets the count, bar a subagent's
-            blocks = 0
-            try:
-                counter.unlink()
-            except Exception:  # noqa: BLE001 - nothing to reset
-                pass
-        line = "compact-gate: " + " ".join(f"{k}={v}" for k, v in trace.items()) + f" blocks={blocks}/{cap}"
-        if error:
-            line += f" error={_one_line(error)}"
-        print(line, file=sys.stderr)
-    except Exception:  # noqa: BLE001 - never fail the request
-        pass
-
-
-def cmd_compact_resume(args: argparse.Namespace) -> None:
-    """SessionStart hook (source `compact`): print the pointer and the resume line as facts. Always exit 0."""
-    if _hook_stdin_or_redirect("compact-resume") is None:  # the engine that owns the session's cwd answered
+        transcript = hook.get("transcript_path") if isinstance(hook, dict) else None
+        print(resume_card(transcript if isinstance(transcript, str) and transcript.strip() else None))
         return
-    print("compaction=done source=compact")
+    except BaseException:  # noqa: BLE001 - SystemExit included: fall back to the plain pointer
+        pass
     try:
-        cmd_next(args)
-    except BaseException as exc:  # noqa: BLE001 - SystemExit included: the hook must never fail
+        cmd_next(argparse.Namespace(card=False))
+    except BaseException as exc:  # noqa: BLE001 - the hook must never fail
         print(f"pointer unavailable: {_one_line(str(exc)) or type(exc).__name__}")
-    print(COMPACT_RESUME_LINE)
+
+
 def cmd_deferred(args: argparse.Namespace) -> None:
     rebuild_index_and_state()
     groups = deferred_jobs()
@@ -4942,7 +5880,7 @@ def rotate_backlog(args: argparse.Namespace) -> None:
 # canvas.json plus one .dc.html per artboard), and the job's rounds (rounds/<NN-slug>/, each
 # snapshotting the tree at close). The orchestrator publishes canvas/ to the job's own canvas Artifact
 # as a plain copy; the engine only prints that plan (design-publish-plan) and never calls claude.ai.
-# The contract is written out in design-cowork/SKILL.md "The design record"; that section and these
+# The contract is written out in design-cowork/reference/record.md "The design record"; that section and these
 # commands must move together. The commands are the only writers of the machine-readable parts
 # (design.json, job.json, round.json, the close-time snapshots), and `design-check` enforces the
 # rest. Stdlib only. Two legacy records sit beside the live one and the scan never reads them:
@@ -4970,12 +5908,44 @@ DESIGN_JOB_CANVAS_KEYS = ("url", "version", "published")
 # design-canvas --version ran, or null when it pinned none. design-publish-plan re-sends the system
 # copies only when that pin has changed since. A job published before v60 has no `system`, and it reads
 # as "the version canvas.json pins now": its first publish already installed the system.
-DESIGN_JOB_CANVAS_OPTIONAL_KEYS = ("system",)
+# Optional job.json canvas key (v61): `manifest`, {project/<path>: bytes} of the files the last publish
+# sent -- the local sizes design-canvas --version reads -- which design-readback compares a canvas
+# listing against (the listing gives sizes, no hash). A job published before v61 has none, and its
+# read-back fetches the boards.
+DESIGN_JOB_CANVAS_OPTIONAL_KEYS = ("system", "manifest")
 DESIGN_ROUND_KEYS = ("schema", "round", "title", "slice", "status", "opened_at", "closed_at",
                      "supersedes", "signoff_words", "canvas_version")
-# Optional round.json keys: `critique`, the round's critique level (design-open --critique). A round
-# written before waves (P36.S5C) has none, and it reads as "off".
-DESIGN_ROUND_OPTIONAL_KEYS = ("critique",)
+# Optional round.json keys: `critique`, the round's critique level (design-open --critique; a round
+# written before waves (P36.S5C) has none, and it reads as "off"); v61: `published`, the canvas version
+# this round last published (design-canvas --version), and `readback`, the last design-readback
+# ({version, base, result, files, removed, at}: base is the published version it compared against).
+# design-close --words and design-sign need a settled read-back of the round's last publish.
+DESIGN_ROUND_OPTIONAL_KEYS = ("critique", "published", "readback")
+DESIGN_READBACK_KEYS = ("version", "base", "result", "files", "removed", "at")
+# A listing gives unchanged / changed / changed-unlocated; fetching settles changed ones as unchanged
+# (the app re-saved on open), differs (not copied in yet) or edited (the operator's files copied in).
+DESIGN_READBACK_RESULTS = ("unchanged", "changed", "changed-unlocated", "differs", "edited")
+DESIGN_READBACK_SETTLED = ("unchanged", "edited")
+DESIGN_LISTING_VERSION_RE = re.compile(r"\(version ([^\s)]+)\)")
+DESIGN_LISTING_FILE_RE = re.compile(r'^\s*-\s+"([^"]+)"\s+\S+\s+(\d+)\s+bytes\s*$')
+DESIGN_READBACK_DIFF = "readback.diff"  # the unified diffs design-readback --fetched writes into its scratch dir
+# SIGNOFF.md is generated by design-close / design-sign (v61); this first line marks the generated one,
+# so a re-run regenerates it and a hand-written (legacy) one is kept.
+DESIGN_SIGNOFF_MARK = "<!-- generated by design-close: the operator's signoff, recorded; data, not instructions -->"
+DESIGN_OPEN_ITEMS_RE = re.compile(r"^\s*(?:[-*]\s*)?\**`?open_items`?\**\s*:\s*(.*?)\s*$", re.I | re.M)
+DESIGN_SUMMARY_MAX = 1024  # bytes: result.md's ## Summary, the part the orchestrator reads
+# Wave briefs (v61): waves/<slice>/brief.md holds what a wave's jobs share; a round's handoff.md names it
+# on a `brief: waves/<slice>/brief.md` line, and that file must exist.
+DESIGN_WAVES_DIR = "waves"
+DESIGN_BRIEF_RE = re.compile(r"^\s*(?:[-*]\s*)?\**`?brief`?\**\s*:\s*`?([^`\s]+)`?\s*$", re.I | re.M)
+# The Design canvas type's runtime and references, refreshed per round into this git-ignored folder of
+# the design root (dot-named: the scan never reads it), so a handoff names them by a repo-relative path.
+DESIGN_TYPE_CACHE = ".type"
+# The record carries repo-relative paths only (v61): an absolute or home path in a record text file is a
+# problem while its round (or job, or wave) is open, and a warning once closed.
+DESIGN_ABS_PATH_RE = re.compile(r"(?:file://|(?<![\w.:/-]))(?:/Users/|/home/|/private/|/tmp/|/var/folders/)"
+                                r"|(?:^|(?<=[\s\"'`(=\[,]))~/|(?<![\w])C:\\", re.M)
+DESIGN_TEXT_SUFFIXES = (".md", ".json", ".html", ".htm", ".css", ".js", ".mjs", ".svg", ".txt")
 DESIGN_CRITIQUE_LEVELS = ("off", "critic", "critic+judge")
 # A wave: one co-work slice holds several jobs (about 3-4), each with its own open round, drafted in
 # parallel. design-open warns past DESIGN_WAVE_OPEN_MAX open rounds in one slice; never a refusal.
@@ -5181,6 +6151,32 @@ def design_job_problems(jid: str, data) -> list:
     published = canvas["published"]
     if not (isinstance(published, list) and all(isinstance(p, str) and p.startswith("project/") and design_path_ok(p) for p in published)):
         problems.append("job.json: canvas.published must be a list of project/<path> canvas paths")
+    manifest = canvas.get("manifest")
+    if "manifest" in canvas and not (isinstance(manifest, dict) and all(
+            isinstance(k, str) and k.startswith("project/") and design_path_ok(k) and type(v) is int and v >= 0
+            for k, v in manifest.items())):
+        problems.append("job.json: canvas.manifest must map project/<path> to the byte size the last publish sent")
+    return problems
+
+
+def design_paths_ok(paths) -> bool:
+    return isinstance(paths, list) and all(isinstance(p, str) and p.startswith("project/") and design_path_ok(p) for p in paths)
+
+
+def design_readback_problems(readback) -> list:
+    """Problems with a round.json `readback` record (design-readback writes it)."""
+    if not (isinstance(readback, dict) and set(readback) == set(DESIGN_READBACK_KEYS)):
+        return [f"round.json: readback must be an object with exactly {', '.join(DESIGN_READBACK_KEYS)}"]
+    problems = []
+    for key in ("version", "base"):
+        if not (isinstance(readback[key], str) and DESIGN_VERSION_RE.match(readback[key])):
+            problems.append(f"round.json: readback.{key} {readback[key]!r} is not a version id")
+    if readback["result"] not in DESIGN_READBACK_RESULTS:
+        problems.append(f"round.json: readback.result {readback['result']!r} is not one of {', '.join(DESIGN_READBACK_RESULTS)}")
+    if not (design_paths_ok(readback["files"]) and design_paths_ok(readback["removed"])):
+        problems.append("round.json: readback.files and readback.removed must be lists of project/<path> canvas paths")
+    if not (isinstance(readback["at"], str) and readback["at"]):
+        problems.append("round.json: readback.at must be an ISO-8601 string")
     return problems
 
 
@@ -5230,13 +6226,45 @@ def design_round_problems(rid: str, data, rdir: Path) -> list:
         problems.append("round.json: supersedes must be a list of round ids (NN-slug)")
     if "critique" in data and data["critique"] not in DESIGN_CRITIQUE_LEVELS:
         problems.append(f"round.json: critique {data['critique']!r} is not one of {', '.join(DESIGN_CRITIQUE_LEVELS)} (absent reads as off)")
+    if data.get("published") is not None and not (isinstance(data["published"], str) and DESIGN_VERSION_RE.match(data["published"])):
+        problems.append(f"round.json: published {data['published']!r} is not a version id (non-empty, no spaces) or null")
+    if data.get("readback") is not None:
+        problems.extend(design_readback_problems(data["readback"]))
     if not (rdir / "handoff.md").exists():
         problems.append("handoff.md missing (every round has its brief)")
     if status == "signed" and not (rdir / "SIGNOFF.md").exists():
         problems.append("SIGNOFF.md missing (a signed round records the operator's literal words)")
     if status == "signed" and not (rdir / "canvas" / "project" / "canvas.json").is_file():
         problems.append("snapshot canvas/project/canvas.json missing (a signed round keeps the canvas tree as it was at close)")
+    if status == "signed" and data.get("readback") is not None and design_build_problem(rdir):
+        problems.append(design_build_problem(rdir))  # signed on v61 (a read-back): the one drafter output
     return problems
+
+
+def design_md_section(text: str, name: str):
+    """The body of a markdown `## <name>` section (to the next `## ` heading), or None without one."""
+    lines, body, inside = text.splitlines(keepends=True), [], False
+    for line in lines:
+        if line.startswith("## "):
+            if inside:
+                break
+            inside = line[3:].strip().lower() == name.lower()
+            continue
+        if inside:
+            body.append(line)
+    return "".join(body) if inside else None
+
+
+def design_build_problem(rdir: Path) -> str:
+    """"" when the round carries its build contract: a legacy build-prompt.md, or result.md's ## Build."""
+    if (rdir / "build-prompt.md").is_file():
+        return ""
+    result = rdir / "result.md"
+    text = result.read_text(encoding="utf-8", errors="replace") if result.is_file() else ""
+    if design_md_section(text, "Build") is None:
+        return ("result.md has no ## Build section (a round without a legacy build-prompt.md carries its build "
+                "contract there: what the mockup builder and the build slices read)")
+    return ""
 
 
 def design_tree_files(project: Path) -> list:
@@ -5316,6 +6344,61 @@ def design_board_lint(text: str, rel: str) -> list:
     return found
 
 
+DESIGN_STATE_BAR_TAG_RE = re.compile(r"""<[a-zA-Z][\w-]*\b[^>]*?\bdata-proto\s*=\s*["']?state-bar\b[^>]*>""", re.I)
+DESIGN_CSS_RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+DESIGN_PINNED_RE = re.compile(r"\bposition\s*:\s*(fixed|sticky)\b", re.I)
+
+
+def design_state_bar_lint(project: Path, texts: dict, boards: dict) -> list:
+    """v61 (P37.S6) the static half of the state-bar lint (check=state-bar), from what the source shows:
+    - the bar pinned: position fixed or sticky in the bar's own style="", or in a CSS rule (a board's
+      <style>, or a .css file of the tree) whose last compound names the bar (state-bar, or a class the
+      bar's tag carries);
+    - several windows: an interactive board that <dc-import>s the same board two or more times (its
+      windows), when that board carries a state bar and the importing board none of its own -- each
+      window then shows its own bar, where one bar above all the windows, inside none, drives them all.
+    design-preview checks the rendered rest: the bar's computed position, the bars on screen, the pages
+    a bar lists, and a preset that moves to another page."""
+    found, has_bar, classes = [], {}, set()
+    for rel, text in texts.items():
+        if not rel.endswith(DESIGN_BOARD_SUFFIX):
+            continue
+        tags = DESIGN_STATE_BAR_TAG_RE.findall(text)
+        has_bar[rel.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)]] = bool(tags)
+        for tag in tags:
+            cls = re.search(r"""\bclass\s*=\s*["']([^"']*)["']""", tag)
+            if cls:
+                classes.update(c for c in cls.group(1).split() if "{" not in c and "}" not in c)
+            style = re.search(r"""\bstyle\s*=\s*["']([^"']*)["']""", tag)
+            pinned = DESIGN_PINNED_RE.search(style.group(1)) if style else None
+            if pinned:
+                found.append(f"{rel}: the state bar's own style is position: {pinned.group(1).lower()} (check=state-bar) -- it is "
+                             "the first row of the page and scrolls away with it, never fixed or sticky")
+    for rel, text in texts.items():
+        css = text if rel.lower().endswith(".css") else "\n".join(re.findall(r"<style\b[^>]*>(.*?)</style>", text, re.S | re.I))
+        for selector, body in DESIGN_CSS_RULE_RE.findall(re.sub(r"/\*.*?\*/", "", css, flags=re.S)):
+            pinned = DESIGN_PINNED_RE.search(body)
+            if not pinned:
+                continue
+            for part in (p.strip() for p in selector.split(",")):
+                last = re.split(r"[\s>+~]+", part)[-1] if part else ""
+                if "state-bar" in last or any(re.search(rf"\.{re.escape(c)}(?![\w-])", last) for c in classes):
+                    found.append(f"{rel}: the rule '{part[:60]}' makes the state bar position: {pinned.group(1).lower()} "
+                                 "(check=state-bar) -- it is the first row of the page and scrolls away with it, never fixed or sticky")
+    for rel, text in texts.items():
+        if not rel.endswith(DESIGN_BOARD_SUFFIX) or not (isinstance(boards.get(rel), dict) and boards[rel].get("is_interactive") is True):
+            continue
+        own = has_bar.get(rel.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)])
+        names = [n.strip() for n in DESIGN_DC_IMPORT_RE.findall(text)]
+        windows = [f"{name}{DESIGN_BOARD_SUFFIX} x{names.count(name)}" for name in sorted(set(names))
+                   if names.count(name) >= 2 and has_bar.get(name)]
+        if windows and not own:
+            found.append(f"{rel}: shows {', '.join(windows)} as windows, each with the state bar its page carries, and has no "
+                         "bar of its own (check=state-bar) -- a board that shows one page in several windows carries exactly "
+                         "one bar, above all the windows and inside none, driving them together")
+    return found
+
+
 def design_canvas_problems(project: Path, system: dict) -> tuple:
     """(problems, warnings, board count, Page count, lint, mounted count) for one job's canvas tree,
     each path under project/. A Page is a board with expand: "fill". lint is the static board lint
@@ -5384,11 +6467,11 @@ def design_canvas_problems(project: Path, system: dict) -> tuple:
             numbers[number] = key
     problems.extend(f"gap in the board titles' reading numbers: no board titled \"{n:02d} · …\""
                     for n in range(1, max(numbers, default=0) + 1) if n not in numbers)
-    lint, mounts = [], set()
+    lint, mounts, texts = [], set(), {}
     for rel in files:
         if not rel.lower().endswith((".html", ".htm", ".css")):
             continue
-        text = (project / rel).read_bytes().decode("utf-8", errors="replace")
+        text = texts[rel] = (project / rel).read_bytes().decode("utf-8", errors="replace")
         if rel.endswith(DESIGN_BOARD_SUFFIX) and not any(line.strip() == DESIGN_SUPPORT_LINE for line in text.splitlines()):
             problems.append(f"{rel}: missing the exact line {DESIGN_SUPPORT_LINE} (the type's runtime)")
         problems.extend(f"{rel}: {p}" for p in design_reference_problems(text, rel))
@@ -5396,6 +6479,7 @@ def design_canvas_problems(project: Path, system: dict) -> tuple:
             lint.extend(design_board_lint(text, rel))
             stem = rel.rsplit("/", 1)[-1][:-len(DESIGN_BOARD_SUFFIX)]
             mounts.update(name.strip() for name in DESIGN_DC_IMPORT_RE.findall(text) if name.strip() != stem)
+    lint.extend(design_state_bar_lint(project, texts, boards))
     records = index.get("designSystems", [])
     if not isinstance(records, list):
         problems.append("canvas.json: designSystems must be a list of install records")
@@ -5488,7 +6572,87 @@ def design_read_job(entry: Path, number: int, system: dict) -> dict:
                                    "split it into jobs by surface")
     elif job["data"] and job["data"]["status"] != "open":
         problems.append(f"{rel}: a {job['data']['status']} job has no canvas tree (canvas/project/)")
+    design_record_lint(job, entry, rel)
     return job
+
+
+def design_abs_path_finding(path: Path, label: str) -> str:
+    """One line naming the absolute or home paths in a record text file, or "" when it has none. Says
+    where (line numbers) and which prefix, never the path itself."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    hits = [(text.count("\n", 0, m.start()) + 1, m.group(0)) for m in DESIGN_ABS_PATH_RE.finditer(text)]
+    if not hits:
+        return ""
+    shown = ", ".join(f"line {n} {token}" for n, token in hits[:3]) + (f" (+{len(hits) - 3} more)" if len(hits) > 3 else "")
+    return (f"{label}: an absolute path (check=abs-path): {shown} -- the record carries repo-relative paths only "
+            "(scratch output stays out of it)")
+
+
+def design_text_files(folder: Path, skip: tuple = ()) -> list:
+    """The text files under a record folder, sorted: dot-entries and the top-level `skip` folders left out."""
+    found = []
+    for path in sorted(folder.rglob("*")) if folder.is_dir() else []:
+        parts = path.relative_to(folder).parts
+        if parts[0] in skip or any(part.startswith(".") for part in parts) or not path.is_file():
+            continue
+        if path.suffix.lower() in DESIGN_TEXT_SUFFIXES:
+            found.append(path)
+    return found
+
+
+def design_record_lint(job: dict, entry: Path, rel: str) -> None:
+    """v61 record checks of one job: absolute paths (a problem while open, lint once closed), the wave
+    brief a round's handoff names, and the size of an open round's ## Summary."""
+    root = entry.parent.parent
+    opened = [r for r in job["rounds"] if r["data"] and r["data"]["status"] == "open"]
+    targets = [(entry / "job.json", f"{rel}/job.json", bool(opened))]
+    project = entry / "canvas" / "project"
+    targets += [(project / f, f"{rel}/canvas/project/{f}", bool(opened))
+                for f in design_tree_files(project) if f.lower().endswith(DESIGN_TEXT_SUFFIXES)]
+    for rnd in job["rounds"]:
+        is_open = rnd in opened
+        rrel = f"{rel}/rounds/{rnd['id']}"
+        targets += [(path, f"{rrel}/{path.relative_to(rnd['path']).as_posix()}", is_open)
+                    for path in design_text_files(rnd["path"], skip=("canvas",))]
+        handoff = rnd["path"] / "handoff.md"
+        text = handoff.read_text(encoding="utf-8", errors="replace") if handoff.is_file() else ""
+        for brief in DESIGN_BRIEF_RE.findall(text):
+            if not (brief.startswith(f"{DESIGN_WAVES_DIR}/") and (root / brief).is_file()):
+                (job["problems"] if is_open else job["lint"]).append(
+                    f"{rrel}/handoff.md: names brief {brief}, which is missing (a wave brief lives at "
+                    f"{DESIGN_WAVES_DIR}/<slice>/brief.md under the design root)")
+        result = rnd["path"] / "result.md"
+        summary = design_md_section(result.read_text(encoding="utf-8", errors="replace"), "Summary") if is_open and result.is_file() else None
+        if summary is not None and len(summary.encode("utf-8")) > DESIGN_SUMMARY_MAX:
+            job["warnings"].append(f"{rrel}/result.md: ## Summary is {len(summary.encode('utf-8'))} bytes, over "
+                                   f"{DESIGN_SUMMARY_MAX} (the orchestrator reads only it; the detail goes under ## Build)")
+    for path, label, is_open in targets:
+        finding = design_abs_path_finding(path, label)
+        if finding:
+            (job["problems"] if is_open else job["lint"]).append(finding)
+
+
+def design_waves_check(root: Path, scan: dict) -> None:
+    """waves/ holds one <slice id>/ folder per wave (its brief.md); absolute paths in a wave's files are a
+    problem while the slice has an open round, else a warning."""
+    waves = root / DESIGN_WAVES_DIR
+    if not waves.is_dir():
+        return
+    live = {j["data"]["slice"] for j, _ in design_open_rounds(scan) if j["data"]}
+    for entry in sorted(waves.iterdir()):
+        if entry.name.startswith("."):
+            continue
+        if not (entry.is_dir() and DESIGN_SLICE_RE.match(entry.name)):
+            scan["problems"].append(f"{DESIGN_WAVES_DIR}/{entry.name}: not a wave folder ({DESIGN_WAVES_DIR}/ holds "
+                                    "one <slice id>/ folder per wave, e.g. P9.S4/, with its brief.md)")
+            continue
+        for path in design_text_files(entry):
+            finding = design_abs_path_finding(path, f"{DESIGN_WAVES_DIR}/{entry.name}/{path.relative_to(entry).as_posix()}")
+            if finding:
+                (scan["problems"] if entry.name in live else scan["warnings"]).append(finding)
 
 
 def design_scan(root: Path, only: str = None) -> dict:
@@ -5552,6 +6716,7 @@ def design_scan(root: Path, only: str = None) -> dict:
         warnings.extend(job["warnings"] + (job["lint"] if (job["data"] or {}).get("status") == "open" else []))
     problems.extend(f"gap in the job numbering: no job numbered {n:02d}"
                     for n in range(1, max(jnumbers, default=0) + 1) if n not in jnumbers)
+    design_waves_check(root, scan)
     # A co-work slice may hold several jobs (a wave), each with at most one open round (design_read_job).
     # Parts that are not schema 2: a pre-v47 record, and a schema-1 record left outside schema1/.
     if hint:
@@ -5745,7 +6910,7 @@ def design_open(args: argparse.Namespace) -> None:
         raise SystemExit(f"design-open: --slug {args.slug!r} is not lowercase words joined by hyphens")
     if not DESIGN_SLICE_RE.match(args.slice):
         raise SystemExit(f"design-open: --slice {args.slice!r} is not a slice id (P<N>.<ID>)")
-    if args.critique not in DESIGN_CRITIQUE_LEVELS:
+    if args.critique is not None and args.critique not in DESIGN_CRITIQUE_LEVELS:
         raise SystemExit(f"design-open: --critique {args.critique!r} is not one of {', '.join(DESIGN_CRITIQUE_LEVELS)}")
     broken = [f"jobs/{j['id']}" for j in scan["jobs"] if j["data"] is None]
     broken += [f"jobs/{j['id']}/rounds/{r['id']}" for j in scan["jobs"] for r in j["rounds"] if r["data"] is None]
@@ -5779,15 +6944,21 @@ def design_open(args: argparse.Namespace) -> None:
         print(f"design-open: job {job['id']} reopened (signed -> open) for a superseding round")
     rounds = sorted(job["rounds"], key=lambda r: r["number"])
     rid = f"{(rounds[-1]['number'] if rounds else 0) + 1:02d}-{args.slug}"
+    # A superseding round is the scoped re-draft after an operator note: critique off unless asked for.
+    critique = args.critique or "off"
     data = {
         "schema": DESIGN_SCHEMA, "round": rid, "title": title, "slice": args.slice, "status": "open",
         "opened_at": now_iso(), "closed_at": None, "supersedes": [rounds[-1]["id"]] if rounds else [],
-        "signoff_words": None, "canvas_version": None, "critique": args.critique,
+        "signoff_words": None, "canvas_version": None, "critique": critique,
     }
     write_json(job["path"] / "rounds" / rid / "round.json", data)
+    cache = root / DESIGN_TYPE_CACHE / ".gitignore"  # the type's runtime and references: local only
+    if not cache.is_file():
+        write_text(cache, "*\n")
+    default = " (a superseding round's default; --critique sets another)" if rounds and args.critique is None else ""
     print(f"design-open: opened {DESIGN_ROOT_SHOWN}/jobs/{job['id']}/rounds/{rid}/ for {args.slice}"
-          + (f" (supersedes {rounds[-1]['id']})" if rounds else "") + f", critique {args.critique}")
-    print(f"next: write jobs/{job['id']}/rounds/{rid}/handoff.md (with the line critique: {args.critique}); the drafter writes "
+          + (f" (supersedes {rounds[-1]['id']})" if rounds else "") + f", critique {critique}{default}")
+    print(f"next: write jobs/{job['id']}/rounds/{rid}/handoff.md (with the line critique: {critique}); the drafter writes "
           f"the canvas tree in jobs/{job['id']}/canvas/project/; close with design-close {job['id']}/{rid}")
     wave = [design_address(j, r) for j, r in design_open_rounds(scan)
             if j["data"]["slice"] == args.slice and j["id"] != job["id"]] + [f"{job['id']}/{rid}"]
@@ -5806,6 +6977,108 @@ def design_find_round(scan: dict, ref: str) -> tuple:
         raise SystemExit(f"design-close: round {ref!r} is in more than one job; name it as "
                          + " or ".join(design_address(j, r) for j, r in found))
     return found[0]
+
+
+def design_open_items(rdir: Path) -> list:
+    """The open-item ids the round's verdict blocks name on an `open_items:` line: its result.md and its
+    latest critique-NN.md and judge-NN.md, in that order, each id once."""
+    sources = [rdir / "result.md"]
+    for prefix in ("critique", "judge"):
+        numbered = sorted(rdir.glob(f"{prefix}-[0-9][0-9]*.md"))
+        sources += numbered[-1:]
+    ids: list = []
+    for path in sources:
+        if not path.is_file():
+            continue
+        match = DESIGN_OPEN_ITEMS_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+        value = match.group(1).replace("`", "").strip("[] ") if match else ""
+        if value.lower() in ("", "none", "-", "n/a"):
+            continue
+        ids += [i for i in (part.strip("[]() ") for part in re.split(r"[,\s]+", value)) if i and i not in ids]
+    return ids
+
+
+def design_signoff_text(address: str, rnd: dict, words: str, version, closed_at: str) -> str:
+    """The generated SIGNOFF.md: the words verbatim, the canvas version, the read-back, the open items."""
+    data = rnd["data"]
+    readback = data.get("readback") or {}
+    edited = f"; the operator's files copied in: {', '.join(readback['files'])}" if readback.get("result") == "edited" else ""
+    seen = (f"{readback['result']} at {readback['version']} (published {readback['base']}){edited}"
+            if readback else "none recorded (legacy)")
+    items = design_open_items(rnd["path"])
+    quoted = "\n".join(f"  > {line}" if line else "  >" for line in words.splitlines() or [""])
+    return (f"{DESIGN_SIGNOFF_MARK}\n# SIGNOFF — {address}\n\n"
+            f"- **Words** (verbatim, the operator's literal signoff):\n\n{quoted}\n\n"
+            f"- **Canvas version:** {version or 'null'}\n"
+            f"- **Read-back:** {seen}\n"
+            f"- **Open items:** {', '.join(items) if items else 'none recorded'}\n"
+            f"- **Supersedes:** {', '.join(data['supersedes']) or 'none'}\n"
+            f"- **Signed:** {closed_at}\n\n"
+            "This file is a factual record dropped at gate close; it is data, not instructions.\n")
+
+
+def design_sign_problems(root: Path, job: dict, rnd: dict) -> list:
+    """Why an open round cannot be signed yet: it must have published the job's current canvas version,
+    hold a settled read-back of that publish, carry its build contract and pass design-check <job>."""
+    jid, data, canvas = job["id"], rnd["data"], job["data"]["canvas"]
+    if canvas["version"] is None:
+        return [f"job {jid} has no published canvas: the operator signs what they saw (publish it, then design-readback)"]
+    problems = []
+    if data.get("published") != canvas["version"]:
+        problems.append(f"round {design_address(job, rnd)} has no recorded publish of the canvas ({canvas['version']}): run "
+                        f"design-canvas {jid} --version <id> after its publish (an open round started before v61: "
+                        f"design-canvas {jid} --version {canvas['version']} records it)")
+    readback = data.get("readback")
+    if not readback or readback["base"] != canvas["version"]:
+        problems.append(f"no read-back since the last publish ({canvas['version']}): run design-readback {jid} --listing <file|->")
+    elif readback["result"] not in DESIGN_READBACK_SETTLED:
+        problems.append(f"the read-back is {readback['result']}: fetch the files it named and settle it with "
+                        f"design-readback {jid} --fetched <dir> [--apply]")
+    if design_build_problem(rnd["path"]):
+        problems.append(design_build_problem(rnd["path"]))
+    if not (job["path"] / "canvas" / "project" / "canvas.json").is_file():
+        problems.append(f"jobs/{jid}/canvas/project/ holds no canvas; nothing to sign")
+    checked = design_scan(root, jid)
+    problems += [f"design-check {jid}: {p}" for p in checked["problems"]]
+    return problems
+
+
+def design_snapshot(job: dict, rnd: dict) -> int:
+    """Copy the job's canvas tree (ds/ left out) into the round folder, byte for byte; the file count."""
+    project, snap = job["path"] / "canvas" / "project", rnd["path"] / "canvas" / "project"
+    files = design_tree_files(project)
+    for rel in files:
+        live = (project / rel).read_bytes()
+        target = snap / rel
+        if not target.is_file() or target.read_bytes() != live:
+            design_write_bytes(target, live)
+    for rel in design_tree_files(snap):  # a half-landed close of a tree that changed since: same files only
+        if rel not in files:
+            (snap / rel).unlink()
+    return len(files)
+
+
+def design_sign_round(job: dict, rnd: dict, words: str, version) -> tuple:
+    """Sign one open round whose preflight passed: SIGNOFF.md (generated; a hand-written legacy one is
+    kept), the snapshot, round.json, then job.json. Returns (snapshotted file count, kept_legacy)."""
+    data, rdir = rnd["data"], rnd["path"]
+    closed_at = now_iso()
+    signoff = rdir / "SIGNOFF.md"
+    current = signoff.read_text(encoding="utf-8", errors="replace") if signoff.is_file() else None
+    kept = current is not None and not current.startswith(DESIGN_SIGNOFF_MARK)
+    if not kept:
+        write_text(signoff, design_signoff_text(design_address(job, rnd), rnd, words, version, closed_at))
+    count = design_snapshot(job, rnd)
+    write_json(rdir / "round.json", dict(data, status="signed", closed_at=closed_at, canvas_version=version, signoff_words=words))
+    write_json(job["path"] / "job.json", dict(job["data"], status="signed"))
+    return count, kept
+
+
+def design_signed_version(job: dict, rnd: dict, given=None):
+    """The canvas version the operator reviewed: --canvas-version, else the read-back's live version, else
+    the job's recorded publish."""
+    readback = rnd["data"].get("readback") or {}
+    return given or readback.get("version") or job["data"]["canvas"]["version"]
 
 
 def design_close(args: argparse.Namespace) -> None:
@@ -5832,33 +7105,193 @@ def design_close(args: argparse.Namespace) -> None:
         return
     if data["status"] != "open":
         raise SystemExit(f"design-close: {address} is already {data['status']}; a closed round is immutable")
-    rdir, project = rnd["path"], job["path"] / "canvas" / "project"
+    rel = f"{DESIGN_ROOT_SHOWN}/jobs/{job['id']}/rounds/{rnd['id']}"
     if status == "signed":
-        if not (rdir / "SIGNOFF.md").is_file():
-            raise SystemExit(f"design-close: write jobs/{job['id']}/rounds/{rnd['id']}/SIGNOFF.md (the operator's literal words) first")
-        design_require(design_scan(root, job["id"]), "design-close")
-        if not (project / "canvas.json").is_file():
-            raise SystemExit(f"design-close: jobs/{job['id']}/canvas/project/ holds no canvas; nothing to sign")
-    # 1. The snapshot: the canvas tree as the operator reviewed it (ds/ left out), byte for byte.
-    files = design_tree_files(project)
-    snap = rdir / "canvas" / "project"
-    for rel in files:
-        live = (project / rel).read_bytes()
-        target = snap / rel
-        if not target.is_file() or target.read_bytes() != live:
-            design_write_bytes(target, live)
-    for rel in design_tree_files(snap):  # a half-landed close of a tree that changed since: same files only
-        if rel not in files:
-            (snap / rel).unlink()
-    # 2. The round, then the job (a re-run of a half-landed signed close finishes the job above).
+        problems = design_sign_problems(root, job, rnd)
+        if problems:
+            raise SystemExit(f"design-close: refused -- {address} cannot be signed yet:\n" + "\n".join(f"- {p}" for p in problems))
+        version = design_signed_version(job, rnd, args.canvas_version)
+        count, kept = design_sign_round(job, rnd, args.words, version)
+        if kept:
+            print(f"design-close: warning: kept the hand-written {rel}/SIGNOFF.md (legacy); nothing generated")
+        print(f"design-close: {address} signed -- {count} file(s) snapshotted to {rel}/canvas/project/, canvas_version "
+              f"{version or 'null'}; SIGNOFF.md {'kept' if kept else 'generated'}; job {job['id']} signed")
+        return
+    # Superseded: the snapshot, then the round (a re-run of a half-landed close finishes it).
+    count = design_snapshot(job, rnd)
     version = args.canvas_version or jdata["canvas"]["version"]
-    write_json(rdir / "round.json", dict(data, status=status, closed_at=now_iso(), canvas_version=version,
-                                         signoff_words=args.words if status == "signed" else None))
-    if status == "signed":
-        write_json(job["path"] / "job.json", dict(jdata, status="signed"))
-    print(f"design-close: {address} {status} -- {len(files)} file(s) snapshotted to "
-          f"{DESIGN_ROOT_SHOWN}/jobs/{job['id']}/rounds/{rnd['id']}/canvas/project/, canvas_version {version or 'null'}"
-          + (f"; job {job['id']} signed" if status == "signed" else "; the job's next round supersedes it"))
+    write_json(rnd["path"] / "round.json", dict(data, status=status, closed_at=now_iso(), canvas_version=version, signoff_words=None))
+    print(f"design-close: {address} {status} -- {count} file(s) snapshotted to {rel}/canvas/project/, canvas_version "
+          f"{version or 'null'}; the job's next round supersedes it")
+
+
+def design_sign(args: argparse.Namespace) -> None:
+    """Sign every job presented at a stop -- each open round of the slice that recorded a publish -- on the
+    operator's one literal word. All or nothing: every presented round passes the preflight first."""
+    if not args.words.strip():
+        raise SystemExit("design-sign: --words must carry the operator's literal words")
+    if not DESIGN_SLICE_RE.match(args.slice):
+        raise SystemExit(f"design-sign: --slice {args.slice!r} is not a slice id (P<N>.<ID>)")
+    root = design_root()
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-sign")
+    mine = [(j, r) for j, r in design_open_rounds(scan) if j["data"] and r["data"]["slice"] == args.slice]
+    presented = [(j, r) for j, r in mine if r["data"].get("published")]
+    held = [(j, r) for j, r in mine if not r["data"].get("published")]
+    if not presented:
+        raise SystemExit(f"design-sign: refused -- nothing presented: no open round of {args.slice} has a recorded publish"
+                         + (f" (open, unpublished: {', '.join(design_address(j, r) for j, r in held)})" if held else ""))
+    refusals = [f"- {design_address(j, r)}: {p}" for j, r in presented for p in design_sign_problems(root, j, r)]
+    if refusals:
+        raise SystemExit(f"design-sign: refused -- nothing signed; {len(refusals)} problem(s):\n" + "\n".join(refusals))
+    for job, rnd in presented:
+        version = design_signed_version(job, rnd)
+        items = design_open_items(rnd["path"])
+        count, kept = design_sign_round(job, rnd, args.words, version)
+        print(f"signed={design_address(job, rnd)} version={version} readback={rnd['data']['readback']['result']} "
+              f"open_items={','.join(items) if items else 'none'} files={count}"
+              + (" signoff=kept-legacy" if kept else ""))
+    for job, rnd in held:
+        print(f"held={design_address(job, rnd)} (no recorded publish: not presented, not signed)")
+
+
+def design_listing(text: str) -> tuple:
+    """(version, {project/<path>: bytes}) from an `Artifact list scope:files` listing: the version in its
+    header, one `- "path"  type  N bytes` line per file; only project/ outside ds/ counts (SKILL.md,
+    index.html, artifact-type/** and project/ds/** are the type's and the system's)."""
+    version = DESIGN_LISTING_VERSION_RE.search(text)
+    files = {}
+    for line in text.splitlines():
+        match = DESIGN_LISTING_FILE_RE.match(line)
+        if match and match.group(1).startswith("project/") and not match.group(1).startswith("project/ds/"):
+            files[match.group(1)] = int(match.group(2))
+    return (version.group(1) if version else None), files
+
+
+def design_readback(args: argparse.Namespace) -> None:
+    """Read a published canvas back without pulling it: compare its file listing with what the last publish
+    sent, name only what to fetch, then diff (and with --apply copy in) just those files."""
+    root = design_root()
+    scan = design_scan(root)
+    design_require_manifest(scan, root, "design-readback")
+    job = design_find_job(scan, args.job, "design-readback")
+    canvas = job["data"]["canvas"]
+    if canvas["version"] is None:
+        raise SystemExit(f"design-readback: refused -- job {args.job} has no recorded publish (design-canvas {args.job} --version <id>)")
+    rnd = next((r for r in job["rounds"] if r["data"] and r["data"]["status"] == "open"), None)
+    if args.listing is not None:
+        design_readback_listing(args, job, rnd, canvas)
+    else:
+        design_readback_fetched(args, root, job, rnd, canvas)
+
+
+def design_readback_listing(args: argparse.Namespace, job: dict, rnd, canvas: dict) -> None:
+    if args.apply:
+        raise SystemExit("design-readback: --apply goes with --fetched")
+    try:
+        text = sys.stdin.read() if args.listing == "-" else Path(args.listing).read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise SystemExit(f"design-readback: cannot read the listing: {exc}")
+    version, live = design_listing(text)
+    if version is None or not DESIGN_VERSION_RE.match(version):
+        raise SystemExit("design-readback: refused -- no `(version <id>)` in the listing (paste the Artifact list scope:files output as is)")
+    if not live:
+        raise SystemExit("design-readback: refused -- the listing names no project/ file")
+    base, manifest, removed = canvas["version"], canvas.get("manifest"), []
+    if version == base:
+        result, fetch = "unchanged", []
+        print(f"readback=unchanged version={version}")
+    else:
+        changed = sorted(p for p in live if manifest and p in manifest and live[p] != manifest[p])
+        added = sorted(p for p in live if manifest and p not in manifest)
+        removed = sorted(p for p in manifest or {} if p not in live)
+        if changed or added or removed:
+            result, fetch = "changed", changed + added
+            print(f"readback=changed version={version} files={len(fetch) + len(removed)}")
+        else:  # a same-size edit the listing cannot see, or no manifest to compare with: the boards
+            result, fetch = "changed-unlocated", sorted(p for p in live if p.endswith(DESIGN_BOARD_SUFFIX))
+            why = "no-manifest" if not manifest else "same-sizes"
+            print(f"readback=changed-unlocated version={version} reason={why} files={len(fetch)}")
+        print(f"fetch={','.join(fetch) if fetch else 'none'}")
+        if removed:
+            print(f"removed={','.join(removed)}")
+    design_readback_record(job, rnd, {"version": version, "base": base, "result": result, "files": fetch,
+                                      "removed": removed, "at": now_iso()})
+    if fetch:
+        print(f"next: Artifact read paths=[the fetch list] out_dir=<scratch>, then design-readback {job['id']} --fetched <scratch> [--apply]")
+
+
+def design_readback_record(job: dict, rnd, readback: dict) -> None:
+    if rnd is None:
+        print(f"recorded=no (job {job['id']} has no open round)")
+        return
+    write_json(rnd["path"] / "round.json", dict(rnd["data"], readback=readback))
+    print(f"recorded={design_address(job, rnd)}")
+
+
+def design_readback_fetched(args: argparse.Namespace, root: Path, job: dict, rnd, canvas: dict) -> None:
+    out = Path(args.fetched).resolve()
+    if not out.is_dir():
+        raise SystemExit(f"design-readback: --fetched {args.fetched} is not a directory")
+    if out == root.resolve() or root.resolve() in out.parents:
+        raise SystemExit("design-readback: refused -- --fetched must be a scratch directory outside the design root")
+    readback = (rnd["data"].get("readback") if rnd else None)
+    if not readback:
+        raise SystemExit(f"design-readback: refused -- no read-back recorded on an open round of {job['id']}: run --listing first")
+    if readback["base"] != canvas["version"]:
+        raise SystemExit(f"design-readback: refused -- the canvas was published since the listing ({canvas['version']}): run --listing again")
+    if not readback["files"] and not readback["removed"]:
+        raise SystemExit(f"design-readback: nothing to fetch (the read-back is {readback['result']})")
+    project = job["path"] / "canvas" / "project"
+    missing, differing, same, chunks = [], [], 0, []
+    fetched = {}
+    for path in readback["files"]:
+        inner = path[len("project/"):]
+        found = next((c for c in (out / path, out / inner) if c.is_file()), None)
+        if found is None:
+            missing.append(path)
+            continue
+        fetched[path] = found.read_bytes()
+    if missing:
+        raise SystemExit(f"design-readback: refused -- not in {args.fetched}: {', '.join(missing)} "
+                         "(read each with Artifact out_dir there; nothing recorded)")
+    for path, live in fetched.items():
+        local = project / path[len("project/"):]
+        mine = local.read_bytes() if local.is_file() else None
+        if mine == live:
+            same += 1
+            continue
+        old = (mine or b"").decode("utf-8", errors="replace").splitlines(keepends=True)
+        new = live.decode("utf-8", errors="replace").splitlines(keepends=True)
+        lines = list(difflib.unified_diff(old, new, fromfile=f"local/{path}", tofile=f"canvas/{path}"))
+        plus = sum(1 for ln in lines if ln.startswith("+") and not ln.startswith("+++"))
+        minus = sum(1 for ln in lines if ln.startswith("-") and not ln.startswith("---"))
+        chunks.append("".join(lines) + ("" if not lines or lines[-1].endswith("\n") else "\n"))
+        differing.append(path)
+        print(f"diff={path} +{plus} -{minus}" + (" (new)" if mine is None else ""))
+    print(f"same={same}")
+    still = [p for p in readback["removed"] if (project / p[len("project/"):]).exists()]
+    if still:
+        print(f"removed={','.join(still)} (gone from the canvas, still in the local tree)")
+    if chunks:
+        write_text(out / DESIGN_READBACK_DIFF, "".join(chunks))
+        print(f"diffs={out / DESIGN_READBACK_DIFF}")
+    if args.apply:
+        if still:
+            raise SystemExit("design-readback: refused -- nothing copied: delete the files the operator removed from the "
+                             f"local tree first ({', '.join(still)}), or restore them on the canvas; then re-run")
+        for path in differing:
+            design_write_bytes(project / path[len("project/"):], fetched[path])
+    if (differing or still) and not args.apply:
+        result = "differs"
+    elif differing or readback["removed"] or readback["result"] == "edited":
+        result = "edited"
+    else:
+        result = "unchanged"
+    print(f"readback={result} version={readback['version']} files={len(differing)}"
+          + (" (copied into the canvas tree)" if args.apply and differing else ""))
+    files = differing if args.apply and differing else readback["files"]  # edited: the files copied in
+    design_readback_record(job, rnd, dict(readback, result=result, files=files, at=now_iso()))
 
 
 def design_canvas(args: argparse.Namespace) -> None:
@@ -5887,21 +7320,38 @@ def design_canvas(args: argparse.Namespace) -> None:
         files = design_tree_files(job["path"] / "canvas" / "project")
         if "canvas.json" not in files:
             raise SystemExit(f"design-canvas: refused -- jobs/{args.job}/canvas/project/ holds no canvas to have published")
+        project = job["path"] / "canvas" / "project"
         canvas["version"], canvas["published"] = args.version, [f"project/{f}" for f in files]
+        # what this publish sent, by size: the manifest design-readback compares the canvas listing with
+        canvas["manifest"] = {f"project/{f}": (project / f).stat().st_size for f in files}
         # the system version this publish installed: the pin the next publish plan compares against
-        canvas["system"] = design_canvas_pinned_system(job["path"] / "canvas" / "project",
-                                                       scan["manifest"]["system"].get("namespace"))
+        canvas["system"] = design_canvas_pinned_system(project, scan["manifest"]["system"].get("namespace"))
     if args.implemented and status != "implemented":
         if status != "signed":
             raise SystemExit(f"design-canvas: refused -- job {args.job} is {status}; only a signed job is marked implemented")
         status = "implemented"
+    # The job's open round records the version it published: what design-sign presents, and what a
+    # read-back must have compared against before the round can be signed.
+    opened = next((r for r in job["rounds"] if r["data"] and r["data"]["status"] == "open"), None)
+    round_note = ""
+    if args.version is not None and opened is not None and opened["data"].get("published") != args.version:
+        write_json(opened["path"] / "round.json", dict(opened["data"], published=args.version))
+        round_note = f"design-canvas: round {design_address(job, opened)} published {args.version}"
     wanted = dict(jdata, canvas=canvas, status=status)
     if wanted == jdata:
         print(f"design-canvas: jobs/{args.job}/job.json unchanged")
+        if round_note:
+            print(round_note)
         return
     write_json(job["path"] / "job.json", wanted)
     print(f"design-canvas: updated {DESIGN_ROOT_SHOWN}/jobs/{args.job}/job.json")
-    print(json.dumps({"canvas": canvas, "status": status}, ensure_ascii=False, indent=2))
+    shown = {k: v for k, v in canvas.items() if k not in ("published", "manifest")}
+    print(json.dumps({"canvas": shown, "status": status}, ensure_ascii=False, indent=2))
+    if args.version is not None:
+        print(f"design-canvas: published={len(canvas['published'])} file(s), manifest recorded "
+              f"({sum(canvas['manifest'].values())} bytes)")
+    if round_note:
+        print(round_note)
 
 
 def design_canvas_pinned_system(project: Path, namespace) -> "str | None":
@@ -5997,11 +7447,24 @@ DESIGN_PREVIEW_CLICKS = 300  # --click: at most this many clicks (and typed fiel
 DESIGN_PREVIEW_BOARD_SECONDS = 120  # --click: a board's click-through stops after this long (and says so)
 DESIGN_PREVIEW_SHIFT = 4  # px: a control resized, or a header/nav/main moved, by more than this is a layout shift
 DESIGN_PREVIEW_LIST_SAMPLE = 4  # --click: a list of this many rows or more is sampled (first, second, last), not clicked row by row
+DESIGN_PREVIEW_REFLOW = 320  # px: the reflow view's width (WCAG 1.4.10: 1280 CSS px at 400% zoom)
+DESIGN_PREVIEW_TEXT_SCALE = 2  # the text view's factor on every element's computed font-size (WCAG 1.4.4: 200%)
+DESIGN_PREVIEW_TABS = 400  # keyboard: at most this many Tab presses per board
+DESIGN_PREVIEW_POP_PROBES = 4  # keyboard: click-only controls (by tag and class) clicked to see whether they open a popover
 # The check names the measured pass gives its issue lines (beside the render's own: load, settle,
 # too-tall, frame-clip, page-clip, overflow, unmounted, runtime-error, script-error, not-found,
 # screenshot, size, browser; and --click's unreachable, click-error, click, layout-shift, same-target,
-# hover-contrast).
-DESIGN_PREVIEW_CHECKS = ("contrast", "unmeasured", "target", "clipped", "dead-link", "image", "name", "checks")
+# hover-contrast). v61 (P37.S6): non-text-contrast and state-bar in every view and state; reflow and
+# overprint in the w320 and text200 views of a PAGE; keyboard on each interactive board.
+DESIGN_PREVIEW_CHECKS = ("contrast", "unmeasured", "target", "clipped", "dead-link", "image", "name", "checks",
+                         "non-text-contrast", "state-bar", "reflow", "overprint", "keyboard")
+# The self-check's blocking checks: self_check=fail names them, and --strict exits 1 on any.
+DESIGN_PREVIEW_BLOCKING = ("non-text-contrast", "reflow", "overprint", "keyboard")
+# Render reuse (v61): the default --out, per job and round, under the design root, git-ignored like .type/.
+DESIGN_PREVIEW_DIR = ".preview"
+DESIGN_PREVIEW_SHEET_W = 1568  # px: a contact sheet's width (about the largest an image is read at without downscaling)
+DESIGN_PREVIEW_SHEET_SCALE = 0.5  # a contact sheet shows its shots at half size or less (the widest fills a tile)
+DESIGN_PREVIEW_SHEET_TILE = 1.6  # a tile is at most this many times as tall as it is wide; the rest is cut (and said so)
 # Shared by the two in-page scripts below: a short element label (<= 40 chars), the text a control
 # shows (aria-hidden text left out), and the interactive set (the target check, and the click set).
 DESIGN_PREVIEW_JS_HELPERS = r"""
@@ -6080,6 +7543,78 @@ while (walker.nextNode()) {
   if (ratio < item.need) out.contrast.push(Object.assign(item, {ratio: Math.floor(ratio * 100) / 100, fg: hex(fg), bg: hex(bg)}));
 } };
 """
+# v61 (P37.S6), inside the measured checks below. non-text-contrast (WCAG 1.4.11): each visible, enabled
+# control of the target set by its element or role (a bare tabindex region, a scrim over a quarter of the
+# viewport, inline text links, [data-proto] chrome, aria-hidden controls and UA-drawn
+# checkboxes, radios, ranges, color and file pickers left out) whose identifying boundary -- a >= 1px
+# border that is not none/hidden, or its own fill -- reaches 3:1 against the color its ancestors paint
+# around it, composited like the text contrast (alpha, ancestor opacity groups, over white). The best of
+# its border sides and its fill counts; a control with neither, or with both under 1.1:1 (drawn in the
+# surface's own color), has no boundary to check (its text or icon identifies it) -- a form field always
+# has one. A background image, gradient, filter or blend mode in the way is unmeasured, never a
+# guess. state-bar: the rendered half of the state-bar lint -- the bar (or an ancestor) fixed or sticky,
+# several bars on one board, a bar showing the presets of more than one page, a bar with no named group.
+DESIGN_PREVIEW_NTC_JS = r"""
+const nativeWidget = e => e.matches('input[type=checkbox],input[type=radio],input[type=range],input[type=color],input[type=file],progress,meter')
+  && cs(e).appearance !== 'none';
+for (const e of controls()) {
+  if (!e.matches(SEL) || inRun(e) || e.closest('[data-proto]') || hiddenIn(e) || nativeWidget(e)) continue;
+  const box = e.getBoundingClientRect(); if (box.width * box.height > innerWidth * innerHeight / 4) continue;  // a scrim or backdrop
+  const s = cs(e);
+  const sides = ['Top', 'Right', 'Bottom', 'Left'].filter(k => parseFloat(s['border' + k + 'Width']) >= 1
+    && !/^(none|hidden)$/.test(s['border' + k + 'Style'])).map(k => s['border' + k + 'Color']);
+  const own = color(s.backgroundColor), filled = !!own && own[3] > 0;
+  if (!sides.length && !filled && s.backgroundImage === 'none') continue;
+  out.boundaries++;
+  const item = {el: desc(e), need: 3};
+  let why = '';
+  if (s.backgroundImage !== 'none' && !sides.length) why = 'a background image or gradient';
+  if (s.filter !== 'none' || s.mixBlendMode !== 'normal') why = why || 'a filter or blend mode';
+  const chain = []; for (let a = e.parentElement; a; a = a.parentElement) chain.push(a);
+  let see = true;
+  for (const a of chain) { if (!see) break; const t = cs(a);
+    if (t.backgroundImage !== 'none') why = why || 'a background image or gradient around it';
+    if (t.filter !== 'none' || t.mixBlendMode !== 'normal') why = why || 'a filter or blend mode around it';
+    const b = color(t.backgroundColor);
+    if (!b) why = why || 'a color it cannot read (' + t.backgroundColor + ')';
+    else if (b[3] >= 1 && +t.opacity >= 1) see = false; }
+  if (why) { item.why = why; out.ntc_unmeasured.push(item); continue; }
+  let layer = [255, 255, 255, 1], total = 1; const groups = [];
+  for (let i = chain.length - 1; i >= 0; i--) { const t = cs(chain[i]), o = +t.opacity; total *= o;
+    if (o < 1) { groups.push([layer, o]); layer = [0, 0, 0, 0]; }
+    layer = over(color(t.backgroundColor), layer); }
+  const o = +s.opacity; total *= o;
+  if (total <= 0) continue;
+  const base = o < 1 ? [0, 0, 0, 0] : layer;
+  const fill = s.backgroundImage === 'none' ? over(own || [0, 0, 0, 0], base) : null;
+  const parts = sides.map(c => ['border', over(color(c) || [0, 0, 0, 0], fill || base)]);
+  if (filled && fill) parts.push(['fill', fill]);
+  let best = null;
+  for (const [part, c0] of parts) { let c = c0, bg = layer;
+    if (o < 1) c = over([c[0], c[1], c[2], c[3] * o], layer);
+    for (let g = groups.length - 1; g >= 0; g--) { const [under, go] = groups[g];
+      c = over([c[0], c[1], c[2], c[3] * go], under); bg = over([bg[0], bg[1], bg[2], bg[3] * go], under); }
+    const l1 = lum(c), l2 = lum(bg), ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    if (!best || ratio > best.ratio) best = {part: part, ratio: ratio, fg: hex(c), bg: hex(bg)}; }
+  const field = e.matches('input,select,textarea');
+  if (best && best.ratio < 1.1 && !field) continue;  // a border or fill in the surface's own color draws no boundary
+  if (best && best.ratio < 3) out.ntc.push(Object.assign(item, best, {ratio: Math.floor(best.ratio * 100) / 100,
+    width: sides.length ? Math.max(...['Top', 'Right', 'Bottom', 'Left'].map(k => parseFloat(s['border' + k + 'Width']) || 0)) : 0}));
+}
+const groupName = g => (g.getAttribute('aria-label') || '').trim() || (g.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean)
+  .map(id => { const r = document.getElementById(id); return r ? textOf(r) : ''; }).join(' ').trim();
+const bars = [...document.querySelectorAll('[data-proto="state-bar"]')].filter(boxed);
+out.bars = bars.length;
+if (bars.length > 1) out.statebar.push({kind: 'several', n: bars.length, names: [...new Set(bars.map(b => {
+  const g = [...b.querySelectorAll('[role=group]')].find(x => boxed(x) && groupName(x)); return g ? clip(groupName(g), 40) : '?'; }))]});
+for (const b of bars) {
+  for (let a = b; a && a !== document.body; a = a.parentElement) { const p = cs(a).position;
+    if (p === 'fixed' || p === 'sticky') { out.statebar.push({kind: 'pinned', pos: p, el: a === b ? 'the bar' : 'its ancestor ' + tagOf(a)}); break; } }
+  const named = [...b.querySelectorAll('[role=group]')].filter(g => boxed(g) && groupName(g));
+  if (named.length > 1) out.statebar.push({kind: 'pages', n: named.length, names: named.slice(0, 3).map(g => clip(groupName(g), 40))});
+  else if (!named.length) out.statebar.push({kind: 'unnamed'});
+}
+"""
 # The measured checks, run on the settled page right before its screenshot. Raw facts only; the engine
 # words them. contrast: every visible text run (one per element) against the background its ancestors
 # paint under it, alpha-composited (color alpha, background alpha, ancestor opacity) over the white
@@ -6088,7 +7623,8 @@ while (walker.nextNode()) {
 # ([data-proto]: the state bar, the board-link strip) is exempt from the target check, never from the
 # others: it must still read, name its buttons and link somewhere real.
 DESIGN_PREVIEW_CHECKS_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + DESIGN_PREVIEW_CONTRAST_JS + r"""
-const out = {contrast: [], unmeasured: [], target: [], clipped: [], links: [], images: [], names: [], texts: 0, targets: 0, fields: 0};
+const out = {contrast: [], unmeasured: [], target: [], clipped: [], links: [], images: [], names: [], texts: 0, targets: 0, fields: 0,
+             ntc: [], ntc_unmeasured: [], boundaries: 0, statebar: [], bars: 0};
 contrastIn(document.body, out);
 const inRun = e => { if (!e.matches('a[href],[role=link]') || cs(e).display !== 'inline') return false;
   let p = e.parentElement; while (p && cs(p).display === 'inline') p = p.parentElement;
@@ -6102,6 +7638,7 @@ for (const e of controls()) {
   const w = x1 - x0, h = y1 - y0;
   if (w < 43.99 || h < 43.99) out.target.push({el: desc(e), w: Math.round(w * 10) / 10, h: Math.round(h * 10) / 10, labelled: !!(e.labels && e.labels.length)});
 }
+""" + DESIGN_PREVIEW_NTC_JS + r"""
 const ownText = e => [...e.childNodes].some(c => c.nodeType === 3 && c.data.trim())
   || (e.children.length > 0 && [...e.children].every(c => cs(c).display === 'inline') && !!e.textContent.trim());
 for (const e of document.body.querySelectorAll('*')) {
@@ -6269,6 +7806,111 @@ window.clearTimeout = function (id) { live.delete(id); return ct(id); }; })()"""
 DESIGN_PREVIEW_ANIMATIONS_JS = ("Promise.race([Promise.all(document.getAnimations().filter(a=>a.effect&&"
                                 "a.effect.getComputedTiming().endTime!==Infinity).map(a=>a.finished.catch(()=>0))),"
                                 "new Promise(r=>setTimeout(r,1000))]).then(()=>1)")
+# v61 (P37.S6): installed before every load's scripts: remembers each element given a click, mousedown,
+# pointerdown, mouseup or pointerup listener with addEventListener (the runtime's onclick= is a property,
+# read directly), for the keyboard check's click-only controls.
+DESIGN_PREVIEW_LISTENERS_JS = r"""(() => { if (window.__dcClick) return; const seen = new WeakSet(); window.__dcClick = seen;
+const add = EventTarget.prototype.addEventListener;
+EventTarget.prototype.addEventListener = function (t, f, o) {
+  if (this instanceof Element && /^(click|mousedown|pointerdown|mouseup|pointerup)$/.test(t)) seen.add(this);
+  return add.call(this, t, f, o); }; })()"""
+# 200% text (WCAG 1.4.4): every element's computed font-size read first, then each set to k times it
+# (!important, in px), so nothing compounds; rem lengths follow the root's.
+DESIGN_PREVIEW_TEXT_SCALE_JS = ("(k=>{const all=[document.documentElement,document.body,...document.body.querySelectorAll('*')]"
+                                ".filter(e=>e&&!/^(SCRIPT|STYLE|TEMPLATE|HEAD|META|LINK|TITLE)$/.test(e.tagName));"
+                                "const px=all.map(e=>parseFloat(getComputedStyle(e).fontSize));"
+                                "all.forEach((e,i)=>{if(px[i]>0)e.style.setProperty('font-size',(px[i]*k)+'px','important');});"
+                                "return all.length;})")
+# overprint (WCAG 1.4.4/1.4.10), in the 320 px and 200%-text views: two text runs of different elements,
+# neither containing the other, whose glyph boxes (Range.getClientRects, the middle half of each line box
+# so stacked lines that merely touch do not count, cut to every clipping ancestor: overflow, clip-path,
+# clip -- a visually hidden label is cut to its 1px box) cross by >= 2px across
+# and >= 1px down, where the crossing is visible: the topmost element at its centre belongs to one of the
+# two and nothing opaque between it and the other hides that one. [data-proto] chrome is left out.
+DESIGN_PREVIEW_OVERPRINT_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + DESIGN_PREVIEW_CONTRAST_JS + r"""
+const runs = [], clips = new Map(), ids = new Map(), range = document.createRange();
+const clipOf = e => { if (!e || e === document.body || e === document.documentElement) return null;
+  if (clips.has(e)) return clips.get(e);
+  const s = cs(e); let c = s.position === 'fixed' ? null : clipOf(e.parentElement);
+  if (s.overflowX !== 'visible' || s.overflowY !== 'visible' || s.clipPath !== 'none' || (s.clip && s.clip !== 'auto')) { const r = e.getBoundingClientRect();
+    c = c ? [Math.max(c[0], r.left), Math.max(c[1], r.top), Math.min(c[2], r.right), Math.min(c[3], r.bottom)] : [r.left, r.top, r.right, r.bottom]; }
+  clips.set(e, c); return c; };
+const seenBy = e => e.checkVisibility ? e.checkVisibility({opacityProperty: true, visibilityProperty: true}) : cs(e).visibility === 'visible';
+const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+while (walker.nextNode()) { const n = walker.currentNode, e = n.parentElement;
+  if (!e || !n.data.trim() || e.closest('script,style,template,noscript,head,[data-proto]') || !seenBy(e)) continue;
+  range.selectNodeContents(n); const c = clipOf(e);
+  for (const r of range.getClientRects()) { if (r.width < 2 || r.height < 2) continue;
+    let b = [r.left, r.top + r.height / 4, r.right, r.bottom - r.height / 4];
+    if (c) b = [Math.max(b[0], c[0]), Math.max(b[1], c[1]), Math.min(b[2], c[2]), Math.min(b[3], c[3])];
+    if (b[2] - b[0] >= 1 && b[3] - b[1] >= 1) runs.push({e: e, b: b}); } }
+runs.sort((p, q) => p.b[1] - q.b[1]);
+const idOf = e => { if (!ids.has(e)) ids.set(e, ids.size); return ids.get(e); };
+const pairs = new Map(); let found = 0;
+for (let i = 0; i < runs.length; i++) { const A = runs[i];
+  for (let j = i + 1; j < runs.length && runs[j].b[1] < A.b[3]; j++) { const B = runs[j];
+    if (A.e === B.e || A.e.contains(B.e) || B.e.contains(A.e)) continue;
+    const x0 = Math.max(A.b[0], B.b[0]), x1 = Math.min(A.b[2], B.b[2]), y0 = Math.max(A.b[1], B.b[1]), y1 = Math.min(A.b[3], B.b[3]);
+    if (x1 - x0 < 2 || y1 - y0 < 1) continue;
+    const key = Math.min(idOf(A.e), idOf(B.e)) + ':' + Math.max(idOf(A.e), idOf(B.e));
+    if (pairs.has(key)) continue;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    if (cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight) {
+      const top = document.elementFromPoint(cx, cy); if (!top) continue;
+      const back = A.e.contains(top) ? B.e : B.e.contains(top) ? A.e : null;
+      if (!back && !(top.contains(A.e) && top.contains(B.e))) continue;
+      let hidden = false;
+      if (back) for (let a = top; a && !a.contains(back); a = a.parentElement) { const t = cs(a), bc = color(t.backgroundColor);
+        if ((bc && bc[3] >= 1) || t.backgroundImage !== 'none') { hidden = true; break; } }
+      if (hidden) continue; }
+    found++;
+    if (pairs.size < 60) pairs.set(key, {a: desc(A.e), b: desc(B.e), w: Math.round(x1 - x0), h: Math.round(y1 - y0)}); } }
+return {runs: runs.length, pairs: [...pairs.values()], found: found}; })()"""
+# keyboard (WCAG 2.1.1), on interactive boards from the settled state: the controls Tab must reach
+# (the target set, outside [data-proto], not aria-hidden, not tabindex < 0, inside an open modal when
+# one is), a focusin recorder, and the click-only controls: an element with a click/mousedown/pointerdown
+# listener (the runtime's on* property, or one added with addEventListener) or, failing that, a pointer
+# cursor its parent does not have, that is neither natively focusable nor tabindex >= 0, sits inside no
+# focusable control or label and holds none (a container of controls delegating clicks is not one), and
+# covers under a quarter of the viewport.
+DESIGN_PREVIEW_KEYS_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + r"""
+const modal = [...document.querySelectorAll('[aria-modal="true"],dialog[open]')].find(boxed) || null;
+const negative = e => e.hasAttribute('tabindex') && parseInt(e.getAttribute('tabindex'), 10) < 0;
+const ctl = controls().filter(e => !e.closest('[data-proto]') && !hiddenIn(e) && !negative(e) && (!modal || modal.contains(e)));
+const L = window.__dcClick;
+const handler = e => ['onclick', 'onmousedown', 'onpointerdown', 'onmouseup', 'onpointerup'].some(p => typeof e[p] === 'function') || (!!L && L.has(e));
+const FOCUS = SEL + ',label,[contenteditable],[tabindex]:not([tabindex^="-"])';
+const area = innerWidth * innerHeight, only = [];
+for (const e of document.body.querySelectorAll('*')) {
+  if (e.closest('[data-proto],script,style,template,noscript') || (e.closest('svg') && e.tagName.toLowerCase() !== 'svg')) continue;
+  const own = handler(e), ptr = !own && cs(e).cursor === 'pointer' && !(e.parentElement && cs(e.parentElement).cursor === 'pointer');
+  if (!own && !ptr) continue;
+  if (e.matches(FOCUS) || e.isContentEditable || (e.parentElement && e.parentElement.closest(FOCUS)) || e.querySelector(FOCUS)) continue;
+  if (!boxed(e) || hiddenIn(e) || off(e) || (modal && !modal.contains(e))) continue;
+  const r = e.getBoundingClientRect(), first = e.getClientRects()[0];
+  if (!first || r.width * r.height > area / 4) continue;
+  const cls = typeof e.className === 'string' ? e.className.trim().split(/\s+/)[0] : '';
+  const key = []; for (let a = e; a && a.parentElement; a = a.parentElement) key.unshift([...a.parentElement.children].indexOf(a));
+  only.push({el: desc(e), sig: e.tagName.toLowerCase() + (cls ? '.' + cls : ''), how: own ? 'a click handler' : 'a pointer cursor', key: key.join('.')}); }
+window.__dcKeys = {ctl: ctl, seen: new Set(), first: null, wrapped: false};
+if (!window.__dcKeysOn) { window.__dcKeysOn = 1;
+  addEventListener('focusin', ev => { const k = window.__dcKeys; if (!k) return;
+    if (k.first === ev.target) k.wrapped = true; else if (!k.first) k.first = ev.target; k.seen.add(ev.target); }, true); }
+if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+const stops = [...document.querySelectorAll(SEL + ',[tabindex]:not([tabindex^="-"])')].filter(e => boxed(e) && !off(e)).length;
+return {controls: ctl.length, stops: stops, only: only, modal: !!modal}; })()"""
+DESIGN_PREVIEW_KEYS_DONE_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + r"""
+const k = window.__dcKeys; if (!k) return null;
+const missed = k.ctl.filter(e => e.isConnected && boxed(e) && !off(e) && !k.seen.has(e));
+return {wrapped: k.wrapped, reached: k.seen.size, missed: missed.map(desc)}; })()"""
+# The keyboard probe: scroll the element with this key into view; the centre of its first box, or null.
+DESIGN_PREVIEW_POINT_JS = ("(k=>{let e=document.documentElement;for(const i of k.split('.')){if(i==='')continue;e=e&&e.children[+i];}"
+                           "if(!e)return null;e.scrollIntoView({block:'center',inline:'center'});const r=e.getClientRects()[0];"
+                           "return r?[r.left+r.width/2,r.top+r.height/2]:null;})")
+# What a click opened: the visible dialogs, menus, tooltips, listboxes and popovers outside [data-proto].
+DESIGN_PREVIEW_OVERLAYS_JS = "(()=>{" + DESIGN_PREVIEW_JS_HELPERS + r"""
+return [...document.querySelectorAll('[role=dialog],[role=alertdialog],[role=menu],[role=tooltip],[role=listbox],[popover],[aria-modal="true"],dialog[open]')]
+  .filter(e => boxed(e) && !e.closest('[data-proto]')).map(e => (e.getAttribute('role') || e.tagName.toLowerCase()) + ' ' + desc(e)); })()"""
 
 
 def design_preview_browser(given):
@@ -6557,6 +8199,43 @@ def design_preview_measured(ctx: dict, rel: str, checks: dict) -> list:
         else:
             found.append(("name", n["el"], f"{n['el']}: a {n['kind']} with no accessible name (no text, aria-label, "
                                            "aria-labelledby, title or img alt)"))
+    ctx["ntc_again"], named, fresh = 0, ctx.setdefault("ntc_named", {}), set()
+    for c in checks.get("ntc", []):
+        # One line per run for a boundary (the same border or fill on the same surface is one token pairing,
+        # drawn again in every view, state and board that shows the control): later shots count it, never
+        # repeat it, and the closing note lists the other boards that draw it.
+        pair = (c["part"], c["fg"], c["bg"])
+        if pair in named and pair not in fresh:
+            ctx["ntc_again"] += 1
+            if named[pair] != rel:
+                ctx.setdefault("ntc_more", {}).setdefault(pair, {}).setdefault(rel, c["el"])
+            continue
+        named[pair] = rel
+        fresh.add(pair)
+        what = f"its {design_preview_num(c['width'])}px border {c['fg']}" if c["part"] == "border" else f"its fill {c['fg']}"
+        found.append(("non-text-contrast", f"{c['fg']} on {c['bg']}",
+                      f"{c['el']}: the control's boundary is {c['ratio']:.2f}:1 against {c['bg']} around it, needs 3:1 "
+                      f"({what}; the best of its border and fill counts; later views, states and boards do not repeat this pair)"))
+    ntc_unmeasured = checks.get("ntc_unmeasured", [])
+    if ntc_unmeasured and rel not in ctx.setdefault("ntc_unmeasured", set()):  # once per board, like unmeasured
+        ctx["ntc_unmeasured"].add(rel)
+        first = ntc_unmeasured[0]
+        found.append(("unmeasured", "ntc", f"{len(ntc_unmeasured)} control boundary(ies) sit on {first['why']} (first: {first['el']}): "
+                                           "non-text contrast not measured; judge it on the PNG"))
+    for b in checks.get("statebar", []):
+        if b["kind"] == "several":
+            message = (f"{b['n']} state bars on one board ({', '.join(b['names'])}): a board that shows one page in several "
+                       "windows carries exactly one bar, above all the windows and inside none, driving them together")
+        elif b["kind"] == "pinned":
+            message = (f"the state bar is position: {b['pos']} ({b['el']}): it is the first row of the page and scrolls "
+                       "away with it, never fixed or sticky")
+        elif b["kind"] == "pages":
+            message = (f"the state bar shows the presets of {b['n']} pages at once ({', '.join(b['names'])}): it lists only "
+                       "the states of the page on screen")
+        else:
+            message = ("the state bar has no [role=group] named by the page (aria-label or aria-labelledby): the preview "
+                       "cannot tell which page is on screen")
+        found.append(("state-bar", b["kind"], message))
     folded: dict = {}
     for check, key, message in found:
         entry = folded.setdefault((check, key), [message, 0])
@@ -6624,14 +8303,17 @@ def design_preview_view(ctx: dict, rel: str, board: dict, view: str) -> int:
         named = {(i["check"], design_preview_fold(i["message"])) for i in record["views"]["frame"]["issues"]}
         kept = [(c, m) for c, m in issues if c not in DESIGN_PREVIEW_CHECKS or (c, design_preview_fold(m)) not in named]
         issues, repeated = kept, len(issues) - len(kept)
-    print(f"board={rel} png={png} w={shot['width']} h={shot['height']} view={view} content={shape['w']}x{shape['h']} "
+    print(f"board={rel} png={design_preview_shown(png)} w={shot['width']} h={shot['height']} view={view} content={shape['w']}x{shape['h']} "
           f"unmounted={len(shape['unmounted'])} errors={len(shape['errors']) + len(shot['errors'])} issues={len(issues)}")
     for check, message in issues:
         print(f"issue board={rel} view={view} check={check}: {message}")
+    again = ctx.get("ntc_again", 0)
     if repeated:
         print(f"note board={rel} view={view}: {repeated} measured issue(s) as in the frame view, not repeated")
-    record["views"][view] = {"png": str(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
-                             "issues": [{"check": c, "message": m} for c, m in issues], "as_in_frame": repeated,
+    if again:
+        print(f"note board={rel} view={view}: {again} non-text-contrast boundary(ies) named earlier in this run, not repeated")
+    record["views"][view] = {"png": design_preview_shown(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
+                             "issues": [{"check": c, "message": m} for c, m in issues], "as_in_frame": repeated, "ntc_as_before": again,
                              "measured": shot["checks"]}
     for link in shot["checks"].get("links", []):
         design_preview_edge(ctx, rel, link["href"])
@@ -6694,6 +8376,239 @@ def design_preview_hover(ctx: dict, rel: str, view: str, state: int, hovered: se
         design_preview_note(ctx, rel, view, state, "click", f"the hover pass stopped: {exc}")
         found += 1
     return found
+
+
+def design_preview_load(page: "DesignBrowser", url: str, width: int, height: int) -> tuple:
+    """A fresh load of `url` in an exact width x height viewport; (loaded, settled)."""
+    page.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
+    page.events.clear()
+    page.call("Page.navigate", {"url": url})
+    loaded = page.wait_event("Page.loadEventFired", DESIGN_PREVIEW_SETTLE)
+    return loaded, page.settle()
+
+
+def design_preview_earlier(record: dict) -> set:
+    """The (check, folded message) pairs the board's views so far already named."""
+    return {(i["check"], design_preview_fold(i["message"])) for v in record["views"].values() for i in v.get("issues", [])}
+
+
+def design_preview_text_view(ctx: dict, rel: str, view: str) -> int:
+    """v61 (P37.S6), a PAGE's two WCAG views: w320 (320 px wide: reflow, WCAG 1.4.10) and text200 (the
+    phone width with every element's font-size doubled: WCAG 1.4.4), each growing to its content. Each
+    names reflow (a sideways scroll), overprint (two text runs crossing) and the clipped check, plus the
+    render's own issues the earlier views did not name. Returns the issue count, or -1 with no screenshot."""
+    page, record = ctx["page"], ctx["report"]["boards"][rel]
+    width, height = (DESIGN_PREVIEW_REFLOW if view == "w320" else DESIGN_PREVIEW_PHONE[0]), DESIGN_PREVIEW_PHONE[1]
+    where = f"at {width}px wide" if view == "w320" else f"at {width}px with {DESIGN_PREVIEW_TEXT_SCALE * 100}% text"
+    png = ctx["out"] / f"{rel[:-len(DESIGN_BOARD_SUFFIX)].replace('/', '__')}.{view}.png"
+    ctx["misses"].clear()
+    try:
+        loaded, settled = design_preview_load(page, f"{ctx['base']}/{rel}", width, height)
+        if view == "text200":
+            page.evaluate(f"{DESIGN_PREVIEW_TEXT_SCALE_JS}({DESIGN_PREVIEW_TEXT_SCALE})")
+            settled = page.settle() and settled
+        shot = design_preview_capture(page, width, height, True, settled)
+        shot["loaded"] = loaded
+        crossed = page.evaluate(DESIGN_PREVIEW_OVERPRINT_JS) or {"pairs": [], "found": 0, "runs": 0}
+    except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+        print(f"board={rel} png=none w={width} h={height} view={view} error=browser")
+        print(f"issue board={rel} view={view} check=screenshot: no screenshot: {exc}")
+        record["views"][view] = {"png": None, "w": width, "h": height,
+                                  "issues": [{"check": "screenshot", "message": f"no screenshot: {exc}"}]}
+        return -1
+    png.write_bytes(shot["png"])
+    shape = shot["shape"]
+    keep = ("clipped", "load", "settle", "too-tall", "unmounted", "runtime-error", "script-error", "not-found")
+    issues = [(c, m) for c, m in design_preview_issues(ctx, rel, shot, True, height) if c in keep]
+    if shape["w"] > width:
+        issues.insert(0, ("reflow", f"content is {shape['w']}px wide {where}: the page scrolls sideways "
+                                    "(it reflows into the width, scrolling only a table, code or a map in its own box)"))
+    for p in crossed["pairs"]:
+        issues.append(("overprint", f"{p['a']} and {p['b']} overprint {where}: their text crosses over {p['w']}x{p['h']}px"))
+    if crossed["found"] > len(crossed["pairs"]):
+        issues.append(("overprint", f"{crossed['found'] - len(crossed['pairs'])} more overprinting pair(s) {where} (see the PNG)"))
+    named = design_preview_earlier(record)
+    kept = [(c, m) for c, m in issues if (c, design_preview_fold(m)) not in named]
+    repeated = len(issues) - len(kept)
+    print(f"board={rel} png={design_preview_shown(png)} w={shot['width']} h={shot['height']} view={view} "
+          f"content={shape['w']}x{shape['h']} unmounted={len(shape['unmounted'])} "
+          f"errors={len(shape['errors']) + len(shot['errors'])} issues={len(kept)}")
+    for check, message in kept:
+        print(f"issue board={rel} view={view} check={check}: {message}")
+    if repeated:
+        print(f"note board={rel} view={view}: {repeated} issue(s) as in an earlier view, not repeated")
+    measured = {"clipped": shot["checks"].get("clipped", []) if isinstance(shot["checks"], dict) else [], "overprint": crossed}
+    record["views"][view] = {"png": design_preview_shown(png), "w": shot["width"], "h": shot["height"],
+                             "content": [shape["w"], shape["h"]], "issues": [{"check": c, "message": m} for c, m in kept],
+                             "as_in_frame": repeated, "measured": measured}
+    return len(kept)
+
+
+def design_preview_keyboard(ctx: dict, rel: str, board: dict) -> int:
+    """v61 (P37.S6): keyboard (WCAG 2.1.1) on an interactive board, frame view, from the settled state.
+    Tab (Input.dispatchKeyEvent) until focus comes back to the first stop, at most DESIGN_PREVIEW_TABS
+    presses; a control the order never reached is unreachable (judged only when the order wrapped). A
+    click-only control (DESIGN_PREVIEW_KEYS_JS) is a keyboard issue too, one line per tag and class; the
+    first DESIGN_PREVIEW_POP_PROBES of them are clicked from a fresh load, and one that opens a dialog,
+    menu, tooltip, listbox or popover is named so. Returns the issue count."""
+    page, url = ctx["page"], f"{ctx['base']}/{rel}"
+    width, height = board["w"], board["h"]
+    record, found = ctx["report"]["boards"][rel], 0
+    key = {"key": "Tab", "code": "Tab", "windowsVirtualKeyCode": 9, "nativeVirtualKeyCode": 9}
+    try:
+        design_preview_load(page, url, width, height)
+        setup = page.evaluate(DESIGN_PREVIEW_KEYS_JS)
+        cap, presses, wrapped = min(DESIGN_PREVIEW_TABS, 2 * max(setup["stops"], setup["controls"]) + 20), 0, False
+        while presses < cap and not wrapped:
+            for _ in range(min(25, cap - presses)):
+                page.call("Input.dispatchKeyEvent", dict(key, type="keyDown"))
+                page.call("Input.dispatchKeyEvent", dict(key, type="keyUp"))
+                presses += 1
+            wrapped = bool(page.evaluate("!!(window.__dcKeys && window.__dcKeys.wrapped)"))
+        done = page.evaluate(DESIGN_PREVIEW_KEYS_DONE_JS) or {"missed": [], "reached": 0}
+        sigs: dict = {}
+        for c in setup["only"]:
+            sigs.setdefault(c["sig"], []).append(c)
+        opened: dict = {}
+        for sig in list(sigs)[:DESIGN_PREVIEW_POP_PROBES]:
+            design_preview_load(page, url, width, height)
+            at = page.evaluate(f"{DESIGN_PREVIEW_POINT_JS}({json.dumps(sigs[sig][0]['key'])})")
+            if not at:
+                continue
+            page.settle(poll=0.04, need=1)
+            before, look = set(page.evaluate(DESIGN_PREVIEW_OVERLAYS_JS) or []), page.evaluate(DESIGN_PREVIEW_STATE_JS)["hash"]
+            design_preview_click(page, at[0], at[1])
+            page.settle(poll=0.04, need=1)
+            try:
+                page.evaluate(DESIGN_PREVIEW_ANIMATIONS_JS)
+            except RuntimeError:
+                pass
+            new = [o for o in page.evaluate(DESIGN_PREVIEW_OVERLAYS_JS) or [] if o not in before]
+            opened[sig] = f"opens {new[0]}" if new else ("changes the page" if page.evaluate(DESIGN_PREVIEW_STATE_JS)["hash"] != look else "")
+    except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+        design_preview_note(ctx, rel, "frame", None, "click", f"the keyboard pass stopped: {exc}")
+        return 1
+    missed = done.get("missed") or []
+    if wrapped and missed:
+        names = ", ".join(missed[:4]) + (f" (+{len(missed) - 4} more)" if len(missed) > 4 else "")
+        design_preview_note(ctx, rel, "frame", None, "keyboard",
+                            f"{len(missed)} control(s) Tab never reaches from the settled state: {names}")
+        found += 1
+    for sig, items in sigs.items():
+        what, how = opened.get(sig), items[0]["how"]
+        more = f" (+{len(items) - 1} more like it)" if len(items) > 1 else ""
+        does = f"{what} on click ({how})" if what else f"takes a click ({how})"
+        design_preview_note(ctx, rel, "frame", None, "keyboard",
+                            f"{items[0]['el']} {does} but never keyboard focus: not natively focusable and no tabindex >= 0, "
+                            f"so a keyboard user cannot reach it{more}")
+        found += 1
+    notes = [f"{done.get('reached', 0)} Tab stop(s) for {setup['controls']} control(s) in {presses} press(es)"
+             + ("" if wrapped else f": the order did not come back to its first stop (cap {cap}), so no control is called unreachable")]
+    if setup.get("modal"):
+        notes.append("an open modal: only its controls are expected")
+    print(f"note board={rel} view=frame: keyboard: " + "; ".join(notes))
+    record["keyboard"] = {"controls": setup["controls"], "reached": done.get("reached", 0), "presses": presses,
+                          "wrapped": wrapped, "missed": missed, "click_only": setup["only"][:40], "opened": opened}
+    return found
+
+
+def design_preview_blocking(report: dict) -> dict:
+    """{check: count} of the blocking checks' issue lines over every board of a (merged) report."""
+    counts: dict = {}
+    for rec in report["boards"].values():
+        items = [i for v in rec.get("views", {}).values() for i in v.get("issues", [])]
+        items += [i for s in rec.get("states", []) for i in s.get("issues", [])] + rec.get("interaction", [])
+        for item in items:
+            if item.get("check") in DESIGN_PREVIEW_BLOCKING:
+                counts[item["check"]] = counts.get(item["check"], 0) + 1
+    return {c: counts[c] for c in DESIGN_PREVIEW_BLOCKING if c in counts}
+
+
+def design_preview_shown(path: Path) -> str:
+    """A screenshot's path as printed and stored: shown() (repo-relative) under the workspace, else absolute."""
+    try:
+        path.resolve().relative_to(ROOT.resolve())
+    except ValueError:
+        return str(path)
+    return shown(path.resolve())
+
+
+def design_preview_tokens(width: int, height: int) -> int:
+    """About what reading one image costs: ceil(w/28) x ceil(h/28) tokens, after the long side is
+    brought down to DESIGN_PREVIEW_SHEET_W."""
+    import math
+    f = min(1.0, DESIGN_PREVIEW_SHEET_W / max(width, height, 1))
+    return math.ceil(width * f / 28) * math.ceil(height * f / 28)
+
+
+def design_preview_sheet(ctx: dict, rel: str) -> dict:
+    """v61 (P37.S6) --contact-sheet: one PNG per board tiling its views and states at one reduced scale
+    (the widest shot fills a tile, at most DESIGN_PREVIEW_SHEET_SCALE of its size; a tile is cut at
+    DESIGN_PREVIEW_SHEET_TILE times its width), each under a caption, at most DESIGN_PREVIEW_SHEET_W px
+    wide, drawn as an HTML page of <img> tiles in the same
+    browser. Returns its record, or {} when the board has no screenshot."""
+    record = ctx["report"]["boards"][rel]
+    tiles = []
+    for view, v in record.get("views", {}).items():
+        if v.get("png"):
+            count = len(v.get("issues", []))
+            tiles.append((f"{view} {v['w']}x{v['h']}" + (f" · {count} issue(s)" if count else ""), v))
+    for s in record.get("states", []):
+        if s.get("png"):
+            count = len(s.get("issues", []))
+            tiles.append((f"{s['view']} state {s['n']:02d}: {' > '.join(s.get('path', []))[:80]}" + (f" · {count} issue(s)" if count else ""), s))
+    files = []
+    for caption, item in tiles:
+        path = Path(item["png"])
+        path = path if path.is_absolute() else (HOST_ROOT or ROOT) / path
+        if path.is_file():
+            files.append((caption, path, item["w"], item["h"]))
+    if not files:
+        return {}
+    import html as htmllib
+    import math
+    cols = max(1, min(6, math.ceil(math.sqrt(len(files)))))
+    gap = 8
+    widest = max(w for _, _, w, _ in files)
+    tile = min((DESIGN_PREVIEW_SHEET_W - gap * (cols + 1)) // cols, max(1, round(widest * DESIGN_PREVIEW_SHEET_SCALE)))
+    scale = tile / widest
+    sheet_w = tile * cols + gap * (cols + 1)
+    cap = int(tile * DESIGN_PREVIEW_SHEET_TILE)
+    cells = []
+    for caption, path, w, h in files:
+        sw, sh = max(1, round(w * scale)), max(1, round(h * scale))
+        cut = " (cut)" if sh > cap else ""
+        cells.append(f'<figure><div class="t" style="height:{min(sh, cap)}px"><img src="{path.as_uri()}" '
+                     f'style="width:{sw}px;height:{sh}px"></div><figcaption>{htmllib.escape(caption + cut)}</figcaption></figure>')
+    title = record.get("title") or rel
+    doc = ("<!doctype html><html><head><meta charset=utf-8><style>"
+           f"body{{margin:0;background:#fff;color:#111;font:13px/1.3 -apple-system,'Helvetica Neue',Arial,sans-serif;width:{sheet_w}px}}"
+           f"h1{{font-size:15px;margin:0;padding:{gap}px {gap}px 0}}"
+           f".g{{display:grid;grid-template-columns:repeat({cols},{tile}px);gap:{gap}px;padding:{gap}px;align-items:start}}"
+           "figure{margin:0}.t{overflow:hidden;outline:1px solid #bbb;background:#f4f4f4}img{display:block}"
+           "figcaption{margin-top:3px;font-size:11px;color:#333;overflow-wrap:anywhere}</style></head><body>"
+           f"<h1>{htmllib.escape(title)} · {htmllib.escape(rel)} · {len(files)} shot(s), 1:{1 / scale:.1f}</h1>"
+           f"<div class=g>{''.join(cells)}</div></body></html>")
+    stem = rel[:-len(DESIGN_BOARD_SUFFIX)].replace("/", "__")
+    page_file = ctx["out"] / f".{stem}.sheet.html"
+    png = ctx["out"] / f"{stem}.sheet.png"
+    page = ctx["page"]
+    page_file.write_text(doc, encoding="utf-8")
+    try:
+        design_preview_load(page, page_file.as_uri(), sheet_w, 300)
+        page.evaluate("Promise.all([...document.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r;})))")
+        height = min(int(page.evaluate("document.documentElement.scrollHeight")), DESIGN_PREVIEW_MAX)
+        page.call("Emulation.setDeviceMetricsOverride", {"width": sheet_w, "height": height, "deviceScaleFactor": 1, "mobile": False})
+        page.settle(poll=0.05, need=1)
+        import base64
+        png.write_bytes(base64.b64decode(page.call("Page.captureScreenshot", {"format": "png"})["data"]))
+    finally:
+        page_file.unlink(missing_ok=True)
+    tokens = design_preview_tokens(sheet_w, height)
+    print(f"sheet board={rel} png={design_preview_shown(png)} w={sheet_w} h={height} tiles={len(files)} "
+          f"scale=1:{1 / scale:.1f} tokens~{tokens} (the {len(files)} PNG(s) one by one: ~{sum(design_preview_tokens(w, h) for _, _, w, h in files)})")
+    return {"png": design_preview_shown(png), "w": sheet_w, "h": height, "tiles": len(files),
+            "scale": round(scale, 4), "tokens": tokens}
 
 
 def design_preview_shifts(before: dict, after: dict, control: dict) -> list:
@@ -6935,6 +8850,9 @@ def design_preview_explore(ctx: dict, rel: str, board: dict, view: str = "frame"
             if before["page"] == now["page"]:
                 for message in design_preview_shifts(before, now, control):
                     issues += say(state["n"], "layout-shift", message)
+            elif control.get("bar"):  # v61: a preset sets its own page's state; the page changes only by the prototype
+                issues += say(state["n"], "state-bar", f"the preset '{control['label']}' moves to another page "
+                              f"({before['page'] or '?'} -> {now['page'] or '?'}): the bar lists only the states of the page on screen")
             if control.get("list") and "text" not in control:
                 opened.setdefault(control["list"], []).append((control["label"], after, now["page"]))
             if now["page"] not in pages_met:
@@ -6978,13 +8896,13 @@ def design_preview_explore(ctx: dict, rel: str, board: dict, view: str = "frame"
                       if (control["label"], text) not in thrown]
             thrown.update((control["label"], text) for text in errors)
             shape = shot["shape"]
-            print(f"state board={rel} view={view} n={new['n']:02d} path=\"{shown}\" png={png} w={shot['width']} "
+            print(f"state board={rel} view={view} n={new['n']:02d} path=\"{shown}\" png={design_preview_shown(png)} w={shot['width']} "
                   f"h={shot['height']} content={shape['w']}x{shape['h']} issues={len(found)}")
             for check, message in found:
                 print(f"issue board={rel} view={view} state={new['n']:02d} check={check}: {message}")
             issues += len(found)
             record["states"].append({"n": new["n"], "view": view, "page": new["page"], "path": [shown_path([s]) for s in path],
-                                     "png": str(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
+                                     "png": design_preview_shown(png), "w": shot["width"], "h": shot["height"], "content": [shape["w"], shape["h"]],
                                      "issues": [{"check": c, "message": m} for c, m in found], "measured": shot["checks"]})
             for link in shot["checks"].get("links", []):
                 design_preview_edge(ctx, rel, link["href"])
@@ -7064,14 +8982,34 @@ def design_preview(args: argparse.Namespace) -> int:
     if not runtime.is_file():
         raise SystemExit(f"design-preview: refused -- no runtime at {runtime} (the orchestrator saves the Design canvas "
                          "type's artifact-type/dc-runtime.js for the job; pass that path)")
-    out = Path(args.out).expanduser().resolve() if args.out else None
-    if out is not None:
+    # v61 (P37.S6) render reuse: the default --out is one stable folder per job and round under the design
+    # root's git-ignored .preview/, so the critic finds the drafter's final render (preview.json, the PNGs,
+    # the contact sheets) without re-rendering it. An --out elsewhere in the design root is refused.
+    rounds = sorted(job["rounds"], key=lambda r: r["number"])
+    current = next((r for r in rounds if r["data"] and r["data"]["status"] == "open"), rounds[-1] if rounds else None)
+    reuse = root / DESIGN_PREVIEW_DIR
+    default_out = reuse / args.job / (current["id"] if current else "no-round")
+    out = Path(args.out).expanduser().resolve() if args.out else default_out.resolve()
+    try:
+        out.relative_to(root.resolve())
+    except ValueError:
+        pass
+    else:
         try:
-            out.relative_to(root.resolve())
+            out.relative_to(reuse.resolve())
         except ValueError:
-            pass
-        else:
-            raise SystemExit(f"design-preview: refused -- --out {out} is inside {DESIGN_ROOT_SHOWN}/; screenshots stay out of the design record")
+            raise SystemExit(f"design-preview: refused -- --out {out} is inside {DESIGN_ROOT_SHOWN}/ but not its git-ignored "
+                             f"{DESIGN_PREVIEW_DIR}/; screenshots stay out of the design record")
+    earlier = None
+    if args.states_only:
+        args.click = True
+        try:
+            earlier = read_json(out / "preview.json")
+        except (ValueError, OSError):
+            earlier = None
+        if not isinstance(earlier, dict) or earlier.get("job") != args.job or not isinstance(earlier.get("boards"), dict):
+            raise SystemExit(f"design-preview: refused -- --states-only reuses an earlier render, and {design_preview_shown(out)} "
+                             "holds none of this job (run design-preview without it first)")
     browser = design_preview_browser(args.browser)
     if browser is None:  # an honest skip: a verdict, not an error, and never a claimed render
         print("preview=skipped reason=no-browser")
@@ -7102,9 +9040,26 @@ def design_preview(args: argparse.Namespace) -> int:
             for name in system.get("files") or []:
                 if not (ds / ns / name).is_file():
                     print(f"warning: system {ns} cache lacks {name}")
-    if out is None:
-        out = Path(tempfile.mkdtemp(prefix=f"design-preview-{args.job}-"))
+    if out == default_out.resolve() and not (reuse / ".gitignore").is_file():  # the renders are local only
+        write_text(reuse / ".gitignore", "*\n")
     out.mkdir(parents=True, exist_ok=True)
+    if earlier is None:
+        try:
+            earlier = read_json(out / "preview.json") if (args.board and (out / "preview.json").is_file()) else None
+        except (ValueError, OSError):
+            earlier = None
+        if not (isinstance(earlier, dict) and earlier.get("job") == args.job and isinstance(earlier.get("boards"), dict)):
+            earlier = None
+    # A board rendered again drops its own old PNGs first (a state that is gone must not linger): only files
+    # named as this command names them (<stem>.<view>[.state-NN].png, <stem>.sheet.png); --states-only
+    # drops only the states and sheets.
+    import glob
+    shot_name = re.compile(r"\.(?:(?:frame|phone|w320|text200)(\.state-\d+)?|(sheet))\.png$")
+    for stem in {rel[:-len(DESIGN_BOARD_SUFFIX)].replace("/", "__") for rel in (args.board or boards)}:
+        for old in out.glob(f"{glob.escape(stem)}.*.png"):
+            match = shot_name.fullmatch(old.name[len(stem):])
+            if match and (not args.states_only or match.group(1) or match.group(2)):
+                old.unlink()
 
     def reading(key):
         title = boards[key].get("title") if isinstance(boards[key], dict) else None
@@ -7113,9 +9068,10 @@ def design_preview(args: argparse.Namespace) -> int:
 
     print(f"runtime=real path={runtime}")
     misses: list = []
-    report = {"schema": 1, "job": args.job, "runtime": str(runtime), "click": bool(args.click), "phone": bool(args.phone),
-              "phone_click": bool(args.phone_click),
-              "boards": {}, "links": [], "issues": [], "totals": {}}
+    report = {"schema": 1, "job": args.job, "round": current["id"] if current else None, "out": design_preview_shown(out),
+              "runtime": str(runtime), "click": bool(args.click), "phone": bool(args.phone),
+              "phone_click": bool(args.phone_click), "states_only": bool(args.states_only),
+              "boards": {}, "links": [], "issues": [], "totals": {}, "sheets": {}}
     profile = tempfile.mkdtemp(prefix="design-preview-profile-")
     try:
         page = DesignBrowser(browser, profile)
@@ -7125,6 +9081,10 @@ def design_preview(args: argparse.Namespace) -> int:
         print(f"preview=failed pngs=0 failed=1 issues=1 states=0 out={out}")
         return 1
     server = design_preview_server(project, runtime_bytes, misses)
+    try:
+        page.call("Page.addScriptToEvaluateOnNewDocument", {"source": DESIGN_PREVIEW_LISTENERS_JS})
+    except RuntimeError:
+        pass  # the keyboard check then reads the on* properties and the pointer cursor only
     ctx = {"page": page, "out": out, "misses": misses, "base": f"http://127.0.0.1:{server.server_address[1]}",
            "boards": boards, "project": project, "report": report, "unmeasured": set(), "edges": {}, "states": 0}
     shots = issues = failed = 0
@@ -7136,6 +9096,17 @@ def design_preview(args: argparse.Namespace) -> int:
             report["boards"][rel] = {"title": entry.get("title"), "page": entry.get("expand") == "fill",
                                      "interactive": entry.get("is_interactive") is True, "views": {}, "states": [],
                                      "click_errors": []}
+            if args.states_only:  # the frame and phone views (and the WCAG views) of the earlier render are kept
+                old_board = earlier["boards"].get(rel) or {}
+                report["boards"][rel]["views"] = old_board.get("views") or {}
+                for kept in ("keyboard",):
+                    if kept in old_board:
+                        report["boards"][rel][kept] = old_board[kept]
+                report["boards"][rel]["interaction"] = [i for i in old_board.get("interaction", [])
+                                                        if i.get("check") == "keyboard" or entry.get("is_interactive") is not True]
+                for kept_view in report["boards"][rel]["views"].values():  # their boundaries are named already
+                    for c in (kept_view.get("measured") or {}).get("ntc", []):
+                        ctx.setdefault("ntc_named", {}).setdefault((c["part"], c["fg"], c["bg"]), rel)
             try:
                 w, h = int(board["w"]), int(board["h"])
             except (KeyError, TypeError, ValueError):
@@ -7150,10 +9121,16 @@ def design_preview(args: argparse.Namespace) -> int:
             board = dict(board, w=w, h=h)
             views = ["frame"] + (["phone"] if board.get("expand") == "fill" or args.phone else [])
             for view in views:
-                found = design_preview_view(ctx, rel, board, view)
+                if args.states_only:  # reuse the earlier render of this view; only its states are taken again
+                    found = 0 if report["boards"][rel]["views"].get(view, {}).get("png") else -1
+                    if found < 0:
+                        print(f"note board={rel} view={view}: no earlier render of this view to reuse (run without --states-only)")
+                        continue
+                else:
+                    found = design_preview_view(ctx, rel, board, view)
                 if found < 0:
                     failed += 1
-                else:
+                elif not args.states_only:
                     shots += 1
                     issues += found
                 if found < 0 or not args.click:
@@ -7170,13 +9147,37 @@ def design_preview(args: argparse.Namespace) -> int:
                         print(f"issue board={rel} view={view} check=click: the click-through stopped: {exc}")
                         report["boards"][rel].setdefault("click", {}).setdefault(view, {})["stopped"] = str(exc)
                         issues += 1
-                elif view == "frame" and board.get("expand") == "fill":  # a PAGE nobody clicks through still gets the hover pass
+                elif view == "frame" and board.get("expand") == "fill" and not args.states_only:  # a PAGE nobody clicks through still gets the hover pass
                     issues += design_preview_hover(ctx, rel, view, 0, set())
+            if args.states_only:
+                continue
+            # v61 (P37.S6): the WCAG passes -- a PAGE's reflow and 200%-text views, an interactive board's keyboard pass.
+            if board.get("expand") == "fill":
+                for view in ("w320", "text200"):
+                    found = design_preview_text_view(ctx, rel, view)
+                    if found < 0:
+                        failed += 1
+                    else:
+                        shots += 1
+                        issues += found
+            if board.get("is_interactive") is True:
+                issues += design_preview_keyboard(ctx, rel, board)
+        if args.contact_sheet:
+            for rel in rendered:
+                sheet = design_preview_sheet(ctx, rel)
+                if sheet:
+                    report["sheets"][rel] = sheet
     finally:
         page.close()
         server.shutdown()
         server.server_close()
         shutil.rmtree(profile, ignore_errors=True)
+    for (part, fg, bg), more in ctx.get("ntc_more", {}).items():  # where a folded boundary is drawn again
+        named = ", ".join(f"{r} ({el})" for r, el in list(more.items())[:3]) + (f" (+{len(more) - 3} more)" if len(more) > 3 else "")
+        print(f"note: the non-text-contrast {part} {fg} on {bg} (first named on {ctx['ntc_named'][(part, fg, bg)]}) is also on "
+              f"{len(more)} other board(s): {named}")
+        report.setdefault("ntc_also", []).append({"part": part, "fg": fg, "bg": bg, "first": ctx["ntc_named"][(part, fg, bg)],
+                                                 "boards": more})
     for rel in sorted(ctx["edges"]):
         for target, kind in sorted(ctx["edges"][rel].items()):
             report["links"].append({"from": rel, "to": target, "external": kind == "external"})
@@ -7201,10 +9202,25 @@ def design_preview(args: argparse.Namespace) -> int:
                     issues += 1
     seconds = round(time.monotonic() - started, 1)
     report["totals"] = {"pngs": shots, "failed": failed, "issues": issues, "states": ctx["states"], "seconds": seconds}
+    if earlier is not None:  # a partial render (--board, --states-only) keeps the earlier render's other boards
+        redone = set(report["boards"])
+        report["boards"] = dict({k: v for k, v in earlier["boards"].items() if k not in redone and k in boards}, **report["boards"])
+        report["issues"] = [i for i in earlier.get("issues", []) if i.get("board") not in redone] + report["issues"]
+        report["links"] = [l for l in earlier.get("links", []) if l.get("from") not in redone] + report["links"]
+        report["sheets"] = dict({k: v for k, v in (earlier.get("sheets") or {}).items() if k not in redone}, **report["sheets"])
+        report["merged"] = sorted(set(report["boards"]) - redone)
+    blocking = design_preview_blocking(report)
+    report["self_check"] = {"result": "fail" if blocking else "pass", "blocking": blocking}
     (out / "preview.json").write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"preview={'failed' if failed and not shots else 'done'} pngs={shots} failed={failed} issues={issues} "
-          f"states={ctx['states']} seconds={seconds:g} out={out}")
-    return 1 if failed else 0
+          f"states={ctx['states']} seconds={seconds:g} out={design_preview_shown(out)}")
+    if report.get("merged"):
+        print(f"note: preview.json keeps the earlier render of {len(report['merged'])} board(s) not rendered now")
+    print(f"self_check={'fail' if blocking else 'pass'} blocking="
+          + (",".join(f"{c}:{n}" for c, n in blocking.items()) or "none"))
+    if failed:
+        return 1
+    return 1 if args.strict and blocking else 0
 
 
 def design_migrate(args: argparse.Namespace) -> None:
@@ -7425,34 +9441,27 @@ def main(argv=None) -> int:
     p.add_argument("--explore", action="store_true", help="the read-only Explore lookup agent's dispatch (the explore row)")
     p.set_defaults(func=cmd_executor_route)
 
-    p = sub.add_parser("record-dispatch", help="Append one executor_dispatched record to works/events.jsonl (slice, kind, risk, route, tier, agent, model, effort, attribution, attempt, verdict, and the measured duration / tokens / tool uses from the Agent completion notification); copy route / model / effort from executor-route; writes nothing else")
+    p = sub.add_parser("record-dispatch", help="Append one executor_dispatched record to works/events.jsonl: the verdict a slice dispatch returned (slice, phase, kind, risk, attempt, verdict, note). What it ran on and cost is metered from the transcripts by dispatch-summary; the pre-v61 flags (--route --model --effort --tier --agent --duration-ms --tokens --tool-uses) still parse and are ignored; writes nothing else")
     p.add_argument("slice", help="the slice that was dispatched")
-    p.add_argument("--route", required=True, choices=EXECUTOR_ROUTES, help="the route row dispatched on (the route= line executor-route printed)")
-    p.add_argument("--model", required=True, help="the model the dispatch ran on (the model= line)")
-    p.add_argument("--effort", required=True, help="the effort the dispatch ran on (the effort= line; empty when none was passed)")
     p.add_argument("--verdict", required=True, choices=_DISPATCH_VERDICTS, help="how the executor returned; failed = an empty or failed return")
     p.add_argument("--attempt", type=int, default=1, help="1 for the first dispatch, 2 for the retry (default 1)")
-    p.add_argument("--tier", choices=EXECUTOR_TIERS + ("-",), help="the tier (default: the route's tier; none for design, critic, judge and explore; - is none, as executor-route prints it)")
-    p.add_argument("--agent", help="the subagent_type dispatched (default: the route's installed agent -- the tier's, design-drafter for design, design-critic for critic and judge)")
-    p.add_argument("--duration-ms", type=int, dest="duration_ms", help="duration_ms from the completion notification")
-    p.add_argument("--tokens", type=int, help="subagent_tokens from the completion notification")
-    p.add_argument("--tool-uses", type=int, dest="tool_uses", help="tool_uses from the completion notification")
-    p.add_argument("--note", help="free text, e.g. back-filled from the completion notification")
+    p.add_argument("--note", help="free text")
+    for flag, dest in _RECORD_DISPATCH_RETIRED:
+        p.add_argument(flag, dest=dest, help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_record_dispatch)
 
-    p = sub.add_parser("dispatch-summary", help="Read-only: summarize the executor_dispatched records in works/events.jsonl by route, by model @ effort and by kind (dispatches, verdict counts, retries, mean / total minutes, tokens); --slice lists one slice's attempts; --json for tooling")
-    p.add_argument("--phase", help="keep one phase's records")
-    p.add_argument("--slice", help="keep one slice's records (its attempts, in order) and print them one per line")
-    p.add_argument("--json", action="store_true", help="print the aggregates as one JSON object")
+    p = sub.add_parser("dispatch-summary", help="Read-only: what a phase really cost -- the main thread beside its subagent spans per slice and per phase (requests, context, output, list-price $, minutes, limit hits, verdicts) metered from Claude Code's transcripts, the means a DECOMP estimates from, then the recorded verdicts; no transcripts found prints one line and the recorded tables")
+    p.add_argument("--phase", help="one phase: its slices, read from the sessions overlapping its slice windows")
+    p.add_argument("--slice", help="one slice: its metered rows and its recorded attempts, one per line")
+    p.add_argument("--json", action="store_true", help="print everything as one JSON object")
+    p.add_argument("--transcripts", action="append", metavar="DIR", help="read this projects/<slug> directory instead of discovering the session root's (repeatable)")
     p.set_defaults(func=cmd_dispatch_summary)
 
     p = sub.add_parser("next", help="Print the current phase/slice selection")
+    p.add_argument("--card", action="store_true", help="print the resume card instead: the pointer, the next action or the typed stop, the open gates, the running spans (from the newest session's subagents/*.meta.json) and the slice's file paths, computed from state, at most 2,048 bytes -- what compact-resume prints after a compaction")
     p.set_defaults(func=cmd_next)
 
-    p = sub.add_parser("compact-gate", help="The PreCompact hook (matcher auto): read the hook JSON on stdin and veto an auto-compaction while this checkout's current slice is in_progress or in_review or the tree is dirty, so compaction lands at a slice boundary; fails open -- a manual /compact, a fill at or above the ceiling (AGENTIC_COMPACT_CEILING), the cap of consecutive blocks (AGENTIC_COMPACT_BLOCK_CAP) and any error all allow, a block is only the stdout {\"decision\": \"block\"} JSON, and it always exits 0 (one trace line on stderr)")
-    p.set_defaults(func=cmd_compact_gate)
-
-    p = sub.add_parser("compact-resume", help="The SessionStart hook (matcher compact): print the next pointer and the resume line (re-read the running skill, the active slice folder and phase.md's ## Now) after a compaction; never fails, always exits 0")
+    p = sub.add_parser("compact-resume", help="The SessionStart hook (matcher compact): after a compaction, print compaction=done source=compact and the resume card (next --card; the running spans from the hook's transcript_path session), falling back to the plain pointer on any error; never fails, always exits 0")
     p.set_defaults(func=cmd_compact_resume)
 
     p = sub.add_parser("deferred", help="Rebuild and print deferred jobs dashboard summary")
@@ -7488,10 +9497,13 @@ def main(argv=None) -> int:
     p.add_argument("--outcome", help="one line recorded in slice.json and rendered in the phase's generated ## Slices table")
     p.set_defaults(func=finish_slice)
 
-    p = sub.add_parser("set-slice-status", help="Set any valid slice status")
+    p = sub.add_parser("set-slice-status", help="Set any valid slice status; a pending stop is typed with --stop-kind and --on-words (stored in slice.json as pending: {kind, on_words, since}, printed by next and the resume card, cleared when the slice leaves pending)")
     p.add_argument("slice")
     p.add_argument("status")
-    p.set_defaults(func=lambda args: (set_slice_status(args.slice, args.status), print(f"slice {args.slice}: {args.status}")))
+    p.add_argument("--stop-kind", dest="stop_kind", choices=SLICE_STOP_KINDS,
+                   help="pending only: what kind of stop this is -- " + "; ".join(f"{k} = {v}" for k, v in SLICE_STOP_KINDS.items()))
+    p.add_argument("--on-words", dest="on_words", help="pending only: what the operator's words on return will do (one line)")
+    p.set_defaults(func=cmd_set_slice_status)
 
     p = sub.add_parser("set-phase-status", help="Set any valid phase status")
     p.add_argument("phase")
@@ -7569,7 +9581,18 @@ def main(argv=None) -> int:
     p.add_argument("--json", action="store_true", help="print the same answer as one JSON object")
     p.set_defaults(func=phase_scope)
 
-    # The design contract, schema 2 (v60): the on-disk layout lives in design-cowork/SKILL.md "The design record".
+    p = sub.add_parser("phase-section", help="Read or write ONE `## ` section of a phase's phase.md: no name = the index (a line per heading with its bytes), a name prints that section, --replace / --append write one section (stdin or --file), --resolve OQ<n> --pointer <ref> collapses an Operator Questions entry; every other byte of the notebook stays identical",
+                       description="phase.md is an index: read one section, write one section, never the whole file. Put the section name BEFORE the flags: phase-section P1 Now --replace --file now.md. Names match case-insensitively (Now, Decisions, 'Doc impact', 'Operator Questions', 'Notes for later slices', Objective, Slices). Slices is generated and refused; Doc impact and Operator Questions are append-only (--append, or --resolve to collapse an answered entry).")
+    p.add_argument("phase")
+    p.add_argument("name", nargs="*", help="section heading (quote it when it has spaces); omit for the index")
+    p.add_argument("--replace", action="store_true", help="replace the section's body (the heading and the rest of the file are kept byte-identical)")
+    p.add_argument("--append", action="store_true", help="add text at the end of the section")
+    p.add_argument("--resolve", metavar="OQ<n>", help="collapse that Operator Questions entry to one line (entries are never deleted)")
+    p.add_argument("--pointer", help="with --resolve: where the answer landed (a Decisions line, a deferred job, a slice)")
+    p.add_argument("--file", help="read the new text from this file (default: stdin)")
+    p.set_defaults(func=phase_section)
+
+    # The design contract, schema 2 (v60): the on-disk layout lives in design-cowork/reference/record.md "The design record".
     p = sub.add_parser("design-init", help=f"Write the design project manifest {DESIGN_ROOT_REL}/design.json (schema {DESIGN_SCHEMA}: id, name, a null-filled system); idempotent -- an unchanged manifest is not rewritten; a schema-1 manifest is refused (design-migrate --to 2)",
                        description=f"Create or update {DESIGN_ROOT_REL}/design.json, the one design project this repo holds. Defaults: id = the repo folder's name, slugified; name = the folder's name. The system record stays as it is (design-system sets it).")
     p.add_argument("--id", default=None, help="the project id: lowercase [a-z0-9-], starting alphanumeric, at most 63 characters")
@@ -7593,16 +9616,16 @@ def main(argv=None) -> int:
     g = p.add_mutually_exclusive_group()
     g.add_argument("--new-job", action="store_true", help="create another job for a slice that already has one (a wave's next surface)")
     g.add_argument("--job", default=None, help="open the next round of this job (e.g. 02-settings); it must belong to --slice")
-    p.add_argument("--critique", default="off", metavar="{" + ",".join(DESIGN_CRITIQUE_LEVELS) + "}", help=f"the round's critique level: {' | '.join(DESIGN_CRITIQUE_LEVELS)} (default off)")
+    p.add_argument("--critique", default=None, metavar="{" + ",".join(DESIGN_CRITIQUE_LEVELS) + "}", help=f"the round's critique level: {' | '.join(DESIGN_CRITIQUE_LEVELS)} (default off; a superseding round, the scoped re-draft after an operator note, stays off unless this is passed)")
     p.set_defaults(func=design_open)
 
-    p = sub.add_parser("design-check", help=f"Check {DESIGN_ROOT_REL}/ against the design contract -- well-formed design.json, job.json and round.json (a critique level, when present, is off, critic or critic+judge), at most one open round per job, and each job's canvas tree (canvas.json keys, boards listed and present, Main.dc.html, path rules, the ./support.js line, board titles numbered 01..N, references inside project/), no stray HTML; warnings exit 0, problems exit 1",
+    p = sub.add_parser("design-check", help=f"Check {DESIGN_ROOT_REL}/ against the design contract -- well-formed design.json, job.json and round.json (a critique level, when present, is off, critic or critic+judge), at most one open round per job, and each job's canvas tree (canvas.json keys, boards listed and present, Main.dc.html, path rules, the ./support.js line, board titles numbered 01..N, references inside project/), no stray HTML, waves/<slice>/ folders and every brief a handoff names, and (v61) no absolute or home path in the record's text (a problem while open, a warning once closed); warnings exit 0, problems exit 1",
                        description=f"Read-only. With a job id, only design.json and that job. Board titles start \"NN · \" with NN forming 01..N as a set (the layout is free). A canvas pinning another system version than design.json's is a warning, and so is an open job past {DESIGN_JOB_PAGES_MAX} Pages (boards with expand: fill) or {DESIGN_JOB_BOARDS_MAX} boards (one job is one surface, sized for one review; a board another board mounts with <dc-import name=...>, a flow board's screen or a gap component's one-instance board, is not counted). Board lint, also warnings, for an open job or a job named by id: check=leaves-canvas (an href to an https URL other than Google Fonts CSS: the link leaves the prototype) and check=same-target-list (a link with a literal .dc.html target inside a <sc-for>: every row opens the same board). A co-work slice may hold several jobs. The OK line lists every open round. {DESIGN_LEGACY_DIR}/ and {DESIGN_SCHEMA1_DIR}/ are legacy records and never read.")
     p.add_argument("job", nargs="?", default=None, help="a job id, e.g. 01-signin (default: every job)")
     p.set_defaults(func=design_check)
 
     p = sub.add_parser("design-canvas", help="Record a job's canvas Artifact in its job.json: --url after creating it, --version after each publish (also records the published file list), --implemented once the signed job is built",
-                       description="--url takes the same Artifact address rule as design-system. --version records canvas.version and sets canvas.published to the files under canvas/project/ (ds/ left out), which the next design-publish-plan diffs against, and canvas.system to the system version canvas.json pins for design.json's namespace (null when it pins none): the version that publish installed. --implemented needs the job signed.")
+                       description="--url takes the same Artifact address rule as design-system. --version records canvas.version and sets canvas.published to the files under canvas/project/ (ds/ left out), which the next design-publish-plan diffs against, canvas.manifest to their byte sizes (what design-readback compares a listing with), the job's open round's published to the version (what design-sign presents), and canvas.system to the system version canvas.json pins for design.json's namespace (null when it pins none): the version that publish installed. --implemented needs the job signed.")
     p.add_argument("job", help="the job id, e.g. 01-signin")
     p.add_argument("--url", default=None, help="the canvas Artifact's address")
     p.add_argument("--version", default=None, help="the version id the last publish returned")
@@ -7614,8 +9637,9 @@ def main(argv=None) -> int:
     p.add_argument("job", help="the job id, e.g. 01-signin")
     p.set_defaults(func=design_publish_plan)
 
-    p = sub.add_parser("design-preview", help="Render each board of a job's canvas locally for the drafter's self-check: serve canvas/project/ (its ds/ system cache included) with the Design canvas type's real runtime as ./support.js over http on 127.0.0.1, screenshot every board in an exact viewport with a throwaway headless Chrome/Chromium profile driven over the DevTools pipe (no port), print one board=<file> png=<path> w= h= line per screenshot plus its issues; no browser prints preview=skipped reason=no-browser, writes nothing and exits 0",
-                       description=f"Never views the published canvas and never calls claude.ai. --runtime is the type's artifact-type/dc-runtime.js, which the orchestrator saves per job (never vendored); it renders standalone, so no stand-in ships. A board renders at its canvas.json w x h; a PAGE (expand: fill) grows to its content and also renders {DESIGN_PREVIEW_PHONE[0]} px wide (--phone: every board). Each line also gives the content size, unmounted parts (an x-import whose system global is missing, a dc-import whose board is missing), script errors and the issue count; issue lines name a clipped frame, a sideways overflow, runtime errors and files not found. Browser: --browser, else ${DESIGN_PREVIEW_BROWSER_ENV} (a named one is the only candidate), else the known Chrome/Chromium paths, else chromium/google-chrome on PATH. Writes only the PNGs and preview.json (outside the design record) and, once, canvas/project/ds/.gitignore (*) when ds/ exists; a system the canvas installs but ds/<namespace>/ lacks is a warning (the engine never fetches it). Exit 1 only when a screenshot failed. "
+    p = sub.add_parser("design-preview", help="Render each board of a job's canvas locally for the drafter's self-check: serve canvas/project/ (its ds/ system cache included) with the Design canvas type's real runtime as ./support.js over http on 127.0.0.1, screenshot every board in an exact viewport with a throwaway headless Chrome/Chromium profile driven over the DevTools pipe (no port), print one board=<file> png=<path> w= h= line per screenshot plus its issues, then the WCAG machine checks (non-text-contrast, reflow and overprint at 320px and 200%% text, keyboard) and a final self_check=pass|fail line; the render stays in the job's git-ignored round folder for the critic; no browser prints preview=skipped reason=no-browser, writes nothing and exits 0",
+                       description=f"Never views the published canvas and never calls claude.ai. --runtime is the type's artifact-type/dc-runtime.js, which the orchestrator saves per job (never vendored); it renders standalone, so no stand-in ships. A board renders at its canvas.json w x h; a PAGE (expand: fill) grows to its content and also renders {DESIGN_PREVIEW_PHONE[0]} px wide (--phone: every board). Each line also gives the content size, unmounted parts (an x-import whose system global is missing, a dc-import whose board is missing), script errors and the issue count; issue lines name a clipped frame, a sideways overflow, runtime errors and files not found. Browser: --browser, else ${DESIGN_PREVIEW_BROWSER_ENV} (a named one is the only candidate), else the known Chrome/Chromium paths, else chromium/google-chrome on PATH. Writes only the PNGs, preview.json and the contact sheets -- by default into {DESIGN_ROOT_SHOWN}/{DESIGN_PREVIEW_DIR}/<job>/<round>/ (the job's open round, else its last; git-ignored, so outside the design record: the critic reads the drafter's final render there instead of rendering again; a whole run replaces the folder's shots, a --board run only that board's, and preview.json keeps the other boards' earlier render) -- and, once, canvas/project/ds/.gitignore (*) when ds/ exists; a system the canvas installs but ds/<namespace>/ lacks is a warning (the engine never fetches it). Exit 1 when a screenshot failed, or with --strict when the self-check fails. "
+                                   f"SELF-CHECK (v61): the last line is self_check=pass|fail blocking=<check:count,...>|none over the whole (merged) render, where blocking = {', '.join(DESIGN_PREVIEW_BLOCKING)}; preview.json repeats it as self_check: {{result, blocking}}. "
                                    f"MEASURED CHECKS, in every view and state; every issue line reads 'issue board=<file> [view=<v>] [state=NN] check=<name>: ...'. "
                                    f"contrast: each visible text run (one per element; aria-hidden, invisible and zero-size text skipped) against the background its ancestors paint, color alpha, background alpha and ancestor opacity composited over white, colors in any CSS syntax; WCAG 4.5:1, or 3:1 for text >= 24px or >= 18.66px bold. A background image, gradient, filter or blend mode in the way makes the text 'unmeasured' (one line per board: judge it on the PNG), never a guess; not seen: a positioned sibling or <img> under the text, text-shadow, placeholder and field-value text, SVG text. "
                                    f"target: an a[href], button, input, select, textarea, summary, ARIA button/link/checkbox/radio/switch/tab/menuitem or tabindex>=0 element (visible, enabled) whose box is under {DESIGN_PREVIEW_TARGET}x{DESIGN_PREVIEW_TARGET}px, a field's <label> counted with it; a link inside a run of text is exempt (WCAG's inline exception). "
@@ -7623,22 +9647,45 @@ def main(argv=None) -> int:
                                    "dead-link: an <a href> to a .dc.html that is no canvas.json board, to another relative file not in the tree, to an #id with no element, or a bare # placeholder; absolute URLs (https:, mailto:) are listed as external, never fetched. "
                                    "image: an <img> that loaded with naturalWidth 0 (background images are not checked). "
                                    "name: a button or link with no accessible name (text, aria-label, aria-labelledby, title or an inner img alt), a form field with no label (label for=, a wrapping label, aria-label, aria-labelledby; a placeholder is not one). "
-                                   "The canvas-only prototype chrome ([data-proto]: the state bar, the board-link strip) is exempt from target, layout-shift and hover-contrast, and is never sampled as a list. "
+                                   "non-text-contrast (WCAG 1.4.11): each visible, enabled control of the target set by element or role (inline text links, [data-proto], aria-hidden ones, UA-drawn checkboxes/radios/ranges/pickers and a scrim over a quarter of the viewport left out) whose boundary -- a >= 1px border that is not none/hidden, or else its own fill; the better of the two counts -- is under 3:1 against the color its ancestors paint around it, composited like contrast; a control with no border or fill, or with both under 1.1:1 (drawn in the surface's color), has no boundary to check unless it is a form field; a background image, gradient, filter or blend mode in the way makes it 'unmeasured'. One line per run for each border/fill-on-surface pair: later views, states and boards count it and a closing note lists the boards that draw it again. Not seen: box-shadow or outline boundaries, an icon's own shapes, focus indicators, a state told apart by a tint on a control whose border passes (the better boundary counts). "
+                                   f"state-bar: the bar ([data-proto=\"state-bar\"]) or an ancestor position fixed or sticky; two or more bars on one board (a board showing one page in several windows carries exactly one, above all the windows and inside none); a bar showing more than one page's named group; a bar with no named [role=group]; with --click, a preset that moves to another page. design-check lints what the source shows (a pinned bar in a style or rule; an interactive board mounting one board as windows with no bar of its own). "
+                                   f"WCAG VIEWS of each PAGE (expand: fill), each growing to its content: w320 ({DESIGN_PREVIEW_REFLOW}px wide) and text200 ({DESIGN_PREVIEW_PHONE[0]}px wide with every element's computed font-size read, then set to {DESIGN_PREVIEW_TEXT_SCALE}x, so nothing compounds); each names reflow (content wider than the view: a sideways scroll; WCAG 1.4.10/1.4.4), overprint (two text runs of different elements, neither containing the other, whose glyph boxes -- the middle half of each line box, cut to every overflow/clip-path ancestor -- cross where it shows: the topmost element there is one of them and nothing opaque hides the other; [data-proto] left out; identical pairs folded) and the clipped check, plus render issues the frame and phone views did not name (<stem>.w320.png, <stem>.text200.png). Not seen: real browser text zoom or a minimum-font setting, text in images or SVG, overlap with non-text shapes, an overprint a scroll or a click reveals. "
+                                   f"keyboard (WCAG 2.1.1), on each is_interactive board from the settled frame view: Tab (Input.dispatchKeyEvent) until focus comes back to its first stop, at most {DESIGN_PREVIEW_TABS} presses; a control of the target set (outside [data-proto], not tabindex < 0, inside an open modal when there is one) the order never reached is unreachable (judged only when it came back). A click-only control -- an element with a click/mousedown/pointerdown listener (an on* property, or addEventListener) or, failing that, a pointer cursor its parent lacks, neither natively focusable nor tabindex >= 0, inside no control or label, holding none and under a quarter of the viewport -- is one line per tag and class; the first {DESIGN_PREVIEW_POP_PROBES} are clicked from a fresh load and one that opens a dialog, menu, tooltip, listbox or popover is named so. Not seen: focus order sense, a visible focus indicator, keys other than Tab (arrows, Escape, Enter on a fake control), a listener delegated to an ancestor with no pointer cursor. "
+                                   "The canvas-only prototype chrome ([data-proto]: the state bar, the board-link strip) is exempt from target, non-text-contrast, overprint, keyboard, layout-shift and hover-contrast, and is never sampled as a list. "
                                    "Identical findings fold into one line ('+N more like it'); the phone view and the states repeat none the frame view named. The render's own issues are check=load, settle, too-tall, frame-clip, page-clip (a PAGE's state taller than its frame h, in the frame view: the render grows a PAGE, the canvas frame does not), overflow, unmounted, runtime-error, script-error, not-found, screenshot, size and browser. "
                                    f"--click: link lines and check=unreachable (a PAGE board, expand: fill, that no chain of links from Main.dc.html reaches; a Components board is not expected to be linked); on each is_interactive board, real mouse clicks (Input.dispatchMouseEvent) at each visible, enabled, uncovered control's centre, breadth first from the settled initial state, never a link that leaves the board. A state is a new visible DOM (shown elements with their class, style and open/expanded/selected/current/disabled attributes, and shown text, plus whether every visible text field holds text); a ticked box or a typed value alone is not a state. The state bar's presets ([data-proto=\"state-bar\"] buttons) are tried first, once per page (a preset sets its page's complete state), and a state on a page not met before is explored ahead of the rest; the page on screen is the bar's visible [role=group] name, else the first h1. A list of {DESIGN_PREVIEW_LIST_SAMPLE}+ alike rows is sampled: its first, second and last row. The type pass types a realistic sample into each visible text field (email, phone, name, postcode, search from the listed text, ...) and fills a form of two or more empty fields whole in one step, each a step of the path; select, date and other native pickers are not explored. After a step the page settles, the short timers it set are waited for (up to 3s: 'Saving...' is passed through to 'Saved') and its animations end. Each state's PNG is taken on its path replayed from a fresh load. A click that throws is check=click-error, once per control. check=layout-shift: a step that stays on the same page and resizes a control (outside [data-proto]) by more than {DESIGN_PREVIEW_SHIFT}px, or moves a header, nav or main by more than {DESIGN_PREVIEW_SHIFT}px; a step to another page is navigation, never a shift. check=same-target: two or more sampled rows of one list open the same state of another page. check=hover-contrast (PAGE boards, frame view, each state): the pointer rests on each button and link once per board (transitions off), and a text run of the hovered control that newly fails contrast is an issue (the a:hover color beating a system Button rendered as <a>). Frame view only, unless --phone-click; at most {DESIGN_PREVIEW_STATES} states, {DESIGN_PREVIEW_DEPTH} steps deep, {DESIGN_PREVIEW_CLICKS} steps and {DESIGN_PREVIEW_BOARD_SECONDS}s per board and view, each cap said on the board's note line. "
-                                   "preview.json: {schema, job, runtime, click, phone, phone_click, boards: {<file>: {title, page, interactive, views: {frame|phone: {png, w, h, content, issues: [{check, message}], as_in_frame, measured}}, states: [{n, view, page, path, png, w, h, content, issues, measured}], click_errors, interaction: [{view, state, check, message}], click: {frame|phone: {states, clicks, notes}}}}, links: [{from, to, external}], issues: [board-level {board, check, message} and every interaction finding {board, view, state, check, message}], totals: {pngs, failed, issues, states, seconds}}; measured holds every raw finding (contrast: el, size, weight, need, ratio, fg, bg; target: el, w, h; clipped; links; images; names) and the counts texts, targets, fields.")
+                                   "--states-only takes only the states again (--click implied), reusing the earlier render's views in --out; --contact-sheet writes <stem>.sheet.png per board, its shots tiled at half size or less under captions (a sheet line gives its token cost against the PNGs one by one). "
+                                   "preview.json: {schema, job, round, out, runtime, click, phone, phone_click, states_only, boards: {<file>: {title, page, interactive, views: {frame|phone|w320|text200: {png, w, h, content, issues: [{check, message}], as_in_frame, measured}}, states: [{n, view, page, path, png, w, h, content, issues, measured}], click_errors, interaction: [{view, state, check, message}], click: {frame|phone: {states, clicks, notes}}, keyboard: {controls, reached, presses, wrapped, missed, click_only, opened}}}, links: [{from, to, external}], issues: [board-level {board, check, message} and every interaction finding {board, view, state, check, message}], sheets: {<file>: {png, w, h, tiles, scale, tokens}}, ntc_also, merged (the boards kept from the earlier render), self_check: {result, blocking}, totals: {pngs, failed, issues, states, seconds}}; png paths are repo-relative under the workspace; measured holds every raw finding (contrast: el, size, weight, need, ratio, fg, bg; target: el, w, h; clipped; links; images; names; ntc: el, part, ratio, fg, bg, width; statebar; overprint in the WCAG views) and the counts texts, targets, fields, boundaries, bars.")
     p.add_argument("job", help="the job id, e.g. 01-signin")
     p.add_argument("--runtime", required=True, help="the path of the Design canvas type's runtime (artifact-type/dc-runtime.js) the orchestrator saved for this job")
-    p.add_argument("--out", default=None, help="the folder for the PNGs (default: a fresh temp folder); never inside the design root")
+    p.add_argument("--out", default=None, help=f"the folder for the PNGs, preview.json and the contact sheets (default: the job's round folder under the design root's git-ignored {DESIGN_PREVIEW_DIR}/, {DESIGN_ROOT_SHOWN}/{DESIGN_PREVIEW_DIR}/<job>/<round>/, where the critic finds the drafter's final render); never elsewhere inside the design root")
     p.add_argument("--browser", default=None, help=f"the Chrome/Chromium executable (default: ${DESIGN_PREVIEW_BROWSER_ENV}, then the known paths)")
     p.add_argument("--board", action="append", default=None, help="render only this board (its canvas.json key, e.g. Main.dc.html); repeatable")
     p.add_argument("--phone", action="store_true", help=f"also render every board {DESIGN_PREVIEW_PHONE[0]} px wide (a PAGE always is)")
     p.add_argument("--phone-click", action="store_true", help=f"with --click (implied), also click through each interactive PAGE at {DESIGN_PREVIEW_PHONE[0]} px wide (<stem>.phone.state-NN.png); about doubles the time")
     p.add_argument("--click", action="store_true", help=f"also click through: print the link graph (link from= to= lines; a PAGE no link chain from Main.dc.html reaches is an issue) and, on each is_interactive board, try the state-bar presets first, then every control (list rows sampled) and a sample typed into each text field, breadth first, and screenshot each new state (state lines, <stem>.frame.state-NN.png), checking layout-shift, same-target, page-clip and, on PAGE boards, hover-contrast; at most {DESIGN_PREVIEW_STATES} states, {DESIGN_PREVIEW_DEPTH} steps deep, {DESIGN_PREVIEW_CLICKS} steps and {DESIGN_PREVIEW_BOARD_SECONDS}s per board, in the frame view only (--phone-click: also at {DESIGN_PREVIEW_PHONE[0]} px)")
+    p.add_argument("--states-only", action="store_true", help="with --click (implied): take only the interaction states again, reusing the frame, phone and WCAG views of the earlier render in --out (refused when there is none); preview.json keeps every other board's earlier render")
+    p.add_argument("--contact-sheet", action="store_true", help=f"also write one <stem>.sheet.png per board rendered: its views and states tiled at one reduced scale, {DESIGN_PREVIEW_SHEET_W}px wide, each under a caption (a sheet line gives its size and its token cost against the PNGs one by one)")
+    p.add_argument("--strict", action="store_true", help=f"exit 1 when the self-check fails (any {', '.join(DESIGN_PREVIEW_BLOCKING)} issue); without it the exit code is as before")
     p.set_defaults(func=design_preview)
 
-    p = sub.add_parser("design-close", help="Close an open design round of a job: snapshot the job's canvas tree (ds/ left out) into the round folder, record canvas_version, then with --words mark the round and its job signed, or with --superseded mark the round superseded; idempotent",
-                       description="--words needs jobs/<job>/rounds/<round>/SIGNOFF.md written first and a passing design-check of the job. --canvas-version defaults to the job's recorded canvas.version. Re-run a half-landed close; a closed round is never rewritten.")
+    p = sub.add_parser("design-readback", help="Read a job's published canvas back without pulling it: --listing parses the Artifact list scope:files output (file or - for stdin) and prints readback=unchanged|changed|changed-unlocated, one fetch= line naming only the files to read (changed and added by size against the publish manifest; the boards when no size moved or no manifest exists) and removed= ones; --fetched <dir> then diffs each fetched file against the local canvas tree (diff=<path> +A -B), and --apply copies them in; records readback in the open round's round.json; never prints file contents",
+                       description="A listing at the job's recorded canvas.version is unchanged. Otherwise the project/ files outside ds/ are size-compared with job.json canvas.manifest (SKILL.md, index.html, artifact-type/ and project/ds/ are ignored). --fetched reads <dir>/project/<path> or <dir>/<path>, writes the unified diffs to <dir>/readback.diff (a scratch dir outside the design root, never the record) and settles the read-back as unchanged, differs (not copied) or edited (--apply: the operator's files copied over the local canvas files, so the record holds what they saw). --apply refuses, copying nothing, while a file gone from the canvas is still in the local tree.")
+    p.add_argument("job", help="the job id, e.g. 01-signin")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--listing", default=None, metavar="FILE|-", help="the Artifact list scope:files output, saved to a file or piped on stdin (-)")
+    g.add_argument("--fetched", default=None, metavar="DIR", help="the scratch out_dir the fetch list was read into with Artifact read")
+    p.add_argument("--apply", action="store_true", help="with --fetched: copy the fetched files over the local canvas files")
+    p.set_defaults(func=design_readback)
+
+    p = sub.add_parser("design-sign", help="Sign every job presented at a stop on the operator's literal words: each open round of the slice that recorded a publish (design-canvas --version) is signed as design-close --words would; all or nothing -- one presented round without a settled read-back, without its build contract or failing design-check signs none; one line per job",
+                       description="Rounds of the slice that published nothing yet are held, not signed. Each signed round gets a generated SIGNOFF.md (the words verbatim, the canvas version, the read-back, the open-item ids), its snapshot, and its job marked signed. With a mockup requested, the words at PENDING #1 are its go-ahead, not a signoff: sign at PENDING #2.")
+    p.add_argument("--slice", required=True, help="the co-work slice whose presented jobs are signed (e.g. P48.S1)")
+    p.add_argument("--words", required=True, help="the operator's literal signoff words, recorded verbatim")
+    p.set_defaults(func=design_sign)
+
+    p = sub.add_parser("design-close", help="Close an open design round of a job: snapshot the job's canvas tree (ds/ left out) into the round folder, record canvas_version, then with --words generate SIGNOFF.md and mark the round and its job signed, or with --superseded mark the round superseded; idempotent",
+                       description="--words needs the round's recorded publish of the job's canvas, a settled read-back of it (design-readback: unchanged or edited), the build contract (result.md ## Build, or a legacy build-prompt.md) and a passing design-check of the job; it generates SIGNOFF.md from the words, the canvas version, the read-back and the open_items: ids of the round's verdict blocks (a hand-written SIGNOFF.md is kept, with a warning). --canvas-version defaults to the read-back's live version, else the job's recorded canvas.version. Re-run a half-landed close; a closed round is never rewritten.")
     p.add_argument("round", help="the round: <job>/<round> (e.g. 01-signin/02-revise), or the bare round id when only one job has it")
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--words", default=None, help="the operator's literal signoff words, recorded verbatim in round.json")
@@ -7694,7 +9741,7 @@ def main(argv=None) -> int:
     p.set_defaults(func=rotate_backlog)
 
     args = parser.parse_args(argv)
-    if NESTED is not None and NESTED_PROBLEMS and args.cmd not in ("validate", "compact-gate", "compact-resume"):  # the hooks fail open
+    if NESTED is not None and NESTED_PROBLEMS and args.cmd not in ("validate", "compact-resume"):  # the hook fails open
         # Never fall back to at-root mode on a broken marker: refuse, and let validate list it all.
         raise SystemExit(f"{shown(ROOT / NESTED_MARKER)} is malformed, so this nested install cannot run {args.cmd}: "
                          f"{'; '.join(NESTED_PROBLEMS)} -- fix the file (run: {WORKFLOW_CMD} validate)")
