@@ -1,0 +1,258 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Callouts",
+          "type": "text"
+        }
+      ],
+      "id": "callouts",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "A note with no title.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "NOTE",
+      "title": null,
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "Body with ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "strong",
+                  "type": "text"
+                }
+              ],
+              "type": "strong"
+            },
+            {
+              "text": " text.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        },
+        {
+          "id": null,
+          "items": [
+            {
+              "blocks": [
+                {
+                  "content": [
+                    {
+                      "text": "a list inside",
+                      "type": "text"
+                    }
+                  ],
+                  "id": null,
+                  "type": "paragraph"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "content": [
+                    {
+                      "text": "and more",
+                      "type": "text"
+                    }
+                  ],
+                  "id": null,
+                  "type": "paragraph"
+                }
+              ]
+            }
+          ],
+          "ordered": false,
+          "start": null,
+          "tight": true,
+          "type": "list"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "IMPORTANT",
+      "title": [
+        {
+          "text": "The key idea",
+          "type": "text"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "Warning body.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "WARNING",
+      "title": [
+        {
+          "text": "Careful",
+          "type": "text"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "Caution body.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "CAUTION",
+      "title": null,
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "Skippable body.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "SKIP",
+      "title": [
+        {
+          "text": "Skip this if you know ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "SQL",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "A collapsed definition.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        },
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "A quote inside a callout.",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ],
+          "id": null,
+          "type": "blockquote"
+        }
+      ],
+      "collapsed": true,
+      "id": null,
+      "kind": "DEFINITION",
+      "title": [
+        {
+          "text": "Primer: write lock",
+          "type": "text"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "Normalized to NOTE.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "NOTE",
+      "title": [
+        {
+          "text": "Lowercase type",
+          "type": "text"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "blocks": [],
+      "collapsed": false,
+      "id": null,
+      "kind": "WARNING",
+      "title": null,
+      "type": "callout"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

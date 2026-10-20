@@ -14,7 +14,7 @@ import json
 import re
 import shutil
 from pathlib import Path, PurePosixPath
-from typing import Optional, Union
+from typing import NamedTuple, Optional, Union
 
 import yaml
 
@@ -157,6 +157,12 @@ def _frontmatter_inner_lines(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
+    native: bool = False,
+    summary: Optional[str] = None,
 ) -> list[str]:
     """The YAML field lines shared by the '---' fenced (md) and '<!--kb' comment
     (html) frontmatter serializers — everything BETWEEN the fences. Factored out so
@@ -168,11 +174,39 @@ def _frontmatter_inner_lines(
     ``version`` (P23) is emitted directly after ``date`` **only for version >= 2**:
     a first version carries no ``version:`` field, so an unversioned corpus stays
     byte-identical to before P23 and ``reindex`` reads a missing field as v1.
+
+    ``lang`` / ``translated_from`` / ``subject`` (P30.S2) follow, each **only when
+    given**, so a document published without them is byte-identical to before P30:
+    ``lang: ko``, then ``translated_from:`` as a ``{lang, version}`` block, then
+    ``subject:`` (a JSON string, like the title).
+
+    ``assets`` (P30.S4) is the version's asset map, emitted LAST and only when
+    non-empty (so every document without images is byte-identical to before): an
+    ``assets:`` mapping with one JSON-flow line per name, sorted. JSON is valid YAML,
+    and the quoted key keeps a name like ``true`` or ``1.5`` a string.
+
+    ``native`` (P30.S5) adds ``format: native`` and ``syntax: 1`` after the version
+    (P29 *Header*), and ``summary`` (a JSON string, like the title) after ``subject``;
+    neither is ever emitted for an ``md``/``html`` document, which stays
+    byte-identical.
     """
     lines = [f"title: {json.dumps(title, ensure_ascii=False)}"]
     lines.append(f"date: {date}")
     if version is not None and version >= 2:
         lines.append(f"version: {int(version)}")
+    if native:
+        lines.append("format: native")
+        lines.append("syntax: 1")
+    if lang:
+        lines.append(f"lang: {lang}")
+    if translated_from:
+        lines.append("translated_from:")
+        lines.append(f"  lang: {translated_from['lang']}")
+        lines.append(f"  version: {int(translated_from['version'])}")
+    if subject:
+        lines.append(f"subject: {json.dumps(subject, ensure_ascii=False)}")
+    if native and summary:
+        lines.append(f"summary: {json.dumps(summary, ensure_ascii=False)}")
     lines.append("tags:")
     for t in tags:
         lines.append(f"  - {t}")
@@ -183,6 +217,11 @@ def _frontmatter_inner_lines(
     lines.append("source:")
     lines.append(f"  project: {project}")
     lines.append(f"  repo: {source_repo}")
+    if assets:
+        lines.append("assets:")
+        for name in sorted(assets):
+            entry = json.dumps(assets[name], ensure_ascii=False, sort_keys=True)
+            lines.append(f"  {json.dumps(name)}: {entry}")
     return lines
 
 
@@ -195,6 +234,12 @@ def serialize_frontmatter(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
+    native: bool = False,
+    summary: Optional[str] = None,
 ) -> str:
     """Hand-rolled frontmatter block, byte-exact to the docs/ convention.
 
@@ -216,6 +261,12 @@ def serialize_frontmatter(
         source_repo=source_repo,
         related=related,
         version=version,
+        lang=lang,
+        subject=subject,
+        translated_from=translated_from,
+        assets=assets,
+        native=native,
+        summary=summary,
     )
     return "---\n" + "\n".join(inner) + "\n---\n"
 
@@ -229,6 +280,10 @@ def serialize_html_frontmatter(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> str:
     """The HTML-comment frontmatter block for an explainer ``.html`` doc.
 
@@ -246,6 +301,10 @@ def serialize_html_frontmatter(
         source_repo=source_repo,
         related=related,
         version=version,
+        lang=lang,
+        subject=subject,
+        translated_from=translated_from,
+        assets=assets,
     )
     return "<!--kb\n" + "\n".join(inner) + "\n-->\n"
 
@@ -439,6 +498,10 @@ def write_document_file(
     related: Optional[list[str]] = None,
     fmt: str = "md",
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> str:
     """Write ``docs/<rel_path>`` as ``<frontmatter> + "\\n" + body``.
 
@@ -463,6 +526,10 @@ def write_document_file(
             source_repo=source_repo or "",
             related=related,
             version=version,
+            lang=lang,
+            subject=subject,
+            translated_from=translated_from,
+            assets=assets,
         )
     else:
         header = serialize_frontmatter(
@@ -473,6 +540,10 @@ def write_document_file(
             source_repo=source_repo or "",
             related=related,
             version=version,
+            lang=lang,
+            subject=subject,
+            translated_from=translated_from,
+            assets=assets,
         )
     content = header + "\n" + _normalize_body(body)
     target = Path(docs_root) / rel_path
@@ -484,6 +555,89 @@ def write_document_file(
     else:
         _meta, parsed_body = parse_frontmatter(content)
     return parsed_body.lstrip("\n")
+
+
+def native_file_content(
+    *,
+    title: str,
+    date: str,
+    tags: list[str],
+    project: str,
+    source_repo: Optional[str],
+    body: str,
+    related: Optional[list[str]] = None,
+    version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
+    summary: Optional[str] = None,
+) -> tuple[str, int]:
+    """Compose a native chapter file (P30.S5): the server's ``---`` header plus the body.
+
+    The header is the md convention's, plus ``format: native`` / ``syntax: 1`` and an
+    optional ``summary`` (P29 *Header*); the server owns it, so a publish sends the
+    body alone. Returns ``(content, body_offset)``: the file to hand to
+    ``server.native.parse_chapter``, and how many file lines precede the body's first
+    line (so a violation's file line maps back to the line of the body the caller
+    sent). Nothing is written here: the parser's ``.source`` (ids written in) is what
+    ``write_raw_document_file`` stores.
+    """
+    header = serialize_frontmatter(
+        title=title,
+        date=date,
+        tags=tags,
+        project=project,
+        source_repo=source_repo or "",
+        related=related,
+        version=version,
+        lang=lang,
+        subject=subject,
+        translated_from=translated_from,
+        assets=assets,
+        native=True,
+        summary=summary,
+    )
+    stripped = _LEADING_BLANKS_RE.match(body or "")
+    leading = stripped.group(0).count("\n") if stripped else 0
+    content = header + "\n" + _normalize_body(body)
+    # header lines + the blank separator line, minus the leading blanks dropped.
+    return content, header.count("\n") + 1 - leading
+
+
+def write_raw_document_file(
+    *, docs_root: Union[str, Path], rel_path: str, content: str
+) -> None:
+    """Write a fully composed document file verbatim (the native write path, P30.S5)."""
+    target = Path(docs_root) / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+
+
+def is_native_meta(meta: dict) -> bool:
+    """Whether a parsed ``---`` header marks a native chapter (P29 *Format flag*):
+    ``format: native``. The extension alone still means ``md`` or ``html``."""
+    return isinstance(meta, dict) and meta.get("format") == "native"
+
+
+def replace_recent_link(
+    docs_root: Union[str, Path], old_rel_path: str, new_rel_path: str
+) -> bool:
+    """Re-point the Recent bullet of ``old_rel_path`` at ``new_rel_path`` in place.
+
+    The ``html -> native`` migration (P30.S5) moves a document's file; its existing
+    bullet keeps its date and position and only its link changes. Returns whether a
+    bullet was re-pointed (``False``: no index, or no bullet for the old path).
+    """
+    index_path = Path(docs_root) / "index.md"
+    if not index_path.exists():
+        return False
+    text = index_path.read_text(encoding="utf-8")
+    needle = f"]({old_rel_path})"
+    if needle not in text:
+        return False
+    index_path.write_text(text.replace(needle, f"]({new_rel_path})"), encoding="utf-8")
+    return True
 
 
 def update_recent_index(
@@ -617,20 +771,34 @@ def archive_dir_rel_path(rel_path: str) -> str:
 def archive_rel_path(rel_path: str, version: int) -> str:
     """``.versions/<project>/<date>-<slug>/vNNNN.<ext>`` for one superseded body.
 
-    The extension mirrors the document's own, so a document's format is fixed for
-    the life of its version chain (the write path rejects a format change on a
-    version bump) and an archive file's parser is unambiguous.
+    The extension mirrors the body being archived, so an archive file's parser is
+    unambiguous. A chain keeps one extension except across the one allowed format
+    migration, ``html -> native`` (P30.S5), where the archived html bodies keep
+    ``.html`` beside the later ``.md`` ones in the same stem-keyed directory.
     """
     ext = PurePosixPath(rel_path).suffix.lstrip(".") or "md"
     return f"{archive_dir_rel_path(rel_path)}/v{int(version):04d}.{ext}"
 
 
-def parse_archive_rel_path(archive_rel: str) -> Optional[tuple[str, int]]:
-    """Inverse of ``archive_rel_path``: -> ``(document rel_path, version)`` or ``None``.
+class ArchivePath(NamedTuple):
+    """A parsed archive path. ``stem`` (``<project>/<date>-<slug>``) is the document's
+    identity; ``ext`` is the archived body's own extension, which may differ from the
+    current document's after an ``html -> native`` migration (P30.S5)."""
 
-    ``None`` for anything that is not a well-formed archive path (wrong top dir,
-    wrong depth, a filename that is not ``vNNNN.{md,html}``) — reindex reports those
-    as skipped rather than guessing.
+    stem: str
+    version: int
+    ext: str
+
+
+def parse_archive_rel_path(archive_rel: str) -> Optional[ArchivePath]:
+    """Inverse of ``archive_rel_path``: -> ``ArchivePath(stem, version, ext)`` or ``None``.
+
+    Stem-based (P30.S5): the archive directory is keyed by the document's stem, and
+    one chain may hold ``v0001.html`` … ``v0003.html`` then ``v0004.md`` once the
+    document migrated to native. Reindex maps the stem to whichever current document
+    owns it. ``None`` for anything that is not a well-formed archive path (wrong top
+    dir, wrong depth, a filename that is not ``vNNNN.{md,html}``) — reindex reports
+    those as skipped rather than guessing.
     """
     parts = PurePosixPath(archive_rel).parts
     if len(parts) != 4 or parts[0] != ARCHIVE_DIR:
@@ -641,7 +809,7 @@ def parse_archive_rel_path(archive_rel: str) -> Optional[tuple[str, int]]:
     version = int(m.group(1))
     if version < 1:
         return None
-    return f"{parts[1]}/{parts[2]}.{m.group(2)}", version
+    return ArchivePath(f"{parts[1]}/{parts[2]}", version, m.group(2))
 
 
 def _frontmatter_block_end(lines: list[str]) -> Optional[int]:

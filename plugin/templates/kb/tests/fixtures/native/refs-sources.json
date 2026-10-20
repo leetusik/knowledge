@@ -1,0 +1,306 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "References",
+          "type": "text"
+        }
+      ],
+      "id": "references",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "In-chapter: ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "the sources",
+              "type": "text"
+            }
+          ],
+          "href": "#sources-list",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "a source",
+              "type": "text"
+            }
+          ],
+          "href": "#src-one",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " and ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "a quiz item",
+              "type": "text"
+            }
+          ],
+          "href": "#q-ref",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".\nChapters: ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "same project",
+              "type": "text"
+            }
+          ],
+          "href": "chapter:phases/p8",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "with lang",
+              "type": "text"
+            }
+          ],
+          "href": "chapter:phases/p8?lang=ko",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ",\n",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "with an id",
+              "type": "text"
+            }
+          ],
+          "href": "chapter:phases/p8#background",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "both",
+              "type": "text"
+            }
+          ],
+          "href": "chapter:phases/p8?lang=en#background",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ",\n",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "other project",
+              "type": "text"
+            }
+          ],
+          "href": "chapter:knowledge/phases/p30",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".\nDocuments: ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "loose",
+              "type": "text"
+            }
+          ],
+          "href": "doc:write-lock",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "other project",
+              "type": "text"
+            }
+          ],
+          "href": "doc:finance/compound-interest",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".\nAn image: ",
+          "type": "text"
+        },
+        {
+          "alt": "a diagram",
+          "src": "asset:flow.png",
+          "title": "Flow",
+          "type": "image"
+        },
+        {
+          "text": ".\nExternal: ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "https",
+              "type": "text"
+            }
+          ],
+          "href": "https://example.com",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " and ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "http",
+              "type": "text"
+            }
+          ],
+          "href": "http://example.com/path#frag",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "id": "quiz-1",
+      "items": [
+        {
+          "answer": [
+            {
+              "text": "In the ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "sources",
+                  "type": "text"
+                }
+              ],
+              "href": "#sources",
+              "title": null,
+              "type": "link"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "explain": null,
+          "id": "q-ref",
+          "prompt": [
+            {
+              "text": "Where is ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "the source",
+                  "type": "text"
+                }
+              ],
+              "href": "#src-two",
+              "title": null,
+              "type": "link"
+            },
+            {
+              "text": "?",
+              "type": "text"
+            }
+          ],
+          "type": "recall"
+        }
+      ],
+      "title": null,
+      "type": "quiz"
+    },
+    {
+      "content": [
+        {
+          "text": "Sources",
+          "type": "text"
+        }
+      ],
+      "id": "sources-list",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "id": "sources",
+      "items": [
+        {
+          "accessed": "2026-10-21",
+          "date": "2024-01-28",
+          "id": "src-one",
+          "note": "The grammar the format starts from.",
+          "publisher": "CommonMark",
+          "title": "The CommonMark spec",
+          "url": "https://spec.commonmark.org/0.31.2/"
+        },
+        {
+          "accessed": null,
+          "date": null,
+          "id": "src-two",
+          "note": null,
+          "publisher": null,
+          "title": "GitHub Flavored Markdown",
+          "url": "https://github.github.com/gfm/"
+        }
+      ],
+      "type": "sources"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

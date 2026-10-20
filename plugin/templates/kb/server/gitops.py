@@ -51,9 +51,36 @@ def _run(args: list[str], *, root, timeout: Optional[float] = None) -> subproces
     return proc
 
 
+# Chapter images are never committed (P30 A2): ``.assets/`` holds them under every
+# tenant root, and tenant #1's public repo must never carry one.
+_NEVER_STAGED_DIR = ".assets"
+
+
 def add(paths: Iterable[str], *, root) -> None:
-    """``git -C <root> add -- <paths...>`` — only the given paths, never ``-A``."""
-    _run(["add", "--", *list(paths)], root=root)
+    """``git -C <root> add -- <paths...>`` — only the given paths, never ``-A``.
+
+    A path inside an ``.assets/`` tree is dropped before git sees it (P30.S4): the
+    images live on the box disk only, whatever a caller passes. ``.assets/`` is also
+    gitignored, so this is the second of two guards.
+    """
+    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    if not kept:
+        return
+    _run(["add", "--", *kept], root=root)
+
+
+def remove(paths: Iterable[str], *, root) -> None:
+    """Stage the deletion of files already gone from the work tree (P30.S5).
+
+    ``git -C <root> rm --cached --quiet --ignore-unmatch -- <paths...>``: the html ->
+    native migration unlinks the old ``.html`` file itself, and this records that
+    removal in the same scoped commit. ``--ignore-unmatch`` keeps a never-committed
+    path from failing the commit.
+    """
+    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    if not kept:
+        return
+    _run(["rm", "--cached", "--quiet", "--ignore-unmatch", "--", *kept], root=root)
 
 
 def commit(message: str, *, root, co_authored_by: Optional[str] = None) -> str:

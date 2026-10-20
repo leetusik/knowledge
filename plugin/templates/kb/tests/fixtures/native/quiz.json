@@ -1,0 +1,230 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Check yourself",
+          "type": "text"
+        }
+      ],
+      "id": "check",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "id": "check-quiz",
+      "items": [
+        {
+          "answer": [
+            "b"
+          ],
+          "explain": [
+            {
+              "text": "The measure is ",
+              "type": "text"
+            },
+            {
+              "text": "--rd-measure",
+              "type": "code"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "id": "read-column",
+          "options": [
+            {
+              "id": "a",
+              "text": [
+                {
+                  "text": "30rem",
+                  "type": "text"
+                }
+              ]
+            },
+            {
+              "id": "b",
+              "text": [
+                {
+                  "children": [
+                    {
+                      "text": "36rem",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "strong"
+                }
+              ]
+            },
+            {
+              "id": "c",
+              "text": [
+                {
+                  "text": "48rem",
+                  "type": "text"
+                }
+              ]
+            }
+          ],
+          "prompt": [
+            {
+              "text": "How wide is the reading column?",
+              "type": "text"
+            }
+          ],
+          "type": "choice"
+        },
+        {
+          "answer": [
+            "a",
+            "c"
+          ],
+          "explain": [
+            {
+              "text": "Callouts and tables are plain Markdown.",
+              "type": "text"
+            }
+          ],
+          "id": "pick-all",
+          "options": [
+            {
+              "id": "a",
+              "text": [
+                {
+                  "text": "figure",
+                  "type": "text"
+                }
+              ]
+            },
+            {
+              "id": "b",
+              "text": [
+                {
+                  "text": "callout",
+                  "type": "text"
+                }
+              ]
+            },
+            {
+              "id": "c",
+              "text": [
+                {
+                  "text": "quiz",
+                  "type": "text"
+                }
+              ]
+            },
+            {
+              "id": "d",
+              "text": [
+                {
+                  "text": "table",
+                  "type": "text"
+                }
+              ]
+            }
+          ],
+          "prompt": [
+            {
+              "text": "Which are typed blocks?",
+              "type": "text"
+            }
+          ],
+          "type": "choice"
+        },
+        {
+          "answer": [
+            {
+              "text": "The manifest and the file, written together.",
+              "type": "text"
+            }
+          ],
+          "explain": [
+            {
+              "text": "See ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "the section",
+                  "type": "text"
+                }
+              ],
+              "href": "#check",
+              "title": null,
+              "type": "link"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "id": "recall-lock",
+          "prompt": [
+            {
+              "text": "What does the write lock protect?",
+              "type": "text"
+            }
+          ],
+          "type": "recall"
+        },
+        {
+          "explain": [
+            {
+              "text": "One writer at a time.",
+              "type": "text"
+            }
+          ],
+          "id": "fill-lock",
+          "text": [
+            {
+              "text": "The ",
+              "type": "text"
+            },
+            {
+              "accept": [
+                "write lock",
+                "WRITE_LOCK"
+              ],
+              "type": "blank"
+            },
+            {
+              "text": " is held around ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "every",
+                  "type": "text"
+                }
+              ],
+              "type": "strong"
+            },
+            {
+              "text": " ",
+              "type": "text"
+            },
+            {
+              "accept": [
+                "write"
+              ],
+              "type": "blank"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "type": "cloze"
+        }
+      ],
+      "title": "Check yourself",
+      "type": "quiz"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

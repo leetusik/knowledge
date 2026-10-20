@@ -1,0 +1,517 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Text before the first heading belongs to no section.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "content": [
+        {
+          "text": "Getting started",
+          "type": "text"
+        }
+      ],
+      "id": "getting-started",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "A paragraph with ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "emphasis",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "strong",
+              "type": "text"
+            }
+          ],
+          "type": "strong"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "struck",
+              "type": "text"
+            }
+          ],
+          "type": "del"
+        },
+        {
+          "text": ", ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "single",
+              "type": "text"
+            }
+          ],
+          "type": "del"
+        },
+        {
+          "text": " and ",
+          "type": "text"
+        },
+        {
+          "text": "inline code",
+          "type": "code"
+        },
+        {
+          "text": ".\nA soft break, then a hard break",
+          "type": "text"
+        },
+        {
+          "type": "break"
+        },
+        {
+          "text": "and an ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "external link",
+              "type": "text"
+            }
+          ],
+          "href": "https://example.com/a?b=1",
+          "title": "Example",
+          "type": "link"
+        },
+        {
+          "text": ", an autolink\n",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "https://example.org/x",
+              "type": "text"
+            }
+          ],
+          "href": "https://example.org/x",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " and a bare ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "www.example.net",
+              "type": "text"
+            }
+          ],
+          "href": "http://www.example.net",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " link. Entities: & ©.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "id": null,
+      "items": [
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "first",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "second",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            },
+            {
+              "id": null,
+              "items": [
+                {
+                  "blocks": [
+                    {
+                      "content": [
+                        {
+                          "text": "nested ",
+                          "type": "text"
+                        },
+                        {
+                          "children": [
+                            {
+                              "text": "a",
+                              "type": "text"
+                            }
+                          ],
+                          "type": "em"
+                        }
+                      ],
+                      "id": null,
+                      "type": "paragraph"
+                    }
+                  ]
+                },
+                {
+                  "blocks": [
+                    {
+                      "content": [
+                        {
+                          "text": "nested b",
+                          "type": "text"
+                        }
+                      ],
+                      "id": null,
+                      "type": "paragraph"
+                    }
+                  ]
+                }
+              ],
+              "ordered": false,
+              "start": null,
+              "tight": true,
+              "type": "list"
+            }
+          ]
+        }
+      ],
+      "ordered": true,
+      "start": 1,
+      "tight": true,
+      "type": "list"
+    },
+    {
+      "id": null,
+      "items": [
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "loose start",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "after a blank line",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        }
+      ],
+      "ordered": true,
+      "start": 3,
+      "tight": true,
+      "type": "list"
+    },
+    {
+      "id": null,
+      "items": [
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "one",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "two",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        }
+      ],
+      "ordered": false,
+      "start": null,
+      "tight": false,
+      "type": "list"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "A plain quote.\nStill the quote.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "id": null,
+      "type": "blockquote"
+    },
+    {
+      "id": null,
+      "type": "hr"
+    },
+    {
+      "align": [
+        "left",
+        "center",
+        "right",
+        null
+      ],
+      "head": [
+        [
+          {
+            "text": "Left",
+            "type": "text"
+          }
+        ],
+        [
+          {
+            "text": "Centre",
+            "type": "text"
+          }
+        ],
+        [
+          {
+            "text": "Right",
+            "type": "text"
+          }
+        ],
+        [
+          {
+            "text": "None",
+            "type": "text"
+          }
+        ]
+      ],
+      "id": null,
+      "rows": [
+        [
+          [
+            {
+              "text": "a",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "children": [
+                {
+                  "text": "b",
+                  "type": "text"
+                }
+              ],
+              "type": "strong"
+            }
+          ],
+          [
+            {
+              "text": "c",
+              "type": "code"
+            }
+          ],
+          []
+        ],
+        [
+          [
+            {
+              "text": "1",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "text": "2",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "text": "3",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "text": "4",
+              "type": "text"
+            }
+          ]
+        ]
+      ],
+      "type": "table"
+    },
+    {
+      "id": "app-code",
+      "lang": "python",
+      "text": "def main():\n    return 1",
+      "title": "server/app.py",
+      "type": "code"
+    },
+    {
+      "id": null,
+      "lang": null,
+      "text": "plain fence, no language",
+      "title": null,
+      "type": "code"
+    },
+    {
+      "id": null,
+      "lang": "text",
+      "text": "  +--+\n  |  |\n  +--+",
+      "title": null,
+      "type": "code"
+    },
+    {
+      "id": null,
+      "lang": null,
+      "text": "indented code",
+      "title": null,
+      "type": "code"
+    },
+    {
+      "id": null,
+      "lang": "mermaid",
+      "text": "graph TD; a-->b",
+      "title": null,
+      "type": "code"
+    },
+    {
+      "content": [
+        {
+          "text": "Getting started",
+          "type": "text"
+        }
+      ],
+      "id": "getting-started-2",
+      "level": 3,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "Deep dive",
+          "type": "text"
+        }
+      ],
+      "id": "deep",
+      "level": 4,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "Setext heading two",
+          "type": "text"
+        }
+      ],
+      "id": "setext-heading-two",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "Sources",
+          "type": "text"
+        }
+      ],
+      "id": "sources-list",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "!!!",
+          "type": "text"
+        }
+      ],
+      "id": "s-1",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "Closing",
+          "type": "text"
+        }
+      ],
+      "id": "closing",
+      "level": 2,
+      "type": "heading"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}
