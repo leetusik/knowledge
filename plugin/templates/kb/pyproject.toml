@@ -16,6 +16,7 @@ dependencies = [
     "markdown-it-py==4.2.0",
     "mdit-py-plugins==0.6.1",
     "pillow>=13.0.0",
+    "fsrs==6.3.2",
 ]
 
 [dependency-groups]

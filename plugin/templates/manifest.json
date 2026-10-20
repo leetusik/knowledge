@@ -155,6 +155,8 @@
       "tests/test_reader_state.py",
       "server/anchors.py",
       "tests/test_anchors.py",
+      "server/review.py",
+      "tests/test_review.py",
       "tests/fixtures/anchors/cases.json",
       "tests/fixtures/anchors/chapter-ko.md",
       "tests/fixtures/anchors/chapter-v1.md",

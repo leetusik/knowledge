@@ -73,3 +73,25 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
   schema change.
 - **decisions.md:** ADR: server-side re-anchoring from the immutable captured anchor, status-only
   write-back, the fuzzy method with both 0.8 bars, and the OQ31–OQ34 edge cases.
+
+## P30.S10
+
+- **api.md:** `GET /app/reader/review/queue?limit=` (1–100, default 20) → `{now, day, profile, counts:
+  {due, new_highlights, done_today, by_book}, limit_reached, next_due_at, cards}`; `POST
+  /app/reader/review/cards/{id}/review` `{rating: again|good, review_id, response?, duration_ms?}` →
+  `{card, counts, limit_reached, next_due_at, day, next}` (repeat = no-op; 409 suspended or an id used
+  for another card); `PATCH /app/reader/review/cards/{id}` `{status: active|suspended}`; `PATCH
+  annotations/{id}` gains `review: bool` ("Review this"); `POST quiz-attempts` returns `card`; every
+  annotation carries `review`. Intervals are whole minutes. The card shape: `server/reader_api.py`'s
+  docstring and OQ41.
+- **backend.md:** new module `server/review.py` (the only importer of `fsrs`: `_Scheduler` with the
+  seeded fuzz, `review_day`, `Resolver` (gate, drift, rendering), `build_queue`, `seed_quiz_card`,
+  `set_highlight_review`, `set_status`, `review`); the review routes and `_mark_review` in
+  `server/reader_api.py`; dependency `fsrs==6.3.2` (pyproject, uv.lock, mirrored in the template).
+- **data.md:** S10 writes `review_cards` and `review_logs` as 0006 made them: a log's id is the client's
+  `review_id`; `response` = `{answer, due, state[, seeded_by]}`; `state_before` 0 = never reviewed,
+  else the FSRS state (1 learning, 2 review, 3 relearning); `status` active | suspended | retired;
+  drift writes (reset, retire) happen on reads. No schema change.
+- **decisions.md:** ADR: review on FSRS as shipped: py-fsrs pinned, defaults plus one 10-minute step,
+  no optimiser, seeded fuzz so previews are exact, first-attempt seeding, lazy drift and readability
+  through the gate, limits per OQ36 (OQ35–OQ41).
