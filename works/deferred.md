@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `33`
+- Open: `34`
 - Promoted: `5`
 - Dropped: `8`
 
@@ -42,6 +42,7 @@
 | `D44` | `deferred` | App shell: the topbar scrolls sideways at 390 px with 175–200% text; the rail fold re-flows the page | P29.REVIEW | the next console or app-shell design round, or D36's device walk, whichever comes first | `works/deferred/open/D44` |
 | `D45` | `deferred` | Sync the kb design system from code once P30 ships the reader values | P29.REVIEW | P30's review passes, or the next design round needs these on a canvas | `works/deferred/open/D45` |
 | `D46` | `deferred` | Design records: no absolute scratchpad paths in committed handoffs and critiques | P29.REVIEW | the next workspace update that touches design-critic or design-cowork | `works/deferred/open/D46` |
+| `D47` | `deferred` | A private content remote for tenant #1 | P30.DECOMP | The operator's word, or the first private subject book. | `works/deferred/open/D47` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |

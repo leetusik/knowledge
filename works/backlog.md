@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.DECOMP`
-- Next slice: `P30.REVIEW`
+- Current slice: `P30.S1`
+- Next slice: `P30.S2`
 - Waiting on operator: `none`
-- Open deferred jobs: `33`
+- Open deferred jobs: `34`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.DECOMP` | 0/2 | - | working tree |
+| `default` | `P30` | planned | `P30.S1` | 1/30 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.DECOMP` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S1` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -151,5 +151,33 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P30.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P30/slices/P30.DECOMP` |
+| [x] `P30.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P30/slices/P30.DECOMP` |
+| [ ] `P30.S1` | `todo` | Superseding design wave (A5): reader, annotations, library | `co-work` | `works/phases/active/P30/slices/P30.S1` |
+| [ ] `P30.S2` | `todo` | Books and chapters: manifests, index, publish placement, book routes | `implementation` | `works/phases/active/P30/slices/P30.S2` |
+| [ ] `P30.S3` | `todo` | Native format: Python parser, validator and conformance fixtures | `implementation` | `works/phases/active/P30/slices/P30.S3` |
+| [ ] `P30.S4` | `todo` | Image assets: upload, content-addressed store, gated serving | `implementation` | `works/phases/active/P30/slices/P30.S4` |
+| [ ] `P30.S5` | `todo` | Native ingest: publish, ids, references, search, MCP, html-to-native | `implementation` | `works/phases/active/P30/slices/P30.S5` |
+| [ ] `P30.S6` | `todo` | Library migration: bind the 42 documents into books, no broken link | `implementation` | `works/phases/active/P30/slices/P30.S6` |
+| [ ] `P30.S7` | `todo` | /explain and the CLI: native chapters, books, assets, portable copy | `implementation` | `works/phases/active/P30/slices/P30.S7` |
+| [ ] `P30.S8` | `todo` | Reader state: revision 0006, /app/reader API, beacon, purge | `implementation` | `works/phases/active/P30/slices/P30.S8` |
+| [ ] `P30.S9` | `todo` | Anchors: server-side re-anchoring across versions and languages | `implementation` | `works/phases/active/P30/slices/P30.S9` |
+| [ ] `P30.S10` | `todo` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
+| [ ] `P30.S11` | `todo` | Sign-in return address (D18, D32) and reader URLs on the org slug | `implementation` | `works/phases/active/P30/slices/P30.S11` |
+| [ ] `P30.S12` | `todo` | Native render pipeline (TS): parser, safe mapping, links, CSP | `implementation` | `works/phases/active/P30/slices/P30.S12` |
+| [ ] `P30.S13` | `todo` | Reader shell: frame, faces, themes, bars, Display, states (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S13` |
+| [ ] `P30.S14` | `todo` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
+| [ ] `P30.S15` | `todo` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |
+| [ ] `P30.S16` | `todo` | Figures, figure rows, svg block and sources (02-figures) | `implementation` | `works/phases/active/P30/slices/P30.S16` |
+| [ ] `P30.S17` | `todo` | Diagrams I: the frame, tones, flow and state (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S17` |
+| [ ] `P30.S18` | `todo` | Diagrams II: sequence, stack, timeline and chart (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S18` |
+| [ ] `P30.S19` | `todo` | Quiz block: choice, recall, cloze, saving, return (04-quiz) | `implementation` | `works/phases/active/P30/slices/P30.S19` |
+| [ ] `P30.S20` | `todo` | Annotations I: selection, highlights, notes, Review this (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S20` |
+| [ ] `P30.S21` | `todo` | Annotations II: bookmarks, place bar, Notes sheet, per-book list (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S21` |
+| [ ] `P30.S22` | `todo` | Library, app-shell entries and the public org library (06-library) | `implementation` | `works/phases/active/P30/slices/P30.S22` |
+| [ ] `P30.S23` | `todo` | Book page (07-book-page) | `implementation` | `works/phases/active/P30/slices/P30.S23` |
+| [ ] `P30.S24` | `todo` | Review surface (08-review) | `implementation` | `works/phases/active/P30/slices/P30.S24` |
+| [ ] `P30.S25` | `todo` | Legacy reader: full-screen frame, bridge, handshake retired (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S25` |
+| [ ] `P30.S26` | `todo` | Print: the native sheet, legacy Print and the notice sheet (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S26` |
+| [ ] `P30.S27` | `todo` | Fidelity and functional sweep: every surface, three viewports, no inner scroller | `qa` | `works/phases/active/P30/slices/P30.S27` |
+| [ ] `P30.S28` | `todo` | Bootstrap handoff note for /explain | `docs` | `works/phases/active/P30/slices/P30.S28` |
 | [ ] `P30.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
