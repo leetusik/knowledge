@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { APP_CSP } from "./src/lib/csp";
+
 /**
  * knowledge web app — Next.js config (P12.S1 scaffold).
  *
@@ -7,9 +9,9 @@ import type { NextConfig } from "next";
  * (P14) can run the lean traced Node server in a container. It is build-only:
  * `next dev` / `next start` ignore it, so local dev is unaffected.
  *
- * Only the generic, everywhere-safe security headers ship here. A full CSP,
- * HSTS, and the production edge/nginx wiring are a P14 deploy concern (this app
- * is local-dev-only in P12). The BFF proxy + auth boundary land in P12.S2.
+ * Only the generic, everywhere-safe security headers ship here, plus (P30.S12)
+ * the app-wide CSP from `src/lib/csp.ts`. HSTS and the production edge/nginx
+ * wiring are a deploy concern. The BFF proxy + auth boundary land in P12.S2.
  */
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -25,6 +27,10 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=()",
           },
           { key: "X-Frame-Options", value: "DENY" },
+          // P30.S12 — the app-wide CSP (defense in depth; `src/lib/csp.ts`). The
+          // reader routes get a stricter per-request superset with a script nonce
+          // from `src/proxy.ts`; the two raw relays below override this key.
+          { key: "Content-Security-Policy", value: APP_CSP },
         ],
       },
       // P16.S2 — the sandboxed-iframe explainer relay exemption. The global

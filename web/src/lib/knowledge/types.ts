@@ -272,6 +272,20 @@ export interface KbDocumentListItem {
   updated_at: string;
 }
 
+/**
+ * One image of a native version (P30.S4): `file` is the content-addressed
+ * `<sha256>.<ext>` the BFF relay serves; `still` names an animated GIF's first
+ * frame. A version's map is exactly its own (no inheritance across versions).
+ */
+export interface KbAsset {
+  file: string;
+  media_type: string;
+  width: number;
+  height: number;
+  animated: boolean;
+  still?: string;
+}
+
 /** `GET /app/documents/{id}` — a list item PLUS the rendered-from `markdown` body. */
 export interface KbDocument extends KbDocumentListItem {
   /** The document body WITHOUT frontmatter (starts at the H1). */
@@ -282,6 +296,12 @@ export interface KbDocument extends KbDocumentListItem {
    * for every other format. Optional so an older backend still type-checks.
    */
   source?: string | null;
+  /**
+   * The version's image assets keyed by asset NAME (P30.S4): what a native
+   * chapter's `asset:<name>` and figure `src` resolve through, to the BFF relay
+   * `/api/documents/{id}/assets/{file}`. Absent or `null` for every other format.
+   */
+  assets?: Record<string, KbAsset> | null;
   /**
    * The document's pretty, durable public path (P25) — `/@{org}/{project}/{slug}`,
    * or `null` when the owner tenant has not claimed an org slug (`tenants.slug` is
@@ -399,6 +419,8 @@ export interface KbDocumentVersion {
   markdown?: string;
   /** The archived native file, on a single-version fetch of a native version (P30.S5). */
   source?: string | null;
+  /** That version's image assets keyed by asset name (P30.S4), as on `KbDocument`. */
+  assets?: Record<string, KbAsset> | null;
 }
 
 /**

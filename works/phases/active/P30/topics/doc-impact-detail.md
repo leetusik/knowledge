@@ -176,3 +176,12 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - security.md: the open-redirect rule for `next=` as shipped (same-origin path only, fail closed, laundered at the gate, in `loginHref` and in the form; the proxy header is overwritten and laundered) (P30.S11)
 - api.md: `GET /app/orgs/{org}/{project}/books/{book}` accepts the tenant id as `org` (UUID first); both book reads' `canonical_path` falls back to the tenant id instead of `null` (OQ42) (P30.S11)
 - decisions.md: ADR: a slug-less tenant's reader URLs are built on the tenant id (OQ26, OQ42) (P30.S11)
+
+### P30.S12
+
+- frontend.md: the native/md render pipeline `web/src/lib/native/` (parse → validate → render; remark + the GFM table/strikethrough/autolink-literal extensions, NOT remark-gfm; `yaml`; saxes for svg; Shiki JS engine) — server-only, no raw HTML, `<NativeChapter source format assetUrl resolveRef>`; `/documents/{id}` and its versions render native through it; md stays on `<MarkdownBody>` until S13 (P30.S12)
+- frontend.md: the render hooks S13+ style (`kb-ch`, `kb-ch-h`, `kb-ch-callout[data-kind]`, `kb-ch-code`/`kb-tok-*`, `kb-ch-figure`, `kb-ch-figures`, `kb-ch-diagram[data-kind]`, `kb-ch-svg`, `kb-ch-quiz`, `kb-ch-sources`, `kb-ch-table`, `kb-link-missing`, `kb-ch-unshowable`) and the code-token classes (`kb-tok-<token>` from Shiki's CSS-variables theme, no inline colour) (P30.S12)
+- security.md: the app CSP as shipped — every response: `object-src 'none'; base-uri 'none'; frame-src 'self'; frame-ancestors 'none'; img-src 'self' data:` (next.config); the reader routes (`/documents/…`, `/@…`) add `script-src 'self' 'nonce-…' 'strict-dynamic'` per request from `src/proxy.ts` (`'unsafe-eval'` in dev only); `style-src` open; the two raw relays keep their `sandbox` policy (OQ51) (P30.S12)
+- security.md: render-side defence in depth: re-validation refuses a block (placeholder) or the whole chapter, never shows source; svg rebuilt through the allowlist a second time with block-scoped ids; a missing link carries no href/title/target; native images are same-origin asset-relay URLs only (P30.S12)
+- decisions.md: ADR: the TS port mirrors the Python parser's tree exactly, quirks included (the chart `type` clobber, OQ46; trailing-tab and callout-indent whitespace; trailing-newline ids), held by core test 4 (`web/tests/native-conformance.test.ts`) (P30.S12)
+- decisions.md: ADR: chapter:/doc: links stay missing until the reader can resolve them for the reader (OQ50); md images same-origin only (OQ52) (P30.S12)

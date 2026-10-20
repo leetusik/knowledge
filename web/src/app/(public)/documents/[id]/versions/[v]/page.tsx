@@ -14,6 +14,7 @@ import { getDocument, getDocumentVersion } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { loginHref } from "@/lib/next-path";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
+import { documentAssetUrl, NativeChapter } from "@/lib/native";
 
 import { Meta } from "../../document-view";
 import { ExplainerFrame } from "../../explainer-frame";
@@ -168,6 +169,16 @@ function PastVersion({
           src={`/api/documents/${id}/versions/${version.version}/raw`}
           title={`${version.title} — ${label}`}
         />
+      ) : version.format === "native" && version.source ? (
+        // P30.S12 — an archived native version renders from its archived file
+        // through the same native pipeline as the live document.
+        <div className="kb-panel kb-doc__body">
+          <NativeChapter
+            source={version.source}
+            format="native"
+            assetUrl={documentAssetUrl(id, version.assets)}
+          />
+        </div>
       ) : (
         <div className="kb-panel kb-doc__body">
           {(version.markdown ?? "").trim() === "" ? (

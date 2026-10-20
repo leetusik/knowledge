@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Native render pipeline (TS): parser, safe mapping, links, CSP",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 120,
   "depends_on": [
     "P30.S11"
   ],
   "created_at": "2026-10-21T00:14:49+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T04:58:22+09:00",
+  "completed_at": "2026-10-21T05:42:56+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "TS native render pipeline (line-for-line port, core test 4 identical to Python on 24 fixtures), React mapping with no raw HTML, svg allowlist twice, never-leaking missing links, Shiki kb-tok classes, app CSP with nonce on reader routes; web 226",
   "validation": {
     "required": [],
     "last_run": null,

@@ -64,3 +64,7 @@ export type { GraphCopy } from "./graph";
 // throws from every console page, so the copy belongs to no single surface.
 export { STATES } from "./states";
 export type { StatesCopy } from "./states";
+
+// Native / md chapter render pipeline (P30.S12) — the plumbing's own words: the
+// "couldn't be shown" placeholders, the missing-link suffix and region names.
+export { CHAPTER } from "./chapter";
