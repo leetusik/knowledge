@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Image assets: upload, content-addressed store, gated serving",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 40,
   "depends_on": [
     "P30.S3"
   ],
   "created_at": "2026-10-21T00:14:38+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T02:50:25+09:00",
+  "completed_at": "2026-10-21T03:05:44+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Chapter images end to end: validated publish assets, lossless EXIF/GPS strip, per-document .assets store (never in git), visibility-gated asset routes with constant 404, web BFF relay, delete cleanup; nginx 20m body + relay location",
   "validation": {
     "required": [],
     "last_run": null,

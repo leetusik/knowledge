@@ -27,6 +27,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 
 from server import app_api
+from server import assets as assets_mod
 from server import auth_api
 from server import books as books_mod
 from server import books_api
@@ -556,6 +557,17 @@ class TranslatedFromIn(BaseModel):
     version: int
 
 
+class AssetIn(BaseModel):
+    """One image on a publish (P30.S4; P29.S1 *Images*). Validated, stripped and
+    stored by ``server/assets.py``; the body references it by ``name``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    media_type: str
+    content_base64: str
+
+
 class DocumentIn(BaseModel):
     """POST /api/documents request. `markdown` is the body WITHOUT frontmatter,
     starting at the H1 — the API generates the convention-exact frontmatter."""
@@ -595,6 +607,9 @@ class DocumentIn(BaseModel):
     lang: Optional[str] = None
     translated_from: Optional[TranslatedFromIn] = None
     subject: Optional[str] = None
+    # Images (P30.S4, additive). The version's asset map is written into its header
+    # and stored under <root>/.assets/<project>/<date>-<slug>/; never committed.
+    assets: Optional[list[AssetIn]] = None
 
 
 def _uses_book_fields(body: DocumentIn) -> bool:
@@ -904,6 +919,28 @@ def create_document(
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
+    # 1-. Images (P30.S4). Validated, stripped and hashed here, before the lock (the
+    #     decode is CPU work); every violation comes back in ONE 422 list. A legacy
+    #     html explainer runs in an opaque-origin sandbox and can reference none, so
+    #     it may not carry any.
+    prepared_assets: list = []
+    if body.assets:
+        if body.format == "html":
+            raise HTTPException(
+                status_code=422,
+                detail=[{
+                    "line": 0, "col": 0, "code": "asset-format",
+                    "message": "an html document cannot carry assets",
+                }],
+            )
+        try:
+            prepared_assets = assets_mod.prepare_assets(
+                [a.model_dump() for a in body.assets]
+            )
+        except assets_mod.AssetError as exc:
+            raise HTTPException(status_code=422, detail=exc.to_detail())
+    asset_map = assets_mod.asset_map(prepared_assets)
+
     rel = documents_mod.rel_path(project, date, slug, fmt=body.format)
     # Sanitize source_repo: local paths → basename, URLs pass through unchanged.
     source_repo = documents_mod.sanitize_source_repo(body.source_repo)
@@ -1060,7 +1097,15 @@ def create_document(
                     format=superseded.get("format") or "md",
                     raw_html=superseded.get("raw_html"),
                     tenant_id=tid,
+                    # The archived file keeps its own `assets:` header verbatim, so
+                    # the old version keeps rendering its own images (P29.S1).
+                    assets=superseded.get("assets"),
                 )
+        # 3a+. Store this version's images (P30.S4) under
+        #      <root>/.assets/<project>/<date>-<slug>/, before the body that names
+        #      them. Content-addressed: identical bytes are stored once, and files an
+        #      older version references are never touched. Never staged in git.
+        assets_mod.store_assets(root, rel, prepared_assets)
         # `stored_body` is the on-disk body minus its frontmatter — the raw markdown
         # for an md doc, the raw HTML for an html doc. The body rule then derives what
         # each plane stores: the DB `markdown` column always holds the readable text
@@ -1080,6 +1125,7 @@ def create_document(
             lang=header_lang,
             subject=subject,
             translated_from=translated_from,
+            assets=asset_map,
         )
         if body.format == "html":
             raw_html = stored_body
@@ -1123,6 +1169,7 @@ def create_document(
             lang=header_lang,
             subject=subject,
             translated_from=translated_from,
+            assets=asset_map,
         )
 
         # 3b. Bind the variant (P30.S2): write the manifest, then rebuild the book's
@@ -1268,6 +1315,9 @@ def create_document(
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    # P30.S4, additive: only a write that sent assets gets the stored map back.
+    if body.assets:
+        resp["assets"] = asset_map
     # P30.S2, additive: only a write that sent a book field gets these keys, so a
     # plain loose publish answers exactly the pre-P30 shape.
     if _uses_book_fields(body):
@@ -1320,6 +1370,10 @@ def _delete_document(
         # derived rows go with it.
         versions_removed = documents_mod.remove_archive_dir(root, rel)
         db.delete_document_versions_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
+        # P30.S4: its images go too — the whole .assets/<project>/<date>-<slug>/
+        # dir, which only this document's versions (all deleted above) reference.
+        # Never in git, so nothing to stage.
+        assets_removed = assets_mod.remove_asset_dir(root, rel)
         # Recent index is a public-root concern; non-#1 tenants have none to update.
         if ctx.is_public:
             recent_removed = documents_mod.remove_from_recent_index(root, rel)
@@ -1371,6 +1425,8 @@ def _delete_document(
         "recent_removed": recent_removed,
         # P23: whether this document had an on-disk version archive to remove.
         "versions_removed": versions_removed,
+        # P30.S4: whether it had an image directory to remove.
+        "assets_removed": assets_removed,
         "committed": committed,
         # The local delete commit; not necessarily the published head (P24).
         "commit_sha": commit_sha,

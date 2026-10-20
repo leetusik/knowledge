@@ -6,6 +6,11 @@ site/
 # never git-published, never served by mkdocs. NOTE: this means non-#1 tenant
 # content has no git backup — see the deferred per-tenant backup job.
 /tenants/
+# Chapter images (P30.S4, decision A2): <root>/.assets/ under EVERY tenant root,
+# tenant #1's docs/ included, lives on the box disk only and is never committed.
+# server/assets.py also drops a self-ignoring .assets/.gitignore, and gitops.add
+# refuses the path, so this line is one of three guards.
+.assets/
 __pycache__/
 *.py[co]
 .venv/

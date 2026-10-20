@@ -51,9 +51,22 @@ def _run(args: list[str], *, root, timeout: Optional[float] = None) -> subproces
     return proc
 
 
+# Chapter images are never committed (P30 A2): ``.assets/`` holds them under every
+# tenant root, and tenant #1's public repo must never carry one.
+_NEVER_STAGED_DIR = ".assets"
+
+
 def add(paths: Iterable[str], *, root) -> None:
-    """``git -C <root> add -- <paths...>`` — only the given paths, never ``-A``."""
-    _run(["add", "--", *list(paths)], root=root)
+    """``git -C <root> add -- <paths...>`` — only the given paths, never ``-A``.
+
+    A path inside an ``.assets/`` tree is dropped before git sees it (P30.S4): the
+    images live on the box disk only, whatever a caller passes. ``.assets/`` is also
+    gitignored, so this is the second of two guards.
+    """
+    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    if not kept:
+        return
+    _run(["add", "--", *kept], root=root)
 
 
 def commit(message: str, *, root, co_authored_by: Optional[str] = None) -> str:

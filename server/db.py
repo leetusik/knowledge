@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS documents (
   lang        TEXT,                          -- the header's `lang:` (P30.S2); NULL = absent (the manifest's variant key, else 'en')
   subject     TEXT,                          -- the header's `subject:` label (P30.S2), a loose document's by-subject grouping
   translated_from TEXT,                      -- the header's `translated_from: {lang, version}` as JSON (P30.S2); NULL = an original
+  assets      TEXT,                          -- the header's `assets:` map as JSON (P30.S4); NULL = no images
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (tenant_id, rel_path)
@@ -93,6 +94,7 @@ CREATE TABLE IF NOT EXISTS document_versions (
   format       TEXT NOT NULL DEFAULT 'md',
   markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions)
   raw_html     TEXT,                        -- raw HTML body for format='html'; NULL for md
+  assets       TEXT,                        -- that version's own `assets:` map as JSON (P30.S4); NULL = no images
   created_at   TEXT NOT NULL,               -- when this version was archived
   UNIQUE (tenant_id, rel_path, version)
 );
@@ -212,6 +214,15 @@ def init_db(conn: sqlite3.Connection) -> None:
     for col in ("lang", "subject", "translated_from"):
         if col not in cols:
             conn.execute(f"ALTER TABLE documents ADD COLUMN {col} TEXT")
+    # P30.S4: the asset map, on the document and on each archived version. Nullable
+    # (no images), re-derived from the headers by the next reindex.
+    if "assets" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN assets TEXT")
+    vcols = {
+        row["name"] for row in conn.execute("PRAGMA table_info(document_versions)").fetchall()
+    }
+    if "assets" not in vcols:
+        conn.execute("ALTER TABLE document_versions ADD COLUMN assets TEXT")
     conn.commit()
 
 
@@ -227,10 +238,27 @@ def connect(path: Optional[Path] = None) -> sqlite3.Connection:
     return conn
 
 
+def _assets_from_column(raw: Any) -> Optional[dict]:
+    """The stored ``assets`` JSON as a dict, or ``None`` (absent or unreadable)."""
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) and value else None
+
+
+def _assets_to_column(assets: Optional[dict]) -> Optional[str]:
+    return json.dumps(assets, ensure_ascii=False, sort_keys=True) if assets else None
+
+
 def _row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
     if row is None:
         return None
     d = dict(row)
+    if "assets" in d:
+        d["assets"] = _assets_from_column(d["assets"])
     try:
         d["tags"] = json.loads(d.get("tags") or "[]")
     except (TypeError, json.JSONDecodeError):
@@ -269,6 +297,7 @@ def upsert_document(
     lang: Optional[str] = None,
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> int:
     """Insert or update by ``(tenant_id, rel_path)``. Preserves created_at, refreshes updated_at.
 
@@ -304,8 +333,8 @@ def upsert_document(
         INSERT INTO documents
           (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
            markdown, related, format, raw_html, version, lang, subject, translated_from,
-           created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           assets, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -322,11 +351,12 @@ def upsert_document(
           lang        = excluded.lang,
           subject     = excluded.subject,
           translated_from = excluded.translated_from,
+          assets      = excluded.assets,
           updated_at  = excluded.updated_at
         """,
         (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
          markdown, related_json, format, raw_html, int(version), lang, subject,
-         translated_json, ts, ts),
+         translated_json, _assets_to_column(assets), ts, ts),
     )
     conn.commit()
     row = conn.execute(
@@ -557,6 +587,8 @@ def _version_row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]
         d["tags"] = json.loads(d.get("tags") or "[]")
     except (TypeError, json.JSONDecodeError):
         d["tags"] = []
+    if "assets" in d:
+        d["assets"] = _assets_from_column(d["assets"])
     return d
 
 
@@ -574,6 +606,7 @@ def upsert_document_version(
     raw_html: Optional[str] = None,
     tenant_id: str = "",
     created_at: Optional[str] = None,
+    assets: Optional[dict] = None,
 ) -> None:
     """Record one archived version. Idempotent on ``(tenant_id, rel_path, version)``.
 
@@ -588,8 +621,8 @@ def upsert_document_version(
         """
         INSERT INTO document_versions
           (tenant_id, rel_path, version, archive_path, title, date, tags, format,
-           markdown, raw_html, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, raw_html, assets, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path, version) DO UPDATE SET
           archive_path = excluded.archive_path,
           title        = excluded.title,
@@ -598,12 +631,13 @@ def upsert_document_version(
           format       = excluded.format,
           markdown     = excluded.markdown,
           raw_html     = excluded.raw_html,
+          assets       = excluded.assets,
           created_at   = excluded.created_at
         """,
         (
             tenant_id, rel_path, int(version), archive_path, title, date,
             json.dumps(list(tags), ensure_ascii=False), format, markdown, raw_html,
-            created_at or _now(),
+            _assets_to_column(assets), created_at or _now(),
         ),
     )
     conn.commit()

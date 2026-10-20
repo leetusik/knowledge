@@ -581,6 +581,24 @@ export async function getDocumentVersionRaw(
 }
 
 /**
+ * `GET /app/documents/{id}/assets/{sha256}.{ext}` → 200 one stored chapter image's
+ * bytes as the UNREAD `Response` (the `getRaw` byte-passthrough seam), for the BFF
+ * image relay (`/api/documents/{id}/assets/{file}`, P30.S4). OPTIONAL-IDENTITY like
+ * `getDocumentRaw`: the image is readable exactly when its document is. Every miss
+ * (an unreadable or missing document, a file no version of it names) is the same
+ * 404. `file` is validated by the caller against `<64 hex>.<png|jpg|webp|gif>`, so
+ * there is nothing to URL-escape.
+ */
+export async function getDocumentAsset(
+  token: string | undefined,
+  id: number,
+  file: string,
+  signal?: AbortSignal,
+): Promise<Response> {
+  return getRaw(`/app/documents/${id}/assets/${file}`, { token, signal });
+}
+
+/**
  * `GET /app/search` (bearer) → 200 `{query, mode, total, limit, offset, results}` —
  * BM25 + recency ranking (fused with the Gemini vector signal when embeddings are
  * enabled → `mode: "hybrid"`), scoped to the caller's tenant. `q` is REQUIRED (a
