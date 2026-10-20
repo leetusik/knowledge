@@ -17,7 +17,8 @@
  *   nonce from the request's CSP header and stamps it on every script it emits,
  *   so a script that did not come from Next — which the render pipeline could
  *   never produce anyway — does not run. Dev adds `'unsafe-eval'`, which React's
- *   development build needs; production never does.
+ *   development build needs, and trusts same-origin scripts instead of
+ *   `'strict-dynamic'` (see `readerCsp`); production never does either.
  *
  * The two raw-HTML relays keep their own stricter `sandbox` policy (next.config).
  * `style-src` is left open: React's `style={…}` props are inline style attributes
@@ -40,12 +41,15 @@ export function isReaderPath(pathname: string): boolean {
 }
 
 export function readerCsp(nonce: string, dev = false): string {
-  const script = [
-    "script-src 'self'",
-    `'nonce-${nonce}'`,
-    "'strict-dynamic'",
-    ...(dev ? ["'unsafe-eval'"] : []),
-  ].join(" ");
+  // P30.S13 — in dev, Next 16 (Turbopack) renders the segment's `loading.tsx` and
+  // client-chunk `<script src>` tags into the HTML WITHOUT the nonce; under
+  // `'strict-dynamic'` (which makes `'self'` inert) the browser blocks them and the
+  // reader never hydrates. Production nonces every script it emits (verified), so only
+  // dev drops `'strict-dynamic'` and trusts same-origin scripts, beside the
+  // `'unsafe-eval'` React's development build already needs.
+  const script = dev
+    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
   return [...APP_DIRECTIVES, script].join("; ");
 }
 

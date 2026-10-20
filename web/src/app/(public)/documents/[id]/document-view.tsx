@@ -138,10 +138,11 @@ export function DocumentView({ doc, id }: { doc: KbDocument; id: number }) {
         <ExplainerFrame src={`/api/documents/${id}/raw`} title={doc.title} />
       ) : doc.format === "native" && doc.source ? (
         // P30.S12 — a native chapter renders from its stored `source` through the
-        // native pipeline (parse → re-validate → React; no raw HTML, ever). An
-        // unstyled stand-in until S13 moves native and md into the reader shell.
-        // `chapter:`/`doc:` links stay "missing" (no `resolveRef`) until the reader
-        // can resolve them for this reader; md keeps <MarkdownBody> until then.
+        // native pipeline (parse → re-validate → React; no raw HTML, ever).
+        // P30.S13 — the two read pages now open native and md documents in the READER
+        // (`@/components/reader`), so this branch is no longer reached from them; it
+        // stays, with `<MarkdownBody>` below, for the legacy frame's own pages until
+        // S25 retires them. `chapter:`/`doc:` links stay "missing" (no `resolveRef`).
         <div className="kb-panel kb-doc__body">
           <NativeChapter
             source={doc.source}

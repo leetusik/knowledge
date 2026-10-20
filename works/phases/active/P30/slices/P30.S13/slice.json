@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Reader shell: frame, faces, themes, bars, Display, states (01-reader)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 130,
   "depends_on": [
     "P30.S12"
   ],
   "created_at": "2026-10-21T00:14:49+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T05:50:21+09:00",
+  "completed_at": "2026-10-21T06:25:51+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Reader shell from 01-reader rounds 02+03: tokens and self-hosted faces, five sizes, light/dark/sepia, top bar, progress line, compact chapter bar, Display/Contents sheets, Sign in to save, states, kb_reader cookie, chapter route; native and md open in the reader; web 240",
   "validation": {
     "required": [],
     "last_run": null,

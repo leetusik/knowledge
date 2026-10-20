@@ -440,6 +440,47 @@ export interface KbDocumentVersionsPage {
   versions: KbDocumentVersion[];
 }
 
+// ── /app/books shapes (P30.S2; the reader, S13) ─────────────────────────────────
+// Mirror `server/db.get_book` as `/app` serves it (`books_api._app_book` drops the
+// internal `tenant_id`). A chapter's variants are its LIVE documents; each variant's
+// `doc_id` is then read through `/app/documents/{id}`, which re-checks visibility.
+
+/** One live language variant of a chapter. */
+export interface KbBookVariant {
+  lang: string;
+  doc_id: number;
+  rel_path: string;
+  title: string;
+  slug: string;
+  /** The variant's CURRENT version. */
+  version: number;
+  format: "md" | "html" | "native";
+  updated_at: string;
+  /** `{lang, version}` of the source it was translated from, or null. */
+  translated_from: { lang: string; version: number } | null;
+}
+
+export interface KbBookChapter {
+  key: string;
+  position: number;
+  title: string | null;
+  source: unknown;
+  variants: KbBookVariant[];
+}
+
+/** `GET /app/orgs/{org}/{project}/books/{book}` (optional identity). */
+export interface KbBook {
+  project: string;
+  slug: string;
+  title: string;
+  kind: string;
+  subject: string | null;
+  description: string | null;
+  chapters: KbBookChapter[];
+  /** `/@{org}/{project}/books/{book}`, on the slug (or the tenant id when it has none). */
+  canonical_path: string;
+}
+
 // ── /app/graph shapes (P12.S6) ─────────────────────────────────────────────
 // Mirror the `server/graph_api.py` twin of `scripts/graph_hook.py`'s inversion —
 // the SAME `{version, projects, nodes, edges}` contract graph.json emits, so the

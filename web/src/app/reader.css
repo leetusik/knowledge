@@ -1,0 +1,509 @@
+/*
+ * The reader shell (P30.S13) — transcribed from the signed `01-reader` rounds:
+ * `02-revise/build-prompt.md` (the base) and `03-chapter-bar-and-border` (the delta:
+ * the control edge, compact chrome C07, the two-slot language switch). The canvas's
+ * `reader.css` is the value source; class names stay as drawn (`rd-*`).
+ *
+ * What lives here: the reader-scoped tokens (sepia, the five text sizes, frame and
+ * motion, the syntax roles' colours for `kb-tok-*`), the frame, the progress line, the
+ * top bar, the chapter bar, the sheets (Contents and Display), the Display panel, the
+ * chapter list, Sign in to save and the loading / not found / failed states.
+ *
+ * What does NOT: the prose kit, callouts, code, tables and the chapter opening (S14),
+ * the resume pill, chapter end and version history (S15). The `.kb-ch` block near the
+ * bottom is a legibility stand-in for the chapter body until S14 styles S12's hooks.
+ *
+ * PRODUCT vs CANVAS. The canvas draws the reader inside a scrolling frame; the product
+ * scrolls the WINDOW. So the line, the bars, the scrim and the sheets are
+ * `position: fixed` here, and (because `container-type` makes its box the containing
+ * block of fixed descendants — see PublicShell's note) the chrome is NOT inside a
+ * container: its breakpoints are viewport media queries on the same rem values (the
+ * reader fills the window, so the viewport is the reader's width). `.rd-page`, which
+ * holds only the article, is the `rd` size container S14's queries measure.
+ *
+ * Themes. The reader root carries `data-md-color-scheme` = `default` (light), `slate`
+ * (dark) or `sepia`, and `data-theme-choice`. For the choice `system` the server cannot
+ * know the device, so the scheme is `default` and the dark values come from
+ * `prefers-color-scheme` below — no flash, no script.
+ */
+
+/* ---------- Sepia: the third reading theme (reader-scoped) ---------- */
+[data-md-color-scheme="sepia"] {
+  --kb-paper: #efe2c5;
+  --kb-surface: #f6ecd6;
+  --kb-surface-sunken: #ecdcba;
+  --kb-border: #e0cda6;
+  --kb-border-strong: #cfb88c;
+  --kb-accent: #0c6159;
+  --kb-accent-strong: #08483f;
+  --kb-accent-soft: rgba(12, 97, 89, 0.15);
+  --kb-tag-bg: #e6dcbf;
+  --kb-tag-fg: #284d45;
+  --kb-ink: #382a1b;
+  --kb-secondary: #5f4d37;
+  --kb-hint: #8b785b;
+  --kb-status-active: #0c6159;
+  --kb-status-active-soft: rgba(12, 97, 89, 0.12);
+  --kb-status-active-ink: #08483f;
+  --kb-status-idle: #7d5c1d;
+  --kb-status-idle-soft: #eedcb4;
+  --kb-status-idle-ink: #614716;
+  --kb-status-revoked: #9a4535;
+  --kb-status-revoked-soft: #efd7c6;
+  --kb-status-revoked-ink: #833526;
+  --kb-scrim: rgba(56, 42, 27, 0.42);
+  --kb-shadow-raise: 0 0.6rem 1.4rem rgba(56, 42, 27, 0.14);
+  --kb-shadow-overlay: 0 1.4rem 3rem rgba(56, 42, 27, 0.24);
+}
+
+/* ---------- Syntax roles and the label on a primary button, per theme ---------- */
+.rd-root[data-md-color-scheme="default"], .rd-swatch__half[data-md-color-scheme="default"] {
+  --rd-syn-kw: #7a3d6e; --rd-syn-fn: #0a5a52; --rd-syn-st: #6e4f12; --rd-syn-nu: #9a3b2a; --rd-syn-cm: #5c5347;
+  --rd-on-accent: #fbfaf5;
+}
+.rd-root[data-md-color-scheme="slate"], .rd-swatch__half[data-md-color-scheme="slate"] {
+  --rd-syn-kw: #d9a7cf; --rd-syn-fn: #7fcfc4; --rd-syn-st: #dcb877; --rd-syn-nu: #eba893; --rd-syn-cm: #b6ad9d;
+  --rd-on-accent: #16130f;
+}
+.rd-root[data-md-color-scheme="sepia"], .rd-swatch__half[data-md-color-scheme="sepia"] {
+  --rd-syn-kw: #6c335f; --rd-syn-fn: #0a5149; --rd-syn-st: #5f430d; --rd-syn-nu: #8a3323; --rd-syn-cm: #5f4d37;
+  --rd-on-accent: #fbfaf5;
+}
+/* The code token classes (S12's `kb-tok-*`, Shiki's CSS-variable roles) read the five roles; the rest stay in ink. */
+.kb-tok-keyword { color: var(--rd-syn-kw); }
+.kb-tok-function { color: var(--rd-syn-fn); }
+.kb-tok-string, .kb-tok-string-expression { color: var(--rd-syn-st); }
+.kb-tok-constant { color: var(--rd-syn-nu); }
+.kb-tok-comment { color: var(--rd-syn-cm); font-style: italic; }
+
+/* System on a dark device: the device's own scheme, from the first paint. These are the `slate` values, unchanged. */
+@media (prefers-color-scheme: dark) {
+  .rd-root[data-theme-choice="system"] {
+    --kb-paper: #1a1815;
+    --kb-surface: #232019;
+    --kb-surface-sunken: #2a261e;
+    --kb-border: #38332a;
+    --kb-border-strong: #453f34;
+    --kb-accent: #62bdb2;
+    --kb-accent-strong: #86d4ca;
+    --kb-accent-soft: rgba(98, 189, 178, 0.2);
+    --kb-tag-bg: #24302b;
+    --kb-tag-fg: #97d2c7;
+    --kb-ink: #ece4d7;
+    --kb-secondary: #b6ad9d;
+    --kb-hint: #7e7566;
+    --kb-status-active: #62bdb2;
+    --kb-status-active-soft: rgba(98, 189, 178, 0.18);
+    --kb-status-active-ink: #86d4ca;
+    --kb-status-idle: #c8a15e;
+    --kb-status-idle-soft: rgba(200, 161, 94, 0.16);
+    --kb-status-idle-ink: #d8b673;
+    --kb-status-revoked: #d68a76;
+    --kb-status-revoked-soft: rgba(214, 138, 118, 0.16);
+    --kb-status-revoked-ink: #e0a08e;
+    --kb-delta-down: #d68a76;
+    --kb-shadow-raise: 0 0.6rem 1.4rem rgba(0, 0, 0, 0.45);
+    --kb-shadow-overlay: 0 1.4rem 3rem rgba(0, 0, 0, 0.6);
+    --kb-scrim: rgba(0, 0, 0, 0.58);
+    --rd-syn-kw: #d9a7cf; --rd-syn-fn: #7fcfc4; --rd-syn-st: #dcb877; --rd-syn-nu: #eba893; --rd-syn-cm: #b6ad9d;
+    --rd-on-accent: #16130f;
+  }
+}
+
+/* The ground behind the page (overscroll, a short chapter) is the theme's surface, not the app's paper. */
+html:has(.rd-root[data-md-color-scheme="slate"]) { background: #232019; }
+html:has(.rd-root[data-md-color-scheme="sepia"]) { background: #f6ecd6; }
+html:has(.rd-root[data-md-color-scheme="default"]) { background: #fffefa; }
+@media (prefers-color-scheme: dark) {
+  html:has(.rd-root[data-theme-choice="system"]) { background: #232019; }
+}
+
+/* The reader jumps (a contents entry, an `#id` link) land at once, as the canvas's do: the app's smooth scrolling would
+   make the chrome rules read the jump as the reader's own gesture. */
+html:has(.rd-root) { scroll-behavior: auto; }
+
+/* ---------- The reader root ---------- */
+.rd-root {
+  /* Hangul in the reading face and the display face is set in one Korean serif, Noto Serif KR (OFL); Latin stays in
+     Literata and Fraunces. The interface (--font-body) keeps Pretendard for Hangul. */
+  --font-reading: "Literata", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  --font-display: var(--font-fraunces), "Fraunces", "Noto Serif KR", "Nanum Myeongjo", var(--font-pretendard), "Pretendard", Georgia, serif;
+  --font-body: var(--kb-font-body);
+  --font-mono: var(--kb-font-mono);
+  --rd-fs: 1.125rem;
+  --rd-k: 1.125;
+  --rd-lead: 1.65;
+  /* The column's small step (code, tables, inline code): 5/6 of the text size, 15 px at the default size. */
+  --rd-fs-s: calc(var(--rd-fs) * 0.8333);
+  --rd-measure: 36rem;
+  --rd-top-h: 3.5rem;
+  --rd-bot-h: 3.75rem;
+  --rd-line: 3px;
+  --rd-gut: var(--kb-app-gutter-phone);
+  --rd-ease: 0.15s ease;
+  /* Round 03: the boundary of a bordered control (secondary button, language switch, display option): kb-hint's value
+     in each theme, at least 3:1 on kb-surface (WCAG 1.4.11). Structural hairlines keep kb-border-strong. */
+  --rd-control-edge: var(--kb-hint);
+  --rd-safe-top: env(safe-area-inset-top, 0px);
+  --rd-safe-bottom: env(safe-area-inset-bottom, 0px);
+  position: relative;
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  background: var(--kb-surface);
+  color: var(--kb-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.rd-root *, .rd-root *::before, .rd-root *::after { box-sizing: border-box; }
+.rd-size-1 { --rd-fs: 0.9375rem; --rd-k: 0.9375; }
+.rd-size-2 { --rd-fs: 1.03125rem; --rd-k: 1.03125; }
+.rd-size-3 { --rd-fs: 1.125rem; --rd-k: 1.125; }
+.rd-size-4 { --rd-fs: 1.25rem; --rd-k: 1.25; }
+.rd-size-5 { --rd-fs: 1.375rem; --rd-k: 1.375; }
+.rd-in { display: contents; }
+/* Breakpoints 40rem, 64rem and 90rem, on the reader's width (the window's). Below 40rem the phone gutter applies. */
+@media (min-width: 40rem) { .rd-root { --rd-gut: var(--kb-app-gutter); } }
+@media (min-width: 90rem) { .rd-root { --rd-gut: var(--kb-app-gutter-wide); } }
+
+/* Focus: the system ring on everything focusable */
+.rd-root :is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--kb-focus-w) solid var(--kb-accent);
+  outline-offset: var(--kb-focus-offset);
+}
+
+/* ---------- Buttons (kb-appbtn values) ---------- */
+.rd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: var(--kb-tap); padding: 0.55rem 1rem;
+  border: 1px solid transparent; border-radius: var(--kb-radius-sm);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2;
+  white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink);
+  transition: color var(--rd-ease), background var(--rd-ease), border-color var(--rd-ease);
+}
+.rd-btn--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
+.rd-btn--primary:hover { background: var(--kb-accent-strong); }
+.rd-btn--secondary { background: var(--kb-surface); border-color: var(--rd-control-edge); color: var(--kb-ink); }
+.rd-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.rd-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
+.rd-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.rd-btn:active { transform: translateY(1px); }
+.rd-btn[aria-busy="true"] { cursor: progress; }
+.rd-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ---------- The progress line (always shown) ---------- */
+.rd-line { position: fixed; top: var(--rd-safe-top); left: 0; right: 0; height: var(--rd-line); background: var(--kb-border); z-index: 30; }
+.rd-line__fill { display: block; height: 100%; background: var(--kb-accent); transition: width 0.2s linear; }
+
+/* ---------- Top bar ---------- */
+.rd-top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  /* the safe area and the line sit above the bar's own height */
+  height: calc(var(--rd-safe-top) + var(--rd-line) + var(--rd-top-h));
+  padding-top: calc(var(--rd-safe-top) + var(--rd-line));
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.rd-top__end { display: flex; align-items: center; gap: var(--kb-space-xs); }
+.rd-logo { display: inline-flex; align-items: center; justify-content: center; width: var(--kb-tap); height: var(--kb-tap); border-radius: var(--kb-radius-sm); flex: none; }
+.rd-logo img { width: 22px; height: 22px; display: block; }
+.rd-logo:hover { background: var(--kb-surface-sunken); }
+.rd-back {
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: var(--kb-tap); min-width: 0; max-width: 100%;
+  padding-inline: 0.4rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none; font-weight: var(--kb-weight-medium);
+}
+.rd-back__chev { color: var(--kb-secondary); flex: none; }
+.rd-back__long, .rd-back__short { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-back__long { display: none; }
+.rd-back:hover .rd-back__long, .rd-back:hover .rd-back__short { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-tag {
+  display: inline-flex; align-items: center; flex: none; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--kb-status-idle-ink); background: var(--kb-status-idle-soft); border-radius: var(--kb-radius-sm); padding: 0.2em 0.5em;
+}
+.rd-tag--accent { color: var(--kb-accent-strong); background: var(--kb-accent-soft); }
+.rd-tag--plain { color: var(--kb-secondary); background: var(--kb-surface-sunken); }
+.rd-top__ver { display: none; }
+.rd-tbtn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: var(--kb-tap); padding-inline: 0.7rem;
+  border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none;
+}
+.rd-tbtn:hover { background: var(--kb-surface-sunken); }
+.rd-tbtn[aria-expanded="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.rd-tbtn--signin { display: none; color: var(--kb-accent); }
+.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
+.rd-lang__opt {
+  min-height: var(--kb-tap); padding-inline: calc(0.6rem - 1px); border: 1px solid transparent; border-radius: calc(var(--kb-radius-sm) - 1px);
+  background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer;
+}
+.rd-lang__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+/* Round 03: the chosen language also takes a 1px accent edge (at least 3:1), drawn in a border the option always
+   carries, so its size never changes */
+.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+@media (min-width: 40rem) {
+  .rd-back__long { display: inline; }
+  .rd-back__short { display: none; }
+  .rd-top__ver { display: inline-flex; }
+  .rd-tbtn--signin { display: inline-flex; }
+  .rd-top { column-gap: var(--kb-space-sm); }
+}
+
+/* Chrome hidden: out of the way, never moved (visibility, so nothing reflows) */
+.rd-chrome-hidden .rd-top, .rd-chrome-hidden .rd-bottom, .rd-chrome-hidden .rd-resume {
+  visibility: hidden; opacity: 0;
+  transition: opacity var(--rd-ease), visibility 0s linear 0.15s;
+}
+.rd-chrome-hidden .rd-top:has(:focus-visible), .rd-chrome-hidden .rd-bottom:has(:focus-visible) { visibility: visible; opacity: 1; }
+.rd-skip {
+  position: fixed; top: calc(var(--rd-safe-top) + var(--rd-line) + 0.4rem); left: 50%; transform: translateX(-50%); z-index: 25;
+  opacity: 0; pointer-events: none;
+}
+.rd-skip:focus-visible { opacity: 1; pointer-events: auto; }
+
+/* ---------- Bottom bar: chapters ---------- */
+.rd-bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  height: calc(var(--rd-bot-h) + var(--rd-safe-bottom));
+  padding-bottom: var(--rd-safe-bottom);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 9.5rem) minmax(0, 1fr); align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-top: 1px solid var(--kb-border);
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-bnav {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; min-height: var(--kb-tap); width: 100%; max-width: 22rem; min-width: 0;
+  padding: 0.25rem 0.6rem; border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer;
+  font-family: var(--font-body); color: var(--kb-ink); text-decoration: none; text-align: left;
+}
+.rd-bnav:hover { background: var(--kb-surface-sunken); }
+.rd-bnav--next { justify-self: end; text-align: right; align-items: flex-end; }
+.rd-bnav--mid { justify-self: center; align-items: center; text-align: center; max-width: 13rem; }
+.rd-bottom__cell { display: flex; min-width: 0; }
+.rd-bottom__cell--end { justify-content: flex-end; }
+.rd-bnav__long { display: none; }
+.rd-bnav__short { display: inline; }
+.rd-bnav[aria-expanded="true"] { background: var(--kb-accent-soft); }
+.rd-bnav__dir { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); white-space: nowrap; }
+.rd-bnav__sub { display: none; font-size: 0.8125rem; color: var(--kb-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rd-bnav--mid .rd-bnav__sub { display: block; }
+.rd-bnav__chev { color: var(--kb-secondary); }
+@media (min-width: 40rem) {
+  .rd-bnav__sub { display: block; }
+  .rd-bnav__long { display: inline; }
+  .rd-bnav__short { display: none; }
+  .rd-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 13rem) minmax(0, 1fr); }
+}
+
+/* ---------- Compact chrome (round 03): the bars under large text and on a narrow phone ----------
+   Measured in rem, so a phone at large text (390 px is 16.25rem at 150% and 12.2rem at 200%) and a narrow phone (320 px at
+   100% is 20rem) get one answer. At 390 px and 100% (24.4rem) none of this applies. */
+/* The language switch has two slots in the bar: before Display (the signed place) and after it (critique C02). Only one
+   shows: the second only when the switch takes the bar's second row, so Tab and reading order follow the rows. */
+.rd-lang--row { display: none; }
+@media (max-width: 20.99rem) {
+  /* The top bar. Display's sides tighten. */
+  .rd-tbtn { padding-inline: 0.5rem; }
+  /* A chapter in two languages: the language switch takes a second row of the bar, at its end edge. */
+  .rd-root.rd-langs { --rd-top-h: 6.5rem; }
+  .rd-langs .rd-top { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .rd-langs .rd-top__end { display: contents; }
+  .rd-langs .rd-lang--bar { display: none; }
+  .rd-langs .rd-lang--row { display: inline-flex; grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+  .rd-langs .rd-top__end > .rd-tbtn { grid-row: 1; grid-column: 2; }
+}
+@media (max-width: 13.99rem) {
+  /* A loose document's back link is "‹ Library", the logo's own destination: the logo steps aside so the label stays whole. */
+  .rd-loose .rd-logo { display: none; }
+}
+/* The chapter bar's compact marks: never drawn above 20rem, so the signed bar is untouched there */
+.rd-bnav__mark, .rd-bnav__count { display: none; }
+@media (max-width: 19.99rem) {
+  /* Previous and Next show only their marks, in square targets; Contents fills the middle, over "2 of 5" (the progress
+     line carries the percentage). One row, the same height. The signed labels stay in place, visually hidden, so every
+     accessible name is the signed one; the marks and the short count are aria-hidden. */
+  .rd-bottom { grid-template-columns: var(--kb-tap) minmax(0, 1fr) var(--kb-tap); }
+  .rd-bnav--prev, .rd-bnav--next { padding-inline: 0; align-items: center; }
+  .rd-bnav--mid { max-width: none; padding-inline: var(--kb-space-xs); }
+  .rd-bnav--prev .rd-bnav__dir, .rd-bnav--next .rd-bnav__dir, .rd-bnav--mid .rd-bnav__sub {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: visible; white-space: nowrap; clip-path: inset(50%);
+  }
+  .rd-bnav__mark { display: block; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1; color: var(--kb-ink); }
+  /* Alone, the chevron carries the control: ink, and large enough to weigh what the arrow weighs */
+  .rd-bnav--prev .rd-bnav__mark { font-size: calc(0.9375rem * 1.35); }
+  .rd-bnav__count { display: block; font-size: 0.8125rem; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+}
+
+/* ---------- The page and the article's track ---------- */
+/* The window scrolls. The content clears the progress line and the top bar above it and, on a chapter, the chapter bar
+   below it. A loose document has no chapter bar and no bottom padding for it. */
+.rd-page {
+  container: rd / inline-size;
+  padding-top: calc(var(--rd-safe-top) + var(--rd-line) + var(--rd-top-h));
+  padding-bottom: calc(var(--rd-bot-h) + var(--rd-safe-bottom));
+}
+.rd-loose .rd-page { padding-bottom: 0; }
+/* One track: text, tables, code, callouts and figures all share the text column's two edges, at every width. */
+.rd-flow {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--rd-gut), 1fr)
+    [text-start] min(100% - 2 * var(--rd-gut), var(--rd-measure))
+    [text-end] minmax(var(--rd-gut), 1fr) [full-end];
+}
+.rd-flow > * { grid-column: text; min-width: 0; }
+.rd-article { min-height: 60vh; }
+
+/* Headings carry the offset that clears the bars when a link or the contents jumps to them; so does any other id'd block
+   (a quiz, a figure, a code block), which an `#id` link can also name. */
+.rd-root :is(h2, h3, h4)[id], .rd-article [id] { scroll-margin-top: calc(var(--rd-top-h) + var(--kb-space-md)); }
+
+/* ---------- Chapter list (the Contents sheet; the chapter end reuses it in S15) ---------- */
+.rd-chs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rd-chs__item { border-bottom: 1px solid var(--kb-border); }
+.rd-ch {
+  display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: baseline;
+  min-height: var(--kb-tap); padding: 0.7rem 0.5rem; width: 100%;
+  color: var(--kb-ink); text-decoration: none; border-radius: var(--kb-radius-sm);
+}
+a.rd-ch:hover { background: var(--kb-surface-sunken); }
+a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-ch[aria-current] { background: var(--kb-accent-soft); }
+.rd-ch__n { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.rd-ch__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; overflow-wrap: break-word; text-wrap: pretty; }
+/* A Korean title or section wraps only at the spaces between its words. */
+.rd-ch__title:lang(ko), .rd-ch__sec:lang(ko) { word-break: keep-all; }
+.rd-ch__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__now { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.rd-ch__tag { flex: none; }
+.rd-ch__secs { list-style: none; margin: 0; padding: 0 0 var(--kb-space-xs) calc(2.4rem + var(--kb-space-sm) + 0.5rem); }
+.rd-ch__sec { display: flex; align-items: center; min-height: var(--kb-tap); font-size: 0.9375rem; color: var(--kb-secondary); text-decoration: none; }
+.rd-ch__sec:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-ch__sec[aria-current] { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+
+/* ---------- Sheets (Contents, Display; Version history's content is S15's) ---------- */
+.rd-scrim { position: fixed; inset: 0; z-index: 35; border: 0; padding: 0; margin: 0; background: var(--kb-scrim); cursor: pointer; }
+.rd-sheet {
+  position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; max-height: min(88%, calc(100% - var(--rd-safe-top) - var(--rd-line)));
+  display: flex; flex-direction: column;
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-overlay);
+  border-radius: var(--kb-radius) var(--kb-radius) 0 0; border-top: 1px solid var(--kb-border);
+  font-family: var(--font-body);
+}
+.rd-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--kb-space-md); padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.4rem) var(--kb-space-xs) var(--rd-gut); border-bottom: 1px solid var(--kb-border); flex: none; }
+.rd-sheet__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+.rd-sheet__body { overflow-y: auto; overscroll-behavior: contain; padding: var(--kb-space-md) var(--rd-gut) calc(var(--kb-space-xl) + var(--rd-safe-bottom)); }
+@media (min-width: 40rem) {
+  .rd-sheet { top: calc(var(--rd-safe-top) + var(--rd-line)); bottom: 0; max-height: none; width: min(26rem, 88%); border-radius: 0; border-top: 0; }
+  .rd-sheet--left { left: 0; right: auto; border-right: 1px solid var(--kb-border); }
+  .rd-sheet--right { right: 0; left: auto; border-left: 1px solid var(--kb-border); }
+  .rd-sheet__body { padding-inline: var(--kb-space-lg); }
+  .rd-sheet__head { padding-left: var(--kb-space-lg); padding-right: var(--kb-space-sm); }
+}
+.rd-sheet__close { flex: none; }
+.rd-sheet__lead { margin: 0 0 var(--kb-space-md); font-size: 0.9375rem; color: var(--kb-secondary); line-height: 1.45; }
+.rd-sheet__booktitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; line-height: 1.25; color: var(--kb-ink); }
+.rd-sheet__bookmeta { margin: var(--kb-space-xs) 0 var(--kb-space-md); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+
+/* Display panel */
+.rd-disp { display: flex; flex-direction: column; gap: var(--kb-space-xl); }
+.rd-disp__group { display: flex; flex-direction: column; gap: var(--kb-space-sm); margin: 0; padding: 0; border: 0; min-width: 0; }
+.rd-disp__label { margin: 0; padding: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-disp__readout { margin: 0; font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-disp__readout b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.rd-sizes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+.rd-themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+.rd-opt {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm);
+  background: var(--kb-surface); color: var(--kb-ink); cursor: pointer; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold);
+  box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
+}
+.rd-opt:hover { border-color: var(--kb-accent); }
+.rd-opt[aria-pressed="true"] { border-color: var(--kb-accent); box-shadow: inset 0 0 0 1px var(--kb-accent); background: var(--kb-accent-soft); }
+.rd-opt__a { font-family: var(--font-reading); font-weight: 500; line-height: 1; color: var(--kb-ink); }
+/* The five sizes' "A": 15, 16.5, 18, 20 and 22 px, fixed */
+.rd-opt__a--1 { font-size: 15px; } .rd-opt__a--2 { font-size: 16.5px; } .rd-opt__a--3 { font-size: 18px; }
+.rd-opt__a--4 { font-size: 20px; } .rd-opt__a--5 { font-size: 22px; }
+.rd-swatch { display: flex; width: 100%; height: 2rem; border-radius: calc(var(--kb-radius-sm) - 1px); border: 1px solid var(--kb-border); overflow: hidden; }
+.rd-swatch__half { flex: 1 1 0; display: flex; align-items: center; justify-content: center; background: var(--kb-surface); color: var(--kb-ink); font-family: var(--font-reading); font-size: 0.9375rem; }
+.rd-disp__note { margin: 0; padding-top: var(--kb-space-md); border-top: 1px solid var(--kb-border); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+
+/* ---------- Sign in to save (the reusable prompt) ---------- */
+.rd-save {
+  display: flex; flex-direction: column; gap: var(--kb-space-sm); max-width: 30rem;
+  padding: var(--kb-space-md) var(--kb-space-lg) var(--kb-space-lg); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-surface); color: var(--kb-ink); font-family: var(--font-body);
+}
+.rd-save__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; line-height: 1.25; }
+.rd-save__body { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); }
+.rd-save__actions { display: flex; flex-wrap: wrap; gap: var(--kb-space-sm); margin-top: var(--kb-space-xs); }
+.rd-save--raised { box-shadow: var(--kb-shadow-raise); }
+
+/* ---------- Loading, not found, failed ---------- */
+.rd-skel { background: linear-gradient(90deg, var(--kb-surface-sunken) 25%, var(--kb-border) 50%, var(--kb-surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--kb-radius-sm); animation: rd-skel-pulse 1.4s ease-in-out infinite; }
+@keyframes rd-skel-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.rd-sk { display: flex; flex-direction: column; padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-sk__book { height: 0.9rem; width: 16rem; max-width: 70%; }
+.rd-sk__title { height: calc(var(--rd-fs) * 1.75); width: 92%; margin-top: var(--kb-space-md); }
+.rd-sk__title2 { height: calc(var(--rd-fs) * 1.75); width: 60%; margin-top: var(--kb-space-sm); }
+.rd-sk__lede { height: calc(var(--rd-fs) * 0.9); width: 85%; margin-top: var(--kb-space-lg); }
+.rd-sk__lede2 { width: 60%; margin-top: var(--kb-space-xs); }
+.rd-sk__meta { height: 0.8rem; width: 12rem; margin-top: var(--kb-space-lg); }
+.rd-sk__toc { margin-top: var(--kb-space-xl); padding-block: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.rd-sk__tocline { height: 0.85rem; }
+.rd-sk__h2 { height: calc(var(--rd-fs) * 1.2); width: 50%; margin-top: var(--kb-space-2xl); }
+.rd-sk__line { height: calc(var(--rd-fs) * 0.75); margin-top: calc(var(--rd-fs) * 0.9); }
+.rd-sk__code { height: 7rem; margin-top: var(--kb-space-lg); border-radius: var(--kb-radius); }
+.rd-sk__w100 { width: 100%; } .rd-sk__w95 { width: 95%; } .rd-sk__w70 { width: 70%; } .rd-sk__w60 { width: 60%; } .rd-sk__w55 { width: 55%; } .rd-sk__w45 { width: 45%; } .rd-sk__w40 { width: 40%; }
+.rd-sk .rd-skel { display: block; }
+@container rd (min-width: 40rem) { .rd-sk__title { height: calc(var(--rd-fs) * 2.1); } .rd-sk__title2 { height: calc(var(--rd-fs) * 2.1); } }
+@container rd (min-width: 64rem) {
+  .rd-sk { padding-top: calc(var(--kb-space-2xl) * 1.5 * var(--rd-k)); }
+  .rd-sk__title { height: calc(var(--rd-fs) * 2.4); } .rd-sk__title2 { height: calc(var(--rd-fs) * 2.4); }
+}
+.rd-ed { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--kb-space-sm); padding: clamp(2.5rem, 1rem + 8cqi, 5.5rem) 1.2rem; }
+.rd-ed__code { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--kb-secondary); }
+.rd-ed__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: clamp(1.5rem, 1.1rem + 2cqi, 2.2rem); line-height: var(--kb-leading-display); letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; }
+.rd-ed__sub { margin: 0; font-size: 0.9375rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); max-width: 30rem; text-wrap: pretty; }
+.rd-ed__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--kb-space-sm); margin-top: var(--kb-space-sm); }
+.rd-ed__ref { margin: var(--kb-space-md) 0 0; font-family: var(--font-mono); font-size: 0.8125rem; color: var(--kb-secondary); }
+@container rd (max-width: 39.99rem) { .rd-ed__actions { flex-direction: column; align-self: stretch; } .rd-ed__actions > .rd-btn { width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-skel { animation: none; }
+  .rd-root *, .rd-root *::before, .rd-root *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
+}
+
+/* ---------- The chapter body, until S14 (a legibility stand-in; S14 replaces it) ----------
+   S12's `kb-ch-*` hooks render with no look of their own, and the app's reset leaves headings and lists bare. This gives
+   them the reading face, the leading and a few margins so a chapter reads. It is NOT the signed prose kit (§5-§9a). */
+.rd-prose { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-prose:lang(ko), .rd-prose :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.rd-prose .kb-ch > * + * { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
+.rd-prose .kb-ch :is(h2, h3, h4) { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); line-height: 1.25; overflow-wrap: break-word; }
+.rd-prose .kb-ch h2 { font-size: 1.45em; margin-top: calc(var(--kb-space-2xl) * var(--rd-k)); }
+.rd-prose .kb-ch h3 { font-size: 1.18em; margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-prose .kb-ch :is(ul, ol) { padding-left: 1.4em; }
+.rd-prose .kb-ch ul { list-style: disc; }
+.rd-prose .kb-ch ol { list-style: decimal; }
+.rd-prose .kb-ch a { color: var(--kb-accent); text-decoration: underline; text-underline-offset: 0.18em; }
+.rd-prose .kb-ch pre { overflow-x: auto; font-family: var(--font-mono); font-size: var(--rd-fs-s); line-height: 1.6; }
+.rd-prose .kb-ch code { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.rd-prose .kb-ch table { border-collapse: collapse; font-size: var(--rd-fs-s); display: block; max-width: 100%; overflow-x: auto; }
+.rd-prose .kb-ch :is(th, td) { border: 1px solid var(--kb-border); padding: 0.4rem 0.6rem; }
+.rd-prose .kb-ch img { max-width: 100%; height: auto; }
+.rd-prose .kb-ch blockquote { border-left: 2px solid var(--kb-border-strong); padding-left: 1em; color: var(--kb-secondary); }
+/* the stand-in chapter title, until S14 builds the chapter opening */
+.rd-title { margin: 0; padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.rd-title:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) { .rd-title { font-size: calc(var(--rd-fs) * 2.1); line-height: 1.1; } }
+@container rd (min-width: 64rem) { .rd-title { font-size: calc(var(--rd-fs) * 2.4); } }

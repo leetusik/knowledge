@@ -1,6 +1,6 @@
 import "server-only";
 
-import { sendJson } from "./client";
+import { getJson, sendJson } from "./client";
 
 // P30.S8 — typed server-side calls against knowledge's user-scoped `/app/reader/*`
 // surface (P29.S3 *Routes and writes*). Same seam as `app.ts`: the caller passes the
@@ -66,5 +66,47 @@ export async function putReaderPosition(
       token,
       signal,
     },
+  );
+}
+
+/** One chapter's state in `GET /app/reader/books/…` (`reader_api._book_progress`). */
+export interface KbReaderChapterState {
+  key: string;
+  state: "unopened" | "started" | "finished";
+  finished_version: number | null;
+  /** Finished on a version older than the newest ("Updated"). */
+  updated: boolean;
+  /** The latest-read variant's position, or null when none was opened. */
+  position: {
+    doc: string;
+    lang: string;
+    version: number;
+    anchor_id: string | null;
+    fraction: number;
+    max_fraction: number;
+  } | null;
+}
+
+/** `GET /app/reader/books/{org}/{project}/{book}` (bearer): the caller's book state. */
+export interface KbReaderBook {
+  progress: { finished: number; started: number; total: number };
+  chapters: KbReaderChapterState[];
+}
+
+/**
+ * `GET /app/reader/books/{org}/{project}/{book}` (bearer) → per-chapter state and book
+ * progress for the Contents sheet. A private or missing book is a 404, an anonymous
+ * caller a 401 (an anonymous reader keeps no state; the page never calls it).
+ */
+export async function getReaderBook(
+  token: string,
+  org: string,
+  project: string,
+  book: string,
+  signal?: AbortSignal,
+): Promise<KbReaderBook> {
+  return getJson<KbReaderBook>(
+    `/app/reader/books/${encodeURIComponent(org)}/${encodeURIComponent(project)}/${encodeURIComponent(book)}`,
+    { token, signal },
   );
 }

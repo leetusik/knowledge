@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,7 @@ import { VersionHistory } from "@/app/(public)/documents/[id]/version-history";
 import { AppShell } from "@/components/app-shell";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { PublicShell } from "@/components/public-shell";
+import { ReaderPage } from "@/components/reader/reader-page";
 import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
@@ -21,6 +23,8 @@ import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-wid
 import { getDocumentVersions, resolveDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
+import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
+import { loadLooseReader } from "@/lib/reader/load";
 
 // P25.S3 — the PRETTY public document URL, `/@{org}/{project}/{doc-slug}`. Same page
 // as `(public)/documents/[id]`, addressed by DURABLE parts instead of the disposable
@@ -50,6 +54,10 @@ import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 // copy-link is rendered here as of P25.S5 — this is the shareable URL, so it is the
 // natural place to copy it from — on the MEMBER branch only, matching the id page (an
 // anonymous visitor is already looking at the link).
+//
+// P30.S13 — a native or md document opens in the READER here too (the loose-document
+// variant, `01-reader`); `?v=N` reads an older version, and an html explainer keeps
+// today's frame until S25.
 //
 // The <title> is STATIC copy, not the document title: the knowledge client is
 // `cache: "no-store"`, so `generateMetadata` would cost a second uncached upstream
@@ -138,7 +146,10 @@ export default async function PrettyDocumentPage({
 
   // Next gives params percent-DECODED already, but decode defensively the way the
   // sibling routes do — a double-encoded segment must not reach the upstream path.
-  const fullWidth = isFullWidth(await searchParams);
+  const query = await searchParams;
+  const fullWidth = isFullWidth(query);
+  const rawV = Array.isArray(query.v) ? query.v[0] : query.v;
+  const v = rawV && /^\d{1,6}$/.test(rawV) ? Number(rawV) : null;
 
   const org = safeDecode(orgParam);
   const project = safeDecode(projectParam);
@@ -162,10 +173,16 @@ export default async function PrettyDocumentPage({
   const fullPath = `/${seg(org)}/${seg(project)}/${seg(slug)}`;
 
   const ctx = await optionalIdentity();
+  const settings = parseReaderCookie((await cookies()).get(READER_COOKIE)?.value);
 
   // ── Member branch — the authenticated chrome, minus the id page's delete. ──────
   if (ctx) {
     const doc = await loadDocument(ctx.token, orgSlug, project, slug);
+    // P30.S13 — native and md open in the reader; html keeps this frame.
+    if (doc.format !== "html") {
+      const reader = await loadLooseReader({ token: ctx.token, doc, v, settings });
+      if (reader) return <ReaderPage reader={reader} />;
+    }
     const history = await loadVersions(ctx.token, doc);
     return (
       <AppShell identity={ctx.identity} fullWidth={fullWidth}>
@@ -231,6 +248,10 @@ export default async function PrettyDocumentPage({
 
   // ── Anonymous branch — public-only read, no token. A miss is the branded 404. ──
   const doc = await loadDocument(undefined, orgSlug, project, slug);
+  if (doc.format !== "html") {
+    const reader = await loadLooseReader({ token: undefined, doc, v, settings });
+    if (reader) return <ReaderPage reader={reader} />;
+  }
   const history = await loadVersions(undefined, doc);
   return (
     <PublicShell fullWidth={fullWidth}>
