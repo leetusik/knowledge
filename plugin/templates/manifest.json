@@ -152,7 +152,13 @@
       "tests/test_native_ingest.py",
       "server/reader_api.py",
       "server/reader_state.py",
-      "tests/test_reader_state.py"
+      "tests/test_reader_state.py",
+      "server/anchors.py",
+      "tests/test_anchors.py",
+      "tests/fixtures/anchors/cases.json",
+      "tests/fixtures/anchors/chapter-ko.md",
+      "tests/fixtures/anchors/chapter-v1.md",
+      "tests/fixtures/anchors/chapter-v2.md"
     ],
     "parameterized": [
       "mkdocs.yml",
