@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Place bar — bookmark the section being read</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-place" role="group" aria-label="{{ groupLabel }}">
+<sc-if value="{{ isBlock }}" hint-placeholder-val="{{ true }}"><span class="an-place__where"><b lang="{{ titleLang }}">{{ title }}</b></span><span class="an-place__sep" aria-hidden="true"></span><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" onclick="{{ note }}">Add note</button><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" aria-pressed="{{ on }}" onclick="{{ bookmark }}"><span class="an-btn-w"><span aria-hidden="{{ off }}">Bookmarked</span><span aria-hidden="{{ on }}">Bookmark</span></span></button></sc-if>
+<sc-if value="{{ isPos }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" aria-pressed="{{ on }}" onclick="{{ bookmark }}"><span class="an-btn-w"><span aria-hidden="{{ off }}">Bookmarked here</span><span aria-hidden="{{ on }}">Bookmark this position</span></span></button></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"title":{"editor":null},"titleLang":{"editor":null},"on":{"editor":null},"onNote":{"editor":null},"onBookmark":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":100}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const kind = P.kind || 'block';
+    const on = !!P.on;
+    return {
+      groupLabel: kind === 'pos' ? 'This position' : 'The section you are reading',
+      isBlock: kind === 'block', isPos: kind === 'pos',
+      title: P.title || 'The write path', titleLang: P.titleLang || 'en',
+      on, off: !on,
+      note: this.call('onNote'), bookmark: this.call('onBookmark'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter opening</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-flow">
+<div class="rd-head">
+<p class="rd-head__book"><span class="rd-head__n">{{ placeLabel }}</span><span>{{ placeName }}</span></p>
+<h1 class="rd-head__title" lang="{{ r.lang }}">{{ title }}</h1>
+<sc-if value="{{ hasSummary }}" hint-placeholder-val="{{ true }}"><p class="rd-head__lede" lang="{{ r.lang }}">{{ r.summary }}</p></sc-if>
+<p class="rd-head__meta"><span>v{{ r.version }} · Published {{ r.date }}</span><sc-if value="{{ hasHistory }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true">·</span><button type="button" class="rd-linkbtn" aria-haspopup="dialog" onclick="{{ versions }}">Version history</button></sc-if></p>
+<sc-if value="{{ r.isOld }}" hint-placeholder-val="{{ false }}"><div class="rd-notice"><p class="rd-notice__text"><span class="rd-notice__label">Older version</span><span>You're reading v{{ r.version }} of this {{ noun }}. It was superseded — the current version is v{{ r.newest }}.</span></p><button type="button" class="rd-linkbtn" onclick="{{ latest }}"><span>Read v{{ r.newest }} →</span></button></div></sc-if>
+<sc-if value="{{ isStale }}" hint-placeholder-val="{{ false }}"><div class="rd-notice"><p class="rd-notice__text"><span class="rd-notice__label">Older translation</span><span>Translated from {{ srcName }} v{{ srcFrom }}. {{ srcName }} has been updated since: it is at v{{ srcNewest }}.</span></p><button type="button" class="rd-linkbtn" onclick="{{ source }}"><span>Read {{ srcName }} v{{ srcNewest }} →</span></button></div></sc-if>
+<sc-if value="{{ hasToc }}" hint-placeholder-val="{{ true }}"><div class="rd-toc"><p class="rd-toc__label">In this {{ noun }}</p><ol class="rd-toc__list" aria-label="In this {{ noun }}"><sc-for list="{{ toc }}" as="e" hint-placeholder-count="4"><li class="rd-toc__group"><a class="rd-toc__a" href="{{ e.href }}" lang="{{ r.lang }}" onclick="{{ e.go }}">{{ e.text }}</a><sc-if value="{{ e.hasSubs }}" hint-placeholder-val="{{ false }}"><ol class="rd-toc__sub"><sc-for list="{{ e.subs }}" as="s" hint-placeholder-count="2"><li><a class="rd-toc__a" href="{{ s.href }}" lang="{{ r.lang }}" onclick="{{ s.go }}">{{ s.text }}</a></li></sc-for></ol></sc-if></li></sc-for></ol></div></sc-if>
+</div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":null},"lang":{"editor":null},"ver":{"editor":null},"onLink":{"editor":null},"onVersions":{"editor":null},"onLatest":{"editor":null},"onSource":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":780}}'>
+class Component extends DCLogic {
+  go(id) {
+    return (e) => {
+      if (!this.props.onLink) return;
+      if (e && e.preventDefault) e.preventDefault();
+      this.props.onLink('#' + id);
+    };
+  }
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const bare = !!P.bare;
+    const doc = P.doc || 'maintainer-guide/internals';
+    const r = RD.read(doc, P.lang || 'en', P.ver);
+    const ctx = RD.ctx(doc);
+    const loose = ctx.loose;
+    const LANG = { en: 'English', ko: '한국어' };
+    const src = r.from;
+    const srcNewest = src ? RD.newest(doc, src.lang) : 0;
+    const href = (id) => (bare ? '#' + id : '#top');
+    return {
+      r,
+      title: RD.display(r.title),
+      noun: loose ? 'document' : 'chapter',
+      placeLabel: loose ? 'Document' : 'Chapter ' + ctx.n + ' of ' + ctx.total,
+      placeName: loose ? ctx.project : ctx.bookTitle,
+      hasSummary: !!r.summary,
+      hasHistory: r.versions.length > 1,
+      isStale: !!(src && srcNewest > src.v),
+      srcName: src ? LANG[src.lang] : '',
+      srcFrom: src ? src.v : 0,
+      srcNewest,
+      hasToc: r.toc.length >= 2,
+      toc: r.toc.map((e) => Object.assign({}, e, { href: href(e.id), go: this.go(e.id),
+        subs: e.subs.map((s) => Object.assign({}, s, { href: href(s.id), go: this.go(s.id) })) })),
+      versions: this.call('onVersions'),
+      latest: this.call('onLatest'),
+      source: this.call('onSource'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Notes sheet</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board an-board--across">
+<p class="rd-board__title">Component — Notes sheet</p>
+<p class="rd-board__lead">The chapter’s marks, in reading order, in the same sheet as Contents (a switch in its head). Highlights in another language and unanchored ones are kept in groups of their own, each saying why. The foot opens every mark in the book. Signed out, the sheet asks to sign in with the shared prompt; empty, it says how to make the first mark.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="NotesPanel" items="{{ c.items }}" other="{{ c.other }}" orphans="{{ c.orphans }}" other-lang="{{ c.otherLang }}" member="{{ c.member }}" loose="{{ c.loose }}" edit-label="{{ c.editLabel }}" theme="{{ c.theme }}" hint-size="100%,900px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":5200,"height":4280}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const v = (seed, doc, lang, ver) => AN.view(RD.read(doc || 'maintainer-guide/internals', lang || 'en', ver), { ann: AN.seed(seed || 'default'), ver: ver || null });
+    const N = (cap, vv, o) => cell(cap, 420, Object.assign({ items: vv.items, other: vv.other, orphans: vv.orphans, otherLang: vv.other.length ? vv.other[0].lang : 'ko', member: true, loose: false, editLabel: null }, o));
+    const d = v();
+    const rows = [
+      { title: 'A chapter (English v2): its marks, the Korean ones, the unanchored ones', cells: [N('Light', d), N('Dark', d, { theme: 'dark' }), N('Sepia', d, { theme: 'sepia' }), N('Writing a label on a bookmark', d, { editLabel: 'm1' })] },
+      { title: 'The same chapter in 한국어 v1, and in English v1', cells: [N('한국어 v1', v('default', null, 'ko')), N('English v1', v('default', null, 'en', 1))] },
+      { title: 'Empty, signed out, and a plain Markdown document', cells: [
+        N('Nothing yet', v('empty')), N('Signed out', v('empty'), { member: false }),
+        N('A plain document · one position bookmark', v('default', 'doc/field-notes/wal-files'), { loose: true }),
+        N('A plain document · nothing yet', v('empty', 'doc/field-notes/wal-files'), { loose: true }) ] },
+      { title: '30 marks in one chapter', cells: [N('Light', v('heavy'))] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

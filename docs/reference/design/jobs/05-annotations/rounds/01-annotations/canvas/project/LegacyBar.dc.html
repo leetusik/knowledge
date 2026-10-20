@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bookmark control on the legacy reader's bar (stand-in bar)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-legacy">
+<p class="an-legacy__cap" data-proto="stand-in">Stand-in · the legacy reader's bar · legacy-and-print draws it (P29.S6)</p>
+<div class="an-legacy__bar"><span class="an-legacy__crumb" data-proto="stand-in">‹ Tidewater, from the inside · Datums</span><span class="an-legacy__ctl"><button type="button" class="rd-btn rd-btn--secondary an-bar__btn" aria-pressed="{{ on }}" onclick="{{ toggle }}"><span class="an-btn-w"><span aria-hidden="{{ off }}">Bookmarked here</span><span aria-hidden="{{ on }}">Bookmark this position</span></span></button></span></div>
+<p class="an-legacy__na">Highlights are not available in this document.</p>
+<p class="an-legacy__aside" data-proto="stand-in">Canvas note · the button and the line above it are this job's. The button keeps your position in the chapter (about {{ pct }}% through), as in a plain Markdown document; where both sit in the real bar is legacy-and-print's.</p>
+<sc-if value="{{ hasSave }}" hint-placeholder-val="{{ false }}"><dc-import name="SignInToSave" bare="{{ true }}" what="bookmarks" place="chapter" raised="{{ true }}" on-sign-in="{{ signIn }}" on-dismiss="{{ dismiss }}" hint-size="100%,190px"></dc-import></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"on":{"editor":null},"pct":{"editor":null},"save":{"editor":null},"member":{"editor":null},"onToggle":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":560,"height":236}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { on: null, save: null };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const member = P.member === undefined ? true : !!P.member;
+    const on = this.state.on === null ? !!P.on : this.state.on;
+    return {
+      on, off: !on, pct: P.pct || 38,
+      hasSave: !member && (this.state.save === null ? !!P.save : this.state.save),
+      toggle: (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!member) { this.setState({ save: true }); return; }
+        if (P.onToggle) P.onToggle(!on); else this.setState({ on: !on });
+      },
+      signIn: () => { if (P.onSignIn) P.onSignIn(); },
+      dismiss: () => this.setState({ save: false }),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

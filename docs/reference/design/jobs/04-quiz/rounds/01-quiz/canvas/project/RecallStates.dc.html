@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Recall question — states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Recall question</p>
+<p class="rd-board__lead">Answer it in your head, then show the answer. The answer, and its explanation when there is one, open in the card that held the button; the reader then says whether they got it. The choice is recorded and said in words, and the number is marked the same way as a graded choice.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Quiz" doc="{{ c.doc }}" lang="{{ c.lang }}" member="{{ c.member }}" hist="{{ c.hist }}" steps="{{ c.steps }}" outcome="{{ c.outcome }}" only="{{ c.only }}" solo="{{ c.solo }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2800,"height":1600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const I = 'maintainer-guide/internals', M = 'doc/money-notes/compound-interest', W1 = 'maintainer-guide/what-it-is', TWH = 'tidewater/harmonic-model';
+    const H = RD.quizHist.internals;
+    const C = (cap, w, o) => Object.assign({ cap, st: 'width: ' + w + 'px', doc: I, lang: 'en', member: true, hist: [], steps: [], outcome: 'saved', only: null, solo: false, theme: 'light', size: 3 }, o);
+    const pick = (id, opt) => [id, { t: 'pick', opt }];
+    const tog = (id, opt) => [id, { t: 'toggle', opt }];
+    const chk = (id) => [id, { t: 'check' }];
+    const typed = (id, vals) => vals.map((v, i) => [id, { t: 'type', n: i + 1, v }]);
+    const rv = ['projection', { t: 'reveal' }], got = ['projection', { t: 'self', v: 'got' }], miss = ['projection', { t: 'self', v: 'missed' }];
+    const rows = [
+      { title: 'Hidden · shown · self-graded · 600', cells: [
+        C('Hidden', 600, { only: ['projection'], solo: true }),
+        C('Answer shown · the two self-grades offered', 600, { only: ['projection'], solo: true, steps: [rv] }),
+        C('I got it', 600, { only: ['projection'], solo: true, steps: [rv, got] }),
+        C('I missed it', 600, { only: ['projection'], solo: true, steps: [rv, miss] }) ] },
+      { title: 'A long answer with inline code · phone · 390', cells: [
+        C('Size 1', 390, { only: ['projection'], solo: true, size: 1, steps: [rv] }),
+        C('Size 5 · sepia', 390, { only: ['projection'], solo: true, size: 5, theme: 'sepia', steps: [rv] }),
+        C('Missed it · dark', 390, { only: ['projection'], solo: true, theme: 'dark', steps: [rv, miss] }),
+        C('한국어 · got it', 390, { lang: 'ko', only: ['projection'], solo: true, steps: [rv, got] }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

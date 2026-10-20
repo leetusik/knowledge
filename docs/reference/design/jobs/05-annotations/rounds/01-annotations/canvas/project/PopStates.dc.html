@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Highlight popover</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Highlight popover</p>
+<p class="rd-board__lead">What a tap on a highlight, a marker or a margin note opens: the note, Review this, and delete, in that order. Editing is plain text with line breaks kept. A highlight’s card follows Review this: on makes it a card in your reviews; off pauses the card and keeps its history; deleting the highlight deletes its card, and the line under Delete says so before you press it.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="NotePop" vm="{{ c.vm }}" autofocus="{{ false }}" theme="{{ c.theme }}" hint-size="100%,300px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":2808}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const seed = AN.seed('default');
+    const H = (id) => seed.hl.filter((a) => a.id === id)[0];
+    const hl = (id, o) => { const a = H(id); const card = a.card || (a.review ? 'active' : ''); return Object.assign({ mode: 'view', id, isHl: true, k: a.note ? 'Highlight · note' : 'Highlight', where: o && o.where || 'The write path', whereLang: a.lang, note: a.note, noteLang: AN.langOf(a.note, a.lang), review: !!a.review, card,
+      delLabel: 'Delete highlight', delNote: card ? (a.note ? 'Its note and its review card go with it.' : 'Its review card goes with it.') : a.note ? 'Its note goes with it.' : '', edLabel: a.note ? 'Note' : 'Note on this highlight', draft: a.note, existing: !!a.note }, o); };
+    const P = (cap, vm, theme) => cell(cap, 384, { vm, theme: theme || 'light' });
+    const ch = seed.hl.filter((a) => /^c/.test(a.id));
+    const list = (xs) => xs.map((a) => ({ id: a.id, quote: a.quote.exact, quoteLang: a.lang, hasNote: !!a.note, note: a.note || '', noteLang: AN.langOf(a.note, a.lang), canDel: true, delAria: 'Delete highlight: ' + AN.clip(a.quote.exact, 60) }));
+    const rows = [
+      { title: 'A highlight', cells: [
+        P('No note · not a card', hl('a1', { where: 'Background' })),
+        P('With a note · a card in your reviews', hl('a2', { where: 'The two planes' })),
+        P('A 500-character note · it scrolls inside the box', hl('a7')),
+        P('Review turned off · the card is paused', hl('a8', { review: false, card: 'suspended' })),
+        P('A Korean note on an English highlight', hl('a14', { where: 'Why a queue, and not the framework’s background tasks, when ordering against the metering middleware is subtle' })) ] },
+      { title: 'Writing', cells: [
+        P('A new note · empty', hl('a1', { mode: 'edit', where: 'Background' })),
+        P('Editing a note · Delete note', hl('a13', { mode: 'edit', where: 'What changed since v1' })),
+        P('A note on a selection · the highlight is made on Save', { mode: 'edit', id: 'new', isHl: true, k: 'New highlight', where: 'The two planes', whereLang: 'en', note: '', edLabel: 'Note on this highlight', draft: '', existing: false }),
+        P('A note on a section · new', { mode: 'edit', id: 'bnew', k: 'Note on this section', where: 'The publish worker', whereLang: 'en', edLabel: 'Note on this section', draft: '', existing: false }) ] },
+      { title: 'Notes on a section, overlaps, and the markers', cells: [
+        P('A note on a diagram', { mode: 'view', id: 'b1', k: 'Note on this diagram', where: 'Diagram · One FastAPI process, two planes', whereLang: 'en', note: 'Redraw this from memory before chapter 3: which plane does a session live in?', noteLang: 'en', delLabel: 'Delete note' }),
+        P('Two highlights overlap', { mode: 'choose', id: 'choose', k: '2 highlights', dlgLabel: 'Choose a highlight', picks: ['a5', 'a6'].map((id) => ({ id, quote: AN.clip(H(id).quote.exact, 90), quoteLang: 'en', meta: H(id).note ? 'Highlight · note' : 'Highlight' })) }),
+        P('Text changed (made on English v1)', { mode: 'changed', id: 'chg', k: 'Text changed', where: 'The write path', whereLang: 'en', lead: 'You made these on English v1. This version no longer says them, so they are not painted here.', list: list(ch), goLabel: 'Read this section in v1' }),
+        P('1 highlight in 한국어', { mode: 'other', id: 'oth', k: '1 highlight in ', kL: '한국어', kLang: 'ko', where: 'The one idea', whereLang: 'en', lead: 'Highlights belong to their language, so this one is not painted on the English text.', list: list([H('k3')]), goLabel: 'Read this section in ', goL: '한국어', goLang: 'ko' }) ] },
+      { title: 'A bookmark', cells: [
+        P('With a label', { mode: 'bm', id: 'm2', k: 'Bookmark', where: 'Two deployments, one codebase', whereLang: 'en', label: 'Flags to check before a deploy', labelLang: 'en' }),
+        P('No label', { mode: 'bm', id: 'm1', k: 'Bookmark', where: 'The write path', whereLang: 'en', label: '' }),
+        P('Writing a label', { mode: 'bm', id: 'm1e', k: 'Bookmark', where: 'The write path', whereLang: 'en', label: '', editing: true }) ] },
+      { title: 'Dark and sepia', cells: [
+        P('Dark · with a note', hl('a2', { where: 'The two planes' }), 'dark'),
+        P('Dark · writing', hl('a13', { mode: 'edit', where: 'What changed since v1' }), 'dark'),
+        P('Sepia · with a note', hl('a12', { where: 'Contracts' }), 'sepia'),
+        P('Sepia · 1 highlight in 한국어', { mode: 'other', id: 'oth2', k: '1 highlight in ', kL: '한국어', kLang: 'ko', where: 'The one idea', whereLang: 'en', lead: 'Highlights belong to their language, so this one is not painted on the English text.', list: list([H('k3')]), goLabel: 'Read this section in ', goL: '한국어', goLang: 'ko' }, 'sepia') ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

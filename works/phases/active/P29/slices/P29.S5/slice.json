@@ -3,14 +3,14 @@
   "phase_id": "P29",
   "name": "Design wave 2 — chapter blocks and annotations",
   "kind": "co-work",
-  "status": "pending",
+  "status": "done",
   "order": 60,
   "depends_on": [
     "P29.S4"
   ],
   "created_at": "2026-10-18T19:45:26+09:00",
   "started_at": "2026-10-20T00:22:50+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-20T11:26:37+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Signed wave 2 on 'accept': figures, diagrams, quiz and annotations rounds closed, every entry-11 item as drawn; annotations' keyboard gaps, quiz C09, diagrams C14-C16 and the two clears left for the review",
   "validation": {
     "required": [],
     "last_run": null,

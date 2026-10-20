@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A listed mark — one item in the Notes sheet or the book's list</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-li" role="listitem"><sc-if value="{{ v.canGo }}" hint-placeholder-val="{{ true }}"><button type="button" class="an-li__go" onclick="{{ go }}"><span class="an-li__k">{{ v.k }}<sc-if value="{{ v.review }}" hint-placeholder-val="{{ false }}"><span class="an-li__k--on"><span class="an-li__sep" aria-hidden="true">·</span> Review this · on</span></sc-if></span><sc-if value="{{ v.hasQuote }}" hint-placeholder-val="{{ true }}"><span class="{{ qCls }}" lang="{{ v.quoteLang }}"><sc-if value="{{ markQ }}" hint-placeholder-val="{{ true }}"><mark>{{ v.quote }}</mark></sc-if><sc-if value="{{ v.isPlainQ }}" hint-placeholder-val="{{ false }}">{{ v.quote }}</sc-if></span></sc-if><sc-if value="{{ v.isGone }}" hint-placeholder-val="{{ false }}"><span class="an-li__main an-li__main--gone" lang="{{ v.quoteLang }}"><del>{{ v.quote }}</del></span></sc-if><sc-if value="{{ v.hasTitle }}" hint-placeholder-val="{{ false }}"><span class="{{ tCls }}" lang="{{ v.titleLang }}">{{ v.title }}</span></sc-if><sc-if value="{{ v.hasNote }}" hint-placeholder-val="{{ false }}"><span class="an-li__note" lang="{{ v.noteLang }}">{{ v.note }}</span></sc-if><sc-if value="{{ v.hasMeta }}" hint-placeholder-val="{{ true }}"><span class="an-li__meta"><sc-if value="{{ v.hasLang }}" hint-placeholder-val="{{ false }}"><b lang="{{ v.langCode }}">{{ v.langName }}</b></sc-if><sc-if value="{{ hasMetaText }}" hint-placeholder-val="{{ true }}"><span>{{ v.meta }}</span></sc-if></span></sc-if></button></sc-if><sc-if value="{{ cantGo }}" hint-placeholder-val="{{ false }}"><div class="an-li__go"><span class="an-li__k">{{ v.k }}<sc-if value="{{ v.review }}" hint-placeholder-val="{{ false }}"><span class="an-li__k--on"><span class="an-li__sep" aria-hidden="true">·</span> Review this · on</span></sc-if></span><sc-if value="{{ v.hasQuote }}" hint-placeholder-val="{{ true }}"><span class="{{ qCls }}" lang="{{ v.quoteLang }}"><sc-if value="{{ markQ }}" hint-placeholder-val="{{ true }}"><mark>{{ v.quote }}</mark></sc-if><sc-if value="{{ v.isPlainQ }}" hint-placeholder-val="{{ false }}">{{ v.quote }}</sc-if></span></sc-if><sc-if value="{{ v.isGone }}" hint-placeholder-val="{{ false }}"><span class="an-li__main an-li__main--gone" lang="{{ v.quoteLang }}"><del>{{ v.quote }}</del></span></sc-if><sc-if value="{{ v.hasTitle }}" hint-placeholder-val="{{ false }}"><span class="{{ tCls }}" lang="{{ v.titleLang }}">{{ v.title }}</span></sc-if><sc-if value="{{ v.hasNote }}" hint-placeholder-val="{{ false }}"><span class="an-li__note" lang="{{ v.noteLang }}">{{ v.note }}</span></sc-if><sc-if value="{{ v.hasMeta }}" hint-placeholder-val="{{ true }}"><span class="an-li__meta"><sc-if value="{{ v.hasLang }}" hint-placeholder-val="{{ false }}"><b lang="{{ v.langCode }}">{{ v.langName }}</b></sc-if><sc-if value="{{ hasMetaText }}" hint-placeholder-val="{{ true }}"><span>{{ v.meta }}</span></sc-if></span></sc-if></div></sc-if><div class="an-li__acts"><sc-if value="{{ v.isBm }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--quiet" aria-expanded="{{ v.editing }}" onclick="{{ label }}">{{ v.labelBtn }}</button></sc-if><button type="button" class="rd-btn rd-btn--quiet an-del" aria-label="{{ v.delAria }}" onclick="{{ del }}">{{ v.delWord }}</button></div><sc-if value="{{ v.editing }}" hint-placeholder-val="{{ false }}"><div class="an-li__edit"><div class="an-ed"><label class="an-ed__label" for="{{ lid }}">Label</label><input id="{{ lid }}" type="text" class="an-ed__field an-ed__field--line" maxlength="120" ref="{{ setInput }}" onkeydown="{{ key }}" placeholder="Why this place?"></div><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ save }}">Save label</button><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ cancel }}">Cancel</button></div></div></sc-if></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"item":{"editor":null},"ctx":{"editor":null},"editing":{"editor":null},"onGo":{"editor":null},"onDelete":{"editor":null},"onLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":230}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.input = null;
+    this.filled = null;
+    this.uid = 'li' + Math.random().toString(36).slice(2, 8);
+  }
+  setInput = (el) => { this.input = el; this.fill(); };
+  item() {
+    const RD = window.RD;
+    if (this.props.item) return this.props.item;
+    const v = RD.an.view(RD.read('maintainer-guide/internals', 'en'), { ann: RD.an.seed('default') });
+    return v.items.filter((x) => x.id === 'a2')[0];
+  }
+  fill() {
+    const it = this.item();
+    if (!this.props.editing || !this.input || this.filled === it.id) return;
+    this.filled = it.id;
+    this.input.value = it.label || '';
+    requestAnimationFrame(() => {
+      const el = this.input;
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      /* bring the editor into view inside the list's own scroller only, never the page */
+      let box = el.parentElement;
+      while (box && !(box.scrollHeight > box.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+      if (!box || box === document.body || box === document.documentElement) return;
+      const li = el.closest('.an-li') || el, b = box.getBoundingClientRect(), r = li.getBoundingClientRect();
+      if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom + 16;
+      else if (r.top < b.top) box.scrollTop -= b.top - r.top + 16;
+    });
+  }
+  componentDidMount() { this.fill(); }
+  componentDidUpdate() { if (!this.props.editing) this.filled = null; this.fill(); }
+  save = () => { const f = this.props.onSaveLabel; if (f) f(this.item(), this.input ? this.input.value : ''); };
+  key = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (this.props.onCancelLabel) this.props.onCancelLabel(); }
+  };
+  renderVals() {
+    const P = this.props, RD = window.RD;
+    const bare = !!P.bare;
+    const it = this.item();
+    const v = RD.an.itemVm(it, P.ctx || 'panel', !!P.editing);
+    const call = (name) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = this.props[name]; if (f) f(it); };
+    return {
+      v, cantGo: !v.canGo, hasMetaText: !!v.meta,
+      markQ: !v.isPlainQ,
+      qCls: 'an-li__main an-li__main--q' + (v.isPlainQ ? ' an-li__main--plain' : '') + (v.isCode ? ' an-li__main--code' : ''),
+      tCls: v.titleBold ? 'an-li__main an-li__main--b' : 'an-li__main',
+      lid: this.uid + '-label', setInput: this.setInput, key: this.key, save: this.save,
+      go: call('onGo'), del: call('onDelete'), label: call('onLabel'),
+      cancel: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onCancelLabel) P.onCancelLabel(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

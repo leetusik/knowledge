@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Sequence</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Sequence</p>
+<p class="rd-board__lead">One column per actor, one row per step, read top to bottom; each step is numbered. A reply is dashed. A step from an actor to itself is a loop on the right of its lifeline. A note sits under its step on a folded card, in the warn tone, so it never reads as a step.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Diagram" sample="{{ c.sample }}" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" scroll="{{ c.scroll }}" pad="{{ c.pad }}" paper="{{ c.paper }}" anchor="{{ c.anchor }}" hint-size="100%,320px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const COL = 720, PH = 390;
+    const K = (cap, w, sample, o) => Object.assign({ cap, st: px(w), sample, block: undefined, lang: 'en', theme: 'light', size: 3 }, o);
+    const sampleOf = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver).blocks.find((b) => b.isDiagram);
+    const rows = [
+      { title: "Two actors · notes and steps to itself; no message answers another, so none is dashed", cells: [K('The legacy bridge · light', COL, 'bridge', {  }), K('The legacy bridge · dark', COL, 'bridge', { theme: 'dark' }), K('The legacy bridge · sepia', COL, 'bridge', { theme: 'sepia' })] },
+      { title: "Six actors · two dashed replies and a note; wider than the column at every width, so it scrolls in its own box", cells: [K('Text column · at the start', COL, 'publish-seq'), K('Phone · 390 · at the start', PH, 'publish-seq'), K('Phone · 390 · scrolled to the end', PH, 'publish-seq', { scroll: 'end' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

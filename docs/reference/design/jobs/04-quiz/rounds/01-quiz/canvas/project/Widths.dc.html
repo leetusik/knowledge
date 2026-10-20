@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The quiz at 390, 820 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+<script src="flow.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+/* Canvas only, never built: the foot strip's one control, in the state bar's neutral button look. */
+[data-proto="screens"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 7px; cursor: pointer; }
+[data-proto="screens"] button:hover { background: #fff; }
+[data-proto="screens"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+</style>
+</helmet>
+<div class="rd-widths">
+<div class="rd-board rd-widths__board">
+<p class="rd-board__title">The quiz at the three reference sizes</p>
+<p class="rd-board__lead">One prototype state drawn three times. A click in any frame moves all three: answer, check or try again in one and the other two follow. Each frame carries the state bar at the top of its page, so it scrolls away with the chapter; the theme and text size picked in any frame show in all three.</p>
+<div class="rd-widths__row">
+<div class="rd-cell"><p class="rd-cap">Phone · 390 × 844</p><div class="rd-stage rd-stage--phone"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" quiz="{{ r.quiz }}" on-quiz="{{ r.onQuiz }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">iPad portrait · 820 × 1180</p><div class="rd-stage rd-stage--ipad"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" quiz="{{ r.quiz }}" on-quiz="{{ r.onQuiz }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">Desktop · 1440 × 900</p><div class="rd-stage rd-stage--desk"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" quiz="{{ r.quiz }}" on-quiz="{{ r.onQuiz }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+</div>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><button type="button" onclick="{{ toBars }}">Back to the three state bars</button><a href="Main.dc.html">Play the whole flow</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2794,"height":1404}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RD.flow.initial('qsw', { themeChoice: 'light', size: 3 });
+    this.a = window.RD.flow.api(this);
+  }
+  /* Each frame's state bar is the first row of its scrolled page (rule 1). One press scrolls all three back to it. */
+  toBars = (e) => {
+    const root = e && e.currentTarget && e.currentTarget.closest('.rd-widths');
+    if (!root) return;
+    if (this.state.panel) this.a.panel(null);
+    root.querySelectorAll('.rd-scroll, .rd-away').forEach((el) => { el.scrollTop = 0; });
+    /* the page's presets are the buttons before the first "· theme:" separator */
+    const g = root.querySelector('[data-proto="state-bar"] .pb-group:not(.is-off)'), presets = [];
+    if (g) for (const el of g.querySelectorAll('button, .pb-sep')) { if (el.classList.contains('pb-sep')) break; presets.push(el); }
+    const b = presets.find((x) => x.getAttribute('aria-pressed') === 'true') || presets[0];
+    if (b) b.focus({ preventScroll: true });
+  };
+  renderVals() {
+    const F = window.RD.flow, s = this.state;
+    const KEYS = ['qopen', 'qsr', 'qsw', 'qmpart', 'qrrev', 'qrgot', 'qctyped', 'qcpart', 'qret', 'qko', 'qkocl', 'qanonsave', 'qone', 'qtwenty', 'lopen', 'lanon'];
+    const on = F.pressedKey(s, KEYS);
+    const none = { kind: 'library', where: '', detail: '', legacyTitle: '', onBack: null, onContinue: null };
+    return {
+      bar: [Object.assign({ key: 'widths', name: 'The quiz at three widths', cls: 'pb-group', only: false,
+        presets: KEYS.map((k) => ({ key: k, label: F.BY[k].label, pressed: on === k, pick: () => this.a.pick(k) })) }, F.extras(this, this.a))],
+      inReader: !s.away,
+      isAway: !!s.away,
+      r: F.readerProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+      toBars: this.toBars,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Margin note — one item in the reader's margin</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<button type="button" class="an-mi" aria-current="{{ current }}" onclick="{{ open }}"><sc-if value="{{ hasLabel }}" hint-placeholder-val="{{ true }}"><span class="{{ kCls }}">{{ label }}</span></sc-if><sc-if value="{{ hasText }}" hint-placeholder-val="{{ true }}"><span class="an-mi__t" lang="{{ lang }}">{{ text }}<sc-if value="{{ hasL }}" hint-placeholder-val="{{ false }}"><span lang="{{ ll }}">{{ lname }}</span></sc-if></span></sc-if></button>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"item":{"editor":null},"current":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":300,"height":130}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const m = P.item || { kind: 'note', label: 'Note', text: 'Content plane: rebuilt from the files. Accounts plane: migrated and backed up. Ask which one before touching a table.', lang: 'en' };
+    const text = m.text || '';
+    const label = m.label || '';
+    return {
+      hasLabel: !!label, label, kCls: m.kind === 'bm' ? 'an-mi__k an-mi__k--on' : 'an-mi__k',
+      hasText: !!text, text, lang: m.lang || 'en', hasL: !!m.hasL, ll: m.ll || 'en', lname: m.lname || '',
+      current: P.current ? 'true' : undefined,
+      open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

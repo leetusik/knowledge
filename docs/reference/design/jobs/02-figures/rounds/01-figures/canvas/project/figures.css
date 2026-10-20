@@ -1,0 +1,224 @@
+/* Job 02-figures, round 01: the figure, the plain Markdown image, the figure row and its card, the svg block, the
+   sources list and the citation. Everything resolves to kb-* tokens and the signed reader's values in reader.css.
+   Proposed, reader-scoped: the tone palette (--fg-<tone>-ink and -soft, PROVISIONAL, pending 03-diagrams) and the
+   image plate and edge (--fg-plate, --fg-edge). Canvas-only rules are marked. */
+
+/* ---------- Tones (provisional, pending 03-diagrams) and the image plate ---------- */
+[data-theme="light"], .rd-frame:not([data-theme]) {
+  --fg-plate: var(--kb-surface);
+  --fg-edge: var(--kb-border-strong);
+  --fg-default-ink: #26211c; --fg-default-soft: #efe9db;
+  --fg-muted-ink: #5c5347; --fg-muted-soft: #f4efe3;
+  --fg-accent-ink: #0a544e; --fg-accent-soft: rgba(15, 111, 102, 0.15);
+  --fg-ok-ink: #3a6a2c; --fg-ok-soft: #e6eedb;
+  --fg-warn-ink: #6b5220; --fg-warn-soft: #efe6d2;
+  --fg-bad-ink: #8f4030; --fg-bad-soft: #f1e1db;
+  --fg-store-ink: #764f6c; --fg-store-soft: #f1e6ee;
+  --fg-series-1-ink: #0a544e; --fg-series-1-soft: #dcebe7;
+  --fg-series-2-ink: #6b5220; --fg-series-2-soft: #f1e7cf;
+  --fg-series-3-ink: #764f6c; --fg-series-3-soft: #efe3ec;
+  --fg-series-4-ink: #8f4030; --fg-series-4-soft: #f4e0d9;
+  --fg-series-5-ink: #35608f; --fg-series-5-soft: #e2eaf3;
+  --fg-series-6-ink: #4f5c1c; --fg-series-6-soft: #e8ecd2;
+}
+[data-theme="dark"] {
+  --fg-plate: #ece4d7;
+  --fg-edge: var(--kb-border-strong);
+  --fg-default-ink: #ece4d7; --fg-default-soft: #2a261e;
+  --fg-muted-ink: #b6ad9d; --fg-muted-soft: #1f1c16;
+  --fg-accent-ink: #86d4ca; --fg-accent-soft: rgba(98, 189, 178, 0.2);
+  --fg-ok-ink: #a9d897; --fg-ok-soft: rgba(156, 207, 138, 0.16);
+  --fg-warn-ink: #d8b673; --fg-warn-soft: rgba(200, 161, 94, 0.16);
+  --fg-bad-ink: #e0a08e; --fg-bad-soft: rgba(214, 138, 118, 0.16);
+  --fg-store-ink: #d4abcb; --fg-store-soft: rgba(201, 155, 192, 0.16);
+  --fg-series-1-ink: #86d4ca; --fg-series-1-soft: rgba(98, 189, 178, 0.16);
+  --fg-series-2-ink: #d8b673; --fg-series-2-soft: rgba(200, 161, 94, 0.16);
+  --fg-series-3-ink: #d4abcb; --fg-series-3-soft: rgba(201, 155, 192, 0.16);
+  --fg-series-4-ink: #e0a08e; --fg-series-4-soft: rgba(214, 138, 118, 0.16);
+  --fg-series-5-ink: #a3c2e4; --fg-series-5-soft: rgba(143, 179, 220, 0.16);
+  --fg-series-6-ink: #c2cf7e; --fg-series-6-soft: rgba(181, 196, 106, 0.16);
+}
+[data-theme="sepia"] {
+  --fg-plate: var(--kb-surface);
+  --fg-edge: var(--kb-border-strong);
+  --fg-default-ink: #382a1b; --fg-default-soft: #ecdcba;
+  --fg-muted-ink: #5f4d37; --fg-muted-soft: #efe2c5;
+  --fg-accent-ink: #08483f; --fg-accent-soft: rgba(12, 97, 89, 0.15);
+  --fg-ok-ink: #33591f; --fg-ok-soft: #e3e3bd;
+  --fg-warn-ink: #614716; --fg-warn-soft: #eedcb4;
+  --fg-bad-ink: #833526; --fg-bad-soft: #efd7c6;
+  --fg-store-ink: #6c4562; --fg-store-soft: #ecd9d6;
+  --fg-series-1-ink: #08483f; --fg-series-1-soft: #dcdfc4;
+  --fg-series-2-ink: #614716; --fg-series-2-soft: #eedcb4;
+  --fg-series-3-ink: #6c4562; --fg-series-3-soft: #ecd9d6;
+  --fg-series-4-ink: #833526; --fg-series-4-soft: #efd7c6;
+  --fg-series-5-ink: #2f5680; --fg-series-5-soft: #dfdfd2;
+  --fg-series-6-ink: #4c561a; --fg-series-6-soft: #e4e1bd;
+}
+.fg-tone-default { --fg-ink: var(--fg-default-ink); --fg-soft: var(--fg-default-soft); }
+.fg-tone-muted { --fg-ink: var(--fg-muted-ink); --fg-soft: var(--fg-muted-soft); }
+.fg-tone-accent { --fg-ink: var(--fg-accent-ink); --fg-soft: var(--fg-accent-soft); }
+.fg-tone-ok { --fg-ink: var(--fg-ok-ink); --fg-soft: var(--fg-ok-soft); }
+.fg-tone-warn { --fg-ink: var(--fg-warn-ink); --fg-soft: var(--fg-warn-soft); }
+.fg-tone-bad { --fg-ink: var(--fg-bad-ink); --fg-soft: var(--fg-bad-soft); }
+.fg-tone-store { --fg-ink: var(--fg-store-ink); --fg-soft: var(--fg-store-soft); }
+.fg-tone-series-1 { --fg-ink: var(--fg-series-1-ink); --fg-soft: var(--fg-series-1-soft); }
+.fg-tone-series-2 { --fg-ink: var(--fg-series-2-ink); --fg-soft: var(--fg-series-2-soft); }
+.fg-tone-series-3 { --fg-ink: var(--fg-series-3-ink); --fg-soft: var(--fg-series-3-soft); }
+.fg-tone-series-4 { --fg-ink: var(--fg-series-4-ink); --fg-soft: var(--fg-series-4-soft); }
+.fg-tone-series-5 { --fg-ink: var(--fg-series-5-ink); --fg-soft: var(--fg-series-5-soft); }
+.fg-tone-series-6 { --fg-ink: var(--fg-series-6-ink); --fg-soft: var(--fg-series-6-soft); }
+
+/* ---------- Parts' wrappers (the bare pass-through in the reader; a standalone frame on a Components board) ---------- */
+.fg-pass { display: block; }
+.fg-solo { padding-block: var(--kb-space-lg); }
+.fg-solo > :first-child { margin-top: 0; }
+
+/* ---------- The figure ---------- */
+.fg-fig {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k));
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem);
+}
+.fg-box { position: relative; }
+.fg-box__scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; border-radius: var(--kb-radius-sm); }
+/* The image box: one image pixel to one CSS pixel at most (never scaled up), never wider than the column, never taller
+   than min(36rem, 75svh); the box is reserved at the image's ratio from the asset map's width and height, so nothing
+   below it moves when the image arrives. */
+.fg-media {
+  --fg-cap: min(36rem, 75svh);
+  position: relative; display: block;
+  width: min(100%, calc(var(--fg-w) * 1px), calc(var(--fg-cap) * var(--fg-w) / var(--fg-h)));
+  aspect-ratio: var(--fg-w) / var(--fg-h);
+  border-radius: var(--kb-radius-sm); background: var(--fg-plate); overflow: hidden;
+}
+/* Every image's edge: a hairline on top of the image, in every theme, so a light screenshot on a light page, or any
+   image in dark and sepia, reads as an image. Takes no layout. */
+.fg-media::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--fg-edge); pointer-events: none; }
+.fg-media__pic, .fg-media__img { display: block; width: 100%; height: 100%; }
+.fg-media__img { object-fit: contain; }
+/* width: wide keeps the column's edges and never shrinks below 36rem: narrower than that (a phone), it scrolls in its box */
+.fg-fig--wide .fg-media { width: min(max(100%, 36rem), calc(var(--fg-w) * 1px), calc(var(--fg-cap) * var(--fg-w) / var(--fg-h))); }
+/* Loading: the reserved box on the sunken ground with the reader's skeleton sheen (none under reduced motion) */
+.fg-media--loading { background: var(--kb-surface-sunken); }
+.fg-media__skel { position: absolute; inset: 0; border-radius: inherit; }
+/* Missing: the image's box, holding its alt text under a label; it grows when the text needs more room */
+.fg-media--missing {
+  display: flex; flex-direction: column; justify-content: center; gap: var(--kb-space-xs);
+  padding: var(--kb-space-md); background: var(--kb-surface-sunken); overflow: visible; min-height: 6rem;
+}
+.fg-miss__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.fg-miss__alt { font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink); overflow-wrap: break-word; text-wrap: pretty; }
+/* The caption: the interface face at the column's small step, in secondary, tight under the image */
+.fg-figcap { display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k)); }
+.fg-cap { margin: 0; max-width: 34em; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-secondary); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-credit { margin: 0; max-width: 40rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.fg-credit__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; }
+.fg-credit__text { min-width: 0; }
+.fg-still { display: none; margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+@media (prefers-reduced-motion: reduce) { .fg-still { display: block; } }
+/* The hint and the scroll fades of a box that scrolls sideways (the signed reader's 9a) */
+.fg-hint { display: none; margin: 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.is-over > .fg-hint { display: block; }
+.fg-fade { display: none; position: absolute; top: 0; bottom: 0; width: 2rem; pointer-events: none; opacity: 0; transition: opacity var(--rd-ease); }
+.fg-fade--r { right: 0; background: linear-gradient(to right, transparent, var(--kb-surface)); }
+.fg-fade--l { left: 0; background: linear-gradient(to left, transparent, var(--kb-surface)); }
+.is-over > .fg-box > .fg-fade { display: block; }
+.is-more-r > .fg-box > .fg-fade--r, .is-more-l > .fg-box > .fg-fade--l { opacity: 1; }
+
+/* ---------- The plain Markdown image: the same image box, at a paragraph's spacing, with no caption ---------- */
+.fg-plain { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; }
+
+/* ---------- The figure row ---------- */
+.fg-row {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding-block: calc(var(--kb-space-md) * var(--rd-k));
+  border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border);
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-md) * var(--rd-k));
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem);
+}
+.fg-row__cap { margin: 0; max-width: 34em; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+/* The items' box is a container measured in its own em (the column's small step), so a row of three goes side by side
+   only when each item gets room for its text at the reader's size. */
+.fg-row__items { container: fgrow / inline-size; font-size: var(--rd-fs-s); }
+.fg-row__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--kb-space-lg) * var(--rd-k)) calc(var(--kb-space-md) * var(--rd-k)); align-items: start; }
+.fg-row__grid > * { min-width: 0; }
+@container rd (min-width: 40rem) {
+  @container fgrow (min-width: 24em) { .fg-row--2 .fg-row__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @container fgrow (min-width: 33em) { .fg-row--3 .fg-row__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+}
+.fg-row--cards .fg-row__grid { align-items: stretch; }
+.fg-row--cards .fg-row__grid > *, .fg-row--cards .fg-row__grid > * > .rd-pass, .fg-row--cards .fg-row__grid > * > .rd-pass > .fg-pass, .fg-row--cards .fg-card { height: 100%; }
+.fg-item { margin: 0; display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k)); min-width: 0; }
+.fg-item .rd-dgm { margin: 0; }
+
+/* ---------- The row card ---------- */
+.fg-card {
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  padding: calc(var(--kb-space-md) * var(--rd-k)); border-radius: var(--kb-radius); background: var(--fg-soft);
+  font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink);
+}
+.fg-card__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--fg-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-card__p { margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
+.fg-card__p + .fg-card__p { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.fg-card :lang(ko), .fg-card:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* ---------- The svg block ---------- */
+/* Drawn in currentColor (kb-ink) and the tone classes only. It is never drawn larger than its viewBox, and never
+   narrower than the width at which its smallest label is 11 px (--fg-minw, computed from the source); below that it
+   scrolls in its box. In a row it scales to the item. Strokes stay hairlines at every width. */
+.fg-svg__svg { display: block; width: min(100%, calc(var(--fg-vbw) * 1px)); min-width: var(--fg-minw, 0px); height: auto; overflow: visible; color: var(--kb-ink); font-family: var(--font-body); }
+.fg-svg__svg :where(*) { vector-effect: non-scaling-stroke; }
+.fg-svg__svg :where(text:not([fill]), tspan:not([fill])) { fill: currentColor; }
+.fg-svg__svg :where(rect, circle, ellipse, polygon, polyline, path):where(:not([fill])) { fill: none; }
+.fg-svg__svg .kb-fill-default { fill: var(--fg-default-soft); } .fg-svg__svg :is(text, tspan).kb-fill-default { fill: var(--fg-default-ink); } .fg-svg__svg .kb-stroke-default { stroke: var(--fg-default-ink); }
+.fg-svg__svg .kb-fill-muted { fill: var(--fg-muted-soft); } .fg-svg__svg :is(text, tspan).kb-fill-muted { fill: var(--fg-muted-ink); } .fg-svg__svg .kb-stroke-muted { stroke: var(--fg-muted-ink); }
+.fg-svg__svg .kb-fill-accent { fill: var(--fg-accent-soft); } .fg-svg__svg :is(text, tspan).kb-fill-accent { fill: var(--fg-accent-ink); } .fg-svg__svg .kb-stroke-accent { stroke: var(--fg-accent-ink); }
+.fg-svg__svg .kb-fill-ok { fill: var(--fg-ok-soft); } .fg-svg__svg :is(text, tspan).kb-fill-ok { fill: var(--fg-ok-ink); } .fg-svg__svg .kb-stroke-ok { stroke: var(--fg-ok-ink); }
+.fg-svg__svg .kb-fill-warn { fill: var(--fg-warn-soft); } .fg-svg__svg :is(text, tspan).kb-fill-warn { fill: var(--fg-warn-ink); } .fg-svg__svg .kb-stroke-warn { stroke: var(--fg-warn-ink); }
+.fg-svg__svg .kb-fill-bad { fill: var(--fg-bad-soft); } .fg-svg__svg :is(text, tspan).kb-fill-bad { fill: var(--fg-bad-ink); } .fg-svg__svg .kb-stroke-bad { stroke: var(--fg-bad-ink); }
+.fg-svg__svg .kb-fill-store { fill: var(--fg-store-soft); } .fg-svg__svg :is(text, tspan).kb-fill-store { fill: var(--fg-store-ink); } .fg-svg__svg .kb-stroke-store { stroke: var(--fg-store-ink); }
+.fg-svg__svg .kb-fill-series-1 { fill: var(--fg-series-1-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-1 { fill: var(--fg-series-1-ink); } .fg-svg__svg .kb-stroke-series-1 { stroke: var(--fg-series-1-ink); }
+.fg-svg__svg .kb-fill-series-2 { fill: var(--fg-series-2-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-2 { fill: var(--fg-series-2-ink); } .fg-svg__svg .kb-stroke-series-2 { stroke: var(--fg-series-2-ink); }
+.fg-svg__svg .kb-fill-series-3 { fill: var(--fg-series-3-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-3 { fill: var(--fg-series-3-ink); } .fg-svg__svg .kb-stroke-series-3 { stroke: var(--fg-series-3-ink); }
+.fg-svg__svg .kb-fill-series-4 { fill: var(--fg-series-4-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-4 { fill: var(--fg-series-4-ink); } .fg-svg__svg .kb-stroke-series-4 { stroke: var(--fg-series-4-ink); }
+.fg-svg__svg .kb-fill-series-5 { fill: var(--fg-series-5-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-5 { fill: var(--fg-series-5-ink); } .fg-svg__svg .kb-stroke-series-5 { stroke: var(--fg-series-5-ink); }
+.fg-svg__svg .kb-fill-series-6 { fill: var(--fg-series-6-soft); } .fg-svg__svg :is(text, tspan).kb-fill-series-6 { fill: var(--fg-series-6-ink); } .fg-svg__svg .kb-stroke-series-6 { stroke: var(--fg-series-6-ink); }
+
+/* ---------- The sources list ---------- */
+.fg-src {
+  list-style: none; margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink);
+}
+.fg-src__item {
+  display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0 var(--kb-space-xs);
+  margin-inline: calc(var(--kb-space-sm) * -1); padding: var(--kb-space-sm); border-radius: var(--kb-radius-sm);
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem);
+}
+/* The item a citation led to (the product's :target; .is-target on the canvas): a sunken ground and a hairline box */
+.fg-src__item.is-target, .fg-src__item:target { background: var(--kb-surface-sunken); box-shadow: inset 0 0 0 1px var(--kb-border-strong); }
+.fg-src__n { font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums; color: var(--kb-secondary); }
+.fg-src__body { display: flex; flex-direction: column; min-width: 0; }
+.fg-src__title { margin: 0; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-src__meta { margin: 0; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.fg-src__url { margin: 0; }
+/* the URL is the link, as text; it wraps anywhere, so a long one stays in the column; its box is 44 px tall */
+.fg-src__link { display: inline-block; overflow-wrap: anywhere; padding-block: calc((var(--kb-tap) - 1.45em) / 2); margin-block: calc((1.45em - var(--kb-tap)) / 2); }
+.fg-src__note { margin: 0; color: var(--kb-ink); }
+.fg-src__back { margin: 0 0 calc((1.45em - var(--kb-tap)) / 2); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-xs); font-size: 0.8125rem; color: var(--kb-secondary); }
+.fg-back { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; min-height: var(--kb-tap); min-width: var(--kb-tap); font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none; }
+.fg-back:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.fg-back__chev { color: var(--kb-secondary); }
+.fg-back--letter { justify-content: center; }
+.fg-src :lang(ko), .fg-src:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.fg-src :lang(ko) .fg-src__link, .fg-src__link { word-break: normal; }
+
+/* ---------- The citation: the author's words and the source's number, one link ---------- */
+.fg-cite { scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 2rem); }
+.fg-cite__n { font-family: var(--font-body); font-size: 0.8333em; font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* the citation the reader came back to (the product's :target; .fg-cite--here on the canvas) */
+.fg-cite--here, .fg-cite:target { background: var(--kb-accent-soft); box-shadow: 0 0 0 2px var(--kb-accent-soft); border-radius: 2px; }
+
+/* ---------- Canvas only: reduced motion as a prototype state (the product follows the media query) ---------- */
+.fg-rm .rd-skel { animation: none; }
+.fg-rm .fg-still { display: block; }
