@@ -3,12 +3,12 @@
   "phase_id": "P30",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-17T18:36:36+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T00:10:03+09:00",
+  "completed_at": "2026-10-21T00:18:42+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Recorded A1-A5 (all recommendations accepted) and cut P30 into 28 slices: S1 the A5 superseding wave, S2-S11 server backing plus /explain and CLI, S12-S26 one signed surface each, S27 the sweep, S28 the handoff note; ~$580 / ~23 span-hours floor",
   "validation": {
     "required": [],
     "last_run": null,

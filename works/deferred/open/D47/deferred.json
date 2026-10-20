@@ -1,0 +1,11 @@
+{
+  "id": "D47",
+  "title": "A private content remote for tenant #1",
+  "status": "deferred",
+  "source": "P30.DECOMP",
+  "reason": "Tenant #1's 'private' documents are world-readable on the public GitHub repo (P29 Q1, decision A1); P30 takes no repo action, and with images kept out of git (A2) they have no off-box backup until the content has a private home.",
+  "trigger": "The operator's word, or the first private subject book.",
+  "created_at": "2026-10-21T00:18:42+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
