@@ -3,13 +3,13 @@
   "phase_id": "P30",
   "name": "Superseding design wave (A5): reader, annotations, library",
   "kind": "co-work",
-  "status": "todo",
+  "status": "pending",
   "order": 10,
   "depends_on": [
     "P30.DECOMP"
   ],
   "created_at": "2026-10-21T00:14:38+09:00",
-  "started_at": null,
+  "started_at": "2026-10-21T00:19:42+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
@@ -30,5 +30,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "your choice of how to open the A5 superseding rounds (under each job's own P29 slice, or after an engine fix) lets S1 open the three rounds and dispatch the drafters",
+    "since": "2026-10-21T00:19:42+09:00"
   }
 }

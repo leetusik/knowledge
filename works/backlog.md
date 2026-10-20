@@ -8,7 +8,7 @@
 - Current phase: `P30`
 - Current slice: `P30.S1`
 - Next slice: `P30.S2`
-- Waiting on operator: `none`
+- Waiting on operator: `P30.S1`
 - Open deferred jobs: `34`
 
 ## Streams
@@ -152,7 +152,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P30.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P30/slices/P30.DECOMP` |
-| [ ] `P30.S1` | `todo` | Superseding design wave (A5): reader, annotations, library | `co-work` | `works/phases/active/P30/slices/P30.S1` |
+| [~] `P30.S1` | `pending` | Superseding design wave (A5): reader, annotations, library | `co-work` | `works/phases/active/P30/slices/P30.S1` |
 | [ ] `P30.S2` | `todo` | Books and chapters: manifests, index, publish placement, book routes | `implementation` | `works/phases/active/P30/slices/P30.S2` |
 | [ ] `P30.S3` | `todo` | Native format: Python parser, validator and conformance fixtures | `implementation` | `works/phases/active/P30/slices/P30.S3` |
 | [ ] `P30.S4` | `todo` | Image assets: upload, content-addressed store, gated serving | `implementation` | `works/phases/active/P30/slices/P30.S4` |
