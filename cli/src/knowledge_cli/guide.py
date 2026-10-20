@@ -145,6 +145,30 @@ knowledge base with no extra setup.
   `cannot reach`. **Never re-run a `save` on a timeout without checking first**: a
   blind retry is a duplicate, or a new version of a document that was already fine.
 
+### Native chapters, books and images
+
+    knowledge save chapter.md --format native --title "Why caches work" --tag caching,basics \\
+      --book phases --book-kind codebase --book-title "myrepo, phase by phase" \\
+      --chapter p8 --chapter-title "P8: Caching" --chapter-source phase=P8 --position 8 \\
+      --lang en --asset arch=./arch.png
+
+- **`--format native`** (or a file whose `---` header says `format: native`): the body has
+  no `# H1` and no header of its own. The header is read first (title, tags, summary,
+  lang, translated_from, subject become defaults; a flag wins) and stripped, because the
+  server writes the header. `--format html` sends a legacy page verbatim.
+- **Placement**: `--book SLUG --chapter KEY` go together; a NEW book also needs
+  `--book-kind codebase|subject`. `--position`, `--chapter-title`, `--chapter-source`
+  only seed a NEW chapter. Re-sending the same `(book, chapter, lang)` is its next
+  version, so a re-explain needs no `--new-version`. A translation adds `--lang ko
+  --translated-from en@2` and must keep the source's quiz ids.
+- **`--asset NAME=PATH`** (repeatable) attaches an image the body references as
+  `asset:NAME`; png, jpeg, webp or gif, by magic bytes. A version inherits no images:
+  re-send them on every publish.
+- **`--subject LABEL`** files a loose document by subject (general-learning mode).
+- **A rejected chapter** prints every violation as `line N: [code] message`; the 201's
+  `warnings` go to stderr as `note: warning: ...`. A re-explain starts from
+  `knowledge read <id or rel_path> --source`, the whole stored file with its ids.
+
 `save` prints the new document's `id`, `rel_path`, the direct `url` (a working doc
 page — shareable when the project is public), and a `knowledge read <id>` hint.
 `--json` carries the full 201 payload — except after a lost reply, where it carries

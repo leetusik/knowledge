@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S7`
-- Next slice: `P30.S8`
+- Current slice: `P30.S8`
+- Next slice: `P30.S9`
 - Waiting on operator: `none`
 - Open deferred jobs: `35`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S7` | 7/30 | - | working tree |
+| `default` | `P30` | planned | `P30.S8` | 8/30 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S7` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S8` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -158,7 +158,7 @@
 | [x] `P30.S4` | `done` | Image assets: upload, content-addressed store, gated serving | `implementation` | `works/phases/active/P30/slices/P30.S4` |
 | [x] `P30.S5` | `done` | Native ingest: publish, ids, references, search, MCP, html-to-native | `implementation` | `works/phases/active/P30/slices/P30.S5` |
 | [x] `P30.S6` | `done` | Library migration: bind the 42 documents into books, no broken link | `implementation` | `works/phases/active/P30/slices/P30.S6` |
-| [ ] `P30.S7` | `todo` | /explain and the CLI: native chapters, books, assets, portable copy | `implementation` | `works/phases/active/P30/slices/P30.S7` |
+| [x] `P30.S7` | `done` | /explain and the CLI: native chapters, books, assets, portable copy | `implementation` | `works/phases/active/P30/slices/P30.S7` |
 | [ ] `P30.S8` | `todo` | Reader state: revision 0006, /app/reader API, beacon, purge | `implementation` | `works/phases/active/P30/slices/P30.S8` |
 | [ ] `P30.S9` | `todo` | Anchors: server-side re-anchoring across versions and languages | `implementation` | `works/phases/active/P30/slices/P30.S9` |
 | [ ] `P30.S10` | `todo` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
