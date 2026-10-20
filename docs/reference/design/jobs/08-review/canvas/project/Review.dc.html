@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review — the queue screen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ frameCls }}" data-theme="{{ m.theme }}" style="{{ frameStyle }}" ref="{{ setFrame }}" onkeydown="{{ onKey }}"><div class="rd-in">
+<div class="rd-scroll rd-scroll--nobottom" ref="{{ setBox }}" onscroll="{{ onScroll }}" aria-busy="{{ busy }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.hasExtra2 }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extra2Label }}</span><sc-for list="{{ g.extra2 }}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<div class="rd-topwrap"><div class="rd-line" aria-hidden="true"><span class="rd-line__fill" style="{{ m.head.progStyle }}"></span></div>
+<header class="rd-top">
+<div class="rd-top__start"><a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ goLibrary }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a><a class="rd-back" href="#top" onclick="{{ goLibrary }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="rd-back__long">Library</span><span class="rd-back__short">Library</span></a></div>
+<div class="rd-top__end"><button type="button" class="rd-tbtn" aria-haspopup="dialog" aria-expanded="{{ setOpen }}" onclick="{{ toggleSettings }}">Settings</button><button type="button" class="rd-tbtn" aria-haspopup="dialog" aria-expanded="{{ dispOpen }}" onclick="{{ toggleDisplay }}">Display</button></div>
+</header></div>
+<main class="rd-flow rv-page" id="top">
+<dc-import name="QueueHead" bare="{{ true }}" h="{{ m.head }}" uid="{{ uid }}" hint-size="100%,150px"></dc-import>
+<sc-if value="{{ m.isCard }}" hint-placeholder-val="{{ true }}"><dc-import name="Card" bare="{{ true }}" c="{{ m.card }}" hint-size="100%,640px"></dc-import></sc-if>
+<sc-if value="{{ m.isEnd }}" hint-placeholder-val="{{ false }}"><dc-import name="ReviewEnd" bare="{{ true }}" e="{{ m.end }}" uid="{{ uid }}" hint-size="100%,420px"></dc-import></sc-if>
+</main>
+</div>
+<sc-if value="{{ m.hasToast }}" hint-placeholder-val="{{ false }}"><div class="an-slot an-slot--page an-slot--toast"><dc-import name="Toast" bare="{{ true }}" text="{{ m.toast }}" on-undo="{{ undo }}" hint-size="360px,52px"></dc-import></div></sc-if>
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-scrim" tabindex="-1" aria-label="Close panel" onclick="{{ closePanel }}"></button></sc-if>
+<sc-if value="{{ isDisplay }}" hint-placeholder-val="{{ false }}"><div class="rd-sheet rd-sheet--right" role="dialog" aria-modal="true" aria-label="Display"><div class="rd-sheet__head"><h2 class="rd-sheet__title">Display</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closePanel }}">Close</button></div><div class="rd-sheet__body"><dc-import name="DisplayPanel" bare="{{ true }}" size="{{ m.size }}" theme-choice="{{ m.themeChoice }}" os="{{ m.os }}" on-size="{{ onSize }}" on-theme="{{ onTheme }}" hint-size="100%,360px"></dc-import></div></div></sc-if>
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}"><div class="rd-sheet rd-sheet--right" role="dialog" aria-modal="true" aria-label="Review settings"><div class="rd-sheet__head"><h2 class="rd-sheet__title">Review settings</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closePanel }}">Close</button></div><div class="rd-sheet__body"><dc-import name="ReviewSettings" bare="{{ true }}" st="{{ m.settings }}" uid="{{ uid }}" hint-size="100%,560px"></dc-import></div></div></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"model": {"editor": null}, "bar": {"editor": null}, "fit": {"editor": null}, "$preview": {"width": 1440, "height": 900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { barVis: 0 };
+    this.box = null;
+    this.frame = null;
+    this.uid = 'rv' + Math.random().toString(36).slice(2, 7);
+  }
+  setBox = (el) => { this.box = el; };
+  setFrame = (el) => { this.frame = el; };
+  /* The canvas's state bar is the scroller's first row; barOff is its height (0 in the product). */
+  barOff() {
+    const bar = this.box && this.box.querySelector('[data-proto="state-bar"]');
+    return bar ? bar.offsetHeight : 0;
+  }
+  measure() {
+    const top = this.box ? this.box.scrollTop : 0;
+    const barVis = Math.max(0, Math.round(this.barOff() - top));
+    if (barVis !== this.state.barVis) this.setState({ barVis });
+  }
+  onScroll = () => { this.measure(); };
+  componentDidMount() { this.measure(); }
+  componentDidUpdate(prev) {
+    const pm = prev.model || {}, m = this.props.model || {};
+    const pid = pm.card ? pm.card.id : null, id = m.card ? m.card.id : null;
+    if (pid !== id || !!pm.isEnd !== !!m.isEnd) this.toCard();
+    if (m.panel && m.panel !== pm.panel) this.focusSheet();
+    if (!m.panel && pm.panel) this.restoreFocus();
+    this.flushSoon();
+    this.measure();
+  }
+  /* A new card shows from its top: if the page was scrolled past it (rating at the foot of a long card), it scrolls back
+     so the card's head sits under the top bar. */
+  toCard() {
+    const t0 = Date.now();
+    const run = () => {
+      const box = this.box;
+      if (!box) return;
+      const el = box.querySelector('[data-rv-card], [data-rv-end], .rv-sk');
+      if (!el) { if (Date.now() - t0 < 1500) requestAnimationFrame(run); return; }
+      const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - (3 + 56 + 16);
+      if (box.scrollTop > top) box.scrollTop = Math.max(0, Math.round(top));
+      this.measure();
+    };
+    requestAnimationFrame(run);
+  }
+  flushSoon() {
+    const t0 = Date.now();
+    const go = () => {
+      const RV = window.RV;
+      if (!RV.focus || !this.frame) return;
+      RV.flush(this.frame);
+      if (RV.focus && Date.now() - t0 < 1500) requestAnimationFrame(go);
+    };
+    requestAnimationFrame(go);
+  }
+  onKey = (e) => {
+    const m = this.props.model;
+    if (e.key === 'Escape' && m && m.panel && m.a) { e.stopPropagation(); m.a.closePanel(); }
+  };
+  focusSheet() {
+    if (!this.opener) this.opener = document.activeElement;
+    const t0 = Date.now();
+    const go = () => {
+      const b = this.frame && this.frame.querySelector('.rd-sheet__close');
+      if (b) b.focus({ preventScroll: true });
+      else if (Date.now() - t0 < 1500) requestAnimationFrame(go);
+    };
+    requestAnimationFrame(go);
+  }
+  restoreFocus() {
+    const o = this.opener;
+    this.opener = null;
+    if (o && o.isConnected && this.frame && this.frame.contains(o)) o.focus({ preventScroll: true });
+  }
+  renderVals() {
+    const P = this.props, RV = window.RV;
+    const m = P.model || RV.view(RV.flow.initial('due'), null);
+    const a = m.a || {};
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [], hasExtra2: false, extra2Label: '', extra2: [] }, g)) : [];
+    const panel = m.panel || null;
+    const call = (fn, arg) => (e) => { if (e && e.preventDefault) e.preventDefault(); if (fn) fn(arg, e && e.currentTarget); };
+    return {
+      m, bar, hasBar: bar.length > 0, uid: this.uid,
+      frameCls: 'rd-frame rd-size-' + (m.size || 3) + ' rd-theme-' + m.theme + (P.fit === 'fill' ? ' rd-frame--fill' : ' rd-frame--alone'),
+      frameStyle: '--rd-barvis: ' + (bar.length ? this.state.barVis : 0) + 'px',
+      busy: m.head.isLoading ? 'true' : undefined,
+      setOpen: panel === 'settings' ? 'true' : 'false',
+      dispOpen: panel === 'display' ? 'true' : 'false',
+      sheetOpen: !!panel, isDisplay: panel === 'display', isSettings: panel === 'settings',
+      goLibrary: call(a.library),
+      toggleSettings: call(a.panel, 'settings'),
+      toggleDisplay: call(a.panel, 'display'),
+      closePanel: call(a.closePanel),
+      undo: () => { if (a.undo) a.undo(); },
+      onSize: (z) => { if (a.size) a.size(z); },
+      onTheme: (t) => { if (a.theme) a.theme(t); },
+      onKey: this.onKey, onScroll: this.onScroll, setBox: this.setBox, setFrame: this.setFrame,
+    };
+  }
+}
+</script>
+</body>
+</html>

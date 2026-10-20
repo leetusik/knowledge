@@ -1,0 +1,37 @@
+{
+  "schema": 2,
+  "job": "07-book-page",
+  "slice": "P29.S6",
+  "title": "book page",
+  "canvas": {
+    "url": "https://claude.ai/artifact/MdWsua1Ck3ppsbhmYhwUXT",
+    "version": "1792473864-cd81",
+    "published": [
+      "project/BookHead.dc.html",
+      "project/BookPage.dc.html",
+      "project/BookState.dc.html",
+      "project/BookTop.dc.html",
+      "project/ChapterRow.dc.html",
+      "project/ClearData.dc.html",
+      "project/ClearStates.dc.html",
+      "project/Continue.dc.html",
+      "project/ContinueStates.dc.html",
+      "project/Elsewhere.dc.html",
+      "project/HeadStates.dc.html",
+      "project/Main.dc.html",
+      "project/NotesEntry.dc.html",
+      "project/NotesStates.dc.html",
+      "project/RowStates.dc.html",
+      "project/StateStates.dc.html",
+      "project/TopStates.dc.html",
+      "project/Widths.dc.html",
+      "project/assets/logo.svg",
+      "project/book.css",
+      "project/book.js",
+      "project/canvas.json",
+      "project/reader.css"
+    ],
+    "system": "1792321604-e214"
+  },
+  "status": "open"
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The legacy Print control and the ⌘P notice sheet</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<link rel="stylesheet" href="paper.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="paper.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The legacy Print control and the ⌘P notice sheet</p>
+<p class="rd-board__lead">Print · new tab says what it does before it is pressed: its label names the new tab, and its description (read by assistive technology, and the stand-in on Page 01) says the original prints there in its own layout. ⌘P on the legacy reader prints one sheet, which names that address in full; nothing else of the page prints.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><sc-if value="{{ c.isBar }}" hint-placeholder-val="{{ true }}"><div class="lg-comp__frame" style="{{ c.st }}"><dc-import name="LegacyBar" title="{{ c.title }}" title-lang="{{ c.titleLang }}" version="{{ c.version }}" newest="{{ c.newest }}" date="{{ c.date }}" has-history="{{ c.hasHistory }}" is-old="{{ c.isOld }}" stale="{{ c.stale }}" src-name="{{ c.srcName }}" src-from="{{ c.srcFrom }}" src-newest="{{ c.srcNewest }}" noun="{{ c.noun }}" member="{{ c.member }}" layer="{{ c.layer }}" on="{{ c.on }}" busy="{{ c.busy }}" theme="{{ c.theme }}" hint-size="100%,150px"></dc-import></div></sc-if><sc-if value="{{ c.isSheet }}" hint-placeholder-val="{{ false }}"><div style="{{ c.st }}"><dc-import name="Sheet" mode="notice" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" paper="{{ c.paper }}" span="{{ c.one }}" width="{{ c.w }}" hint-size="100%,1200px"></dc-import></div></sc-if><sc-if value="{{ c.isAway }}" hint-placeholder-val="{{ false }}"><div class="rd-stage" style="{{ c.st }}"><dc-import name="Elsewhere" fit="fill" kind="print" detail="{{ c.detail }}" back="Back to the chapter" hint-size="100%,100%"></dc-import></div></sc-if></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2600,"height":2670}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, LG = window.LG;
+    const t = (k, l) => RD.titleOf(k, l || 'en').text;
+    const B = (cap, w, o) => Object.assign({ isBar: true, isSheet: false, isAway: false, cap, st: 'width: ' + w + 'px', title: t('tidewater/datums'), titleLang: 'en', version: 1, newest: 1, date: '3 Oct 2026',
+      hasHistory: false, isOld: false, stale: false, srcName: 'English', srcFrom: 1, srcNewest: 2, noun: 'chapter', member: true, layer: 'read',
+      on: false, busy: false, theme: 'light' }, o);
+    const N = (cap, doc, lang, ver, paper) => ({ isBar: false, isSheet: true, isAway: false, cap, doc, lang, ver, paper, one: 1, w: paper === 'letter' ? 816 : 794, st: 'width: ' + (paper === 'letter' ? 816 : 794) + 'px' });
+    const rows = [
+      { title: 'The control, in the document bar', cells: [
+        B('Default · 390', 390, {}),
+        B('Default · dark · 390', 390, { theme: 'dark' }),
+        B('Held while the document loads · 390', 390, { busy: true }),
+        B('Default · 820', 820, {}),
+      ] },
+      { title: 'Where it leads · the stand-in on the canvas (the product opens a new tab)', cells: [
+        { isBar: false, isSheet: false, isAway: true, cap: 'Print · new tab → the original, on its own', st: 'width: 1440px; height: 900px', detail: LG.addr('tidewater/datums', null, true, 'en') },
+      ] },
+      { title: 'The ⌘P notice sheet · on paper, at 100%', cells: [
+        N('A legacy chapter · A4', 'tidewater/datums', 'en', null, 'a4'),
+        N('A loose legacy document, older version · US Letter', 'doc/lantern/plain-files', 'en', 1, 'letter'),
+        N('A legacy chapter in Korean · A4', 'lantern-phases/p8', 'ko', null, 'a4'),
+      ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

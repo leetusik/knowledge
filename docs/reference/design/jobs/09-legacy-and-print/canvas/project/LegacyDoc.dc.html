@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A framed legacy document, in its own look</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<article class="{{ rootCls }}" lang="{{ lang }}">
+<div class="lgd__body">
+<sc-for list="{{ blocks }}" as="b" hint-placeholder-count="8"><sc-if value="{{ b.isH1 }}" hint-placeholder-val="{{ false }}"><h1 class="lgd__h1">{{ b.text }}</h1></sc-if><sc-if value="{{ b.isMeta }}" hint-placeholder-val="{{ false }}"><p class="lgd__meta">{{ b.text }}</p></sc-if><sc-if value="{{ b.isH2 }}" hint-placeholder-val="{{ false }}"><h2 class="lgd__h2" id="{{ b.id }}">{{ b.text }}</h2></sc-if><sc-if value="{{ b.isH3 }}" hint-placeholder-val="{{ false }}"><h3 class="lgd__h3" id="{{ b.id }}">{{ b.text }}</h3></sc-if><sc-if value="{{ b.isP }}" hint-placeholder-val="{{ true }}"><p class="lgd__p"><sc-for list="{{ b.runs }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code>{{ r.v }}</code></sc-if><sc-if value="{{ r.isB }}" hint-placeholder-val="{{ false }}"><strong>{{ r.v }}</strong></sc-if><sc-if value="{{ r.isA }}" hint-placeholder-val="{{ false }}"><a href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}">{{ r.v }}</a></sc-if></sc-for></p></sc-if><sc-if value="{{ b.isBox }}" hint-placeholder-val="{{ false }}"><p class="lgd__box"><sc-for list="{{ b.runs }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code>{{ r.v }}</code></sc-if><sc-if value="{{ r.isB }}" hint-placeholder-val="{{ false }}"><strong>{{ r.v }}</strong></sc-if><sc-if value="{{ r.isA }}" hint-placeholder-val="{{ false }}"><a href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}">{{ r.v }}</a></sc-if></sc-for></p></sc-if><sc-if value="{{ b.isUl }}" hint-placeholder-val="{{ false }}"><ul class="lgd__ul"><sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3"><li><sc-for list="{{ it.runs }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code>{{ r.v }}</code></sc-if><sc-if value="{{ r.isB }}" hint-placeholder-val="{{ false }}"><strong>{{ r.v }}</strong></sc-if><sc-if value="{{ r.isA }}" hint-placeholder-val="{{ false }}"><a href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}">{{ r.v }}</a></sc-if></sc-for></li></sc-for></ul></sc-if><sc-if value="{{ b.isCode }}" hint-placeholder-val="{{ false }}"><div class="lgd__code"><sc-if value="{{ b.hasTitle }}" hint-placeholder-val="{{ true }}"><p class="lgd__codetitle">{{ b.title }}</p></sc-if><pre class="lgd__pre"><code>{{ b.text }}</code></pre></div></sc-if><sc-if value="{{ b.isArt }}" hint-placeholder-val="{{ false }}"><pre class="lgd__pre lgd__art">{{ b.text }}</pre></sc-if><sc-if value="{{ b.isTable }}" hint-placeholder-val="{{ false }}"><div class="lgd__tw"><table class="lgd__t"><thead><tr><sc-for list="{{ b.head }}" as="c" hint-placeholder-count="3"><th><sc-for list="{{ c.runs }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code>{{ r.v }}</code></sc-if><sc-if value="{{ r.isB }}" hint-placeholder-val="{{ false }}"><strong>{{ r.v }}</strong></sc-if><sc-if value="{{ r.isA }}" hint-placeholder-val="{{ false }}"><a href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}">{{ r.v }}</a></sc-if></sc-for></th></sc-for></tr></thead><tbody><sc-for list="{{ b.rows }}" as="row" hint-placeholder-count="3"><tr><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><td><sc-for list="{{ c.runs }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code>{{ r.v }}</code></sc-if><sc-if value="{{ r.isB }}" hint-placeholder-val="{{ false }}"><strong>{{ r.v }}</strong></sc-if><sc-if value="{{ r.isA }}" hint-placeholder-val="{{ false }}"><a href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}">{{ r.v }}</a></sc-if></sc-for></td></sc-for></tr></sc-for></tbody></table></div></sc-if><sc-if value="{{ b.isQuiz }}" hint-placeholder-val="{{ false }}"><div class="lgd__quiz"><sc-for list="{{ b.qs }}" as="q" hint-placeholder-count="2"><fieldset class="lgd__q"><legend class="lgd__qq">{{ q.q }}</legend><div class="lgd__opts"><sc-for list="{{ q.options }}" as="o" hint-placeholder-count="3"><label class="lgd__opt"><input type="radio" name="{{ q.name }}" value="{{ o.id }}" checked="{{ o.checked }}" onchange="{{ o.pick }}"><span>{{ o.text }}</span></label></sc-for></div><div class="lgd__qfoot"><button type="button" class="lgd__check" onclick="{{ q.check }}">Check</button></div><sc-if value="{{ q.isOk }}" hint-placeholder-val="{{ false }}"><p class="lgd__fb lgd__fb--ok" role="status">{{ q.ok }}</p></sc-if><sc-if value="{{ q.isBad }}" hint-placeholder-val="{{ false }}"><p class="lgd__fb lgd__fb--bad" role="status">{{ q.bad }}</p></sc-if><sc-if value="{{ q.isNone }}" hint-placeholder-val="{{ false }}"><p class="lgd__fb" role="status">Choose an answer first.</p></sc-if></fieldset></sc-for></div></sc-if><sc-if value="{{ b.isSources }}" hint-placeholder-val="{{ false }}"><ol class="lgd__src"><sc-for list="{{ b.items }}" as="s" hint-placeholder-count="2"><li><a href="#top" data-to="{{ s.to }}" onclick="{{ linkClick }}">{{ s.title }}</a><span>, {{ s.pub }}</span></li></sc-for></ol></sc-if></sc-for>
+</div>
+</article>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"body":{"editor":null},"dark":{"editor":null},"lang":{"editor":null},"onLink":{"editor":null},"onAnchor":{"editor":null},"$preview":{"width":820,"height":5100}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { picks: {}, checked: {} }; }
+  linkClick = (e) => {
+    const a = e.currentTarget, to = a.getAttribute('data-to') || '';
+    const P = this.props;
+    if (to.charAt(0) === '#') {
+      if (P.onAnchor) { e.preventDefault(); P.onAnchor(to.slice(1)); }
+      return;
+    }
+    e.preventDefault();
+    if (P.onLink) P.onLink(to);
+  };
+  renderVals() {
+    const LG = window.LG, P = this.props, st = this.state;
+    const body = P.body || 'datums-en-1';
+    const blocks = LG.blocks(body).map((b) => {
+      if (!b.isQuiz) return b;
+      const qs = b.items.map((it) => {
+        const pick = st.picks[it.id], chk = st.checked[it.id];
+        const right = it.options.filter((o) => o.right)[0];
+        return {
+          q: it.q, name: body + '-' + it.id, ok: it.ok, bad: it.bad,
+          isOk: chk === 'ok', isBad: chk === 'bad', isNone: chk === 'none',
+          options: it.options.map((o) => ({ id: o.id, text: o.text, checked: pick === o.id,
+            pick: () => this.setState({ picks: Object.assign({}, st.picks, { [it.id]: o.id }), checked: Object.assign({}, st.checked, { [it.id]: null }) }) })),
+          check: () => this.setState({ checked: Object.assign({}, st.checked, { [it.id]: !pick ? 'none' : pick === (right && right.id) ? 'ok' : 'bad' }) }),
+        };
+      });
+      return Object.assign({}, b, { qs });
+    });
+    return {
+      blocks,
+      lang: P.lang || 'en',
+      rootCls: 'lgd' + (P.dark ? ' lgd--dark' : ''),
+      linkClick: this.linkClick,
+    };
+  }
+}
+</script>
+</body>
+</html>

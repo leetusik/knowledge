@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — ratings, Next and interval previews</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Ratings, Next and interval previews</p>
+<p class="rd-board__lead">The foot of every card. Graded types (choice, cloze) rate through Next, which says before it is pressed what it will send; recall and highlights rate with two buttons, each with its interval preview. Saving and failing change the words and the label, never the size. Intervals read as “in 10 minutes”, “in 1 day”, “in 23 days”, “in 2 months”, “in 1.3 years” (open question 4).</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="Rating" f="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 3392, "height": 1894}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const F = (spec) => RV.sample.card(Object.assign({ uid: 'rt-' + theme + '-' + spec.cap }, spec)).foot;
+      return [
+        { cap: 'Next · right: rates it Good', v: F({ cap: 'a', at: 'rc-read-column', acts: [{ t: 'pick', opt: 'b' }] }) },
+        { cap: 'Next · wrong: rates it Again', v: F({ cap: 'b', at: 'rc-read-column', acts: [{ t: 'pick', opt: 'a' }] }) },
+        { cap: 'Next · saving', v: F({ cap: 'c', at: 'rc-read-column', acts: [{ t: 'pick', opt: 'b' }], pending: 'good' }) },
+        { cap: 'Next · not saved: Try again', v: F({ cap: 'd', at: 'rc-read-column', acts: [{ t: 'pick', opt: 'b' }], failed: 'good' }) },
+        { cap: 'Recall · two ratings', v: F({ cap: 'e', at: 'rc-projection', acts: [{ t: 'reveal' }] }) },
+        { cap: 'Highlight · two ratings', v: F({ cap: 'f', at: 'hl-a2' }) },
+        { cap: 'Highlight · not saved', v: F({ cap: 'g', at: 'hl-a2', failed: 'again' }) },
+        { cap: 'Phone · recall ratings stacked under the question', phone: true, v: F({ cap: 'h', at: 'rc-projection', acts: [{ t: 'reveal' }] }) },
+        { cap: 'Phone · Next', phone: true, v: F({ cap: 'i', at: 'rc-read-column', acts: [{ t: 'pick', opt: 'b' }] }) },
+        { cap: 'Intervals · learning card, a day', v: F({ cap: 'j', at: 'tw-how-many', acts: [{ t: 'pick', opt: 'c' }] }) },
+        { cap: 'Intervals · months', v: F({ cap: 'k', at: 'hl-s1' }) },
+        { cap: 'Intervals · a mature card, years (format sample)', v: F({ cap: 'l', at: 'hl-a2', ov: { good: 475 * RV.DAY } }) },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Display sheet for a legacy document</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-disp">
+<fieldset class="rd-disp__group"><legend class="rd-disp__label">Theme</legend>
+<div class="rd-themes"><sc-for list="{{ themes }}" as="t" hint-placeholder-count="4"><button type="button" class="rd-opt" aria-pressed="{{ t.pressed }}" onclick="{{ t.pick }}"><span class="rd-swatch" aria-hidden="true"><sc-for list="{{ t.halves }}" as="h" hint-placeholder-count="1"><span class="rd-swatch__half" data-theme="{{ h }}">Aa</span></sc-for></span><span>{{ t.label }}</span></button></sc-for></div>
+<p class="rd-disp__readout"><b>{{ themeName }}</b>{{ themeNote }}</p>
+</fieldset>
+<div class="rd-disp__group"><p class="rd-disp__label">In this document</p><p class="lg-disp__p">{{ docNote }}</p></div>
+<p class="rd-disp__note">Saved on this device. Your other devices keep their own.</p>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"themeChoice":{"editor":null},"os":{"editor":null},"look":{"editor":null},"onTheme":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":420}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { choice: null }; }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const choice = this.state.choice || P.themeChoice || 'system';
+    const os = P.os || 'light';
+    const pickTheme = (k) => () => { if (P.onTheme) P.onTheme(k); else this.setState({ choice: k }); };
+    const T = [
+      { key: 'system', label: 'System', halves: ['light', 'dark'] },
+      { key: 'light', label: 'Light', halves: ['light'] },
+      { key: 'dark', label: 'Dark', halves: ['dark'] },
+      { key: 'sepia', label: 'Sepia', halves: ['sepia'] },
+    ];
+    const NAME = { system: 'System', light: 'Light', dark: 'Dark', sepia: 'Sepia' };
+    const auto = (P.look || 'auto') === 'auto';
+    return {
+      themes: T.map((t) => ({ label: t.label, halves: t.halves, pressed: choice === t.key, pick: pickTheme(t.key) })),
+      themeName: NAME[choice],
+      themeNote: choice === 'system' ? ' · follows this device, ' + os + ' now' : choice === 'sepia' ? ' · warm paper, for long reading' : '',
+      docNote: auto
+        ? "It keeps its original layout. The theme colours the reading controls, and Dark (or System, when this device is dark) also shows the document's own dark look. Text size doesn't reach inside: to read it larger, use your browser's zoom."
+        : "It keeps its original layout, which is light only. The theme colours the reading controls around it. Text size doesn't reach inside: to read it larger, use your browser's zoom.",
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-panel',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

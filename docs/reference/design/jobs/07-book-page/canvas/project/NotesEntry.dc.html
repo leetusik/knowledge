@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes in this book, the entry</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<sc-if value="{{ has }}" hint-placeholder-val="{{ true }}"><a class="bk-notes" href="#top" onclick="{{ go }}"><span class="bk-notes__title">{{ label }} <span aria-hidden="true">→</span></span><span class="bk-notes__meta">{{ line }}</span></a></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"viewer":{"editor":null},"pk":{"editor":null},"onNotes":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":384,"height":104}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const bare = !!P.bare;
+    const book = P.book || 'guide';
+    const viewer = P.viewer || 'member';
+    const pk = P.pk || BK.pkFor(book, viewer);
+    const n = BK.view(book, viewer, pk).notes;
+    return {
+      has: !!n,
+      label: 'Notes in this book',
+      line: n ? n.line : '',
+      go: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onNotes) P.onNotes(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone bk-demo',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

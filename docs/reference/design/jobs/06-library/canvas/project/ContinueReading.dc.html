@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Continue reading</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<div class="{{ contCls }}">
+<a class="lib-lead" href="#top" onclick="{{ lead.open }}">
+<span class="lib-lead__line" aria-hidden="true"><span class="lib-lead__fill" style="{{ lead.fill }}"></span></span>
+<span class="lib-bookline"><span class="lib-label">{{ lead.label }}</span><span class="lib-bookline__book">{{ lead.book }}</span><sc-if value="{{ lead.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if></span>
+<span class="lib-lead__title" lang="{{ lead.lang }}"><sc-for list="{{ lead.titleParts }}" as="p" hint-placeholder-count="1"><span lang="{{ p.lang }}">{{ p.t }}</span></sc-for></span>
+<span class="lib-lead__place"><sc-if value="{{ lead.atSection }}" hint-placeholder-val="{{ true }}">Left off at <b lang="{{ lead.lang }}">{{ lead.section }}</b> · {{ lead.pct }}%</sc-if><sc-if value="{{ lead.atPct }}" hint-placeholder-val="{{ false }}">Left off at {{ lead.pct }}%</sc-if><sc-if value="{{ lead.next }}" hint-placeholder-val="{{ false }}">Up next · you finished chapter {{ lead.finishedN }}</sc-if><sc-if value="{{ lead.hasLang }}" hint-placeholder-val="{{ false }}"> · <span lang="ko">{{ lead.langName }}</span></sc-if></span>
+<span class="lib-btn lib-btn--primary lib-lead__go">{{ lead.go }} <span aria-hidden="true">→</span></span>
+</a>
+<sc-if value="{{ hasRows }}" hint-placeholder-val="{{ true }}"><ul class="lib-rows" aria-label="Also in progress"><sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><li><a class="lib-row" href="#top" onclick="{{ r.open }}"><span class="lib-bookline"><span class="lib-label">{{ r.label }}</span><span class="lib-row__book">{{ r.book }}</span></span><span class="lib-row__title" lang="{{ r.lang }}"><sc-for list="{{ r.titleParts }}" as="p" hint-placeholder-count="1"><span lang="{{ p.lang }}">{{ p.t }}</span></sc-for></span><span class="lib-row__meta"><sc-if value="{{ r.atSection }}" hint-placeholder-val="{{ true }}"><span>Left off at <b lang="{{ r.lang }}">{{ r.section }}</b> · {{ r.pct }}%</span></sc-if><sc-if value="{{ r.atPct }}" hint-placeholder-val="{{ false }}"><span>Left off at {{ r.pct }}%</span></sc-if><sc-if value="{{ r.next }}" hint-placeholder-val="{{ false }}"><span>Up next · you finished chapter {{ r.finishedN }}</span></sc-if><sc-if value="{{ r.hasLang }}" hint-placeholder-val="{{ false }}"><span class="lib-dot" aria-hidden="true">·</span><span lang="ko">{{ r.langName }}</span></sc-if><sc-if value="{{ r.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if></span></a></li></sc-for></ul></sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"items":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"width":{"editor":null},"$preview":{"width":1064,"height":321}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, L = window.LIB;
+    const items = P.items || L.continueItems(L.DATASETS.today, L.PROG.default, 4);
+    const shape = (it) => {
+      const isDoc = it.kind === 'doc';
+      return Object.assign({}, it, {
+        label: isDoc ? 'Document' : 'Chapter ' + it.n + ' of ' + it.total,
+        book: isDoc ? it.project : it.bookTitle + (it.showProject ? ' · ' + it.project : ''),
+        atSection: !it.next && !!it.section,
+        atPct: !it.next && !it.section,
+        hasLang: !!it.langName,
+        fill: 'width: ' + (it.next ? 0 : it.pct) + '%',
+        go: it.next ? 'Read next' : 'Continue reading',
+        open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(it); },
+      });
+    };
+    const all = items.map(shape);
+    const lead = all[0] || shape({ kind: 'doc', project: '', title: '', titleParts: [], section: '', pct: 0, lang: 'en', langName: '' });
+    const rows = all.slice(1);
+    const bare = !!P.bare;
+    return {
+      lead,
+      rows,
+      hasRows: rows.length > 0,
+      contCls: rows.length ? 'lib-cont lib-cont--many' : 'lib-cont',
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: ' + (P.width || 1064) + 'px',
+    };
+  }
+}
+</script>
+</body>
+</html>

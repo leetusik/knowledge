@@ -73,12 +73,15 @@ contracts in `## Decisions` and the per-wave notes in `## Notes for later slices
   `block` margin marker and the other-language marker; the per-book list of bookmarks and notes; legacy and
   `md` chapters ("bookmark this position", "Highlights are not available"); "Sign in to save".
 - **`library`** (S6): the member library by project and by subject, including the state with no subject
-  book (today's truth); Continue reading; book cards with progress, and loose documents; the phone loading
+  book (today's truth) and, from P29.S6, a subject's loose articles beside its books (a subject with
+  articles and no book); Continue reading; book cards with progress, and loose documents; the phone loading
   skeleton (D36 (6)); the public org library `/@{org}`; Library and Review as entry points in the app
-  shell. Console, auth and landing change only where this forces it.
+  shell; "clear all reading data", behind a confirmation (P29.S6). Console, auth and landing change only
+  where this forces it.
 - **`book-page`** (S6): the ordered chapters with their states, book progress, and Continue reading; each
   chapter's KO/EN variants and versions; legacy and native chapters side by side; a `phases` book, a
-  per-slice book, and a preface-like chapter; the member and public views.
+  per-slice book, and a preface-like chapter; the member and public views; the per-book list's entry
+  (`annotations` 8); "clear this book's reading data", behind a confirmation (P29.S6).
 - **`review`** (S6): the queue header (due, new highlights, done today, by book); front and back for
   choice, cloze, recall and highlight cards; Again / Good with interval previews, and Next for the graded
   types; suspend; done for today; empty; the link back into the chapter.
@@ -117,12 +120,14 @@ phone, iPad and desktop, in light, dark and sepia.
 17. Chapter annotation panel with the Unanchored group; `block` and other-language markers →
     `annotations`.
 18. Per-book list of bookmarks and notes → `annotations`.
-19. Library: member, by project and by subject (including no subject book), Continue reading, book cards
-    with progress, loose documents, loading skeleton → `library`.
+19. Library: member, by project and by subject (including no subject book, and a subject's loose articles
+    beside its books), Continue reading, book cards with progress, loose documents, loading skeleton, "clear
+    all reading data" → `library`.
 20. Public org library `/@{org}` → `library`.
 21. App-shell entry points Library and Review; console, auth and landing only where forced → `library`.
 22. Book page: ordered chapters with states, progress, Continue reading, variants and versions, legacy
-    beside native, `phases` / per-slice / preface cases, member and public views → `book-page`.
+    beside native, `phases` / per-slice / preface cases, member and public views, the per-book list's
+    entry, "clear this book's reading data" → `book-page`.
 23. Review: queue header, card fronts and backs (choice, cloze, recall, highlight), Again / Good with
     previews, Next, suspend, done for today, empty, back into the chapter → `review`.
 24. Legacy reader: full-screen frame under the slim chrome bar, the settings-don't-apply note, loading,
@@ -194,7 +199,8 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
     KO/EN pair; a preface-like chapter; no subject book;
   - use real titles only from the `knowledge` project's own maintainer guide; every other book and project
     is invented, with the same shape;
-  - use invented subject-book samples (English, Finance, AI) where a subject state is drawn;
+  - use invented subject samples, books and loose articles alike (English, Finance, AI), where a subject
+    state is drawn (amended at P29.S6, when subjects gained loose articles);
   - **never** carry glide-ilab or base material, arb_upbit_1's strategy content, secrets, emails or any
     personal data.
 - **Setup at P29.S4's opening, by the orchestrator inline, not a slice (P29.DECOMP2).** (1) `design-init`
@@ -221,6 +227,15 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
   *Compatibility*, S2 *Ingest, search and MCP*); (3) the quiz result payload's `doc_slug` becomes `doc` and
   gains `unit` (S2 *Quiz*, S3 *Quiz results*); (4) reader state is keyed by the document stem plus a
   chapter `unit`, not by chapter identity (S3 *Keys*).
+- **One-article subjects and the two clears (P29.S6).** The operator answered `## Operator Questions` 12
+  with "yes to both" (2026-10-20), so:
+  - **a one-article subject is a loose document** in its subject's project, carrying its `subject` label.
+    `/explain`'s general mode publishes one by default and makes a chapter only when a book is named, and
+    the by-subject view lists a subject's loose documents beside its books. This is written into S1
+    *Entities*, *Book* and *Phase or slice → chapter* and S2 */explain* in place, each marked "amended,
+    accepted at P29.S6". The `library` job draws it; the book page and the signed reader are unchanged;
+  - **the two clears are drawn in wave 3** (S3 *Privacy*): `book-page` draws "clear this book's reading
+    data" and `library` draws "clear all reading data", each behind a confirmation.
 
 ### The signed reader (P29.S4; the spec stays in the signed round, linked by path)
 
@@ -299,8 +314,8 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
     an S2 observation).
 - **Left open for `P29.REVIEW`** (entry 11): `annotations` 10's two keyboard gaps; `quiz` C09, the signed
   option border at about 1.6:1; `diagrams` C14 (no component bundle), C15 (the proposed tone properties
-  are not in the `kb` system) and C16 (no Hangul face on the canvas); and S3 *Privacy*'s two clears, which
-  no wave-2 job draws.
+  are not in the `kb` system) and C16 (no Hangul face on the canvas). S3 *Privacy*'s two clears, which no
+  wave-2 job draws, went to wave 3 at P29.S6 (entry 12).
 
 ### Book and chapter model — data contracts (P29.S1; evidence in `slices/P29.S1/result.md`)
 
@@ -310,7 +325,9 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
   - A **chapter** is a thin entity that points at one document per language.
   - A **book** is an ordered list of chapters.
   - **Loose documents** (in no book) remain first-class. The library lists them under their project; the
-    reader opens them with no book navigation.
+    reader opens them with no book navigation. A loose document may carry a `subject` label, and the
+    by-subject view lists it under that subject beside the subject's books; a one-article subject is one
+    (amended, accepted at P29.S6).
 - **Book (P29.S1).** Fields:
   - `slug` (`[a-z0-9-]`, unique per project);
   - `title`;
@@ -327,7 +344,8 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
   - A **subject** book lives in a project named for its subject: `project` = the subject slug, e.g.
     `finance`, `english`, `ai`. Visibility therefore toggles per subject shelf.
   - Library grouping keys: **by project** = `project` (codebase books plus loose documents); **by
-    subject** = `book.subject`.
+    subject** = `book.subject` for a book and the document's own `subject` for a loose document (amended,
+    accepted at P29.S6).
 - **Chapter (P29.S1).** A manifest entry with these fields:
   - `key`: `[a-z0-9-]`, unique in its book, never reused.
   - `position`: a JSON number; ascending order, ties broken by `key`. A fractional value inserts
@@ -387,9 +405,12 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
     `"P<N>: <phase name>"`, `source.phase`.
   - **One doc per slice:** book `p<N>` (title `"P<N>: <phase name>"`), key = the slice id lowercased
     (`s1`, `f1`), position = the slice's `order`, `source.slice`.
-  - **General mode:** a subject book, as described under Book.
+  - **General mode:** a loose document in the subject's project (`project` = the subject slug, as under
+    Book), carrying its `subject` label, by default; a chapter in a subject book only when the request
+    names one (amended, accepted at P29.S6).
   - **What `/explain` sends** (all additive to `POST /api/documents`): `book: {slug, title?, kind,
-    subject?}`, `chapter: {key, position?, title?, source?}`, `lang`, `translated_from?`, `assets?`.
+    subject?}`, `chapter: {key, position?, title?, source?}`, `lang`, `translated_from?`, `assets?`, and
+    `subject?` for a loose document, stored with the document (amended, accepted at P29.S6).
   - **Server placement:** the server finds or creates the manifest. It resolves `(project, book, key,
     lang)`: if that variant exists, the publish is **its next version** (the same rel_path, which
     replaces the skill's list-and-match step for chapters); otherwise it creates the document and adds
@@ -680,8 +701,9 @@ _Durable cross-slice decisions. Replace a superseded line; never stack versions.
     - **topic** (codebase) → a chapter in a codebase book the skill names (or a loose document);
     - **phase** → book `phases`, key `p<N>`;
     - **slice** → book `p<N>`, key = the slice id;
-    - **general** (no repo) → a chapter in a subject book. Its `## Sources` holds a `sources` block, and
-      citations are links to source ids.
+    - **general** (no repo) → a loose document in the subject's project, carrying `subject`, by default;
+      a chapter in a subject book only when the request names one (amended, accepted at P29.S6). Its
+      `## Sources` holds a `sources` block, and citations are links to source ids.
 
     All modes write native.
   - **Page shape:** the fixed Background/Intuition/Code/Best practices/Quiz becomes a **recommended
@@ -1241,6 +1263,225 @@ _Questions only the operator can answer. Append only; every entry is routed at t
        `book-page` draws "clear this book's reading data" and `library` draws "clear all reading data", each
        behind a confirmation, so P30 never invents a destructive flow. **The other side:** both leave v1,
        keeping only per-item delete. That is less to build, but it walks back S3's promise.
+    - **Answered 2026-10-20** with "yes to both": both recommendations stand (`## Decisions` →
+      *One-article subjects and the two clears*). The S1 and S2 contract lines are amended in place, and
+      the `library` and `book-page` handoffs carry both.
+
+13. **(P29.S6) Wave 3's open design decisions** (asked at its PENDING #1; one list per job. Each item is
+    drawn as the drafter's answer in that job's `docs/reference/design/jobs/<job>/rounds/<round>/result.md`
+    → *Open questions*; the critic's notes are in the same round's `critique-01.md`, and the `library`
+    judge's rulings in its `judge-01.md`). The operator's words settle them; the review routes any their
+    words leave open.
+    - **Wave choices, each named on every job it touches** (the `library` judge ruled on its own job's
+      escalations; under `critic` no judge rules on the other three, so their critics' choices are unsure):
+      1. **The frame, `library`, `book-page` and `review` (judge C12 in `library`, dropped to the
+         operator):** `library` draws the library inside the app shell (the topbar and a rail with Reading
+         and Org groups, Library and Review as entry points); `book-page` and `review` draw the reader's
+         chrome, a slim bar with the logo and "‹ Library", and no app shell. The judge kept each frame and
+         carried nothing: the operator's words settle it for all three. `legacy-and-print` keeps the signed
+         reader's own bars either way.
+      2. **The theme rule, the same three (judge C13, dropped; it follows the frame):** a page in the app
+         shell follows the app's rule (the OS, light and dark, no sepia); a page in the reader's chrome
+         follows the reader's Display setting (System, Light, Dark, Sepia). `library` draws the first,
+         `book-page` and `review` the second.
+      3. **The clear's confirmation, `library` and `book-page` (judge C14 in `library`, dropped and carried
+         to `book-page`):** the wave keeps `library`'s form, the product's own destructive pattern. If the
+         operator agrees, `book-page`'s next round takes it: the confirm button reads "Yes, clear this
+         book's reading data", the keep line ends "It can't be undone.", Cancel stays in place, dimmed and
+         disabled, while clearing (drawn: hidden), a failure carries a reference line, and the trigger is
+         neutral at rest, with red only on the second press (drawn: a red ghost button). Signing `book-page`
+         as drawn keeps the two forms.
+      4. **The resume line, `library`, `book-page` and `legacy-and-print` (noted by the `library` judge, not
+         ruled):** `library` reads "Left off at …", `book-page` "You stopped at …"; the signed reader's line is
+         "Picked up where you left off". `legacy-and-print` keeps the signed words and ends them with a
+         percentage ("· 29%"), since it cannot read a legacy document's headings (its OQ4).
+      5. **The reader's way back from a review card, `review` (C10, unsure):** back to Review, which keeps
+         its place (drawn), or to the book page.
+      6. **How a book is named, `review` and `book-page` (C11 in `review`, unsure):** review's By book says
+         "knowledge · book"; `book-page` heads the book "CODEBASE knowledge". S3's by-book counts carry no
+         kind.
+      7. **The stand-ins' wording, `review` and `book-page` (C12 in `review`, unsure):** canvas-only text.
+      8. **The shared sample library, `library`, `book-page` and `legacy-and-print` (C13 in
+         `legacy-and-print`, unsure):** the three drafts invent different products, chapter titles, dates and
+         progress for the same two books, lantern and orchard (orchard's chapter 2 is 60% read in `library`,
+         29% in `legacy-and-print`), and different loose documents. The handoffs fixed the names and left the
+         titles free while saying the canvases agree (the orchestrator's slip). Canvas-only sample data: if the
+         operator makes one set canonical, the other jobs change in their next round. `legacy-and-print`'s
+         titles sit on written document bodies.
+    - **`library`** (`06-library/01-library`, critique `critic+judge`):
+      1. Theme: the app's rule (the OS's light or dark, no toggle, no sepia); `/@{org}` signed out stays
+         light. Every board is also drawn in dark and sepia, so the reader's rule can be picked instead
+         (wave choice 2).
+      2. Frame: inside the app shell, like the console (wave choice 1).
+      3. Entry points: a "Reading" group (Library, Review) above "Org" in the rail, and all five links in the
+         iPad strip and the phone bar. The wordmark and the landing after sign-in go to `/library`, which
+         changes where every member arrives, admins included (proposed).
+      4. By subject with nothing labelled: one last shelf, "Without a subject", with a note while no subject
+         exists (today).
+      5. The grouping is remembered in the address (`?by=subject`) and on the device (the `kb_reader`
+         cookie); the address wins.
+      6. Projects with nothing to read are not shelves: one line counts them and links to the dashboard. A
+         plain `PUBLIC` tag marks a public project.
+      7. Continue reading: up to 4 items, one per book or loose document, most recent first. After a finished
+         chapter the book offers the next one ("Read next →"); a finished book or document leaves.
+      8. Another org's public books show only in Continue reading. On `/@{org}`, a signed-in non-member sees
+         their own progress, "private to you".
+      9. `/@{org}` with nothing public: the constant 404 for anyone who is not a member; a member sees a
+         panel, "Nothing here is public yet".
+      10. "Clear all reading data" sits at the foot of `/library` only, confirmed inline in two steps. It
+          removes positions, bookmarks, highlights and notes, quiz answers, and review cards with their
+          schedule; it keeps the review settings and the display cookie.
+      11. The Review count: cards due (`counts.due`) in a pill, hidden at 0, "99+" above 99.
+      12. New: on `/@{org}` signed out, a one-line note with a "Sign in" link replaces the signed §12 Sign in
+          to save. Making §12 accept a library place would make it one pattern, but changes a signed part.
+      - **Wave choice 8** (from `legacy-and-print`'s critic, C13): the sample library's lantern and orchard.
+      - **The judge's rulings:** upheld C05 (while a Clear all state shows, the state bar says the clear is
+        at the page's foot; no preset scrolls), C15 (an unopened book's card reads "0 of 4 finished") and
+        C16 (the lead's button reads "Continue reading →", and "Read next →" after a finished chapter), all
+        three answered in a short pass; dropped C12 and C13 to the operator (wave choices 1 and 2), and C14
+        to `book-page` (wave choice 3).
+      - **Rebuttal, both sides (C02's Korean half):** the critic: the "Continue · 한국어 first" preset changes
+        the lead's height (at 390 from 295 to 244 px; at 820 and 1024 from 235 to 205 px). The drafter: the
+        preset swaps in the same chapter in its other language, a different scene rather than a control
+        showing its state, and reserving the English title's lines would leave a blank band under every
+        shorter title.
+      - **Departures:** shell values drawn as proposals (44 px nav targets; the topbar's user line and the
+        rail's eyebrow in the secondary ink; the current rail item in the strong accent; a dark-theme colour
+        for the danger button's label; the wordmark to `/library`); a name where the product shows the email
+        (no email on the canvas); §12 not reused on `/@{org}`; the page's buttons take the reader's button
+        values; a lone book card keeps its column width; the reader's display face and sepia appear outside
+        the reader; a third canvas row of mounted parts; six Pages where the handoff said about five.
+      - **For the shell's owner (logged, not changed):** at 390 with 175–200% text, the locked shell's topbar
+        scrolls sideways (the account button; the public Sign in); the rail's fold re-flows the page (C04).
+      - **Sample data beyond the rule's shape:** a stress state of 20 loose documents in one project, and two
+        KO/EN pairs; both came from the orchestrator's handoff.
+      - **The critic's taste notes:** dark and sepia drawn in full on four boards and in key states on three;
+        on a subject shelf a card repeats the subject as its project label; Review reads 12 here while
+        `review`'s queue opens on 14 due (one number for the sample day would keep the family consistent);
+        books are bordered cards and documents hairline rows, against the system's "hairlines instead of
+        boxes". Gaps: no component bundle; the control border at 1.58:1 (C11); no sepia outside the reader;
+        no Hangul face; no on-fill token.
+    - **`book-page`** (`07-book-page/01-book-page`):
+      1. Theme: the reader's Display setting, for every reader, signed out included (wave choice 2).
+      2. Frame: the reader's chrome with the page's own slim top bar (logo, "‹ Library", Sign in), no app
+         rail (wave choice 1).
+      3. The preface stays in place as chapter 20, so the row numbers match the reader's "Chapter N of M".
+      4. Numbering is the manifest ordinal, as the reader counts. A phases book's titles carry their phase
+         ("P8: …"); a per-slice book's meta leads with the slice id; a shape note says what the book is.
+      5. Languages and versions: a line of language links under a row's title ("English · v2", "한국어 ·
+         v1", with OLDER TRANSLATION), and a Versions panel of the reader's version rows.
+      6. Continue reading reads Continue, Next, Start or Finished; it is absent for the anonymous and for a
+         reader who has opened nothing.
+      7. "Notes in this book →" sits under Continue reading, hidden when signed out or never opened.
+         Recommended: the signed per-book list's back link reads "‹ Back to the book" when opened from here
+         (a change to a signed part, the operator's).
+      8. "Clear this book's reading data" sits at the foot of the Contents, confirmed inline (wave choice 3).
+      9. No review cards on this page; a "N cards due from this book" line would be a seam with `review`.
+      10. The public view: no progress, no clear and no notes entry; the org shows; Sign in sits in the bar.
+      11. A kind line ("CODEBASE knowledge", "SUBJECT English") over the title; the description shows only
+          when the book has one.
+      12. The page is fixed at the reader's text size 3. Should it follow the reader's size, as it follows
+          the theme?
+      - **Wave choice 8** (from `legacy-and-print`'s critic, C13): the sample library's lantern and orchard.
+      - **Departures:** §12 Sign in to save is not used (the head has its own signed-out line); its own
+        chapter list in §11's words; version rows without "Reading now"; a stand-in for the per-book list;
+        its own slim top bar; Sign in at every width; the stand-in board extended; Cancel hidden during
+        "Clearing…"; a red ghost trigger; text size fixed at 3.
+      - **Sample data beyond the rule's shape:** two KO/EN pairs (the guide's chapter 2, and a legacy one in
+        the phases book) where the real library has one, and a per-slice book, which the job's scope asks
+        for.
+      - **The critic's taste notes:** signed-out rows keep an empty second line; on a 20-chapter book
+        Continue reading scrolls away (a Continue link in the slim bar would keep it in reach); "Versions"
+        reads like a caption; "Clearing…" has no busy ring, as in the signed reader; "ORIGINAL LAYOUT"
+        repeats on every row of an all-legacy book.
+    - **`review`** (`08-review/01-review`):
+      1. Theme: the reader's Display setting and text size, per device (wave choice 2).
+      2. Frame: a focused frame in the reader's family (the progress line, the logo, "‹ Library", Settings
+         and Display, one centred column), no app shell (wave choice 1).
+      3. The rating words follow the card type: recall "I got it" / "I missed it", highlight "Got it" /
+         "Show sooner", choice and cloze one **Next** that rates from the grade; Good first, with the
+         scheduler's "Good" / "Again" and the interval under each.
+      4. The interval preview: "in 10 minutes", "in 1 day", "in 23 days", "in 2 months", "in 1.3 years".
+      5. Suspend: a quiet "Suspend card" on every card, with Undo; suspending a highlight's card also turns
+         its Review this off. No list of suspended cards, so a suspended quiz card has no way back in this
+         cut. Is one needed (a P30 surface)?
+      6. The review settings: a right-hand sheet from Settings (time zone, reviews a day, new highlights a
+         day, the 04:00 day line); the limit states link to it.
+      7. By book: a read-only list; the queue mixes every book. A filter needs a `book` parameter on the
+         queue route (P30).
+      8. The way back into the chapter shows on a quiz card's back only; a highlight shows it at once;
+         Review keeps its place on return.
+      9. Done for today: the next card's time in the reader's own time, and "Continue reading →"; no
+         "review more", no statistics.
+      10. An entry from the quiz to review is only a flagged proposal on the stand-in; the signed quiz is
+          unchanged.
+      11. Two P30 contract additions: `limit_reached` (held cards kept in S3's counts), and the quiz's title
+          and the question's place in a card's `where`.
+      12. The rating buttons' border is the signed secondary button's, at 1.58:1 (the quiz's C09 gap).
+      - **Departures:** iPad landscape not drawn; new highlights after the due cards; Again comes back
+        today; "years" only as a format sample; the settings' bounds (1–999, 0–999) invented; signed out
+        shows the Sign in stand-in; the 34 `layout-shift` lines left (C08); the handoff's `#try-it` and
+        `#twenty` were not the guide's quizzes (the orchestrator's slip), so the guide's cards come from
+        `#check`. Where review uses a signed part differently is logged in its `result.md`; the signed parts
+        are unchanged.
+      - **The critic's taste notes:** the title, three counts and By book read as a work queue before the
+        card, against "kindle like" (C13); three vocabularies for the same two ratings (C14); on a phone the
+        action that moves on sits below the first screen once answered (C15); By book rows do nothing when
+        tapped (C16). Gaps: C08 and C09.
+    - **`legacy-and-print`** (`09-legacy-and-print/01-legacy-and-print`):
+      1. The bars (OQ1): the signed top bar never hides; a new document bar (status, "Print · new tab",
+         "Bookmark this position", two notes) sits above the signed chapter bar, and the two fold away together
+         on a scroll down and return on a scroll up, at the top and at the end. The alternative: the bottom
+         chrome never hides (no resize, C03; at 390 the document keeps 428 of 763 px, against 738 folded).
+      2. The bookmark and the notes (OQ2): "Bookmark this position" beside "Print · new tab"; under the row,
+         "Highlights are not available in this document." and "The theme and text size don't restyle it."
+      3. Finishing (OQ3): at 95% or more the bar's status cell takes the chapter end's words.
+      4. Resume (OQ4): by anchor, else fraction; the pill "Picked up where you left off · 29%", the fraction
+         where the place lands on that screen, where the signed pill names a section (wave choice 4).
+      5. The version notices in the document bar, above its status, in the signed words (OQ5).
+      6. The theme over the document (OQ6): the bars take the reader's theme; through the frame's `color-scheme`
+         a self-darkening document shows its own dark look under Dark or System on a dark device, and a
+         light-only document stays light; text size is not offered. Browser support is P30's device check
+         (D36 (7)).
+      7. The native sheet (OQ7): the masthead and colophon, the answer key "Answers" at the chapter's end, and
+         the rules for long content (a lead-in keeps with the block it introduces). A member's saved quiz
+         answers, highlights and notes do not print.
+      8. The words (OQ8): "Print · new tab"; the ⌘P notice sheet "This chapter prints from its own page".
+      9. A legacy document opened from the console opens in this reader; Back goes to its book page or the
+         library (OQ9, answered in words, not drawn).
+      10. A bridge `restore` by pixels for an exact same-device resume: not drawn (OQ10, a contract change for
+          P30).
+      11. No print sheets for `library`, `book-page` or `review` (OQ11).
+      12. The wave's sample library (OQ12): wave choice 8.
+      - **Rebuttals, both sides (unsure under `critic`):** C03: the critic: folding the bottom chrome resizes
+        the frame by 170–310 px (six `layout-shift` lines), and the logged reason does not lift the bar's line
+        6; the drafter: the handoff locks the frame as a `flex: 1` box that is the only scroller and asks for
+        chrome that hides as it scrolls, so a fold resizes it by definition, and measured, the top bar, the
+        frame's top edge, its scroll position and the first visible line stay on the same pixel (OQ1 decides).
+        C06: the critic: one `check=settle` on PaperQuiz in its full run, clean in seven solo renders (low
+        confidence); the drafter: its own full render shows none; not reproducible.
+      - **Departures:** three bars, not S2's one; the hide-and-show differs from the signed reader (the top bar
+        never hides, the bottom chrome folds, no tap toggle); the frame resizes on the fold (C03); the pill
+        names a percentage; no Full width and no Copy link; the diagram on paper is markup standing in for the
+        signed SVG; a Korean framed title can break inside a word at 390 (the authored look); 13 `href="#top"`
+        links handled by script (the signed reader's pattern); under larger text or zoom the page turns tight
+        (the document keeps min(40%, 17rem) and the document bar scrolls inside itself) and the document bar's
+        button labels wrap; the handoff's "open question 10" read as OQ9 (the orchestrator's slip).
+      - **For the signed reader (logged, not changed):** its chapter bar overprints its labels at a 150–200%
+        root font on a phone, and below 320 CSS px its top bar's "‹ Book" overprints "Display" (C07). A fix is a
+        change to a signed job, the operator's.
+      - **Gaps:** no component bundle; the frame's dark focus ring (`#62bdb2`), the print palette, sepia and the
+        reader's faces are not `kb` tokens.
+      - **The critic's taste notes:** against "kindle like", the phone opens with about half its height as
+        chrome (428 of 844 px; 285 on an older translation) until the first scroll (C14); the status block keeps
+        its tallest state's height, about 37 px of air on the phone (C15).
+    - **For the whole wave:** the contract details the drafts propose for P30, all additive: `review`'s
+      `limit_reached` (held cards kept in S3's counts), the quiz's title and the question's place in a card's
+      `where`, and a `book` parameter on the queue route for a By book filter; `library`'s shell values and the
+      landing after sign-in at `/library`, which changes where every member arrives; `legacy-and-print`'s `look`
+      field (`"auto"` or `"light"`, which P30 derives from the document, `"light"` until known), a bridge
+      `restore` by pixels (its OQ10, not drawn) and the frame's dark focus ring as a `kb` token. Whether browsers
+      honour the frame's `color-scheme` is P30's device check (D36 (7)).
 
 ## Notes for later slices
 
@@ -1321,8 +1562,11 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
 - **(from P29.S1, P29.S2 and P29.S3, split by P29.DECOMP2, for P29.S6)** **What the wave-3 jobs must
   draw**, at phone, iPad and desktop, in light, dark and sepia:
   - **Library and book page data:**
-    - **library groups:** by project (codebase books + loose documents) and by subject (`book.subject`;
-      subject books live in a project named for the subject);
+    - **library groups:** by project (codebase books + loose documents) and by subject (`book.subject`,
+      plus a loose document's own `subject`, so a one-article subject is listed; subject books and subject
+      articles live in a project named for the subject; P29.S6);
+    - **the two clears** (S3 *Privacy*, P29.S6): "clear this book's reading data" on the book page and
+      "clear all reading data" in the library, each behind a confirmation;
     - **today's corpus:** 4 books, all codebase (`changple5/curriculum` 20, `glide-ilab/phases` 4 with p8
       EN v2 + KO v1, `knowledge/maintainer-guide` 5, `vocky/maintainer-guide` 4), 8 loose documents and
       **no subject book yet** — the library must look right with no subject books at all. Canvases draw
@@ -1383,6 +1627,8 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
   - send `book`/`chapter`/`lang`/`translated_from`/`assets` and `format: "native"`;
   - carry ids forward on a re-explain via `fetch_document`;
   - the general mode's `#sources` becomes a `sources` block;
+  - the general mode publishes a loose document carrying `subject` in the subject's project by default,
+    and a chapter only when a book is named (P29.S6);
   - the fixed five-section shape becomes the recommended outline;
   - translation keeps ids;
   - images are attached by name, through the CLI's `--asset`;
@@ -1393,14 +1639,14 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
 
 _≤ 15 lines, rewritten by every slice at its end: what is done, what the next slice must know, what is open. Last on purpose._
 
-- **Landed (P29.S5, signed 2026-10-20 on "accept"):** wave 2's four rounds, `02-figures/01-figures`,
-  `03-diagrams/01-diagrams`, `04-quiz/01-quiz` and `05-annotations/01-annotations`. Every entry-11 item
-  stands as drawn (`## Decisions` → *The signed chapter blocks and annotations*).
-- **Next: `P29.S6`, wave 3** (`library` at `critic+judge`; `book-page`, `review` and `legacy-and-print` at
-  `critic`), one PENDING #1 stop. Its frame is the signed reader plus wave 2 (`## Notes for later slices`).
-- **Waiting on the operator (`P29.S6` is `pending` before any job opens):** `## Operator Questions` 12,
-  where a one-article subject lives and whether wave 3 draws the two clears. Both shape the `library` and
-  `book-page` handoffs, and the wave drafts together, so nothing opens until the operator answers.
+- **Landed (P29.S6, drafted, not signed):** wave 3's four rounds are drafted, critiqued and published:
+  - `library`, `06-library/01-library`: https://claude.ai/artifact/6MnT599Y3zvUfXwnWp7F8N
+  - `book-page`, `07-book-page/01-book-page`: https://claude.ai/artifact/MdWsua1Ck3ppsbhmYhwUXT
+  - `review`, `08-review/01-review`: https://claude.ai/artifact/3hv7LEEnr5cnLwHYZpBQ4N
+  - `legacy-and-print`, `09-legacy-and-print/01-legacy-and-print`: https://claude.ai/artifact/JY3yBGAVC3z6TzcubwbvW5
+- **Waiting on the operator (PENDING #1):** their words on each job. Literal approval signs it; anything
+  else is feedback and opens a superseding round. The decisions to take are `## Operator Questions` entry 13.
+- **Next, once every job is signed: `P29.REVIEW`**, the phase's last slice.
 - **Open:** Q1 (a live exposure), Q2 and Q3 (parity fails until it is answered) for P30; Q4–Q8 on their
-  working assumptions; entry 11's open items (`annotations` 10, `quiz` C09, `diagrams` C14–C16, the two
-  clears). All are routed at `P29.REVIEW`. P30 waits for P29 `done`; P28 owes its docs consolidation.
+  working assumptions; entry 11's open items (`annotations` 10, `quiz` C09, `diagrams` C14–C16); entry 13.
+  All are routed at `P29.REVIEW`. P30 waits for P29 `done`; P28 owes its docs consolidation.

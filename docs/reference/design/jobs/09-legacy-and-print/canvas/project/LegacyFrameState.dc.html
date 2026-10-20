@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The frame's own states: loading, slow, file missing, relay failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<sc-if value="{{ isLoad }}" hint-placeholder-val="{{ true }}"><div class="lg-fs" role="status" aria-label="{{ loadLabel }}">
+<p class="lg-fs__line"><span aria-hidden="{{ hideNormal }}">Loading the original document…</span><span aria-hidden="{{ hideSlow }}">Still loading. This document is taking longer than usual.</span></p>
+<span class="rd-skel lg-fs__title"></span><span class="rd-skel lg-fs__meta"></span>
+<span class="rd-skel lg-fs__ln lg-fs__w100 lg-fs__gap"></span><span class="rd-skel lg-fs__ln lg-fs__w96"></span><span class="rd-skel lg-fs__ln lg-fs__w100"></span><span class="rd-skel lg-fs__ln lg-fs__w72"></span>
+<span class="rd-skel lg-fs__h2"></span><span class="rd-skel lg-fs__ln lg-fs__w100"></span><span class="rd-skel lg-fs__ln lg-fs__w90"></span><span class="rd-skel lg-fs__ln lg-fs__w48"></span>
+<span class="rd-skel lg-fs__box"></span>
+</div></sc-if>
+<sc-if value="{{ isMissing }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Not found · 404</span><h1 class="rd-ed__title">This {{ noun }}'s file is missing</h1><p class="rd-ed__sub">The library lists this {{ noun }}, but the file that holds its text isn't there, so there is nothing to show. {{ missingNext }}</p><div class="rd-ed__actions"><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ back }}"><span aria-hidden="true">‹</span> {{ backLabel }}</a></div></div></sc-if>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Error · 502</span><h1 class="rd-ed__title">The original document didn't load.</h1><p class="rd-ed__sub">The connection to its file failed on our side. Try again — and if it keeps failing, the reference below tells us where it stopped.</p><div class="rd-ed__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ retry }}">Try again</button></div><p class="rd-ed__ref">ref · lg-5d81e0a4</p></div></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"noun":{"editor":null},"onRetry":{"editor":null},"onBack":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":820,"height":640}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const kind = P.kind || 'loading';
+    const noun = P.noun || 'chapter';
+    const slow = kind === 'slow';
+    return {
+      noun,
+      isLoad: kind === 'loading' || slow,
+      hideNormal: slow ? 'true' : undefined,
+      hideSlow: slow ? undefined : 'true',
+      loadLabel: slow ? 'Still loading' : 'Loading',
+      isMissing: kind === 'missing',
+      isFailed: kind === 'failed',
+      missingNext: noun === 'chapter' ? "The book's other chapters still open." : 'The rest of the library still opens.',
+      backLabel: noun === 'chapter' ? 'Back to the book' : 'Back to the library',
+      back: this.call('onBack'),
+      retry: this.call('onRetry'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

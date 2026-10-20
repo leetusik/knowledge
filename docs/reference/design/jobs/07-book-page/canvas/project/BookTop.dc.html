@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book page top bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<header class="bk-top">
+<div class="bk-top__start">
+<a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ logo }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a>
+<a class="rd-back" href="#top" onclick="{{ back }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="rd-back__long">Library</span><span class="rd-back__short">Library</span></a>
+</div>
+<div class="bk-top__mid" data-on="{{ on }}" aria-hidden="{{ midHidden }}"><span class="bk-top__title">{{ title }}</span><sc-if value="{{ hasProg }}" hint-placeholder-val="{{ true }}"><span class="bk-top__prog">{{ progress }}</span></sc-if></div>
+<div class="bk-top__end"><sc-if value="{{ anon }}" hint-placeholder-val="{{ false }}"><a class="rd-tbtn rd-tbtn--signin" href="#top" onclick="{{ signIn }}">Sign in</a></sc-if></div>
+</header>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"title":{"editor":null},"progress":{"editor":null},"compact":{"editor":null},"anon":{"editor":null},"onLogo":{"editor":null},"onLibrary":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":1200,"height":56}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const on = P.compact === undefined ? true : !!P.compact;
+    const progress = P.progress === undefined ? '2 of 5 finished' : P.progress;
+    return {
+      title: P.title || 'The knowledge maintainer guide',
+      progress,
+      hasProg: !!progress,
+      on: on ? 'true' : 'false',
+      midHidden: on ? undefined : 'true',
+      anon: !!P.anon,
+      logo: this.call('onLogo'),
+      back: this.call('onLibrary'),
+      signIn: this.call('onSignIn'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

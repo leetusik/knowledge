@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clear all reading data</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Clear all reading data</p>
+<p class="lib-board__lead">At the foot of the library, under Your reading data: a secondary button that opens an inline confirmation (the console’s two-step, not a dialog). The confirmation names what goes and what stays; Cancel takes the focus, never the destructive button; Escape or Cancel leaves everything as it was. Clearing keeps the button’s width; cleared says so in a line; a failure says nothing was cleared.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="6"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="ClearAll" phase="{{ c.phase }}" theme="{{ c.theme }}" width="{{ c.width }}" hint-size="720px,560px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2272,"height":2745}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const S = [
+      ['At rest', 'rest', 720], ['Confirming · Cancel has the focus', 'confirm', 720], ['Clearing…', 'clearing', 720],
+      ['Cleared', 'cleared', 720], ['Failed · nothing was cleared', 'failed', 720], ['Confirming, at phone width', 'confirm', 390],
+    ];
+    const keyStates = [S[1], S[3], S[4]];
+    const row = (t, name, list) => ({ name, cells: list.map(([c, ph, w]) => ({ cap: c, capStyle: cap(w), phase: ph, width: w, theme: t })) });
+    return { rows: [row('light', 'Light · every state', S), row('dark', 'Dark', keyStates), row('sepia', 'Sepia', keyStates)] };
+  }
+}
+</script>
+</body>
+</html>

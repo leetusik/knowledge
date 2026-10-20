@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stand-in for another job's screen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ rootCls }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<div class="rd-away__main">
+<div class="rd-away__card">
+<p class="rd-away__kind">{{ kindLabel }}</p>
+<h1 class="rd-away__title">{{ heading }}</h1>
+<p class="rd-away__body">{{ body }}</p>
+<sc-if value="{{ hasWhere }}" hint-placeholder-val="{{ false }}"><p class="rd-away__body">{{ whereLead }} <b>{{ where }}</b></p></sc-if>
+<sc-if value="{{ hasItems }}" hint-placeholder-val="{{ false }}"><div class="lg-away-list"><p class="rd-away__body">On this canvas, open one in the legacy reader:</p><ul class="lg-away-list__ul" aria-label="Open in the legacy reader"><sc-for list="{{ items }}" as="it" hint-placeholder-count="3"><li><button type="button" class="lg-away-list__row" onclick="{{ it.open }}"><span class="lg-away-list__title" lang="{{ it.lang }}">{{ it.title }}</span><span class="lg-away-list__meta">{{ it.meta }}</span></button></li></sc-for></ul></div></sc-if>
+<div class="rd-away__actions">
+<sc-if value="{{ isSignin }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn rd-away__btn--main" onclick="{{ cont }}">Finish signing in</button></sc-if>
+<button type="button" class="rd-away__btn" onclick="{{ back }}"><span aria-hidden="true">‹</span>&nbsp;{{ backLabel }}</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"where":{"editor":null},"detail":{"editor":null},"legacyTitle":{"editor":null},"back":{"editor":null},"items":{"editor":null},"from":{"editor":null},"onBack":{"editor":null},"onContinue":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const kind = P.kind || 'signin';
+    const where = P.where || 'Knowledge System Internals: The Content Plane, the Write Path, and the Contracts · The write path';
+    const back = P.back || 'Back to the chapter';
+    const C = {
+      book: { k: 'Another job · 07-book-page', h: 'Book page — another job', b: 'The book page for “' + (P.detail || 'Tidewater, from the inside') + '” is drawn by the book-page job (07-book-page). Its chapter list opens a legacy chapter here, in the legacy reader, and a native one in the reader.', back },
+      library: { k: 'Another job · 06-library', h: 'Library — another job', b: 'The library is drawn by the library job (06-library). A loose legacy document opens from there in the legacy reader; a book opens its book page (07-book-page), whose chapter list opens a legacy chapter here.', back },
+      signin: { k: 'Another surface · auth, unchanged', h: 'Sign in — another surface', b: 'Signing in is the existing auth flow; this job does not change it.', back: 'Back, still signed out', wl: 'When it finishes, you come back to the same place:' },
+      legacy: { k: 'Another job · legacy-and-print', h: 'Legacy reader — another job', b: '“' + (P.legacyTitle || 'Datums: Chart Datum, Mean Sea Level, and the Conversions Between Them') + '” keeps its original layout. The legacy-and-print job draws how it opens.', back: 'Back to the chapter' },
+      external: { k: 'Outside the canvas', h: 'This link leaves the canvas', b: 'In the product it opens ' + (P.detail || 'https://www.sqlite.org/wal.html').replace(/^https:\/\//, '') + ' in a new tab, and the chapter stays open here.', back: 'Back to the chapter' },
+      reader: { k: 'Signed · 01-reader', h: 'Reader — signed (01-reader)', b: (P.detail || 'Chapter 8 · The public tide-table API') + ' is a native chapter, so it opens in the signed reader, with its own chapter bar and end. Its chapter bar leads back to the legacy chapter, which opens in the legacy reader again.', back },
+      newtab: { k: 'Outside the canvas · a new tab', h: 'Opens in a new tab: ' + (P.detail || 'https://tidesandcurrents.noaa.gov/datum_options.html').replace(/^https:\/\//, ''), b: 'The document asked for an outside link. The bridge opens it in a new tab with noopener; the legacy reader stays where it was, at the same place.', back },
+      print: { k: 'Outside the canvas · a new tab', h: 'The original document, in a new tab', b: 'Print · new tab opens ' + (P.detail || '[host]/@quillwork/tidewater/books/tidewater/datums/raw') + ' on its own, outside the frame. There it prints in its own layout from the browser’s Print command; the bridge does nothing when it is not framed.', back },
+    }[kind];
+    const call = (name) => () => { const f = this.props[name]; if (f) f(); };
+    const items = Array.isArray(P.items) ? P.items.map((it) => ({ title: it.title, lang: it.lang || 'en', meta: it.meta, open: () => { if (it.open) it.open(); } })) : [];
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [] }, g)) : [];
+    return {
+      bar, hasBar: bar.length > 0,
+      kindLabel: C.k, heading: C.h, body: C.b, backLabel: C.back,
+      hasWhere: kind === 'signin', whereLead: C.wl || '', where,
+      items, hasItems: items.length > 0,
+      isSignin: kind === 'signin',
+      cont: call('onContinue'),
+      back: call('onBack'),
+      rootCls: P.fit === 'fill' ? 'rd-away' : 'rd-away rd-away--alone',
+    };
+  }
+}
+</script>
+</body>
+</html>

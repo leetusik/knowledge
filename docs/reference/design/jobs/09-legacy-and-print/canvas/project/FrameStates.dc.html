@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The frame’s own states: loading, a slow relay, a missing file, a failed relay, not found</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The frame’s own states: loading, a slow relay, a missing file, a failed relay, not found</p>
+<p class="rd-board__lead">Each state fills the frame’s area under the reader’s bars, which stay usable. Loading draws the document’s outline (still under reduced motion), and the slow line replaces it in place. A missing file and a failed relay each say what happened and the one thing to do. Not found reads the same for a missing address and a private one (404, never 403). The live versions are on Page 01 (state bar).</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Legacy" fit="fill" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" theme="{{ c.theme }}" theme-choice="{{ c.themeChoice }}" os="{{ c.os }}" member="{{ c.member }}" bar="{{ c.bar }}" panel="{{ c.panel }}" status="{{ c.status }}" prog="{{ c.prog }}" jump="{{ c.jump }}" prompt="{{ c.prompt }}" resumed="{{ c.resumed }}" hold="{{ c.hold }}" marks="{{ c.marks }}" mark-on-land="{{ c.markOnLand }}" safe="{{ c.safe }}" hint-size="100%,100%"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3000,"height":2076}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, LG = window.LG;
+    const J = (anchor, frac) => ({ anchor: anchor || null, frac: frac || 0, token: 1 });
+    const size = { phone: 'width: 390px; height: 844px', ipad: 'width: 820px; height: 1180px', desk: 'width: 1440px; height: 900px', land: 'width: 1024px; height: 768px' };
+    const L = (cap, dev, o) => Object.assign({ cap, st: size[dev], doc: 'tidewater/datums', lang: 'en', ver: null, theme: 'light', themeChoice: 'light', os: 'light',
+      member: true, bar: 'shown', panel: null, status: 'ready', prog: RD.progress, jump: J(null, 0), prompt: null, resumed: false, hold: null,
+      marks: [], markOnLand: false, safe: dev === 'phone' }, o);
+
+    const rows = [
+      { title: 'Phone · 390 × 844', cells: [
+        L('Loading', 'phone', { status: 'loading' }),
+        L('Loading · slow relay', 'phone', { status: 'slow' }),
+        L('File missing · 404', 'phone', { status: 'missing' }),
+        L('Relay failed · 502', 'phone', { status: 'failed' }),
+        L('Not found · no such document', 'phone', { doc: 'doc/lantern/offline-maps', status: 'notfound' }),
+        L('Not found · a private document (harbor-ops)', 'phone', { doc: 'doc/harbor-ops/runbook', status: 'notfound' }),
+      ] },
+      { title: 'Desktop · 1440 × 900 · dark and sepia', cells: [
+        L('Relay failed · dark', 'desk', { status: 'failed', theme: 'dark', themeChoice: 'dark' }),
+        L('Loading · sepia', 'desk', { status: 'loading', theme: 'sepia', themeChoice: 'sepia' }),
+      ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

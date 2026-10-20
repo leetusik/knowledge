@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The legacy reader at 390, 820, 1024 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="lflow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-widths">
+<div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div>
+<div class="rd-board rd-widths__board">
+<p class="rd-board__title">The legacy reader at the four reference sizes</p>
+<p class="rd-board__lead">One prototype state drawn four times: a click in any frame moves all four, and the state bar above picks a scene and a theme for all of them. Each frame is a whole screen that never scrolls; only the framed document scrolls inside it.</p>
+<div class="lg-widths__row">
+<div class="rd-cell"><p class="rd-cap">Phone · 390 × 844 · safe areas simulated</p><div class="rd-stage rd-stage--phone"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Legacy" fit="fill" safe="{{ true }}" doc="{{ rP.doc }}" lang="{{ rP.lang }}" ver="{{ rP.ver }}" theme="{{ rP.theme }}" theme-choice="{{ rP.themeChoice }}" os="{{ rP.os }}" member="{{ rP.member }}" bar="{{ rP.bar }}" panel="{{ rP.panel }}" status="{{ rP.status }}" prog="{{ rP.prog }}" jump="{{ rP.jump }}" prompt="{{ rP.prompt }}" resumed="{{ rP.resumed }}" hold="{{ rP.hold }}" marks="{{ rP.marks }}" mark-on-land="{{ rP.markOnLand }}" on-open="{{ rP.onOpen }}" on-link="{{ rP.onLink }}" on-lang="{{ rP.onLang }}" on-version="{{ rP.onVersion }}" on-theme="{{ rP.onTheme }}" on-panel="{{ rP.onPanel }}" on-bar="{{ rP.onBar }}" on-mark="{{ rP.onMark }}" on-bookmark="{{ rP.onBookmark }}" on-place-mark="{{ rP.onPlaceMark }}" on-end="{{ rP.onEnd }}" on-end-left="{{ rP.onEndLeft }}" on-reading="{{ rP.onReading }}" on-away="{{ rP.onAway }}" on-print="{{ rP.onPrint }}" on-retry="{{ rP.onRetry }}" on-prompt="{{ rP.onPrompt }}" on-from-top="{{ rP.onFromTop }}" on-dismiss-resume="{{ rP.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" back="{{ w.back }}" items="{{ w.items }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div><p class="lg-widths__note">The top 47 px and the bottom 34 px stand for the iPhone's safe areas (the notch and the home-indicator strip), simulated; the bars pad themselves out of them, and nothing is drawn there.</p></div>
+<div class="rd-cell"><p class="rd-cap">iPad portrait · 820 × 1180</p><div class="rd-stage rd-stage--ipad"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Legacy" fit="fill" doc="{{ rI.doc }}" lang="{{ rI.lang }}" ver="{{ rI.ver }}" theme="{{ rI.theme }}" theme-choice="{{ rI.themeChoice }}" os="{{ rI.os }}" member="{{ rI.member }}" bar="{{ rI.bar }}" panel="{{ rI.panel }}" status="{{ rI.status }}" prog="{{ rI.prog }}" jump="{{ rI.jump }}" prompt="{{ rI.prompt }}" resumed="{{ rI.resumed }}" hold="{{ rI.hold }}" marks="{{ rI.marks }}" mark-on-land="{{ rI.markOnLand }}" on-open="{{ rI.onOpen }}" on-link="{{ rI.onLink }}" on-lang="{{ rI.onLang }}" on-version="{{ rI.onVersion }}" on-theme="{{ rI.onTheme }}" on-panel="{{ rI.onPanel }}" on-bar="{{ rI.onBar }}" on-mark="{{ rI.onMark }}" on-bookmark="{{ rI.onBookmark }}" on-place-mark="{{ rI.onPlaceMark }}" on-end="{{ rI.onEnd }}" on-end-left="{{ rI.onEndLeft }}" on-reading="{{ rI.onReading }}" on-away="{{ rI.onAway }}" on-print="{{ rI.onPrint }}" on-retry="{{ rI.onRetry }}" on-prompt="{{ rI.onPrompt }}" on-from-top="{{ rI.onFromTop }}" on-dismiss-resume="{{ rI.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" back="{{ w.back }}" items="{{ w.items }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">iPad landscape · 1024 × 768</p><div class="rd-stage lg-stage--land"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Legacy" fit="fill" doc="{{ rL.doc }}" lang="{{ rL.lang }}" ver="{{ rL.ver }}" theme="{{ rL.theme }}" theme-choice="{{ rL.themeChoice }}" os="{{ rL.os }}" member="{{ rL.member }}" bar="{{ rL.bar }}" panel="{{ rL.panel }}" status="{{ rL.status }}" prog="{{ rL.prog }}" jump="{{ rL.jump }}" prompt="{{ rL.prompt }}" resumed="{{ rL.resumed }}" hold="{{ rL.hold }}" marks="{{ rL.marks }}" mark-on-land="{{ rL.markOnLand }}" on-open="{{ rL.onOpen }}" on-link="{{ rL.onLink }}" on-lang="{{ rL.onLang }}" on-version="{{ rL.onVersion }}" on-theme="{{ rL.onTheme }}" on-panel="{{ rL.onPanel }}" on-bar="{{ rL.onBar }}" on-mark="{{ rL.onMark }}" on-bookmark="{{ rL.onBookmark }}" on-place-mark="{{ rL.onPlaceMark }}" on-end="{{ rL.onEnd }}" on-end-left="{{ rL.onEndLeft }}" on-reading="{{ rL.onReading }}" on-away="{{ rL.onAway }}" on-print="{{ rL.onPrint }}" on-retry="{{ rL.onRetry }}" on-prompt="{{ rL.onPrompt }}" on-from-top="{{ rL.onFromTop }}" on-dismiss-resume="{{ rL.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" back="{{ w.back }}" items="{{ w.items }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">Desktop · 1440 × 900</p><div class="rd-stage rd-stage--desk"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Legacy" fit="fill" doc="{{ rD.doc }}" lang="{{ rD.lang }}" ver="{{ rD.ver }}" theme="{{ rD.theme }}" theme-choice="{{ rD.themeChoice }}" os="{{ rD.os }}" member="{{ rD.member }}" bar="{{ rD.bar }}" panel="{{ rD.panel }}" status="{{ rD.status }}" prog="{{ rD.prog }}" jump="{{ rD.jump }}" prompt="{{ rD.prompt }}" resumed="{{ rD.resumed }}" hold="{{ rD.hold }}" marks="{{ rD.marks }}" mark-on-land="{{ rD.markOnLand }}" on-open="{{ rD.onOpen }}" on-link="{{ rD.onLink }}" on-lang="{{ rD.onLang }}" on-version="{{ rD.onVersion }}" on-theme="{{ rD.onTheme }}" on-panel="{{ rD.onPanel }}" on-bar="{{ rD.onBar }}" on-mark="{{ rD.onMark }}" on-bookmark="{{ rD.onBookmark }}" on-place-mark="{{ rD.onPlaceMark }}" on-end="{{ rD.onEnd }}" on-end-left="{{ rD.onEndLeft }}" on-reading="{{ rD.onReading }}" on-away="{{ rD.onAway }}" on-print="{{ rD.onPrint }}" on-retry="{{ rD.onRetry }}" on-prompt="{{ rD.onPrompt }}" on-from-top="{{ rD.onFromTop }}" on-dismiss-resume="{{ rD.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" back="{{ w.back }}" items="{{ w.items }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3858,"height":1404}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.LG.flow.initial('tw-top', { themeChoice: 'light', os: 'light' });
+    this.a = window.LG.flow.api(this);
+    /* each frame is its own device: what its own scrolling records stays with it; a click moves all four */
+    this.aBy = { phone: window.LG.flow.api(this, 'phone'), ipad: window.LG.flow.api(this, 'ipad'), land: window.LG.flow.api(this, 'land'), desk: window.LG.flow.api(this, 'desk') };
+  }
+  renderVals() {
+    const F = window.LG.flow, s = this.state;
+    const none = { kind: 'library', where: '', detail: '', back: '', items: [], onBack: null, onContinue: null };
+    const all = F.bar(this, this.a);
+    const PG = F.pageOf(s);
+    const keys = ['tw-top', 'tw-hidden', 'tw-end', 'tw-mark', 'tw-list', 'tw-display', 'tw-anonsave', 'tw-loading', 'tw-failed', 'or-resume', 'or-short', 'ln-ko', 'lo-versions', 'lo-old', 'lo-ko', 'lo-private'];
+    const on = F.pressedKey(s, keys);
+    const ex = all[0].extra;
+    return {
+      groups: [{ key: 'widths', name: 'The legacy reader at four sizes', cls: 'pb-group', only: false,
+        presets: keys.map((k) => ({ key: k, label: F.BY[k].label, pressed: on === k, pick: () => this.a.pick(k) })),
+        hasExtra: true, extraLabel: '· theme:', extra: ex }],
+      inReader: !s.away,
+      isAway: !!s.away,
+      rP: F.legacyProps(this, this.aBy.phone, 'phone'),
+      rI: F.legacyProps(this, this.aBy.ipad, 'ipad'),
+      rL: F.legacyProps(this, this.aBy.land, 'land'),
+      rD: F.legacyProps(this, this.aBy.desk, 'desk'),
+      w: s.away ? F.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Top bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Top bar</p>
+<p class="rd-board__lead">Logo and “‹ Library” go to the library. Once the book’s head has scrolled under the bar, the middle shows the book’s title and progress (it is always laid out, and only shown then, so nothing moves). Sign in stays in the bar at every width for a signed-out reader: a book page has no chapter end to carry it.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="BookTop" title="{{ c.title }}" progress="{{ c.progress }}" compact="{{ c.compact }}" anon="{{ c.anon }}" theme="{{ c.theme }}" hint-size="100%,56px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3000,"height":590}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const T = (cap, w, o) => Object.assign({ cap, st: px(w), title: 'The knowledge maintainer guide', progress: '2 of 5 finished', compact: false, anon: false, theme: 'light' }, o);
+    const rows = [
+      { title: 'Desktop · 1440 wide', cells: [T('Member · at the top of the page', 1440, {}), T('Member · scrolled past the head: the book stays in view', 1440, { compact: true })] },
+      { title: 'iPad · 820 and 1024', cells: [T('Signed out · at the top · Sign in in the bar', 1024, { anon: true, progress: '5 chapters' }), T('Tidewater · scrolled · sepia', 820, { compact: true, title: 'Tidewater, from the inside', progress: '10 of 20 finished', theme: 'sepia' }), T('Signed out · scrolled · dark', 820, { compact: true, anon: true, progress: '5 chapters', theme: 'dark' })] },
+      { title: 'Phone · 390', cells: [T('Member · at the top', 390, {}), T('Scrolled · a long title ends in an ellipsis · dark', 390, { compact: true, title: 'P24: Running checks from three regions', progress: '2 of 4 finished', theme: 'dark' }), T('Signed out · scrolled · sepia', 390, { compact: true, anon: true, progress: '5 chapters', theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

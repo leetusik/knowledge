@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clear this book's reading data</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<section class="bk-clear" ref="{{ setSection }}">
+<h2 class="bk-clear__title">Your reading data</h2>
+<sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}"><p class="bk-clear__lead">Your place, progress, bookmarks, highlights and notes in this book are kept for you alone.</p><button type="button" class="rd-btn rd-btn--ghost bk-del" ref="{{ setTrigger }}" onclick="{{ ask }}">Clear this book's reading data</button></sc-if>
+<sc-if value="{{ isAsking }}" hint-placeholder-val="{{ false }}"><div class="bk-confirm" role="group" aria-label="Clear your reading data for this book?" onkeydown="{{ onKey }}">
+<p class="bk-confirm__q">Clear your reading data for this book?</p>
+<p class="bk-confirm__p">This removes, from <b>{{ title }}</b> only:</p>
+<ul class="bk-confirm__list"><sc-for list="{{ goes }}" as="g" hint-placeholder-count="3"><li>{{ g.text }}</li></sc-for></ul>
+<p class="bk-confirm__p">It keeps every other book, the chapters themselves, and your display settings on this device. You can't undo this.</p>
+<div class="bk-confirm__actions"><button type="button" class="{{ cancelCls }}" ref="{{ setCancel }}" aria-hidden="{{ busyAttr }}" tabindex="{{ cancelTab }}" onclick="{{ cancel }}">Cancel</button><button type="button" class="rd-btn bk-danger" aria-busy="{{ busyAttr }}" onclick="{{ confirm }}"><span class="bk-stack"><span class="{{ restCls }}">Clear reading data</span><span class="{{ busyCls }}">Clearing…</span></span></button></div>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><p class="bk-confirm__err" role="alert"><b>Couldn't clear this book's reading data.</b> Nothing was cleared. Try again.</p></sc-if>
+</div></sc-if>
+<sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}"><p class="bk-clear__done" role="status" tabindex="-1" ref="{{ setDone }}"><b>Reading data cleared.</b> Every chapter of this book reads Not started, and there's no place to continue from.</p></sc-if>
+</section>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"viewer":{"editor":null},"pk":{"editor":null},"clear":{"editor":null},"onAsk":{"editor":null},"onCancel":{"editor":null},"onConfirm":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":640,"height":184}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.cancelEl = null;
+    this.triggerEl = null;
+    this.sectionEl = null;
+    this.doneEl = null;
+  }
+  setCancel = (el) => { this.cancelEl = el; };
+  setTrigger = (el) => { this.triggerEl = el; };
+  setSection = (el) => { this.sectionEl = el; };
+  setDone = (el) => { this.doneEl = el; };
+  /* Focus, only after a press inside this part (the trigger, Cancel, Escape, the danger button); a preset that jumps
+     to a state, or a Components board that draws the states side by side, moves no focus.
+     - Opened from the trigger: focus lands on Cancel, never on the destructive button, and the section is brought into
+       view by the least distance, so Cancel, its focus ring and "Clear reading data" are all on screen.
+     - Closed by Cancel or Escape: focus goes back to the trigger.
+     - Cleared: the busy button goes with the group, so focus moves to the "Reading data cleared." line (tabindex -1),
+       which is kept in view. A failure leaves focus on the danger button, which is the retry.
+     Focus itself never scrolls (preventScroll); only the least-distance reveal does. */
+  componentDidMount() { this.last = this.props.clear || 'idle'; this.wantFocus = null; }
+  componentDidUpdate() {
+    const was = this.last || 'idle', now = this.props.clear || 'idle';
+    this.last = now;
+    if (was === now) return;
+    const want = this.wantFocus;
+    if (!(want === 'done' && now === 'pending')) this.wantFocus = null;
+    if (want === 'cancel' && now === 'confirm' && this.cancelEl) { this.cancelEl.focus({ preventScroll: true }); this.reveal(); }
+    if (want === 'trigger' && now === 'idle' && this.triggerEl) this.triggerEl.focus({ preventScroll: true });
+    if (want === 'done' && now === 'done' && this.doneEl) { this.doneEl.focus({ preventScroll: true }); this.reveal(); }
+  }
+  reveal() { if (this.sectionEl && this.sectionEl.scrollIntoView) this.sectionEl.scrollIntoView({ block: 'nearest' }); }
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const bare = !!P.bare;
+    const book = P.book || 'guide';
+    const viewer = P.viewer || 'member';
+    const pk = P.pk || BK.pkFor(book, viewer);
+    const clear = P.clear || 'idle';
+    const v = BK.view(book, viewer, pk);
+    const d = v.data;
+    const goes = [{ text: 'your place and progress in ' + BK.count(d.chapters, 'chapter', 'chapters') }];
+    if (d.notes) goes.push({ text: BK.count(d.notes, 'bookmark, highlight or note', 'bookmarks, highlights and notes') });
+    goes.push({ text: 'your quiz answers, and the review cards from its chapters' });
+    const busy = clear === 'pending';
+    const call = (name) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = P[name]; if (f) f(); };
+    return {
+      title: v.book.title,
+      goes,
+      isIdle: clear === 'idle',
+      isAsking: clear === 'confirm' || clear === 'pending' || clear === 'failed',
+      isFailed: clear === 'failed',
+      isDone: clear === 'done',
+      busy,
+      busyAttr: busy ? 'true' : undefined,
+      restCls: busy ? 'is-off' : '',
+      busyCls: busy ? '' : 'is-off',
+      ask: (e) => { this.wantFocus = 'cancel'; call('onAsk')(e); },
+      cancel: (e) => { if (busy) { if (e && e.preventDefault) e.preventDefault(); return; } this.wantFocus = 'trigger'; call('onCancel')(e); },
+      cancelCls: busy ? 'rd-btn rd-btn--ghost bk-hold' : 'rd-btn rd-btn--ghost',
+      cancelTab: busy ? '-1' : undefined,
+      confirm: (e) => { if (e && e.preventDefault) e.preventDefault(); if (busy) return; this.wantFocus = 'done'; if (P.onConfirm) P.onConfirm(); },
+      onKey: (e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); this.wantFocus = 'trigger'; if (P.onCancel) P.onCancel(); } },
+      setCancel: this.setCancel,
+      setTrigger: this.setTrigger,
+      setSection: this.setSection,
+      setDone: this.setDone,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone bk-demo',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

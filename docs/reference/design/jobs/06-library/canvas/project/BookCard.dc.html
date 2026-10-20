@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<a class="lib-book" href="#top" onclick="{{ open }}">
+<sc-if value="{{ c.showProject }}" hint-placeholder-val="{{ false }}"><span class="lib-label">{{ c.project }}</span></sc-if>
+<span class="lib-book__title"><sc-for list="{{ c.titleParts }}" as="p" hint-placeholder-count="1"><span lang="{{ p.lang }}">{{ p.t }}</span></sc-for></span>
+<sc-if value="{{ hasMeta }}" hint-placeholder-val="{{ true }}"><span class="lib-book__meta"><sc-for list="{{ meta }}" as="m" hint-placeholder-count="2"><sc-if value="{{ m.sep }}" hint-placeholder-val="{{ false }}"><span class="lib-dot" aria-hidden="true">·</span></sc-if><span lang="{{ m.lang }}">{{ m.t }}</span></sc-for><sc-if value="{{ c.allLegacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if></span></sc-if>
+<sc-if value="{{ c.member }}" hint-placeholder-val="{{ true }}"><span class="lib-book__prog"><span class="lib-bar" aria-hidden="true"><span class="lib-bar__fill" style="{{ fillStyle }}"></span></span><span class="lib-book__count"><span>{{ countText }}</span><sc-if value="{{ c.updated }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--accent">Updated</span></sc-if></span></span></sc-if>
+</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"card":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":400,"height":196}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, L = window.LIB;
+    const c = P.card || L.bookCard(L.BOOKS.MG, L.PROG.default, true, false);
+    const meta = [];
+    if (!c.member) meta.push({ t: L.plural(c.total, 'chapter', 'chapters'), lang: 'en', sep: false });
+    (c.langs || []).forEach((l) => meta.push({ t: l.name, lang: l.lang, sep: meta.length > 0 }));
+    const countText = c.done + ' of ' + c.total + ' finished';
+    const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+    const bare = !!P.bare;
+    return {
+      c,
+      meta,
+      hasMeta: meta.length > 0 || !!c.allLegacy,
+      countText,
+      fillStyle: 'width: ' + pct + '%',
+      open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(c); },
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: 400px; min-height: 196px',
+    };
+  }
+}
+</script>
+</body>
+</html>

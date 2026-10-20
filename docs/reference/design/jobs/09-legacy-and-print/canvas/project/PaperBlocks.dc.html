@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Long content on paper: a wide ASCII drawing, a long code line, a collapsed callout, a figure row wider than the column, a table across pages</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<link rel="stylesheet" href="paper.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="paper.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Long content on paper: a wide ASCII drawing, a long code line, a collapsed callout, a figure row wider than the column, a table across pages</p>
+<p class="rd-board__lead">The print stylesheet’s rules for what doesn’t fit, at 100%: an ASCII drawing scales down to fit the column (to 6.5pt at the least) and only then wraps; code wraps with a hanging indent; a collapsed callout prints open; a figure row keeps 13rem per item or breaks into even rows, never split across pages; a table’s rows never split and its header repeats on the next page. Each item is the signed sample (the reader’s chapter 2, 02-figures); the drawing is written for this board.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div style="{{ c.st }}"><dc-import name="Sheet" mode="flow" sample="{{ c.sample }}" paper="{{ c.paper }}" span="{{ c.span }}" scale="{{ c.scale }}" width="{{ c.w }}" hint-size="100%,1200px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3500,"height":2560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const S = (cap, paper) => ({ cap, sample: 'long', paper, span: 4, scale: 1, w: 3400, st: 'width: 3400px' });
+    return { rows: [
+      { title: 'A4 · 794 × 1123', cells: [S('Every page', 'a4')] },
+      { title: 'US Letter · 816 × 1056', cells: [S('Every page', 'letter')] },
+    ] };
+  }
+}
+</script>
+</body>
+</html>

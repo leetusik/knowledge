@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Sheets in the legacy reader: Contents, Display, Version history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Sheets in the legacy reader: Contents, Display, Version history</p>
+<p class="rd-board__lead">The signed sheets, opened from the reader’s top bar and the document bar. Contents marks every legacy row “Original layout”; a native chapter opens in the reader. Display keeps the signed Theme choice and says what reaches the document and what doesn’t. Version history is the signed list. Below 40rem a sheet rises from the bottom; from 40rem it is a side panel.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Legacy" fit="fill" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" theme="{{ c.theme }}" theme-choice="{{ c.themeChoice }}" os="{{ c.os }}" member="{{ c.member }}" bar="{{ c.bar }}" panel="{{ c.panel }}" status="{{ c.status }}" prog="{{ c.prog }}" jump="{{ c.jump }}" prompt="{{ c.prompt }}" resumed="{{ c.resumed }}" hold="{{ c.hold }}" marks="{{ c.marks }}" mark-on-land="{{ c.markOnLand }}" safe="{{ c.safe }}" hint-size="100%,100%"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3000,"height":2076}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, LG = window.LG;
+    const J = (anchor, frac) => ({ anchor: anchor || null, frac: frac || 0, token: 1 });
+    const size = { phone: 'width: 390px; height: 844px', ipad: 'width: 820px; height: 1180px', desk: 'width: 1440px; height: 900px', land: 'width: 1024px; height: 768px' };
+    const L = (cap, dev, o) => Object.assign({ cap, st: size[dev], doc: 'tidewater/datums', lang: 'en', ver: null, theme: 'light', themeChoice: 'light', os: 'light',
+      member: true, bar: 'shown', panel: null, status: 'ready', prog: RD.progress, jump: J(null, 0), prompt: null, resumed: false, hold: null,
+      marks: [], markOnLand: false, safe: dev === 'phone' }, o);
+
+    const rows = [
+      { title: 'Phone · 390 × 844', cells: [
+        L('Contents · a legacy chapter in a native book', 'phone', { panel: 'contents' }),
+        L('Contents · an all-legacy book · reopened at the saved place', 'phone', { doc: 'orchard-guide/job-model', panel: 'contents', resumed: true, jump: J(RD.progress['orchard-guide/job-model'].at, RD.progress['orchard-guide/job-model'].frac) }),
+        L('Display · a self-darkening document', 'phone', { panel: 'display' }),
+        L('Display · a light-only document · dark', 'phone', { doc: 'orchard-guide/harvester', panel: 'display', theme: 'dark', themeChoice: 'dark' }),
+        L('Version history · a loose document at v3', 'phone', { doc: 'doc/ferry-board/timetable-feed', panel: 'versions' }),
+      ] },
+      { title: 'Desktop · 1440 × 900 · side panels', cells: [
+        L('Contents · sepia', 'desk', { panel: 'contents', theme: 'sepia', themeChoice: 'sepia' }),
+        L('Version history · v1 open (older)', 'desk', { doc: 'doc/lantern/plain-files', ver: 1, panel: 'versions' }),
+      ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
