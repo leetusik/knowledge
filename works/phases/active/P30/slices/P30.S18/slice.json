@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Diagrams II: sequence, stack, timeline and chart (03-diagrams)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 180,
   "depends_on": [
     "P30.S17"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T08:09:15+09:00",
+  "completed_at": "2026-10-21T08:46:09+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Sequence (SVG, canvas layout port), stack, timeline and charts (bar/line/interval, em-based HTML) drawn from 03-diagrams in S17's frame with text alternatives; S12 text bodies removed; web 269",
   "validation": {
     "required": [],
     "last_run": null,

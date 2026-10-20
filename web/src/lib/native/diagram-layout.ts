@@ -90,7 +90,7 @@ export interface Layout {
   init: LNode | null;
 }
 
-const TONES = [
+export const TONES = [
   "default",
   "muted",
   "accent",
@@ -109,7 +109,7 @@ const TONES = [
 export const toneOf = (t: unknown): string =>
   typeof t === "string" && TONES.includes(t) ? t : "default";
 
-const r1 = (n: number): number => Math.round(n * 10) / 10;
+export const r1 = (n: number): number => Math.round(n * 10) / 10;
 
 /** The signed layout constants (build prompt "Node sizing", "Gaps", "Edges"). */
 const M = {
@@ -142,7 +142,7 @@ const M = {
   loopH: 22,
 };
 
-type Pt = [number, number];
+export type Pt = [number, number];
 type Side = "T" | "B" | "L" | "R";
 
 export interface LNode {
@@ -443,7 +443,7 @@ function pickRoute(G: Grid, s: LNode, t: LNode): Route {
 
 // --- geometry helpers --------------------------------------------------------------
 
-function rounded(pts: Pt[], rad: number): string {
+export function rounded(pts: Pt[], rad: number): string {
   if (pts.length < 2) return "";
   let d = `M${r1(pts[0][0])} ${r1(pts[0][1])}`;
   for (let i = 1; i < pts.length - 1; i++) {
@@ -471,7 +471,7 @@ function rounded(pts: Pt[], rad: number): string {
   return `${d} L${r1(z[0])} ${r1(z[1])}`;
 }
 
-function arrow(tip: Pt, from: Pt, len: number, half: number): string {
+export function arrow(tip: Pt, from: Pt, len: number, half: number): string {
   let dx = tip[0] - from[0];
   let dy = tip[1] - from[1];
   const l = Math.hypot(dx, dy) || 1;
@@ -482,7 +482,7 @@ function arrow(tip: Pt, from: Pt, len: number, half: number): string {
   return `M${r1(tip[0])} ${r1(tip[1])} L${r1(bx - dy * half)} ${r1(by + dx * half)} L${r1(bx + dy * half)} ${r1(by - dx * half)} Z`;
 }
 
-function rectPath(
+export function rectPath(
   x: number,
   y: number,
   w: number,
@@ -502,7 +502,7 @@ function labelBox(text: string, maxW?: number) {
   };
 }
 
-function textBlock(
+export function textBlock(
   lines: string[],
   font: Font,
   x: number,

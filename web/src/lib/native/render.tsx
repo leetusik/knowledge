@@ -32,7 +32,7 @@ import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 
 import { letters, planCitations, type CitationPlan } from "./cites";
-import { Drawing, graphAlt, layoutFor } from "./diagram-draw";
+import { diagramParts, kindOf } from "./diagram-kinds";
 import { highlight } from "./highlight";
 import {
   resolveAsset,
@@ -150,7 +150,6 @@ type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
-const num = (v: unknown): number | null => (typeof v === "number" ? v : null);
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const recs = (v: unknown): Rec[] => arr(v).filter(isRec);
 const inl = (v: unknown): Inline[] | null =>
@@ -684,20 +683,7 @@ class Renderer {
       case "figures":
         return this.figures(block, id);
       case "diagram":
-        if (this.isDrawn(block))
-          return this.drawn(block, id, "figure", inl(block.caption));
-        return (
-          <figure
-            className="kb-ch-diagram"
-            id={id}
-            data-block={id}
-            data-kind={str(block.kind) ?? undefined}
-            aria-label={str(block.title) ?? undefined}
-          >
-            {this.diagramBody(block)}
-            {this.caption(inl(block.caption))}
-          </figure>
-        );
+        return this.drawn(block, id, "figure", inl(block.caption));
       case "svg":
         return this.svgBlock(block, id);
       case "quiz":
@@ -707,16 +693,6 @@ class Renderer {
       default:
         return null;
     }
-  }
-
-  caption(nodes: Inline[] | null, extra?: ReactNode): ReactNode {
-    if ((!nodes || !nodes.length) && !extra) return null;
-    return (
-      <figcaption className="kb-ch-caption">
-        {this.inline(nodes)}
-        {extra}
-      </figcaption>
-    );
   }
 
   /** §2 the figure's caption, credit and (for an animated asset) the still-frame line. */
@@ -825,21 +801,9 @@ class Renderer {
           </figure>
         );
       case "diagram":
-        if (isRec(item.diagram) && this.isDrawn(item.diagram))
-          return (
-            <figure className="fg-item" data-kind="diagram">
-              {this.drawn(item.diagram, undefined, "div", null)}
-              {this.itemCap(inl(item.caption))}
-            </figure>
-          );
         return isRec(item.diagram) ? (
           <figure className="fg-item" data-kind="diagram">
-            <div
-              className="kb-ch-diagram"
-              data-kind={str(item.diagram.kind) ?? undefined}
-            >
-              {this.diagramBody(item.diagram)}
-            </div>
+            {this.drawn(item.diagram, undefined, "div", null)}
             {this.itemCap(inl(item.caption))}
           </figure>
         ) : null;
@@ -871,19 +835,14 @@ class Renderer {
     );
   }
 
-  /** The kinds S17 draws (flow and state); the others keep S12's structured text until S18 draws them. */
-  isDrawn(d: Rec): boolean {
-    const kind = str(d.kind);
-    return kind === "flow" || kind === "state";
-  }
-
   /** How many drawn diagrams this render has made (their title ids: `dg-title-<n>`). */
   private dgCount = 0;
 
   /**
-   * S17: a flow or state diagram, drawn on the server into safe React SVG (`03-diagrams` round 01): the frame in the
-   * slot, the drawing laid out from its data (`diagram-layout.ts`), the visually hidden text alternative and the
-   * caption. `tag` is `div` inside a figure-row item, whose own figcaption carries the caption.
+   * A diagram, drawn on the server into safe React elements (`03-diagrams` round 01): the frame in the slot, the
+   * drawing (an SVG for flow, state and sequence, HTML in `em` for stack, timeline and chart), the visually hidden
+   * text alternative and the caption. `tag` is `div` inside a figure-row item, whose own figcaption carries the
+   * caption.
    */
   drawn(
     d: Rec,
@@ -891,9 +850,13 @@ class Renderer {
     tag: "figure" | "div",
     caption: Inline[] | null,
   ): ReactNode {
-    const kind = str(d.kind) === "state" ? "state" : "flow";
-    const layout = layoutFor(d, kind);
-    const lines = graphAlt(layout, d);
+    const kind = kindOf(d);
+    const { drawing, alt } = diagramParts(
+      d,
+      kind,
+      (s) => this.text(s),
+      CHAPTER.diagram.alt.lead,
+    );
     this.dgCount += 1;
     return (
       <DiagramFigure
@@ -902,19 +865,8 @@ class Renderer {
         tag={tag}
         titleId={`dg-title-${this.dgCount}`}
         title={this.text(str(d.title) ?? "")}
-        drawing={<Drawing layout={layout} />}
-        alt={
-          lines.length ? (
-            <div className="dg__sr">
-              <p>{CHAPTER.diagram.alt.lead}</p>
-              <ul>
-                {lines.map((line, i) => (
-                  <li key={i}>{this.text(line)}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null
-        }
+        drawing={drawing}
+        alt={alt}
         caption={
           caption && caption.length ? (
             <figcaption className="dg__cap">{this.inline(caption)}</figcaption>
@@ -923,182 +875,6 @@ class Renderer {
         ariaLabel={CHAPTER.diagram.aria}
         hint={CHAPTER.diagram.hint}
       />
-    );
-  }
-
-  /**
-   * S12's diagram body: the diagram's content as accessible structured text
-   * (title, then nodes and connections, steps, layers, lanes or a data table).
-   * S17/S18 replace it with the drawn diagram from the signed `03-diagrams`.
-   */
-  diagramBody(d: Rec): ReactNode {
-    const kind = str(d.kind);
-    const dTitle = str(d.title);
-    const title = (
-      <p className="kb-ch-diagram__title">
-        {dTitle === null ? null : this.text(dTitle)}
-      </p>
-    );
-    let body: ReactNode = null;
-    if (kind === "flow" || kind === "state") {
-      const labels = new Map(
-        recs(d.nodes).map((n) => [str(n.id), str(n.label)]),
-      );
-      body = (
-        <>
-          <ul
-            className="kb-ch-diagram__nodes"
-            aria-label={CHAPTER.diagram.nodes}
-          >
-            {recs(d.nodes).map((n, i) => (
-              <li
-                key={i}
-                data-shape={str(n.shape) ?? "box"}
-                data-tone={tone(n.tone)}
-              >
-                {str(n.label)}
-                {str(n.sub) ? (
-                  <span className="kb-ch-diagram__sub"> {str(n.sub)}</span>
-                ) : null}
-                {arr(n.fields).length ? (
-                  <ul>
-                    {arr(n.fields).map((f, j) => (
-                      <li key={j}>{str(f)}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          {recs(d.edges).length ? (
-            <ul
-              className="kb-ch-diagram__edges"
-              aria-label={CHAPTER.diagram.edges}
-            >
-              {recs(d.edges).map((e, i) => (
-                <li
-                  key={i}
-                  data-style={str(e.style) ?? "solid"}
-                  data-tone={tone(e.tone)}
-                >
-                  {labels.get(str(e.from)) ?? str(e.from)} {"→"}{" "}
-                  {labels.get(str(e.to)) ?? str(e.to)}
-                  {str(e.label) ? `: ${str(e.label)}` : null}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
-      );
-    } else if (kind === "sequence") {
-      const labels = new Map(
-        recs(d.actors).map((a) => [str(a.id), str(a.label)]),
-      );
-      body = (
-        <ol className="kb-ch-diagram__steps" aria-label={CHAPTER.diagram.steps}>
-          {recs(d.steps).map((s, i) => (
-            <li key={i} data-style={str(s.style) ?? "solid"}>
-              {labels.get(str(s.from)) ?? str(s.from)} {"→"}{" "}
-              {labels.get(str(s.to)) ?? str(s.to)}: {str(s.label)}
-              {str(s.note) ? (
-                <span className="kb-ch-diagram__sub"> {str(s.note)}</span>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      );
-    } else if (kind === "stack") {
-      body = (
-        <ul
-          className="kb-ch-diagram__layers"
-          aria-label={CHAPTER.diagram.layers}
-          data-nested={d.nested ? "" : undefined}
-        >
-          {recs(d.layers).map((l, i) => (
-            <li key={i} data-tone={tone(l.tone)}>
-              {str(l.label)}
-              {arr(l.items).length ? (
-                <ul>
-                  {arr(l.items).map((it, j) => (
-                    <li key={j}>{str(it)}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      );
-    } else if (kind === "timeline") {
-      const unit = isRec(d.axis) ? (str(d.axis.unit) ?? "") : "";
-      body = (
-        <ul className="kb-ch-diagram__lanes" aria-label={CHAPTER.diagram.lanes}>
-          {recs(d.lanes).map((lane, i) => (
-            <li key={i}>
-              {str(lane.label)}
-              <ul>
-                {recs(lane.bars).map((b, j) => (
-                  <li key={`b${j}`} data-tone={tone(b.tone)}>
-                    {num(b.from)}–{num(b.to)} {unit}
-                    {str(b.label) ? `: ${str(b.label)}` : null}
-                  </li>
-                ))}
-                {recs(lane.marks).map((m, j) => (
-                  <li key={`m${j}`} data-mark="">
-                    {num(m.at)} {unit}: {str(m.label)}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      );
-    } else if (kind === "chart") {
-      body = this.chartTable(d);
-    }
-    return (
-      <div className="kb-ch-diagram__body">
-        {title}
-        {body}
-      </div>
-    );
-  }
-
-  chartTable(d: Rec): ReactNode {
-    const x = isRec(d.x) ? d.x : {};
-    const categories = arr(x.categories).map((c) => str(c) ?? "");
-    const series = recs(d.series);
-    const width = Math.max(
-      categories.length,
-      ...series.map((s) => arr(s.values).length),
-      0,
-    );
-    const cell = (v: unknown) =>
-      Array.isArray(v) ? v.join("–") : (num(v) ?? "");
-    return (
-      <table
-        className="kb-ch-chart"
-        data-type={str(d.chart) ?? undefined}
-        aria-label={CHAPTER.diagram.series}
-      >
-        <thead>
-          <tr>
-            <th>{str(x.label)}</th>
-            {Array.from({ length: width }, (_, i) => (
-              <th key={i}>{categories[i] ?? i + 1}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((s, i) => (
-            <tr key={i} data-tone={tone(s.tone)}>
-              <th>{str(s.name)}</th>
-              {arr(s.values).map((v, j) => (
-                <td key={j}>{cell(v)}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
     );
   }
 
