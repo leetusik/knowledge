@@ -1,0 +1,353 @@
+{
+  "about": "P30.S6 library-to-books binding, from P29.S1's book map (made at origin/main ed8dba0) reconciled against origin/main ed8dba0 on 2026-10-21: 42 documents, none published since, so the map is unchanged. Each book is the body of PUT /api/books/{project}/{book}; 'reason' fields are documentation and are stripped before the PUT. Run: scripts/migrate_books.py.",
+  "reconciled_at": "ed8dba0",
+  "books": {
+    "changple5": {
+      "curriculum": {
+        "title": "changple5 curriculum",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 1: a numbered 20-part guide series",
+        "chapters": [
+          {
+            "key": "01-big-picture",
+            "position": 1,
+            "variants": {
+              "en": "changple5/2026-08-26-01-big-picture.html"
+            },
+            "reason": "curriculum part 1 (the NN- filename prefix)"
+          },
+          {
+            "key": "02-configuration-and-boundaries",
+            "position": 2,
+            "variants": {
+              "en": "changple5/2026-08-26-02-configuration-and-boundaries.html"
+            },
+            "reason": "curriculum part 2 (the NN- filename prefix)"
+          },
+          {
+            "key": "03-identity-and-auth",
+            "position": 3,
+            "variants": {
+              "en": "changple5/2026-08-26-03-identity-and-auth.html"
+            },
+            "reason": "curriculum part 3 (the NN- filename prefix)"
+          },
+          {
+            "key": "04-conversations-system-of-record",
+            "position": 4,
+            "variants": {
+              "en": "changple5/2026-08-26-04-conversations-system-of-record.html"
+            },
+            "reason": "curriculum part 4 (the NN- filename prefix)"
+          },
+          {
+            "key": "05-chat-turn-end-to-end",
+            "position": 5,
+            "variants": {
+              "en": "changple5/2026-08-26-05-chat-turn-end-to-end.html"
+            },
+            "reason": "curriculum part 5 (the NN- filename prefix)"
+          },
+          {
+            "key": "06-chat-context-and-memory",
+            "position": 6,
+            "variants": {
+              "en": "changple5/2026-08-26-06-chat-context-and-memory.html"
+            },
+            "reason": "curriculum part 6 (the NN- filename prefix)"
+          },
+          {
+            "key": "07-retrieval-read-path",
+            "position": 7,
+            "variants": {
+              "en": "changple5/2026-08-26-07-retrieval-read-path.html"
+            },
+            "reason": "curriculum part 7 (the NN- filename prefix)"
+          },
+          {
+            "key": "08-ingestion-pipeline",
+            "position": 8,
+            "variants": {
+              "en": "changple5/2026-08-26-08-ingestion-pipeline.html"
+            },
+            "reason": "curriculum part 8 (the NN- filename prefix)"
+          },
+          {
+            "key": "09-indexing-and-embeddings",
+            "position": 9,
+            "variants": {
+              "en": "changple5/2026-08-26-09-indexing-and-embeddings.html"
+            },
+            "reason": "curriculum part 9 (the NN- filename prefix)"
+          },
+          {
+            "key": "10-consulting-mode",
+            "position": 10,
+            "variants": {
+              "en": "changple5/2026-08-26-10-consulting-mode.html"
+            },
+            "reason": "curriculum part 10 (the NN- filename prefix)"
+          },
+          {
+            "key": "11-safety-and-grounding",
+            "position": 11,
+            "variants": {
+              "en": "changple5/2026-08-26-11-safety-and-grounding.html"
+            },
+            "reason": "curriculum part 11 (the NN- filename prefix)"
+          },
+          {
+            "key": "12-content-library",
+            "position": 12,
+            "variants": {
+              "en": "changple5/2026-08-26-12-content-library.html"
+            },
+            "reason": "curriculum part 12 (the NN- filename prefix)"
+          },
+          {
+            "key": "13-content-agent-intake-and-scaffold",
+            "position": 13,
+            "variants": {
+              "en": "changple5/2026-08-28-13-content-agent-intake-and-scaffold.html"
+            },
+            "reason": "curriculum part 13 (the NN- filename prefix)"
+          },
+          {
+            "key": "14-content-agent-build-and-publish",
+            "position": 14,
+            "variants": {
+              "en": "changple5/2026-08-28-14-content-agent-build-and-publish.html"
+            },
+            "reason": "curriculum part 14 (the NN- filename prefix)"
+          },
+          {
+            "key": "15-content-agent-agent-side",
+            "position": 15,
+            "variants": {
+              "en": "changple5/2026-08-28-15-content-agent-agent-side.html"
+            },
+            "reason": "curriculum part 15 (the NN- filename prefix)"
+          },
+          {
+            "key": "16-running-it-celery-and-observability",
+            "position": 16,
+            "variants": {
+              "en": "changple5/2026-09-13-16-running-it-celery-and-observability.html"
+            },
+            "reason": "curriculum part 16 (the NN- filename prefix)"
+          },
+          {
+            "key": "17-operator-console-and-llm-runtime",
+            "position": 17,
+            "variants": {
+              "en": "changple5/2026-09-13-17-operator-console-and-llm-runtime.html"
+            },
+            "reason": "curriculum part 17 (the NN- filename prefix)"
+          },
+          {
+            "key": "18-billing-toss",
+            "position": 18,
+            "variants": {
+              "en": "changple5/2026-09-13-18-billing-toss.html"
+            },
+            "reason": "curriculum part 18 (the NN- filename prefix)"
+          },
+          {
+            "key": "19-leaf-subsystems",
+            "position": 19,
+            "variants": {
+              "en": "changple5/2026-09-13-19-leaf-subsystems.html"
+            },
+            "reason": "curriculum part 19 (the NN- filename prefix)"
+          },
+          {
+            "key": "20-reading-guide",
+            "position": 20,
+            "variants": {
+              "en": "changple5/2026-09-13-20-reading-guide.html"
+            },
+            "reason": "curriculum part 20 (the NN- filename prefix)"
+          }
+        ]
+      }
+    },
+    "glide-ilab": {
+      "phases": {
+        "title": "glide-ilab, phase by phase",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 2: phase explainers; title per P29 *Phase or slice -> chapter*",
+        "chapters": [
+          {
+            "key": "p8",
+            "position": 8,
+            "variants": {
+              "en": "glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html",
+              "ko": "glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html"
+            },
+            "source": {
+              "phase": "P8"
+            },
+            "reason": "P8 phase explainer; the -ko file is its Korean variant"
+          },
+          {
+            "key": "p9",
+            "position": 9,
+            "variants": {
+              "en": "glide-ilab/2026-10-10-p9-the-stage-1-system-explained.html"
+            },
+            "source": {
+              "phase": "P9"
+            },
+            "reason": "P9 phase explainer"
+          },
+          {
+            "key": "p17-p18",
+            "position": 17,
+            "variants": {
+              "en": "glide-ilab/2026-10-15-p17-and-p18-signal-extraction-and-the-weekly-aggregation-explained.html"
+            },
+            "source": {
+              "phase": "P17-P18"
+            },
+            "reason": "joint P17+P18 phase explainer (key p<N>-p<M>, position N)"
+          },
+          {
+            "key": "p24",
+            "position": 24,
+            "variants": {
+              "en": "glide-ilab/2026-10-16-p24-the-research-page-signal-and-theme-fixes-explained.html"
+            },
+            "source": {
+              "phase": "P24"
+            },
+            "reason": "P24 phase explainer"
+          }
+        ]
+      }
+    },
+    "knowledge": {
+      "maintainer-guide": {
+        "title": "knowledge maintainer guide",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 3: each document's banner reads 'Part N of a five-part series'",
+        "chapters": [
+          {
+            "key": "knowledge-what-it-is-and-how-it-is-used",
+            "position": 1,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html"
+            },
+            "reason": "series part 1 (its banner)"
+          },
+          {
+            "key": "knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts",
+            "position": 2,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html"
+            },
+            "reason": "series part 2 (its banner)"
+          },
+          {
+            "key": "knowledge-s-read-surfaces-two-front-ends-one-corpus",
+            "position": 3,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html"
+            },
+            "reason": "series part 3 (its banner)"
+          },
+          {
+            "key": "shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates",
+            "position": 4,
+            "variants": {
+              "en": "knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html"
+            },
+            "reason": "series part 4 (its banner)"
+          },
+          {
+            "key": "why-knowledge-is-this-way-and-how-to-change-it",
+            "position": 5,
+            "variants": {
+              "en": "knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html"
+            },
+            "reason": "series part 5 (its banner)"
+          }
+        ]
+      }
+    },
+    "vocky": {
+      "maintainer-guide": {
+        "title": "vocky maintainer guide",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 4: part 1 lists the four parts; later parts cite 'Part 1', 'Parts 1-3'",
+        "chapters": [
+          {
+            "key": "vocky-what-it-is-and-how-it-is-used",
+            "position": 1,
+            "variants": {
+              "en": "vocky/2026-08-06-vocky-what-it-is-and-how-it-is-used.html"
+            },
+            "reason": "series part 1 (cross-references)"
+          },
+          {
+            "key": "vocky-system-internals-architecture-code-map-data-model-and-contracts",
+            "position": 2,
+            "variants": {
+              "en": "vocky/2026-08-06-vocky-system-internals-architecture-code-map-data-model-and-contracts.html"
+            },
+            "reason": "series part 2 (cross-references)"
+          },
+          {
+            "key": "vocky-security-operations-and-qa-keeping-it-safe-and-keeping-it-running",
+            "position": 3,
+            "variants": {
+              "en": "vocky/2026-08-06-vocky-security-operations-and-qa-keeping-it-safe-and-keeping-it-running.html"
+            },
+            "reason": "series part 3 (cross-references)"
+          },
+          {
+            "key": "vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to",
+            "position": 4,
+            "variants": {
+              "en": "vocky/2026-08-06-vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to.html"
+            },
+            "reason": "series part 4 (cross-references)"
+          }
+        ]
+      }
+    }
+  },
+  "loose": [
+    {
+      "rel_path": "arb_upbit_1/2026-08-31-real-running-investment-strategy.html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "arb_upbit_1/2026-09-19-the-fish-ladder-catching-upbit-local-price-spikes-with-deep-limit-orders.html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "arb_upbit_1/2026-09-21-the-korbit-fish-book-v2-measured-rungs-a-rest-then-taker-exit-and-a-5-m-live-sta.html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "base/2026-10-07-reading-your-glide-onboarding-doc-the-background-knowledge-explained-for-beginne.md",
+      "reason": "single document; its glide subject is in another project and a book never spans projects (P29.S1)"
+    },
+    {
+      "rel_path": "bootstrap_agentic_workspace.sh/2026-08-10-the-agentic-workspace-from-scratch-what-this-repo-is-and-how-to-use-it.html",
+      "reason": "single document in its project (P29.S1)"
+    },
+    {
+      "rel_path": "glide-ilab/2026-10-07-how-the-glide-ilab-team-ships-code-commits-prs-deploys-and-your-first-ticket.html",
+      "reason": "onboarding topic, not a phase (P29.S1)"
+    },
+    {
+      "rel_path": "glide-ilab/2026-10-14-the-signal-tables-pr-explained-what-it-covers-how-it-looks-and-how-it-fits-the-r.html",
+      "reason": "a PR explainer with no phase number (P29.S1)"
+    },
+    {
+      "rel_path": "Mijual/2026-09-21-jujutower-ai-architecture.html",
+      "reason": "single document in its project (P29.S1)"
+    }
+  ]
+}

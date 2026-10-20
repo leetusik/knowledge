@@ -4,7 +4,7 @@ Linked from `phase.md` → `## Notes for later slices`. Moved here by P30.S4 to 
 each section keeps its source and audience tags. A slice that consumes an entry says so in its `result.md`
 and may delete it here. Detail behind each entry: that slice's `result.md`.
 
-## (from P30.S2, for S6, S7, S11 and S13) The book API as shipped
+## (from P30.S2, for S7, S11 and S13) The book API as shipped
 
 The full contract is in `slices/P30.S2/result.md` → *Contracts as shipped*. The essentials:
 
@@ -18,9 +18,7 @@ The full contract is in `slices/P30.S2/result.md` → *Contracts as shipped*. Th
 - **A book's GET shape:** each chapter carries `variants:[{lang, rel_path, doc_id, title, slug, version,
   format, updated_at, translated_from}]`. `/app` adds `canonical_path`.
 - (The S5 item, re-pointing the manifest variant on html → native, was consumed by P30.S5.)
-- **For S6:** `PUT /api/books/{project}/{book}` binds existing documents. It 422s a missing or
-  other-project rel_path (`detail.missing`) and 409s a document another book binds. A no-op PUT makes
-  no commit.
+- (The S6 item, `PUT` for binding existing documents, was consumed by P30.S6.)
 - **For S7:** the CLI sends `book: {slug, title?, kind, subject?}`, `chapter: {key, position?, title?,
   source?}`, `lang`, `translated_from: {lang, version}` and `subject`. A new book needs `kind`.
 - **Postgres-gated tests:** the disposable PG `kb-p28s2-pg` on `:55432` (`kb:kb`) runs them via
@@ -81,7 +79,7 @@ Module docstring of `server/assets.py` is the spec; the detail is in `slices/P30
   5m → 20m and adds the asset relay location; the box needs the nginx reload that a deploy does.
   `pillow` is a new Python dependency (in `uv.lock`).
 
-## (from P30.S5, for S6, S7, S12, S16 and S28) Native ingest as shipped
+## (from P30.S5, for S7, S12, S16 and S28) Native ingest as shipped
 
 The spec is `server/native/README.md` → *Ingest (S5)*; the detail is in `slices/P30.S5/result.md`.
 
@@ -94,11 +92,11 @@ The spec is `server/native/README.md` → *Ingest (S5)*; the detail is in `slice
   header. So do `/app/documents/{id}`, the slug read and both version reads, beside `assets`.
   `markdown` is the plain-text search projection. Every list drops `source`. `/raw` stays html-only
   (a native document is a 404 there).
-- **For S6:** the binding tool binds documents as they are, and S6 renames nothing. A NEW document may
-  not take a stem another document owns (409, `detail.rel_path` names the owner). `document_versions`
-  rows are keyed by the document's CURRENT rel_path, and reindex finds a chain by stem
-  (`documents.parse_archive_rel_path` → `ArchivePath(stem, version, ext)`). By-path reads of an old
-  `.html` path resolve through the stem alias. By-path DELETE stays exact.
+- **Stems (was the S6 item; S6 consumed its binding half):** a NEW document may not take a stem another
+  document owns (409, `detail.rel_path` names the owner). `document_versions` rows are keyed by the
+  document's CURRENT rel_path, and reindex finds a chain by stem (`documents.parse_archive_rel_path` →
+  `ArchivePath(stem, version, ext)`). By-path reads of an old `.html` path resolve through the stem
+  alias. By-path DELETE stays exact.
 - **For S7 (CLI):** strip the file's own `---` header and send its fields as request fields (title,
   tags, date, `summary`, `lang`, `translated_from`). Send the body as `markdown`. A re-explain reads
   `source` from `GET /api/documents/by-path/{rel}`. MCP `fetch_document` caps at 20,000 characters

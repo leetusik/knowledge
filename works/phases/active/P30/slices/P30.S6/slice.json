@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Library migration: bind the 42 documents into books, no broken link",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 60,
   "depends_on": [
     "P30.S5"
   ],
   "created_at": "2026-10-21T00:14:38+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T03:26:51+09:00",
+  "completed_at": "2026-10-21T03:40:27+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Idempotent library-to-books binding tool (PUT /api/books only, merge-never-replace) + map of 4 books/33 chapters/8 loose; local proof on the 42-doc origin/main copy: 167/167 URLs identical, 259 files byte-identical, re-apply a no-op",
   "validation": {
     "required": [],
     "last_run": null,
