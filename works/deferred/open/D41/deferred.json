@@ -1,0 +1,11 @@
+{
+  "id": "D41",
+  "title": "Review: a way back for suspended cards",
+  "status": "deferred",
+  "source": "P29.REVIEW",
+  "reason": "P29.REVIEW routing of review 5 (Operator Questions 13): the signed 08-review round gives Suspend only a short Undo, so a suspended quiz card has no way back (a highlight's card returns when Review this is turned on again). P30 keeps the suspended flag and its history (S3), so a later list can restore cards; the list is a new surface, so a design round comes first",
+  "trigger": "a reader asks to restore a suspended card, or the operator wants it in v1 at P30's DECOMP",
+  "created_at": "2026-10-20T17:13:14+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `27`
+- Open: `33`
 - Promoted: `5`
 - Dropped: `8`
 
@@ -36,6 +36,12 @@
 | `D39` | `deferred` | Chrome print slicing of a framed explainer (page-1 gap, near-blank pages) | P28.F4 | an operator complaint about blank pages in a PDF, or the next print-layer change | `works/deferred/open/D39` |
 | `D4` | `deferred` | Agent-published commits are authored kb-api <kb-api@localhost> in public repo history | P8.S5 | operator decides they want attributable agent commits | `works/deferred/open/D4` |
 | `D40` | `deferred` | Explainer reporter: measureAt can loop with a document that mutation-observes <html> | P28.REVIEW | the /explain template or any framed document gaining a MutationObserver, or an explainer seen churning or stale after load | `works/deferred/open/D40` |
+| `D41` | `deferred` | Review: a way back for suspended cards | P29.REVIEW | a reader asks to restore a suspended card, or the operator wants it in v1 at P30's DECOMP | `works/deferred/open/D41` |
+| `D42` | `deferred` | Review: an entry point from the quiz's save line | P29.REVIEW | after P30 ships Review, the operator wants a direct path from a quiz into the queue | `works/deferred/open/D42` |
+| `D43` | `deferred` | Legacy reader: a bridge restore by pixels | P29.REVIEW | a report that the legacy reader resumes on the wrong screen on the same device | `works/deferred/open/D43` |
+| `D44` | `deferred` | App shell: the topbar scrolls sideways at 390 px with 175–200% text; the rail fold re-flows the page | P29.REVIEW | the next console or app-shell design round, or D36's device walk, whichever comes first | `works/deferred/open/D44` |
+| `D45` | `deferred` | Sync the kb design system from code once P30 ships the reader values | P29.REVIEW | P30's review passes, or the next design round needs these on a canvas | `works/deferred/open/D45` |
+| `D46` | `deferred` | Design records: no absolute scratchpad paths in committed handoffs and critiques | P29.REVIEW | the next workspace update that touches design-critic or design-cowork | `works/deferred/open/D46` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |

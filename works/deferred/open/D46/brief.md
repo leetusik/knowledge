@@ -1,0 +1,14 @@
+# Deferred: D46 Design records: no absolute scratchpad paths in committed handoffs and critiques
+
+## Context
+
+## Why Deferred
+
+P29.REVIEW observation O2: under docs/reference/design/, the handoffs' Paths section (runtime and type references, per design-cowork) and the critic's and judge's evidence lines commit /private/tmp scratchpad paths (39 lines in 20 P29 files). They are dead links and carry the machine's local account name, which earlier committed files already carry, so there is no new exposure. A workspace (bootstrap) matter: this repo never edits the bootstrap
+
+## Trigger to Promote
+
+the next workspace update that touches design-critic or design-cowork
+
+## Notes
+

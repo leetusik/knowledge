@@ -5,17 +5,17 @@
 
 ## Pointer
 
-- Current phase: `P29`
-- Current slice: `P29.REVIEW`
-- Next slice: `none`
+- Current phase: `P30`
+- Current slice: `P30.DECOMP`
+- Next slice: `P30.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `27`
+- Open deferred jobs: `33`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P29` | planned | `P29.REVIEW` | 8/9 | - | working tree |
+| `default` | `P30` | planned | `P30.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -29,7 +29,7 @@
 | [x] `P26` | `done` | `pass` | New-maintainer knowledge base | `none` | `works/phases/active/P26` |
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
-| [ ] `P29` | `planned` | `pending` | Learning reader — book model, chapter format + reader surfaces (design) | `P29.REVIEW` | `works/phases/active/P29` |
+| [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.DECOMP` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
@@ -145,7 +145,7 @@
 | [x] `P29.S4` | `done` | Design wave 1 — the reader | `co-work` | `works/phases/active/P29/slices/P29.S4` |
 | [x] `P29.S5` | `done` | Design wave 2 — chapter blocks and annotations | `co-work` | `works/phases/active/P29/slices/P29.S5` |
 | [x] `P29.S6` | `done` | Design wave 3 — library, book page, review, legacy and print | `co-work` | `works/phases/active/P29/slices/P29.S6` |
-| [ ] `P29.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
+| [x] `P29.REVIEW` | `done` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
 
 ## Phase P30: Learning reader — apply
 
