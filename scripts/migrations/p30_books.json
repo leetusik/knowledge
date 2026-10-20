@@ -1,0 +1,353 @@
+{
+  "about": "P30.S6 library-to-books binding, from P29.S1's book map (made at origin/main ed8dba0) reconciled against origin/main ed8dba0 on 2026-10-21: 42 documents, none published since, so the map is unchanged. Each book is the body of PUT /api/books/{project}/{book}; 'reason' fields are documentation and are stripped before the PUT. Run: scripts/migrate_books.py.",
+  "reconciled_at": "ed8dba0",
+  "books": {
+    "changple5": {
+      "curriculum": {
+        "title": "[private]",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 1: a numbered 20-part guide series",
+        "chapters": [
+          {
+            "key": "[private]",
+            "position": 1,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 1 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 2,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 2 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 3,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 3 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 4,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 4 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 5,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 5 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 6,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 6 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 7,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 7 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 8,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 8 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 9,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 9 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 10,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 10 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 11,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 11 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 12,
+            "variants": {
+              "en": "changple5/2026-08-26-[private].html"
+            },
+            "reason": "curriculum part 12 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 13,
+            "variants": {
+              "en": "changple5/2026-08-28-[private].html"
+            },
+            "reason": "curriculum part 13 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 14,
+            "variants": {
+              "en": "changple5/2026-08-28-[private].html"
+            },
+            "reason": "curriculum part 14 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 15,
+            "variants": {
+              "en": "changple5/2026-08-28-[private].html"
+            },
+            "reason": "curriculum part 15 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 16,
+            "variants": {
+              "en": "changple5/2026-09-13-[private].html"
+            },
+            "reason": "curriculum part 16 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 17,
+            "variants": {
+              "en": "changple5/2026-09-13-[private].html"
+            },
+            "reason": "curriculum part 17 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 18,
+            "variants": {
+              "en": "changple5/2026-09-13-[private].html"
+            },
+            "reason": "curriculum part 18 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 19,
+            "variants": {
+              "en": "changple5/2026-09-13-[private].html"
+            },
+            "reason": "curriculum part 19 (the NN- filename prefix)"
+          },
+          {
+            "key": "[private]",
+            "position": 20,
+            "variants": {
+              "en": "changple5/2026-09-13-[private].html"
+            },
+            "reason": "curriculum part 20 (the NN- filename prefix)"
+          }
+        ]
+      }
+    },
+    "glide-ilab": {
+      "phases": {
+        "title": "[private]",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 2: phase explainers; title per P29 *Phase or slice -> chapter*",
+        "chapters": [
+          {
+            "key": "p8",
+            "position": 8,
+            "variants": {
+              "en": "glide-ilab/2026-10-08-[private].html",
+              "ko": "glide-ilab/2026-10-08-[private].html"
+            },
+            "source": {
+              "phase": "P8"
+            },
+            "reason": "P8 phase explainer; the -ko file is its Korean variant"
+          },
+          {
+            "key": "p9",
+            "position": 9,
+            "variants": {
+              "en": "glide-ilab/2026-10-10-[private].html"
+            },
+            "source": {
+              "phase": "P9"
+            },
+            "reason": "P9 phase explainer"
+          },
+          {
+            "key": "p17-p18",
+            "position": 17,
+            "variants": {
+              "en": "glide-ilab/2026-10-15-[private].html"
+            },
+            "source": {
+              "phase": "P17-P18"
+            },
+            "reason": "joint P17+P18 phase explainer (key p<N>-p<M>, position N)"
+          },
+          {
+            "key": "p24",
+            "position": 24,
+            "variants": {
+              "en": "glide-ilab/2026-10-16-[private].html"
+            },
+            "source": {
+              "phase": "P24"
+            },
+            "reason": "P24 phase explainer"
+          }
+        ]
+      }
+    },
+    "knowledge": {
+      "maintainer-guide": {
+        "title": "knowledge maintainer guide",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 3: each document's banner reads 'Part N of a five-part series'",
+        "chapters": [
+          {
+            "key": "knowledge-what-it-is-and-how-it-is-used",
+            "position": 1,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html"
+            },
+            "reason": "series part 1 (its banner)"
+          },
+          {
+            "key": "knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts",
+            "position": 2,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html"
+            },
+            "reason": "series part 2 (its banner)"
+          },
+          {
+            "key": "knowledge-s-read-surfaces-two-front-ends-one-corpus",
+            "position": 3,
+            "variants": {
+              "en": "knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html"
+            },
+            "reason": "series part 3 (its banner)"
+          },
+          {
+            "key": "shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates",
+            "position": 4,
+            "variants": {
+              "en": "knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html"
+            },
+            "reason": "series part 4 (its banner)"
+          },
+          {
+            "key": "why-knowledge-is-this-way-and-how-to-change-it",
+            "position": 5,
+            "variants": {
+              "en": "knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html"
+            },
+            "reason": "series part 5 (its banner)"
+          }
+        ]
+      }
+    },
+    "vocky": {
+      "maintainer-guide": {
+        "title": "[private]",
+        "kind": "codebase",
+        "reason": "P29.S1 Book 4: part 1 lists the four parts; later parts cite 'Part 1', 'Parts 1-3'",
+        "chapters": [
+          {
+            "key": "[private]",
+            "position": 1,
+            "variants": {
+              "en": "vocky/2026-08-06-[private].html"
+            },
+            "reason": "series part 1 (cross-references)"
+          },
+          {
+            "key": "[private]",
+            "position": 2,
+            "variants": {
+              "en": "vocky/2026-08-06-[private].html"
+            },
+            "reason": "series part 2 (cross-references)"
+          },
+          {
+            "key": "[private]",
+            "position": 3,
+            "variants": {
+              "en": "vocky/2026-08-06-[private].html"
+            },
+            "reason": "series part 3 (cross-references)"
+          },
+          {
+            "key": "[private]",
+            "position": 4,
+            "variants": {
+              "en": "vocky/2026-08-06-[private].html"
+            },
+            "reason": "series part 4 (cross-references)"
+          }
+        ]
+      }
+    }
+  },
+  "loose": [
+    {
+      "rel_path": "arb_upbit_1/2026-08-31-[private].html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "arb_upbit_1/2026-09-19-[private].html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "arb_upbit_1/2026-09-21-[private].html",
+      "reason": "strategy topic with no declared series (P29.S1)"
+    },
+    {
+      "rel_path": "base/2026-10-07-[private].md",
+      "reason": "single document; its glide subject is in another project and a book never spans projects (P29.S1)"
+    },
+    {
+      "rel_path": "bootstrap_agentic_workspace.sh/2026-08-10-[private].html",
+      "reason": "single document in its project (P29.S1)"
+    },
+    {
+      "rel_path": "glide-ilab/2026-10-07-[private].html",
+      "reason": "onboarding topic, not a phase (P29.S1)"
+    },
+    {
+      "rel_path": "glide-ilab/2026-10-14-[private].html",
+      "reason": "a PR explainer with no phase number (P29.S1)"
+    },
+    {
+      "rel_path": "Mijual/2026-09-21-[private].html",
+      "reason": "single document in its project (P29.S1)"
+    }
+  ]
+}
