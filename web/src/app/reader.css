@@ -723,7 +723,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 
 /* ---------- Until S17-S19: the blocks they own keep a column rhythm and legible lists ----------
    Diagrams (S17/S18) and the quiz (S19) draw their own look; until then they sit in the column. */
-.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram, .fg-fig, .fg-row) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
+.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram, .dg, .fg-fig, .fg-row) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
 .kb-ch-unshowable { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; color: var(--kb-secondary); }
 .kb-ch img:not(.fg-media__img) { max-width: 100%; height: auto; }
 
@@ -1041,3 +1041,87 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 /* ---------- Jumps: a figure, a row, an svg block, a source item and a citation land below the top bar ---------- */
 .kb-ch .fg-fig, .kb-ch .fg-row, .kb-ch .fg-src__item { scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem); }
 .kb-ch .fg-cite { scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 2rem); }
+
+/* ---------- P30.S17: the diagram block's frame and the drawn kinds (flow, state) ----------
+   Transcribed from the signed `03-diagrams` canvas (`diagram.css`, round 01). Class names stay as drawn. The tones
+   (`--dg-<tone>`) are defined above. Flow and state are SVG laid out on the server (`diagram-layout.ts`), in px at the
+   default text size; the SVG scales with the figure's font size (`--dg-vbw` is the natural width, `--dg-floor` the
+   width where its 13 px text has become 11 px). */
+.dg { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding: 0; font-size: max(11px, var(--rd-fs-s)); position: relative; scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem); }
+.dg__title { margin: 0; font-family: var(--font-body); font-size: var(--rd-fs-s); font-weight: 600; line-height: 1.35; color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.dg__title:lang(ko), .dg__title :lang(ko), .dg__cap:lang(ko), .dg__cap :lang(ko), .dg :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.dg__box { position: relative; margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.dg__scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.dg__scroll:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); border-radius: var(--kb-radius-sm); }
+.dg__svg { display: block; height: auto; max-width: none; overflow: visible; width: clamp(calc(var(--dg-floor) * 1px), 100%, calc(var(--dg-vbw) / 15 * 1em)); }
+.dg__fade { display: none; position: absolute; top: 0; bottom: 0; width: 2rem; pointer-events: none; opacity: 0; transition: opacity var(--rd-ease, 0.15s ease); }
+.dg__fade--r { right: 0; background: linear-gradient(to right, transparent, var(--kb-surface)); }
+.dg__fade--l { left: 0; background: linear-gradient(to left, transparent, var(--kb-surface)); }
+.dg.is-over .dg__fade, .dg.is-over .dg__hint { display: block; }
+.dg.is-more-r .dg__fade--r, .dg.is-more-l .dg__fade--l { opacity: 1; }
+.dg__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.dg__cap { margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; font-family: var(--font-reading); font-size: var(--rd-fs-s); line-height: 1.55; color: var(--kb-secondary); text-wrap: pretty; overflow-wrap: break-word; }
+.dg__cap em:lang(ko), .dg__cap em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+.dg__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.dg__sr > * { display: block; }
+.dg__sr li { display: block; }
+@media (prefers-reduced-motion: reduce) { .dg__fade { transition: none; } }
+@media print {
+  .dg { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .dg__fade, .dg__hint { display: none !important; }
+  .dg__scroll { overflow: visible; }
+  .dg__svg { width: 100% !important; min-width: 0 !important; }
+}
+
+/* the drawn kinds: SVG, px at the default size */
+.dg-t { font-family: var(--font-body); font-size: 13px; font-weight: 400; fill: var(--kb-secondary); text-anchor: middle; }
+.dg-t--label { font-size: 15px; font-weight: 600; fill: var(--kb-ink); }
+.dg-t--grp { font-weight: 600; fill: var(--kb-secondary); }
+.dg-t--field { font-family: var(--font-mono); font-variant-ligatures: none; fill: var(--kb-ink); }
+.dg-t--num { font-weight: 600; fill: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.dg-t--note { fill: var(--kb-ink); }
+.dg-t--start { text-anchor: start; }
+.dg-t--end { text-anchor: end; }
+.dg-tone-default { --dgl: var(--dg-default); --dgi: var(--dg-default-ink); --dgt: var(--dg-default-tint); }
+.dg-tone-muted { --dgl: var(--dg-muted); --dgi: var(--dg-muted-ink); --dgt: var(--dg-muted-tint); }
+.dg-tone-accent { --dgl: var(--dg-accent); --dgi: var(--dg-accent-ink); --dgt: var(--dg-accent-tint); }
+.dg-tone-ok { --dgl: var(--dg-ok); --dgi: var(--dg-ok-ink); --dgt: var(--dg-ok-tint); }
+.dg-tone-warn { --dgl: var(--dg-warn); --dgi: var(--dg-warn-ink); --dgt: var(--dg-warn-tint); }
+.dg-tone-bad { --dgl: var(--dg-bad); --dgi: var(--dg-bad-ink); --dgt: var(--dg-bad-tint); }
+.dg-tone-store { --dgl: var(--dg-store); --dgi: var(--dg-store-ink); --dgt: var(--dg-store-tint); }
+.dg-tone-series-1 { --dgl: var(--dg-series-1); --dgi: var(--dg-series-1-ink); --dgt: var(--dg-series-1-tint); }
+.dg-tone-series-2 { --dgl: var(--dg-series-2); --dgi: var(--dg-series-2-ink); --dgt: var(--dg-series-2-tint); }
+.dg-tone-series-3 { --dgl: var(--dg-series-3); --dgi: var(--dg-series-3-ink); --dgt: var(--dg-series-3-tint); }
+.dg-tone-series-4 { --dgl: var(--dg-series-4); --dgi: var(--dg-series-4-ink); --dgt: var(--dg-series-4-tint); }
+.dg-tone-series-5 { --dgl: var(--dg-series-5); --dgi: var(--dg-series-5-ink); --dgt: var(--dg-series-5-tint); }
+.dg-tone-series-6 { --dgl: var(--dg-series-6); --dgi: var(--dg-series-6-ink); --dgt: var(--dg-series-6-tint); }
+.dg-n { fill: var(--dgt); stroke: var(--dgl); stroke-width: 1.25; }
+.dg-n--entity { fill: var(--kb-surface); }
+.dg-enthead { fill: var(--dgt); stroke: none; }
+.dg-enthead.dg-tone-default { fill: var(--kb-surface-sunken); }
+.dg-grp { fill: var(--dgt); stroke: var(--dgl); stroke-width: 1; }
+.dg-e { fill: none; stroke: var(--dg-default); stroke-width: 1.5; stroke-linejoin: round; }
+.dg-e--dash { stroke-dasharray: 6 4; }
+.dg-h { fill: var(--dg-default); stroke: none; }
+.dg-start { fill: var(--kb-ink); stroke: none; }
+.dg-line { fill: none; stroke-width: 1.25; }
+.dg-hair { fill: none; stroke: var(--kb-border); stroke-width: 1; }
+.dg-life { fill: none; stroke: var(--dg-muted); stroke-width: 1.25; }
+.dg-note { fill: var(--dg-warn-tint); stroke: var(--dg-warn); stroke-width: 1.25; }
+.dg-knock { fill: var(--kb-surface); stroke: none; }
+.dg-knock--grp { fill: var(--dgt); }
+/* a toned edge, arrowhead or label: after the drawn-kind rules, so the tone wins over the default line and ink */
+.dg-st-default { stroke: var(--dg-default); } .dg-hf-default { fill: var(--dg-default); } .dg-ink-default { fill: var(--dg-default-ink); color: var(--dg-default-ink); }
+.dg-st-muted { stroke: var(--dg-muted); } .dg-hf-muted { fill: var(--dg-muted); } .dg-ink-muted { fill: var(--dg-muted-ink); color: var(--dg-muted-ink); }
+.dg-st-accent { stroke: var(--dg-accent); } .dg-hf-accent { fill: var(--dg-accent); } .dg-ink-accent { fill: var(--dg-accent-ink); color: var(--dg-accent-ink); }
+.dg-st-ok { stroke: var(--dg-ok); } .dg-hf-ok { fill: var(--dg-ok); } .dg-ink-ok { fill: var(--dg-ok-ink); color: var(--dg-ok-ink); }
+.dg-st-warn { stroke: var(--dg-warn); } .dg-hf-warn { fill: var(--dg-warn); } .dg-ink-warn { fill: var(--dg-warn-ink); color: var(--dg-warn-ink); }
+.dg-st-bad { stroke: var(--dg-bad); } .dg-hf-bad { fill: var(--dg-bad); } .dg-ink-bad { fill: var(--dg-bad-ink); color: var(--dg-bad-ink); }
+.dg-st-store { stroke: var(--dg-store); } .dg-hf-store { fill: var(--dg-store); } .dg-ink-store { fill: var(--dg-store-ink); color: var(--dg-store-ink); }
+.dg-st-series-1 { stroke: var(--dg-series-1); } .dg-hf-series-1 { fill: var(--dg-series-1); } .dg-ink-series-1 { fill: var(--dg-series-1-ink); color: var(--dg-series-1-ink); }
+.dg-st-series-2 { stroke: var(--dg-series-2); } .dg-hf-series-2 { fill: var(--dg-series-2); } .dg-ink-series-2 { fill: var(--dg-series-2-ink); color: var(--dg-series-2-ink); }
+.dg-st-series-3 { stroke: var(--dg-series-3); } .dg-hf-series-3 { fill: var(--dg-series-3); } .dg-ink-series-3 { fill: var(--dg-series-3-ink); color: var(--dg-series-3-ink); }
+.dg-st-series-4 { stroke: var(--dg-series-4); } .dg-hf-series-4 { fill: var(--dg-series-4); } .dg-ink-series-4 { fill: var(--dg-series-4-ink); color: var(--dg-series-4-ink); }
+.dg-st-series-5 { stroke: var(--dg-series-5); } .dg-hf-series-5 { fill: var(--dg-series-5); } .dg-ink-series-5 { fill: var(--dg-series-5-ink); color: var(--dg-series-5-ink); }
+.dg-st-series-6 { stroke: var(--dg-series-6); } .dg-hf-series-6 { fill: var(--dg-series-6); } .dg-ink-series-6 { fill: var(--dg-series-6-ink); color: var(--dg-series-6-ink); }
+.dg-st-ink { stroke: var(--kb-ink); }

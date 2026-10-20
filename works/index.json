@@ -118,13 +118,13 @@
       "order": 10,
       "path": "works/phases/active/P30",
       "review_status": "pending",
-      "current_slice": "P30.S17",
+      "current_slice": "P30.S18",
       "slice_count": 32,
-      "done_slice_count": 19
+      "done_slice_count": 20
     }
   ],
   "deferred_open_count": 36,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 8,
-  "last_rebuilt_at": "2026-10-21T07:53:12+09:00"
+  "last_rebuilt_at": "2026-10-21T08:09:15+09:00"
 }

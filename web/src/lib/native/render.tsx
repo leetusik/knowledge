@@ -21,6 +21,7 @@ import "server-only";
 
 import { createElement, Fragment, type ReactNode } from "react";
 
+import { DiagramFigure } from "@/components/reader/diagram-figure";
 import {
   ImageBox,
   MissingBox,
@@ -31,6 +32,7 @@ import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 
 import { letters, planCitations, type CitationPlan } from "./cites";
+import { Drawing, graphAlt, layoutFor } from "./diagram-draw";
 import { highlight } from "./highlight";
 import {
   resolveAsset,
@@ -682,6 +684,8 @@ class Renderer {
       case "figures":
         return this.figures(block, id);
       case "diagram":
+        if (this.isDrawn(block))
+          return this.drawn(block, id, "figure", inl(block.caption));
         return (
           <figure
             className="kb-ch-diagram"
@@ -821,6 +825,13 @@ class Renderer {
           </figure>
         );
       case "diagram":
+        if (isRec(item.diagram) && this.isDrawn(item.diagram))
+          return (
+            <figure className="fg-item" data-kind="diagram">
+              {this.drawn(item.diagram, undefined, "div", null)}
+              {this.itemCap(inl(item.caption))}
+            </figure>
+          );
         return isRec(item.diagram) ? (
           <figure className="fg-item" data-kind="diagram">
             <div
@@ -857,6 +868,61 @@ class Renderer {
           </p>
         ))}
       </div>
+    );
+  }
+
+  /** The kinds S17 draws (flow and state); the others keep S12's structured text until S18 draws them. */
+  isDrawn(d: Rec): boolean {
+    const kind = str(d.kind);
+    return kind === "flow" || kind === "state";
+  }
+
+  /** How many drawn diagrams this render has made (their title ids: `dg-title-<n>`). */
+  private dgCount = 0;
+
+  /**
+   * S17: a flow or state diagram, drawn on the server into safe React SVG (`03-diagrams` round 01): the frame in the
+   * slot, the drawing laid out from its data (`diagram-layout.ts`), the visually hidden text alternative and the
+   * caption. `tag` is `div` inside a figure-row item, whose own figcaption carries the caption.
+   */
+  drawn(
+    d: Rec,
+    id: string | undefined,
+    tag: "figure" | "div",
+    caption: Inline[] | null,
+  ): ReactNode {
+    const kind = str(d.kind) === "state" ? "state" : "flow";
+    const layout = layoutFor(d, kind);
+    const lines = graphAlt(layout, d);
+    this.dgCount += 1;
+    return (
+      <DiagramFigure
+        id={id}
+        kind={kind}
+        tag={tag}
+        titleId={`dg-title-${this.dgCount}`}
+        title={this.text(str(d.title) ?? "")}
+        drawing={<Drawing layout={layout} />}
+        alt={
+          lines.length ? (
+            <div className="dg__sr">
+              <p>{CHAPTER.diagram.alt.lead}</p>
+              <ul>
+                {lines.map((line, i) => (
+                  <li key={i}>{this.text(line)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null
+        }
+        caption={
+          caption && caption.length ? (
+            <figcaption className="dg__cap">{this.inline(caption)}</figcaption>
+          ) : null
+        }
+        ariaLabel={CHAPTER.diagram.aria}
+        hint={CHAPTER.diagram.hint}
+      />
     );
   }
 

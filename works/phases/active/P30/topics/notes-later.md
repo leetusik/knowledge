@@ -134,3 +134,18 @@ The detail is in `slices/P30.S16/result.md`; the decisions are OQ78–OQ82 (`top
 - **Style attributes:** the figures emit `style="--fg-w:…;--fg-h:…"` and `style="--fg-vbw:…;--fg-minw:…px"` (numbers only); the S12 test now allows exactly that and still refuses any other `style`. `style-src` is open, so no CSP change.
 - **Live-check setup that worked:** the production build `next start` (`:3081`) and a dev clone (`:3083`, opened at `localhost` for the HMR socket; its `node_modules` had to be a real copy, a symlink out of the clone is refused) against a scratch API (`:8781`, database `kb_s16live`), a public `fixtures` project for anonymous reads, my own chapter (`scratchpad/s16/figs.md`) with generated PNG/GIF assets published through `knowledge save --asset`; a missing image is a stored file deleted from `<root>/tenants/<tenant>/.assets/…`; Aside + the iframe harness for geometry and screenshots, a CDP script (`cdp16.mjs`, with `Emulation.setEmulatedMedia` for reduced motion and real key events) for console, CSP, keyboard and reduced motion.
 
+
+## (from P30.S17, for S18 and REVIEW) Diagram drawings I as shipped
+
+The detail is in `slices/P30.S17/result.md`; the decisions are OQ83–OQ86 (`topics/operator-questions-decided.md`).
+
+- **Where things are:**
+  - `web/src/lib/native/diagram-layout.ts` (`layoutGraph(spec, "flow"|"state")` returns `{W, H, prims, nodes, edges, init}`, a port of the canvas's `dggraph.js`; `layoutSequence` is NOT ported yet: S18 ports it from `dggraph.js` lines 598-697);
+  - `diagram-text.ts` (`measure`, `wrap`, `wrapBalanced`, the four faces `LABEL`/`SMALL`/`SMALL_B`/`MONO`);
+  - `diagram-metrics.ts` (GENERATED; do not hand-edit; `web/scripts/gen-diagram-metrics.py`; it holds Source Sans 3, JetBrains Mono and Pretendard only);
+  - `diagram-draw.tsx` (`Drawing` turns prims into the SVG with `--dg-vbw`/`--dg-floor`, `graphSpec`, `graphAlt`);
+  - `web/src/components/reader/diagram-figure.tsx` (the client frame: `tag` figure or div, title, scroll box through `useBox`, fades, hint, hidden alternative, caption);
+  - CSS: the last block of `reader.css` ("P30.S17"), canvas class names (`dg-*`, `dg__*`), the drawn-kind classes incl. `.dg-note`, `.dg-life`, `.dg-t--num` that sequence needs;
+  - copy: `CHAPTER.diagram` (`hint`, `aria`, `alt.*`).
+- **For S18:** `Renderer.isDrawn(d)` picks the kinds with the new frame (flow, state); extend it and `drawn()` (add a `layoutSequence` call, the sequence alternative is an `<ol>`, `"{a} to {b}: {label}"`), and the row kinds (stack, timeline, chart) are HTML in `em` inside the same `DiagramFigure` (pass them as `drawing`; they have no `--dg-vbw` and carry their own min width). `diagramBody` and the `kb-ch-diagram__*` styles go when the last kind moves. The title id is `dg-title-<n>` from `Renderer.dgCount`.
+- **Live-check setup that worked:** scratch API `:8791` (database `kb_s17live`), `next start` `:3791`, a dev clone `:3793` (opened at `localhost`), the anonymous harness `:3792`; scripts and the diagram test chapter generator (`mk.mjs`, from the canvas's `dgdata.js` samples) in the session scratchpad `s17/`. Headless Chrome (CDP) raw ArrowRight events do not scroll a box; Aside's `page.keyboard.press` does.
