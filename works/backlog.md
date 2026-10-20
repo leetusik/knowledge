@@ -8,7 +8,7 @@
 - Current phase: `P29`
 - Current slice: `P29.S6`
 - Next slice: `P29.REVIEW`
-- Waiting on operator: `none`
+- Waiting on operator: `P29.S6`
 - Open deferred jobs: `27`
 
 ## Streams
@@ -144,7 +144,7 @@
 | [x] `P29.DECOMP2` | `done` | Re-cut: design waves from the research findings | `decomposition` | `works/phases/active/P29/slices/P29.DECOMP2` |
 | [x] `P29.S4` | `done` | Design wave 1 — the reader | `co-work` | `works/phases/active/P29/slices/P29.S4` |
 | [x] `P29.S5` | `done` | Design wave 2 — chapter blocks and annotations | `co-work` | `works/phases/active/P29/slices/P29.S5` |
-| [ ] `P29.S6` | `todo` | Design wave 3 — library, book page, review, legacy and print | `co-work` | `works/phases/active/P29/slices/P29.S6` |
+| [~] `P29.S6` | `pending` | Design wave 3 — library, book page, review, legacy and print | `co-work` | `works/phases/active/P29/slices/P29.S6` |
 | [ ] `P29.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P29/slices/P29.REVIEW` |
 
 ## Phase P30: Learning reader — apply
