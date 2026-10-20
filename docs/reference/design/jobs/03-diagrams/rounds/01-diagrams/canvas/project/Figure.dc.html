@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The figure in the slot</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The figure in the slot</p>
+<p class="rd-board__lead">A diagram is a figure in the text column: its title above it in the interface face, the drawing on the page itself (no plate, no frame), and its caption under it in the reading face, both at the column’s small step. Nothing else surrounds it. A drawing wider than the column keeps its size and scrolls in its own box, with the fades and the hint the code block uses.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Diagram" sample="{{ c.sample }}" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" scroll="{{ c.scroll }}" pad="{{ c.pad }}" paper="{{ c.paper }}" anchor="{{ c.anchor }}" hint-size="100%,320px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":3470}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const COL = 720, PH = 390;
+    const K = (cap, w, sample, o) => Object.assign({ cap, st: px(w), sample, block: undefined, lang: 'en', theme: 'light', size: 3 }, o);
+    const sampleOf = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver).blocks.find((b) => b.isDiagram);
+    const rows = [
+      { title: "In the text column · 576 wide at every width from a tablet up", cells: [K('Title, drawing and caption · the reader’s sample, EN v2', COL, undefined, { block: sampleOf('en') }), K('No caption · the figure ends at the drawing', COL, 'chapter-states'), K('Caption with a link to another chapter', COL, 'write-path')] },
+      { title: "The sample in each version · and a caption with a missing link", cells: [K('Older version · EN v1', COL, undefined, { block: sampleOf('en', 1) }), K('한국어 v1 · Hangul in the interface face inside the drawing, the reading face in the caption', COL, undefined, { block: sampleOf('ko'), lang: 'ko' }), K('Caption with a missing link', COL, 'tables')] },
+      { title: "Text sizes 1, 3 and 5 · the drawing grows with the text", cells: [K('Size 1 · smallest', COL, undefined, { block: sampleOf('en'), size: 1 }), K('Size 3 · default', COL, undefined, { block: sampleOf('en') }), K('Size 5 · largest · the drawing grows until it fills the column', COL, undefined, { block: sampleOf('en'), size: 5 })] },
+      { title: "Wider than the column · it keeps its size and scrolls in its own box", cells: [K('At the start · fade on the right', COL, 'publish-seq'), K('Scrolled to the middle · fades on both sides', COL, 'publish-seq', { scroll: 'mid' }), K('At the end · fade on the left', COL, 'publish-seq', { scroll: 'end' })] },
+      { title: "Dark and sepia", cells: [K('The sample · dark', COL, undefined, { block: sampleOf('en'), theme: 'dark' }), K('The sample · sepia', COL, undefined, { block: sampleOf('en'), theme: 'sepia' }), K('Caption with a link · dark', COL, 'write-path', { theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

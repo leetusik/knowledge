@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quiz block — states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Quiz block</p>
+<p class="rd-board__lead">The block in the reading column: a mono label naming it a quiz and how many questions it holds, the title when it has one, then the questions between hairlines. Each number hangs in its own column and is circled when the answer is right and struck through when it is wrong; the head counts the questions answered, never a score. Signed out, the reader answers and grades exactly as a member does, and Sign in to save opens once, under the first answer.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Quiz" doc="{{ c.doc }}" lang="{{ c.lang }}" member="{{ c.member }}" hist="{{ c.hist }}" steps="{{ c.steps }}" outcome="{{ c.outcome }}" only="{{ c.only }}" solo="{{ c.solo }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":6105}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const I = 'maintainer-guide/internals', M = 'doc/money-notes/compound-interest', W1 = 'maintainer-guide/what-it-is', TWH = 'tidewater/harmonic-model';
+    const H = RD.quizHist.internals;
+    const C = (cap, w, o) => Object.assign({ cap, st: 'width: ' + w + 'px', doc: I, lang: 'en', member: true, hist: [], steps: [], outcome: 'saved', only: null, solo: false, theme: 'light', size: 3 }, o);
+    const pick = (id, opt) => [id, { t: 'pick', opt }];
+    const tog = (id, opt) => [id, { t: 'toggle', opt }];
+    const chk = (id) => [id, { t: 'check' }];
+    const typed = (id, vals) => vals.map((v, i) => [id, { t: 'type', n: i + 1, v }]);
+    const sameSteps = [pick('more-or-less', 'a')];
+    const rows = [
+      { title: 'A quiz in a loose document · three themes · 600 wide', cells: [
+        C('Light · one answered', 600, { doc: M, steps: sameSteps }),
+        C('Dark', 600, { doc: M, theme: 'dark', steps: sameSteps }),
+        C('Sepia', 600, { doc: M, theme: 'sepia', steps: sameSteps }) ] },
+      { title: 'Untitled with one question · titled with seven (the first shown)', cells: [
+        C('Untitled · one question · it still reads as a quiz', 600, { doc: W1 }),
+        C('Titled · seven questions · the head and the first question', 600, { only: ['read-column'] }) ] },
+      { title: 'Phone · 390 · text sizes 1 and 5 · 한국어', cells: [
+        C('Size 1', 390, { doc: M, size: 1, only: ['double-at-8', 'more-or-less'] }),
+        C('Size 5 · sepia', 390, { doc: M, size: 5, theme: 'sepia', only: ['double-at-8', 'more-or-less'] }),
+        C('한국어 · keep-all · dark', 390, { lang: 'ko', theme: 'dark', only: ['read-column', 'publish-in-lock'] }) ] },
+      { title: 'Signed out · Sign in to save opens once, under the first answer', cells: [
+        C('A document · “you come back to this document”', 600, { doc: M, member: false, steps: sameSteps }),
+        C('A chapter · phone · dark', 390, { member: false, theme: 'dark', only: ['read-column', 'publish-in-lock'], steps: [pick('read-column', 'b')] }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

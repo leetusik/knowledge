@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Sources list and citations</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Sources list and citations</p>
+<p class="rd-board__lead">A sources list (```sources) and the citations that point at it. Each item reads in one order: number, title, publisher · date · Accessed, the URL as a link in its own words, the note, then the way back. A citation keeps the author's words and adds the source's number; following it marks the item, and the item's back links return to each citation. A source's URL opens the in-canvas note for a link that leaves the canvas.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><sc-if value="{{ c.isA }}" hint-placeholder-val="{{ true }}"><dc-import name="SourceList" block="{{ c.block }}" target="{{ c.target }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ c.isB }}" hint-placeholder-val="{{ false }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,480px"></dc-import></sc-if></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":5140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const src = RD.read(SUB, 'en').blocks.find((b) => b.isSources), srcKo = RD.read(SUB, 'ko').blocks.find((b) => b.isSources);
+    const sb = RD.read(SUB, 'en').blocks;
+    const k = sb.findIndex((b) => b.id === 'what-it-predicts');
+    const text = sb.slice(k, k + 3), here = RD.figs.mark(text, 'cite-py-fsrs-1');
+    const L = (cap, w, o) => Object.assign(K(cap, w, Object.assign({ target: '' }, o)), { isA: true, isB: false });
+    const T = (cap, w, o) => Object.assign(K(cap, w, o), { isA: false, isB: true });
+    const rows = [
+      { title: 'Citations in the text · the author\'s words and the source\'s number, one link · a number alone when the words are only a number', cells: [
+        T('820', 820, { blocks: text }), T('Back at the citation · the one you came from is marked', 820, { blocks: here }), T('390', 390, { blocks: text })] },
+      { title: 'The sources list · 8 items, every field used, some with only a title and a URL · 820 and 390', cells: [
+        L('820', 820, { block: src }), L('390 · the 120-character URL wraps in the column', 390, { block: src })] },
+      { title: 'After following a citation · the item is the target: a sunken ground and a hairline box; back links return to each citation', cells: [
+        L('py-fsrs, cited three times · 820', 820, { block: src, target: 'py-fsrs' }), L('The long URL, the target · 390', 390, { block: src, target: 'sample-long-sessions' })] },
+      { title: 'Dark and sepia, and Korean', cells: [
+        L('Dark · 820', 820, { block: src, theme: 'dark', target: 'py-fsrs' }), L('Sepia · 820', 820, { block: src, theme: 'sepia', target: 'py-fsrs' }),
+        L('Korean · 390 · a Korean source title keeps its words', 390, { block: srcKo, lang: 'ko' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

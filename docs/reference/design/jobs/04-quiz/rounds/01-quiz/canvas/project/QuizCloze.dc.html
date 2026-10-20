@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quiz · a cloze question</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ innerCls }}" lang="{{ lang }}">
+<div class="qz-item">
+<span class="{{ it.nCls }}" aria-hidden="true">{{ it.n }}</span>
+<div class="qz-body">
+<span class="qz-vh">{{ it.srLabel }}</span>
+<p class="qz-q qz-cloze" id="{{ it.promptId }}"><sc-for list="{{ it.segs }}" as="g" hint-placeholder-count="3"><sc-if value="{{ g.isText }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ g.runs }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if></sc-for></sc-if><sc-if value="{{ g.isBlank }}" hint-placeholder-val="{{ false }}"><span class="qz-bw"><sc-if value="{{ g.showN }}" hint-placeholder-val="{{ false }}"><span class="qz-bn" aria-hidden="true">{{ g.n }}</span></sc-if><input type="text" class="{{ g.cls }}" id="{{ g.inputId }}" value="{{ g.value }}" readonly="{{ g.ro }}" aria-label="{{ g.aria }}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" data-qz-first="{{ g.first }}" onchange="{{ g.onChange }}" onkeydown="{{ g.onKey }}"><sc-if value="{{ g.hasTail }}" hint-placeholder-val="{{ false }}">{{ g.tail }}</sc-if></span></sc-if></sc-for></p>
+<p class="qz-hint">{{ it.hint }}</p>
+<sc-if value="{{ it.hasNote }}" hint-placeholder-val="{{ false }}"><p class="qz-note"><sc-for list="{{ it.noteParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></p></sc-if>
+<div class="qz-foot"><div class="qz-stack"><sc-for list="{{ it.status }}" as="s" hint-placeholder-count="2"><p class="{{ s.cls }}" aria-hidden="{{ s.hidden }}"><span class="{{ s.wordCls }}">{{ s.word }}</span><sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span class="qz-st__sub"><sc-for list="{{ s.subParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if></p></sc-for></div><div class="qz-acts"><button type="button" class="{{ it.mainCls }}" data-qz-main="1" onclick="{{ it.onMain }}"><span class="qz-swap"><span class="{{ it.checkCls }}">Check</span><span class="{{ it.retryCls }}">Try again</span></span></button></div></div>
+<sc-if value="{{ it.hasResult }}" hint-placeholder-val="{{ false }}"><div class="qz-result"><sc-if value="{{ it.hasAcc }}" hint-placeholder-val="{{ false }}"><ul class="qz-acc" aria-label="{{ it.accLabel }}"><sc-for list="{{ it.acc }}" as="a" hint-placeholder-count="1"><li><sc-if value="{{ a.showN }}" hint-placeholder-val="{{ false }}"><span class="qz-acc__n">{{ a.n }}</span> </sc-if><sc-if value="{{ a.hasWrote }}" hint-placeholder-val="{{ true }}">You wrote “<span class="qz-acc__wrote" lang="{{ lang }}">{{ a.wrote }}</span>”. </sc-if><sc-if value="{{ a.isEmpty }}" hint-placeholder-val="{{ false }}">Left empty. </sc-if>Accepted: <sc-for list="{{ a.accs }}" as="x" hint-placeholder-count="1"><b lang="{{ lang }}">{{ x.v }}</b>{{ x.sep }}</sc-for>.</li></sc-for></ul></sc-if><sc-if value="{{ it.hasExplain }}" hint-placeholder-val="{{ false }}"><p class="qz-why"><sc-for list="{{ it.explain }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if></sc-for></p></sc-if></div></sc-if>
+<p class="qz-vh" aria-live="polite">{{ it.live }}</p>
+</div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"it":{"editor":null},"lang":{"editor":null},"onLink":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":472}}'>
+class Component extends DCLogic {
+  linkClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    if (!this.props.onLink) return;
+    e.preventDefault();
+    this.props.onLink(to);
+  };
+  frame(extra) {
+    const P = this.props, bare = !!P.bare;
+    return Object.assign({
+      lang: P.lang || 'en',
+      linkClick: this.linkClick,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'qz-part' : 'rd-flow rd-prose qz-solo',
+    }, extra);
+  }
+  /* Alone on its board: one sample question, from the maintainer guide's chapter 2 quiz. */
+  sample(itemId, steps) {
+    const RD = window.RD, Q = RD.quiz;
+    const block = Q.block('maintainer-guide/internals', 'en', null, 'check');
+    const view = Q.viewOf('maintainer-guide/internals', 'en', null, true);
+    let b = { qz: {}, hist: [], sign: {}, seq: 0 };
+    steps.forEach((a) => { const r = Q.dispatch(b, view, block, itemId, a, true); b = r.bundle; if (r.send) b = Q.land(b, r.send, 'saved'); });
+    return Q.view(block, { view, bundle: b, act: () => {} }).items.filter((x) => x.id === itemId)[0];
+  }
+
+  renderVals() {
+    let it = this.props.it || this.sample('write-path', [{ t: 'type', n: 1, v: 'write lock' }, { t: 'type', n: 2, v: 'sqlite3' }, { t: 'type', n: 3, v: 'git' }, { t: 'check' }]);
+    it = Object.assign({}, it, { segs: it.segs.map((g) => Object.assign({}, g, { ro: g.readOnly ? 'readonly' : undefined })) });
+    return this.frame({ it: this.props.onLink ? it : window.RD.quiz.relink(it) });
+  }
+}
+</script>
+</body>
+</html>

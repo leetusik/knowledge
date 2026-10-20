@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Figure row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ flowCls }}" lang="{{ lang }}">
+<figure class="{{ b.cls }}" id="{{ idAttr }}"><sc-if value="{{ b.hasCaption }}" hint-placeholder-val="{{ true }}"><figcaption class="fg-row__cap"><sc-for list="{{ b.caption }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if><sc-if value="{{ r.isCite }}" hint-placeholder-val="{{ false }}"><a class="{{ r.cls }}" id="{{ r.citeId }}" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ citeClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="fg-cite__n">{{ r.num }}</span></a></sc-if></sc-for></figcaption></sc-if><div class="fg-row__items"><div class="fg-row__grid"><sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3"><sc-if value="{{ it.isImage }}" hint-placeholder-val="{{ true }}"><dc-import name="Figure" block="{{ it }}" state="{{ state }}" rm="{{ rm }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,320px"></dc-import></sc-if><sc-if value="{{ it.isSvg }}" hint-placeholder-val="{{ false }}"><dc-import name="SvgBlock" block="{{ it }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,240px"></dc-import></sc-if><sc-if value="{{ it.isCard }}" hint-placeholder-val="{{ false }}"><dc-import name="RowCard" card="{{ it }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,200px"></dc-import></sc-if><sc-if value="{{ it.isDiagram }}" hint-placeholder-val="{{ false }}"><figure class="fg-item"><div class="rd-dgm fg-dgm" data-proto="stand-in"><p class="rd-dgm__kind">Canvas only · diagram stand-in · the diagrams job (03-diagrams)</p><p class="rd-dgm__what">A <code class="rd-dgm__code">{{ it.dkind }}</code> diagram goes here, drawn by 03-diagrams. This box only holds its place and shows the text a reader gets without the picture.</p><dl class="rd-dgm__alt"><div class="rd-dgm__pair"><dt>Title</dt><dd><sc-for list="{{ it.titleParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></dd></div></dl></div><sc-if value="{{ it.hasCaption }}" hint-placeholder-val="{{ true }}"><figcaption class="fg-figcap"><p class="fg-cap"><sc-for list="{{ it.caption }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if><sc-if value="{{ r.isCite }}" hint-placeholder-val="{{ false }}"><a class="{{ r.cls }}" id="{{ r.citeId }}" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ citeClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="fg-cite__n">{{ r.num }}</span></a></sc-if></sc-for></p></figcaption></sc-if></figure></sc-if></sc-for></div></div></figure>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"state":{"editor":null},"rm":{"editor":null},"lang":{"editor":null},"onLink":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":600}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tick: 0 }; }
+
+  linkClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    if (!this.props.onLink) { if (e.currentTarget.getAttribute('href') === '#top') e.preventDefault(); return; }
+    e.preventDefault();
+    this.props.onLink(to);
+  };
+  /* A citation: the source item becomes the target (the product's :target), then the reader's own anchor jump. */
+  citeClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    e.preventDefault();
+    if (!this.props.bare) return;
+    if (window.RD.figs) window.RD.figs.go({ target: to.slice(1), here: '' });
+    if (this.props.onLink) this.props.onLink(to);
+  };
+  /* Canvas only: a part shown alone on a Components board has no chapter around it, so its in-chapter links
+     (#id, a citation) point at #top there and do nothing; data-to keeps the real target. In the reader they go. */
+  loc(o) {
+    if (this.props.bare) return o;
+    const walk = (x) => {
+      if (Array.isArray(x)) return x.map(walk);
+      if (!x || typeof x !== 'object') return x;
+      const n = {};
+      for (const k in x) n[k] = (k === 'svg' || k === 'a') ? x[k] : walk(x[k]);
+      if ((n.isLink || n.isCite) && typeof n.href === 'string' && n.href.charAt(0) === '#' && n.href !== '#top') n.href = '#top';
+      return n;
+    };
+    return walk(o);
+  }
+  componentDidMount() {
+    const F = window.RD.figs;
+    if (F) this.unsub = F.sub(() => this.setState({ tick: (this.state.tick || 0) + 1 }));
+    if (this.check && document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.check());
+  }
+  componentWillUnmount() {
+    if (this.unsub) this.unsub();
+    if (this.ro) this.ro.disconnect();
+    if (this.box) this.box.removeEventListener('scroll', this.onScroll);
+  }
+  wrap(rm) {
+    const P = this.props, bare = !!P.bare;
+    return {
+      wrapCls: (bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone') + (rm ? ' fg-rm' : ''),
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      flowCls: bare ? 'fg-pass' : 'rd-flow fg-solo',
+      lang: bare ? (P.lang || undefined) : (P.lang || 'en'),
+      linkClick: this.linkClick,
+      citeClick: this.citeClick,
+    };
+  }
+
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const b = this.loc(P.block || RD.read('maintainer-guide/read-surfaces', 'en').blocks.find((x) => x.id === 'column-row'));
+    const F = RD.figs ? RD.figs.get() : { rm: false };
+    const rm = P.rm === undefined || P.rm === null ? !!F.rm : !!P.rm;
+    return Object.assign(this.wrap(rm), { b, idAttr: b.id || undefined, state: P.state, rm: P.rm, onLink: P.onLink });
+  }
+}
+</script>
+</body>
+</html>

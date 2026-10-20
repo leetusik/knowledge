@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Highlights in the text</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Highlights in the text</p>
+<p class="rd-board__lead">The paint is drawn as markup over the chapter’s own text. A highlight is a warm tint with a 1px line in the bronze ink along its foot, so it is never told by colour alone; a highlight with a note takes that line at 2px; where two overlap the tint goes one step deeper; the one whose popover is open takes the accent underline; text being selected takes the accent’s pale tint until it is saved. Below 64rem a block’s markers sit under its heading (its note, Text changed, another language) and "Bookmarked" sits above the heading, in its margin, so no text moves. Hover (the 2px bronze line on any highlight) is reached on the Pages.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,900px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":4430}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const read = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver);
+    const cut = (blocks, from, to) => { const a = blocks.findIndex((b) => b.id === from); const z = to ? blocks.findIndex((b) => b.id === to) : blocks.length; return blocks.slice(a, z); };
+    const seed = AN.seed('default');
+    const at = (lang, st, from, to, ver) => cut(AN.view(read(lang, ver), Object.assign({ ann: seed, ver: ver || null }, st)).blocks, from, to);
+    const sel = (() => { const r = read('en'); const S = AN.layout(r.blocks, true).secs['the-two-planes']; const s = S.text.indexOf('The content plane holds documents'); const e = s + 'The content plane holds documents, the search index and version rows'.length; return { doc: r.key, lang: 'en', ver: null, mode: 'passage', sec: 'the-two-planes', s, e, quote: AN.quoteAt(S.text, s, e) }; })();
+    const C = (cap, theme, blocks, o) => cell(cap, 680, Object.assign({ theme, blocks, lang: 'en', size: 3 }, o));
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const rows = [
+      { title: 'A section with a note, an overlap, a changed pair, a Korean marker and a bookmark (The write path)', cells: TH.map(([t, n]) => C(n, t, at('en', {}, 'the-write-path', 'the-publish-worker').slice(0, 4))) },
+      { title: 'A highlight with a note, and a note on the diagram (The two planes)', cells: TH.map(([t, n]) => C(n, t, at('en', {}, 'the-two-planes', 'two-deployments'))) },
+      { title: 'One highlight, three moments: being selected, saved, open', cells: [
+        C('Being selected · not saved yet', 'light', at('en', { sel }, 'the-two-planes', 'two-planes')),
+        C('Saved · the popover is open on it (accent underline)', 'light', at('en', { active: 'a2' }, 'the-two-planes', 'two-planes')),
+        C('Being selected · dark', 'dark', at('en', { sel }, 'the-two-planes', 'two-planes')) ] },
+      { title: 'Inside code, inside a link, and a bookmark with a note on its section (The one idea; Contracts)', cells: [
+        C('In a code block · light', 'light', at('en', {}, 'the-one-idea', 'what-reindex-recovers').slice(0, 4)),
+        C('In a link · and the section is bookmarked · light', 'light', at('en', {}, 'contracts', 'what-changed').slice(0, 4)),
+        C('In a link · sepia', 'sepia', at('en', {}, 'contracts', 'what-changed').slice(0, 4)) ] },
+      { title: 'Korean: its own highlights painted, the English ones a marker (한국어 v1)', cells: [
+        C('한국어 · light', 'light', at('ko', {}, 'the-write-path', 'the-publish-worker').slice(0, 4), { lang: 'ko' }),
+        C('한국어 · dark', 'dark', at('ko', {}, 'the-one-idea', 'what-reindex-recovers').slice(0, 3), { lang: 'ko' }) ] },
+      { title: 'Text size 1 and 5 (the paint and the markers scale with the text; nothing else moves)', cells: [
+        C('Text size 1', 'light', at('en', {}, 'the-two-planes', 'two-deployments').slice(0, 2), { size: 1 }),
+        C('Text size 5', 'light', at('en', {}, 'the-two-planes', 'two-deployments').slice(0, 2), { size: 5 }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

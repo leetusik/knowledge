@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Figure row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Figure row</p>
+<p class="rd-board__lead">A figure row holds two or three items side by side inside the 36rem column, between two hairlines, with the row caption above them in the interface face, semibold. Items sit side by side from a 40rem frame when each has room for its text at the reader's size; on a phone they stack in order, each keeping its caption. CSS only: no script.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="FigureRow" block="{{ c.block }}" state="{{ c.state }}" rm="{{ c.rm }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,600px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3200,"height":5860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const two = B(FIG, 'en', 'two-branches'), mixed = B(FIG, 'en', 'column-row'), dgm = B(FIG, 'en', 'handshake'), cards = B(FIG, 'en', 'house-style-rules');
+    const two2 = B(FIG, 'en', 'two-readers'), mixedKo = B(FIG, 'ko', 'column-row');
+    const rows = [
+      { title: 'Two images, each with its caption, and the row caption above them · side by side at 820, stacked at 390', cells: [
+        K('820 · side by side', 820, { block: two }), K('390 · stacked, in order', 390, { block: two })] },
+      { title: 'Three mixed items: an image, an svg and a card · unequal heights, top-aligned', cells: [
+        K('820 · side by side', 820, { block: mixed }), K('390 · stacked', 390, { block: mixed })] },
+      { title: 'A row with a diagram item · a canvas-only stand-in for 03-diagrams, showing the diagram\'s title', cells: [
+        K('820', 820, { block: dgm }), K('390 · stacked', 390, { block: dgm })] },
+      { title: 'A row of three cards at 820 · text sizes 1, 3 and 5 (at 5, three no longer fit, so the row stacks)', cells: [
+        K('Size 1', 820, { block: cards, size: 1 }), K('Size 3', 820, { block: cards }), K('Size 5 · stacked', 820, { block: cards, size: 5 })] },
+      { title: 'Two cards, and the themes · 820', cells: [
+        K('Two cards · light', 820, { block: two2 }), K('Two cards · dark', 820, { block: two2, theme: 'dark' }),
+        K('Three mixed · sepia', 820, { block: mixed, theme: 'sepia' }), K('Three cards · dark', 820, { block: cards, theme: 'dark' })] },
+      { title: 'Loading, and Korean · the images hold their boxes; Korean captions keep their words', cells: [
+        K('Two images loading · 820', 820, { block: two, state: 'loading' }), K('Three mixed · Korean · 390', 390, { block: mixedKo, lang: 'ko' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — SVG block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — SVG block</p>
+<p class="rd-board__lead">The svg block draws one SVG from the S2 allowlist in currentColor (the text's ink) and the tone classes kb-fill-<tone> and kb-stroke-<tone>, with no frame of its own. Its label is its accessible name (role img); the caption shows under it when there is one. Its text is set in the interface face; strokes keep 1 px at every width.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="SvgBlock" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,480px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3400,"height":2860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const mock = B(FIG, 'en', 'sandbox-mock'), mx = B(SUB, 'en', 'review-outcomes');
+    const mockKo = B(FIG, 'ko', 'sandbox-mock'), mxKo = B(SUB, 'ko', 'review-outcomes');
+    const rows = [
+      { title: 'A UI mock · 820 fits the column · 390 keeps its labels at 11 px or more, so it scrolls in its box', cells: [
+        K('820 · light', 820, { block: mock }), K('390 · scrolls, with the fade and the hint', 390, { block: mock })] },
+      { title: 'A 2×2 matrix · drawn at its own size at 820 · scaled to the column at 390 (its labels stay over 11 px)', cells: [
+        K('820 · light', 820, { block: mx }), K('390', 390, { block: mx })] },
+      { title: 'Dark and sepia · currentColor and the tone classes follow the theme; hairlines stay 1 px', cells: [
+        K('UI mock · dark', 820, { block: mock, theme: 'dark' }), K('UI mock · sepia', 820, { block: mock, theme: 'sepia' }),
+        K('Matrix · dark', 820, { block: mx, theme: 'dark' }), K('Matrix · sepia', 820, { block: mx, theme: 'sepia' })] },
+      { title: 'Korean labels', cells: [
+        K('UI mock · Korean · 820', 820, { block: mockKo, lang: 'ko' }), K('UI mock · Korean · 390', 390, { block: mockKo, lang: 'ko' }),
+        K('Matrix · Korean · 390', 390, { block: mxKo, lang: 'ko' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

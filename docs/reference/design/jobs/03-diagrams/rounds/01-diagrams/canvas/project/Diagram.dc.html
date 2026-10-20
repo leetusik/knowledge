@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Diagram — the diagram block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}" lang="{{ wrapLang }}">
+<figure class="{{ figCls }}" id="{{ figId }}" aria-labelledby="{{ titleId }}">
+<p class="dg__title" id="{{ titleId }}"><sc-for list="{{ b.titleParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></p>
+<div class="dg__box">
+<div class="dg__scroll" ref="{{ setBox }}" tabindex="{{ tab }}" role="{{ role }}" aria-label="{{ aria }}">
+<sc-if value="{{ v.isSvg }}" hint-placeholder-val="{{ true }}"><svg class="dg__svg" viewBox="{{ v.vb }}" style="{{ v.svgStyle }}" aria-hidden="true" focusable="false"><sc-for list="{{ v.prims.regions }}" as="p" hint-placeholder-count="1"><path class="{{ p.cls }}" d="{{ p.d }}"></path></sc-for><sc-for list="{{ v.prims.edges }}" as="p" hint-placeholder-count="3"><path class="{{ p.cls }}" d="{{ p.d }}"></path></sc-for><sc-for list="{{ v.prims.heads }}" as="p" hint-placeholder-count="3"><path class="{{ p.cls }}" d="{{ p.d }}"></path></sc-for><sc-for list="{{ v.prims.shapes }}" as="p" hint-placeholder-count="3"><path class="{{ p.cls }}" d="{{ p.d }}"></path></sc-for><sc-for list="{{ v.prims.rules }}" as="p" hint-placeholder-count="1"><path class="{{ p.cls }}" d="{{ p.d }}"></path></sc-for><sc-for list="{{ v.prims.knocks }}" as="k" hint-placeholder-count="1"><rect class="{{ k.cls }}" x="{{ k.x }}" y="{{ k.y }}" width="{{ k.w }}" height="{{ k.h }}" rx="2"></rect></sc-for><sc-for list="{{ v.prims.texts }}" as="t" hint-placeholder-count="4"><text class="{{ t.cls }}" x="{{ t.x }}" y="{{ t.y }}" ref="{{ t.ref }}"></text></sc-for></svg></sc-if>
+<sc-if value="{{ isStackPlain }}" hint-placeholder-val="{{ false }}"><ol class="dgs"><sc-for list="{{ v.stack.layers }}" as="l" hint-placeholder-count="4"><li class="{{ l.cls }}"><p class="dgs__label" lang="{{ l.lang }}">{{ l.label }}</p><sc-if value="{{ l.hasItems }}" hint-placeholder-val="{{ true }}"><ul class="dgs__items"><sc-for list="{{ l.items }}" as="it" hint-placeholder-count="2"><li lang="{{ it.lang }}">{{ it.t }}</li></sc-for></ul></sc-if></li></sc-for></ol></sc-if>
+<sc-if value="{{ isStackNested }}" hint-placeholder-val="{{ false }}"><div class="dgs dgs--nested" style="{{ v.stack.gridStyle }}"><sc-for list="{{ v.stack.layers }}" as="l" hint-placeholder-count="3"><div class="{{ l.boxCls }}" style="{{ l.boxStyle }}" aria-hidden="true"></div></sc-for><sc-for list="{{ v.stack.layers }}" as="l" hint-placeholder-count="3"><div class="dgs__head" style="{{ l.headStyle }}"><p class="dgs__label" lang="{{ l.lang }}"><sc-if value="{{ l.hasInside }}" hint-placeholder-val="{{ false }}"><span class="dg__sr"><span>{{ l.inside }}</span></span></sc-if>{{ l.label }}</p><sc-if value="{{ l.hasItems }}" hint-placeholder-val="{{ true }}"><ul class="dgs__items"><sc-for list="{{ l.items }}" as="it" hint-placeholder-count="2"><li lang="{{ it.lang }}">{{ it.t }}</li></sc-for></ul></sc-if></div></sc-for></div></sc-if>
+<sc-if value="{{ v.isTimeline }}" hint-placeholder-val="{{ false }}"><div class="dgt" style="{{ v.tl.rootStyle }}" aria-hidden="true"><div class="dgt__lanes"><sc-for list="{{ v.tl.lanes }}" as="ln" hint-placeholder-count="3"><div class="dgt__lane"><p class="dgt__name" lang="{{ ln.lang }}">{{ ln.label }}</p><div class="dgt__track"><div class="dgt__grid"><sc-for list="{{ v.tl.ticks }}" as="tk" hint-placeholder-count="5"><span class="dgt__gl" style="{{ tk.style }}"></span></sc-for></div><sc-for list="{{ ln.mrows }}" as="mr" hint-placeholder-count="1"><div class="dgt__mrow"><sc-for list="{{ mr.marks }}" as="m" hint-placeholder-count="2"><span class="dgt__mark" style="{{ m.lineStyle }}"><span class="dgt__mline"></span><span class="dgt__mdot"></span></span><span class="{{ m.labCls }}" style="{{ m.labStyle }}" lang="{{ m.lang }}">{{ m.label }}</span></sc-for></div></sc-for><sc-for list="{{ ln.rows }}" as="row" hint-placeholder-count="1"><div class="dgt__row"><sc-for list="{{ row.bars }}" as="b" hint-placeholder-count="2"><span class="{{ b.cls }}" style="{{ b.barStyle }}"></span><span class="{{ b.labCls }}" style="{{ b.labStyle }}" lang="{{ b.lang }}">{{ b.lab }}</span></sc-for></div></sc-for></div></div></sc-for></div><div class="dgt__foot"><div class="dgt__axis"><sc-for list="{{ v.tl.ticks }}" as="tk" hint-placeholder-count="5"><span class="{{ tk.cls }}" style="{{ tk.style }}">{{ tk.label }}</span></sc-for></div><sc-if value="{{ v.tl.hasUnit }}" hint-placeholder-val="{{ true }}"><p class="dgt__unit">{{ v.tl.unit }}</p></sc-if></div></div></sc-if>
+<sc-if value="{{ isVbar }}" hint-placeholder-val="{{ false }}"><div class="{{ c.rootCls }}" style="{{ c.rootStyle }}" aria-hidden="true"><sc-if value="{{ c.hasLegend }}" hint-placeholder-val="{{ false }}"><ul class="dgc__legend"><sc-for list="{{ c.series }}" as="s" hint-placeholder-count="3"><li><sc-if value="{{ s.isLine }}" hint-placeholder-val="{{ false }}"><svg class="dgc-swl" viewBox="0 0 24 10" aria-hidden="true" focusable="false"><line class="{{ s.lineCls }}" x1="0" y1="5" x2="24" y2="5" style="{{ s.dashStyle }}"></line></svg></sc-if><sc-if value="{{ s.notLine }}" hint-placeholder-val="{{ true }}"><span class="{{ s.swCls }}"></span></sc-if><span lang="{{ s.lang }}">{{ s.name }}</span></li></sc-for></ul></sc-if><sc-if value="{{ c.hasYlabel }}" hint-placeholder-val="{{ true }}"><p class="dgc__y">{{ c.ylabel }}</p></sc-if><div class="dgc__frame"><div class="dgc__yt"><div class="dgc__yt-sizer">{{ c.ywide }}</div><sc-for list="{{ c.ticks }}" as="t" hint-placeholder-count="5"><span class="dgc__ytl" style="{{ t.bottom }}">{{ t.label }}</span></sc-for></div><div class="dgc__plot"><sc-for list="{{ c.ticks }}" as="t" hint-placeholder-count="5"><span class="{{ t.cls }}" style="{{ t.bottom }}"></span></sc-for><sc-if value="{{ c.hasZeroLine }}" hint-placeholder-val="{{ false }}"><span class="dgc-zero" style="{{ c.zeroStyle }}"></span></sc-if><div class="dgc__cats" style="{{ c.catStyle }}"><sc-for list="{{ c.cats }}" as="cat" hint-placeholder-count="5"><div class="dgc__cat"><sc-for list="{{ cat.bars }}" as="b" hint-placeholder-count="1"><span class="{{ b.cls }}" style="{{ b.style }}"></span><sc-if value="{{ b.showVal }}" hint-placeholder-val="{{ true }}"><span class="{{ b.vcls }}" style="{{ b.vstyle }}">{{ b.v }}</span></sc-if></sc-for></div></sc-for></div><sc-for list="{{ c.rules }}" as="r" hint-placeholder-count="1"><span class="dgc-rule" style="{{ r.bottom }}"></span></sc-for><div class="dgc__ends"><sc-for list="{{ c.rules }}" as="r" hint-placeholder-count="1"><span class="dgc-end dgc-end--rule" style="{{ r.endStyle }}">{{ r.label }}</span></sc-for></div></div><span></span><div class="dgc__xl" style="{{ c.catStyle }}"><sc-for list="{{ c.cats }}" as="cat" hint-placeholder-count="5"><span class="dgc__xlab" lang="{{ cat.lang }}">{{ cat.label }}</span></sc-for></div></div><sc-if value="{{ c.hasXlabel }}" hint-placeholder-val="{{ true }}"><p class="dgc__x">{{ c.xlabel }}</p></sc-if></div></sc-if>
+<sc-if value="{{ isLine }}" hint-placeholder-val="{{ false }}"><div class="{{ c.rootCls }}" style="{{ c.rootStyle }}" aria-hidden="true"><sc-if value="{{ c.hasLegend }}" hint-placeholder-val="{{ false }}"><ul class="dgc__legend"><sc-for list="{{ c.series }}" as="s" hint-placeholder-count="3"><li><sc-if value="{{ s.isLine }}" hint-placeholder-val="{{ false }}"><svg class="dgc-swl" viewBox="0 0 24 10" aria-hidden="true" focusable="false"><line class="{{ s.lineCls }}" x1="0" y1="5" x2="24" y2="5" style="{{ s.dashStyle }}"></line></svg></sc-if><sc-if value="{{ s.notLine }}" hint-placeholder-val="{{ true }}"><span class="{{ s.swCls }}"></span></sc-if><span lang="{{ s.lang }}">{{ s.name }}</span></li></sc-for></ul></sc-if><sc-if value="{{ c.hasYlabel }}" hint-placeholder-val="{{ true }}"><p class="dgc__y">{{ c.ylabel }}</p></sc-if><div class="dgc__frame"><div class="dgc__yt"><div class="dgc__yt-sizer">{{ c.ywide }}</div><sc-for list="{{ c.ticks }}" as="t" hint-placeholder-count="5"><span class="dgc__ytl" style="{{ t.bottom }}">{{ t.label }}</span></sc-for></div><div class="dgc__plot"><sc-for list="{{ c.ticks }}" as="t" hint-placeholder-count="5"><span class="{{ t.cls }}" style="{{ t.bottom }}"></span></sc-for><sc-if value="{{ c.hasZeroLine }}" hint-placeholder-val="{{ false }}"><span class="dgc-zero" style="{{ c.zeroStyle }}"></span></sc-if><svg class="dgc__lineplot" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true" focusable="false"><sc-for list="{{ c.lines }}" as="l" hint-placeholder-count="2"><polyline class="{{ l.cls }}" points="{{ l.pts }}" style="{{ l.dashStyle }}"></polyline></sc-for></svg><sc-for list="{{ c.rules }}" as="r" hint-placeholder-count="1"><span class="dgc-rule" style="{{ r.bottom }}"></span></sc-for><div class="dgc__ends"><sc-for list="{{ c.lines }}" as="l" hint-placeholder-count="2"><span class="{{ l.labCls }}" style="{{ l.endStyle }}" lang="{{ l.lang }}">{{ l.name }}</span></sc-for><sc-for list="{{ c.rules }}" as="r" hint-placeholder-count="1"><span class="dgc-end dgc-end--rule" style="{{ r.endStyle }}">{{ r.label }}</span></sc-for></div></div><span></span><div class="dgc__xt"><sc-for list="{{ c.xticks }}" as="t" hint-placeholder-count="5"><span class="{{ t.cls }}" style="{{ t.style }}">{{ t.label }}</span></sc-for></div></div><sc-if value="{{ c.hasXlabel }}" hint-placeholder-val="{{ true }}"><p class="dgc__x">{{ c.xlabel }}</p></sc-if></div></sc-if>
+<sc-if value="{{ isHz }}" hint-placeholder-val="{{ false }}"><div class="{{ c.rootCls }}" style="{{ c.rootStyle }}" aria-hidden="true"><sc-if value="{{ c.hasLegend }}" hint-placeholder-val="{{ false }}"><ul class="dgc__legend"><sc-for list="{{ c.series }}" as="s" hint-placeholder-count="3"><li><sc-if value="{{ s.isLine }}" hint-placeholder-val="{{ false }}"><svg class="dgc-swl" viewBox="0 0 24 10" aria-hidden="true" focusable="false"><line class="{{ s.lineCls }}" x1="0" y1="5" x2="24" y2="5" style="{{ s.dashStyle }}"></line></svg></sc-if><sc-if value="{{ s.notLine }}" hint-placeholder-val="{{ true }}"><span class="{{ s.swCls }}"></span></sc-if><span lang="{{ s.lang }}">{{ s.name }}</span></li></sc-for></ul></sc-if><div class="dgc__rows"><sc-if value="{{ c.hasHead }}" hint-placeholder-val="{{ true }}"><div class="dgc__row dgc__row--head"><span class="dgc__rlab dgc__rlab--head">{{ c.xlabel }}</span><div class="dgc__track"><div class="dgc__heads"><sc-for list="{{ c.vrules }}" as="r" hint-placeholder-count="1"><span class="{{ r.headCls }}" style="{{ r.headStyle }}">{{ r.label }}</span></sc-for></div></div></div></sc-if><sc-for list="{{ c.rows }}" as="row" hint-placeholder-count="5"><div class="dgc__row"><span class="dgc__rlab" lang="{{ row.lang }}">{{ row.label }}</span><div class="dgc__track"><div class="dgc__trackin"><div class="dgc__hgrid"><sc-for list="{{ c.hgrid }}" as="g" hint-placeholder-count="5"><span class="{{ g.cls }}" style="{{ g.style }}"></span></sc-for><sc-for list="{{ c.vrules }}" as="r" hint-placeholder-count="1"><span class="dgc-vrule" style="{{ r.style }}"></span></sc-for></div><sc-if value="{{ c.isInterval }}" hint-placeholder-val="{{ false }}"><sc-for list="{{ row.bars }}" as="b" hint-placeholder-count="1"><div class="dgc__hb"><span class="{{ b.cls }}" style="{{ b.style }}"><sc-if value="{{ b.hasMid }}" hint-placeholder-val="{{ true }}"><span class="dgc-mid" style="{{ b.mstyle }}"></span></sc-if></span></div><p class="dgc-rtext" style="{{ b.tstyle }}">{{ b.text }}</p></sc-for></sc-if><sc-if value="{{ c.isBarH }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ row.bars }}" as="b" hint-placeholder-count="1"><div class="dgc__hb"><span class="{{ b.cls }}" style="{{ b.style }}"></span><span class="{{ b.vcls }}" style="{{ b.vstyle }}">{{ b.v }}</span></div></sc-for></sc-if></div></div></div></sc-for></div><div class="dgc__hfoot"><div class="dgc__haxis"><sc-for list="{{ c.haxis }}" as="t" hint-placeholder-count="5"><span class="{{ t.cls }}" style="{{ t.style }}">{{ t.label }}</span></sc-for></div><sc-if value="{{ c.hasYlabel }}" hint-placeholder-val="{{ true }}"><p class="dgc__x">{{ c.ylabel }}</p></sc-if></div></div></sc-if>
+</div>
+<span class="dg__fade dg__fade--l" aria-hidden="true"></span><span class="dg__fade dg__fade--r" aria-hidden="true"></span>
+</div>
+<p class="dg__hint">Scroll sideways to see the whole drawing →</p>
+<sc-if value="{{ hasAlt }}" hint-placeholder-val="{{ false }}"><div class="dg__sr"><p>The drawing, as text.</p><sc-if value="{{ v.altOrdered }}" hint-placeholder-val="{{ false }}"><ol><sc-for list="{{ v.alt }}" as="a" hint-placeholder-count="3"><li>{{ a }}</li></sc-for></ol></sc-if><sc-if value="{{ altList }}" hint-placeholder-val="{{ true }}"><ul><sc-for list="{{ v.alt }}" as="a" hint-placeholder-count="3"><li>{{ a }}</li></sc-for></ul></sc-if></div></sc-if>
+<sc-if value="{{ v.isChart }}" hint-placeholder-val="{{ false }}"><div class="dg__sr"><table><caption>{{ c.tableCap }}</caption><thead><tr><th scope="col">{{ c.table.first }}</th><sc-for list="{{ c.table.head }}" as="h" hint-placeholder-count="2"><th scope="col" lang="{{ h.lang }}">{{ h.v }}</th></sc-for></tr></thead><tbody><sc-for list="{{ c.table.rows }}" as="r" hint-placeholder-count="3"><tr><th scope="row" lang="{{ r.lang }}">{{ r.k }}</th><sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="2"><td>{{ cell.v }}</td></sc-for></tr></sc-for></tbody></table></div></sc-if>
+<sc-if value="{{ hasCaption }}" hint-placeholder-val="{{ true }}"><figcaption class="dg__cap"><sc-for list="{{ cap }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if></sc-for></figcaption></sc-if>
+</figure>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"sample":{"editor":null},"lang":{"editor":null},"onLink":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"bare":{"editor":null},"width":{"editor":null},"scroll":{"editor":null},"noCaption":{"editor":null},"anchor":{"editor":null},"pad":{"editor":null},"paper":{"editor":null},"$preview":{"width":820,"height":560}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { over: false, moreL: false, moreR: false, fv: 0 };
+    this.box = null; this.ro = null;
+    window.__dgUid = (window.__dgUid || 0) + 1;
+    this.uid = window.__dgUid;
+  }
+  /* A drawing keeps its legible size: when it is wider than the column, its box scrolls and says so (the signed
+     code-block rule, §9a). Measured, as the code block measures; the fade shows only where more remains. */
+  setBox = (el) => {
+    if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    if (this.box) this.box.removeEventListener('scroll', this.onScroll);
+    this.box = el;
+    if (el) el.addEventListener('scroll', this.onScroll, { passive: true });
+    if (el && window.ResizeObserver) { this.ro = new ResizeObserver(() => { this.check(); this.force(); }); this.ro.observe(el); }
+    this.check();
+  };
+  edges(el) {
+    const max = el.scrollWidth - el.clientWidth;
+    return { moreL: max > 1 && el.scrollLeft > 1, moreR: max > 1 && el.scrollLeft < max - 1 };
+  }
+  onScroll = () => {
+    const el = this.box;
+    if (!el) return;
+    const e = this.edges(el);
+    if (e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(e);
+  };
+  check() {
+    const el = this.box;
+    if (!el) return;
+    const over = el.scrollWidth > el.clientWidth + 1;
+    const e = this.edges(el);
+    if (over !== this.state.over || e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(Object.assign({ over }, e));
+  }
+  /* Canvas only: a Components cell can open a wide drawing scrolled to its middle or its end, to show both fades. */
+  force() {
+    const el = this.box, m = this.props.scroll;
+    if (!el || !m) return;
+    const max = el.scrollWidth - el.clientWidth;
+    if (max <= 1) return;
+    const want = m === 'end' ? max : Math.round(max / 2);
+    if (Math.abs(el.scrollLeft - want) > 1) { el.scrollLeft = want; this.onScroll(); }
+  }
+  componentDidMount() {
+    this.off = window.DG.onFonts(() => this.setState({ fv: window.DG.fontsVersion }));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { this.check(); this.force(); });
+  }
+  componentDidUpdate() { this.check(); this.force(); }
+  componentWillUnmount() { if (this.off) this.off(); if (this.ro) this.ro.disconnect(); if (this.box) this.box.removeEventListener('scroll', this.onScroll); }
+  linkClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    if (!this.props.onLink) return;
+    e.preventDefault();
+    this.props.onLink(to);
+  };
+  renderVals() {
+    const RD = window.RD, DG = window.DG;
+    const lang = this.props.lang || 'en';
+    let b = this.props.block;
+    if (!b || !b.spec) {
+      const key = this.props.sample || 'write-path';
+      b = RD.parse('```diagram #' + key + '\n' + DG.SAMPLES[key] + '\n```', lang, 'native')[0];
+    }
+    const v = DG.build(b.spec);
+    const c = v.isChart ? v.chart : {};
+    if (v.isChart) { c.isBarH = c.horizontal && !c.isInterval; c.series.forEach((s) => { s.notLine = !s.isLine; }); }
+    const bare = !!this.props.bare;
+    const over = this.state.over;
+    const hasCaption = b.hasCaption && !this.props.noCaption;
+    const w = this.props.width;
+    return {
+      b, v, c, cap: b.caption,
+      isStackPlain: v.isStack && v.stack.plain,
+      isStackNested: v.isStack && v.stack.nested,
+      isVbar: v.isChart && c.vertical,
+      isLine: v.isChart && c.isLine,
+      isHz: v.isChart && c.horizontal,
+      hasAlt: !!(v.alt && v.alt.length),
+      altList: !v.altOrdered,
+      hasCaption,
+      linkClick: this.linkClick,
+      figCls: 'dg dg--' + v.kind + (over ? ' is-over' : '') + (this.state.moreL ? ' is-more-l' : '') + (this.state.moreR ? ' is-more-r' : ''),
+      figId: bare || this.props.anchor ? (b.id || undefined) : undefined,
+      titleId: 'dg-title-' + this.uid,
+      setBox: this.setBox,
+      tab: over ? 0 : undefined,
+      role: over ? 'region' : undefined,
+      aria: over ? 'Drawing, scrolls sideways' : undefined,
+      wrapCls: bare ? 'dg-pass' : 'rd-frame rd-size-' + (this.props.size || 3) + ' rd-standalone dg-cell' + (this.props.pad === 'none' ? ' dg-cell--tight' : ''),
+      wrapTheme: bare ? undefined : (this.props.theme || 'light'),
+      wrapStyle: bare ? undefined : ((w ? 'width: ' + w + 'px; ' : '') + (this.props.paper ? 'background: #ffffff' : '')) || undefined,
+      wrapLang: bare ? undefined : lang,
+    };
+  }
+}
+</script>
+</body>
+</html>

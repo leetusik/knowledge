@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Undo line — what a deletion took</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-toast" role="status"><span class="an-toast__text">{{ text }}</span><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ undo }}">Undo</button></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"text":{"editor":null},"onUndo":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":480,"height":100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    return {
+      text: P.text || 'Highlight deleted, and its review card with it.',
+      undo: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onUndo) P.onUndo(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

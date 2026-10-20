@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Figure</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Figure</p>
+<p class="rd-board__lead">A figure is the image, its caption and its credit, read as one. The image is shown at its own pixel size or smaller, never scaled up, on a hairline edge, in a box reserved at its proportions. The caption sits under it in the interface face at the column's small step, in secondary; the credit has its own line under a CREDIT label. No figure numbers. Light, dark and sepia leave the image's pixels alone.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Figure" block="{{ c.block }}" state="{{ c.state }}" rm="{{ c.rm }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,480px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3200,"height":5440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const desk = B(FIG, 'en', 'reader-desktop'), bff = B(FIG, 'en', 'bff-sketch'), tall = B(FIG, 'en', 'reader-phone'), small = B(FIG, 'en', 'language-switch');
+    const wideShot = B(FIG, 'en', 'contents-sheet'), chart = B(SUB, 'en', 'recall-curves'), gif = B(FIG, 'en', 'chrome-hides');
+    const chartCol = Object.assign({}, chart, { wide: false, id: 'recall-curves-column' });
+    const tallKo = B(FIG, 'ko', 'reader-phone');
+    const rows = [
+      { title: 'A column figure · loaded, loading and missing · iPad 820 (the 576 px column, the same from 40rem up)', cells: [
+        K('Loaded · a caption with a link, inline code and emphasis, and a credit', 820, { block: desk }),
+        K('Loading · the box holds the image\'s shape; the caption is already there', 820, { block: desk, state: 'loading' }),
+        K('Missing · the alt text in the image\'s place, the caption kept', 820, { block: desk, state: 'missing' })] },
+      { title: 'A light screenshot in dark and sepia, and a transparent PNG in all three themes · 820', cells: [
+        K('Light screenshot · dark · its hairline edge, no dimming', 820, { block: desk, theme: 'dark' }),
+        K('Light screenshot · sepia', 820, { block: desk, theme: 'sepia' }),
+        K('Transparent PNG · light', 820, { block: bff }),
+        K('Transparent PNG · dark · the light plate shows through', 820, { block: bff, theme: 'dark' }),
+        K('Transparent PNG · sepia', 820, { block: bff, theme: 'sepia' })] },
+      { title: 'Image sizes · a tall portrait (1170 × 2532) and a small image (260 × 100) · 820 and 390', cells: [
+        K('Tall portrait · 820 · its height stops at 36rem', 820, { block: tall }),
+        K('Tall portrait · 390', 390, { block: tall }),
+        K('Small image · 820 · at its own size, never scaled up', 820, { block: small }),
+        K('Small image · 390', 390, { block: small })] },
+      { title: 'width: wide · it keeps 36rem and scrolls in its box where the column is narrower (a phone) · the 3:1 chart and a screenshot', cells: [
+        K('Wide 3:1 chart · 390 · scrolls in its box, with the fade and the hint', 390, { block: chart }),
+        K('Wide screenshot · 390', 390, { block: wideShot }),
+        K('The same chart as a column figure · 390 · it shrinks to the column', 390, { block: chartCol }),
+        K('Wide 3:1 chart · 820 · fits the column, as a column figure would', 820, { block: chart })] },
+      { title: 'A long caption at 390 · text sizes 1, 3 and 5 · and a Korean caption', cells: [
+        K('Long caption · size 1', 390, { block: tall, size: 1 }),
+        K('Long caption · size 3', 390, { block: tall }),
+        K('Long caption · size 5', 390, { block: tall, size: 5 }),
+        K('Korean caption · size 3 · keep-all', 390, { block: tallKo, lang: 'ko' })] },
+      { title: 'A caption with a citation, and an animated GIF · 820', cells: [
+        K('Caption with a citation · the number goes to the source', 820, { block: chart }),
+        K('Animated GIF · plays', 820, { block: gif }),
+        K('Animated GIF · reduced motion · the still frame, and a line that says so', 820, { block: gif, rm: true })] },
+      { title: 'Loading and missing at 390, in dark and sepia', cells: [
+        K('Loading · 390 · dark', 390, { block: desk, state: 'loading', theme: 'dark' }),
+        K('Missing · 390 · dark', 390, { block: desk, state: 'missing', theme: 'dark' }),
+        K('Missing · 390 · sepia', 390, { block: small, state: 'missing', theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

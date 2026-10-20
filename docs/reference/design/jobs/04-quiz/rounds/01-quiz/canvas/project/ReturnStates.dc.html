@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saved answers, retry and signed out — states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Saved answers, retry and the signed-out reader</p>
+<p class="rd-board__lead">Signed in, every attempt is saved and the first one goes to review; on return the block shows the latest saved attempt, saying when it was made and, when it differs from the one open, on which version or in which language. A question that changed since starts fresh and says why. Signed out, everything answers and grades, and nothing claims to be saved.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Quiz" doc="{{ c.doc }}" lang="{{ c.lang }}" member="{{ c.member }}" hist="{{ c.hist }}" steps="{{ c.steps }}" outcome="{{ c.outcome }}" only="{{ c.only }}" solo="{{ c.solo }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3840,"height":4577}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const I = 'maintainer-guide/internals', M = 'doc/money-notes/compound-interest', W1 = 'maintainer-guide/what-it-is', TWH = 'tidewater/harmonic-model';
+    const H = RD.quizHist.internals;
+    const C = (cap, w, o) => Object.assign({ cap, st: 'width: ' + w + 'px', doc: I, lang: 'en', member: true, hist: [], steps: [], outcome: 'saved', only: null, solo: false, theme: 'light', size: 3 }, o);
+    const pick = (id, opt) => [id, { t: 'pick', opt }];
+    const tog = (id, opt) => [id, { t: 'toggle', opt }];
+    const chk = (id) => [id, { t: 'check' }];
+    const typed = (id, vals) => vals.map((v, i) => [id, { t: 'type', n: i + 1, v }]);
+    const rows = [
+      { title: 'On return, signed in · the latest saved attempt per question · 600', cells: [
+        C('Made on this version', 600, { hist: H, only: ['read-column'], solo: true }),
+        C('Made on v1 · the question has not changed', 600, { hist: H, only: ['publish-in-lock'], solo: true }),
+        C('Made on v1 · the question changed since · starts fresh', 600, { hist: H, only: ['rel-path'], solo: true }) ] },
+      { title: 'On return · another language, and the other two types · 600', cells: [
+        C('한국어 · an answer made in English', 600, { lang: 'ko', hist: H, only: ['read-column'], solo: true }),
+        C('한국어 · a cloze answered in English starts fresh', 600, { lang: 'ko', hist: H, only: ['write-path'], solo: true }),
+        C('Recall · the saved self-grade', 600, { hist: H, only: ['projection'], solo: true }),
+        C('Cloze · the saved typed answers', 600, { hist: H, only: ['write-path'], solo: true }) ] },
+      { title: 'Saving and retry · the first attempt is the one review keeps · 600', cells: [
+        C('Saving…', 600, { only: ['read-column'], solo: true, outcome: 'saving', steps: [pick('read-column', 'b')] }),
+        C('Saved for review · a first attempt', 600, { only: ['read-column'], solo: true, steps: [pick('read-column', 'b')] }),
+        C('After Try again · answerable again', 600, { only: ['read-column'], solo: true, steps: [pick('read-column', 'a'), ['read-column', { t: 'retry' }]] }),
+        C('A second attempt · review keeps the first', 600, { only: ['read-column'], solo: true, steps: [pick('read-column', 'a'), ['read-column', { t: 'retry' }], pick('read-column', 'b')] }),
+        C('Not saved', 600, { only: ['read-column'], solo: true, outcome: 'failed', steps: [pick('read-column', 'b')] }),
+        C('After Not saved, Try again · the next saved answer is the first', 600, { only: ['read-column'], solo: true, outcome: ['failed', 'saved'], steps: [pick('read-column', 'b'), ['read-column', { t: 'retry' }], pick('read-column', 'b')] }) ] },
+      { title: 'Signed out · answers and grades; never claims to save', cells: [
+        C('Answered · Sign in to save under it', 600, { member: false, only: ['read-column'], solo: true, steps: [pick('read-column', 'b')] }),
+        C('After Not now · the next answer asks nothing', 600, { member: false, only: ['read-column', 'publish-in-lock'], solo: true, steps: [pick('read-column', 'b'), ['read-column', { t: 'signclose' }], pick('publish-in-lock', 'c')] }),
+        C('Recall · signed out · dark', 390, { member: false, theme: 'dark', only: ['projection'], solo: true, steps: [['projection', { t: 'reveal' }], ['projection', { t: 'self', v: 'got' }]] }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

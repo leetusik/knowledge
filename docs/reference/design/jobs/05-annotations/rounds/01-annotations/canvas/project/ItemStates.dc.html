@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Note row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Note row</p>
+<p class="rd-board__lead">One mark in a list: what it is (a small label), the quote painted as it is in the text, its note, and where it is. A row goes to its place; Delete (Remove for a bookmark) sits at its end. A bookmark takes a short label inline. In the book’s list each row also names its language.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="NoteItem" item="{{ c.item }}" ctx="{{ c.ctx }}" editing="{{ c.editing }}" theme="{{ c.theme }}" hint-size="100%,160px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1990}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const d = AN.view(RD.read('maintainer-guide/internals', 'en'), { ann: AN.seed('default') });
+    const old = AN.view(RD.read('maintainer-guide/internals', 'en', 1), { ann: AN.seed('default'), ver: 1 });
+    const bk = AN.book(AN.seed('default'), 'maintainer-guide');
+    const all = d.items.concat(d.other, d.orphans);
+    const F = (list, id) => list.filter((x) => x.id === id)[0];
+    const I = (cap, item, o) => cell(cap, 420, Object.assign({ item, ctx: 'panel', editing: false }, o));
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const rows = [
+      { title: 'Highlights and notes', cells: [
+        I('A highlight', F(all, 'a3')), I('With a note · a review card', F(all, 'a2')), I('A 500-character note · three lines here', F(all, 'a7')),
+        I('A three-word highlight with a note', F(all, 'a13')), I('A Korean note', F(all, 'a14')), I('A note on a diagram', F(all, 'b1')) ] },
+      { title: 'Bookmarks', cells: [
+        I('With a label', F(all, 'm2')), I('No label', F(all, 'm1')), I('Writing a label', F(all, 'm1'), { editing: true }),
+        I('From the HTML version · approximate', F(bk, 'p1'), { ctx: 'book' }), I('A position in a plain document', AN.view(RD.read('doc/field-notes/wal-files', 'en'), { ann: AN.seed('default') }).items[0]) ] },
+      { title: 'Statuses', cells: [
+        I('Text changed (made on v1, seen on v2)', F(all, 'c1')),
+        I('In 한국어 (seen on English)', F(all, 'k1')), I('Unanchored · with its note', F(all, 'o1')), I('Unanchored · no note', F(all, 'o2')) ] },
+      { title: 'In the book’s list (the language is named)', cells: [I('English', F(bk, 's1'), { ctx: 'book' }), I('한국어', F(bk, 'k3'), { ctx: 'book' }), I('A labelled bookmark', F(bk, 'p2'), { ctx: 'book' })] },
+      { title: 'Dark and sepia', cells: TH.slice(1).map(([t, n]) => I(n + ' · with a note', F(all, 'a2'), { theme: t })).concat(TH.slice(1).map(([t, n]) => I(n + ' · unanchored', F(all, 'o1'), { theme: t }))) },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
