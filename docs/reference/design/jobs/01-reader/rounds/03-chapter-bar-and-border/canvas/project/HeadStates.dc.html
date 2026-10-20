@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Chapter opening</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Chapter opening</p>
+<p class="rd-board__lead">The chapter page: where it sits in its book, the title, the summary lede, the version line and the table of contents generated from the h2s and h3s. No contents is drawn for one section or none. Older versions and older translations say so in words, with a way to the newest.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ChapterHead" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,520px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3400,"height":3043}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const I = 'maintainer-guide/internals';
+    const H = (cap, w, o) => Object.assign({ cap, st: px(w), doc: I, lang: 'en', ver: undefined, theme: 'light', size: 3 }, o);
+    const rows = [
+      { title: 'iPad · 820', cells: [H('Member opens a chapter', 820, {}), H('Reading an older version (v1) · sepia', 820, { ver: 1, theme: 'sepia' }), H('A loose document · no book, no chapter number', 820, { doc: 'doc/field-notes/sqlite-wal' }), H('A 20-chapter book · chapter 11 · dark', 820, { doc: 'tidewater/storm-surge', theme: 'dark' })] },
+      { title: 'Phone · 390', cells: [H('The longest title wraps whole', 390, {}), H('No summary · the header closes up', 390, { doc: 'maintainer-guide/read-surfaces' }), H('One section · no contents drawn', 390, { doc: 'maintainer-guide/shipping' }), H('한국어 · an older translation · dark', 390, { lang: 'ko', theme: 'dark' }), H('Largest size (5 of 5) · sepia', 390, { size: 5, theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

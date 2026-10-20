@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Table</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<div class="{{ tableCls }}">
+<div class="rd-table__wrap"><div class="rd-table__scroll" ref="{{ setBox }}" tabindex="{{ tab }}" role="{{ role }}" aria-label="{{ aria }}"><table class="rd-t"><thead><tr><sc-for list="{{ b.head }}" as="h" hint-placeholder-count="4"><th scope="col" class="{{ h.cls }}" data-tx="{{ h.tx }}" data-sec="{{ h.sec }}" data-tk="{{ h.tk }}" data-base="{{ h.base }}"><sc-for list="{{ h.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></th></sc-for></tr></thead><tbody><sc-for list="{{ b.rows }}" as="row" hint-placeholder-count="4"><tr><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="4"><td class="{{ c.cls }}" data-tx="{{ c.tx }}" data-sec="{{ c.sec }}" data-tk="{{ c.tk }}" data-base="{{ c.base }}"><sc-for list="{{ c.runs }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for><span class="rd-a__ext" data-an-skip="1"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></span></sc-if></sc-for></td></sc-for></tr></sc-for></tbody></table></div><sc-if value="{{ scrolls }}" hint-placeholder-val="{{ false }}"><span class="rd-table__fade rd-table__fade--l" aria-hidden="true"></span><span class="rd-table__fade rd-table__fade--r" aria-hidden="true"></span></sc-if></div>
+<sc-if value="{{ scrolls }}" hint-placeholder-val="{{ false }}"><p class="rd-table__hint">{{ hint }}</p></sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"onLink":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":485}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { over: false, moreL: false, moreR: false }; this.box = null; this.ro = null; }
+  /* Wider than its box? Measured, so the fade and the hint show exactly when the table scrolls sideways. The fade shows
+     only on a side where more of the table remains, read from the scroll position. */
+  setBox = (el) => {
+    if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    if (this.box) this.box.removeEventListener('scroll', this.onScroll);
+    this.box = el;
+    if (el) el.addEventListener('scroll', this.onScroll, { passive: true });
+    if (el && window.ResizeObserver) {
+      this.ro = new ResizeObserver(() => this.check());
+      this.ro.observe(el);
+      const t = el.querySelector('table');
+      if (t) this.ro.observe(t);
+    }
+    this.check();
+  };
+  edges(el) {
+    const max = el.scrollWidth - el.clientWidth;
+    return { moreL: max > 1 && el.scrollLeft > 1, moreR: max > 1 && el.scrollLeft < max - 1 };
+  }
+  onScroll = () => {
+    const el = this.box;
+    if (!el) return;
+    const e = this.edges(el);
+    if (e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(e);
+  };
+  check() {
+    const el = this.box;
+    if (!el) return;
+    const t = el.querySelector('table');
+    const over = !!t && t.offsetWidth > el.clientWidth + 1;
+    const e = this.edges(el);
+    if (over !== this.state.over || e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(Object.assign({ over }, e));
+  }
+  componentDidMount() { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.check()); }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); if (this.box) this.box.removeEventListener('scroll', this.onScroll); }
+  linkClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    if (!this.props.onLink) return;
+    e.preventDefault();
+    this.props.onLink(to);
+  };
+  renderVals() {
+    const RD = window.RD;
+    const b = RD.an.plainBlock(this.props.block || RD.read('maintainer-guide/internals', 'en').blocks.find((x) => x.isTable && x.wide));
+    const bare = !!this.props.bare;
+    const kind = b.wide ? 'rd-table--wide' : b.long ? 'rd-table--long' : '';
+    const over = this.state.over;
+    /* The fade and the hint are always rendered for a table that can scroll and shown by CSS: a wide table, or a long
+       one in its own box (a phone, or any width where it runs past the column), or any table measured wider than its box. */
+    const box = !!(b.wide || b.long || over);
+    return {
+      b,
+      tableCls: 'rd-table' + (kind ? ' ' + kind : '') + (over ? ' is-over' : '') + (box && this.state.moreL ? ' is-more-l' : '') + (box && this.state.moreR ? ' is-more-r' : ''),
+      scrolls: box,
+      hint: b.long ? 'Scroll in the table for all ' + b.rows.length + ' rows and ' + b.cols + ' columns' : 'Scroll sideways for all ' + b.cols + ' columns →',
+      tab: box ? 0 : undefined,
+      role: box ? 'region' : undefined,
+      aria: b.long ? 'Table, ' + b.cols + ' columns, ' + b.rows.length + ' rows' : box ? 'Table, ' + b.cols + ' columns, scrolls sideways' : undefined,
+      setBox: this.setBox,
+      linkClick: this.linkClick,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (this.props.size || 3) + ' rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (this.props.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The reader at 390, 820 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+<script src="flow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-widths">
+<sc-if value="{{ t150 }}" hint-placeholder-val="{{ false }}"><style>html { font-size: 150%; }</style></sc-if>
+<sc-if value="{{ t200 }}" hint-placeholder-val="{{ false }}"><style>html { font-size: 200%; }</style></sc-if>
+<div class="rd-board rd-widths__board">
+<p class="rd-board__title">The reader at the three reference sizes</p>
+<p class="rd-board__lead">One prototype state drawn three times. A click in any frame moves all three. Each frame carries the state bar at the top of its page, so it scrolls away with the chapter; a scene or theme picked in any frame shows in all three.</p>
+<div class="rd-widths__row">
+<div class="rd-cell rd-widths__phone"><p class="rd-cap">{{ capPhone }}</p><div class="{{ phoneCls }}"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">iPad portrait · 820 × 1180{{ capText }}</p><div class="rd-stage rd-stage--ipad"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">Desktop · 1440 × 900{{ capText }}</p><div class="rd-stage rd-stage--desk"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2794,"height":1369}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RD.flow.initial('top', { themeChoice: 'light', size: 3, win: 'ref' });
+    this.a = window.RD.flow.api(this);
+  }
+  renderVals() {
+    const F = window.RD.flow, s = this.state;
+    const KEYS = ['top', 'resume', 'hidden', 'list', 'display', 'versions', 'endfin', 'anonsave', 'long', 'ko', 'old', 'wtop', 'mdart', 'loading', 'notfound', 'failed'];
+    const on = F.pressedKey(s, KEYS);
+    const none = { kind: 'library', where: '', detail: '', legacyTitle: '', onBack: null, onContinue: null };
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia'], ['system', 'System']];
+    /* Round 03: text size (the root font size, every frame) and the narrow phone (canvas only) */
+    const SZ = [['ref', 'Text 100% · phone 390', 390, 100], ['t150', 'Text 150%', 390, 150], ['t200', 'Text 200%', 390, 200], ['p320', 'Phone 320 · text 100%', 320, 100]];
+    const sz = SZ.find(([k]) => k === s.win) || SZ[0];
+    const text = sz[3], phoneW = sz[2];
+    return {
+      bar: [{ key: 'widths', name: 'The reader at three widths', cls: 'pb-group', only: false,
+        presets: KEYS.map((k) => ({ key: k, label: F.BY[k].label, pressed: on === k, pick: () => this.a.pick(k) })),
+        hasExtra: true, extraLabel: '· theme:',
+        extra: TH.map(([k, label]) => ({ label, pressed: s.themeChoice === k, pick: () => this.setState({ themeChoice: k }) })),
+        hasExtra2: true, extra2Label: '· size:',
+        extra2: SZ.map(([k, label]) => ({ label, pressed: sz[0] === k, pick: () => this.setState({ win: k }) })) }],
+      t150: text === 150,
+      t200: text === 200,
+      capPhone: 'Phone · ' + phoneW + ' × 844' + (text === 100 ? '' : ' · text ' + text + '%'),
+      capText: text === 100 ? '' : ' · text ' + text + '%',
+      phoneCls: 'rd-stage rd-stage--phone' + (phoneW === 320 ? ' rd-stage--narrow' : ''),
+      inReader: !s.away,
+      isAway: !!s.away,
+      r: F.readerProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>

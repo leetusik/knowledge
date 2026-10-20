@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Grouping control</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Grouping control</p>
+<p class="lib-board__lead">Two choices, By project and By subject, as one group of pressed buttons: the current one carries aria-pressed, a fill and an inset ring, so the state is a shape as well as a colour. Below 40rem it runs the full width. The grouping is kept in the address (?by=subject) and remembered on this device.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="Grouping" value="{{ c.value }}" theme="{{ c.theme }}" width="{{ c.width }}" hint-size="320px,90px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1300,"height":651}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const S = [['By project (the default)', 'project', 320], ['By subject', 'subject', 320], ['At phone width · full width', 'subject', 390]];
+    return { rows: THEMES.map(([t, name]) => ({ name, cells: S.map(([c, v, w]) => ({ cap: c, capStyle: cap(w), value: v, width: w, theme: t })) })) };
+  }
+}
+</script>
+</body>
+</html>

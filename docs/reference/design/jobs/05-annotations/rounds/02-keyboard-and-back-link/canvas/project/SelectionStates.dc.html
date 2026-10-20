@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Selection bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Selection bar</p>
+<p class="rd-board__lead">It opens under a selection (above it when there is no room below; 28px below on touch, clear of the handles). One bar, four cases: a passage takes a highlight or a note; a heading or a typed block’s caption takes a note on its section or a bookmark; the title and the text before the first section take nothing yet; a plain Markdown document takes only a position bookmark. The buttons keep their width when they turn on.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="SelBar" mode="{{ c.mode }}" clipped="{{ c.clipped }}" sec-title="{{ c.secTitle }}" sec-lang="{{ c.secLang }}" sec-word="{{ c.secWord }}" bm-on="{{ c.bmOn }}" pos-on="{{ c.posOn }}" theme="{{ c.theme }}" hint-size="100%,120px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1450}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const B = (cap, o) => cell(cap, 460, Object.assign({ mode: 'passage', clipped: false, secTitle: 'The write path', secLang: 'en', secWord: 'Section', bmOn: false, posOn: false }, o));
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const rows = [
+      { title: 'A passage', cells: TH.map(([t, n]) => B(n, { theme: t })) },
+      { title: 'A passage that runs past its section: it is cut at the section’s end, and says so', cells: [B('Light', { clipped: true, secTitle: 'The publish worker' }), B('Dark', { clipped: true, secTitle: 'The publish worker', theme: 'dark' }), B('Korean section title', { clipped: true, secTitle: '쓰기 경로', secLang: 'ko' })] },
+      { title: 'A heading or a typed block’s caption: a note on the section, or a bookmark', cells: [
+        B('A heading', { mode: 'block', secTitle: 'Why a queue, and not the framework’s background tasks, when ordering against the metering middleware is subtle' }),
+        B('A heading · bookmarked', { mode: 'block', secTitle: 'Two deployments, one codebase', bmOn: true }),
+        B('A diagram’s title', { mode: 'block', secWord: 'Diagram', secTitle: 'One FastAPI process, two planes' }),
+        B('Sepia · bookmarked', { mode: 'block', secTitle: 'Contracts', bmOn: true, theme: 'sepia' }) ] },
+      { title: 'Where highlights are not taken', cells: [
+        B('The title, the lede, or text before the first section', { mode: 'refuse' }),
+        B('A plain Markdown document', { mode: 'none' }),
+        B('A plain Markdown document · position bookmarked', { mode: 'none', posOn: true }),
+        B('Dark', { mode: 'none', theme: 'dark' }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

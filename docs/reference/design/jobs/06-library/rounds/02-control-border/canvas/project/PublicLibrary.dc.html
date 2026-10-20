@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The public library — the flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+<script src="libflow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-proto" ref="{{ setRoot }}">
+<div class="lib-proto__stage">
+<sc-if value="{{ inLib }}" hint-placeholder-val="{{ true }}"><dc-import name="Library" fit="fill" bar="{{ groups }}" route="{{ l.route }}" viewer="{{ l.viewer }}" theme="{{ l.theme }}" data="{{ l.data }}" prog="{{ l.prog }}" group="{{ l.group }}" status="{{ l.status }}" pub="{{ l.pub }}" clear="{{ l.clear }}" folded="{{ l.folded }}" expanded="{{ l.expanded }}" due="{{ l.due }}" on-go="{{ l.onGo }}" on-group="{{ l.onGroup }}" on-fold="{{ l.onFold }}" on-more="{{ l.onMore }}" on-clear="{{ l.onClear }}" on-retry="{{ l.onRetry }}" hint-size="100%,1100px"></dc-import></sc-if>
+<sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ groups }}" kind="{{ w.kind }}" detail="{{ w.detail }}" back-label="{{ w.backLabel }}" on-back="{{ w.onBack }}" on-primary="{{ w.onPrimary }}" hint-size="100%,900px"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><a href="Main.dc.html">Play the member's library</a><a href="Library.dc.html">The library screen alone</a><a href="PublicWidths.dc.html">The public library at 390, 820, 1024 and 1440</a><a href="Elsewhere.dc.html">The stand-ins for other jobs' screens</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.flow = 'public';
+    this.state = window.LIB.flow.initial('pa', 'light');
+    this.a = window.LIB.flow.api(this);
+  }
+  setRoot = (el) => { this.root = el; };
+  scrollPos() { return window.LIB.flow.scrollPos(this.root); }
+  componentDidUpdate(prevProps, prevState) {
+    const sc = this.state.scroll, was = prevState && prevState.scroll;
+    if (sc && (!was || sc.tok !== was.tok)) window.LIB.flow.applyScroll(this.root, sc);
+  }
+  renderVals() {
+    const F = window.LIB.flow, s = this.state;
+    return {
+      setRoot: this.setRoot,
+      groups: F.bar(this, this.a),
+      inLib: !s.away,
+      isAway: !!s.away,
+      l: F.libraryProps(this, this.a),
+      w: F.awayProps(this, this.a),
+    };
+  }
+}
+</script>
+</body>
+</html>

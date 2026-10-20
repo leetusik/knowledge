@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Place bar, undo line, sign-in prompt</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Place bar, undo line, sign-in prompt</p>
+<p class="rd-board__lead">The bottom of the reading screen holds one thing at a time, over the chapter bar. The place bar names the section you are in and takes a note on it or a bookmark; in a plain Markdown document it bookmarks the position. After a delete the undo line says what went (the review card included) and offers Undo for ten seconds. Signed out, a bookmark asks to sign in with the shared prompt, its noun changed to bookmarks or highlights and notes.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><sc-if value="{{ c.isPlace }}" hint-placeholder-val="{{ true }}"><dc-import name="PlaceBar" kind="{{ c.kind }}" title="{{ c.title }}" title-lang="{{ c.titleLang }}" on="{{ c.on }}" theme="{{ c.theme }}" hint-size="100%,80px"></dc-import></sc-if><sc-if value="{{ c.isToast }}" hint-placeholder-val="{{ false }}"><dc-import name="Toast" text="{{ c.text }}" theme="{{ c.theme }}" hint-size="100%,80px"></dc-import></sc-if><sc-if value="{{ c.isSave }}" hint-placeholder-val="{{ false }}"><dc-import name="SignInToSave" what="{{ c.what }}" place="{{ c.place }}" raised="{{ true }}" theme="{{ c.theme }}" hint-size="100%,200px"></dc-import></sc-if></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":1580}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const PL = (cap, o) => cell(cap, 460, Object.assign({ isPlace: true, isToast: false, isSave: false, kind: 'block', title: 'The write path', titleLang: 'en', on: false }, o));
+    const TO = (cap, text, theme) => cell(cap, 520, { isPlace: false, isToast: true, isSave: false, text, theme: theme || 'light' });
+    const SV = (cap, what, place, theme) => cell(cap, 480, { isPlace: false, isToast: false, isSave: true, what, place, theme: theme || 'light' });
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const rows = [
+      { title: 'Place bar · in a section', cells: TH.map(([t, n]) => PL(n, { theme: t })) },
+      { title: 'Place bar · bookmarked, a long title, a diagram, Korean', cells: [
+        PL('Bookmarked', { title: 'Two deployments, one codebase', on: true }),
+        PL('A long heading is cut with an ellipsis', { title: 'Why a queue, and not the framework’s background tasks, when ordering against the metering middleware is subtle' }),
+        PL('In a diagram’s section', { title: 'Diagram · One FastAPI process, two planes' }),
+        PL('한국어', { title: '쓰기 경로', titleLang: 'ko', on: true }) ] },
+      { title: 'Place bar · a plain Markdown document (a position)', cells: [PL('Not bookmarked', { kind: 'pos' }), PL('Bookmarked here', { kind: 'pos', on: true }), PL('Dark', { kind: 'pos', theme: 'dark' })] },
+      { title: 'Undo line · what each delete says', cells: [
+        TO('A highlight with a review card', 'Highlight deleted, and its review card with it.'),
+        TO('With a note and a card', 'Highlight, note and review card deleted.'),
+        TO('With a note', 'Highlight and its note deleted.'),
+        TO('A plain highlight', 'Highlight deleted.'),
+        TO('A note', 'Note deleted.'),
+        TO('A bookmark', 'Bookmark removed.'),
+        TO('Dark', 'Highlight deleted, and its review card with it.', 'dark'),
+        TO('Sepia', 'Bookmark removed.', 'sepia') ] },
+      { title: 'Signed out · the shared prompt, its noun changed', cells: [
+        SV('Bookmarks · a chapter', 'bookmarks', 'chapter'), SV('Highlights and notes · a chapter', 'highlights and notes', 'chapter'),
+        SV('Bookmarks · a plain document', 'bookmarks', 'document'), SV('Dark', 'highlights and notes', 'chapter', 'dark') ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

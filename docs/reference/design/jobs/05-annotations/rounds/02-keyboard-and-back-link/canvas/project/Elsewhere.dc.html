@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stand-in for another job's screen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ rootCls }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<div class="rd-away__main">
+<div class="rd-away__card">
+<p class="rd-away__kind">{{ kindLabel }}</p>
+<h1 class="rd-away__title">{{ heading }}</h1>
+<p class="rd-away__body">{{ body }}</p>
+<sc-if value="{{ hasWhere }}" hint-placeholder-val="{{ false }}"><p class="rd-away__body">{{ whereLead }} <b>{{ where }}</b></p></sc-if>
+<sc-if value="{{ isLegacy }}" hint-placeholder-val="{{ false }}"><div class="an-away-legacy"><dc-import name="LegacyBar" on="{{ legacyBm }}" member="{{ member }}" pct="38" on-toggle="{{ legacyToggle }}" on-sign-in="{{ legacySignIn }}" hint-size="100%,200px"></dc-import></div></sc-if>
+<div class="rd-away__actions">
+<sc-if value="{{ isSignin }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn rd-away__btn--main" onclick="{{ cont }}">Finish signing in</button></sc-if>
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn" onclick="{{ bookNotes }}">Notes in this book&nbsp;<span aria-hidden="true">→</span></button></sc-if>
+<button type="button" class="rd-away__btn" onclick="{{ back }}"><span aria-hidden="true">‹</span>&nbsp;{{ backLabel }}</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"where":{"editor":null},"detail":{"editor":null},"legacyTitle":{"editor":null},"from":{"editor":null},"onBack":{"editor":null},"onContinue":{"editor":null},"legacyBm":{"editor":null},"member":{"editor":null},"onLegacyBm":{"editor":null},"onSignIn":{"editor":null},"onBookNotes":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const kind = P.kind || 'signin';
+    const where = P.where || 'Knowledge System Internals: The Content Plane, the Write Path, and the Contracts · The write path';
+    const C = {
+      book: { k: 'Another job · book-page', h: 'Book page — another job', b: 'The book page for “' + (P.detail || 'The knowledge maintainer guide') + '” is drawn by the book-page job (07-book-page). Its chapter list opens each chapter here, in the reader, and its “Notes in this book →” opens this job’s list, whose back link returns here.', back: 'Back to the chapter' },
+      library: { k: 'Another job · library', h: 'Library — another job', b: 'The library is drawn by the library job. Every book and loose document opens from there.', back: 'Back to the reader' },
+      signin: { k: 'Another surface · auth, unchanged', h: 'Sign in — another surface', b: 'Signing in is the existing auth flow; this job does not change it.', back: 'Back, still signed out', wl: 'When it finishes, you come back to the same chapter and section:' },
+      legacy: { k: 'Another job · legacy-and-print', h: 'Legacy reader — another job', b: '“' + (P.legacyTitle || 'Datums: Chart Datum, Mean Sea Level, and the Conversions Between Them') + '” keeps its original layout. The legacy-and-print job draws how it opens.', back: 'Back to the chapter' },
+      external: { k: 'Outside the canvas', h: 'This link leaves the canvas', b: 'In the product it opens ' + (P.detail || 'https://www.sqlite.org/wal.html').replace(/^https:\/\//, '') + ' in a new tab, and the chapter stays open here.', back: 'Back to the chapter' },
+    }[kind];
+    const call = (name) => () => { const f = this.props[name]; if (f) f(); };
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [] }, g)) : [];
+    return {
+      bar, hasBar: bar.length > 0,
+      kindLabel: C.k, heading: C.h, body: C.b, backLabel: C.back,
+      hasWhere: kind === 'signin', whereLead: C.wl || '', where,
+      isSignin: kind === 'signin',
+      isLegacy: kind === 'legacy',
+      isBook: kind === 'book',
+      bookNotes: call('onBookNotes'),
+      legacyBm: !!P.legacyBm, member: P.member === undefined ? true : !!P.member,
+      legacyToggle: (on) => { if (P.onLegacyBm) P.onLegacyBm(on); },
+      legacySignIn: call('onSignIn'),
+      cont: call('onContinue'),
+      back: call('onBack'),
+      rootCls: P.fit === 'fill' ? 'rd-away' : 'rd-away rd-away--alone',
+    };
+  }
+}
+</script>
+</body>
+</html>

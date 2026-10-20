@@ -1,0 +1,184 @@
+{
+ "v": 3,
+ "title": "The library",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 4280,
+   "title": "01 · Page — Library (the flow)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Library.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 2470,
+   "title": "02 · Page — The member's library alone"
+  },
+  "PublicLibrary.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 1160,
+   "title": "03 · Page — Public library, /@quillwork (the flow)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Widths.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 3866,
+   "h": 1380,
+   "title": "04 · Page — The member's library at 390, 820, 1024 and 1440",
+   "is_interactive": true
+  },
+  "PublicWidths.dc.html": {
+   "x": 8506,
+   "y": 0,
+   "w": 3866,
+   "h": 1390,
+   "title": "05 · Page — The public library at 390, 820, 1024 and 1440",
+   "is_interactive": true
+  },
+  "Elsewhere.dc.html": {
+   "x": 12452,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "06 · Page — Stand-ins for other jobs' screens"
+  },
+  "ShellStates.dc.html": {
+   "x": 0,
+   "y": 4400,
+   "w": 3500,
+   "h": 3140,
+   "title": "07 · Component — App shell entry points"
+  },
+  "BookCardStates.dc.html": {
+   "x": 3580,
+   "y": 4400,
+   "w": 2160,
+   "h": 1728,
+   "title": "08 · Component — Book card"
+  },
+  "DocRowStates.dc.html": {
+   "x": 5820,
+   "y": 4400,
+   "w": 2056,
+   "h": 1212,
+   "title": "09 · Component — Loose document row"
+  },
+  "ContinueStates.dc.html": {
+   "x": 7956,
+   "y": 4400,
+   "w": 3304,
+   "h": 3034,
+   "title": "10 · Component — Continue reading"
+  },
+  "GroupingStates.dc.html": {
+   "x": 11340,
+   "y": 4400,
+   "w": 1300,
+   "h": 651,
+   "title": "11 · Component — Grouping control"
+  },
+  "ClearStates.dc.html": {
+   "x": 12720,
+   "y": 4400,
+   "w": 2272,
+   "h": 2745,
+   "title": "12 · Component — Clear all reading data"
+  },
+  "StateStates.dc.html": {
+   "x": 15072,
+   "y": 4400,
+   "w": 3304,
+   "h": 4480,
+   "title": "13 · Component — Loading, failed, empty and not found"
+  },
+  "BookCard.dc.html": {
+   "x": 0,
+   "y": 9000,
+   "w": 400,
+   "h": 196,
+   "title": "14 · Mounted part — Book card (one instance)"
+  },
+  "DocRow.dc.html": {
+   "x": 480,
+   "y": 9000,
+   "w": 480,
+   "h": 108,
+   "title": "15 · Mounted part — Loose document row (one instance)"
+  },
+  "ContinueReading.dc.html": {
+   "x": 1040,
+   "y": 9000,
+   "w": 1064,
+   "h": 321,
+   "title": "16 · Mounted part — Continue reading (one instance)"
+  },
+  "Grouping.dc.html": {
+   "x": 2184,
+   "y": 9000,
+   "w": 320,
+   "h": 90,
+   "title": "17 · Mounted part — Grouping control (one instance)"
+  },
+  "ClearAll.dc.html": {
+   "x": 2584,
+   "y": 9000,
+   "w": 720,
+   "h": 198,
+   "title": "18 · Mounted part — Clear all reading data (one instance)"
+  },
+  "LibraryState.dc.html": {
+   "x": 3384,
+   "y": 9000,
+   "w": 1064,
+   "h": 1171,
+   "title": "19 · Mounted part — Library states (one instance)"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Library.dc.html",
+  "PublicLibrary.dc.html",
+  "Widths.dc.html",
+  "PublicWidths.dc.html",
+  "Elsewhere.dc.html",
+  "ShellStates.dc.html",
+  "BookCardStates.dc.html",
+  "DocRowStates.dc.html",
+  "ContinueStates.dc.html",
+  "GroupingStates.dc.html",
+  "ClearStates.dc.html",
+  "StateStates.dc.html",
+  "BookCard.dc.html",
+  "DocRow.dc.html",
+  "ContinueReading.dc.html",
+  "Grouping.dc.html",
+  "ClearAll.dc.html",
+  "LibraryState.dc.html"
+ ],
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-20T03:43:01Z"
+ },
+ "notes": {},
+ "designSystems": [
+  {
+   "title": "knowledge",
+   "namespace": "kb",
+   "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+   "version": "1792321604-e214",
+   "copiedAt": "2026-10-20T03:43:01Z"
+  }
+ ]
+}

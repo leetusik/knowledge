@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Superseding design wave (A5): reader, annotations, library",
   "kind": "co-work",
-  "status": "pending",
+  "status": "done",
   "order": 10,
   "depends_on": [
     "P30.DECOMP"
   ],
   "created_at": "2026-10-21T00:14:38+09:00",
   "started_at": "2026-10-21T00:19:42+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-21T02:10:24+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Signed the A5 wave on the operator's words: 01-reader C07 compact bars and the 3:1 control edge, 05-annotations keyboard tab stops on highlights and the book-page back link, 06-library 3:1 control and ghost edges; wave choice C03 deferred as D48",
   "validation": {
     "required": [],
     "last_run": null,
@@ -30,10 +30,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "wave",
-    "on_words": "'accept' signs all three rounds as presented (design-sign) and the build continues at S2; anything else is feedback recorded verbatim, and a superseding round re-drafts that job",
-    "since": "2026-10-21T01:17:49+09:00"
   }
 }

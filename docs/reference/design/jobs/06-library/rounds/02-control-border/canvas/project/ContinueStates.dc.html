@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Continue reading</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Continue reading</p>
+<p class="lib-board__lead">The overall Continue reading: the four most recent positions, one per book and per loose document. The lead is one link whose top edge is the reader’s own progress line; the others are rows. Each names its chapter and book (or its document and project) and where you left off, and opens there. A finished chapter offers the next one; a finished book or document leaves; with nothing to continue, the section is not drawn.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="8"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="ContinueReading" items="{{ c.items }}" theme="{{ c.theme }}" width="{{ c.width }}" hint-size="1064px,340px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3304,"height":3034}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const T = DS.today;
+    const withT = (key, rec) => { const p = Object.assign({}, PR.default); p[key] = rec; return p; };
+    const S = [
+      ['Several, most recent first', L.continueItems(T, PR.default, 4), 1064],
+      ['One item', L.continueItems(T, PR.one, 4), 1064],
+      ['In 한국어 first', L.continueItems(T, PR.ko, 4), 1064],
+      ['Just finished a chapter · the next one is offered', L.continueItems(T, PR.next, 4), 1064],
+      ['A loose document first', L.continueItems(T, withT('doc:field-notes/sqlite-wal', { s: 'started', pct: 20, at: 'Checkpoints', t: 200 }), 4), 1064],
+      ['A legacy chapter first', L.continueItems(T, withT('orchard/maintainer-guide#harvest-runs', { s: 'started', pct: 60, t: 200 }), 4), 1064],
+      ['The longest real title, no section yet', L.continueItems(T, PR.long, 4), 1064],
+      ['Several, at phone width', L.continueItems(T, PR.default, 4), 390],
+    ];
+    const keyStates = [S[0], S[2], S[7]];
+    const row = (t, name, list) => ({ name, cells: list.map(([c, items, w]) => ({ cap: c, capStyle: cap(w), items, width: w, theme: t })) });
+    return { rows: [row('light', 'Light · every state', S), row('dark', 'Dark', keyStates), row('sepia', 'Sepia', keyStates)] };
+  }
+}
+</script>
+</body>
+</html>

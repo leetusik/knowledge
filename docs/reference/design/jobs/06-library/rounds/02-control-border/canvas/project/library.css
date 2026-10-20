@@ -1,0 +1,445 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200..900&display=swap");
+
+/* The library (job 06-library, round 01). Everything resolves to kb-* tokens.
+   - The sepia block and the reader's tags are copied verbatim from the signed reader
+     (jobs/01-reader/rounds/02-revise/canvas/project/reader.css).
+   - The app shell is recreated from the product's values (web/src/app/kb-console.css,
+     kb-console-responsive.css, kb-console-r4.css, components/app-shell/app-frame.css), with the
+     entry points this job adds and every nav target at 44 px (proposed; see result.md).
+   - Canvas-only chrome (state bar, foot strip, stand-ins, Components boards) is at the end. */
+
+/* ---------- Sepia: the reader's third theme (copied verbatim from the signed reader) ---------- */
+[data-theme="sepia"] {
+  --kb-paper: #efe2c5;
+  --kb-surface: #f6ecd6;
+  --kb-surface-sunken: #ecdcba;
+  --kb-border: #e0cda6;
+  --kb-border-strong: #cfb88c;
+  --kb-accent: #0c6159;
+  --kb-accent-strong: #08483f;
+  --kb-accent-soft: rgba(12, 97, 89, 0.15);
+  --kb-tag-bg: #e6dcbf;
+  --kb-tag-fg: #284d45;
+  --kb-ink: #382a1b;
+  --kb-secondary: #5f4d37;
+  --kb-hint: #8b785b;
+  --kb-status-active: #0c6159;
+  --kb-status-active-soft: rgba(12, 97, 89, 0.12);
+  --kb-status-active-ink: #08483f;
+  --kb-status-idle: #7d5c1d;
+  --kb-status-idle-soft: #eedcb4;
+  --kb-status-idle-ink: #614716;
+  --kb-status-revoked: #9a4535;
+  --kb-status-revoked-soft: #efd7c6;
+  --kb-status-revoked-ink: #833526;
+  --kb-scrim: rgba(56, 42, 27, 0.42);
+  --kb-shadow-raise: 0 0.6rem 1.4rem rgba(56, 42, 27, 0.14);
+  --kb-shadow-overlay: 0 1.4rem 3rem rgba(56, 42, 27, 0.24);
+}
+
+/* The label on a filled button: the system's rule (light #fbfaf5, dark #16130f), sepia as the reader's. */
+[data-theme="light"], .kb-app:not([data-theme]) { --lib-on-fill: #fbfaf5; }
+[data-theme="dark"] { --lib-on-fill: #16130f; }
+[data-theme="sepia"] { --lib-on-fill: #fbfaf5; }
+
+/* The control edge (round 02-control-border, C11): the resting boundary of a bordered control, at least 3:1 on
+   the page (kb-paper) and on the control's own fill (kb-surface) in light, dark and sepia. Library-scoped; it
+   resolves to the system's kb-hint and is declared wherever a theme is set, so it follows that theme.
+   Structural lines (rules, card and panel edges, dividers) keep kb-border and kb-border-strong. */
+:root, [data-theme] { --lib-control-edge: var(--kb-hint); }
+/* The shell's ghost buttons (critique 01, C01) rest on the topbar's kb-surface-sunken, where kb-hint is 2.97:1 in
+   light. Their edge takes their own label colour, kb-secondary (at least 5.96:1 on every ground they touch). */
+:root, [data-theme] { --lib-ghost-edge: var(--kb-secondary); }
+
+html, body { margin: 0; }
+
+/* ---------- The app shell ---------- */
+.kb-app {
+  /* The display face carries the reader's Korean serif ahead of the system's fallback (as in the reader). */
+  --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif;
+  --lib-ease: 0.15s ease;
+  container: kbapp / inline-size;
+  position: relative;
+  display: flex; flex-direction: column; min-height: 100vh;
+  box-sizing: border-box;
+  background: var(--kb-paper); color: var(--kb-ink);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.kb-app--stage { min-height: 100%; }
+.kb-app *, .kb-app *::before, .kb-app *::after { box-sizing: border-box; }
+.kb-app :is(a, button, summary, [tabindex]):focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.kb-app :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+.kb-skip { position: absolute; left: 0.6rem; top: -4rem; z-index: 60; display: inline-flex; align-items: center; min-height: var(--kb-tap); box-sizing: border-box; background: var(--kb-surface); border: 1px solid var(--kb-accent); border-radius: var(--kb-radius-sm); padding: 0.5rem 0.8rem; font-size: 0.85rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); text-decoration: none; }
+.kb-skip:focus { top: 0.6rem; }
+
+.kb-topbar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 0.85rem;
+  height: var(--kb-app-topbar-h); padding: 0 1.1rem;
+  background: var(--kb-surface-sunken); border-bottom: 1px solid var(--kb-border);
+}
+.kb-topbar__brand { display: inline-flex; align-items: center; gap: 0.5rem; min-height: var(--kb-tap); padding-inline: 0.3rem; border-radius: var(--kb-radius-sm); text-decoration: none; flex: none; }
+.kb-topbar__brand img { width: 22px; height: 22px; display: block; }
+.kb-topbar__word { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; letter-spacing: -0.01em; color: var(--kb-ink); }
+.kb-topbar__brand:hover .kb-topbar__word { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+.kb-topbar__divider { width: 1px; height: 1.3rem; background: var(--kb-border-strong); flex: none; }
+.kb-topbar__crumb { font-size: 0.86rem; color: var(--kb-secondary); white-space: nowrap; }
+.kb-topbar__crumb b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-topbar__spacer { flex: 1 1 auto; }
+/* Proposed: kb-secondary, not kb-hint (2.9–3.4:1 on the topbar). The canvas shows a name where the product shows the email. */
+.kb-topbar__user { font-family: var(--font-mono); font-size: 0.72rem; color: var(--kb-secondary); max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Console buttons (kb-appbtn values); every one at least 44 px tall (proposed, see result.md). */
+.kb-appbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: var(--kb-tap); padding: 0.5rem 0.9rem; border: 1px solid transparent; border-radius: var(--kb-radius-sm); font-family: var(--font-body); font-size: 0.85rem; font-weight: var(--kb-weight-semibold); line-height: 1.2; white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink); transition: color var(--lib-ease), background var(--lib-ease), border-color var(--lib-ease); }
+.kb-appbtn--ghost { border-color: var(--lib-ghost-edge); color: var(--kb-secondary); }
+.kb-appbtn--ghost:hover { border-color: var(--kb-ink); color: var(--kb-ink); }
+.kb-railtoggle { width: var(--kb-tap); padding: 0; flex: none; }
+.kb-railtoggle svg { display: block; }
+
+/* The phone account disclosure (round 03 §4.2): a native details. */
+.kb-account { position: relative; display: none; flex: none; }
+.kb-account > summary { list-style: none; cursor: pointer; display: grid; place-items: center; width: var(--kb-tap); height: var(--kb-tap); border-radius: 50%; }
+.kb-account > summary::-webkit-details-marker { display: none; }
+.kb-account__avatar { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--kb-accent-soft); color: var(--kb-accent-strong); font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; }
+.kb-account__menu { position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 50; min-width: 15rem; background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); box-shadow: var(--kb-shadow-overlay); padding: 0.85rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.kb-account__name { font-family: var(--font-mono); font-size: 0.72rem; color: var(--kb-ink); }
+.kb-account__org { font-size: 0.84rem; color: var(--kb-secondary); }
+.kb-account__org b { color: var(--kb-ink); }
+.kb-account__menu .kb-appbtn { width: 100%; margin-top: 0.5rem; }
+
+/* The phone bar and the 40–64rem strip: one nav, placed by container queries. */
+.kb-navbar { display: none; background: var(--kb-surface-sunken); }
+.kb-navbar__link { display: flex; align-items: center; justify-content: center; gap: 0.3rem; min-height: var(--kb-tap); text-decoration: none; color: var(--kb-secondary); font-size: 0.82rem; font-weight: var(--kb-weight-medium); transition: color var(--lib-ease), background var(--lib-ease), border-color var(--lib-ease); }
+.kb-navbar__link:hover { color: var(--kb-ink); background: var(--kb-surface); }
+.kb-navbar__link[aria-current="page"] { color: var(--kb-accent-strong); font-weight: var(--kb-weight-semibold); background: var(--kb-accent-soft); }
+.kb-navbar__row { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+.kb-navbar__sep { width: 1px; height: 1.3rem; background: var(--kb-border-strong); flex: none; margin-inline: 0.35rem; }
+
+/* The Review count (open question 11): counts.due, only above 0, "99+" above 99. */
+.kb-count { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: calc(3ch + 0.8em + 2px); padding: 0.08em 0.4em; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-pill); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--kb-ink); background: var(--kb-surface); }
+
+/* Zero due: the pill keeps its space so Review never changes width; the phone bar's equal columns drop it. */
+.kb-count.is-zero { visibility: hidden; }
+.kb-app-layout { flex: 1 1 auto; display: grid; grid-template-columns: var(--kb-app-rail-w) minmax(0, 1fr); }
+.kb-app-layout[data-rail="collapsed"], .kb-app-layout--norail { grid-template-columns: minmax(0, 1fr); }
+.kb-app-layout[data-rail="collapsed"] > .kb-rail { display: none; }
+.kb-app-main { container: kbmain / inline-size; min-width: 0; padding: 1.6rem 1.7rem 2.2rem; }
+.kb-app--public .kb-app-main { max-width: var(--kb-app-max-w); margin-inline: auto; width: 100%; }
+
+.kb-rail { background: var(--kb-paper); border-right: 1px solid var(--kb-border); padding: 1.3rem 0.85rem; display: flex; flex-direction: column; gap: var(--kb-space-lg); }
+.kb-rail__sec { display: flex; flex-direction: column; }
+/* The rail's eyebrow (kb-app-eyebrow values) in kb-secondary, which the README allows; kb-hint fails as text. */
+.kb-rail__head { margin: 0 0.55rem 0.5rem; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.kb-rail__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.kb-rail__link { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: var(--kb-tap); padding: 0.48rem 0.6rem; border-radius: var(--kb-radius-sm); border-left: 2px solid transparent; font-size: 0.9rem; color: var(--kb-secondary); text-decoration: none; transition: color var(--lib-ease), background var(--lib-ease), border-color var(--lib-ease); }
+.kb-rail__link:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.kb-rail__link[aria-current="page"] { color: var(--kb-accent-strong); font-weight: var(--kb-weight-semibold); border-left-color: var(--kb-accent); background: var(--kb-accent-soft); }
+
+/* Phone (< 40rem) */
+@container kbapp (width < 40rem) {
+  .kb-app-layout { grid-template-columns: minmax(0, 1fr); order: 1; }
+  .kb-app-layout > .kb-rail { display: none; }
+  .kb-railtoggle { display: none; }
+  .kb-topbar { padding: 0 var(--kb-app-gutter-phone); gap: 0.6rem; }
+  .kb-topbar__divider, .kb-topbar__crumb, .kb-topbar__user, .kb-topbar__signout { display: none; }
+  .kb-account { display: block; }
+  .kb-app-main { padding: 1.1rem var(--kb-app-gutter-phone) 1.6rem; }
+  /* Five equal columns; with larger text, when the labels no longer fit one row, the bar wraps to a second row
+     rather than scroll sideways or cut a label. */
+  .kb-navbar { display: flex; flex-wrap: wrap; order: 2; position: sticky; bottom: 0; z-index: 30; border-top: 1px solid var(--kb-border); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .kb-navbar__link { flex: 1 1 0; min-width: min-content; flex-direction: column; gap: 0.15rem; min-height: var(--kb-app-navbar-h); padding: 0.45rem 0.1rem; border-top: 2px solid transparent; }
+  .kb-navbar__link[aria-current="page"] { border-top-color: var(--kb-accent); }
+  .kb-navbar__sep { display: none; }
+  .kb-count.is-zero { display: none; }
+  .kb-app--public .kb-topbar { padding: 0 var(--kb-app-gutter-phone); }
+}
+/* Tablet (40–64rem): the strip under the topbar */
+@container kbapp (width >= 40rem) and (width < 64rem) {
+  .kb-app-layout { grid-template-columns: minmax(0, 1fr); }
+  .kb-app-layout > .kb-rail { display: none; }
+  .kb-railtoggle { display: none; }
+  .kb-topbar { padding: 0 1.4rem; }
+  .kb-topbar__user { max-width: 11rem; }
+  .kb-navbar { display: flex; align-items: center; flex-wrap: wrap; position: sticky; top: var(--kb-app-topbar-h); z-index: 20; gap: 0.25rem; padding: 0.4rem 1.4rem; border-bottom: 1px solid var(--kb-border); }
+  .kb-navbar__link { padding: 0.45rem 0.85rem; border-radius: var(--kb-radius-sm); }
+  .kb-app-main { padding: 1.35rem 1.4rem 2.2rem; }
+}
+@container kbapp (width >= 90rem) {
+  .kb-app-main { padding: 2rem var(--kb-app-gutter-wide) 3rem; max-width: var(--kb-app-max-w); margin-inline: auto; width: 100%; }
+}
+
+/* ---------- Buttons in the content (the reader's signed button values) ---------- */
+.lib-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: var(--kb-tap); padding: 0.55rem 1rem;
+  border: 1px solid transparent; border-radius: var(--kb-radius-sm);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2;
+  white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink);
+  transition: color var(--lib-ease), background var(--lib-ease), border-color var(--lib-ease);
+}
+.lib-btn--primary { background: var(--kb-accent); color: var(--lib-on-fill); }
+.lib-btn--primary:hover { background: var(--kb-accent-strong); }
+.lib-btn--secondary { background: var(--kb-surface); border-color: var(--lib-control-edge); color: var(--kb-ink); }
+.lib-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.lib-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
+.lib-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.lib-btn--danger { background: var(--kb-status-revoked); color: var(--lib-on-fill); }
+.lib-btn--danger:hover { background: var(--kb-status-revoked-ink); }
+.lib-btn:active { transform: translateY(1px); }
+.lib-btn:disabled { cursor: not-allowed; color: var(--kb-secondary); background: var(--kb-surface-sunken); border-color: var(--kb-border); }
+.lib-btn[aria-busy="true"] { cursor: progress; }
+/* A busy button keeps its rest width: both labels share one grid cell, one hidden. */
+.lib-btn__labels { display: inline-grid; }
+.lib-btn__labels > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.lib-btn__labels > .is-off { visibility: hidden; }
+.lib-spin { width: 0.85em; height: 0.85em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: lib-spin 0.8s linear infinite; flex: none; }
+@keyframes lib-spin { to { transform: rotate(360deg); } }
+/* A text link that moves you on */
+.lib-link { color: var(--kb-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--kb-accent) 55%, transparent); text-underline-offset: 0.18em; text-decoration-thickness: 1px; font-weight: var(--kb-weight-semibold); }
+.lib-link:hover { color: var(--kb-accent-strong); text-decoration-thickness: 2px; text-decoration-color: currentColor; }
+
+/* ---------- The reader's tags (copied verbatim from the signed reader) ---------- */
+.rd-tag {
+  display: inline-flex; align-items: center; flex: none; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--kb-status-idle-ink); background: var(--kb-status-idle-soft); border-radius: var(--kb-radius-sm); padding: 0.2em 0.5em;
+}
+.rd-tag--accent { color: var(--kb-accent-strong); background: var(--kb-accent-soft); }
+.rd-tag--plain { color: var(--kb-secondary); background: var(--kb-surface-sunken); }
+
+/* ---------- The library page ---------- */
+.lib { width: 100%; max-width: var(--kb-app-read-w); margin-inline: auto; display: flex; flex-direction: column; gap: var(--kb-space-xl); }
+.lib-head { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.lib-title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: clamp(1.35rem, 1.05rem + 1.6cqi, 1.65rem); line-height: var(--kb-leading-display); letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); }
+.lib-sub { margin: 0; font-size: 0.9375rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.lib-note { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 40rem; text-wrap: pretty; }
+.lib-sec { display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.lib-sec__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-sm) var(--kb-space-md); padding-bottom: var(--kb-space-sm); border-bottom: 1px solid var(--kb-border); min-height: calc(var(--kb-tap) + var(--kb-space-sm)); }
+.lib-h2 { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; line-height: var(--kb-leading-heading); color: var(--kb-ink); }
+
+/* Mono label: the system's eyebrow, in kb-secondary */
+.lib-label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+
+/* Continue reading */
+.lib-cont { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kb-space-md); }
+/* From 60rem the lead keeps the 3fr column whether there is one item or several, so a lone lead never stretches
+   across the page (as a lone book card keeps its column width). */
+@container kbmain (width >= 60rem) { .lib-cont { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
+.lib-lead {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: var(--kb-space-sm);
+  padding: calc(var(--kb-space-lg) + 3px) var(--kb-space-lg) var(--kb-space-lg);
+  background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
+  color: var(--kb-ink); text-decoration: none;
+  transition: border-color var(--lib-ease), box-shadow var(--lib-ease);
+}
+.lib-lead:hover { border-color: var(--kb-border-strong); box-shadow: var(--kb-shadow-hover); }
+.lib-lead:hover .lib-lead__go { background: var(--kb-accent-strong); }
+/* The reader's progress line, as the lead's top edge */
+.lib-lead__line { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--kb-border); }
+.lib-lead__fill { display: block; height: 100%; background: var(--kb-accent); }
+.lib-bookline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.6rem; min-width: 0; }
+.lib-bookline__book { font-size: 0.9375rem; color: var(--kb-secondary); overflow-wrap: anywhere; }
+.lib-lead__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: clamp(1.35rem, 1.05rem + 1.6cqi, 1.65rem); line-height: 1.15; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.lib-lead__place { margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-secondary); font-variant-numeric: tabular-nums; text-wrap: pretty; }
+.lib-lead__place b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.lib-lead__go { align-self: flex-start; margin-top: var(--kb-space-xs); pointer-events: none; }
+
+/* Rows: the other Continue items and loose documents */
+.lib-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.lib-rows > li { border-bottom: 1px solid var(--kb-border); }
+.lib-row { display: flex; flex-direction: column; gap: 0.25rem; min-height: var(--kb-tap); padding: 0.75rem 0.5rem; color: var(--kb-ink); text-decoration: none; transition: background var(--lib-ease); }
+.lib-row:hover { background: var(--kb-surface-sunken); }
+.lib-row:hover .lib-row__title { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+.lib-row__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; color: var(--kb-ink); overflow-wrap: break-word; text-wrap: pretty; }
+.lib-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.lib-row__meta b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.lib-dot { color: var(--kb-secondary); }
+
+/* Books and documents */
+.lib-groups { display: flex; flex-direction: column; gap: var(--kb-space-xl); }
+.lib-group { display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.lib-group__head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.75rem; }
+/* A shelf label: mono, uppercase, ink */
+.lib-group__name { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-ink); overflow-wrap: anywhere; }
+.lib-group__count { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.lib-books { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr)); gap: var(--kb-space-md); }
+.lib-books > li { display: flex; min-width: 0; }
+.lib-books > li > .sc-host { display: flex; flex: 1 1 auto; min-width: 0; }
+.lib-more { align-self: flex-start; }
+/* Show all / Show fewer: the width of the longer label is kept, and both labels start at the same left edge. */
+.lib-more .lib-btn__labels > span { justify-content: flex-start; }
+.lib-foot { margin: 0; font-size: 0.9375rem; color: var(--kb-secondary); }
+
+/* Book card */
+.lib-book {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--kb-space-sm);
+  padding: var(--kb-space-md) 1.1rem 1.1rem;
+  background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
+  color: var(--kb-ink); text-decoration: none;
+  transition: border-color var(--lib-ease), box-shadow var(--lib-ease);
+}
+.lib-book:hover { border-color: var(--kb-border-strong); box-shadow: var(--kb-shadow-hover); }
+.lib-book:hover .lib-book__title { text-decoration: underline; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+.lib-book__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; line-height: var(--kb-leading-heading); color: var(--kb-ink); overflow-wrap: break-word; text-wrap: pretty; }
+.lib-book__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; font-size: 0.8125rem; color: var(--kb-secondary); }
+.lib-book__prog { margin-top: auto; padding-top: var(--kb-space-xs); display: flex; flex-direction: column; gap: 0.45rem; }
+.lib-book__count { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.lib-bar { display: block; height: 3px; border-radius: 2px; background: var(--kb-border); overflow: hidden; }
+.lib-bar__fill { display: block; height: 100%; background: var(--kb-accent); }
+
+/* Grouping control (the reader's language switch, as signed) */
+.lib-seg { display: inline-flex; align-items: stretch; gap: 1px; padding: 1px; border: 1px solid var(--lib-control-edge); border-radius: var(--kb-radius-sm); background: var(--kb-surface); }
+.lib-seg__opt { min-height: var(--kb-tap); padding-inline: 0.85rem; border: 0; border-radius: calc(var(--kb-radius-sm) - 1px); background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); white-space: nowrap; cursor: pointer; transition: color var(--lib-ease), background var(--lib-ease); }
+.lib-seg__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+/* Pressed: a fill and an inset ring, so the state is a shape as well as a colour */
+.lib-seg__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); box-shadow: inset 0 0 0 1px var(--kb-accent); }
+/* On the phone the two options share the width; with larger text a label wraps inside its option instead of
+   pushing the control past the edge. */
+@container kbmain (width < 40rem) { .lib-sec__head > .sc-host, .lib-sec__head > .lib-seg { flex: 1 1 100%; } .lib-seg { display: flex; } .lib-seg__opt { flex: 1 1 0; min-width: 0; padding-inline: 0.6rem; white-space: normal; line-height: 1.2; text-wrap: balance; } }
+
+/* Panels: empty states and the clear */
+.lib-panel { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); padding: var(--kb-space-lg); background: var(--kb-surface); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); }
+.lib-panel__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; line-height: 1.3; color: var(--kb-ink); }
+.lib-panel__body { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 38rem; text-wrap: pretty; }
+
+/* Clear all reading data */
+.lib-data { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); padding-top: var(--kb-space-lg); border-top: 1px solid var(--kb-border); }
+.lib-data__lead { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 38rem; text-wrap: pretty; }
+.lib-data__done { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.6rem; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-ink); max-width: 38rem; }
+.lib-confirm { align-self: stretch; max-width: 36rem; display: flex; flex-direction: column; gap: var(--kb-space-sm); padding: var(--kb-space-md) var(--kb-space-lg) var(--kb-space-lg); background: var(--kb-surface); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); }
+.lib-confirm__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.15rem; line-height: 1.3; color: var(--kb-ink); }
+.lib-confirm__text { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-ink); }
+.lib-confirm__list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-ink); }
+.lib-confirm__list li::marker { color: var(--kb-secondary); }
+.lib-confirm__keep { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); }
+.lib-confirm__error { margin: 0; padding: var(--kb-space-sm) var(--kb-space-md); border-radius: var(--kb-radius-sm); background: var(--kb-status-revoked-soft); color: var(--kb-status-revoked-ink); font-size: 0.9375rem; line-height: 1.45; }
+.lib-confirm__error b { font-weight: var(--kb-weight-semibold); }
+.lib-confirm__actions { display: flex; flex-wrap: wrap; gap: var(--kb-space-sm); margin-top: var(--kb-space-xs); }
+.lib-ref { margin: 0; font-family: var(--font-mono); font-size: 0.8125rem; color: var(--kb-secondary); }
+@container kbmain (width < 40rem) { .lib-confirm { padding: var(--kb-space-md); } .lib-confirm__actions { flex-direction: column-reverse; align-items: stretch; } .lib-confirm__actions > .lib-btn { width: 100%; } }
+
+/* Loading: a skeleton that mirrors the page at its width (the product's kb-skel) */
+.lib-skel { display: block; background: linear-gradient(90deg, var(--kb-surface-sunken) 25%, var(--kb-border) 50%, var(--kb-surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--kb-radius-sm); animation: lib-skel 1.4s ease-in-out infinite; }
+@keyframes lib-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.lib-sk__title { height: 1.65rem; width: 9rem; }
+.lib-sk__sub { height: 0.9rem; width: 12rem; }
+.lib-sk__h2 { height: 1.15rem; width: 11rem; }
+.lib-sk__lead { height: 12.5rem; border-radius: var(--kb-radius); }
+.lib-sk__rows { display: flex; flex-direction: column; border-top: 1px solid var(--kb-border); }
+.lib-sk__row { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.8rem 0.5rem; border-bottom: 1px solid var(--kb-border); }
+.lib-sk__l1 { height: 0.7rem; width: 45%; }
+.lib-sk__l2 { height: 0.9rem; width: 85%; }
+.lib-sk__l3 { height: 0.7rem; width: 35%; }
+.lib-sk__seg { height: var(--kb-tap); width: 15rem; border-radius: var(--kb-radius-sm); }
+.lib-sk__shelf { height: 0.75rem; width: 7rem; }
+.lib-sk__card { height: 8.5rem; border-radius: var(--kb-radius); flex: 1 1 auto; }
+@container kbmain (width < 40rem) { .lib-sk__seg { width: 100%; } .lib-sk__card { height: 7.5rem; } .lib-sk__lead { height: 14rem; } }
+
+/* Editorial: errors and not found (the reader's signed values) */
+.lib-ed { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--kb-space-sm); padding: clamp(2.5rem, 1rem + 8cqi, 5.5rem) 1.2rem; }
+.lib-ed__code { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--kb-secondary); }
+.lib-ed__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: clamp(1.5rem, 1.1rem + 2cqi, 2.2rem); line-height: var(--kb-leading-display); letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; }
+.lib-ed__sub { margin: 0; font-size: 0.9375rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); max-width: 30rem; text-wrap: pretty; }
+.lib-ed__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--kb-space-sm); margin-top: var(--kb-space-sm); }
+.lib-ed__ref { margin: var(--kb-space-md) 0 0; font-family: var(--font-mono); font-size: 0.8125rem; color: var(--kb-secondary); }
+@container kbmain (width < 40rem) { .lib-ed__actions { flex-direction: column; align-self: stretch; } .lib-ed__actions > .lib-btn { width: 100%; } }
+@container kbmain (width < 40rem) { .lib-btn { white-space: normal; text-align: center; max-width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-skel, .lib-spin { animation: none; }
+  .kb-app *, .kb-app *::before, .kb-app *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
+}
+
+/* ---------- Canvas-only prototype chrome (never built; copied from the signed reader) ---------- */
+[data-proto="state-bar"] {
+  display: grid; padding: 6px 12px; background: #ececea; border-bottom: 1px dashed #8a8a86; color: #2b2b2b;
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+[data-proto="state-bar"] .pb-cell { display: grid; }
+[data-proto="state-bar"] .pb-group { grid-area: 1 / 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+[data-proto="state-bar"] .pb-group.is-off { visibility: hidden; }
+[data-proto="state-bar"] .pb-cap { color: #444; }
+[data-proto="state-bar"] .pb-name { font-weight: 700; color: #1d1d1d; margin-right: 4px; }
+[data-proto="state-bar"] .pb-note { color: #444; font-style: italic; }
+[data-proto="state-bar"] .pb-foot.is-hidden { visibility: hidden; }
+[data-proto="state-bar"] .pb-sep { color: #666; }
+[data-proto="state-bar"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 7px; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; }
+/* Every preset is as wide as its bold (pressed) label, so pressing one never re-wraps the bar or moves the page */
+[data-proto="state-bar"] button::after { content: attr(data-label); content: attr(data-label) / ""; font-weight: 700; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+[data-proto="state-bar"] button:hover { background: #fff; }
+[data-proto="state-bar"] button[aria-pressed="true"] { font-weight: 700; background: #fff; border-color: #3a3a38; }
+[data-proto="state-bar"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+[data-proto="screens"] {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 6px 12px; background: #ececea; border-top: 1px dashed #8a8a86; color: #2b2b2b;
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+[data-proto="screens"] a { color: #1d1d1d; text-decoration: underline; }
+[data-proto="screens"] a:hover { text-decoration-thickness: 2px; }
+
+/* The flow board's shell (canvas only) */
+.lib-proto { display: flex; flex-direction: column; min-height: 100vh; background: #f4f3ef; }
+.lib-proto__stage { flex: 1 1 auto; display: flex; flex-direction: column; }
+.lib-proto__stage > .sc-host { flex: 1 1 auto; display: flex; flex-direction: column; }
+.lib-proto__stage > .sc-host > .kb-app, .lib-proto__stage > .sc-host > .rd-away { flex: 1 1 auto; min-height: 0; }
+/* At phone width the shell fills the window as the product's does, so the bottom bar rests at the foot of the
+   window in a short state too (the canvas foot strip sits below it). */
+@media (max-width: 39.99rem) { .lib-proto__stage > .sc-host > .kb-app { min-height: 100vh; } }
+
+/* The stand-ins for other jobs' screens (canvas only; copied from the signed reader) */
+.rd-away { display: flex; flex-direction: column; min-height: 100vh; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+.rd-away--stage { min-height: 100%; }
+.rd-away__main { flex: 1 0 auto; display: grid; place-items: center; padding: 2rem 1.2rem; }
+.rd-away__card { display: flex; flex-direction: column; gap: 12px; max-width: 34rem; width: 100%; padding: 28px; border: 1px dashed #8a8a86; border-radius: 6px; background: #fbfaf7; box-sizing: border-box; }
+.rd-away__kind { margin: 0; font: 600 12px/1.3 ui-monospace, "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #4f4a42; }
+.rd-away__title { margin: 0; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1.2; color: #26211c; text-wrap: balance; }
+.rd-away__body { margin: 0; font-size: 16px; line-height: 1.5; color: #3d362d; overflow-wrap: break-word; }
+.rd-away__body b { color: #26211c; }
+.rd-away__body :lang(ko), .rd-away__body:lang(ko) { word-break: keep-all; }
+.rd-away__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.rd-away__btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 4px; border: 1px solid #8a8a86; background: #fff; color: #26211c; font: 600 15px/1.2 "Source Sans 3", system-ui, sans-serif; cursor: pointer; }
+.rd-away__btn:hover { border-color: #26211c; }
+.rd-away__btn--main { background: #26211c; border-color: #26211c; color: #fbfaf7; }
+.rd-away__btn--main:hover { background: #000; }
+.rd-away__btn:focus-visible { outline: 2px solid #26211c; outline-offset: 2px; }
+
+/* ---------- Components boards and the widths sheet (canvas only) ---------- */
+.lib-board { box-sizing: border-box; min-height: 100vh; padding: 32px; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; display: flex; flex-direction: column; gap: 28px; }
+.lib-board__head { display: flex; flex-direction: column; gap: 4px; }
+.lib-board__title { margin: 0; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 22px; color: #26211c; }
+.lib-board__lead { margin: 0; font-size: 14px; color: #4f4a42; max-width: 60rem; line-height: 1.45; }
+.lib-board__group { display: flex; flex-direction: column; gap: 12px; }
+.lib-board__rowtitle { margin: 0; font: 700 12px/1.3 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #4f4a42; }
+.lib-board__row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.lib-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lib-cap { margin: 0; font-size: 13px; font-weight: 600; color: #3d362d; max-width: 30rem; }
+.lib-ground { box-sizing: border-box; padding: 20px; border-radius: 6px; border: 1px solid #d8ccb3; background: var(--kb-paper); color: var(--kb-ink); font-family: var(--font-body); container: kbmain / inline-size; display: flex; flex-direction: column; }
+.lib-ground > .sc-host { display: flex; flex-direction: column; }
+.lib-ground :is(a, button, summary, [tabindex]):focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.lib-ground :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.lib-ground { --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif; --lib-ease: 0.15s ease; }
+.lib-ground *, .lib-ground *::before, .lib-ground *::after { box-sizing: border-box; }
+.lib-stage { position: relative; overflow: auto; border: 1px solid #d8ccb3; border-radius: 6px; background: #f4f3ef; }
+.lib-stage > .sc-host { height: 100%; }
+.lib-widths { display: flex; flex-direction: column; min-height: 100vh; background: #f4f3ef; }
+.lib-widths__body { display: flex; flex-direction: column; gap: 20px; padding: 28px 32px 32px; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+.lib-widths__row { display: flex; gap: 40px; align-items: flex-start; }
+
+/* A mounted part passes its root through (the importer lays it out) */
+.lib-pass { display: contents; }
+.lib-row__book { font-size: 0.8125rem; color: var(--kb-secondary); overflow-wrap: anywhere; }
+.kb-rail > nav { display: flex; flex-direction: column; gap: var(--kb-space-lg); }
+.kb-topbar__signin { flex: none; }
+@container kbapp (width < 40rem) { .kb-navbar__row { flex-wrap: wrap; justify-content: center; } }
+.lib-stage--phone { width: 390px; height: 844px; }
+.lib-stage--ipad { width: 820px; height: 1180px; }
+.lib-stage--land { width: 1024px; height: 768px; }
+.lib-stage--desk { width: 1440px; height: 900px; }
+.lib-stage--crop { width: 1100px; height: 360px; }
+.lib-stage--fade { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent); }
+
+/* A link standing alone under a panel's text: a 44px target, the text still where it was. */
+.lib-link--solo { display: inline-flex; align-items: center; gap: 0.3em; min-height: var(--kb-tap); align-self: flex-start; margin-block: calc(var(--kb-space-sm) * -1); }

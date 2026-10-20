@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Selection bar — the action beside a selection</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-box an-box--bar" role="toolbar" aria-label="{{ label }}" onmousedown="{{ hold }}">
+<sc-if value="{{ isPassage }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ clipped }}" hint-placeholder-val="{{ false }}"><p class="an-box__msg">Highlights stay inside one section, so this one stops at the end of <b lang="{{ secLang }}">{{ secTitle }}</b>.</p></sc-if><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" onclick="{{ highlight }}">Highlight</button><span class="an-place__sep" aria-hidden="true"></span><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" onclick="{{ note }}">Add note</button></sc-if>
+<sc-if value="{{ isBlock }}" hint-placeholder-val="{{ false }}"><p class="an-box__msg">{{ secWord }} · <b lang="{{ secLang }}">{{ secTitle }}</b></p><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" onclick="{{ blockNote }}">Add note</button><span class="an-place__sep" aria-hidden="true"></span><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" aria-pressed="{{ bmOn }}" onclick="{{ bookmark }}"><span class="an-btn-w"><span aria-hidden="{{ bmOff }}">Bookmarked</span><span aria-hidden="{{ bmOn }}">Bookmark</span></span></button></sc-if>
+<sc-if value="{{ isRefuse }}" hint-placeholder-val="{{ false }}"><p class="an-box__msg an-box__msg--only">Highlights start at the first section.</p></sc-if>
+<sc-if value="{{ isNone }}" hint-placeholder-val="{{ false }}"><p class="an-box__msg">Highlights are not available in this document.</p><button type="button" class="rd-btn rd-btn--quiet an-bar__btn" aria-pressed="{{ posOn }}" onclick="{{ bookmarkPos }}"><span class="an-btn-w"><span aria-hidden="{{ posOff }}">Bookmarked here</span><span aria-hidden="{{ posOn }}">Bookmark this position</span></span></button></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":null},"clipped":{"editor":null},"secTitle":{"editor":null},"secLang":{"editor":null},"secWord":{"editor":null},"bmOn":{"editor":null},"posOn":{"editor":null},"onHighlight":{"editor":null},"onNote":{"editor":null},"onBlockNote":{"editor":null},"onBookmark":{"editor":null},"onBookmarkPos":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":120}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  /* The bar never takes the selection away: pressing it keeps the text selected. */
+  hold = (e) => { if (e.target.closest('button')) e.preventDefault(); };
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const mode = P.mode || 'passage';
+    const bmOn = !!P.bmOn, posOn = !!P.posOn;
+    return {
+      label: mode === 'passage' ? 'Selected text' : mode === 'block' ? 'This ' + (P.secWord || 'Section').toLowerCase() : 'Selected text',
+      isPassage: mode === 'passage', isBlock: mode === 'block', isRefuse: mode === 'refuse', isNone: mode === 'none',
+      clipped: !!P.clipped,
+      secTitle: P.secTitle || 'The write path', secLang: P.secLang || 'en', secWord: P.secWord || 'Section',
+      bmOn, bmOff: !bmOn, posOn, posOff: !posOn,
+      hold: this.hold,
+      highlight: this.call('onHighlight'), note: this.call('onNote'), blockNote: this.call('onBlockNote'),
+      bookmark: this.call('onBookmark'), bookmarkPos: this.call('onBookmarkPos'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

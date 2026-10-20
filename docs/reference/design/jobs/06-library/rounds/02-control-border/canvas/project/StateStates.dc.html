@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loading, failed, empty and not found</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Loading, failed, empty and not found</p>
+<p class="lib-board__lead">Each frame is the page’s content column at that width (20 px of board padding around it). Loading is a skeleton that mirrors the page at that width, the phone’s card blocks included, and is still under reduced motion. Failed and not found are the reader’s editorial states; the shell stays around them. The three public misses (nothing public, an unknown org, a private project’s address) are one constant 404, so nothing private is revealed.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="9"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="LibraryState" kind="{{ c.kind }}" route="{{ c.route }}" signed-in="{{ c.signedIn }}" theme="{{ c.theme }}" width="{{ c.width }}" hint-size="1064px,600px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3304,"height":4480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const S = [
+      ['Loading · desktop, the 1024 px column at 1440', 'loading', 'library', true, 1064],
+      ['Loading · iPad portrait, the 775 px column at 820', 'loading', 'library', true, 815],
+      ['Loading · phone, the 356 px column at 390', 'loading', 'library', true, 396],
+      ['Loading · the public library, the 1024 px column at 1440', 'loading', 'public', false, 1064],
+      ['Failed to load', 'failed', 'library', true, 1064],
+      ['Empty library (under the Library heading)', 'empty', 'library', true, 1064],
+      ['Not found · signed out (all three public misses)', 'notfound', 'public', false, 1064],
+      ['Not found · signed in', 'notfound', 'public', true, 1064],
+      ['A member: nothing public yet (under the org heading)', 'nothingpublic', 'public', true, 1064],
+    ];
+    const keyStates = [S[0], S[4], S[6]];
+    const row = (t, name, list) => ({ name, cells: list.map(([c, k, r, si, w]) => ({ cap: c, capStyle: cap(w), kind: k, route: r, signedIn: si, width: w, theme: t })) });
+    return { rows: [row('light', 'Light · every state', S), row('dark', 'Dark', keyStates), row('sepia', 'Sepia', keyStates)] };
+  }
+}
+</script>
+</body>
+</html>

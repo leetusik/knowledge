@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Bookmark on a legacy chapter</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Bookmark on a legacy chapter</p>
+<p class="rd-board__lead">A legacy chapter keeps its own layout; legacy-and-print (P29.S6) draws its reader and its bar. This job adds one control to that bar: Bookmark this position, as in a plain Markdown document. The dashed bar and the grey notes are stand-ins; only the button and the line “Highlights are not available in this document.” are this job’s.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="LegacyBar" on="{{ c.on }}" member="{{ c.member }}" save="{{ c.save }}" pct="38" theme="{{ c.theme }}" hint-size="100%,200px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1900,"height":992}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const L = (cap, o) => cell(cap, 560, Object.assign({ on: false, member: true, save: false }, o));
+    const rows = [
+      { title: 'Signed in', cells: [L('Not bookmarked'), L('Bookmarked here', { on: true }), L('Dark', { theme: 'dark', on: true })] },
+      { title: 'Signed out', cells: [L('After pressing Bookmark this position', { member: false, save: true })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
