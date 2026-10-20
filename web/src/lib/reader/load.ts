@@ -20,6 +20,7 @@
  */
 import "server-only";
 
+import { cache } from "react";
 import { notFound } from "next/navigation";
 
 import { SITE } from "@/content";
@@ -27,10 +28,18 @@ import {
   getBook,
   getDocument,
   getDocumentVersion,
+  getDocumentVersions,
   resolveDocument,
 } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
-import { getReaderBook, type KbReaderBook } from "@/lib/knowledge/reader";
+import {
+  docStem,
+  getReaderBook,
+  getReaderChapter,
+  getReaderDoc,
+  type KbReaderBook,
+  type KbVariantState,
+} from "@/lib/knowledge/reader";
 import type {
   KbAsset,
   KbBook,
@@ -45,15 +54,18 @@ import {
   type DocRef,
 } from "@/lib/native";
 import { plainText } from "@/lib/native/parse";
-import type { ReaderSettings } from "@/lib/reader-cookie";
+import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
 import type {
   ChapterRow,
   ReaderHeading,
   ReaderLanguage,
+  ReaderProgress,
+  ReaderVersions,
   ReaderView,
   TranslationSource,
+  VersionRow,
 } from "./types";
 
 /** The most `chapter:` / `doc:` targets one page resolves; past it a link stays "missing". */
@@ -250,6 +262,86 @@ function toBody(
   };
 }
 
+// --- progress, versions, the next chapter's lede (P30.S15) --------------------------
+
+/**
+ * A member's saved progress from the variant read. `resume` is offered on the newest
+ * version only, and only when it has a place to return to: a mapped section, or a
+ * fraction past the very top. A chapter marked unread was reset to the top
+ * (`block_id: null`, fraction 0), so it has none and opens at the top. (The pill is
+ * for a STARTED chapter; a finished one is landed only by a language switch's link.)
+ */
+function progressOf(
+  state: KbVariantState | null,
+  onNewest: boolean,
+): ReaderProgress {
+  if (!state) {
+    return {
+      state: "unopened",
+      finishedVersion: null,
+      maxFraction: 0,
+      resume: null,
+    };
+  }
+  const r = state.resume;
+  const hasPlace = !!r && (r.block_id !== null || r.fraction > 0.01);
+  return {
+    state: state.chapter.state,
+    finishedVersion: state.chapter.finished_version,
+    maxFraction: state.position?.max_fraction ?? 0,
+    resume:
+      onNewest && r && hasPlace
+        ? { block: r.block_id, fraction: r.fraction }
+        : null,
+  };
+}
+
+/**
+ * The Version history sheet's rows (§14): the live version first, then the superseded
+ * ones newest first. The index does not carry an archived version's `translated_from`,
+ * so "Translated from English v1" is shown on the current row only. `ok: false` is the
+ * sheet's own "Unavailable" state: a fault here never takes down the chapter.
+ */
+async function loadVersions(
+  token: string | undefined,
+  doc: KbDocument,
+  lang: string,
+  from: { lang: string; version: number } | null,
+): Promise<ReaderVersions> {
+  const label = languageName(lang);
+  const current: VersionRow = {
+    n: doc.version,
+    date: doc.date,
+    from: from
+      ? { label: languageName(from.lang), version: from.version }
+      : null,
+  };
+  if (doc.version <= 1) return { ok: true, label, rows: [current] };
+  try {
+    const page = await getDocumentVersions(token, doc.id);
+    const older: VersionRow[] = [...page.versions]
+      .sort((a, b) => b.version - a.version)
+      .map((v) => ({ n: v.version, date: v.date, from: null }));
+    return { ok: true, label, rows: [current, ...older] };
+  } catch {
+    return { ok: false, label, rows: [] };
+  }
+}
+
+/** The next chapter's lede (its native header's `summary`), or null; never fails the page. */
+async function nextSummary(
+  token: string | undefined,
+  docId: number,
+): Promise<string | null> {
+  try {
+    const doc = await getDocument(token, docId);
+    if (doc.format !== "native" || !doc.source) return null;
+    return validateChapter(doc.source, "native").tree.summary || null;
+  } catch {
+    return null;
+  }
+}
+
 // --- links: chapter: and doc: pre-resolved with the reader's token ------------------
 
 function refKey(ref: ChapterRef | DocRef): string {
@@ -396,15 +488,30 @@ export async function loadChapterReader(args: {
   };
   const checked = validateChapter(body.text, body.format);
 
-  // A member's state: degrade, never fail the chapter over it.
-  let state: KbReaderBook | null = null;
-  if (token) {
-    try {
-      state = await getReaderBook(token, org, project, book.slug);
-    } catch {
-      state = null;
-    }
-  }
+  // A member's state: degrade, never fail the chapter over it. The book read fills the
+  // chapter list; the variant read carries this chapter's progress and `resume`; the
+  // history and the next chapter's lede are read alongside (none can fail the page).
+  const nextRow = live[idx + 1];
+  const nextPick = nextRow
+    ? (nextRow.variants.find((v) => v.lang === variant.lang) ??
+      defaultVariant(nextRow))
+    : undefined;
+  const [state, variantState, versions, nextLede] = await Promise.all([
+    token
+      ? getReaderBook(token, org, project, book.slug).catch(() => null)
+      : Promise.resolve<KbReaderBook | null>(null),
+    token
+      ? getReaderChapter(
+          token,
+          { org, project, book: book.slug, key: chapter.key },
+          variant.lang,
+        ).catch(() => null)
+      : Promise.resolve<KbVariantState | null>(null),
+    loadVersions(token, doc, variant.lang, variant.translated_from),
+    nextPick && nextPick.format !== "html"
+      ? nextSummary(token, nextPick.doc_id)
+      : Promise.resolve<string | null>(null),
+  ]);
   const stateOf = new Map((state?.chapters ?? []).map((c) => [c.key, c]));
 
   const rows: ChapterRow[] = live.map((c, i) => {
@@ -441,8 +548,16 @@ export async function loadChapterReader(args: {
     };
   });
 
-  const neighbour = (row: ChapterRow | undefined) =>
-    row ? { title: row.title, lang: row.lang, href: row.href } : undefined;
+  const neighbour = (row: ChapterRow | undefined, summary?: string | null) =>
+    row
+      ? {
+          title: row.title,
+          lang: row.lang,
+          href: row.href,
+          n: row.n,
+          ...(summary ? { summary } : {}),
+        }
+      : undefined;
 
   const langs: ReaderLanguage[] = [...chapter.variants]
     .sort((a, b) => a.lang.localeCompare(b.lang))
@@ -469,13 +584,18 @@ export async function loadChapterReader(args: {
     project,
     staleSource: staleSourceOf(chapter, variant, body.version === doc.version),
     target,
+    write: { org, project, doc: docStem(project, variant.rel_path) },
+    progress: token
+      ? progressOf(variantState, body.version === doc.version)
+      : null,
+    versions,
     book: {
       title: book.title,
       backHref: bookHref({ org, project, book: book.slug }),
       n: idx + 1,
       total: live.length,
       prev: neighbour(rows[idx - 1]),
-      next: neighbour(rows[idx + 1]),
+      next: neighbour(rows[idx + 1], nextLede),
       chapters: rows,
       finished: state ? state.progress.finished : null,
     },
@@ -511,25 +631,35 @@ export async function loadLooseReader(args: {
   doc: KbDocument;
   v: number | null;
   settings: ReaderSettings;
+  /** The `{org}` of the URL read through (the pretty route), when it has one. */
+  org?: string | null;
 }): Promise<LoadedReader | null> {
   const { token, doc, settings } = args;
   const body = await readBody(token, doc, args.v);
   if (!body) return null;
 
-  const org = orgOfPath(doc.canonical_path);
+  const org = orgOfPath(doc.canonical_path) ?? args.org ?? null;
   const checked = validateChapter(body.text, body.format);
-  const resolveRef = await buildResolver({
-    token,
-    org,
-    project: doc.project,
-    checked,
-  });
+  const lang = guessLang(`${body.title}\n${body.text.slice(0, 4000)}`);
+  const stem = docStem(doc.project, doc.rel_path);
+  // The member's saved progress and the history, beside the link resolution. A
+  // tenant with no org slug has nowhere to address a save (`org` is the slug or the
+  // tenant id, and a loose read carries neither): that reader keeps no progress.
+  const [resolveRef, variantState, versions] = await Promise.all([
+    buildResolver({ token, org, project: doc.project, checked }),
+    token && org
+      ? getReaderDoc(token, { org, project: doc.project, doc: stem }).catch(
+          () => null,
+        )
+      : Promise.resolve<KbVariantState | null>(null),
+    loadVersions(token, doc, lang, null),
+  ]);
 
   const view: ReaderView = {
     kind: "loose",
     member: !!token,
     title: body.title,
-    lang: guessLang(`${body.title}\n${body.text.slice(0, 4000)}`),
+    lang,
     langs: [],
     version: body.version,
     newest: doc.version,
@@ -542,6 +672,12 @@ export async function loadLooseReader(args: {
       id: doc.id,
       canonicalPath: doc.canonical_path,
     },
+    write: org ? { org, project: doc.project, doc: stem } : null,
+    progress:
+      token && org
+        ? progressOf(variantState, body.version === doc.version)
+        : null,
+    versions,
     book: null,
     headings: headingsOf(checked),
     settings,
@@ -558,3 +694,33 @@ export async function loadLooseReader(args: {
     resolveRef,
   };
 }
+
+/**
+ * `loadChapterReader`, deduped per request for `generateMetadata` (the page <title>
+ * is the chapter's title) and the page itself: the knowledge client is `no-store`, so
+ * without this the title would cost a second set of upstream reads. Every argument is
+ * a primitive (React's `cache` keys on identity); the settings arrive as the raw
+ * cookie value.
+ */
+export const loadChapterReaderOnce = cache(
+  async (
+    token: string | undefined,
+    org: string,
+    project: string,
+    book: string,
+    chapter: string,
+    lang: string | null,
+    v: number | null,
+    cookie: string | undefined,
+  ): Promise<ReaderLoad> =>
+    loadChapterReader({
+      token,
+      org,
+      project,
+      book,
+      chapter,
+      lang,
+      v,
+      settings: parseReaderCookie(cookie),
+    }),
+);

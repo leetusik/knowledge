@@ -1,34 +1,12 @@
 import Link from "next/link";
 
 import { READER } from "@/content";
+import { publishedDate } from "@/lib/reader/date";
 import { hangulRuns, isKorean, joinHyphens } from "@/lib/reader/hangul";
 import { readerHref } from "@/lib/reader-href";
 import type { ReaderHeading, ReaderView } from "@/lib/reader/types";
 
 import { VersionsButton } from "./versions-button";
-
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-/** `2026-10-03` → `3 Oct 2026`, with no locale or time zone in the way. */
-export function publishedDate(date: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
-  if (!m) return date;
-  const month = MONTHS[Number(m[2]) - 1];
-  return month ? `${Number(m[3])} ${month} ${m[1]}` : date;
-}
 
 /**
  * The chapter opening (`01-reader` §5, `ChapterHead`, board 08), a server component:
