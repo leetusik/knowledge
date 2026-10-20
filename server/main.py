@@ -17,6 +17,7 @@ import time.
 from __future__ import annotations
 
 import datetime
+import logging
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -35,6 +36,8 @@ from server import config, db
 from server import dashboard_api
 from server import documents_api
 from server import graph_api
+from server import reader_api
+from server import reader_state
 from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
@@ -59,6 +62,8 @@ from server.usage import (
     EVENT_SEARCH,
 )
 from server.usage.metering import UsageHint, record_usage
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -163,6 +168,12 @@ app.include_router(graph_api.router)
 # project-gated /app/orgs/{org}/{project}/books/{book}. Unmetered like every /app
 # route. The bearer /api/books routes live below with the rest of /api.
 app.include_router(books_api.router)
+
+# Reader state (P30.S8): the session-only /app/reader/… reads and writes over the
+# Postgres reader tables (positions, bookmarks, annotations, quiz attempts,
+# profile). Every query is user-scoped and re-checks the document's readability;
+# unmetered. The document-delete paths below purge it (server/reader_state.py).
+app.include_router(reader_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
@@ -1404,14 +1415,23 @@ def create_document(
         # 3b. Bind the variant (P30.S2): write the manifest, then rebuild the book's
         #     derived rows from it — the same replace_book reindex runs.
         manifest_rel = None
+        reader_rebound = None  # P30.S8: (project, rel_paths) whose reader unit may change
         if new_manifest is not None:
             manifest_project = project
             if placement is None and migrated_from is not None:
                 manifest_project = binding["project"]
+            bound_before = reader_state.book_rel_paths(
+                conn, tid, manifest_project, new_manifest["slug"]
+            )
             manifest_rel = books_mod.write_manifest(root, manifest_project, new_manifest)
             db.replace_book(
                 conn, tenant_id=tid, project=manifest_project, manifest=new_manifest,
                 manifest_path=manifest_rel,
+            )
+            reader_rebound = (
+                manifest_project,
+                bound_before
+                | reader_state.book_rel_paths(conn, tid, manifest_project, new_manifest["slug"]),
             )
 
         # 4. Git only when requested AND enabled. A failed commit is NOT rolled
@@ -1452,6 +1472,12 @@ def create_document(
                 committed = True
             except gitops.GitError as exc:
                 commit_error = exc.stderr or str(exc)
+
+    # 4a. P30.S8: a binding this write made (placement, or the html -> native
+    #     re-point) re-writes the readers' `unit` on the documents it touched —
+    #     best-effort, outside WRITE_LOCK; reads derive the unit afresh anyway.
+    if reader_rebound is not None:
+        reader_state.sync_units_after_manifest(conn, tid, *reader_rebound)
 
     # 4b. AFTER-RESPONSE publish work (P24.S1). Everything above is durable: the
     #     file is on disk, the DB transaction is committed, the local commit is
@@ -1606,6 +1632,26 @@ def _delete_document(
     write path, the push runs after the response (P24.S1)."""
     rel = doc["rel_path"]
     root = _tenant_root(ctx)
+    # P30.S8: purge every reader's state for this document FIRST, and fail closed —
+    # if the purge cannot run, nothing is deleted (503), so a deleted document never
+    # leaves readers' positions, bookmarks or notes behind (A4). Postgres and the
+    # SQLite content plane cannot share a transaction; the purge is one Postgres
+    # transaction of its own, logged. Legacy mode has no reader state.
+    reader_purged = None
+    if reader_state.reader_state_enabled(ctx.tenant_id):
+        try:
+            reader_purged = reader_state.run_from_worker(
+                reader_state.purge_document,
+                ctx.tenant_id,
+                doc["project"],
+                reader_state.doc_of(doc["project"], rel),
+            )
+        except Exception:
+            logger.error("reader-state purge failed; delete of %s aborted", rel, exc_info=True)
+            raise HTTPException(
+                status_code=503,
+                detail="could not remove readers' state for this document; nothing was deleted",
+            )
     with WRITE_LOCK:
         (root / rel).unlink(missing_ok=True)
         # Deleting a document deletes its history with it (P23): the whole
@@ -1671,6 +1717,8 @@ def _delete_document(
         "versions_removed": versions_removed,
         # P30.S4: whether it had an image directory to remove.
         "assets_removed": assets_removed,
+        # P30.S8: readers' state rows purged per table (null in legacy mode).
+        "reader_state_purged": reader_purged,
         "committed": committed,
         # The local delete commit; not necessarily the published head (P24).
         "commit_sha": commit_sha,
@@ -1878,11 +1926,13 @@ def put_book(
         manifest_file = root / books_mod.manifest_rel_path(project, book)
         created = not manifest_file.is_file()
         before = None if created else manifest_file.read_bytes()
+        bound_before = reader_state.book_rel_paths(conn, tid, project, book)
         manifest_rel = books_mod.write_manifest(root, project, manifest)
         changed = before != manifest_file.read_bytes()
         db.replace_book(
             conn, tenant_id=tid, project=project, manifest=manifest, manifest_path=manifest_rel
         )
+        rebound = bound_before | reader_state.book_rel_paths(conn, tid, project, book)
 
         committed = False
         commit_sha = None
@@ -1901,6 +1951,10 @@ def put_book(
             except gitops.GitError as exc:
                 # Reported, never rolled back, like a document write.
                 commit_error = exc.stderr or str(exc)
+
+    # P30.S8: binding or unbinding documents re-writes their readers' `unit`
+    # (c:<book>/<key> <-> d:<doc>); best-effort, outside WRITE_LOCK.
+    reader_state.sync_units_after_manifest(conn, tid, project, rebound)
 
     push_pending = False
     if committed and config.git_push_enabled():

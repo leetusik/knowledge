@@ -149,7 +149,10 @@
       "tests/test_assets.py",
       "tests/test_books.py",
       "tests/test_native_format.py",
-      "tests/test_native_ingest.py"
+      "tests/test_native_ingest.py",
+      "server/reader_api.py",
+      "server/reader_state.py",
+      "tests/test_reader_state.py"
     ],
     "parameterized": [
       "mkdocs.yml",
