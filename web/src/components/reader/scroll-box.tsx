@@ -33,7 +33,11 @@ interface Measure {
 
 const NONE: Measure = { over: false, l: false, r: false };
 
-function useBox(content: "self" | "table") {
+/**
+ * `watchLoad` (P30.S16, a wide figure): an image inside the box that finishes loading can change
+ * the box's content width, so a `load` anywhere inside (captured: it does not bubble) re-measures.
+ */
+export function useBox(content: "self" | "table", watchLoad = false) {
   const [m, setM] = useState<Measure>(NONE);
   const ref = useRef<HTMLElement | null>(null);
 
@@ -62,6 +66,7 @@ function useBox(content: "self" | "table") {
     if (!el) return;
     read();
     el.addEventListener("scroll", read, { passive: true });
+    if (watchLoad) el.addEventListener("load", read, true);
     window.addEventListener("resize", read);
     const ro =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(read);
@@ -80,11 +85,12 @@ function useBox(content: "self" | "table") {
     document.fonts?.ready.then(read).catch(() => {});
     return () => {
       el.removeEventListener("scroll", read);
+      if (watchLoad) el.removeEventListener("load", read, true);
       window.removeEventListener("resize", read);
       ro?.disconnect();
       mo?.disconnect();
     };
-  }, [read]);
+  }, [read, watchLoad]);
 
   return { m, ref };
 }

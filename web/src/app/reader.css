@@ -9,8 +9,9 @@
  * top bar, the chapter bar, the sheets (Contents and Display), the Display panel, the
  * chapter list, Sign in to save and the loading / not found / failed states.
  *
- * What does NOT: (the resume pill, chapter end and version history are the last block, P30.S15), figures and
- * svg (S16), diagrams (S17/S18), the quiz (S19). The chapter opening (§5), the prose
+ * What does NOT: (the resume pill, chapter end and version history are the P30.S15 block; figures, svg, the
+ * sources list and the tone palette are the P30.S16 block, both at the end of this file), diagrams (S17/S18), the
+ * quiz (S19). The chapter opening (§5), the prose
  * kit (§6-§6a), callouts (§7), code (§8), the diagram slot (§8a), tables (§9) and the
  * scroll fades (§9a) are the last block of this file (P30.S14); S12's `kb-ch-*` hooks
  * carry the prose kit's names (the canvas's `rd-p`, `rd-callout`, `rd-code`, `rd-table`
@@ -720,11 +721,11 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
   .kb-ch-table--long td { white-space: nowrap; }
 }
 
-/* ---------- Until S16-S19: the blocks they own keep a column rhythm and legible lists ----------
-   Figures and svg (S16), diagrams (S17/S18) and the quiz (S19) draw their own look; until then they sit in the column. */
-.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
+/* ---------- Until S17-S19: the blocks they own keep a column rhythm and legible lists ----------
+   Diagrams (S17/S18) and the quiz (S19) draw their own look; until then they sit in the column. */
+.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram, .fg-fig, .fg-row) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
 .kb-ch-unshowable { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; color: var(--kb-secondary); }
-.kb-ch img { max-width: 100%; height: auto; }
+.kb-ch img:not(.fg-media__img) { max-width: 100%; height: auto; }
 
 /* ---------- P30.S15: the chapter end, the Version history sheet, the resume pill ----------
    Transcribed from the signed `01-reader` canvas (`reader.css`, rounds 02 and 03): the end (§10), the version rows
@@ -782,3 +783,261 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .rd-resume b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
 .rd-resume__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rd-resume .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); }
+
+/* ======================================================================================
+   P30.S16 — figures and sources, transcribed from the signed `02-figures` canvas
+   (round 01's `figures.css`; §1-§8 of its build prompt). The tone values are the signed
+   `03-diagrams` palette (wave choice 1: it replaced 02-figures' provisional values). The
+   rules keep the canvas's `fg-*` names; S12's renderer emits them. Where the prose kit's
+   rules (`.kb-ch a`, `.kb-ch ol`, `.kb-ch li`, `.rd-article [id]`) are more specific than
+   the canvas's single-class rules, these carry `.kb-ch` so the signed values win.
+   ====================================================================================== */
+
+/* ---------- Tones and the image plate (`03-diagrams` owns the palette; `02-figures` reads it) ----------
+   13 tones × (line, ink, tint) × light, dark, sepia and print, transcribed from the signed 03-diagrams canvas
+   (`diagram.css`). `--fg-plate` is the ground behind an image's transparent pixels; `--fg-edge` the image's edge. */
+.rd-root {
+  --fg-plate: var(--kb-surface);
+  --fg-edge: var(--kb-border-strong);
+  --dg-default: #7c7362; --dg-default-ink: #26211c; --dg-default-tint: #fffefa;
+  --dg-muted: #8a8071; --dg-muted-ink: #5c5347; --dg-muted-tint: #efe9db;
+  --dg-accent: #0f6f66; --dg-accent-ink: #0a544e; --dg-accent-tint: #dbe9e4;
+  --dg-ok: #4d6a2b; --dg-ok-ink: #3b5221; --dg-ok-tint: #e4e8db;
+  --dg-warn: #8a6a2a; --dg-warn-ink: #6b5220; --dg-warn-tint: #efe6d2;
+  --dg-bad: #a8503f; --dg-bad-ink: #8f4030; --dg-bad-tint: #f1e1db;
+  --dg-store: #44617a; --dg-store-ink: #33506a; --dg-store-tint: #e3e6e7;
+  --dg-series-1: #0f6f66; --dg-series-1-ink: #0a544e; --dg-series-1-tint: #dbe9e4;
+  --dg-series-2: #8a6a2a; --dg-series-2-ink: #6b5220; --dg-series-2-tint: #efe6d2;
+  --dg-series-3: #764f6c; --dg-series-3-ink: #5f3d57; --dg-series-3-tint: #eae4e5;
+  --dg-series-4: #44617a; --dg-series-4-ink: #33506a; --dg-series-4-tint: #e3e6e7;
+  --dg-series-5: #a8503f; --dg-series-5-ink: #8f4030; --dg-series-5-tint: #f1e1db;
+  --dg-series-6: #4d6a2b; --dg-series-6-ink: #3b5221; --dg-series-6-tint: #e4e8db;
+}
+.rd-root[data-md-color-scheme="slate"] {
+  --fg-plate: #ece4d7;
+  --dg-default: #9a9081; --dg-default-ink: #ece4d7; --dg-default-tint: #232019;
+  --dg-muted: #7e7566; --dg-muted-ink: #b6ad9d; --dg-muted-tint: #2a261e;
+  --dg-accent: #62bdb2; --dg-accent-ink: #86d4ca; --dg-accent-tint: #2e3c35;
+  --dg-ok: #a3bd6e; --dg-ok-ink: #bdd290; --dg-ok-tint: #373927;
+  --dg-warn: #c8a15e; --dg-warn-ink: #d8b673; --dg-warn-tint: #3d3524;
+  --dg-bad: #d68a76; --dg-bad-ink: #e0a08e; --dg-bad-tint: #403128;
+  --dg-store: #8fb0cc; --dg-store-ink: #aac5dc; --dg-store-tint: #343736;
+  --dg-series-1: #62bdb2; --dg-series-1-ink: #86d4ca; --dg-series-1-tint: #2e3c35;
+  --dg-series-2: #c8a15e; --dg-series-2-ink: #d8b673; --dg-series-2-tint: #3d3524;
+  --dg-series-3: #c99bc0; --dg-series-3-ink: #d9b4d2; --dg-series-3-tint: #3e3434;
+  --dg-series-4: #8fb0cc; --dg-series-4-ink: #aac5dc; --dg-series-4-tint: #343736;
+  --dg-series-5: #d68a76; --dg-series-5-ink: #e0a08e; --dg-series-5-tint: #403128;
+  --dg-series-6: #a3bd6e; --dg-series-6-ink: #bdd290; --dg-series-6-tint: #373927;
+}
+.rd-root[data-md-color-scheme="sepia"] {
+  --dg-default: #6b5c47; --dg-default-ink: #382a1b; --dg-default-tint: #f6ecd6;
+  --dg-muted: #8b785b; --dg-muted-ink: #5f4d37; --dg-muted-tint: #ecdcba;
+  --dg-accent: #0c6159; --dg-accent-ink: #08483f; --dg-accent-tint: #d3d7c3;
+  --dg-ok: #475f22; --dg-ok-ink: #374a19; --dg-ok-tint: #dcd7bb;
+  --dg-warn: #7d5c1d; --dg-warn-ink: #614716; --dg-warn-tint: #eedcb4;
+  --dg-bad: #9a4535; --dg-bad-ink: #833526; --dg-bad-tint: #efd7c6;
+  --dg-store: #3c5870; --dg-store-ink: #2e4559; --dg-store-tint: #dad6c7;
+  --dg-series-1: #0c6159; --dg-series-1-ink: #08483f; --dg-series-1-tint: #d3d7c3;
+  --dg-series-2: #7d5c1d; --dg-series-2-ink: #614716; --dg-series-2-tint: #eedcb4;
+  --dg-series-3: #6b4461; --dg-series-3-ink: #56344d; --dg-series-3-tint: #e1d3c4;
+  --dg-series-4: #3c5870; --dg-series-4-ink: #2e4559; --dg-series-4-tint: #dad6c7;
+  --dg-series-5: #9a4535; --dg-series-5-ink: #833526; --dg-series-5-tint: #efd7c6;
+  --dg-series-6: #475f22; --dg-series-6-ink: #374a19; --dg-series-6-tint: #dcd7bb;
+}
+@media (prefers-color-scheme: dark) {
+  .rd-root[data-theme-choice="system"] {
+    --fg-plate: #ece4d7;
+    --dg-default: #9a9081; --dg-default-ink: #ece4d7; --dg-default-tint: #232019;
+    --dg-muted: #7e7566; --dg-muted-ink: #b6ad9d; --dg-muted-tint: #2a261e;
+    --dg-accent: #62bdb2; --dg-accent-ink: #86d4ca; --dg-accent-tint: #2e3c35;
+    --dg-ok: #a3bd6e; --dg-ok-ink: #bdd290; --dg-ok-tint: #373927;
+    --dg-warn: #c8a15e; --dg-warn-ink: #d8b673; --dg-warn-tint: #3d3524;
+    --dg-bad: #d68a76; --dg-bad-ink: #e0a08e; --dg-bad-tint: #403128;
+    --dg-store: #8fb0cc; --dg-store-ink: #aac5dc; --dg-store-tint: #343736;
+    --dg-series-1: #62bdb2; --dg-series-1-ink: #86d4ca; --dg-series-1-tint: #2e3c35;
+    --dg-series-2: #c8a15e; --dg-series-2-ink: #d8b673; --dg-series-2-tint: #3d3524;
+    --dg-series-3: #c99bc0; --dg-series-3-ink: #d9b4d2; --dg-series-3-tint: #3e3434;
+    --dg-series-4: #8fb0cc; --dg-series-4-ink: #aac5dc; --dg-series-4-tint: #343736;
+    --dg-series-5: #d68a76; --dg-series-5-ink: #e0a08e; --dg-series-5-tint: #403128;
+    --dg-series-6: #a3bd6e; --dg-series-6-ink: #bdd290; --dg-series-6-tint: #373927;
+  }
+}
+@media print {
+  .rd-root, .rd-root[data-md-color-scheme] {
+    --fg-plate: var(--kb-surface);
+    --dg-default: #7c7362; --dg-default-ink: #26211c; --dg-default-tint: #fffefa;
+    --dg-muted: #8a8071; --dg-muted-ink: #5c5347; --dg-muted-tint: #efe9db;
+    --dg-accent: #0f6f66; --dg-accent-ink: #0a544e; --dg-accent-tint: #dbe9e4;
+    --dg-ok: #4d6a2b; --dg-ok-ink: #3b5221; --dg-ok-tint: #e4e8db;
+    --dg-warn: #8a6a2a; --dg-warn-ink: #6b5220; --dg-warn-tint: #efe6d2;
+    --dg-bad: #a8503f; --dg-bad-ink: #8f4030; --dg-bad-tint: #f1e1db;
+    --dg-store: #44617a; --dg-store-ink: #33506a; --dg-store-tint: #e3e6e7;
+    --dg-series-1: #0f6f66; --dg-series-1-ink: #0a544e; --dg-series-1-tint: #dbe9e4;
+    --dg-series-2: #8a6a2a; --dg-series-2-ink: #6b5220; --dg-series-2-tint: #efe6d2;
+    --dg-series-3: #764f6c; --dg-series-3-ink: #5f3d57; --dg-series-3-tint: #eae4e5;
+    --dg-series-4: #44617a; --dg-series-4-ink: #33506a; --dg-series-4-tint: #e3e6e7;
+    --dg-series-5: #a8503f; --dg-series-5-ink: #8f4030; --dg-series-5-tint: #f1e1db;
+    --dg-series-6: #4d6a2b; --dg-series-6-ink: #3b5221; --dg-series-6-tint: #e4e8db;
+  }
+}
+/* A card's tone: the tint is its ground, the ink its title. An unknown or absent tone is `default` (the renderer says so). */
+.fg-tone-default { --fg-ink: var(--dg-default-ink); --fg-soft: var(--dg-default-tint); }
+.fg-tone-muted { --fg-ink: var(--dg-muted-ink); --fg-soft: var(--dg-muted-tint); }
+.fg-tone-accent { --fg-ink: var(--dg-accent-ink); --fg-soft: var(--dg-accent-tint); }
+.fg-tone-ok { --fg-ink: var(--dg-ok-ink); --fg-soft: var(--dg-ok-tint); }
+.fg-tone-warn { --fg-ink: var(--dg-warn-ink); --fg-soft: var(--dg-warn-tint); }
+.fg-tone-bad { --fg-ink: var(--dg-bad-ink); --fg-soft: var(--dg-bad-tint); }
+.fg-tone-store { --fg-ink: var(--dg-store-ink); --fg-soft: var(--dg-store-tint); }
+.fg-tone-series-1 { --fg-ink: var(--dg-series-1-ink); --fg-soft: var(--dg-series-1-tint); }
+.fg-tone-series-2 { --fg-ink: var(--dg-series-2-ink); --fg-soft: var(--dg-series-2-tint); }
+.fg-tone-series-3 { --fg-ink: var(--dg-series-3-ink); --fg-soft: var(--dg-series-3-tint); }
+.fg-tone-series-4 { --fg-ink: var(--dg-series-4-ink); --fg-soft: var(--dg-series-4-tint); }
+.fg-tone-series-5 { --fg-ink: var(--dg-series-5-ink); --fg-soft: var(--dg-series-5-tint); }
+.fg-tone-series-6 { --fg-ink: var(--dg-series-6-ink); --fg-soft: var(--dg-series-6-tint); }
+
+/* ---------- The image box (§1): shared by the figure, the plain image and a row's image item ---------- */
+.fg-media {
+  --fg-cap: min(36rem, 75svh);
+  position: relative; display: block;
+  width: min(100%, calc(var(--fg-w) * 1px), calc(var(--fg-cap) * var(--fg-w) / var(--fg-h)));
+  aspect-ratio: var(--fg-w) / var(--fg-h);
+  border-radius: var(--kb-radius-sm); background: var(--fg-plate); overflow: hidden;
+}
+/* The edge: a hairline over the image, in every theme; takes no layout. The reader never dims or filters an image. */
+.fg-media::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--fg-edge); pointer-events: none; }
+.fg-media__pic, .fg-media__img { display: block; width: 100%; height: 100%; }
+.fg-media__img { object-fit: contain; }
+/* Loading: the reserved box on the sunken ground with the signed sheen; the picture paints over it (DOM order) and the edge over both. */
+.fg-media--loading { background: var(--kb-surface-sunken); }
+.fg-media__skel { position: absolute; inset: 0; border-radius: inherit; }
+.fg-media__pic { position: relative; }
+.fg-media.is-loaded { background: var(--fg-plate); }
+.fg-media.is-loaded > .fg-media__skel { display: none; }
+/* Missing: the image's box, holding its alt text under a label; it grows when the text needs more room */
+.fg-media--missing {
+  display: flex; flex-direction: column; justify-content: center; gap: var(--kb-space-xs);
+  padding: var(--kb-space-md); background: var(--kb-surface-sunken); overflow: visible; min-height: 6rem;
+}
+.fg-miss__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.fg-miss__alt { font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink); overflow-wrap: break-word; text-wrap: pretty; }
+
+/* ---------- The figure (§2) ---------- */
+.fg-fig {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k));
+}
+.fg-box { position: relative; }
+.fg-box__scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; border-radius: var(--kb-radius-sm); }
+/* width: wide keeps the column's edges and never shrinks below 36rem: narrower than that (a phone), it scrolls in its box */
+.fg-fig--wide .fg-media { width: min(max(100%, 36rem), calc(var(--fg-w) * 1px), calc(var(--fg-cap) * var(--fg-w) / var(--fg-h))); }
+/* The caption: the interface face at the column's small step, in secondary, tight under the image */
+.fg-figcap { display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k)); }
+.fg-cap { margin: 0; max-width: 34em; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-secondary); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-credit { margin: 0; max-width: 40rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.fg-credit__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; }
+.fg-credit__text { min-width: 0; }
+.fg-still { display: none; margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+@media (prefers-reduced-motion: reduce) { .fg-still { display: block; } }
+/* The hint and the scroll fades of a box that scrolls sideways (§9a), shown only while it is measured to overflow */
+.fg-hint { display: none; margin: 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.fg-fig.is-over > .fg-hint { display: block; }
+.fg-fade { display: none; position: absolute; top: 0; bottom: 0; width: 2rem; pointer-events: none; opacity: 0; transition: opacity var(--rd-ease); }
+.fg-fade--r { right: 0; background: linear-gradient(to right, transparent, var(--kb-surface)); }
+.fg-fade--l { left: 0; background: linear-gradient(to left, transparent, var(--kb-surface)); }
+.fg-fig.is-over > .fg-box > .fg-fade { display: block; }
+.fg-fig.is-more-r > .fg-box > .fg-fade--r, .fg-fig.is-more-l > .fg-box > .fg-fade--l { opacity: 1; }
+/* Korean: the reader's rules reach the caption and credit (the chrome strings stay English) */
+.fg-figcap:lang(ko), .fg-figcap :lang(ko), .fg-row__cap:lang(ko), .fg-row__cap :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* ---------- The plain Markdown image (§3): the same box, at a paragraph's spacing, with no caption ---------- */
+.fg-plain { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; }
+
+/* ---------- The figure row (§4) ---------- */
+.fg-row {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding-block: calc(var(--kb-space-md) * var(--rd-k));
+  border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border);
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-md) * var(--rd-k));
+}
+.fg-row__cap { margin: 0; max-width: 34em; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+/* The items' box is a container measured in its own em (the column's small step), so a row of three goes side by side
+   only when each item gets room for its text at the reader's size. `rd` is the page's container (.rd-page). */
+.fg-row__items { container: fgrow / inline-size; font-size: var(--rd-fs-s); }
+.fg-row__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--kb-space-lg) * var(--rd-k)) calc(var(--kb-space-md) * var(--rd-k)); align-items: start; }
+.fg-row__grid > * { min-width: 0; }
+@container rd (min-width: 40rem) {
+  @container fgrow (min-width: 24em) { .fg-row--2 .fg-row__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @container fgrow (min-width: 33em) { .fg-row--3 .fg-row__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+}
+.fg-row--cards .fg-row__grid { align-items: stretch; }
+.fg-row--cards .fg-card { height: 100%; }
+.fg-item { margin: 0; display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k)); min-width: 0; }
+.fg-item .kb-ch-diagram { margin: 0; }
+
+/* ---------- The row card (§5) ---------- */
+.fg-card {
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  padding: calc(var(--kb-space-md) * var(--rd-k)); border-radius: var(--kb-radius); background: var(--fg-soft);
+  font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink);
+}
+.fg-card__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--fg-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-card__p { margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
+.fg-card__p + .fg-card__p { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.fg-card :lang(ko), .fg-card:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* ---------- The svg block (§6) ----------
+   Drawn in currentColor (kb-ink) and the tone classes only. Never drawn larger than its viewBox, and never narrower than
+   the width at which its smallest label is 11 px (--fg-minw, computed from the source); below that it scrolls in its
+   box. In a row it scales to the item (no --fg-minw). Strokes stay hairlines at every width. */
+.fg-svg__svg { display: block; width: min(100%, calc(var(--fg-vbw) * 1px)); min-width: var(--fg-minw, 0px); height: auto; overflow: visible; color: var(--kb-ink); font-family: var(--font-body); }
+.fg-svg__svg :where(*) { vector-effect: non-scaling-stroke; }
+.fg-svg__svg :where(text:not([fill]), tspan:not([fill])) { fill: currentColor; }
+.fg-svg__svg :where(rect, circle, ellipse, polygon, polyline, path):where(:not([fill])) { fill: none; }
+.fg-svg__svg .kb-fill-default { fill: var(--dg-default-tint); } .fg-svg__svg :is(text, tspan).kb-fill-default { fill: var(--dg-default-ink); } .fg-svg__svg .kb-stroke-default { stroke: var(--dg-default); color: var(--dg-default); }
+.fg-svg__svg .kb-fill-muted { fill: var(--dg-muted-tint); } .fg-svg__svg :is(text, tspan).kb-fill-muted { fill: var(--dg-muted-ink); } .fg-svg__svg .kb-stroke-muted { stroke: var(--dg-muted); color: var(--dg-muted); }
+.fg-svg__svg .kb-fill-accent { fill: var(--dg-accent-tint); } .fg-svg__svg :is(text, tspan).kb-fill-accent { fill: var(--dg-accent-ink); } .fg-svg__svg .kb-stroke-accent { stroke: var(--dg-accent); color: var(--dg-accent); }
+.fg-svg__svg .kb-fill-ok { fill: var(--dg-ok-tint); } .fg-svg__svg :is(text, tspan).kb-fill-ok { fill: var(--dg-ok-ink); } .fg-svg__svg .kb-stroke-ok { stroke: var(--dg-ok); color: var(--dg-ok); }
+.fg-svg__svg .kb-fill-warn { fill: var(--dg-warn-tint); } .fg-svg__svg :is(text, tspan).kb-fill-warn { fill: var(--dg-warn-ink); } .fg-svg__svg .kb-stroke-warn { stroke: var(--dg-warn); color: var(--dg-warn); }
+.fg-svg__svg .kb-fill-bad { fill: var(--dg-bad-tint); } .fg-svg__svg :is(text, tspan).kb-fill-bad { fill: var(--dg-bad-ink); } .fg-svg__svg .kb-stroke-bad { stroke: var(--dg-bad); color: var(--dg-bad); }
+.fg-svg__svg .kb-fill-store { fill: var(--dg-store-tint); } .fg-svg__svg :is(text, tspan).kb-fill-store { fill: var(--dg-store-ink); } .fg-svg__svg .kb-stroke-store { stroke: var(--dg-store); color: var(--dg-store); }
+.fg-svg__svg .kb-fill-series-1 { fill: var(--dg-series-1-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-1 { fill: var(--dg-series-1-ink); } .fg-svg__svg .kb-stroke-series-1 { stroke: var(--dg-series-1); color: var(--dg-series-1); }
+.fg-svg__svg .kb-fill-series-2 { fill: var(--dg-series-2-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-2 { fill: var(--dg-series-2-ink); } .fg-svg__svg .kb-stroke-series-2 { stroke: var(--dg-series-2); color: var(--dg-series-2); }
+.fg-svg__svg .kb-fill-series-3 { fill: var(--dg-series-3-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-3 { fill: var(--dg-series-3-ink); } .fg-svg__svg .kb-stroke-series-3 { stroke: var(--dg-series-3); color: var(--dg-series-3); }
+.fg-svg__svg .kb-fill-series-4 { fill: var(--dg-series-4-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-4 { fill: var(--dg-series-4-ink); } .fg-svg__svg .kb-stroke-series-4 { stroke: var(--dg-series-4); color: var(--dg-series-4); }
+.fg-svg__svg .kb-fill-series-5 { fill: var(--dg-series-5-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-5 { fill: var(--dg-series-5-ink); } .fg-svg__svg .kb-stroke-series-5 { stroke: var(--dg-series-5); color: var(--dg-series-5); }
+.fg-svg__svg .kb-fill-series-6 { fill: var(--dg-series-6-tint); } .fg-svg__svg :is(text, tspan).kb-fill-series-6 { fill: var(--dg-series-6-ink); } .fg-svg__svg .kb-stroke-series-6 { stroke: var(--dg-series-6); color: var(--dg-series-6); }
+
+/* ---------- The sources list (§7) ---------- */
+.kb-ch .fg-src {
+  list-style: none; margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink);
+}
+.kb-ch .fg-src__item {
+  display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0 var(--kb-space-xs);
+  margin: 0; margin-inline: calc(var(--kb-space-sm) * -1); padding: var(--kb-space-sm); border-radius: var(--kb-radius-sm);
+}
+.kb-ch .fg-src__item > * { margin-top: 0; }
+/* The item a citation led to (:target): a sunken ground and a hairline box */
+.kb-ch .fg-src__item:target { background: var(--kb-surface-sunken); box-shadow: inset 0 0 0 1px var(--kb-border-strong); }
+.fg-src__n { font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums; color: var(--kb-secondary); }
+.fg-src__body { display: flex; flex-direction: column; min-width: 0; }
+.fg-src__title { margin: 0; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-src__meta { margin: 0; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.fg-src__url { margin: 0; }
+/* the URL is the link, as text; it wraps anywhere, so a long one stays in the column; its box is 44 px tall */
+.fg-src__link { display: inline-block; overflow-wrap: anywhere; padding-block: calc((var(--kb-tap) - 1.45em) / 2); margin-block: calc((1.45em - var(--kb-tap)) / 2); }
+.fg-src__note { margin: 0; color: var(--kb-ink); }
+.fg-src__back { margin: 0 0 calc((1.45em - var(--kb-tap)) / 2); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-xs); font-size: 0.8125rem; color: var(--kb-secondary); }
+.kb-ch a.fg-back { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; min-height: var(--kb-tap); min-width: var(--kb-tap); font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none; }
+.kb-ch a.fg-back:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.fg-back__chev { color: var(--kb-secondary); }
+.fg-src:lang(ko), .fg-src :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.fg-src .fg-src__link { word-break: normal; }
+
+/* ---------- The citation (§8): the author's words and the source's number, one link ---------- */
+.fg-cite__n { font-family: var(--font-body); font-size: 0.8333em; font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kb-ch a.fg-cite:target { background: var(--kb-accent-soft); box-shadow: 0 0 0 2px var(--kb-accent-soft); border-radius: 2px; }
+
+/* ---------- Jumps: a figure, a row, an svg block, a source item and a citation land below the top bar ---------- */
+.kb-ch .fg-fig, .kb-ch .fg-row, .kb-ch .fg-src__item { scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem); }
+.kb-ch .fg-cite { scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 2rem); }

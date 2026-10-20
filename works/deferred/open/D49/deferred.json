@@ -1,0 +1,11 @@
+{
+  "id": "D49",
+  "title": "Sources note as inline Markdown",
+  "status": "deferred",
+  "source": "P30.S16",
+  "reason": "A source note renders as plain text; inline Markdown is a schema and tree change on both parser halves with fixtures and plugin_parity (P30.S16 OQ79)",
+  "trigger": "An author needs a link or emphasis in a source note",
+  "created_at": "2026-10-21T07:53:12+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

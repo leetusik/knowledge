@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S16`
-- Next slice: `P30.S17`
+- Current slice: `P30.S17`
+- Next slice: `P30.S18`
 - Waiting on operator: `none`
-- Open deferred jobs: `35`
+- Open deferred jobs: `36`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S16` | 18/32 | - | working tree |
+| `default` | `P30` | planned | `P30.S17` | 19/32 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S16` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S17` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -169,7 +169,7 @@
 | [x] `P30.S13` | `done` | Reader shell: frame, faces, themes, bars, Display, states (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S13` |
 | [x] `P30.S14` | `done` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
 | [x] `P30.S15` | `done` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |
-| [ ] `P30.S16` | `todo` | Figures, figure rows, svg block and sources (02-figures) | `implementation` | `works/phases/active/P30/slices/P30.S16` |
+| [x] `P30.S16` | `done` | Figures, figure rows, svg block and sources (02-figures) | `implementation` | `works/phases/active/P30/slices/P30.S16` |
 | [ ] `P30.S17` | `todo` | Diagrams I: the frame, tones, flow and state (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S17` |
 | [ ] `P30.S18` | `todo` | Diagrams II: sequence, stack, timeline and chart (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S18` |
 | [ ] `P30.S19` | `todo` | Quiz block: choice, recall, cloze, saving, return (04-quiz) | `implementation` | `works/phases/active/P30/slices/P30.S19` |

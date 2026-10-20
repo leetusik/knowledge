@@ -27,7 +27,9 @@ export {
   type Section,
 } from "./project";
 export {
+  documentAssets,
   documentAssetUrl,
+  type AssetInfo,
   type ChapterRef,
   type DocRef,
   type LinkContext,

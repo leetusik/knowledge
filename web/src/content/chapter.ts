@@ -9,9 +9,6 @@ export const CHAPTER = {
   unshowableChapter: "This chapter couldn't be shown.",
   /** Screen-reader suffix on a link whose target cannot be opened. */
   missingLink: "(link unavailable)",
-  /** The accessible name of a figure whose image cannot be loaded. */
-  missingImage: (alt: string): string =>
-    alt ? `Image unavailable: ${alt}` : "Image unavailable",
   regions: {
     code: (language: string | null): string =>
       language === null ? "Code block" : `Code block (${language})`,
@@ -69,8 +66,30 @@ export const CHAPTER = {
     lanes: "Lanes",
     series: "Series",
   },
+  /** P30.S16 — the figures' strings (`02-figures` round 01, *Every string written for these blocks*). */
+  figure: {
+    missing: "Image not available",
+    credit: "Credit",
+    still: "Still frame: your device is set to reduce motion.",
+    /** A `wide` figure that scrolls sideways. */
+    aria: "Image, scrolls sideways",
+    hint: "Scroll sideways to see the whole image →",
+  },
   sources: {
     label: "Sources",
-    accessed: (date: string): string => `accessed ${date}`,
+    accessed: (date: string): string => `Accessed ${date}`,
+    back: "Back to the text",
+    backLead: "Back to the text:",
+    /** `, in “<section>”` is left out when no h2 precedes the citation. */
+    backAria: (section: string | null): string =>
+      section ? `Back to the text, in “${section}”` : "Back to the text",
+    backLetterAria: (
+      letter: string,
+      count: number,
+      section: string | null,
+    ): string =>
+      section
+        ? `Back to citation ${letter} of ${count}, in “${section}”`
+        : `Back to citation ${letter} of ${count}`,
   },
 } as const;

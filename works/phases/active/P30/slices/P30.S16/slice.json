@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Figures, figure rows, svg block and sources (02-figures)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 160,
   "depends_on": [
     "P30.S15"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T07:30:56+09:00",
+  "completed_at": "2026-10-21T07:53:12+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Figures from 02-figures: image box sized from the asset map with missing/animated states, figure, plain image, row and cards in 13 tones, svg block, sources list and citations; web 262",
   "validation": {
     "required": [],
     "last_run": null,

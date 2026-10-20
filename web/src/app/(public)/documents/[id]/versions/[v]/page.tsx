@@ -14,7 +14,7 @@ import { getDocument, getDocumentVersion } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { loginHref } from "@/lib/next-path";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
-import { documentAssetUrl, NativeChapter } from "@/lib/native";
+import { documentAssets, NativeChapter } from "@/lib/native";
 
 import { Meta } from "../../document-view";
 import { ExplainerFrame } from "../../explainer-frame";
@@ -176,7 +176,7 @@ function PastVersion({
           <NativeChapter
             source={version.source}
             format="native"
-            assetUrl={documentAssetUrl(id, version.assets)}
+            assetInfo={documentAssets(id, version.assets)}
           />
         </div>
       ) : (

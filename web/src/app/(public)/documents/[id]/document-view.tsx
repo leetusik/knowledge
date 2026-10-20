@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { DOCUMENTS, SITE } from "@/content";
 import type { KbDocument } from "@/lib/knowledge/types";
-import { documentAssetUrl, NativeChapter } from "@/lib/native";
+import { documentAssets, NativeChapter } from "@/lib/native";
 
 import { ExplainerFrame } from "./explainer-frame";
 import { MarkdownBody } from "./markdown-body";
@@ -147,7 +147,7 @@ export function DocumentView({ doc, id }: { doc: KbDocument; id: number }) {
           <NativeChapter
             source={doc.source}
             format="native"
-            assetUrl={documentAssetUrl(id, doc.assets)}
+            assetInfo={documentAssets(id, doc.assets)}
           />
         </div>
       ) : (
