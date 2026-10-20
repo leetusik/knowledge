@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SVG block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ flowCls }}" lang="{{ lang }}">
+<figure class="{{ figCls }}" id="{{ idAttr }}"><div class="fg-box"><div class="fg-box__scroll" ref="{{ setBox }}" tabindex="{{ tab }}" role="{{ role }}" aria-label="{{ boxAria }}"><svg class="fg-svg__svg" viewBox="{{ t.viewBox }}" role="img" aria-label="{{ b.label }}" style="{{ svgStyle }}"><sc-for list="{{ t.kids }}" as="n" hint-placeholder-count="4"><sc-if value="{{ n.isRect }}" hint-placeholder-val="{{ false }}"><rect x="{{ n.a.x }}" y="{{ n.a.y }}" width="{{ n.a.width }}" height="{{ n.a.height }}" rx="{{ n.a.rx }}" ry="{{ n.a.ry }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></rect></sc-if><sc-if value="{{ n.isCircle }}" hint-placeholder-val="{{ false }}"><circle cx="{{ n.a.cx }}" cy="{{ n.a.cy }}" r="{{ n.a.r }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></circle></sc-if><sc-if value="{{ n.isEllipse }}" hint-placeholder-val="{{ false }}"><ellipse cx="{{ n.a.cx }}" cy="{{ n.a.cy }}" rx="{{ n.a.rx }}" ry="{{ n.a.ry }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></ellipse></sc-if><sc-if value="{{ n.isLine }}" hint-placeholder-val="{{ false }}"><line x1="{{ n.a.x1 }}" y1="{{ n.a.y1 }}" x2="{{ n.a.x2 }}" y2="{{ n.a.y2 }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></line></sc-if><sc-if value="{{ n.isPolyline }}" hint-placeholder-val="{{ false }}"><polyline points="{{ n.a.points }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></polyline></sc-if><sc-if value="{{ n.isPolygon }}" hint-placeholder-val="{{ false }}"><polygon points="{{ n.a.points }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></polygon></sc-if><sc-if value="{{ n.isPath }}" hint-placeholder-val="{{ false }}"><path d="{{ n.a.d }}" marker-start="{{ n.a.markerStart }}" marker-mid="{{ n.a.markerMid }}" marker-end="{{ n.a.markerEnd }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"></path></sc-if><sc-if value="{{ n.isText }}" hint-placeholder-val="{{ false }}"><text x="{{ n.a.x }}" y="{{ n.a.y }}" font-size="{{ n.a.fontSize }}" font-weight="{{ n.a.fontWeight }}" text-anchor="{{ n.a.anchor }}" dominant-baseline="{{ n.a.baseline }}" letter-spacing="{{ n.a.spacing }}" class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"><sc-for list="{{ n.kids }}" as="nt" hint-placeholder-count="1"><sc-if value="{{ nt.isTextNode }}" hint-placeholder-val="{{ true }}">{{ nt.vv }}</sc-if><sc-if value="{{ nt.isTspan }}" hint-placeholder-val="{{ false }}"><tspan x="{{ nt.a.x }}" y="{{ nt.a.y }}" font-size="{{ nt.a.fontSize }}" font-weight="{{ nt.a.fontWeight }}" class="{{ nt.a.cls }}" fill="{{ nt.a.fill }}">{{ nt.tv }}</tspan></sc-if></sc-for></text></sc-if><sc-if value="{{ n.isG }}" hint-placeholder-val="{{ false }}"><g class="{{ n.a.cls }}" fill="{{ n.a.fill }}" stroke="{{ n.a.stroke }}" stroke-width="{{ n.a.strokeWidth }}" stroke-dasharray="{{ n.a.dash }}" stroke-linecap="{{ n.a.cap }}" stroke-linejoin="{{ n.a.join }}" opacity="{{ n.a.opacity }}" fill-opacity="{{ n.a.fillOpacity }}" stroke-opacity="{{ n.a.strokeOpacity }}" transform="{{ n.a.transform }}"><sc-for list="{{ n.kids }}" as="ng" hint-placeholder-count="2"><sc-if value="{{ ng.isRect }}" hint-placeholder-val="{{ false }}"><rect x="{{ ng.a.x }}" y="{{ ng.a.y }}" width="{{ ng.a.width }}" height="{{ ng.a.height }}" rx="{{ ng.a.rx }}" ry="{{ ng.a.ry }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></rect></sc-if><sc-if value="{{ ng.isCircle }}" hint-placeholder-val="{{ false }}"><circle cx="{{ ng.a.cx }}" cy="{{ ng.a.cy }}" r="{{ ng.a.r }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></circle></sc-if><sc-if value="{{ ng.isEllipse }}" hint-placeholder-val="{{ false }}"><ellipse cx="{{ ng.a.cx }}" cy="{{ ng.a.cy }}" rx="{{ ng.a.rx }}" ry="{{ ng.a.ry }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></ellipse></sc-if><sc-if value="{{ ng.isLine }}" hint-placeholder-val="{{ false }}"><line x1="{{ ng.a.x1 }}" y1="{{ ng.a.y1 }}" x2="{{ ng.a.x2 }}" y2="{{ ng.a.y2 }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></line></sc-if><sc-if value="{{ ng.isPolyline }}" hint-placeholder-val="{{ false }}"><polyline points="{{ ng.a.points }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></polyline></sc-if><sc-if value="{{ ng.isPolygon }}" hint-placeholder-val="{{ false }}"><polygon points="{{ ng.a.points }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></polygon></sc-if><sc-if value="{{ ng.isPath }}" hint-placeholder-val="{{ false }}"><path d="{{ ng.a.d }}" marker-start="{{ ng.a.markerStart }}" marker-mid="{{ ng.a.markerMid }}" marker-end="{{ ng.a.markerEnd }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"></path></sc-if><sc-if value="{{ ng.isText }}" hint-placeholder-val="{{ false }}"><text x="{{ ng.a.x }}" y="{{ ng.a.y }}" font-size="{{ ng.a.fontSize }}" font-weight="{{ ng.a.fontWeight }}" text-anchor="{{ ng.a.anchor }}" dominant-baseline="{{ ng.a.baseline }}" letter-spacing="{{ ng.a.spacing }}" class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"><sc-for list="{{ ng.kids }}" as="ngt" hint-placeholder-count="1"><sc-if value="{{ ngt.isTextNode }}" hint-placeholder-val="{{ true }}">{{ ngt.vv }}</sc-if><sc-if value="{{ ngt.isTspan }}" hint-placeholder-val="{{ false }}"><tspan x="{{ ngt.a.x }}" y="{{ ngt.a.y }}" font-size="{{ ngt.a.fontSize }}" font-weight="{{ ngt.a.fontWeight }}" class="{{ ngt.a.cls }}" fill="{{ ngt.a.fill }}">{{ ngt.tv }}</tspan></sc-if></sc-for></text></sc-if><sc-if value="{{ ng.isG }}" hint-placeholder-val="{{ false }}"><g class="{{ ng.a.cls }}" fill="{{ ng.a.fill }}" stroke="{{ ng.a.stroke }}" stroke-width="{{ ng.a.strokeWidth }}" stroke-dasharray="{{ ng.a.dash }}" stroke-linecap="{{ ng.a.cap }}" stroke-linejoin="{{ ng.a.join }}" opacity="{{ ng.a.opacity }}" fill-opacity="{{ ng.a.fillOpacity }}" stroke-opacity="{{ ng.a.strokeOpacity }}" transform="{{ ng.a.transform }}"><sc-for list="{{ ng.kids }}" as="ngg" hint-placeholder-count="2"><sc-if value="{{ ngg.isRect }}" hint-placeholder-val="{{ false }}"><rect x="{{ ngg.a.x }}" y="{{ ngg.a.y }}" width="{{ ngg.a.width }}" height="{{ ngg.a.height }}" rx="{{ ngg.a.rx }}" ry="{{ ngg.a.ry }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></rect></sc-if><sc-if value="{{ ngg.isCircle }}" hint-placeholder-val="{{ false }}"><circle cx="{{ ngg.a.cx }}" cy="{{ ngg.a.cy }}" r="{{ ngg.a.r }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></circle></sc-if><sc-if value="{{ ngg.isEllipse }}" hint-placeholder-val="{{ false }}"><ellipse cx="{{ ngg.a.cx }}" cy="{{ ngg.a.cy }}" rx="{{ ngg.a.rx }}" ry="{{ ngg.a.ry }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></ellipse></sc-if><sc-if value="{{ ngg.isLine }}" hint-placeholder-val="{{ false }}"><line x1="{{ ngg.a.x1 }}" y1="{{ ngg.a.y1 }}" x2="{{ ngg.a.x2 }}" y2="{{ ngg.a.y2 }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></line></sc-if><sc-if value="{{ ngg.isPolyline }}" hint-placeholder-val="{{ false }}"><polyline points="{{ ngg.a.points }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></polyline></sc-if><sc-if value="{{ ngg.isPolygon }}" hint-placeholder-val="{{ false }}"><polygon points="{{ ngg.a.points }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></polygon></sc-if><sc-if value="{{ ngg.isPath }}" hint-placeholder-val="{{ false }}"><path d="{{ ngg.a.d }}" marker-start="{{ ngg.a.markerStart }}" marker-mid="{{ ngg.a.markerMid }}" marker-end="{{ ngg.a.markerEnd }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"></path></sc-if><sc-if value="{{ ngg.isText }}" hint-placeholder-val="{{ false }}"><text x="{{ ngg.a.x }}" y="{{ ngg.a.y }}" font-size="{{ ngg.a.fontSize }}" font-weight="{{ ngg.a.fontWeight }}" text-anchor="{{ ngg.a.anchor }}" dominant-baseline="{{ ngg.a.baseline }}" letter-spacing="{{ ngg.a.spacing }}" class="{{ ngg.a.cls }}" fill="{{ ngg.a.fill }}" stroke="{{ ngg.a.stroke }}" stroke-width="{{ ngg.a.strokeWidth }}" stroke-dasharray="{{ ngg.a.dash }}" stroke-linecap="{{ ngg.a.cap }}" stroke-linejoin="{{ ngg.a.join }}" opacity="{{ ngg.a.opacity }}" fill-opacity="{{ ngg.a.fillOpacity }}" stroke-opacity="{{ ngg.a.strokeOpacity }}" transform="{{ ngg.a.transform }}"><sc-for list="{{ ngg.kids }}" as="nggt" hint-placeholder-count="1"><sc-if value="{{ nggt.isTextNode }}" hint-placeholder-val="{{ true }}">{{ nggt.vv }}</sc-if><sc-if value="{{ nggt.isTspan }}" hint-placeholder-val="{{ false }}"><tspan x="{{ nggt.a.x }}" y="{{ nggt.a.y }}" font-size="{{ nggt.a.fontSize }}" font-weight="{{ nggt.a.fontWeight }}" class="{{ nggt.a.cls }}" fill="{{ nggt.a.fill }}">{{ nggt.tv }}</tspan></sc-if></sc-for></text></sc-if></sc-for></g></sc-if></sc-for></g></sc-if></sc-for></svg></div><span class="fg-fade fg-fade--l" aria-hidden="true"></span><span class="fg-fade fg-fade--r" aria-hidden="true"></span></div><sc-if value="{{ isBlock }}" hint-placeholder-val="{{ true }}"><p class="fg-hint">Scroll sideways to see the whole drawing →</p></sc-if><sc-if value="{{ b.hasCaption }}" hint-placeholder-val="{{ true }}"><figcaption class="fg-figcap"><p class="fg-cap"><sc-for list="{{ b.caption }}" as="r" hint-placeholder-count="3"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ r.v }}</span></sc-if><sc-if value="{{ r.isEm }}" hint-placeholder-val="{{ false }}"><em><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></em></sc-if><sc-if value="{{ r.isStrong }}" hint-placeholder-val="{{ false }}"><strong><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></strong></sc-if><sc-if value="{{ r.isDel }}" hint-placeholder-val="{{ false }}"><del><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></del></sc-if><sc-if value="{{ r.isCode }}" hint-placeholder-val="{{ false }}"><code class="rd-ic">{{ r.v }}</code></sc-if><sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></a></sc-if><sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><a class="rd-a" href="#top" data-to="{{ r.to }}" onclick="{{ linkClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="rd-a__ext"> · new tab</span></a></sc-if><sc-if value="{{ r.isMissing }}" hint-placeholder-val="{{ false }}"><span class="rd-missing"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if><sc-if value="{{ r.isCite }}" hint-placeholder-val="{{ false }}"><a class="{{ r.cls }}" id="{{ r.citeId }}" href="{{ r.href }}" data-to="{{ r.to }}" onclick="{{ citeClick }}"><sc-for list="{{ r.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for><span class="fg-cite__n">{{ r.num }}</span></a></sc-if></sc-for></p></figcaption></sc-if></figure>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"lang":{"editor":null},"onLink":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":500}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tick: 0, over: false, moreL: false, moreR: false }; this.box = null; this.ro = null; }
+
+  linkClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    if (!this.props.onLink) { if (e.currentTarget.getAttribute('href') === '#top') e.preventDefault(); return; }
+    e.preventDefault();
+    this.props.onLink(to);
+  };
+  /* A citation: the source item becomes the target (the product's :target), then the reader's own anchor jump. */
+  citeClick = (e) => {
+    const to = e.currentTarget.getAttribute('data-to');
+    e.preventDefault();
+    if (!this.props.bare) return;
+    if (window.RD.figs) window.RD.figs.go({ target: to.slice(1), here: '' });
+    if (this.props.onLink) this.props.onLink(to);
+  };
+  /* Canvas only: a part shown alone on a Components board has no chapter around it, so its in-chapter links
+     (#id, a citation) point at #top there and do nothing; data-to keeps the real target. In the reader they go. */
+  loc(o) {
+    if (this.props.bare) return o;
+    const walk = (x) => {
+      if (Array.isArray(x)) return x.map(walk);
+      if (!x || typeof x !== 'object') return x;
+      const n = {};
+      for (const k in x) n[k] = (k === 'svg' || k === 'a') ? x[k] : walk(x[k]);
+      if ((n.isLink || n.isCite) && typeof n.href === 'string' && n.href.charAt(0) === '#' && n.href !== '#top') n.href = '#top';
+      return n;
+    };
+    return walk(o);
+  }
+  componentDidMount() {
+    const F = window.RD.figs;
+    if (F) this.unsub = F.sub(() => this.setState({ tick: (this.state.tick || 0) + 1 }));
+    if (this.check && document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.check());
+  }
+  componentWillUnmount() {
+    if (this.unsub) this.unsub();
+    if (this.ro) this.ro.disconnect();
+    if (this.box) this.box.removeEventListener('scroll', this.onScroll);
+  }
+  wrap(rm) {
+    const P = this.props, bare = !!P.bare;
+    return {
+      wrapCls: (bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone') + (rm ? ' fg-rm' : ''),
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      flowCls: bare ? 'fg-pass' : 'rd-flow fg-solo',
+      lang: bare ? (P.lang || undefined) : (P.lang || 'en'),
+      linkClick: this.linkClick,
+      citeClick: this.citeClick,
+    };
+  }
+
+  /* Wider than its box (a wide image below 36rem, a drawing whose labels would shrink under 11 px), the box scrolls and
+     says so, as the signed reader's drawings and tables do (its 9a): measured, and re-measured on resize and when fonts
+     load. Each fade shows only on a side where more remains. */
+  setBox = (el) => {
+    if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    if (this.box) this.box.removeEventListener('scroll', this.onScroll);
+    this.box = el;
+    if (el) el.addEventListener('scroll', this.onScroll, { passive: true });
+    if (el && window.ResizeObserver) { this.ro = new ResizeObserver(() => this.check()); this.ro.observe(el); if (el.firstElementChild) this.ro.observe(el.firstElementChild); }
+    this.check();
+  };
+  edges(el) {
+    const max = el.scrollWidth - el.clientWidth;
+    return { moreL: max > 1 && el.scrollLeft > 1, moreR: max > 1 && el.scrollLeft < max - 1 };
+  }
+  onScroll = () => {
+    const el = this.box;
+    if (!el) return;
+    const e = this.edges(el);
+    if (e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(e);
+  };
+  check() {
+    const el = this.box;
+    if (!el) return;
+    const over = el.scrollWidth > el.clientWidth + 1;
+    const e = this.edges(el);
+    if (over !== this.state.over || e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(Object.assign({ over }, e));
+  }
+  overCls(on) {
+    const s = this.state;
+    return on && s.over ? ' is-over' + (s.moreL ? ' is-more-l' : '') + (s.moreR ? ' is-more-r' : '') : '';
+  }
+
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const b = this.loc(P.block || RD.read('maintainer-guide/read-surfaces', 'en').blocks.find((x) => x.id === 'sandbox-mock'));
+    const t = b.svg || { viewBox: '0 0 100 100', vbW: 100, vbH: 100, kids: [], minFont: 16 };
+    const item = b.kind === 'item';
+    /* the drawing never shrinks below the width at which its smallest label is 11 px; narrower than that, it scrolls */
+    const minw = item ? 0 : Math.ceil(t.vbW * 11 / (t.minFont || 16));
+    const over = !item && this.state.over;
+    return Object.assign(this.wrap(false), {
+      b, t,
+      isBlock: !item,
+      figCls: (item ? 'fg-item fg-svg fg-svg--item' : 'fg-fig fg-svg') + this.overCls(!item),
+      idAttr: b.id || undefined,
+      svgStyle: '--fg-vbw: ' + t.vbW + '; --fg-minw: ' + minw + 'px',
+      setBox: this.setBox,
+      tab: over ? 0 : undefined,
+      role: over ? 'region' : undefined,
+      boxAria: over ? 'Drawing, scrolls sideways' : undefined,
+    });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reader chapter bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<nav class="rd-bottom" aria-label="Chapters">
+<div class="rd-bottom__cell">
+<sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--prev" href="#top" onclick="{{ prev }}"><span class="rd-bnav__dir"><span class="rd-bnav__chev" aria-hidden="true">‹</span> Previous</span><span class="rd-bnav__sub" lang="{{ prevLang }}">{{ prevTitle }}</span></a></sc-if>
+</div>
+<button type="button" class="rd-bnav rd-bnav--mid" aria-haspopup="dialog" aria-expanded="{{ listOpen }}" onclick="{{ contents }}"><span class="rd-bnav__dir">Contents</span><span class="rd-bnav__sub">{{ where }}</span></button>
+<div class="rd-bottom__cell rd-bottom__cell--end">
+<sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ next }}"><span class="rd-bnav__dir">Next →</span><span class="rd-bnav__sub" lang="{{ nextLang }}">{{ nextTitle }}</span></a></sc-if>
+<sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ book }}"><span class="rd-bnav__dir"><span class="rd-bnav__long">Back to the book →</span><span class="rd-bnav__short">The book →</span></span><span class="rd-bnav__sub">{{ bookTitle }}</span></a></sc-if>
+</div>
+</nav>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"n":{"editor":null},"total":{"editor":null},"pct":{"editor":null},"prevTitle":{"editor":null},"prevLang":{"editor":null},"nextTitle":{"editor":null},"nextLang":{"editor":null},"bookTitle":{"editor":null},"panel":{"editor":null},"onPrev":{"editor":null},"onNext":{"editor":null},"onBook":{"editor":null},"onContents":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":1200,"height":60}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const n = P.n || 2, total = P.total || 5;
+    const pct = P.pct === undefined ? 38 : P.pct;
+    const prevTitle = P.prevTitle === undefined ? 'Knowledge: What It Is and How It Is Used' : P.prevTitle;
+    const nextTitle = P.nextTitle === undefined ? "Knowledge's Read Surfaces: Two Front Ends, One Corpus" : P.nextTitle;
+    return {
+      hasPrev: n > 1,
+      hasNext: n < total,
+      isLast: n >= total,
+      prevTitle, nextTitle,
+      prevLang: P.prevLang || 'en',
+      nextLang: P.nextLang || 'en',
+      bookTitle: P.bookTitle || 'The knowledge maintainer guide',
+      where: 'Chapter ' + n + ' of ' + total + ' · ' + pct + '%',
+      listOpen: P.panel === 'contents',
+      prev: this.call('onPrev'),
+      next: this.call('onNext'),
+      book: this.call('onBook'),
+      contents: this.call('onContents'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-bottom',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Flow</p>
+<p class="rd-board__lead">Nodes sit on the author’s grid, or flow in the block’s direction. Every column is as wide as its widest node and every row as tall as its tallest; edges run orthogonally through the gaps between them, never across a node, with each label knocked out of its own line. Groups are tinted regions with their name at the top left: a group that owns whole rows is a lane across the drawing.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Diagram" sample="{{ c.sample }}" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" scroll="{{ c.scroll }}" pad="{{ c.pad }}" paper="{{ c.paper }}" anchor="{{ c.anchor }}" hint-size="100%,320px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":3864}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const COL = 720, PH = 390;
+    const K = (cap, w, sample, o) => Object.assign({ cap, st: px(w), sample, block: undefined, lang: 'en', theme: 'light', size: 3 }, o);
+    const sampleOf = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver).blocks.find((b) => b.isDiagram);
+    const rows = [
+      { title: "A pipeline in two lanes · direction right · labelled, dashed and conditional edges", cells: [K('Pipeline in lanes · light', COL, 'write-path', {  }), K('Pipeline in lanes · dark', COL, 'write-path', { theme: 'dark' }), K('Pipeline in lanes · sepia', COL, 'write-path', { theme: 'sepia' })] },
+      { title: "A loop back · layers with every shape (pill, box, store) · toned edges with labels", cells: [K('A loop · the way back runs round the outside, dashed', COL, 'retry'), K('Layers in direction down · pill, box and store', COL, 'layers', { anchor: true }), K('Layers · dark', COL, 'layers', { theme: 'dark' })] },
+      { title: "Tables (entity with fields) · no node placed · long labels", cells: [K('Entities with fields · an ER drawing', COL, 'tables'), K('No node placed · flows down in order', COL, 'reindex'), K('Long labels and sub lines wrap inside their node', COL, 'long-labels')] },
+      { title: "Korean labels", cells: [K('Korean node and edge labels', COL, 'ko-write', { lang: 'ko' }), K('Long Korean labels · keep-all', COL, 'ko-long', { lang: 'ko' }), K('Korean · sepia', COL, 'ko-write', { lang: 'ko', theme: 'sepia' })] },
+      { title: "Phone · 390 · a drawing shrinks to its floor, then scrolls in its own box", cells: [K('Pipeline in lanes', PH, 'write-path'), K('Layers', PH, 'layers'), K('Entities', PH, 'tables')] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

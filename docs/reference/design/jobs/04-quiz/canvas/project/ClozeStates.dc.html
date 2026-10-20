@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cloze question — states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Cloze question</p>
+<p class="rd-board__lead">The blanks sit inside the sentence, set in the reading face at 16 px or more and 44 px tall, every one the same width whatever it accepts, so its length gives nothing away. Nothing grades until Check. Answers compare after trimming spaces at the ends, ignoring capitals and normalizing Unicode (NFC); each wrong blank is struck through and listed with what was accepted.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Quiz" doc="{{ c.doc }}" lang="{{ c.lang }}" member="{{ c.member }}" hist="{{ c.hist }}" steps="{{ c.steps }}" outcome="{{ c.outcome }}" only="{{ c.only }}" solo="{{ c.solo }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3400,"height":2449}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const I = 'maintainer-guide/internals', M = 'doc/money-notes/compound-interest', W1 = 'maintainer-guide/what-it-is', TWH = 'tidewater/harmonic-model';
+    const H = RD.quizHist.internals;
+    const C = (cap, w, o) => Object.assign({ cap, st: 'width: ' + w + 'px', doc: I, lang: 'en', member: true, hist: [], steps: [], outcome: 'saved', only: null, solo: false, theme: 'light', size: 3 }, o);
+    const pick = (id, opt) => [id, { t: 'pick', opt }];
+    const tog = (id, opt) => [id, { t: 'toggle', opt }];
+    const chk = (id) => [id, { t: 'check' }];
+    const typed = (id, vals) => vals.map((v, i) => [id, { t: 'type', n: i + 1, v }]);
+    const W = 'write-path', P5 = 'predict-a-minute';
+    const right = typed(W, [' Write Lock ', 'sqlite', 'GIT', 'postgres']);
+    const part = typed(W, ['write lock', 'sqlite3', 'git', '']);
+    const five = typed(P5, ['constituent', 'Phase', 'angular speed', 'amplitude', 'mean level']);
+    const fiveBad = typed(P5, ['wave', 'phase', 'frequency', 'amplitude', 'MSL']);
+    const ko = typed(W, ['쓰기 잠금'.normalize('NFD'), 'SQLite', 'git', 'Postgres']);
+    const rows = [
+      { title: 'Typed, then Check · 600', cells: [
+        C('Empty', 600, { only: [W], solo: true }),
+        C('Typed · nothing grades yet', 600, { only: [W], solo: true, steps: right }),
+        C('Right · capitals, spaces and an alternative', 600, { only: [W], solo: true, steps: right.concat([chk(W)]) }),
+        C('Partly right · what was accepted, per blank', 600, { only: [W], solo: true, steps: part.concat([chk(W)]) }),
+        C('Check with every blank empty', 600, { only: [W], solo: true, steps: [chk(W)] }) ] },
+      { title: 'Five blanks in one sentence · phone · 390', cells: [
+        C('Size 3 · empty', 390, { doc: TWH, only: [P5], solo: true }),
+        C('Size 5 · sepia · typed', 390, { doc: TWH, only: [P5], solo: true, size: 5, theme: 'sepia', steps: five }),
+        C('Size 1 · dark · graded, two wrong', 390, { doc: TWH, only: [P5], solo: true, size: 1, theme: 'dark', steps: fiveBad.concat([chk(P5)]) }) ] },
+      { title: '한국어 · decomposed Hangul (NFD) typed, accepted after NFC', cells: [
+        C('Typed', 390, { lang: 'ko', only: [W], solo: true, steps: ko }),
+        C('Checked · right', 390, { lang: 'ko', only: [W], solo: true, steps: ko.concat([chk(W)]) }),
+        C('Partly right · dark', 390, { lang: 'ko', only: [W], solo: true, theme: 'dark', steps: typed(W, ['쓰기 락', 'SQLite', 'git', 'MySQL']).concat([chk(W)]) }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

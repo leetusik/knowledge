@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Timeline</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Timeline</p>
+<p class="rd-board__lead">Lanes share one scaled axis. A bar runs from its start to its end, its label under it; a label that would run past the axis end is set to end at the bar’s end. Overlapping bars take a second row. A mark is a moment: a diamond on a dashed line through the lane, its label beside it.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Diagram" sample="{{ c.sample }}" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" scroll="{{ c.scroll }}" pad="{{ c.pad }}" paper="{{ c.paper }}" anchor="{{ c.anchor }}" hint-size="100%,320px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1840}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const COL = 720, PH = 390;
+    const K = (cap, w, sample, o) => Object.assign({ cap, st: px(w), sample, block: undefined, lang: 'en', theme: 'light', size: 3 }, o);
+    const sampleOf = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver).blocks.find((b) => b.isDiagram);
+    const rows = [
+      { title: "Lanes, bars and marks · a short bar and overlapping bars", cells: [K('Position writes · light', COL, 'position-writes', {  }), K('Position writes · dark', COL, 'position-writes', { theme: 'dark' }), K('Position writes · sepia', COL, 'position-writes', { theme: 'sepia' })] },
+      { title: "Twelve lanes, the limit · and the phone", cells: [K('Twelve lanes', COL, 'limits-lanes'), K('Position writes · 390 · the lane name moves above its lane', PH, 'position-writes'), K('Twelve lanes · 390', PH, 'limits-lanes')] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

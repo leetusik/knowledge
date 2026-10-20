@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Choice question — states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Choice question</p>
+<p class="rd-board__lead">One answer grades on tap; several (select all that apply) grade on Check. After grading, every option that matters says so in words on its top border, the chosen ones filled, the right one ringed, and the explanation follows. Nothing on the question moves when it grades. The letter keys are circles when one answer is asked for and squares when several are.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Quiz" doc="{{ c.doc }}" lang="{{ c.lang }}" member="{{ c.member }}" hist="{{ c.hist }}" steps="{{ c.steps }}" outcome="{{ c.outcome }}" only="{{ c.only }}" solo="{{ c.solo }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,420px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2800,"height":4002}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const I = 'maintainer-guide/internals', M = 'doc/money-notes/compound-interest', W1 = 'maintainer-guide/what-it-is', TWH = 'tidewater/harmonic-model';
+    const H = RD.quizHist.internals;
+    const C = (cap, w, o) => Object.assign({ cap, st: 'width: ' + w + 'px', doc: I, lang: 'en', member: true, hist: [], steps: [], outcome: 'saved', only: null, solo: false, theme: 'light', size: 3 }, o);
+    const pick = (id, opt) => [id, { t: 'pick', opt }];
+    const tog = (id, opt) => [id, { t: 'toggle', opt }];
+    const chk = (id) => [id, { t: 'check' }];
+    const typed = (id, vals) => vals.map((v, i) => [id, { t: 'type', n: i + 1, v }]);
+    const rows = [
+      { title: 'One answer · grades on tap · 600', cells: [
+        C('Unanswered', 600, { only: ['read-column'], solo: true }),
+        C('Tapped the right option', 600, { only: ['read-column'], solo: true, steps: [pick('read-column', 'b')] }),
+        C('Tapped a wrong option · the right one shown', 600, { only: ['read-column'], solo: true, steps: [pick('read-column', 'a')] }) ] },
+      { title: 'Select all that apply · grades on Check · 600', cells: [
+        C('Selecting · nothing graded yet', 600, { only: ['two-planes'], solo: true, steps: [tog('two-planes', 'a'), tog('two-planes', 'b')] }),
+        C('Check with nothing chosen', 600, { only: ['two-planes'], solo: true, steps: [chk('two-planes')] }),
+        C('Partly right · graded wrong', 600, { only: ['two-planes'], solo: true, steps: [tog('two-planes', 'a'), tog('two-planes', 'b'), chk('two-planes')] }),
+        C('Every right option and no wrong one', 600, { only: ['two-planes'], solo: true, steps: [tog('two-planes', 'a'), tog('two-planes', 'c'), chk('two-planes')] }) ] },
+      { title: 'Two options and six · phone · 390', cells: [
+        C('Two options', 390, { doc: TWH, only: ['sum-of-waves'], solo: true }),
+        C('Six options · a wrong tap · dark', 390, { doc: TWH, only: ['spring-tides'], solo: true, theme: 'dark', steps: [pick('spring-tides', 'a')] }),
+        C('Six options · sepia', 390, { doc: TWH, only: ['spring-tides'], solo: true, theme: 'sepia' }) ] },
+      { title: 'A long option with inline code, at text sizes 1, 3 and 5 · a link in the prompt · 390', cells: [
+        C('Size 1', 390, { only: ['dormant'], solo: true, size: 1 }),
+        C('Size 3 · graded', 390, { only: ['dormant'], solo: true, steps: [pick('dormant', 'c')] }),
+        C('Size 5 · sepia', 390, { only: ['dormant'], solo: true, size: 5, theme: 'sepia' }),
+        C('A link in the prompt · dark', 390, { only: ['two-planes'], solo: true, theme: 'dark' }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Notes and bookmarks on typed blocks</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Notes and bookmarks on typed blocks</p>
+<p class="rd-board__lead">A typed block (a diagram, a quiz, a figure, the sources) is a section of its own when it has an id: its title or caption takes a note on it and a bookmark, never a highlight. The diagram is the reader’s canvas-only stand-in; quiz, figure and sources are stand-ins naming their jobs, to show where the marker and "Bookmarked" sit. Text before the first section takes nothing yet (Q5).</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><sc-if value="{{ c.isProse }}" hint-placeholder-val="{{ true }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="en" theme="{{ c.theme }}" size="3" hint-size="100%,600px"></dc-import></sc-if><sc-if value="{{ c.isStand }}" hint-placeholder-val="{{ false }}"><div class="rd-frame rd-size-3 rd-standalone rd-pad" data-theme="{{ c.theme }}"><div class="rd-in"><div class="an-stand-wrap"><span class="an-tag an-tag--demo" aria-hidden="true">{{ c.tag }}</span><div class="an-stand" data-proto="stand-in"><p class="an-stand__kind">{{ c.kind }}</p><p class="an-stand__text">{{ c.text }}</p></div><div class="an-rows an-rows--demo"><div class="an-row"><span class="an-row__k">{{ c.rowK }}</span><span class="an-row__t">{{ c.rowT }}</span></div></div></div></div></div></sc-if><sc-if value="{{ c.isBar }}" hint-placeholder-val="{{ false }}"><dc-import name="SelBar" mode="{{ c.mode }}" sec-title="{{ c.secTitle }}" sec-word="{{ c.secWord }}" theme="{{ c.theme }}" hint-size="100%,120px"></dc-import></sc-if></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1165}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const r = RD.read('maintainer-guide/internals', 'en');
+    const v = AN.view(r, { ann: AN.seed('default') });
+    const cut = (from, n) => { const a = v.blocks.findIndex((b) => b.id === from); return v.blocks.slice(a, a + n); };
+    const base = { isProse: false, isStand: false, isBar: false, theme: 'light', tag: '', kind: '', text: '', rowK: '', rowT: '', mode: 'block', secTitle: '', secWord: 'Section' };
+    const PR = (cap, blocks, o) => cell(cap, 680, Object.assign({}, base, { isProse: true, blocks }, o));
+    const ST = (cap, o) => cell(cap, 680, Object.assign({}, base, { isStand: true }, o));
+    const BR = (cap, o) => cell(cap, 460, Object.assign({}, base, { isBar: true }, o));
+    const rows = [
+      { title: 'A diagram (the reader’s stand-in) with a note on it', cells: [PR('Light', cut('two-planes', 1)), PR('Dark', cut('two-planes', 1), { theme: 'dark' })] },
+      { title: 'Quiz, figure and sources: where their marker and "Bookmarked" sit (stand-ins; their jobs draw the blocks)', cells: [
+        ST('Quiz · 04-quiz', { kind: 'Stand-in · a quiz block · 04-quiz draws it', text: 'Its question is its caption: select it to add a note on the quiz or bookmark it. The answers are never highlighted.', tag: 'Bookmarked', rowK: 'Note on this quiz', rowT: 'Got this wrong twice. The 201 goes out before the push.' }),
+        ST('Figure · 02-figures', { kind: 'Stand-in · a figure · 02-figures draws it', text: 'Its caption takes a note on the figure or a bookmark.', tag: '', rowK: 'Note on this figure', rowT: 'Compare with the diagram in chapter 1.' }),
+        ST('Sources · 02-figures', { kind: 'Stand-in · a sources list · 02-figures draws it', text: 'Its heading takes a note on the list or a bookmark.', tag: 'Bookmarked', rowK: 'Text changed', rowT: '1 note you made no longer matches the text' }) ] },
+      { title: 'Selecting a typed block’s caption, and text before the first section', cells: [
+        BR('A diagram’s title', { secWord: 'Diagram', secTitle: 'One FastAPI process, two planes' }),
+        BR('A quiz’s question', { secWord: 'Quiz', secTitle: 'Where does the 201 go out?' }),
+        BR('Before the first section (Q5)', { mode: 'refuse' }) ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Row card, every tone (provisional values)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Row card, every tone (provisional values)</p>
+<p class="rd-board__lead">A card is a side-by-side text item in a figure row: a tone's soft ground, the title in the display face in the tone's ink, the body in the interface face at the column's small step, in ink. The title always says what the card is, so the tone is never the only signal. The 13 tones use 03-diagrams' names; their values here are PROVISIONAL, pending 03-diagrams. Every text measures 4.5:1 or more on its ground (result.md).</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="RowCard" card="{{ c.card }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,220px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const TITLES = [['default', 'Note: a plain aside'], ['muted', 'Aside: background you can skip'], ['accent', 'Key point: the one to remember'],
+      ['ok', 'Do: the way that works'], ['warn', 'Watch for: a common slip'], ['bad', 'Never: the way that breaks'], ['store', 'Stored: where the state lives'],
+      ['series-1', 'Series 1: the first of a set'], ['series-2', 'Series 2: the second'], ['series-3', 'Series 3: the third'],
+      ['series-4', 'Series 4: the fourth'], ['series-5', 'Series 5: the fifth'], ['series-6', 'Series 6: the sixth']];
+    const body = "A card's body is inline Markdown: a [link in the chapter](#two-front-ends), `inline code` and *emphasis*.";
+    const card = (t) => RD.figBuild.card({ title: t[1], body, tone: t[0] }, true);
+    const row = (theme, label) => ({ title: label, cells: TITLES.map((t) => K('tone: ' + t[0], 300, { card: card(t), theme })) });
+    const rows = [row('light', 'Light'), row('dark', 'Dark'), row('sepia', 'Sepia')];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
