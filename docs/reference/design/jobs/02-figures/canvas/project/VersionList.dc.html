@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Version history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<sc-if value="{{ fail }}" hint-placeholder-val="{{ false }}"><p class="rd-ver__fail"><span class="rd-ver__failcode">Unavailable</span><span class="rd-ver__failsub">Couldn't load this {{ noun }}'s history. The {{ noun }} itself is fine — reload to try again.</span></p></sc-if>
+<sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}"><p class="rd-sheet__lead">{{ variant }} · {{ lead }}</p>
+<ol class="rd-vers"><sc-for list="{{ items }}" as="v" hint-placeholder-count="2"><li class="rd-ver" aria-current="{{ v.cur }}">
+<div class="rd-ver__main"><span class="rd-ver__line"><span class="rd-ver__n">v{{ v.n }}</span><sc-if value="{{ v.isNewest }}" hint-placeholder-val="{{ true }}"><span class="rd-tag rd-tag--accent">Current</span></sc-if></span><span class="rd-ver__date">Published {{ v.date }}</span><sc-if value="{{ v.hasFrom }}" hint-placeholder-val="{{ false }}"><span class="rd-ver__from">{{ v.fromText }}</span></sc-if></div>
+<sc-if value="{{ v.isCur }}" hint-placeholder-val="{{ true }}"><span class="rd-ver__reading">Reading now</span></sc-if>
+<sc-if value="{{ v.notCur }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--secondary" aria-label="View version {{ v.n }}" onclick="{{ v.open }}">View</button></sc-if>
+</li></sc-for></ol></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":null},"lang":{"editor":null},"ver":{"editor":null},"fail":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":205}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const bare = !!P.bare;
+    const doc = P.doc || 'maintainer-guide/internals';
+    const r = RD.read(doc, P.lang || 'en', P.ver);
+    const loose = RD.ctx(doc).loose;
+    const noun = loose ? 'document' : 'chapter';
+    const LANG = { en: 'English', ko: '한국어' };
+    const earlier = r.versions.length - 1;
+    const lead = earlier === 0 ? 'This is the only version.' : earlier === 1 ? '1 earlier version, newest first.' : earlier + ' earlier versions, newest first.';
+    return {
+      noun,
+      fail: !!P.fail,
+      ok: !P.fail,
+      variant: LANG[r.lang] || r.lang,
+      lead,
+      items: r.versions.map((v) => ({
+        n: v.n, date: v.date,
+        isNewest: v.n === r.newest,
+        isCur: v.n === r.version,
+        notCur: v.n !== r.version,
+        cur: v.n === r.version ? 'true' : undefined,
+        hasFrom: !!v.from,
+        fromText: v.from ? 'Translated from ' + (LANG[v.from.lang] || v.from.lang) + ' v' + v.from.v : '',
+        open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(v.n); },
+      })),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-panel',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

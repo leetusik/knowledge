@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quiz in a chapter — the flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+<script src="flow.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+/* Canvas only, never built: the foot strip's one control, in the state bar's neutral button look. */
+[data-proto="screens"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 7px; cursor: pointer; }
+[data-proto="screens"] button:hover { background: #fff; }
+[data-proto="screens"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+</style>
+</helmet>
+<div class="rd-proto">
+<div class="rd-proto__stage">
+<sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ groups }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" quiz="{{ r.quiz }}" on-quiz="{{ r.onQuiz }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ groups }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,900px"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><button type="button" onclick="{{ toBar }}">Back to the state bar</button><a href="Reader.dc.html">The chapter screen alone</a><a href="Widths.dc.html">The quiz at 390, 820 and 1440</a><a href="Elsewhere.dc.html">The stand-in for another job's screen</a><a href="Quiz.dc.html">The quiz block alone</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":935}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RD.flow.initial('qopen', { themeChoice: 'system', size: 3 });
+    this.a = window.RD.flow.api(this);
+  }
+  /* The state bar is the first row of the scrolled page (rule 1: it scrolls away, never pinned). This strip sits under the
+     page, so from any state one press scrolls the page back to the bar, and focus goes to its pressed preset. */
+  toBar = (e) => {
+    const root = e && e.currentTarget && e.currentTarget.closest('.rd-proto');
+    if (!root) return;
+    /* an open sheet closes first: its scrim would otherwise shrink to start under the bar */
+    if (this.state.panel) this.a.panel(null);
+    root.querySelectorAll('.rd-scroll, .rd-away').forEach((el) => { el.scrollTop = 0; });
+    /* the page's presets are the buttons before the first "· theme:" separator */
+    const g = root.querySelector('[data-proto="state-bar"] .pb-group:not(.is-off)'), presets = [];
+    if (g) for (const el of g.querySelectorAll('button, .pb-sep')) { if (el.classList.contains('pb-sep')) break; presets.push(el); }
+    const b = presets.find((x) => x.getAttribute('aria-pressed') === 'true') || presets[0];
+    if (b) b.focus({ preventScroll: true });
+  };
+  renderVals() {
+    const F = window.RD.flow, s = this.state;
+    const none = { kind: 'library', where: '', detail: '', legacyTitle: '', onBack: null, onContinue: null };
+    return {
+      groups: F.bar(this, this.a),
+      inReader: !s.away,
+      isAway: !!s.away,
+      r: F.readerProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+      toBar: this.toBar,
+    };
+  }
+}
+</script>
+</body>
+</html>

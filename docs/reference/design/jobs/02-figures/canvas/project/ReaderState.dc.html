@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loading, not found, failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-flow">
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ true }}"><div class="rd-head rd-sk" role="status" aria-label="Loading…">
+<span class="rd-skel rd-sk__book"></span><span class="rd-skel rd-sk__title"></span><span class="rd-skel rd-sk__title2"></span><span class="rd-skel rd-sk__lede"></span><span class="rd-skel rd-sk__lede rd-sk__lede2"></span><span class="rd-skel rd-sk__meta"></span>
+<div class="rd-sk__toc"><span class="rd-skel rd-sk__tocline rd-sk__w60"></span><span class="rd-skel rd-sk__tocline rd-sk__w45"></span><span class="rd-skel rd-sk__tocline rd-sk__w55"></span><span class="rd-skel rd-sk__tocline rd-sk__w40"></span></div>
+<span class="rd-skel rd-sk__h2"></span><span class="rd-skel rd-sk__line rd-sk__w100"></span><span class="rd-skel rd-sk__line rd-sk__w95"></span><span class="rd-skel rd-sk__line rd-sk__w100"></span><span class="rd-skel rd-sk__line rd-sk__w70"></span><span class="rd-skel rd-sk__code"></span>
+</div></sc-if>
+<sc-if value="{{ isNotFound }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Not found · 404</span><h1 class="rd-ed__title">{{ nounCap }} not found</h1><p class="rd-ed__sub">There's no {{ noun }} at this address. It may have moved, or the link may be wrong.</p><div class="rd-ed__actions"><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ library }}"><span aria-hidden="true">‹</span> Back to the library</a></div></div></sc-if>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Error · 500</span><h1 class="rd-ed__title">Something on our side stopped reading.</h1><p class="rd-ed__sub">This {{ noun }} did not finish loading. Try again — and if it keeps failing, the reference below tells us where it stopped.</p><div class="rd-ed__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ retry }}">Try again</button></div><p class="rd-ed__ref">ref · rd-7f3a2c91</p></div></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"noun":{"editor":null},"onRetry":{"editor":null},"onLibrary":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":820,"height":845}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const kind = P.kind || 'loading';
+    const noun = P.noun || 'chapter';
+    return {
+      noun,
+      nounCap: noun.charAt(0).toUpperCase() + noun.slice(1),
+      isLoading: kind === 'loading',
+      isNotFound: kind === 'notfound',
+      isFailed: kind === 'failed',
+      retry: this.call('onRetry'),
+      library: this.call('onLibrary'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

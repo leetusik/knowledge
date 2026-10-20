@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Narrow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="diagram.css">
+<script src="reader.js"></script>
+<script src="dg.js"></script>
+<script src="dggraph.js"></script>
+<script src="dgrows.js"></script>
+<script src="dgdata.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Narrow</p>
+<p class="rd-board__lead">The rule at every width: a drawn diagram shows at its natural size, shrinks with the column down to the point where its small text is 11 px, and below that keeps that size and scrolls in its own box; the page never scrolls sideways. Stacks, timelines and charts are text and boxes, so they re-flow with the column down to their own minimum width, then scroll the same way.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Diagram" sample="{{ c.sample }}" block="{{ c.block }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" scroll="{{ c.scroll }}" pad="{{ c.pad }}" paper="{{ c.paper }}" anchor="{{ c.anchor }}" hint-size="100%,320px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":2780}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const COL = 720, PH = 390;
+    const K = (cap, w, sample, o) => Object.assign({ cap, st: px(w), sample, block: undefined, lang: 'en', theme: 'light', size: 3 }, o);
+    const sampleOf = (lang, ver) => RD.read('maintainer-guide/internals', lang, ver).blocks.find((b) => b.isDiagram);
+    const rows = [
+      { title: "The widest diagram on a phone · 390", cells: [K('Sixty nodes · at the start', PH, 'limits-map'), K('Sixty nodes · scrolled to the middle', PH, 'limits-map', { scroll: 'mid' }), K('Sixty nodes · text column, desktop', COL, 'limits-map')] },
+      { title: "A figure-row item · a third of the column, about 180 wide", cells: [K('A small flow · fits at its natural size', 180, 'row-item', { pad: 'none' }), K('The pipeline · at its floor, it scrolls', 180, 'write-path', { pad: 'none' }), K('A bar chart · re-flows into rows', 180, 'survey', { pad: 'none' }), K('A stack · re-flows', 180, 'stack-plain', { pad: 'none' }), K('A timeline · at its minimum, it scrolls', 180, 'position-writes', { pad: 'none' })] },
+      { title: "A figure-row item · half the column, about 280 wide", cells: [K('The pipeline · shrinks, then scrolls', 280, 'write-path', { pad: 'none' }), K('Lines', 280, 'line', { pad: 'none' }), K('Card status', 280, 'card-states', { pad: 'none' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Highlight popover and note editor</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-box an-pop" role="dialog" aria-label="{{ dlgLabel }}" tabindex="-1" ref="{{ setBox }}" onkeydown="{{ boxKey }}">
+<div class="an-box__head"><p class="an-box__k"><sc-if value="{{ hasKL }}" hint-placeholder-val="{{ false }}">{{ k }}<span lang="{{ kLang }}">{{ kL }}</span></sc-if><sc-if value="{{ noKL }}" hint-placeholder-val="{{ true }}">{{ k }}</sc-if></p><button type="button" class="rd-btn rd-btn--quiet an-box__x" onclick="{{ close }}">Close</button></div>
+<sc-if value="{{ hasWhere }}" hint-placeholder-val="{{ false }}"><p class="an-box__where" lang="{{ whereLang }}">{{ where }}</p></sc-if>
+<sc-if value="{{ isView }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ hasNote }}" hint-placeholder-val="{{ true }}"><p class="an-box__note" lang="{{ noteLang }}">{{ note }}</p><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--secondary" onclick="{{ edit }}"><span class="an-btn-w"><span>Edit note</span><span aria-hidden="true">Save note</span><span aria-hidden="true">Add note</span></span></button></div></sc-if>
+<sc-if value="{{ noNote }}" hint-placeholder-val="{{ false }}"><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--secondary" onclick="{{ edit }}"><span class="an-btn-w"><span>Add note</span><span aria-hidden="true">Edit note</span><span aria-hidden="true">Save note</span></span></button></div></sc-if>
+<sc-if value="{{ isHl }}" hint-placeholder-val="{{ true }}"><hr class="an-box__rule"><button type="button" class="an-rev" role="switch" aria-checked="{{ review }}" onclick="{{ toggleReview }}"><span class="an-rev__track" aria-hidden="true"><span class="an-rev__thumb"></span></span><span class="an-rev__label">Review this · <b>{{ revWord }}</b></span><span class="an-rev__sub">{{ revSub }}</span></button></sc-if>
+<hr class="an-box__rule"><div class="an-box__actions an-box__actions--split"><button type="button" class="rd-btn rd-btn--quiet an-del" onclick="{{ del }}">{{ delLabel }}</button><sc-if value="{{ hasDelNote }}" hint-placeholder-val="{{ false }}"><span class="an-box__fine">{{ delNote }}</span></sc-if></div>
+</sc-if>
+<sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}"><div class="an-ed"><label class="an-ed__label" for="{{ fid }}">{{ edLabel }}</label><textarea id="{{ fid }}" class="an-ed__field" lang="{{ noteLang }}" ref="{{ setField }}" onkeydown="{{ fieldKey }}" placeholder="What do you want to remember about this?"></textarea><p class="an-ed__hint">⌘ Enter saves · Esc cancels · line breaks are kept</p></div><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ save }}"><span class="an-btn-w"><span>Save note</span><span aria-hidden="true">Edit note</span><span aria-hidden="true">Add note</span></span></button><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ cancel }}">Cancel</button><sc-if value="{{ existing }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--quiet an-del an-push" onclick="{{ delNoteOnly }}">Delete note</button></sc-if></div></sc-if>
+<sc-if value="{{ isChoose }}" hint-placeholder-val="{{ false }}"><p class="an-box__fine">They overlap here. Pick one to open it.</p><ul class="an-box__list"><sc-for list="{{ picks }}" as="p" hint-placeholder-count="2"><li><button type="button" class="an-pick" onclick="{{ p.pick }}"><span class="an-pick__q" lang="{{ p.quoteLang }}"><mark>{{ p.quote }}</mark></span><span class="an-pick__m">{{ p.meta }}</span></button></li></sc-for></ul></sc-if>
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}"><p class="an-box__fine">{{ lead }}</p><ul class="an-box__list"><sc-for list="{{ list }}" as="it" hint-placeholder-count="2"><li class="an-box__item"><sc-if value="{{ it.hasQuote }}" hint-placeholder-val="{{ true }}"><p class="an-box__quote" lang="{{ it.quoteLang }}">{{ it.quote }}</p></sc-if><sc-if value="{{ it.hasNote }}" hint-placeholder-val="{{ false }}"><p class="an-box__note an-box__note--item" lang="{{ it.noteLang }}">{{ it.note }}</p></sc-if><sc-if value="{{ it.canDel }}" hint-placeholder-val="{{ false }}"><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--quiet an-del" aria-label="{{ it.delAria }}" onclick="{{ it.del }}">Delete</button></div></sc-if></li></sc-for></ul><sc-if value="{{ hasGo }}" hint-placeholder-val="{{ true }}"><div class="an-box__actions"><button type="button" class="an-link" onclick="{{ go }}"><span>{{ goLabel }}<span lang="{{ goLang }}">{{ goL }}</span> →</span></button></div></sc-if></sc-if>
+<sc-if value="{{ isBm }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ bmShow }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ hasLabel }}" hint-placeholder-val="{{ true }}"><p class="an-box__note an-box__label" lang="{{ labelLang }}">{{ label }}</p></sc-if><sc-if value="{{ noLabel }}" hint-placeholder-val="{{ false }}"><p class="an-box__fine">No label. A label says why you kept this place, in the Notes list and the book's list.</p></sc-if><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--secondary" onclick="{{ editLabel }}"><span class="an-btn-w"><span>{{ labelBtn }}</span><span aria-hidden="true">Save label</span><span aria-hidden="true">Edit label</span><span aria-hidden="true">Add label</span></span></button><button type="button" class="rd-btn rd-btn--quiet an-del an-push" onclick="{{ removeBm }}">Remove bookmark</button></div></sc-if>
+<sc-if value="{{ bmEdit }}" hint-placeholder-val="{{ false }}"><div class="an-ed"><label class="an-ed__label" for="{{ lid }}">Label</label><input id="{{ lid }}" type="text" class="an-ed__field an-ed__field--line" maxlength="120" ref="{{ setLabel }}" onkeydown="{{ labelKey }}" placeholder="Why this place?"></div><div class="an-box__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ saveLabel }}"><span class="an-btn-w"><span>Save label</span><span aria-hidden="true">Edit label</span><span aria-hidden="true">Add label</span></span></button><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ cancelLabel }}">Cancel</button></div></sc-if>
+</sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"vm":{"editor":null},"onClose":{"editor":null},"onEdit":{"editor":null},"onSave":{"editor":null},"onCancel":{"editor":null},"onDeleteNote":{"editor":null},"onReview":{"editor":null},"onDelete":{"editor":null},"onDeleteItem":{"editor":null},"onPick":{"editor":null},"onGo":{"editor":null},"onEditLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onRemoveBm":{"editor":null},"autofocus":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":520}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.box = null;
+    this.field = null;
+    this.labelEl = null;
+    this.filled = null;
+    this.uid = 'an' + Math.random().toString(36).slice(2, 8);
+  }
+  setBox = (el) => { this.box = el; };
+  setField = (el) => { this.field = el; this.fill(); };
+  setLabel = (el) => { this.labelEl = el; this.fill(); };
+  vm() {
+    const RD = window.RD;
+    return this.props.vm || {
+      mode: 'view', id: 'a2', isHl: true, k: 'Highlight · note', dlgLabel: 'Highlight', where: 'The two planes', whereLang: 'en',
+      note: 'Content plane: rebuilt from the files. Accounts plane: migrated and backed up. Ask which one before touching a table.',
+      noteLang: 'en', review: true, card: 'active', delLabel: 'Delete highlight', delNote: 'Its note and its review card go with it.',
+      edLabel: 'Note', draft: '', existing: true
+    };
+  }
+  /* The field is the reader's own text: it is filled once when the editor opens, never re-rendered under the cursor. */
+  fill() {
+    const v = this.vm();
+    const key = v.mode + '|' + (v.id || '') + '|' + (v.fillKey || '');
+    if (this.filled === key) return;
+    if (v.mode === 'edit' && this.field) {
+      this.filled = key;
+      this.field.value = v.draft || '';
+      if ((this.props.autofocus !== false && !!this.props.vm)) requestAnimationFrame(() => { if (this.field) { this.field.focus({ preventScroll: true }); this.field.setSelectionRange(this.field.value.length, this.field.value.length); } });
+    } else if (v.mode === 'bm' && v.editing && this.labelEl) {
+      this.filled = key;
+      this.labelEl.value = v.label || '';
+      if ((this.props.autofocus !== false && !!this.props.vm)) requestAnimationFrame(() => { if (this.labelEl) this.labelEl.focus({ preventScroll: true }); });
+    }
+  }
+  componentDidMount() {
+    this.fill();
+    const v = this.vm();
+    if ((this.props.autofocus !== false && !!this.props.vm) && v.mode !== 'edit' && !(v.mode === 'bm' && v.editing) && this.box) this.box.focus({ preventScroll: true });
+  }
+  componentDidUpdate() { this.fill(); }
+  call(name, arg) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f(arg);
+    };
+  }
+  save = () => { if (this.props.onSave) this.props.onSave(this.field ? this.field.value : ''); };
+  saveLabel = () => { if (this.props.onSaveLabel) this.props.onSaveLabel(this.labelEl ? this.labelEl.value : ''); };
+  fieldKey = (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); this.save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (this.props.onCancel) this.props.onCancel(); }
+  };
+  labelKey = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.saveLabel(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (this.props.onCancelLabel) this.props.onCancelLabel(); }
+  };
+  boxKey = (e) => {
+    if (e.key === 'Escape' && !e.target.closest('textarea, input')) { e.preventDefault(); e.stopPropagation(); if (this.props.onClose) this.props.onClose(); }
+  };
+  renderVals() {
+    const P = this.props, v = this.vm();
+    const bare = !!P.bare;
+    const mode = v.mode || 'view';
+    const isList = mode === 'changed' || mode === 'other';
+    return {
+      setBox: this.setBox, setField: this.setField, setLabel: this.setLabel, boxKey: this.boxKey, fieldKey: this.fieldKey, labelKey: this.labelKey,
+      dlgLabel: v.dlgLabel || v.k || 'Highlight',
+      k: v.k || 'Highlight', hasKL: !!v.kL, noKL: !v.kL, kL: v.kL || '', kLang: v.kLang || 'en',
+      hasWhere: !!v.where, where: v.where || '', whereLang: v.whereLang || 'en',
+      isView: mode === 'view', isEdit: mode === 'edit', isChoose: mode === 'choose', isList, isBm: mode === 'bm',
+      hasNote: !!v.note, noNote: !v.note, note: v.note || '', noteLang: v.noteLang || 'en',
+      isHl: !!v.isHl, review: !!v.review, revWord: v.review ? 'On' : 'Off',
+      revSub: v.review ? 'It is a card in your reviews.' : v.card === 'suspended' ? 'Its card is paused, and keeps its history.' : 'Turn on to make it a review card.',
+      delLabel: v.delLabel || 'Delete highlight', hasDelNote: !!v.delNote, delNote: v.delNote || '',
+      fid: this.uid + '-note', lid: this.uid + '-label', edLabel: v.edLabel || 'Note', existing: !!v.existing,
+      picks: (v.picks || []).map((p) => Object.assign({}, p, { pick: this.call('onPick', p.id) })),
+      lead: v.lead || '',
+      list: (v.list || []).map((it) => Object.assign({ hasNote: false, note: '', noteLang: 'en', canDel: false, delAria: '' }, it, { hasQuote: !!it.quote, del: this.call('onDeleteItem', it.id) })),
+      hasGo: !!v.goLabel, goLabel: v.goLabel || '', goL: v.goL || '', goLang: v.goLang || 'en',
+      bmShow: !v.editing, bmEdit: !!v.editing, hasLabel: !!v.label, noLabel: !v.label, label: v.label || '', labelLang: v.labelLang || 'en', labelBtn: v.label ? 'Edit label' : 'Add label',
+      close: this.call('onClose'), edit: this.call('onEdit'), cancel: this.call('onCancel'), del: this.call('onDelete'), delNoteOnly: this.call('onDeleteNote'),
+      toggleReview: this.call('onReview'), go: this.call('onGo'), editLabel: this.call('onEditLabel'), cancelLabel: this.call('onCancelLabel'),
+      removeBm: this.call('onRemoveBm'), save: this.save, saveLabel: this.saveLabel,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

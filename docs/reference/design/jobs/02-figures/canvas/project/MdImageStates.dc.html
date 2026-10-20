@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Plain Markdown image</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="figures.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Plain Markdown image</p>
+<p class="rd-board__lead">A plain Markdown image, ![alt](asset:name), inside a paragraph. It follows the figure's image rules (its own pixel size or smaller, the hairline edge, the reserved box) but carries no caption, credit or width, takes the id img-&lt;name&gt; rather than one an author writes, and sits at a paragraph's spacing; its alt text is its only text. An image never sits among words: the paragraph around it splits in two.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><sc-if value="{{ c.isA }}" hint-placeholder-val="{{ true }}"><dc-import name="Prose" blocks="{{ c.blocks }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,480px"></dc-import></sc-if><sc-if value="{{ c.isB }}" hint-placeholder-val="{{ false }}"><dc-import name="Figure" block="{{ c.block }}" state="{{ c.state }}" rm="{{ c.rm }}" lang="{{ c.lang }}" theme="{{ c.theme }}" size="{{ c.size }}" hint-size="100%,480px"></dc-import></sc-if></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":2140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+    const FIG = 'maintainer-guide/read-surfaces', SUB = 'ml-gently/forgetting';
+    const B = (doc, lang, id) => RD.read(doc, lang).blocks.find((b) => b.id === id);
+    const K = (cap, w, o) => Object.assign({ cap, st: px(w), theme: 'light', size: 3, lang: 'en', state: 'loaded', rm: false }, o);
+
+    const fb = RD.read(FIG, 'en').blocks;
+    const i = fb.findIndex((b) => b.isImg);
+    const j = fb.findIndex((b) => b.id === 'reader-desktop');
+    const around = fb.slice(i - 1, i + 2), beside = fb.slice(j, i + 1), img = fb[i];
+    const P = (cap, w, o) => Object.assign(K(cap, w, o), { isA: true, isB: false });
+    const F = (cap, w, o) => Object.assign(K(cap, w, o), { isA: false, isB: true });
+    const rows = [
+      { title: 'In a paragraph · the image becomes its own block between the two halves · 820 and 390', cells: [
+        P('820 · light', 820, { blocks: around }), P('390 · light', 390, { blocks: around })] },
+      { title: 'Dark and sepia · 820', cells: [P('Dark', 820, { blocks: around, theme: 'dark' }), P('Sepia', 820, { blocks: around, theme: 'sepia' })] },
+      { title: 'Beside a figure · what sets it apart: no caption, no credit, no width and no author-written id, at a paragraph\'s spacing', cells: [
+        P('A figure, a paragraph, then a plain image · 820', 820, { blocks: beside })] },
+      { title: 'Loading and missing', cells: [F('Loading · 820', 820, { block: img, state: 'loading' }), F('Missing · 820 · its alt text, under the label', 820, { block: img, state: 'missing' }),
+        F('Missing · 390 · dark', 390, { block: img, state: 'missing', theme: 'dark' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

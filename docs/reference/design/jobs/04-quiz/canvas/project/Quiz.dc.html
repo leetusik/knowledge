@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quiz · the block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" ref="{{ setRoot }}"><div class="{{ innerCls }}" lang="{{ lang }}">
+<section class="qz" id="{{ v.id }}" aria-label="{{ v.name }}">
+<sc-if value="{{ showHead }}" hint-placeholder-val="{{ true }}"><div class="qz__head"><p class="qz__label">{{ v.label }}</p><sc-if value="{{ v.hasCount }}" hint-placeholder-val="{{ true }}"><p class="{{ v.countCls }}" aria-hidden="{{ v.countHidden }}">{{ v.count }}</p></sc-if></div><sc-if value="{{ v.hasTitle }}" hint-placeholder-val="{{ true }}"><p class="qz__title" id="{{ v.titleId }}"><sc-for list="{{ v.titleParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></p></sc-if></sc-if>
+<ol class="qz__items"><sc-for list="{{ items }}" as="it" hint-placeholder-count="3"><li class="qz__li" id="{{ it.domId }}"><sc-if value="{{ it.isChoice }}" hint-placeholder-val="{{ true }}"><dc-import name="QuizChoice" it="{{ it }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,360px"></dc-import></sc-if><sc-if value="{{ it.isRecall }}" hint-placeholder-val="{{ false }}"><dc-import name="QuizRecall" it="{{ it }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,240px"></dc-import></sc-if><sc-if value="{{ it.isCloze }}" hint-placeholder-val="{{ false }}"><dc-import name="QuizCloze" it="{{ it }}" lang="{{ lang }}" on-link="{{ onLink }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></sc-if><sc-if value="{{ it.showSave }}" hint-placeholder-val="{{ false }}"><div class="qz-save"><dc-import name="SignInToSave" bare="{{ true }}" what="quiz answers" place="{{ it.place }}" on-sign-in="{{ it.onSignIn }}" on-dismiss="{{ it.onSignClose }}" hint-size="100%,170px"></dc-import></div></sc-if></li></sc-for></ol>
+</section>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"doc":{"editor":null},"lang":{"editor":null},"ver":{"editor":null},"member":{"editor":null},"quiz":{"editor":null},"qview":{"editor":null},"onQuiz":{"editor":null},"onLink":{"editor":null},"onSignIn":{"editor":null},"steps":{"editor":null},"hist":{"editor":null},"outcome":{"editor":null},"only":{"editor":null},"solo":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":3750}}'>
+class Component extends DCLogic {
+  /* Controlled inside the reader (quiz + onQuiz come from the flow); alone, or on a Components board, it keeps its own
+     state, seeded by `steps` (the clicks that lead to the state shown). */
+  constructor(p) {
+    super(p);
+    this.root = null;
+    this.timers = [];
+    const ctx = this.ctx(p), Q = window.RD.quiz;
+    let b = { qz: {}, hist: (p.hist || []).slice(), sign: { at: null, closed: false }, seq: 0 };
+    /* alone on its board, with no props: two questions answered, one right and one wrong */
+    const steps = p.steps || (!p.block && !p.doc && !p.onQuiz ? [['read-column', { t: 'pick', opt: 'b' }], ['publish-in-lock', { t: 'pick', opt: 'a' }]] : []);
+    /* `outcome` is one answer for every send, or a list, one per send in order (the last one repeats) */
+    const outs = [].concat(p.outcome || 'saved');
+    let sent = 0;
+    steps.forEach((s) => {
+      const r = Q.dispatch(b, ctx.qv, ctx.block, s[0], s[1], ctx.qv.member);
+      b = r.bundle;
+      if (r.send) {
+        const o = outs[Math.min(sent, outs.length - 1)];
+        sent += 1;
+        if (o !== 'saving') b = Q.land(b, r.send, o);
+      }
+    });
+    this.state = { b };
+  }
+  setRoot = (el) => { this.root = el; };
+  componentDidUpdate() { window.RD.quiz.flush(this.root); }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  ctx(P) {
+    const Q = window.RD.quiz;
+    const doc = P.doc || 'maintainer-guide/internals', lang = P.lang || 'en';
+    const qv = P.qview || Q.viewOf(doc, lang, P.ver || null, P.member === undefined ? true : !!P.member);
+    const block = P.block || Q.block(qv.doc, qv.lang, qv.ver);
+    return { qv, block };
+  }
+  act(itemId, a, el, block, qv) {
+    const Q = window.RD.quiz, P = this.props, dom = block.id + '--' + itemId;
+    if (!a || a.t === 'none') return;
+    if (a.t === 'retry') Q.want(el, dom, '[data-qz-first]');
+    if (a.t === 'reveal') Q.want(el, dom, '[data-qz-answer]');
+    if (a.t === 'self') Q.want(el, dom, '[data-qz-retry]');
+    if (a.t === 'signclose') Q.want(this.root, dom, '[data-qz-main]');
+    if (typeof P.onQuiz === 'function') { P.onQuiz(block, itemId, a, qv); return; }
+    if (a.t === 'signin') { if (P.onSignIn) P.onSignIn(); return; }
+    const r = Q.dispatch(this.state.b, qv, block, itemId, a, qv.member);
+    this.setState({ b: r.bundle });
+    if (r.send) {
+      const send = r.send;
+      this.timers.push(setTimeout(() => {
+        this.setState({ b: Q.land(this.state.b, send, 'saved') });
+      }, 650));
+    }
+  }
+  renderVals() {
+    const RD = window.RD, P = this.props;
+    const { qv, block } = this.ctx(P);
+    const bundle = typeof P.onQuiz === 'function' ? (P.quiz || {}) : this.state.b;
+    const v = RD.quiz.view(block, { view: qv, bundle, act: (itemId, a, el) => this.act(itemId, a, el, block, qv) });
+    const only = P.only ? [].concat(P.only) : null;
+    const items = only ? v.items.filter((x) => only.indexOf(x.id) >= 0) : v.items;
+    const bare = !!P.bare;
+    return {
+      v,
+      items: P.onLink ? items : RD.quiz.relink(items),
+      showHead: !P.solo,
+      lang: qv.lang,
+      onLink: P.onLink,
+      setRoot: this.setRoot,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'qz-part' : 'rd-flow rd-prose qz-solo',
+    };
+  }
+}
+</script>
+</body>
+</html>

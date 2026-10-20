@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in to save</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="{{ boxCls }}" role="group" aria-label="Sign in to save">
+<p class="rd-save__title">Sign in to save</p>
+<p class="rd-save__body">{{ body }} After you sign in, you come back to this {{ place }}, at this section.</p>
+<div class="rd-save__actions"><a class="rd-btn rd-btn--secondary" href="#top" onclick="{{ signIn }}">Sign in</a><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ dismiss }}">Not now</button></div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"what":{"editor":null},"place":{"editor":null},"raised":{"editor":null},"onSignIn":{"editor":null},"onDismiss":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":480,"height":249}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const what = P.what || 'finished chapters and your place in each one';
+    return {
+      body: 'Signed in, your ' + what + ' are kept across your devices.',
+      place: P.place || 'chapter',
+      boxCls: P.raised ? 'rd-save rd-save--raised' : 'rd-save',
+      signIn: this.call('onSignIn'),
+      dismiss: this.call('onDismiss'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
