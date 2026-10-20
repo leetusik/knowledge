@@ -48,7 +48,7 @@ def slugify(title: str) -> str:
 def validate_project(project: str) -> str:
     if (
         not isinstance(project, str)
-        or not _PROJECT_RE.match(project)
+        or not _PROJECT_RE.fullmatch(project)
         or ".." in project
         or "/" in project
     ):
@@ -63,21 +63,21 @@ def validate_tags(tags) -> list[str]:
     if not (2 <= len(tags) <= 5):
         raise ConventionError(f"tags must have 2-5 items, got {len(tags)}")
     for t in tags:
-        if not isinstance(t, str) or not _TAG_RE.match(t):
+        if not isinstance(t, str) or not _TAG_RE.fullmatch(t):
             raise ConventionError(f"invalid tag: {t!r}")
     return tags
 
 
 def validate_slug(slug: str) -> str:
     # Same charset as tags.
-    if not isinstance(slug, str) or not _TAG_RE.match(slug):
+    if not isinstance(slug, str) or not _TAG_RE.fullmatch(slug):
         raise ConventionError(f"invalid slug: {slug!r}")
     return slug
 
 
 def validate_date(date: str) -> str:
     """Require YYYY-MM-DD and a real calendar date (rejects 2026-13-45, 20260702)."""
-    if not isinstance(date, str) or not _DATE_FMT_RE.match(date):
+    if not isinstance(date, str) or not _DATE_FMT_RE.fullmatch(date):
         raise ConventionError(f"invalid date (expected YYYY-MM-DD): {date!r}")
     try:
         datetime.date.fromisoformat(date)
@@ -803,7 +803,7 @@ def parse_archive_rel_path(archive_rel: str) -> Optional[ArchivePath]:
     parts = PurePosixPath(archive_rel).parts
     if len(parts) != 4 or parts[0] != ARCHIVE_DIR:
         return None
-    m = _ARCHIVE_FILE_RE.match(parts[3])
+    m = _ARCHIVE_FILE_RE.fullmatch(parts[3])
     if not m:
         return None
     version = int(m.group(1))

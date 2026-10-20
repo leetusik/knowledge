@@ -102,7 +102,7 @@ The codes are:
 
 ### Ids
 
-The syntax is `[a-z0-9][a-z0-9-]{0,63}`.
+The syntax is `[a-z0-9][a-z0-9-]{0,63}`, matched against the whole value: a trailing newline (a YAML block-scalar `id: |`) is `id-malformed`, never trimmed (every id, slug and key validator uses `fullmatch`).
 
 **The document namespace** must be unique per chapter. It holds:
 
@@ -181,7 +181,7 @@ Kind       flow/state: nodes:[{id, label, sub, at:[row,col]|null, shape, fields:
            stack:      layers:[{label, items:[str]|null, tone}], nested:bool|null
            timeline:   axis:{unit, from:num, to:num, ticks:[num]|null},
                        lanes:[{label, bars:[{from, to, label, tone}], marks:[{at, label}]|null}]
-           chart:      type:"bar"|"line"|"interval", x:{label, categories:[str]|null,
+           chart:      chart:"bar"|"line"|"interval" (its own key: the block keeps type:"diagram"), x:{label, categories:[str]|null,
                        numeric:{from, to}|null}, y:{label, min, max}, series:[{name, values, tone}],
                        rules:[{at, label}]|null; an interval value is [low, high] or [low, median, high]
 

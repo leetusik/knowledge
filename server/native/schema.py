@@ -618,7 +618,7 @@ def _chart(data, cx, p, kind) -> dict:
             cx.mapping(rp, rule, required=("at", "label"))
             rules.append({"at": cx.number(rp + ("at",), _get(rule, "at")),
                           "label": cx.text(rp + ("label",), _get(rule, "label"))})
-    return {"type": ctype, "x": x, "y": y, "series": series, "rules": rules}
+    return {"chart": ctype, "x": x, "y": y, "series": series, "rules": rules}
 
 
 def _chart_value(path, value, ctype, cx):
@@ -683,7 +683,8 @@ def _quiz_item(p, item, cx: BlockContext) -> Optional[dict]:
                     cx.err(p + ("answer", j), "quiz-answer", f"names no option of this item ({a!r})")
                 elif a in seen:
                     cx.err(p + ("answer", j), "quiz-answer", f"repeats option {a!r}")
-                seen.add(a)
+                if isinstance(a, str):  # a non-string (e.g. a nested list) is unhashable: already refused above
+                    seen.add(a)
         out.update({"prompt": cx.md(p + ("prompt",), _get(item, "prompt")), "options": options,
                     "answer": answer, "explain": cx.md(p + ("explain",), _get(item, "explain"))})
     elif qtype == "recall":

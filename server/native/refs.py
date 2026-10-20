@@ -39,7 +39,7 @@ class RefError(Exception):
 
 
 def is_asset_name(value) -> bool:
-    return isinstance(value, str) and bool(ASSET_NAME_RE.match(value))
+    return isinstance(value, str) and bool(ASSET_NAME_RE.fullmatch(value))
 
 
 def _ok(fn, value) -> bool:
@@ -69,7 +69,7 @@ def parse_ref(href: str, *, image: bool = False) -> dict:
     if href.startswith("chapter:"):
         if image:
             raise RefError("ref-scheme", f"an image must be asset:<name>, not {href!r}")
-        m = _CHAPTER_RE.match(href)
+        m = _CHAPTER_RE.fullmatch(href)
         if not m:
             raise RefError("ref-malformed", f"malformed chapter reference {href!r}")
         parts = m.group(1).split("/")
@@ -94,7 +94,7 @@ def parse_ref(href: str, *, image: bool = False) -> dict:
     if href.startswith("doc:"):
         if image:
             raise RefError("ref-scheme", f"an image must be asset:<name>, not {href!r}")
-        m = _DOC_RE.match(href)
+        m = _DOC_RE.fullmatch(href)
         parts = m.group(1).split("/") if m else []
         if len(parts) == 2:
             project, slug = parts

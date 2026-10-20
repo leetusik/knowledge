@@ -185,3 +185,10 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - security.md: render-side defence in depth: re-validation refuses a block (placeholder) or the whole chapter, never shows source; svg rebuilt through the allowlist a second time with block-scoped ids; a missing link carries no href/title/target; native images are same-origin asset-relay URLs only (P30.S12)
 - decisions.md: ADR: the TS port mirrors the Python parser's tree exactly, quirks included (the chart `type` clobber, OQ46; trailing-tab and callout-indent whitespace; trailing-newline ids), held by core test 4 (`web/tests/native-conformance.test.ts`) (P30.S12)
 - decisions.md: ADR: chapter:/doc: links stay missing until the reader can resolve them for the reader (OQ50); md images same-origin only (OQ52) (P30.S12)
+
+### P30.F2
+
+- backend.md: the native tree's chart diagram carries its kind (`bar|line|interval`) under its own `chart` key; the block keeps `type: "diagram"` (top-level and inside a figures row); `native/project.py` now searches a top-level chart's labels (it was skipped under `type: "bar"`). A stored chapter is re-parsed from `source`, so its tree changes shape on its next parse; a search row stored before this keeps the old text until re-ingest or reindex (P30.F2)
+- backend.md: a choice-quiz `answer` entry that is not a string is one `quiz-answer` violation (422 with its line), never a `TypeError`/500; every id, slug, key, asset-name, file-name and `chapter:`/`doc:` validator in `server/` (`native/ids`, `native/refs`, `assets`, `books`, `documents`, `documents_api`, `reader_api`) matches with `re.fullmatch`, so a trailing newline (a YAML block-scalar `id: |`) is refused with the normal `id-malformed` (P30.F2)
+- decisions.md: the README tree contract changed: chart `chart:"bar"|"line"|"interval"` replaces the clobbered `type`; supersedes the S12 ADR line "quirks included (the chart `type` clobber, OQ46; trailing-newline ids)": those two quirks are gone, the other whitespace quirks stay held by core test 4 (P30.F2)
+

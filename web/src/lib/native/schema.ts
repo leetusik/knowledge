@@ -984,7 +984,7 @@ const chart: KindCheck = (data, cx, p) => {
       };
     });
   }
-  return { type: ctype, x, y, series, rules };
+  return { chart: ctype, x, y, series, rules };
 };
 
 function chartValue(
@@ -1113,7 +1113,7 @@ function quizItem(p: YamlPath, item: YamlValue, cx: BlockContext): Out | null {
             `repeats option ${pyRepr(a)}`,
           );
         }
-        seen.add(typeof a === "object" ? JSON.stringify(a) : a);
+        if (typeof a === "string") seen.add(a);
       });
     }
     Object.assign(out, {

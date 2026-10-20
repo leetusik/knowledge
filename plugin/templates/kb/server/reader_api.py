@@ -169,13 +169,13 @@ class DocKey(_Body):
     @field_validator("project", "doc")
     @classmethod
     def _segment(cls, value: str) -> str:
-        if not NAME_RE.match(value):
+        if not NAME_RE.fullmatch(value):
             raise ValueError("must be one path segment")
         return value
 
 
 def _check_id(value: str | None, what: str) -> str | None:
-    if value is not None and not ID_RE.match(value):
+    if value is not None and not ID_RE.fullmatch(value):
         raise ValueError(f"{what} must match [a-z0-9][a-z0-9-]{{0,63}}")
     return value
 
@@ -296,7 +296,7 @@ class QuizAttemptIn(DocKey):
             raise ValueError("response is too large")
         if self.item_type == "choice":
             ok = set(r) == {"selected"} and isinstance(r["selected"], list) and all(
-                isinstance(x, str) and ID_RE.match(x) for x in r["selected"]
+                isinstance(x, str) and ID_RE.fullmatch(x) for x in r["selected"]
             )
         elif self.item_type == "cloze":
             ok = set(r) == {"blanks"} and isinstance(r["blanks"], list) and all(

@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S13` | 14/31 | - | working tree |
+| `default` | `P30` | planned | `P30.S13` | 15/32 | - | working tree |
 
 ## Active Phases
 
@@ -165,6 +165,7 @@
 | [x] `P30.S10` | `done` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
 | [x] `P30.S11` | `done` | Sign-in return address (D18, D32) and reader URLs on the org slug | `implementation` | `works/phases/active/P30/slices/P30.S11` |
 | [x] `P30.S12` | `done` | Native render pipeline (TS): parser, safe mapping, links, CSP | `implementation` | `works/phases/active/P30/slices/P30.S12` |
+| [x] `P30.F2` | `done` | Native parser fixes on both halves: chart type key, quiz answer 422, id trailing newline | `fix` | `works/phases/active/P30/slices/P30.F2` |
 | [ ] `P30.S13` | `todo` | Reader shell: frame, faces, themes, bars, Display, states (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S13` |
 | [ ] `P30.S14` | `todo` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
 | [ ] `P30.S15` | `todo` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |

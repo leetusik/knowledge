@@ -418,14 +418,7 @@ class Renderer {
 
   typed(block: TypedBlock): ReactNode {
     const id = block.id ?? undefined;
-    // A top-level chart arrives as type "bar" | "line" | "interval" with kind
-    // "chart" (the Python tree's quirk, kept for parity; see tree.ts): a diagram.
-    const isChart =
-      block.kind === "chart" &&
-      (block.type === "bar" ||
-        block.type === "line" ||
-        block.type === "interval");
-    switch (isChart ? "diagram" : block.type) {
+    switch (block.type) {
       case "figure":
         return this.figure(block, id);
       case "figures":
@@ -706,7 +699,7 @@ class Renderer {
     return (
       <table
         className="kb-ch-chart"
-        data-type={str(d.type) ?? undefined}
+        data-type={str(d.chart) ?? undefined}
         aria-label={CHAPTER.diagram.series}
       >
         <thead>

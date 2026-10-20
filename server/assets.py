@@ -480,7 +480,7 @@ def prepare_assets(items: Optional[list]) -> list[PreparedAsset]:
     for idx, item in enumerate(items):
         name = item.get("name") if isinstance(item, dict) else None
         label = name if isinstance(name, str) and name else f"#{idx}"
-        if not isinstance(name, str) or not ASSET_NAME_RE.match(name):
+        if not isinstance(name, str) or not ASSET_NAME_RE.fullmatch(name):
             violations.append(_violation(
                 "asset-name",
                 "an asset name is [A-Za-z0-9][A-Za-z0-9._-]{0,127}",
@@ -621,12 +621,12 @@ def parse_asset_map(raw: Any) -> Optional[dict]:
         return None
     out: dict[str, dict] = {}
     for name, entry in raw.items():
-        if not isinstance(name, str) or not ASSET_NAME_RE.match(name):
+        if not isinstance(name, str) or not ASSET_NAME_RE.fullmatch(name):
             continue
         if not isinstance(entry, dict):
             continue
         file = entry.get("file")
-        m = FILE_RE.match(file) if isinstance(file, str) else None
+        m = FILE_RE.fullmatch(file) if isinstance(file, str) else None
         if not m:
             continue
         media_type = MEDIA_TYPE_BY_EXT[m.group(2)]
@@ -641,7 +641,7 @@ def parse_asset_map(raw: Any) -> Optional[dict]:
             "animated": bool(entry.get("animated", False)),
         }
         still = entry.get("still")
-        if isinstance(still, str) and FILE_RE.match(still) and still.endswith(".png"):
+        if isinstance(still, str) and FILE_RE.fullmatch(still) and still.endswith(".png"):
             clean["still"] = still
         out[name] = clean
     return out or None
@@ -655,11 +655,11 @@ def referenced_files(amap: Optional[dict]) -> dict[str, str]:
             continue
         file = entry.get("file")
         if isinstance(file, str):
-            m = FILE_RE.match(file)
+            m = FILE_RE.fullmatch(file)
             if m:
                 out[file] = MEDIA_TYPE_BY_EXT[m.group(2)]
         still = entry.get("still")
-        if isinstance(still, str) and FILE_RE.match(still):
+        if isinstance(still, str) and FILE_RE.fullmatch(still):
             out[still] = "image/png"
     return out
 
@@ -675,7 +675,7 @@ def asset_dir_rel_path(rel_path: str) -> str:
 
 def asset_file_path(root: Union[str, Path], rel_path: str, file: str) -> Optional[Path]:
     """The on-disk path of one stored file, or ``None`` for a malformed file name."""
-    if not FILE_RE.match(file or ""):
+    if not FILE_RE.fullmatch(file or ""):
         return None
     return Path(root) / asset_dir_rel_path(rel_path) / file
 

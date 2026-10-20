@@ -697,7 +697,7 @@ def _document_asset_files(conn, doc: dict) -> dict[str, str]:
 
 
 async def _asset_response(conn, doc: dict, file: str, *, public: bool) -> Response:
-    if not assets_mod.FILE_RE.match(file):
+    if not assets_mod.FILE_RE.fullmatch(file):
         raise _no_such_asset()
     media_type = _document_asset_files(conn, doc).get(file)
     if media_type is None:

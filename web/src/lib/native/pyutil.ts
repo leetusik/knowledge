@@ -23,15 +23,12 @@ export function pySplitlines(value: string): string[] {
 }
 
 /**
- * A full match the way Python's `re.match(r"^...$")` behaves: `$` also matches
- * right before ONE final newline. The native modules use `^…$` patterns, so a
- * value with a trailing `"\n"` passes there; this keeps the TS side agreeing.
+ * A full match, the way Python's `re.fullmatch` behaves: the whole value, with
+ * no tolerance for a trailing newline (the native modules use `re.fullmatch`
+ * since P30.F2; `re.match(r"^…$")` used to let `"s1\n"` through).
  */
 export function pyFullMatch(re: RegExp, value: string): RegExpExecArray | null {
-  const m = re.exec(value);
-  if (m) return m;
-  if (value.endsWith("\n")) return re.exec(value.slice(0, -1));
-  return null;
+  return re.exec(value);
 }
 
 /** Python `str.isascii()`. */
