@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { DOCUMENTS, SITE } from "@/content";
 import type { KbDocument } from "@/lib/knowledge/types";
+import { documentAssetUrl, NativeChapter } from "@/lib/native";
 
 import { ExplainerFrame } from "./explainer-frame";
 import { MarkdownBody } from "./markdown-body";
@@ -135,6 +136,19 @@ export function DocumentView({ doc, id }: { doc: KbDocument; id: number }) {
           rehype-raw) exactly as before. */}
       {doc.format === "html" ? (
         <ExplainerFrame src={`/api/documents/${id}/raw`} title={doc.title} />
+      ) : doc.format === "native" && doc.source ? (
+        // P30.S12 — a native chapter renders from its stored `source` through the
+        // native pipeline (parse → re-validate → React; no raw HTML, ever). An
+        // unstyled stand-in until S13 moves native and md into the reader shell.
+        // `chapter:`/`doc:` links stay "missing" (no `resolveRef`) until the reader
+        // can resolve them for this reader; md keeps <MarkdownBody> until then.
+        <div className="kb-panel kb-doc__body">
+          <NativeChapter
+            source={doc.source}
+            format="native"
+            assetUrl={documentAssetUrl(id, doc.assets)}
+          />
+        </div>
       ) : (
         <div className="kb-panel kb-doc__body">
           {/* §5 — the empty-body line is `.kb-prose__empty` INSIDE `.kb-prose`, not

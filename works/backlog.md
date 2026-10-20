@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S12`
-- Next slice: `P30.S13`
+- Current slice: `P30.S13`
+- Next slice: `P30.S14`
 - Waiting on operator: `none`
 - Open deferred jobs: `35`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S12` | 13/31 | - | working tree |
+| `default` | `P30` | planned | `P30.S13` | 14/31 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S12` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S13` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -164,7 +164,7 @@
 | [x] `P30.S9` | `done` | Anchors: server-side re-anchoring across versions and languages | `implementation` | `works/phases/active/P30/slices/P30.S9` |
 | [x] `P30.S10` | `done` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
 | [x] `P30.S11` | `done` | Sign-in return address (D18, D32) and reader URLs on the org slug | `implementation` | `works/phases/active/P30/slices/P30.S11` |
-| [ ] `P30.S12` | `todo` | Native render pipeline (TS): parser, safe mapping, links, CSP | `implementation` | `works/phases/active/P30/slices/P30.S12` |
+| [x] `P30.S12` | `done` | Native render pipeline (TS): parser, safe mapping, links, CSP | `implementation` | `works/phases/active/P30/slices/P30.S12` |
 | [ ] `P30.S13` | `todo` | Reader shell: frame, faces, themes, bars, Display, states (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S13` |
 | [ ] `P30.S14` | `todo` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
 | [ ] `P30.S15` | `todo` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |
