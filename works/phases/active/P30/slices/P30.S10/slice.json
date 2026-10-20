@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Review: FSRS cards, queue, ratings, suspend, item drift",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 100,
   "depends_on": [
     "P30.S9"
   ],
   "created_at": "2026-10-21T00:14:39+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T04:29:39+09:00",
+  "completed_at": "2026-10-21T04:43:23+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Review on FSRS: fsrs==6.3.2 wrapped in server/review.py (10-min step, seeded fuzz, exact previews), first-attempt seeding, Review-this cards with suspend/resume, local-day queue with limits, idempotent Again/Good, drift and readability via Gate; suite 222",
   "validation": {
     "required": [],
     "last_run": null,

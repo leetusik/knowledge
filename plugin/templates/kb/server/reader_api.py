@@ -29,9 +29,34 @@ Reads:
 * ``GET /app/reader/profile``.
 
 Writes: ``PUT positions``; ``POST/PATCH/DELETE bookmarks[/{id}]``;
-``POST/PATCH/DELETE annotations[/{id}]``; ``POST quiz-attempts`` → ``{attempt,
-card}``; ``DELETE state?scope=book|all``; ``PATCH profile``. Review (S10) is not
-here.
+``POST/PATCH/DELETE annotations[/{id}]`` (``PATCH {review: true|false}`` is a
+highlight's "Review this"); ``POST quiz-attempts`` → ``{attempt, card}`` (the first
+attempt seeds the item's review card); ``DELETE state?scope=book|all``; ``PATCH
+profile``. Every annotation a read or write returns carries ``review`` (its card is
+active).
+
+**Review (P30.S10, ``server/review.py``):**
+
+* ``GET /app/reader/review/queue?limit=`` → ``{now, day: {start, end, time_zone},
+  profile, counts: {due, new_highlights, done_today, by_book: [{org, project, book,
+  book_title, due, new}]}, limit_reached: "reviews"|"new_highlights"|null,
+  next_due_at, cards: [card]}``. A card is ``{card_id, source, item_type, status,
+  state (new|learning|review|relearning), reset, reps, lapses, due, last_review,
+  created_at, where: {org, project, book, book_title, chapter_key, chapter_title,
+  chapter_index, chapter_count, doc, lang, version, block_id, href, quiz_title,
+  item_index, item_count | block_title, annotation_id}, front, back, previews:
+  {again: {due, interval}, good: {due, interval}}}``; every ``interval`` is in
+  whole minutes. Held cards stay in ``counts`` and ``by_book``.
+* ``POST /app/reader/review/cards/{id}/review`` ``{rating: again|good, review_id,
+  response?, duration_ms?}`` → ``{card: {card_id, source, status, state, reps,
+  lapses, due, interval, due_today, rating, reviewed_at, replayed, previews},
+  counts, limit_reached, next_due_at, day, next}``. A repeated ``review_id`` is a
+  no-op returning the stored outcome; a suspended card is a 409.
+* ``PATCH /app/reader/review/cards/{id}`` ``{status: active|suspended}`` → ``{card,
+  counts, limit_reached, next_due_at}``: suspend, and its undo.
+
+A card whose document the caller cannot read (or a retired quiz card) is in no
+list, count or preview, and every write to it is the constant 404.
 
 **Re-anchoring (S9)** runs on these reads, lazily: the captured anchor is never
 rewritten; ``anchor_status`` and ``anchored_version`` (the newest version the text
@@ -62,7 +87,7 @@ from zoneinfo import available_timezones
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from server import anchors, config
+from server import anchors, config, review
 from server import reader_state as rs
 from server.accounts.auth import AuthContext, require_user
 from server.documents_api import get_conn
@@ -244,6 +269,7 @@ class AnnotationIn(DocKey):
 
 class AnnotationPatch(_Body):
     note: str | None = Field(default=None, max_length=NOTE_MAX)
+    review: bool | None = None  # "Review this" (P30.S10): a highlight's card on/off
 
 
 class QuizAttemptIn(DocKey):
@@ -304,6 +330,23 @@ class ProfilePatch(_Body):
         if value not in _ZONES:
             raise ValueError("must be an IANA time zone")
         return value
+
+
+class ReviewIn(_Body):
+    rating: Literal["again", "good"]
+    review_id: UUID  # the client's idempotency id: a repeat is a no-op
+    response: dict[str, Any] | None = None
+    duration_ms: int | None = Field(default=None, ge=0, le=86_400_000)
+
+    @model_validator(mode="after")
+    def _size(self) -> "ReviewIn":
+        if self.response is not None and len(json.dumps(self.response)) > RESPONSE_MAX:
+            raise ValueError("response is too large")
+        return self
+
+
+class CardPatch(_Body):
+    status: Literal["active", "suspended"]
 
 
 # -- serializers -------------------------------------------------------------------
@@ -582,7 +625,19 @@ async def _variant_payload(
         "quiz": [_attempt_out(r, ref) for r in attempts],
     }
     await anch.flush()
+    await _mark_review(
+        uid, payload["annotations"], payload["unanchored"], payload["other_languages"]["annotations"]
+    )
     return payload
+
+
+async def _mark_review(user_id: UUID, *lists: list[dict[str, Any]]) -> None:
+    """Set each annotation's ``review``: is "Review this" on (an active card)?"""
+
+    items = [a for items in lists for a in items]
+    active = await review.active_highlights(user_id, (a["id"] for a in items))
+    for a in items:
+        a["review"] = a["id"] in active
 
 
 @router.get("/docs/{org}/{project}/{doc}")
@@ -874,6 +929,7 @@ async def read_annotations(
         ),
     }
     await anch.flush()
+    await _mark_review(uid, payload["annotations"], payload["unanchored"])
     return payload
 
 
@@ -1007,7 +1063,9 @@ async def create_annotation(
         raise _not_found()
     if not created:
         response.status_code = 200
-    return {"annotation": _annotation_out(row, ref)}
+    out = _annotation_out(row, ref)
+    out["review"] = bool(await review.active_highlights(ctx.user.id, [row.id]))
+    return {"annotation": out}
 
 
 @router.patch("/annotations/{annotation_id}")
@@ -1017,19 +1075,41 @@ async def patch_annotation(
     ctx: AuthContext = Depends(require_user),
     conn=Depends(get_conn),
 ) -> dict[str, Any]:
-    """Set or clear a highlight's note (``review`` is S10's)."""
+    """Set or clear a note, and turn a highlight's "Review this" on or off (S10).
 
-    if "note" not in body.model_fields_set:
-        raise _unprocessable("nothing to change: send note (null clears it)")
+    ``review: true`` creates the highlight's card, or makes a suspended one active
+    again with its history; ``review: false`` suspends it (history kept). Deleting
+    the highlight deletes its card.
+    """
+
+    fields = body.model_fields_set
+    if not fields & {"note", "review"}:
+        raise _unprocessable("nothing to change: send note (null clears it) or review")
+    if "review" in fields and body.review is None:
+        raise _unprocessable("review is true or false")
     gate = _gate(ctx, conn)
     row, ref = await _owned_readable(gate, rs.ANNOTATIONS, annotation_id, ctx)
-    note = _clean_note(body.note)
-    if note is None and row.quote is None:
-        raise _unprocessable("a block note needs its note; delete it instead")
-    updated = await rs.update_owned(rs.ANNOTATIONS, annotation_id, ctx.user.id, {"note": note})
-    if updated is None:
-        raise _not_found()
-    return {"annotation": _annotation_out(updated, ref)}
+    if "review" in fields and row.quote is None:
+        raise _unprocessable("only a highlight can be reviewed")
+    updated = row
+    if "note" in fields:
+        note = _clean_note(body.note)
+        if note is None and row.quote is None:
+            raise _unprocessable("a block note needs its note; delete it instead")
+        updated = await rs.update_owned(
+            rs.ANNOTATIONS, annotation_id, ctx.user.id, {"note": note}
+        )
+        if updated is None:
+            raise _not_found()
+    card = None
+    if "review" in fields:
+        card = await review.set_highlight_review(ctx.user.id, ref, row, bool(body.review))
+    out = _annotation_out(updated, ref)
+    out["review"] = bool(await review.active_highlights(ctx.user.id, [annotation_id]))
+    result: dict[str, Any] = {"annotation": out}
+    if card is not None:
+        result["card"] = review.card_brief(card, review.now())
+    return result
 
 
 @router.delete("/annotations/{annotation_id}", status_code=204, response_class=Response)
@@ -1054,7 +1134,8 @@ async def create_quiz_attempt(
 ) -> dict[str, Any]:
     """Save one graded attempt; the server numbers it and adds ``unit``.
 
-    ``card`` is ``null`` until S10 seeds review cards from first attempts.
+    The FIRST attempt of ``(unit, item_id)`` seeds the item's review card (P30.S10);
+    ``card`` is that card, or ``null`` when the item has none.
     """
 
     gate = _gate(ctx, conn)
@@ -1074,9 +1155,13 @@ async def create_quiz_attempt(
         raise _not_found()
     if not created:
         response.status_code = 200
+    if row.attempt == 1:
+        card = await review.seed_quiz_card(ctx.user.id, ref, row)  # idempotent
+    else:
+        card = await review.quiz_card(ctx.user.id, ref, row.unit, row.item_id)
     return {
         "attempt": row.attempt,
-        "card": None,
+        "card": review.card_brief(card, review.now()) if card is not None else None,
         "result": {
             **_attempt_out(row, ref),
             "book": ref.book,
@@ -1121,3 +1206,90 @@ async def patch_profile(
             raise _unprocessable(f"{key} cannot be null")
     return {"profile": await rs.patch_profile(ctx.user.id, changes)}
 
+
+
+# -- review (P30.S10) --------------------------------------------------------------
+
+
+@router.get("/review/queue")
+async def read_review_queue(
+    limit: int = Query(default=20, ge=1, le=review.QUEUE_LIMIT_MAX),
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """The caller's review queue for their local day (P29 *Review data contract*)."""
+
+    return await review.build_queue(_gate(ctx, conn), ctx.user.id, limit=limit)
+
+
+async def _readable_card(gate: rs.Gate, ctx: AuthContext, card_id: UUID):
+    """The caller's own card, resolvable to a document they may read now, else 404."""
+
+    row = await review.get_card(ctx.user.id, card_id)
+    if row is None:
+        raise _not_found()
+    resolver = review.Resolver(gate=gate, user_id=ctx.user.id, at=review.now())
+    resolved = await resolver.resolve(row)
+    await resolver.flush()
+    if resolved is None:
+        raise _not_found()
+    return resolved
+
+
+def _after_write(queue: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "counts": queue["counts"],
+        "limit_reached": queue["limit_reached"],
+        "next_due_at": queue["next_due_at"],
+        "day": queue["day"],
+    }
+
+
+@router.post("/review/cards/{card_id}/review")
+async def post_review(
+    card_id: UUID,
+    body: ReviewIn,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Rate one card (Again or Good), idempotently by ``review_id``."""
+
+    gate = _gate(ctx, conn)
+    await _readable_card(gate, ctx, card_id)
+    try:
+        card = await review.review(
+            ctx.user.id, card_id, rating=body.rating, review_id=body.review_id,
+            response=body.response, duration_ms=body.duration_ms,
+        )
+    except review.ReviewConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if card is None:
+        raise _not_found()
+    at = review.now()
+    row = await review.get_card(ctx.user.id, card_id)
+    queue = await review.build_queue(gate, ctx.user.id, limit=1, at=at)
+    card["previews"] = review.previews(row, at) if row is not None else None
+    card["due_today"] = datetime.fromisoformat(card["due"]) < datetime.fromisoformat(
+        queue["day"]["end"]
+    )
+    return {"card": card, **_after_write(queue),
+            "next": queue["cards"][0] if queue["cards"] else None}
+
+
+@router.patch("/review/cards/{card_id}")
+async def patch_card(
+    card_id: UUID,
+    body: CardPatch,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Suspend a card, or undo that (for a highlight card this is "Review this")."""
+
+    gate = _gate(ctx, conn)
+    await _readable_card(gate, ctx, card_id)
+    row = await review.set_status(ctx.user.id, card_id, body.status)
+    if row is None:
+        raise _not_found()
+    at = review.now()
+    queue = await review.build_queue(gate, ctx.user.id, limit=1, at=at)
+    return {"card": review.card_brief(row, at), **_after_write(queue)}

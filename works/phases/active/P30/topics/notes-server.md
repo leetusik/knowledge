@@ -169,3 +169,26 @@ the decisions are OQ31–OQ34 (`topics/operator-questions-decided.md`).
   the reads make, or trust the written-back `anchor_status` (fresh after any read).
 - **Per-book list** (`GET annotations?…`): `annotations`, `unanchored` and `bookmarks`, each with
   `chapter_key`, sorted by chapter/variant order then reading order.
+
+## (from P30.S10, for S19, S20, S24 and REVIEW) Review as shipped
+
+The routes and payloads are `server/reader_api.py`'s docstring; the logic and its rules are
+`server/review.py`'s docstring; the decisions are OQ35–OQ41 (`topics/operator-questions-decided.md`).
+
+- **For S19 (quiz):** `POST quiz-attempts` now returns `card: {card_id, source, status, state, reps,
+  lapses, due, interval}` (null when the item has none). The first attempt seeds it; later ones return
+  the existing card untouched. A recall attempt's grade comes from `response.self_grade`.
+- **For S20 (annotations):** "Review this" is `PATCH annotations/{id} {review: true|false}` (a block note
+  is a 422); the reply has `annotation.review` and `card`. Every annotation in the doc, chapter and
+  per-book reads carries `review` (other languages too). Off suspends (history kept); on resumes the
+  same card; deleting the highlight deletes the card.
+- **For S24 (review surface):** load `GET review/queue?limit=`; rate with `POST review/cards/{id}/review`
+  and a client `review_id` (Try again resends the SAME id; a repeat answers `replayed: true`);
+  `card.due_today` says whether an Again card comes back today (append it to the local queue with
+  `card.previews`); the reply's `counts`, `limit_reached` and `next_due_at` replace the page's; `next`
+  is the server's queue head. Suspend/undo is `PATCH review/cards/{id} {status}`. Intervals are whole
+  minutes; `state` is new | learning | review | relearning, `reset: true` is "Starts over", and
+  `created_at` gives "added today". `profile` comes with the queue (the settings form, the limit states).
+- **For REVIEW:** P29 *Privacy* says a reader can delete any single card; no such route exists (the plan
+  did not ask for it; a highlight card goes with its highlight, every card with `DELETE state`). An
+  observation for the walkthrough or a deferred job, beside D41 (the suspended-cards list).
