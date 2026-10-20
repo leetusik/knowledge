@@ -95,3 +95,76 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - **decisions.md:** ADR: review on FSRS as shipped: py-fsrs pinned, defaults plus one 10-minute step,
   no optimiser, seeded fuzz so previews are exact, first-attempt seeding, lazy drift and readability
   through the gate, limits per OQ36 (OQ35–OQ41).
+
+
+## Full Doc impact lines, folded by the orchestrator (word for word)
+
+### P30.S2, folded
+
+- api.md: `POST /api/documents` gains the optional `book`, `chapter`, `lang`, `translated_from` and `subject` fields (chapter placement; the 201 gains `book`, `chapter_key`, `lang`, `translated_from`, `subject`, `book_created`, `chapter_created` and `manifest_path` only when one of them is sent). New routes: `GET /api/books?project=`, `GET`/`PUT /api/books/{project}/{book}`, `GET /app/books?project=<uuid>`, `GET /app/books/{project}/{book}` and the project-gated `GET /app/orgs/{org}/{project}/books/{book}` (one constant 404). Search hits gain `book`, `chapter_key` and `lang`. Document reads gain `lang`, `subject` and `translated_from` (P30.S2)
+- data.md: book manifests at `<root>/.books/<project>/<book>.json` (canonical; tenant #1's are committed with their chapter). Derived SQLite tables `books`, `chapters` and `chapter_variants` have composite keys and no surrogate ids, plus a unique `(tenant_id, rel_path)` (one chapter per document). `documents` gains `lang`, `subject` and `translated_from`. The header gains the optional `lang:`, `translated_from: {lang, version}` and `subject:` (P30.S2)
+- backend.md: the new modules `server/books.py` (manifest validators and atomic IO) and `server/books_api.py` (/app book routes). `reindex.py`'s third walk, `_rebuild_books`, runs as one transaction and reports `books_indexed`/`books_removed`; `.books` is a reserved dir. `create_document` settles the manifest under `WRITE_LOCK` before any file write (P30.S2)
+- decisions.md: ADR: books and chapters as on-disk manifests with a derived SQLite index (P29.S1's model, shipped). Membership never rewrites a document. POST seeds only a new book or chapter, and PUT edits. A deleted document's binding is omitted on read, not unbound on delete (P30.S2)
+
+### P30.S3, folded
+
+- data.md: the native chapter format as shipped. That covers the header (`format: native`, `syntax: 1`, `summary`); the grammar (CommonMark + GFM tables, strikethrough and autolinks, GFM-alert callouts of six types, typed fenced YAML 1.2 core blocks, and trailing `{#id}` heading ids, h2–h4 only); every typed-block schema and limit; the id namespace and assignment rules; the reference schemes; the normalized block tree; and the section projection (passage containers joined by "\n", with offsets in code points) that annotation offsets are measured against. The spec is `server/native/README.md` (P30.S3)
+- backend.md: the new package `server/native/` (`parse.py` `parse_chapter`, `schema.py`, `svg.py`, `ids.py`, `refs.py`, `project.py`, `yamlcore.py`, `errors.py`, `fixtures_util.py`) is pure and not yet wired. It adds the dependencies `markdown-it-py==4.2.0` and `mdit-py-plugins==0.6.1`, and the shared conformance fixtures in `tests/fixtures/native/` (core test 4, the Python half) (P30.S3)
+- decisions.md: ADR: native ingest rejects and never strips. One violation list feeds one 422, and the SVG allowlist reports the block, element and attribute. ADR: markdown-it-py for the Python parser, held to the TS parser by language-neutral fixtures. ADR: the per-section passage-container projection (the signed `05-annotations` rule) is the basis for annotation offsets, and the search text is a separate, wider projection. ADR: unknown tones, shapes, kinds and callout types are rejected at ingest, and the renderer's fallbacks are defence in depth (P30.S3)
+
+### P30.S4, folded
+
+- api.md: `POST /api/documents` gains the optional `assets: [{name, media_type, content_base64}]` (png, jpeg, webp, gif; 2 MB each, 20, 12 MB in total; not on an html document). Violations come back as ONE 422 list (`asset-*` codes, S3's shape), and the 201 carries `assets` (the stored map) when some were sent. Document and version detail reads (`/api` and `/app`, not the `/app` list) gain `assets`. The delete response gains `assets_removed`. New optional-identity routes: `GET /app/documents/{id}/assets/{sha256}.{ext}` and `GET /app/orgs/{org}/{project}/{slug}/assets/{file}`, with one constant 404, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox` and `Cache-Control: private|public, max-age=300` (P30.S4)
+- data.md: chapter images at `<root>/.assets/<project>/<date>-<slug>/<sha256>.<ext>` (content-addressed, per document, never committed, removed with the document). The header gains `assets:` (one JSON-flow line per name: `{file, media_type, width, height, animated, still?}`, the displayed size), and `documents` and `document_versions` gain an `assets` JSON column re-derived by reindex. `.assets` is a reserved dir (P30.S4)
+- backend.md: the new module `server/assets.py` (validation, container-level metadata stripping with a pixel check, the GIF still, content-addressed storage). The new dependency is `pillow` 13. `gitops.add` drops any `.assets/` path; `create_document` stores images under `WRITE_LOCK` before the body, and `_delete_document` removes the directory (P30.S4)
+- security.md: image visibility: an asset is readable exactly when its document is (`_resolve_readable_doc` / the slug resolver's gate), only when some version of that document names it, and every miss is one constant 404. EXIF/GPS is stripped losslessly with an orientation-only block kept, and a 40 MP decode cap guards against decompression bombs. Raster only (no SVG upload), served `nosniff` under `default-src 'none'; sandbox` (P30.S4)
+- frontend.md: the BFF image relay `GET /api/documents/[id]/assets/[file]` (optional identity; it re-asserts the content type from the extension, `nosniff`, the sandbox CSP and the cache scope) and `getDocumentAsset` in `lib/knowledge/app.ts` (P30.S4)
+- operations.md: `deploy/knowledge.conf` raises `client_max_body_size` to 20m and adds the regex location `^/api/documents/<id>/assets/<sha256>.<ext>$` → knowledge-web. Tenant #1's images live only on the box disk under `docs/.assets/`, with no off-box backup (A2) (P30.S4)
+- decisions.md: ADR: chapter images are stripped at the container level, never re-encoded, so the pixels are the uploaded ones (pixel-verified), and the orientation tag survives. ADR: the asset map is per version, with no inheritance, and P29's per-document directory is the dedupe unit (P30.S4)
+
+### P30.S5, folded
+
+- **api.md (P30.S5):** `POST /api/documents` gains `format: "native"` and a `summary` field. A native body is sent without a header and fails with one 422 list (codes in `server/native/README.md` → *Ingest (S5)*, lines in the body as sent). The 201 adds `assigned_ids`, `warnings` and `migrated_from`. Body limits apply to every format (native 512 KB, md 512 KB, html 1 MB). Only native chapters may carry `assets`. The `/api` and `/app` detail and version reads add `source`. By-path reads resolve an old `.html` path through the stem alias. html → native is the one format migration, and a new document taking another's stem is a 409.
+- **api.md, the MCP contract (P30.S5):** `fetch_document`'s `format` gains `"native"`, and `markdown` then carries the native source. This is additive and stays contract v1; `mcp-server/CONTRACT.md` is updated, so the `api.md` summary of it needs the same line.
+- **data.md (P30.S5):** `documents.source` and `document_versions.source` hold the stored native file. `format` gains `'native'`, a `.md` file whose header says `format: native` (plus `syntax: 1`, `summary`). For native rows, `markdown` is the plain-text search projection. `document_versions.rel_path` is the document's CURRENT rel_path and is re-keyed on html → native. Archive chains are stem-keyed (`v0001.html` … `v000N.md` in one directory). One document owns each stem.
+- **backend.md (P30.S5):** new module `server/native_ingest.py` (body limits, reference and translation checks, retired ids, the stored projection). `create_document` composes, parses and validates native chapters and runs the html → native migration (`db.rekey_document`, `gitops.remove`, the manifest re-point, `documents.replace_recent_link`). Reindex derives `format` from the header and finds archive chains by stem (`parse_archive_rel_path` → `ArchivePath`). The graph resolves `related:` edges through the stem alias. `ParseResult.ids` and `NativeFormatError.refs` are added.
+- **frontend.md (P30.S5):** the web `KbDocument`/`KbDocumentVersion` types gain `format: "native"` and `source?` (types only; S12 renders).
+- **decisions.md (P30.S5):** ADR line for P29.S2's ingest contract as shipped: one 422; references (`asset:`/`#id` fail, `chapter:`/`doc:` warn); the per-format body limits; native-only images; html → native as an in-place re-key with a stem alias and one document per stem (OQ14–OQ19).
+
+### P30.S6, folded
+
+- operations.md: the library-to-books migration runbook (`scripts/migrate_books.py`); detail `topics/doc-impact-detail.md` (P30.S6)
+- decisions.md: ADR: library bound by `PUT /api/books` only, merged never replaced, links hashed (P30.S6)
+
+### P30.S7, folded
+
+- experience.md: the `/explain` native flow, phase/slice → chapter placement, general mode, `--asset` images (P30.S7)
+- api.md: `knowledge save` flags `--format`, `--book`, `--chapter`, `--position`, `--lang`, `--translated-from`, `--asset`, `--new-version`; `read --source` (P30.S7)
+- operations.md: `scripts/publish_fixture_book.py` loads the dev fixture book into a LOCAL API (P30.S7)
+
+### P30.F1, folded
+
+- operations.md: plugin template parity restored with the P30 server (`plugin/templates/kb/` mirrors S2-S7; the manifest gains a `root_only` list that `scripts/plugin_parity.py` honors for the migration tool's test and the book fixtures) (P30.F1)
+
+### P30.S8, folded
+
+- api.md: the `/app/reader/…` reads and writes, the 404 rule, the purge's 503; detail `topics/doc-impact-detail.md` (P30.S8)
+- data.md: revision `0006_reader_state`, seven reader tables, keys `doc`/`unit` (P30.S8)
+- backend.md: `server/reader_state.py`, `server/reader_api.py`, the delete purge and unit re-write hooks in `main.py` (P30.S8)
+- security.md: reader-state privacy: user-scoped, readability re-checked, hidden on lost access, purged on delete (fail closed) (P30.S8)
+- frontend.md: `POST /api/reader/position`, the beacon relay, and `lib/knowledge/reader.ts` (P30.S8)
+- decisions.md: ADR: P29.S3's reader-state contract as shipped (OQ26–OQ30) (P30.S8)
+
+### P30.S9, folded
+
+- api.md: reader reads return resolved annotations (`anchor`, `unanchored`, `other_languages`, bookmark `place`, `resume`); detail `topics/doc-impact-detail.md` (P30.S9)
+- backend.md: `server/anchors.py` (the ladder, `map_id`), `SectionCache` and `write_back_anchors` in `reader_state.py`, `_Anchoring` in `reader_api.py` (P30.S9)
+- data.md: `anchor_status`/`anchored_version` are a read-written cache; the captured anchor is never rewritten; no schema change (P30.S9)
+- decisions.md: ADR: re-anchoring from the immutable captured anchor, status-only write-back, fuzzy at 0.8 on quote and context (OQ31–OQ34) (P30.S9)
+
+### P30.S10, folded
+
+- api.md: the review routes, "Review this", the quiz-attempt `card`, annotations' `review`; detail `topics/doc-impact-detail.md` (P30.S10)
+- backend.md: `server/review.py` (the only `fsrs` importer), the review routes in `reader_api.py`, dependency `fsrs==6.3.2` (P30.S10)
+- data.md: how S10 writes `review_cards`/`review_logs` (log id = `review_id`, `response` keeps the outcome); no schema change (P30.S10)
+- decisions.md: ADR: review on FSRS as shipped (OQ35–OQ41) (P30.S10)
