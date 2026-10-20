@@ -31,6 +31,15 @@
  *     URL parsers STRIP tab/newline before resolving, so a string that looks
  *     path-like can resolve elsewhere;
  *   - a repeated `?next=` (the caller hands us `string[]`) or an empty value;
+ *   - (P30.S11) a value longer than `MAX_NEXT_PATH_LENGTH` — nothing the app emits
+ *     comes near it, and an unbounded value is a free amplifier for log and header
+ *     abuse;
+ *   - (P30.S11) a path whose PERCENT-DECODED form carries `//`, `\` or a control
+ *     character anywhere — `/%2F%2Fevil.example`, `/%5Cevil`, `/%252F%252Fevil`
+ *     (decoded up to three times). The raw string is same-origin, but any layer
+ *     that decodes the path before it redirects (a proxy, a framework, a future
+ *     refactor) would turn it into a protocol-relative URL. No real path of ours
+ *     ever contains an empty segment, so nothing legitimate is lost;
  *   - `/login` and `/signup` themselves, which are not an attack but a LOOP: the
  *     gate would bounce an authenticated visitor back to the gate forever.
  *
@@ -41,6 +50,24 @@
 
 /** Where a missing or rejected `next` lands. */
 export const DEFAULT_NEXT_PATH = "/dashboard";
+
+/** The sign-in gate. */
+export const LOGIN_PATH = "/login";
+
+/**
+ * P30.S11 — the longest `next` honoured. Generous for any real reader URL (org,
+ * project, book, chapter, `?lang=&v=` and a block id run well under 300).
+ */
+export const MAX_NEXT_PATH_LENGTH = 2048;
+
+/**
+ * P30.S11 (D32) — the request header the proxy (`src/proxy.ts`) stamps with the
+ * path + query of every page request, so a server guard can build `/login?next=`
+ * for the page it is refusing. The proxy always OVERWRITES it, so a client cannot
+ * plant one on a proxied route, and its value is laundered by `safeNextPath`
+ * before use regardless.
+ */
+export const REQUEST_PATH_HEADER = "x-kb-request-path";
 
 /**
  * Paths that would bounce the visitor straight back to the gate. Matched as whole
@@ -66,6 +93,7 @@ export function safeNextPath(
   // A repeated key arrives as an array — ambiguous input on a security boundary is
   // rejected rather than resolved.
   if (typeof raw !== "string" || raw.length === 0) return DEFAULT_NEXT_PATH;
+  if (raw.length > MAX_NEXT_PATH_LENGTH) return DEFAULT_NEXT_PATH;
 
   // Relative, and not protocol-relative. `/\` is `//` to a URL parser.
   if (!raw.startsWith("/")) return DEFAULT_NEXT_PATH;
@@ -90,6 +118,9 @@ export function safeNextPath(
   // rather than trust the shape of the output.
   if (!path.startsWith("/") || path.startsWith("//")) return DEFAULT_NEXT_PATH;
 
+  // Encoded bypasses: judge the path as a decoding layer would see it.
+  if (!decodedPathIsSafe(url.pathname)) return DEFAULT_NEXT_PATH;
+
   const segment = url.pathname;
   if (
     LOOP_PATHS.some((p) => segment === p || segment.startsWith(`${p}/`))
@@ -98,4 +129,53 @@ export function safeNextPath(
   }
 
   return path;
+}
+
+/** Unsafe in a path at any decoding depth: an empty segment, a backslash, a control character. */
+const UNSAFE_DECODED = /\/\/|\\|[\x00-\x1f\x7f]/;
+
+/**
+ * Percent-decode `pathname` up to three times and refuse it if any stage carries
+ * `//`, `\` or a control character, or if a stage is not valid percent-encoding.
+ * Three rounds covers double- and triple-encoding; a value still changing after
+ * that is refused outright rather than trusted.
+ */
+function decodedPathIsSafe(pathname: string): boolean {
+  let current = pathname;
+  for (let round = 0; round < 3; round += 1) {
+    if (UNSAFE_DECODED.test(current)) return false;
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(current);
+    } catch {
+      return false;
+    }
+    if (decoded === current) return true;
+    current = decoded;
+  }
+  return !UNSAFE_DECODED.test(current) && decodeOnce(current) === current;
+}
+
+function decodeOnce(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * P30.S11 — the sign-in URL that returns to `next`: `/login?next=<encoded>`, or a
+ * bare `/login` when `next` is missing, unsafe, or already the default landing.
+ * `next` is laundered HERE as well as at the gate, so a caller can never emit a
+ * link that names an off-site return address. The value is the full path, query
+ * and `#hash`; the browser keeps the hash inside the encoded parameter, so the
+ * gate hands it back intact (the reader's "Sign in to save" relies on that to
+ * return to the same block).
+ */
+export function loginHref(next?: string | null): string {
+  const safe = safeNextPath(next);
+  return safe === DEFAULT_NEXT_PATH
+    ? LOGIN_PATH
+    : `${LOGIN_PATH}?next=${encodeURIComponent(safe)}`;
 }

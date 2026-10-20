@@ -13,6 +13,7 @@ import { DOCUMENTS, SHARE } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
 import { getDocument, getDocumentVersions } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
+import { loginHref } from "@/lib/next-path";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
 import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
@@ -234,7 +235,11 @@ export default async function DocumentPage({
   }
 
   // ── Anonymous branch — public-only read, no token. A miss bounces to /login. ─
-  const doc = await loadDocument(undefined, id, () => redirect("/login"));
+  // P30.S11 (D18) — with `?next=` back to this document, so signing in finishes
+  // the trip the visitor started (a private document then reads as a member's).
+  const doc = await loadDocument(undefined, id, () =>
+    redirect(loginHref(`/documents/${id}`)),
+  );
   // P25.S3 — an anonymous visitor who followed an old id link is sent on to the
   // PRETTY URL when the document has one (`canonical_path`, built once in the backend
   // from durable parts; `null` until the owning tenant claims an org slug, and then

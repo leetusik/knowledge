@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
-import { getSession, requireSession } from "./session";
+import { getSession, loginRedirectTarget, requireSession } from "./session";
 import { safeNextPath } from "./next-path";
 import { me } from "./knowledge/auth";
 import { ApiError } from "./knowledge/client";
@@ -12,8 +12,6 @@ import type { KbIdentity } from "./knowledge/types";
 // P12.S2 — the composed page guards, one layer above `session.ts` (cookie/crypto)
 // and `knowledge/auth.ts` (the API calls). `session.ts` deliberately knows nothing
 // about knowledge and vice-versa; this module is where the two meet.
-
-const LOGIN_PATH = "/login";
 
 export interface AuthenticatedContext {
   /** The knowledge bearer token, unsealed from the cookie — for server-to-server calls. */
@@ -28,7 +26,8 @@ export interface AuthenticatedContext {
  * Two distinct failures, two distinct handlings:
  *   - no/invalid/expired cookie → `requireSession()` redirects to /login;
  *   - a cookie whose knowledge token is dead (revoked/expired server-side) →
- *     knowledge answers 401 and we redirect to /login. We cannot CLEAR the cookie
+ *     knowledge answers 401 and we redirect to /login.
+ *   Both carry `?next=` back to the refused page (P30.S11, D32). We cannot CLEAR the cookie
  *     here (Next only allows cookie writes from route handlers / server actions), so
  *     the stale cookie survives — which is exactly why `redirectIfAuthenticated`
  *     below re-verifies rather than trusting the cookie alone. A successful login
@@ -47,7 +46,8 @@ export const requireIdentity = cache(
       return { token, identity: await me(token) };
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        redirect(LOGIN_PATH);
+        // P30.S11 (D32) — the same return address as the cookie-less case.
+        redirect(await loginRedirectTarget());
       }
       throw error;
     }

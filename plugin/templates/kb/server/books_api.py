@@ -11,6 +11,8 @@ the manifests in ``server/books.py`` are the truth):
   (``require_user``): another tenant's book, or none, is a 404.
 * ``GET /app/orgs/{org}/{project}/books/{book}`` — the same book addressed by its
   durable public identity, backing the reader URL ``/@{org}/{project}/books/{book}``.
+  ``org`` is the org slug, or the tenant id for a tenant without one (P30.S11,
+  OQ26 — the graph's and reader state's rule, parsed UUID first).
   Optional-identity: a member of the org reads it whatever the project's
   visibility; anyone else only when the project is **public**. Every miss (legacy
   mode, no such org, no such project or book, a private project) is the one
@@ -34,6 +36,7 @@ from server import config, db
 from server.accounts.auth import AuthContext, optional_user, require_user
 from server.accounts.service import get_accounts_service
 from server.documents_api import _resolve_project_name, get_conn
+from server.reader_state import org_label
 
 router = APIRouter()
 
@@ -48,6 +51,26 @@ def _no_such_book() -> HTTPException:
 def _app_book(book: dict) -> dict:
     """The /app book shape: the derived row minus the internal ``tenant_id``."""
     return {k: v for k, v in book.items() if k != "tenant_id"}
+
+
+def _book_canonical_path(org: str, project: str, book: str) -> str:
+    """``/@{org}/{project}/books/{book}`` on ``org_label`` (slug, else tenant id).
+
+    P30.S11: a slug-less tenant's books get a path on the tenant id instead of
+    ``None``, so the reader URL (web ``orgSegment``) always resolves back here.
+    """
+
+    return f"/@{org}/{project}/books/{book}"
+
+
+async def _resolve_org(org: str):
+    """``org`` as a tenant: a tenant id (UUID first, like ``/app/graph``) or an org slug."""
+
+    try:
+        tenant_id = UUID(org)
+    except (ValueError, AttributeError, TypeError):
+        return await get_accounts_service().get_tenant_by_slug(org)
+    return await get_accounts_service().get_tenant(tenant_id)
 
 
 @router.get("/app/books")
@@ -77,10 +100,9 @@ async def get_book(
     found = db.get_book(conn, project=project, slug=book, tenant_id=str(ctx.tenant.id))
     if found is None:
         raise HTTPException(status_code=404, detail=_NO_SUCH_BOOK_DETAIL)
-    org_slug = ctx.tenant.slug
     return {
         **_app_book(found),
-        "canonical_path": f"/@{org_slug}/{project}/books/{book}" if org_slug else None,
+        "canonical_path": _book_canonical_path(org_label(ctx.tenant), project, book),
     }
 
 
@@ -92,9 +114,11 @@ async def resolve_book_by_slug(
     ctx: AuthContext | None = Depends(optional_user),
     conn=Depends(get_conn),
 ) -> dict[str, object]:
-    """One book by org slug + project + book slug, gated by project visibility.
+    """One book by org (slug or tenant id) + project + book slug, gated by visibility.
 
-    Resolution: Postgres org slug -> tenant -> the tenant-scoped book row. A member
+    Resolution: Postgres org slug or tenant id -> tenant -> the tenant-scoped book
+    row. ``canonical_path`` names the slug when the tenant has one, so a member who
+    arrived on the tenant-id path can be sent on to the pretty one. A member
     of that tenant reads it whatever the project's visibility; any other caller,
     anonymous or cross-org, only when the owning project is ``public``. Every miss
     is the same 404 detail, so a private project and a nonexistent one look
@@ -103,7 +127,7 @@ async def resolve_book_by_slug(
 
     if config.database_url() is None:
         raise _no_such_book()  # legacy/template: no accounts registry, no orgs.
-    tenant = await get_accounts_service().get_tenant_by_slug(org)
+    tenant = await _resolve_org(org)
     if tenant is None:
         raise _no_such_book()
     found = db.get_book(conn, project=project, slug=book, tenant_id=str(tenant.id))
@@ -116,5 +140,5 @@ async def resolve_book_by_slug(
             raise _no_such_book()
     return {
         **_app_book(found),
-        "canonical_path": f"/@{tenant.slug}/{project}/books/{book}",
+        "canonical_path": _book_canonical_path(org_label(tenant), project, book),
     }

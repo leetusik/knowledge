@@ -28,13 +28,15 @@ function errorFor(status: number | null): string {
   }
 }
 
-export function SignupForm() {
+/** P30.S11 — `next` is already laundered by `signup/page.tsx`, as on /login. */
+export function SignupForm({ next }: { next?: string }) {
   return (
     <CredentialsForm
       endpoint="/api/auth/signup"
       copy={SIGNUP_PAGE}
       passwordAutoComplete="new-password"
       errorFor={errorFor}
+      next={next}
     />
   );
 }

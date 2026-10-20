@@ -1,10 +1,11 @@
 import "server-only";
 
 import { createHash, createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { readSessionEnv } from "./env";
+import { loginHref, REQUEST_PATH_HEADER } from "./next-path";
 
 // P12.S2 — the sealed-cookie session (D-P12-2). knowledge issues an opaque 30-day
 // bearer token from `/auth/*`; the BFF SEALS that token into an httpOnly cookie
@@ -29,8 +30,6 @@ const SESSION_TTL_SECONDS = SESSION_TTL_MS / 1000;
 
 /** Sealed-cookie envelope version — `v1.<iv>.<ct>.<tag>`, each part base64url. */
 const SEAL_VERSION = "v1";
-
-const LOGIN_PATH = "/login";
 
 /** Sealed plaintext: the knowledge token + its self-describing expiry (epoch ms). */
 interface SealedPayload {
@@ -167,13 +166,31 @@ export async function getSession(): Promise<string | null> {
 }
 
 /**
+ * P30.S11 (D32) — where a refused page request is sent: `/login?next=<the page>`.
+ *
+ * The page's path + query come from the `REQUEST_PATH_HEADER` the proxy
+ * (`src/proxy.ts`) stamps on every page request — a server component has no other
+ * reliable way to learn its own URL. `loginHref` launders it through
+ * `safeNextPath`, so a missing, crafted or off-site value degrades to a bare
+ * `/login` (which lands on the default after sign-in), never to an open redirect.
+ * A server action's request carries the PAGE's path (actions post to the page
+ * URL), so an action that finds the session gone returns the reader to the page
+ * they acted on.
+ */
+export async function loginRedirectTarget(): Promise<string> {
+  const store = await headers();
+  return loginHref(store.get(REQUEST_PATH_HEADER));
+}
+
+/**
  * Server-component/layout guard that REQUIRES a session: returns the decrypted
- * knowledge token for bearer injection, or `redirect("/login")` when the cookie is
- * absent/invalid/expired. The `(app)` layout awaits this before rendering.
+ * knowledge token for bearer injection, or redirects to the sign-in gate when the
+ * cookie is absent/invalid/expired — carrying `?next=` back to this page (P30.S11,
+ * D32). The `(app)` layout awaits this before rendering.
  */
 export async function requireSession(): Promise<string> {
   const token = await getSession();
-  if (!token) redirect(LOGIN_PATH);
+  if (!token) redirect(await loginRedirectTarget());
   return token;
 }
 

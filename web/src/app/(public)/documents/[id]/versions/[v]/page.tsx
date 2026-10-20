@@ -12,6 +12,7 @@ import { optionalIdentity } from "@/lib/auth-guards";
 import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
 import { getDocument, getDocumentVersion } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
+import { loginHref } from "@/lib/next-path";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
 import { Meta } from "../../document-view";
@@ -224,7 +225,10 @@ export default async function DocumentVersionPage({
   const token = ctx?.token;
   // An anonymous miss bounces to /login (uniform for every anonymous miss on this
   // surface, exactly like the document read); a member's miss is the branded 404.
-  const onMiss: () => never = ctx ? notFound : () => redirect("/login");
+  // P30.S11 (D18) — the bounce carries `?next=` back to this version.
+  const onMiss: () => never = ctx
+    ? notFound
+    : () => redirect(loginHref(`/documents/${id}/versions/${version}`));
 
   const doc = await loadOrMiss(() => getDocument(token, id), onMiss);
   const row = await loadOrMiss(

@@ -50,8 +50,8 @@ export interface CredentialsFormProps {
   /** Map a non-ok BFF status (or `null` for a network throw) to display copy. */
   errorFor: (status: number | null) => string;
   /**
-   * Post-sign-in destination. Omitted (signup) means `/dashboard`; `/login` passes
-   * the sanitised `?next=` it was reached with.
+   * Post-sign-in destination. Omitted means `/dashboard`; `/login` and (P30.S11)
+   * `/signup` pass the sanitised `?next=` they were reached with.
    */
   next?: string;
 }

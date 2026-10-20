@@ -5,7 +5,8 @@
 * reindex from an empty DB reproduces the book tables exactly;
 * PUT refuses a binding to a document that does not exist or is in another project;
 * a loose publish that sends no new field is byte-for-byte today's;
-* a public book route on a private project is a 404 (Postgres-gated).
+* a public book route on a private project is a 404 (Postgres-gated);
+* a slug-less tenant's book is addressed on its tenant id (P30.S11, OQ26).
 """
 from __future__ import annotations
 
@@ -249,17 +250,7 @@ def test_loose_publish_without_new_fields_is_unchanged(client):
 from tests.test_documents_api import _project, _signup, documents_client  # noqa: E402,F401
 
 
-def test_public_book_route_is_404_on_a_private_project(documents_client):
-    client, _ = documents_client
-    headers, tenant = _signup(client, f"books-{uuid4()}@example.com")
-    pub = _project(client, headers, "shelf")
-    _project(client, headers, "secret")  # stays private
-    org = f"org-{uuid4().hex[:10]}"
-    assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
-    assert client.patch(
-        f"/app/projects/{pub}", json={"visibility": "public"}, headers=headers
-    ).status_code == 200
-
+def _seed_books(tenant: str) -> None:
     conn = db.connect()
     try:
         for project in ("shelf", "secret"):
@@ -278,6 +269,24 @@ def test_public_book_route_is_404_on_a_private_project(documents_client):
     finally:
         conn.close()
 
+
+def _tenant_with_books(client) -> tuple[dict[str, str], str]:
+    headers, tenant = _signup(client, f"books-{uuid4()}@example.com")
+    pub = _project(client, headers, "shelf")
+    _project(client, headers, "secret")  # stays private
+    assert client.patch(
+        f"/app/projects/{pub}", json={"visibility": "public"}, headers=headers
+    ).status_code == 200
+    _seed_books(tenant)
+    return headers, tenant
+
+
+def test_public_book_route_is_404_on_a_private_project(documents_client):
+    client, _ = documents_client
+    headers, tenant = _tenant_with_books(client)
+    org = f"org-{uuid4().hex[:10]}"
+    assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
+
     # Anonymous: the public project's book reads; the private one is the same 404
     # as a book that does not exist (never a 403).
     ok = client.get(f"/app/orgs/{org}/shelf/books/intro")
@@ -292,3 +301,27 @@ def test_public_book_route_is_404_on_a_private_project(documents_client):
     # The member reads their own private book.
     assert client.get(f"/app/orgs/{org}/secret/books/intro", headers=headers).status_code == 200
     assert client.get("/app/books/secret/intro", headers=headers).status_code == 200
+
+
+def test_slugless_tenant_book_is_addressed_on_its_tenant_id(documents_client):
+    """P30.S11 (OQ26): `org` is the slug, or the tenant id when there is none."""
+
+    client, _ = documents_client
+    headers, tenant = _tenant_with_books(client)
+
+    # No slug: the member read names the tenant-id path, and that path resolves,
+    # still gated (the private project is the same 404 as a missing book).
+    member = client.get("/app/books/shelf/intro", headers=headers)
+    assert member.json()["canonical_path"] == f"/@{tenant}/shelf/books/intro"
+    ok = client.get(f"/app/orgs/{tenant}/shelf/books/intro")
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["canonical_path"] == f"/@{tenant}/shelf/books/intro"
+    priv = client.get(f"/app/orgs/{tenant}/secret/books/intro")
+    assert priv.status_code == 404
+    assert priv.json() == client.get(f"/app/orgs/{uuid4()}/shelf/books/intro").json()
+
+    # Once the org claims a slug, the id path still resolves and names the slug.
+    org = f"org-{uuid4().hex[:10]}"
+    assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
+    again = client.get(f"/app/orgs/{tenant}/shelf/books/intro")
+    assert again.json()["canonical_path"] == f"/@{org}/shelf/books/intro"

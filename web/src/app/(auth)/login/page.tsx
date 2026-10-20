@@ -32,7 +32,7 @@ export default async function LoginPage({
   await redirectIfAuthenticated(next);
 
   return (
-    <AuthCard copy={LOGIN_PAGE}>
+    <AuthCard copy={LOGIN_PAGE} next={next}>
       <LoginForm next={next} />
     </AuthCard>
   );

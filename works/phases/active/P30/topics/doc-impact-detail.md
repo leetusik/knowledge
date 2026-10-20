@@ -168,3 +168,11 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - backend.md: `server/review.py` (the only `fsrs` importer), the review routes in `reader_api.py`, dependency `fsrs==6.3.2` (P30.S10)
 - data.md: how S10 writes `review_cards`/`review_logs` (log id = `review_id`, `response` keeps the outcome); no schema change (P30.S10)
 - decisions.md: ADR: review on FSRS as shipped (OQ35–OQ41) (P30.S10)
+
+### P30.S11
+
+- frontend.md: the sign-in return address: `src/proxy.ts` stamps `x-kb-request-path`; `requireSession`/`requireIdentity` redirect to `/login?next=`; `safeNextPath` hardened (length cap, decoded `//` `\` control chars); `loginHref`; signup honours `next` and the auth cross-link carries it; `/documents/{id}` anonymous misses carry `next` (D18, D32) (P30.S11)
+- frontend.md: `web/src/lib/reader-href.ts` — `orgSegment`, `bookHref`, `readerHref`, `signInToSaveHref`, the one builder for reader, book and "Sign in to save" URLs (P30.S11)
+- security.md: the open-redirect rule for `next=` as shipped (same-origin path only, fail closed, laundered at the gate, in `loginHref` and in the form; the proxy header is overwritten and laundered) (P30.S11)
+- api.md: `GET /app/orgs/{org}/{project}/books/{book}` accepts the tenant id as `org` (UUID first); both book reads' `canonical_path` falls back to the tenant id instead of `null` (OQ42) (P30.S11)
+- decisions.md: ADR: a slug-less tenant's reader URLs are built on the tenant id (OQ26, OQ42) (P30.S11)
