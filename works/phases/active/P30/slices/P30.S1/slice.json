@@ -3,7 +3,7 @@
   "phase_id": "P30",
   "name": "Superseding design wave (A5): reader, annotations, library",
   "kind": "co-work",
-  "status": "in_progress",
+  "status": "pending",
   "order": 10,
   "depends_on": [
     "P30.DECOMP"
@@ -30,5 +30,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "wave",
+    "on_words": "'accept' signs all three rounds as presented (design-sign) and the build continues at S2; anything else is feedback recorded verbatim, and a superseding round re-drafts that job",
+    "since": "2026-10-21T01:17:49+09:00"
   }
 }
