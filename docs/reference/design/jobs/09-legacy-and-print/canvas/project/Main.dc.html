@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legacy reader — the flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="lflow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-proto lg-proto">
+<div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div>
+<div class="rd-proto__stage">
+<sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Legacy" fit="fill" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" member="{{ r.member }}" bar="{{ r.bar }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" hold="{{ r.hold }}" marks="{{ r.marks }}" mark-on-land="{{ r.markOnLand }}" on-open="{{ r.onOpen }}" on-link="{{ r.onLink }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-panel="{{ r.onPanel }}" on-bar="{{ r.onBar }}" on-mark="{{ r.onMark }}" on-bookmark="{{ r.onBookmark }}" on-place-mark="{{ r.onPlaceMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-print="{{ r.onPrint }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,900px"></dc-import></sc-if>
+<sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" back="{{ w.back }}" items="{{ w.items }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,900px"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><a href="Legacy.dc.html">The legacy screen alone</a><a href="Widths.dc.html">The legacy reader at 390, 820, 1024 and 1440</a><a href="Paper.dc.html">Print: the native sheet and the notice sheet</a><a href="Elsewhere.dc.html">The stand-in for another job's screen</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":991}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.LG.flow.initial('tw-top', { themeChoice: 'system', os: 'light' });
+    this.a = window.LG.flow.api(this);
+  }
+  renderVals() {
+    const F = window.LG.flow, s = this.state;
+    const none = { kind: 'library', where: '', detail: '', back: '', items: [], onBack: null, onContinue: null };
+    return {
+      groups: F.bar(this, this.a),
+      inReader: !s.away,
+      isAway: !!s.away,
+      r: F.legacyProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>

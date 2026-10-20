@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book page loading, not found, failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="{{ innerCls }}">
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ true }}"><div class="bk-layout" role="status" aria-label="Loading…">
+<div class="bk-sk"><span class="rd-skel bk-sk__kind"></span><span class="rd-skel bk-sk__title"></span><span class="rd-skel bk-sk__title2"></span><span class="rd-skel bk-sk__prog"></span><span class="rd-skel bk-sk__bar"></span><div class="bk-sk__cont"><span class="rd-skel bk-sk__label"></span><span class="rd-skel bk-sk__ctitle"></span><span class="rd-skel bk-sk__m bk-sk__w60"></span><span class="rd-skel bk-sk__btn"></span></div></div>
+<div class="bk-sk"><span class="rd-skel bk-sk__head"></span><div class="bk-sk__rows"><sc-for list="{{ rows }}" as="w" hint-placeholder-count="5"><div class="bk-sk__row"><span class="rd-skel bk-sk__n"></span><span class="bk-sk__lines"><span class="{{ w.cls }}"></span><span class="rd-skel bk-sk__m"></span></span></div></sc-for></div></div>
+</div></sc-if>
+<sc-if value="{{ isNotFound }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Not found · 404</span><h1 class="rd-ed__title">Book not found</h1><p class="rd-ed__sub">There's no book at this address. It may have moved, or the link may be wrong.</p><div class="rd-ed__actions"><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ library }}"><span aria-hidden="true">‹</span> Back to the library</a></div></div></sc-if>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><div class="rd-ed"><span class="rd-ed__code">Error · 500</span><h1 class="rd-ed__title">Something on our side stopped reading.</h1><p class="rd-ed__sub">This book did not finish loading. Try again — and if it keeps failing, the reference below tells us where it stopped.</p><div class="rd-ed__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ retry }}">Try again</button></div><p class="rd-ed__ref">ref · bk-4c81d0e2</p></div></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"onRetry":{"editor":null},"onLibrary":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":1440,"height":506}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f();
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const kind = P.kind || 'loading';
+    const W = ['bk-sk__w90', 'bk-sk__w75', 'bk-sk__w85', 'bk-sk__w60', 'bk-sk__w50'];
+    return {
+      isLoading: kind === 'loading',
+      isNotFound: kind === 'notfound',
+      isFailed: kind === 'failed',
+      rows: W.map((w) => ({ cls: 'rd-skel bk-sk__t ' + w })),
+      retry: this.call('onRetry'),
+      library: this.call('onLibrary'),
+      innerCls: bare ? '' : 'bk-main',
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

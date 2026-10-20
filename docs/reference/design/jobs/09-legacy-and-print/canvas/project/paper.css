@@ -1,0 +1,210 @@
+/* The reader's print sheet (job 09-legacy-and-print, round 01). Two halves:
+   1. .pp-flow and everything under it is the print stylesheet itself, the part the product builds (build-prompt.md,
+      Print): the light print palette whatever the screen theme, the faces and sizes on paper, every block on paper.
+      Every size is in px at 96/in (1pt = 4/3px): 14px = 10.5pt, 12px = 9pt (the floor), 26.67px = 20pt.
+   2. .pp-sheet, .pp-win, .pp-mc, .pp-probe and .pp-board* are canvas-only: they cut the flow into pages so the canvas
+      can show paper. The browser's print engine does that in the product. */
+
+/* ---------- The print palette (today's kb-print.css values) and faces ---------- */
+.pp-flow, .pp-notice {
+  --pp-paper: #ffffff; --pp-sunken: #f4f1ea; --pp-border: #c9c2b3; --pp-ink: #1b1714; --pp-sec: #4a433a;
+  --pp-hint: #6d665a; --pp-accent: #0a544e;
+  /* the diagrams' signed print tones (03-diagrams, @media print) */
+  --pp-dg-line: #7c7362; --pp-dg-ink: #26211c; --pp-dg-tint: #fffefa;
+  --pp-dg-store: #44617a; --pp-dg-store-ink: #33506a; --pp-dg-store-tint: #e3e6e7;
+  --pp-read: "Literata", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --pp-disp: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --pp-body: "Source Sans 3", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --pp-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--pp-read); font-size: 14px; line-height: 1.55; color: var(--pp-ink); background: var(--pp-paper);
+  font-kerning: normal; text-rendering: optimizeLegibility; overflow-wrap: break-word;
+}
+.pp-flow :lang(ko), .pp-flow:lang(ko), .pp-notice :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.pp-flow * { box-sizing: border-box; }
+.pp-flow p, .pp-flow h1, .pp-flow h2, .pp-flow h3, .pp-flow h4, .pp-flow ul, .pp-flow ol, .pp-flow figure, .pp-flow blockquote { margin: 0; }
+/* Block rhythm: 10px between blocks, more above a heading. A margin at a page's top is dropped by the print engine. */
+.pp-flow > .pp-b + .pp-b { margin-top: 10px; }
+.pp-flow > .pp-b--h2 { margin-top: 24px !important; }
+.pp-flow > .pp-b--h3 { margin-top: 18px !important; }
+.pp-flow > .pp-b--h4 { margin-top: 14px !important; }
+.pp-flow > .pp-b--wide + .pp-b, .pp-flow > .pp-b + .pp-b--wide { margin-top: 14px; }
+/* Prose keeps a reading measure; wide blocks (code, tables, figures, diagrams, callouts) take the whole column. */
+.pp-measure { max-width: 38em; }
+
+/* ---------- Inline ---------- */
+.pp-e { font-style: italic; }
+.pp-s { font-weight: 700; }
+.pp-d { text-decoration: line-through; }
+.pp-c { font-family: var(--pp-mono); font-size: max(12px, 0.857em); font-variant-ligatures: none; overflow-wrap: anywhere; }
+.pp-l { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+/* A link prints its address after its text; an in-document # link and a bare link print nothing more. */
+.pp-href { font-family: var(--pp-mono); font-size: 12px; font-style: normal; font-weight: 400; color: var(--pp-sec); overflow-wrap: anywhere; }
+
+/* ---------- The masthead (page 1 only) ---------- */
+.pp-head { padding-bottom: 2px; }
+.pp-head__label { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+.pp-head__addr { margin-top: 2px !important; font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); overflow-wrap: anywhere; padding-bottom: 8px; border-bottom: 1px solid var(--pp-border); }
+.pp-head__old { margin-top: 8px !important; font: 12px/1.45 var(--pp-body); color: var(--pp-ink); overflow-wrap: anywhere; }
+.pp-head__tag { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 0 5px; border: 1px solid var(--pp-ink); border-radius: 2px; margin-right: 4px; }
+.pp-head__title { margin-top: 18px !important; font-family: var(--pp-disp); font-size: 26.67px; line-height: 1.2; font-weight: 600; text-wrap: balance; break-after: avoid; }
+.pp-head__lede { margin-top: 8px !important; color: var(--pp-sec); max-width: 38em; text-wrap: pretty; }
+
+/* ---------- Headings ---------- */
+.pp-h2 { font: 600 18.67px/1.3 var(--pp-disp); text-wrap: balance; break-after: avoid; }
+.pp-h3 { font: 600 16px/1.35 var(--pp-disp); text-wrap: balance; break-after: avoid; }
+.pp-h4 { font: 700 14px/1.4 var(--pp-body); break-after: avoid; }
+.pp-p { max-width: 38em; text-wrap: pretty; orphans: 2; widows: 2; }
+/* A lead-in stays with what it introduces: a paragraph directly before a figure row, a diagram, a code block, a table,
+   a callout or a list never ends a page while that block starts the next (a heading before it already keeps with it). */
+.pp-p:has(+ .pp-b--wide), .pp-p:has(+ .pp-b > .pp-list) { break-after: avoid; }
+
+/* ---------- Lists and quotes ---------- */
+.pp-list { max-width: 38em; padding-left: 1.4em !important; }
+.pp-list li + li { margin-top: 3px; }
+.pp-list li { break-inside: avoid; }
+.pp-list .pp-list { margin-top: 3px !important; }
+.pp-quote { max-width: 38em; padding-left: 14px; border-left: 2px solid var(--pp-border); color: var(--pp-sec); font-style: italic; }
+.pp-quote p + p { margin-top: 6px; }
+.pp-hr { border: 0; border-top: 1px solid var(--pp-border); margin: 18px 0 !important; width: 6rem; }
+
+/* ---------- Callouts: printed open, a hairline box with the type in words ---------- */
+.pp-callout { border: 1px solid var(--pp-border); border-radius: 4px; padding: 9px 14px 11px; break-inside: avoid; }
+.pp-callout__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.pp-callout__word { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+.pp-callout__title { font: 600 14px/1.4 var(--pp-body); color: var(--pp-ink); }
+.pp-callout__body { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.pp-callout__body .pp-p, .pp-callout__body .pp-list { max-width: none; }
+/* A warning or caution carries a heavier rule as well as its word, so the kind never rests on the label alone. */
+.pp-callout--warning, .pp-callout--caution { border-color: var(--pp-ink); }
+
+/* ---------- Code: wrapped, grayscale, a hanging indent; ASCII art scales to fit ---------- */
+.pp-code { border: 1px solid var(--pp-border); border-radius: 4px; background: var(--pp-sunken); break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.pp-code__bar { display: flex; justify-content: space-between; gap: 10px; padding: 3px 10px; border-bottom: 1px solid var(--pp-border); font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); background: var(--pp-paper); border-radius: 4px 4px 0 0; }
+.pp-code__body { padding: 7px 10px 8px; font-family: var(--pp-mono); line-height: 1.45; font-variant-ligatures: none; color: var(--pp-ink); }
+.pp-ln { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 2ch; text-indent: -2ch; min-height: 1.45em; }
+.pp-code--art .pp-ln { padding-left: 0; text-indent: 0; line-height: 1.3; min-height: 1.3em; }
+.pp-tk.t-kw { font-weight: 700; }
+.pp-tk.t-cm { color: var(--pp-sec); font-style: italic; }
+.pp-tk.t-st { color: var(--pp-sec); }
+
+/* ---------- Tables: rows never split; the header row repeats on a new page ---------- */
+.pp-t { width: 100%; border-collapse: collapse; font: 12px/1.4 var(--pp-body); font-variant-numeric: tabular-nums; color: var(--pp-ink); }
+.pp-t th, .pp-t td { border: 1px solid var(--pp-border); padding: 4px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.pp-t th { background: var(--pp-sunken); font-weight: 700; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.pp-t tr { break-inside: avoid; }
+.pp-t thead { break-after: avoid; }
+.pp-t + .pp-t { margin-top: 0; }
+/* canvas-only: the print engine repeats <thead> itself; here a continued piece starts a new page with its header */
+.pp-t--cont { break-before: column; }
+
+/* ---------- A figure row: side by side while each item keeps 13rem, else even rows; never split ---------- */
+.pp-fig { break-inside: avoid; }
+.pp-fig__row { display: grid; gap: 12px; }
+.pp-card { border: 1px solid var(--pp-border); border-radius: 4px; padding: 9px 12px 11px; display: flex; flex-direction: column; gap: 4px; }
+.pp-card--accent { border-color: var(--pp-accent); box-shadow: inset 0 3px 0 var(--pp-accent); padding-top: 12px; }
+.pp-card__title { font: 600 14px/1.35 var(--pp-body); }
+.pp-card__body { font-size: 12px; line-height: 1.5; }
+.pp-fig__cap { margin-top: 6px !important; font-size: 12px; line-height: 1.5; color: var(--pp-sec); max-width: 46em; }
+
+/* ---------- The diagram in its print tones, at the column's full width ---------- */
+.pp-dg { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.pp-dg__title { font: 600 14px/1.35 var(--pp-body); }
+.pp-dg__box { margin-top: 8px; display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(0, 1.25fr); grid-template-rows: auto auto auto 12px; font-family: var(--pp-body); color: var(--pp-dg-ink); }
+.pp-dg__group { grid-column: 3; grid-row: 1 / 5; border: 1.5px solid var(--pp-dg-line); border-radius: 8px; }
+.pp-dg__glabel { grid-column: 3; grid-row: 1; padding: 7px 12px 0; font: 600 12px/1.35 var(--pp-body); color: var(--pp-sec); }
+.pp-dg__node { margin: 8px 12px 0; padding: 7px 10px 8px; border: 1.5px solid var(--pp-dg-line); border-radius: 6px; background: var(--pp-dg-tint); display: flex; flex-direction: column; gap: 1px; }
+.pp-dg__node--1 { grid-column: 3; grid-row: 2; }
+.pp-dg__node--2 { grid-column: 3; grid-row: 3; margin-top: 12px; }
+.pp-dg__nlabel { font: 600 14px/1.3 var(--pp-body); }
+.pp-dg__nsub { font: 12px/1.35 var(--pp-body); color: var(--pp-sec); }
+.pp-dg__store { grid-column: 1; grid-row: 2 / 4; align-self: center; padding: 10px 10px 9px; border: 1.5px solid var(--pp-dg-store); border-top: 4px double var(--pp-dg-store); border-radius: 6px; background: var(--pp-dg-store-tint); font: 12px/1.4 var(--pp-mono); color: var(--pp-dg-store-ink); overflow-wrap: anywhere; }
+.pp-dg__edge { grid-column: 2; display: grid; grid-template-rows: 1fr auto 1fr; margin-right: -13px; position: relative; z-index: 1; padding-top: 8px; }
+.pp-dg__edge--1 { grid-row: 2; }
+.pp-dg__edge--2 { grid-row: 3; padding-top: 12px; }
+.pp-dg__elabel { align-self: end; justify-self: center; padding: 0 8px 3px; font: 12px/1.3 var(--pp-body); text-align: center; color: var(--pp-dg-ink); }
+.pp-dg__elabel .pp-c { font-size: 12px; }
+.pp-dg__line { position: relative; height: 0; border-top: 1.5px solid var(--pp-dg-line); }
+.pp-dg__edge--dashed .pp-dg__line { border-top-style: dashed; }
+.pp-dg__line::after { content: ""; position: absolute; top: -6px; right: -1px; border-left: 10px solid var(--pp-dg-line); border-top: 5.25px solid transparent; border-bottom: 5.25px solid transparent; }
+.pp-dg__edge--back .pp-dg__line::after { right: auto; left: -1px; border-left: 0; border-right: 10px solid var(--pp-dg-line); }
+.pp-dg__cap { margin-top: 8px !important; font-size: 12px; line-height: 1.5; color: var(--pp-sec); max-width: 46em; }
+
+/* ---------- The quiz on paper ---------- */
+.pp-quiz__head { break-inside: avoid; break-after: avoid; }
+.pp-quiz__label { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+.pp-quiz__title { margin-top: 2px !important; font: 600 16px/1.35 var(--pp-disp); }
+.pp-qi { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; margin-top: 14px; break-inside: avoid; max-width: 40em; }
+.pp-qi__n, .pp-ai__n { font: 600 14px/1.55 var(--pp-disp); font-variant-numeric: lining-nums tabular-nums; color: var(--pp-ink); }
+.pp-qi__hint { margin-top: 1px !important; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.pp-opts { list-style: none; padding: 0 !important; margin-top: 6px !important; display: flex; flex-direction: column; gap: 5px; }
+.pp-opt { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 8px; align-items: start; }
+.pp-qk { width: 20px; height: 20px; margin-top: 1px; border: 1.25px solid var(--pp-ink); border-radius: 50%; display: grid; place-items: center; font: 700 12px/1 var(--pp-mono); color: var(--pp-ink); }
+.pp-qk--sq { border-radius: 3px; }
+.pp-cloze { line-height: 2.1; }
+.pp-blank { display: inline-block; min-width: 8.5em; border-bottom: 1px solid var(--pp-ink); line-height: 1.3; }
+.pp-blank__n { font: 12px/1 var(--pp-mono); color: var(--pp-sec); }
+.pp-lines { margin-top: 4px !important; display: flex; flex-direction: column; }
+.pp-rule { height: 28px; border-bottom: 1px solid var(--pp-hint); }
+.pp-quiz__note { margin-top: 14px !important; font: italic 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+
+/* ---------- The answer key, at the chapter's end ---------- */
+.pp-ans__lead { margin-top: 3px !important; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); break-after: avoid; }
+.pp-ai { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; margin-top: 10px; break-inside: avoid; max-width: 40em; }
+.pp-ai__a { line-height: 1.5; }
+.pp-ai__key { font-family: var(--pp-mono); font-size: 12px; font-weight: 700; margin-right: 2px; }
+.pp-ai__label { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); margin-right: 4px; }
+.pp-ai__x { margin-top: 2px !important; font-size: 12px; line-height: 1.5; color: var(--pp-sec); }
+
+/* ---------- Sources ---------- */
+.pp-src__list { list-style: none; padding: 0 !important; margin-top: 8px !important; display: flex; flex-direction: column; gap: 8px; max-width: 42em; }
+.pp-src__i { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); column-gap: 4px; break-inside: avoid; }
+.pp-src__num { font: 12px/1.6 var(--pp-mono); color: var(--pp-sec); }
+.pp-src__title { font-weight: 600; }
+.pp-src__meta { font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.pp-src__note { font-size: 12px; line-height: 1.5; }
+.pp-src__url { font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); overflow-wrap: anywhere; }
+
+/* ---------- The colophon (the last thing printed) ---------- */
+.pp-colo { margin-top: 28px !important; padding-top: 8px; border-top: 1px solid var(--pp-border); font: 12px/1.5 var(--pp-body); color: var(--pp-sec); break-inside: avoid; max-width: 46em; overflow-wrap: anywhere; }
+.pp-colo__line { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px !important; }
+
+/* ---------- The ⌘P notice sheet (one page, printed from the legacy reader) ---------- */
+.pp-notice { position: absolute; inset: 0; padding: 60px 57px 68px; display: flex; flex-direction: column; gap: 14px; }
+.pp-notice__label { margin: 0; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); padding-bottom: 8px; border-bottom: 1px solid var(--pp-border); }
+.pp-notice__title { margin: 22px 0 0; font: 600 26.67px/1.2 var(--pp-disp); text-wrap: balance; max-width: 22em; }
+.pp-notice__p { margin: 0; max-width: 38em; text-wrap: pretty; }
+.pp-notice__addr { margin: 0; padding: 12px 14px; border: 1px solid var(--pp-ink); border-radius: 4px; font: 14px/1.5 var(--pp-mono); overflow-wrap: anywhere; max-width: 40em; }
+.pp-notice__printed { margin: 8px 0 0; font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); }
+
+/* =================== Canvas-only below: paper, pages and the board around them (never built) =================== */
+.pp-host { position: relative; width: 100%; }
+.pp-probe { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+.pp-probe__in { position: absolute; left: 0; top: 0; visibility: hidden; }
+.pp-mc { column-count: 1; column-fill: auto; }
+.pp-pages { display: flex; flex-wrap: wrap; gap: 28px 32px; justify-content: center; }
+.pp-slot { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.pp-scaled { position: relative; overflow: hidden; background: #ffffff; outline: 1px solid #cfc9bc; }
+.pp-sheet { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: #ffffff; }
+.pp-win { position: absolute; overflow: hidden; }
+.pp-slot__cap { margin: 0; font: 13px/1.4 "Source Sans 3", system-ui, sans-serif; color: #3d362d; font-variant-numeric: tabular-nums; }
+.pp-crop { background: #ffffff; outline: 1px solid #cfc9bc; padding: 24px 57px; box-sizing: border-box; }
+/* the canvas-only pager strip */
+[data-proto="pager"] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; font: 13px/1.4 system-ui, sans-serif; color: #1d1d1d; background: #ebeae6; border: 1px dashed #8d8d88; border-radius: 4px; }
+[data-proto="pager"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 8px; cursor: pointer; }
+[data-proto="pager"] button[aria-pressed="true"] { font-weight: 700; background: #ffffff; border-color: #3a3a38; }
+[data-proto="pager"] button:disabled { color: #5c5c58; cursor: default; }
+[data-proto="pager"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+.pp-pager__now { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* the Paper board */
+.pp-board { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1440px; margin-inline: auto; padding: 24px 32px 32px; box-sizing: border-box; }
+.pp-board__head { display: flex; flex-direction: column; gap: 6px; max-width: 62rem; }
+.pp-board__title { margin: 0; font: 600 22px/1.3 "Fraunces", Georgia, serif; color: #1b1714; }
+.pp-board__lead { margin: 0; font: 15px/1.5 "Source Sans 3", system-ui, sans-serif; color: #3d362d; max-width: 46rem; }
+@media (max-width: 40rem) { .pp-board { padding: 16px 12px 24px; } }
+.pp-proto { background: #f4f3ef; display: flex; flex-direction: column; }
+.pp-comp { display: flex; flex-direction: column; gap: 32px; padding: 32px; background: #f4f3ef; }
+.pp-comp__row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.pp-comp__cell { display: flex; flex-direction: column; gap: 8px; }
+.pp-comp__cap { margin: 0; font: 13px/1.45 "Source Sans 3", system-ui, sans-serif; color: #3d362d; max-width: 52rem; }
+.pp-comp__title { margin: 0; font: 600 20px/1.3 "Fraunces", Georgia, serif; color: #1b1714; }

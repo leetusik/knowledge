@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — A quiz of twenty questions on paper, and its answer key</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<link rel="stylesheet" href="paper.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="paper.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — A quiz of twenty questions on paper, and its answer key</p>
+<p class="rd-board__lead">Prompts and options print; choices are marked by a circle (one answer) or a square (several), blanks are rules, recall gets ruled lines. Every item is kept whole on its page. The key follows at the chapter’s end: each number’s answer, then why. Saved answers don’t print. The twenty items are 04-quiz’s sample (Tidewater, chapter 2).</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div style="{{ c.st }}"><dc-import name="Sheet" mode="flow" sample="{{ c.sample }}" paper="{{ c.paper }}" span="{{ c.span }}" scale="{{ c.scale }}" width="{{ c.w }}" hint-size="100%,1200px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3500,"height":2562}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { rows: [
+      { title: 'A4 · 794 × 1123 · at 100%', cells: [{ cap: 'Every page', sample: 'twenty', paper: 'a4', span: 8, scale: 1, w: 3400, st: 'width: 3400px' }] },
+    ] };
+  }
+}
+</script>
+</body>
+</html>

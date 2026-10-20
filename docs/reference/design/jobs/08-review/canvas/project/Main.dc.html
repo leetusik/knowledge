@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review — the flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+/* Canvas only, never built: the foot strip's one control, in the state bar's neutral button look. */
+[data-proto="screens"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 7px; cursor: pointer; }
+[data-proto="screens"] button:hover { background: #fff; }
+[data-proto="screens"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+</style>
+</helmet>
+<div class="rd-proto" data-rv-root="1">
+<div class="rd-proto__stage">
+<sc-if value="{{ inReview }}" hint-placeholder-val="{{ true }}"><dc-import name="Review" fit="fill" bar="{{ groups }}" model="{{ m }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ groups }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" proposal="{{ w.proposal }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><button type="button" onclick="{{ toBar }}">Back to the state bar</button><a href="Review.dc.html">The review screen alone</a><a href="Widths.dc.html">Review at 390, 820 and 1440</a><a href="Elsewhere.dc.html">The stand-in for another job's screen</a><a href="Card.dc.html">One card alone</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 1440, "height": 935}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RV.flow.initial('due');
+    this.a = window.RV.flow.api(this);
+  }
+  componentWillUnmount() { this.a.stop(); }
+
+  /* The state bar is the first row of the scrolled page (rule 1: it scrolls away, never pinned). This strip sits under the
+     page, so from any state one press scrolls the page back to the bar, and focus goes to its pressed preset. */
+  toBar = (e) => {
+    const root = e && e.currentTarget && e.currentTarget.closest('[data-rv-root]');
+    if (!root) return;
+    if (this.state.panel) this.a.closePanel();
+    root.querySelectorAll('.rd-scroll, .rd-away').forEach((el) => { el.scrollTop = 0; });
+    const g = root.querySelector('[data-proto="state-bar"] .pb-group:not(.is-off)'), presets = [];
+    if (g) for (const el of g.querySelectorAll('button, .pb-sep')) { if (el.classList.contains('pb-sep')) break; presets.push(el); }
+    const b = presets.find((x) => x.getAttribute('aria-pressed') === 'true') || presets[0];
+    if (b) b.focus({ preventScroll: true });
+  };
+
+  renderVals() {
+    const F = window.RV.flow, s = this.state, a = this.a;
+    const inReview = s.member && s.page === 'review';
+    let w = { kind: 'library-review', where: '', detail: '', proposal: false, onBack: null, onContinue: null };
+    if (!s.member) w = { kind: 'signin-review', where: 'Review, at the first card due', detail: '', proposal: false, onBack: null, onContinue: a.signedIn };
+    else if (s.page !== 'review') w = F.awayProps(s, a);
+    return { groups: F.bar(s, a), inReview, isAway: !inReview, m: F.view(s, a), w, toBar: this.toBar };
+  }
+}
+</script>
+</body>
+</html>

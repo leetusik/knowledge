@@ -1,0 +1,43 @@
+{
+  "schema": 2,
+  "job": "08-review",
+  "slice": "P29.S6",
+  "title": "review",
+  "canvas": {
+    "url": "https://claude.ai/artifact/3hv7LEEnr5cnLwHYZpBQ4N",
+    "version": "1792475245-1994",
+    "published": [
+      "project/Card.dc.html",
+      "project/ChoiceCardStates.dc.html",
+      "project/ClozeCardStates.dc.html",
+      "project/DisplayPanel.dc.html",
+      "project/Elsewhere.dc.html",
+      "project/HighlightCardStates.dc.html",
+      "project/Main.dc.html",
+      "project/QueueHead.dc.html",
+      "project/QueueHeadStates.dc.html",
+      "project/QueueStates.dc.html",
+      "project/Rating.dc.html",
+      "project/RatingStates.dc.html",
+      "project/RecallCardStates.dc.html",
+      "project/Review.dc.html",
+      "project/ReviewEnd.dc.html",
+      "project/ReviewSettings.dc.html",
+      "project/SettingsStates.dc.html",
+      "project/SuspendStates.dc.html",
+      "project/Toast.dc.html",
+      "project/Widths.dc.html",
+      "project/annot.css",
+      "project/annot.js",
+      "project/assets/logo.svg",
+      "project/canvas.json",
+      "project/quiz.css",
+      "project/reader.css",
+      "project/reader.js",
+      "project/review.css",
+      "project/review.js"
+    ],
+    "system": "1792321604-e214"
+  },
+  "status": "open"
+}

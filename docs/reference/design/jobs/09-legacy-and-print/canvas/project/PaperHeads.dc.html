@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The masthead and the colophon</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<link rel="stylesheet" href="paper.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="paper.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The masthead and the colophon</p>
+<p class="rd-board__lead">The masthead opens page 1: where the sheet comes from (the book and the chapter’s place), the address that always opens it, the version and its date, and the print date. An older version says so before the title. The colophon closes the last page: where and when it was printed, which version it is, and where the current one lives. Crops of the page at 100%, inside the paper’s side margins.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div style="{{ c.st }}"><dc-import name="Sheet" mode="flow" crop="{{ true }}" blocks="{{ c.blocks }}" lang="{{ c.lang }}" paper="{{ c.paper }}" hint-size="794px,300px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1800,"height":1264}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const PP = window.PP, INT = 'maintainer-guide/internals', WAL = 'doc/field-notes/sqlite-wal';
+    const H = (cap, k, l, v) => ({ cap, blocks: [PP.head(k, l, v)], lang: l, paper: 'a4', st: 'width: 794px' });
+    const C = (cap, k, l, v) => ({ cap, blocks: [PP.colophon(k, l, v)], lang: l, paper: 'a4', st: 'width: 794px' });
+    return { rows: [
+      { title: 'The masthead · top of page 1', cells: [
+        H('Chapter 2 · English v2 (current)', INT, 'en', null), H('Older version · English v1', INT, 'en', 1),
+        H('한국어 v1', INT, 'ko', null), H('A loose native document · v2', WAL, 'en', null),
+      ] },
+      { title: 'The colophon · end of the last page', cells: [
+        C('Chapter 2 · English v2 (current)', INT, 'en', null), C('Older version · English v1', INT, 'en', 1),
+        C('한국어 v1 · an older translation', INT, 'ko', null), C('A loose native document · v2', WAL, 'en', null),
+      ] },
+    ] };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book head</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<header class="bk-head">
+<div class="bk-head__id">
+<p class="bk-head__kind"><span class="rd-head__n">{{ h.kindLabel }}</span><span>{{ h.place }}</span></p>
+<h1 class="bk-head__title">{{ h.title }}</h1>
+</div>
+<sc-if value="{{ h.hasDesc }}" hint-placeholder-val="{{ false }}"><p class="bk-head__desc">{{ h.description }}</p></sc-if>
+<sc-if value="{{ h.member }}" hint-placeholder-val="{{ true }}"><div class="bk-prog"><p class="bk-prog__text"><b>{{ h.done }} of {{ h.total }}</b> finished</p><span class="bk-prog__bar" aria-hidden="true"><span class="bk-prog__fill" style="{{ fill }}"></span></span></div></sc-if>
+<sc-if value="{{ anon }}" hint-placeholder-val="{{ false }}"><div class="bk-prog"><p class="bk-prog__text"><b>{{ count }}</b></p><p class="bk-anon">Signed-out reading isn't saved. <a href="#top" onclick="{{ signIn }}">Sign in</a> to keep your place and progress in this book.</p></div></sc-if>
+</header>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"viewer":{"editor":null},"pk":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":384,"height":210}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const bare = !!P.bare;
+    const book = P.book || 'guide';
+    const viewer = P.viewer || 'member';
+    const pk = P.pk || BK.pkFor(book, viewer);
+    const v = BK.view(book, viewer, pk);
+    return {
+      h: v.head,
+      anon: !v.head.member,
+      count: v.count,
+      fill: 'width: ' + v.head.pct + '%',
+      signIn: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onSignIn) P.onSignIn(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone bk-demo',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

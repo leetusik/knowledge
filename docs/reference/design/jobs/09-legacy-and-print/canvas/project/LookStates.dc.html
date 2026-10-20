@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The document’s own look under each reader theme</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The document’s own look under each reader theme</p>
+<p class="rd-board__lead">The reader never restyles the document. The bars take the reader’s theme; the frame’s color-scheme picks between a self-darkening document’s own two looks (Dark, or System on a dark device, shows its dark look; Light and Sepia its light one). A light-only document stays light in every theme. The kb-border hairlines above and below the frame are the seam.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Legacy" fit="fill" doc="{{ c.doc }}" lang="{{ c.lang }}" ver="{{ c.ver }}" theme="{{ c.theme }}" theme-choice="{{ c.themeChoice }}" os="{{ c.os }}" member="{{ c.member }}" bar="{{ c.bar }}" panel="{{ c.panel }}" status="{{ c.status }}" prog="{{ c.prog }}" jump="{{ c.jump }}" prompt="{{ c.prompt }}" resumed="{{ c.resumed }}" hold="{{ c.hold }}" marks="{{ c.marks }}" mark-on-land="{{ c.markOnLand }}" safe="{{ c.safe }}" hint-size="100%,100%"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":2884}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, LG = window.LG;
+    const J = (anchor, frac) => ({ anchor: anchor || null, frac: frac || 0, token: 1 });
+    const size = { phone: 'width: 390px; height: 844px', ipad: 'width: 820px; height: 1180px', desk: 'width: 1440px; height: 900px', land: 'width: 1024px; height: 768px' };
+    const L = (cap, dev, o) => Object.assign({ cap, st: size[dev], doc: 'tidewater/datums', lang: 'en', ver: null, theme: 'light', themeChoice: 'light', os: 'light',
+      member: true, bar: 'shown', panel: null, status: 'ready', prog: RD.progress, jump: J(null, 0), prompt: null, resumed: false, hold: null,
+      marks: [], markOnLand: false, safe: dev === 'phone' }, o);
+
+    const AUTO = { doc: 'tidewater/datums', jump: J('chart-datum') };
+    const LIGHT = { doc: 'orchard-guide/harvester', jump: J(null, 0.3) };
+    const th = (t, c, os) => ({ theme: t, themeChoice: c || t, os: os || 'light' });
+    const rows = [
+      { title: 'Self-darkening document (Tidewater, chapter 7) · phone', cells: [
+        L('Light', 'phone', Object.assign({}, AUTO, th('light'))),
+        L('Dark · the document’s own dark look', 'phone', Object.assign({}, AUTO, th('dark'))),
+        L('Sepia · the document’s light look under sepia bars', 'phone', Object.assign({}, AUTO, th('sepia'))),
+        L('System on a dark device · its dark look', 'phone', Object.assign({}, AUTO, th('dark', 'system', 'dark'))),
+      ] },
+      { title: 'Light-only document (orchard’s guide, chapter 3) · phone', cells: [
+        L('Light', 'phone', Object.assign({}, LIGHT, th('light'))),
+        L('Dark · the document stays light', 'phone', Object.assign({}, LIGHT, th('dark'))),
+        L('Sepia', 'phone', Object.assign({}, LIGHT, th('sepia'))),
+        L('System on a dark device · stays light', 'phone', Object.assign({}, LIGHT, th('dark', 'system', 'dark'))),
+      ] },
+      { title: 'English with Korean terms · iPad landscape, 1024 × 768', cells: [
+        L('Light · Korean runs set in the system’s Hangul fonts, never restyled', 'land', { doc: 'doc/subway-times/arrival-feed', jump: J(null, 0.2) }),
+        L('Dark · its own dark look', 'land', Object.assign({ doc: 'doc/subway-times/arrival-feed', jump: J(null, 0.2) }, th('dark'))),
+      ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review — done, limits, empty, loading, failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ innerCls }}">
+<sc-if value="{{ e.isLoading }}" hint-placeholder-val="{{ false }}"><div class="rv-sk" aria-hidden="true"><span class="rd-skel rv-sk__kind"></span><span class="rd-skel rv-sk__src"></span><span class="rd-skel rv-sk__q rv-sk__w95"></span><span class="rd-skel rv-sk__q rv-sk__w70"></span><div class="rv-sk__opts"><span class="rd-skel rv-sk__hint"></span><span class="rd-skel rv-sk__opt"></span><span class="rd-skel rv-sk__opt"></span><span class="rd-skel rv-sk__opt"></span><span class="rd-skel rv-sk__opt"></span></div></div></sc-if>
+<sc-if value="{{ e.isFailed }}" hint-placeholder-val="{{ false }}"><div class="rd-ed" data-rv-end="1" tabindex="-1"><span class="rd-ed__code">Error · 500</span><h2 class="rd-ed__title">Something on our side stopped reading.</h2><p class="rd-ed__sub">Your cards did not load. Try again — and if it keeps failing, the reference below tells us where it stopped.</p><div class="rd-ed__actions"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ e.onRetry }}">Try again</button></div><p class="rd-ed__ref">ref · rv-3c81f0a2</p></div></sc-if>
+<sc-if value="{{ e.isDone }}" hint-placeholder-val="{{ true }}"><section class="rv-end" data-rv-end="1" tabindex="-1" aria-labelledby="{{ titleId }}"><p class="rd-end__mark">{{ e.mark }}</p><h2 class="rv-end__title" id="{{ titleId }}">{{ e.title }}</h2><p class="rv-end__body">{{ e.body }}</p><sc-if value="{{ e.isLimit }}" hint-placeholder-val="{{ false }}"><p class="rv-end__more"><button type="button" class="rd-linkbtn" onclick="{{ e.onSettings }}">Change your daily limits →</button></p></sc-if><div class="rd-next"><p class="rd-next__label">{{ e.next.label }}</p><p class="rd-next__title">{{ e.next.title }}</p><p class="rd-next__lede">{{ e.next.lede }}</p><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ e.onContinue }}">{{ e.next.go }}</a></div></section></sc-if>
+<sc-if value="{{ e.isEmpty }}" hint-placeholder-val="{{ false }}"><section class="rv-empty" data-rv-end="1" tabindex="-1" aria-labelledby="{{ titleId }}"><h2 class="rv-empty__title" id="{{ titleId }}">No review cards yet</h2><p class="rv-empty__body">A card is made when you answer a quiz question in a chapter, or turn on Review this on a highlight. It comes back here when it is due.</p><a class="rd-btn rd-btn--primary" href="#top" onclick="{{ e.onLibrary }}">Open the library →</a></section></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"e": {"editor": null}, "bare": {"editor": null}, "theme": {"editor": null}, "size": {"editor": null}, "uid": {"editor": null}, "$preview": {"width": 640, "height": 520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, RV = window.RV, bare = !!P.bare;
+    const e = P.e || RV.sample.end('done');
+    return {
+      e, titleId: (P.uid || 'rv') + '-end-title',
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'rv-endwrap' : 'rd-flow rv-solo',
+    };
+  }
+}
+</script>
+</body>
+</html>

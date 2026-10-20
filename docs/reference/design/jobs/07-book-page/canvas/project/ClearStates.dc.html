@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Clear this book’s reading data</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Clear this book’s reading data</p>
+<p class="rd-board__lead">At the foot of the chapters, under its own heading, away from every everyday action. The trigger opens an inline confirmation (the product’s two-step pattern) that names the book, what goes for it alone and what stays; focus lands on Cancel, Escape cancels, and nothing is cleared without the second press. Clearing… keeps the button’s width; a failure says nothing was cleared.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ClearData" book="{{ c.book }}" viewer="{{ c.viewer }}" pk="{{ c.pk }}" clear="{{ c.clear }}" theme="{{ c.theme }}" hint-size="100%,360px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3400,"height":2400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const K = (cap, w, clear, o) => Object.assign({ cap, st: px(w), book: 'guide', viewer: 'member', pk: 'g-default', clear, theme: 'light' }, o);
+    const rows = [
+      { title: 'Light · 640 wide', cells: [K('Idle', 640, 'idle'), K('Confirming · focus on Cancel', 640, 'confirm'), K('Clearing…', 640, 'pending'), K('Failed · nothing cleared', 640, 'failed'), K('Cleared', 640, 'done', { pk: 'none' })] },
+      { title: 'Light · phone, 356 wide', cells: [K('Confirming', 356, 'confirm'), K('Tidewater · nothing marked, so no item count', 356, 'confirm', { book: 'tidewater', pk: 'tide' })] },
+      { title: 'Dark', cells: [K('Idle', 640, 'idle', { theme: 'dark' }), K('Confirming', 640, 'confirm', { theme: 'dark' }), K('Failed', 640, 'failed', { theme: 'dark' })] },
+      { title: 'Sepia', cells: [K('Confirming', 640, 'confirm', { theme: 'sepia' }), K('Clearing…', 640, 'pending', { theme: 'sepia' }), K('Cleared', 640, 'done', { pk: 'none', theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

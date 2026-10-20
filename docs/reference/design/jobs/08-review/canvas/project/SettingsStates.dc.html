@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — suspend and review settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Review settings</p>
+<p class="rd-board__lead">The review settings sheet (open question 6), from Settings in the top bar: the time zone, the two daily limits and the day's 04:00 start, with its invalid, saving and failed states.</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="ReviewSettings" st="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 1900, "height": 2308}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const T = (key, mod) => RV.sample.settings(key, mod);
+      return [
+        { cap: 'Review settings', sheet: true, v: T('settings') },
+        { cap: 'Not a whole number', sheet: true, v: T('settings', (n) => { n.sdraft = { tz: 'Asia/Kolkata', max: '2,000', maxNew: '20' }; n.sphase = 'invalid'; }) },
+        { cap: 'Saving', sheet: true, v: T('settings', (n) => { n.sdraft = { tz: 'Asia/Kolkata', max: '150', maxNew: '20' }; n.sphase = 'saving'; }) },
+        { cap: 'Not saved', sheet: true, v: T('settings-fail') },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

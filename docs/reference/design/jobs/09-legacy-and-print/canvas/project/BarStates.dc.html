@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — The document bar (LegacyBar)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — The document bar (LegacyBar)</p>
+<p class="rd-board__lead">The bar under the frame in the legacy reader: the document’s status, Print · new tab, the signed bookmark control and its line, and two short notes: no highlights here, and the theme and text size don’t restyle it. At the end of a document its status turns into the signed chapter end’s words in one grid cell, so the bar keeps one height. A notice sits on top when the version or the translation is older. Hover and focus are reached on the Pages (01 and 03); a press there toggles Bookmarked here.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="lg-comp__frame" style="{{ c.st }}"><dc-import name="LegacyBar" title="{{ c.title }}" title-lang="{{ c.titleLang }}" version="{{ c.version }}" newest="{{ c.newest }}" date="{{ c.date }}" has-history="{{ c.hasHistory }}" is-old="{{ c.isOld }}" stale="{{ c.stale }}" src-name="{{ c.srcName }}" src-from="{{ c.srcFrom }}" src-newest="{{ c.srcNewest }}" noun="{{ c.noun }}" member="{{ c.member }}" layer="{{ c.layer }}" on="{{ c.on }}" busy="{{ c.busy }}" theme="{{ c.theme }}" hint-size="100%,150px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2300,"height":1800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const t = (k, l) => RD.titleOf(k, l || 'en').text;
+    const px = (w) => 'width: ' + w + 'px';
+    const B = (cap, w, o) => Object.assign({ cap, st: px(w), title: t('tidewater/datums'), titleLang: 'en', version: 1, newest: 1, date: '3 Oct 2026',
+      hasHistory: false, isOld: false, stale: false, srcName: 'English', srcFrom: 1, srcNewest: 2, noun: 'chapter', member: true, layer: 'read',
+      on: false, busy: false, theme: 'light' }, o);
+    const PF = { title: t('doc/lantern/plain-files'), noun: 'document', version: 2, newest: 2, date: '12 Sep 2026', hasHistory: true };
+    const KO = { title: t('lantern-phases/p8', 'ko'), titleLang: 'ko', version: 1, newest: 1, date: '20 Aug 2026', stale: true, hasHistory: false };
+    const rows = [
+      { title: 'Phone · 390 · light', cells: [
+        B('Reading · the longest real title, cut with an ellipsis', 390, {}),
+        B('Bookmarked here', 390, { on: true }),
+        B('End · Finished', 390, { layer: 'finished' }),
+        B('End · finished an earlier version', 390, { layer: 'updated' }),
+        B('End · Marked as unread', 390, { layer: 'unread' }),
+        B('End · signed out', 390, { member: false, layer: 'anon' }),
+        B('Loose document · v2 · Version history', 390, PF),
+        B('Older version · v1 of a loose document', 390, Object.assign({}, PF, { version: 1, newest: 2, date: '30 Jun 2026', isOld: true })),
+        B('Older translation · a Korean title', 390, KO),
+        B('Loading · actions held, the status stays', 390, { busy: true }),
+      ] },
+      { title: 'iPad and desktop · 820 and 1440 · the status and the actions on one row', cells: [
+        B('820 · reading', 820, {}),
+        B('820 · end · Finished', 820, { layer: 'finished' }),
+        B('1440 · older version, with its notice', 1440, Object.assign({}, PF, { version: 1, newest: 2, date: '30 Jun 2026', isOld: true })),
+      ] },
+      { title: 'Themes · 390', cells: [
+        B('Dark · reading', 390, { theme: 'dark' }),
+        B('Dark · Bookmarked here', 390, { theme: 'dark', on: true }),
+        B('Sepia · end · Finished', 390, { theme: 'sepia', layer: 'finished' }),
+        B('Sepia · older translation', 390, Object.assign({ theme: 'sepia' }, KO)),
+      ] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

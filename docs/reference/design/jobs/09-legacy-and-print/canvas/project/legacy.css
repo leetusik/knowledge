@@ -1,0 +1,226 @@
+/* The legacy reader (job 09-legacy-and-print, round 01). It extends the signed reader (reader.css, copied unchanged):
+   every value resolves to kb-* tokens or to the reader's own scoped values, except the framed document's authored look
+   (.lgd, the document's own, kept as authored) and the canvas-only shells at the end. */
+
+/* ---------- Copied unchanged from the signed annotations (05-annotations, annot.css): the legacy bookmark control ---------- */
+.an-btn-w { display: inline-grid; }
+.an-btn-w > * { grid-area: 1 / 1; }
+.an-btn-w > [aria-hidden="true"] { visibility: hidden; }
+.an-bar__btn { color: var(--kb-ink); }
+.an-bar__btn[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.an-legacy__ctl .rd-btn { min-height: 2.75rem; }
+.an-legacy__na { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+
+/* ---------- The page: never scrolls; the frame is the only scroller ---------- */
+/* In the product: html, body { height: 100dvh (100vh fallback); overflow: hidden; overscroll-behavior: none } and
+   <meta name="viewport" content="…, viewport-fit=cover">. On the canvas the stage gives the viewport's height. */
+.lg-page { display: flex; flex-direction: column; overflow: hidden; overscroll-behavior: none; background: var(--kb-surface); }
+.lg-page.rd-frame--alone { height: 100vh; }
+/* Safe areas: env(safe-area-inset-top/bottom) in the product. The canvas simulates an iPhone's (47 / 34 px) on the phone
+   frames only, through these two properties; nothing is drawn in them but the bars' own surface. */
+.lg-safe { flex: none; background: var(--kb-surface); }
+.lg-safe--t { height: var(--lg-safe-t, 0px); }
+.lg-safe--b { height: var(--lg-safe-b, 0px); }
+.lg-topbox { flex: none; position: relative; z-index: 20; height: calc(var(--rd-line) + var(--rd-top-h)); padding-inline: var(--lg-safe-x, 0px); }
+.lg-stage { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
+/* The frame: an iframe in the product (flex: 1; min-height: 0; border: 0), drawn here as the scrolling box it is. Its
+   background is the document's own page colour, so an overscroll or a short document shows the document, not the reader. */
+.lg-docframe {
+  --lg-ring: #0f6f66;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; border: 0;
+  background: #fbfbfa; -webkit-overflow-scrolling: touch;
+}
+.lg-docframe--dark { --lg-ring: #62bdb2; background: #17191c; }
+.lg-docframe--state { background: var(--kb-surface); }
+/* The system's focus ring, inside the frame's edge, in the light or dark kb-accent to match the document's own scheme
+   (the ring sits on the document's page, not on the reader's surface). After load on desktop the frame takes focus
+   quietly; the ring shows once the reader moves focus by keyboard. */
+.lg-docframe:focus-visible { outline: var(--kb-focus-w) solid var(--lg-ring); outline-offset: calc(-1 * var(--kb-focus-w)); }
+.lg-docframe[data-quiet="1"]:focus-visible { outline-color: transparent; }
+.lg-docframe--state:focus-visible { --lg-ring: var(--kb-accent); }
+
+/* Skip link: first in the tab order, shown only when focused */
+.lg-skip {
+  position: absolute; z-index: 45; top: calc(var(--lg-safe-t, 0px) + var(--rd-line) + 0.4rem); left: var(--rd-gut);
+  opacity: 0; pointer-events: none;
+}
+.lg-skip:focus-visible { opacity: 1; pointer-events: auto; }
+/* Show reading controls: after the frame in the tab order, shown only when focused, only while the bar is hidden */
+.lg-showctl { position: absolute; z-index: 25; left: 50%; bottom: var(--kb-space-sm); transform: translateX(-50%); opacity: 0; pointer-events: none; }
+.lg-showctl:focus-visible { opacity: 1; pointer-events: auto; }
+/* The resume pill and the Sign in to save card sit at the bottom of the frame's area, above the bar */
+.lg-stage .rd-resume { bottom: var(--kb-space-sm); }
+.lg-slot { position: absolute; z-index: 26; left: var(--rd-gut); right: var(--rd-gut); bottom: var(--kb-space-sm); display: flex; justify-content: center; }
+.lg-slot .rd-save { width: 100%; }
+@container rd (min-width: 40rem) { .lg-slot { left: auto; justify-content: flex-end; } .lg-slot .rd-save { width: 30rem; } }
+
+/* ---------- The bottom chrome: the document bar, then the signed chapter bar ---------- */
+/* It hides by collapsing (rows 0fr), so the frame grows downward and the document never moves; the top bar and the
+   progress line never hide. */
+.lg-bottom { flex: none; display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--rd-ease); position: relative; z-index: 20; }
+.lg-bottom__in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding-inline: var(--lg-safe-x, 0px); background: var(--kb-surface); }
+.lg-bot-hidden .lg-bottom { grid-template-rows: 0fr; }
+.lg-bot-hidden .lg-bottom__in { visibility: hidden; transition: visibility 0s linear 0.15s; }
+.lg-bot-hidden .lg-bottom:has(:focus-visible) { grid-template-rows: 1fr; }
+.lg-bot-hidden .lg-bottom:has(:focus-visible) .lg-bottom__in { visibility: visible; }
+.lg-chap { flex: none; position: relative; height: var(--rd-bot-h); }
+.lg-bottom__bar { flex: none; }
+/* Larger text, zoom or a short window (Legacy measures it: the chrome at its full height would leave the document less
+   than min(40% of the page, 17rem)): the document keeps that much, and the document bar gives way, scrolling inside
+   itself; the chapter bar and the safe area under it stay whole. At the reference sizes no state is tight. */
+.lg-tight .lg-stage { flex: 1 1 0; min-height: min(40%, 17rem); }
+.lg-tight .lg-bottom { flex: 0 1 auto; min-height: 0; }
+.lg-tight .lg-bottom__bar { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* A deliberate crop: the scrolled bar fades at its lower edge, so the reader sees there is more of it */
+.lg-tight .lg-bottom__bar::after {
+  content: ""; position: sticky; bottom: 0; display: block; height: var(--kb-space-lg); margin-top: calc(-1 * var(--kb-space-lg));
+  background: linear-gradient(to bottom, transparent, var(--kb-surface)); pointer-events: none;
+}
+
+/* ---------- The document bar (LegacyBar) ---------- */
+.lg-bar {
+  display: flex; flex-direction: column; gap: var(--kb-space-xs);
+  padding: var(--kb-space-xs) var(--rd-gut) var(--kb-space-sm);
+  background: var(--kb-surface); border-top: 1px solid var(--kb-border); color: var(--kb-ink); font-family: var(--font-body);
+}
+.lg-bar .rd-notice { margin-top: var(--kb-space-xs); }
+.lg-bar__row { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: var(--kb-space-xs) var(--kb-space-md); }
+.lg-bar__status { display: grid; min-width: 0; }
+.lg-bar__layer { grid-area: 1 / 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.lg-bar__layer.is-off { visibility: hidden; }
+.lg-bar__line { margin: 0; display: flex; align-items: center; gap: var(--kb-space-sm); min-width: 0; padding-top: var(--kb-space-xs); }
+.lg-bar__line .rd-tag { flex: none; }
+.lg-bar__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; line-height: 1.35; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.lg-bar__title:lang(ko) { word-break: keep-all; }
+.lg-bar__state { margin: 0; padding-top: var(--kb-space-xs); display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem var(--kb-space-sm); line-height: 1.35; }
+.lg-bar__word { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.lg-bar__sub { font-size: 0.8125rem; color: var(--kb-secondary); }
+.lg-bar__meta { margin: 0; min-height: var(--kb-tap); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.lg-bar__meta .rd-linkbtn { font-size: 0.8125rem; }
+.lg-bar__actions { display: flex; flex-wrap: wrap; gap: var(--kb-space-xs); }
+.lg-bar__actions.is-off { visibility: hidden; }
+.lg-bar__actions .rd-btn { min-height: 2.75rem; }
+/* Larger text: a control wider than the bar wraps its label inside its own box instead of running off the screen. At the
+   reference sizes every label fits on one line, so nothing changes there. */
+.lg-bar__actions > *, .lg-bar__actions .an-legacy__ctl .rd-btn { max-width: 100%; }
+.lg-bar__actions .rd-btn { white-space: normal; text-align: center; }
+.lg-bar__notes { display: flex; flex-wrap: wrap; column-gap: 0.3em; }
+/* The Print control's hint: hidden, and read as its description (aria-describedby reads a hidden element it names) */
+.lg-sr, .lg-sr[hidden] { display: none; }
+@container rd (min-width: 40rem) {
+  .lg-bar { padding-block: var(--kb-space-xs) var(--kb-space-sm); }
+  .lg-bar__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .lg-bar__actions { flex-wrap: nowrap; }
+}
+
+/* ---------- The frame's own states: loading, slow, file missing, relay failed ---------- */
+.lg-fs { max-width: 46rem; margin: 0 auto; padding: var(--kb-space-xl) var(--rd-gut); display: flex; flex-direction: column; }
+.lg-fs__line { margin: 0 0 var(--kb-space-lg); display: grid; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-secondary); }
+.lg-fs__line > span { grid-area: 1 / 1; }
+.lg-fs__line > [aria-hidden="true"] { visibility: hidden; }
+.lg-fs .rd-skel { display: block; }
+.lg-fs__title { height: 2rem; width: 85%; }
+.lg-fs__meta { height: 0.8rem; width: 14rem; max-width: 60%; margin-top: var(--kb-space-sm); }
+.lg-fs__ln { height: 0.85rem; margin-top: 0.85rem; }
+.lg-fs__gap { margin-top: var(--kb-space-xl); }
+.lg-fs__h2 { height: 1.3rem; width: 55%; margin-top: var(--kb-space-xl); }
+.lg-fs__box { height: 6.5rem; margin-top: var(--kb-space-lg); border-radius: var(--kb-radius); }
+.lg-fs__w100 { width: 100%; } .lg-fs__w96 { width: 96%; } .lg-fs__w90 { width: 90%; } .lg-fs__w72 { width: 72%; } .lg-fs__w48 { width: 48%; }
+
+/* ---------- The Display sheet's note for a legacy document ---------- */
+.lg-disp__p { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-ink); max-width: 34rem; }
+
+/* ---------- The framed document's own look (REFERENCE: the explain skill's template; never restyled by the reader) ---------- */
+.lgd {
+  color-scheme: light; min-height: 100%; box-sizing: border-box; padding: 2rem 0 1px;
+  background: #fbfbfa; color: #1f2328; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.lgd * { box-sizing: border-box; }
+.lgd__body { max-width: 46rem; margin: 0 auto 2rem; padding: 0 1rem; }
+.lgd__h1 { margin: 0 0 0.4rem; font-size: 2rem; line-height: 1.2; font-weight: 700; color: #1f2328; }
+.lgd__meta { margin: 0 0 1.5rem; font-size: 0.875rem; color: #59636e; }
+.lgd__h2 { margin: 2.2rem 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid #d1d9e0; font-size: 1.5rem; line-height: 1.25; font-weight: 700; color: #1f2328; }
+.lgd__h3 { margin: 1.6rem 0 0.4rem; font-size: 1.2rem; line-height: 1.3; font-weight: 700; color: #1f2328; }
+.lgd__p, .lgd__ul { margin: 0.8rem 0 0; }
+.lgd__ul li + li { margin-top: 0.3rem; }
+.lgd a { color: #0b57d0; text-decoration: underline; text-underline-offset: 0.15em; }
+.lgd a:hover { text-decoration-thickness: 2px; }
+.lgd code { font: 0.875em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 4px; }
+.lgd__box { margin: 1rem 0 0; padding: 0.8rem 1rem; background: #f4f4f4; border-radius: 6px; }
+.lgd__code { margin: 1rem 0 0; }
+.lgd__codetitle { margin: 0; padding: 0.4rem 1rem; background: #e9ebee; border-radius: 6px 6px 0 0; font: 0.8125rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #3d444d; }
+.lgd__codetitle + .lgd__pre { border-radius: 0 0 6px 6px; margin-top: 0; }
+.lgd__pre { margin: 1rem 0 0; padding: 1rem; background: #f4f4f4; border-radius: 6px; overflow-x: auto; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #1f2328; }
+.lgd__pre code { background: none; padding: 0; font: inherit; }
+.lgd__art { line-height: 1.25; }
+.lgd__tw { margin: 1rem 0 0; overflow-x: auto; }
+.lgd__t { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+.lgd__t th, .lgd__t td { border: 1px solid #d1d9e0; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+.lgd__t th { background: #f4f4f4; font-weight: 600; }
+.lgd__quiz { display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0 0; }
+.lgd__q { margin: 0; padding: 0.8rem 1rem 1rem; border: 1px solid #d1d9e0; border-radius: 6px; }
+.lgd__qq { float: left; width: 100%; margin: 0; padding: 0; font-weight: 600; }
+.lgd__qq + * { clear: both; }
+.lgd__opts { display: flex; flex-direction: column; margin-top: 0.4rem; }
+.lgd__opt { display: flex; align-items: center; gap: 0.6rem; min-height: 44px; cursor: pointer; }
+.lgd__opt input { width: 1.1rem; height: 1.1rem; margin: 0; flex: none; }
+.lgd__qfoot { margin-top: 0.4rem; }
+.lgd__check { min-height: 44px; padding: 0 1.1rem; border: 1px solid #59636e; border-radius: 6px; background: #ffffff; color: #1f2328; font: 600 0.9375rem/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; }
+.lgd__check:hover { background: #f4f4f4; }
+.lgd__fb { margin: 0.8rem 0 0; padding: 0.6rem 0.8rem; border-radius: 6px; background: #f4f4f4; }
+.lgd__fb--ok { background: #d6f5d6; color: #14401c; }
+.lgd__fb--bad { background: #f7d6d6; color: #5c1414; }
+.lgd__src { margin: 0.8rem 0 0; padding-left: 1.4rem; }
+.lgd__src li + li { margin-top: 0.3rem; }
+.lgd :focus-visible { outline: 2px solid #0b57d0; outline-offset: 2px; }
+/* Its own dark scheme (18 of the 41 explainers): @media (prefers-color-scheme: dark) in the document, chosen here by the
+   frame's color-scheme. */
+.lgd--dark { color-scheme: dark; background: #17191c; color: #e6e6e6; }
+.lgd--dark .lgd__h1, .lgd--dark .lgd__h2, .lgd--dark .lgd__h3, .lgd--dark .lgd__pre { color: #e6e6e6; }
+.lgd--dark .lgd__meta { color: #a8b0b8; }
+.lgd--dark .lgd__h2, .lgd--dark .lgd__t th, .lgd--dark .lgd__t td, .lgd--dark .lgd__q { border-color: #3a3f45; }
+.lgd--dark a { color: #8ab4f8; }
+.lgd--dark code, .lgd--dark .lgd__box, .lgd--dark .lgd__pre, .lgd--dark .lgd__t th, .lgd--dark .lgd__fb { background: #23262a; }
+.lgd--dark .lgd__codetitle { background: #2c3035; color: #c9d1d9; }
+.lgd--dark .lgd__check { background: #23262a; border-color: #8b949e; color: #e6e6e6; }
+.lgd--dark .lgd__check:hover { background: #2c3035; }
+.lgd--dark .lgd__fb--ok { background: #1e3a24; color: #d6f5d6; }
+.lgd--dark .lgd__fb--bad { background: #45201f; color: #f7d6d6; }
+.lgd--dark :focus-visible { outline-color: #8ab4f8; }
+
+/* The stand-ins (canvas-only): a long address wraps inside the card instead of widening it past a phone frame */
+.rd-away__main { grid-template-columns: minmax(0, 1fr); }
+.rd-away__body, .rd-away__title { overflow-wrap: anywhere; }
+
+/* ---------- Canvas-only shells (never built) ---------- */
+/* Main: the state bar sits above the stage on the board's own page, so it scrolls away with the board; the legacy page
+   inside the stage never scrolls. The stage mirrors each reference viewport's height. */
+.rd-proto.lg-proto { display: flex; flex-direction: column; min-height: 0; background: #f4f3ef; }
+.lg-proto .rd-proto__stage { flex: none; position: relative; min-height: 0; height: 52.75rem; }
+@media (min-width: 40rem) { .lg-proto .rd-proto__stage { height: 73.75rem; } }
+@media (min-width: 64rem) { .lg-proto .rd-proto__stage { height: 56.25rem; } }
+.lg-stage--land { width: 1024px; height: 768px; }
+.lg-widths__row { display: flex; gap: 40px; align-items: flex-start; }
+.lg-widths__note { margin: 8px 0 0; max-width: 390px; font-size: 13px; line-height: 1.45; color: #3d362d; }
+.lg-comp { display: flex; flex-direction: column; gap: 40px; }
+.lg-comp__frame { position: relative; border: 1px solid #d8ccb3; border-radius: 6px; overflow: hidden; }
+.lg-comp__frame > .rd-frame { overflow: visible; }
+.lg-comp__w390 { width: 390px; } .lg-comp__w820 { width: 820px; } .lg-comp__w1440 { width: 1440px; } .lg-comp__w420 { width: 420px; }
+.lg-comp__h560 { height: 560px; } .lg-comp__h700 { height: 700px; }
+.lg-comp__theme { display: flex; flex-direction: column; gap: 12px; }
+
+/* The library stand-in's canvas-only list (never built): what the library would open in the legacy reader, one row per
+   document, so the prototype reaches every legacy page by clicking. Canvas-neutral colours, as the stand-in's own. */
+.lg-away-list { display: flex; flex-direction: column; gap: 8px; }
+.lg-away-list__ul { margin: 0; padding: 0; list-style: none; border-top: 1px solid #d8d4cc; }
+.lg-away-list__ul > li { border-bottom: 1px solid #d8d4cc; }
+.lg-away-list__row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 10px 8px;
+  border: 0; border-radius: 4px; background: transparent; color: #26211c; text-align: left; cursor: pointer; font: inherit;
+}
+.lg-away-list__row:hover { background: #efece5; }
+.lg-away-list__row:hover .lg-away-list__title { text-decoration: underline; text-underline-offset: 0.15em; }
+.lg-away-list__row:focus-visible { outline: 2px solid #26211c; outline-offset: 2px; }
+.lg-away-list__title { font: 600 15px/1.35 "Source Sans 3", system-ui, sans-serif; overflow-wrap: anywhere; }
+.lg-away-list__title:lang(ko) { word-break: keep-all; }
+.lg-away-list__meta { font-size: 13px; line-height: 1.4; color: #4f4a42; }

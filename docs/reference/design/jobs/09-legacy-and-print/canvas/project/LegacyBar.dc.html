@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The legacy document bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="lg-bar" role="region" aria-label="This document">
+<sc-if value="{{ isOldNote }}" hint-placeholder-val="{{ false }}"><div class="rd-notice"><p class="rd-notice__text"><span class="rd-notice__label">Older version</span><span>You're reading v{{ version }} of this {{ noun }}. It was superseded — the current version is v{{ newest }}.</span></p><button type="button" class="rd-linkbtn" onclick="{{ latest }}"><span>Read v{{ newest }} →</span></button></div></sc-if>
+<sc-if value="{{ isStaleNote }}" hint-placeholder-val="{{ false }}"><div class="rd-notice"><p class="rd-notice__text"><span class="rd-notice__label">Older translation</span><span>Translated from {{ srcName }} v{{ srcFrom }}. {{ srcName }} has been updated since: it is at v{{ srcNewest }}.</span></p><button type="button" class="rd-linkbtn" onclick="{{ source }}"><span>Read {{ srcName }} v{{ srcNewest }} →</span></button></div></sc-if>
+<div class="lg-bar__row">
+<div class="lg-bar__status" aria-live="polite">
+<div class="{{ readCls }}" aria-hidden="{{ readHidden }}"><p class="lg-bar__line"><span class="rd-tag rd-tag--plain">Original layout</span><span class="lg-bar__title" lang="{{ titleLang }}">{{ title }}</span></p><p class="lg-bar__meta"><span>v{{ version }} · Published {{ date }}</span><sc-if value="{{ hasHistory }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true">·</span><button type="button" class="rd-linkbtn" aria-haspopup="dialog" onclick="{{ versions }}">Version history</button></sc-if></p></div>
+<sc-for list="{{ ends }}" as="e" hint-placeholder-count="1"><div class="{{ e.cls }}" aria-hidden="{{ e.hidden }}"><p class="lg-bar__state"><span class="lg-bar__word">{{ e.word }}</span><span class="lg-bar__sub">{{ e.sub }}</span></p><p class="lg-bar__meta"><sc-if value="{{ e.unread }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-linkbtn" onclick="{{ unread }}">Mark as unread</button></sc-if><sc-if value="{{ e.finish }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-linkbtn" aria-expanded="{{ promptOpen }}" onclick="{{ finish }}">Mark as finished</button></sc-if><sc-if value="{{ hasHistory }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true">·</span><button type="button" class="rd-linkbtn" aria-haspopup="dialog" onclick="{{ versions }}">Version history</button></sc-if></p></div></sc-for>
+</div>
+<div class="{{ actCls }}" aria-hidden="{{ busy }}">
+<a class="rd-btn rd-btn--secondary" href="#top" aria-describedby="{{ hintId }}" onclick="{{ print }}">Print · new tab</a><span class="lg-sr" id="{{ hintId }}" hidden="hidden">Opens the original document in a new tab, where it prints in its own layout.</span>
+<span class="an-legacy__ctl"><button type="button" class="rd-btn rd-btn--secondary an-bar__btn" aria-pressed="{{ on }}" onclick="{{ toggle }}"><span class="an-btn-w"><span aria-hidden="{{ off }}">Bookmarked here</span><span aria-hidden="{{ on }}">Bookmark this position</span></span></button></span>
+</div>
+</div>
+<div class="lg-bar__notes"><p class="an-legacy__na">Highlights are not available in this document.</p><p class="an-legacy__na">The theme and text size don't restyle it.</p></div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"title":{"editor":null},"titleLang":{"editor":null},"version":{"editor":null},"newest":{"editor":null},"date":{"editor":null},"hasHistory":{"editor":null},"isOld":{"editor":null},"stale":{"editor":null},"srcName":{"editor":null},"srcFrom":{"editor":null},"srcNewest":{"editor":null},"noun":{"editor":null},"member":{"editor":null},"layer":{"editor":null},"on":{"editor":null},"busy":{"editor":null},"promptOpen":{"editor":null},"onPrint":{"editor":null},"onBookmark":{"editor":null},"onMark":{"editor":null},"onVersions":{"editor":null},"onLatest":{"editor":null},"onSource":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":820,"height":150}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); window.__lgBarSeq = (window.__lgBarSeq || 0) + 1; this.uid = window.__lgBarSeq; this.state = { on: null }; }
+  call(name, arg) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f(arg);
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const member = P.member === undefined ? true : !!P.member;
+    const noun = P.noun || 'chapter';
+    const layer = P.layer || 'read';
+    const on = P.onBookmark ? !!P.on : (this.state.on === null ? !!P.on : this.state.on);
+    /* Every status a reader can toggle between shares one grid cell (the others visibility: hidden), so the bar keeps one
+       height and pressing Mark as finished / Mark as unread moves nothing. The words are the signed chapter end's (§10). */
+    const LINES = member ? [
+      ['finished', 'Finished', 'Saved to your progress.', 'unread'],
+      ['updated', 'Finished', 'You finished an earlier version. This ' + noun + ' has been updated since.', 'unread'],
+      ['unread', 'Not finished', 'Marked as unread. Read it to the end again to finish it.', 'finish'],
+    ] : [['anon', 'Not saved', "Signed-out reading isn't saved. Your display settings stay on this device.", 'finish']];
+    const ends = LINES.map(([k, word, sub, act]) => ({
+      word, sub, unread: act === 'unread', finish: act === 'finish',
+      cls: 'lg-bar__layer' + (k === layer ? '' : ' is-off'), hidden: k === layer ? undefined : 'true',
+    }));
+    const busy = !!P.busy;
+    return {
+      title: P.title || 'Datums: Chart Datum, Mean Sea Level, and the Conversions Between Them',
+      titleLang: P.titleLang || 'en',
+      version: P.version || 1,
+      newest: P.newest || P.version || 1,
+      date: P.date || '3 Oct 2026',
+      hasHistory: !!P.hasHistory,
+      noun,
+      isOldNote: !!P.isOld,
+      isStaleNote: !!P.stale && !P.isOld,
+      srcName: P.srcName || 'English', srcFrom: P.srcFrom || 1, srcNewest: P.srcNewest || 2,
+      readCls: 'lg-bar__layer' + (layer === 'read' ? '' : ' is-off'),
+      readHidden: layer === 'read' ? undefined : 'true',
+      ends,
+      promptOpen: !!P.promptOpen,
+      busy: busy ? 'true' : undefined,
+      actCls: 'lg-bar__actions' + (busy ? ' is-off' : ''),
+      hintId: 'lg-print-hint-' + this.uid,
+      on, off: !on,
+      print: this.call('onPrint'),
+      toggle: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onBookmark) P.onBookmark(); else this.setState({ on: !on }); },
+      unread: this.call('onMark', false),
+      finish: this.call('onMark', true),
+      versions: this.call('onVersions'),
+      latest: this.call('onLatest'),
+      source: this.call('onSource'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
