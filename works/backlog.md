@@ -167,7 +167,7 @@
 | [x] `P30.S12` | `done` | Native render pipeline (TS): parser, safe mapping, links, CSP | `implementation` | `works/phases/active/P30/slices/P30.S12` |
 | [x] `P30.F2` | `done` | Native parser fixes on both halves: chart type key, quiz answer 422, id trailing newline | `fix` | `works/phases/active/P30/slices/P30.F2` |
 | [x] `P30.S13` | `done` | Reader shell: frame, faces, themes, bars, Display, states (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S13` |
-| [ ] `P30.S14` | `todo` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
+| [ ] `P30.S14` | `in_progress` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
 | [ ] `P30.S15` | `todo` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |
 | [ ] `P30.S16` | `todo` | Figures, figure rows, svg block and sources (02-figures) | `implementation` | `works/phases/active/P30/slices/P30.S16` |
 | [ ] `P30.S17` | `todo` | Diagrams I: the frame, tones, flow and state (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S17` |
