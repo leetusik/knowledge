@@ -1,0 +1,908 @@
+"""The reader-state API: ``/app/reader/…`` (P30.S8; P29.S3 *Routes and writes*).
+
+Session-only (``require_user``): an anonymous caller is the generic 401 and
+nothing is stored for them (A4). Unmetered, like every ``/app`` route.
+
+Reads:
+
+* ``GET /app/reader/continue?limit=`` — the most recent position per readable book
+  and loose document, newest first;
+* ``GET /app/reader/library`` — per-book progress and loose-document state, batched,
+  over everything the reader has state in;
+* ``GET /app/reader/books/{org}/{project}/{book}`` — per-chapter state, resume,
+  book progress, the continue pointer and the counts "clear this book" names;
+* ``GET /app/reader/chapters/{org}/{project}/{book}/{key}?lang=&v=`` and
+  ``GET /app/reader/docs/{org}/{project}/{doc}?v=`` — one variant's position,
+  bookmarks, annotations (anchors as stored; S9 resolves them) and the latest quiz
+  attempts of its unit, in one call;
+* ``GET /app/reader/annotations?org=&project=&book=`` (or ``&doc=``) — the
+  per-book list, orphans included, with the bookmarks beside them;
+* ``GET /app/reader/profile``.
+
+Writes: ``PUT positions``; ``POST/PATCH/DELETE bookmarks[/{id}]``;
+``POST/PATCH/DELETE annotations[/{id}]``; ``POST quiz-attempts`` → ``{attempt,
+card}``; ``DELETE state?scope=book|all``; ``PATCH profile``. Review (S10) and
+anchor resolution (S9) are not here.
+
+**Isolation.** Every query carries ``user_id = <caller>``; another user's row id is
+the constant 404. **Visibility.** Every read and write re-checks the document's
+readability through :class:`server.reader_state.Gate` (member of the owner
+tenant, or a public project, and the document exists): a private or deleted
+document is omitted from every list and count, and every write to it — a create,
+an edit or a delete — is the same 404 (404, never 403). Only ``DELETE
+state?scope=all`` reaches hidden rows: it clears everything the reader owns.
+
+``org`` (path, query or body) is the org slug, or the tenant id for a tenant with
+no slug — the ``/app/graph?org=`` rule.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime
+from typing import Any, Literal
+from uuid import UUID
+from zoneinfo import available_timezones
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from server import config
+from server import reader_state as rs
+from server.accounts.auth import AuthContext, require_user
+from server.documents_api import get_conn
+
+router = APIRouter(prefix="/app/reader")
+
+# The ONE 404 every reader-state miss raises: another user's row, an unknown org,
+# a private or deleted document, a missing book — all indistinguishable.
+_NOT_FOUND = "not found"
+
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")  # P29.S2 *Ids*
+NAME_RE = re.compile(r"^[^/\s][^/]{0,199}$")  # a project or doc segment
+NOTE_MAX = 2000  # 05-annotations Q17, the same on the server and in the field
+LABEL_MAX = 120  # 05-annotations: a bookmark's label
+SNIPPET_MAX = 300  # ~140 characters, with headroom for a multi-byte "…" clip
+QUOTE_MAX = 5000
+SNAPSHOT_MAX = 5000
+RESPONSE_MAX = 8192  # bytes of a quiz response, serialized
+
+
+def _not_found() -> HTTPException:
+    return HTTPException(status_code=404, detail=_NOT_FOUND)
+
+
+def _unprocessable(message: str) -> HTTPException:
+    return HTTPException(status_code=422, detail=message)
+
+
+def _gate(ctx: AuthContext, conn) -> rs.Gate:
+    if config.database_url() is None:  # pragma: no cover - require_user needs the DB anyway
+        raise _not_found()
+    return rs.Gate(conn=conn, ctx_tenant_id=ctx.tenant.id)
+
+
+async def _doc_ref(gate: rs.Gate, org: str, project: str, doc: str) -> rs.DocRef:
+    tenant = await gate.resolve_org(org)
+    if tenant is None:
+        raise _not_found()
+    ref = await gate.doc(tenant.id, project, doc)
+    if ref is None:
+        raise _not_found()
+    return ref
+
+
+async def _owned_readable(gate: rs.Gate, table, row_id: UUID, ctx: AuthContext):
+    """The caller's own row whose document they may still read, else the 404."""
+
+    row = await rs.get_owned(table, row_id, ctx.user.id)
+    if row is None:
+        raise _not_found()
+    ref = await gate.doc(row.tenant_id, row.project, row.doc)
+    if ref is None:
+        raise _not_found()
+    return row, ref
+
+
+def _version(ref: rs.DocRef, version: int | None) -> int:
+    if version is None:
+        return ref.version
+    if version > ref.version:
+        raise _unprocessable(f"version {version} does not exist (current is {ref.version})")
+    return version
+
+
+# -- bodies ----------------------------------------------------------------------
+
+
+class _Body(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class DocKey(_Body):
+    """The document a write is about: ``(org, project, doc)``."""
+
+    org: str = Field(min_length=1, max_length=200)
+    project: str = Field(min_length=1, max_length=200)
+    doc: str = Field(min_length=1, max_length=200)
+
+    @field_validator("project", "doc")
+    @classmethod
+    def _segment(cls, value: str) -> str:
+        if not NAME_RE.match(value):
+            raise ValueError("must be one path segment")
+        return value
+
+
+def _check_id(value: str | None, what: str) -> str | None:
+    if value is not None and not ID_RE.match(value):
+        raise ValueError(f"{what} must match [a-z0-9][a-z0-9-]{{0,63}}")
+    return value
+
+
+class PositionIn(DocKey):
+    version: int | None = Field(default=None, ge=1)
+    anchor_id: str | None = Field(default=None, min_length=1, max_length=200)
+    fraction: float = Field(default=0.0, ge=0.0, le=1.0)
+    max_fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+    finished: bool = False  # the end sentinel entered the viewport, or Mark as finished
+    unread: bool = False  # Mark as unread: the one reset
+
+    @model_validator(mode="after")
+    def _one_mark(self) -> "PositionIn":
+        if self.finished and self.unread:
+            raise ValueError("finished and unread are mutually exclusive")
+        return self
+
+
+class BookmarkAnchor(_Body):
+    block_id: str | None = None
+    anchor: str | None = Field(default=None, min_length=1, max_length=200)
+    fraction: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @field_validator("block_id")
+    @classmethod
+    def _block(cls, value: str | None) -> str | None:
+        return _check_id(value, "block_id")
+
+
+class BookmarkIn(DocKey):
+    id: UUID
+    version: int | None = Field(default=None, ge=1)
+    anchor: BookmarkAnchor
+    label: str | None = Field(default=None, max_length=LABEL_MAX)
+    snippet: str = Field(default="", max_length=SNIPPET_MAX)
+
+
+class BookmarkPatch(_Body):
+    label: str | None = Field(default=None, max_length=LABEL_MAX)
+
+
+class Quote(_Body):
+    exact: str = Field(min_length=1, max_length=QUOTE_MAX)
+    prefix: str = Field(default="", max_length=32)
+    suffix: str = Field(default="", max_length=32)
+    start: int | None = Field(default=None, ge=0)
+    end: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _range(self) -> "Quote":
+        if self.start is not None and self.end is not None and self.end < self.start:
+            raise ValueError("end must not be before start")
+        return self
+
+
+class Snapshot(_Body):
+    text: str = Field(default="", max_length=SNAPSHOT_MAX)
+    block_title: str = Field(default="", max_length=500)
+    chapter_title: str = Field(default="", max_length=500)
+
+
+def _clean_note(value: str | None) -> str | None:
+    """Plain text, line breaks kept; blank means no note."""
+
+    if value is None or not value.strip():
+        return None
+    return value
+
+
+class AnnotationIn(DocKey):
+    id: UUID
+    version: int | None = Field(default=None, ge=1)
+    block_id: str
+    quote: Quote | None = None
+    note: str | None = Field(default=None, max_length=NOTE_MAX)
+    snapshot: Snapshot = Field(default_factory=Snapshot)
+
+    @field_validator("block_id")
+    @classmethod
+    def _block(cls, value: str) -> str:
+        return _check_id(value, "block_id") or value
+
+    @model_validator(mode="after")
+    def _quote_or_note(self) -> "AnnotationIn":
+        self.note = _clean_note(self.note)
+        if self.quote is None and self.note is None:
+            raise ValueError("an annotation needs a quote or a note")
+        return self
+
+
+class AnnotationPatch(_Body):
+    note: str | None = Field(default=None, max_length=NOTE_MAX)
+
+
+class QuizAttemptIn(DocKey):
+    id: UUID
+    version: int | None = Field(default=None, ge=1)
+    book: str | None = None  # informative: the server derives the unit itself
+    chapter_key: str | None = None
+    block_id: str
+    item_id: str
+    item_type: Literal["choice", "recall", "cloze"]
+    response: dict[str, Any]
+    correct: bool
+    answered_at: datetime | None = None
+
+    @field_validator("block_id", "item_id")
+    @classmethod
+    def _ids(cls, value: str) -> str:
+        return _check_id(value, "id") or value
+
+    @model_validator(mode="after")
+    def _response_shape(self) -> "QuizAttemptIn":
+        r = self.response
+        if len(json.dumps(r)) > RESPONSE_MAX:
+            raise ValueError("response is too large")
+        if self.item_type == "choice":
+            ok = set(r) == {"selected"} and isinstance(r["selected"], list) and all(
+                isinstance(x, str) and ID_RE.match(x) for x in r["selected"]
+            )
+        elif self.item_type == "cloze":
+            ok = set(r) == {"blanks"} and isinstance(r["blanks"], list) and all(
+                isinstance(x, str) for x in r["blanks"]
+            )
+        else:
+            ok = set(r) == {"self_grade"} and r["self_grade"] in ("got", "missed")
+        if not ok:
+            raise ValueError(f"response does not match a {self.item_type} item")
+        return self
+
+
+_ZONES: set[str] | None = None
+
+
+class ProfilePatch(_Body):
+    """``day_starts_at_hour`` is not editable (08-review §7): sending it is a 422."""
+
+    time_zone: str | None = Field(default=None, max_length=64)
+    max_reviews_per_day: int | None = Field(default=None, ge=1, le=999)
+    new_highlights_per_day: int | None = Field(default=None, ge=0, le=999)
+
+    @field_validator("time_zone")
+    @classmethod
+    def _zone(cls, value: str | None) -> str | None:
+        global _ZONES
+        if value is None:
+            return None
+        if _ZONES is None:
+            _ZONES = available_timezones()
+        if value not in _ZONES:
+            raise ValueError("must be an IANA time zone")
+        return value
+
+
+# -- serializers -------------------------------------------------------------------
+
+
+def _position_out(row, ref: rs.DocRef) -> dict[str, Any]:
+    out = rs.row_out(row, ref.org)
+    out["updated"] = bool(
+        row.state == "finished"
+        and row.finished_version is not None
+        and ref.version > row.finished_version
+    )
+    return out
+
+
+def _bookmark_out(row, ref: rs.DocRef) -> dict[str, Any]:
+    anchor = row.anchor or {}
+    positional = not anchor.get("block_id")
+    return rs.row_out(
+        row,
+        ref.org,
+        # A position bookmark (plain md, legacy); one made on a legacy chapter that
+        # is native now restores approximately (P29 *Anchors → Legacy*).
+        pos=positional,
+        approx=positional and ref.format == "native",
+    )
+
+
+def _annotation_out(row, ref: rs.DocRef) -> dict[str, Any]:
+    return rs.row_out(row, ref.org, kind="hl" if row.quote is not None else "bnote")
+
+
+def _attempt_out(row, ref: rs.DocRef) -> dict[str, Any]:
+    return rs.row_out(row, ref.org)
+
+
+def _unit_state(rows) -> dict[str, Any]:
+    """A chapter's state across its variants: finishing any variant finishes it."""
+
+    if not rows:
+        return {"state": "unopened", "finished_version": None, "finished_at": None}
+    finished = [r for r in rows if r.state == "finished"]
+    if finished:
+        first = min(finished, key=lambda r: r.finished_at or r.updated_at)
+        return {
+            "state": "finished",
+            "finished_version": first.finished_version,
+            "finished_at": rs._iso(first.finished_at),
+            "finished_lang": first.lang,
+        }
+    return {"state": "started", "finished_version": None, "finished_at": None}
+
+
+# -- reads -------------------------------------------------------------------------
+
+
+async def _variant_payload(
+    gate: rs.Gate, ref: rs.DocRef, ctx: AuthContext, requested: int | None
+) -> dict[str, Any]:
+    uid = ctx.user.id
+    if requested is not None and requested > ref.version:
+        raise _not_found()
+    # Unit-mates: the same chapter's other variants, for the chapter state.
+    mates = [ref.doc]
+    if ref.book is not None:
+        book = await gate.book(ref.tenant_id, ref.project, ref.book)
+        if book is not None:
+            mates = [d for key, _, d in rs.live_book_docs(book) if key == ref.chapter_key]
+    positions = await rs.positions_for_docs(uid, ref.tenant_id, ref.project, mates)
+    own = next((p for p in positions if p.doc == ref.doc), None)
+    bookmarks = await rs.rows_for_docs(rs.BOOKMARKS, uid, ref.tenant_id, ref.project, [ref.doc])
+    annotations = await rs.rows_for_docs(
+        rs.ANNOTATIONS, uid, ref.tenant_id, ref.project, [ref.doc]
+    )
+    attempts = await rs.latest_attempts(uid, ref.tenant_id, ref.project, ref.unit)
+    state = _unit_state(positions)
+    state["updated"] = bool(
+        state["state"] == "finished"
+        and state["finished_version"] is not None
+        and ref.version > state["finished_version"]
+    )
+    return {
+        "doc": ref.public(),
+        "requested_version": requested or ref.version,
+        "position": _position_out(own, ref) if own is not None else None,
+        "chapter": state,
+        "bookmarks": [_bookmark_out(r, ref) for r in bookmarks],
+        "annotations": [_annotation_out(r, ref) for r in annotations],
+        "quiz": [_attempt_out(r, ref) for r in attempts],
+    }
+
+
+@router.get("/docs/{org}/{project}/{doc}")
+async def read_doc(
+    org: str,
+    project: str,
+    doc: str,
+    v: int | None = Query(default=None, ge=1),
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """One document's state for the caller, in one call."""
+
+    gate = _gate(ctx, conn)
+    ref = await _doc_ref(gate, org, project, doc)
+    return await _variant_payload(gate, ref, ctx, v)
+
+
+def _pick_variant(chapter: dict, lang: str | None) -> dict | None:
+    variants = chapter["variants"]
+    if not variants:
+        return None
+    by_lang = {v["lang"]: v for v in variants}
+    if lang is not None:
+        return by_lang.get(lang)
+    return by_lang.get("en") or variants[0]
+
+
+@router.get("/chapters/{org}/{project}/{book}/{key}")
+async def read_chapter(
+    org: str,
+    project: str,
+    book: str,
+    key: str,
+    lang: str | None = None,
+    v: int | None = Query(default=None, ge=1),
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """One chapter variant's state (``lang`` absent: ``en``, else the first variant)."""
+
+    gate = _gate(ctx, conn)
+    tenant = await gate.resolve_org(org)
+    if tenant is None:
+        raise _not_found()
+    found = await gate.book(tenant.id, project, book)
+    chapter = next((c for c in (found or {}).get("chapters", []) if c["key"] == key), None)
+    variant = _pick_variant(chapter, lang) if chapter is not None else None
+    if variant is None:
+        raise _not_found()
+    ref = await gate.doc(tenant.id, project, rs.doc_of(project, variant["rel_path"]))
+    if ref is None:
+        raise _not_found()
+    return await _variant_payload(gate, ref, ctx, v)
+
+
+async def _book_progress(
+    gate: rs.Gate, ctx: AuthContext, tenant_id: UUID, book: dict
+) -> dict[str, Any]:
+    """Per-chapter state, progress and the continue pointer for one readable book."""
+
+    live = rs.live_book_docs(book)
+    positions = await rs.positions_for_docs(
+        ctx.user.id, tenant_id, book["project"], [d for _, _, d in live]
+    )
+    by_doc = {p.doc: p for p in positions}
+    chapters = []
+    finished = started = 0
+    latest = None
+    for ch in book["chapters"]:
+        rows = []
+        variants = []
+        for var in ch["variants"]:
+            doc = rs.doc_of(book["project"], var["rel_path"])
+            row = by_doc.get(doc)
+            variants.append(
+                {
+                    "lang": var["lang"],
+                    "doc": doc,
+                    "version": var["version"],
+                    "state": row.state if row is not None else "unopened",
+                }
+            )
+            if row is not None:
+                rows.append((row, var))
+        state = _unit_state([r for r, _ in rows])
+        newest_version = max((var["version"] for var in ch["variants"]), default=None)
+        state["updated"] = bool(
+            state["state"] == "finished"
+            and state["finished_version"] is not None
+            and newest_version is not None
+            and newest_version > state["finished_version"]
+        )
+        resume = max(rows, key=lambda rv: rv[0].updated_at) if rows else None
+        if state["state"] == "finished":
+            finished += 1
+        elif state["state"] == "started":
+            started += 1
+        position = None
+        if resume is not None:
+            row, var = resume
+            position = {
+                "doc": row.doc,
+                "lang": row.lang,
+                "version": row.version,
+                "anchor_id": row.anchor_id,
+                "fraction": row.fraction,
+                "max_fraction": row.max_fraction,
+                "updated_at": rs._iso(row.updated_at),
+            }
+            if latest is None or row.updated_at > latest[0].updated_at:
+                latest = (row, ch["key"])
+        chapters.append({"key": ch["key"], **state, "position": position, "variants": variants})
+    cont = None
+    if latest is not None:
+        row, key = latest
+        cont = {
+            "chapter_key": key,
+            "doc": row.doc,
+            "lang": row.lang,
+            "anchor_id": row.anchor_id,
+            "fraction": row.fraction,
+            "state": row.state,
+            "updated_at": rs._iso(row.updated_at),
+        }
+    return {
+        "progress": {"finished": finished, "started": started, "total": len(book["chapters"])},
+        "continue": cont,
+        "chapters": chapters,
+        "last_read_at": cont["updated_at"] if cont else None,
+    }
+
+
+@router.get("/books/{org}/{project}/{book}")
+async def read_book(
+    org: str,
+    project: str,
+    book: str,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """One book's reading state for the caller."""
+
+    gate = _gate(ctx, conn)
+    tenant = await gate.resolve_org(org)
+    found = await gate.book(tenant.id, project, book) if tenant is not None else None
+    if found is None:
+        raise _not_found()
+    progress = await _book_progress(gate, ctx, tenant.id, found)
+    docs = [d for _, _, d in rs.live_book_docs(found)]
+    marks = await rs.count_marks(ctx.user.id, tenant.id, project, docs)
+    with_place = sum(1 for c in progress["chapters"] if c["position"] is not None)
+    return {
+        "book": {
+            "org": rs.org_label(tenant),
+            "project": project,
+            "slug": found["slug"],
+            "title": found["title"],
+        },
+        **progress,
+        "counts": {"chapters_with_place": with_place, "marks": marks},
+    }
+
+
+@router.get("/continue")
+async def read_continue(
+    limit: int = Query(default=10, ge=1, le=50),
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """The most recent position per readable book and loose document."""
+
+    gate = _gate(ctx, conn)
+    items: list[dict[str, Any]] = []
+    seen: set[tuple] = set()
+    for row in await rs.recent_positions(ctx.user.id, 500):
+        ref = await gate.doc(row.tenant_id, row.project, row.doc)
+        if ref is None:
+            continue  # private or deleted: omitted
+        group = (row.tenant_id, row.project, "b", ref.book) if ref.book else (
+            row.tenant_id, row.project, "d", ref.doc
+        )
+        if group in seen:
+            continue
+        seen.add(group)
+        items.append({"doc": ref.public(), "position": _position_out(row, ref)})
+        if len(items) >= limit:
+            break
+    return {"items": items}
+
+
+@router.get("/library")
+async def read_library(
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Per-book progress and loose-document state over everything the reader has read."""
+
+    gate = _gate(ctx, conn)
+    books: dict[tuple[UUID, str, str], dict] = {}
+    docs: list[dict[str, Any]] = []
+    for row in await rs.recent_positions(ctx.user.id, 5000):
+        ref = await gate.doc(row.tenant_id, row.project, row.doc)
+        if ref is None:
+            continue
+        if ref.book is not None:
+            key = (row.tenant_id, row.project, ref.book)
+            if key not in books:
+                found = await gate.book(row.tenant_id, row.project, ref.book)
+                if found is not None:
+                    books[key] = found
+            continue
+        docs.append({"doc": ref.public(), "position": _position_out(row, ref)})
+    out_books = []
+    for (tenant_id, project, slug), found in books.items():
+        progress = await _book_progress(gate, ctx, tenant_id, found)
+        tenant = await gate.tenant(tenant_id)
+        out_books.append(
+            {
+                "org": rs.org_label(tenant) if tenant else str(tenant_id),
+                "project": project,
+                "book": slug,
+                "title": found["title"],
+                "progress": progress["progress"],
+                "continue": progress["continue"],
+                "last_read_at": progress["last_read_at"],
+            }
+        )
+    return {"books": out_books, "docs": docs}
+
+
+@router.get("/annotations")
+async def read_annotations(
+    org: str,
+    project: str,
+    book: str | None = None,
+    doc: str | None = None,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """The per-book (or one loose document's) list, orphans included, in reading order."""
+
+    if (book is None) == (doc is None):
+        raise _unprocessable("give exactly one of book or doc")
+    gate = _gate(ctx, conn)
+    tenant = await gate.resolve_org(org)
+    if tenant is None:
+        raise _not_found()
+    if book is not None:
+        found = await gate.book(tenant.id, project, book)
+        if found is None:
+            raise _not_found()
+        live = rs.live_book_docs(found)
+    else:
+        ref = await gate.doc(tenant.id, project, doc)
+        if ref is None or ref.book is not None:
+            raise _not_found()
+        live = [(None, ref.lang, ref.doc)]
+    order = {d: (i, key, lang) for i, (key, lang, d) in enumerate(live)}
+    refs = {d: await gate.doc(tenant.id, project, d) for d in order}
+    refs = {d: r for d, r in refs.items() if r is not None}
+    uid = ctx.user.id
+
+    def placed(rows, fn):
+        out = []
+        for r in rows:
+            ref = refs.get(r.doc)
+            if ref is None:
+                continue
+            _, key, lang = order[r.doc]
+            out.append({**fn(r, ref), "chapter_key": key})
+        out.sort(key=lambda o: (order[o["doc"]][0], o["created_at"]))
+        return out
+
+    annotations = await rs.rows_for_docs(rs.ANNOTATIONS, uid, tenant.id, project, refs)
+    bookmarks = await rs.rows_for_docs(rs.BOOKMARKS, uid, tenant.id, project, refs)
+    return {
+        "annotations": placed(annotations, _annotation_out),
+        "bookmarks": placed(bookmarks, _bookmark_out),
+    }
+
+
+@router.get("/profile")
+async def read_profile(ctx: AuthContext = Depends(require_user)) -> dict[str, Any]:
+    return {"profile": await rs.get_profile(ctx.user.id)}
+
+
+# -- writes ------------------------------------------------------------------------
+
+
+@router.put("/positions")
+async def put_position(
+    body: PositionIn,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Write the caller's position (the cadence write, the beacon and the two marks)."""
+
+    gate = _gate(ctx, conn)
+    ref = await _doc_ref(gate, body.org, body.project, body.doc)
+    row = await rs.upsert_position(
+        ctx.user.id,
+        ref,
+        version=_version(ref, body.version),
+        anchor_id=body.anchor_id,
+        fraction=body.fraction,
+        max_fraction=body.max_fraction,
+        finished=body.finished,
+        unread=body.unread,
+    )
+    return {"position": _position_out(row, ref)}
+
+
+def _validate_bookmark(ref: rs.DocRef, anchor: BookmarkAnchor) -> dict[str, Any]:
+    if ref.format == "native":
+        if anchor.block_id is None or anchor.fraction is not None or anchor.anchor is not None:
+            raise _unprocessable("a native bookmark is {block_id}")
+        return {"block_id": anchor.block_id}
+    if anchor.block_id is not None or anchor.fraction is None:
+        raise _unprocessable("this document's bookmark is a position: {fraction, anchor?}")
+    if ref.format == "md" and anchor.anchor is not None:
+        raise _unprocessable("a plain Markdown position has no anchor")
+    out: dict[str, Any] = {"fraction": anchor.fraction}
+    if anchor.anchor is not None:
+        out["anchor"] = anchor.anchor
+    return out
+
+
+@router.post("/bookmarks", status_code=201)
+async def create_bookmark(
+    body: BookmarkIn,
+    response: Response,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    gate = _gate(ctx, conn)
+    ref = await _doc_ref(gate, body.org, body.project, body.doc)
+    row, created = await rs.create_row(
+        rs.BOOKMARKS,
+        dict(
+            id=body.id, user_id=ctx.user.id, tenant_id=ref.tenant_id, project=ref.project,
+            doc=ref.doc, unit=ref.unit, lang=ref.lang, version=_version(ref, body.version),
+            anchor=_validate_bookmark(ref, body.anchor), label=body.label or None,
+            snippet=body.snippet,
+        ),
+    )
+    if row is None:
+        raise _not_found()
+    if not created:
+        response.status_code = 200
+    return {"bookmark": _bookmark_out(row, ref)}
+
+
+@router.patch("/bookmarks/{bookmark_id}")
+async def patch_bookmark(
+    bookmark_id: UUID,
+    body: BookmarkPatch,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    if "label" not in body.model_fields_set:
+        raise _unprocessable("nothing to change: send label (null clears it)")
+    gate = _gate(ctx, conn)
+    _, ref = await _owned_readable(gate, rs.BOOKMARKS, bookmark_id, ctx)
+    row = await rs.update_owned(
+        rs.BOOKMARKS, bookmark_id, ctx.user.id, {"label": body.label or None}
+    )
+    if row is None:
+        raise _not_found()
+    return {"bookmark": _bookmark_out(row, ref)}
+
+
+@router.delete("/bookmarks/{bookmark_id}", status_code=204, response_class=Response)
+async def delete_bookmark(
+    bookmark_id: UUID,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> Response:
+    gate = _gate(ctx, conn)
+    await _owned_readable(gate, rs.BOOKMARKS, bookmark_id, ctx)
+    if not await rs.delete_owned(rs.BOOKMARKS, bookmark_id, ctx.user.id):
+        raise _not_found()
+    return Response(status_code=204)
+
+
+@router.post("/annotations", status_code=201)
+async def create_annotation(
+    body: AnnotationIn,
+    response: Response,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    gate = _gate(ctx, conn)
+    ref = await _doc_ref(gate, body.org, body.project, body.doc)
+    if ref.format != "native":
+        raise _unprocessable("highlights and notes need a native chapter")
+    version = _version(ref, body.version)
+    row, created = await rs.create_row(
+        rs.ANNOTATIONS,
+        dict(
+            id=body.id, user_id=ctx.user.id, tenant_id=ref.tenant_id, project=ref.project,
+            doc=ref.doc, unit=ref.unit, lang=ref.lang, version=version,
+            block_id=body.block_id,
+            quote=body.quote.model_dump(exclude_none=True) if body.quote else None,
+            note=body.note, snapshot=body.snapshot.model_dump(),
+            anchor_status="anchored", anchored_version=version,
+        ),
+    )
+    if row is None:
+        raise _not_found()
+    if not created:
+        response.status_code = 200
+    return {"annotation": _annotation_out(row, ref)}
+
+
+@router.patch("/annotations/{annotation_id}")
+async def patch_annotation(
+    annotation_id: UUID,
+    body: AnnotationPatch,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Set or clear a highlight's note (``review`` is S10's)."""
+
+    if "note" not in body.model_fields_set:
+        raise _unprocessable("nothing to change: send note (null clears it)")
+    gate = _gate(ctx, conn)
+    row, ref = await _owned_readable(gate, rs.ANNOTATIONS, annotation_id, ctx)
+    note = _clean_note(body.note)
+    if note is None and row.quote is None:
+        raise _unprocessable("a block note needs its note; delete it instead")
+    updated = await rs.update_owned(rs.ANNOTATIONS, annotation_id, ctx.user.id, {"note": note})
+    if updated is None:
+        raise _not_found()
+    return {"annotation": _annotation_out(updated, ref)}
+
+
+@router.delete("/annotations/{annotation_id}", status_code=204, response_class=Response)
+async def delete_annotation(
+    annotation_id: UUID,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> Response:
+    gate = _gate(ctx, conn)
+    await _owned_readable(gate, rs.ANNOTATIONS, annotation_id, ctx)
+    if not await rs.delete_owned(rs.ANNOTATIONS, annotation_id, ctx.user.id):
+        raise _not_found()
+    return Response(status_code=204)
+
+
+@router.post("/quiz-attempts", status_code=201)
+async def create_quiz_attempt(
+    body: QuizAttemptIn,
+    response: Response,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Save one graded attempt; the server numbers it and adds ``unit``.
+
+    ``card`` is ``null`` until S10 seeds review cards from first attempts.
+    """
+
+    gate = _gate(ctx, conn)
+    ref = await _doc_ref(gate, body.org, body.project, body.doc)
+    if ref.format != "native":
+        raise _unprocessable("quizzes are native-chapter blocks")
+    row, created = await rs.record_attempt(
+        dict(
+            id=body.id, user_id=ctx.user.id, tenant_id=ref.tenant_id, project=ref.project,
+            doc=ref.doc, unit=ref.unit, lang=ref.lang, version=_version(ref, body.version),
+            block_id=body.block_id, item_id=body.item_id, item_type=body.item_type,
+            response=body.response, correct=body.correct,
+            answered_at=body.answered_at or rs.utc_now(),
+        )
+    )
+    if row is None:
+        raise _not_found()
+    if not created:
+        response.status_code = 200
+    return {
+        "attempt": row.attempt,
+        "card": None,
+        "result": {
+            **_attempt_out(row, ref),
+            "book": ref.book,
+            "chapter_key": ref.chapter_key,
+        },
+    }
+
+
+@router.delete("/state")
+async def clear_state(
+    scope: Literal["book", "all"],
+    org: str | None = None,
+    project: str | None = None,
+    book: str | None = None,
+    ctx: AuthContext = Depends(require_user),
+    conn=Depends(get_conn),
+) -> dict[str, Any]:
+    """Clear one book's state (``scope=book&org=&project=&book=``) or all of it."""
+
+    if scope == "all":
+        return {"scope": "all", "removed": await rs.clear_all(ctx.user.id)}
+    if not (org and project and book):
+        raise _unprocessable("scope=book needs org, project and book")
+    gate = _gate(ctx, conn)
+    tenant = await gate.resolve_org(org)
+    found = await gate.book(tenant.id, project, book) if tenant is not None else None
+    if found is None:
+        raise _not_found()
+    docs = [d for _, _, d in rs.live_book_docs(found)]
+    removed = await rs.clear_book(ctx.user.id, tenant.id, project, book, docs)
+    return {"scope": "book", "removed": removed}
+
+
+@router.patch("/profile")
+async def patch_profile(
+    body: ProfilePatch,
+    ctx: AuthContext = Depends(require_user),
+) -> dict[str, Any]:
+    changes = body.model_dump(exclude_unset=True)
+    for key in ("max_reviews_per_day", "new_highlights_per_day"):
+        if key in changes and changes[key] is None:
+            raise _unprocessable(f"{key} cannot be null")
+    return {"profile": await rs.patch_profile(ctx.user.id, changes)}
+

@@ -112,3 +112,28 @@ The spec is `server/native/README.md` → *Ingest (S5)*; the detail is in `slice
 - **For S28:** the skill's re-explain fetches the source, keeps its ids, strips the header and
   re-sends the body. A translation must keep the source's quiz item and option ids (422
   `translation-quiz-ids`).
+
+## (from P30.S8, for S9, S10, S11, S13+) Reader state as shipped
+
+The routes and payloads are `server/reader_api.py`'s docstring; the detail is in `slices/P30.S8/result.md`.
+
+- **Keys:** `doc` = `<date>-<slug>` (`reader_state.doc_of(project, rel_path)`); `unit` =
+  `c:<book>/<key>` or `d:<doc>`; `org` = the org slug or the tenant id (a slug-less tenant still works, S11).
+  Use `Gate.doc(...)` for every new route: it is the readability re-check AND the fresh unit/lang/version.
+  Never group by a stored `unit`; take the gate's.
+- **For S9:** annotations are stored as given with `anchor_status: anchored`, `anchored_version` = the
+  version made on; `quote` is `{exact, prefix, suffix, start?, end?}`. The doc/chapter reads return them
+  raw under `annotations` and echo `requested_version` (`?v=`). S9 resolves them there and writes
+  `anchor_status`/`anchored_version` back; no migration needed. The other-language markers ("1
+  highlight in 한국어") are not in the payload yet.
+- **For S10:** `review_cards`/`review_logs` exist and are empty. `POST quiz-attempts` returns
+  `card: null` and the attempt number (first = 1, per unit+item, any language/version): seed the card
+  there. `PATCH annotations/{id}` refuses `review` (extra fields are 422): add it. The unit re-write and
+  the purge do not touch quiz cards of a chapter (shared across variants), only a loose doc's; the
+  per-day limits live in `reader_profiles` (`GET/PATCH profile`).
+- **For S13+ (the reader UI):** writes go through server actions calling `client.ts`; add them to
+  `web/src/lib/knowledge/reader.ts`. The beacon is `navigator.sendBeacon("/api/reader/position",
+  JSON.stringify({org, project, doc, version?, anchor_id?, fraction, max_fraction?, finished?}))`.
+  Mark as unread is `PUT positions {unread: true}` (server action, never the beacon). Bookmarks: native
+  `{block_id}`; md `{fraction}`; legacy `{fraction, anchor?}`; reads add `pos`/`approx`. Limits: note
+  2,000, label 120, snippet 300. Annotations and quizzes are native-only (422 otherwise).

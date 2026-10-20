@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S8`
-- Next slice: `P30.S9`
+- Current slice: `P30.S9`
+- Next slice: `P30.S10`
 - Waiting on operator: `none`
 - Open deferred jobs: `35`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S8` | 9/31 | - | working tree |
+| `default` | `P30` | planned | `P30.S9` | 10/31 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S8` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S9` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -160,7 +160,7 @@
 | [x] `P30.S6` | `done` | Library migration: bind the 42 documents into books, no broken link | `implementation` | `works/phases/active/P30/slices/P30.S6` |
 | [x] `P30.S7` | `done` | /explain and the CLI: native chapters, books, assets, portable copy | `implementation` | `works/phases/active/P30/slices/P30.S7` |
 | [x] `P30.F1` | `done` | Resync the plugin template with the P30 server (plugin_parity) | `fix` | `works/phases/active/P30/slices/P30.F1` |
-| [ ] `P30.S8` | `todo` | Reader state: revision 0006, /app/reader API, beacon, purge | `implementation` | `works/phases/active/P30/slices/P30.S8` |
+| [x] `P30.S8` | `done` | Reader state: revision 0006, /app/reader API, beacon, purge | `implementation` | `works/phases/active/P30/slices/P30.S8` |
 | [ ] `P30.S9` | `todo` | Anchors: server-side re-anchoring across versions and languages | `implementation` | `works/phases/active/P30/slices/P30.S9` |
 | [ ] `P30.S10` | `todo` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
 | [ ] `P30.S11` | `todo` | Sign-in return address (D18, D32) and reader URLs on the org slug | `implementation` | `works/phases/active/P30/slices/P30.S11` |
