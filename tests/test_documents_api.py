@@ -167,8 +167,9 @@ def _seed_version(
         conn.close()
 
 
-# The exact /app list projection. `format` (html-explainer phase) and `version`
-# (P23.S1) are additive columns that ride along on every read shape — this set is
+# The exact /app list projection. `format` (html-explainer phase), `version`
+# (P23.S1) and `lang`/`subject`/`translated_from` (P30.S2, the optional header
+# fields) are additive columns that ride along on every read shape — this set is
 # the assertion that nothing INTERNAL (markdown/tags_text/tenant_id/raw_html) ever
 # joins them, so it must be kept in step with the documents table.
 _LIST_KEYS = {
@@ -183,6 +184,9 @@ _LIST_KEYS = {
     "related",
     "format",
     "version",
+    "lang",
+    "subject",
+    "translated_from",
     "created_at",
     "updated_at",
 }

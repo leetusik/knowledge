@@ -24,10 +24,12 @@ from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from server import app_api
 from server import auth_api
+from server import books as books_mod
+from server import books_api
 from server import config, db
 from server import dashboard_api
 from server import documents_api
@@ -153,6 +155,11 @@ app.include_router(documents_api.router)
 # same {version, projects, nodes, edges} contract with each doc node's url = the S5
 # read route /documents/{id}. Same require_user guard; never sets request.state.usage.
 app.include_router(graph_api.router)
+
+# Books (P30.S2): the session-guarded member reads /app/books… and the public,
+# project-gated /app/orgs/{org}/{project}/books/{book}. Unmetered like every /app
+# route. The bearer /api/books routes live below with the rest of /api.
+app.include_router(books_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
@@ -512,6 +519,43 @@ async def reindex(
         raise HTTPException(status_code=422, detail=str(exc))
 
 
+class BookRefIn(BaseModel):
+    """``book`` on a chapter publish (P30.S2; P29 *Phase or slice → chapter*).
+
+    The fields seed a NEW book's manifest (``kind`` is then required; ``title``
+    defaults to the slug). For a book that already exists the manifest is
+    authoritative and these are ignored: ``PUT /api/books/{project}/{book}`` is how a
+    book's own fields change."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str
+    title: Optional[str] = None
+    kind: Optional[str] = None
+    subject: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ChapterRefIn(BaseModel):
+    """``chapter`` on a chapter publish (P30.S2). ``position``/``title``/``source``
+    seed a NEW chapter (no ``position`` = appended at max + 1); an existing chapter
+    keeps its manifest entry."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    position: Optional[float] = None
+    title: Optional[str] = None
+    source: Optional[dict[str, str]] = None
+
+
+class TranslatedFromIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lang: str
+    version: int
+
+
 class DocumentIn(BaseModel):
     """POST /api/documents request. `markdown` is the body WITHOUT frontmatter,
     starting at the H1 — the API generates the convention-exact frontmatter."""
@@ -541,6 +585,183 @@ class DocumentIn(BaseModel):
     rel_path: Optional[str] = None
     commit: bool = True
     co_authored_by: Optional[str] = None
+    # Books and chapters (P30.S2, additive — all default to "absent", which is
+    # today's loose document exactly). `book` + `chapter` place the document as the
+    # `lang` variant of a chapter (P29 *Server placement*); `lang` and
+    # `translated_from` go into the header; `subject` is a loose document's
+    # by-subject label, stored with it.
+    book: Optional[BookRefIn] = None
+    chapter: Optional[ChapterRefIn] = None
+    lang: Optional[str] = None
+    translated_from: Optional[TranslatedFromIn] = None
+    subject: Optional[str] = None
+
+
+def _uses_book_fields(body: DocumentIn) -> bool:
+    """Whether a write carries any P30.S2 field (else it is byte-for-byte today's)."""
+    return any(
+        v is not None
+        for v in (body.book, body.chapter, body.lang, body.translated_from, body.subject)
+    )
+
+
+def _validated_placement(body: DocumentIn) -> Optional[dict]:
+    """The validated chapter placement of a write, or ``None`` for a loose document.
+
+    Raises ``ConventionError`` (-> 422): ``book`` and ``chapter`` go together; slug,
+    key, kind, subject, title, position and source follow ``server/books.py``.
+    """
+    if body.book is None and body.chapter is None:
+        return None
+    if body.book is None or body.chapter is None:
+        raise documents_mod.ConventionError(
+            "book and chapter go together: send both to place a chapter, or neither "
+            "for a loose document"
+        )
+    b, c = body.book, body.chapter
+    kind = books_mod.validate_kind(b.kind) if b.kind is not None else None
+    subject = books_mod.validate_subject(b.subject)
+    if kind == "subject" and subject is None:
+        raise documents_mod.ConventionError("a subject book needs book.subject")
+    return {
+        "book": {
+            "slug": books_mod.validate_book_slug(b.slug),
+            "title": books_mod.validate_text(b.title, "book.title", required=False),
+            "kind": kind,
+            "subject": subject,
+            "description": books_mod.validate_text(
+                b.description, "book.description", required=False
+            ),
+        },
+        "chapter": {
+            "key": books_mod.validate_chapter_key(c.key),
+            "position": (
+                books_mod.validate_position(c.position) if c.position is not None else None
+            ),
+            "title": books_mod.validate_text(c.title, "chapter.title", required=False),
+            "source": books_mod.validate_source(c.source),
+        },
+        "lang": books_mod.validate_lang(body.lang) if body.lang is not None else books_mod.DEFAULT_LANG,
+    }
+
+
+def _read_manifest_or_409(root: Path, project: str, slug: str) -> Optional[dict]:
+    """The book's current manifest (``None`` = no such book yet); a malformed one on
+    disk is a 409 — the write refuses to build on a manifest it cannot read."""
+    try:
+        return books_mod.read_manifest(root, project, slug)
+    except documents_mod.ConventionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=f"book manifest {books_mod.manifest_rel_path(project, slug)} is invalid: {exc}",
+        )
+
+
+def _place_variant(
+    conn,
+    *,
+    root: Path,
+    project: str,
+    tid: str,
+    placement: dict,
+    rel: str,
+) -> tuple[dict, bool, bool]:
+    """Build the manifest that binds ``rel`` as the placement's variant (no write).
+
+    Runs INSIDE ``WRITE_LOCK``, before any file is touched, so every refusal leaves
+    nothing behind: it re-reads the manifest (the authoritative copy) and 409s when
+    this ``(chapter, lang)`` is already bound to a different document, or when ``rel``
+    already belongs to a different chapter — in this book or, through the index, in
+    another (P29: a document is in at most one chapter). A new book needs
+    ``book.kind`` (422). Returns ``(manifest, book_created, chapter_created)``.
+    """
+    book, chapter, lang = placement["book"], placement["chapter"], placement["lang"]
+    manifest = _read_manifest_or_409(root, project, book["slug"])
+    book_created = manifest is None
+    if manifest is None:
+        if book["kind"] is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"book {book['slug']!r} does not exist yet: book.kind is required to create it",
+            )
+        manifest = {
+            "slug": book["slug"],
+            "title": book["title"] or book["slug"],
+            "kind": book["kind"],
+            "subject": book["subject"],
+            "description": book["description"],
+            "chapters": [],
+        }
+    else:
+        manifest = {**manifest, "chapters": [dict(c, variants=dict(c["variants"])) for c in manifest["chapters"]]}
+
+    conflict = {"rel_path": rel, "book": book["slug"], "chapter_key": chapter["key"], "lang": lang}
+    bound_here = books_mod.find_binding(manifest, rel)
+    if bound_here is not None and bound_here != (chapter["key"], lang):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                **conflict,
+                "message": (
+                    f"{rel} is already chapter {bound_here[0]!r} ({bound_here[1]}) of book "
+                    f"{book['slug']!r}; a document belongs to at most one chapter"
+                ),
+            },
+        )
+    elsewhere = db.find_chapter_binding(conn, rel, tid)
+    if elsewhere is not None and (elsewhere["project"], elsewhere["book"]) != (project, book["slug"]):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                **conflict,
+                "message": (
+                    f"{rel} is already chapter {elsewhere['chapter_key']!r} of book "
+                    f"{elsewhere['book']!r}; a document belongs to at most one chapter"
+                ),
+            },
+        )
+
+    ch = books_mod.find_chapter(manifest, chapter["key"])
+    chapter_created = ch is None
+    if ch is None:
+        ch = {
+            "key": chapter["key"],
+            "position": (
+                chapter["position"]
+                if chapter["position"] is not None
+                else books_mod.next_position(manifest)
+            ),
+            "variants": {},
+        }
+        if chapter["title"] is not None:
+            ch["title"] = chapter["title"]
+        if chapter["source"] is not None:
+            ch["source"] = chapter["source"]
+        manifest["chapters"].append(ch)
+    current = ch["variants"].get(lang)
+    # A binding whose document is gone (drift) is simply re-pointed; a live one is
+    # never silently replaced.
+    if (
+        current is not None
+        and current != rel
+        and db.get_document_by_path(conn, current, tenant_id=tid) is not None
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                **conflict,
+                "message": (
+                    f"chapter {chapter['key']!r} ({lang}) of book {book['slug']!r} is "
+                    f"bound to {current}, not {rel}"
+                ),
+            },
+        )
+    ch["variants"][lang] = rel
+    try:
+        manifest = books_mod.normalize_manifest(manifest, project=project)
+    except documents_mod.ConventionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return manifest, book_created, chapter_created
 
 
 async def ensure_registry_project(
@@ -664,6 +885,22 @@ def create_document(
             body.slug if body.slug else documents_mod.slugify(body.title)
         )
         related = documents_mod.validate_related(body.related)
+        # P30.S2 (additive): chapter placement + the optional header fields. All
+        # None for a write that sends none of them -> today's loose path exactly.
+        placement = _validated_placement(body)
+        header_lang = (
+            books_mod.validate_lang(body.lang) if body.lang is not None else None
+        )
+        subject = books_mod.validate_subject(body.subject)
+        translated_from = books_mod.validate_translated_from(
+            body.translated_from.model_dump() if body.translated_from is not None else None
+        )
+        if translated_from is not None and translated_from["lang"] == (
+            header_lang or books_mod.DEFAULT_LANG
+        ):
+            raise documents_mod.ConventionError(
+                "translated_from.lang must differ from the document's own lang"
+            )
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -682,7 +919,43 @@ def create_document(
     #     kept, so identity never moves and the request's date/slug are ignored for
     #     a resolved target (`updated_at` is what moves). A miss falls through to a
     #     plain v1 create at the computed rel_path.
-    target = _resolve_version_target(conn, ctx, body, project=project, slug=slug)
+    # 1a. Chapter placement (P30.S2; P29 *Server placement*). The chapter key replaces
+    #     list-and-match: when `(project, book, key, lang)` is already bound, this
+    #     publish IS that document's next version (same rel_path), whatever
+    #     `new_version` says. Otherwise the usual resolution below runs and whatever
+    #     document it writes becomes the variant (bound under the lock, step 3).
+    target = None
+    if placement is not None:
+        existing = _read_manifest_or_409(root, project, placement["book"]["slug"])
+        if existing is None and placement["book"]["kind"] is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"book {placement['book']['slug']!r} does not exist yet: "
+                    "book.kind is required to create it"
+                ),
+            )
+        ch = (
+            books_mod.find_chapter(existing, placement["chapter"]["key"])
+            if existing is not None
+            else None
+        )
+        bound = ch["variants"].get(placement["lang"]) if ch is not None else None
+        if bound is not None:
+            if body.rel_path and body.rel_path != bound:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"rel_path {body.rel_path} conflicts with chapter "
+                        f"{placement['chapter']['key']!r} ({placement['lang']}), "
+                        f"which is bound to {bound}"
+                    ),
+                )
+            # A binding whose document row is gone (drift) resolves to nothing and
+            # falls through to a fresh create, which is then re-bound.
+            target = db.get_document_by_path(conn, bound, tenant_id=_tenant_filter(ctx))
+    if target is None:
+        target = _resolve_version_target(conn, ctx, body, project=project, slug=slug)
     if target is not None:
         # Neither the format nor the project may change across a version chain: the
         # rel_path (which encodes both the project dir and the extension) is the
@@ -755,6 +1028,16 @@ def create_document(
     #    -> LOCAL git add/commit. (WRITE_LOCK is NOT reentrant — nothing called in
     #    here may retake it, which is why the push is queued outside it in 4b.)
     with WRITE_LOCK:
+        # 3-. Chapter placement (P30.S2): settle the manifest FIRST, before any file
+        #     is touched, so a binding conflict (409) or a book that cannot be created
+        #     (422) leaves nothing behind. Re-read under the lock: it is the
+        #     authoritative copy.
+        new_manifest = None
+        book_created = chapter_created = False
+        if placement is not None:
+            new_manifest, book_created, chapter_created = _place_variant(
+                conn, root=root, project=project, tid=tid, placement=placement, rel=rel
+            )
         # 3a. Archive the body about to be replaced, BEFORE it is overwritten, to
         #     <root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>. `None` when
         #     there is nothing on disk to keep (a fresh create, or a DB row whose
@@ -794,6 +1077,9 @@ def create_document(
             related=related,
             fmt=body.format,
             version=doc_version,
+            lang=header_lang,
+            subject=subject,
+            translated_from=translated_from,
         )
         if body.format == "html":
             raw_html = stored_body
@@ -834,7 +1120,20 @@ def create_document(
             raw_html=raw_html,
             version=doc_version,
             tenant_id=tid,
+            lang=header_lang,
+            subject=subject,
+            translated_from=translated_from,
         )
+
+        # 3b. Bind the variant (P30.S2): write the manifest, then rebuild the book's
+        #     derived rows from it — the same replace_book reindex runs.
+        manifest_rel = None
+        if new_manifest is not None:
+            manifest_rel = books_mod.write_manifest(root, project, new_manifest)
+            db.replace_book(
+                conn, tenant_id=tid, project=project, manifest=new_manifest,
+                manifest_path=manifest_rel,
+            )
 
         # 4. Git only when requested AND enabled. A failed commit is NOT rolled
         #    back — the file/DB stay written; report committed:false + commit_error.
@@ -854,6 +1153,9 @@ def create_document(
                     # The superseded body travels with the repo (public root only),
                     # so tenant #1's version history is in git too.
                     staged.append(f"docs/{archive_path}")
+                if manifest_rel is not None:
+                    # The book manifest rides in the chapter's own scoped commit.
+                    staged.append(f"docs/{manifest_rel}")
                 gitops.add(staged, root=config.kb_root())
                 message = (
                     f"docs({project}): add {slug}"
@@ -966,6 +1268,17 @@ def create_document(
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    # P30.S2, additive: only a write that sent a book field gets these keys, so a
+    # plain loose publish answers exactly the pre-P30 shape.
+    if _uses_book_fields(body):
+        resp["book"] = placement["book"]["slug"] if placement else None
+        resp["chapter_key"] = placement["chapter"]["key"] if placement else None
+        resp["lang"] = placement["lang"] if placement else header_lang
+        resp["translated_from"] = translated_from
+        resp["subject"] = subject
+        resp["book_created"] = book_created
+        resp["chapter_created"] = chapter_created
+        resp["manifest_path"] = manifest_rel
     # Meter the created document (best-effort, via the middleware). Attributed to
     # `project` (the write's project name) -> tenant project UUID. Inert in legacy
     # mode (tenant_id None -> the middleware skips).
@@ -1118,4 +1431,192 @@ def delete_document(
         project_id=ctx.project_id,
         credential_id=ctx.credential_id,
     )
+    return resp
+
+
+# --- Books (P30.S2) -----------------------------------------------------------
+#
+# The bearer plane of P29's book model. A book is a manifest on disk
+# (<root>/.books/<project>/<book>.json, server/books.py) mirrored into the derived
+# books / chapters / chapter_variants tables. Reads are tenant-scoped like
+# /api/documents; PUT is the one way to edit a book's own fields, its order and its
+# bindings, and is how existing documents are bound into books (S6's migration).
+
+
+def _public_book(book: dict) -> dict:
+    """The /api book shape: the derived row minus the internal ``tenant_id``."""
+    return {k: v for k, v in book.items() if k != "tenant_id"}
+
+
+@app.get("/api/books")
+def list_books(
+    project: Optional[str] = None,
+    ctx: ApiAuthContext = Depends(resolve_api_read),
+    conn=Depends(get_conn),
+):
+    """The caller's books (optionally one project's) with their chapter counts."""
+    items = db.list_books(conn, tenant_id=_tenant_filter(ctx), project=project)
+    return {"total": len(items), "items": [_public_book(b) for b in items]}
+
+
+@app.get("/api/books/{project}/{book}")
+def get_book(
+    project: str,
+    book: str,
+    ctx: ApiAuthContext = Depends(resolve_api_read),
+    conn=Depends(get_conn),
+):
+    """One book: its fields and ordered chapters, each with its live variants
+    ``{lang, doc_id, rel_path, title, slug, version, format, updated_at,
+    translated_from}``. 404 when the book does not exist for this tenant."""
+    found = db.get_book(conn, project=project, slug=book, tenant_id=_tenant_filter(ctx))
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"no book {book!r} in project {project!r}")
+    return _public_book(found)
+
+
+class BookPutIn(BaseModel):
+    """``PUT /api/books/{project}/{book}``: the whole manifest, replacing the old one.
+
+    ``chapters[]`` entries are manifest chapters: ``{key, position, title?, source?,
+    variants: {<lang>: <rel_path>}}``. ``slug`` is optional and must equal the path's.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    slug: Optional[str] = None
+    title: str
+    kind: str
+    subject: Optional[str] = None
+    description: Optional[str] = None
+    chapters: list[dict] = []
+    commit: bool = True
+    co_authored_by: Optional[str] = None
+
+
+@app.put("/api/books/{project}/{book}")
+def put_book(
+    project: str,
+    book: str,
+    body: BookPutIn,
+    ctx: ApiAuthContext = Depends(resolve_api_write),
+    conn=Depends(get_conn),
+):
+    """Replace (or create) a book's manifest: its title, order and bindings.
+
+    Validation, all before anything is written:
+
+    * the manifest itself (``books.normalize_manifest``) -> 422: slug/key/lang
+      syntax, kind, a subject book's subject, unique keys, one binding per document,
+      every variant inside this project;
+    * every bound rel_path must be an existing document of this tenant in this
+      project -> 422 naming the missing ones (a document of another project or
+      another tenant is "missing" here: it is not readable in this project);
+    * a document another book already binds -> 409 (P29: at most one chapter).
+
+    Then, under ``WRITE_LOCK``: the manifest is written atomically, the derived rows
+    rebuilt, and — for the public root — the manifest committed alone
+    (``docs(<project>): update book <slug>``), pushed after the response like a
+    document write. Bound documents are never rewritten. Unmetered.
+    """
+    try:
+        documents_mod.validate_project(project)
+        books_mod.validate_book_slug(book)
+        if body.slug is not None and body.slug != book:
+            raise documents_mod.ConventionError(
+                f"body slug {body.slug!r} does not match the path's {book!r}"
+            )
+        manifest = books_mod.normalize_manifest(
+            {
+                "slug": book,
+                "title": body.title,
+                "kind": body.kind,
+                "subject": body.subject,
+                "description": body.description,
+                "chapters": body.chapters,
+            },
+            project=project,
+        )
+    except documents_mod.ConventionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    tenant = _tenant_filter(ctx)
+    missing = []
+    for ch in manifest["chapters"]:
+        for rel in ch["variants"].values():
+            doc = db.get_document_by_path(conn, rel, tenant_id=tenant)
+            if doc is None or doc["project"] != project:
+                missing.append(rel)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "every bound document must exist in this project",
+                "missing": missing,
+            },
+        )
+
+    root = _tenant_root(ctx)
+    tid = _tenant_db_id(ctx)
+    with WRITE_LOCK:
+        for ch in manifest["chapters"]:
+            for lang, rel in ch["variants"].items():
+                other = db.find_chapter_binding(conn, rel, tid)
+                if other is not None and (other["project"], other["book"]) != (project, book):
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "message": (
+                                f"{rel} is already chapter {other['chapter_key']!r} of book "
+                                f"{other['book']!r}; a document belongs to at most one chapter"
+                            ),
+                            "rel_path": rel,
+                            "book": other["book"],
+                            "chapter_key": other["chapter_key"],
+                        },
+                    )
+        manifest_file = root / books_mod.manifest_rel_path(project, book)
+        created = not manifest_file.is_file()
+        before = None if created else manifest_file.read_bytes()
+        manifest_rel = books_mod.write_manifest(root, project, manifest)
+        changed = before != manifest_file.read_bytes()
+        db.replace_book(
+            conn, tenant_id=tid, project=project, manifest=manifest, manifest_path=manifest_rel
+        )
+
+        committed = False
+        commit_sha = None
+        commit_error = None
+        # An unchanged manifest has nothing to commit (git would refuse the empty
+        # commit), so a no-op PUT reports committed:false with no error.
+        if changed and body.commit and config.git_commit_enabled() and ctx.is_public:
+            try:
+                gitops.add([f"docs/{manifest_rel}"], root=config.kb_root())
+                commit_sha = gitops.commit(
+                    f"docs({project}): update book {book}",
+                    root=config.kb_root(),
+                    co_authored_by=body.co_authored_by,
+                )
+                committed = True
+            except gitops.GitError as exc:
+                # Reported, never rolled back, like a document write.
+                commit_error = exc.stderr or str(exc)
+
+    push_pending = False
+    if committed and config.git_push_enabled():
+        push_pending = True
+        publish.submit(f"push book {manifest_rel}", _push_task(config.kb_root()))
+
+    found = db.get_book(conn, project=project, slug=book, tenant_id=tid)
+    resp = {
+        **_public_book(found or {}),
+        "created": created,
+        "manifest_path": manifest_rel,
+        "committed": committed,
+        "commit_sha": commit_sha,
+        "pushed": False,
+        "push_pending": push_pending,
+    }
+    if commit_error is not None:
+        resp["commit_error"] = commit_error
     return resp

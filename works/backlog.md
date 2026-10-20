@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S2`
-- Next slice: `P30.S3`
+- Current slice: `P30.S3`
+- Next slice: `P30.S4`
 - Waiting on operator: `none`
 - Open deferred jobs: `35`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S2` | 2/30 | - | working tree |
+| `default` | `P30` | planned | `P30.S3` | 3/30 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S2` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S3` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -153,7 +153,7 @@
 |---|---|---|---|---|
 | [x] `P30.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P30/slices/P30.DECOMP` |
 | [x] `P30.S1` | `done` | Superseding design wave (A5): reader, annotations, library | `co-work` | `works/phases/active/P30/slices/P30.S1` |
-| [ ] `P30.S2` | `todo` | Books and chapters: manifests, index, publish placement, book routes | `implementation` | `works/phases/active/P30/slices/P30.S2` |
+| [x] `P30.S2` | `done` | Books and chapters: manifests, index, publish placement, book routes | `implementation` | `works/phases/active/P30/slices/P30.S2` |
 | [ ] `P30.S3` | `todo` | Native format: Python parser, validator and conformance fixtures | `implementation` | `works/phases/active/P30/slices/P30.S3` |
 | [ ] `P30.S4` | `todo` | Image assets: upload, content-addressed store, gated serving | `implementation` | `works/phases/active/P30/slices/P30.S4` |
 | [ ] `P30.S5` | `todo` | Native ingest: publish, ids, references, search, MCP, html-to-native | `implementation` | `works/phases/active/P30/slices/P30.S5` |
