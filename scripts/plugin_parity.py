@@ -23,6 +23,10 @@ on any file present in root but missing from the template, or vice versa — so 
 new ``server/foo.py`` (or a stale template copy) cannot slip past the identical
 list. ``__pycache__`` and ``*.pyc`` are excluded.
 
+A manifest ``root_only`` list (repo paths or directories that must never ship —
+e.g. the library-migration tool's test and fixtures) is excluded from the
+repo side of that completeness check.
+
 Exit 0 only when every check is green; otherwise it prints a per-file drift list
 and exits 1. Run in CI via ``.github/workflows/plugin-ci.yml``.
 """
@@ -72,6 +76,7 @@ def main() -> int:
 
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     files = manifest.get("files", {})
+    root_only = manifest.get("root_only", [])
     render_mod = _load_render()
 
     # --- Render the whole tree once with the operator's real values ---
@@ -115,6 +120,14 @@ def main() -> int:
         for rel_dir in manifest.get("shipped_dirs", []):
             tmpl_set = _dir_files(KB_DIR / rel_dir)
             root_set = _dir_files(REPO_ROOT / rel_dir)
+            # manifest ``root_only``: repo paths (file or dir) that are never shipped.
+            root_set = {
+                n for n in root_set
+                if not any(
+                    f"{rel_dir}/{n}" == r or f"{rel_dir}/{n}".startswith(r + "/")
+                    for r in root_only
+                )
+            }
             for name in sorted(root_set - tmpl_set):
                 drift.append(f"[completeness] in repo but not shipped: {rel_dir}/{name}")
             for name in sorted(tmpl_set - root_set):

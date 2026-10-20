@@ -1,0 +1,14 @@
+=== references
+In-chapter: the sources, a source and a quiz item.
+Chapters: same project, with lang,
+with an id, both,
+other project.
+Documents: loose, other project.
+An image: .
+External: https and http.
+=== quiz-1
+
+=== sources-list
+
+=== sources
+

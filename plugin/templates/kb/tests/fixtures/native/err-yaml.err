@@ -1,0 +1,9 @@
+6 yaml-anchor
+12 yaml-tag
+19 yaml-duplicate-key
+26 yaml
+29 field-missing
+30 field-value
+31 field-unknown
+32 field-value
+36 field-type

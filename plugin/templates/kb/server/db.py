@@ -32,9 +32,14 @@ CREATE TABLE IF NOT EXISTS documents (
   rel_path    TEXT NOT NULL,                -- '<project>/<date>-<slug>.{md,html}' relative to the tenant's content root
   markdown    TEXT NOT NULL,                -- readable text body WITHOUT frontmatter (extracted plain text for html docs)
   related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
-  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' (the on-disk doc format)
+  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' | 'native' (P30.S5: a .md file whose header says format: native)
   raw_html    TEXT,                          -- raw HTML body for format='html' (the raw viewer route source); NULL for md
   version     INTEGER NOT NULL DEFAULT 1,    -- current version number (P23); re-derived from the file's `version:` frontmatter, absent = 1
+  lang        TEXT,                          -- the header's `lang:` (P30.S2); NULL = absent (the manifest's variant key, else 'en')
+  subject     TEXT,                          -- the header's `subject:` label (P30.S2), a loose document's by-subject grouping
+  translated_from TEXT,                      -- the header's `translated_from: {lang, version}` as JSON (P30.S2); NULL = an original
+  assets      TEXT,                          -- the header's `assets:` map as JSON (P30.S4); NULL = no images
+  source      TEXT,                          -- the whole stored native file (P30.S5; header + body, ids written in); NULL unless format='native'
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (tenant_id, rel_path)
@@ -81,18 +86,64 @@ END;
 CREATE TABLE IF NOT EXISTS document_versions (
   id           INTEGER PRIMARY KEY,
   tenant_id    TEXT NOT NULL DEFAULT '',
-  rel_path     TEXT NOT NULL,               -- the CURRENT document's rel_path (identity, stable across versions)
+  rel_path     TEXT NOT NULL,               -- the CURRENT document's rel_path (identity; re-keyed with the document on an html -> native migration, P30.S5)
   version      INTEGER NOT NULL,
   archive_path TEXT NOT NULL,               -- '.versions/<project>/<date>-<slug>/vNNNN.<ext>' relative to the content root
   title        TEXT NOT NULL,
   date         TEXT NOT NULL,
   tags         TEXT NOT NULL DEFAULT '[]',  -- JSON array
   format       TEXT NOT NULL DEFAULT 'md',
-  markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions)
+  markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions, the search projection for native)
   raw_html     TEXT,                        -- raw HTML body for format='html'; NULL for md
+  assets       TEXT,                        -- that version's own `assets:` map as JSON (P30.S4); NULL = no images
+  source       TEXT,                        -- the archived native file (P30.S5); NULL unless format='native'
   created_at   TEXT NOT NULL,               -- when this version was archived
   UNIQUE (tenant_id, rel_path, version)
 );
+
+-- Books and chapters (P30.S2). A DERIVED index over the on-disk book manifests
+-- (<root>/.books/<project>/<book>.json, server/books.py), rebuilt by reindex's
+-- third walk, so a DB wipe loses nothing. Identity is the manifest's own:
+-- (tenant_id, project, book slug[, chapter key[, lang]]) — never documents.id,
+-- which a rebuild renumbers. No surrogate ids at all, so a rebuild reproduces
+-- every row exactly. A variant names its document by rel_path; the reads join
+-- documents on (tenant_id, rel_path) and drop a variant whose document is gone.
+CREATE TABLE IF NOT EXISTS books (
+  tenant_id     TEXT NOT NULL DEFAULT '',
+  project       TEXT NOT NULL,
+  slug          TEXT NOT NULL,
+  title         TEXT NOT NULL,
+  kind          TEXT NOT NULL CHECK (kind IN ('codebase', 'subject')),
+  subject       TEXT,
+  description   TEXT,
+  manifest_path TEXT NOT NULL,              -- '.books/<project>/<slug>.json' relative to the content root
+  PRIMARY KEY (tenant_id, project, slug)
+);
+
+CREATE TABLE IF NOT EXISTS chapters (
+  tenant_id TEXT NOT NULL DEFAULT '',
+  project   TEXT NOT NULL,
+  book      TEXT NOT NULL,                  -- books.slug
+  key       TEXT NOT NULL,
+  position  NUMERIC NOT NULL,               -- ascending; ties broken by key
+  title     TEXT,                           -- override; NULL = the shown variant's document title
+  source    TEXT,                           -- JSON object, e.g. {"phase": "P8"}; NULL when absent
+  PRIMARY KEY (tenant_id, project, book, key)
+);
+
+CREATE TABLE IF NOT EXISTS chapter_variants (
+  tenant_id   TEXT NOT NULL DEFAULT '',
+  project     TEXT NOT NULL,
+  book        TEXT NOT NULL,
+  chapter_key TEXT NOT NULL,
+  lang        TEXT NOT NULL,                -- BCP-47 primary subtag
+  rel_path    TEXT NOT NULL,                -- the bound document (documents.rel_path)
+  PRIMARY KEY (tenant_id, project, book, chapter_key, lang)
+);
+
+-- A document is in at most one chapter (P29 *Chapter*).
+CREATE UNIQUE INDEX IF NOT EXISTS chapter_variants_doc
+  ON chapter_variants (tenant_id, rel_path);
 
 CREATE TABLE IF NOT EXISTS document_embeddings (
   doc_id       INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
@@ -158,6 +209,29 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE documents ADD COLUMN raw_html TEXT")
     if "version" not in cols:
         conn.execute("ALTER TABLE documents ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+    # P30.S2: the three optional header fields, nullable, so every existing row
+    # reads back as "absent" with no back-fill. The books / chapters /
+    # chapter_variants tables need no migration: _SCHEMA creates them and the
+    # next reindex fills them from the manifests.
+    for col in ("lang", "subject", "translated_from"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE documents ADD COLUMN {col} TEXT")
+    # P30.S4: the asset map, on the document and on each archived version. Nullable
+    # (no images), re-derived from the headers by the next reindex.
+    if "assets" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN assets TEXT")
+    vcols = {
+        row["name"] for row in conn.execute("PRAGMA table_info(document_versions)").fetchall()
+    }
+    if "assets" not in vcols:
+        conn.execute("ALTER TABLE document_versions ADD COLUMN assets TEXT")
+    # P30.S5: the stored native file, on the document and on each archived version.
+    # Nullable (every non-native row), re-derived from the files by the next reindex.
+    # Not in documents_fts: `markdown` carries the native search projection.
+    if "source" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN source TEXT")
+    if "source" not in vcols:
+        conn.execute("ALTER TABLE document_versions ADD COLUMN source TEXT")
     conn.commit()
 
 
@@ -173,10 +247,27 @@ def connect(path: Optional[Path] = None) -> sqlite3.Connection:
     return conn
 
 
+def _assets_from_column(raw: Any) -> Optional[dict]:
+    """The stored ``assets`` JSON as a dict, or ``None`` (absent or unreadable)."""
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) and value else None
+
+
+def _assets_to_column(assets: Optional[dict]) -> Optional[str]:
+    return json.dumps(assets, ensure_ascii=False, sort_keys=True) if assets else None
+
+
 def _row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
     if row is None:
         return None
     d = dict(row)
+    if "assets" in d:
+        d["assets"] = _assets_from_column(d["assets"])
     try:
         d["tags"] = json.loads(d.get("tags") or "[]")
     except (TypeError, json.JSONDecodeError):
@@ -185,6 +276,13 @@ def _row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
         d["related"] = json.loads(d.get("related") or "[]")
     except (TypeError, json.JSONDecodeError):
         d["related"] = []
+    if "translated_from" in d:
+        try:
+            d["translated_from"] = (
+                json.loads(d["translated_from"]) if d["translated_from"] else None
+            )
+        except (TypeError, json.JSONDecodeError):
+            d["translated_from"] = None
     return d
 
 
@@ -205,6 +303,11 @@ def upsert_document(
     version: int = 1,
     tenant_id: str = "",
     now: Optional[str] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
+    source: Optional[str] = None,
 ) -> int:
     """Insert or update by ``(tenant_id, rel_path)``. Preserves created_at, refreshes updated_at.
 
@@ -221,18 +324,31 @@ def upsert_document(
     ``created_at``) since it never changes for a given row. Returns the row id.
     (``format`` shadows the builtin here on purpose — a keyword-only param — and the
     builtin is never called in this scope.)
+
+    ``lang`` / ``subject`` / ``translated_from`` (P30.S2) mirror the optional header
+    fields of the same names; ``None`` = absent, which every pre-P30 file is.
+
+    ``source`` (P30.S5) is the whole stored native file, for ``format='native'``
+    only; ``markdown`` then holds the native search projection (what FTS and the
+    embeddings read).
     """
     ts = now or _now()
     tags = list(tags)
     tags_json = json.dumps(tags, ensure_ascii=False)
     tags_text = " ".join(tags)
     related_json = json.dumps(list(related) if related is not None else [], ensure_ascii=False)
+    translated_json = (
+        json.dumps(translated_from, ensure_ascii=False, sort_keys=True)
+        if translated_from
+        else None
+    )
     conn.execute(
         """
         INSERT INTO documents
           (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
-           markdown, related, format, raw_html, version, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, related, format, raw_html, version, lang, subject, translated_from,
+           assets, source, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -246,10 +362,16 @@ def upsert_document(
           format      = excluded.format,
           raw_html    = excluded.raw_html,
           version     = excluded.version,
+          lang        = excluded.lang,
+          subject     = excluded.subject,
+          translated_from = excluded.translated_from,
+          assets      = excluded.assets,
+          source      = excluded.source,
           updated_at  = excluded.updated_at
         """,
         (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
-         markdown, related_json, format, raw_html, int(version), ts, ts),
+         markdown, related_json, format, raw_html, int(version), lang, subject,
+         translated_json, _assets_to_column(assets), source, ts, ts),
     )
     conn.commit()
     row = conn.execute(
@@ -289,6 +411,96 @@ def get_document_by_path(
             "SELECT * FROM documents WHERE rel_path = ?", (rel_path,)
         ).fetchone()
     return _row_to_dict(row)
+
+
+def rel_path_stem(rel_path: str) -> str:
+    """``<project>/<date>-<slug>`` — a rel_path without its ``.md``/``.html``
+    extension. The stem is a document's identity across an ``html -> native``
+    format migration (P30.S5): the archive and asset directories are keyed by it."""
+    for ext in (".md", ".html"):
+        if rel_path.endswith(ext):
+            return rel_path[: -len(ext)]
+    return rel_path
+
+
+def find_documents_by_stem(
+    conn: sqlite3.Connection, stem: str, tenant_id: Optional[str] = None
+) -> list[dict[str, Any]]:
+    """Every document whose rel_path is ``<stem>.md`` or ``<stem>.html`` (P30.S5)."""
+    sql = "SELECT * FROM documents WHERE rel_path IN (?, ?)"
+    params: list[Any] = [f"{stem}.md", f"{stem}.html"]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    sql += " ORDER BY id"
+    return [d for d in (_row_to_dict(r) for r in conn.execute(sql, params).fetchall()) if d]
+
+
+def get_document_by_path_or_alias(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
+) -> Optional[dict[str, Any]]:
+    """``get_document_by_path``, with the P30.S5 stem alias as the fallback.
+
+    A document migrated ``html -> native`` moved from ``<stem>.html`` to
+    ``<stem>.md`` (P29 *Legacy -> native re-explain*); a by-path or MCP read of the
+    old path must keep answering. On an exact miss, the one document sharing the
+    stem answers; none (or an ambiguous two) is a miss. Reads only: writes and
+    deletes stay exact.
+    """
+    doc = get_document_by_path(conn, rel_path, tenant_id=tenant_id)
+    if doc is not None:
+        return doc
+    stem = rel_path_stem(rel_path)
+    if stem == rel_path:
+        return None
+    matches = find_documents_by_stem(conn, stem, tenant_id=tenant_id)
+    return matches[0] if len(matches) == 1 else None
+
+
+def rekey_document(
+    conn: sqlite3.Connection, *, tenant_id: str, old_rel_path: str, new_rel_path: str
+) -> None:
+    """Move one document's identity from ``old_rel_path`` to ``new_rel_path`` in place.
+
+    The ``html -> native`` migration (P30.S5): the ``documents`` row keeps its id (so
+    ``/documents/{id}``, its embedding and every id-keyed reference survive) and its
+    archived versions follow it, so the version chain spans the extension change.
+    Not committed here: the caller's next upsert commits it with the new body.
+    """
+    conn.execute(
+        "UPDATE documents SET rel_path = ? WHERE tenant_id = ? AND rel_path = ?",
+        (new_rel_path, tenant_id, old_rel_path),
+    )
+    conn.execute(
+        "UPDATE document_versions SET rel_path = ? WHERE tenant_id = ? AND rel_path = ?",
+        (new_rel_path, tenant_id, old_rel_path),
+    )
+
+
+def chapter_variant_exists(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: Optional[str],
+    project: str,
+    book: str,
+    key: str,
+    lang: Optional[str] = None,
+) -> bool:
+    """Whether ``(project, book, key[, lang])`` is a chapter with a live variant —
+    the index a native ``chapter:`` reference resolves against (P30.S5)."""
+    sql = (
+        "SELECT 1 FROM chapter_variants v JOIN documents d "
+        "ON d.tenant_id = v.tenant_id AND d.rel_path = v.rel_path "
+        "WHERE v.project = ? AND v.book = ? AND v.chapter_key = ?"
+    )
+    params: list[Any] = [project, book, key]
+    if lang is not None:
+        sql += " AND v.lang = ?"
+        params.append(lang)
+    if tenant_id is not None:
+        sql += " AND v.tenant_id = ?"
+        params.append(tenant_id)
+    return conn.execute(sql + " LIMIT 1", params).fetchone() is not None
 
 
 def find_latest_document_by_slug(
@@ -480,6 +692,8 @@ def _version_row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]
         d["tags"] = json.loads(d.get("tags") or "[]")
     except (TypeError, json.JSONDecodeError):
         d["tags"] = []
+    if "assets" in d:
+        d["assets"] = _assets_from_column(d["assets"])
     return d
 
 
@@ -497,6 +711,8 @@ def upsert_document_version(
     raw_html: Optional[str] = None,
     tenant_id: str = "",
     created_at: Optional[str] = None,
+    assets: Optional[dict] = None,
+    source: Optional[str] = None,
 ) -> None:
     """Record one archived version. Idempotent on ``(tenant_id, rel_path, version)``.
 
@@ -511,8 +727,8 @@ def upsert_document_version(
         """
         INSERT INTO document_versions
           (tenant_id, rel_path, version, archive_path, title, date, tags, format,
-           markdown, raw_html, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, raw_html, assets, source, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path, version) DO UPDATE SET
           archive_path = excluded.archive_path,
           title        = excluded.title,
@@ -521,12 +737,14 @@ def upsert_document_version(
           format       = excluded.format,
           markdown     = excluded.markdown,
           raw_html     = excluded.raw_html,
+          assets       = excluded.assets,
+          source       = excluded.source,
           created_at   = excluded.created_at
         """,
         (
             tenant_id, rel_path, int(version), archive_path, title, date,
             json.dumps(list(tags), ensure_ascii=False), format, markdown, raw_html,
-            created_at or _now(),
+            _assets_to_column(assets), source, created_at or _now(),
         ),
     )
     conn.commit()
@@ -683,3 +901,224 @@ def delete_orphan_embeddings(conn: sqlite3.Connection, model: str) -> int:
     )
     conn.commit()
     return cur.rowcount
+
+
+# --- Books and chapters (P30.S2) ----------------------------------------------
+#
+# Derived rows over the on-disk manifests (server/books.py). The manifest is the
+# truth; these tables exist so reads, search and the library can query membership
+# without parsing JSON per request. Every write here is "replace this book's rows
+# from its manifest", so the write path and reindex share one code path and can
+# never drift.
+
+
+def replace_book(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    project: str,
+    manifest: dict[str, Any],
+    manifest_path: str,
+    commit: bool = True,
+) -> None:
+    """Upsert one book's row and replace its chapters/variants from ``manifest``.
+
+    ``manifest`` must already be normalized (``books.normalize_manifest``). A
+    rel_path bound by ANOTHER book of the same tenant violates the
+    one-chapter-per-document index and raises ``sqlite3.IntegrityError``; callers
+    check first (the write paths 409/422, reindex reports a skip).
+    """
+    slug = manifest["slug"]
+    conn.execute(
+        """
+        INSERT INTO books (tenant_id, project, slug, title, kind, subject, description,
+                           manifest_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tenant_id, project, slug) DO UPDATE SET
+          title         = excluded.title,
+          kind          = excluded.kind,
+          subject       = excluded.subject,
+          description   = excluded.description,
+          manifest_path = excluded.manifest_path
+        """,
+        (tenant_id, project, slug, manifest["title"], manifest["kind"],
+         manifest.get("subject"), manifest.get("description"), manifest_path),
+    )
+    conn.execute(
+        "DELETE FROM chapter_variants WHERE tenant_id = ? AND project = ? AND book = ?",
+        (tenant_id, project, slug),
+    )
+    conn.execute(
+        "DELETE FROM chapters WHERE tenant_id = ? AND project = ? AND book = ?",
+        (tenant_id, project, slug),
+    )
+    for ch in manifest.get("chapters", []):
+        source = ch.get("source")
+        conn.execute(
+            "INSERT INTO chapters (tenant_id, project, book, key, position, title, source) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (tenant_id, project, slug, ch["key"], ch["position"], ch.get("title"),
+             json.dumps(source, ensure_ascii=False, sort_keys=True) if source else None),
+        )
+        for lang, rel in ch["variants"].items():
+            conn.execute(
+                "INSERT INTO chapter_variants "
+                "(tenant_id, project, book, chapter_key, lang, rel_path) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (tenant_id, project, slug, ch["key"], lang, rel),
+            )
+    if commit:
+        conn.commit()
+
+
+def delete_book(conn: sqlite3.Connection, *, tenant_id: str, project: str, slug: str) -> None:
+    """Drop one book's rows (its manifest vanished from disk)."""
+    for table, col in (("chapter_variants", "book"), ("chapters", "book"), ("books", "slug")):
+        conn.execute(
+            f"DELETE FROM {table} WHERE tenant_id = ? AND project = ? AND {col} = ?",
+            (tenant_id, project, slug),
+        )
+    conn.commit()
+
+
+def find_chapter_binding(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: str
+) -> Optional[dict[str, Any]]:
+    """The ``{project, book, chapter_key, lang}`` binding a document, or ``None``."""
+    row = conn.execute(
+        "SELECT project, book, chapter_key, lang FROM chapter_variants "
+        "WHERE tenant_id = ? AND rel_path = ?",
+        (tenant_id, rel_path),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def list_books(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: Optional[str] = None,
+    project: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    """Books with their chapter count, ``project, title, slug`` order.
+
+    ``tenant_id`` ``None`` = legacy (unscoped), like every other read here.
+    """
+    sql = (
+        "SELECT b.tenant_id, b.project, b.slug, b.title, b.kind, b.subject, b.description, "
+        "(SELECT COUNT(*) FROM chapters c WHERE c.tenant_id = b.tenant_id "
+        " AND c.project = b.project AND c.book = b.slug) AS chapter_count "
+        "FROM books b"
+    )
+    where: list[str] = []
+    params: list[Any] = []
+    if tenant_id is not None:
+        where.append("b.tenant_id = ?")
+        params.append(tenant_id)
+    if project is not None:
+        where.append("b.project = ?")
+        params.append(project)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY b.project ASC, b.title ASC, b.slug ASC"
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def get_book(
+    conn: sqlite3.Connection,
+    *,
+    project: str,
+    slug: str,
+    tenant_id: Optional[str] = None,
+) -> Optional[dict[str, Any]]:
+    """One book with its ordered chapters and each chapter's LIVE variants.
+
+    A variant is resolved against ``documents`` on ``(tenant_id, rel_path)`` and
+    carries what the reader's language switch needs (P29 *Versions × variants*):
+    ``{lang, doc_id, rel_path, title, version, format, updated_at,
+    translated_from}``. A binding whose document no longer exists is left out of the
+    payload (it stays in the manifest until the next ``PUT`` drops it). ``None`` when
+    the book does not exist (for this tenant).
+    """
+    sql = "SELECT * FROM books WHERE project = ? AND slug = ?"
+    params: list[Any] = [project, slug]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    sql += " ORDER BY tenant_id LIMIT 1"
+    book = conn.execute(sql, params).fetchone()
+    if book is None:
+        return None
+    tid = book["tenant_id"]
+    chapters = conn.execute(
+        "SELECT key, position, title, source FROM chapters "
+        "WHERE tenant_id = ? AND project = ? AND book = ? ORDER BY position ASC, key ASC",
+        (tid, project, slug),
+    ).fetchall()
+    variants = conn.execute(
+        "SELECT cv.chapter_key, cv.lang, cv.rel_path, d.id AS doc_id, d.title, d.slug, "
+        "d.version, d.format, d.updated_at, d.translated_from "
+        "FROM chapter_variants cv JOIN documents d "
+        "ON d.tenant_id = cv.tenant_id AND d.rel_path = cv.rel_path "
+        "WHERE cv.tenant_id = ? AND cv.project = ? AND cv.book = ? "
+        "ORDER BY cv.chapter_key ASC, cv.lang ASC",
+        (tid, project, slug),
+    ).fetchall()
+    by_key: dict[str, list[dict[str, Any]]] = {}
+    for v in variants:
+        d = dict(v)
+        try:
+            d["translated_from"] = (
+                json.loads(d["translated_from"]) if d["translated_from"] else None
+            )
+        except (TypeError, json.JSONDecodeError):
+            d["translated_from"] = None
+        d["version"] = int(d.get("version") or 1)
+        key = d.pop("chapter_key")
+        by_key.setdefault(key, []).append(d)
+    out_chapters = []
+    for c in chapters:
+        try:
+            source = json.loads(c["source"]) if c["source"] else None
+        except (TypeError, json.JSONDecodeError):
+            source = None
+        out_chapters.append(
+            {
+                "key": c["key"],
+                "position": c["position"],
+                "title": c["title"],
+                "source": source,
+                "variants": by_key.get(c["key"], []),
+            }
+        )
+    return {
+        "tenant_id": tid,
+        "project": book["project"],
+        "slug": book["slug"],
+        "title": book["title"],
+        "kind": book["kind"],
+        "subject": book["subject"],
+        "description": book["description"],
+        "chapters": out_chapters,
+    }
+
+
+def chapter_bindings_for_docs(
+    conn: sqlite3.Connection, doc_ids: Sequence[int]
+) -> dict[int, dict[str, Any]]:
+    """``{doc_id: {book, chapter_key, lang}}`` for the documents that are chapter
+    variants (search's additive hit fields). Loose documents are simply absent."""
+    ids = [int(i) for i in doc_ids]
+    if not ids:
+        return {}
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        "SELECT d.id AS doc_id, cv.book, cv.chapter_key, cv.lang "
+        "FROM documents d JOIN chapter_variants cv "
+        "ON cv.tenant_id = d.tenant_id AND cv.rel_path = d.rel_path "
+        f"WHERE d.id IN ({placeholders})",
+        ids,
+    ).fetchall()
+    return {
+        int(r["doc_id"]): {"book": r["book"], "chapter_key": r["chapter_key"], "lang": r["lang"]}
+        for r in rows
+    }

@@ -1,0 +1,189 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Art",
+          "type": "text"
+        }
+      ],
+      "id": "art",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "caption": [
+        {
+          "text": "Drawn by hand, ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "in SVG",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": ".",
+          "type": "text"
+        }
+      ],
+      "id": "arrow-art",
+      "label": "An arrow from A to B",
+      "svg": {
+        "attrs": {
+          "aria-label": "Arrow",
+          "role": "img",
+          "viewBox": "0 0 120 40"
+        },
+        "children": [
+          {
+            "attrs": {},
+            "children": [
+              {
+                "text": "Arrow"
+              }
+            ],
+            "name": "title"
+          },
+          {
+            "attrs": {},
+            "children": [
+              {
+                "attrs": {
+                  "id": "head",
+                  "markerHeight": "6",
+                  "markerWidth": "6",
+                  "orient": "auto",
+                  "refX": "10",
+                  "refY": "5",
+                  "viewBox": "0 0 10 10"
+                },
+                "children": [
+                  {
+                    "attrs": {
+                      "d": "M0 0 L10 5 L0 10 z",
+                      "fill": "currentColor"
+                    },
+                    "children": [],
+                    "name": "path"
+                  }
+                ],
+                "name": "marker"
+              },
+              {
+                "attrs": {
+                  "id": "dot"
+                },
+                "children": [
+                  {
+                    "attrs": {
+                      "class": "kb-fill-accent",
+                      "cx": "0",
+                      "cy": "0",
+                      "r": "3"
+                    },
+                    "children": [],
+                    "name": "circle"
+                  }
+                ],
+                "name": "g"
+              }
+            ],
+            "name": "defs"
+          },
+          {
+            "attrs": {
+              "marker-end": "url(#head)",
+              "stroke": "currentColor",
+              "stroke-width": "1.5",
+              "vector-effect": "non-scaling-stroke",
+              "x1": "10",
+              "x2": "100",
+              "y1": "20",
+              "y2": "20"
+            },
+            "children": [],
+            "name": "line"
+          },
+          {
+            "attrs": {
+              "href": "#dot",
+              "x": "10",
+              "y": "20"
+            },
+            "children": [],
+            "name": "use"
+          },
+          {
+            "attrs": {
+              "href": "#dot",
+              "x": "100",
+              "y": "20"
+            },
+            "children": [],
+            "name": "use"
+          },
+          {
+            "attrs": {
+              "class": "kb-fill-muted",
+              "font-size": "10",
+              "x": "10",
+              "y": "35"
+            },
+            "children": [
+              {
+                "text": "A "
+              },
+              {
+                "attrs": {
+                  "font-weight": "bold"
+                },
+                "children": [
+                  {
+                    "text": "to"
+                  }
+                ],
+                "name": "tspan"
+              },
+              {
+                "text": " B"
+              }
+            ],
+            "name": "text"
+          }
+        ],
+        "name": "svg"
+      },
+      "type": "svg"
+    },
+    {
+      "caption": null,
+      "id": "svg-1",
+      "label": "JSON body",
+      "svg": {
+        "attrs": {
+          "viewBox": "0 0 4 4"
+        },
+        "children": [
+          {
+            "attrs": {
+              "aria-hidden": "true",
+              "height": "4",
+              "width": "4"
+            },
+            "children": [],
+            "name": "rect"
+          }
+        ],
+        "name": "svg"
+      },
+      "type": "svg"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

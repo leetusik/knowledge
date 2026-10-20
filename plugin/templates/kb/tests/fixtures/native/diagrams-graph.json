@@ -1,0 +1,229 @@
+{
+  "blocks": [
+    {
+      "caption": null,
+      "direction": "right",
+      "edges": [
+        {
+          "from": "cli",
+          "label": "POST",
+          "style": null,
+          "to": "api",
+          "tone": null
+        },
+        {
+          "from": "api",
+          "label": null,
+          "style": "dashed",
+          "to": "disk",
+          "tone": "muted"
+        },
+        {
+          "from": "api",
+          "label": "retry",
+          "style": null,
+          "to": "api",
+          "tone": null
+        }
+      ],
+      "groups": [
+        {
+          "id": "server",
+          "label": "Server",
+          "nodes": [
+            "api",
+            "disk",
+            "doc"
+          ]
+        }
+      ],
+      "id": "pipeline",
+      "kind": "flow",
+      "nodes": [
+        {
+          "at": [
+            0,
+            0
+          ],
+          "fields": null,
+          "id": "cli",
+          "label": "CLI",
+          "shape": "pill",
+          "sub": null,
+          "tone": null
+        },
+        {
+          "at": [
+            0,
+            1
+          ],
+          "fields": null,
+          "id": "api",
+          "label": "API",
+          "shape": null,
+          "sub": "FastAPI",
+          "tone": "accent"
+        },
+        {
+          "at": [
+            0,
+            2
+          ],
+          "fields": null,
+          "id": "disk",
+          "label": "Disk",
+          "shape": "store",
+          "sub": null,
+          "tone": "store"
+        },
+        {
+          "at": [
+            1,
+            2
+          ],
+          "fields": [
+            "id",
+            "rel_path",
+            "version"
+          ],
+          "id": "doc",
+          "label": "documents",
+          "shape": "entity",
+          "sub": null,
+          "tone": null
+        }
+      ],
+      "title": "The publish pipeline",
+      "type": "diagram"
+    },
+    {
+      "caption": [
+        {
+          "text": "From ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "new",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": " to retired.",
+          "type": "text"
+        }
+      ],
+      "direction": null,
+      "edges": [
+        {
+          "from": "new",
+          "label": "first review",
+          "style": null,
+          "to": "learning",
+          "tone": null
+        },
+        {
+          "from": "learning",
+          "label": null,
+          "style": null,
+          "to": "retired",
+          "tone": null
+        }
+      ],
+      "final": [
+        "retired"
+      ],
+      "groups": null,
+      "id": "card-states",
+      "initial": "new",
+      "kind": "state",
+      "nodes": [
+        {
+          "at": [
+            0,
+            0
+          ],
+          "fields": null,
+          "id": "new",
+          "label": "New",
+          "shape": null,
+          "sub": null,
+          "tone": null
+        },
+        {
+          "at": [
+            0,
+            1
+          ],
+          "fields": null,
+          "id": "learning",
+          "label": "Learning",
+          "shape": null,
+          "sub": null,
+          "tone": null
+        },
+        {
+          "at": [
+            1,
+            1
+          ],
+          "fields": null,
+          "id": "retired",
+          "label": "Retired",
+          "shape": null,
+          "sub": null,
+          "tone": "muted"
+        }
+      ],
+      "title": "A card's life",
+      "type": "diagram"
+    },
+    {
+      "caption": null,
+      "direction": null,
+      "edges": [
+        {
+          "from": "start",
+          "label": null,
+          "style": null,
+          "to": "done",
+          "tone": null
+        }
+      ],
+      "final": [
+        "done"
+      ],
+      "groups": null,
+      "id": "single-final",
+      "initial": null,
+      "kind": "state",
+      "nodes": [
+        {
+          "at": null,
+          "fields": null,
+          "id": "start",
+          "label": "Start",
+          "shape": null,
+          "sub": null,
+          "tone": null
+        },
+        {
+          "at": null,
+          "fields": null,
+          "id": "done",
+          "label": "Done",
+          "shape": null,
+          "sub": null,
+          "tone": null
+        }
+      ],
+      "title": "Single final",
+      "type": "diagram"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

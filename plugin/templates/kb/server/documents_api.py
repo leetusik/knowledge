@@ -7,7 +7,12 @@ documents surface codes against — eight reads and one delete:
   filter + offset pagination → ``{total, items}``.
 * ``GET /app/documents/{doc_id}`` — one document (with ``markdown``) → 404 when it is
   missing or belongs to another tenant (cross-tenant ids never leak). Optional-identity
-  since P19.S2: also readable anonymously when it belongs to a public project.
+  since P19.S2: also readable anonymously when it belongs to a public project. A
+  native chapter's detail (P30.S5; P29 *Render model*) carries ``source``, the whole
+  stored native file, beside the version's ``assets`` map; ``markdown`` is then its
+  plain-text search projection. ``source`` is ``null`` for every other format. The
+  version read below carries the archived version's ``source`` and ``assets`` the
+  same way.
 * ``GET /app/orgs/{org}/{project}/{slug}`` — the same document, addressed by its
   DURABLE public identity instead of the disposable row id (P25.S2): the Postgres
   org slug, the project name, and the doc slug. Same optional-identity trust gate,
@@ -22,6 +27,9 @@ documents surface codes against — eight reads and one delete:
   ``markdown`` body.
 * ``GET /app/documents/{doc_id}/versions/{version}/raw`` — an archived HTML version's
   raw HTML, with the ``/raw`` route's sandbox headers repeated verbatim.
+* ``GET /app/documents/{doc_id}/assets/{sha256}.{ext}`` and
+  ``GET /app/orgs/{org}/{project}/{slug}/assets/{file}`` — one stored chapter image
+  (P30.S4), behind the document's own gate; every miss is one constant 404.
 * ``DELETE /app/documents/{doc_id}`` — hard-delete one of the caller's **own** documents
   (P21.S1): member-only (``require_user``, **no** public fallback), 204 on success.
 * ``GET /app/search`` — full-text/hybrid search over the tenant's documents →
@@ -63,6 +71,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from starlette.concurrency import run_in_threadpool
 
+from server import assets as assets_mod
 from server import config
 from server import db
 from server import search as search_mod
@@ -106,7 +115,10 @@ def _app_doc(doc: dict, *, include_markdown: bool) -> dict:
 
     drop = set(_DROP)
     if not include_markdown:
-        drop.add("markdown")
+        # The list shape carries neither the body nor the asset map (P30.S4) nor the
+        # native source (P30.S5): all are detail-level, and the list's key set stays
+        # what it was.
+        drop |= {"markdown", "assets", "source"}
     return {k: v for k, v in doc.items() if k not in drop}
 
 
@@ -123,7 +135,7 @@ def _app_version(row: dict, *, include_markdown: bool) -> dict:
 
     drop = set(_VERSION_DROP)
     if not include_markdown:
-        drop.add("markdown")
+        drop |= {"markdown", "source"}
     return {k: v for k, v in row.items() if k not in drop}
 
 
@@ -419,21 +431,38 @@ async def resolve_document_by_slug(
     applied.
     """
 
-    if config.database_url() is None:
-        raise _no_such_path()  # legacy/template: no accounts registry, no orgs.
-    tenant = await get_accounts_service().get_tenant_by_slug(org)
-    if tenant is None:
+    resolved = await _resolve_readable_slug(conn, org, project, slug, ctx)
+    if resolved is None:
         raise _no_such_path()
-    doc = db.find_latest_document_by_slug(conn, project, slug, tenant_id=str(tenant.id))
-    if doc is None:
-        raise _no_such_path()
-    is_member = ctx is not None and ctx.tenant.id == tenant.id
-    if not is_member and not await _is_publicly_readable(doc):
-        raise _no_such_path()
+    doc, tenant_slug, _is_member = resolved
     return {
         **_app_doc(doc, include_markdown=True),
-        "canonical_path": _canonical_path(tenant.slug, doc),
+        "canonical_path": _canonical_path(tenant_slug, doc),
     }
+
+
+async def _resolve_readable_slug(
+    conn, org: str, project: str, slug: str, ctx: AuthContext | None
+) -> tuple[dict, str, bool] | None:
+    """The slug resolver's trust gate, shared by the document and asset routes.
+
+    ``(doc, org slug, is_member)`` or ``None`` for every miss: legacy mode, an
+    unknown org slug, no such document, or a private project for a non-member — all
+    indistinguishable to the caller (404-never-403).
+    """
+
+    if config.database_url() is None:
+        return None  # legacy/template: no accounts registry, no orgs.
+    tenant = await get_accounts_service().get_tenant_by_slug(org)
+    if tenant is None:
+        return None
+    doc = db.find_latest_document_by_slug(conn, project, slug, tenant_id=str(tenant.id))
+    if doc is None:
+        return None
+    is_member = ctx is not None and ctx.tenant.id == tenant.id
+    if not is_member and not await _is_publicly_readable(doc):
+        return None
+    return doc, tenant.slug, is_member
 
 
 @router.get("/app/documents/{doc_id}/raw")
@@ -607,6 +636,133 @@ async def get_document_version_raw(
             "Cache-Control": "no-store",
         },
     )
+
+
+# --- Chapter images (P30.S4; P29.S1 *Images*) -------------------------------
+#
+# Two optional-identity reads of one stored image. Each resolves the DOCUMENT
+# through the same gate as the document itself (``_resolve_readable_doc`` for the
+# id route, the slug resolver's predicate for the pretty one), then serves the file
+# only when some version of THAT document (the current one or an archived one)
+# names it in its asset map. Every miss (no such document, an unreadable one, a
+# malformed file name, a file no version names, a file missing on disk) raises the
+# ONE constant 404 below, so an asset never says more than its document would.
+# ``{file:path}`` is deliberate: a file segment with an encoded slash still reaches
+# the handler (and its constant 404) instead of the framework's own.
+
+_NO_SUCH_ASSET_DETAIL = "no such asset"
+
+# Content-addressed bytes never change; the only staleness is a lost right to read
+# them, so the cache window stays short. Shared caches only for a public project.
+_ASSET_CACHE_PRIVATE = "private, max-age=300"
+_ASSET_CACHE_PUBLIC = "public, max-age=300"
+# Raster bytes only, never a document: nothing in the response may run.
+_ASSET_CSP = "default-src 'none'; sandbox"
+
+
+def _no_such_asset() -> HTTPException:
+    return HTTPException(status_code=404, detail=_NO_SUCH_ASSET_DETAIL)
+
+
+async def _content_root(doc: dict):
+    """The on-disk content root that holds ``doc`` (the write path's routing).
+
+    The ``''`` legacy sentinel and tenant #1 live in the public ``docs/`` root;
+    every other tenant in ``<KB_ROOT>/tenants/<uuid>/``. A tenant id that is not a
+    UUID resolves to nothing (never a path built from an arbitrary string).
+    """
+
+    owner = str(doc.get("tenant_id") or "")
+    if not owner:
+        return config.docs_root()
+    try:
+        owner_uuid = UUID(owner)
+    except (ValueError, TypeError):
+        return None
+    tenant_one = await get_tenant_one_id()
+    if tenant_one is not None and owner_uuid == tenant_one:
+        return config.docs_root()
+    return config.kb_root() / "tenants" / str(owner_uuid)
+
+
+def _document_asset_files(conn, doc: dict) -> dict[str, str]:
+    """``{file: media_type}`` over the asset maps of every version of ``doc``."""
+
+    files = assets_mod.referenced_files(doc.get("assets"))
+    for row in db.list_document_versions(
+        conn, doc["rel_path"], tenant_id=_archive_tenant(doc)
+    ):
+        files.update(assets_mod.referenced_files(row.get("assets")))
+    return files
+
+
+async def _asset_response(conn, doc: dict, file: str, *, public: bool) -> Response:
+    if not assets_mod.FILE_RE.match(file):
+        raise _no_such_asset()
+    media_type = _document_asset_files(conn, doc).get(file)
+    if media_type is None:
+        raise _no_such_asset()
+    root = await _content_root(doc)
+    path = None if root is None else assets_mod.asset_file_path(root, doc["rel_path"], file)
+    if path is None or not path.is_file():
+        raise _no_such_asset()
+    data = await run_in_threadpool(path.read_bytes)
+    return Response(
+        content=data,
+        media_type=media_type,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": _ASSET_CSP,
+            "Cache-Control": _ASSET_CACHE_PUBLIC if public else _ASSET_CACHE_PRIVATE,
+        },
+    )
+
+
+def _is_member_of(doc: dict, ctx: AuthContext | None) -> bool:
+    return ctx is not None and str(doc.get("tenant_id") or "") == str(ctx.tenant.id)
+
+
+@router.get("/app/documents/{doc_id}/assets/{file:path}")
+async def get_document_asset(
+    doc_id: int,
+    file: str,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> Response:
+    """One stored image of a document, by ``<sha256>.<ext>`` (P30.S4).
+
+    Optional-identity exactly like ``GET /app/documents/{id}``: resolved through
+    ``_resolve_readable_doc``, so a member reads their own private document's images
+    and anyone reads a public project's. ``Cache-Control`` is ``public`` only when
+    the read came through the public path. Unmetered (``/app``).
+    """
+
+    doc = await _resolve_readable_doc(conn, doc_id, ctx)
+    if doc is None:
+        raise _no_such_asset()
+    return await _asset_response(conn, doc, file, public=not _is_member_of(doc, ctx))
+
+
+@router.get("/app/orgs/{org}/{project}/{slug}/assets/{file:path}")
+async def get_document_asset_by_slug(
+    org: str,
+    project: str,
+    slug: str,
+    file: str,
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> Response:
+    """The same image addressed by the document's pretty identity (P30.S4).
+
+    Backs ``/@{org}/{project}/{slug}/assets/{file}``: the slug resolver's own trust
+    gate, then the same per-document asset check and the same constant 404.
+    """
+
+    resolved = await _resolve_readable_slug(conn, org, project, slug, ctx)
+    if resolved is None:
+        raise _no_such_asset()
+    doc, _tenant_slug, is_member = resolved
+    return await _asset_response(conn, doc, file, public=not is_member)
 
 
 def _delete_owned_document(doc_id: int, api_ctx: ApiAuthContext) -> bool:

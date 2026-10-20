@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S8` | 8/30 | - | working tree |
+| `default` | `P30` | planned | `P30.S8` | 9/31 | - | working tree |
 
 ## Active Phases
 
@@ -159,6 +159,7 @@
 | [x] `P30.S5` | `done` | Native ingest: publish, ids, references, search, MCP, html-to-native | `implementation` | `works/phases/active/P30/slices/P30.S5` |
 | [x] `P30.S6` | `done` | Library migration: bind the 42 documents into books, no broken link | `implementation` | `works/phases/active/P30/slices/P30.S6` |
 | [x] `P30.S7` | `done` | /explain and the CLI: native chapters, books, assets, portable copy | `implementation` | `works/phases/active/P30/slices/P30.S7` |
+| [x] `P30.F1` | `done` | Resync the plugin template with the P30 server (plugin_parity) | `fix` | `works/phases/active/P30/slices/P30.F1` |
 | [ ] `P30.S8` | `todo` | Reader state: revision 0006, /app/reader API, beacon, purge | `implementation` | `works/phases/active/P30/slices/P30.S8` |
 | [ ] `P30.S9` | `todo` | Anchors: server-side re-anchoring across versions and languages | `implementation` | `works/phases/active/P30/slices/P30.S9` |
 | [ ] `P30.S10` | `todo` | Review: FSRS cards, queue, ratings, suspend, item drift | `implementation` | `works/phases/active/P30/slices/P30.S10` |
