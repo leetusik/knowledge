@@ -9,7 +9,7 @@
  * top bar, the chapter bar, the sheets (Contents and Display), the Display panel, the
  * chapter list, Sign in to save and the loading / not found / failed states.
  *
- * What does NOT: the resume pill, chapter end and version history (S15), figures and
+ * What does NOT: (the resume pill, chapter end and version history are the last block, P30.S15), figures and
  * svg (S16), diagrams (S17/S18), the quiz (S19). The chapter opening (§5), the prose
  * kit (§6-§6a), callouts (§7), code (§8), the diagram slot (§8a), tables (§9) and the
  * scroll fades (§9a) are the last block of this file (P30.S14); S12's `kb-ch-*` hooks
@@ -725,3 +725,60 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
 .kb-ch-unshowable { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; color: var(--kb-secondary); }
 .kb-ch img { max-width: 100%; height: auto; }
+
+/* ---------- P30.S15: the chapter end, the Version history sheet, the resume pill ----------
+   Transcribed from the signed `01-reader` canvas (`reader.css`, rounds 02 and 03): the end (§10), the version rows
+   (§14) and the pill (§4). Class names stay as drawn. The pill is `position: fixed` here (the window scrolls). */
+.rd-end { padding-top: calc(var(--kb-space-xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-2xl) * var(--rd-k)); }
+.rd-end__mark { display: flex; align-items: center; gap: var(--kb-space-md); margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-end__mark::before, .rd-end__mark::after { content: ""; flex: 1 1 0; height: 1px; background: var(--kb-border); }
+/* The status row holds still when the reader presses Mark as finished / Mark as unread: every sentence a member can
+   toggle between shares one grid cell (the others visibility: hidden), so the cell is always as tall as the longest one,
+   and the button keeps its place. Below 40rem the button sits under the sentence; from 40rem, at its end. */
+.rd-status { margin-top: var(--kb-space-lg); display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; align-items: center; gap: var(--kb-space-sm) var(--kb-space-md); padding-block: var(--kb-space-sm); }
+.rd-status__text { margin: 0; display: grid; }
+.rd-status__line { grid-area: 1 / 1; margin: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.rd-status__line.is-off { visibility: hidden; }
+@container rd (min-width: 40rem) { .rd-status { grid-template-columns: minmax(0, 1fr) auto; } }
+.rd-status__state { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.rd-status__sub { font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-status__btn { min-width: 10.5rem; }
+.rd-next { margin-top: var(--kb-space-lg); padding: var(--kb-space-lg) 0; border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.rd-next__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-next__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.25; color: var(--kb-ink); text-wrap: balance; }
+.rd-next__lede { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; }
+.rd-next__title:lang(ko), .rd-next__lede:lang(ko) { word-break: keep-all; }
+.rd-next .rd-btn { margin-top: var(--kb-space-xs); }
+.rd-end__list { margin-top: var(--kb-space-xl); }
+.rd-end__listhead { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--kb-space-xs) var(--kb-space-md); }
+.rd-end__listtitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
+.rd-end__count { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-end__prompt { margin-top: var(--kb-space-sm); }
+
+/* Version history */
+.rd-vers { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rd-ver { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); min-height: 3.5rem; padding: var(--kb-space-sm) 0; border-bottom: 1px solid var(--kb-border); }
+.rd-ver__main { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.rd-ver__line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); }
+.rd-ver__n { font-family: var(--font-mono); font-size: 0.9375rem; font-weight: 700; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.rd-ver__date { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ver__from { font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-ver__reading { font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.rd-ver[aria-current] { background: var(--kb-accent-soft); margin-inline: calc(var(--kb-space-sm) * -1); padding-inline: var(--kb-space-sm); border-radius: var(--kb-radius-sm); }
+.rd-ver__fail { margin: 0; display: flex; flex-direction: column; gap: var(--kb-space-xs); padding: var(--kb-space-md) 0; }
+.rd-ver__failcode { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-ver__failsub { font-size: 0.9375rem; color: var(--kb-secondary); line-height: 1.45; }
+
+/* Resume pill: centred above the chapter bar, or above the bottom edge on a loose document. It hides with the chrome
+   (the rule above) and leaves when the chrome hides. */
+.rd-resume {
+  position: fixed; z-index: 21; left: 50%; transform: translateX(-50%); bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--rd-safe-bottom));
+  display: flex; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); max-width: calc(100% - 2 * var(--rd-gut)); width: max-content;
+  padding: 0.15rem 0.3rem 0.15rem 1rem; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
+  background: var(--kb-surface); box-shadow: var(--kb-shadow-raise); font-size: 0.8125rem; color: var(--kb-secondary);
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-loose .rd-resume { bottom: calc(var(--kb-space-md) + var(--rd-safe-bottom)); }
+.rd-resume b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.rd-resume__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-resume .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); }

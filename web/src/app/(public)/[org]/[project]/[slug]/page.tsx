@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { ChevronLeft } from "lucide-react";
 
@@ -59,11 +60,42 @@ import { loadLooseReader } from "@/lib/reader/load";
 // variant, `01-reader`); `?v=N` reads an older version, and an html explainer keeps
 // today's frame until S25.
 //
-// The <title> is STATIC copy, not the document title: the knowledge client is
-// `cache: "no-store"`, so `generateMetadata` would cost a second uncached upstream
-// fetch on every render. Per-document SEO titles are the explicitly out-of-scope SEO
-// expansion, not an oversight.
-export const metadata: Metadata = { title: DOCUMENTS.title };
+// The <title> is the document's title (P30.S15), through `generateMetadata`. The
+// knowledge client is `cache: "no-store"`, so the page and the metadata share ONE
+// resolver read per request (`resolveDocumentOnce`, React `cache`); a miss or a fault
+// falls back to the static title and the page handles the miss itself.
+const resolveDocumentOnce = cache(
+  (
+    token: string | undefined,
+    org: string,
+    project: string,
+    slug: string,
+  ): Promise<KbDocument> => resolveDocument(token, org, project, slug),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ org: string; project: string; slug: string }>;
+}): Promise<Metadata> {
+  try {
+    const p = await params;
+    const org = safeDecode(p.org);
+    if (org.startsWith("@") && org.length >= 2) {
+      const ctx = await optionalIdentity();
+      const doc = await resolveDocumentOnce(
+        ctx?.token,
+        org.slice(1),
+        safeDecode(p.project),
+        safeDecode(p.slug),
+      );
+      if (doc.title) return { title: doc.title };
+    }
+  } catch {
+    // the page renders the miss or the failure itself
+  }
+  return { title: DOCUMENTS.title };
+}
 
 /**
  * Resolve one document by its durable `(org, project, slug)` triple with the caller's
@@ -85,7 +117,7 @@ async function loadDocument(
   slug: string,
 ): Promise<KbDocument> {
   try {
-    return await resolveDocument(token, org, project, slug);
+    return await resolveDocumentOnce(token, org, project, slug);
   } catch (error) {
     if (
       error instanceof ApiError &&
@@ -180,7 +212,13 @@ export default async function PrettyDocumentPage({
     const doc = await loadDocument(ctx.token, orgSlug, project, slug);
     // P30.S13 — native and md open in the reader; html keeps this frame.
     if (doc.format !== "html") {
-      const reader = await loadLooseReader({ token: ctx.token, doc, v, settings });
+      const reader = await loadLooseReader({
+        token: ctx.token,
+        doc,
+        v,
+        settings,
+        org: orgSlug,
+      });
       if (reader) return <ReaderPage reader={reader} />;
     }
     const history = await loadVersions(ctx.token, doc);
@@ -249,7 +287,13 @@ export default async function PrettyDocumentPage({
   // ── Anonymous branch — public-only read, no token. A miss is the branded 404. ──
   const doc = await loadDocument(undefined, orgSlug, project, slug);
   if (doc.format !== "html") {
-    const reader = await loadLooseReader({ token: undefined, doc, v, settings });
+    const reader = await loadLooseReader({
+      token: undefined,
+      doc,
+      v,
+      settings,
+      org: orgSlug,
+    });
     if (reader) return <ReaderPage reader={reader} />;
   }
   const history = await loadVersions(undefined, doc);

@@ -31,10 +31,17 @@ import {
   type ChromeScroll,
 } from "@/lib/reader/chrome";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
-import type { ReaderView } from "@/lib/reader/types";
+import type { ChapterRow, ReaderView } from "@/lib/reader/types";
 
 import { ChapterList } from "./chapter-list";
 import { DisplayPanel } from "./display-panel";
+import {
+  ReaderProgressContext,
+  type ReaderProgressValue,
+} from "./reader-progress";
+import { useReading } from "./use-reading";
+import { OPEN_SHEET_EVENT } from "./versions-button";
+import { VersionList } from "./version-list";
 
 import "@/app/reader-fonts.css";
 import "@/app/reader.css";
@@ -50,14 +57,18 @@ import "@/app/reader.css";
  *    on a tap on the text; ignored for 450ms after the reader's own scroll and while a
  *    sheet is open), via `stepChrome`;
  *  - progress (the line, "Chapter N of M · P%") and the section being read;
- *  - the sheets: focus moves to Close, Tab cycles inside, Escape / Close / the scrim
- *    close and return focus to the opener, the chrome cannot hide meanwhile;
+ *  - the sheets (Contents, Display, Version history): focus moves to Close, Tab cycles
+ *    inside, Escape / Close / the scrim close and return focus to the opener, the
+ *    chrome cannot hide meanwhile. Version history opens on the opening's
+ *    `reader:open-sheet` event;
+ *  - the reader's memory (`useReading`, P30.S15): the resume pill, the position
+ *    cadence and beacon, finish and unread, handed to the chapter end by context;
  *  - the device settings: applied live, written to the `kb_reader` cookie, never sent
  *    to the server.
  * `state` other than `ready` is the loading / not found / failed screen: the line and
  * top bar stay, the chapter bar appears only once the chapter is ready.
  */
-type Panel = "contents" | "display" | null;
+type Panel = "contents" | "display" | "versions" | null;
 
 export function ReaderFrame({
   view,
@@ -88,6 +99,11 @@ export function ReaderFrame({
   const panelRef = useRef<Panel>(null);
   const scrollRef = useRef<ChromeScroll>({ last: 0, run: 0 });
   const titleId = useId();
+  const quiet = useCallback(() => {
+    quietUntil.current = Date.now() + QUIET_MS;
+  }, []);
+  const rd = useReading({ view, ready, rootRef, topRef, quiet });
+  const { dismissPill } = rd;
 
   // The scroll handler reads the open sheet through a ref, so it never goes stale.
   useEffect(() => {
@@ -191,6 +207,26 @@ export function ReaderFrame({
     setPanel(null);
   }, []);
 
+  // The opening's "Version history" button asks for the sheet by event (OQ64).
+  useEffect(() => {
+    if (!ready) return;
+    const onOpenSheet = (e: Event) => {
+      const detail = (e as CustomEvent<{ sheet?: string; opener?: unknown }>)
+        .detail;
+      if (detail?.sheet !== "versions" || !view.versions) return;
+      const from = detail.opener instanceof HTMLElement ? detail.opener : null;
+      if (panelRef.current === null) opener.current = from;
+      setPanel("versions");
+    };
+    window.addEventListener(OPEN_SHEET_EVENT, onOpenSheet);
+    return () => window.removeEventListener(OPEN_SHEET_EVENT, onOpenSheet);
+  }, [ready, view.versions]);
+
+  // The pill leaves when the chrome hides.
+  useEffect(() => {
+    if (hidden) dismissPill();
+  }, [hidden, dismissPill]);
+
   useEffect(() => {
     if (panel === null) return;
     const sheet = sheetRef.current;
@@ -268,9 +304,29 @@ export function ReaderFrame({
     section,
   };
   const signIn = signInToSaveHref(view.target, place);
-  const switchTo = (lang: string) => {
+  // The language switch opens the other variant at the same section. A member's
+  // pending position is written first, so the server's `resume` (the unit's latest
+  // position mapped onto the other variant by id, nearest preceding id as the
+  // fallback) is where the reader is NOW.
+  const switchTo = async (lang: string) => {
     if (lang === view.lang) return;
+    await rd.flush();
     router.push(readerHref(view.target, { lang, section }));
+  };
+  // A version opens at its top; the newest clears `?v=`.
+  const openVersion = (n: number) => {
+    closePanel();
+    router.push(
+      readerHref(view.target, {
+        lang: view.langs.length > 1 ? view.lang : null,
+        version: n === view.newest ? null : n,
+      }),
+    );
+  };
+  const fromTop = () => {
+    quietUntil.current = Date.now() + QUIET_MS;
+    window.scrollTo(0, 0);
+    dismissPill();
   };
 
   const book = view.book;
@@ -323,6 +379,66 @@ export function ReaderFrame({
   const prev = book?.prev;
   const next = book?.next;
   const isLast = !!book && !next;
+
+  // The chapter list as it reads now: the current row follows the reader's own finish
+  // and unread, and "X of M finished" moves with it (the end, the Contents sheet and
+  // the lists agree).
+  const baseFinished = view.progress?.state === "finished";
+  const rows = useMemo<ChapterRow[]>(() => {
+    if (!book) return [];
+    if (!rd.saves) return book.chapters;
+    const st = rd.reading;
+    const opened =
+      view.progress?.state !== "unopened" || view.version === view.newest;
+    return book.chapters.map((row) => {
+      if (!row.current) return row;
+      if (st.finished) {
+        return {
+          ...row,
+          state: "finished",
+          percent: undefined,
+          updated: rd.updated,
+        };
+      }
+      if (!opened) return row;
+      return {
+        ...row,
+        state: "started",
+        percent: Math.round(st.maxFraction * 100),
+        updated: false,
+      };
+    });
+  }, [
+    book,
+    rd.saves,
+    rd.reading,
+    rd.updated,
+    view.progress,
+    view.version,
+    view.newest,
+  ]);
+  const finishedCount =
+    book && book.finished !== null
+      ? Math.max(
+          0,
+          book.finished +
+            (rd.saves
+              ? (rd.reading.finished ? 1 : 0) - (baseFinished ? 1 : 0)
+              : 0),
+        )
+      : null;
+  const progressValue = useMemo<ReaderProgressValue>(
+    () => ({
+      member: view.member,
+      saves: rd.saves,
+      state: rd.state,
+      signInHref: signIn,
+      mark: (finished: boolean) => void rd.mark(finished),
+      rows,
+      finishedCount,
+    }),
+    [view.member, rd, signIn, rows, finishedCount],
+  );
 
   return (
     <div
@@ -394,9 +510,31 @@ export function ReaderFrame({
 
         <main className="rd-page" id="main-content">
           <div className="rd-article" onClick={onTap}>
-            {children}
+            <ReaderProgressContext.Provider value={progressValue}>
+              {children}
+            </ReaderProgressContext.Provider>
           </div>
         </main>
+
+        {ready && rd.pill && !hidden && panel === null ? (
+          <div className="rd-resume">
+            <span className="rd-resume__text">
+              {READER.resume.lead} ·{" "}
+              <b lang={view.lang}>
+                {rd.pill.section
+                  ? hangulRuns(rd.pill.section, !isKorean(view.lang))
+                  : `${rd.pill.percent}%`}
+              </b>
+            </span>
+            <button
+              type="button"
+              className="rd-btn rd-btn--quiet"
+              onClick={fromTop}
+            >
+              {READER.resume.fromTop}
+            </button>
+          </div>
+        ) : null}
 
         {hasBottom && book ? (
           <nav className="rd-bottom" aria-label={READER.bottom.navLabel}>
@@ -497,7 +635,9 @@ export function ReaderFrame({
                 <h2 className="rd-sheet__title" id={titleId}>
                   {panel === "contents"
                     ? READER.sheets.contents
-                    : READER.sheets.display}
+                    : panel === "versions"
+                      ? READER.sheets.versionHistory
+                      : READER.sheets.display}
                 </h2>
                 <button
                   type="button"
@@ -517,11 +657,11 @@ export function ReaderFrame({
                       {READER.sheets.bookMeta(
                         book.n,
                         book.total,
-                        view.member ? book.finished : null,
+                        view.member ? finishedCount : null,
                       )}
                     </p>
                     <ChapterList
-                      rows={book.chapters}
+                      rows={rows}
                       member={view.member}
                       sections={secs}
                       lang={view.lang}
@@ -533,6 +673,15 @@ export function ReaderFrame({
                       onOpen={closePanel}
                     />
                   </>
+                ) : null}
+                {panel === "versions" && view.versions ? (
+                  <VersionList
+                    versions={view.versions}
+                    version={view.version}
+                    newest={view.newest}
+                    noun={loose ? "document" : "chapter"}
+                    onOpen={openVersion}
+                  />
                 ) : null}
                 {panel === "display" ? (
                   <DisplayPanel

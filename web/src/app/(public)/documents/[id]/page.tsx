@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
 import { ChevronLeft } from "lucide-react";
 
@@ -47,9 +48,32 @@ import { VersionHistory } from "./version-history";
 // until S25. The member's copy-link / Export PDF / Full width / Delete row belongs to
 // that older frame and is not part of the reader.
 //
-// The <title> is STATIC copy, not the document title: the knowledge client is
-// `cache: "no-store"`, so `generateMetadata` would cost a second uncached fetch.
-export const metadata: Metadata = { title: DOCUMENTS.title };
+// The <title> is the document's title (P30.S15), through `generateMetadata`. The
+// knowledge client is `cache: "no-store"`, so the page and the metadata share ONE
+// document read per request (`getDocumentOnce`, React `cache`). A miss or a fault falls
+// back to the static title; the page handles the miss itself.
+const getDocumentOnce = cache(
+  (token: string | undefined, id: number): Promise<KbDocument> =>
+    getDocument(token, id),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  try {
+    const id = Number((await params).id);
+    if (Number.isInteger(id) && id >= 1) {
+      const ctx = await optionalIdentity();
+      const doc = await getDocumentOnce(ctx?.token, id);
+      if (doc.title) return { title: doc.title };
+    }
+  } catch {
+    // the page renders the miss or the failure itself
+  }
+  return { title: DOCUMENTS.title };
+}
 
 /**
  * Fetch one document with the caller's (optional) token, mapping knowledge's 404/400
@@ -65,7 +89,7 @@ async function loadDocument(
   onMiss: () => never,
 ): Promise<KbDocument> {
   try {
-    return await getDocument(token, id);
+    return await getDocumentOnce(token, id);
   } catch (error) {
     if (
       error instanceof ApiError &&

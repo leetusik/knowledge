@@ -31,6 +31,10 @@ export interface NeighbourChapter {
   title: string;
   lang: string;
   href: string;
+  /** The chapter's place, 1-based (the chapter end's "Next · Chapter N"). */
+  n?: number;
+  /** The next chapter's lede, when it has one (the chapter end). */
+  summary?: string | null;
 }
 
 /** A heading the section tracking and the Contents sheet's section list read. */
@@ -72,6 +76,49 @@ export interface TranslationSource {
   newest: number;
 }
 
+/** Where a member's position is written: the document the variant on screen is stored as. */
+export interface ReaderWrite {
+  /** The org slug, or the tenant id for a tenant without one. */
+  org: string;
+  project: string;
+  /** The document stem `<date>-<slug>`. */
+  doc: string;
+}
+
+/** The unit's latest position mapped onto this variant (`resume`, S9). */
+export interface ReaderResume {
+  /** The section id to land on; null = land at `fraction`. */
+  block: string | null;
+  fraction: number;
+}
+
+/** A member's saved progress on this chapter or document, as read at load. */
+export interface ReaderProgress {
+  state: ChapterState;
+  finishedVersion: number | null;
+  /** This variant's own furthest-read fraction, 0..1. */
+  maxFraction: number;
+  /** Set only when the chapter is started and has a place to return to. */
+  resume: ReaderResume | null;
+}
+
+/** One row of the Version history sheet (§14), newest first. */
+export interface VersionRow {
+  n: number;
+  /** `YYYY-MM-DD`; empty when the index does not carry it. */
+  date: string;
+  /** "Translated from English v1": known for the current version only. */
+  from: { label: string; version: number } | null;
+}
+
+export interface ReaderVersions {
+  /** False: the history could not be read ("Unavailable"). */
+  ok: boolean;
+  /** "English", "한국어": the variant's own language name. */
+  label: string;
+  rows: VersionRow[];
+}
+
 /** What the client frame needs; the article itself arrives as `children`. */
 export interface ReaderView {
   kind: "chapter" | "loose";
@@ -91,6 +138,12 @@ export interface ReaderView {
   /** Set when this variant's source has been updated since it was translated. */
   staleSource: TranslationSource | null;
   target: ReaderTarget;
+  /** Where this reader's position is written; null = nowhere to save (see `progress`). */
+  write: ReaderWrite | null;
+  /** A member's saved progress; null when signed out or when it could not be read. */
+  progress: ReaderProgress | null;
+  /** The Version history sheet's rows. */
+  versions: ReaderVersions | null;
   book: ReaderBook | null;
   headings: ReaderHeading[];
   settings: ReaderSettings;

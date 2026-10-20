@@ -110,3 +110,76 @@ export async function getReaderBook(
     { token, signal },
   );
 }
+
+// P30.S15 — one variant's state in a single read (`GET /app/reader/chapters/…` and
+// `GET /app/reader/docs/…`, S8 + S9): this variant's own position, the chapter's
+// state across its variants, and `resume`, the unit's latest position in ANY
+// variant mapped onto this one by id (nearest preceding id as the fallback).
+
+/** The unit's latest position, mapped onto the variant read (`anchors.resume`). */
+export interface KbResume {
+  doc: string;
+  lang: string;
+  version: number;
+  /** The mapped section id; null = no id to land on (use `fraction`). */
+  block_id: string | null;
+  exact: boolean;
+  fraction: number;
+}
+
+/** The slice of a variant read the reader's progress needs. */
+export interface KbVariantState {
+  position: KbPosition | null;
+  resume: KbResume | null;
+  chapter: {
+    state: "unopened" | "started" | "finished";
+    finished_version: number | null;
+    updated: boolean;
+  };
+}
+
+/**
+ * `GET /app/reader/chapters/{org}/{project}/{book}/{key}?lang=` (bearer): this
+ * chapter variant's state for the caller. A private or missing target is a 404, an
+ * anonymous caller a 401 (the page never calls it for them).
+ */
+export async function getReaderChapter(
+  token: string,
+  target: { org: string; project: string; book: string; key: string },
+  lang: string,
+  signal?: AbortSignal,
+): Promise<KbVariantState> {
+  const e = encodeURIComponent;
+  return getJson<KbVariantState>(
+    `/app/reader/chapters/${e(target.org)}/${e(target.project)}/${e(target.book)}/${e(target.key)}?lang=${e(lang)}`,
+    { token, signal },
+  );
+}
+
+/**
+ * `GET /app/reader/docs/{org}/{project}/{doc}` (bearer): a loose document's state.
+ * `doc` is the document stem (`<date>-<slug>`).
+ */
+export async function getReaderDoc(
+  token: string,
+  target: { org: string; project: string; doc: string },
+  signal?: AbortSignal,
+): Promise<KbVariantState> {
+  const e = encodeURIComponent;
+  return getJson<KbVariantState>(
+    `/app/reader/docs/${e(target.org)}/${e(target.project)}/${e(target.doc)}`,
+    { token, signal },
+  );
+}
+
+/**
+ * The document stem `<date>-<slug>` of a `rel_path` in `project` (the server's
+ * `reader_state.doc_of`): the path without its extension and its `<project>/` prefix.
+ */
+export function docStem(project: string, relPath: string): string {
+  const stem = relPath.replace(/\.(md|html)$/, "");
+  const prefix = `${project}/`;
+  return stem.startsWith(prefix)
+    ? stem.slice(prefix.length)
+    : (stem.split("/").pop() ?? stem);
+}

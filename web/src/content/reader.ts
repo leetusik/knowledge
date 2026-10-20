@@ -2,7 +2,8 @@
 // for the reader* (the chrome copy is English only; D36 (4)). Only what the shell
 // builds is here: the top bar, the chapter bar, the sheets, Sign in to save and the
 // three states. The chapter opening's strings (P30.S14) are under `opening`; the
-// resume pill, the chapter end and version history carry theirs in S15.
+// resume pill, the chapter end and version history's (P30.S15) are under `resume`,
+// `end` and `versions`.
 
 export const READER = {
   /** The chapter opening (`ChapterHead`, §5). */
@@ -25,6 +26,65 @@ export const READER = {
     readSource: (source: string, newest: number): string =>
       `Read ${source} v${newest} →`,
     contents: (noun: string): string => `In this ${noun}`,
+  },
+  /** The resume pill (§4). */
+  resume: {
+    lead: "Picked up where you left off",
+    fromTop: "From the top",
+  },
+  /** The chapter end (§10). Each sentence is a [state word, sub-line] pair. */
+  end: {
+    mark: (noun: string): string => `End of ${noun}`,
+    signedOut: [
+      "Not saved",
+      "Signed-out reading isn't saved. Your display settings stay on this device.",
+    ] as const,
+    finished: ["Finished", "Saved to your progress."] as const,
+    updated: (noun: string): readonly [string, string] => [
+      "Finished",
+      `You finished an earlier version. This ${noun} has been updated since.`,
+    ],
+    unread: [
+      "Not finished",
+      "Marked as unread. Read it to the end again to finish it.",
+    ] as const,
+    notYet: (noun: string): readonly [string, string] => [
+      "Not finished yet",
+      `Reaching this point marks the ${noun} finished.`,
+    ],
+    markFinished: "Mark as finished",
+    markUnread: "Mark as unread",
+    nextLabel: (n: number): string => `Next · Chapter ${n}`,
+    readNext: "Read next →",
+    lastLabel: "Last chapter",
+    lastTitle: "You've reached the end of this book.",
+    backToBook: "Back to the book →",
+    backToLibrary: "Back to the library",
+    inThisBook: "In this book",
+    finishedCount: (done: number, total: number): string =>
+      `${done} of ${total} finished`,
+    chapters: (total: number): string => `${total} chapters`,
+  },
+  /** The Version history sheet (§14). */
+  versions: {
+    lead: (label: string, earlier: number): string =>
+      `${label} · ${
+        earlier <= 0
+          ? "This is the only version."
+          : earlier === 1
+            ? "1 earlier version, newest first."
+            : `${earlier} earlier versions, newest first.`
+      }`,
+    current: "Current",
+    published: (date: string): string => `Published ${date}`,
+    from: (label: string, version: number): string =>
+      `Translated from ${label} v${version}`,
+    view: "View",
+    viewAria: (n: number): string => `View version ${n}`,
+    listLabel: "Versions",
+    unavailable: "Unavailable",
+    failed: (noun: "chapter" | "document"): string =>
+      `Couldn't load this ${noun}'s history. The ${noun} itself is fine — reload to try again.`,
   },
   /** The skip button, first in the tab order, shown while the chrome is hidden. */
   showControls: "Show reading controls",
