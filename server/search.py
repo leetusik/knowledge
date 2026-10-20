@@ -192,6 +192,24 @@ def _vector_ordering(
     return scored
 
 
+def _attach_chapters(
+    conn: sqlite3.Connection, page: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Add ``book`` / ``chapter_key`` / ``lang`` to each hit on the page (P30.S2).
+
+    Additive: a document bound as a chapter variant carries its book slug, chapter
+    key and variant language; a loose document carries three ``None``s. Only the
+    returned page is looked up (one query), never the whole ranked set.
+    """
+    bindings = db.chapter_bindings_for_docs(conn, [r["id"] for r in page])
+    for r in page:
+        b = bindings.get(int(r["id"]))
+        r["book"] = b["book"] if b else None
+        r["chapter_key"] = b["chapter_key"] if b else None
+        r["lang"] = b["lang"] if b else None
+    return page
+
+
 def search(
     conn: sqlite3.Connection,
     q: str,
@@ -216,7 +234,9 @@ def search(
     and its cosine ordering is fused with the keyword ordering via RRF (``RRF_K``).
 
     Each result carries the document fields (minus ``markdown``) plus ``score``, a
-    ``snippet``, and ``signals`` ``{bm25?, recency, vector?}``. In BM25 mode ``score`` is
+    ``snippet``, ``signals`` ``{bm25?, recency, vector?}``, and (P30.S2) ``book`` /
+    ``chapter_key`` / ``lang`` — set for a chapter variant, ``None`` for a loose
+    document. In BM25 mode ``score`` is
     ``bm25 + RECENCY_WEIGHT * recency`` (higher-is-better); in hybrid mode ``score`` is the
     RRF fusion of the keyword and vector orderings. A vector-only hit (semantic match, no
     keyword overlap) has no ``bm25`` signal and a leading-text ``snippet``.
@@ -304,7 +324,8 @@ def search(
         for rec in kw_order:
             rec["_score"] = rec["_kwscore"]
         results = [_finalize(r) for r in kw_order]
-        return {"results": results[offset : offset + limit], "total": total, "mode": "bm25"}
+        page = _attach_chapters(conn, results[offset : offset + limit])
+        return {"results": page, "total": total, "mode": "bm25"}
 
     # --- RRF fusion of the keyword ordering and the vector ordering ---
     kw_rank = {r["id"]: i + 1 for i, r in enumerate(kw_order)}
@@ -332,4 +353,5 @@ def search(
 
     fused.sort(key=lambda r: (r["_score"], r["date"], r["id"]), reverse=True)
     results = [_finalize(r) for r in fused]
-    return {"results": results[offset : offset + limit], "total": len(records), "mode": "hybrid"}
+    page = _attach_chapters(conn, results[offset : offset + limit])
+    return {"results": page, "total": len(records), "mode": "hybrid"}

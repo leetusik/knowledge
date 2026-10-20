@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from server import config, db, documents, embeddings
+from server import books, config, db, documents, embeddings
 
 # Generated agentic-workspace internals that live inside the MkDocs content root
 # (docs/current/*.md, docs/versions/**/*.md). They carry no explainer frontmatter,
@@ -27,7 +27,10 @@ from server import config, db, documents, embeddings
 # It is walked separately by _walk_versions into the document_versions table.
 # NOTE: Path.rglob does NOT skip dot-dirs — the exclusion must be explicit here and
 # in scripts/graph_hook.py + scripts/site_smoke.py.
-RESERVED_DIRS = {"current", "versions", documents.ARCHIVE_DIR}
+#
+# `.books` (P30.S2) holds the book manifests (JSON, never an explainer); it is walked
+# by _walk_books into the books / chapters / chapter_variants tables.
+RESERVED_DIRS = {"current", "versions", documents.ARCHIVE_DIR, books.BOOKS_DIR}
 
 # '<YYYY-MM-DD>-<slug>.{md,html}' — group(1) date, group(2) slug, group(3) ext.
 _FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.(md|html)$")
@@ -45,6 +48,29 @@ def _version_from_meta(meta: dict) -> int:
     except (TypeError, ValueError):
         return 1
     return value if value >= 1 else 1
+
+
+def _header_extras(meta: dict) -> dict:
+    """The optional P30.S2 header fields, re-derived leniently from frontmatter.
+
+    ``lang`` / ``subject`` / ``translated_from`` are informational: a malformed value
+    reads back as absent (``None``) rather than skipping the whole document, which
+    stays indexed exactly as before P30.
+    """
+    out: dict = {"lang": None, "subject": None, "translated_from": None}
+    try:
+        if meta.get("lang") is not None:
+            out["lang"] = books.validate_lang(str(meta.get("lang")))
+    except documents.ConventionError:
+        pass
+    subject = meta.get("subject")
+    if isinstance(subject, str) and subject.strip():
+        out["subject"] = subject
+    try:
+        out["translated_from"] = books.validate_translated_from(meta.get("translated_from"))
+    except documents.ConventionError:
+        pass
+    return out
 
 
 def _index_file(
@@ -131,6 +157,7 @@ def _index_file(
             raw_html=raw_html_val,
             version=_version_from_meta(meta),
             tenant_id=tenant_id,
+            **_header_extras(meta),
         )
     except sqlite3.Error as exc:
         return False, f"db error: {exc}"
@@ -417,6 +444,73 @@ def _walk_versions(
     return indexed, skipped
 
 
+def _rebuild_books(
+    conn: sqlite3.Connection,
+    roots: list[tuple[Path, str]],
+    books_by_tenant: dict[str, set[tuple[str, str]]],
+) -> tuple[int, int, list[dict]]:
+    """Rebuild the book tables from every root's ``.books/`` manifests (P30.S2).
+
+    The third walk. Every ``.books/<project>/<book>.json`` under each ``(root,
+    tenant_id)`` is validated (``books.read_manifest``) and its book row, chapters and
+    variants written under that tenant; ``(project, slug)`` is recorded in
+    ``books_by_tenant`` for the vanished-book cleanup. The rows are a pure function of
+    the files, so a wiped DB is rebuilt exactly.
+
+    It runs as ONE transaction: every chapter/variant row is cleared first (so a
+    document re-bound from one book to another never collides with its stale row on
+    the one-chapter-per-document index) and the walk refills them, so a concurrent
+    reader sees the old index or the new one, never an empty one. A malformed
+    manifest, one whose slug disagrees with its file name, or one binding a document
+    another book already binds is reported as a skip and indexes nothing (a
+    savepoint undoes its partial rows; the cleanup then drops its stale book row).
+    Returns (indexed, removed, skipped).
+    """
+    indexed = 0
+    removed = 0
+    skipped: list[dict] = []
+    conn.execute("DELETE FROM chapter_variants")
+    conn.execute("DELETE FROM chapters")
+    for root, tenant_id in roots:
+        seen = books_by_tenant.setdefault(tenant_id, set())
+        for project, slug, path in books.iter_manifest_files(root):
+            rel = path.relative_to(root).as_posix()
+            try:
+                manifest = books.read_manifest(root, project, slug)
+            except documents.ConventionError as exc:
+                skipped.append({"rel_path": rel, "reason": f"invalid book manifest: {exc}"})
+                continue
+            if manifest is None:  # pragma: no cover - raced away mid-walk
+                continue
+            conn.execute("SAVEPOINT book")
+            try:
+                db.replace_book(
+                    conn, tenant_id=tenant_id, project=project, manifest=manifest,
+                    manifest_path=rel, commit=False,
+                )
+            except sqlite3.IntegrityError:
+                conn.execute("ROLLBACK TO SAVEPOINT book")
+                conn.execute("RELEASE SAVEPOINT book")
+                skipped.append(
+                    {"rel_path": rel, "reason": "binds a document another book already binds"}
+                )
+                continue
+            conn.execute("RELEASE SAVEPOINT book")
+            seen.add((project, slug))
+            indexed += 1
+    # A book row whose manifest is gone (or failed to validate this run) is dropped,
+    # tenant-scoped, inside the same transaction.
+    for row in conn.execute("SELECT tenant_id, project, slug FROM books").fetchall():
+        if (row["project"], row["slug"]) not in books_by_tenant.get(row["tenant_id"], set()):
+            conn.execute(
+                "DELETE FROM books WHERE tenant_id = ? AND project = ? AND slug = ?",
+                (row["tenant_id"], row["project"], row["slug"]),
+            )
+            removed += 1
+    conn.commit()
+    return indexed, removed, skipped
+
+
 def reindex(
     conn: Optional[sqlite3.Connection] = None,
     docs_root: Optional[Path] = None,
@@ -437,10 +531,12 @@ def reindex(
     Each root is walked twice: once for its current documents (``_walk_root``) and
     once for its ``.versions/`` archive tree (``_walk_versions``), which rebuilds the
     ``document_versions`` table from the superseded bodies on disk. Version history
-    therefore survives a DB wipe exactly like documents do.
+    therefore survives a DB wipe exactly like documents do. A third walk
+    (``_rebuild_books``, P30.S2) then rebuilds the ``books`` / ``chapters`` /
+    ``chapter_variants`` rows from every root's ``.books/`` manifests.
 
     Returns {indexed, removed, skipped:[{rel_path, reason}], versions_indexed,
-    versions_removed, embeddings:{...},
+    versions_removed, books_indexed, books_removed, embeddings:{...},
     duration_ms}. The vanished-row cleanup is tenant-scoped: a row is stale only if
     its ``(tenant_id, rel_path)`` isn't on disk, so one tenant's reindex never
     deletes another tenant's rows. The embedding-sync step (content-hash cached)
@@ -460,6 +556,10 @@ def reindex(
     disk_by_tenant: dict[str, set[str]] = {}
     # The same, for the .versions/ archive tree -> document_versions.
     archives_by_tenant: dict[str, set[str]] = {}
+    # (project, book slug) manifests present on disk, by tenant -> books tables.
+    books_by_tenant: dict[str, set[tuple[str, str]]] = {}
+    # Every content root walked, for the books walk that runs after the documents.
+    roots: list[tuple[Path, str]] = []
 
     # 1. Public root (docs/): tenant #1 in tenant mode, else the '' legacy sentinel.
     public_tid = str(tenant_one_id) if tenant_one_id else ""
@@ -469,6 +569,7 @@ def reindex(
     n, s = _walk_versions(conn, root, public_tid, archives_by_tenant)
     versions_indexed += n
     skipped += s
+    roots.append((root, public_tid))
 
     # 2. Namespaced non-published roots: <KB_ROOT>/tenants/<uuid>/. Each dir name
     #    IS the tenant_id (re-derived from the path). Absent when no non-#1 tenant
@@ -484,6 +585,12 @@ def reindex(
             n, s = _walk_versions(conn, tdir, tdir.name, archives_by_tenant)
             versions_indexed += n
             skipped += s
+            roots.append((tdir, tdir.name))
+
+    # 3. Books (P30.S2): the third walk, rebuilding the books / chapters /
+    #    chapter_variants rows from every root's .books/ manifests.
+    books_indexed, books_removed, s = _rebuild_books(conn, roots, books_by_tenant)
+    skipped += s
 
     # Delete DB rows whose file vanished from disk (drift repair), tenant-scoped:
     # a row is stale only if its (tenant_id, rel_path) is not on disk for THAT
@@ -528,6 +635,10 @@ def reindex(
         # current documents only, so an unversioned corpus reports 0/0 here.
         "versions_indexed": versions_indexed,
         "versions_removed": versions_removed,
+        # Books (P30.S2): manifests rebuilt from <root>/.books/** into the books /
+        # chapters / chapter_variants tables. Additive keys.
+        "books_indexed": books_indexed,
+        "books_removed": books_removed,
         "embeddings": embeddings_report,
         "duration_ms": duration_ms,
     }
@@ -564,6 +675,10 @@ def _main() -> int:
         print(
             f"versions: indexed={result['versions_indexed']} "
             f"removed={result['versions_removed']}"
+        )
+        print(
+            f"books: indexed={result['books_indexed']} "
+            f"removed={result['books_removed']}"
         )
         print(f"skipped: {len(result['skipped'])}")
         for item in result["skipped"]:

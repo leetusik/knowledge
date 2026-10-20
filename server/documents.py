@@ -157,6 +157,9 @@ def _frontmatter_inner_lines(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
 ) -> list[str]:
     """The YAML field lines shared by the '---' fenced (md) and '<!--kb' comment
     (html) frontmatter serializers — everything BETWEEN the fences. Factored out so
@@ -168,11 +171,24 @@ def _frontmatter_inner_lines(
     ``version`` (P23) is emitted directly after ``date`` **only for version >= 2**:
     a first version carries no ``version:`` field, so an unversioned corpus stays
     byte-identical to before P23 and ``reindex`` reads a missing field as v1.
+
+    ``lang`` / ``translated_from`` / ``subject`` (P30.S2) follow, each **only when
+    given**, so a document published without them is byte-identical to before P30:
+    ``lang: ko``, then ``translated_from:`` as a ``{lang, version}`` block, then
+    ``subject:`` (a JSON string, like the title).
     """
     lines = [f"title: {json.dumps(title, ensure_ascii=False)}"]
     lines.append(f"date: {date}")
     if version is not None and version >= 2:
         lines.append(f"version: {int(version)}")
+    if lang:
+        lines.append(f"lang: {lang}")
+    if translated_from:
+        lines.append("translated_from:")
+        lines.append(f"  lang: {translated_from['lang']}")
+        lines.append(f"  version: {int(translated_from['version'])}")
+    if subject:
+        lines.append(f"subject: {json.dumps(subject, ensure_ascii=False)}")
     lines.append("tags:")
     for t in tags:
         lines.append(f"  - {t}")
@@ -195,6 +211,9 @@ def serialize_frontmatter(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
 ) -> str:
     """Hand-rolled frontmatter block, byte-exact to the docs/ convention.
 
@@ -216,6 +235,9 @@ def serialize_frontmatter(
         source_repo=source_repo,
         related=related,
         version=version,
+        lang=lang,
+        subject=subject,
+        translated_from=translated_from,
     )
     return "---\n" + "\n".join(inner) + "\n---\n"
 
@@ -229,6 +251,9 @@ def serialize_html_frontmatter(
     source_repo: str,
     related: Optional[list[str]] = None,
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
 ) -> str:
     """The HTML-comment frontmatter block for an explainer ``.html`` doc.
 
@@ -246,6 +271,9 @@ def serialize_html_frontmatter(
         source_repo=source_repo,
         related=related,
         version=version,
+        lang=lang,
+        subject=subject,
+        translated_from=translated_from,
     )
     return "<!--kb\n" + "\n".join(inner) + "\n-->\n"
 
@@ -439,6 +467,9 @@ def write_document_file(
     related: Optional[list[str]] = None,
     fmt: str = "md",
     version: Optional[int] = None,
+    lang: Optional[str] = None,
+    subject: Optional[str] = None,
+    translated_from: Optional[dict] = None,
 ) -> str:
     """Write ``docs/<rel_path>`` as ``<frontmatter> + "\\n" + body``.
 
@@ -463,6 +494,9 @@ def write_document_file(
             source_repo=source_repo or "",
             related=related,
             version=version,
+            lang=lang,
+            subject=subject,
+            translated_from=translated_from,
         )
     else:
         header = serialize_frontmatter(
@@ -473,6 +507,9 @@ def write_document_file(
             source_repo=source_repo or "",
             related=related,
             version=version,
+            lang=lang,
+            subject=subject,
+            translated_from=translated_from,
         )
     content = header + "\n" + _normalize_body(body)
     target = Path(docs_root) / rel_path
