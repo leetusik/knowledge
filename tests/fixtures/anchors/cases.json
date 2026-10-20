@@ -1,0 +1,64 @@
+{
+  "about": "Core test 3 (P29 *S3 build inputs*): anchors captured on `from` (prefix, suffix and start derived from its section text as the browser captures them: up to 32 characters either side) re-anchored on `to`. `text` is what the resolved offsets must cover in `to`'s section. `language` maps ids from `source` onto `target` (exact, else the nearest preceding id, else null).",
+  "from": "chapter-v1.md",
+  "to": "chapter-v2.md",
+  "cases": [
+    {
+      "name": "exact: same section, text shifted by an inserted paragraph",
+      "block_id": "overview",
+      "exact": "flame behind thin glass",
+      "expect": {"status": "anchored", "method": "exact", "block_id": "overview", "text": "flame behind thin glass"}
+    },
+    {
+      "name": "fuzzy: one word edited, similarity >= 0.8",
+      "block_id": "overview",
+      "exact": "trims the wick every evening before the fishing boats",
+      "expect": {"status": "anchored", "method": "fuzzy", "block_id": "overview", "text": "trims the wick each evening before the fishing boats"}
+    },
+    {
+      "name": "fuzzy miss: the sentence rewritten, similarity < 0.8, the section stays",
+      "block_id": "fuel",
+      "exact": "Whale oil burned bright but smelled of the sea",
+      "expect": {"status": "block", "method": "block", "block_id": "fuel"}
+    },
+    {
+      "name": "moved: the sentence now in another section",
+      "block_id": "fuel",
+      "exact": "Kerosene replaced it after 1860",
+      "expect": {"status": "anchored", "method": "moved", "block_id": "keepers", "text": "Kerosene replaced it after 1860"}
+    },
+    {
+      "name": "moved: the section retired, the text kept elsewhere",
+      "block_id": "lenses",
+      "exact": "a single horizontal beam",
+      "expect": {"status": "anchored", "method": "moved", "block_id": "keepers", "text": "a single horizontal beam"}
+    },
+    {
+      "name": "orphan: the section retired and the text gone",
+      "block_id": "lenses",
+      "exact": "Fresnel lens bends the light",
+      "expect": {"status": "orphan", "method": "orphan", "block_id": null}
+    },
+    {
+      "name": "block note on a surviving section",
+      "block_id": "fuel",
+      "exact": null,
+      "expect": {"status": "anchored", "method": "section", "block_id": "fuel"}
+    },
+    {
+      "name": "block note on a retired section",
+      "block_id": "lenses",
+      "exact": null,
+      "expect": {"status": "orphan", "method": "orphan", "block_id": null}
+    }
+  ],
+  "language": {
+    "source": "chapter-v1.md",
+    "target": "chapter-ko.md",
+    "cases": [
+      {"name": "by id", "block_id": "fuel", "expect": ["fuel", true]},
+      {"name": "missing: nearest preceding id", "block_id": "lenses", "expect": ["fuel", false]},
+      {"name": "unknown to the source", "block_id": "nowhere", "expect": [null, false]}
+    ]
+  }
+}

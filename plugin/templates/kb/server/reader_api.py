@@ -13,16 +13,30 @@ Reads:
   book progress, the continue pointer and the counts "clear this book" names;
 * ``GET /app/reader/chapters/{org}/{project}/{book}/{key}?lang=&v=`` and
   ``GET /app/reader/docs/{org}/{project}/{doc}?v=`` — one variant's position,
-  bookmarks, annotations (anchors as stored; S9 resolves them) and the latest quiz
-  attempts of its unit, in one call;
+  bookmarks, annotations and the latest quiz attempts of its unit, in one call.
+  Annotations come resolved for the version on screen (P30.S9, ``server/anchors.py``):
+  each carries ``anchor: {status, method, block_id, start, end, section_index}``,
+  ``annotations`` holds the anchored and ``block`` ones in reading order and
+  ``unanchored`` the orphans; ``other_languages: {annotations, bookmarks}`` holds the
+  chapter's other variants' marks, each with ``section`` mapped onto this variant by
+  id (nearest preceding id as the fallback), never painted; bookmarks carry
+  ``place: {block_id, exact, fraction, section_index}``; ``resume`` is the unit's
+  latest position mapped onto this variant;
 * ``GET /app/reader/annotations?org=&project=&book=`` (or ``&doc=``) — the
-  per-book list, orphans included, with the bookmarks beside them;
+  per-book list, resolved the same way against each chapter's current version:
+  ``annotations`` in reading order, ``unanchored`` (orphans, never dropped), and
+  ``bookmarks`` with their ``place``;
 * ``GET /app/reader/profile``.
 
 Writes: ``PUT positions``; ``POST/PATCH/DELETE bookmarks[/{id}]``;
 ``POST/PATCH/DELETE annotations[/{id}]``; ``POST quiz-attempts`` → ``{attempt,
-card}``; ``DELETE state?scope=book|all``; ``PATCH profile``. Review (S10) and
-anchor resolution (S9) are not here.
+card}``; ``DELETE state?scope=book|all``; ``PATCH profile``. Review (S10) is not
+here.
+
+**Re-anchoring (S9)** runs on these reads, lazily: the captured anchor is never
+rewritten; ``anchor_status`` and ``anchored_version`` (the newest version the text
+was found on) are written back for the caller's own rows when a read of a
+document's current version changes them. Nothing is deleted or moved.
 
 **Isolation.** Every query carries ``user_id = <caller>``; another user's row id is
 the constant 404. **Visibility.** Every read and write re-checks the document's
@@ -48,7 +62,7 @@ from zoneinfo import available_timezones
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from server import config
+from server import anchors, config
 from server import reader_state as rs
 from server.accounts.auth import AuthContext, require_user
 from server.documents_api import get_conn
@@ -343,6 +357,160 @@ def _unit_state(rows) -> dict[str, Any]:
     return {"state": "started", "finished_version": None, "finished_at": None}
 
 
+# -- anchors (P30.S9) ----------------------------------------------------------------
+
+_LAST = 1 << 30  # sorts a place with no section after every section
+
+
+def _section_ids(secs: list[dict] | None) -> list[str]:
+    return [s["id"] for s in secs or []]
+
+
+def _reading_key(item: dict[str, Any]) -> tuple:
+    """Reading order within one document (05-annotations *Order*): by section, then
+    the section's note, then Text changed, then highlights by offset."""
+
+    a = item["anchor"]
+    index = a.get("section_index")
+    if a["status"] == anchors.BLOCK:
+        rank = 2
+    elif item["kind"] == "bnote":
+        rank = 1
+    else:
+        rank = 4
+    return (_LAST if index is None else index, rank, a.get("start") or 0, item["created_at"])
+
+
+def _place_key(item: dict[str, Any]) -> tuple:
+    p = item["place"]
+    index = p.get("section_index")
+    return (_LAST if index is None else index, p.get("fraction") or 0.0, item["created_at"])
+
+
+class _Anchoring:
+    """One request's re-anchoring: resolve rows, queue the write-back, flush once.
+
+    Every read resolves each annotation from its CAPTURED anchor (``block_id`` +
+    ``quote``, never rewritten) against the version on screen, so the result is
+    always current; the write-back only caches ``anchor_status`` and
+    ``anchored_version`` (the newest version the text was found on) for the
+    caller's own rows, and only for a document's current version.
+    """
+
+    def __init__(self, conn, user_id: UUID) -> None:
+        self.sections = rs.SectionCache(conn)
+        self.user_id = user_id
+        self.updates: list[tuple[UUID, str, int, int]] = []
+
+    def annotation(self, row, ref: rs.DocRef, version: int) -> dict[str, Any]:
+        """One annotation of document ``ref``, resolved at ``version`` of it."""
+
+        out = _annotation_out(row, ref)
+        secs = self.sections.get(ref, version)
+        if secs is None:  # not native, archive missing or unparseable: report as stored
+            quote = row.quote or {}
+            out["anchor"] = {
+                "status": row.anchor_status, "method": "stored", "block_id": row.block_id,
+                "start": quote.get("start"), "end": quote.get("end"), "section_index": None,
+            }
+            return out
+        res = anchors.resolve(row.block_id, row.quote, secs)
+        order = {sid: i for i, sid in enumerate(_section_ids(secs))}
+        out["anchor_status"] = res.status  # for the version on screen
+        out["anchor"] = res.public(order)
+        if version == ref.version:
+            anchored_version = version if res.found else row.anchored_version
+            if (res.status, anchored_version) != (row.anchor_status, row.anchored_version):
+                self.updates.append((row.id, res.status, anchored_version, version))
+            out["anchored_version"] = anchored_version
+        return out
+
+    def other_language(
+        self, row, own: rs.DocRef, target: rs.DocRef, version: int
+    ) -> dict[str, Any]:
+        """An annotation made in another language variant (``own``), shown on ``target``.
+
+        Highlights belong to their language (P29 *Language switch*): it is resolved
+        in its own variant's current version (so its status is real), and only its
+        section is mapped onto the target by id, falling back to the nearest
+        preceding id; it is never painted on the translation.
+        """
+
+        out = self.annotation(row, own, own.version)
+        block = out["anchor"]["block_id"] or row.block_id
+        target_secs = self.sections.get(target, version)
+        section, exact, index = None, False, None
+        if target_secs is not None:
+            source = self.sections.order(own, own.version)
+            if block not in source:
+                source = self.sections.order(own, row.version)
+            ids = _section_ids(target_secs)
+            section, exact = anchors.map_id(block, source, ids)
+            index = ids.index(section) if section is not None else None
+        out["other_language"] = True
+        out["section"] = {"block_id": section, "exact": exact, "section_index": index}
+        return out
+
+    def bookmark(self, row, own: rs.DocRef, target: rs.DocRef, version: int) -> dict[str, Any]:
+        """A bookmark made on ``own``, placed in ``target`` at ``version`` (``place``).
+
+        A section bookmark maps by id, else to the nearest preceding id of the
+        version it was made on (``exact`` false), else to no section. A position
+        keeps its fraction; a legacy one (made on the HTML version) restores by its
+        element id when the native chapter carries that id (P29 *Legacy*).
+        """
+
+        out = _bookmark_out(row, own)
+        anchor = row.anchor or {}
+        target_secs = self.sections.get(target, version)
+        ids = _section_ids(target_secs)
+        if anchor.get("block_id"):
+            if target_secs is None:
+                same = target.doc == own.doc
+                block, exact = (anchor["block_id"], True) if same else (None, False)
+            else:
+                source = self.sections.order(own, row.version) or self.sections.order(
+                    own, own.version
+                )
+                block, exact = anchors.map_id(anchor["block_id"], source, ids)
+        else:
+            legacy = anchor.get("anchor")
+            block, exact = (legacy, True) if legacy and legacy in ids else (None, False)
+        out["place"] = {
+            "block_id": block,
+            "exact": exact,
+            "fraction": anchor.get("fraction"),
+            "section_index": ids.index(block) if block in ids else None,
+        }
+        return out
+
+    def resume(
+        self, positions: list, refs: dict[str, rs.DocRef], target: rs.DocRef, version: int
+    ) -> dict[str, Any] | None:
+        """The unit's latest position (any variant) mapped onto ``target`` by id."""
+
+        if not positions:
+            return None
+        latest = max(positions, key=lambda p: (p.updated_at, p.doc))
+        own = refs.get(latest.doc)
+        target_secs = self.sections.get(target, version)
+        if target_secs is None:
+            same = latest.doc == target.doc and latest.anchor_id
+            block, exact = (latest.anchor_id, True) if same else (None, False)
+        else:
+            source = self.sections.order(own, latest.version) if own is not None else []
+            block, exact = anchors.map_id(latest.anchor_id, source, _section_ids(target_secs))
+        return {
+            "doc": latest.doc, "lang": latest.lang, "version": latest.version,
+            "block_id": block, "exact": exact, "fraction": latest.fraction,
+        }
+
+    async def flush(self) -> None:
+        if self.updates:
+            await rs.write_back_anchors(self.user_id, self.updates)
+            self.updates = []
+
+
 # -- reads -------------------------------------------------------------------------
 
 
@@ -371,15 +539,50 @@ async def _variant_payload(
         and state["finished_version"] is not None
         and ref.version > state["finished_version"]
     )
-    return {
+
+    # P30.S9: every annotation resolved for the version on screen; orphans apart;
+    # the other variants' marks mapped onto this one by id; resume mapped too.
+    version = requested or ref.version
+    anch = _Anchoring(gate.conn, uid)
+    refs = {ref.doc: ref}
+    for d in mates:
+        if d not in refs:
+            mate = await gate.doc(ref.tenant_id, ref.project, d)
+            if mate is not None:
+                refs[d] = mate
+    resolved = [anch.annotation(r, ref, version) for r in annotations]
+    others = [d for d in refs if d != ref.doc]
+    other_annotations = await rs.rows_for_docs(
+        rs.ANNOTATIONS, uid, ref.tenant_id, ref.project, others
+    )
+    other_bookmarks = await rs.rows_for_docs(rs.BOOKMARKS, uid, ref.tenant_id, ref.project, others)
+    other = [anch.other_language(r, refs[r.doc], ref, version) for r in other_annotations]
+    other.sort(key=lambda o: (
+        _LAST if o["section"]["section_index"] is None else o["section"]["section_index"],
+        o["lang"], o["created_at"],
+    ))
+    payload = {
         "doc": ref.public(),
-        "requested_version": requested or ref.version,
+        "requested_version": version,
         "position": _position_out(own, ref) if own is not None else None,
+        "resume": anch.resume(positions, refs, ref, version),
         "chapter": state,
-        "bookmarks": [_bookmark_out(r, ref) for r in bookmarks],
-        "annotations": [_annotation_out(r, ref) for r in annotations],
+        "bookmarks": sorted((anch.bookmark(r, ref, ref, version) for r in bookmarks), key=_place_key),
+        "annotations": sorted(
+            (a for a in resolved if a["anchor"]["status"] != anchors.ORPHAN), key=_reading_key
+        ),
+        "unanchored": [a for a in resolved if a["anchor"]["status"] == anchors.ORPHAN],
+        "other_languages": {
+            "annotations": other,
+            "bookmarks": sorted(
+                (anch.bookmark(r, refs[r.doc], ref, version) for r in other_bookmarks),
+                key=_place_key,
+            ),
+        },
         "quiz": [_attempt_out(r, ref) for r in attempts],
     }
+    await anch.flush()
+    return payload
 
 
 @router.get("/docs/{org}/{project}/{doc}")
@@ -643,23 +846,35 @@ async def read_annotations(
     refs = {d: r for d, r in refs.items() if r is not None}
     uid = ctx.user.id
 
-    def placed(rows, fn):
+    anch = _Anchoring(conn, uid)
+
+    def placed(rows, fn, key):
         out = []
         for r in rows:
             ref = refs.get(r.doc)
             if ref is None:
                 continue
-            _, key, lang = order[r.doc]
-            out.append({**fn(r, ref), "chapter_key": key})
-        out.sort(key=lambda o: (order[o["doc"]][0], o["created_at"]))
+            _, chapter_key, _lang = order[r.doc]
+            out.append({**fn(r, ref), "chapter_key": chapter_key})
+        out.sort(key=lambda o: (order[o["doc"]][0], *key(o)))
         return out
 
     annotations = await rs.rows_for_docs(rs.ANNOTATIONS, uid, tenant.id, project, refs)
     bookmarks = await rs.rows_for_docs(rs.BOOKMARKS, uid, tenant.id, project, refs)
-    return {
-        "annotations": placed(annotations, _annotation_out),
-        "bookmarks": placed(bookmarks, _bookmark_out),
+    # P30.S9: each resolved against its document's current version (written back),
+    # in reading order; orphans in their own group, never dropped.
+    resolved = placed(
+        annotations, lambda r, ref: anch.annotation(r, ref, ref.version), _reading_key
+    )
+    payload = {
+        "annotations": [a for a in resolved if a["anchor"]["status"] != anchors.ORPHAN],
+        "unanchored": [a for a in resolved if a["anchor"]["status"] == anchors.ORPHAN],
+        "bookmarks": placed(
+            bookmarks, lambda r, ref: anch.bookmark(r, ref, ref, ref.version), _place_key
+        ),
     }
+    await anch.flush()
+    return payload
 
 
 @router.get("/profile")

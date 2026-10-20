@@ -681,6 +681,90 @@ async def clear_book(
     return removed
 
 
+# -- anchors (P30.S9) --------------------------------------------------------------------
+
+
+@dataclass
+class SectionCache:
+    """Per-request: each ``(document, version)``'s section projection, parsed once.
+
+    ``get`` returns ``[{"id", "text"}]`` for a native version, and ``None`` when
+    the version is not native (a legacy or md body has no sections to anchor in),
+    its archived row is missing, or its stored source no longer parses. ``None``
+    means "do not resolve": the caller reports the stored anchor and writes
+    nothing, so a missing archive or a stricter future parser can never turn a
+    chapter's annotations into orphans.
+    """
+
+    conn: sqlite3.Connection
+    _cache: dict[tuple[str, str, int], list[dict] | None] = field(default_factory=dict)
+
+    def get(self, ref: DocRef, version: int) -> list[dict] | None:
+        key = (str(ref.tenant_id), ref.rel_path, int(version))
+        if key not in self._cache:
+            self._cache[key] = self._load(ref, int(version))
+        return self._cache[key]
+
+    def order(self, ref: DocRef, version: int) -> list[str]:
+        return [s["id"] for s in self.get(ref, version) or []]
+
+    def _load(self, ref: DocRef, version: int) -> list[dict] | None:
+        from server.native import NativeFormatError, parse_chapter, sections
+
+        tid = str(ref.tenant_id)
+        if version == ref.version:
+            row = self.conn.execute(
+                "SELECT format, source FROM documents WHERE id = ? AND tenant_id = ?",
+                (ref.doc_id, tid),
+            ).fetchone()
+        else:
+            row = db.get_document_version(self.conn, ref.rel_path, version, tenant_id=tid)
+        if row is None or row["format"] != "native" or not row["source"]:
+            return None
+        try:
+            return sections(parse_chapter(row["source"]).tree)
+        except NativeFormatError:
+            logger.warning(
+                "anchors: stored source no longer parses tenant=%s rel_path=%s v=%s",
+                tid, ref.rel_path, version,
+            )
+            return None
+
+
+async def write_back_anchors(user_id: UUID, updates: Iterable[tuple[UUID, str, int, int]]) -> int:
+    """Write re-anchoring results back: ``(id, anchor_status, anchored_version, target)``.
+
+    Only the caller's own rows (``user_id``), only the two status columns (the
+    captured ``block_id``/``quote``, the note and ``updated_at`` are never touched),
+    only when something changes, and never over a result computed against a newer
+    version (``anchored_version <= target``). A row deleted meanwhile simply
+    matches nothing: this never inserts, deletes or resurrects. Idempotent.
+    """
+
+    changed = 0
+    updates = list(updates)
+    if not updates:
+        return 0
+    async with get_session_maker()() as session:
+        for row_id, status, anchored_version, target in updates:
+            result = await session.execute(
+                update(ANNOTATIONS)
+                .where(
+                    ANNOTATIONS.c.id == row_id,
+                    ANNOTATIONS.c.user_id == user_id,
+                    ANNOTATIONS.c.anchored_version <= target,
+                    or_(
+                        ANNOTATIONS.c.anchor_status != status,
+                        ANNOTATIONS.c.anchored_version != anchored_version,
+                    ),
+                )
+                .values(anchor_status=status, anchored_version=anchored_version)
+            )
+            changed += result.rowcount
+        await session.commit()
+    return changed
+
+
 # -- content-plane hooks -----------------------------------------------------------
 
 

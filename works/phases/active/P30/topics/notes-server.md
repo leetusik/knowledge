@@ -137,3 +137,35 @@ The routes and payloads are `server/reader_api.py`'s docstring; the detail is in
   Mark as unread is `PUT positions {unread: true}` (server action, never the beacon). Bookmarks: native
   `{block_id}`; md `{fraction}`; legacy `{fraction, anchor?}`; reads add `pos`/`approx`. Limits: note
   2,000, label 120, snippet 300. Annotations and quizzes are native-only (422 otherwise).
+
+## (from P30.S9, for S10, S13, S20, S21 and S23) Anchors as shipped
+
+The ladder is `server/anchors.py` (its docstring is the spec); the detail is in `slices/P30.S9/result.md`;
+the decisions are OQ31–OQ34 (`topics/operator-questions-decided.md`).
+
+- **What the reads return** (doc and chapter reads): `annotations` = anchored + `block` in reading order
+  (by section, then a section note, then Text changed, then highlights by `start`); `unanchored` =
+  orphans (the Unanchored group); each item has `anchor: {status, method, block_id, start, end,
+  section_index}` and `anchor_status` for the version ON SCREEN. Paint only `status == "anchored"` with
+  a `start` (a highlight); `block` is the signed "Text changed" marker on `anchor.block_id`; a block
+  note is `method: "section"` with no offsets. `method: "stored"` means the version could not be
+  resolved (not native, archive missing): show the row, paint nothing.
+- **Text changed copy:** "Made on {Language} v{n}" and "Read this section in v{n}" take the row's
+  `lang` and `version` (made on) and its ORIGINAL `block_id` (never rewritten). `anchored_version` is
+  the newest version the text was found on, not the made-on version.
+- **Other languages:** `other_languages.annotations` items have `other_language: true`, their own
+  `anchor` (resolved in their own variant) and `section: {block_id, exact, section_index}` on the
+  variant on screen; `section.block_id: null` means no mappable section (list it in the "In {endonym}"
+  group without a section marker). Never paint them. `other_languages.bookmarks` carry `place` the
+  same way.
+- **Bookmarks:** `place: {block_id, exact, fraction, section_index}`. `exact: false` with a block id =
+  the section was retired and it fell back to the nearest preceding one; `block_id: null` = land at
+  `fraction` (positions) or the top. Legacy migrated bookmarks keep `approx: true` and restore by id
+  when the native chapter has it.
+- **Resume:** `resume: {doc, lang, version, block_id, exact, fraction}` is the unit's latest position in
+  ANY variant, mapped onto this one (S13's language switch); `position` stays this variant's own row.
+- **For S10:** review cards for highlights should read a highlight's status with
+  `anchors.resolve(row.block_id, row.quote, SectionCache(conn).get(ref, ref.version))`, the same call
+  the reads make, or trust the written-back `anchor_status` (fresh after any read).
+- **Per-book list** (`GET annotations?…`): `annotations`, `unanchored` and `bookmarks`, each with
+  `chapter_key`, sorted by chapter/variant order then reading order.

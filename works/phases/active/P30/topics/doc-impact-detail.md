@@ -51,3 +51,25 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - **decisions.md:** ADR for P29.S3's state contract as shipped: Postgres per `user_id`; stem + unit keys;
   P29's conflict rules in one atomic upsert; client-id idempotent creates; purge before the content
   delete, failing closed; no tombstones; the OQ26–OQ30 choices.
+
+## P30.S9
+
+- **api.md:** the `/app/reader/docs/…` and `/chapters/…` reads now return annotations resolved for the
+  version on screen: each carries `anchor: {status, method, block_id, start, end, section_index}`
+  (`method` exact | fuzzy | moved | section | block | orphan | stored) and `anchor_status` for that
+  version; `annotations` holds anchored and `block` ones in reading order, `unanchored` the orphans;
+  `other_languages: {annotations, bookmarks}` holds the chapter's other variants' marks with
+  `section: {block_id, exact, section_index}` mapped by id (nearest preceding id as the fallback);
+  bookmarks carry `place: {block_id, exact, fraction, section_index}`; `resume` is the unit's latest
+  position mapped onto the variant. `GET annotations?…` returns `annotations`, `unanchored` and
+  `bookmarks`, resolved against each chapter's current version.
+- **backend.md:** new pure module `server/anchors.py` (the ladder `resolve`, `map_id`, bit-parallel
+  Levenshtein `similarity`, `THRESHOLD` 0.8); `server/reader_state.py` gains `SectionCache` (each
+  version's section projection parsed once per request; `None` = do not resolve) and
+  `write_back_anchors`; `server/reader_api.py` gains `_Anchoring` (resolve, queue, flush once per read).
+- **data.md:** `reader_annotations.anchor_status` (anchored | block | orphan) and `anchored_version` (the
+  newest version the text was found on) are a cache written back by reads of a document's current
+  version; the captured `block_id`/`quote` and `updated_at` are never rewritten by re-anchoring. No
+  schema change.
+- **decisions.md:** ADR: server-side re-anchoring from the immutable captured anchor, status-only
+  write-back, the fuzzy method with both 0.8 bars, and the OQ31–OQ34 edge cases.
