@@ -18,10 +18,10 @@
 <div class="rd-topwrap" ref="{{ setTop }}"><dc-import name="ReaderTop" bare="{{ true }}" pct="{{ pct }}" back-long="{{ backLong }}" back-short="{{ backShort }}" is-old="{{ isOld }}" version="{{ version }}" langs="{{ langs }}" lang="{{ lang }}" member="{{ member }}" panel="{{ panel }}" notes="{{ topNotes }}" on-notes="{{ toggleNotes }}" on-back="{{ goBack }}" on-logo="{{ goLibrary }}" on-lang="{{ onLang }}" on-display="{{ toggleDisplay }}" on-sign-in="{{ signIn }}" hint-size="100%,59px"></dc-import><sc-if value="{{ hiddenNow }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--secondary rd-skip" onclick="{{ showChrome }}">Show reading controls</button></sc-if></div>
 <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}"><div class="rd-article" ref="{{ setArt }}" onclick="{{ onTap }}" onmouseup="{{ onSelEnd }}" ontouchend="{{ onSelEnd }}">
 <dc-import name="ChapterHead" bare="{{ true }}" doc="{{ doc }}" lang="{{ lang }}" ver="{{ ver }}" on-link="{{ onLink }}" on-versions="{{ openVersions }}" on-latest="{{ readLatest }}" on-source="{{ readSource }}" hint-size="100%,520px"></dc-import>
-<dc-import name="Prose" bare="{{ true }}" blocks="{{ blocks }}" lang="{{ lang }}" on-link="{{ onLink }}" on-marker="{{ onMarker }}" hint-size="100%,2400px"></dc-import>
+<dc-import name="Prose" bare="{{ true }}" blocks="{{ blocks }}" lang="{{ lang }}" on-link="{{ onLink }}" on-marker="{{ onMarker }}" hint-size="100%,2400px"></dc-import><div class="an-sr-desc"><span id="{{ dHl }}">Highlight</span><span id="{{ dNote }}">Highlight with a note</span><span id="{{ dTwo }}">Highlights overlap here</span></div>
 <dc-import name="ChapterEnd" bare="{{ true }}" doc="{{ doc }}" lang="{{ lang }}" prog="{{ prog }}" member="{{ member }}" prompt="{{ prompt }}" on-mark="{{ onMark }}" on-open="{{ onOpen }}" on-book="{{ goBook }}" on-library="{{ goLibrary }}" on-prompt="{{ onPrompt }}" on-sign-in="{{ signIn }}" hint-size="100%,640px"></dc-import>
 <sc-if value="{{ hasRail }}" hint-placeholder-val="{{ false }}"><div class="an-rail" role="complementary" aria-label="Notes in the margin"><sc-for list="{{ rail }}" as="m" hint-placeholder-count="3"><div class="an-ri" style="{{ m.style }}"><dc-import name="MarginNote" bare="{{ true }}" item="{{ m.item }}" current="{{ m.current }}" on-open="{{ m.open }}" hint-size="100%,44px"></dc-import></div></sc-for></div></sc-if>
-<sc-if value="{{ hasFloat }}" hint-placeholder-val="{{ false }}"><div class="{{ floatCls }}" style="{{ floatStyle }}" ref="{{ setFloat }}"><sc-if value="{{ isSelBar }}" hint-placeholder-val="{{ false }}"><dc-import name="SelBar" bare="{{ true }}" mode="{{ sb.mode }}" clipped="{{ sb.clipped }}" sec-title="{{ sb.secTitle }}" sec-lang="{{ sb.secLang }}" sec-word="{{ sb.secWord }}" bm-on="{{ sb.bmOn }}" pos-on="{{ sb.posOn }}" on-highlight="{{ sbHighlight }}" on-note="{{ sbNote }}" on-block-note="{{ sbBlockNote }}" on-bookmark="{{ sbBookmark }}" on-bookmark-pos="{{ sbBookmarkPos }}" hint-size="100%,56px"></dc-import></sc-if><sc-if value="{{ isPop }}" hint-placeholder-val="{{ false }}"><dc-import name="NotePop" bare="{{ true }}" vm="{{ popVm }}" on-close="{{ popClose }}" on-edit="{{ popEdit }}" on-save="{{ popSave }}" on-cancel="{{ popCancel }}" on-delete-note="{{ popDeleteNote }}" on-review="{{ popReview }}" on-delete="{{ popDelete }}" on-delete-item="{{ popDeleteItem }}" on-pick="{{ popPick }}" on-go="{{ popGo }}" on-edit-label="{{ popEditLabel }}" on-save-label="{{ popSaveLabel }}" on-cancel-label="{{ popCancelLabel }}" on-remove-bm="{{ popDelete }}" hint-size="100%,220px"></dc-import></sc-if><sc-if value="{{ isSaveSel }}" hint-placeholder-val="{{ false }}"><dc-import name="SignInToSave" bare="{{ true }}" what="{{ saveWhat }}" place="{{ noun }}" raised="{{ true }}" on-sign-in="{{ signIn }}" on-dismiss="{{ dismissSave }}" hint-size="100%,190px"></dc-import></sc-if></div></sc-if>
+<sc-if value="{{ hasFloat }}" hint-placeholder-val="{{ false }}"><div class="{{ floatCls }}" style="{{ floatStyle }}" ref="{{ setFloat }}"><sc-if value="{{ isSelBar }}" hint-placeholder-val="{{ false }}"><dc-import name="SelBar" bare="{{ true }}" mode="{{ sb.mode }}" clipped="{{ sb.clipped }}" sec-title="{{ sb.secTitle }}" sec-lang="{{ sb.secLang }}" sec-word="{{ sb.secWord }}" bm-on="{{ sb.bmOn }}" pos-on="{{ sb.posOn }}" on-highlight="{{ sbHighlight }}" on-note="{{ sbNote }}" on-block-note="{{ sbBlockNote }}" on-bookmark="{{ sbBookmark }}" on-bookmark-pos="{{ sbBookmarkPos }}" hint-size="100%,56px"></dc-import></sc-if><sc-if value="{{ isPop }}" hint-placeholder-val="{{ false }}"><dc-import name="NotePop" bare="{{ true }}" vm="{{ popVm }}" kbd="{{ popKbd }}" on-close="{{ popClose }}" on-edit="{{ popEdit }}" on-save="{{ popSave }}" on-cancel="{{ popCancel }}" on-delete-note="{{ popDeleteNote }}" on-review="{{ popReview }}" on-delete="{{ popDelete }}" on-delete-item="{{ popDeleteItem }}" on-pick="{{ popPick }}" on-go="{{ popGo }}" on-edit-label="{{ popEditLabel }}" on-save-label="{{ popSaveLabel }}" on-cancel-label="{{ popCancelLabel }}" on-remove-bm="{{ popDelete }}" hint-size="100%,220px"></dc-import></sc-if><sc-if value="{{ isSaveSel }}" hint-placeholder-val="{{ false }}"><dc-import name="SignInToSave" bare="{{ true }}" what="{{ saveWhat }}" place="{{ noun }}" raised="{{ true }}" on-sign-in="{{ signIn }}" on-dismiss="{{ dismissSave }}" hint-size="100%,190px"></dc-import></sc-if></div></sc-if>
 </div></sc-if>
 <sc-if value="{{ isState }}" hint-placeholder-val="{{ false }}"><dc-import name="ReaderState" bare="{{ true }}" kind="{{ status }}" noun="{{ noun }}" on-retry="{{ onRetry }}" on-library="{{ goLibrary }}" hint-size="100%,520px"></dc-import></sc-if>
 </div>
@@ -65,6 +65,9 @@ class Component extends DCLogic {
     this.popOpener = null;
     this.lastFocus = null;
     this.selN = 0;
+    /* round 02: ids for the highlights' descriptions, one set per reader on the page */
+    this.uid = 'rd' + Math.random().toString(36).slice(2, 8);
+    this.kfT = 0;
     this.ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.relayout()) : null;
   }
   setBox = (el) => { this.box = el; };
@@ -78,13 +81,49 @@ class Component extends DCLogic {
   };
   setFloat = (el) => { this.float = el; if (el) this.relayout(); };
   /* What opens a popover: the last control the reader focused or pressed outside the floating box. It is recorded as it
-     happens, never read back after the popover has taken focus. A plain highlight has no tab stop, so pressing one
-     records nothing and focus stays where it was (the logged keyboard gap, Q10). */
+     happens, never read back after the popover has taken focus. Since round 02 a highlight's first piece is a tab stop
+     (annotations 10, option a), so it is recorded like any control, and focus comes back to it when its popover closes. */
   onFocusIn = (e) => {
+    this.syncKf();
     const t = e.target;
     if (!t || !t.closest || !this.frame || !this.frame.contains(t) || t.closest('.an-float')) return;
     this.lastFocus = t.closest('[data-proto]') ? null : t;
   };
+  onFocusOut = () => { this.syncKf(); };
+  /* Canvas only (round 02): which highlight holds keyboard focus is kept in the flow's state (kf), so a preset can land
+     on it and the four frames on 03 draw the same ring. The product needs nothing but :focus-visible. A highlight
+     enters kf when it is reached by keyboard (or by a preset), and leaves it when focus moves anywhere but its popover. */
+  syncKf() {
+    clearTimeout(this.kfT);
+    this.kfT = setTimeout(() => {
+      const A = this.an(), cur = (A.kf && A.kf.id) || null;
+      if (!A.act || !this.frame) return;
+      const el = document.activeElement;
+      if (el && el.closest && el.closest('.rd-frame') && !this.frame.contains(el)) return;
+      let want = null;
+      if (el && el.matches && this.frame.contains(el)) {
+        if (el.matches('mark.an-m[data-an-key]')) {
+          const ids = (el.getAttribute('data-an-key') || '').split(' ').filter(Boolean);
+          if (cur && ids.indexOf(cur) >= 0) want = cur;
+          else if (el.matches(':focus-visible')) want = ids[0] || null;
+        } else if (el.closest('.an-float') && A.pop) want = cur;
+      }
+      if (want !== cur && A.act.kfocus) A.act.kfocus(want);
+    }, 0);
+  }
+  /* A preset's keyboard focus: the highlight's stop takes focus once the page has landed on it. With its popover open,
+     the stop is only recorded as the popover's opener, so Escape brings focus back to it. */
+  focusKf(id, pop) {
+    const t0 = Date.now();
+    const go = () => {
+      const el = this.art && this.art.querySelector('mark.an-m[data-an-key~="' + id + '"]');
+      if (!el || this.jumpBusy) { if (Date.now() - t0 < 4000) requestAnimationFrame(go); return; }
+      this.lastFocus = el;
+      if (pop) { this.popOpener = el; return; }
+      el.focus({ preventScroll: true, focusVisible: true });
+    };
+    requestAnimationFrame(go);
+  }
   onPointerDown = (e) => {
     const t = e.target;
     if (!t || !t.closest || !this.frame || !this.frame.contains(t) || t.closest('.an-float')) return;
@@ -116,6 +155,7 @@ class Component extends DCLogic {
     document.addEventListener('selectionchange', this.onSelChange);
     document.addEventListener('keydown', this.onDocKey);
     document.addEventListener('focusin', this.onFocusIn);
+    document.addEventListener('focusout', this.onFocusOut);
     document.addEventListener('pointerdown', this.onPointerDown, true);
     this.relayout();
   }
@@ -123,6 +163,8 @@ class Component extends DCLogic {
     document.removeEventListener('selectionchange', this.onSelChange);
     document.removeEventListener('keydown', this.onDocKey);
     document.removeEventListener('focusin', this.onFocusIn);
+    document.removeEventListener('focusout', this.onFocusOut);
+    clearTimeout(this.kfT);
     document.removeEventListener('pointerdown', this.onPointerDown, true);
     if (this.ro) this.ro.disconnect();
   }
@@ -139,9 +181,15 @@ class Component extends DCLogic {
     /* the popover: focus comes back to what opened it */
     const A = P.an || {}, B = prev.an || {};
     if (A.pop && !B.pop) this.popOpener = this.lastFocus;
+    /* round 02: a preset that puts keyboard focus on a highlight (its token changes) */
+    const kt = (A.kf && A.kf.token) || 0, pkt = (B.kf && B.kf.token) || 0;
+    if (kt && kt !== pkt) this.focusKf(A.kf.id, !!A.pop);
     if (!A.pop && B.pop) {
-      const o = this.popOpener;
+      let o = this.popOpener;
       this.popOpener = null;
+      /* opened from a highlight's stop: focus goes back to that stop (found again if the paint was redrawn) */
+      const key = (A.kf && A.kf.id) || (o && o.getAttribute && !o.isConnected && o.getAttribute('data-an-key'));
+      if (key && this.art) { const el = this.art.querySelector('mark.an-m[data-an-key~="' + String(key).split(' ')[0] + '"]'); if (el) o = el; }
       if (o && o.isConnected && this.frame && this.frame.contains(o) && o !== document.body) o.focus({ preventScroll: true });
     }
     if (!A.sel) this.mine = false;
@@ -272,6 +320,12 @@ class Component extends DCLogic {
     if (!inMe && !this.mine) return;
     if (this.props.panel) return;
     const k = e.key;
+    /* round 02: Enter or Space on a highlight's stop opens what a tap there opens (its popover, or the chooser) */
+    if ((k === 'Enter' || k === ' ') && t && t.matches && t.matches('mark.an-m[data-an-key]')) {
+      const ids = (t.getAttribute('data-an') || '').split(' ').filter(Boolean);
+      if (ids.length) { e.preventDefault(); this.lastFocus = t; A.act.marks(ids, { kbd: true, kf: (t.getAttribute('data-an-key') || '').split(' ')[0] }); }
+      return;
+    }
     if ((k === 'h' || k === 'H') && A.sel && A.sel.mode === 'passage') { e.preventDefault(); this.clearNative(); A.act.highlight(A.sel.id); }
     else if ((k === 'n' || k === 'N') && A.sel && A.sel.mode === 'passage') { e.preventDefault(); this.clearNative(); A.act.noteSel(A.sel.id); }
     else if (k === 'Escape' && (A.pop || A.sel || A.save)) { e.preventDefault(); if (A.pop) A.act.closePop(); else A.act.clear(); this.clearNative(); }
@@ -499,10 +553,11 @@ class Component extends DCLogic {
   view(r, A, ver) {
     const AN = window.RD.an;
     const active = (A.pop && (A.pop.type === 'hl' || A.pop.type === 'bnote') && A.pop.id) || A.active || null;
+    const kf = (!A.pop && A.kf && A.kf.id) || null;
     const m = this.memo;
-    if (m && m.blocks === r.blocks && m.ann === A.ann && m.sel === A.sel && m.active === active && m.ver === ver && m.lang === r.lang) return m.v;
-    const v = AN.view(r, { ann: A.ann, sel: A.sel, active, ver });
-    this.memo = { blocks: r.blocks, ann: A.ann, sel: A.sel, active, ver, lang: r.lang, doc: r.key, v };
+    if (m && m.blocks === r.blocks && m.ann === A.ann && m.sel === A.sel && m.active === active && m.ver === ver && m.lang === r.lang && m.kf === kf) return m.v;
+    const v = AN.view(r, { ann: A.ann, sel: A.sel, active, ver, kf, uid: this.uid });
+    this.memo = { blocks: r.blocks, ann: A.ann, sel: A.sel, active, ver, lang: r.lang, doc: r.key, kf, v };
     return v;
   }
   popVm(A, v, r) {
@@ -765,7 +820,8 @@ class Component extends DCLogic {
       sbBlockNote: () => { this.clearNative(); act.blockNote(sel && sel.sec, 'sel'); },
       sbBookmark: () => act.bookmark(sel && sel.sec, 'sel'),
       sbBookmarkPos: () => act.bookmarkPos(this.posNow(), 'sel'),
-      isPop: !!popVm, popVm: popVm || { mode: 'view' },
+      isPop: !!popVm, popVm: popVm || { mode: 'view' }, popKbd: !!(pop && pop.kbd),
+      dHl: this.uid + '-d-hl', dNote: this.uid + '-d-note', dTwo: this.uid + '-d-2',
       popClose: () => act.closePop(), popEdit: () => act.editNote(), popSave: (t) => act.saveNote(t), popCancel: () => act.cancelEdit(),
       popDeleteNote: () => act.deleteNote(), popReview: () => act.review(), popDelete: () => act.del(pop && pop.id),
       popDeleteItem: (id) => act.del(id), popPick: (id) => act.marks([id]),

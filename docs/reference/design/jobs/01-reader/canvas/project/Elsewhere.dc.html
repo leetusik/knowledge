@@ -11,7 +11,7 @@
 <body>
 <x-dc>
 <div class="{{ rootCls }}">
-<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.hasExtra2 }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extra2Label }}</span><sc-for list="{{ g.extra2 }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
 <div class="rd-away__main">
 <div class="rd-away__card">
 <p class="rd-away__kind">{{ kindLabel }}</p>
@@ -40,7 +40,7 @@ class Component extends DCLogic {
       external: { k: 'Outside the canvas', h: 'This link leaves the canvas', b: 'In the product it opens ' + (P.detail || 'https://www.sqlite.org/wal.html').replace(/^https:\/\//, '') + ' in a new tab, and the chapter stays open here.', back: 'Back to the chapter' },
     }[kind];
     const call = (name) => () => { const f = this.props[name]; if (f) f(); };
-    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [] }, g)) : [];
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [], hasExtra2: false, extra2Label: '', extra2: [] }, g)) : [];
     return {
       bar, hasBar: bar.length > 0,
       kindLabel: C.k, heading: C.h, body: C.b, backLabel: C.back,

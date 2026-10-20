@@ -5,7 +5,7 @@
   "title": "annotations",
   "canvas": {
     "url": "https://claude.ai/artifact/FJTQP73ZHxMkDyKywJ3zmj",
-    "version": "1792460312-003a",
+    "version": "1792512928-113e",
     "published": [
       "project/BlockStates.dc.html",
       "project/BookNotes.dc.html",
@@ -50,7 +50,51 @@
       "project/reader.css",
       "project/reader.js"
     ],
-    "system": "1792321604-e214"
+    "system": "1792321604-e214",
+    "manifest": {
+      "project/BlockStates.dc.html": 4933,
+      "project/BookNotes.dc.html": 8121,
+      "project/Callout.dc.html": 50343,
+      "project/ChapterEnd.dc.html": 6793,
+      "project/ChapterHead.dc.html": 4682,
+      "project/ChapterList.dc.html": 3965,
+      "project/CodeBlock.dc.html": 4975,
+      "project/DisplayPanel.dc.html": 3571,
+      "project/Elsewhere.dc.html": 5641,
+      "project/HighlightStates.dc.html": 5132,
+      "project/ItemStates.dc.html": 3699,
+      "project/LegacyBar.dc.html": 2938,
+      "project/LegacyStates.dc.html": 2182,
+      "project/Main.dc.html": 3761,
+      "project/MarginNote.dc.html": 2040,
+      "project/MarginStates.dc.html": 3444,
+      "project/NoteItem.dc.html": 7602,
+      "project/NotePop.dc.html": 13806,
+      "project/NotesPanel.dc.html": 5740,
+      "project/PanelStates.dc.html": 3212,
+      "project/PillStates.dc.html": 4727,
+      "project/PlaceBar.dc.html": 2524,
+      "project/PopStates.dc.html": 6581,
+      "project/Prose.dc.html": 71755,
+      "project/ProseTable.dc.html": 13272,
+      "project/Reader.dc.html": 56257,
+      "project/ReaderBottom.dc.html": 3406,
+      "project/ReaderState.dc.html": 3384,
+      "project/ReaderTop.dc.html": 3899,
+      "project/SelBar.dc.html": 4074,
+      "project/SelectionStates.dc.html": 3630,
+      "project/SignInToSave.dc.html": 1851,
+      "project/Toast.dc.html": 1291,
+      "project/VersionList.dc.html": 3255,
+      "project/Widths.dc.html": 12808,
+      "project/annot.css": 28167,
+      "project/annot.js": 38293,
+      "project/assets/logo.svg": 519,
+      "project/canvas.json": 6469,
+      "project/flow.js": 40122,
+      "project/reader.css": 61755,
+      "project/reader.js": 80156
+    }
   },
-  "status": "signed"
+  "status": "open"
 }

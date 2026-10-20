@@ -166,6 +166,10 @@
             piece.mkCls = "an-m" + (hl.length > 1 ? " an-m--2" : "") + (hl.some(function (r) { return r.note; }) ? " an-m--note" : "") + (hl.some(function (r) { return r.active; }) ? " is-active" : "");
             piece.mkId = hl.map(function (r) { return r.id; }).join(" ");
           }
+          /* round 02: the piece where a highlight starts is its keyboard stop (see stops() below) */
+          piece._pend = pend;
+          piece._hl = hl;
+          piece._starts = hl.filter(function (r) { return r.first && r.s === x; });
         }
         out.push(piece);
       }
@@ -175,9 +179,41 @@
     if (flags) flags.end = pos;
     return out;
   }
+  /* Round 02 (annotations 10, option a): the keyboard stop. Each highlight's first piece, in reading order, is a
+     focusable button (tabindex 0) that opens what a tap on it opens: its popover, or the chooser where highlights
+     overlap. A piece inside a link (or under the pending tint) never takes the stop; the stop moves to the highlight's
+     next piece outside it, and a highlight wholly inside a link takes none (a tap on it follows the link, as signed).
+     groups: [{ parts, link }] in reading order, within one container. */
+  function setStop(p, st) {
+    var ids = [];
+    st.forEach(function (r) { if (ids.indexOf(r.id) < 0) ids.push(r.id); });
+    var uid = st[0].uid, n = (p._hl || []).length;
+    p.mkKey = ids.join(" ");
+    p.mkTab = 0;
+    p.mkRole = "button";
+    p.mkPop = "dialog";
+    p.mkDesc = uid ? uid + (n > 1 ? "-d-2" : (p._hl || []).some(function (r) { return r.note; }) ? "-d-note" : "-d-hl") : undefined;
+    if (st.some(function (r) { return r.kf; })) p.mkCls += " is-kf";
+  }
+  function stops(groups) {
+    var carry = [];
+    groups.forEach(function (g) {
+      (g.parts || []).forEach(function (p) {
+        var here = p.mk && p._hl ? p._hl.map(function (r) { return r.id; }) : [];
+        var st = (p._starts || []).slice();
+        if (!g.link && !p._pend) {
+          /* a start carried out of a link lands here if this piece still covers it; else it ended inside the link */
+          carry.forEach(function (r) { if (here.indexOf(r.id) >= 0) st.push(r); });
+          carry = [];
+          if (st.length) setStop(p, st);
+        } else carry = carry.filter(function (r) { return here.indexOf(r.id) >= 0; }).concat(st);
+        delete p._starts; delete p._hl; delete p._pend;
+      });
+    });
+  }
   function segRuns(runs, ranges) {
     var pos = 0;
-    return (runs || []).map(function (r) {
+    var out = (runs || []).map(function (r) {
       var parts = partsOf(r), f = {};
       var seg = cut(parts, pos, ranges, f);
       pos = f.end;
@@ -188,11 +224,13 @@
       n.parts = seg;
       return n;
     });
+    stops(out.map(function (n) { return { parts: n.parts, link: n.kind === "link" || n.kind === "ext" }; }));
+    return out;
   }
-  function segParts(parts, ranges) { return cut(parts.map(function (p) { return { v: p.v, isKo: !!p.isKo }; }), 0, ranges); }
+  function segParts(parts, ranges) { var out = cut(parts.map(function (p) { return { v: p.v, isKo: !!p.isKo }; }), 0, ranges); stops([{ parts: out, link: false }]); return out; }
   function segLines(lines, ranges) {
     var pos = 0;
-    return lines.map(function (l, i) {
+    var out = lines.map(function (l, i) {
       if (i > 0) pos += 1;
       var off = pos;
       var toks = l.toks.map(function (t) {
@@ -203,6 +241,10 @@
       });
       return { off: off, toks: toks };
     });
+    var groups = [];
+    out.forEach(function (l) { l.toks.forEach(function (t) { groups.push({ parts: t.parts, link: false }); }); });
+    stops(groups);
+    return out;
   }
 
   /* Decorates a block array for the boards: every container gets its key, section, kind and base offset, and its runs
@@ -292,6 +334,7 @@
         var r = {};
         for (var k in base) r[k] = base[k];
         r.s = a - c.base; r.e = b - c.base;
+        r.first = a === s;
         (out[c.key] = out[c.key] || []).push(r);
       }
     });
@@ -332,7 +375,7 @@
       if (res.status === "anchored" && a.kind === "hl") {
         it.s = res.s;
         it.code = S.conts.some(function (c) { return c.kind === "code" && res.s >= c.base && res.e <= c.base + c.text.length; });
-        merge(ranges, spread(S, res.s, res.e, { id: a.id, note: !!a.note, active: st && st.active === a.id }));
+        merge(ranges, spread(S, res.s, res.e, { id: a.id, note: !!a.note, active: st && st.active === a.id, kf: !!(st && st.kf && st.kf === a.id), uid: (st && st.uid) || "" }));
         if (a.note) rail.push({ key: a.id, kind: "note", at: "mark", id: a.id, sec: a.block_id, label: "Note", text: a.note, lang: AN.langOf(a.note, a.lang), order: S.n * 1e6 + res.s });
       } else if (res.status === "anchored" && a.kind === "bnote") {
         it.s = -1;

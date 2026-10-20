@@ -1093,3 +1093,4 @@
 {"ts": "2026-10-21T00:18:42+09:00", "type": "deferred_created", "deferred": "D47", "source": "P30.DECOMP"}
 {"ts": "2026-10-21T00:19:42+09:00", "type": "slice_status_changed", "slice": "P30.S1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T00:19:42+09:00", "type": "slice_status_changed", "slice": "P30.S1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-10-21T00:23:21+09:00", "type": "slice_status_changed", "slice": "P30.S1", "old_status": "pending", "new_status": "in_progress"}

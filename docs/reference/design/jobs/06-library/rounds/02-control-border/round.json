@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "round": "02-control-border",
+  "title": "control border",
+  "slice": "P29.S6",
+  "status": "open",
+  "opened_at": "2026-10-21T00:23:28+09:00",
+  "closed_at": null,
+  "supersedes": [
+    "01-library"
+  ],
+  "signoff_words": null,
+  "canvas_version": null,
+  "critique": "critic",
+  "published": "1792511621-bd73"
+}

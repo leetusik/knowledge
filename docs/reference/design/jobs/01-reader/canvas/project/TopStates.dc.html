@@ -13,20 +13,33 @@
 <div class="rd-board">
 <p class="rd-board__title">Component — Top bar and progress line</p>
 <p class="rd-board__lead">The progress line (3 px, the chapter read so far) sits above the bar and stays when the chrome hides. Logo to the library, a back link to the book, the language switch only when the chapter has two languages, Display, and Sign in for a signed-out reader from 40rem.</p>
-<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ReaderTop" pct="{{ c.pct }}" back-long="{{ c.backLong }}" back-short="{{ c.backShort }}" is-old="{{ c.isOld }}" version="{{ c.version }}" langs="{{ c.langs }}" lang="{{ c.lang }}" member="{{ c.member }}" panel="{{ c.panel }}" theme="{{ c.theme }}" hint-size="100%,59px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><div style="{{ c.zs }}"><dc-import name="ReaderTop" pct="{{ c.pct }}" back-long="{{ c.backLong }}" back-short="{{ c.backShort }}" is-old="{{ c.isOld }}" version="{{ c.version }}" langs="{{ c.langs }}" lang="{{ c.lang }}" member="{{ c.member }}" panel="{{ c.panel }}" loose="{{ c.loose }}" theme="{{ c.theme }}" hint-size="100%,59px"></dc-import></div></div></div></sc-for></div></div></sc-for></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":703}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":1013}}'>
 class Component extends DCLogic {
   renderVals() {
     const RD = window.RD;
     const px = (w) => 'width: ' + w + 'px';
+    const z = (k) => 'zoom: ' + k + '; width: ' + Math.round(390 / k * 100) / 100 + 'px';
+    /* 150% scales a 260 px layout (16.25rem, what 390 px is at 150%) instead of zooming it: zoom 1.5 snaps a 1px edge to
+       one device pixel, which the browser reports as 0.67px, so the chosen language's edge would not measure. The stage
+       holds the scaled height: the 3 px line and the two-row bar (6.5rem), times 1.5. */
+    const s15 = (h) => ({ st: 'width: 390px; height: calc(' + h + ' * 1.5)', zs: 'width: 260px; transform: scale(1.5); transform-origin: 0 0' });
 
-    const T = (cap, w, o) => Object.assign({ cap, st: px(w), pct: 38, backLong: undefined, backShort: undefined, isOld: false, version: 2, langs: ['en', 'ko'], lang: 'en', member: true, panel: null, theme: 'light' }, o);
+    const T = (cap, w, o) => Object.assign({ cap, st: px(w), zs: 'zoom: 1', loose: false, pct: 38, backLong: undefined, backShort: undefined, isOld: false, version: 2, langs: ['en', 'ko'], lang: 'en', member: true, panel: null, theme: 'light' }, o);
     const rows = [
       { title: 'Desktop · 1200 wide', cells: [T('Member · English and 한국어 · 38% read', 1200, {}), T('Signed out · Sign in in the bar', 1200, { member: false, pct: 12 })] },
       { title: 'iPad · 820', cells: [T('Reading an older version · sepia', 820, { isOld: true, version: 1, theme: 'sepia', pct: 0 }), T('한국어 chosen · dark', 820, { lang: 'ko', theme: 'dark', pct: 72 }), T('Loose document · one language, so no switch · back to the library', 820, { backLong: 'Library', backShort: 'Library', langs: ['en'], pct: 20 })] },
       { title: 'Phone · 390', cells: [T('Member · top of chapter', 390, { pct: 0 }), T('Display open · dark', 390, { panel: 'display', theme: 'dark', pct: 64 }), T('Signed out · sepia · Sign in moves to the chapter end', 390, { member: false, theme: 'sepia', pct: 100 })] },
+      /* Round 03: under 21rem a chapter in two languages gives the language switch its own row. Large text is drawn with the
+         browser's zoom; every size in the bar is in rem, so the root font size lays it out the same way (pages 01 and 03). */
+      { title: 'Large text and the narrow phone · under 21rem wide, the language switch takes its own row', cells: [
+        T('Phone 320 · text 100% · English and 한국어', 320, { pct: 0 }),
+        T('Phone 390 · text 150%', 390, s15('(3px + 6.5rem)')),
+        T('Phone 390 · text 200% · 한국어 chosen · dark', 390, { lang: 'ko', theme: 'dark', pct: 72, zs: z(2) }),
+        T('One language · text 200% · sepia · one row', 390, { langs: ['en'], theme: 'sepia', zs: z(2) }),
+        T('Loose document · text 200% · the logo steps aside for “‹ Library”', 390, { backLong: 'Library', backShort: 'Library', langs: ['en'], loose: true, pct: 20, zs: z(2) })] },
     ];
     return { rows };
   }

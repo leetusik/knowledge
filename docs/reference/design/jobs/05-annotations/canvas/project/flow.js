@@ -21,7 +21,9 @@
       prog: clone(RD.progress), jump: jump(null, 0), prompt: false, resumed: false, away: null, verFail: false,
       os: "light", hold: null, sec: null,
       ann: AN.seed("default"), sel: null, pop: null, toast: null, save: null, active: null, editLabel: null,
-      view: "reader", filter: "all", bookScroll: 0, legacyBm: false };
+      view: "reader", filter: "all", bookScroll: 0, legacyBm: false,
+      /* round 02: the highlight holding keyboard focus (annotations 10), and where the book's list was opened from (book-page 7) */
+      kf: null, bookFrom: "chapter" };
     for (var k in over) s[k] = over[k];
     /* a scene that lands in the text is "in the text" from the start, so its preset reads pressed */
     if (s.jump && (s.jump.id || s.jump.mark || s.jump.frac) && !("sec" in over)) s.sec = s.jump.id || "in-text";
@@ -80,6 +82,9 @@
     { key: "poplong", page: "chapter", label: "Long note · review on", make: function () { return scene({ pop: { type: "hl", id: "a7" }, jump: jumpMark("a7") }); } },
     { key: "note", page: "chapter", label: "Writing a note", make: function () { return scene({ pop: { type: "hl", id: "a1", edit: true }, jump: jumpMark("a1") }); } },
     { key: "noteedit", page: "chapter", label: "Editing a note", make: function () { return scene({ pop: { type: "hl", id: "a13", edit: true }, jump: jumpMark("a13") }); } },
+    /* round 02 (annotations 10, option a): a highlight without a note, reached by Tab, then opened with Enter */
+    { key: "kbfocus", page: "chapter", label: "Keyboard · focus on a highlight", make: function () { return scene({ kf: { id: "a3", token: jump().token }, jump: jumpMark("a3") }); } },
+    { key: "kbpop", page: "chapter", label: "Keyboard · popover opened with Enter", make: function () { return scene({ pop: { type: "hl", id: "a3", kbd: true }, kf: { id: "a3", token: jump().token }, jump: jumpMark("a3") }); } },
     { key: "overlap", page: "chapter", label: "Two highlights overlap", make: function () { return scene({ pop: { type: "choose", ids: ["a5", "a6"] }, jump: jumpMark("a6") }); } },
     { key: "deleted", page: "chapter", label: "Deleted · undo", make: function () {
       var ann = AN.seed("default"); ann.hl = ann.hl.filter(function (a) { return a.id !== "a3"; }); ann.name = "less-a3";
@@ -114,6 +119,8 @@
     { key: "mdanon", page: "loose", label: "Signed out · Bookmark", make: function () { return scene({ doc: MDN, member: false, save: { what: "bookmarks", at: "slot" }, jump: jump(null, 0.3) }); } },
     /* the book's list */
     { key: "book", page: "booknotes", label: "All", make: function () { return scene({ view: "booknotes" }); } },
+    /* round 02 (book-page 7): opened from the book page's "Notes in this book →", so its back link reads "Back to the book" */
+    { key: "bookfrom", page: "booknotes", label: "Opened from the book page", make: function () { return scene({ view: "booknotes", bookFrom: "book" }); } },
     { key: "bookbm", page: "booknotes", label: "Bookmarks only", make: function () { return scene({ view: "booknotes", filter: "bm" }); } },
     { key: "booklabel", page: "booknotes", label: "Writing a label", make: function () { return scene({ view: "booknotes", filter: "bm", editLabel: "m4" }); } },
     { key: "bookmany", page: "booknotes", label: "100 items", make: function () { return scene({ view: "booknotes", ann: AN.seed("many") }); } },
@@ -145,8 +152,8 @@
     var a = s.ann || {}, p = s.pop;
     var an = [a.name + ":" + (a.rev || 1), s.sel ? [s.sel.mode, s.sel.sec, s.sel.s, s.sel.e, s.sel.key].join(":") : "",
       p ? [p.type, p.id || p.sec || (p.ids || []).join(","), p.edit ? 1 : 0].join(":") : "", s.toast ? "toast" : "", s.save ? s.save.at : "",
-      s.editLabel || ""].join("/");
-    if (page === "booknotes") return [page, an, s.filter].join("|");
+      s.editLabel || "", s.kf ? "kf:" + s.kf.id : ""].join("/");
+    if (page === "booknotes") return [page, an, s.filter, s.bookFrom || "chapter"].join("|");
     return [page, s.doc, s.lang, s.ver || RD.newest(s.doc, s.lang), s.member, s.chrome, s.panel || "", s.status, s.prompt,
       s.resumed, s.verFail, s.os, s.os === "dark" ? s.themeChoice : "",
       s.sec ? "in-text" : "at-top", an].join("|");
@@ -184,7 +191,7 @@
   }
 
   /* what the annotation layer clears when the reader moves on */
-  var CLEAR = { sel: null, pop: null, save: null, active: null, editLabel: null };
+  var CLEAR = { sel: null, pop: null, save: null, active: null, editLabel: null, kf: null };
 
   function api(comp) {
     function S() { return comp.state; }
@@ -234,7 +241,7 @@
       if (!x) return;
       var list = x.kind === "bm" ? "bm" : "hl", at = A()[list].map(function (y) { return y.id; }).indexOf(id);
       var ann = edit(function (a) { a[list] = a[list].filter(function (y) { return y.id !== id; }); });
-      put({ ann: ann, pop: null, active: null, editLabel: null, toast: toast(delText(x), { list: list, item: x, at: at }) });
+      put({ ann: ann, pop: null, active: null, editLabel: null, kf: null, toast: toast(delText(x), { list: list, item: x, at: at }) });
     }
     var an = {
       select: function (sel) { put({ sel: sel, pop: null, save: null, active: null }); },
@@ -267,12 +274,15 @@
         if (from === "place") o.jump = jump(sec);
         put(o);
       },
-      marks: function (ids) {
-        if (ids.length > 1) { put({ sel: null, save: null, pop: { type: "choose", ids: ids }, active: null }); return; }
+      /* o (round 02): { kbd, kf } when Enter or Space on a highlight's stop opened it; focus comes back to that stop */
+      marks: function (ids, o) {
+        var kb = !!(o && o.kbd), kf = o && o.kf ? { id: o.kf } : S().kf;
+        if (ids.length > 1) { put({ sel: null, save: null, pop: { type: "choose", ids: ids, kbd: kb }, active: null, kf: kf }); return; }
         var x = find(ids[0]);
         if (!x) return;
-        put({ sel: null, save: null, active: null, editLabel: null, pop: x.kind === "bnote" ? { type: "bnote", id: x.id, sec: x.block_id } : { type: "hl", id: x.id } });
+        put({ sel: null, save: null, active: null, editLabel: null, kf: kf, pop: x.kind === "bnote" ? { type: "bnote", id: x.id, sec: x.block_id } : { type: "hl", id: x.id, kbd: kb } });
       },
+      kfocus: function (id) { var c = S().kf; if ((c && c.id) === (id || undefined) || (!c && !id)) return; put({ kf: id ? { id: id } : null }); },
       /* a marker under a block or in the margin: "open:<id>", "changed:<section>", "other:<section>", "bm:<id>" */
       marker: function (k) {
         var i = String(k || "").indexOf(":"), kind = k.slice(0, i), v = k.slice(i + 1);
@@ -385,8 +395,19 @@
         var v = n === RD.newest(s.doc, s.lang) ? null : n;
         put(Object.assign({ ver: v, panel: null, resumed: false, prompt: false, hold: null, jump: jump(sec, 0), sec: sec || null }, CLEAR));
       },
-      openBook: function () { seq += 1; put(Object.assign({ view: "booknotes", panel: null, filter: "all", bookScroll: seq }, CLEAR)); },
-      closeBook: function () { var s = S(); put(Object.assign({ view: "reader", panel: null, jump: s.sec && s.sec !== "in-text" ? jump(s.sec) : jump(null, 0) }, CLEAR)); },
+      openBook: function () { seq += 1; put(Object.assign({ view: "booknotes", panel: null, filter: "all", bookScroll: seq, bookFrom: "chapter" }, CLEAR)); },
+      /* round 02 (book-page 7): the book page's "Notes in this book →" (on its stand-in) opens the same list */
+      bookFromBook: function () { seq += 1; put(Object.assign({ view: "booknotes", away: null, panel: null, filter: "all", bookScroll: seq, bookFrom: "book" }, CLEAR)); },
+      closeBook: function () {
+        var s = S();
+        /* opened from the book page: "Back to the book" returns there (its stand-in; 07-book-page draws the page) */
+        if (s.bookFrom === "book") {
+          put(Object.assign({ view: "reader", panel: null, away: away("book", { doc: s.doc, lang: s.lang, ver: s.ver, member: s.member, sec: s.sec && s.sec !== "in-text" ? s.sec : null },
+            (RD.ctx(s.doc) || {}).bookTitle || "") }, CLEAR));
+          return;
+        }
+        put(Object.assign({ view: "reader", panel: null, jump: s.sec && s.sec !== "in-text" ? jump(s.sec) : jump(null, 0) }, CLEAR));
+      },
       /* from the book's list: open the chapter in the mark's language, at the mark */
       bookGo: function (it) {
         var s = S();
@@ -512,14 +533,14 @@
       onChrome: a.chrome, onMark: a.mark, onEnd: a.end, onEndLeft: a.endLeft, onReading: a.reading, onAway: a.away, onRetry: a.retry,
       onPrompt: a.prompt, onFromTop: a.fromTop, onDismissResume: a.dismissResume,
       an: { ann: s.member ? s.ann : (comp.emptyAnn = comp.emptyAnn || empty), sel: s.sel, pop: s.pop, toast: s.toast, save: s.save, active: s.active,
-        editLabel: s.editLabel, act: a.an }
+        editLabel: s.editLabel, kf: s.kf, act: a.an }
     };
   }
 
   /* The book's list, from the flow state. */
   function bookProps(comp, a) {
     var s = comp.state;
-    return { ann: s.ann, filter: s.filter, editLabel: s.editLabel, theme: themeOf(s), size: s.size, scrollToken: s.bookScroll,
+    return { ann: s.ann, filter: s.filter, editLabel: s.editLabel, theme: themeOf(s), size: s.size, scrollToken: s.bookScroll, from: s.bookFrom || "chapter",
       toast: s.toast ? s.toast.text : "", onUndo: a.an.undo,
       onBack: a.an.closeBook, onLogo: function () { a.away("library"); }, onGo: a.an.bookGo, onDelete: function (it) { a.an.del(it.id); },
       onLabel: function (it) { a.an.label(it.id); }, onSaveLabel: function (it, t) { a.an.saveLabel(it.id, t); }, onCancelLabel: a.an.cancelLabel,
@@ -534,7 +555,7 @@
     if (r && f.sec) r.sections.forEach(function (x) { if (x.id === f.sec) sec = x.text; });
     var where = sec ? t + " · " + sec : t;
     var o = { kind: w.kind, onBack: a.back, onContinue: a.signedIn, where: where, title: t, detail: w.detail, legacyTitle: "",
-      legacyBm: !!s.legacyBm, member: s.member, onLegacyBm: a.an.legacyBm, onSignIn: function () { a.away("signin"); } };
+      legacyBm: !!s.legacyBm, member: s.member, onLegacyBm: a.an.legacyBm, onSignIn: function () { a.away("signin"); }, onBookNotes: a.an.bookFromBook };
     if (w.kind === "legacy") o.legacyTitle = RD.titleOf(w.detail, "en").text;
     if (w.kind === "book") o.detail = w.detail || (RD.ctx(f.doc) || {}).bookTitle || "";
     return o;

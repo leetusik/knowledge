@@ -100,6 +100,7 @@
     var s = BY[key || "top"].make();
     s.themeChoice = s.themeChoice || (device && device.themeChoice) || "system";
     s.size = (device && device.size) || 3;
+    s.win = (device && device.win) || null;
     s.preset = key || "top";
     s.loadId = 0;
     return s;
@@ -219,7 +220,7 @@
       dismissResume: function () { if (S().resumed) comp.setState({ resumed: false }); },
       pick: function (key) {
         var s = S(), m = BY[key].make();
-        var n = Object.assign({ themeChoice: s.themeChoice, size: s.size }, m);
+        var n = Object.assign({ themeChoice: s.themeChoice, size: s.size, win: s.win }, m);
         n.preset = key;
         n.loadId = (s.loadId || 0) + 1;
         comp.setState(n);
@@ -253,19 +254,35 @@
     return o;
   }
 
-  function bar(comp, a, pageKeys) {
+  /* Round 03: the window a page is drawn in, a device setting like the theme (canvas only). Text is the root font
+     size, as the browser's text zoom sets it; the reader's bars answer to their container's width in rem. */
+  var WINDOWS = [
+    { key: "fill", label: "Fills the window", w: 0, text: 100 },
+    { key: "p390", label: "Phone 390", w: 390, text: 100 },
+    { key: "p390t150", label: "Phone 390 · text 150%", w: 390, text: 150 },
+    { key: "p390t200", label: "Phone 390 · text 200%", w: 390, text: 200 },
+    { key: "p320", label: "Phone 320", w: 320, text: 100 }
+  ];
+  var WIN_BY = {};
+  WINDOWS.forEach(function (w) { WIN_BY[w.key] = w; });
+
+  /* extraFor(pageKey) may add one row of device presets to a page's group (round 03: the window row). */
+  function bar(comp, a, pageKeys, extraFor) {
     var s = comp.state, cur = pageOf(s);
     return PAGES.filter(function (p) { return !pageKeys || pageKeys.indexOf(p.key) >= 0; }).map(function (p) {
       var keys = PRESETS.filter(function (x) { return x.page === p.key; }).map(function (x) { return x.key; });
       var on = p.key === cur ? pressedKey(s, keys) : null;
-      return {
+      var g = {
         key: p.key, name: p.name, off: p.key !== cur, cls: p.key !== cur ? "pb-group is-off" : "pb-group",
         only: keys.length === 1, hasExtra: false, extraLabel: "", extra: [],
         presets: keys.map(function (k) { return { key: k, label: BY[k].label, pressed: on === k, pick: function () { a.pick(k); } }; })
       };
+      var x = extraFor ? extraFor(p.key) : null;
+      if (x) { g.hasExtra = true; g.extraLabel = x.label; g.extra = x.items; }
+      return g;
     });
   }
 
   RD.flow = { PRESETS: PRESETS, PAGES: PAGES, BY: BY, initial: initial, api: api, readerProps: readerProps, awayProps: awayProps,
-    bar: bar, pageOf: pageOf, themeOf: themeOf, pressedKey: pressedKey, scene: scene, jump: jump };
+    bar: bar, pageOf: pageOf, themeOf: themeOf, pressedKey: pressedKey, scene: scene, jump: jump, WINDOWS: WINDOWS, WIN_BY: WIN_BY };
 })();

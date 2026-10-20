@@ -13,22 +13,35 @@
 <div class="rd-board">
 <p class="rd-board__title">Component — Chapter bar</p>
 <p class="rd-board__lead">Previous, the chapter list and next, at the bottom where a thumb reaches. The first chapter has no previous; the last chapter's way on is the book. Titles show from 40rem; the middle always says where you are.</p>
-<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ReaderBottom" n="{{ c.n }}" total="{{ c.total }}" pct="{{ c.pct }}" prev-title="{{ c.prevTitle }}" next-title="{{ c.nextTitle }}" book-title="{{ c.bookTitle }}" panel="{{ c.panel }}" theme="{{ c.theme }}" hint-size="100%,60px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><div style="{{ c.zs }}"><dc-import name="ReaderBottom" n="{{ c.n }}" total="{{ c.total }}" pct="{{ c.pct }}" prev-title="{{ c.prevTitle }}" next-title="{{ c.nextTitle }}" book-title="{{ c.bookTitle }}" panel="{{ c.panel }}" theme="{{ c.theme }}" hint-size="100%,60px"></dc-import></div></div></div></sc-for></div></div></sc-for></div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":707}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":923}}'>
 class Component extends DCLogic {
   renderVals() {
     const RD = window.RD;
     const px = (w) => 'width: ' + w + 'px';
+    const z = (k) => 'zoom: ' + k + '; width: ' + Math.round(390 / k * 100) / 100 + 'px';
+    /* 150% scales a 260 px layout (16.25rem, what 390 px is at 150%) instead of zooming it: zoom 1.5 snaps a 1px edge to
+       one device pixel, which the browser reports as 0.67px. The stage holds the scaled height: the bar (3.75rem) times 1.5. */
+    const s15 = (h) => ({ st: 'width: 390px; height: calc(' + h + ' * 1.5)', zs: 'width: 260px; transform: scale(1.5); transform-origin: 0 0' });
 
     const mg = RD.books['maintainer-guide'].chapters.map((k) => RD.titleOf(k, 'en').text);
     const tw = RD.books['tidewater'].chapters.map((k) => RD.titleOf(k, 'en').text);
-    const B = (cap, w, n, o) => Object.assign({ cap, st: px(w), n, total: 5, pct: 38, prevTitle: mg[n - 2] || '', nextTitle: mg[n] || '', bookTitle: 'The knowledge maintainer guide', panel: null, theme: 'light' }, o);
+    const B = (cap, w, n, o) => Object.assign({ cap, st: px(w), zs: 'zoom: 1', n, total: 5, pct: 38, prevTitle: mg[n - 2] || '', nextTitle: mg[n] || '', bookTitle: 'The knowledge maintainer guide', panel: null, theme: 'light' }, o);
     const rows = [
       { title: 'Desktop · 1200 wide', cells: [B('First chapter · no previous', 1200, 1, { pct: 0 }), B('Middle chapter', 1200, 2, {}), B('Last chapter · back to the book', 1200, 5, { pct: 100 })] },
       { title: 'iPad · 820', cells: [B('Contents open · dark', 820, 2, { panel: 'contents', theme: 'dark' }), B('A 20-chapter book · sepia', 820, 11, { total: 20, pct: 46, prevTitle: tw[9], nextTitle: tw[11], bookTitle: 'Tidewater, from the inside', theme: 'sepia' })] },
       { title: 'Phone · 390', cells: [B('Middle chapter', 390, 2, {}), B('First chapter', 390, 1, { pct: 0 }), B('Last chapter · sepia', 390, 5, { theme: 'sepia', pct: 100 }), B('Contents open · dark', 390, 2, { panel: 'contents', theme: 'dark' })] },
+      /* Round 03: under 20rem (a 390 phone at 125% text and up) the bar keeps its marks. Large text is drawn with the
+         browser's zoom; every size in the bar is in rem, so the root font size lays it out the same way (pages 01 and 03). */
+      { title: 'Large text and the narrow phone · under 20rem wide, Previous and Next keep their marks', cells: [
+        B('Phone 320 · text 100% · as signed', 320, 2, {}),
+        B('Phone 390 · text 150%', 390, 2, s15('3.75rem')),
+        B('Phone 390 · text 200%', 390, 2, { zs: z(2) }),
+        B('First chapter · text 200%', 390, 1, { pct: 0, zs: z(2) }),
+        B('Last chapter · back to the book · text 200% · sepia', 390, 5, { pct: 100, theme: 'sepia', zs: z(2) }),
+        B('A 20-chapter book · Contents open · text 200% · dark', 390, 11, { total: 20, pct: 46, prevTitle: tw[9], nextTitle: tw[11], bookTitle: 'Tidewater, from the inside', panel: 'contents', theme: 'dark', zs: z(2) })] },
     ];
     return { rows };
   }

@@ -26,6 +26,17 @@ mark.an-m.is-active, mark.an-m.is-active:hover { box-shadow: inset 0 -2px 0 var(
 mark.an-pending, mark.an-pending:hover { background: color-mix(in srgb, var(--kb-accent) 22%, var(--kb-surface)); color: var(--kb-ink); box-shadow: none; cursor: text; }
 .rd-a mark.an-pending { color: var(--kb-accent-strong); }
 @media (forced-colors: active) { mark.an-m { forced-color-adjust: none; outline: 1px solid CanvasText; } }
+/* Round 02 (annotations 10, option a): a highlight's first piece is a tab stop (role button). Its focus is the system ring,
+   the rule reader.css gives every [tabindex] in the frame; nothing else about the paint changes, at rest, on hover or on a tap.
+   In forced colours the ring takes the system's Highlight, over the 1px CanvasText line the paint keeps. */
+@media (forced-colors: active) { mark.an-m:focus-visible, mark.an-m.is-kf { outline: var(--kb-focus-w) solid Highlight; outline-offset: var(--kb-focus-offset); } }
+/* Canvas only: a preset is pressed with the pointer, so the browser draws no :focus-visible after it; is-kf draws the same
+   ring for a preset's keyboard focus, and on 03's frames that do not hold the focus. The popover's ring (the box takes focus
+   when it opens from the keyboard) shows the same way until a control inside it is focused. */
+.rd-frame mark.an-m.is-kf { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.an-pop.is-kf:not(:has(:focus)) { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+/* The descriptions a highlight's stop points at (aria-describedby): never shown. */
+.an-sr-desc { display: none; }
 
 /* The article holds the floating parts (the bar, the popover, the margin), so it is their positioning box. */
 .rd-article { position: relative; }

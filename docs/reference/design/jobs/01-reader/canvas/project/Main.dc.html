@@ -12,10 +12,12 @@
 <body>
 <x-dc>
 <div class="rd-proto">
-<div class="rd-proto__stage">
+<sc-if value="{{ t150 }}" hint-placeholder-val="{{ false }}"><style>html { font-size: 150%; }</style></sc-if>
+<sc-if value="{{ t200 }}" hint-placeholder-val="{{ false }}"><style>html { font-size: 200%; }</style></sc-if>
+<div class="{{ stageCls }}"><sc-if value="{{ isDevice }}" hint-placeholder-val="{{ false }}"><p class="rd-cap rd-proto__cap">{{ winCap }}</p></sc-if><div class="{{ winCls }}">
 <sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ groups }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,900px"></dc-import></sc-if>
 <sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ groups }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,900px"></dc-import></sc-if>
-</div>
+</div></div>
 <div data-proto="screens"><span>Canvas only ·</span><a href="Reader.dc.html">The chapter screen alone</a><a href="Widths.dc.html">The reader at 390, 820 and 1440</a><a href="Elsewhere.dc.html">The stand-in for another job's screen</a></div>
 </div>
 </x-dc>
@@ -23,14 +25,24 @@
 class Component extends DCLogic {
   constructor(p) {
     super(p);
-    this.state = window.RD.flow.initial('top', { themeChoice: 'system', size: 3 });
+    this.state = window.RD.flow.initial('top', { themeChoice: 'system', size: 3, win: 'fill' });
     this.a = window.RD.flow.api(this);
   }
   renderVals() {
     const F = window.RD.flow, s = this.state;
     const none = { kind: 'library', where: '', detail: '', legacyTitle: '', onBack: null, onContinue: null };
+    /* Round 03: the window row, on the two pages that show the reader's bars (canvas only) */
+    const win = F.WIN_BY[s.win] || F.WIN_BY.fill;
+    const winRow = (page) => (page === 'chapter' || page === 'loose') ? { label: '· window:',
+      items: F.WINDOWS.map((w) => ({ label: w.label, pressed: win.key === w.key, pick: () => this.setState({ win: w.key }) })) } : null;
     return {
-      groups: F.bar(this, this.a),
+      groups: F.bar(this, this.a, null, winRow),
+      t150: win.text === 150,
+      t200: win.text === 200,
+      stageCls: 'rd-proto__stage' + (win.w ? ' rd-proto__stage--device' : ''),
+      winCls: 'rd-proto__win' + (win.w ? ' rd-proto__win--' + win.w : ''),
+      isDevice: !!win.w,
+      winCap: 'Phone · ' + win.w + ' × 844 · text ' + win.text + '%',
       inReader: !s.away,
       isAway: !!s.away,
       r: F.readerProps(this, this.a),

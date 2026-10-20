@@ -5,7 +5,7 @@
   "title": "library",
   "canvas": {
     "url": "https://claude.ai/artifact/6MnT599Y3zvUfXwnWp7F8N",
-    "version": "1792475416-ec5f",
+    "version": "1792511621-bd73",
     "published": [
       "project/BookCard.dc.html",
       "project/BookCardStates.dc.html",
@@ -32,7 +32,33 @@
       "project/library.css",
       "project/library.js"
     ],
-    "system": "1792321604-e214"
+    "system": "1792321604-e214",
+    "manifest": {
+      "project/BookCard.dc.html": 2781,
+      "project/BookCardStates.dc.html": 2632,
+      "project/ClearAll.dc.html": 4921,
+      "project/ClearStates.dc.html": 2287,
+      "project/ContinueReading.dc.html": 4591,
+      "project/ContinueStates.dc.html": 2945,
+      "project/DocRow.dc.html": 2265,
+      "project/DocRowStates.dc.html": 2740,
+      "project/Elsewhere.dc.html": 6845,
+      "project/Grouping.dc.html": 1571,
+      "project/GroupingStates.dc.html": 1877,
+      "project/Library.dc.html": 15498,
+      "project/LibraryState.dc.html": 5739,
+      "project/Main.dc.html": 2595,
+      "project/PublicLibrary.dc.html": 2519,
+      "project/PublicWidths.dc.html": 5852,
+      "project/ShellStates.dc.html": 3284,
+      "project/StateStates.dc.html": 2984,
+      "project/Widths.dc.html": 5769,
+      "project/assets/logo.svg": 519,
+      "project/canvas.json": 3833,
+      "project/libflow.js": 17564,
+      "project/library.css": 38829,
+      "project/library.js": 22944
+    }
   },
-  "status": "signed"
+  "status": "open"
 }

@@ -42,6 +42,15 @@
 [data-theme="dark"] { --lib-on-fill: #16130f; }
 [data-theme="sepia"] { --lib-on-fill: #fbfaf5; }
 
+/* The control edge (round 02-control-border, C11): the resting boundary of a bordered control, at least 3:1 on
+   the page (kb-paper) and on the control's own fill (kb-surface) in light, dark and sepia. Library-scoped; it
+   resolves to the system's kb-hint and is declared wherever a theme is set, so it follows that theme.
+   Structural lines (rules, card and panel edges, dividers) keep kb-border and kb-border-strong. */
+:root, [data-theme] { --lib-control-edge: var(--kb-hint); }
+/* The shell's ghost buttons (critique 01, C01) rest on the topbar's kb-surface-sunken, where kb-hint is 2.97:1 in
+   light. Their edge takes their own label colour, kb-secondary (at least 5.96:1 on every ground they touch). */
+:root, [data-theme] { --lib-ghost-edge: var(--kb-secondary); }
+
 html, body { margin: 0; }
 
 /* ---------- The app shell ---------- */
@@ -84,8 +93,8 @@ html, body { margin: 0; }
 
 /* Console buttons (kb-appbtn values); every one at least 44 px tall (proposed, see result.md). */
 .kb-appbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: var(--kb-tap); padding: 0.5rem 0.9rem; border: 1px solid transparent; border-radius: var(--kb-radius-sm); font-family: var(--font-body); font-size: 0.85rem; font-weight: var(--kb-weight-semibold); line-height: 1.2; white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink); transition: color var(--lib-ease), background var(--lib-ease), border-color var(--lib-ease); }
-.kb-appbtn--ghost { border-color: var(--kb-border); color: var(--kb-secondary); }
-.kb-appbtn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.kb-appbtn--ghost { border-color: var(--lib-ghost-edge); color: var(--kb-secondary); }
+.kb-appbtn--ghost:hover { border-color: var(--kb-ink); color: var(--kb-ink); }
 .kb-railtoggle { width: var(--kb-tap); padding: 0; flex: none; }
 .kb-railtoggle svg { display: block; }
 
@@ -172,7 +181,7 @@ html, body { margin: 0; }
 }
 .lib-btn--primary { background: var(--kb-accent); color: var(--lib-on-fill); }
 .lib-btn--primary:hover { background: var(--kb-accent-strong); }
-.lib-btn--secondary { background: var(--kb-surface); border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.lib-btn--secondary { background: var(--kb-surface); border-color: var(--lib-control-edge); color: var(--kb-ink); }
 .lib-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
 .lib-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
 .lib-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
@@ -283,7 +292,7 @@ html, body { margin: 0; }
 .lib-bar__fill { display: block; height: 100%; background: var(--kb-accent); }
 
 /* Grouping control (the reader's language switch, as signed) */
-.lib-seg { display: inline-flex; align-items: stretch; gap: 1px; padding: 1px; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); background: var(--kb-surface); }
+.lib-seg { display: inline-flex; align-items: stretch; gap: 1px; padding: 1px; border: 1px solid var(--lib-control-edge); border-radius: var(--kb-radius-sm); background: var(--kb-surface); }
 .lib-seg__opt { min-height: var(--kb-tap); padding-inline: 0.85rem; border: 0; border-radius: calc(var(--kb-radius-sm) - 1px); background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); white-space: nowrap; cursor: pointer; transition: color var(--lib-ease), background var(--lib-ease); }
 .lib-seg__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
 /* Pressed: a fill and an inset ring, so the state is a shape as well as a colour */

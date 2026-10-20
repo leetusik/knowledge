@@ -23,20 +23,21 @@
 <sc-if value="{{ isLegacy }}" hint-placeholder-val="{{ false }}"><div class="an-away-legacy"><dc-import name="LegacyBar" on="{{ legacyBm }}" member="{{ member }}" pct="38" on-toggle="{{ legacyToggle }}" on-sign-in="{{ legacySignIn }}" hint-size="100%,200px"></dc-import></div></sc-if>
 <div class="rd-away__actions">
 <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn rd-away__btn--main" onclick="{{ cont }}">Finish signing in</button></sc-if>
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn" onclick="{{ bookNotes }}">Notes in this book&nbsp;<span aria-hidden="true">→</span></button></sc-if>
 <button type="button" class="rd-away__btn" onclick="{{ back }}"><span aria-hidden="true">‹</span>&nbsp;{{ backLabel }}</button>
 </div>
 </div>
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"where":{"editor":null},"detail":{"editor":null},"legacyTitle":{"editor":null},"from":{"editor":null},"onBack":{"editor":null},"onContinue":{"editor":null},"legacyBm":{"editor":null},"member":{"editor":null},"onLegacyBm":{"editor":null},"onSignIn":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"where":{"editor":null},"detail":{"editor":null},"legacyTitle":{"editor":null},"from":{"editor":null},"onBack":{"editor":null},"onContinue":{"editor":null},"legacyBm":{"editor":null},"member":{"editor":null},"onLegacyBm":{"editor":null},"onSignIn":{"editor":null},"onBookNotes":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
     const P = this.props;
     const kind = P.kind || 'signin';
     const where = P.where || 'Knowledge System Internals: The Content Plane, the Write Path, and the Contracts · The write path';
     const C = {
-      book: { k: 'Another job · book-page', h: 'Book page — another job', b: 'The book page for “' + (P.detail || 'The knowledge maintainer guide') + '” is drawn by the book-page job. Its chapter list opens each chapter here, in the reader.', back: 'Back to the chapter' },
+      book: { k: 'Another job · book-page', h: 'Book page — another job', b: 'The book page for “' + (P.detail || 'The knowledge maintainer guide') + '” is drawn by the book-page job (07-book-page). Its chapter list opens each chapter here, in the reader, and its “Notes in this book →” opens this job’s list, whose back link returns here.', back: 'Back to the chapter' },
       library: { k: 'Another job · library', h: 'Library — another job', b: 'The library is drawn by the library job. Every book and loose document opens from there.', back: 'Back to the reader' },
       signin: { k: 'Another surface · auth, unchanged', h: 'Sign in — another surface', b: 'Signing in is the existing auth flow; this job does not change it.', back: 'Back, still signed out', wl: 'When it finishes, you come back to the same chapter and section:' },
       legacy: { k: 'Another job · legacy-and-print', h: 'Legacy reader — another job', b: '“' + (P.legacyTitle || 'Datums: Chart Datum, Mean Sea Level, and the Conversions Between Them') + '” keeps its original layout. The legacy-and-print job draws how it opens.', back: 'Back to the chapter' },
@@ -50,6 +51,8 @@ class Component extends DCLogic {
       hasWhere: kind === 'signin', whereLead: C.wl || '', where,
       isSignin: kind === 'signin',
       isLegacy: kind === 'legacy',
+      isBook: kind === 'book',
+      bookNotes: call('onBookNotes'),
       legacyBm: !!P.legacyBm, member: P.member === undefined ? true : !!P.member,
       legacyToggle: (on) => { if (P.onLegacyBm) P.onLegacyBm(on); },
       legacySignIn: call('onSignIn'),

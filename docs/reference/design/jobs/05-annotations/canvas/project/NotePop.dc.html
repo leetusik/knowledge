@@ -13,7 +13,7 @@
 <body>
 <x-dc>
 <div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
-<div class="an-box an-pop" role="dialog" aria-label="{{ dlgLabel }}" tabindex="-1" ref="{{ setBox }}" onkeydown="{{ boxKey }}">
+<div class="{{ boxCls }}" role="dialog" aria-label="{{ dlgLabel }}" tabindex="-1" ref="{{ setBox }}" onkeydown="{{ boxKey }}">
 <div class="an-box__head"><p class="an-box__k"><sc-if value="{{ hasKL }}" hint-placeholder-val="{{ false }}">{{ k }}<span lang="{{ kLang }}">{{ kL }}</span></sc-if><sc-if value="{{ noKL }}" hint-placeholder-val="{{ true }}">{{ k }}</sc-if></p><button type="button" class="rd-btn rd-btn--quiet an-box__x" onclick="{{ close }}">Close</button></div>
 <sc-if value="{{ hasWhere }}" hint-placeholder-val="{{ false }}"><p class="an-box__where" lang="{{ whereLang }}">{{ where }}</p></sc-if>
 <sc-if value="{{ isView }}" hint-placeholder-val="{{ true }}">
@@ -32,7 +32,7 @@
 </div>
 </div></div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"vm":{"editor":null},"onClose":{"editor":null},"onEdit":{"editor":null},"onSave":{"editor":null},"onCancel":{"editor":null},"onDeleteNote":{"editor":null},"onReview":{"editor":null},"onDelete":{"editor":null},"onDeleteItem":{"editor":null},"onPick":{"editor":null},"onGo":{"editor":null},"onEditLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onRemoveBm":{"editor":null},"autofocus":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":520}}'>
+<script type="text/x-dc" data-dc-script data-props='{"vm":{"editor":null},"kbd":{"editor":null},"onClose":{"editor":null},"onEdit":{"editor":null},"onSave":{"editor":null},"onCancel":{"editor":null},"onDeleteNote":{"editor":null},"onReview":{"editor":null},"onDelete":{"editor":null},"onDeleteItem":{"editor":null},"onPick":{"editor":null},"onGo":{"editor":null},"onEditLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onRemoveBm":{"editor":null},"autofocus":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":520}}'>
 class Component extends DCLogic {
   constructor(p) {
     super(p);
@@ -73,8 +73,26 @@ class Component extends DCLogic {
     this.fill();
     const v = this.vm();
     if ((this.props.autofocus !== false && !!this.props.vm) && v.mode !== 'edit' && !(v.mode === 'bm' && v.editing) && this.box) this.box.focus({ preventScroll: true });
+    this.shown = v.mode;
   }
-  componentDidUpdate() { this.fill(); }
+  /* Round 02: a pick in the chooser swaps the box's content and takes away the button that held focus, so the box takes
+     focus again, as when it opens; Escape then closes it and focus goes back to the stop that opened the chooser. */
+  componentDidUpdate() {
+    this.fill();
+    const v = this.vm(), was = this.shown;
+    this.shown = v.mode;
+    if (was === 'choose' && v.mode !== 'choose' && v.mode !== 'edit' && (this.props.autofocus !== false && !!this.props.vm)) {
+      /* the reader hides the popover while it places it again: focus waits until it is shown */
+      const t0 = Date.now();
+      const go = () => {
+        const b = this.box;
+        if (!b || !b.isConnected) return;
+        if (getComputedStyle(b).visibility !== 'visible') { if (Date.now() - t0 < 1500) requestAnimationFrame(go); return; }
+        b.focus({ preventScroll: true });
+      };
+      requestAnimationFrame(go);
+    }
+  }
   call(name, arg) {
     return (e) => {
       if (e && e.preventDefault) e.preventDefault();
@@ -120,6 +138,8 @@ class Component extends DCLogic {
       toggleReview: this.call('onReview'), go: this.call('onGo'), editLabel: this.call('onEditLabel'), cancelLabel: this.call('onCancelLabel'),
       removeBm: this.call('onRemoveBm'), save: this.save, saveLabel: this.saveLabel,
       wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      /* round 02 (canvas only): opened by keyboard, the box shows the ring :focus-visible gives it, also after a preset */
+      boxCls: 'an-box an-pop' + (this.props.kbd ? ' is-kf' : ''),
       wrapTheme: bare ? undefined : (P.theme || 'light'),
     };
   }

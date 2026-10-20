@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "round": "02-keyboard-and-back-link",
+  "title": "keyboard and back link",
+  "slice": "P29.S5",
+  "status": "open",
+  "opened_at": "2026-10-21T00:23:27+09:00",
+  "closed_at": null,
+  "supersedes": [
+    "01-annotations"
+  ],
+  "signoff_words": null,
+  "canvas_version": null,
+  "critique": "critic",
+  "published": "1792512928-113e"
+}

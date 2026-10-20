@@ -19,14 +19,15 @@
 <sc-if value="{{ isOld }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-top__ver"><span>Older version · v{{ version }}</span></span></sc-if>
 </div>
 <div class="rd-top__end">
-<sc-if value="{{ hasLangs }}" hint-placeholder-val="{{ true }}"><div class="rd-lang" role="group" aria-label="Language"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button type="button" class="rd-lang__opt" lang="{{ l.code }}" aria-pressed="{{ l.pressed }}" onclick="{{ l.pick }}">{{ l.label }}</button></sc-for></div></sc-if>
+<sc-if value="{{ hasLangs }}" hint-placeholder-val="{{ true }}"><div class="rd-lang rd-lang--bar" role="group" aria-label="Language"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button type="button" class="rd-lang__opt" lang="{{ l.code }}" aria-pressed="{{ l.pressed }}" onclick="{{ l.pick }}">{{ l.label }}</button></sc-for></div></sc-if>
 <button type="button" class="rd-tbtn" aria-haspopup="dialog" aria-expanded="{{ dispOpen }}" onclick="{{ display }}">Display</button>
+<sc-if value="{{ hasLangs }}" hint-placeholder-val="{{ true }}"><div class="rd-lang rd-lang--row" role="group" aria-label="Language"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button type="button" class="rd-lang__opt" lang="{{ l.code }}" aria-pressed="{{ l.pressed }}" onclick="{{ l.pick }}">{{ l.label }}</button></sc-for></div></sc-if>
 <sc-if value="{{ anon }}" hint-placeholder-val="{{ false }}"><a class="rd-tbtn rd-tbtn--signin" href="#top" onclick="{{ signIn }}">Sign in</a></sc-if>
 </div>
 </header>
 </div></div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"pct":{"editor":null},"backLong":{"editor":null},"backShort":{"editor":null},"isOld":{"editor":null},"version":{"editor":null},"langs":{"editor":null},"lang":{"editor":null},"member":{"editor":null},"panel":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onLang":{"editor":null},"onDisplay":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":1200,"height":59}}'>
+<script type="text/x-dc" data-dc-script data-props='{"pct":{"editor":null},"backLong":{"editor":null},"backShort":{"editor":null},"isOld":{"editor":null},"version":{"editor":null},"langs":{"editor":null},"lang":{"editor":null},"member":{"editor":null},"panel":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onLang":{"editor":null},"onDisplay":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"loose":{"editor":null},"theme":{"editor":null},"$preview":{"width":1200,"height":59}}'>
 class Component extends DCLogic {
   call(name, arg) {
     return (e) => {
@@ -57,7 +58,7 @@ class Component extends DCLogic {
       back: this.call('onBack'),
       display: this.call('onDisplay'),
       signIn: this.call('onSignIn'),
-      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-top',
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-top' + (langs.length > 1 ? ' rd-langs' : '') + (P.loose ? ' rd-loose' : ''),
       wrapTheme: bare ? undefined : (P.theme || 'light'),
     };
   }
