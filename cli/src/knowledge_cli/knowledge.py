@@ -59,7 +59,7 @@ from typing import Any
 
 import httpx
 
-from . import auth, config
+from . import auth, config, native
 from .client import ApiError, KnowledgeClient, never_sent
 from .errors import CliError
 
@@ -516,15 +516,16 @@ def cmd_save(args: argparse.Namespace) -> int:
     reporting a disconnect it cannot back up (`verify_save`).
     """
 
-    markdown = strip_frontmatter(read_body(args.file), args.file)
+    fmt, header, markdown = _prepare_body(args)
     if not markdown.strip():
         raise CliError(f"{args.file} is empty — nothing to save")
 
-    title = derive_title(markdown, args.title)
-    tags = validate_tags(parse_tags(args.tag))
+    title = _title_for(args, fmt, header, markdown)
+    tags = validate_tags(parse_tags(args.tag) or _header_tags(header))
     project = validate_project(
         args.project or default_project(), derived=not args.project
     )
+    extra = native.build_fields(args, fmt, header)
 
     # The lost reply's cause, kept as text: `except ... as exc` unbinds `exc` at the
     # end of its own block, so the message has to be built before then.
@@ -541,10 +542,16 @@ def cmd_save(args: argparse.Namespace) -> int:
                 date=args.date,
                 slug=args.slug,
                 overwrite=args.overwrite,
+                co_authored_by=args.co_authored_by,
+                extra=extra,
             )
         except ApiError as exc:
             if exc.status == 409:
                 raise CliError(_conflict(exc.detail)) from None
+            if exc.status == 422:
+                rejected = native.rejected_message(exc.detail)
+                if rejected:
+                    raise CliError(rejected) from None
             raise
         except httpx.TransportError as exc:
             # The split this whole branch exists for. Nothing sent -> `main()`'s
@@ -554,6 +561,19 @@ def cmd_save(args: argparse.Namespace) -> int:
             # the document — so ask it, and never re-POST on a guess.
             if never_sent(exc):
                 raise
+            if extra:
+                # A native, placed or imaged publish has no rel_path the CLI can
+                # derive (the server places a chapter), and `markdown` reads back as
+                # the search projection, so the byte comparison cannot confirm it.
+                # Say so, and never re-send.
+                raise CliError(
+                    _unconfirmed(
+                        exc,
+                        f"This publish cannot be read back by the CLI. Check with "
+                        f"`knowledge list --project {project}` before re-running; "
+                        "re-sending blind can add an unwanted version.",
+                    )
+                ) from None
             rel = save_rel_path(
                 project=project, title=title, date=args.date, slug=args.slug
             )
@@ -573,6 +593,8 @@ def cmd_save(args: argparse.Namespace) -> int:
             "`push_pending` field."
         )
 
+    for line in native.warning_lines(payload):
+        auth.note(f"warning: {line}")
     if emit(payload, args.json):
         return 0
     print(f"saved: {payload.get('title')}")
@@ -585,7 +607,62 @@ def cmd_save(args: argparse.Namespace) -> int:
     if payload.get("url"):
         print(f"  url:  {payload.get('url')}")
     print(f"  read: knowledge read {payload.get('id')}")
+    if payload.get("assigned_ids"):
+        print(f"  ids assigned by the server: {len(payload['assigned_ids'])}")
     return 0
+
+
+def _prepare_body(args: argparse.Namespace) -> tuple[str, dict[str, Any], str]:
+    """`(format, header fields, body)` for the file being saved.
+
+    * **html** (`--format html`): the raw page, untouched — a legacy chapter.
+    * **native**: `--format native`, or a file whose `---` header says
+      `format: native`. The header is read first (its title, tags, lang, summary,
+      translated_from and subject become defaults) and stripped, because the server
+      writes the header itself.
+    * **md** (the default): exactly the old behaviour, a stray header warned about.
+    """
+
+    raw = read_body(args.file)
+    if args.format == "html":
+        return "html", {}, raw
+    header, rest = native.split_header(raw)
+    if args.format == "native" or header.get("format") == "native":
+        if header and header.get("format") not in (None, "native"):
+            raise CliError(
+                f"{args.file} has a `format: {header['format']}` header, "
+                "but --format native was given"
+            )
+        return "native", header, rest
+    return "md", {}, strip_frontmatter(raw, args.file)
+
+
+def _header_tags(header: dict[str, Any]) -> list[str]:
+    tags = header.get("tags")
+    return [str(t) for t in tags] if isinstance(tags, list) else []
+
+
+def _title_for(
+    args: argparse.Namespace, fmt: str, header: dict[str, Any], markdown: str
+) -> str:
+    """`--title`; then, per format, the header's title, the page's `<title>`, or the H1.
+
+    A native chapter has no H1 (the title lives in the header), and an html page has
+    its `<title>`; only md derives the title from the body, as it always did.
+    """
+
+    if args.title:
+        return args.title
+    if fmt == "native":
+        if header.get("title"):
+            return str(header["title"])
+        raise CliError("no title: a native chapter has no # H1 — pass --title (or a `title:` header)")
+    if fmt == "html":
+        match = re.search(r"<title[^>]*>(.*?)</title>", markdown, re.I | re.S)
+        if match and match.group(1).strip():
+            return " ".join(match.group(1).split())
+        raise CliError("no title: pass --title (the page has no <title>)")
+    return derive_title(markdown, None)
 
 
 def _conflict(detail: str) -> str:
@@ -707,6 +784,12 @@ def cmd_read(args: argparse.Namespace) -> int:
     # a file `save` accepts, and anything printed around it would end up inside the
     # document on the way back. `--json` carries the fields this drops.
     markdown = payload.get("markdown") or ""
+    if args.source:
+        # A native chapter's whole stored file, header and ids included: what a
+        # re-explain starts from. `markdown` is only its search projection.
+        if not payload.get("source"):
+            raise CliError(f"{target} is not a native chapter — it has no source (drop --source)")
+        markdown = payload["source"]
     print(markdown, end="" if markdown.endswith("\n") else "\n")
     return 0
 
@@ -822,6 +905,67 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--overwrite", action="store_true", help="replace an existing document at the same path"
     )
+    p.add_argument(
+        "--format",
+        choices=("md", "native", "html"),
+        help=(
+            "md (default), native (a native chapter; a file whose header says "
+            "`format: native` is detected without it) or html (a legacy page, sent "
+            "verbatim, needs --title or a <title>)"
+        ),
+    )
+    p.add_argument(
+        "--co-authored-by",
+        metavar="NAME <EMAIL>",
+        help="the bare attribution of the model that did the work; the API prepends `Co-Authored-By: `",
+    )
+    p.add_argument("--summary", help="a native chapter's one-line lede (default: the header's)")
+    p.add_argument("--lang", help="the chapter's language, e.g. en or ko (default: the header's)")
+    p.add_argument(
+        "--translated-from",
+        metavar="LANG@V",
+        help="this is a translation of that language's version, e.g. en@2",
+    )
+    p.add_argument(
+        "--subject",
+        help="a loose document's by-subject label (general-learning mode); default: the header's",
+    )
+    p.add_argument("--book", metavar="SLUG", help="place this as a chapter of that book (needs --chapter)")
+    p.add_argument("--chapter", metavar="KEY", help="the chapter key within the book (needs --book)")
+    p.add_argument(
+        "--position",
+        type=float,
+        help="where a NEW chapter goes in the book (default: appended at the end)",
+    )
+    p.add_argument("--book-title", help="a NEW book's title (default: its slug)")
+    p.add_argument(
+        "--book-kind",
+        choices=native.BOOK_KINDS,
+        help="a NEW book's kind (required when the book does not exist yet)",
+    )
+    p.add_argument("--book-subject", help="a NEW subject book's subject label")
+    p.add_argument("--chapter-title", help="a NEW chapter's title in the book's table of contents")
+    p.add_argument(
+        "--chapter-source",
+        action="append",
+        metavar="KEY=VALUE",
+        help="where a NEW chapter came from, e.g. phase=P8 or slice=P8.S2 (repeatable)",
+    )
+    p.add_argument(
+        "--asset",
+        action="append",
+        metavar="NAME=PATH",
+        help=(
+            "attach an image the chapter references as asset:NAME (repeatable; png, "
+            "jpeg, webp or gif, sniffed from the file's first bytes)"
+        ),
+    )
+    p.add_argument(
+        "--new-version",
+        action="store_true",
+        help="publish as the next version of the existing document (matched by project and slug)",
+    )
+    p.add_argument("--rel-path", help="with --new-version: the document to supersede, as `knowledge list` prints it")
     _add_json(p)
     p.set_defaults(func=cmd_save)
 
@@ -864,6 +1008,11 @@ def register(sub: argparse._SubParsersAction) -> None:
             "a document id, or the rel_path that `knowledge list` prints "
             "(project/YYYY-MM-DD-slug.md — the full path, not a bare slug)"
         ),
+    )
+    p.add_argument(
+        "--source",
+        action="store_true",
+        help="a native chapter: print the whole stored file (header and ids), not the search text",
     )
     _add_json(p)
     p.set_defaults(func=cmd_read)

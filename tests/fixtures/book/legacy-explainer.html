@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A legacy explainer (fixture)</title>
+<style>
+  body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6; }
+  .callout { border-left: 4px solid #4a7; background: #f0f8f4; padding: .75rem 1rem; margin: 1rem 0; }
+  .opt { display: block; margin: .3rem 0; padding: .4rem .6rem; cursor: pointer; }
+  .opt.correct { background: #d6f5d6; }
+  .opt.incorrect { background: #f7d6d6; }
+</style>
+</head>
+<body>
+<h1>A legacy explainer (fixture)</h1>
+<nav><strong>Contents</strong><ol><li><a href="#background">Background</a></li><li><a href="#quiz">Quiz</a></li></ol></nav>
+<section id="background">
+  <h2>Background</h2>
+  <p>This page is an <strong>invented</strong> html explainer, the kind written before the native format existed. It carries its own style and a small script, and it opens in the legacy reader.</p>
+  <div class="callout">A cache keeps a copy of an answer close to where it is asked for.</div>
+</section>
+<section id="quiz">
+  <h2>Quiz</h2>
+  <div class="q">
+    <p><strong>1.</strong> What does a cache keep?</p>
+    <button class="opt" data-correct="false">The origin</button>
+    <button class="opt" data-correct="true">A copy of an answer</button>
+    <p class="why" hidden>A cache stores copies, never the origin itself.</p>
+  </div>
+</section>
+<script>
+  document.querySelectorAll('.q').forEach(function (q) {
+    var why = q.querySelector('.why');
+    q.querySelectorAll('.opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btn.classList.add(btn.dataset.correct === 'true' ? 'correct' : 'incorrect');
+        if (why) why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

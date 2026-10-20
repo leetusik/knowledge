@@ -317,9 +317,14 @@ class KnowledgeClient:
         overwrite: bool = False,
         commit: bool = True,
         co_authored_by: str | None = None,
+        extra: dict[str, Any] | None = None,
         token: str | None = None,
     ) -> Any:
         """POST /api/documents -> 201 (the frozen consumer contract). Metered.
+
+        `extra` carries the additive fields (P30: `format`, `summary`, `book`,
+        `chapter`, `lang`, `translated_from`, `subject`, `new_version`, `rel_path`,
+        `assets`); it is merged last and is empty for a plain md save.
 
         `markdown` is the body **without** frontmatter, starting at the H1 — the
         API generates convention-exact frontmatter itself. `tags` must be **2-5**
@@ -350,6 +355,8 @@ class KnowledgeClient:
             body["related"] = related
         if co_authored_by is not None:
             body["co_authored_by"] = co_authored_by
+        if extra:
+            body.update(extra)
         return self._request(
             "POST", "/api/documents", token=token, json=body, timeout=WRITE_TIMEOUT
         )

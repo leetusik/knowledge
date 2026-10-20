@@ -33,3 +33,21 @@ Moved word for word from `phase.md` → `## Notes for later slices` by P30.S5 to
   - translation keeps ids;
   - images are attached by name through the CLI's `--asset`, and images are no longer banned;
   - stop deleting `.agents/skills/explain/` (A3).
+
+## (from P30.S7, for S8 onwards) Loading the fixture book
+
+`scripts/publish_fixture_book.py` publishes the shared fixture book through the `knowledge` CLI (sources in `tests/fixtures/book/`, all invented text). What lands:
+- project `fixtures`, book `fixture-guide` (kind `subject`), three chapters:
+  - `all-blocks` (en): every block type, all six callouts, a diagram of every kind (flow, state, sequence, stack, timeline, chart bar/line/interval), an svg, a figure, a two-image figure row, a mixed row, every quiz type, `sources`; **two versions** (v1 a short draft, v2 the full chapter, ids kept);
+  - `write-lock`: en and its `ko` translation (`translated_from en@1`, same ids and quiz ids);
+  - `legacy`: one `html` chapter;
+- a loose native document in project `fixture-finance`, carrying `subject: Fixture finance`.
+
+To run it, start a throwaway API (never `:8766`, never production), then the script:
+```
+mkdir -p $ROOT/docs && git -C $ROOT init -q && git -C $ROOT commit -q --allow-empty -m init   # needs user.name/email
+KB_ROOT=$ROOT KB_DB_PATH=$ROOT/data/kb.sqlite3 .venv/bin/uvicorn server.main:app --host 127.0.0.1 --port 8767
+python3 scripts/publish_fixture_book.py --base-url http://127.0.0.1:8767
+```
+Legacy (single-tenant) mode with no `KB_API_TOKEN` on the server accepts any bearer; the script sends a throwaway one and an empty CLI config home. It refuses non-local hosts and stops when the book exists unless `--force`. Reset by pointing at a fresh `KB_ROOT`. Chapter URLs: `/api/books/fixtures/fixture-guide`, documents `1` (all-blocks), `2`/`3` (write-lock en/ko), `4` (legacy), `5` (loose) on fresh state.
+For a tenant-mode stack (Postgres) use a `vk_` key from the stack as `--token`.

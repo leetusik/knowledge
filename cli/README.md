@@ -31,6 +31,10 @@ channel. Upgrade by re-running either command; the `uv` form takes `--reinstall`
     # Save a note (2-5 tags, lowercase-kebab; body starts at its # H1).
     knowledge save note.md --tag python --tag testing
 
+    # A native chapter, placed in a book, with an image (see `knowledge save --help`).
+    knowledge save chapter.md --format native --title "Title" --tag a,b \
+      --book my-book --book-kind subject --book-subject Topic --chapter intro --asset fig=./fig.png
+
     # Find and read it back.
     knowledge search "the thing I saved"
     knowledge list
