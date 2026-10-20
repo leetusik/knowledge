@@ -69,6 +69,20 @@ def add(paths: Iterable[str], *, root) -> None:
     _run(["add", "--", *kept], root=root)
 
 
+def remove(paths: Iterable[str], *, root) -> None:
+    """Stage the deletion of files already gone from the work tree (P30.S5).
+
+    ``git -C <root> rm --cached --quiet --ignore-unmatch -- <paths...>``: the html ->
+    native migration unlinks the old ``.html`` file itself, and this records that
+    removal in the same scoped commit. ``--ignore-unmatch`` keeps a never-committed
+    path from failing the commit.
+    """
+    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    if not kept:
+        return
+    _run(["rm", "--cached", "--quiet", "--ignore-unmatch", "--", *kept], root=root)
+
+
 def commit(message: str, *, root, co_authored_by: Optional[str] = None) -> str:
     """Commit the staged changes and return the resulting HEAD sha.
 

@@ -1,8 +1,9 @@
 # `server/native/`: the native chapter format
 
 This package is a pure Python parser, validator and plain-text projection for `format: native`
-chapters, following P29.S2's contract. It is not wired to any route: S5 wires ingest, and S12's TS parser
-reproduces the same tree from the shared fixtures in `tests/fixtures/native/`.
+chapters, following P29.S2's contract. S5 wires it into ingest (`server/native_ingest.py` and
+`POST /api/documents`, below), and S12's TS parser reproduces the same tree from the shared fixtures in
+`tests/fixtures/native/`.
 
 ```python
 from server.native import parse_chapter, NativeFormatError, sections, search_text
@@ -12,6 +13,7 @@ result.tree          # the normalized block tree (below), JSON-serializable
 result.source        # the file to store: LF line endings, every assigned id written in
 result.assigned_ids  # [{"id", "type", "line"}], for the 201 response
 result.refs          # every link/image reference: {"kind", ..., "href", "line", "image"}
+result.ids           # the document id namespace, authored + assigned (S5 reserves them on the next version)
 sections(result.tree)     # [{"id", "text"}]: the anchor basis (S9)
 search_text(result.tree)  # the FTS/embedding text (S5)
 ```
@@ -268,6 +270,51 @@ The `.txt` fixture form (`format_sections`) writes, for each section, `=== <id>\
 figure alt and caption and credit, every diagram label, title and caption, SVG labels, and quiz titles,
 prompts, options and explanations. It never includes answer keys: a recall `answer`, a choice `answer` or
 a cloze blank. It also covers source titles. It is Python-only (S5).
+
+## Ingest (S5)
+
+`POST /api/documents` with `format: "native"` wires this parser in (`server/main.py` and
+`server/native_ingest.py`).
+
+- **The request.** `markdown` is the chapter body **without** a header. The server writes the
+  header: the md convention's fields plus `format: native`, `syntax: 1` and an optional `summary`
+  (the request's `summary` field, native only). A body that starts with its own `---` header is
+  therefore parsed as body, and usually fails.
+- **One 422.** Every violation joins one list in this shape: the parser's, the images'
+  (`asset-*`) and the ones below. **Lines are lines of the body as sent.** A finding in the
+  server's header, or about the whole document, has `line: 0`.
+
+  | Code | Kind | When |
+  |---|---|---|
+  | `body-too-large` | 422 | over the format's body limit: native 512 KB (P29), md 512 KB, html 1 MB |
+  | `ref-unknown-asset` | 422 | an `asset:` image, figure `src` or figure-row image names no asset of THIS publish (a new version inherits none) |
+  | `translation-quiz-ids` | 422 | a `translated_from` publish whose quiz item or option ids differ from that source version's |
+  | `asset-format` | 422 | assets on an `md` or `html` document: only native chapters carry images |
+  | `ref-unresolved` | warning | a `chapter:` or `doc:` target that does not exist yet (it renders as a missing link) |
+  | `translation-ids` | warning | heading and block ids that differ from the translation's source |
+  | `translation-source-missing` | warning | the source version is not a stored native version of this chapter |
+
+- **The 201** adds `assigned_ids` (`{id, type, line}`), `warnings` and `migrated_from` (the old
+  rel_path of an html → native migration, else `null`). These keys appear only on a native publish.
+- **Ids.** The parser's `reserved_ids` are every id of every earlier native version of the document,
+  so a retired id is never minted again. An author keeps a surviving id by re-sending it.
+- **Storage.** The file is the parser's `.source`. The DB keeps it whole in `source` and its
+  `search_text` in `markdown`, which is what FTS5 and the embeddings read. Reindex derives `format`
+  from the header, so a `.md` file that says `format: native` is native.
+- **Reads.** The `/api` and `/app` document and version detail reads carry `source` (`null` for
+  every other format) beside the version's `assets` map. List shapes carry neither. MCP
+  `fetch_document` returns `source` in `markdown`, with `format: "native"`.
+- **html → native** is the one format migration (P29 *Legacy → native re-explain*). It happens on the
+  first native publish onto an html document, through `new_version`, an explicit `rel_path` or a
+  chapter binding:
+  - the html body is archived as `vNNNN.html` in the stem-keyed `.versions/` directory;
+  - the native file is written at `<stem>.md`, and the html file is removed in the same commit;
+  - the row keeps its id, and its rel_path and its archived versions move with it;
+  - the book binding is re-pointed;
+  - a by-path or MCP read of the old `.html` path resolves through the stem alias.
+
+  `md → native` is an ordinary next version. Every other format change is a 422. A NEW document may
+  not take a stem another document already owns (409).
 
 ## The fixtures
 

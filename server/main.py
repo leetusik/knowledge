@@ -39,10 +39,12 @@ from server import usage_api
 from server import documents as documents_mod
 from server import embeddings as embeddings_mod
 from server import gitops
+from server import native_ingest
 from server import publish
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
+from server.native import NativeFormatError, parse_chapter, search_text
 from server.accounts.service import get_accounts_service
 from server.api_auth import (
     ApiAuthContext,
@@ -260,14 +262,15 @@ def require_read_bearer(authorization: Optional[str] = Header(default=None)) -> 
 # already exposed as a list), so it never leaves the API. raw_html is an internal
 # viewer-only column (served only by the /app raw route), never in /api JSON — but
 # `format` IS exposed (additive). markdown is dropped from list payloads and kept on
-# single-doc fetches.
+# single-doc fetches; so is `source` (P30.S5: the stored native file, null for every
+# other format), which is what a re-explain reads its ids back from.
 _INTERNAL = {"tags_text", "raw_html"}
 
 
 def _public_doc(doc: dict, *, include_markdown: bool) -> dict:
     drop = set(_INTERNAL)
     if not include_markdown:
-        drop.add("markdown")
+        drop |= {"markdown", "source"}
     return {k: v for k, v in doc.items() if k not in drop}
 
 
@@ -290,7 +293,7 @@ def _public_version(row: dict, *, include_body: bool) -> dict:
     """
     drop = set(_VERSION_INTERNAL)
     if not include_body:
-        drop |= {"markdown", "raw_html"}
+        drop |= {"markdown", "raw_html", "source"}
     elif row.get("format") != "html":
         drop.add("raw_html")
     return {k: v for k, v in row.items() if k not in drop}
@@ -395,12 +398,14 @@ def list_document_versions(
     answers ``current_version: 3`` with v2 and v1 in ``versions``. An
     unversioned document answers ``current_version: 1`` and an empty list.
     """
-    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    doc = db.get_document_by_path_or_alias(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    rows = db.list_document_versions(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    # The chain is keyed by the document's CURRENT rel_path (P30.S5: an old .html
+    # path reaches a migrated document through the stem alias).
+    rows = db.list_document_versions(conn, doc["rel_path"], tenant_id=_tenant_filter(ctx))
     return {
-        "rel_path": rel_path,
+        "rel_path": doc["rel_path"],
         "current_version": int(doc.get("version") or 1),
         "total": len(rows),
         "versions": [_public_version(r, include_body=False) for r in rows],
@@ -418,10 +423,10 @@ def get_document_version(
     an html version). The CURRENT version is not addressable here — it is the
     document, so ``GET /api/documents/by-path/{rel_path}`` serves it; asking for
     it here is a 404, exactly like a version that never existed."""
-    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    doc = db.get_document_by_path_or_alias(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    row = db.get_document_version(conn, rel_path, version, tenant_id=_tenant_filter(ctx))
+    row = db.get_document_version(conn, doc["rel_path"], version, tenant_id=_tenant_filter(ctx))
     if row is None:
         raise HTTPException(
             status_code=404, detail=f"no version {version} of document {rel_path!r}"
@@ -437,7 +442,9 @@ def get_document_by_path(
     ctx: ApiAuthContext = Depends(resolve_api_read),
     conn=Depends(get_conn),
 ):
-    doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
+    # P30.S5: a miss falls back to the document sharing the path's stem, so the old
+    # `<stem>.html` of a document migrated to native keeps resolving (MCP included).
+    doc = db.get_document_by_path_or_alias(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
     return _public_doc(doc, include_markdown=True)
@@ -583,7 +590,12 @@ class DocumentIn(BaseModel):
     # Additive (default "md" — existing callers unchanged). "html" ingests a
     # self-contained explainer: the `markdown` field carries the raw HTML body, and
     # a bad value gets a free 422 from the Literal. Pydantic v2 forbids by default.
-    format: Literal["md", "html"] = "md"
+    # "native" (P30.S5) is a native chapter: `markdown` carries its body WITHOUT a
+    # header (the server writes the header, adding `format: native` / `syntax: 1`);
+    # the body is parsed and validated, and every violation is one 422 list.
+    format: Literal["md", "html", "native"] = "md"
+    # P30.S5: a native chapter's optional lede, written into its header (P29 *Header*).
+    summary: Optional[str] = None
     overwrite: bool = False
     # Versioned re-publish (P23, additive — both default to today's behavior).
     # `new_version: true` republishes an EXISTING document as its next version:
@@ -680,6 +692,7 @@ def _place_variant(
     tid: str,
     placement: dict,
     rel: str,
+    replaces: Optional[str] = None,
 ) -> tuple[dict, bool, bool]:
     """Build the manifest that binds ``rel`` as the placement's variant (no write).
 
@@ -689,6 +702,10 @@ def _place_variant(
     already belongs to a different chapter — in this book or, through the index, in
     another (P29: a document is in at most one chapter). A new book needs
     ``book.kind`` (422). Returns ``(manifest, book_created, chapter_created)``.
+
+    ``replaces`` (P30.S5) is the document's old rel_path on an ``html -> native``
+    migration: the same document under its previous name, so a binding to it counts
+    as this document's own and is re-pointed to ``rel``.
     """
     book, chapter, lang = placement["book"], placement["chapter"], placement["lang"]
     manifest = _read_manifest_or_409(root, project, book["slug"])
@@ -712,6 +729,8 @@ def _place_variant(
 
     conflict = {"rel_path": rel, "book": book["slug"], "chapter_key": chapter["key"], "lang": lang}
     bound_here = books_mod.find_binding(manifest, rel)
+    if bound_here is None and replaces is not None:
+        bound_here = books_mod.find_binding(manifest, replaces)
     if bound_here is not None and bound_here != (chapter["key"], lang):
         raise HTTPException(
             status_code=409,
@@ -724,6 +743,8 @@ def _place_variant(
             },
         )
     elsewhere = db.find_chapter_binding(conn, rel, tid)
+    if elsewhere is None and replaces is not None:
+        elsewhere = db.find_chapter_binding(conn, replaces, tid)
     if elsewhere is not None and (elsewhere["project"], elsewhere["book"]) != (project, book["slug"]):
         raise HTTPException(
             status_code=409,
@@ -758,7 +779,7 @@ def _place_variant(
     # never silently replaced.
     if (
         current is not None
-        and current != rel
+        and current not in (rel, replaces)
         and db.get_document_by_path(conn, current, tenant_id=tid) is not None
     ):
         raise HTTPException(
@@ -865,7 +886,9 @@ def _resolve_version_target(
         return None
     tenant = _tenant_filter(ctx)
     if body.rel_path:
-        return db.get_document_by_path(conn, body.rel_path, tenant_id=tenant)
+        # The stem alias (P30.S5): naming a migrated document by its old .html path
+        # still finds it.
+        return db.get_document_by_path_or_alias(conn, body.rel_path, tenant_id=tenant)
     return db.find_latest_document_by_slug(conn, project, slug, tenant_id=tenant)
 
 
@@ -916,29 +939,41 @@ def create_document(
             raise documents_mod.ConventionError(
                 "translated_from.lang must differ from the document's own lang"
             )
+        if body.summary is not None and body.format != "native":
+            raise documents_mod.ConventionError(
+                "summary is a native chapter's header field: send it with format \"native\""
+            )
+        if body.summary is not None and not body.summary.strip():
+            raise documents_mod.ConventionError("summary must be a non-empty string")
     except documents_mod.ConventionError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    # 1-. Images (P30.S4). Validated, stripped and hashed here, before the lock (the
-    #     decode is CPU work); every violation comes back in ONE 422 list. A legacy
-    #     html explainer runs in an opaque-origin sandbox and can reference none, so
-    #     it may not carry any.
+    # 1-. Content violations, collected into ONE 422 list (P29 *Ingest*; S3's shape:
+    #     {line, col, code, message}). The body limit applies to every format
+    #     (P30.S5). Images (P30.S4) are validated, stripped and hashed here, before
+    #     the lock (the decode is CPU work). Only a native chapter may carry images
+    #     (P30.S5, OQ14): a legacy html explainer runs in an opaque-origin sandbox and
+    #     can reference none, and plain md has no `asset:` resolution. A native body
+    #     is parsed further down, once its version (hence its header) is known, and
+    #     its violations join this list.
+    violations: list[dict] = native_ingest.body_limit_violations(body.format, body.markdown)
+    body_too_large = bool(violations)
     prepared_assets: list = []
     if body.assets:
-        if body.format == "html":
-            raise HTTPException(
-                status_code=422,
-                detail=[{
-                    "line": 0, "col": 0, "code": "asset-format",
-                    "message": "an html document cannot carry assets",
-                }],
-            )
-        try:
-            prepared_assets = assets_mod.prepare_assets(
-                [a.model_dump() for a in body.assets]
-            )
-        except assets_mod.AssetError as exc:
-            raise HTTPException(status_code=422, detail=exc.to_detail())
+        if body.format != "native":
+            violations.append({
+                "line": 0, "col": 0, "code": "asset-format",
+                "message": f"only a native chapter can carry assets, not an {body.format} document",
+            })
+        else:
+            try:
+                prepared_assets = assets_mod.prepare_assets(
+                    [a.model_dump() for a in body.assets]
+                )
+            except assets_mod.AssetError as exc:
+                violations.extend(exc.to_detail())
+    if violations and body.format != "native":
+        raise HTTPException(status_code=422, detail=violations)
     asset_map = assets_mod.asset_map(prepared_assets)
 
     rel = documents_mod.rel_path(project, date, slug, fmt=body.format)
@@ -990,20 +1025,30 @@ def create_document(
                 )
             # A binding whose document row is gone (drift) resolves to nothing and
             # falls through to a fresh create, which is then re-bound.
-            target = db.get_document_by_path(conn, bound, tenant_id=_tenant_filter(ctx))
+            target = db.get_document_by_path_or_alias(
+                conn, bound, tenant_id=_tenant_filter(ctx)
+            )
     if target is None:
         target = _resolve_version_target(conn, ctx, body, project=project, slug=slug)
+    # P30.S5: the one format migration. The first native publish onto an html
+    # document is that document's next version, moved from <stem>.html to <stem>.md
+    # (P29 *Legacy -> native re-explain*); `migrated_from` is its old rel_path.
+    migrated_from: Optional[str] = None
     if target is not None:
-        # Neither the format nor the project may change across a version chain: the
-        # rel_path (which encodes both the project dir and the extension) is the
-        # document's identity, and the archive files sit beside it. Both are 422s
-        # rather than silent coercions — the caller wants a NEW document.
-        if (target.get("format") or "md") != body.format:
+        # The project may not change across a version chain, and neither may the
+        # format, with two exceptions (P29): md -> native is an ordinary next version
+        # (same rel_path), and html -> native is the format migration. Every other
+        # change is a 422 rather than a silent coercion — the caller wants a NEW
+        # document.
+        target_format = target.get("format") or "md"
+        if target_format != body.format and (target_format, body.format) not in (
+            ("md", "native"), ("html", "native"),
+        ):
             raise HTTPException(
                 status_code=422,
                 detail=(
                     f"cannot change format of {target['rel_path']} "
-                    f"({target.get('format') or 'md'}) to {body.format} in a new "
+                    f"({target_format}) to {body.format} in a new "
                     "version — publish it as a new document instead"
                 ),
             )
@@ -1019,6 +1064,25 @@ def create_document(
         rel = target["rel_path"]
         date = target["date"]
         slug = target["slug"]
+        if target_format == "html" and body.format == "native":
+            migrated_from = rel
+            rel = f"{db.rel_path_stem(rel)}.md"
+            # The native file's place must be free: another document (or a stray
+            # file) at <stem>.md would otherwise be overwritten.
+            occupant = db.get_document_by_path(conn, rel, tenant_id=_tenant_filter(ctx))
+            if (occupant is not None and occupant["id"] != target["id"]) or (
+                occupant is None and (root / rel).exists()
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "message": (
+                            f"cannot migrate {migrated_from} to native: {rel} is "
+                            "already taken"
+                        ),
+                        "rel_path": rel,
+                    },
+                )
 
     # Self-reference dropped silently (a doc can't be related to itself).
     related = [r for r in related if r != rel]
@@ -1045,6 +1109,34 @@ def create_document(
                 )
             raise HTTPException(status_code=409, detail=detail)
 
+    # 2a. One document per file stem (P30.S5). The archive and asset directories are
+    #     keyed by `<project>/<date>-<slug>`, and an old `.html` path resolves to its
+    #     migrated `.md` through that stem, so a NEW document may not take a stem
+    #     another document of a different extension already owns (overwrite
+    #     replaces only its own rel_path). Re-publishing that document is the way.
+    if target is None:
+        stem = db.rel_path_stem(rel)
+        for other in db.find_documents_by_stem(conn, stem, tenant_id=_tenant_filter(ctx)):
+            if other["rel_path"] == rel:
+                continue
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": (
+                        f"{other['rel_path']} already uses the file stem {stem}; "
+                        "a document's stem is its identity across formats"
+                    ),
+                    "rel_path": other["rel_path"],
+                    "id": other["id"],
+                    "existing_title": other["title"],
+                    "version": other.get("version") or 1,
+                    "hint": (
+                        "re-publish it as the next version: POST again with "
+                        f'"new_version": true, "rel_path": "{other["rel_path"]}"'
+                    ),
+                },
+            )
+
     # 2b. Which body (if any) this write supersedes, and at which version number.
     #     `target` covers new_version; overwrite supersedes whatever sits at `rel`.
     #     A file with no DB row (drift) is still archived — its version comes from
@@ -1061,6 +1153,88 @@ def create_document(
         prev_version = None
     doc_version = prev_version + 1 if prev_version is not None else 1
 
+    # 2c. A native chapter (P30.S5; P29 *Ingest*): compose the file (the server's
+    #     header + the body), parse and validate it, resolve its references, check a
+    #     translation's ids, and fail with ONE 422 that lists every violation, the
+    #     image ones included. Ids the document's earlier native versions used are
+    #     never minted again. Lines are mapped back to the body as sent.
+    native = None
+    native_warnings: list[dict] = []
+    native_assigned: list[dict] = []
+    if body.format == "native":
+        content, offset = documents_mod.native_file_content(
+            title=body.title,
+            date=date,
+            tags=tags,
+            project=project,
+            source_repo=source_repo,
+            body=body.markdown,
+            related=related,
+            version=doc_version,
+            lang=header_lang,
+            subject=subject,
+            translated_from=translated_from,
+            assets=asset_map,
+            summary=body.summary,
+        )
+        reserved = (
+            native_ingest.retired_ids(conn, superseded, tenant_id=_tenant_filter(ctx))
+            if superseded is not None
+            else set()
+        )
+        if not body_too_large:
+            try:
+                native = parse_chapter(content, reserved_ids=reserved)
+            except NativeFormatError as exc:
+                violations.extend(native_ingest.remap_lines(exc.to_detail(), offset))
+                violations.extend(native_ingest.remap_lines(
+                    native_ingest.unknown_assets(
+                        native_ingest.failed_parse_asset_uses(exc),
+                        {a.name for a in body.assets or []},
+                    ),
+                    offset,
+                ))
+        if native is not None:
+            self_chapter = (
+                (project, placement["book"]["slug"], placement["chapter"]["key"])
+                if placement is not None
+                else None
+            )
+            errors, warns = native_ingest.resolve_refs(
+                conn,
+                native,
+                asset_names={a.name for a in body.assets or []},
+                project=project,
+                tenant_id=_tenant_filter(ctx),
+                self_chapter=self_chapter,
+                self_slug=(project, slug),
+            )
+            violations.extend(native_ingest.remap_lines(errors, offset))
+            native_warnings.extend(native_ingest.remap_lines(warns, offset))
+            if translated_from is not None:
+                source_rel = None
+                if placement is not None:
+                    manifest_now = _read_manifest_or_409(root, project, placement["book"]["slug"])
+                    ch_now = (
+                        books_mod.find_chapter(manifest_now, placement["chapter"]["key"])
+                        if manifest_now is not None
+                        else None
+                    )
+                    if ch_now is not None:
+                        source_rel = ch_now["variants"].get(translated_from["lang"])
+                errors, warns = native_ingest.translation_findings(
+                    conn,
+                    native.tree,
+                    source_rel_path=source_rel,
+                    translated_from=translated_from,
+                    tenant_id=_tenant_filter(ctx),
+                )
+                violations.extend(errors)
+                native_warnings.extend(warns)
+            native_assigned = native_ingest.remap_lines(native.assigned_ids, offset)
+        if violations:
+            raise HTTPException(status_code=422, detail=violations)
+
     # 3. Locked critical section: archive -> file write -> index update -> DB upsert
     #    -> LOCAL git add/commit. (WRITE_LOCK is NOT reentrant — nothing called in
     #    here may retake it, which is why the push is queued outside it in 4b.)
@@ -1073,18 +1247,54 @@ def create_document(
         book_created = chapter_created = False
         if placement is not None:
             new_manifest, book_created, chapter_created = _place_variant(
-                conn, root=root, project=project, tid=tid, placement=placement, rel=rel
+                conn, root=root, project=project, tid=tid, placement=placement, rel=rel,
+                replaces=migrated_from,
             )
+        elif migrated_from is not None:
+            # P30.S5: the book binding follows a migrated document. The manifest that
+            # binds its old rel_path is re-pointed to the new one (same chapter, same
+            # lang); a binding the index knows but the manifest lacks is drift, and
+            # the next reindex settles it.
+            binding = db.find_chapter_binding(conn, migrated_from, tid)
+            if binding is not None:
+                bound_manifest = _read_manifest_or_409(root, binding["project"], binding["book"])
+                if bound_manifest is not None:
+                    chapters = []
+                    for c in bound_manifest["chapters"]:
+                        variants = {
+                            lang: (rel if r == migrated_from else r)
+                            for lang, r in c["variants"].items()
+                        }
+                        chapters.append(dict(c, variants=variants))
+                    try:
+                        new_manifest = books_mod.normalize_manifest(
+                            {**bound_manifest, "chapters": chapters}, project=binding["project"]
+                        )
+                    except documents_mod.ConventionError as exc:  # pragma: no cover - defensive
+                        raise HTTPException(status_code=409, detail=str(exc))
         # 3a. Archive the body about to be replaced, BEFORE it is overwritten, to
         #     <root>/.versions/<project>/<date>-<slug>/vNNNN.<ext>. `None` when
         #     there is nothing on disk to keep (a fresh create, or a DB row whose
         #     file vanished).
         archive_path = None
+        if migrated_from is not None:
+            # P30.S5: the document's row (and its archived versions) take the new
+            # rel_path in place, so its id, URL and version chain carry over.
+            db.rekey_document(
+                conn, tenant_id=tid, old_rel_path=migrated_from, new_rel_path=rel
+            )
         if prev_version is not None:
+            # The body being replaced still sits at its own path: the old `.html` on
+            # a migration, archived as vNNNN.html in the same stem-keyed directory.
             archive_path = documents_mod.archive_document_file(
-                docs_root=root, rel_path=rel, version=prev_version
+                docs_root=root, rel_path=migrated_from or rel, version=prev_version
             )
             if archive_path is not None and superseded is not None:
+                archived_source = None
+                if superseded.get("format") == "native":
+                    # The archived file itself (its `version:` line stamped), exactly
+                    # what reindex re-derives from disk.
+                    archived_source = (root / archive_path).read_text(encoding="utf-8")
                 db.upsert_document_version(
                     conn,
                     rel_path=rel,
@@ -1100,6 +1310,7 @@ def create_document(
                     # The archived file keeps its own `assets:` header verbatim, so
                     # the old version keeps rendering its own images (P29.S1).
                     assets=superseded.get("assets"),
+                    source=archived_source,
                 )
         # 3a+. Store this version's images (P30.S4) under
         #      <root>/.assets/<project>/<date>-<slug>/, before the body that names
@@ -1110,29 +1321,43 @@ def create_document(
         # for an md doc, the raw HTML for an html doc. The body rule then derives what
         # each plane stores: the DB `markdown` column always holds the readable text
         # (extracted plain text for html), `raw_html` holds the HTML only for html.
-        stored_body = documents_mod.write_document_file(
-            docs_root=root,
-            rel_path=rel,
-            title=body.title,
-            date=date,
-            tags=tags,
-            project=project,
-            source_repo=source_repo,
-            body=body.markdown,
-            related=related,
-            fmt=body.format,
-            version=doc_version,
-            lang=header_lang,
-            subject=subject,
-            translated_from=translated_from,
-            assets=asset_map,
-        )
-        if body.format == "html":
-            raw_html = stored_body
-            stored_markdown = documents_mod.extract_html_text(stored_body)
-        else:
+        native_source = None
+        if native is not None:
+            # P30.S5: the parser's normalized source (assigned ids written in) is the
+            # stored file; the DB keeps it whole in `source` and its search
+            # projection in `markdown` (FTS + embeddings).
+            documents_mod.write_raw_document_file(
+                docs_root=root, rel_path=rel, content=native.source
+            )
+            native_source = native.source
             raw_html = None
-            stored_markdown = stored_body
+            stored_markdown = search_text(native.tree)
+            if migrated_from is not None:
+                (root / migrated_from).unlink(missing_ok=True)
+        else:
+            stored_body = documents_mod.write_document_file(
+                docs_root=root,
+                rel_path=rel,
+                title=body.title,
+                date=date,
+                tags=tags,
+                project=project,
+                source_repo=source_repo,
+                body=body.markdown,
+                related=related,
+                fmt=body.format,
+                version=doc_version,
+                lang=header_lang,
+                subject=subject,
+                translated_from=translated_from,
+                assets=asset_map,
+            )
+            if body.format == "html":
+                raw_html = stored_body
+                stored_markdown = documents_mod.extract_html_text(stored_body)
+            else:
+                raw_html = None
+                stored_markdown = stored_body
         # Public landing + Recent index are mkdocs-publish concerns, so only the
         # public root gets them. Non-#1 tenants keep a minimal tree (their content
         # is never served in P10) — skip both and report them as not created.
@@ -1141,6 +1366,9 @@ def create_document(
             # mkdocs builds site/<project>/index.html and the deploy gate stays
             # green. Never overwrites an existing (hand-written or auto) landing.
             landing_created = documents_mod.ensure_project_landing(root, project)
+            if migrated_from is not None:
+                # The migrated document keeps its Recent bullet; only its link moves.
+                documents_mod.replace_recent_link(root, migrated_from, rel)
             recent_updated = documents_mod.update_recent_index(
                 root,
                 date=date,
@@ -1170,15 +1398,19 @@ def create_document(
             subject=subject,
             translated_from=translated_from,
             assets=asset_map,
+            source=native_source,
         )
 
         # 3b. Bind the variant (P30.S2): write the manifest, then rebuild the book's
         #     derived rows from it — the same replace_book reindex runs.
         manifest_rel = None
         if new_manifest is not None:
-            manifest_rel = books_mod.write_manifest(root, project, new_manifest)
+            manifest_project = project
+            if placement is None and migrated_from is not None:
+                manifest_project = binding["project"]
+            manifest_rel = books_mod.write_manifest(root, manifest_project, new_manifest)
             db.replace_book(
-                conn, tenant_id=tid, project=project, manifest=new_manifest,
+                conn, tenant_id=tid, project=manifest_project, manifest=new_manifest,
                 manifest_path=manifest_rel,
             )
 
@@ -1204,6 +1436,9 @@ def create_document(
                     # The book manifest rides in the chapter's own scoped commit.
                     staged.append(f"docs/{manifest_rel}")
                 gitops.add(staged, root=config.kb_root())
+                if migrated_from is not None:
+                    # The old .html file is gone from the work tree (P30.S5).
+                    gitops.remove([f"docs/{migrated_from}"], root=config.kb_root())
                 message = (
                     f"docs({project}): add {slug}"
                     if doc_version == 1
@@ -1315,6 +1550,15 @@ def create_document(
     }
     if commit_error is not None:
         resp["commit_error"] = commit_error
+    # P30.S5, additive: only a native publish gets these keys. `assigned_ids` lists the
+    # ids the server wrote into the stored file and `warnings` the non-fatal findings
+    # (an unresolved chapter:/doc: link, a translation's id drift), both with lines
+    # in the body as sent; `migrated_from` is the old rel_path of an html -> native
+    # migration (null otherwise).
+    if body.format == "native":
+        resp["assigned_ids"] = native_assigned
+        resp["warnings"] = native_warnings
+        resp["migrated_from"] = migrated_from
     # P30.S4, additive: only a write that sent assets gets the stored map back.
     if body.assets:
         resp["assets"] = asset_map

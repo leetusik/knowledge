@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from server import assets as assets_mod
-from server import books, config, db, documents, embeddings
+from server import books, config, db, documents, embeddings, native_ingest
 
 # Generated agentic-workspace internals that live inside the MkDocs content root
 # (docs/current/*.md, docs/versions/**/*.md). They carry no explainer frontmatter,
@@ -81,6 +81,28 @@ def _header_extras(meta: dict) -> dict:
     return out
 
 
+def _body_columns(
+    text: str, body: str, meta: dict, is_html: bool
+) -> tuple[str, Optional[str], Optional[str], str]:
+    """``(markdown, raw_html, source, format)`` for one walked file.
+
+    The body rule, which must match the write path so a fresh-DB rebuild reproduces
+    the same rows: the DB ``markdown`` column always holds readable text — the raw
+    markdown for an md doc, extracted plain text for an html doc, and the search
+    projection for a native chapter — while ``raw_html`` carries the raw HTML only
+    for html docs and ``source`` the whole file only for native ones. ``format``
+    comes from the header (P29 *Format flag*): a ``.md`` file whose header says
+    ``format: native`` is native; the extension alone still means md or html.
+    """
+    if is_html:
+        body_stripped = body.lstrip("\n")
+        return documents.extract_html_text(body_stripped), body_stripped, None, "html"
+    if documents.is_native_meta(meta):
+        source = text.replace("\r\n", "\n").replace("\r", "\n")
+        return native_ingest.stored_projection(source), None, source, "native"
+    return body.lstrip("\n"), None, None, "md"
+
+
 def _index_file(
     conn: sqlite3.Connection, root: Path, path: Path, rel: str, tenant_id: str = ""
 ) -> tuple[bool, Optional[str]]:
@@ -135,19 +157,7 @@ def _index_file(
     if isinstance(source, dict) and source.get("repo") is not None:
         source_repo = documents.sanitize_source_repo(str(source.get("repo"))) or None
 
-    # Body rule (must match the write path so a fresh-DB rebuild reproduces the same
-    # rows): the DB `markdown` column always holds readable text — the raw markdown
-    # for an md doc, extracted plain text for an html doc — while `raw_html` carries
-    # the raw HTML only for html docs.
-    body_stripped = body.lstrip("\n")
-    if is_html:
-        markdown_val = documents.extract_html_text(body_stripped)
-        raw_html_val: Optional[str] = body_stripped
-        fmt = "html"
-    else:
-        markdown_val = body_stripped
-        raw_html_val = None
-        fmt = "md"
+    markdown_val, raw_html_val, source_val, fmt = _body_columns(text, body, meta, is_html)
 
     try:
         db.upsert_document(
@@ -165,6 +175,7 @@ def _index_file(
             raw_html=raw_html_val,
             version=_version_from_meta(meta),
             tenant_id=tenant_id,
+            source=source_val,
             **_header_extras(meta),
         )
     except sqlite3.Error as exc:
@@ -173,9 +184,15 @@ def _index_file(
 
 
 def _index_version_file(
-    conn: sqlite3.Connection, root: Path, path: Path, arch_rel: str, tenant_id: str
-) -> tuple[bool, Optional[str]]:
-    """Upsert one archived version file into ``document_versions``. (indexed, skip_reason).
+    conn: sqlite3.Connection,
+    root: Path,
+    path: Path,
+    arch_rel: str,
+    tenant_id: str,
+    current_by_stem: Optional[dict[str, set[str]]] = None,
+) -> tuple[bool, Optional[str], Optional[str]]:
+    """Upsert one archived version file into ``document_versions``.
+    Returns ``(indexed, skip_reason, the document rel_path it was keyed under)``.
 
     The archive tree is canonical (the DB is disposable), so everything is re-derived
     from the file: its rel_path + version from the path
@@ -184,17 +201,27 @@ def _index_version_file(
     the file's mtime (when the body was archived — the write path's own timestamp is
     gone once the DB is wiped). The body rule matches ``_index_file``: ``markdown``
     always holds readable text, ``raw_html`` only the html flavor's raw body.
+
+    The chain is keyed by the CURRENT document's rel_path, found by stem (P30.S5):
+    ``current_by_stem`` maps each stem to the current documents on disk, so the
+    ``v0001.html`` of a document since migrated to ``<stem>.md`` joins that
+    document's chain. A current document with the archive's own extension wins (two
+    documents sharing a stem predate S5's one-document-per-stem rule); with no
+    current document at all, the archive's own extension names it, as before.
     """
     parsed = documents.parse_archive_rel_path(arch_rel)
     if parsed is None:
-        return False, "not a <project>/<date>-<slug>/vNNNN.{md,html} archive path"
-    doc_rel, version = parsed
-    is_html = arch_rel.endswith(".html")
+        return False, "not a <project>/<date>-<slug>/vNNNN.{md,html} archive path", None
+    version = parsed.version
+    own = f"{parsed.stem}.{parsed.ext}"
+    current = (current_by_stem or {}).get(parsed.stem, set())
+    doc_rel = own if (own in current or not current) else sorted(current)[0]
+    is_html = parsed.ext == "html"
 
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        return False, f"unreadable: {exc}"
+        return False, f"unreadable: {exc}", None
 
     try:
         if is_html:
@@ -202,11 +229,11 @@ def _index_version_file(
         else:
             meta, body = documents.parse_frontmatter(text)
     except documents.FrontmatterError as exc:
-        return False, f"missing/invalid frontmatter: {exc}"
+        return False, f"missing/invalid frontmatter: {exc}", None
 
     title = meta.get("title")
     if not isinstance(title, str) or not title.strip():
-        return False, "missing/invalid frontmatter: no title"
+        return False, "missing/invalid frontmatter: no title", None
 
     date_val = meta.get("date")
     if isinstance(date_val, datetime.date):
@@ -215,20 +242,12 @@ def _index_version_file(
     try:
         documents.validate_date(date_val)
     except documents.ConventionError:
-        return False, "missing/invalid frontmatter: bad date"
+        return False, "missing/invalid frontmatter: bad date", None
 
     raw_tags = meta.get("tags")
     tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
 
-    body_stripped = body.lstrip("\n")
-    if is_html:
-        markdown_val = documents.extract_html_text(body_stripped)
-        raw_html_val: Optional[str] = body_stripped
-        fmt = "html"
-    else:
-        markdown_val = body_stripped
-        raw_html_val = None
-        fmt = "md"
+    markdown_val, raw_html_val, source_val, fmt = _body_columns(text, body, meta, is_html)
 
     try:
         archived_at = datetime.datetime.fromtimestamp(
@@ -252,10 +271,11 @@ def _index_version_file(
             tenant_id=tenant_id,
             created_at=archived_at,
             assets=assets_mod.parse_asset_map(meta.get("assets")),
+            source=source_val,
         )
     except sqlite3.Error as exc:
-        return False, f"db error: {exc}"
-    return True, None
+        return False, f"db error: {exc}", None
+    return True, None, doc_rel
 
 
 # Per-request 429-backoff retries for the batch embed sync (documents only).
@@ -423,7 +443,8 @@ def _walk_versions(
     conn: sqlite3.Connection,
     root: Path,
     tenant_id: str,
-    archives_by_tenant: dict[str, set[str]],
+    archives_by_tenant: dict[str, set[tuple[str, str]]],
+    current_rels: Optional[set[str]] = None,
 ) -> tuple[int, list[dict]]:
     """Walk one content root's ``.versions/`` archive tree into ``document_versions``.
 
@@ -433,10 +454,14 @@ def _walk_versions(
     tenant-scoped vanished-archive cleanup. Malformed entries are reported as skips
     (same shape as the document walk) rather than guessed at. Archived versions are
     never FTS-indexed, embedded or graphed — this walk touches only
-    ``document_versions``. Returns (indexed, skipped)."""
+    ``document_versions``. ``current_rels`` (the root's current documents on disk)
+    keys each chain by stem (P30.S5). Returns (indexed, skipped)."""
     indexed = 0
     skipped: list[dict] = []
     seen = archives_by_tenant.setdefault(tenant_id, set())
+    current_by_stem: dict[str, set[str]] = {}
+    for rel in current_rels or ():
+        current_by_stem.setdefault(db.rel_path_stem(rel), set()).add(rel)
     archive_root = root / documents.ARCHIVE_DIR
     if not archive_root.is_dir():
         return indexed, skipped
@@ -444,9 +469,14 @@ def _walk_versions(
         if not path.is_file():
             continue
         arch_rel = path.relative_to(root).as_posix()
-        ok, reason = _index_version_file(conn, root, path, arch_rel, tenant_id)
+        ok, reason, doc_rel = _index_version_file(
+            conn, root, path, arch_rel, tenant_id, current_by_stem
+        )
         if ok:
-            seen.add(arch_rel)
+            # The (document, archive file) pair: a row keyed under a document's OLD
+            # rel_path (before an html -> native migration reached this box through
+            # git) points at a live file but is no longer the chain's, and goes.
+            seen.add((doc_rel, arch_rel))
             indexed += 1
         else:
             skipped.append({"rel_path": arch_rel, "reason": reason})
@@ -564,7 +594,7 @@ def reindex(
     # vanished-row cleanup.
     disk_by_tenant: dict[str, set[str]] = {}
     # The same, for the .versions/ archive tree -> document_versions.
-    archives_by_tenant: dict[str, set[str]] = {}
+    archives_by_tenant: dict[str, set[tuple[str, str]]] = {}
     # (project, book slug) manifests present on disk, by tenant -> books tables.
     books_by_tenant: dict[str, set[tuple[str, str]]] = {}
     # Every content root walked, for the books walk that runs after the documents.
@@ -575,7 +605,9 @@ def reindex(
     n, s = _walk_root(conn, root, public_tid, disk_by_tenant)
     indexed += n
     skipped += s
-    n, s = _walk_versions(conn, root, public_tid, archives_by_tenant)
+    n, s = _walk_versions(
+        conn, root, public_tid, archives_by_tenant, disk_by_tenant.get(public_tid)
+    )
     versions_indexed += n
     skipped += s
     roots.append((root, public_tid))
@@ -591,7 +623,9 @@ def reindex(
             n, s = _walk_root(conn, tdir, tdir.name, disk_by_tenant)
             indexed += n
             skipped += s
-            n, s = _walk_versions(conn, tdir, tdir.name, archives_by_tenant)
+            n, s = _walk_versions(
+                conn, tdir, tdir.name, archives_by_tenant, disk_by_tenant.get(tdir.name)
+            )
             versions_indexed += n
             skipped += s
             roots.append((tdir, tdir.name))
@@ -620,7 +654,7 @@ def reindex(
         "SELECT tenant_id, rel_path, version, archive_path FROM document_versions"
     ).fetchall():
         tid = row["tenant_id"]
-        if row["archive_path"] not in archives_by_tenant.get(tid, set()):
+        if (row["rel_path"], row["archive_path"]) not in archives_by_tenant.get(tid, set()):
             conn.execute(
                 "DELETE FROM document_versions "
                 "WHERE tenant_id = ? AND rel_path = ? AND version = ?",

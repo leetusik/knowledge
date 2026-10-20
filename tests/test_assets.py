@@ -25,7 +25,9 @@ from server import db
 _INDEX = "# Knowledge Base\n\n## Recent\n\n<!-- explain:recent -->\n\n## Browse\n"
 _PAYLOAD = {
     "title": "Images",
-    "markdown": "# Images\n\nA body.\n",
+    # Only a native chapter may carry images (P30.S5, OQ14).
+    "format": "native",
+    "markdown": "## Images\n\nA body.\n",
     "project": "pics",
     "tags": ["testing", "images"],
     "source_repo": "acme/repo",

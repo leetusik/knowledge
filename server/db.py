@@ -32,13 +32,14 @@ CREATE TABLE IF NOT EXISTS documents (
   rel_path    TEXT NOT NULL,                -- '<project>/<date>-<slug>.{md,html}' relative to the tenant's content root
   markdown    TEXT NOT NULL,                -- readable text body WITHOUT frontmatter (extracted plain text for html docs)
   related     TEXT NOT NULL DEFAULT '[]',   -- JSON array of related rel_paths (forward links only)
-  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' (the on-disk doc format)
+  format      TEXT NOT NULL DEFAULT 'md',   -- 'md' | 'html' | 'native' (P30.S5: a .md file whose header says format: native)
   raw_html    TEXT,                          -- raw HTML body for format='html' (the raw viewer route source); NULL for md
   version     INTEGER NOT NULL DEFAULT 1,    -- current version number (P23); re-derived from the file's `version:` frontmatter, absent = 1
   lang        TEXT,                          -- the header's `lang:` (P30.S2); NULL = absent (the manifest's variant key, else 'en')
   subject     TEXT,                          -- the header's `subject:` label (P30.S2), a loose document's by-subject grouping
   translated_from TEXT,                      -- the header's `translated_from: {lang, version}` as JSON (P30.S2); NULL = an original
   assets      TEXT,                          -- the header's `assets:` map as JSON (P30.S4); NULL = no images
+  source      TEXT,                          -- the whole stored native file (P30.S5; header + body, ids written in); NULL unless format='native'
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (tenant_id, rel_path)
@@ -85,16 +86,17 @@ END;
 CREATE TABLE IF NOT EXISTS document_versions (
   id           INTEGER PRIMARY KEY,
   tenant_id    TEXT NOT NULL DEFAULT '',
-  rel_path     TEXT NOT NULL,               -- the CURRENT document's rel_path (identity, stable across versions)
+  rel_path     TEXT NOT NULL,               -- the CURRENT document's rel_path (identity; re-keyed with the document on an html -> native migration, P30.S5)
   version      INTEGER NOT NULL,
   archive_path TEXT NOT NULL,               -- '.versions/<project>/<date>-<slug>/vNNNN.<ext>' relative to the content root
   title        TEXT NOT NULL,
   date         TEXT NOT NULL,
   tags         TEXT NOT NULL DEFAULT '[]',  -- JSON array
   format       TEXT NOT NULL DEFAULT 'md',
-  markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions)
+  markdown     TEXT NOT NULL,               -- readable text body (extracted plain text for html versions, the search projection for native)
   raw_html     TEXT,                        -- raw HTML body for format='html'; NULL for md
   assets       TEXT,                        -- that version's own `assets:` map as JSON (P30.S4); NULL = no images
+  source       TEXT,                        -- the archived native file (P30.S5); NULL unless format='native'
   created_at   TEXT NOT NULL,               -- when this version was archived
   UNIQUE (tenant_id, rel_path, version)
 );
@@ -223,6 +225,13 @@ def init_db(conn: sqlite3.Connection) -> None:
     }
     if "assets" not in vcols:
         conn.execute("ALTER TABLE document_versions ADD COLUMN assets TEXT")
+    # P30.S5: the stored native file, on the document and on each archived version.
+    # Nullable (every non-native row), re-derived from the files by the next reindex.
+    # Not in documents_fts: `markdown` carries the native search projection.
+    if "source" not in cols:
+        conn.execute("ALTER TABLE documents ADD COLUMN source TEXT")
+    if "source" not in vcols:
+        conn.execute("ALTER TABLE document_versions ADD COLUMN source TEXT")
     conn.commit()
 
 
@@ -298,6 +307,7 @@ def upsert_document(
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
     assets: Optional[dict] = None,
+    source: Optional[str] = None,
 ) -> int:
     """Insert or update by ``(tenant_id, rel_path)``. Preserves created_at, refreshes updated_at.
 
@@ -317,6 +327,10 @@ def upsert_document(
 
     ``lang`` / ``subject`` / ``translated_from`` (P30.S2) mirror the optional header
     fields of the same names; ``None`` = absent, which every pre-P30 file is.
+
+    ``source`` (P30.S5) is the whole stored native file, for ``format='native'``
+    only; ``markdown`` then holds the native search projection (what FTS and the
+    embeddings read).
     """
     ts = now or _now()
     tags = list(tags)
@@ -333,8 +347,8 @@ def upsert_document(
         INSERT INTO documents
           (tenant_id, project, slug, date, title, tags, tags_text, source_repo, rel_path,
            markdown, related, format, raw_html, version, lang, subject, translated_from,
-           assets, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           assets, source, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path) DO UPDATE SET
           project     = excluded.project,
           slug        = excluded.slug,
@@ -352,11 +366,12 @@ def upsert_document(
           subject     = excluded.subject,
           translated_from = excluded.translated_from,
           assets      = excluded.assets,
+          source      = excluded.source,
           updated_at  = excluded.updated_at
         """,
         (tenant_id, project, slug, date, title, tags_json, tags_text, source_repo, rel_path,
          markdown, related_json, format, raw_html, int(version), lang, subject,
-         translated_json, _assets_to_column(assets), ts, ts),
+         translated_json, _assets_to_column(assets), source, ts, ts),
     )
     conn.commit()
     row = conn.execute(
@@ -396,6 +411,96 @@ def get_document_by_path(
             "SELECT * FROM documents WHERE rel_path = ?", (rel_path,)
         ).fetchone()
     return _row_to_dict(row)
+
+
+def rel_path_stem(rel_path: str) -> str:
+    """``<project>/<date>-<slug>`` — a rel_path without its ``.md``/``.html``
+    extension. The stem is a document's identity across an ``html -> native``
+    format migration (P30.S5): the archive and asset directories are keyed by it."""
+    for ext in (".md", ".html"):
+        if rel_path.endswith(ext):
+            return rel_path[: -len(ext)]
+    return rel_path
+
+
+def find_documents_by_stem(
+    conn: sqlite3.Connection, stem: str, tenant_id: Optional[str] = None
+) -> list[dict[str, Any]]:
+    """Every document whose rel_path is ``<stem>.md`` or ``<stem>.html`` (P30.S5)."""
+    sql = "SELECT * FROM documents WHERE rel_path IN (?, ?)"
+    params: list[Any] = [f"{stem}.md", f"{stem}.html"]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        params.append(tenant_id)
+    sql += " ORDER BY id"
+    return [d for d in (_row_to_dict(r) for r in conn.execute(sql, params).fetchall()) if d]
+
+
+def get_document_by_path_or_alias(
+    conn: sqlite3.Connection, rel_path: str, tenant_id: Optional[str] = None
+) -> Optional[dict[str, Any]]:
+    """``get_document_by_path``, with the P30.S5 stem alias as the fallback.
+
+    A document migrated ``html -> native`` moved from ``<stem>.html`` to
+    ``<stem>.md`` (P29 *Legacy -> native re-explain*); a by-path or MCP read of the
+    old path must keep answering. On an exact miss, the one document sharing the
+    stem answers; none (or an ambiguous two) is a miss. Reads only: writes and
+    deletes stay exact.
+    """
+    doc = get_document_by_path(conn, rel_path, tenant_id=tenant_id)
+    if doc is not None:
+        return doc
+    stem = rel_path_stem(rel_path)
+    if stem == rel_path:
+        return None
+    matches = find_documents_by_stem(conn, stem, tenant_id=tenant_id)
+    return matches[0] if len(matches) == 1 else None
+
+
+def rekey_document(
+    conn: sqlite3.Connection, *, tenant_id: str, old_rel_path: str, new_rel_path: str
+) -> None:
+    """Move one document's identity from ``old_rel_path`` to ``new_rel_path`` in place.
+
+    The ``html -> native`` migration (P30.S5): the ``documents`` row keeps its id (so
+    ``/documents/{id}``, its embedding and every id-keyed reference survive) and its
+    archived versions follow it, so the version chain spans the extension change.
+    Not committed here: the caller's next upsert commits it with the new body.
+    """
+    conn.execute(
+        "UPDATE documents SET rel_path = ? WHERE tenant_id = ? AND rel_path = ?",
+        (new_rel_path, tenant_id, old_rel_path),
+    )
+    conn.execute(
+        "UPDATE document_versions SET rel_path = ? WHERE tenant_id = ? AND rel_path = ?",
+        (new_rel_path, tenant_id, old_rel_path),
+    )
+
+
+def chapter_variant_exists(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: Optional[str],
+    project: str,
+    book: str,
+    key: str,
+    lang: Optional[str] = None,
+) -> bool:
+    """Whether ``(project, book, key[, lang])`` is a chapter with a live variant —
+    the index a native ``chapter:`` reference resolves against (P30.S5)."""
+    sql = (
+        "SELECT 1 FROM chapter_variants v JOIN documents d "
+        "ON d.tenant_id = v.tenant_id AND d.rel_path = v.rel_path "
+        "WHERE v.project = ? AND v.book = ? AND v.chapter_key = ?"
+    )
+    params: list[Any] = [project, book, key]
+    if lang is not None:
+        sql += " AND v.lang = ?"
+        params.append(lang)
+    if tenant_id is not None:
+        sql += " AND v.tenant_id = ?"
+        params.append(tenant_id)
+    return conn.execute(sql + " LIMIT 1", params).fetchone() is not None
 
 
 def find_latest_document_by_slug(
@@ -607,6 +712,7 @@ def upsert_document_version(
     tenant_id: str = "",
     created_at: Optional[str] = None,
     assets: Optional[dict] = None,
+    source: Optional[str] = None,
 ) -> None:
     """Record one archived version. Idempotent on ``(tenant_id, rel_path, version)``.
 
@@ -621,8 +727,8 @@ def upsert_document_version(
         """
         INSERT INTO document_versions
           (tenant_id, rel_path, version, archive_path, title, date, tags, format,
-           markdown, raw_html, assets, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           markdown, raw_html, assets, source, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, rel_path, version) DO UPDATE SET
           archive_path = excluded.archive_path,
           title        = excluded.title,
@@ -632,12 +738,13 @@ def upsert_document_version(
           markdown     = excluded.markdown,
           raw_html     = excluded.raw_html,
           assets       = excluded.assets,
+          source       = excluded.source,
           created_at   = excluded.created_at
         """,
         (
             tenant_id, rel_path, int(version), archive_path, title, date,
             json.dumps(list(tags), ensure_ascii=False), format, markdown, raw_html,
-            _assets_to_column(assets), created_at or _now(),
+            _assets_to_column(assets), source, created_at or _now(),
         ),
     )
     conn.commit()

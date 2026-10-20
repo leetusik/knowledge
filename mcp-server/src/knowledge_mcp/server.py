@@ -123,9 +123,10 @@ def _map_document(
     markdown, related, created_at, updated_at}``. We surface the citable metadata
     plus the (possibly truncated) body and the truncation signal. ``url`` goes
     through the same ``_citation_url`` seam as ``search`` (empty for the whole
-    corpus today). ``format`` is relayed verbatim from upstream — ``"md" | "html"``
-    — defaulting to ``"md"`` so an older upstream that omits it still maps cleanly;
-    for an ``"html"`` doc ``markdown`` carries the server-extracted readable text.
+    corpus today). ``format`` is relayed verbatim from upstream — ``"md" | "html" |
+    "native"`` — defaulting to ``"md"`` so an older upstream that omits it still maps
+    cleanly; for an ``"html"`` doc ``markdown`` carries the server-extracted readable
+    text, and for a ``"native"`` chapter its native source (``_body_of``).
     """
 
     return {
@@ -250,8 +251,23 @@ async def run_fetch_document(
     except upstream.UpstreamError as exc:
         raise _tool_error(exc, kind="fetch") from exc
 
-    markdown, truncated, total_chars = _truncate(doc.get("markdown") or "", config.FETCH_MAX_CHARS)
+    markdown, truncated, total_chars = _truncate(_body_of(doc), config.FETCH_MAX_CHARS)
     return _map_document(doc, markdown=markdown, truncated=truncated, total_chars=total_chars)
+
+
+def _body_of(doc: dict[str, Any]) -> str:
+    """The text ``fetch_document`` returns in ``markdown``.
+
+    A native chapter (``format: "native"``, P30.S5) returns its **native source**:
+    the whole stored file, header and ids included, so a re-explain can carry its
+    ids forward (P29 *Ingest, search and MCP*). Upstream sends it as ``source``;
+    its ``markdown`` is only the plain-text search projection. Every other format
+    returns ``markdown`` exactly as before.
+    """
+
+    if doc.get("format") == "native" and doc.get("source"):
+        return str(doc["source"])
+    return doc.get("markdown") or ""
 
 
 def _inbound_authorization(ctx: Context | None) -> str | None:
@@ -307,10 +323,12 @@ async def search(
         "Returns {id, rel_path, title, project, date, tags, url, format, markdown, "
         "truncated, total_chars}. When `truncated` is true, `markdown` is the first "
         "N characters and `total_chars` is the full length — narrow with `search` "
-        "for the rest. `format` is `\"md\" | \"html\"`; for an `\"html\"` doc (a "
-        "standalone HTML explainer) `markdown` carries the server-extracted "
-        "readable text. `url` is the document's public citation origin when one "
-        "exists (empty otherwise)."
+        "for the rest. `format` is `\"md\" | \"html\" | \"native\"`; for an "
+        "`\"html\"` doc (a standalone HTML explainer) `markdown` carries the "
+        "server-extracted readable text, and for a `\"native\"` chapter its native "
+        "source (CommonMark with typed blocks and ids; readable as markdown). "
+        "`url` is the document's public citation origin when one exists (empty "
+        "otherwise)."
     ),
 )
 async def fetch_document(
