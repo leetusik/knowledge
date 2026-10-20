@@ -1152,3 +1152,4 @@
 {"ts": "2026-10-21T07:53:12+09:00", "type": "executor_dispatched", "slice": "P30.S16", "phase": "P30", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T07:53:12+09:00", "type": "slice_status_changed", "slice": "P30.S16", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-21T07:53:12+09:00", "type": "deferred_created", "deferred": "D49", "source": "P30.S16"}
+{"ts": "2026-10-21T07:53:12+09:00", "type": "slice_status_changed", "slice": "P30.S17", "old_status": "todo", "new_status": "in_progress"}

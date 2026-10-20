@@ -170,7 +170,7 @@
 | [x] `P30.S14` | `done` | Reader prose kit and chapter opening (01-reader) | `implementation` | `works/phases/active/P30/slices/P30.S14` |
 | [x] `P30.S15` | `done` | Reader progress and moving: resume, finished, chapter list, languages, versions | `implementation` | `works/phases/active/P30/slices/P30.S15` |
 | [x] `P30.S16` | `done` | Figures, figure rows, svg block and sources (02-figures) | `implementation` | `works/phases/active/P30/slices/P30.S16` |
-| [ ] `P30.S17` | `todo` | Diagrams I: the frame, tones, flow and state (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S17` |
+| [ ] `P30.S17` | `in_progress` | Diagrams I: the frame, tones, flow and state (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S17` |
 | [ ] `P30.S18` | `todo` | Diagrams II: sequence, stack, timeline and chart (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S18` |
 | [ ] `P30.S19` | `todo` | Quiz block: choice, recall, cloze, saving, return (04-quiz) | `implementation` | `works/phases/active/P30/slices/P30.S19` |
 | [ ] `P30.S20` | `todo` | Annotations I: selection, highlights, notes, Review this (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S20` |
