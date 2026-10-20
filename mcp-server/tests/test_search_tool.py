@@ -326,3 +326,23 @@ def test_fetch_401_becomes_unauthorized():
             )
         )
     assert "unauthorized" in str(excinfo.value).lower()
+
+
+def test_fetch_returns_native_source_in_the_same_shape():
+    # A native chapter (P30.S5): `markdown` carries the stored native source (ids
+    # included, for a re-explain), not the upstream's plain-text search projection;
+    # the key set is unchanged.
+    source = "---\ntitle: \"Notes\"\nformat: native\nsyntax: 1\n---\n\n## Intro {#intro}\n\nBody.\n"
+    native_doc = {**_DOC, "format": "native", "markdown": "Intro\nBody.", "source": source}
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=native_doc)
+
+    out = asyncio.run(
+        server.run_fetch_document(
+            id=42, authorization="Bearer vk_x", transport=httpx.MockTransport(handler),
+        )
+    )
+    assert set(out) == _FETCH_KEYS
+    assert out["format"] == "native"
+    assert out["markdown"] == source and out["total_chars"] == len(source)

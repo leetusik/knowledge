@@ -144,12 +144,24 @@ def build_tenant_graph(
         )
 
     doc_ids = {r["id"] for r in records}
+    # P30.S5: a `related:` link to a document's old `<stem>.html` reaches it after its
+    # html -> native migration moved it to `<stem>.md` (the stem alias), instead of
+    # turning into a broken edge. An exact match always wins.
+    by_stem: dict[str, list[str]] = {}
+    for rid in doc_ids:
+        by_stem.setdefault(db.rel_path_stem(rid), []).append(rid)
+
+    def _resolve_related(target: str) -> str:
+        if target in doc_ids:
+            return target
+        matches = by_stem.get(db.rel_path_stem(target), [])
+        return matches[0] if len(matches) == 1 else target
 
     # Edges (deduped; self-references dropped) — related first, then doc<->tag.
     edges: list[dict[str, Any]] = []
     seen: set[tuple] = set()
     for r in records:  # related: directed as authored
-        for target in r["related"]:
+        for target in (_resolve_related(t) for t in r["related"]):
             key = ("related", r["id"], target)
             if target == r["id"] or key in seen:
                 continue

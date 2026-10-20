@@ -27,3 +27,46 @@ notebook keeps a one-line summary of each. Nothing here is superseded.
 
   Once signed, each round's `result.md` `## Build` is the delta on that job's signed build prompt, and the
   build slices read both.
+
+## Moved by P30.S5 (word for word, to keep the notebook under budget)
+
+- **The operator's answers to P29.REVIEW's A1–A5.** The operator approved P30.DECOMP's plan on 2026-10-21,
+  which accepts every recommendation as written:
+  - **A1 (Q1, tenant #1's "private" docs are world-readable on the public GitHub repo):** P30 takes no repo
+    action. The orchestrator files a deferred job, "a private content remote for tenant #1", triggered by
+    the operator's word or by the first private subject book. P30 adds no new exposure, because images stay
+    out of git (A2). Book manifests carry only the titles already public.
+  - **A2 (Q2):** chapter images are not committed. `.assets/` is gitignored for every tenant (S4).
+    Tenant #1's images live only on the box disk, with no off-box backup, until A1 gets a private home.
+  - **A3 (Q3):** (a) restore the portable `.agents/skills/explain/SKILL.md`, rewritten for the native
+    format, in S7. The handoff note (S28) asks the bootstrap's updater to stop deleting
+    `.agents/skills/explain/`. Until then a workspace update can delete the copy again, so check it after
+    every update.
+  - **A4 (Q4–Q8), all five confirmed:**
+    - no JS widgets in v1;
+    - no math in v1;
+    - an anonymous reader keeps only the settings cookie, and every save shows "Sign in to save";
+    - highlights enter review only through "Review this";
+    - deleting a document purges readers' notes on it.
+
+    The working assumptions are now decisions, and no signed job reopens.
+  - **A5:** yes to all four, as P30's first slice (S1, a `co-work` wave at critique level `critic`):
+    - C07;
+    - `annotations` 10;
+    - the about 1.58:1 control and rating-button border raised to 3:1 (`quiz` C09, `review` 12,
+      `library` C11);
+    - `book-page` 7.
+
+    Its one `pending` stop comes at the start of the run, so the build after it runs unattended.
+- **The A5 wave is signed (P30.S1, 2026-10-21)** on the operator's words "do as your recommendations for
+  all. and don't stop till the phase done. skip the blockers, everything do as your recommendation. go.":
+  `jobs/01-reader/rounds/03-chapter-bar-and-border/`, `jobs/05-annotations/rounds/02-keyboard-and-back-link/`
+  and `jobs/06-library/rounds/02-control-border/`, each with its `SIGNOFF.md`. Settled as drawn:
+  - the chapter bar shrinks to ‹ and → under 20rem;
+  - annotations option (a): a tab stop on each highlight's first piece;
+  - highlight stops keep WCAG 2.5.8's inline exception, not the 44 px floor;
+  - the 3:1 edge is reader- and library-scoped (`--rd-control-edge`, `--lib-control-edge` = `kb-hint`;
+    `--lib-ghost-edge` = `kb-secondary` on the sunken top bar), not a `kb` token change. The shell's ghost
+    edge applies on library pages only until D45.
+  - Wave choice C03 (matching annotations' filter, rows and legacy control, and review's filter) is
+    deferred as D48, since it needs another design round.

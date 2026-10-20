@@ -251,9 +251,12 @@ export interface KbDocumentListItem {
    * `"md"` (default) or `"html"` (P16) — an additive field the backend now sends on
    * every list + detail projection. `"html"` docs are self-contained HTML explainers
    * the viewer renders in a sandboxed opaque-origin iframe (never as markdown); `"md"`
-   * docs render byte-identically to before via `<MarkdownBody>`.
+   * docs render byte-identically to before via `<MarkdownBody>`. `"native"` (P30.S5)
+   * is a native chapter: its detail read carries the stored file as `source`, and the
+   * reader renders it from there (S12); `markdown` is then only its plain-text search
+   * projection.
    */
-  format: "md" | "html";
+  format: "md" | "html" | "native";
   /**
    * The document's CURRENT version number (P23) — `1` for a document that has never
    * been re-published, `N` after N-1 version bumps. Additive on every list + detail
@@ -273,6 +276,12 @@ export interface KbDocumentListItem {
 export interface KbDocument extends KbDocumentListItem {
   /** The document body WITHOUT frontmatter (starts at the H1). */
   markdown: string;
+  /**
+   * A native chapter's whole stored file — its `---` header (`format: native`,
+   * `syntax: 1`) and body, every id written in (P30.S5; P29 *Render model*). `null`
+   * for every other format. Optional so an older backend still type-checks.
+   */
+  source?: string | null;
   /**
    * The document's pretty, durable public path (P25) — `/@{org}/{project}/{slug}`,
    * or `null` when the owner tenant has not claimed an org slug (`tenants.slug` is
@@ -379,7 +388,7 @@ export interface KbDocumentVersion {
   /** `YYYY-MM-DD` — the document's publication date, not the archive time. */
   date: string;
   tags: string[];
-  format: "md" | "html";
+  format: "md" | "html" | "native";
   /** ISO-8601. When this body was superseded and archived. */
   created_at: string;
   /**
@@ -388,6 +397,8 @@ export interface KbDocumentVersion {
    * rendered body comes from the `/raw` twin.
    */
   markdown?: string;
+  /** The archived native file, on a single-version fetch of a native version (P30.S5). */
+  source?: string | null;
 }
 
 /**

@@ -7,7 +7,12 @@ documents surface codes against — eight reads and one delete:
   filter + offset pagination → ``{total, items}``.
 * ``GET /app/documents/{doc_id}`` — one document (with ``markdown``) → 404 when it is
   missing or belongs to another tenant (cross-tenant ids never leak). Optional-identity
-  since P19.S2: also readable anonymously when it belongs to a public project.
+  since P19.S2: also readable anonymously when it belongs to a public project. A
+  native chapter's detail (P30.S5; P29 *Render model*) carries ``source``, the whole
+  stored native file, beside the version's ``assets`` map; ``markdown`` is then its
+  plain-text search projection. ``source`` is ``null`` for every other format. The
+  version read below carries the archived version's ``source`` and ``assets`` the
+  same way.
 * ``GET /app/orgs/{org}/{project}/{slug}`` — the same document, addressed by its
   DURABLE public identity instead of the disposable row id (P25.S2): the Postgres
   org slug, the project name, and the doc slug. Same optional-identity trust gate,
@@ -110,9 +115,10 @@ def _app_doc(doc: dict, *, include_markdown: bool) -> dict:
 
     drop = set(_DROP)
     if not include_markdown:
-        # The list shape carries neither the body nor the asset map (P30.S4): both
-        # are detail-level, and the list's key set stays what it was.
-        drop |= {"markdown", "assets"}
+        # The list shape carries neither the body nor the asset map (P30.S4) nor the
+        # native source (P30.S5): all are detail-level, and the list's key set stays
+        # what it was.
+        drop |= {"markdown", "assets", "source"}
     return {k: v for k, v in doc.items() if k not in drop}
 
 
@@ -129,7 +135,7 @@ def _app_version(row: dict, *, include_markdown: bool) -> dict:
 
     drop = set(_VERSION_DROP)
     if not include_markdown:
-        drop.add("markdown")
+        drop |= {"markdown", "source"}
     return {k: v for k, v in row.items() if k not in drop}
 
 

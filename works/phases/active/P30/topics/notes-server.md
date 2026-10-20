@@ -4,7 +4,7 @@ Linked from `phase.md` → `## Notes for later slices`. Moved here by P30.S4 to 
 each section keeps its source and audience tags. A slice that consumes an entry says so in its `result.md`
 and may delete it here. Detail behind each entry: that slice's `result.md`.
 
-## (from P30.S2, for S3–S7, S11 and S13) The book API as shipped
+## (from P30.S2, for S6, S7, S11 and S13) The book API as shipped
 
 The full contract is in `slices/P30.S2/result.md` → *Contracts as shipped*. The essentials:
 
@@ -17,8 +17,7 @@ The full contract is in `slices/P30.S2/result.md` → *Contracts as shipped*. Th
   title?, variants:{lang: rel_path}, source?}]}`.
 - **A book's GET shape:** each chapter carries `variants:[{lang, rel_path, doc_id, title, slug, version,
   format, updated_at, translated_from}]`. `/app` adds `canonical_path`.
-- **For S5:** html → native must re-point the manifest variant (`write_manifest` + `replace_book` under
-  the lock), and `rel_path` stays the binding key.
+- (The S5 item, re-pointing the manifest variant on html → native, was consumed by P30.S5.)
 - **For S6:** `PUT /api/books/{project}/{book}` binds existing documents. It 422s a missing or
   other-project rel_path (`detail.missing`) and 409s a document another book binds. A no-op PUT makes
   no commit.
@@ -28,7 +27,7 @@ The full contract is in `slices/P30.S2/result.md` → *Contracts as shipped*. Th
   `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55432/kb`.
 - (The S4 item, `.assets` as a reserved dir, was consumed by P30.S4.)
 
-## (from P30.S3, for S5, S9 and S12) The native parser as shipped
+## (from P30.S3, for S9 and S12) The native parser as shipped
 
 The spec is `server/native/README.md`; the detail is in `slices/P30.S3/result.md`.
 
@@ -36,11 +35,8 @@ The spec is `server/native/README.md`; the detail is in `slices/P30.S3/result.md
   this), `.assigned_ids` and `.refs`, or it raises `NativeFormatError`, whose `.to_detail()` is the
   422 list. The projections are `sections(tree)`/`section_map`, which are the anchor basis, and
   `search_text(tree)` for FTS.
-- **For S5:**
-  - resolve `.refs`: an unknown `asset:` is a 422, and a `chapter:`/`doc:` miss is a warning;
-  - pass retired ids as `reserved_ids`;
-  - check `translated_from`'s quiz item and option id sets;
-  - `fetch_document` returns `.source`.
+- (The S5 items were consumed by P30.S5. The parser now also returns `.ids`, the document id
+  namespace, and a `NativeFormatError` carries `.refs`, the references read before it failed.)
 - **For S9:** section text and offsets (code points, with no whitespace collapse) come from
   `project.sections`. Re-anchor against them.
 - **For S12:**
@@ -51,7 +47,7 @@ The spec is `server/native/README.md`; the detail is in `slices/P30.S3/result.md
 - (The S4 item, the asset-name rule, was consumed by P30.S4: `server/assets.py` imports
   `refs.ASSET_NAME_RE`.)
 
-## (from P30.S4, for S5, S7, S16, S25 and S27) Image assets as shipped
+## (from P30.S4, for S7, S16, S25 and S27) Image assets as shipped
 
 Module docstring of `server/assets.py` is the spec; the detail is in `slices/P30.S4/result.md`.
 
@@ -68,10 +64,8 @@ Module docstring of `server/assets.py` is the spec; the detail is in `slices/P30
   rotation of 90/270 swaps them). `ext` is `png | jpg | webp | gif`.
 - **No inheritance:** a version's map is exactly what its publish sent. A re-explain must re-send its
   images (the CLI does), and the archived version keeps its own map and files.
-- **For S5:** resolve `.refs`' `asset:` names against the map from `prepare_assets` (`asset_map(...)`);
-  merge `AssetError.to_detail()` and `NativeFormatError.to_detail()` into ONE 422 list. Today an `md`
-  document may carry assets and an `html` one may not (`asset-format`); S5 decides whether `md` keeps
-  that once `native` exists.
+- (The S5 item was consumed by P30.S5: one merged 422 list, and only a native chapter may carry
+  assets, so `md` and `html` both get `asset-format`, per OQ14.)
 - **For S7:** `--asset NAME=PATH` maps to one `{name, media_type, content_base64}`; the media type comes
   from the file's magic bytes (`assets_mod.sniff_media_type` is the server's rule).
 - **For S16:** the render model's `Asset.url` is the BFF relay `/api/documents/{id}/assets/{file}`
@@ -86,3 +80,37 @@ Module docstring of `server/assets.py` is the spec; the detail is in `slices/P30
 - **For S27 and the orchestrator (deploy):** `deploy/knowledge.conf` raises `client_max_body_size`
   5m → 20m and adds the asset relay location; the box needs the nginx reload that a deploy does.
   `pillow` is a new Python dependency (in `uv.lock`).
+
+## (from P30.S5, for S6, S7, S12, S16 and S28) Native ingest as shipped
+
+The spec is `server/native/README.md` → *Ingest (S5)*; the detail is in `slices/P30.S5/result.md`.
+
+- **The publish contract:** `format: "native"`, `markdown` = the body WITHOUT a header. The server
+  writes the header (the md fields plus `format: native`, `syntax: 1` and the request's `summary`). The
+  422 is one list in S3's shape, with lines in the body as sent (`0` = header or whole document). The
+  201 adds `assigned_ids` `[{id, type, line}]`, `warnings` (`ref-unresolved`, `translation-ids`,
+  `translation-source-missing`) and `migrated_from`. Body limits: native 512 KB, md 512 KB, html 1 MB.
+- **Reads:** `GET /api/documents/{id}` and `by-path` carry `source`, the whole stored file with its
+  header. So do `/app/documents/{id}`, the slug read and both version reads, beside `assets`.
+  `markdown` is the plain-text search projection. Every list drops `source`. `/raw` stays html-only
+  (a native document is a 404 there).
+- **For S6:** the binding tool binds documents as they are, and S6 renames nothing. A NEW document may
+  not take a stem another document owns (409, `detail.rel_path` names the owner). `document_versions`
+  rows are keyed by the document's CURRENT rel_path, and reindex finds a chain by stem
+  (`documents.parse_archive_rel_path` → `ArchivePath(stem, version, ext)`). By-path reads of an old
+  `.html` path resolve through the stem alias. By-path DELETE stays exact.
+- **For S7 (CLI):** strip the file's own `---` header and send its fields as request fields (title,
+  tags, date, `summary`, `lang`, `translated_from`). Send the body as `markdown`. A re-explain reads
+  `source` from `GET /api/documents/by-path/{rel}`. MCP `fetch_document` caps at 20,000 characters
+  (`MCP_FETCH_MAX_CHARS`), so a long chapter's source is truncated there. A legacy html chapter needs
+  no special flag: its first native publish (book fields, `new_version` or `rel_path`) is the
+  migration. Surface `warnings` and the 422 list's lines to the author.
+- **For S12:** render from `source`, the whole file, which S3's TS port parses as-is. The version
+  read's `source` is the archived file. `web/src/lib/knowledge/types.ts` now has
+  `format: "md" | "html" | "native"` and `source?: string | null` on `KbDocument` and
+  `KbDocumentVersion`. `DocumentView` still sends every non-html document to `<MarkdownBody>` with
+  `markdown`, which for native is the projection. S12 replaces that branch.
+- **For S16:** `KbDocument` carries `source` now; it still lacks `assets` (S4's note).
+- **For S28:** the skill's re-explain fetches the source, keeps its ids, strips the header and
+  re-sends the body. A translation must keep the source's quiz item and option ids (422
+  `translation-quiz-ids`).

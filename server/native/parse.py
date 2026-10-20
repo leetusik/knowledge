@@ -42,6 +42,7 @@ class ParseResult:
     assigned_ids: list = field(default_factory=list)  # [{"id", "type", "line"}]
     refs: list = field(default_factory=list)  # every link/image reference, for S5 to resolve
     warnings: list = field(default_factory=list)
+    ids: list = field(default_factory=list)  # the document namespace, authored + assigned (S5 reserves them)
 
 
 def _build_md() -> MarkdownIt:
@@ -159,7 +160,7 @@ class _Parser:
             idx = self.header_lines + body_line
             new_lines[idx] = fn(new_lines[idx])
         return ParseResult(tree=tree, source="\n".join(new_lines), assigned_ids=self.assigned,
-                           refs=self.refs)
+                           refs=self.refs, ids=list(self.ids.document))
 
     def header(self, lines: list[str]) -> Optional[str]:
         if not lines or lines[0].rstrip() != "---":
@@ -496,8 +497,14 @@ def parse_chapter(source: str, *, reserved_ids=()) -> ParseResult:
     ``reserved_ids``: ids that must never be minted (S5 passes the retired ids
     of earlier versions). Raises ``NativeFormatError`` listing every violation.
     """
+    parser = _Parser(source, reserved_ids)
     try:
-        return _Parser(source, reserved_ids).run()
+        return parser.run()
+    except NativeFormatError as exc:
+        # The references read before the failure, so ingest can still resolve the
+        # inline ``asset:`` names into the same one 422 list (S5).
+        exc.refs = list(parser.refs)
+        raise
     except RecursionError:
         # markdown-it's emphasis pairing can nest far past MAX_INLINE_DEPTH before
         # the tree is built; a pathological source is a 422, never a 500.

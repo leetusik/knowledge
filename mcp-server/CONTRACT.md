@@ -113,7 +113,7 @@ Fetch one document's full markdown by **exactly one** of `id` or `rel_path` (use
 | Param | Type | Notes |
 |-------|------|-------|
 | `id` | integer | the document id from a search hit |
-| `rel_path` | string | the `project/YYYY-MM-DD-slug.md` path from a search hit |
+| `rel_path` | string | the `project/YYYY-MM-DD-slug.md` path from a search hit. A document migrated from html to native (P30) moved from `….html` to `….md`; its old `….html` path still resolves (a stem alias) |
 
 Provide **exactly one** (XOR). Both or neither → tool error
 `provide exactly one of \`id\` or \`rel_path\`` **before any upstream call**.
@@ -132,11 +132,17 @@ Provide **exactly one** (XOR). Both or neither → tool error
   `MCP_FETCH_MAX_CHARS`). Over the cap, `markdown` is the first N chars plus a marker
   `…[truncated: showing N of TOTAL characters]`, `truncated` is `true`, and `total_chars`
   is the **full** length — so the agent knows there is more and can narrow via `search`.
-- `format` — `"md" | "html"`. For an `"html"` doc (a standalone HTML explainer)
+- `format` — `"md" | "html" | "native"`. For an `"html"` doc (a standalone HTML explainer)
   `markdown` carries the server-extracted **readable text** (not the raw HTML), so the
   agent surface stays plain text and character-capped exactly as for markdown docs.
-  Consumers must **tolerate this field being absent** on an older server; treat a
-  missing `format` as `"md"`.
+  For a `"native"` chapter (P30) `markdown` carries the chapter's **native source**: the
+  whole stored file, its `---` header (`format: native`, `syntax: 1`) and every id
+  included, so a re-explain can carry its ids forward. The source is valid CommonMark
+  (typed blocks are fenced code, ids are `{#id}` / `#id` text), so a consumer that does
+  not know the value can treat it as `"md"`. `"native"` is a new value in an existing
+  field, additive under [Versioning & stability](#versioning--stability): the contract
+  version stays `1`. Consumers must **tolerate this field being absent** on an older
+  server; treat a missing `format` as `"md"`, and an unknown value as `"md"`.
 - `url` — same citation seam as `search`; empty for the whole current corpus (D13).
 
 **Errors:** `not found: no document with that id/rel_path` (404 — a missing **or**
