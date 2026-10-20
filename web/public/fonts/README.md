@@ -37,3 +37,19 @@ pnpm add -D @fontsource-variable/source-sans-3 @fontsource-variable/fraunces @fo
 # copy the files (see paths in node_modules/.pnpm/...) into this folder, then:
 pnpm remove @fontsource-variable/source-sans-3 @fontsource-variable/fraunces @fontsource-variable/jetbrains-mono pretendard
 ```
+
+## The reader's reading faces (`public/fonts/reader/`, P30.S13)
+
+Two more OFL faces, vendored as Google Fonts' own woff2 **unicode-range subsets** (not wired through
+`next/font`, which cannot carry `unicode-range`): `src/app/reader-fonts.css` declares them, and only the reader's
+client frame imports it, so no other page pays for them. A page loads just the subsets its text uses.
+
+| Files | Face | Axes | Role |
+|---|---|---|---|
+| `literata-{normal,italic}-sNNN.woff2` (14) | Literata (OFL) | `wght` 400–700, roman and italic | `--font-reading`: the chapter's body text |
+| `notoserifkr-normal-sNNN.woff2` (124) | Noto Serif KR (OFL 1.1) | `wght` 200–900 | Hangul in the reading and display faces (`01-reader` round 02, *Faces*) |
+
+The subset files are numbered in the order Google's CSS lists them; the `unicode-range` of each is in
+`reader-fonts.css`. To refresh: fetch `https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&display=swap`
+and `…?family=Noto+Serif+KR:wght@200..900&display=swap` with a modern Chrome user agent, download each `woff2`, and
+regenerate the CSS. Do not hotlink.

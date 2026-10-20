@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -8,12 +9,15 @@ import { DeleteDocumentButton } from "@/app/(app)/documents/delete-document-butt
 import { AppShell } from "@/components/app-shell";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { PublicShell } from "@/components/public-shell";
+import { ReaderPage } from "@/components/reader/reader-page";
 import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS, SHARE } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
 import { getDocument, getDocumentVersions } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { loginHref } from "@/lib/next-path";
+import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
+import { loadLooseReader } from "@/lib/reader/load";
 import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 
 import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
@@ -36,6 +40,12 @@ import { VersionHistory } from "./version-history";
 //   - an anonymous visitor → fetched TOKENLESS and wrapped in <PublicShell>; a
 //     private/nonexistent doc 404s server-side and we bounce to /login (uniform for
 //     every anonymous miss — no returnTo plumbing, a deferred nicety).
+//
+// P30.S13 — a native or md document opens in the READER (`01-reader`, the loose-
+// document variant: no book navigation, no app shell) from this id URL and from its
+// pretty URL; `?v=N` reads an older version. An html explainer keeps today's frame
+// until S25. The member's copy-link / Export PDF / Full width / Delete row belongs to
+// that older frame and is not part of the reader.
 //
 // The <title> is STATIC copy, not the document title: the knowledge client is
 // `cache: "no-store"`, so `generateMetadata` would cost a second uncached fetch.
@@ -117,7 +127,8 @@ export default async function DocumentPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: idParam } = await params;
-  const fullWidth = isFullWidth(await searchParams);
+  const query = await searchParams;
+  const fullWidth = isFullWidth(query);
   // Doc ids are integers. A non-integer / non-positive id is effectively not-found
   // for everyone (the backend would 422 it) and leaks nothing regardless of auth, so
   // short-circuit to the branded not-found BEFORE reading the session. Outside any
@@ -126,10 +137,18 @@ export default async function DocumentPage({
   if (!Number.isInteger(id) || id < 1) notFound();
 
   const ctx = await optionalIdentity();
+  const rawV = Array.isArray(query.v) ? query.v[0] : query.v;
+  const v = rawV && /^\d{1,6}$/.test(rawV) ? Number(rawV) : null;
+  const settings = parseReaderCookie((await cookies()).get(READER_COOKIE)?.value);
 
   // ── Member branch — the unchanged authenticated experience. ────────────────
   if (ctx) {
     const doc = await loadDocument(ctx.token, id, notFound);
+    // P30.S13 — native and md open in the reader; html keeps this frame.
+    if (doc.format !== "html") {
+      const reader = await loadLooseReader({ token: ctx.token, doc, v, settings });
+      if (reader) return <ReaderPage reader={reader} />;
+    }
     const history = await loadVersions(ctx.token, doc);
     return (
       <AppShell identity={ctx.identity} fullWidth={fullWidth}>
@@ -253,7 +272,13 @@ export default async function DocumentPage({
   // phase, and a 308 would be cached by browsers past a slug change. One-way only —
   // the pretty page never redirects back here, so there is no loop.
   // Top level, outside any try: `redirect()` signals by throwing.
-  if (doc.canonical_path) redirect(doc.canonical_path);
+  if (doc.canonical_path) {
+    redirect(v !== null ? `${doc.canonical_path}?v=${v}` : doc.canonical_path);
+  }
+  if (doc.format !== "html") {
+    const reader = await loadLooseReader({ token: undefined, doc, v, settings });
+    if (reader) return <ReaderPage reader={reader} />;
+  }
   const history = await loadVersions(undefined, doc);
   return (
     <PublicShell fullWidth={fullWidth}>

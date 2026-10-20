@@ -68,3 +68,7 @@ export type { StatesCopy } from "./states";
 // Native / md chapter render pipeline (P30.S12) — the plumbing's own words: the
 // "couldn't be shown" placeholders, the missing-link suffix and region names.
 export { CHAPTER } from "./chapter";
+
+// The reader shell (P30.S13) — the `01-reader` round's strings for the top bar, the
+// chapter bar, the Contents and Display sheets, Sign in to save and the states.
+export { READER } from "./reader";

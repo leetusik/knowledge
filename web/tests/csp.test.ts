@@ -23,7 +23,12 @@ describe("app CSP", () => {
     );
     expect(policy).not.toContain("unsafe-eval");
     expect(policy).not.toContain("unsafe-inline");
-    expect(readerCsp(nonce, true)).toContain("'unsafe-eval'");
+    // dev: React needs eval, and Next's dev server leaves its chunk tags un-nonced, so
+    // same-origin scripts are trusted instead of 'strict-dynamic' (P30.S13)
+    const dev = readerCsp(nonce, true);
+    expect(dev).toContain("'unsafe-eval'");
+    expect(dev).toContain(`script-src 'self' 'nonce-${nonce}'`);
+    expect(dev).not.toContain("strict-dynamic");
   });
 
   it("scopes the nonce policy to the pages that render document bodies", () => {

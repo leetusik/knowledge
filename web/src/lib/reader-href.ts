@@ -18,7 +18,7 @@
  * islands build these links too.
  */
 
-import { loginHref } from "./next-path";
+import { DEFAULT_NEXT_PATH, loginHref } from "./next-path";
 
 /** The part of a tenant the org segment is built from. */
 export interface OrgOwner {
@@ -118,3 +118,11 @@ export function signInToSaveHref(
 ): string {
   return loginHref(readerHref(target, place));
 }
+
+/**
+ * The library — "the reader's home" (`01-reader` *Wiring*: the logo, and a loose
+ * document's "‹ Library" and "‹ Back to the library"). It is the app's landing
+ * (`DEFAULT_NEXT_PATH`), so S22 moving the landing to `/library` there moves the
+ * reader's links with it; until then it is the dashboard.
+ */
+export const LIBRARY_HREF = DEFAULT_NEXT_PATH;

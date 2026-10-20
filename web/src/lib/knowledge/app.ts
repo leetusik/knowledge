@@ -4,6 +4,7 @@ import { getJson, getRaw, sendJson } from "./client";
 import type {
   KbCredential,
   KbDashboard,
+  KbBook,
   KbDocument,
   KbDocumentsPage,
   KbDocumentsQuery,
@@ -451,6 +452,26 @@ export async function resolveDocument(
   // `..` in any of them must never restructure the upstream path).
   const path = `/app/orgs/${encodeURIComponent(org)}/${encodeURIComponent(project)}/${encodeURIComponent(slug)}`;
   return getJson<KbDocument>(path, { token, signal });
+}
+
+/**
+ * `GET /app/orgs/{org}/{project}/books/{book}` → 200 the book with its ordered
+ * chapters and each chapter's live variants (P30.S2). `org` is the BARE org slug or
+ * the tenant id for a tenant without one (`orgSegment`), no `@`.
+ *
+ * OPTIONAL-IDENTITY like `resolveDocument`: a member of the org reads it whatever the
+ * project's visibility, anyone else only when the project is public. EVERY miss —
+ * unknown org, project or book, a private project — is one indistinguishable **404**.
+ */
+export async function getBook(
+  token: string | undefined,
+  org: string,
+  project: string,
+  book: string,
+  signal?: AbortSignal,
+): Promise<KbBook> {
+  const path = `/app/orgs/${encodeURIComponent(org)}/${encodeURIComponent(project)}/books/${encodeURIComponent(book)}`;
+  return getJson<KbBook>(path, { token, signal });
 }
 
 /**
