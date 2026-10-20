@@ -160,6 +160,7 @@ def _frontmatter_inner_lines(
     lang: Optional[str] = None,
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> list[str]:
     """The YAML field lines shared by the '---' fenced (md) and '<!--kb' comment
     (html) frontmatter serializers — everything BETWEEN the fences. Factored out so
@@ -176,6 +177,11 @@ def _frontmatter_inner_lines(
     given**, so a document published without them is byte-identical to before P30:
     ``lang: ko``, then ``translated_from:`` as a ``{lang, version}`` block, then
     ``subject:`` (a JSON string, like the title).
+
+    ``assets`` (P30.S4) is the version's asset map, emitted LAST and only when
+    non-empty (so every document without images is byte-identical to before): an
+    ``assets:`` mapping with one JSON-flow line per name, sorted. JSON is valid YAML,
+    and the quoted key keeps a name like ``true`` or ``1.5`` a string.
     """
     lines = [f"title: {json.dumps(title, ensure_ascii=False)}"]
     lines.append(f"date: {date}")
@@ -199,6 +205,11 @@ def _frontmatter_inner_lines(
     lines.append("source:")
     lines.append(f"  project: {project}")
     lines.append(f"  repo: {source_repo}")
+    if assets:
+        lines.append("assets:")
+        for name in sorted(assets):
+            entry = json.dumps(assets[name], ensure_ascii=False, sort_keys=True)
+            lines.append(f"  {json.dumps(name)}: {entry}")
     return lines
 
 
@@ -214,6 +225,7 @@ def serialize_frontmatter(
     lang: Optional[str] = None,
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> str:
     """Hand-rolled frontmatter block, byte-exact to the docs/ convention.
 
@@ -238,6 +250,7 @@ def serialize_frontmatter(
         lang=lang,
         subject=subject,
         translated_from=translated_from,
+        assets=assets,
     )
     return "---\n" + "\n".join(inner) + "\n---\n"
 
@@ -254,6 +267,7 @@ def serialize_html_frontmatter(
     lang: Optional[str] = None,
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> str:
     """The HTML-comment frontmatter block for an explainer ``.html`` doc.
 
@@ -274,6 +288,7 @@ def serialize_html_frontmatter(
         lang=lang,
         subject=subject,
         translated_from=translated_from,
+        assets=assets,
     )
     return "<!--kb\n" + "\n".join(inner) + "\n-->\n"
 
@@ -470,6 +485,7 @@ def write_document_file(
     lang: Optional[str] = None,
     subject: Optional[str] = None,
     translated_from: Optional[dict] = None,
+    assets: Optional[dict] = None,
 ) -> str:
     """Write ``docs/<rel_path>`` as ``<frontmatter> + "\\n" + body``.
 
@@ -497,6 +513,7 @@ def write_document_file(
             lang=lang,
             subject=subject,
             translated_from=translated_from,
+            assets=assets,
         )
     else:
         header = serialize_frontmatter(
@@ -510,6 +527,7 @@ def write_document_file(
             lang=lang,
             subject=subject,
             translated_from=translated_from,
+            assets=assets,
         )
     content = header + "\n" + _normalize_body(body)
     target = Path(docs_root) / rel_path

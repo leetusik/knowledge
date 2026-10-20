@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from server import assets as assets_mod
 from server import books, config, db, documents, embeddings
 
 # Generated agentic-workspace internals that live inside the MkDocs content root
@@ -30,7 +31,12 @@ from server import books, config, db, documents, embeddings
 #
 # `.books` (P30.S2) holds the book manifests (JSON, never an explainer); it is walked
 # by _walk_books into the books / chapters / chapter_variants tables.
-RESERVED_DIRS = {"current", "versions", documents.ARCHIVE_DIR, books.BOOKS_DIR}
+#
+# `.assets` (P30.S4) holds chapter images (content-addressed bytes, never an
+# explainer). Nothing walks it: each version's asset map lives in its own header.
+RESERVED_DIRS = {
+    "current", "versions", documents.ARCHIVE_DIR, books.BOOKS_DIR, assets_mod.ASSETS_DIR,
+}
 
 # '<YYYY-MM-DD>-<slug>.{md,html}' — group(1) date, group(2) slug, group(3) ext.
 _FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.(md|html)$")
@@ -57,7 +63,7 @@ def _header_extras(meta: dict) -> dict:
     reads back as absent (``None``) rather than skipping the whole document, which
     stays indexed exactly as before P30.
     """
-    out: dict = {"lang": None, "subject": None, "translated_from": None}
+    out: dict = {"lang": None, "subject": None, "translated_from": None, "assets": None}
     try:
         if meta.get("lang") is not None:
             out["lang"] = books.validate_lang(str(meta.get("lang")))
@@ -70,6 +76,8 @@ def _header_extras(meta: dict) -> dict:
         out["translated_from"] = books.validate_translated_from(meta.get("translated_from"))
     except documents.ConventionError:
         pass
+    # P30.S4: the version's asset map; malformed entries are dropped, not fatal.
+    out["assets"] = assets_mod.parse_asset_map(meta.get("assets"))
     return out
 
 
@@ -243,6 +251,7 @@ def _index_version_file(
             raw_html=raw_html_val,
             tenant_id=tenant_id,
             created_at=archived_at,
+            assets=assets_mod.parse_asset_map(meta.get("assets")),
         )
     except sqlite3.Error as exc:
         return False, f"db error: {exc}"
