@@ -65,6 +65,20 @@ export const CHAPTER = {
     layers: "Layers",
     lanes: "Lanes",
     series: "Series",
+    /** P30.S17 — `03-diagrams` round 01, *Every string written for the diagram block*. */
+    hint: "Scroll sideways to see the whole drawing →",
+    aria: "Drawing, scrolls sideways",
+    /** The text alternative of a drawn kind (visually hidden, after the drawing). */
+    alt: {
+      lead: "The drawing, as text.",
+      starts: (label: string): string => `Starts at ${label}.`,
+      inGroup: (group: string): string => `, in ${group}`,
+      endState: ", an end state",
+      fields: (list: string): string => `. Fields: ${list}`,
+      goes: (parts: string): string => `. Goes ${parts}.`,
+      to: (target: string): string => `to ${target}`,
+      itself: "back to itself",
+    },
   },
   /** P30.S16 — the figures' strings (`02-figures` round 01, *Every string written for these blocks*). */
   figure: {

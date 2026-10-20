@@ -57,7 +57,7 @@ scope.
   - no inner scroller;
   - no CSP or console errors.
 
-  Compare against the canvas boards by screenshot. Stop your servers afterwards.
+  Compare against the canvas boards by screenshot. Stop your servers afterwards **by the PIDs you started, never `pkill -f next-server` or any pattern kill** (S17 killed the standing `:3030` that way).
 - Name the instrument in `result.md`, and never claim a check you didn't run.
 
 ## Gates
