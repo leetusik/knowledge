@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legacy reader — the chapter screen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="legacy.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ frameCls }}" data-theme="{{ theme }}" style="{{ frameStyle }}" ref="{{ setFrame }}" onkeydown="{{ onKey }}"><div class="rd-in">
+<a class="rd-btn rd-btn--secondary lg-skip" href="#top" onclick="{{ skipToDoc }}">Skip to the document</a>
+<div class="lg-safe lg-safe--t" aria-hidden="true"></div>
+<div class="lg-topbox"><dc-import name="ReaderTop" bare="{{ true }}" pct="{{ pct }}" back-long="{{ backLong }}" back-short="{{ backShort }}" is-old="{{ isOld }}" version="{{ version }}" langs="{{ langs }}" lang="{{ lang }}" member="{{ member }}" panel="{{ panel }}" on-back="{{ goBack }}" on-logo="{{ goLibrary }}" on-lang="{{ onLang }}" on-display="{{ toggleDisplay }}" on-sign-in="{{ signIn }}" hint-size="100%,59px"></dc-import></div>
+<main class="lg-stage" aria-label="{{ stageLabel }}" aria-busy="{{ busy }}">
+<sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}"><div class="{{ docCls }}" tabindex="0" role="region" aria-label="{{ docLabel }}" data-quiet="{{ quiet }}" ref="{{ setDoc }}" onscroll="{{ onScroll }}" onblur="{{ onDocBlur }}"><dc-import name="LegacyDoc" body="{{ body }}" dark="{{ docDark }}" lang="{{ lang }}" on-link="{{ onDocLink }}" on-anchor="{{ onAnchor }}" hint-size="100%,1600px"></dc-import></div></sc-if>
+<sc-if value="{{ isFrameState }}" hint-placeholder-val="{{ false }}"><div class="lg-docframe lg-docframe--state" tabindex="0" role="region" aria-label="{{ docLabel }}" ref="{{ setDoc }}"><dc-import name="LegacyFrameState" bare="{{ true }}" kind="{{ status }}" noun="{{ noun }}" on-retry="{{ onRetry }}" on-back="{{ goBack }}" hint-size="100%,560px"></dc-import></div></sc-if>
+<sc-if value="{{ isNotFound }}" hint-placeholder-val="{{ false }}"><div class="lg-docframe lg-docframe--state"><dc-import name="ReaderState" bare="{{ true }}" kind="notfound" noun="{{ noun }}" on-library="{{ goLibrary }}" hint-size="100%,520px"></dc-import></div></sc-if>
+<sc-if value="{{ hiddenNow }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--secondary lg-showctl" onclick="{{ showBar }}">Show reading controls</button></sc-if>
+<sc-if value="{{ showResume }}" hint-placeholder-val="{{ false }}"><div class="rd-resume"><span class="rd-resume__text">Picked up where you left off · <b>{{ resumeAt }}</b></span><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ fromTop }}">From the top</button></div></sc-if>
+<sc-if value="{{ hasPrompt }}" hint-placeholder-val="{{ false }}"><div class="lg-slot"><dc-import name="SignInToSave" bare="{{ true }}" what="{{ promptWhat }}" place="{{ noun }}" raised="{{ true }}" on-sign-in="{{ signIn }}" on-dismiss="{{ dismissPrompt }}" hint-size="100%,190px"></dc-import></div></sc-if>
+</main>
+<sc-if value="{{ hasBottom }}" hint-placeholder-val="{{ true }}"><div class="lg-bottom"><div class="lg-bottom__in">
+<div class="lg-bottom__bar"><dc-import name="LegacyBar" bare="{{ true }}" title="{{ title }}" title-lang="{{ lang }}" version="{{ version }}" newest="{{ newest }}" date="{{ date }}" has-history="{{ hasHistory }}" is-old="{{ isOld }}" stale="{{ stale }}" src-name="{{ srcName }}" src-from="{{ srcFrom }}" src-newest="{{ srcNewest }}" noun="{{ noun }}" member="{{ member }}" layer="{{ layer }}" on="{{ marked }}" busy="{{ notReady }}" prompt-open="{{ finishPrompt }}" on-print="{{ print }}" on-bookmark="{{ bookmark }}" on-mark="{{ onMark }}" on-versions="{{ openVersions }}" on-latest="{{ readLatest }}" on-source="{{ readSource }}" hint-size="100%,130px"></dc-import></div>
+<sc-if value="{{ hasChap }}" hint-placeholder-val="{{ true }}"><div class="lg-chap"><dc-import name="ReaderBottom" bare="{{ true }}" n="{{ n }}" total="{{ total }}" pct="{{ pct }}" prev-title="{{ prevTitle }}" prev-lang="{{ prevLang }}" next-title="{{ nextTitle }}" next-lang="{{ nextLang }}" book-title="{{ bookTitle }}" panel="{{ panel }}" on-prev="{{ goPrev }}" on-next="{{ goNext }}" on-book="{{ goBook }}" on-contents="{{ toggleContents }}" hint-size="100%,60px"></dc-import></div></sc-if>
+<div class="lg-safe lg-safe--b" aria-hidden="true"></div>
+</div></div></sc-if>
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-scrim" tabindex="-1" aria-label="Close panel" onclick="{{ closePanel }}"></button></sc-if>
+<sc-if value="{{ isContents }}" hint-placeholder-val="{{ false }}"><div class="rd-sheet rd-sheet--left" role="dialog" aria-modal="true" aria-label="Contents"><div class="rd-sheet__head"><h2 class="rd-sheet__title">Contents</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closePanel }}">Close</button></div><div class="rd-sheet__body"><p class="rd-sheet__booktitle">{{ bookTitle }}</p><p class="rd-sheet__bookmeta">{{ bookMeta }}</p><dc-import name="ChapterList" bare="{{ true }}" book="{{ book }}" cur="{{ doc }}" prog="{{ prog }}" member="{{ member }}" lang="{{ lang }}" on-open="{{ onOpen }}" hint-size="100%,420px"></dc-import></div></div></sc-if>
+<sc-if value="{{ isDisplay }}" hint-placeholder-val="{{ false }}"><div class="rd-sheet rd-sheet--right" role="dialog" aria-modal="true" aria-label="Display"><div class="rd-sheet__head"><h2 class="rd-sheet__title">Display</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closePanel }}">Close</button></div><div class="rd-sheet__body"><dc-import name="LegacyDisplay" bare="{{ true }}" theme-choice="{{ themeChoice }}" os="{{ os }}" look="{{ look }}" on-theme="{{ onTheme }}" hint-size="100%,420px"></dc-import></div></div></sc-if>
+<sc-if value="{{ isVersions }}" hint-placeholder-val="{{ false }}"><div class="rd-sheet rd-sheet--right" role="dialog" aria-modal="true" aria-label="Version history"><div class="rd-sheet__head"><h2 class="rd-sheet__title">Version history</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closePanel }}">Close</button></div><div class="rd-sheet__body"><dc-import name="VersionList" bare="{{ true }}" doc="{{ doc }}" lang="{{ lang }}" ver="{{ ver }}" on-open="{{ onVersion }}" hint-size="100%,240px"></dc-import></div></div></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":null},"lang":{"editor":null},"ver":{"editor":null},"theme":{"editor":null},"themeChoice":{"editor":null},"os":{"editor":null},"member":{"editor":null},"bar":{"editor":null},"panel":{"editor":null},"status":{"editor":null},"prog":{"editor":null},"jump":{"editor":null},"prompt":{"editor":null},"resumed":{"editor":null},"hold":{"editor":null},"marks":{"editor":null},"markOnLand":{"editor":null},"safe":{"editor":null},"fit":{"editor":null},"onOpen":{"editor":null},"onLink":{"editor":null},"onLang":{"editor":null},"onVersion":{"editor":null},"onTheme":{"editor":null},"onPanel":{"editor":null},"onBar":{"editor":null},"onMark":{"editor":null},"onBookmark":{"editor":null},"onPlaceMark":{"editor":null},"onEnd":{"editor":null},"onEndLeft":{"editor":null},"onReading":{"editor":null},"onAway":{"editor":null},"onPrint":{"editor":null},"onRetry":{"editor":null},"onPrompt":{"editor":null},"onFromTop":{"editor":null},"onDismissResume":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { frac: 0, anchor: null, quiet: '1', landPct: null, tight: false };
+    this.docEl = null;
+    this.frame = null;
+    this.lastF = 0;
+    this.quietUntil = 0;
+    this.rebase = false;
+    this.endLock = false;
+    this.endIn = false;
+    this.sent = { pct: -10, anchor: undefined, at: '' };
+    this.placed = 0;
+  }
+  setDoc = (el) => { this.docEl = el; };
+  setFrame = (el) => { this.frame = el; };
+  componentDidMount() {
+    this.applyJump(true);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { this.fit(); if (Date.now() < this.quietUntil + 600) this.applyJump(false); });
+    if (window.ResizeObserver && this.frame) { this.ro = new ResizeObserver(() => this.fit()); this.watch(); }
+    this.fit();
+  }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); }
+  /* fit() runs whenever the page or any part of the chrome changes size (a window resize, zoom, a larger root font) */
+  watch() {
+    if (!this.ro || !this.frame) return;
+    const els = [this.frame, ...this.frame.querySelectorAll('.lg-topbox, .lg-bottom__bar > *, .lg-chap')];
+    if (this.watched && els.length === this.watched.length && els.every((e, i) => e === this.watched[i])) return;
+    this.ro.disconnect(); els.forEach((e) => this.ro.observe(e)); this.watched = els;
+  }
+  /* Larger text, zoom or a short window: the document keeps at least min(40% of the page, 17rem). When the bottom
+     chrome at its full height would leave it less, the page is tight: the chrome gives way and its document bar scrolls
+     inside itself, while the chapter bar under it stays whole. At the reference sizes no state is tight. */
+  fit() {
+    const page = this.frame;
+    if (!page) return;
+    const q = (sel) => page.querySelector(sel);
+    const bar = q('.lg-bottom__bar'), top = q('.lg-topbox');
+    let tight = false;
+    if (bar && top) {
+      const H = page.clientHeight;
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const chap = q('.lg-chap'), sb = q('.lg-safe--b'), st = q('.lg-safe--t');
+      const chrome = bar.scrollHeight + (chap ? chap.offsetHeight : 0) + (sb ? sb.offsetHeight : 0);
+      const room = H - top.offsetHeight - (st ? st.offsetHeight : 0) - chrome;
+      tight = H > 0 && room < Math.min(0.4 * H, 17 * rem) - 1;
+    }
+    if (tight !== !!this.state.tight) this.setState({ tight });
+  }
+  componentDidUpdate(prev) {
+    const P = this.props;
+    const jt = (P.jump && P.jump.token) || 0, pjt = (prev.jump && prev.jump.token) || 0;
+    const moved = P.doc !== prev.doc || P.lang !== prev.lang || P.ver !== prev.ver;
+    if (jt !== pjt || moved || (P.status === 'ready' && prev.status !== 'ready')) {
+      if (moved) { this.endIn = false; this.endLock = false; }
+      /* a restore is a new landing: the bridge posts its place even when it is the place last posted */
+      this.sent = { pct: -10, anchor: undefined, at: '' };
+      this.applyJump(true);
+    }
+    if ((P.bar || 'shown') !== (prev.bar || 'shown')) this.rebase = true;
+    if (P.panel && P.panel !== prev.panel) this.focusSheet();
+    if (!P.panel && prev.panel) this.restoreFocus();
+    this.watch();
+    this.fit();
+  }
+  /* The bridge's restore, on load: by anchor when the document has it, else by fraction. */
+  applyJump(focus) {
+    const j = this.props.jump || {};
+    const t0 = Date.now();
+    const run = () => {
+      const box = this.docEl;
+      if (!box || (this.props.status || 'ready') !== 'ready') { if (Date.now() - t0 < 4000) requestAnimationFrame(run); return; }
+      let top = 0;
+      if (j.anchor) {
+        const el = box.querySelector('[id="' + j.anchor + '"]');
+        if (!el) { if (Date.now() - t0 < 1500) { requestAnimationFrame(run); return; } }
+        if (el) top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 12;
+        else if (j.frac) top = j.frac * (box.scrollHeight - box.clientHeight);
+      } else if (j.frac) {
+        top = j.frac * (box.scrollHeight - box.clientHeight);
+      }
+      this.quietUntil = Date.now() + 450;
+      box.scrollTop = Math.max(0, Math.round(top));
+      this.lastF = this.fracOf();
+      /* the resume pill names the place in this screen's own terms: the fraction where the restore landed */
+      this.setState({ landPct: Math.round(this.lastF * 100) });
+      this.measure();
+      if (this.props.markOnLand && j.token && this.placed !== j.token && this.props.onPlaceMark) { this.placed = j.token; this.props.onPlaceMark(this.fracOf()); }
+      /* on desktop the frame takes focus after load, so Space, PageDown and the arrows scroll it */
+      if (focus && this.frame && this.frame.offsetWidth >= 1024 && !this.props.panel) {
+        if (!this.frame.contains(document.activeElement) || document.activeElement === document.body) {
+          this.setState({ quiet: '1' });
+          box.focus({ preventScroll: true });
+        }
+      }
+    };
+    requestAnimationFrame(run);
+  }
+  fracOf() {
+    const box = this.docEl;
+    if (!box) return 0;
+    const max = box.scrollHeight - box.clientHeight;
+    if (max <= 1) return 1;
+    return Math.min(1, Math.max(0, box.scrollTop / max));
+  }
+  anchorOf() {
+    const box = this.docEl;
+    if (!box) return null;
+    const line = box.getBoundingClientRect().top + 24;
+    let a = null;
+    box.querySelectorAll('h2[id], h3[id]').forEach((h) => { if (h.getBoundingClientRect().top <= line) a = h.id; });
+    return a;
+  }
+  /* What the bridge posts: { kb: "legacy", v: 1, type: "scroll", fraction, anchor }, throttled. */
+  measure() {
+    const P = this.props;
+    if ((P.status || 'ready') !== 'ready' || !this.docEl) return;
+    const frac = this.fracOf(), anchor = this.anchorOf();
+    if (Math.abs(frac - this.state.frac) > 0.0005 || anchor !== this.state.anchor) this.setState({ frac, anchor });
+    const pct = Math.round(frac * 100);
+    const at = frac >= 0.95 ? 'end' : frac < 0.005 ? 'top' : 'text';
+    if (P.onReading && (anchor !== this.sent.anchor || Math.abs(pct - this.sent.pct) >= 5 || at !== this.sent.at)) {
+      this.sent = { pct, anchor, at };
+      P.onReading({ frac, anchor });
+    }
+    const seen = frac >= 0.95;
+    if (seen && !this.endIn) { this.endIn = true; if (P.onEnd) P.onEnd(); }
+    else if (!seen && this.endIn) { this.endIn = false; if (P.onEndLeft) P.onEndLeft(); }
+  }
+  /* The bar's rules, from the fraction alone (the bridge reports no taps):
+     shown at the top and at the end, and it stays at the end until the reader scrolls back up; hidden on a scroll down;
+     shown on a scroll up of 0.2% of the document or more. Quiet for 450 ms after a restore, and while a sheet is open.
+     After the bar hides or shows, the frame's height changes and so does the fraction: the next message only re-sets the
+     baseline. */
+  onScroll = () => {
+    const P = this.props;
+    if (!this.docEl) return;
+    const f = this.fracOf(), df = f - this.lastF;
+    this.lastF = f;
+    const quiet = Date.now() < this.quietUntil;
+    if (!quiet && P.onBar && !P.panel) {
+      let want = null;
+      if (f >= 0.995) { want = 'shown'; this.endLock = true; }
+      else if (f <= 0.0005) want = 'shown';
+      else if (this.rebase) this.rebase = false;
+      else if (df < -0.002) { want = 'shown'; this.endLock = false; }
+      else if (df > 0.0005 && !this.endLock) want = 'hidden';
+      if (want && want !== (P.bar || 'shown')) {
+        P.onBar(want);
+        if (want === 'hidden' && P.resumed && P.onDismissResume) P.onDismissResume();
+      }
+    }
+    this.measure();
+  };
+  onAnchor = (id) => {
+    const box = this.docEl;
+    if (!box) return;
+    const el = box.querySelector('[id="' + id + '"]');
+    if (!el) return;
+    box.scrollTop = Math.max(0, Math.round(el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 12));
+  };
+  onKey = (e) => {
+    if (e.key === 'Escape' && this.props.panel && this.props.onPanel) {
+      e.stopPropagation();
+      this.props.onPanel(null);
+    }
+  };
+  focusSheet() {
+    if (!this.opener) this.opener = document.activeElement;
+    const t0 = Date.now();
+    const go = () => {
+      const b = this.frame && this.frame.querySelector('.rd-sheet__close');
+      if (b) b.focus({ preventScroll: true });
+      else if (Date.now() - t0 < 1500) requestAnimationFrame(go);
+    };
+    requestAnimationFrame(go);
+  }
+  restoreFocus() {
+    const o = this.opener;
+    this.opener = null;
+    if (o && o.isConnected && this.frame && this.frame.contains(o)) o.focus({ preventScroll: true });
+  }
+  renderVals() {
+    const RD = window.RD, LG = window.LG, P = this.props;
+    const doc = P.doc || 'tidewater/datums';
+    const member = P.member === undefined ? true : !!P.member;
+    const prog = P.prog || RD.progress;
+    let status = P.status || 'ready';
+    const g = LG.read(doc, P.lang || 'en', P.ver);
+    if (!g) status = 'notfound';
+    const r = g ? g.r : null;
+    const ctx = RD.ctx(doc) || { loose: true, total: 0, n: 0 };
+    const loose = !!ctx.loose;
+    const lang = r ? r.lang : 'en';
+    const panel = P.panel || null;
+    const ready = status === 'ready';
+    const theme = P.theme || 'light';
+    const botHidden = (P.bar || 'shown') === 'hidden' && ready;
+    const frac = ready ? this.state.frac : 0;
+    const pct = ready ? Math.round(frac * 100) : 0;
+    const st = RD.stateOf(prog, doc);
+    let layer = 'read';
+    if (ready && r && !r.isOld && frac >= 0.95) {
+      if (!member) layer = 'anon';
+      else if (st === 'finished' || st === 'updated' || st === 'unread') layer = st;
+    }
+    const marks = P.marks || [];
+    const marked = ready && marks.some((m) => Math.abs(m - frac) <= 0.02);
+    const away = (kind, detail) => () => { if (P.onAway) P.onAway(kind, detail); };
+    const call = (fn) => (e) => { if (e && e.preventDefault) e.preventDefault(); fn(); };
+    const togglePanel = (name) => () => { if (P.onPanel) P.onPanel(panel === name ? null : name); };
+    const prevKey = !loose && ctx.prev, nextKey = !loose && ctx.next;
+    const tPrev = prevKey ? RD.titleOf(prevKey, lang) : { text: '', lang: 'en' };
+    const tNext = nextKey ? RD.titleOf(nextKey, lang) : { text: '', lang: 'en' };
+    const done = loose ? 0 : RD.finishedCount(ctx.bookKey, prog);
+    const look = (RD.docs[doc] && RD.docs[doc].look) || 'light';
+    const LANG = { en: 'English', ko: '한국어' };
+    const safe = !!P.safe;
+    const jf = P.jump && P.jump.frac;
+    return {
+      frameCls: 'rd-frame lg-page rd-size-3 rd-theme-' + theme + (P.fit === 'fill' ? ' rd-frame--fill' : ' rd-frame--alone') + (botHidden ? ' lg-bot-hidden' : '') + (this.state.tight ? ' lg-tight' : '') + (member ? '' : ' rd-anon') + (loose ? ' rd-loose' : ''),
+      frameStyle: safe ? '--lg-safe-t: 47px; --lg-safe-b: 34px; --rd-barvis: 47px' : '--rd-barvis: 0px',
+      theme, themeChoice: P.themeChoice || 'system', os: P.os || 'light', look,
+      doc, lang, ver: P.ver || null, member, prog, panel, status,
+      noun: loose ? 'document' : 'chapter',
+      pct,
+      backLong: loose ? 'Library' : ctx.bookTitle,
+      backShort: loose ? 'Library' : 'Book',
+      isOld: !!(r && r.isOld && ready),
+      version: r ? r.version : 1,
+      newest: r ? r.newest : 1,
+      date: r ? r.date : '',
+      title: r ? r.title : '',
+      hasHistory: !!(r && r.versions.length > 1),
+      stale: !!(g && g.stale && ready),
+      srcName: g && g.srcLang ? LANG[g.srcLang] : '', srcFrom: g ? g.srcFrom : 0, srcNewest: g ? g.srcNewest : 0,
+      langs: r && status !== 'notfound' ? r.langs : [],
+      body: g ? g.body : '',
+      docDark: look === 'auto' && theme === 'dark',
+      docCls: 'lg-docframe' + (look === 'auto' && theme === 'dark' ? ' lg-docframe--dark' : ''),
+      docLabel: r ? r.title + ', in its original layout' : 'Document',
+      stageLabel: r ? r.title : 'Not found',
+      quiet: this.state.quiet || undefined,
+      busy: status === 'loading' || status === 'slow' ? 'true' : undefined,
+      isReady: ready && !!g,
+      isFrameState: !!g && (status === 'loading' || status === 'slow' || status === 'missing' || status === 'failed'),
+      isNotFound: status === 'notfound',
+      notReady: !ready,
+      hasBottom: !!g,
+      hasChap: !!g && !loose,
+      layer,
+      marked,
+      hiddenNow: botHidden,
+      showResume: !!P.resumed && ready && member && !panel && !botHidden,
+      resumeAt: (this.state.landPct != null ? this.state.landPct : Math.round((jf || 0) * 100)) + '%',
+      hasPrompt: !!P.prompt && !member && ready,
+      promptWhat: P.prompt === 'bookmark' ? 'bookmarks' : 'finished chapters and your place in each one',
+      finishPrompt: P.prompt === 'finish' && !member,
+      n: ctx.n || 0, total: ctx.total || 0,
+      prevTitle: tPrev.text, prevLang: tPrev.lang, nextTitle: tNext.text, nextLang: tNext.lang,
+      bookTitle: loose ? '' : ctx.bookTitle,
+      book: loose ? '' : ctx.bookKey,
+      bookMeta: loose ? '' : 'Chapter ' + ctx.n + ' of ' + ctx.total + (member ? ' · ' + done + ' of ' + ctx.total + ' finished' : ''),
+      sheetOpen: !!panel,
+      isContents: panel === 'contents' && !loose && !!g,
+      isDisplay: panel === 'display',
+      isVersions: panel === 'versions' && !!g,
+      onOpen: P.onOpen,
+      onLang: P.onLang,
+      onVersion: P.onVersion,
+      onTheme: P.onTheme,
+      onMark: P.onMark,
+      onRetry: P.onRetry,
+      onDocLink: (to) => { if (P.onLink) P.onLink(to); },
+      onAnchor: this.onAnchor,
+      print: () => { if (P.onPrint) P.onPrint(); },
+      bookmark: () => { if (P.onBookmark) P.onBookmark(this.fracOf()); },
+      goBack: away(loose ? 'library' : 'book'),
+      goBook: away('book'),
+      goLibrary: away('library'),
+      signIn: away('signin'),
+      goPrev: () => { if (P.onOpen && prevKey) P.onOpen(prevKey); },
+      goNext: () => { if (P.onOpen && nextKey) P.onOpen(nextKey); },
+      toggleDisplay: togglePanel('display'),
+      toggleContents: togglePanel('contents'),
+      openVersions: () => { if (P.onPanel) P.onPanel('versions'); },
+      closePanel: call(() => { if (P.onPanel) P.onPanel(null); }),
+      readLatest: () => { if (P.onVersion && r) P.onVersion(r.newest); },
+      readSource: () => { if (P.onLang && g && g.srcLang) P.onLang(g.srcLang); },
+      showBar: () => { if (P.onBar) P.onBar('shown'); },
+      fromTop: () => { if (P.onFromTop) P.onFromTop(); },
+      dismissPrompt: () => { if (P.onPrompt) P.onPrompt(null); },
+      skipToDoc: (e) => { if (e && e.preventDefault) e.preventDefault(); if (this.docEl) { this.setState({ quiet: undefined }); this.docEl.focus({ preventScroll: true }); } },
+      onDocBlur: () => { if (this.state.quiet) this.setState({ quiet: undefined }); },
+      onKey: this.onKey,
+      onScroll: this.onScroll,
+      setDoc: this.setDoc,
+      setFrame: this.setFrame,
+    };
+  }
+}
+</script>
+</body>
+</html>

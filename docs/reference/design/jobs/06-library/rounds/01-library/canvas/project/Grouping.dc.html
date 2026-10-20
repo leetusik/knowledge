@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Grouping control</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<div class="lib-seg" role="group" aria-label="Group books and documents">
+<button type="button" class="lib-seg__opt" aria-pressed="{{ byProject }}" onclick="{{ pickProject }}">By project</button>
+<button type="button" class="lib-seg__opt" aria-pressed="{{ bySubject }}" onclick="{{ pickSubject }}">By subject</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"value":{"editor":null},"onChange":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"width":{"editor":null},"$preview":{"width":320,"height":90}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const v = P.value === 'subject' ? 'subject' : 'project';
+    const pick = (to) => () => { if (to !== v && P.onChange) P.onChange(to); };
+    const bare = !!P.bare;
+    return {
+      byProject: v === 'project' ? 'true' : 'false',
+      bySubject: v === 'subject' ? 'true' : 'false',
+      pickProject: pick('project'),
+      pickSubject: pick('subject'),
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: ' + (P.width || 320) + 'px',
+    };
+  }
+}
+</script>
+</body>
+</html>

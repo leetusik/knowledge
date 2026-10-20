@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Chapter row, languages and versions</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Chapter row, languages and versions</p>
+<p class="rd-board__lead">The reader’s chapter row and words (§11), with a line under the title when a chapter has more than one language or version: each language and its newest version, opening that variant; “Older translation” when a translation is behind its source; “Versions” opening every version, by language, each one to open. A chapter with one language and one version adds nothing.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ChapterRow" row="{{ c.row }}" open="{{ c.open }}" theme="{{ c.theme }}" hint-size="100%,80px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2560,"height":3120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const row = (book, viewer, pk, key) => BK.view(book, viewer, pk || BK.pkFor(book, viewer)).rows.filter((r) => r.key === key)[0];
+    const R = (cap, w, book, key, o) => { const x = Object.assign({ viewer: 'member', pk: undefined, open: false, theme: 'light' }, o); return { cap, st: px(w), row: row(book, x.viewer, x.pk, key), open: x.open, theme: x.theme }; };
+    const rows = [
+      { title: 'Light · 640 wide (iPad, and the desktop list column)', cells: [R('Finished', 640, 'guide', 'what-it-is'), R('Started · two languages, the 한국어 one behind its source', 640, 'guide', 'internals'), R('Started at 0% (just opened, or marked unread): “Started” alone', 640, 'guide', 'read-surfaces', { pk: 'g-opened' }), R('Versions open', 640, 'guide', 'internals', { open: true }), R('Finished on v2, now v3: Updated', 640, 'guide', 'why'), R('One language, three versions · open', 640, 'guide', 'why', { open: true }), R('Legacy · finished', 640, 'tidewater', 'datums'), R('Legacy · not started (orchard, never opened)', 640, 'orchard', 'cache-keys'), R('Phases book · legacy · two languages', 640, 'lantern', 'p8'), R('Phases book · versions open, both legacy', 640, 'lantern', 'p8', { open: true }), R('Per-slice book · the slice id first', 640, 'p24', 's3'), R('Signed out · no state words', 640, 'guide', 'internals', { viewer: 'anon' })] },
+      { title: 'Light · phone, 356 wide', cells: [R('Last read in 한국어: its title in 한국어', 356, 'guide', 'internals', { pk: 'g-ko' }), R('The longest real title', 356, 'guide', 'shipping'), R('A long legacy title', 356, 'tidewater', 'datums'), R('Versions open on a phone', 356, 'guide', 'internals', { open: true })] },
+      { title: 'Dark', cells: [R('Two languages', 640, 'guide', 'internals', { theme: 'dark' }), R('Updated · versions open', 640, 'guide', 'why', { open: true, theme: 'dark' }), R('Legacy · started', 356, 'lantern', 'p9', { theme: 'dark' })] },
+      { title: 'Sepia', cells: [R('Two languages', 640, 'guide', 'internals', { theme: 'sepia' }), R('Phases book · versions open', 640, 'lantern', 'p8', { open: true, theme: 'sepia' }), R('Per-slice book', 356, 'p24', 's1', { theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

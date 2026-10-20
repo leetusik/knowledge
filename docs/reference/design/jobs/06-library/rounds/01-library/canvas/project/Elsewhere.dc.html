@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stand-ins for other jobs' screens</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ rootCls }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if><sc-if value="{{ g.foot }}" hint-placeholder-val="{{ false }}"><span class="{{ g.footCls }}" aria-hidden="{{ g.footHidden }}">Shown at the foot of the page, under “Your reading data”: scroll down.</span></sc-if></div></sc-for></div></div></sc-if>
+<div class="rd-away__main">
+<div class="rd-away__card">
+<p class="rd-away__kind">{{ kindLabel }}</p>
+<h1 class="rd-away__title">{{ heading }}</h1>
+<p class="rd-away__body">{{ body }}</p>
+<sc-if value="{{ hasWhere }}" hint-placeholder-val="{{ false }}"><p class="rd-away__body">{{ whereLead }} <b>{{ where }}</b></p></sc-if>
+<div class="rd-away__actions">
+<sc-if value="{{ hasPrimary }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-away__btn rd-away__btn--main" onclick="{{ primary }}">{{ primaryLabel }}</button></sc-if>
+<button type="button" class="rd-away__btn" onclick="{{ back }}"><span aria-hidden="true">‹</span>&nbsp;{{ backLabel }}</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"detail":{"editor":null},"backLabel":{"editor":null},"onBack":{"editor":null},"onPrimary":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const kind = P.kind || 'book';
+    const d = P.detail || {};
+    const q = (t) => '“' + t + '”';
+    const at = () => {
+      if (d.next) return ', at its top';
+      if (d.section) return ', at ' + q(d.section) + (d.pct ? ' (' + d.pct + '%)' : '');
+      if (d.pct) return ', at ' + d.pct + '%';
+      return ', at its top';
+    };
+    let readerBody;
+    if (d.kind === 'doc') readerBody = 'Opens the document ' + q(d.title || "SQLite's write-ahead log, in practice") + ' from ' + (d.project || 'field-notes') + at() + '.';
+    else readerBody = 'Opens chapter ' + (d.n || 2) + ' of ' + (d.total || 5) + ', ' + q(d.title || 'Knowledge System Internals: The Content Plane, the Write Path, and the Contracts') + ', in ' + q(d.book || 'The knowledge maintainer guide') + (d.n ? at() : ', at ' + q('The write path') + ' (38%)') + '.';
+    const name = d.name || 'Dashboard';
+    const C = {
+      book: { k: 'Another job · 07-book-page', h: 'Book page — another job', b: 'The book page for ' + q(d.title || 'The knowledge maintainer guide') + ' (' + (d.project || 'knowledge') + ' / ' + (d.slug || 'maintainer-guide') + ') is drawn by the book-page job: its chapter list, its own Continue reading, and the clear for one book.' },
+      bookPublic: { k: 'Another job · 07-book-page', h: 'Book page, public view — another job', b: q(d.title || 'The knowledge maintainer guide') + ' (' + (d.project || 'knowledge') + ' / ' + (d.slug || 'maintainer-guide') + '), as a visitor sees it, is drawn by the book-page job.' },
+      reader: { k: 'Signed · 01-reader', h: 'Reader — signed', b: readerBody },
+      legacy: { k: 'Another job · 09-legacy-and-print', h: 'Legacy reader — another job', b: q(d.title || 'How orchard schedules a harvest run') + ' keeps its original layout. The legacy-and-print job draws how it opens.' },
+      review: { k: 'Another job · 08-review', h: 'Review — another job', b: 'The review page and its cards are drawn by the review job. The count on the Review entry is the number of cards due now.' },
+      console: { k: 'The console · unchanged', h: name + ' — unchanged', b: 'The console’s ' + name.toLowerCase() + ' page is unchanged by this job. Library and Review sit above it in the navigation, one step away.' },
+      signin: { k: 'Another surface · auth, unchanged', h: 'Sign in — another surface', b: 'Signing in is the existing auth flow; this job does not change it.', wl: 'When it finishes, you come back to', w: 'Quillwork’s public library, /@quillwork.', pl: 'Finish signing in' },
+      signout: { k: 'Another surface · auth, unchanged', h: 'Sign out — another surface', b: 'Signing out is the existing auth flow; this job does not change it. It ends on the sign-in page.' },
+      landing: { k: 'Another surface · unchanged', h: 'Home — unchanged', b: 'The public home page at / is unchanged by this job. The logo leads here for a visitor who is signed out.' },
+      mylib: { k: 'This job · drawn on board 01', h: 'Library — drawn on board 01', b: 'Mira’s library at /library is this job’s other page. It is drawn on “01 · Page — Library (the flow)”, where every state of it can be played.' },
+      ownlib: { k: 'This job · the member’s library', h: 'Library — Larkspur', b: 'Tomas’s own library at /library is the same page Quillwork’s members see, holding Larkspur’s books and documents. This prototype draws only Quillwork’s.' },
+    }[kind] || { k: '', h: '', b: '' };
+    const call = (name) => () => { const f = this.props[name]; if (f) f(); };
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [] }, g)) : [];
+    let rootCls = 'rd-away';
+    if (P.fit === 'stage') rootCls += ' rd-away--stage';
+    return {
+      bar, hasBar: bar.length > 0,
+      kindLabel: C.k, heading: C.h, body: C.b,
+      hasWhere: !!C.wl, whereLead: C.wl || '', where: C.w || '',
+      hasPrimary: !!C.pl, primaryLabel: C.pl || '',
+      backLabel: P.backLabel || (kind === 'signin' ? 'Back, still signed out' : kind === 'signout' ? 'Back, still signed in' : 'Back to the library'),
+      primary: call('onPrimary'),
+      back: call('onBack'),
+      rootCls,
+    };
+  }
+}
+</script>
+</body>
+</html>

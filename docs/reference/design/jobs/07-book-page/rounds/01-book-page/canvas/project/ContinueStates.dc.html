@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Continue reading</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Continue reading</p>
+<p class="rd-board__lead">This book’s place: the most recently updated position among its chapters. Set as the reader’s “Next” block, with the page’s one primary button. It names the chapter and the section where you stopped; on a book never opened (or signed out, or cleared) it starts chapter 1; on a finished book it says so and leads to the chapter updated since.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="Continue" book="{{ c.book }}" viewer="{{ c.viewer }}" pk="{{ c.pk }}" theme="{{ c.theme }}" hint-size="100%,240px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3800,"height":1380}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const C = (cap, w, book, o) => Object.assign({ cap, st: px(w), book, viewer: 'member', pk: undefined, theme: 'light' }, o);
+    const rows = [
+      { title: 'Light · 384 wide', cells: [C('Started · at a section', 384, 'guide'), C('Started · last read in 한국어', 384, 'guide', { pk: 'g-ko' }), C('Started at 0% · just opened, or marked unread', 384, 'guide', { pk: 'g-opened' }), C('Started · legacy, no sections', 384, 'lantern'), C('The place is on a finished chapter: the next one', 384, 'guide', { pk: 'g-next' }), C('Never opened · cleared · starts chapter 1', 384, 'guide', { pk: 'none' }), C('Signed out · starts chapter 1', 384, 'guide', { viewer: 'anon' }), C('Every chapter finished · one Updated', 384, 'guide', { pk: 'g-done' }), C('Every chapter finished, all on the newest', 384, 'guide', { pk: 'g-all' })] },
+      { title: 'Dark', cells: [C('Started · at a section', 384, 'guide', { theme: 'dark' }), C('Tidewater · chapter 11', 356, 'tidewater', { theme: 'dark' }), C('All legacy, never opened', 384, 'orchard', { theme: 'dark' }), C('Every chapter finished · one Updated', 384, 'guide', { pk: 'g-done', theme: 'dark' })] },
+      { title: 'Sepia', cells: [C('Started · at a section', 384, 'guide', { theme: 'sepia' }), C('Per-slice book · chapter 3', 356, 'p24', { theme: 'sepia' }), C('Signed out', 384, 'guide', { viewer: 'anon', theme: 'sepia' }), C('Every chapter finished, all on the newest', 384, 'guide', { pk: 'g-all', theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

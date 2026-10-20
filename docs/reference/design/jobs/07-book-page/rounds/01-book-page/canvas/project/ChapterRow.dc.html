@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter row, its languages and versions</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="{{ rowCls }}">
+<a class="rd-ch" href="#top" onclick="{{ open }}"><span class="rd-ch__n">{{ r.n }}</span><span class="rd-ch__body"><span class="rd-ch__title" lang="{{ r.lang }}">{{ r.title }}</span><span class="rd-ch__meta"><sc-if value="{{ hasLead }}" hint-placeholder-val="{{ true }}"><span><sc-if value="{{ hasSlice }}" hint-placeholder-val="{{ false }}"><span class="bk-ch__src">{{ r.slice }}</span></sc-if>{{ leadText }}</span></sc-if><sc-if value="{{ r.updated }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--accent rd-ch__tag">Updated</span></sc-if><sc-if value="{{ r.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain rd-ch__tag">Original layout</span></sc-if></span></span></a>
+<sc-if value="{{ r.hasVars }}" hint-placeholder-val="{{ false }}"><div class="bk-vars">
+<sc-if value="{{ r.multiLang }}" hint-placeholder-val="{{ true }}"><span class="bk-vars__langs"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><span class="bk-lang"><a class="bk-lang__link" href="#top" lang="{{ l.code }}" onclick="{{ l.go }}">{{ l.text }}</a><sc-if value="{{ l.stale }}" hint-placeholder-val="{{ false }}"><span class="rd-tag">Older translation</span></sc-if></span></sc-for></span></sc-if>
+<sc-if value="{{ single }}" hint-placeholder-val="{{ false }}"><span class="bk-vars__one">{{ r.single }}</span></sc-if>
+<sc-if value="{{ r.multiVer }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-btn rd-btn--quiet bk-verbtn" aria-expanded="{{ expanded }}" onclick="{{ toggle }}"><span class="bk-stack"><span class="{{ showCls }}">Versions</span><span class="{{ hideCls }}">Hide versions</span></span></button></sc-if>
+</div></sc-if>
+<sc-if value="{{ isOpen }}" hint-placeholder-val="{{ false }}"><div class="bk-verpanel" role="region" aria-label="{{ panelName }}"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="1"><div class="bk-vergroup"><sc-if value="{{ g.showName }}" hint-placeholder-val="{{ true }}"><p class="bk-vergroup__name"><span lang="{{ g.code }}">{{ g.label }}</span><sc-if value="{{ g.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if></p></sc-if><ol class="rd-vers"><sc-for list="{{ g.rows }}" as="v" hint-placeholder-count="2"><li class="rd-ver"><div class="rd-ver__main"><span class="rd-ver__line"><span class="rd-ver__n">v{{ v.v }}</span><sc-if value="{{ v.current }}" hint-placeholder-val="{{ true }}"><span class="rd-tag rd-tag--accent">Current</span></sc-if></span><span class="rd-ver__date">{{ v.date }}</span><sc-if value="{{ v.hasFrom }}" hint-placeholder-val="{{ false }}"><span class="rd-ver__from">{{ v.from }}</span></sc-if></div><button type="button" class="rd-btn rd-btn--secondary" aria-label="{{ v.aria }}" onclick="{{ v.go }}">View</button></li></sc-for></ol></div></sc-for></div></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"row":{"editor":null},"open":{"editor":null},"onOpen":{"editor":null},"onVersions":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":640,"height":136}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const bare = !!P.bare;
+    const r = P.row || BK.view('guide', 'member', 'g-default').rows[1];
+    const isOpen = !!P.open && r.multiVer;
+    const fire = (fn) => (e) => { if (e && e.preventDefault) e.preventDefault(); fn(); };
+    const open = (lang, v, resume) => { if (P.onOpen) P.onOpen(r.key, lang, v, resume); };
+    const langs = r.langLinks.map((l) => ({ code: l.code, label: l.label, v: l.v, text: l.label + ' · v' + l.v, stale: l.stale, go: fire(() => open(l.code, null, true)) }));
+    const groups = r.groups.map((g) => ({
+      code: g.code, label: g.label, legacy: g.legacy, showName: r.groups.length > 1,
+      rows: g.rows.map((x) => ({ v: x.v, date: x.date, current: x.current, hasFrom: !!x.from, from: x.from, aria: x.aria, go: fire(() => open(g.code, x.v, false)) })),
+    }));
+    return {
+      r,
+      /* A per-slice row leads with its slice id, joined to the signed word by the word's own " · " (one dot
+         spacing along the line): "P24.S3 · Started · 22%". Signed out, the id stands alone before any tag. */
+      hasSlice: !!r.slice,
+      hasLead: !!r.slice || !!r.word,
+      leadText: r.slice && r.word ? ' · ' + r.word : r.word,
+      rowCls: r.hasVars ? 'bk-row bk-row--vars' : 'bk-row',
+      langs,
+      single: !r.multiLang && r.multiVer,
+      expanded: isOpen ? 'true' : 'false',
+      showCls: isOpen ? 'is-off' : '',
+      hideCls: isOpen ? '' : 'is-off',
+      isOpen,
+      groups,
+      panelName: 'Versions of chapter ' + r.n,
+      open: fire(() => open(r.lang, null, true)),
+      toggle: fire(() => { if (P.onVersions) P.onVersions(r.key); }),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone bk-demo bk-demo--list',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

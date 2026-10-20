@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Print: the native sheet and the ⌘P notice</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="paper.css">
+<script src="reader.js"></script>
+<script src="legacydocs.js"></script>
+<script src="legacy.js"></script>
+<script src="paper.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="pp-proto">
+<div data-proto="state-bar"><div class="pb-cell"><div class="pb-group" role="group" aria-label="{{ pageName }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ pageName }}</span><sc-for list="{{ presets }}" as="p" hint-placeholder-count="8"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><span class="pb-sep">· paper:</span><sc-for list="{{ papers }}" as="t" hint-placeholder-count="2"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></div></div></div>
+<div class="pp-board">
+<div class="pp-board__head">
+<h1 class="pp-board__title">{{ heading }}</h1>
+<p class="pp-board__lead">{{ lead }}</p>
+</div>
+<sc-if value="{{ isFlow }}" hint-placeholder-val="{{ true }}"><dc-import name="Sheet" doc="{{ doc }}" lang="{{ lang }}" ver="{{ ver }}" paper="{{ paper }}" mode="flow" target="{{ target }}" from="{{ from }}" span="{{ span }}" pager="{{ true }}" on-page="{{ onPage }}" hint-size="100%,2000px"></dc-import></sc-if>
+<sc-if value="{{ isNotice }}" hint-placeholder-val="{{ false }}"><dc-import name="Sheet" doc="{{ doc }}" lang="{{ lang }}" ver="{{ ver }}" paper="{{ paper }}" mode="notice" span="{{ one }}" hint-size="100%,1000px"></dc-import></sc-if>
+</div>
+<div data-proto="screens"><span>Canvas only ·</span><a href="Main.dc.html">Play the legacy reader</a><a href="Widths.dc.html">The legacy reader at four sizes</a><a href="Sheet.dc.html">The sheet alone</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2269}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = Object.assign({ paper: 'a4' }, this.make('p-top'));
+  }
+  make(key) {
+    const INT = 'maintainer-guide/internals';
+    const S = (o) => Object.assign({ preset: key, doc: INT, lang: 'en', ver: null, mode: 'flow', target: 'top', from: 0 }, o);
+    return {
+      'p-top': S({}),
+      'p-table': S({ target: 'longtable' }),
+      'p-quiz': S({ target: 'quiz' }),
+      'p-key': S({ target: 'answers' }),
+      'p-ko': S({ lang: 'ko' }),
+      'p-old': S({ ver: 1 }),
+      'p-loose': S({ doc: 'doc/field-notes/sqlite-wal' }),
+      'p-notice': S({ doc: 'tidewater/datums', mode: 'notice', target: null }),
+    }[key];
+  }
+  renderVals() {
+    const s = this.state;
+    const LABELS = [['p-top', 'Chapter 2 · English v2'], ['p-table', 'A table across pages'], ['p-quiz', 'The quiz on paper'],
+      ['p-key', 'The answer key and colophon'], ['p-ko', '한국어 v1'], ['p-old', 'Older version · v1'],
+      ['p-loose', 'Loose document · v2'], ['p-notice', '⌘P on the legacy reader']];
+    const sig = (o) => [o.doc, o.lang, o.ver || '', o.mode, o.target || '', o.target ? '' : o.from].join('|');
+    const mine = sig(s);
+    let on = null;
+    LABELS.forEach(([k]) => { if (!on && sig(this.make(k)) === mine) on = k; });
+    if (s.preset && sig(this.make(s.preset)) === mine) on = s.preset;
+    const notice = s.mode === 'notice';
+    const loose = s.doc === 'doc/field-notes/sqlite-wal';
+    return {
+      pageName: 'Print · the native sheet and the ⌘P notice',
+      presets: LABELS.map(([k, label]) => ({ label: label, pressed: on === k, pick: () => this.setState(Object.assign({}, this.make(k))) })),
+      papers: [['a4', 'A4'], ['letter', 'US Letter']].map(([k, label]) => ({ label: label, pressed: s.paper === k, pick: () => this.setState({ paper: k }) })),
+      heading: notice ? 'What ⌘P prints from the legacy reader: one notice sheet' : loose ? 'A loose native document, printed' : 'A native chapter, printed',
+      lead: notice
+        ? 'The legacy reader’s bars and its framed document don’t print. The one sheet names the address that prints the document in its own layout, in full.'
+        : 'The reader’s print sheet: no chrome, the light print palette whatever the screen theme was (Light, Dark or Sepia), and every block set for paper. Pages are cut here the way the browser cuts them; captions and the pager are canvas only.',
+      isFlow: !notice, isNotice: notice,
+      doc: s.doc, lang: s.lang, ver: s.ver, paper: s.paper, target: s.target, from: s.from, span: 4, one: 1,
+      onPage: (k) => this.setState({ target: null, from: k, preset: null }),
+    };
+  }
+}
+</script>
+</body>
+</html>

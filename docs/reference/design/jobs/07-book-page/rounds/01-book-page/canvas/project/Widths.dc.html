@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The book page at 390, 820, 1024 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="bk-widths">
+<div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div>
+<div class="rd-board rd-widths__board">
+<p class="rd-board__title">The book page at the four reference sizes</p>
+<p class="rd-board__lead">One prototype state drawn four times, each frame the whole page from top to bottom, so every part a preset names is in view: a preset or a click in any frame moves all four. On the device, the screen shows the frame’s top 844, 1180, 768 or 900 px; the top bar stays pinned while the page scrolls under it (board 05 draws its scrolled state). The state bar above the frames scrolls away with the board.</p>
+<div class="bk-widths__row">
+<div class="rd-cell"><p class="rd-cap">Phone · 390 wide, the whole page · its screen is 844 tall</p><div class="rd-stage bk-stage bk-stage--phone"><sc-if value="{{ onBook }}" hint-placeholder-val="{{ true }}"><dc-import name="BookPage" fit="frame" book="{{ p.book }}" viewer="{{ p.viewer }}" pk="{{ p.pk }}" status="{{ p.status }}" vers="{{ p.vers }}" clear="{{ p.clear }}" theme="{{ p.theme }}" tok="{{ p.tok }}" on-open="{{ p.onOpen }}" on-versions="{{ p.onVersions }}" on-notes="{{ p.onNotes }}" on-library="{{ p.onLibrary }}" on-sign-in="{{ p.onSignIn }}" on-ask="{{ p.onAsk }}" on-cancel="{{ p.onCancel }}" on-confirm="{{ p.onConfirm }}" on-retry="{{ p.onRetry }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="flow" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" url="{{ w.url }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,844px"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">iPad portrait · 820 wide, the whole page · its screen is 1180 tall</p><div class="rd-stage bk-stage bk-stage--ipad"><sc-if value="{{ onBook }}" hint-placeholder-val="{{ true }}"><dc-import name="BookPage" fit="frame" book="{{ p.book }}" viewer="{{ p.viewer }}" pk="{{ p.pk }}" status="{{ p.status }}" vers="{{ p.vers }}" clear="{{ p.clear }}" theme="{{ p.theme }}" tok="{{ p.tok }}" on-open="{{ p.onOpen }}" on-versions="{{ p.onVersions }}" on-notes="{{ p.onNotes }}" on-library="{{ p.onLibrary }}" on-sign-in="{{ p.onSignIn }}" on-ask="{{ p.onAsk }}" on-cancel="{{ p.onCancel }}" on-confirm="{{ p.onConfirm }}" on-retry="{{ p.onRetry }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="flow" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" url="{{ w.url }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,844px"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">iPad landscape · 1024 wide, the whole page · its screen is 768 tall</p><div class="rd-stage bk-stage bk-stage--land"><sc-if value="{{ onBook }}" hint-placeholder-val="{{ true }}"><dc-import name="BookPage" fit="frame" book="{{ p.book }}" viewer="{{ p.viewer }}" pk="{{ p.pk }}" status="{{ p.status }}" vers="{{ p.vers }}" clear="{{ p.clear }}" theme="{{ p.theme }}" tok="{{ p.tok }}" on-open="{{ p.onOpen }}" on-versions="{{ p.onVersions }}" on-notes="{{ p.onNotes }}" on-library="{{ p.onLibrary }}" on-sign-in="{{ p.onSignIn }}" on-ask="{{ p.onAsk }}" on-cancel="{{ p.onCancel }}" on-confirm="{{ p.onConfirm }}" on-retry="{{ p.onRetry }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="flow" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" url="{{ w.url }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,844px"></dc-import></sc-if></div></div>
+<div class="rd-cell"><p class="rd-cap">Desktop · 1440 wide, the whole page · its screen is 900 tall</p><div class="rd-stage bk-stage bk-stage--desk"><sc-if value="{{ onBook }}" hint-placeholder-val="{{ true }}"><dc-import name="BookPage" fit="frame" book="{{ p.book }}" viewer="{{ p.viewer }}" pk="{{ p.pk }}" status="{{ p.status }}" vers="{{ p.vers }}" clear="{{ p.clear }}" theme="{{ p.theme }}" tok="{{ p.tok }}" on-open="{{ p.onOpen }}" on-versions="{{ p.onVersions }}" on-notes="{{ p.onNotes }}" on-library="{{ p.onLibrary }}" on-sign-in="{{ p.onSignIn }}" on-ask="{{ p.onAsk }}" on-cancel="{{ p.onCancel }}" on-confirm="{{ p.onConfirm }}" on-retry="{{ p.onRetry }}" hint-size="100%,900px"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="flow" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" url="{{ w.url }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,844px"></dc-import></sc-if></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3858,"height":3000}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.BK.initial('g');
+    this.a = window.BK.api(this);
+  }
+  renderVals() {
+    const BK = window.BK, s = this.state;
+    const none = { kind: 'chapter', where: '', detail: '', url: '', onBack: null, onContinue: null };
+    return {
+      groups: BK.bar(this, this.a),
+      onBook: !s.away,
+      isAway: !!s.away,
+      p: BK.pageProps(this, this.a),
+      w: s.away ? BK.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>

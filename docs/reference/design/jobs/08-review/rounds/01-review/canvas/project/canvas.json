@@ -1,0 +1,189 @@
+{
+ "v": 3,
+ "title": "Review",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 935,
+   "title": "01 · Page — Review (the flow)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Widths.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 2794,
+   "h": 1424,
+   "title": "02 · Page — Review at 390, 820 and 1440",
+   "is_interactive": true
+  },
+  "Review.dc.html": {
+   "x": 4394,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "03 · Page — Review screen alone"
+  },
+  "Elsewhere.dc.html": {
+   "x": 5914,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "04 · Page — Stand-in for another job's screen (signed, copied and extended)"
+  },
+  "QueueHeadStates.dc.html": {
+   "x": 0,
+   "y": 1544,
+   "w": 3392,
+   "h": 2828,
+   "title": "05 · Component — Queue header"
+  },
+  "ChoiceCardStates.dc.html": {
+   "x": 3472,
+   "y": 1544,
+   "w": 6140,
+   "h": 4559,
+   "title": "06 · Component — Choice card"
+  },
+  "ClozeCardStates.dc.html": {
+   "x": 9692,
+   "y": 1544,
+   "w": 3440,
+   "h": 2376,
+   "title": "07 · Component — Cloze card"
+  },
+  "RecallCardStates.dc.html": {
+   "x": 13212,
+   "y": 1544,
+   "w": 3392,
+   "h": 2636,
+   "title": "08 · Component — Recall card"
+  },
+  "HighlightCardStates.dc.html": {
+   "x": 16684,
+   "y": 1544,
+   "w": 3440,
+   "h": 2341,
+   "title": "09 · Component — Highlight card"
+  },
+  "RatingStates.dc.html": {
+   "x": 20204,
+   "y": 1544,
+   "w": 3392,
+   "h": 1894,
+   "title": "10 · Component — Ratings, Next and interval previews"
+  },
+  "QueueStates.dc.html": {
+   "x": 23676,
+   "y": 1544,
+   "w": 3392,
+   "h": 3306,
+   "title": "11 · Component — Done for today, limits, no cards, loading, failed"
+  },
+  "SuspendStates.dc.html": {
+   "x": 27148,
+   "y": 1544,
+   "w": 1400,
+   "h": 698,
+   "title": "12 · Component — Suspended, with undo"
+  },
+  "SettingsStates.dc.html": {
+   "x": 28628,
+   "y": 1544,
+   "w": 1900,
+   "h": 2308,
+   "title": "13 · Component — Review settings"
+  },
+  "Card.dc.html": {
+   "x": 0,
+   "y": 6223,
+   "w": 640,
+   "h": 1031,
+   "title": "14 · Mounted part — Card (one instance)"
+  },
+  "Rating.dc.html": {
+   "x": 720,
+   "y": 6223,
+   "w": 640,
+   "h": 140,
+   "title": "15 · Mounted part — Ratings (one instance)"
+  },
+  "QueueHead.dc.html": {
+   "x": 1440,
+   "y": 6223,
+   "w": 640,
+   "h": 200,
+   "title": "16 · Mounted part — Queue header (one instance)"
+  },
+  "ReviewEnd.dc.html": {
+   "x": 2160,
+   "y": 6223,
+   "w": 640,
+   "h": 520,
+   "title": "17 · Mounted part — Done for today (one instance)"
+  },
+  "ReviewSettings.dc.html": {
+   "x": 2880,
+   "y": 6223,
+   "w": 420,
+   "h": 640,
+   "title": "18 · Mounted part — Review settings (one instance)"
+  },
+  "DisplayPanel.dc.html": {
+   "x": 3380,
+   "y": 6223,
+   "w": 420,
+   "h": 363,
+   "title": "19 · Signed reader, copied — Display panel (one instance)"
+  },
+  "Toast.dc.html": {
+   "x": 3880,
+   "y": 6223,
+   "w": 480,
+   "h": 100,
+   "title": "20 · Signed annotations, copied — Undo line (one instance)"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Widths.dc.html",
+  "Review.dc.html",
+  "Elsewhere.dc.html",
+  "QueueHeadStates.dc.html",
+  "ChoiceCardStates.dc.html",
+  "ClozeCardStates.dc.html",
+  "RecallCardStates.dc.html",
+  "HighlightCardStates.dc.html",
+  "RatingStates.dc.html",
+  "QueueStates.dc.html",
+  "SuspendStates.dc.html",
+  "SettingsStates.dc.html",
+  "Card.dc.html",
+  "Rating.dc.html",
+  "QueueHead.dc.html",
+  "ReviewEnd.dc.html",
+  "ReviewSettings.dc.html",
+  "DisplayPanel.dc.html",
+  "Toast.dc.html"
+ ],
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-20T12:40:00Z"
+ },
+ "notes": {},
+ "designSystems": [
+  {
+   "title": "knowledge",
+   "namespace": "kb",
+   "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+   "version": "1792321604-e214",
+   "copiedAt": "2026-10-20T12:40:00Z"
+  }
+ ]
+}

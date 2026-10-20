@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review — the queue header</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ innerCls }}">
+<header class="rv-head">
+<h1 class="rv-head__title">Review</h1>
+<div class="rv-head__row"><div class="rv-head__counts"><p class="{{ h.countCls }}" aria-hidden="{{ h.countHidden }}"><b>{{ h.due }}</b> due · <b>{{ h.newH }}</b> {{ h.newWord }} · <b>{{ h.done }}</b> done today</p><sc-if value="{{ h.isLoading }}" hint-placeholder-val="{{ false }}"><span class="rd-skel rv-count__sk" role="status" aria-label="Loading your cards…"></span></sc-if></div><button type="button" class="rd-tbtn rv-bybook" aria-expanded="{{ h.openAttr }}" aria-controls="{{ booksId }}" disabled="{{ h.bookOff }}" onclick="{{ h.onBooks }}">By book</button></div>
+<p class="{{ h.savedCls }}" role="status"><b>{{ h.savedWord }}</b> · {{ h.savedRest }}</p>
+<sc-if value="{{ h.open }}" hint-placeholder-val="{{ false }}"><div id="{{ booksId }}"><sc-if value="{{ h.hasBooks }}" hint-placeholder-val="{{ true }}"><ul class="rv-books" aria-label="Due today, by book"><sc-for list="{{ h.books }}" as="b" hint-placeholder-count="3"><li class="rv-book"><span class="rv-book__title">{{ b.title }}</span><span class="rv-book__n">{{ b.counts }}</span><span class="rv-book__sub">{{ b.sub }}</span></li></sc-for></ul><p class="rv-books__note">{{ h.booksNote }}</p></sc-if><sc-if value="{{ h.noBooks }}" hint-placeholder-val="{{ false }}"><p class="rv-books__note">Nothing is due today in any book.</p></sc-if></div></sc-if>
+</header>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"h": {"editor": null}, "bare": {"editor": null}, "theme": {"editor": null}, "size": {"editor": null}, "uid": {"editor": null}, "$preview": {"width": 640, "height": 200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, RV = window.RV, bare = !!P.bare;
+    const h = P.h || RV.sample.head('due');
+    return {
+      h, booksId: (P.uid || 'rv') + '-books',
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'rv-headwrap' : 'rd-flow rv-solo',
+    };
+  }
+}
+</script>
+</body>
+</html>

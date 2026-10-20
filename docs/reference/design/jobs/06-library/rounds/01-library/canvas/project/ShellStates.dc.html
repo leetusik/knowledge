@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The app shell’s entry points</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">The app shell’s entry points</p>
+<p class="lib-board__lead">Library and Review join the shell as a Reading group above the console’s Org group: in the rail from 64rem (folding still works), in the strip under the topbar from 40 to 64rem, and as five equal items in the phone bar. Every nav target is 44 px. The current page keeps the shell’s rule (aria-current, accent, a 2 px edge). Review shows the cards due, only above 0, and 99+ above 99. Each frame is the live page, cropped: a phone frame ends on its bottom bar, and every other crop fades out where the page goes on.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="9"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><div class="{{ c.stageCls }}" style="{{ c.stageStyle }}"><dc-import name="Library" fit="stage" route="{{ c.route }}" viewer="{{ c.viewer }}" theme="{{ c.theme }}" folded="{{ c.folded }}" due="{{ c.due }}" hint-size="100%,100%"></dc-import></div></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3500,"height":3140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const st = (w, h) => 'width: ' + w + 'px; height: ' + h + 'px';
+    const S = [
+      ['Desktop · the rail, Library current', 'library', 'member', false, null, 1100, 400],
+      ['Desktop · the rail folded', 'library', 'member', true, null, 1100, 400],
+      ['iPad portrait · the strip under the topbar', 'library', 'member', false, null, 820, 300],
+      ['Phone · the bottom bar', 'library', 'member', false, null, 390, 600],
+      ['Phone · nothing due in Review', 'library', 'member', false, 0, 390, 600],
+      ['Phone · over 99 due', 'library', 'member', false, 140, 390, 600],
+      ['Desktop · over 99 due in the rail', 'library', 'member', false, 140, 1100, 400],
+      ['Signed in on /@quillwork, not a member · nothing current', 'public', 'visitor', false, null, 1100, 400],
+      ['Signed out on /@quillwork · the public topbar', 'public', 'anon', false, null, 1100, 400],
+    ];
+    const keyStates = [S[0], S[2], S[3]];
+    const row = (t, name, list) => ({ name, cells: list.map(([c, r, v, f, d, w, h]) => ({ cap: c, capStyle: cap(w), route: r, viewer: v, folded: f, due: d, stageStyle: st(w, h), stageCls: w > 400 ? 'lib-stage lib-stage--fade' : 'lib-stage', theme: t })) });
+    return { rows: [row('light', 'Light · every state', S), row('dark', 'Dark', keyStates), row('sepia', 'Sepia', keyStates)] };
+  }
+}
+</script>
+</body>
+</html>

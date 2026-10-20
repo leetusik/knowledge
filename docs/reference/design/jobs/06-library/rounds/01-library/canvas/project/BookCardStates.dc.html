@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Book card</p>
+<p class="lib-board__lead">A book on a shelf: its title, its languages, ORIGINAL LAYOUT when every chapter is legacy, and, for a signed-in reader, the reader's own words for book progress ("X of M finished") over a 3 px bar, with UPDATED when a finished chapter has a newer version. Hover (border and title underline) and focus (the system ring) are reached on the Pages.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="9"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="BookCard" card="{{ c.card }}" theme="{{ c.theme }}" hint-size="400px,196px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2160,"height":1728}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const S = [
+      ['Nothing opened yet · 0 of 4 finished', (m) => L.bookCard(B.ORCHARD, PR.none, true, false)],
+      ['Started · 1 of 6 finished', (m) => L.bookCard(B.AI, PR.default, true, false)],
+      ['Every chapter finished', (m) => L.bookCard(B.ENG, PR.all, true, false)],
+      ['A finished chapter is Updated · a KO/EN pair', (m) => L.bookCard(B.MG, PR.default, true, false)],
+      ['Every chapter legacy', (m) => L.bookCard(B.ORCHARD, PR.default, true, false)],
+      ['Native and legacy mixed · 20 chapters', (m) => L.bookCard(B.TW, PR.default, true, false)],
+      ['Signed out · chapters only', (m) => L.bookCard(B.MG, PR.none, false, false)],
+      ['Same slug · knowledge (outside its project shelf)', (m) => L.bookCard(B.MG, PR.default, true, true)],
+      ['Same slug · orchard (outside its project shelf)', (m) => L.bookCard(B.ORCHARD, PR.default, true, true)],
+    ];
+    return { rows: THEMES.map(([t, name]) => ({ name, cells: S.map(([c, f]) => ({ cap: c, capStyle: cap(400), card: f(), theme: t })) })) };
+  }
+}
+</script>
+</body>
+</html>

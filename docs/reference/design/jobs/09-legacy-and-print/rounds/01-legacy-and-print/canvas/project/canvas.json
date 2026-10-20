@@ -1,0 +1,223 @@
+{
+ "v": 3,
+ "title": "The legacy reader and print",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 991,
+   "title": "01 · Page — Legacy reader (the flow)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Legacy.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "02 · Page — The legacy screen alone"
+  },
+  "Widths.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 3858,
+   "h": 1404,
+   "title": "03 · Page — The legacy reader at 390, 820, 1024 and 1440",
+   "is_interactive": true
+  },
+  "Paper.dc.html": {
+   "x": 6978,
+   "y": 0,
+   "w": 1440,
+   "h": 2269,
+   "title": "04 · Page — Print: the native sheet and the ⌘P notice",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Elsewhere.dc.html": {
+   "x": 8498,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "05 · Page — Stand-in for another job's screen"
+  },
+  "BarStates.dc.html": {
+   "x": 0,
+   "y": 2389,
+   "w": 2300,
+   "h": 1800,
+   "title": "06 · Component — The document bar"
+  },
+  "FrameStates.dc.html": {
+   "x": 2380,
+   "y": 2389,
+   "w": 3000,
+   "h": 2076,
+   "title": "07 · Component — The frame’s own states"
+  },
+  "LookStates.dc.html": {
+   "x": 5460,
+   "y": 2389,
+   "w": 2200,
+   "h": 2884,
+   "title": "08 · Component — The document’s look under each theme"
+  },
+  "SheetStates.dc.html": {
+   "x": 7740,
+   "y": 2389,
+   "w": 3000,
+   "h": 2076,
+   "title": "09 · Component — Sheets in the legacy reader"
+  },
+  "PrintStates.dc.html": {
+   "x": 10820,
+   "y": 2389,
+   "w": 2600,
+   "h": 2670,
+   "title": "10 · Component — Print control and the ⌘P notice sheet"
+  },
+  "PaperBlocks.dc.html": {
+   "x": 13500,
+   "y": 2389,
+   "w": 3500,
+   "h": 2560,
+   "title": "11 · Component — Long content on paper"
+  },
+  "PaperQuiz.dc.html": {
+   "x": 17080,
+   "y": 2389,
+   "w": 3500,
+   "h": 2562,
+   "title": "12 · Component — Quiz and answer key on paper"
+  },
+  "PaperHeads.dc.html": {
+   "x": 20660,
+   "y": 2389,
+   "w": 1800,
+   "h": 1264,
+   "title": "13 · Component — Masthead and colophon"
+  },
+  "LegacyBar.dc.html": {
+   "x": 0,
+   "y": 5393,
+   "w": 820,
+   "h": 150,
+   "title": "14 · Mounted part — The document bar (one instance)"
+  },
+  "LegacyDoc.dc.html": {
+   "x": 900,
+   "y": 5393,
+   "w": 820,
+   "h": 5100,
+   "title": "15 · Mounted part — A framed document in its own look (one instance)"
+  },
+  "LegacyFrameState.dc.html": {
+   "x": 1800,
+   "y": 5393,
+   "w": 820,
+   "h": 640,
+   "title": "16 · Mounted part — The frame’s states (one instance)"
+  },
+  "LegacyDisplay.dc.html": {
+   "x": 2700,
+   "y": 5393,
+   "w": 420,
+   "h": 420,
+   "title": "17 · Mounted part — Display for a legacy document (one instance)"
+  },
+  "Sheet.dc.html": {
+   "x": 3200,
+   "y": 5393,
+   "w": 1640,
+   "h": 2400,
+   "title": "18 · Mounted part — The print sheet on paper (one instance)"
+  },
+  "ReaderTop.dc.html": {
+   "x": 4920,
+   "y": 5393,
+   "w": 1200,
+   "h": 59,
+   "title": "19 · Mounted part — Top bar, signed (one instance)"
+  },
+  "ReaderBottom.dc.html": {
+   "x": 6200,
+   "y": 5393,
+   "w": 1200,
+   "h": 60,
+   "title": "20 · Mounted part — Chapter bar, signed (one instance)"
+  },
+  "ChapterList.dc.html": {
+   "x": 7480,
+   "y": 5393,
+   "w": 420,
+   "h": 428,
+   "title": "21 · Mounted part — Chapter list, signed (one instance)"
+  },
+  "VersionList.dc.html": {
+   "x": 7980,
+   "y": 5393,
+   "w": 420,
+   "h": 205,
+   "title": "22 · Mounted part — Version history, signed (one instance)"
+  },
+  "SignInToSave.dc.html": {
+   "x": 8480,
+   "y": 5393,
+   "w": 480,
+   "h": 249,
+   "title": "23 · Mounted part — Sign in to save, signed (one instance)"
+  },
+  "ReaderState.dc.html": {
+   "x": 9040,
+   "y": 5393,
+   "w": 820,
+   "h": 845,
+   "title": "24 · Mounted part — Not found, signed (one instance)"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Legacy.dc.html",
+  "Widths.dc.html",
+  "Paper.dc.html",
+  "Elsewhere.dc.html",
+  "BarStates.dc.html",
+  "FrameStates.dc.html",
+  "LookStates.dc.html",
+  "SheetStates.dc.html",
+  "PrintStates.dc.html",
+  "PaperBlocks.dc.html",
+  "PaperQuiz.dc.html",
+  "PaperHeads.dc.html",
+  "LegacyBar.dc.html",
+  "LegacyDoc.dc.html",
+  "LegacyFrameState.dc.html",
+  "LegacyDisplay.dc.html",
+  "Sheet.dc.html",
+  "ReaderTop.dc.html",
+  "ReaderBottom.dc.html",
+  "ChapterList.dc.html",
+  "VersionList.dc.html",
+  "SignInToSave.dc.html",
+  "ReaderState.dc.html"
+ ],
+ "notes": {},
+ "designSystems": [
+  {
+   "title": "knowledge",
+   "namespace": "kb",
+   "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+   "version": "1792321604-e214",
+   "copiedAt": "2026-10-20T04:30:00Z"
+  }
+ ],
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-20T04:30:00Z"
+ }
+}
