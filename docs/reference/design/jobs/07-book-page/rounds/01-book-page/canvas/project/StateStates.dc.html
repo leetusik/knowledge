@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Loading, not found, failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Loading, not found, failed</p>
+<p class="rd-board__lead">The reader’s states (§16) with the noun “book”: a skeleton in the page’s own shape, the editorial not found and failed. The top bar stays above each in the page. A private book’s address, signed out, is this same not found: 404, never 403.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="BookState" kind="{{ c.kind }}" theme="{{ c.theme }}" hint-size="100%,520px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3000,"height":2660}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const S = (cap, w, kind, theme) => ({ cap, st: px(w), kind, theme: theme || 'light' });
+    const rows = [
+      { title: 'Desktop · 1440', cells: [S('Loading · two columns from 64rem', 1440, 'loading'), S('Not found · also a private book signed out', 1440, 'notfound')] },
+      { title: 'Phone · 390 and iPad · 820', cells: [S('Loading', 390, 'loading'), S('Failed · Try again', 390, 'failed'), S('Failed · dark', 820, 'failed', 'dark'), S('Not found · sepia', 820, 'notfound', 'sepia')] },
+      { title: 'Dark and sepia', cells: [S('Loading · dark', 820, 'loading', 'dark'), S('Loading · sepia', 820, 'loading', 'sepia')] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review card — the ratings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ innerCls }}"><div class="{{ f.footCls }}"><div class="qz-stack"><sc-for list="{{ f.cells }}" as="s" hint-placeholder-count="2"><p class="{{ s.cls }}" aria-hidden="{{ s.hidden }}"><span class="{{ s.wordCls }}">{{ s.word }}</span><sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span class="qz-st__sub"><sc-for list="{{ s.subParts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-for></span></sc-if></p></sc-for></div><div class="qz-acts"><sc-if value="{{ f.isMain }}" hint-placeholder-val="{{ true }}"><div class="{{ f.mainLayer }}" aria-hidden="{{ f.mainHidden }}"><button type="button" class="{{ f.mainCls }}" data-rv-main="1" data-rv-role="{{ f.mainRole }}" aria-busy="{{ f.mainBusy }}" disabled="{{ f.mainDisabled }}" onclick="{{ f.onMain }}"><span class="qz-swap"><span class="{{ f.lab.check }}">Check</span><span class="{{ f.lab.next }}">Next</span><span class="{{ f.lab.saving }}">Saving…</span><span class="{{ f.lab.retry }}">Try again</span></span></button></div></sc-if><sc-if value="{{ f.isPair }}" hint-placeholder-val="{{ false }}"><div class="{{ f.pairLayer }}" aria-hidden="{{ f.pairHidden }}"><sc-for list="{{ f.pair }}" as="b" hint-placeholder-count="2"><button type="button" class="rd-btn rd-btn--secondary rv-rate" data-rv-rate="{{ b.r }}" aria-busy="{{ b.busy }}" disabled="{{ b.off }}" onclick="{{ b.onClick }}"><span class="qz-swap"><span class="{{ b.wordCls }}">{{ b.word }}</span><span class="{{ b.savCls }}">Saving…</span></span><span class="rv-rate__ivl">{{ b.sub }}</span></button></sc-for></div><div class="{{ f.retryLayer }}" aria-hidden="{{ f.retryHidden }}"><button type="button" class="rd-btn rd-btn--primary qz-act" data-rv-main="1" data-rv-role="retry" onclick="{{ f.onRetry }}">Try again</button></div></sc-if></div></div><p class="qz-vh" aria-live="polite">{{ f.live }}</p></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"f": {"editor": null}, "bare": {"editor": null}, "theme": {"editor": null}, "size": {"editor": null}, "uid": {"editor": null}, "$preview": {"width": 640, "height": 140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, RV = window.RV, bare = !!P.bare;
+    const f0 = P.f || RV.sample.card({ at: 'rc-projection', acts: [{ t: 'reveal' }], uid: 'rating-alone' }).foot;
+    const f = Object.assign({}, f0, { footCls: 'qz-foot rv-foot' + (f0.isPair ? ' rv-foot--pair' : '') });
+    return {
+      f,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (P.size || 3) + ' rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'rv-footwrap' : 'rd-flow rv-solo-pad',
+    };
+  }
+}
+</script>
+</body>
+</html>

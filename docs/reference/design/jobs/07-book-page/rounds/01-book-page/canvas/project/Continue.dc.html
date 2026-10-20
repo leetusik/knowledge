@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Continue reading</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<section class="rd-next bk-cont">
+<h2 class="rd-next__label">{{ label }}</h2>
+<sc-if value="{{ isChapter }}" hint-placeholder-val="{{ true }}"><p class="rd-next__title" lang="{{ c.lang }}">{{ c.title }}</p></sc-if>
+<sc-if value="{{ isFinished }}" hint-placeholder-val="{{ false }}"><p class="rd-next__title">You've finished all {{ c.total }} chapters.</p></sc-if>
+<sc-if value="{{ hasAt }}" hint-placeholder-val="{{ true }}"><p class="bk-cont__at">You stopped at <b lang="{{ c.lang }}">{{ c.section }}</b>, {{ c.pct }}% of the way in.</p></sc-if>
+<sc-if value="{{ hasPct }}" hint-placeholder-val="{{ false }}"><p class="bk-cont__at">You stopped {{ c.pct }}% of the way in.</p></sc-if>
+<sc-if value="{{ hasOpened }}" hint-placeholder-val="{{ false }}"><p class="bk-cont__at">You've opened it, but not read far yet.</p></sc-if>
+<sc-if value="{{ hasAfter }}" hint-placeholder-val="{{ false }}"><p class="bk-cont__at">You finished chapter {{ c.after }}.</p></sc-if>
+<sc-if value="{{ hasSummary }}" hint-placeholder-val="{{ false }}"><p class="rd-next__lede" lang="{{ c.lang }}">{{ c.summary }}</p></sc-if>
+<sc-if value="{{ hasUpdated }}" hint-placeholder-val="{{ false }}"><p class="bk-cont__at">Chapter {{ c.n }} has been updated since you finished it.</p></sc-if>
+<sc-if value="{{ c.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if>
+<a class="{{ btnCls }}" href="#top" onclick="{{ go }}">{{ btnLabel }} <span aria-hidden="true">→</span></a>
+</section>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"viewer":{"editor":null},"pk":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":384,"height":300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const bare = !!P.bare;
+    const book = P.book || 'guide';
+    const viewer = P.viewer || 'member';
+    const pk = P.pk || BK.pkFor(book, viewer);
+    const c = BK.view(book, viewer, pk).cont;
+    const k = c.kind;
+    const upd = k === 'finished' && c.updated.length > 0;
+    const LABEL = { continue: 'Continue · Chapter ' + c.n, next: 'Next · Chapter ' + c.n, start: 'Start · Chapter ' + c.n, finished: 'Finished' };
+    const BTN = { continue: 'Continue reading', next: 'Read next', start: 'Read chapter ' + c.n, finished: 'Read chapter ' + c.n + ' again' };
+    const primary = k !== 'finished' || upd;
+    return {
+      c,
+      label: LABEL[k],
+      isChapter: k !== 'finished',
+      isFinished: k === 'finished',
+      hasAt: k === 'continue' && !!c.section,
+      hasPct: k === 'continue' && !c.section && c.pct > 0,
+      hasOpened: k === 'continue' && !c.section && !c.pct,
+      hasAfter: k === 'next',
+      hasSummary: (k === 'start' || k === 'next') && !!c.summary,
+      hasUpdated: upd,
+      btnLabel: BTN[k],
+      btnCls: primary ? 'rd-btn rd-btn--primary' : 'rd-btn rd-btn--secondary',
+      go: (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!P.onOpen) return;
+        if (k === 'continue') P.onOpen(c.key, c.lang, null, true);
+        else P.onOpen(c.key, c.lang, null, false);
+      },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone bk-demo',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — the queue's other states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Done for today, the daily limits, no cards yet, loading and failed</p>
+<p class="rd-board__lead">What takes the card's place when there is no card to show. Each says why, when the next card is due in the reader's own time, and offers one way on.</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="ReviewEnd" e="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 3392, "height": 3306}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const E = (key) => RV.sample.end(key);
+      return [
+        { cap: 'Done for today', v: E('done') },
+        { cap: 'Daily limit · 200 reviews', v: E('limit') },
+        { cap: 'Daily limit · new highlights', v: E('limitnew') },
+        { cap: 'No cards yet', v: E('empty') },
+        { cap: 'Loading · a card’s skeleton', v: E('loading') },
+        { cap: 'Failed to load', v: E('lfail') },
+        { cap: 'Phone · done for today', phone: true, v: E('done') },
+        { cap: 'Phone · loading', phone: true, v: E('loading') },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

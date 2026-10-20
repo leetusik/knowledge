@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library — the screen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ appCls }}" data-theme="{{ theme }}" id="top">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if><sc-if value="{{ g.foot }}" hint-placeholder-val="{{ false }}"><span class="{{ g.footCls }}" aria-hidden="{{ g.footHidden }}">Shown at the foot of the page, under “Your reading data”: scroll down.</span></sc-if></div></sc-for></div></div></sc-if>
+<a class="kb-skip" href="#main-content">Skip to content</a>
+<sc-if value="{{ v.signedIn }}" hint-placeholder-val="{{ true }}"><header class="kb-topbar">
+<button type="button" class="kb-appbtn kb-appbtn--ghost kb-railtoggle" aria-label="Navigation" aria-expanded="{{ railOpen }}" aria-controls="kb-rail" title="{{ foldTitle }}" onclick="{{ fold }}"><sc-if value="{{ railShown }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></sc-if><sc-if value="{{ v.folded }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m14 9 3 3-3 3"></path></svg></sc-if></button>
+<a class="kb-topbar__brand" href="#top" onclick="{{ goHome }}"><img src="assets/logo.svg" alt="" width="22" height="22"><span class="kb-topbar__word">knowledge</span></a>
+<span class="kb-topbar__divider"></span>
+<span class="kb-topbar__crumb">Org <b>{{ v.orgName }}</b></span>
+<span class="kb-topbar__spacer"></span>
+<span class="kb-topbar__user">{{ v.userName }}</span>
+<button type="button" class="kb-appbtn kb-appbtn--ghost kb-topbar__signout" onclick="{{ signOut }}">Sign out</button>
+<details class="kb-account"><summary aria-label="Account menu"><span class="kb-account__avatar">{{ v.initial }}</span></summary><div class="kb-account__menu"><span class="kb-account__name">{{ v.userName }}</span><span class="kb-account__org">Org <b>{{ v.orgName }}</b></span><button type="button" class="kb-appbtn kb-appbtn--ghost" onclick="{{ signOut }}">Sign out</button></div></details>
+</header>
+<nav class="kb-navbar" aria-label="Primary"><sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}"><span class="kb-navbar__sep" aria-hidden="true"></span></sc-if><a class="kb-navbar__link" href="#top" aria-current="{{ n.current }}" aria-label="{{ n.aria }}" onclick="{{ n.go }}"><span class="kb-navbar__row"><span>{{ n.label }}</span><sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}"><span class="{{ n.countCls }}" aria-hidden="true">{{ n.count }}</span></sc-if></span></a></sc-for></nav>
+</sc-if>
+<sc-if value="{{ v.anon }}" hint-placeholder-val="{{ false }}"><header class="kb-topbar">
+<a class="kb-topbar__brand" href="#top" onclick="{{ goHome }}"><img src="assets/logo.svg" alt="" width="22" height="22"><span class="kb-topbar__word">knowledge</span></a>
+<span class="kb-topbar__spacer"></span>
+<a class="kb-appbtn kb-appbtn--ghost kb-topbar__signin" href="#top" onclick="{{ signIn }}">Sign in</a>
+</header></sc-if>
+<div class="{{ layoutCls }}" data-rail="{{ railState }}">
+<sc-if value="{{ v.signedIn }}" hint-placeholder-val="{{ true }}"><aside id="kb-rail" class="kb-rail"><nav aria-label="Sections">
+<div class="kb-rail__sec"><p class="kb-rail__head">Reading</p><ul class="kb-rail__list"><sc-for list="{{ railRead }}" as="n" hint-placeholder-count="2"><li><a class="kb-rail__link" href="#top" aria-current="{{ n.current }}" aria-label="{{ n.aria }}" onclick="{{ n.go }}"><span>{{ n.label }}</span><sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}"><span class="{{ n.countCls }}" aria-hidden="true">{{ n.count }}</span></sc-if></a></li></sc-for></ul></div>
+<div class="kb-rail__sec"><p class="kb-rail__head">Org</p><ul class="kb-rail__list"><sc-for list="{{ railOrg }}" as="n" hint-placeholder-count="3"><li><a class="kb-rail__link" href="#top" onclick="{{ n.go }}"><span>{{ n.label }}</span></a></li></sc-for></ul></div>
+</nav></aside></sc-if>
+<main id="main-content" class="kb-app-main">
+<sc-if value="{{ isState }}" hint-placeholder-val="{{ false }}"><dc-import name="LibraryState" bare="{{ true }}" kind="{{ stateKind }}" route="{{ v.route }}" signed-in="{{ v.signedIn }}" org="{{ v.orgName }}" on-retry="{{ retry }}" on-primary="{{ statePrimary }}" hint-size="100%,640px"></dc-import></sc-if>
+<sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}"><div class="lib">
+<header class="lib-head">
+<h1 class="lib-title">{{ v.title }}</h1>
+<sc-if value="{{ hasSub }}" hint-placeholder-val="{{ true }}"><p class="lib-sub">{{ v.sub }}</p></sc-if>
+<sc-if value="{{ visitorNote }}" hint-placeholder-val="{{ false }}"><p class="lib-note">Your progress in these books is private to you.</p></sc-if>
+<sc-if value="{{ anonNote }}" hint-placeholder-val="{{ false }}"><p class="lib-note">Signed out, nothing you read here is saved. <a class="lib-link" href="#top" onclick="{{ signIn }}">Sign in</a> to keep your place in each book; you come back to this page.</p></sc-if>
+</header>
+<sc-if value="{{ isEmptyLib }}" hint-placeholder-val="{{ false }}"><dc-import name="LibraryState" bare="{{ true }}" kind="empty" route="library" on-primary="{{ goDashboard }}" hint-size="100%,170px"></dc-import></sc-if>
+<sc-if value="{{ v.nothingPublic }}" hint-placeholder-val="{{ false }}"><dc-import name="LibraryState" bare="{{ true }}" kind="nothingpublic" route="public" org="{{ v.orgName }}" on-primary="{{ goDashboard }}" hint-size="100%,170px"></dc-import></sc-if>
+<sc-if value="{{ hasCont }}" hint-placeholder-val="{{ true }}"><section class="lib-sec" aria-labelledby="lib-cont-h">
+<div class="lib-sec__head"><h2 class="lib-h2" id="lib-cont-h">Continue reading</h2></div>
+<dc-import name="ContinueReading" bare="{{ true }}" items="{{ v.cont }}" on-open="{{ openItem }}" hint-size="100%,300px"></dc-import>
+</section></sc-if>
+<sc-if value="{{ hasShelves }}" hint-placeholder-val="{{ true }}"><section class="lib-sec" aria-labelledby="lib-books-h">
+<div class="lib-sec__head"><h2 class="lib-h2" id="lib-books-h">Books and documents</h2><sc-if value="{{ showGrouping }}" hint-placeholder-val="{{ true }}"><dc-import name="Grouping" bare="{{ true }}" value="{{ v.group }}" on-change="{{ group }}" hint-size="240px,46px"></dc-import></sc-if></div>
+<sc-if value="{{ v.noSubjects }}" hint-placeholder-val="{{ false }}"><p class="lib-note">Nothing has a subject yet. A book or document gets one when it's published with a subject.</p></sc-if>
+<div class="lib-groups"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="4"><section class="lib-group" aria-labelledby="{{ g.hid }}">
+<div class="lib-group__head"><h3 class="lib-group__name" id="{{ g.hid }}">{{ g.name }}</h3><span class="lib-group__count">{{ g.count }}</span><sc-if value="{{ g.isPublic }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Public</span></sc-if></div>
+<sc-if value="{{ g.hasBooks }}" hint-placeholder-val="{{ true }}"><ul class="lib-books" aria-label="{{ g.booksLabel }}"><sc-for list="{{ g.books }}" as="b" hint-placeholder-count="1"><li><dc-import name="BookCard" bare="{{ true }}" card="{{ b }}" on-open="{{ openBook }}" hint-size="100%,170px"></dc-import></li></sc-for></ul></sc-if>
+<sc-if value="{{ g.hasDocs }}" hint-placeholder-val="{{ false }}"><ul class="lib-rows" aria-label="{{ g.docsLabel }}"><sc-for list="{{ g.docs }}" as="d" hint-placeholder-count="2"><li><dc-import name="DocRow" bare="{{ true }}" doc="{{ d }}" on-open="{{ openDoc }}" hint-size="100%,64px"></dc-import></li></sc-for></ul></sc-if>
+<sc-if value="{{ g.hasMore }}" hint-placeholder-val="{{ false }}"><button type="button" class="lib-btn lib-btn--quiet lib-more" aria-expanded="{{ g.openAttr }}" aria-label="{{ g.moreLabel }}" onclick="{{ g.more }}"><span class="lib-btn__labels" aria-hidden="true"><span class="{{ g.allCls }}">{{ g.allLabel }}</span><span class="{{ g.fewCls }}">Show fewer</span></span></button></sc-if>
+</section></sc-for></div>
+<sc-if value="{{ hasEmptyProjects }}" hint-placeholder-val="{{ true }}"><p class="lib-foot">{{ emptyProjectsText }} <a class="lib-link" href="#top" onclick="{{ goDashboard }}">They're on the dashboard <span aria-hidden="true">→</span></a></p></sc-if>
+</section></sc-if>
+<sc-if value="{{ isLib }}" hint-placeholder-val="{{ true }}"><dc-import name="ClearAll" bare="{{ true }}" phase="{{ clear }}" on-start="{{ clearStart }}" on-cancel="{{ clearCancel }}" on-confirm="{{ clearConfirm }}" hint-size="100%,170px"></dc-import></sc-if>
+</div></sc-if>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"route":{"editor":null},"viewer":{"editor":null},"theme":{"editor":null},"data":{"editor":null},"prog":{"editor":null},"group":{"editor":null},"status":{"editor":null},"pub":{"editor":null},"clear":{"editor":null},"folded":{"editor":null},"expanded":{"editor":null},"due":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"onGo":{"editor":null},"onGroup":{"editor":null},"onFold":{"editor":null},"onMore":{"editor":null},"onClear":{"editor":null},"onRetry":{"editor":null},"$preview":{"width":1440,"height":2470}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, L = window.LIB;
+    const v = L.view(P);
+    const lib = v.route === 'library';
+    const go = (kind, detail) => (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onGo) P.onGo(kind, detail || {}); };
+    const call = (name, arg) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = P[name]; if (f) f(arg); };
+    const memberOfOrg = v.viewer === 'member';
+    const libraryTarget = memberOfOrg ? 'library' : 'ownlib';
+    const navItem = (key, label, extra) => Object.assign({ key, label, sep: false, current: undefined, aria: label, hasCount: false, count: '', countCls: 'kb-count' }, extra || {});
+    // The pill is always there so Review keeps its width; at zero it is hidden (is-zero) and the name reads plain "Review".
+    const review = navItem('review', 'Review', { hasCount: true, count: v.hasDue ? v.due : '0', countCls: v.hasDue ? 'kb-count' : 'kb-count is-zero', aria: v.hasDue ? 'Review, ' + v.due + ' due' : 'Review', go: go('review') });
+    const libItem = navItem('library', 'Library', { current: lib ? 'page' : undefined, go: lib ? call('__none') : go(libraryTarget) });
+    const orgItems = ['Dashboard', 'Documents', 'Graph'].map((n, i) => navItem(n.toLowerCase(), n, { sep: i === 0, go: go('console', { name: n }) }));
+    const openItem = (it) => {
+      if (it.legacy) P.onGo && P.onGo('legacy', { title: it.title, book: it.bookTitle, project: it.project, n: it.n, total: it.total, kind: it.kind });
+      else P.onGo && P.onGo('reader', { kind: it.kind, title: it.title, book: it.bookTitle, project: it.project, n: it.n, total: it.total, section: it.section, pct: it.pct, lang: it.lang, next: it.next });
+    };
+    const openBook = (c) => { if (P.onGo) P.onGo(lib ? 'book' : 'bookPublic', { title: c.title, project: c.project, slug: c.slug }); };
+    const openDoc = (d) => {
+      if (!P.onGo) return;
+      if (d.legacy) P.onGo('legacy', { title: d.title, project: d.project, kind: 'doc' });
+      else P.onGo('reader', { kind: 'doc', title: d.title, project: d.project, section: d.section, pct: d.pct, state: d.state, lang: d.lang, anon: !d.member });
+    };
+    const groups = (v.groups || []).map((g, i) => Object.assign({}, g, {
+      hid: 'lib-g-' + i,
+      booksLabel: 'Books in ' + g.name,
+      docsLabel: 'Documents in ' + g.name,
+      openAttr: g.open ? 'true' : 'false',
+      // Both labels share one grid cell, so the button keeps the width of the longer one.
+      allCls: g.open ? 'is-off' : '',
+      fewCls: g.open ? '' : 'is-off',
+      more: call('onMore', g.key),
+    }));
+    let stateKind = null;
+    if (v.status === 'loading') stateKind = 'loading';
+    else if (v.status === 'failed') stateKind = 'failed';
+    else if (!lib && v.missing) stateKind = 'notfound';
+    const fit = P.fit || 'page';
+    let appCls = 'kb-app';
+    if (v.anon) appCls += ' kb-app--public';
+    if (fit === 'stage') appCls += ' kb-app--stage';
+    const bar = Array.isArray(P.bar) ? P.bar : [];
+    const ready = !stateKind;
+    return {
+      v,
+      bar, hasBar: bar.length > 0,
+      appCls,
+      theme: P.theme || 'light',
+      layoutCls: v.signedIn ? 'kb-app-layout' : 'kb-app-layout kb-app-layout--norail',
+      railState: v.signedIn && v.folded ? 'collapsed' : 'expanded',
+      railShown: !v.folded,
+      railOpen: v.folded ? 'false' : 'true',
+      foldTitle: v.folded ? 'Show navigation' : 'Hide navigation',
+      fold: call('onFold'),
+      nav: [libItem, review].concat(orgItems),
+      railRead: [libItem, review],
+      railOrg: orgItems,
+      goHome: v.signedIn ? (lib ? call('__none') : go(libraryTarget)) : go('landing'),
+      signIn: go('signin'),
+      signOut: go('signout'),
+      goDashboard: go('console', { name: 'Dashboard' }),
+      statePrimary: stateKind === 'notfound' ? (v.signedIn ? go(libraryTarget) : go('signin')) : go('console', { name: 'Dashboard' }),
+      retry: call('onRetry'),
+      isState: !!stateKind,
+      stateKind: stateKind || 'loading',
+      isReady: ready,
+      isLib: lib,
+      hasSub: !(lib && v.isEmpty),
+      visitorNote: !lib && v.signedIn && !v.nothingPublic,
+      anonNote: !lib && v.anon,
+      isEmptyLib: lib && v.isEmpty,
+      hasCont: lib && v.cont.length > 0,
+      openItem, openBook, openDoc,
+      hasShelves: !v.isEmpty && !v.nothingPublic && groups.length > 0,
+      showGrouping: lib,
+      group: (g) => { if (P.onGroup) P.onGroup(g); },
+      groups,
+      hasEmptyProjects: lib && v.emptyProjects > 0 && v.group === 'project',
+      emptyProjectsText: v.emptyProjects + ' projects have nothing to read yet.',
+      clear: P.clear || 'rest',
+      clearStart: () => { if (P.onClear) P.onClear('start'); },
+      clearCancel: () => { if (P.onClear) P.onClear('cancel'); },
+      clearConfirm: () => { if (P.onClear) P.onClear('confirm'); },
+    };
+  }
+}
+</script>
+</body>
+</html>

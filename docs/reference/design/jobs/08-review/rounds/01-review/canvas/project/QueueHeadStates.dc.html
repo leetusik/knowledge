@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — the queue header</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Queue header</p>
+<p class="rd-board__lead">The same header in every state: the title, the three counts in words and numbers, By book, and the last save. Only the values change. The counts come from the queue route and from each rating's reply.</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="QueueHead" h="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 3392, "height": 2828}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const H = (key, mod) => RV.sample.head(key, mod);
+      return [
+        { cap: 'Cards due', v: H('due') },
+        { cap: 'After a rating: the counts move, the save is said', v: H('saved') },
+        { cap: 'By book, open', v: H('bybook') },
+        { cap: 'One card left', v: H('one') },
+        { cap: '200 due', v: H('many') },
+        { cap: 'Phone · cards due, By book open', phone: true, v: H('bybook') },
+        { cap: 'Loading', v: H('loading') },
+        { cap: 'No cards yet', v: H('empty') },
+        { cap: 'Daily limit reached, By book open: the cards it holds stay due', v: H('limit', (n) => { n.bybook = true; }) },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

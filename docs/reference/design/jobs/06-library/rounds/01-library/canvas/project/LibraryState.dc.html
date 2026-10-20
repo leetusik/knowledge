@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ true }}"><div class="lib" role="status" aria-label="Loading…">
+<div class="lib-head"><span class="lib-skel lib-sk__title"></span><span class="lib-skel lib-sk__sub"></span></div>
+<sc-if value="{{ isLib }}" hint-placeholder-val="{{ true }}"><div class="lib-sec">
+<div class="lib-sec__head"><span class="lib-skel lib-sk__h2"></span></div>
+<div class="lib-cont lib-cont--many"><span class="lib-skel lib-sk__lead"></span><div class="lib-sk__rows"><div class="lib-sk__row"><span class="lib-skel lib-sk__l1"></span><span class="lib-skel lib-sk__l2"></span><span class="lib-skel lib-sk__l3"></span></div><div class="lib-sk__row"><span class="lib-skel lib-sk__l1"></span><span class="lib-skel lib-sk__l2"></span><span class="lib-skel lib-sk__l3"></span></div><div class="lib-sk__row"><span class="lib-skel lib-sk__l1"></span><span class="lib-skel lib-sk__l2"></span><span class="lib-skel lib-sk__l3"></span></div></div></div>
+</div></sc-if>
+<div class="lib-sec">
+<sc-if value="{{ isLib }}" hint-placeholder-val="{{ true }}"><div class="lib-sec__head"><span class="lib-skel lib-sk__h2"></span><span class="lib-skel lib-sk__seg"></span></div></sc-if>
+<div class="lib-group"><span class="lib-skel lib-sk__shelf"></span>
+<div class="lib-books"><span class="lib-skel lib-sk__card"></span><span class="lib-skel lib-sk__card"></span><span class="lib-skel lib-sk__card"></span></div>
+</div>
+<div class="lib-group"><span class="lib-skel lib-sk__shelf"></span>
+<div class="lib-sk__rows"><div class="lib-sk__row"><span class="lib-skel lib-sk__l2"></span><span class="lib-skel lib-sk__l3"></span></div><div class="lib-sk__row"><span class="lib-skel lib-sk__l2"></span><span class="lib-skel lib-sk__l3"></span></div></div>
+</div>
+</div>
+</div></sc-if>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><div class="lib-ed" role="alert">
+<span class="lib-ed__code">Error · 500</span>
+<h1 class="lib-ed__title">Something on our side stopped reading.</h1>
+<p class="lib-ed__sub">{{ failedSub }}</p>
+<div class="lib-ed__actions"><button type="button" class="lib-btn lib-btn--primary" onclick="{{ retry }}">Try again</button></div>
+<p class="lib-ed__ref">ref · {{ ref }}</p>
+</div></sc-if>
+<sc-if value="{{ isMissing }}" hint-placeholder-val="{{ false }}"><div class="lib-ed">
+<span class="lib-ed__code">Not found · 404</span>
+<h1 class="lib-ed__title">Library not found</h1>
+<p class="lib-ed__sub">There's no public library at this address. It may have moved, or the link may be wrong.</p>
+<div class="lib-ed__actions"><sc-if value="{{ anon }}" hint-placeholder-val="{{ true }}"><a class="lib-btn lib-btn--secondary" href="#top" onclick="{{ primary }}">Sign in</a></sc-if><sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}"><a class="lib-btn lib-btn--secondary" href="#top" onclick="{{ primary }}"><span aria-hidden="true">‹</span>&nbsp;Back to your library</a></sc-if></div>
+</div></sc-if>
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><div class="lib-panel">
+<h2 class="lib-panel__title">No books or documents yet</h2>
+<p class="lib-panel__body">Publish one with an API key, and it shows up here.</p>
+<a class="lib-link lib-link--solo" href="#top" onclick="{{ primary }}">Create an API key on the dashboard <span aria-hidden="true">→</span></a>
+</div></sc-if>
+<sc-if value="{{ isNothingPublic }}" hint-placeholder-val="{{ false }}"><div class="lib-panel">
+<h2 class="lib-panel__title">Nothing here is public yet</h2>
+<p class="lib-panel__body">Visitors to this address see a not-found page until a project is public. Only members of {{ org }} see this note.</p>
+<a class="lib-link lib-link--solo" href="#top" onclick="{{ primary }}">Make a project public on the dashboard <span aria-hidden="true">→</span></a>
+</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":null},"route":{"editor":null},"signedIn":{"editor":null},"org":{"editor":null},"onRetry":{"editor":null},"onPrimary":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"width":{"editor":null},"$preview":{"width":1064,"height":1171}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const kind = P.kind || 'loading';
+    const isLib = P.route !== 'public';
+    const bare = !!P.bare;
+    const call = (name) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = P[name]; if (f) f(); };
+    return {
+      isLoading: kind === 'loading',
+      isFailed: kind === 'failed',
+      isMissing: kind === 'notfound',
+      isEmpty: kind === 'empty',
+      isNothingPublic: kind === 'nothingpublic',
+      isLib,
+      anon: !P.signedIn,
+      signedIn: !!P.signedIn,
+      org: P.org || 'Quillwork',
+      failedSub: isLib
+        ? 'Your library did not finish loading. Try again — and if it keeps failing, the reference below tells us where it stopped.'
+        : 'This library did not finish loading. Try again — and if it keeps failing, the reference below tells us where it stopped.',
+      ref: isLib ? 'lib-4c1e92a7' : 'lib-9a03d5e1',
+      retry: call('onRetry'),
+      primary: call('onPrimary'),
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: ' + (P.width || 1064) + 'px',
+    };
+  }
+}
+</script>
+</body>
+</html>

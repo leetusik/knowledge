@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="{{ innerCls }}">
+<form class="rv-set" novalidate onsubmit="{{ st.onSave }}">
+<p class="rd-sheet__lead">These apply to all your cards, on every device.</p>
+<div class="an-ed"><label class="an-ed__label" for="{{ ids.tz }}">Time zone</label><select id="{{ ids.tz }}" class="an-ed__field an-ed__field--line rv-select" value="{{ st.tz }}" aria-describedby="{{ ids.tzHint }}" onchange="{{ st.onTz }}"><sc-for list="{{ st.zones }}" as="z" hint-placeholder-count="5"><option value="{{ z.v }}">{{ z.label }}</option></sc-for></select><p class="rv-hint" id="{{ ids.tzHint }}">Your review day and every due time follow it. It was taken from this browser on your first review.</p></div>
+<div class="an-ed"><label class="an-ed__label" for="{{ ids.max }}">Reviews a day</label><input type="text" inputmode="numeric" id="{{ ids.max }}" class="{{ st.maxCls }}" value="{{ st.max }}" aria-invalid="{{ st.maxInvalid }}" aria-describedby="{{ maxDesc }}" onchange="{{ st.onMax }}"><div class="rv-msg"><p class="{{ st.maxHintCls }}" id="{{ ids.maxHint }}">The most cards you review in one day. The rest wait for tomorrow.</p><p class="{{ st.maxErrCls }}" id="{{ ids.maxErr }}">Enter a whole number from 1 to 999.</p></div></div>
+<div class="an-ed"><label class="an-ed__label" for="{{ ids.nw }}">New highlights a day</label><input type="text" inputmode="numeric" id="{{ ids.nw }}" class="{{ st.newCls }}" value="{{ st.maxNew }}" aria-invalid="{{ st.newInvalid }}" aria-describedby="{{ newDesc }}" onchange="{{ st.onMaxNew }}"><div class="rv-msg"><p class="{{ st.newHintCls }}" id="{{ ids.nwHint }}">Highlights you have not reviewed yet that join your reviews each day. 0 pauses new ones.</p><p class="{{ st.newErrCls }}" id="{{ ids.nwErr }}">Enter a whole number from 0 to 999.</p></div></div>
+<p class="rv-set__day">Your review day starts at 04:00, so a review after midnight still counts for the day before.</p>
+<div class="rv-set__foot"><p class="{{ st.failCls }}" role="status" aria-hidden="{{ st.failHidden }}">Not saved · check your connection</p><button type="submit" class="rd-btn rd-btn--primary qz-act" aria-busy="{{ st.busy }}" disabled="{{ st.off }}"><span class="qz-swap"><span class="{{ st.lab.save }}">Save settings</span><span class="{{ st.lab.saving }}">Saving…</span><span class="{{ st.lab.retry }}">Try again</span></span></button><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ st.onCancel }}">Cancel</button></div>
+</form>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"st": {"editor": null}, "bare": {"editor": null}, "theme": {"editor": null}, "size": {"editor": null}, "uid": {"editor": null}, "$preview": {"width": 420, "height": 640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, RV = window.RV, bare = !!P.bare;
+    const st = P.st || RV.sample.settings('settings');
+    const u = P.uid || 'rv-set';
+    const ids = { tz: u + '-tz', tzHint: u + '-tz-hint', max: u + '-max', maxHint: u + '-max-hint', maxErr: u + '-max-err', nw: u + '-new', nwHint: u + '-new-hint', nwErr: u + '-new-err' };
+    return {
+      st, ids,
+      maxDesc: st.maxInvalid ? ids.maxErr + ' ' + ids.maxHint : ids.maxHint,
+      newDesc: st.newInvalid ? ids.nwErr + ' ' + ids.nwHint : ids.nwHint,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      innerCls: bare ? 'rv-setwrap' : 'rd-demo-panel',
+    };
+  }
+}
+</script>
+</body>
+</html>

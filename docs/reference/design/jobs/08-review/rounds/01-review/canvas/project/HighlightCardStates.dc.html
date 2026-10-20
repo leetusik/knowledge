@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Highlight card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Highlight card</p>
+<p class="rd-board__lead">A highlight the reader turned Review this on for. Its front is the whole card: the section's title, the quote in the reading face with the signed paint (the 1 px bronze foot, 2 px with a note), and the reader's note. There is no back, so the way into the chapter shows at once.</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="Card" c="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 3440, "height": 2341}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const S = (spec) => RV.sample.card(Object.assign({ uid: 'hl-' + theme + '-' + spec.cap }, spec));
+      return [
+        { cap: 'With a note', v: S({ cap: 'a', at: 'hl-a2' }) },
+        { cap: 'New · no note', v: S({ cap: 'b', at: 'hl-a3' }) },
+        { cap: 'New · a 500-character note', v: S({ cap: 'c', at: 'hl-a7' }) },
+        { cap: 'In 한국어, with a Korean note', v: S({ cap: 'd', at: 'hl-k3' }) },
+        { cap: 'Rating failed · Try again sends the same review', v: S({ cap: 'e', at: 'hl-s1', failed: 'good' }) },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

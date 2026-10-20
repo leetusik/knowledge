@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Recall card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="annot.css">
+<link rel="stylesheet" href="review.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="review.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Recall card</p>
+<p class="rd-board__lead">A quiz card of type recall: the prompt, then the answer shown, then the reader's own grade, which is the rating. The two choices keep the quiz's words and add the rating and its interval underneath (open question 3).</p>
+<div class="rd-board__rows"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ g.title }}</p><div class="rd-row"><sc-for list="{{ g.cells }}" as="x" hint-placeholder-count="4"><div class="rd-cell"><p class="rd-cap">{{ x.cap }}</p><div class="{{ x.box }}"><dc-import name="Card" c="{{ x.v }}" theme="{{ g.theme }}" uid="{{ x.uid }}" hint-size="100%,560px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 3392, "height": 2636}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RV = window.RV;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cells = (theme) => {
+
+      const S = (spec) => RV.sample.card(Object.assign({ uid: 'rc-' + theme + '-' + spec.cap }, spec));
+      return [
+        { cap: 'Prompt', v: S({ cap: 'a', at: 'rc-projection' }) },
+        { cap: 'Answer shown · two ratings', v: S({ cap: 'b', at: 'rc-projection', acts: [{ t: 'reveal' }] }) },
+        { cap: 'I got it · saving', v: S({ cap: 'c', at: 'rc-projection', acts: [{ t: 'reveal' }, { t: 'self', v: 'got' }], pending: 'good' }) },
+        { cap: 'Long answer shown (from a document)', v: S({ cap: 'd', at: 'wal-why', acts: [{ t: 'reveal' }] }) },
+      ];
+    };
+    return {
+      groups: THEMES.map((t) => ({ title: t[1], theme: t[0], cells: cells(t[0]).map((x, i) => Object.assign({ box: 'rd-stage rv-cellbox' + (x.phone ? ' rv-cellbox--phone' : x.sheet ? ' rv-cellbox--sheet' : ''), uid: 'b-' + t[0] + '-' + i }, x)) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

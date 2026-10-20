@@ -1,0 +1,174 @@
+{
+  "v": 3,
+  "title": "The book page",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-20T03:16:59Z"
+  },
+  "notes": {},
+  "designSystems": [
+    {
+      "title": "knowledge",
+      "namespace": "kb",
+      "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+      "version": "1792321604-e214",
+      "copiedAt": "2026-10-20T03:16:59Z"
+    }
+  ],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2210,
+      "title": "01 · Page — Book page (the flow)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "BookPage.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 834,
+      "title": "02 · Page — Book page alone",
+      "expand": "fill"
+    },
+    "Widths.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 3858,
+      "h": 3000,
+      "title": "03 · Page — The book page at 390, 820, 1024 and 1440",
+      "is_interactive": true
+    },
+    "Elsewhere.dc.html": {
+      "x": 6978,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "04 · Page — Stand-in for another job's screen"
+    },
+    "TopStates.dc.html": {
+      "x": 0,
+      "y": 3120,
+      "w": 3000,
+      "h": 590,
+      "title": "05 · Component — Top bar"
+    },
+    "HeadStates.dc.html": {
+      "x": 3080,
+      "y": 3120,
+      "w": 2560,
+      "h": 1700,
+      "title": "06 · Component — Book head"
+    },
+    "ContinueStates.dc.html": {
+      "x": 5720,
+      "y": 3120,
+      "w": 3800,
+      "h": 1380,
+      "title": "07 · Component — Continue reading"
+    },
+    "NotesStates.dc.html": {
+      "x": 9600,
+      "y": 3120,
+      "w": 1800,
+      "h": 520,
+      "title": "08 · Component — Notes in this book, the entry"
+    },
+    "RowStates.dc.html": {
+      "x": 0,
+      "y": 4940,
+      "w": 2560,
+      "h": 3120,
+      "title": "09 · Component — Chapter row, languages and versions"
+    },
+    "ClearStates.dc.html": {
+      "x": 2640,
+      "y": 4940,
+      "w": 3400,
+      "h": 2400,
+      "title": "10 · Component — Clear this book's reading data"
+    },
+    "StateStates.dc.html": {
+      "x": 6120,
+      "y": 4940,
+      "w": 3000,
+      "h": 2660,
+      "title": "11 · Component — Loading, not found, failed"
+    },
+    "BookTop.dc.html": {
+      "x": 0,
+      "y": 8180,
+      "w": 1200,
+      "h": 56,
+      "title": "12 · Mounted part — Top bar (one instance)"
+    },
+    "BookHead.dc.html": {
+      "x": 1280,
+      "y": 8180,
+      "w": 384,
+      "h": 210,
+      "title": "13 · Mounted part — Book head (one instance)"
+    },
+    "Continue.dc.html": {
+      "x": 1744,
+      "y": 8180,
+      "w": 384,
+      "h": 300,
+      "title": "14 · Mounted part — Continue reading (one instance)"
+    },
+    "NotesEntry.dc.html": {
+      "x": 2208,
+      "y": 8180,
+      "w": 384,
+      "h": 104,
+      "title": "15 · Mounted part — Notes in this book entry (one instance)"
+    },
+    "ChapterRow.dc.html": {
+      "x": 2672,
+      "y": 8180,
+      "w": 640,
+      "h": 136,
+      "title": "16 · Mounted part — Chapter row (one instance)"
+    },
+    "ClearData.dc.html": {
+      "x": 3392,
+      "y": 8180,
+      "w": 640,
+      "h": 184,
+      "title": "17 · Mounted part — Clear reading data (one instance)"
+    },
+    "BookState.dc.html": {
+      "x": 4112,
+      "y": 8180,
+      "w": 1440,
+      "h": 506,
+      "title": "18 · Mounted part — Loading, not found, failed (one instance)"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "BookPage.dc.html",
+    "Widths.dc.html",
+    "Elsewhere.dc.html",
+    "TopStates.dc.html",
+    "HeadStates.dc.html",
+    "ContinueStates.dc.html",
+    "NotesStates.dc.html",
+    "RowStates.dc.html",
+    "ClearStates.dc.html",
+    "StateStates.dc.html",
+    "BookTop.dc.html",
+    "BookHead.dc.html",
+    "Continue.dc.html",
+    "NotesEntry.dc.html",
+    "ChapterRow.dc.html",
+    "ClearData.dc.html",
+    "BookState.dc.html"
+  ]
+}

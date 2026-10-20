@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ frameCls }}" data-theme="{{ theme }}"><div class="rd-in">
+<div class="bk-scroll" ref="{{ setBox }}" aria-busy="{{ busy }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="3"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<div class="bk-topwrap" ref="{{ setTop }}"><dc-import name="BookTop" bare="{{ true }}" title="{{ topTitle }}" progress="{{ topProg }}" compact="{{ compact }}" anon="{{ anon }}" on-logo="{{ library }}" on-library="{{ library }}" on-sign-in="{{ signIn }}" hint-size="100%,56px"></dc-import></div>
+<main class="bk-main">
+<sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}"><div class="bk-layout">
+<div class="bk-side">
+<div ref="{{ setHead }}"><dc-import name="BookHead" bare="{{ true }}" book="{{ book }}" viewer="{{ viewer }}" pk="{{ pk }}" on-sign-in="{{ signIn }}" hint-size="100%,260px"></dc-import></div>
+<dc-import name="Continue" bare="{{ true }}" book="{{ book }}" viewer="{{ viewer }}" pk="{{ pk }}" on-open="{{ open }}" hint-size="100%,230px"></dc-import>
+<sc-if value="{{ hasNotes }}" hint-placeholder-val="{{ true }}"><dc-import name="NotesEntry" bare="{{ true }}" book="{{ book }}" viewer="{{ viewer }}" pk="{{ pk }}" on-notes="{{ notes }}" hint-size="100%,56px"></dc-import></sc-if>
+</div>
+<div class="bk-body">
+<section class="bk-list">
+<div class="rd-end__listhead"><h2 class="rd-end__listtitle">Contents</h2><span class="rd-end__count">{{ count }}</span></div>
+<sc-if value="{{ hasShape }}" hint-placeholder-val="{{ false }}"><p class="bk-list__note">{{ shapeNote }}</p></sc-if>
+<ol class="rd-chs" aria-label="Chapters"><sc-for list="{{ rows }}" as="r" hint-placeholder-count="5"><li class="rd-chs__item"><dc-import name="ChapterRow" bare="{{ true }}" row="{{ r.row }}" open="{{ r.isOpen }}" on-open="{{ r.onOpen }}" on-versions="{{ r.onVersions }}" hint-size="100%,64px"></dc-import></li></sc-for></ol>
+</section>
+<sc-if value="{{ showClear }}" hint-placeholder-val="{{ true }}"><dc-import name="ClearData" bare="{{ true }}" book="{{ book }}" viewer="{{ viewer }}" pk="{{ pk }}" clear="{{ clear }}" on-ask="{{ ask }}" on-cancel="{{ cancel }}" on-confirm="{{ confirm }}" hint-size="100%,150px"></dc-import></sc-if>
+</div>
+</div></sc-if>
+<sc-if value="{{ isState }}" hint-placeholder-val="{{ false }}"><dc-import name="BookState" bare="{{ true }}" kind="{{ status }}" on-retry="{{ retry }}" on-library="{{ library }}" hint-size="100%,520px"></dc-import></sc-if>
+</main>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":null},"viewer":{"editor":null},"pk":{"editor":null},"status":{"editor":null},"vers":{"editor":null},"clear":{"editor":null},"theme":{"editor":null},"tok":{"editor":null},"reveal":{"editor":null},"jump":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"onOpen":{"editor":null},"onVersions":{"editor":null},"onNotes":{"editor":null},"onLibrary":{"editor":null},"onSignIn":{"editor":null},"onAsk":{"editor":null},"onCancel":{"editor":null},"onConfirm":{"editor":null},"onRetry":{"editor":null},"$preview":{"width":1440,"height":834}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { compact: false };
+    this.box = null;
+    this.top = null;
+    this.head = null;
+    this.onWin = () => this.measure();
+  }
+  setBox = (el) => { this.box = el; };
+  setTop = (el) => { this.top = el; };
+  setHead = (el) => { this.head = el; };
+  /* The top bar shows the book once its head has scrolled under the bar: visibility only, so nothing moves. The page
+     scrolls as a document (the window), on the flow board as in the product. */
+  measure() {
+    let on = false;
+    if (this.head && this.top) on = this.head.getBoundingClientRect().bottom < this.top.getBoundingClientRect().bottom;
+    if (on !== this.state.compact) this.setState({ compact: on });
+  }
+  componentDidMount() { this.jump = this.props.jump || 0; window.addEventListener('scroll', this.onWin, { passive: true }); }
+  componentWillUnmount() { window.removeEventListener('scroll', this.onWin); this.gone = true; }
+  /* Canvas only (the flow board, fit="page"): a preset that names a part below the first screen (the open versions,
+     the clear flow) brings it into view by the least distance, once it has rendered; any other preset starts at the
+     top of the page. Only the window scrolls, so the page itself never moves inside it. */
+  componentDidUpdate() {
+    const jump = this.props.jump || 0;
+    if (this.props.fit !== 'page' || jump === this.jump) return;
+    this.jump = jump;
+    const kind = this.props.reveal;
+    if (!kind) { window.scrollTo(0, 0); return; }
+    let tries = 0;
+    const find = () => {
+      if (this.gone || !this.box) return null;
+      if (kind === 'clear') return this.box.querySelector('.bk-clear');
+      const panel = this.box.querySelector('.bk-verpanel');
+      return panel ? panel.closest('.bk-row') : null;
+    };
+    const go = () => {
+      const el = find();
+      if (el) { el.scrollIntoView({ block: 'nearest' }); return; }
+      if (++tries < 20) requestAnimationFrame(go);
+    };
+    requestAnimationFrame(go);
+  }
+  renderVals() {
+    const BK = window.BK, P = this.props;
+    const book = P.book || 'guide';
+    const viewer = P.viewer || 'member';
+    const pk = P.pk || BK.pkFor(book, viewer);
+    const status = P.status || 'ready';
+    const clear = P.clear || 'idle';
+    const v = BK.books[book] ? BK.view(book, viewer, pk) : null;
+    const ready = status === 'ready' && !!v;
+    const call = (name) => (e) => { if (e && e.preventDefault) e.preventDefault(); const f = P[name]; if (f) f(); };
+    const bar = Array.isArray(P.bar) ? P.bar : [];
+    const rows = ready ? v.rows.map((r) => ({
+      row: r,
+      isOpen: P.vers === r.key,
+      onOpen: (key, lang, ver, resume) => { if (P.onOpen) P.onOpen(key, lang, ver, resume); },
+      onVersions: (key) => { if (P.onVersions) P.onVersions(key); },
+    })) : [];
+    return {
+      bar, hasBar: bar.length > 0,
+      theme: P.theme || 'light',
+      frameCls: 'rd-frame rd-size-3 bk-frame rd-standalone',
+      busy: status === 'loading' ? 'true' : undefined,
+      topTitle: ready ? v.book.title : '',
+      topProg: ready ? (v.member ? v.head.progress : v.count) : '',
+      compact: ready && this.state.compact,
+      anon: viewer === 'anon',
+      isReady: ready,
+      isState: !ready,
+      status: status === 'ready' ? 'notfound' : status,
+      book, viewer, pk, clear,
+      hasNotes: ready && !!v.notes,
+      count: ready ? v.count : '',
+      hasShape: ready && v.hasShape,
+      shapeNote: ready ? v.shapeNote : '',
+      rows,
+      showClear: ready && v.member && (v.data.has || clear !== 'idle'),
+      open: (key, lang, ver, resume) => { if (P.onOpen) P.onOpen(key, lang, ver, resume); },
+      notes: () => { if (P.onNotes) P.onNotes(); },
+      library: () => { if (P.onLibrary) P.onLibrary(); },
+      signIn: () => { if (P.onSignIn) P.onSignIn(); },
+      ask: () => { if (P.onAsk) P.onAsk(); },
+      cancel: () => { if (P.onCancel) P.onCancel(); },
+      confirm: () => { if (P.onConfirm) P.onConfirm(); },
+      retry: () => { if (P.onRetry) P.onRetry(); },
+      setBox: this.setBox, setTop: this.setTop, setHead: this.setHead,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Notes in this book, the entry</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="book.css">
+<script src="book.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Notes in this book, the entry</p>
+<p class="rd-board__lead">The way from this page to the signed per-book list. It counts what is marked in this book; with nothing marked it says so and still opens the list, whose own empty state explains. It is left out when there is no reading data: signed out, never opened, or just cleared.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="3"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="NotesEntry" book="{{ c.book }}" viewer="{{ c.viewer }}" pk="{{ c.pk }}" theme="{{ c.theme }}" hint-size="100%,72px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1800,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BK = window.BK;
+    const px = (w) => 'width: ' + w + 'px';
+    const N = (cap, w, book, o) => Object.assign({ cap, st: px(w), book, viewer: 'member', pk: undefined, theme: 'light' }, o);
+    const rows = [
+      { title: 'Light · 384 wide', cells: [N('With items', 384, 'guide'), N('Signed in, another org · their own items', 384, 'guide', { viewer: 'other' }), N('Opened, nothing marked yet', 384, 'tidewater')] },
+      { title: 'Dark and sepia', cells: [N('With items · dark', 384, 'guide', { theme: 'dark' }), N('Nothing marked yet · sepia', 384, 'tidewater', { theme: 'sepia' }), N('lantern · sepia', 384, 'lantern', { theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
