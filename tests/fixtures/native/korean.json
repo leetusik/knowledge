@@ -1,0 +1,220 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "배경",
+          "type": "text"
+        }
+      ],
+      "id": "s-1",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "한국어 본문입니다. ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "강조",
+              "type": "text"
+            }
+          ],
+          "type": "strong"
+        },
+        {
+          "text": "와 ",
+          "type": "text"
+        },
+        {
+          "text": "코드",
+          "type": "code"
+        },
+        {
+          "text": "가 섞여 있습니다.\n줄바꿈 뒤의 문장입니다.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "content": [
+        {
+          "text": "Mixed 혼합 제목",
+          "type": "text"
+        }
+      ],
+      "id": "s-2",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "쓰기 잠금",
+          "type": "text"
+        }
+      ],
+      "id": "write-lock",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "align": [
+        null,
+        null
+      ],
+      "head": [
+        [
+          {
+            "text": "용어",
+            "type": "text"
+          }
+        ],
+        [
+          {
+            "text": "뜻",
+            "type": "text"
+          }
+        ]
+      ],
+      "id": null,
+      "rows": [
+        [
+          [
+            {
+              "text": "잠금",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "text": "한 번에 하나",
+              "type": "text"
+            }
+          ]
+        ]
+      ],
+      "type": "table"
+    },
+    {
+      "caption": [
+        {
+          "text": "요청이 ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "잠금",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": "을 거칩니다.",
+          "type": "text"
+        }
+      ],
+      "direction": null,
+      "edges": [
+        {
+          "from": "client",
+          "label": "요청",
+          "style": null,
+          "to": "lock",
+          "tone": null
+        }
+      ],
+      "groups": null,
+      "id": "diagram-1",
+      "kind": "flow",
+      "nodes": [
+        {
+          "at": null,
+          "fields": null,
+          "id": "client",
+          "label": "클라이언트",
+          "shape": null,
+          "sub": null,
+          "tone": null
+        },
+        {
+          "at": null,
+          "fields": null,
+          "id": "lock",
+          "label": "쓰기 잠금",
+          "shape": null,
+          "sub": "하나씩",
+          "tone": null
+        }
+      ],
+      "title": "요청의 흐름",
+      "type": "diagram"
+    },
+    {
+      "id": "lock-quiz",
+      "items": [
+        {
+          "explain": null,
+          "id": "ko-cloze",
+          "text": [
+            {
+              "text": "한 번에 하나의 쓰기만 ",
+              "type": "text"
+            },
+            {
+              "accept": [
+                "잠금",
+                "락"
+              ],
+              "type": "blank"
+            },
+            {
+              "text": "을 얻습니다.",
+              "type": "text"
+            }
+          ],
+          "type": "cloze"
+        },
+        {
+          "answer": [
+            {
+              "text": "동시에 쓰면 파일이 깨지기 때문입니다.",
+              "type": "text"
+            }
+          ],
+          "explain": null,
+          "id": "ko-recall",
+          "prompt": [
+            {
+              "text": "잠금은 왜 필요한가요?",
+              "type": "text"
+            }
+          ],
+          "type": "recall"
+        }
+      ],
+      "title": "확인 문제",
+      "type": "quiz"
+    },
+    {
+      "content": [
+        {
+          "text": "잠금 뒤의 문단입니다.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    }
+  ],
+  "summary": "한국어 요약입니다.",
+  "syntax": 1
+}

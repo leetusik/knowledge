@@ -1,0 +1,206 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Figures",
+          "type": "text"
+        }
+      ],
+      "id": "figures",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "A bar chart of reviews per day",
+      "caption": [
+        {
+          "text": "Reviews per day, ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "last month",
+              "type": "text"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": ".",
+          "type": "text"
+        }
+      ],
+      "credit": [
+        {
+          "text": "Source: ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "the team",
+              "type": "text"
+            }
+          ],
+          "href": "https://example.com/data",
+          "title": null,
+          "type": "link"
+        }
+      ],
+      "id": "fig-full",
+      "src": "chart-1.png",
+      "type": "figure",
+      "width": "wide"
+    },
+    {
+      "alt": "A desk",
+      "caption": [
+        {
+          "text": "The minimal figure.",
+          "type": "text"
+        }
+      ],
+      "credit": null,
+      "id": "figure-1",
+      "src": "photo_2.jpeg",
+      "type": "figure",
+      "width": null
+    },
+    {
+      "caption": null,
+      "id": "row-two",
+      "items": [
+        {
+          "alt": "Before",
+          "caption": [
+            {
+              "text": "Before the change.",
+              "type": "text"
+            }
+          ],
+          "kind": "image",
+          "src": "before.png"
+        },
+        {
+          "body": [
+            [
+              {
+                "text": "The first paragraph of the card.",
+                "type": "text"
+              }
+            ],
+            [
+              {
+                "text": "A second paragraph with ",
+                "type": "text"
+              },
+              {
+                "children": [
+                  {
+                    "text": "emphasis",
+                    "type": "text"
+                  }
+                ],
+                "type": "em"
+              },
+              {
+                "text": ".",
+                "type": "text"
+              }
+            ]
+          ],
+          "kind": "card",
+          "title": "After",
+          "tone": "accent"
+        }
+      ],
+      "type": "figures"
+    },
+    {
+      "caption": [
+        {
+          "text": "Three ways to show it.",
+          "type": "text"
+        }
+      ],
+      "id": "row-three",
+      "items": [
+        {
+          "alt": "The image",
+          "caption": null,
+          "kind": "image",
+          "src": "a.webp"
+        },
+        {
+          "caption": [
+            {
+              "text": "The stack.",
+              "type": "text"
+            }
+          ],
+          "diagram": {
+            "kind": "stack",
+            "layers": [
+              {
+                "items": null,
+                "label": "UI",
+                "tone": null
+              },
+              {
+                "items": [
+                  "FastAPI",
+                  "uvicorn"
+                ],
+                "label": "API",
+                "tone": "muted"
+              }
+            ],
+            "nested": null,
+            "title": "Layers"
+          },
+          "kind": "diagram"
+        },
+        {
+          "caption": null,
+          "kind": "svg",
+          "label": "A square",
+          "svg": {
+            "attrs": {
+              "viewBox": "0 0 10 10"
+            },
+            "children": [
+              {
+                "attrs": {
+                  "class": "kb-stroke-accent",
+                  "fill": "none",
+                  "height": "8",
+                  "width": "8",
+                  "x": "1",
+                  "y": "1"
+                },
+                "children": [],
+                "name": "rect"
+              }
+            ],
+            "name": "svg"
+          }
+        }
+      ],
+      "type": "figures"
+    },
+    {
+      "content": [
+        {
+          "text": "Text after the row.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

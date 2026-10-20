@@ -1,0 +1,16 @@
+=== callouts
+A note with no title.
+The key idea
+Body with strong text.
+a list inside
+and more
+Careful
+Warning body.
+Caution body.
+Skip this if you know SQL
+Skippable body.
+Primer: write lock
+A collapsed definition.
+A quote inside a callout.
+Lowercase type
+Normalized to NOTE.

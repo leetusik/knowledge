@@ -1,0 +1,10 @@
+=== figures
+
+=== fig-full
+
+=== figure-1
+
+=== row-two
+
+=== row-three
+Text after the row.

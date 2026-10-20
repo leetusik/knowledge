@@ -1,0 +1,251 @@
+{
+  "blocks": [
+    {
+      "actors": [
+        {
+          "id": "user",
+          "label": "User"
+        },
+        {
+          "id": "web",
+          "label": "Web"
+        },
+        {
+          "id": "api",
+          "label": "API"
+        }
+      ],
+      "caption": null,
+      "id": "handshake",
+      "kind": "sequence",
+      "steps": [
+        {
+          "from": "user",
+          "label": "Submit",
+          "note": null,
+          "style": null,
+          "to": "web"
+        },
+        {
+          "from": "web",
+          "label": "POST /login",
+          "note": "over TLS",
+          "style": null,
+          "to": "api"
+        },
+        {
+          "from": "api",
+          "label": "token",
+          "note": null,
+          "style": "dashed",
+          "to": "web"
+        },
+        {
+          "from": "web",
+          "label": "store cookie",
+          "note": null,
+          "style": null,
+          "to": "web"
+        }
+      ],
+      "title": "Sign in",
+      "type": "diagram"
+    },
+    {
+      "caption": null,
+      "id": "layers",
+      "kind": "stack",
+      "layers": [
+        {
+          "items": null,
+          "label": "Browser",
+          "tone": "series-1"
+        },
+        {
+          "items": [
+            "BFF",
+            "pages"
+          ],
+          "label": "Next.js",
+          "tone": null
+        },
+        {
+          "items": null,
+          "label": "FastAPI",
+          "tone": null
+        }
+      ],
+      "nested": true,
+      "title": "The layers",
+      "type": "diagram"
+    },
+    {
+      "axis": {
+        "from": 0,
+        "ticks": [
+          0,
+          10,
+          20,
+          30
+        ],
+        "to": 30,
+        "unit": "days"
+      },
+      "caption": null,
+      "id": "rollout",
+      "kind": "timeline",
+      "lanes": [
+        {
+          "bars": [
+            {
+              "from": 0,
+              "label": "Server",
+              "to": 12,
+              "tone": "accent"
+            },
+            {
+              "from": 10,
+              "label": null,
+              "to": 20,
+              "tone": null
+            }
+          ],
+          "label": "Build",
+          "marks": [
+            {
+              "at": 20,
+              "label": "Review"
+            }
+          ]
+        },
+        {
+          "bars": [],
+          "label": "Ship",
+          "marks": null
+        }
+      ],
+      "title": "The rollout",
+      "type": "diagram"
+    },
+    {
+      "caption": null,
+      "id": "per-day",
+      "kind": "chart",
+      "rules": [
+        {
+          "at": 25,
+          "label": "Goal"
+        }
+      ],
+      "series": [
+        {
+          "name": "Cards",
+          "tone": "series-2",
+          "values": [
+            12,
+            30,
+            7
+          ]
+        },
+        {
+          "name": "Highlights",
+          "tone": null,
+          "values": [
+            3,
+            4.5,
+            0
+          ]
+        }
+      ],
+      "title": "Reviews per day",
+      "type": "bar",
+      "x": {
+        "categories": [
+          "Mon",
+          "Tue",
+          "Wed"
+        ],
+        "label": "Day",
+        "numeric": null
+      },
+      "y": {
+        "label": "Reviews",
+        "max": 50,
+        "min": 0
+      }
+    },
+    {
+      "caption": null,
+      "id": "retention",
+      "kind": "chart",
+      "rules": null,
+      "series": [
+        {
+          "name": "Recall",
+          "tone": null,
+          "values": [
+            1,
+            0.9,
+            0.8,
+            0.75
+          ]
+        }
+      ],
+      "title": "Retention",
+      "type": "line",
+      "x": {
+        "categories": null,
+        "label": "Days since review",
+        "numeric": {
+          "from": 1,
+          "to": 30
+        }
+      },
+      "y": {
+        "label": "Recall",
+        "max": null,
+        "min": null
+      }
+    },
+    {
+      "caption": null,
+      "id": "spread",
+      "kind": "chart",
+      "rules": null,
+      "series": [
+        {
+          "name": "Interval",
+          "tone": null,
+          "values": [
+            [
+              4,
+              9,
+              21
+            ],
+            [
+              7,
+              15
+            ]
+          ]
+        }
+      ],
+      "title": "Spread",
+      "type": "interval",
+      "x": {
+        "categories": [
+          "A",
+          "B"
+        ],
+        "label": "Deck",
+        "numeric": null
+      },
+      "y": {
+        "label": "Days",
+        "max": null,
+        "min": null
+      }
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}
