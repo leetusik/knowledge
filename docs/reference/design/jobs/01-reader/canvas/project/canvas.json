@@ -41,21 +41,21 @@
    "x": 0,
    "y": 1489,
    "w": 2200,
-   "h": 2300,
+   "h": 2352,
    "title": "05 · Foundations — reading type, sizes, sepia and syntax roles (proposed)"
   },
   "TopStates.dc.html": {
    "x": 2280,
    "y": 1489,
    "w": 2560,
-   "h": 703,
+   "h": 1013,
    "title": "06 · Component — Top bar and progress line"
   },
   "BottomStates.dc.html": {
    "x": 4920,
    "y": 1489,
    "w": 2560,
-   "h": 707,
+   "h": 923,
    "title": "07 · Component — Chapter bar"
   },
   "HeadStates.dc.html": {

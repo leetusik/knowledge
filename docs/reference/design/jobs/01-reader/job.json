@@ -5,7 +5,7 @@
   "title": "The reader",
   "canvas": {
     "url": "https://claude.ai/artifact/MRzppHqkh5aCqpkBa8QCVY",
-    "version": "1792405111-eccf",
+    "version": "1792513047-6269",
     "published": [
       "project/BottomStates.dc.html",
       "project/Callout.dc.html",
@@ -44,7 +44,45 @@
       "project/reader.css",
       "project/reader.js"
     ],
-    "system": "1792321604-e214"
+    "system": "1792321604-e214",
+    "manifest": {
+      "project/BottomStates.dc.html": 4187,
+      "project/Callout.dc.html": 20295,
+      "project/CalloutStates.dc.html": 2715,
+      "project/ChapterEnd.dc.html": 6793,
+      "project/ChapterHead.dc.html": 4682,
+      "project/ChapterList.dc.html": 3965,
+      "project/CodeBlock.dc.html": 3982,
+      "project/CodeStates.dc.html": 3374,
+      "project/DisplayPanel.dc.html": 3571,
+      "project/DisplayStates.dc.html": 2011,
+      "project/Elsewhere.dc.html": 4903,
+      "project/EndStates.dc.html": 2773,
+      "project/Foundations.dc.html": 14571,
+      "project/HeadStates.dc.html": 2492,
+      "project/ListStates.dc.html": 3166,
+      "project/Main.dc.html": 3730,
+      "project/Prose.dc.html": 29460,
+      "project/ProseStates.dc.html": 3471,
+      "project/ProseTable.dc.html": 7774,
+      "project/Reader.dc.html": 20206,
+      "project/ReaderBottom.dc.html": 3653,
+      "project/ReaderState.dc.html": 3384,
+      "project/ReaderTop.dc.html": 4013,
+      "project/SaveStates.dc.html": 2037,
+      "project/SignInToSave.dc.html": 1851,
+      "project/StateStates.dc.html": 2035,
+      "project/TableStates.dc.html": 2955,
+      "project/TopStates.dc.html": 4333,
+      "project/VersionList.dc.html": 3255,
+      "project/VersionStates.dc.html": 2053,
+      "project/Widths.dc.html": 7512,
+      "project/assets/logo.svg": 519,
+      "project/canvas.json": 5693,
+      "project/flow.js": 17732,
+      "project/reader.css": 66285,
+      "project/reader.js": 80156
+    }
   },
-  "status": "signed"
+  "status": "open"
 }

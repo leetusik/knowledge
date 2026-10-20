@@ -15,7 +15,7 @@
 <div class="{{ frameCls }}" data-theme="{{ theme }}"><div class="rd-in">
 <div class="an-page" ref="{{ setBox }}">
 <sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
-<header class="an-page__top"><a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ logo }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a><a class="rd-back" href="#top" onclick="{{ back }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="an-page__backt">Back to the chapter</span></a></header>
+<header class="an-page__top"><a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ logo }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a><a class="rd-back" href="#top" onclick="{{ back }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="an-page__backt">{{ backText }}</span></a></header>
 <main class="an-page__main">
 <p class="an-page__book">{{ bookTitle }}</p>
 <h1 class="an-page__title">Notes in this book</h1>
@@ -28,7 +28,7 @@
 <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div class="an-slot an-slot--toast an-slot--page"><dc-import name="Toast" bare="{{ true }}" text="{{ toast }}" on-undo="{{ undo }}" hint-size="100%,48px"></dc-import></div></sc-if>
 </div></div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"ann":{"editor":null},"filter":{"editor":null},"editLabel":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"scrollToken":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onGo":{"editor":null},"onDelete":{"editor":null},"onLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onFilter":{"editor":null},"toast":{"editor":null},"onUndo":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"ann":{"editor":null},"from":{"editor":null},"filter":{"editor":null},"editLabel":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"scrollToken":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onGo":{"editor":null},"onDelete":{"editor":null},"onLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onFilter":{"editor":null},"toast":{"editor":null},"onUndo":{"editor":null},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   constructor(p) {
     super(p);
@@ -79,6 +79,8 @@ class Component extends DCLogic {
       frameCls: 'rd-frame rd-size-' + (P.size || 3) + ' rd-theme-' + (P.theme || 'light') + (P.fit === 'fill' ? ' rd-frame--fill' : ' rd-frame--alone'),
       theme: P.theme || 'light',
       bookTitle: book ? book.title : 'The knowledge maintainer guide',
+      /* round 02 (book-page 7): opened from the book page, the back link returns there; from a chapter, as signed */
+      backText: P.from === 'book' ? 'Back to the book' : 'Back to the chapter',
       countLine,
       filters: F.map(([k, label]) => ({ label, n: n[k], pressed: filter === k, pick: () => { if (P.onFilter) P.onFilter(k); else this.setState({ filter: k }); } })),
       isEmpty: shown.length === 0, emptyLine: EMPTY[filter],

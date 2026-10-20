@@ -13,12 +13,12 @@
 <div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
 <nav class="rd-bottom" aria-label="Chapters">
 <div class="rd-bottom__cell">
-<sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--prev" href="#top" onclick="{{ prev }}"><span class="rd-bnav__dir"><span class="rd-bnav__chev" aria-hidden="true">‹</span> Previous</span><span class="rd-bnav__sub" lang="{{ prevLang }}">{{ prevTitle }}</span></a></sc-if>
+<sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--prev" href="#top" onclick="{{ prev }}"><span class="rd-bnav__dir"><span class="rd-bnav__chev" aria-hidden="true">‹</span> Previous</span><span class="rd-bnav__mark" aria-hidden="true">‹</span><span class="rd-bnav__sub" lang="{{ prevLang }}">{{ prevTitle }}</span></a></sc-if>
 </div>
-<button type="button" class="rd-bnav rd-bnav--mid" aria-haspopup="dialog" aria-expanded="{{ listOpen }}" onclick="{{ contents }}"><span class="rd-bnav__dir">Contents</span><span class="rd-bnav__sub">{{ where }}</span></button>
+<button type="button" class="rd-bnav rd-bnav--mid" aria-haspopup="dialog" aria-expanded="{{ listOpen }}" onclick="{{ contents }}"><span class="rd-bnav__dir">Contents</span><span class="rd-bnav__sub">{{ where }}</span><span class="rd-bnav__count" aria-hidden="true">{{ count }}</span></button>
 <div class="rd-bottom__cell rd-bottom__cell--end">
-<sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ next }}"><span class="rd-bnav__dir">Next →</span><span class="rd-bnav__sub" lang="{{ nextLang }}">{{ nextTitle }}</span></a></sc-if>
-<sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ book }}"><span class="rd-bnav__dir"><span class="rd-bnav__long">Back to the book →</span><span class="rd-bnav__short">The book →</span></span><span class="rd-bnav__sub">{{ bookTitle }}</span></a></sc-if>
+<sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ next }}"><span class="rd-bnav__dir">Next →</span><span class="rd-bnav__mark" aria-hidden="true">→</span><span class="rd-bnav__sub" lang="{{ nextLang }}">{{ nextTitle }}</span></a></sc-if>
+<sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}"><a class="rd-bnav rd-bnav--next" href="#top" onclick="{{ book }}"><span class="rd-bnav__dir"><span class="rd-bnav__long">Back to the book →</span><span class="rd-bnav__short">The book →</span></span><span class="rd-bnav__mark" aria-hidden="true">→</span><span class="rd-bnav__sub">{{ bookTitle }}</span></a></sc-if>
 </div>
 </nav>
 </div></div>
@@ -48,6 +48,7 @@ class Component extends DCLogic {
       nextLang: P.nextLang || 'en',
       bookTitle: P.bookTitle || 'The knowledge maintainer guide',
       where: 'Chapter ' + n + ' of ' + total + ' · ' + pct + '%',
+      count: n + ' of ' + total,
       listOpen: P.panel === 'contents',
       prev: this.call('onPrev'),
       next: this.call('onNext'),

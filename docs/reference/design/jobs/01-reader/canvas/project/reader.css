@@ -68,6 +68,9 @@ html, body { margin: 0; }
   --rd-line: 3px;
   --rd-gut: var(--kb-app-gutter-phone);
   --rd-ease: 0.15s ease;
+  /* Round 03: the boundary of a bordered control (secondary button, language switch, display option). It takes
+     kb-hint's value in each theme, at least 3:1 on kb-surface (WCAG 1.4.11); structural hairlines keep kb-border-strong. */
+  --rd-control-edge: var(--kb-hint);
   position: relative;
   overflow: hidden;
   container: rd / inline-size;
@@ -113,7 +116,7 @@ html, body { margin: 0; }
 }
 .rd-btn--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
 .rd-btn--primary:hover { background: var(--kb-accent-strong); }
-.rd-btn--secondary { background: var(--kb-surface); border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.rd-btn--secondary { background: var(--kb-surface); border-color: var(--rd-control-edge); color: var(--kb-ink); }
 .rd-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
 .rd-btn--ghost { border-color: var(--kb-border); color: var(--kb-secondary); }
 .rd-btn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
@@ -167,13 +170,15 @@ html, body { margin: 0; }
 .rd-tbtn:hover { background: var(--kb-surface-sunken); }
 .rd-tbtn[aria-expanded="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
 .rd-tbtn--signin { display: none; color: var(--kb-accent); }
-.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
+.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
 .rd-lang__opt {
-  min-height: var(--kb-tap); padding-inline: 0.6rem; border: 0; border-radius: calc(var(--kb-radius-sm) - 1px);
+  min-height: var(--kb-tap); padding-inline: calc(0.6rem - 1px); border: 1px solid transparent; border-radius: calc(var(--kb-radius-sm) - 1px);
   background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer;
 }
 .rd-lang__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
-.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+/* Round 03: the chosen language also takes a 1px accent edge (at least 3:1), drawn in a border the option always
+   carries, so its size never changes */
+.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); border-color: var(--kb-accent); }
 @container rd (min-width: 40rem) {
   .rd-back__long { display: inline; }
   .rd-back__short { display: none; }
@@ -225,6 +230,45 @@ html, body { margin: 0; }
   .rd-bnav__long { display: inline; }
   .rd-bnav__short { display: none; }
   .rd-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 13rem) minmax(0, 1fr); }
+}
+
+/* ---------- Compact chrome (round 03): the bars under large text and on a narrow phone ----------
+   Measured on the reader's container in rem, so a phone at large text (390 px is 16.25rem at 150% and 12.2rem at 200%)
+   and a narrow phone (320 px at 100% is 20rem) get one answer. At 390 px and 100% (24.4rem) none of this applies. */
+/* The language switch has two slots in the bar: before Display (the signed place) and after it (critique C02). Only one
+   shows: the second only when the switch takes the bar's second row, so Tab and reading order follow the rows. */
+.rd-lang--row { display: none; }
+@container rd (max-width: 20.99rem) {
+  /* The top bar. Display's sides tighten. */
+  .rd-tbtn { padding-inline: 0.5rem; }
+  /* A chapter in two languages: the language switch takes a second row of the bar, at its end edge. */
+  .rd-langs > .rd-in { --rd-top-h: 6.5rem; }
+  .rd-langs .rd-top { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .rd-langs .rd-top__end { display: contents; }
+  .rd-langs .rd-lang--bar { display: none; }
+  .rd-langs .rd-lang--row { display: inline-flex; grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+  .rd-langs .rd-top__end > .rd-tbtn { grid-row: 1; grid-column: 2; }
+}
+@container rd (max-width: 13.99rem) {
+  /* A loose document's back link is "‹ Library", the logo's own destination: the logo steps aside so the label stays whole. */
+  .rd-loose .rd-logo { display: none; }
+}
+/* The chapter bar's compact marks: never drawn above 20rem, so the signed bar is untouched there */
+.rd-bnav__mark, .rd-bnav__count { display: none; }
+@container rd (max-width: 19.99rem) {
+  /* The chapter bar. Previous and Next show only their marks, in square targets; Contents fills the middle, over
+     "2 of 5" (the progress line carries the percentage). One row, the same height. The signed labels stay in place,
+     visually hidden, so every accessible name is the signed one; the marks and the short count are aria-hidden. */
+  .rd-bottom { grid-template-columns: var(--kb-tap) minmax(0, 1fr) var(--kb-tap); }
+  .rd-bnav--prev, .rd-bnav--next { padding-inline: 0; align-items: center; }
+  .rd-bnav--mid { max-width: none; padding-inline: var(--kb-space-xs); }
+  .rd-bnav--prev .rd-bnav__dir, .rd-bnav--next .rd-bnav__dir, .rd-bnav--mid .rd-bnav__sub {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: visible; white-space: nowrap; clip-path: inset(50%);
+  }
+  .rd-bnav__mark { display: block; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1; color: var(--kb-ink); }
+  /* Alone, the chevron carries the control: ink, and large enough to weigh what the arrow weighs */
+  .rd-bnav--prev .rd-bnav__mark { font-size: calc(0.9375rem * 1.35); }
+  .rd-bnav__count { display: block; font-size: 0.8125rem; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
 }
 
 /* ---------- The scroller and the article's track ---------- */
@@ -550,7 +594,7 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--kb-space-xs); }
 .rd-opt {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--kb-space-xs);
-  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm);
+  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm);
   background: var(--kb-surface); color: var(--kb-ink); cursor: pointer; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold);
   box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
 }
@@ -667,7 +711,9 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-sheet__group { margin-top: var(--kb-space-lg); }
 .rd-sheet__group:first-child { margin-top: 0; }
 .rd-ch__tag { flex: none; }
-.rd-demo-top { height: calc(var(--rd-line) + var(--rd-top-h)); }
+/* One top bar alone: the frame holds the line and the bar in flow, so it grows when the bar takes two rows (round 03) */
+.rd-demo-top { padding-top: var(--rd-line); }
+.rd-demo-top .rd-top { position: relative; top: 0; }
 .rd-demo-bottom { height: var(--rd-bot-h); }
 .rd-demo-sheet { position: relative; height: 34rem; }
 .rd-demo-sheet .rd-sheet { position: absolute; }
@@ -729,11 +775,23 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-proto__stage { flex: none; min-height: 0; height: 52.75rem; }
 @media (min-width: 40rem) { .rd-proto__stage { height: 73.75rem; } }
 @media (min-width: 64rem) { .rd-proto__stage { height: 56.25rem; } }
+/* Round 03: the window row. "Fills the window" is the signed stage; a phone window is drawn 390 or 320 px wide and
+   844 px tall in the middle of a 900 px stage, at the root font size the row sets (px here, so text zoom never moves it). */
+.rd-proto__win { position: absolute; inset: 0; }
+.rd-proto__win > .sc-host { position: absolute; inset: 0; }
+.rd-proto__stage.rd-proto__stage--device { height: 900px; }
+.rd-proto__stage--device .rd-proto__win { inset: 28px 0 auto; height: 844px; margin-inline: auto; overflow: hidden; outline: 1px solid #d8ccb3; border-radius: 6px; }
+.rd-proto__win--390 { width: 390px; }
+.rd-proto__win--320 { width: 320px; }
+.rd-proto__cap { position: absolute; top: 5px; left: 0; right: 0; text-align: center; font-family: "Source Sans 3", system-ui, sans-serif; }
 /* The three-widths contact sheet (canvas only) */
 .rd-widths { background: #f4f3ef; min-height: 100%; }
 .rd-widths__board { min-height: 0; }
 .rd-widths__row { display: flex; gap: 40px; align-items: flex-start; }
 .rd-stage--phone { width: 390px; height: 844px; }
+.rd-stage--phone.rd-stage--narrow { width: 320px; }
+/* The phone's cell keeps 390 px, so narrowing the phone never moves the iPad and desktop frames */
+.rd-widths__phone { width: 390px; }
 .rd-stage--ipad { width: 820px; height: 1180px; }
 .rd-stage--desk { width: 1440px; height: 900px; }
 .rd-board__rows { display: flex; flex-direction: column; gap: 40px; }
