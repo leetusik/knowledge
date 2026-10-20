@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The library at 390, 820, 1024 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+<script src="libflow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-widths" ref="{{ setRoot }}">
+<div class="lib-widths__body">
+<div class="lib-board__head"><p class="lib-board__title">The member’s library at the four reference sizes</p>
+<p class="lib-board__lead">One prototype state drawn four times; a click in any frame moves all four. Each frame carries the state bar at the top of its page, so it scrolls away with the page, and the bar lists only the page on screen. A state or theme picked in any frame shows in all four. The public library has its own sheet.</p></div>
+<div class="lib-widths__row">
+<div class="lib-cell"><p class="lib-cap">Phone · 390 × 844</p><div class="lib-stage lib-stage--phone"><sc-if value="{{ inLib }}" hint-placeholder-val="{{ true }}"><dc-import name="Library" fit="stage" bar="{{ bar }}" route="{{ l.route }}" viewer="{{ l.viewer }}" theme="{{ l.theme }}" data="{{ l.data }}" prog="{{ l.prog }}" group="{{ l.group }}" status="{{ l.status }}" pub="{{ l.pub }}" clear="{{ l.clear }}" folded="{{ l.folded }}" expanded="{{ l.expanded }}" due="{{ l.due }}" on-go="{{ l.onGo }}" on-group="{{ l.onGroup }}" on-fold="{{ l.onFold }}" on-more="{{ l.onMore }}" on-clear="{{ l.onClear }}" on-retry="{{ l.onRetry }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="stage" bar="{{ bar }}" kind="{{ w.kind }}" detail="{{ w.detail }}" back-label="{{ w.backLabel }}" on-back="{{ w.onBack }}" on-primary="{{ w.onPrimary }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="lib-cell"><p class="lib-cap">iPad portrait · 820 × 1180</p><div class="lib-stage lib-stage--ipad"><sc-if value="{{ inLib }}" hint-placeholder-val="{{ true }}"><dc-import name="Library" fit="stage" bar="{{ bar }}" route="{{ l.route }}" viewer="{{ l.viewer }}" theme="{{ l.theme }}" data="{{ l.data }}" prog="{{ l.prog }}" group="{{ l.group }}" status="{{ l.status }}" pub="{{ l.pub }}" clear="{{ l.clear }}" folded="{{ l.folded }}" expanded="{{ l.expanded }}" due="{{ l.due }}" on-go="{{ l.onGo }}" on-group="{{ l.onGroup }}" on-fold="{{ l.onFold }}" on-more="{{ l.onMore }}" on-clear="{{ l.onClear }}" on-retry="{{ l.onRetry }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="stage" bar="{{ bar }}" kind="{{ w.kind }}" detail="{{ w.detail }}" back-label="{{ w.backLabel }}" on-back="{{ w.onBack }}" on-primary="{{ w.onPrimary }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="lib-cell"><p class="lib-cap">iPad landscape · 1024 × 768</p><div class="lib-stage lib-stage--land"><sc-if value="{{ inLib }}" hint-placeholder-val="{{ true }}"><dc-import name="Library" fit="stage" bar="{{ bar }}" route="{{ l.route }}" viewer="{{ l.viewer }}" theme="{{ l.theme }}" data="{{ l.data }}" prog="{{ l.prog }}" group="{{ l.group }}" status="{{ l.status }}" pub="{{ l.pub }}" clear="{{ l.clear }}" folded="{{ l.folded }}" expanded="{{ l.expanded }}" due="{{ l.due }}" on-go="{{ l.onGo }}" on-group="{{ l.onGroup }}" on-fold="{{ l.onFold }}" on-more="{{ l.onMore }}" on-clear="{{ l.onClear }}" on-retry="{{ l.onRetry }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="stage" bar="{{ bar }}" kind="{{ w.kind }}" detail="{{ w.detail }}" back-label="{{ w.backLabel }}" on-back="{{ w.onBack }}" on-primary="{{ w.onPrimary }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="lib-cell"><p class="lib-cap">Desktop · 1440 × 900</p><div class="lib-stage lib-stage--desk"><sc-if value="{{ inLib }}" hint-placeholder-val="{{ true }}"><dc-import name="Library" fit="stage" bar="{{ bar }}" route="{{ l.route }}" viewer="{{ l.viewer }}" theme="{{ l.theme }}" data="{{ l.data }}" prog="{{ l.prog }}" group="{{ l.group }}" status="{{ l.status }}" pub="{{ l.pub }}" clear="{{ l.clear }}" folded="{{ l.folded }}" expanded="{{ l.expanded }}" due="{{ l.due }}" on-go="{{ l.onGo }}" on-group="{{ l.onGroup }}" on-fold="{{ l.onFold }}" on-more="{{ l.onMore }}" on-clear="{{ l.onClear }}" on-retry="{{ l.onRetry }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="stage" bar="{{ bar }}" kind="{{ w.kind }}" detail="{{ w.detail }}" back-label="{{ w.backLabel }}" on-back="{{ w.onBack }}" on-primary="{{ w.onPrimary }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3866,"height":1380}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.flow = 'main';
+    this.state = window.LIB.flow.initial('lp', 'light');
+    this.a = window.LIB.flow.api(this);
+  }
+  setRoot = (el) => { this.root = el; };
+  scrollPos() { return window.LIB.flow.scrollPos(this.root); }
+  componentDidUpdate(prevProps, prevState) {
+    const sc = this.state.scroll, was = prevState && prevState.scroll;
+    if (sc && (!was || sc.tok !== was.tok)) window.LIB.flow.applyScroll(this.root, sc);
+  }
+  renderVals() {
+    const F = window.LIB.flow, s = this.state;
+    return {
+      setRoot: this.setRoot,
+      bar: F.bar(this, this.a),
+      inLib: !s.away,
+      isAway: !!s.away,
+      l: F.libraryProps(this, this.a),
+      w: F.awayProps(this, this.a),
+    };
+  }
+}
+</script>
+</body>
+</html>

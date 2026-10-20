@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loose document row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lib-board">
+<div class="lib-board__head"><p class="lib-board__title">Loose document row</p>
+<p class="lib-board__lead">A loose document is a row, never a card, so it can never pass for a one-chapter book. It carries the reader’s state words (Not started, Started · N%, Finished), its date, UPDATED when it changed since you finished it, ORIGINAL LAYOUT when it is legacy, and its project only outside its project’s shelf. No version numbers, and nothing that implies a series.</p></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3"><div class="lib-board__group"><p class="lib-board__rowtitle">{{ r.name }}</p><div class="lib-board__row"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="8"><div class="lib-cell"><p class="lib-cap" style="{{ c.capStyle }}">{{ c.cap }}</p><dc-import name="DocRow" doc="{{ c.doc }}" theme="{{ c.theme }}" hint-size="480px,110px"></dc-import></div></sc-for></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2056,"height":1212}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = window.LIB, B = L.BOOKS, PR = L.PROG, DS = L.DATASETS;
+    const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const cap = (w) => 'max-width: ' + w + 'px';
+    const D = (id) => L.DOCS.concat(L.SUBJECT_DOCS, L.LONG_DOCS).filter((d) => d.id === id)[0];
+    const S = [
+      ['Native · started at a section', L.docRow(D('field-notes/sqlite-wal'), PR.default, true, false)],
+      ['Plain md · finished', L.docRow(D('field-notes/wal-files'), PR.default, true, false)],
+      ['Legacy · not started', L.docRow(D('lantern/release-day'), PR.default, true, false)],
+      ['Legacy at v3 · finished on v2, so Updated', L.docRow(D('quayside/ingest-dead-letter'), PR.default, true, false)],
+      ['English with Korean terms · started', L.docRow(D('helpdesk/honorifics'), PR.default, true, false)],
+      ['A Korean title · not started', L.docRow(D('field-notes/checkpoint-ko'), PR.default, true, false)],
+      ['Outside its project shelf · project named', L.docRow(D('english/articles-uncountable'), PR.default, true, true)],
+      ['Signed out · the date only', L.docRow(D('field-notes/sqlite-wal'), PR.none, false, false)],
+    ];
+    return { rows: THEMES.map(([t, name]) => ({ name, cells: S.map(([c, d]) => ({ cap: c, capStyle: cap(480), doc: d, theme: t })) })) };
+  }
+}
+</script>
+</body>
+</html>

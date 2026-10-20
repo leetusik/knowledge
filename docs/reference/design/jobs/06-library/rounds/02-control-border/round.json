@@ -3,14 +3,42 @@
   "round": "02-control-border",
   "title": "control border",
   "slice": "P29.S6",
-  "status": "open",
+  "status": "signed",
   "opened_at": "2026-10-21T00:23:28+09:00",
-  "closed_at": null,
+  "closed_at": "2026-10-21T02:10:03+09:00",
   "supersedes": [
     "01-library"
   ],
-  "signoff_words": null,
-  "canvas_version": null,
+  "signoff_words": "do as your recommendations for all. and don't stop till the phase done. skip the blockers, everything do as your recommendation. go.",
+  "canvas_version": "1792516119-4054",
   "critique": "critic",
-  "published": "1792511621-bd73"
+  "published": "1792511621-bd73",
+  "readback": {
+    "version": "1792516119-4054",
+    "base": "1792511621-bd73",
+    "result": "unchanged",
+    "files": [
+      "project/BookCard.dc.html",
+      "project/BookCardStates.dc.html",
+      "project/ClearAll.dc.html",
+      "project/ClearStates.dc.html",
+      "project/ContinueReading.dc.html",
+      "project/ContinueStates.dc.html",
+      "project/DocRow.dc.html",
+      "project/DocRowStates.dc.html",
+      "project/Elsewhere.dc.html",
+      "project/Grouping.dc.html",
+      "project/GroupingStates.dc.html",
+      "project/Library.dc.html",
+      "project/LibraryState.dc.html",
+      "project/Main.dc.html",
+      "project/PublicLibrary.dc.html",
+      "project/PublicWidths.dc.html",
+      "project/ShellStates.dc.html",
+      "project/StateStates.dc.html",
+      "project/Widths.dc.html"
+    ],
+    "removed": [],
+    "at": "2026-10-21T02:09:46+09:00"
+  }
 }

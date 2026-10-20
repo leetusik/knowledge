@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Margin notes</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Margin notes</p>
+<p class="rd-board__lead">From 64rem the notes move out of the text into the right margin, each level with what it belongs to: a highlight’s note beside its first line; a section’s note, Text changed, another language and Bookmarked beside its heading. Long notes stop at four lines; the popover shows the rest. The one whose popover is open is tinted. Below 64rem the same markers sit under the heading (Component — Highlights in the text).</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="{{ c.stCls }}" style="{{ c.st }}"><dc-import name="MarginNote" item="{{ c.item }}" current="{{ c.current }}" theme="{{ c.theme }}" hint-size="100%,120px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":840}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD, AN = RD.an;
+    const px = (w) => 'width: ' + w + 'px';
+    const cell = (cap, w, o) => Object.assign({ cap, st: px(w), stCls: 'rd-stage', theme: 'light' }, o);
+
+    const seed = AN.seed('default');
+    const H = (id) => seed.hl.filter((a) => a.id === id)[0];
+    const M = (cap, item, o) => cell(cap, 256, Object.assign({ item, current: false }, o));
+    const note = (id) => ({ kind: 'note', label: 'Note', text: H(id).note, lang: AN.langOf(H(id).note, 'en') });
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia']];
+    const rows = [
+      { title: 'A highlight’s note', cells: [M('Short', note('a9')), M('Long · stops at four lines', note('a7')), M('Korean', note('a14')), M('Its popover is open', note('a2'), { current: true })] },
+      { title: 'Beside a heading', cells: [
+        M('A note on a section', { kind: 'bnote', label: 'Note on this section', text: H('b2').note, lang: 'en' }),
+        M('Bookmarked · with a label', { kind: 'bm', label: 'Bookmarked', text: 'Flags to check before a deploy', lang: 'en' }),
+        M('Bookmarked · no label', { kind: 'bm', label: 'Bookmarked', text: '', lang: 'en' }),
+        M('Text changed', { kind: 'changed', label: 'Text changed', text: '2 highlights you made no longer match the text', lang: 'en' }),
+        M('Another language', { kind: 'other', label: '', text: '1 highlight in ', lang: 'en', hasL: true, ll: 'ko', lname: '한국어' }) ] },
+      { title: 'Dark and sepia', cells: TH.slice(1).map(([t, n]) => M(n + ' · a note', note('a2'), { theme: t })).concat(TH.slice(1).map(([t, n]) => M(n + ' · bookmarked', { kind: 'bm', label: 'Bookmarked', text: 'Route table', lang: 'en' }, { theme: t }))).concat([M('Dark · open', note('a2'), { theme: 'dark', current: true })]) },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

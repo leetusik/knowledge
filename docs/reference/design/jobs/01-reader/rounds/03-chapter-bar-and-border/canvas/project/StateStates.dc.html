@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component — Loading, not found, failed</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-board">
+<p class="rd-board__title">Component — Loading, not found, failed</p>
+<p class="rd-board__lead">Loading draws the chapter's own shape in sunken blocks with the border sheen, still under reduced motion. Not found is short, never hints at a private chapter, and goes back to the library. A failed load keeps the bar and speaks editorially, with one action.</p>
+<div class="rd-board__rows"><sc-for list="{{ rows }}" as="row" hint-placeholder-count="2"><div class="rd-board__group"><p class="rd-board__rowtitle">{{ row.title }}</p><div class="rd-row"><sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3"><div class="rd-cell"><p class="rd-cap">{{ c.cap }}</p><div class="rd-stage" style="{{ c.st }}"><dc-import name="ReaderState" kind="{{ c.kind }}" noun="{{ c.noun }}" theme="{{ c.theme }}" hint-size="100%,520px"></dc-import></div></div></sc-for></div></div></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2600,"height":1988}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const RD = window.RD;
+    const px = (w) => 'width: ' + w + 'px';
+
+    const R = (cap, w, kind, o) => Object.assign({ cap, st: px(w), kind, noun: 'chapter', theme: 'light' }, o);
+    const rows = [
+      { title: 'iPad · 820', cells: [R('Loading', 820, 'loading', {}), R('Not found · sepia', 820, 'notfound', { theme: 'sepia' }), R('Failed to load · dark', 820, 'failed', { theme: 'dark' })] },
+      { title: 'Phone · 390', cells: [R('Loading · dark', 390, 'loading', { theme: 'dark' }), R('Not found', 390, 'notfound', {}), R('Failed to load · sepia', 390, 'failed', { theme: 'sepia' })] },
+    ];
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

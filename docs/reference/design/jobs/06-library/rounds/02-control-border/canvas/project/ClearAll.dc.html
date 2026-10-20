@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clear all reading data</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<section class="lib-data" aria-labelledby="lib-data-h" ref="{{ setRoot }}">
+<h2 class="lib-h2" id="lib-data-h">Your reading data</h2>
+<p class="lib-data__lead">What you've finished, your place in each book and document, bookmarks, highlights, notes, quiz answers and review cards. Only you can see them.</p>
+<sc-if value="{{ isCleared }}" hint-placeholder-val="{{ false }}"><p class="lib-data__done" role="status" tabindex="-1" data-done="1"><b>All reading data cleared.</b> <span>Every book and document is back to the start.</span></p></sc-if>
+<sc-if value="{{ showTrigger }}" hint-placeholder-val="{{ true }}"><button type="button" class="lib-btn lib-btn--secondary" data-trigger="1" onclick="{{ start }}">Clear all reading data</button></sc-if>
+<sc-if value="{{ showConfirm }}" hint-placeholder-val="{{ false }}"><div class="lib-confirm" role="group" aria-labelledby="lib-confirm-h" onkeydown="{{ onKey }}">
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><p class="lib-confirm__error" role="alert"><b>Nothing was cleared.</b> Something on our side stopped, so your reading data is as it was. Try again.</p></sc-if>
+<p class="lib-confirm__title" id="lib-confirm-h">Clear all reading data?</p>
+<p class="lib-confirm__text">This removes, from every library you read:</p>
+<ul class="lib-confirm__list">
+<li>your place and progress in every book and document</li>
+<li>bookmarks</li>
+<li>highlights and notes</li>
+<li>quiz answers</li>
+<li>review cards and their schedule</li>
+</ul>
+<p class="lib-confirm__keep">It keeps the books and documents themselves, your review settings, and your display settings on this device. It can't be undone.</p>
+<div class="lib-confirm__actions">
+<button type="button" class="lib-btn lib-btn--secondary" data-cancel="1" disabled="{{ busy }}" onclick="{{ cancel }}">Cancel</button>
+<button type="button" class="lib-btn lib-btn--danger" aria-busy="{{ busyAttr }}" onclick="{{ confirm }}"><span class="lib-btn__labels"><span class="{{ restCls }}">Yes, clear all reading data</span><span class="{{ busyCls }}" aria-hidden="{{ busyHidden }}"><span class="lib-spin" aria-hidden="true"></span>Clearing…</span></span></button>
+</div>
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}"><p class="lib-ref">ref · clr-5e81b0d4</p></sc-if>
+</div></sc-if>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"phase":{"editor":null},"onStart":{"editor":null},"onCancel":{"editor":null},"onConfirm":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"width":{"editor":null},"$preview":{"width":720,"height":198}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.want = null;
+  }
+  setRoot = (el) => { this.root = el; };
+  /* Focus follows a press made here (never a preset): the confirm opens on Cancel, Cancel and Escape return to the
+     trigger, and a finished clear lands on its status line. While clearing, focus stays on the pressed button. */
+  componentDidUpdate(prev) {
+    const ph = this.props.phase || 'rest', was = prev.phase || 'rest';
+    if (!this.want || ph === was || ph === 'clearing') return;
+    this.want = null;
+    const sel = { confirm: '[data-cancel]', rest: '[data-trigger]', cleared: '[data-done]' }[ph];
+    const el = sel && this.root && this.root.querySelector(sel);
+    if (el && el.focus) el.focus();
+  }
+  renderVals() {
+    const P = this.props;
+    const ph = P.phase || 'rest';
+    const busy = ph === 'clearing';
+    const bare = !!P.bare;
+    const call = (name) => (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      if (busy) return;
+      this.want = true;
+      const f = P[name];
+      if (f) f();
+    };
+    return {
+      setRoot: this.setRoot,
+      isCleared: ph === 'cleared',
+      showTrigger: ph === 'rest' || ph === 'cleared',
+      showConfirm: ph === 'confirm' || ph === 'clearing' || ph === 'failed',
+      isFailed: ph === 'failed',
+      busy,
+      busyAttr: busy ? 'true' : 'false',
+      restCls: busy ? 'is-off' : '',
+      busyCls: busy ? '' : 'is-off',
+      busyHidden: busy ? 'false' : 'true',
+      start: call('onStart'),
+      cancel: call('onCancel'),
+      confirm: call('onConfirm'),
+      onKey: (e) => {
+        if (e.key === 'Escape' && !busy) { e.preventDefault(); this.want = true; if (P.onCancel) P.onCancel(); }
+      },
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: ' + (P.width || 720) + 'px',
+    };
+  }
+}
+</script>
+</body>
+</html>

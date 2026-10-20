@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes — the chapter's highlights, notes and bookmarks</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="an-notes">
+<sc-if value="{{ anon }}" hint-placeholder-val="{{ false }}"><dc-import name="SignInToSave" bare="{{ true }}" what="highlights and notes" place="{{ place }}" on-sign-in="{{ signIn }}" on-dismiss="{{ dismiss }}" hint-size="100%,190px"></dc-import></sc-if>
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><p class="an-empty">{{ emptyLine }}</p></sc-if>
+<sc-if value="{{ hasItems }}" hint-placeholder-val="{{ true }}"><section class="an-group" aria-label="{{ mainLabel }}"><p class="an-group__lead">In reading order. Choose one to go to its place.</p><div class="an-list" role="list"><sc-for list="{{ items }}" as="it" hint-placeholder-count="4"><dc-import name="NoteItem" bare="{{ true }}" item="{{ it.item }}" ctx="panel" editing="{{ it.editing }}" on-go="{{ go }}" on-delete="{{ del }}" on-label="{{ label }}" on-save-label="{{ saveLabel }}" on-cancel-label="{{ cancelLabel }}" hint-size="100%,96px"></dc-import></sc-for></div></section></sc-if>
+<sc-if value="{{ hasOther }}" hint-placeholder-val="{{ false }}"><section class="an-group" aria-labelledby="{{ otherId }}"><div class="an-group__head"><h3 class="an-group__title" id="{{ otherId }}">In <span lang="{{ otherLang }}">{{ otherName }}</span></h3></div><p class="an-group__lead">Highlights belong to their language, so these are not painted here. Choose one to read it in <span lang="{{ otherLang }}">{{ otherName }}</span>.</p><div class="an-list" role="list"><sc-for list="{{ other }}" as="it" hint-placeholder-count="2"><dc-import name="NoteItem" bare="{{ true }}" item="{{ it.item }}" ctx="panel" on-go="{{ go }}" on-delete="{{ del }}" hint-size="100%,96px"></dc-import></sc-for></div></section></sc-if>
+<sc-if value="{{ hasOrphans }}" hint-placeholder-val="{{ false }}"><section class="an-group" aria-labelledby="{{ orphId }}"><div class="an-group__head"><h3 class="an-group__title" id="{{ orphId }}">Unanchored</h3></div><p class="an-group__lead">The text these were made on is no longer in this chapter. They stay until you delete them.</p><div class="an-list" role="list"><sc-for list="{{ orphans }}" as="it" hint-placeholder-count="2"><dc-import name="NoteItem" bare="{{ true }}" item="{{ it.item }}" ctx="panel" on-delete="{{ del }}" hint-size="100%,96px"></dc-import></sc-for></div></section></sc-if>
+<sc-if value="{{ hasBook }}" hint-placeholder-val="{{ true }}"><div class="an-foot"><a class="an-link" href="#top" onclick="{{ book }}">All notes in this book →</a></div></sc-if>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"items":{"editor":null},"other":{"editor":null},"orphans":{"editor":null},"otherLang":{"editor":null},"member":{"editor":null},"loose":{"editor":null},"editLabel":{"editor":null},"onGo":{"editor":null},"onDelete":{"editor":null},"onLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onBook":{"editor":null},"onSignIn":{"editor":null},"onDismiss":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":420,"height":3760}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.uid = 'np' + Math.random().toString(36).slice(2, 8);
+  }
+  renderVals() {
+    const P = this.props, RD = window.RD;
+    const bare = !!P.bare;
+    let items = P.items, other = P.other, orphans = P.orphans;
+    if (!items) {
+      const v = RD.an.view(RD.read('maintainer-guide/internals', 'en'), { ann: RD.an.seed('default') });
+      items = v.items; other = v.other; orphans = v.orphans;
+    }
+    other = other || []; orphans = orphans || [];
+    const member = P.member === undefined ? true : !!P.member;
+    const loose = !!P.loose;
+    const otherLang = P.otherLang || (other[0] && other[0].lang) || 'ko';
+    const fn = (name) => (x, y) => { const f = this.props[name]; if (f) f(x, y); };
+    const wrap = (list) => list.map((it) => ({ item: it, editing: P.editLabel === it.id }));
+    const any = items.length + other.length + orphans.length > 0;
+    return {
+      anon: !member, place: loose ? 'document' : 'chapter',
+      isEmpty: member && !any,
+      emptyLine: loose ? 'Nothing marked in this document yet: use Bookmark this position to keep a place.' : 'Nothing marked in this chapter yet: select a passage to highlight it, or bookmark a section from the bar at the bottom.',
+      hasItems: member && items.length > 0, items: wrap(items), mainLabel: loose ? 'In this document' : 'In this chapter',
+      hasOther: member && other.length > 0, other: wrap(other), otherLang, otherName: RD.an.LANG[otherLang] || otherLang, otherId: this.uid + '-o',
+      hasOrphans: member && orphans.length > 0, orphans: wrap(orphans), orphId: this.uid + '-u',
+      hasBook: member && !loose,
+      go: fn('onGo'), del: fn('onDelete'), label: fn('onLabel'), saveLabel: fn('onSaveLabel'),
+      cancelLabel: () => { if (P.onCancelLabel) P.onCancelLabel(); },
+      book: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onBook) P.onBook(); },
+      signIn: () => { if (P.onSignIn) P.onSignIn(); },
+      dismiss: () => { if (P.onDismiss) P.onDismiss(); },
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

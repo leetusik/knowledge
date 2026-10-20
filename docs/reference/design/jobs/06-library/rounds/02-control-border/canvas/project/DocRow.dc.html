@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loose document row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="library.css">
+<script src="library.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" style="{{ wrapStyle }}">
+<a class="lib-row" href="#top" onclick="{{ open }}">
+<span class="lib-row__title" lang="{{ d.lang }}"><sc-for list="{{ d.titleParts }}" as="p" hint-placeholder-count="1"><span lang="{{ p.lang }}">{{ p.t }}</span></sc-for></span>
+<span class="lib-row__meta"><sc-for list="{{ meta }}" as="m" hint-placeholder-count="2"><sc-if value="{{ m.sep }}" hint-placeholder-val="{{ false }}"><span class="lib-dot" aria-hidden="true">·</span></sc-if><span class="{{ m.cls }}">{{ m.t }}</span></sc-for><sc-if value="{{ d.updated }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--accent">Updated</span></sc-if><sc-if value="{{ d.legacy }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-tag--plain">Original layout</span></sc-if></span>
+</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":null},"onOpen":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"$preview":{"width":480,"height":108}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, L = window.LIB;
+    const d = P.doc || L.docRow(L.DOCS[0], L.PROG.default, true, false);
+    const meta = [];
+    if (d.showProject) meta.push({ t: d.project, cls: 'lib-label', sep: false });
+    if (d.member) {
+      let st = 'Not started';
+      if (d.state === 'started') st = d.pct > 0 ? 'Started · ' + d.pct + '%' : 'Started';
+      if (d.state === 'finished') st = 'Finished';
+      meta.push({ t: st, cls: '', sep: meta.length > 0 });
+    }
+    meta.push({ t: d.date, cls: '', sep: meta.length > 0 });
+    const bare = !!P.bare;
+    return {
+      d,
+      meta,
+      open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(d); },
+      wrapCls: bare ? 'lib-pass' : 'lib-ground',
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+      wrapStyle: bare ? undefined : 'width: 480px',
+    };
+  }
+}
+</script>
+</body>
+</html>

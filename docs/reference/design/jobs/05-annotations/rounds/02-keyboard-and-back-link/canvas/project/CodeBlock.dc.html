@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Code block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<figure class="{{ figCls }}">
+<sc-if value="{{ b.hasTitle }}" hint-placeholder-val="{{ true }}"><figcaption class="rd-code__bar"><span class="rd-code__title">{{ b.title }}</span><span class="rd-code__lang">{{ b.langLabel }}</span></figcaption></sc-if>
+<div class="rd-code__wrap"><pre class="rd-code__pre" ref="{{ setPre }}" tabindex="{{ tab }}" role="{{ role }}" aria-label="{{ aria }}" data-tx="{{ b.tx }}" data-sec="{{ b.sec }}" data-tk="{{ b.tk }}" data-base="{{ b.base }}"><code><sc-for list="{{ b.lines }}" as="ln" hint-placeholder-count="4"><span class="rd-code__ln" data-off="{{ ln.off }}"><sc-for list="{{ ln.toks }}" as="t" hint-placeholder-count="2"><span class="{{ t.c }}"><sc-for list="{{ t.parts }}" as="pt" hint-placeholder-count="1"><sc-if value="{{ pt.mk }}" hint-placeholder-val="{{ false }}"><mark class="{{ pt.mkCls }}" data-an="{{ pt.mkId }}" data-an-key="{{ pt.mkKey }}" tabindex="{{ pt.mkTab }}" role="{{ pt.mkRole }}" aria-haspopup="{{ pt.mkPop }}" aria-describedby="{{ pt.mkDesc }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></mark></sc-if><sc-if value="{{ pt.nomk }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ pt.isKo }}" hint-placeholder-val="{{ false }}"><span lang="ko">{{ pt.v }}</span></sc-if><sc-if value="{{ pt.isPlain }}" hint-placeholder-val="{{ true }}">{{ pt.v }}</sc-if></sc-if></sc-for></span></sc-for></span></sc-for></code></pre><sc-if value="{{ b.art }}" hint-placeholder-val="{{ false }}"><span class="rd-code__fade rd-code__fade--l" aria-hidden="true"></span><span class="rd-code__fade rd-code__fade--r" aria-hidden="true"></span></sc-if></div>
+<sc-if value="{{ b.art }}" hint-placeholder-val="{{ false }}"><p class="rd-code__hint">Scroll sideways to see the whole drawing →</p></sc-if>
+</figure>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"block":{"editor":null},"bare":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"$preview":{"width":820,"height":429}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { over: false, moreL: false, moreR: false }; this.pre = null; this.ro = null; }
+  /* A drawing keeps its lines (no wrapping): when it is wider than its box, the box scrolls and says so. Measured.
+     The fade shows only on a side where more of the drawing remains, read from the scroll position. */
+  setPre = (el) => {
+    if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    if (this.pre) this.pre.removeEventListener('scroll', this.onScroll);
+    this.pre = el;
+    if (el) el.addEventListener('scroll', this.onScroll, { passive: true });
+    if (el && window.ResizeObserver) { this.ro = new ResizeObserver(() => this.check()); this.ro.observe(el); }
+    this.check();
+  };
+  edges(el) {
+    const max = el.scrollWidth - el.clientWidth;
+    return { moreL: max > 1 && el.scrollLeft > 1, moreR: max > 1 && el.scrollLeft < max - 1 };
+  }
+  onScroll = () => {
+    const el = this.pre;
+    if (!el) return;
+    const e = this.edges(el);
+    if (e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(e);
+  };
+  check() {
+    const el = this.pre;
+    if (!el) return;
+    const over = el.scrollWidth > el.clientWidth + 1;
+    const e = this.edges(el);
+    if (over !== this.state.over || e.moreL !== this.state.moreL || e.moreR !== this.state.moreR) this.setState(Object.assign({ over }, e));
+  }
+  componentDidMount() { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.check()); }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); if (this.pre) this.pre.removeEventListener('scroll', this.onScroll); }
+  renderVals() {
+    const RD = window.RD;
+    const b = RD.an.plainBlock(this.props.block || RD.read('maintainer-guide/internals', 'en').blocks.find((x) => x.isCode && x.hasTitle));
+    const bare = !!this.props.bare;
+    return {
+      b,
+      figCls: 'rd-code' + (b.art ? ' rd-code--art' : '') + (b.art && this.state.over ? ' is-over' : '') + (b.art && this.state.moreL ? ' is-more-l' : '') + (b.art && this.state.moreR ? ' is-more-r' : ''),
+      setPre: this.setPre,
+      tab: b.art ? 0 : undefined,
+      role: b.art ? 'region' : undefined,
+      aria: b.art ? 'Drawing, scrolls sideways' : undefined,
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-' + (this.props.size || 3) + ' rd-standalone rd-pad',
+      wrapTheme: bare ? undefined : (this.props.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes in this book — every bookmark, highlight and note in a book</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ frameCls }}" data-theme="{{ theme }}"><div class="rd-in">
+<div class="an-page" ref="{{ setBox }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ false }}"><div data-proto="state-bar"><div class="pb-cell"><sc-for list="{{ bar }}" as="g" hint-placeholder-count="2"><div class="{{ g.cls }}" role="group" aria-label="{{ g.name }}"><span class="pb-cap">Prototype only · jump to a state:</span><span class="pb-name">{{ g.name }}</span><sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" data-label="{{ p.label }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><sc-if value="{{ g.hasExtra }}" hint-placeholder-val="{{ false }}"><span class="pb-sep">{{ g.extraLabel }}</span><sc-for list="{{ g.extra }}" as="t" hint-placeholder-count="4"><button type="button" aria-pressed="{{ t.pressed }}" data-label="{{ t.label }}" onclick="{{ t.pick }}">{{ t.label }}</button></sc-for></sc-if><sc-if value="{{ g.only }}" hint-placeholder-val="{{ false }}"><span class="pb-note">only state</span></sc-if></div></sc-for></div></div></sc-if>
+<header class="an-page__top"><a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ logo }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a><a class="rd-back" href="#top" onclick="{{ back }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="an-page__backt">{{ backText }}</span></a></header>
+<main class="an-page__main">
+<p class="an-page__book">{{ bookTitle }}</p>
+<h1 class="an-page__title">Notes in this book</h1>
+<p class="an-page__count">{{ countLine }}</p>
+<div class="an-page__filters"><div class="an-filter" role="group" aria-label="Show"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="3"><button type="button" class="an-filter__opt" aria-pressed="{{ f.pressed }}" onclick="{{ f.pick }}">{{ f.label }}<span class="an-filter__n">{{ f.n }}</span></button></sc-for></div></div>
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><p class="an-empty">{{ emptyLine }}</p></sc-if>
+<sc-for list="{{ chapters }}" as="c" hint-placeholder-count="3"><section class="an-chap" aria-labelledby="{{ c.hid }}"><div class="an-chap__head"><span class="an-chap__n">Chapter {{ c.n }}</span><h2 class="an-chap__title" id="{{ c.hid }}" lang="{{ c.lang }}">{{ c.title }}</h2></div><div class="an-list" role="list"><sc-for list="{{ c.items }}" as="it" hint-placeholder-count="3"><dc-import name="NoteItem" bare="{{ true }}" item="{{ it.item }}" ctx="book" editing="{{ it.editing }}" on-go="{{ go }}" on-delete="{{ del }}" on-label="{{ label }}" on-save-label="{{ saveLabel }}" on-cancel-label="{{ cancelLabel }}" hint-size="100%,110px"></dc-import></sc-for></div></section></sc-for>
+</main>
+</div>
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div class="an-slot an-slot--toast an-slot--page"><dc-import name="Toast" bare="{{ true }}" text="{{ toast }}" on-undo="{{ undo }}" hint-size="100%,48px"></dc-import></div></sc-if>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ann":{"editor":null},"from":{"editor":null},"filter":{"editor":null},"editLabel":{"editor":null},"theme":{"editor":null},"size":{"editor":null},"fit":{"editor":null},"bar":{"editor":null},"scrollToken":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onGo":{"editor":null},"onDelete":{"editor":null},"onLabel":{"editor":null},"onSaveLabel":{"editor":null},"onCancelLabel":{"editor":null},"onFilter":{"editor":null},"toast":{"editor":null},"onUndo":{"editor":null},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { filter: 'all', editLabel: null };
+    this.box = null;
+    this.uid = 'bk' + Math.random().toString(36).slice(2, 8);
+  }
+  setBox = (el) => { this.box = el; };
+  componentDidUpdate(prev) {
+    /* a new scene starts at the top of the page */
+    if (this.box && this.props.scrollToken !== prev.scrollToken) this.box.scrollTop = 0;
+  }
+  renderVals() {
+    const P = this.props, RD = window.RD, AN = RD.an;
+    const ann = P.ann || AN.seed('default');
+    const filter = P.onFilter ? (P.filter || 'all') : this.state.filter;
+    const editLabel = P.onLabel ? P.editLabel : this.state.editLabel;
+    const all = AN.book(ann, 'maintainer-guide');
+    const isBm = (it) => it.kind === 'bm';
+    const n = { all: all.length, bm: all.filter(isBm).length, hl: all.filter((it) => !isBm(it)).length };
+    const shown = all.filter((it) => filter === 'all' || (filter === 'bm' ? isBm(it) : !isBm(it)));
+    const book = RD.books['maintainer-guide'];
+    const chapters = [];
+    shown.forEach((it) => {
+      let c = chapters[chapters.length - 1];
+      if (!c || c.key !== it.chapterKey) {
+        const t = RD.titleOf(it.chapterKey, 'en');
+        c = { key: it.chapterKey, n: it.chapterN, title: t.text, lang: t.lang, hid: this.uid + '-c' + it.chapterN, items: [] };
+        chapters.push(c);
+      }
+      c.items.push({ item: it, editing: editLabel === it.id });
+    });
+    const approx = shown.filter((it) => it.status === 'approx').length;
+    const gone = shown.filter((it) => it.status === 'orphan').length;
+    const ch = chapters.length;
+    const noun = filter === 'bm' ? AN.count(shown.length, 'bookmark', 'bookmarks') : filter === 'hl' ? AN.count(shown.length, 'highlight or note', 'highlights and notes') : AN.count(shown.length, 'item', 'items');
+    const countLine = noun + ' in ' + AN.count(ch, 'chapter', 'chapters') + (approx ? ' · ' + approx + ' approximate' : '') + (gone ? ' · ' + gone + ' unanchored' : '');
+    const EMPTY = {
+      all: 'Nothing marked in this book yet: highlights, notes and bookmarks you make in its chapters gather here.',
+      bm: 'No bookmarks in this book yet: use Bookmark in the bar below a chapter’s text.',
+      hl: 'No highlights or notes in this book yet: select a passage in a chapter to highlight it.',
+    };
+    const F = [['all', 'All'], ['bm', 'Bookmarks'], ['hl', 'Highlights and notes']];
+    const fn = (name, local) => (x, y) => { const f = this.props[name]; if (f) f(x, y); else if (local) local(x, y); };
+    const bar = Array.isArray(P.bar) ? P.bar.map((g) => Object.assign({ hasExtra: false, extraLabel: '', extra: [] }, g)) : [];
+    return {
+      bar, hasBar: bar.length > 0, setBox: this.setBox,
+      frameCls: 'rd-frame rd-size-' + (P.size || 3) + ' rd-theme-' + (P.theme || 'light') + (P.fit === 'fill' ? ' rd-frame--fill' : ' rd-frame--alone'),
+      theme: P.theme || 'light',
+      bookTitle: book ? book.title : 'The knowledge maintainer guide',
+      /* round 02 (book-page 7): opened from the book page, the back link returns there; from a chapter, as signed */
+      backText: P.from === 'book' ? 'Back to the book' : 'Back to the chapter',
+      countLine,
+      filters: F.map(([k, label]) => ({ label, n: n[k], pressed: filter === k, pick: () => { if (P.onFilter) P.onFilter(k); else this.setState({ filter: k }); } })),
+      isEmpty: shown.length === 0, emptyLine: EMPTY[filter],
+      chapters,
+      hasToast: !!P.toast, toast: P.toast || '', undo: () => { if (P.onUndo) P.onUndo(); },
+      go: fn('onGo'), del: fn('onDelete'),
+      label: fn('onLabel', (it) => this.setState({ editLabel: it.id })),
+      saveLabel: fn('onSaveLabel', () => this.setState({ editLabel: null })),
+      cancelLabel: () => { if (P.onCancelLabel) P.onCancelLabel(); else this.setState({ editLabel: null }); },
+      back: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onBack) P.onBack(); },
+      logo: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onLogo) P.onLogo(); },
+    };
+  }
+}
+</script>
+</body>
+</html>

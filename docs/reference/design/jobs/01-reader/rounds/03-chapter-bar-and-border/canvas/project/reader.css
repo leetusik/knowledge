@@ -1,0 +1,845 @@
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Noto+Serif+KR:wght@200..900&display=swap");
+
+/* The reader (job 01-reader, rounds 01 and 02). Proposed additions to the kb system:
+   the reading face and its Korean serif, five text-size steps, the sepia theme, syntax roles,
+   the reader's measure (one column for text, tables and code), and motion. Everything else
+   resolves to kb-* tokens. */
+
+/* ---------- Sepia: the third reading theme (reader-scoped, proposed) ---------- */
+[data-theme="sepia"] {
+  --kb-paper: #efe2c5;
+  --kb-surface: #f6ecd6;
+  --kb-surface-sunken: #ecdcba;
+  --kb-border: #e0cda6;
+  --kb-border-strong: #cfb88c;
+  --kb-accent: #0c6159;
+  --kb-accent-strong: #08483f;
+  --kb-accent-soft: rgba(12, 97, 89, 0.15);
+  --kb-tag-bg: #e6dcbf;
+  --kb-tag-fg: #284d45;
+  --kb-ink: #382a1b;
+  --kb-secondary: #5f4d37;
+  --kb-hint: #8b785b;
+  --kb-status-active: #0c6159;
+  --kb-status-active-soft: rgba(12, 97, 89, 0.12);
+  --kb-status-active-ink: #08483f;
+  --kb-status-idle: #7d5c1d;
+  --kb-status-idle-soft: #eedcb4;
+  --kb-status-idle-ink: #614716;
+  --kb-status-revoked: #9a4535;
+  --kb-status-revoked-soft: #efd7c6;
+  --kb-status-revoked-ink: #833526;
+  --kb-scrim: rgba(56, 42, 27, 0.42);
+  --kb-shadow-raise: 0 0.6rem 1.4rem rgba(56, 42, 27, 0.14);
+  --kb-shadow-overlay: 0 1.4rem 3rem rgba(56, 42, 27, 0.24);
+}
+
+/* ---------- Syntax roles (proposed): keyword, function, string, number, comment ---------- */
+[data-theme="light"], .rd-frame:not([data-theme]) {
+  --rd-syn-kw: #7a3d6e; --rd-syn-fn: #0a5a52; --rd-syn-st: #6e4f12; --rd-syn-nu: #9a3b2a; --rd-syn-cm: #5c5347;
+  --rd-on-accent: #fbfaf5;
+}
+[data-theme="dark"] {
+  --rd-syn-kw: #d9a7cf; --rd-syn-fn: #7fcfc4; --rd-syn-st: #dcb877; --rd-syn-nu: #eba893; --rd-syn-cm: #b6ad9d;
+  --rd-on-accent: #16130f;
+}
+[data-theme="sepia"] {
+  --rd-syn-kw: #6c335f; --rd-syn-fn: #0a5149; --rd-syn-st: #5f430d; --rd-syn-nu: #8a3323; --rd-syn-cm: #5f4d37;
+  --rd-on-accent: #fbfaf5;
+}
+
+html, body { margin: 0; }
+
+/* ---------- The reader frame ---------- */
+.rd-frame {
+  /* Hangul in the reading face and the display face is set in one Korean serif, Noto Serif KR (OFL); Latin stays in
+     Literata and Fraunces. The interface (--font-body) keeps Pretendard for Hangul. */
+  --font-reading: "Literata", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif;
+  --rd-fs: 1.125rem;
+  --rd-k: 1.125;
+  --rd-lead: 1.65;
+  /* The column's small step (code, tables, inline code): 5/6 of the text size, 15 px at the default size,
+     the same value as the interface's 15 px step there. */
+  --rd-fs-s: calc(var(--rd-fs) * 0.8333);
+  --rd-measure: 36rem;
+  --rd-top-h: 3.5rem;
+  --rd-bot-h: 3.75rem;
+  --rd-line: 3px;
+  --rd-gut: var(--kb-app-gutter-phone);
+  --rd-ease: 0.15s ease;
+  /* Round 03: the boundary of a bordered control (secondary button, language switch, display option). It takes
+     kb-hint's value in each theme, at least 3:1 on kb-surface (WCAG 1.4.11); structural hairlines keep kb-border-strong. */
+  --rd-control-edge: var(--kb-hint);
+  position: relative;
+  overflow: hidden;
+  container: rd / inline-size;
+  box-sizing: border-box;
+  background: var(--kb-surface);
+  color: var(--kb-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.rd-frame *, .rd-frame *::before, .rd-frame *::after { box-sizing: border-box; }
+.rd-fill { position: absolute; inset: 0; }
+.rd-alone { height: 100vh; min-height: 32rem; }
+.rd-size-1 { --rd-fs: 0.9375rem; --rd-k: 0.9375; }
+.rd-size-2 { --rd-fs: 1.03125rem; --rd-k: 1.03125; }
+.rd-size-3 { --rd-fs: 1.125rem; --rd-k: 1.125; }
+.rd-size-4 { --rd-fs: 1.25rem; --rd-k: 1.25; }
+.rd-size-5 { --rd-fs: 1.375rem; --rd-k: 1.375; }
+.rd-in { display: contents; }
+.rd-pad { padding: var(--kb-space-lg); }
+.rd-standalone { overflow: visible; }
+/* A Components board draws a code block or a table alone: it takes the text column's width, as it does in the reader. */
+.rd-standalone > :is(.rd-code, .rd-table) { max-width: var(--rd-measure); margin-inline: auto; }
+@container rd (min-width: 40rem) { .rd-in { --rd-gut: var(--kb-app-gutter); } }
+@container rd (min-width: 90rem) { .rd-in { --rd-gut: var(--kb-app-gutter-wide); } }
+
+/* Focus: the system ring on everything focusable */
+.rd-frame :is(a, button, summary, [tabindex]):focus-visible,
+.rd-board :is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--kb-focus-w) solid var(--kb-accent);
+  outline-offset: var(--kb-focus-offset);
+}
+
+/* ---------- Buttons (kb-appbtn values) ---------- */
+.rd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: var(--kb-tap); padding: 0.55rem 1rem;
+  border: 1px solid transparent; border-radius: var(--kb-radius-sm);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2;
+  white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink);
+  transition: color var(--rd-ease, 0.15s ease), background var(--rd-ease, 0.15s ease), border-color var(--rd-ease, 0.15s ease);
+}
+.rd-btn--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
+.rd-btn--primary:hover { background: var(--kb-accent-strong); }
+.rd-btn--secondary { background: var(--kb-surface); border-color: var(--rd-control-edge); color: var(--kb-ink); }
+.rd-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.rd-btn--ghost { border-color: var(--kb-border); color: var(--kb-secondary); }
+.rd-btn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.rd-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
+.rd-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.rd-btn:active { transform: translateY(1px); }
+.rd-btn[aria-busy="true"] { cursor: progress; }
+.rd-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ---------- The progress line (always shown) ---------- */
+.rd-line { position: absolute; top: 0; left: 0; right: 0; height: var(--rd-line); background: var(--kb-border); z-index: 30; }
+.rd-line__fill { display: block; height: 100%; background: var(--kb-accent); transition: width 0.2s linear; }
+
+/* ---------- Top bar ---------- */
+.rd-top {
+  position: absolute; top: var(--rd-line); left: 0; right: 0; z-index: 20;
+  height: var(--rd-top-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.rd-top__end { display: flex; align-items: center; gap: var(--kb-space-xs); }
+.rd-logo { display: inline-flex; align-items: center; justify-content: center; width: var(--kb-tap); height: var(--kb-tap); border-radius: var(--kb-radius-sm); flex: none; }
+.rd-logo img { width: 22px; height: 22px; display: block; }
+.rd-logo:hover { background: var(--kb-surface-sunken); }
+.rd-back {
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: var(--kb-tap); min-width: 0; max-width: 100%;
+  padding-inline: 0.4rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none; font-weight: var(--kb-weight-medium);
+}
+.rd-back__chev { color: var(--kb-secondary); flex: none; }
+.rd-back__long, .rd-back__short { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-back__long { display: none; }
+.rd-back:hover .rd-back__long, .rd-back:hover .rd-back__short { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-tag {
+  display: inline-flex; align-items: center; flex: none; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--kb-status-idle-ink); background: var(--kb-status-idle-soft); border-radius: var(--kb-radius-sm); padding: 0.2em 0.5em;
+}
+.rd-tag--accent { color: var(--kb-accent-strong); background: var(--kb-accent-soft); }
+.rd-tag--plain { color: var(--kb-secondary); background: var(--kb-surface-sunken); }
+.rd-top__ver { display: none; }
+.rd-tbtn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: var(--kb-tap); padding-inline: 0.7rem;
+  border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none;
+}
+.rd-tbtn:hover { background: var(--kb-surface-sunken); }
+.rd-tbtn[aria-expanded="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.rd-tbtn--signin { display: none; color: var(--kb-accent); }
+.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
+.rd-lang__opt {
+  min-height: var(--kb-tap); padding-inline: calc(0.6rem - 1px); border: 1px solid transparent; border-radius: calc(var(--kb-radius-sm) - 1px);
+  background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer;
+}
+.rd-lang__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+/* Round 03: the chosen language also takes a 1px accent edge (at least 3:1), drawn in a border the option always
+   carries, so its size never changes */
+.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+@container rd (min-width: 40rem) {
+  .rd-back__long { display: inline; }
+  .rd-back__short { display: none; }
+  .rd-top__ver { display: inline-flex; }
+  .rd-tbtn--signin { display: inline-flex; }
+  .rd-top { column-gap: var(--kb-space-sm); }
+}
+
+/* Chrome hidden: out of the way, never moved (visibility, so nothing reflows) */
+.rd-chrome-hidden .rd-top, .rd-chrome-hidden .rd-bottom, .rd-chrome-hidden .rd-resume {
+  visibility: hidden; opacity: 0;
+  transition: opacity var(--rd-ease), visibility 0s linear 0.15s;
+}
+.rd-chrome-hidden .rd-top:has(:focus-visible), .rd-chrome-hidden .rd-bottom:has(:focus-visible) { visibility: visible; opacity: 1; }
+.rd-skip {
+  position: absolute; top: calc(var(--rd-line) + 0.4rem); left: 50%; transform: translateX(-50%); z-index: 25;
+  opacity: 0; pointer-events: none;
+}
+.rd-skip:focus-visible { opacity: 1; pointer-events: auto; }
+
+/* ---------- Bottom bar: chapters ---------- */
+.rd-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+  height: var(--rd-bot-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 9.5rem) minmax(0, 1fr); align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-top: 1px solid var(--kb-border);
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-bnav {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; min-height: var(--kb-tap); width: 100%; max-width: 22rem; min-width: 0;
+  padding: 0.25rem 0.6rem; border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer;
+  font-family: var(--font-body); color: var(--kb-ink); text-decoration: none; text-align: left;
+}
+.rd-bnav:hover { background: var(--kb-surface-sunken); }
+.rd-bnav--next { justify-self: end; text-align: right; align-items: flex-end; }
+.rd-bnav--mid { justify-self: center; align-items: center; text-align: center; max-width: 13rem; }
+.rd-bottom__cell { display: flex; min-width: 0; }
+.rd-bottom__cell--end { justify-content: flex-end; }
+.rd-bnav__long { display: none; }
+.rd-bnav__short { display: inline; }
+.rd-bnav[aria-expanded="true"] { background: var(--kb-accent-soft); }
+.rd-bnav__dir { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); white-space: nowrap; }
+.rd-bnav__sub { display: none; font-size: 0.8125rem; color: var(--kb-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rd-bnav--mid .rd-bnav__sub { display: block; }
+.rd-bnav__chev { color: var(--kb-secondary); }
+@container rd (min-width: 40rem) {
+  .rd-bnav__sub { display: block; }
+  .rd-bnav__long { display: inline; }
+  .rd-bnav__short { display: none; }
+  .rd-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 13rem) minmax(0, 1fr); }
+}
+
+/* ---------- Compact chrome (round 03): the bars under large text and on a narrow phone ----------
+   Measured on the reader's container in rem, so a phone at large text (390 px is 16.25rem at 150% and 12.2rem at 200%)
+   and a narrow phone (320 px at 100% is 20rem) get one answer. At 390 px and 100% (24.4rem) none of this applies. */
+/* The language switch has two slots in the bar: before Display (the signed place) and after it (critique C02). Only one
+   shows: the second only when the switch takes the bar's second row, so Tab and reading order follow the rows. */
+.rd-lang--row { display: none; }
+@container rd (max-width: 20.99rem) {
+  /* The top bar. Display's sides tighten. */
+  .rd-tbtn { padding-inline: 0.5rem; }
+  /* A chapter in two languages: the language switch takes a second row of the bar, at its end edge. */
+  .rd-langs > .rd-in { --rd-top-h: 6.5rem; }
+  .rd-langs .rd-top { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .rd-langs .rd-top__end { display: contents; }
+  .rd-langs .rd-lang--bar { display: none; }
+  .rd-langs .rd-lang--row { display: inline-flex; grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+  .rd-langs .rd-top__end > .rd-tbtn { grid-row: 1; grid-column: 2; }
+}
+@container rd (max-width: 13.99rem) {
+  /* A loose document's back link is "‹ Library", the logo's own destination: the logo steps aside so the label stays whole. */
+  .rd-loose .rd-logo { display: none; }
+}
+/* The chapter bar's compact marks: never drawn above 20rem, so the signed bar is untouched there */
+.rd-bnav__mark, .rd-bnav__count { display: none; }
+@container rd (max-width: 19.99rem) {
+  /* The chapter bar. Previous and Next show only their marks, in square targets; Contents fills the middle, over
+     "2 of 5" (the progress line carries the percentage). One row, the same height. The signed labels stay in place,
+     visually hidden, so every accessible name is the signed one; the marks and the short count are aria-hidden. */
+  .rd-bottom { grid-template-columns: var(--kb-tap) minmax(0, 1fr) var(--kb-tap); }
+  .rd-bnav--prev, .rd-bnav--next { padding-inline: 0; align-items: center; }
+  .rd-bnav--mid { max-width: none; padding-inline: var(--kb-space-xs); }
+  .rd-bnav--prev .rd-bnav__dir, .rd-bnav--next .rd-bnav__dir, .rd-bnav--mid .rd-bnav__sub {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: visible; white-space: nowrap; clip-path: inset(50%);
+  }
+  .rd-bnav__mark { display: block; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1; color: var(--kb-ink); }
+  /* Alone, the chevron carries the control: ink, and large enough to weigh what the arrow weighs */
+  .rd-bnav--prev .rd-bnav__mark { font-size: calc(0.9375rem * 1.35); }
+  .rd-bnav__count { display: block; font-size: 0.8125rem; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+}
+
+/* ---------- The scroller and the article's track ---------- */
+/* The canvas scrolls inside the frame, from its top edge, as the product scrolls the window. The canvas-only state bar
+   is the scroller's first child, so it scrolls away with the page; the progress line and the top bar ride in a sticky
+   wrapper under it, so they stay at the top of the frame once the bar has gone. */
+.rd-scroll {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  padding-bottom: var(--rd-bot-h);
+  scroll-behavior: auto;
+}
+.rd-scroll--nobottom { padding-bottom: 0; }
+.rd-topwrap { position: sticky; top: 0; z-index: 20; height: calc(var(--rd-line) + var(--rd-top-h)); pointer-events: none; }
+.rd-topwrap .rd-top, .rd-topwrap .rd-skip { pointer-events: auto; }
+/* One track: text, tables, code, callouts and figures all share the text column's two edges, at every width. */
+.rd-flow {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--rd-gut), 1fr)
+    [text-start] min(100% - 2 * var(--rd-gut), var(--rd-measure))
+    [text-end] minmax(var(--rd-gut), 1fr) [full-end];
+}
+.rd-flow > * { grid-column: text; min-width: 0; }
+
+/* ---------- The chapter opening (the bold move: a book's chapter page) ---------- */
+.rd-head { padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-head__book { margin: 0 0 var(--kb-space-md); display: flex; flex-wrap: wrap; gap: 0 var(--kb-space-sm); align-items: baseline; font-size: 0.9375rem; color: var(--kb-secondary); }
+.rd-head__n { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display);
+  color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.rd-head__lede { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; font-family: var(--font-reading); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.5; color: var(--kb-secondary); text-wrap: pretty; }
+.rd-head__meta { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-head__meta .rd-linkbtn { font-size: 0.8125rem; }
+.rd-head :lang(ko), .rd-head__title:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) {
+  .rd-head__title { font-size: calc(var(--rd-fs) * 2.1); line-height: 1.1; }
+}
+@container rd (min-width: 64rem) {
+  .rd-head { padding-top: calc(var(--kb-space-2xl) * 1.5 * var(--rd-k)); }
+  .rd-head__title { font-size: calc(var(--rd-fs) * 2.4); }
+}
+.rd-linkbtn {
+  display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-body); font-size: inherit; font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none;
+}
+.rd-linkbtn:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* Version and translation notices: a hairline, a tint and a word, never a coloured rule */
+.rd-notice {
+  margin-top: calc(var(--kb-space-lg) * var(--rd-k));
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-md);
+  padding: var(--kb-space-sm) var(--kb-space-md); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-status-idle-soft); color: var(--kb-ink); font-size: 0.9375rem; line-height: 1.45;
+}
+.rd-notice__text { flex: 1 1 18rem; margin: 0; display: flex; flex-direction: column; gap: 0.15rem; text-wrap: balance; }
+.rd-notice__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-status-idle-ink); }
+.rd-notice .rd-linkbtn { color: var(--kb-accent-strong); }
+
+/* The generated table of contents */
+.rd-toc { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); padding-block: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); }
+.rd-toc__label { margin: 0 0 var(--kb-space-xs); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-toc__list, .rd-toc__sub { list-style: none; margin: 0; padding: 0; }
+.rd-toc__group { break-inside: avoid; }
+.rd-toc__sub { padding-left: var(--kb-space-md); }
+.rd-toc__a {
+  /* first lines line up across the two columns: text starts at the top, padded to a 44px row */
+  display: flex; align-items: flex-start; min-height: var(--kb-tap); padding-block: calc((var(--kb-tap) - 1.3em) / 2);
+  font-size: 0.9375rem; line-height: 1.3; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none; text-wrap: pretty;
+}
+.rd-toc__sub .rd-toc__a { font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-size: 0.9375rem; }
+.rd-toc__a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-toc__a:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) { .rd-toc__list { columns: 2; column-gap: var(--kb-space-xl); } }
+
+/* ---------- The prose kit ---------- */
+.rd-prose { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-prose:lang(ko), .rd-prose :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.rd-prose > :first-child { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-h { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; scroll-margin-top: calc(var(--rd-top-h) + var(--kb-space-md)); }
+.rd-h2 { margin: calc(var(--kb-space-2xl) * var(--rd-k)) 0 calc(var(--kb-space-md) * var(--rd-k)); padding-bottom: calc(var(--kb-space-sm) * var(--rd-k)); border-bottom: 1px solid var(--kb-border); font-size: 1.45em; line-height: 1.2; letter-spacing: var(--kb-tracking-display); }
+.rd-h3 { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 calc(var(--kb-space-sm) * var(--rd-k)); font-size: 1.18em; line-height: 1.25; }
+.rd-h4 { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 calc(var(--kb-space-xs) * var(--rd-k)); font-size: 1em; line-height: 1.35; }
+.rd-h2 + .rd-h3 { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
+.rd-h:lang(ko) { word-break: keep-all; }
+.rd-p { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; text-wrap: pretty; hanging-punctuation: first; }
+.rd-prose strong, .rd-callout strong { font-weight: 650; }
+.rd-prose em, .rd-callout em { font-style: italic; }
+/* Hangul has no italic: a Korean quote stays upright, Korean emphasis is set semibold */
+.rd-quote:lang(ko), .rd-quote :lang(ko) { font-style: normal; }
+.rd-prose em:lang(ko), .rd-callout em:lang(ko), .rd-prose em :lang(ko), .rd-callout em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+.rd-callout :lang(ko) { word-break: keep-all; }
+/* Korean in a table cell keeps its words whole: no emergency break either, so a narrow column grows to its longest
+   word and the table scrolls in its box instead (the prose rule above would let a cell break mid-word). */
+.rd-t :lang(ko) { word-break: keep-all; overflow-wrap: normal; }
+.rd-prose del, .rd-callout del { text-decoration-thickness: 1px; color: var(--kb-secondary); }
+.rd-ic {
+  font-family: var(--font-mono); font-size: 0.8333em; line-height: 1; padding: 0.12em 0.32em;
+  background: var(--kb-surface-sunken); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm);
+  overflow-wrap: anywhere;
+  /* A chip that wraps is cut open at the line break (slice). With clone, each piece gets its end padding and border,
+     which the browser does not count when it breaks the line, so a piece ending at the column's edge overhung it. */
+  -webkit-box-decoration-break: slice; box-decoration-break: slice;
+}
+.rd-list { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding-left: 1.4em; }
+.rd-list .rd-list { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
+.rd-li { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); padding-left: 0.2em; }
+.rd-li::marker { color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+ol.rd-list ol.rd-list { list-style-type: lower-alpha; }
+ul.rd-list ul.rd-list { list-style-type: circle; }
+.rd-quote { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding: 0 0 0 1em; border-left: 2px solid var(--kb-border-strong); color: var(--kb-secondary); font-style: italic; }
+.rd-quote .rd-p:first-child { margin-top: 0; }
+.rd-hr { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 0; border: 0; height: 1px; background: var(--kb-border); }
+
+/* Links: accent, always underlined; external says so in words; missing is plain text */
+.rd-a { color: var(--kb-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, var(--kb-accent) 55%, transparent); }
+.rd-a:hover { color: var(--kb-accent-strong); text-decoration-color: var(--kb-accent-strong); text-decoration-thickness: 2px; }
+.rd-a__ext { font-family: var(--font-body); font-size: 0.8333em; font-weight: var(--kb-weight-semibold); white-space: nowrap; }
+.rd-missing { color: inherit; text-decoration: none; }
+
+/* ---------- Callouts ---------- */
+.rd-callout {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  padding: calc(var(--kb-space-md) * var(--rd-k)) calc(var(--kb-space-md) * var(--rd-k) + 0.25rem);
+  border-radius: var(--kb-radius); background: var(--kb-surface-sunken);
+  font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink);
+}
+.rd-callout--important { background: var(--kb-accent-soft); }
+.rd-callout--warning { background: var(--kb-status-idle-soft); }
+.rd-callout--caution { background: var(--kb-status-revoked-soft); }
+.rd-callout__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem var(--kb-space-sm); }
+.rd-callout__type { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); line-height: 1.6; }
+.rd-callout--important .rd-callout__type { color: var(--kb-accent-strong); }
+.rd-callout--warning .rd-callout__type { color: var(--kb-status-idle-ink); }
+.rd-callout--caution .rd-callout__type { color: var(--kb-status-revoked-ink); }
+.rd-callout__title { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--kb-ink); }
+.rd-callout__body > :first-child { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
+.rd-callout .rd-p { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rd-callout .rd-list { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rd-callout .rd-code { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rd-callout .rd-code { --rd-code-bg: var(--kb-surface); }
+.rd-callout--fold { padding-block: 0; }
+.rd-callout__sum {
+  display: flex; align-items: center; gap: var(--kb-space-sm); min-height: var(--kb-tap); padding-block: 0.35rem;
+  cursor: pointer; list-style: none;
+}
+.rd-callout__sum::-webkit-details-marker { display: none; }
+.rd-callout__sum .rd-callout__head { flex: 1 1 auto; }
+.rd-callout__toggle { flex: none; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent); }
+.rd-callout__toggle-open { display: none; }
+details[open] > .rd-callout__sum .rd-callout__toggle-open { display: inline; }
+details[open] > .rd-callout__sum .rd-callout__toggle-closed { display: none; }
+.rd-callout__sum:hover .rd-callout__toggle { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-callout--fold > .rd-callout__body { padding-bottom: calc(var(--kb-space-md) * var(--rd-k)); }
+
+/* ---------- Code ---------- */
+.rd-code { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; }
+.rd-code__bar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--kb-space-sm); padding: 0.5rem 1rem; border: 1px solid var(--kb-border); border-bottom: 0; border-radius: var(--kb-radius) var(--kb-radius) 0 0; background: var(--kb-surface); }
+.rd-code__title { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-ink); overflow-wrap: anywhere; }
+.rd-code__lang { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); flex: none; }
+.rd-code { --rd-code-bg: var(--kb-surface-sunken); }
+.rd-code__wrap { position: relative; }
+.rd-code__pre {
+  margin: 0; padding: 0.9rem 1rem; background: var(--rd-code-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
+  font-family: var(--font-mono); font-size: var(--rd-fs-s); line-height: 1.6; color: var(--kb-ink);
+  white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+}
+/* The browser's own `code { font-family: monospace }` would otherwise set every code line in the platform mono face.
+   Code shows the characters as typed: no ligatures (JetBrains Mono would draw "->" as one arrow). */
+.rd-code__pre code { font: inherit; font-variant-ligatures: none; }
+.rd-code__bar + .rd-code__pre { border-radius: 0 0 var(--kb-radius) var(--kb-radius); }
+.rd-code__ln { display: block; padding-left: 2ch; text-indent: -2ch; min-height: 1.6em; }
+/* An ASCII drawing keeps every line and column: no wrapping, and a line height no taller than the mono face's "|"
+   (0.94em in JetBrains Mono), so vertical strokes join from line to line. Wider than the column, it scrolls inside its
+   own box, with the fade and the hint, at every width. */
+.rd-code--art { --rd-art-lead: 0.93; }
+.rd-code--art .rd-code__pre { white-space: pre; overflow-wrap: normal; overflow-x: auto; overscroll-behavior-inline: contain; line-height: var(--rd-art-lead); }
+.rd-code--art .rd-code__ln { padding-left: 0; text-indent: 0; min-height: calc(var(--rd-art-lead) * 1em); }
+.rd-code__fade { display: none; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 2rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--rd-code-bg)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; opacity: 0; transition: opacity var(--rd-ease); }
+.rd-code__fade--l { right: auto; left: 1px; background: linear-gradient(to left, transparent, var(--rd-code-bg)); border-radius: var(--kb-radius) 0 0 var(--kb-radius); }
+.rd-code__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-code--art.is-over .rd-code__fade, .rd-code--art.is-over .rd-code__hint { display: block; }
+/* The fade is a cue that more remains, so it shows only on a side where it does (measured from the scroll position):
+   scrolled to the end, the last column and the right border are at full strength. It takes no layout. */
+.rd-code.is-more-r .rd-code__fade--r, .rd-code.is-more-l .rd-code__fade--l { opacity: 1; }
+.rd-code .t-kw { color: var(--rd-syn-kw); }
+.rd-code .t-fn { color: var(--rd-syn-fn); }
+.rd-code .t-st { color: var(--rd-syn-st); }
+.rd-code .t-nu { color: var(--rd-syn-nu); }
+.rd-code .t-cm { color: var(--rd-syn-cm); font-style: italic; }
+
+/* ---------- Tables ---------- */
+.rd-table { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; position: relative; }
+.rd-table__cap { margin: 0 0 var(--kb-space-xs); font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-table__scroll { overflow-x: auto; overscroll-behavior-inline: contain; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); }
+.rd-table__scroll:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.rd-t { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; }
+.rd-t th, .rd-t td { padding: 0.55rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--kb-border); }
+.rd-t tr > :not(:last-child) { border-right: 1px solid var(--kb-border); }
+.rd-t tbody tr:last-child > * { border-bottom: 0; }
+.rd-t th { background: var(--kb-surface-sunken); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--kb-secondary); white-space: nowrap; }
+.rd-t td { color: var(--kb-ink); overflow-wrap: normal; word-break: normal; }
+.rd-t .is-r { text-align: right; font-variant-numeric: tabular-nums; }
+.rd-t .is-c { text-align: center; }
+.rd-t .rd-ic { font-size: 1em; white-space: nowrap; overflow-wrap: normal; }
+.rd-table--wide .rd-t { min-width: 44rem; }
+/* A long table that fits the column has no box of its own: its header row sticks to the top of the reading area while
+   the chrome is hidden (just under the progress line), and flush under the top bar while it shows. The canvas scroller
+   starts at the frame's top edge like the product's window, so these are the product's values. */
+.rd-table--long .rd-table__scroll { overflow: visible; }
+.rd-table--long thead th { position: sticky; top: var(--rd-line); z-index: 2; box-shadow: 0 1px 0 var(--kb-border-strong); transition: top var(--rd-ease); }
+.rd-frame:not(.rd-chrome-hidden) .rd-table--long thead th { top: calc(var(--rd-line) + var(--rd-top-h)); }
+/* A standalone frame (a Components board) has no inner scroller: the page scrolls, so the header sticks at the top. */
+.rd-standalone .rd-table--long thead th, .rd-frame.rd-standalone:not(.rd-chrome-hidden) .rd-table--long thead th { top: 0; }
+.rd-table__fade { display: none; position: absolute; top: 0; right: 0; bottom: 0; width: 2rem; pointer-events: none; background: linear-gradient(to right, transparent, var(--kb-surface)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; opacity: 0; transition: opacity var(--rd-ease); }
+.rd-table__fade--l { right: auto; left: 0; background: linear-gradient(to left, transparent, var(--kb-surface)); border-radius: var(--kb-radius) 0 0 var(--kb-radius); }
+/* Shown (where the box can scroll) only on a side where more of the table remains, from the measured scroll position. */
+.rd-table.is-more-r .rd-table__fade--r, .rd-table.is-more-l .rd-table__fade--l { opacity: 1; }
+.rd-table__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+/* Wider than the column (measured: the table's width is more than its box's), a table scrolls sideways inside its own
+   box at every width, with the fade and the hint. */
+.rd-table.is-over .rd-table__fade, .rd-table.is-over .rd-table__hint { display: block; }
+/* A long table wider than the column cannot keep a page-level sticky header (a sticky cell sticks to its nearest
+   scrolling box): it takes the phone's box, both ways, at every width, its header row sticky at the box's top. */
+.rd-table--long.is-over .rd-table__scroll { overflow: auto; max-height: 30rem; }
+.rd-table--long.is-over thead th, .rd-frame:not(.rd-chrome-hidden) .rd-table--long.is-over thead th { top: 0; }
+/* In its own box, as on a phone, cells keep one line so the rows stay even. */
+.rd-table--long.is-over .rd-t td { white-space: nowrap; }
+@container rd (max-width: 39.99rem) {
+  .rd-table--long .rd-table__fade { display: block; }
+  .rd-table--long .rd-table__hint { display: block; }
+  /* On a phone a long table scrolls inside its own box, both ways: the box is shorter than the screen, so its header row
+     sticks to the top of the box and row 30 still sits under its column names. Cells keep one line so the rows stay even. */
+  .rd-table--long .rd-table__scroll { overflow: auto; max-height: 30rem; }
+  .rd-table--long thead th, .rd-frame:not(.rd-chrome-hidden) .rd-table--long thead th { top: 0; }
+  .rd-table--long .rd-t td { white-space: nowrap; }
+}
+.rd-table__wrap { position: relative; }
+
+/* ---------- The chapter end ---------- */
+.rd-end { padding-top: calc(var(--kb-space-xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-2xl) * var(--rd-k)); }
+.rd-end__mark { display: flex; align-items: center; gap: var(--kb-space-md); margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-end__mark::before, .rd-end__mark::after { content: ""; flex: 1 1 0; height: 1px; background: var(--kb-border); }
+/* The status row holds still when the reader presses Mark as finished / Mark as unread: every sentence a member can
+   toggle between shares one grid cell (the others visibility: hidden), so the cell is always as tall as the longest one,
+   and the button keeps its place. Below 40rem the button sits under the sentence; from 40rem, at its end. */
+.rd-status { margin-top: var(--kb-space-lg); display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; align-items: center; gap: var(--kb-space-sm) var(--kb-space-md); padding-block: var(--kb-space-sm); }
+.rd-status__text { margin: 0; display: grid; }
+.rd-status__line { grid-area: 1 / 1; margin: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.rd-status__line.is-off { visibility: hidden; }
+@container rd (min-width: 40rem) { .rd-status { grid-template-columns: minmax(0, 1fr) auto; } }
+.rd-status__state { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.rd-status__sub { font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-status__btn { min-width: 10.5rem; }
+.rd-next { margin-top: var(--kb-space-lg); padding: var(--kb-space-lg) 0; border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.rd-next__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-next__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.25; color: var(--kb-ink); text-wrap: balance; }
+.rd-next__lede { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; }
+.rd-next__title:lang(ko), .rd-next__lede:lang(ko) { word-break: keep-all; }
+.rd-next .rd-btn { margin-top: var(--kb-space-xs); }
+.rd-end__list { margin-top: var(--kb-space-xl); }
+.rd-end__listhead { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--kb-space-xs) var(--kb-space-md); }
+.rd-end__listtitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
+.rd-end__count { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-end__prompt { margin-top: var(--kb-space-sm); }
+
+/* ---------- Chapter list ---------- */
+.rd-chs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rd-chs__item { border-bottom: 1px solid var(--kb-border); }
+.rd-ch {
+  display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: baseline;
+  min-height: var(--kb-tap); padding: 0.7rem 0.5rem; width: 100%;
+  color: var(--kb-ink); text-decoration: none; border-radius: var(--kb-radius-sm);
+}
+a.rd-ch:hover { background: var(--kb-surface-sunken); }
+a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-ch[aria-current] { background: var(--kb-accent-soft); }
+.rd-ch__n { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.rd-ch__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; overflow-wrap: break-word; text-wrap: pretty; }
+/* A Korean title or section wraps only at the spaces between its words, as in the chapter opening. */
+.rd-ch__title:lang(ko), .rd-ch__sec:lang(ko) { word-break: keep-all; }
+.rd-ch__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__now { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.rd-ch__secs { list-style: none; margin: 0; padding: 0 0 var(--kb-space-xs) calc(2.4rem + var(--kb-space-sm) + 0.5rem); }
+.rd-ch__sec { display: flex; align-items: center; min-height: var(--kb-tap); font-size: 0.9375rem; color: var(--kb-secondary); text-decoration: none; }
+.rd-ch__sec:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-ch__sec[aria-current] { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+
+/* ---------- Sheets (Contents, Display, Version history) ---------- */
+.rd-scrim { position: absolute; inset: 0; top: var(--rd-barvis, 0px); z-index: 35; border: 0; padding: 0; margin: 0; background: var(--kb-scrim); cursor: pointer; }
+.rd-sheet {
+  position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; max-height: min(88%, calc(100% - var(--rd-barvis, 0px) - var(--rd-line)));
+  display: flex; flex-direction: column;
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-overlay);
+  border-radius: var(--kb-radius) var(--kb-radius) 0 0; border-top: 1px solid var(--kb-border);
+  font-family: var(--font-body);
+}
+.rd-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--kb-space-md); padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.4rem) var(--kb-space-xs) var(--rd-gut); border-bottom: 1px solid var(--kb-border); flex: none; }
+.rd-sheet__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+.rd-sheet__body { overflow-y: auto; overscroll-behavior: contain; padding: var(--kb-space-md) var(--rd-gut) var(--kb-space-xl); }
+@container rd (min-width: 40rem) {
+  .rd-sheet { top: calc(var(--rd-barvis, 0px) + var(--rd-line)); bottom: 0; max-height: none; width: min(26rem, 88%); border-radius: 0; border-top: 0; }
+  .rd-sheet--left { left: 0; right: auto; border-right: 1px solid var(--kb-border); }
+  .rd-sheet--right { right: 0; left: auto; border-left: 1px solid var(--kb-border); }
+  .rd-sheet__body { padding-inline: var(--kb-space-lg); }
+  .rd-sheet__head { padding-left: var(--kb-space-lg); padding-right: var(--kb-space-sm); }
+}
+.rd-sheet__lead { margin: 0 0 var(--kb-space-md); font-size: 0.9375rem; color: var(--kb-secondary); line-height: 1.45; }
+.rd-sheet__booktitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; line-height: 1.25; color: var(--kb-ink); }
+.rd-sheet__bookmeta { margin: var(--kb-space-xs) 0 var(--kb-space-md); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+
+/* Display panel */
+.rd-disp { display: flex; flex-direction: column; gap: var(--kb-space-xl); }
+.rd-disp__group { display: flex; flex-direction: column; gap: var(--kb-space-sm); margin: 0; padding: 0; border: 0; }
+.rd-disp__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-disp__readout { margin: 0; font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-disp__readout b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.rd-sizes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+.rd-themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+.rd-opt {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm);
+  background: var(--kb-surface); color: var(--kb-ink); cursor: pointer; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold);
+  box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
+}
+.rd-opt:hover { border-color: var(--kb-accent); }
+.rd-opt[aria-pressed="true"] { border-color: var(--kb-accent); box-shadow: inset 0 0 0 1px var(--kb-accent); background: var(--kb-accent-soft); }
+.rd-opt__a { font-family: var(--font-reading); font-weight: 500; line-height: 1; color: var(--kb-ink); }
+.rd-swatch { display: flex; width: 100%; height: 2rem; border-radius: calc(var(--kb-radius-sm) - 1px); border: 1px solid var(--kb-border); overflow: hidden; }
+.rd-swatch__half { flex: 1 1 0; display: flex; align-items: center; justify-content: center; background: var(--kb-surface); color: var(--kb-ink); font-family: var(--font-reading); font-size: 0.9375rem; }
+.rd-disp__note { margin: 0; padding-top: var(--kb-space-md); border-top: 1px solid var(--kb-border); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+
+/* Version history */
+.rd-vers { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rd-ver { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); min-height: 3.5rem; padding: var(--kb-space-sm) 0; border-bottom: 1px solid var(--kb-border); }
+.rd-ver__main { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.rd-ver__line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); }
+.rd-ver__n { font-family: var(--font-mono); font-size: 0.9375rem; font-weight: 700; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.rd-ver__date { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ver__from { font-size: 0.8125rem; color: var(--kb-secondary); }
+.rd-ver__reading { font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.rd-ver[aria-current] { background: var(--kb-accent-soft); margin-inline: calc(var(--kb-space-sm) * -1); padding-inline: var(--kb-space-sm); border-radius: var(--kb-radius-sm); }
+.rd-ver__fail { margin: 0; display: flex; flex-direction: column; gap: var(--kb-space-xs); padding: var(--kb-space-md) 0; }
+.rd-ver__failcode { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-ver__failsub { font-size: 0.9375rem; color: var(--kb-secondary); line-height: 1.45; }
+
+/* ---------- Sign in to save (the reusable prompt) ---------- */
+.rd-save {
+  display: flex; flex-direction: column; gap: var(--kb-space-sm); max-width: 30rem;
+  padding: var(--kb-space-md) var(--kb-space-lg) var(--kb-space-lg); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-surface); color: var(--kb-ink); font-family: var(--font-body);
+}
+.rd-save__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; line-height: 1.25; }
+.rd-save__body { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); }
+.rd-save__actions { display: flex; flex-wrap: wrap; gap: var(--kb-space-sm); margin-top: var(--kb-space-xs); }
+.rd-save--raised { box-shadow: var(--kb-shadow-raise); }
+
+/* ---------- Resume pill ---------- */
+.rd-resume {
+  position: absolute; z-index: 21; left: 50%; transform: translateX(-50%); bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); max-width: calc(100% - 2 * var(--rd-gut)); width: max-content;
+  padding: 0.15rem 0.3rem 0.15rem 1rem; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
+  background: var(--kb-surface); box-shadow: var(--kb-shadow-raise); font-size: 0.8125rem; color: var(--kb-secondary);
+  transition: opacity var(--rd-ease), visibility 0s linear 0s;
+}
+.rd-loose .rd-resume { bottom: calc(var(--kb-space-md) + env(safe-area-inset-bottom, 0px)); }
+.rd-resume b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.rd-resume__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-resume .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); }
+
+/* ---------- Loading, not found, failed ---------- */
+.rd-skel { background: linear-gradient(90deg, var(--kb-surface-sunken) 25%, var(--kb-border) 50%, var(--kb-surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--kb-radius-sm); animation: rd-skel-pulse 1.4s ease-in-out infinite; }
+@keyframes rd-skel-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.rd-sk { display: flex; flex-direction: column; }
+.rd-sk__book { height: 0.9rem; width: 16rem; max-width: 70%; }
+.rd-sk__title { height: calc(var(--rd-fs) * 1.75); width: 92%; margin-top: var(--kb-space-md); }
+.rd-sk__title2 { height: calc(var(--rd-fs) * 1.75); width: 60%; margin-top: var(--kb-space-sm); }
+.rd-sk__lede { height: calc(var(--rd-fs) * 0.9); width: 85%; margin-top: var(--kb-space-lg); }
+.rd-sk__meta { height: 0.8rem; width: 12rem; margin-top: var(--kb-space-lg); }
+.rd-sk__toc { margin-top: var(--kb-space-xl); padding-block: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.rd-sk__tocline { height: 0.85rem; }
+.rd-sk__h2 { height: calc(var(--rd-fs) * 1.2); width: 50%; margin-top: var(--kb-space-2xl); }
+.rd-sk__line { height: calc(var(--rd-fs) * 0.75); margin-top: calc(var(--rd-fs) * 0.9); }
+.rd-sk__code { height: 7rem; margin-top: var(--kb-space-lg); border-radius: var(--kb-radius); }
+@container rd (min-width: 40rem) { .rd-sk__title { height: calc(var(--rd-fs) * 2.1); } .rd-sk__title2 { height: calc(var(--rd-fs) * 2.1); } }
+@container rd (min-width: 64rem) { .rd-sk__title { height: calc(var(--rd-fs) * 2.4); } .rd-sk__title2 { height: calc(var(--rd-fs) * 2.4); } }
+.rd-ed { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--kb-space-sm); padding: clamp(2.5rem, 1rem + 8cqi, 5.5rem) 1.2rem; }
+.rd-ed__code { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--kb-secondary); }
+.rd-ed__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: clamp(1.5rem, 1.1rem + 2cqi, 2.2rem); line-height: var(--kb-leading-display); letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; }
+.rd-ed__sub { margin: 0; font-size: 0.9375rem; line-height: var(--kb-leading-snug); color: var(--kb-secondary); max-width: 30rem; text-wrap: pretty; }
+.rd-ed__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--kb-space-sm); margin-top: var(--kb-space-sm); }
+.rd-ed__ref { margin: var(--kb-space-md) 0 0; font-family: var(--font-mono); font-size: 0.8125rem; color: var(--kb-secondary); }
+@container rd (max-width: 39.99rem) { .rd-ed__actions { flex-direction: column; align-self: stretch; } .rd-ed__actions > .rd-btn { width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-skel { animation: none; }
+  .rd-frame *, .rd-frame *::before, .rd-frame *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
+}
+
+/* ---------- Canvas-only prototype chrome (never built) ---------- */
+[data-proto="state-bar"] {
+  display: grid; padding: 6px 12px; background: #ececea; border-bottom: 1px dashed #8a8a86; color: #2b2b2b;
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+[data-proto="state-bar"] .pb-cell { display: grid; }
+[data-proto="state-bar"] .pb-group { grid-area: 1 / 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+[data-proto="state-bar"] .pb-group.is-off { visibility: hidden; }
+[data-proto="state-bar"] .pb-cap { color: #444; }
+[data-proto="state-bar"] .pb-name { font-weight: 700; color: #1d1d1d; margin-right: 4px; }
+[data-proto="state-bar"] .pb-note { color: #444; font-style: italic; }
+[data-proto="state-bar"] .pb-sep { color: #666; }
+[data-proto="state-bar"] button { font: inherit; color: #1d1d1d; background: #f7f7f5; border: 1px solid #b9b9b4; border-radius: 3px; padding: 2px 7px; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; }
+/* Every preset is as wide as its bold (pressed) label, so pressing one never re-wraps the bar or moves the page */
+[data-proto="state-bar"] button::after { content: attr(data-label); content: attr(data-label) / ""; font-weight: 700; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+[data-proto="state-bar"] button:hover { background: #fff; }
+[data-proto="state-bar"] button[aria-pressed="true"] { font-weight: 700; background: #fff; border-color: #3a3a38; }
+[data-proto="state-bar"] button:focus-visible { outline: 2px solid #3a3a38; outline-offset: 1px; }
+[data-proto="screens"] {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 6px 12px; background: #ececea; border-top: 1px dashed #8a8a86; color: #2b2b2b;
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+[data-proto="screens"] a { color: #1d1d1d; text-decoration: underline; }
+[data-proto="screens"] a:hover { text-decoration-thickness: 2px; }
+
+/* ---------- Component boards (canvas layout for the states) ---------- */
+.rd-board { box-sizing: border-box; min-height: 100%; padding: 32px; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+.rd-board__title { margin: 0 0 4px; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 22px; color: #26211c; }
+.rd-board__lead { margin: 0 0 24px; font-size: 14px; color: #5c5347; max-width: 60rem; line-height: 1.45; }
+.rd-row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.rd-cell { display: flex; flex-direction: column; gap: 8px; }
+.rd-cap { margin: 0; font-size: 13px; font-weight: 600; color: #3d362d; }
+.rd-stage { position: relative; overflow: hidden; border: 1px solid #d8ccb3; border-radius: 6px; }
+
+/* ---------- Additions: sheets, end prompt, stand-ins, demos ---------- */
+.rd-sheet__close { flex: none; }
+.rd-sheet__group { margin-top: var(--kb-space-lg); }
+.rd-sheet__group:first-child { margin-top: 0; }
+.rd-ch__tag { flex: none; }
+/* One top bar alone: the frame holds the line and the bar in flow, so it grows when the bar takes two rows (round 03) */
+.rd-demo-top { padding-top: var(--rd-line); }
+.rd-demo-top .rd-top { position: relative; top: 0; }
+.rd-demo-bottom { height: var(--rd-bot-h); }
+.rd-demo-sheet { position: relative; height: 34rem; }
+.rd-demo-sheet .rd-sheet { position: absolute; }
+.rd-demo-panel { padding: var(--kb-space-md) var(--rd-gut) var(--kb-space-lg); font-family: var(--font-body); }
+.rd-frame--fill { position: absolute; inset: 0; }
+.rd-frame--alone { height: 100vh; }
+.rd-tapzone { cursor: text; }
+.rd-art-scale { display: none; }
+
+/* The stand-ins for other jobs' screens (canvas only, never built). In the flow, the state bar is the stand-in's first
+   row and scrolls with it, as on the reader. */
+.rd-away { position: absolute; inset: 0; overflow-y: auto; display: flex; flex-direction: column; background: #f4f3ef; color: #26211c; font-family: "Source Sans 3", system-ui, sans-serif; }
+.rd-away__main { flex: 1 0 auto; display: grid; place-items: center; padding: 2rem 1.2rem; }
+.rd-away__card { display: flex; flex-direction: column; gap: 12px; max-width: 34rem; width: 100%; padding: 28px; border: 1px dashed #8a8a86; border-radius: 6px; background: #fbfaf7; }
+.rd-away__kind { margin: 0; font: 600 12px/1.3 ui-monospace, "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #4f4a42; }
+.rd-away__title { margin: 0; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1.2; color: #26211c; text-wrap: balance; }
+.rd-away__body { margin: 0; font-size: 16px; line-height: 1.5; color: #3d362d; }
+.rd-away__body b { color: #26211c; }
+.rd-away__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.rd-away__btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 4px; border: 1px solid #8a8a86; background: #fff; color: #26211c; font: 600 15px/1.2 "Source Sans 3", system-ui, sans-serif; cursor: pointer; }
+.rd-away__btn:hover { border-color: #26211c; }
+.rd-away__btn--main { background: #26211c; border-color: #26211c; color: #fbfaf7; }
+.rd-away__btn--main:hover { background: #000; }
+.rd-away__btn:focus-visible { outline: 2px solid #26211c; outline-offset: 2px; }
+
+/* The diagram slot (canvas only, never built): a stand-in for the diagrams job's block (P29.S5). It shows the diagram's
+   kind and its text alternative (title and caption), in the canvas chrome's neutral greys and system type, so it never
+   reads as the diagram's design. Light and sepia share the light chrome; dark has its own. */
+.rd-dgm {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+  border: 1px dashed #7a7a75; border-radius: 6px; background: #ececea; color: #1d1d1d;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif; scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + 1rem);
+}
+.rd-dgm__kind { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #444; }
+.rd-dgm__what { margin: 0; color: #2b2b2b; max-width: 34rem; }
+.rd-dgm__code { font: 600 12px/1.3 ui-monospace, "SF Mono", Menlo, monospace; padding: 0 3px; border-radius: 3px; background: #dcdcd8; color: #1d1d1d; }
+.rd-dgm__alt { margin: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px dashed #b9b9b4; }
+.rd-dgm__pair { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0 10px; align-items: baseline; }
+.rd-dgm__alt dt { font-size: 12px; font-weight: 700; color: #444; }
+.rd-dgm__alt dd { margin: 0; color: #1d1d1d; overflow-wrap: break-word; }
+.rd-dgm__pair:first-child dd { font-weight: 600; }
+.rd-dgm :lang(ko), .rd-dgm:lang(ko) { word-break: keep-all; }
+[data-theme="dark"] .rd-dgm { background: #2c2c2a; color: #ececea; border-color: #8a8a86; }
+[data-theme="dark"] .rd-dgm__kind, [data-theme="dark"] .rd-dgm__alt dt { color: #c4c4c0; }
+[data-theme="dark"] .rd-dgm__what, [data-theme="dark"] .rd-dgm__alt dd { color: #ececea; }
+[data-theme="dark"] .rd-dgm__code { background: #3d3d3a; color: #ececea; }
+[data-theme="dark"] .rd-dgm__alt { border-top-color: #6f6f6b; }
+
+/* Flow board shell (canvas only) */
+.rd-proto { display: flex; flex-direction: column; min-height: 100vh; background: #f4f3ef; }
+.rd-proto__stage { position: relative; flex: 1 1 auto; min-height: 44rem; }
+.rd-proto__stage > .sc-host, .rd-proto__stage > .rd-proto__fill { position: absolute; inset: 0; }
+.rd-away--alone { position: relative; min-height: 100vh; box-sizing: border-box; }
+.rd-sk__lede2 { width: 60%; margin-top: var(--kb-space-xs); }
+.rd-sk__w100 { width: 100%; } .rd-sk__w95 { width: 95%; } .rd-sk__w70 { width: 70%; } .rd-sk__w60 { width: 60%; } .rd-sk__w55 { width: 55%; } .rd-sk__w45 { width: 45%; } .rd-sk__w40 { width: 40%; }
+.rd-sk .rd-skel { display: block; }
+/* The flow stage mirrors each reference viewport's height: phone 844, iPad 1180, desktop 900. The state bar is inside
+   the stage, at the top of the reader's scrolled page, so it scrolls away with the chapter. */
+.rd-proto__stage { flex: none; min-height: 0; height: 52.75rem; }
+@media (min-width: 40rem) { .rd-proto__stage { height: 73.75rem; } }
+@media (min-width: 64rem) { .rd-proto__stage { height: 56.25rem; } }
+/* Round 03: the window row. "Fills the window" is the signed stage; a phone window is drawn 390 or 320 px wide and
+   844 px tall in the middle of a 900 px stage, at the root font size the row sets (px here, so text zoom never moves it). */
+.rd-proto__win { position: absolute; inset: 0; }
+.rd-proto__win > .sc-host { position: absolute; inset: 0; }
+.rd-proto__stage.rd-proto__stage--device { height: 900px; }
+.rd-proto__stage--device .rd-proto__win { inset: 28px 0 auto; height: 844px; margin-inline: auto; overflow: hidden; outline: 1px solid #d8ccb3; border-radius: 6px; }
+.rd-proto__win--390 { width: 390px; }
+.rd-proto__win--320 { width: 320px; }
+.rd-proto__cap { position: absolute; top: 5px; left: 0; right: 0; text-align: center; font-family: "Source Sans 3", system-ui, sans-serif; }
+/* The three-widths contact sheet (canvas only) */
+.rd-widths { background: #f4f3ef; min-height: 100%; }
+.rd-widths__board { min-height: 0; }
+.rd-widths__row { display: flex; gap: 40px; align-items: flex-start; }
+.rd-stage--phone { width: 390px; height: 844px; }
+.rd-stage--phone.rd-stage--narrow { width: 320px; }
+/* The phone's cell keeps 390 px, so narrowing the phone never moves the iPad and desktop frames */
+.rd-widths__phone { width: 390px; }
+.rd-stage--ipad { width: 820px; height: 1180px; }
+.rd-stage--desk { width: 1440px; height: 900px; }
+.rd-board__rows { display: flex; flex-direction: column; gap: 40px; }
+.rd-board__group { display: flex; flex-direction: column; gap: 12px; }
+.rd-board__rowtitle { margin: 0; font: 700 12px/1.3 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #4f4a42; }
+.rd-stage > .sc-host > .rd-frame { min-height: 100%; }
+/* Foundations board (canvas only) */
+.rd-found__card { padding: 20px 24px; border-radius: 6px; }
+.rd-found__face .rd-found__card { width: 340px; }
+.rd-found__sample { margin: 0; color: var(--kb-ink); }
+.rd-found__sample--read { font-family: var(--font-reading); font-size: 18px; line-height: 1.65; }
+.rd-found__sample--disp { font-family: var(--font-display); font-weight: 600; font-size: 30px; line-height: 1.15; }
+.rd-found__sample--ui { font-family: var(--font-body); font-size: 16px; font-weight: 600; }
+.rd-found__sample--mono { font-family: var(--font-mono); font-size: 18px; }
+.rd-found__meta { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--kb-secondary); }
+.rd-found__card--stack { display: flex; flex-direction: column; gap: 10px; }
+.rd-found__sample:lang(ko), .rd-found__sample :lang(ko) { word-break: keep-all; }
+.rd-found__card--stack .rd-found__meta { margin: 0; }
+.rd-found__col { width: calc(36rem + 48px); }
+.rd-found__para { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); }
+.rd-found__steps { width: calc(36rem + 48px); display: flex; flex-direction: column; }
+.rd-found__steps .rd-head__title { font-size: calc(var(--rd-fs) * 2.4); line-height: 1.1; }
+.rd-found__steps .rd-h { margin-block: 16px 0; }
+.rd-found__steps .rd-head__lede { margin-top: 12px; }
+.rd-found__steps .rd-found__para { margin-top: 12px; }
+.rd-found__theme { width: 460px; display: flex; flex-direction: column; gap: 18px; font-size: 14px; }
+.rd-found__roles, .rd-found__checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rd-found__role { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; color: var(--kb-ink); }
+.rd-found__chip { width: 28px; height: 20px; border-radius: 4px; border: 1px solid var(--kb-border-strong); }
+.rd-found__hex { font-family: var(--font-mono); font-size: 12px; color: var(--kb-secondary); }
+.rd-found__checks { padding-top: 14px; border-top: 1px solid var(--kb-border); }
+.rd-found__checks li { display: flex; justify-content: space-between; gap: 12px; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-found__checks b { color: var(--kb-ink); font-weight: 600; }
+.rd-found__syn { display: flex; flex-direction: column; gap: 6px; }
+.rd-found__synlabel { margin: 0; color: var(--kb-secondary); }
+.rd-found__syn .rd-found__checks { padding: 12px 14px; border: 1px solid var(--kb-border); border-radius: 6px; background: var(--kb-surface-sunken); font-family: var(--font-mono); font-size: 13px; }
+.rd-found__motion { margin: 0; }
+.rd-found__scale { width: 560px; }
+.rd-found__ladder { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rd-found__ladder li { display: grid; grid-template-columns: 3rem 9.5rem minmax(0, 1fr); align-items: baseline; gap: 12px; padding-block: 6px; border-bottom: 1px solid var(--kb-border); }
+.rd-found__ladder li:last-child { border-bottom: 0; }
+.rd-found__px { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; text-align: right; }
+.rd-found__use { color: var(--kb-ink); line-height: 1.15; white-space: nowrap; }
+.rd-found__use--title { font-family: var(--font-display); font-weight: 600; font-size: calc(var(--rd-fs) * 2.4); }
+.rd-found__use--h2 { font-family: var(--font-display); font-weight: 600; font-size: calc(var(--rd-fs) * 1.45); }
+.rd-found__use--h3 { font-family: var(--font-display); font-weight: 600; font-size: calc(var(--rd-fs) * 1.18); }
+.rd-found__use--body { font-family: var(--font-reading); font-size: var(--rd-fs); }
+.rd-found__use--small { font-family: var(--font-mono); font-size: var(--rd-fs-s); }
+.rd-found__use--meta { font-family: var(--font-body); font-size: 0.8125rem; }
+.rd-found__use--label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-found__what { font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.35; color: var(--kb-secondary); }

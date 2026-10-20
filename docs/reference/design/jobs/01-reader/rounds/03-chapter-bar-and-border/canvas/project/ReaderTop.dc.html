@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reader top bar and progress line</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<script src="reader.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="rd-line" aria-hidden="true"><span class="rd-line__fill" style="{{ fillStyle }}"></span></div>
+<header class="rd-top">
+<div class="rd-top__start">
+<a class="rd-logo" href="#top" aria-label="knowledge library" onclick="{{ logo }}"><img src="assets/logo.svg" alt="" width="22" height="22"></a>
+<a class="rd-back" href="#top" onclick="{{ back }}"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="rd-back__long">{{ backLong }}</span><span class="rd-back__short">{{ backShort }}</span></a>
+<sc-if value="{{ isOld }}" hint-placeholder-val="{{ false }}"><span class="rd-tag rd-top__ver"><span>Older version · v{{ version }}</span></span></sc-if>
+</div>
+<div class="rd-top__end">
+<sc-if value="{{ hasLangs }}" hint-placeholder-val="{{ true }}"><div class="rd-lang rd-lang--bar" role="group" aria-label="Language"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button type="button" class="rd-lang__opt" lang="{{ l.code }}" aria-pressed="{{ l.pressed }}" onclick="{{ l.pick }}">{{ l.label }}</button></sc-for></div></sc-if>
+<button type="button" class="rd-tbtn" aria-haspopup="dialog" aria-expanded="{{ dispOpen }}" onclick="{{ display }}">Display</button>
+<sc-if value="{{ hasLangs }}" hint-placeholder-val="{{ true }}"><div class="rd-lang rd-lang--row" role="group" aria-label="Language"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button type="button" class="rd-lang__opt" lang="{{ l.code }}" aria-pressed="{{ l.pressed }}" onclick="{{ l.pick }}">{{ l.label }}</button></sc-for></div></sc-if>
+<sc-if value="{{ anon }}" hint-placeholder-val="{{ false }}"><a class="rd-tbtn rd-tbtn--signin" href="#top" onclick="{{ signIn }}">Sign in</a></sc-if>
+</div>
+</header>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"pct":{"editor":null},"backLong":{"editor":null},"backShort":{"editor":null},"isOld":{"editor":null},"version":{"editor":null},"langs":{"editor":null},"lang":{"editor":null},"member":{"editor":null},"panel":{"editor":null},"onBack":{"editor":null},"onLogo":{"editor":null},"onLang":{"editor":null},"onDisplay":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"loose":{"editor":null},"theme":{"editor":null},"$preview":{"width":1200,"height":59}}'>
+class Component extends DCLogic {
+  call(name, arg) {
+    return (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const f = this.props[name];
+      if (f) f(arg);
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const pct = Math.max(0, Math.min(100, P.pct === undefined ? 38 : P.pct));
+    const langs = P.langs === undefined ? ['en', 'ko'] : P.langs;
+    const cur = P.lang || 'en';
+    const LABEL = { en: 'English', ko: '한국어' };
+    const member = P.member === undefined ? true : !!P.member;
+    return {
+      fillStyle: 'width: ' + pct + '%',
+      backLong: P.backLong || 'The knowledge maintainer guide',
+      backShort: P.backShort || 'Book',
+      isOld: !!P.isOld,
+      version: P.version || 1,
+      hasLangs: langs.length > 1,
+      langs: langs.map((code) => ({ code, label: LABEL[code] || code, pressed: code === cur, pick: this.call('onLang', code) })),
+      dispOpen: P.panel === 'display',
+      anon: !member,
+      logo: this.call('onLogo'),
+      back: this.call('onBack'),
+      display: this.call('onDisplay'),
+      signIn: this.call('onSignIn'),
+      wrapCls: bare ? 'rd-pass' : 'rd-frame rd-size-3 rd-standalone rd-demo-top' + (langs.length > 1 ? ' rd-langs' : '') + (P.loose ? ' rd-loose' : ''),
+      wrapTheme: bare ? undefined : (P.theme || 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

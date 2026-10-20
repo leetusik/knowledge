@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The reader at 390, 820, 1024 and 1440</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="annot.css">
+<script src="reader.js"></script>
+<script src="annot.js"></script>
+<script src="flow.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="rd-widths">
+<div class="rd-board rd-widths__board">
+<p class="rd-board__title">The reader with its marks, at the four reference sizes</p>
+<p class="rd-board__lead">One prototype state drawn four times. A click in any frame moves all four. Each frame carries the state bar at the top of its page, so it scrolls away with the chapter; a scene, theme or text size picked in any frame shows in all four. From 1024 the notes move into the margin. The book's list (Contents, then Notes, then All notes in this book →) and the legacy chapter (Another book · Contents, then Datums) open by a click in any frame, and the bar then shows their own states.</p>
+<div class="rd-widths__row">
+<div class="rd-cell rd-cell--phone"><p class="rd-cap">Phone · 390 × 844</p><div class="rd-stage rd-stage--phone"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" an="{{ r.an }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ inBook }}" hint-placeholder-val="{{ false }}"><dc-import name="BookNotes" fit="fill" bar="{{ bar }}" ann="{{ b.ann }}" from="{{ b.from }}" filter="{{ b.filter }}" edit-label="{{ b.editLabel }}" theme="{{ b.theme }}" size="{{ b.size }}" scroll-token="{{ b.scrollToken }}" toast="{{ b.toast }}" on-undo="{{ b.onUndo }}" on-back="{{ b.onBack }}" on-logo="{{ b.onLogo }}" on-go="{{ b.onGo }}" on-delete="{{ b.onDelete }}" on-label="{{ b.onLabel }}" on-save-label="{{ b.onSaveLabel }}" on-cancel-label="{{ b.onCancelLabel }}" on-filter="{{ b.onFilter }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" legacy-bm="{{ w.legacyBm }}" member="{{ w.member }}" on-legacy-bm="{{ w.onLegacyBm }}" on-book-notes="{{ w.onBookNotes }}" on-sign-in="{{ w.onSignIn }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell rd-cell--ipad"><p class="rd-cap">iPad portrait · 820 × 1180</p><div class="rd-stage rd-stage--ipad"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" an="{{ r.an }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ inBook }}" hint-placeholder-val="{{ false }}"><dc-import name="BookNotes" fit="fill" bar="{{ bar }}" ann="{{ b.ann }}" from="{{ b.from }}" filter="{{ b.filter }}" edit-label="{{ b.editLabel }}" theme="{{ b.theme }}" size="{{ b.size }}" scroll-token="{{ b.scrollToken }}" toast="{{ b.toast }}" on-undo="{{ b.onUndo }}" on-back="{{ b.onBack }}" on-logo="{{ b.onLogo }}" on-go="{{ b.onGo }}" on-delete="{{ b.onDelete }}" on-label="{{ b.onLabel }}" on-save-label="{{ b.onSaveLabel }}" on-cancel-label="{{ b.onCancelLabel }}" on-filter="{{ b.onFilter }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" legacy-bm="{{ w.legacyBm }}" member="{{ w.member }}" on-legacy-bm="{{ w.onLegacyBm }}" on-book-notes="{{ w.onBookNotes }}" on-sign-in="{{ w.onSignIn }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell rd-cell--wide"><p class="rd-cap">iPad landscape · 1024 × 768 · the margin starts here</p><div class="rd-stage rd-stage--wide"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" an="{{ r.an }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ inBook }}" hint-placeholder-val="{{ false }}"><dc-import name="BookNotes" fit="fill" bar="{{ bar }}" ann="{{ b.ann }}" from="{{ b.from }}" filter="{{ b.filter }}" edit-label="{{ b.editLabel }}" theme="{{ b.theme }}" size="{{ b.size }}" scroll-token="{{ b.scrollToken }}" toast="{{ b.toast }}" on-undo="{{ b.onUndo }}" on-back="{{ b.onBack }}" on-logo="{{ b.onLogo }}" on-go="{{ b.onGo }}" on-delete="{{ b.onDelete }}" on-label="{{ b.onLabel }}" on-save-label="{{ b.onSaveLabel }}" on-cancel-label="{{ b.onCancelLabel }}" on-filter="{{ b.onFilter }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" legacy-bm="{{ w.legacyBm }}" member="{{ w.member }}" on-legacy-bm="{{ w.onLegacyBm }}" on-book-notes="{{ w.onBookNotes }}" on-sign-in="{{ w.onSignIn }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+<div class="rd-cell rd-cell--desk"><p class="rd-cap">Desktop · 1440 × 900</p><div class="rd-stage rd-stage--desk"><sc-if value="{{ inReader }}" hint-placeholder-val="{{ true }}"><dc-import name="Reader" fit="fill" bar="{{ bar }}" doc="{{ r.doc }}" lang="{{ r.lang }}" ver="{{ r.ver }}" theme="{{ r.theme }}" theme-choice="{{ r.themeChoice }}" os="{{ r.os }}" size="{{ r.size }}" member="{{ r.member }}" chrome="{{ r.chrome }}" panel="{{ r.panel }}" status="{{ r.status }}" prog="{{ r.prog }}" jump="{{ r.jump }}" prompt="{{ r.prompt }}" resumed="{{ r.resumed }}" ver-fail="{{ r.verFail }}" hold="{{ r.hold }}" an="{{ r.an }}" on-open="{{ r.onOpen }}" on-lang="{{ r.onLang }}" on-version="{{ r.onVersion }}" on-theme="{{ r.onTheme }}" on-size="{{ r.onSize }}" on-panel="{{ r.onPanel }}" on-chrome="{{ r.onChrome }}" on-mark="{{ r.onMark }}" on-end="{{ r.onEnd }}" on-end-left="{{ r.onEndLeft }}" on-reading="{{ r.onReading }}" on-away="{{ r.onAway }}" on-retry="{{ r.onRetry }}" on-prompt="{{ r.onPrompt }}" on-from-top="{{ r.onFromTop }}" on-dismiss-resume="{{ r.onDismissResume }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ inBook }}" hint-placeholder-val="{{ false }}"><dc-import name="BookNotes" fit="fill" bar="{{ bar }}" ann="{{ b.ann }}" from="{{ b.from }}" filter="{{ b.filter }}" edit-label="{{ b.editLabel }}" theme="{{ b.theme }}" size="{{ b.size }}" scroll-token="{{ b.scrollToken }}" toast="{{ b.toast }}" on-undo="{{ b.onUndo }}" on-back="{{ b.onBack }}" on-logo="{{ b.onLogo }}" on-go="{{ b.onGo }}" on-delete="{{ b.onDelete }}" on-label="{{ b.onLabel }}" on-save-label="{{ b.onSaveLabel }}" on-cancel-label="{{ b.onCancelLabel }}" on-filter="{{ b.onFilter }}" hint-size="100%,100%"></dc-import></sc-if><sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}"><dc-import name="Elsewhere" fit="fill" bar="{{ bar }}" kind="{{ w.kind }}" where="{{ w.where }}" detail="{{ w.detail }}" legacy-title="{{ w.legacyTitle }}" legacy-bm="{{ w.legacyBm }}" member="{{ w.member }}" on-legacy-bm="{{ w.onLegacyBm }}" on-book-notes="{{ w.onBookNotes }}" on-sign-in="{{ w.onSignIn }}" on-back="{{ w.onBack }}" on-continue="{{ w.onContinue }}" hint-size="100%,100%"></dc-import></sc-if></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3858,"height":1392}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = window.RD.flow.initial('top', { themeChoice: 'light', size: 3 });
+    this.a = window.RD.flow.api(this);
+  }
+  renderVals() {
+    const F = window.RD.flow, s = this.state;
+    /* The reader's states (a chapter and a plain document) share one group here; every other page keeps its own group,
+       as on 01 Main, and shows only when a click in the frames has put that page on screen. */
+    const KEYS = ['top', 'marked', 'sel', 'selcross', 'selhead', 'pop', 'poplong', 'kbfocus', 'kbpop', 'note', 'overlap', 'bnote', 'changed', 'other', 'bm', 'bmplace', 'deleted', 'notes', 'notes30', 'label', 'ko', 'old', 'anonsel', 'anonbm', 'mdmid', 'mdsel', 'tw'];
+    const LONG = { mdmid: 'Markdown document · bookmarked position', mdsel: 'Markdown document · selecting text' };
+    const none = { kind: 'library', where: '', detail: '', legacyTitle: '', legacyBm: false, member: true, onLegacyBm: null, onSignIn: null, onBack: null, onContinue: null, onBookNotes: null };
+    const TH = [['light', 'Light'], ['dark', 'Dark'], ['sepia', 'Sepia'], ['system', 'System']];
+    const SZ = [[1, 'Text size 1'], [3, 'Text size 3'], [5, 'Text size 5']];
+    const inBook = !s.away && s.view === 'booknotes';
+    const cur = F.pageOf(s);
+    const extra = TH.map(([k, label]) => ({ label, pressed: s.themeChoice === k, pick: () => this.setState({ themeChoice: k }) }))
+      .concat(SZ.map(([n, label]) => ({ label, pressed: s.size === n, pick: () => this.setState({ size: n }) })));
+    const pages = [{ name: 'The reader at four widths', pages: ['chapter', 'loose'], keys: KEYS, display: true }]
+      .concat(F.PAGES.filter((p) => p.key !== 'chapter' && p.key !== 'loose').map((p) => ({ name: p.name, pages: [p.key],
+        keys: F.PRESETS.filter((x) => x.page === p.key).map((x) => x.key), display: p.key === 'booknotes' })));
+    const bar = pages.map((g) => {
+      const here = g.pages.indexOf(cur) >= 0;
+      const on = here ? F.pressedKey(s, g.keys) : null;
+      return { key: g.pages[0], name: g.name, cls: here ? 'pb-group' : 'pb-group is-off', only: g.keys.length === 1,
+        presets: g.keys.map((k) => ({ key: k, label: LONG[k] || F.BY[k].label, pressed: on === k, pick: () => this.a.pick(k) })),
+        hasExtra: g.display, extraLabel: g.display ? '· display:' : '', extra: g.display ? extra : [] };
+    });
+    return {
+      bar,
+      inReader: !s.away && !inBook,
+      inBook,
+      isAway: !!s.away,
+      r: F.readerProps(this, this.a),
+      b: F.bookProps(this, this.a),
+      w: s.away ? F.awayProps(this, this.a) : none,
+    };
+  }
+}
+</script>
+</body>
+</html>
