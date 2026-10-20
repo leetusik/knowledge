@@ -1800,6 +1800,7 @@
     },
     {
       "caption": null,
+      "chart": "line",
       "id": "chart-at",
       "kind": "chart",
       "rules": null,
@@ -2018,7 +2019,7 @@
         }
       ],
       "title": "Many points",
-      "type": "line",
+      "type": "diagram",
       "x": {
         "categories": null,
         "label": "X",

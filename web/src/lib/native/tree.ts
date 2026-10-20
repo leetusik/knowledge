@@ -56,23 +56,13 @@ export type Block =
  * reads them defensively, because a refused field is `null`.
  */
 export interface TypedBlock {
-  /**
-   * `"bar" | "line" | "interval"` is a top-level CHART diagram: the Python
-   * parser's `block.update(check_diagram(...))` lets the chart's own `type`
-   * overwrite the block's `"diagram"`, and the shared fixtures encode that, so
-   * this port keeps it for parity (its `kind` is still `"chart"`). The renderer
-   * reads such a block as a diagram. (P30.S12, OQ46.)
-   */
   type:
     | "figure"
     | "figures"
     | "diagram"
     | "svg"
     | "quiz"
-    | "sources"
-    | "bar"
-    | "line"
-    | "interval";
+    | "sources";
   id: string | null;
   [field: string]: unknown;
 }

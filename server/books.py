@@ -68,19 +68,19 @@ DEFAULT_LANG = "en"
 
 
 def validate_book_slug(slug: Any) -> str:
-    if not isinstance(slug, str) or len(slug) > _KEY_MAX or not _KEY_RE.match(slug):
+    if not isinstance(slug, str) or len(slug) > _KEY_MAX or not _KEY_RE.fullmatch(slug):
         raise ConventionError(f"invalid book slug: {slug!r}")
     return slug
 
 
 def validate_chapter_key(key: Any) -> str:
-    if not isinstance(key, str) or len(key) > _KEY_MAX or not _KEY_RE.match(key):
+    if not isinstance(key, str) or len(key) > _KEY_MAX or not _KEY_RE.fullmatch(key):
         raise ConventionError(f"invalid chapter key: {key!r}")
     return key
 
 
 def validate_lang(lang: Any) -> str:
-    if not isinstance(lang, str) or not _LANG_RE.match(lang):
+    if not isinstance(lang, str) or not _LANG_RE.fullmatch(lang):
         raise ConventionError(
             f"invalid lang (expected a lowercase BCP-47 primary subtag): {lang!r}"
         )

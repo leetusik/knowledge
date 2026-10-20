@@ -23,7 +23,7 @@ ID_MAX = 64
 
 
 def is_valid_id(value) -> bool:
-    return isinstance(value, str) and bool(ID_RE.match(value))
+    return isinstance(value, str) and bool(ID_RE.fullmatch(value))
 
 
 def heading_slug(text: str) -> Optional[str]:

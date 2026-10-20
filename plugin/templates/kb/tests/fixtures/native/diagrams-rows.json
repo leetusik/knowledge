@@ -129,6 +129,7 @@
     },
     {
       "caption": null,
+      "chart": "bar",
       "id": "per-day",
       "kind": "chart",
       "rules": [
@@ -158,7 +159,7 @@
         }
       ],
       "title": "Reviews per day",
-      "type": "bar",
+      "type": "diagram",
       "x": {
         "categories": [
           "Mon",
@@ -176,6 +177,7 @@
     },
     {
       "caption": null,
+      "chart": "line",
       "id": "retention",
       "kind": "chart",
       "rules": null,
@@ -192,7 +194,7 @@
         }
       ],
       "title": "Retention",
-      "type": "line",
+      "type": "diagram",
       "x": {
         "categories": null,
         "label": "Days since review",
@@ -209,6 +211,7 @@
     },
     {
       "caption": null,
+      "chart": "interval",
       "id": "spread",
       "kind": "chart",
       "rules": null,
@@ -230,7 +233,7 @@
         }
       ],
       "title": "Spread",
-      "type": "interval",
+      "type": "diagram",
       "x": {
         "categories": [
           "A",
