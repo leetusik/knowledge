@@ -25,6 +25,10 @@ machine; step 2a sets one up on first use if none exists). This skill produces a
 **saved document**: if the operator only asked a question and did not ask for anything
 to be saved, answer normally in chat and write no files.
 
+This skill is **operator-invoked only**: the workspace's phase review never runs it (it reports
+`explain: not written — run /explain for this phase` and stops there), and step 2a asks before it
+creates an account on an external service.
+
 There is one output format everywhere: all three modes — explaining a topic, explaining a
 code change/diff/phase, and general research — emit the same kind of interactive HTML
 explainer. Only research mode trades the fixed code-shaped outline for a free-form one.

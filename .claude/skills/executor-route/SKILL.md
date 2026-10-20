@@ -1,6 +1,6 @@
 ---
 name: executor-route
-description: Show the executor route table (model and effort per route, the per-row executors.toml overrides, the agent files' sync state) and the dispatch record's summary; with a slice id, the dispatch decision for that slice.
+description: Show the executor route table (model and effort per route, the per-row executors.toml overrides, the agent files' sync state) and the metered dispatch summary; with a slice id, the dispatch decision for that slice.
 argument-hint: "[<slice_id> [--retry] | --drafter | --explore]"
 allowed-tools: Bash(python3 scripts/workflow.py:*)
 disable-model-invocation: true
@@ -12,7 +12,7 @@ The engine owns one executor route table: each row (`high`, `research`, `mid`, `
 
 Run `python3 scripts/workflow.py executor-route $ARGUMENTS` and relay its output:
 
-- **No argument: the table.** It prints every row's tier, model, effort and source (`default`, `executors.toml`, `mid row`), whether the agent files are in sync with it, and the proxy line. Then also run `python3 scripts/workflow.py dispatch-summary` and relay it: the recorded executor runs by route, by model @ effort and by kind — the evidence the table is tuned from.
+- **No argument: the table.** It prints every row's tier, model, effort and source (`default`, `executors.toml`, `mid row`), whether the agent files are in sync with it, and the proxy line. Then also run `python3 scripts/workflow.py dispatch-summary` and relay it: what each slice really cost — the main thread beside its spans, metered from Claude Code's transcripts at list price, with the per-route and per-kind means — then the recorded verdicts; the evidence the table is tuned from.
 - **A slice id (`--retry` for a second attempt): the decision.** It prints the slice's route, the reason, the agent (`subagent_type=`), the model and effort with whether each is passed on the Agent call (`pass_model=`, `pass_effort=`), and the commit attribution. These are the lines the orchestrator pins as the slice's `## Dispatch` section.
 - **`--drafter` / `--explore`:** the same lines for the `design-drafter` span and for read-only `Explore` lookups.
 
