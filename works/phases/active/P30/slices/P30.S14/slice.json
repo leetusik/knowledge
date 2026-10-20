@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Reader prose kit and chapter opening (01-reader)",
   "kind": "implementation",
-  "status": "in_progress",
+  "status": "done",
   "order": 140,
   "depends_on": [
     "P30.S13"
   ],
   "created_at": "2026-10-21T00:14:49+09:00",
   "started_at": "2026-10-21T06:25:51+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-21T06:55:59+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Chapter opening with generated contents and version notices, prose kit on kb-ch hooks, callouts, code, scroll-box tables and drawings with fades, diagram slot frame, missing-link style, Hangul runs wrapped lang=ko; web 244",
   "validation": {
     "required": [],
     "last_run": null,

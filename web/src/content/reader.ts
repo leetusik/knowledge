@@ -1,10 +1,31 @@
 // P30.S13 — the reader's own words, from `01-reader` round 02's *Every string written
 // for the reader* (the chrome copy is English only; D36 (4)). Only what the shell
 // builds is here: the top bar, the chapter bar, the sheets, Sign in to save and the
-// three states. The chapter opening, the resume pill, the chapter end and version
-// history carry their strings in S14 and S15.
+// three states. The chapter opening's strings (P30.S14) are under `opening`; the
+// resume pill, the chapter end and version history carry theirs in S15.
 
 export const READER = {
+  /** The chapter opening (`ChapterHead`, §5). */
+  opening: {
+    chapterOf: (n: number, total: number): string => `Chapter ${n} of ${total}`,
+    document: "Document",
+    version: (v: number, date: string): string => `v${v} · Published ${date}`,
+    versionHistory: "Version history",
+    olderVersion: "Older version",
+    olderVersionBody: (v: number, newest: number, noun: string): string =>
+      `You're reading v${v} of this ${noun}. It was superseded — the current version is v${newest}.`,
+    readNewest: (newest: number): string => `Read v${newest} →`,
+    olderTranslation: "Older translation",
+    olderTranslationBody: (
+      source: string,
+      from: number,
+      newest: number,
+    ): string =>
+      `Translated from ${source} v${from}. ${source} has been updated since: it is at v${newest}.`,
+    readSource: (source: string, newest: number): string =>
+      `Read ${source} v${newest} →`,
+    contents: (noun: string): string => `In this ${noun}`,
+  },
   /** The skip button, first in the tab order, shown while the chrome is hidden. */
   showControls: "Show reading controls",
   top: {

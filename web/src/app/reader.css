@@ -9,9 +9,12 @@
  * top bar, the chapter bar, the sheets (Contents and Display), the Display panel, the
  * chapter list, Sign in to save and the loading / not found / failed states.
  *
- * What does NOT: the prose kit, callouts, code, tables and the chapter opening (S14),
- * the resume pill, chapter end and version history (S15). The `.kb-ch` block near the
- * bottom is a legibility stand-in for the chapter body until S14 styles S12's hooks.
+ * What does NOT: the resume pill, chapter end and version history (S15), figures and
+ * svg (S16), diagrams (S17/S18), the quiz (S19). The chapter opening (§5), the prose
+ * kit (§6-§6a), callouts (§7), code (§8), the diagram slot (§8a), tables (§9) and the
+ * scroll fades (§9a) are the last block of this file (P30.S14); S12's `kb-ch-*` hooks
+ * carry the prose kit's names (the canvas's `rd-p`, `rd-callout`, `rd-code`, `rd-table`
+ * become `.kb-ch p`, `.kb-ch-callout`, `.kb-ch-code`, `.kb-ch-table`).
  *
  * PRODUCT vs CANVAS. The canvas draws the reader inside a scrolling frame; the product
  * scrolls the WINDOW. So the line, the bars, the scrim and the sheets are
@@ -483,27 +486,242 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
   .rd-root *, .rd-root *::before, .rd-root *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
 }
 
-/* ---------- The chapter body, until S14 (a legibility stand-in; S14 replaces it) ----------
-   S12's `kb-ch-*` hooks render with no look of their own, and the app's reset leaves headings and lists bare. This gives
-   them the reading face, the leading and a few margins so a chapter reads. It is NOT the signed prose kit (§5-§9a). */
+/* ======================================================================================
+   P30.S14 — the chapter opening and the prose kit, transcribed from the signed canvas
+   (`01-reader` round 03's reader.css, which carries round 02's; §5-§9a of the prompt).
+   The opening keeps the canvas's `rd-head*`, `rd-toc*` and `rd-notice*` names; the body
+   styles S12's `kb-ch-*` hooks. The window scrolls, so the canvas's inner-scroller
+   offsets are the product's values: the line and the top bar sit on the safe area.
+   ====================================================================================== */
+
+/* ---------- The chapter opening (§5): a book's chapter page ---------- */
+.rd-head { padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-head__book { margin: 0 0 var(--kb-space-md); display: flex; flex-wrap: wrap; gap: 0 var(--kb-space-sm); align-items: baseline; font-size: 0.9375rem; color: var(--kb-secondary); }
+.rd-head__n { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display);
+  color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.rd-head__lede { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; font-family: var(--font-reading); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.5; color: var(--kb-secondary); text-wrap: pretty; }
+.rd-head__meta { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-head__meta .rd-linkbtn { font-size: 0.8125rem; }
+.rd-head :lang(ko), .rd-head__title:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) {
+  .rd-head__title { font-size: calc(var(--rd-fs) * 2.1); line-height: 1.1; }
+}
+@container rd (min-width: 64rem) {
+  .rd-head { padding-top: calc(var(--kb-space-2xl) * 1.5 * var(--rd-k)); }
+  .rd-head__title { font-size: calc(var(--rd-fs) * 2.4); }
+}
+.rd-linkbtn {
+  display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-body); font-size: inherit; font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none;
+}
+.rd-linkbtn:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* Version and translation notices: a hairline, a tint and a word, never a coloured rule */
+.rd-notice {
+  margin-top: calc(var(--kb-space-lg) * var(--rd-k));
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-md);
+  padding: var(--kb-space-sm) var(--kb-space-md); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-status-idle-soft); color: var(--kb-ink); font-size: 0.9375rem; line-height: 1.45;
+}
+.rd-notice__text { flex: 1 1 18rem; margin: 0; display: flex; flex-direction: column; gap: 0.15rem; text-wrap: balance; }
+.rd-notice__label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-status-idle-ink); }
+.rd-notice .rd-linkbtn { color: var(--kb-accent-strong); }
+
+/* The generated table of contents */
+.rd-toc { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); padding-block: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); }
+.rd-toc__label { margin: 0 0 var(--kb-space-xs); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-toc__list, .rd-toc__sub { list-style: none; margin: 0; padding: 0; }
+.rd-toc__group { break-inside: avoid; }
+.rd-toc__sub { padding-left: var(--kb-space-md); }
+.rd-toc__a {
+  /* first lines line up across the two columns: text starts at the top, padded to a 44px row */
+  display: flex; align-items: flex-start; min-height: var(--kb-tap); padding-block: calc((var(--kb-tap) - 1.3em) / 2);
+  font-size: 0.9375rem; line-height: 1.3; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none; text-wrap: pretty;
+}
+.rd-toc__sub .rd-toc__a { font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-size: 0.9375rem; }
+.rd-toc__a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-toc__a:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) { .rd-toc__list { columns: 2; column-gap: var(--kb-space-xl); } }
+
+/* ---------- The prose kit (§6): Literata at --rd-fs / 1.65, in ink ---------- */
 .rd-prose { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+/* §6 Korean, and §6a each Hangul run inside other-language text (`<span lang="ko">`): kept whole, breaking at spaces */
 .rd-prose:lang(ko), .rd-prose :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
-.rd-prose .kb-ch > * + * { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
-.rd-prose .kb-ch :is(h2, h3, h4) { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); line-height: 1.25; overflow-wrap: break-word; }
-.rd-prose .kb-ch h2 { font-size: 1.45em; margin-top: calc(var(--kb-space-2xl) * var(--rd-k)); }
-.rd-prose .kb-ch h3 { font-size: 1.18em; margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
-.rd-prose .kb-ch :is(ul, ol) { padding-left: 1.4em; }
-.rd-prose .kb-ch ul { list-style: disc; }
-.rd-prose .kb-ch ol { list-style: decimal; }
-.rd-prose .kb-ch a { color: var(--kb-accent); text-decoration: underline; text-underline-offset: 0.18em; }
-.rd-prose .kb-ch pre { overflow-x: auto; font-family: var(--font-mono); font-size: var(--rd-fs-s); line-height: 1.6; }
-.rd-prose .kb-ch code { font-family: var(--font-mono); overflow-wrap: anywhere; }
-.rd-prose .kb-ch table { border-collapse: collapse; font-size: var(--rd-fs-s); display: block; max-width: 100%; overflow-x: auto; }
-.rd-prose .kb-ch :is(th, td) { border: 1px solid var(--kb-border); padding: 0.4rem 0.6rem; }
-.rd-prose .kb-ch img { max-width: 100%; height: auto; }
-.rd-prose .kb-ch blockquote { border-left: 2px solid var(--kb-border-strong); padding-left: 1em; color: var(--kb-secondary); }
-/* the stand-in chapter title, until S14 builds the chapter opening */
-.rd-title { margin: 0; padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
-.rd-title:lang(ko) { word-break: keep-all; }
-@container rd (min-width: 40rem) { .rd-title { font-size: calc(var(--rd-fs) * 2.1); line-height: 1.1; } }
-@container rd (min-width: 64rem) { .rd-title { font-size: calc(var(--rd-fs) * 2.4); } }
+.rd-prose .kb-ch > :first-child { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+
+/* Headings. An `md` body's own h1s (past the one the opening shows) set like an h2. */
+.kb-ch-h { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.kb-ch h1.kb-ch-h, .kb-ch h2.kb-ch-h { margin: calc(var(--kb-space-2xl) * var(--rd-k)) 0 calc(var(--kb-space-md) * var(--rd-k)); padding-bottom: calc(var(--kb-space-sm) * var(--rd-k)); border-bottom: 1px solid var(--kb-border); font-size: 1.45em; line-height: 1.2; letter-spacing: var(--kb-tracking-display); }
+.kb-ch h3.kb-ch-h { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 calc(var(--kb-space-sm) * var(--rd-k)); font-size: 1.18em; line-height: 1.25; }
+.kb-ch h4.kb-ch-h, .kb-ch h5.kb-ch-h, .kb-ch h6.kb-ch-h { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 calc(var(--kb-space-xs) * var(--rd-k)); font-size: 1em; line-height: 1.35; }
+.kb-ch h2.kb-ch-h + h3.kb-ch-h { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
+.kb-ch-h:lang(ko) { word-break: keep-all; }
+
+/* Paragraphs. A list item's paragraphs sit tight; a loose item's sit a small step apart (undrawn: the nearest drawn rhythm). */
+.kb-ch > p, .kb-ch li > p, .kb-ch blockquote > p, .kb-ch .kb-ch-callout__body > p { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; text-wrap: pretty; hanging-punctuation: first; }
+.kb-ch li > p { margin-top: 0; }
+.kb-ch li > * + * { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.kb-ch strong { font-weight: 650; }
+.kb-ch em { font-style: italic; }
+/* Hangul has no italic: a Korean quote stays upright, Korean emphasis is set semibold */
+.kb-ch blockquote:lang(ko), .kb-ch blockquote :lang(ko) { font-style: normal; }
+.kb-ch em:lang(ko), .kb-ch em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+.kb-ch-callout :lang(ko) { word-break: keep-all; }
+/* Korean in a table cell keeps its words whole: no emergency break either, so a narrow column grows to its longest
+   word and the table scrolls in its box instead (the prose rule above would let a cell break mid-word). */
+.kb-ch-table :lang(ko) { word-break: keep-all; overflow-wrap: normal; }
+.kb-ch del { text-decoration-thickness: 1px; color: var(--kb-secondary); }
+.kb-ch :not(pre) > code {
+  font-family: var(--font-mono); font-size: 0.8333em; line-height: 1; padding: 0.12em 0.32em;
+  background: var(--kb-surface-sunken); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm);
+  overflow-wrap: anywhere;
+  /* A chip that wraps is cut open at the line break (slice). With clone, each piece gets its end padding and border,
+     which the browser does not count when it breaks the line, so a piece ending at the column's edge overhung it. */
+  -webkit-box-decoration-break: slice; box-decoration-break: slice;
+}
+/* Lists: `md` above, 1.4em in, items `xs` apart; a nested list `xs` above; markers in secondary, tabular. */
+.kb-ch > :is(ul, ol), .kb-ch blockquote > :is(ul, ol), .kb-ch .kb-ch-callout__body > :is(ul, ol) { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; }
+.kb-ch :is(ul, ol) { padding-left: 1.4em; }
+.kb-ch li > :is(ul, ol) { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; }
+.kb-ch ul { list-style: disc; }
+.kb-ch ol { list-style: decimal; }
+.kb-ch ol ol { list-style-type: lower-alpha; }
+.kb-ch ul ul { list-style-type: circle; }
+.kb-ch li { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); padding-left: 0.2em; }
+.kb-ch li::marker { color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.kb-ch blockquote { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; padding: 0 0 0 1em; border-left: 2px solid var(--kb-border-strong); color: var(--kb-secondary); font-style: italic; }
+.kb-ch blockquote > p:first-child { margin-top: 0; }
+.kb-ch > hr { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 0; border: 0; height: 1px; background: var(--kb-border); }
+
+/* Links: accent, always underlined; external says so in words; a missing one is plain text */
+.kb-ch a { color: var(--kb-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, var(--kb-accent) 55%, transparent); }
+.kb-ch a:hover { color: var(--kb-accent-strong); text-decoration-color: var(--kb-accent-strong); text-decoration-thickness: 2px; }
+.kb-ch-link__ext { font-family: var(--font-body); font-size: 0.8333em; font-weight: var(--kb-weight-semibold); white-space: nowrap; }
+.kb-link-missing { color: inherit; text-decoration: none; }
+
+/* ---------- Callouts (§7) ---------- */
+.kb-ch-callout {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  padding: calc(var(--kb-space-md) * var(--rd-k)) calc(var(--kb-space-md) * var(--rd-k) + 0.25rem);
+  border-radius: var(--kb-radius); background: var(--kb-surface-sunken);
+  font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink);
+}
+.kb-ch-callout[data-kind="important"] { background: var(--kb-accent-soft); }
+.kb-ch-callout[data-kind="warning"] { background: var(--kb-status-idle-soft); }
+.kb-ch-callout[data-kind="caution"] { background: var(--kb-status-revoked-soft); }
+.kb-ch-callout__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem var(--kb-space-sm); }
+.kb-ch-callout__type { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); line-height: 1.6; }
+.kb-ch-callout[data-kind="important"] .kb-ch-callout__type { color: var(--kb-accent-strong); }
+.kb-ch-callout[data-kind="warning"] .kb-ch-callout__type { color: var(--kb-status-idle-ink); }
+.kb-ch-callout[data-kind="caution"] .kb-ch-callout__type { color: var(--kb-status-revoked-ink); }
+.kb-ch-callout__title { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--kb-ink); }
+/* The canvas cascade: the body's first block sits `xs` below the head, but its paragraphs, lists and code take the `sm` step
+   (the later, equally specific rules win on the canvas, so a first paragraph measures `sm`). */
+.kb-ch-callout__body > :first-child { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
+.kb-ch-callout .kb-ch-callout__body > :is(p, ul, ol, .kb-ch-code) { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.kb-ch-callout .kb-ch-code { --rd-code-bg: var(--kb-surface); }
+.kb-ch-callout[data-collapsed] { padding-block: 0; }
+.kb-ch-callout__sum {
+  display: flex; align-items: center; gap: var(--kb-space-sm); min-height: var(--kb-tap); padding-block: 0.35rem;
+  cursor: pointer; list-style: none;
+}
+.kb-ch-callout__sum::-webkit-details-marker { display: none; }
+.kb-ch-callout__sum .kb-ch-callout__head { flex: 1 1 auto; }
+.kb-ch-callout__toggle { flex: none; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent); }
+.kb-ch-callout__toggle-open { display: none; }
+details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-open { display: inline; }
+details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: none; }
+.kb-ch-callout__sum:hover .kb-ch-callout__toggle { text-decoration: underline; text-underline-offset: 0.2em; }
+.kb-ch-callout[data-collapsed] > .kb-ch-callout__body { padding-bottom: calc(var(--kb-space-md) * var(--rd-k)); }
+
+/* ---------- Code (§8): the text column's width, edge to edge with the paragraphs ---------- */
+.kb-ch-code { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; --rd-code-bg: var(--kb-surface-sunken); }
+.kb-ch-code__bar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--kb-space-sm); padding: 0.5rem 1rem; border: 1px solid var(--kb-border); border-bottom: 0; border-radius: var(--kb-radius) var(--kb-radius) 0 0; background: var(--kb-surface); }
+.kb-ch-code__title { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-ink); overflow-wrap: anywhere; }
+.kb-ch-code__lang { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); flex: none; }
+.kb-ch-code__wrap { position: relative; }
+.kb-ch-code__pre {
+  margin: 0; padding: 0.9rem 1rem; background: var(--rd-code-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius);
+  font-family: var(--font-mono); font-size: var(--rd-fs-s); line-height: 1.6; color: var(--kb-ink);
+  white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+}
+/* The browser's own `code { font-family: monospace }` would otherwise set every code line in the platform mono face.
+   Code shows the characters as typed: no ligatures (JetBrains Mono would draw "->" as one arrow). */
+.kb-ch-code__pre code { font: inherit; font-variant-ligatures: none; }
+.kb-ch-code__bar + .kb-ch-code__wrap > .kb-ch-code__pre { border-radius: 0 0 var(--kb-radius) var(--kb-radius); }
+.kb-ch-code__ln { display: block; padding-left: 2ch; text-indent: -2ch; min-height: 1.6em; }
+/* An ASCII drawing keeps every line and column: no wrapping, and a line height no taller than the mono face's "|"
+   (0.94em in JetBrains Mono), so vertical strokes join from line to line. Wider than the column, it scrolls inside its
+   own box, with the fade and the hint, at every width. */
+.kb-ch-code--art { --rd-art-lead: 0.93; }
+.kb-ch-code--art .kb-ch-code__pre { white-space: pre; overflow-wrap: normal; overflow-x: auto; overscroll-behavior-inline: contain; line-height: var(--rd-art-lead); }
+.kb-ch-code--art .kb-ch-code__ln { padding-left: 0; text-indent: 0; min-height: calc(var(--rd-art-lead) * 1em); }
+.kb-ch-code__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+.kb-ch-code--art.is-over .kb-ch-fade, .kb-ch-code--art.is-over .kb-ch-code__hint { display: block; }
+
+/* ---------- The diagram slot (§8a): a figure in the text column; the drawing is the diagrams job's (S17/S18) ---------- */
+.kb-ch-diagram { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; }
+
+/* ---------- The scroll fades (§9a): a cue that more remains, only on a side where it does ---------- */
+.kb-ch-fade {
+  --fade-ground: var(--kb-surface);
+  display: none; position: absolute; top: 0; right: 0; bottom: 0; width: 2rem; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--fade-ground)); border-radius: 0 var(--kb-radius) var(--kb-radius) 0;
+  opacity: 0; transition: opacity var(--rd-ease);
+}
+.kb-ch-fade--l { right: auto; left: 0; background: linear-gradient(to left, transparent, var(--fade-ground)); border-radius: var(--kb-radius) 0 0 var(--kb-radius); }
+/* a drawing's fade sits inside its border, on the drawing's own ground */
+.kb-ch-code .kb-ch-fade { --fade-ground: var(--rd-code-bg); top: 1px; right: 1px; bottom: 1px; }
+.kb-ch-code .kb-ch-fade--l { right: auto; left: 1px; }
+.kb-ch-code.is-more-r .kb-ch-fade--r, .kb-ch-code.is-more-l .kb-ch-fade--l,
+.kb-ch-table.is-more-r .kb-ch-fade--r, .kb-ch-table.is-more-l .kb-ch-fade--l { opacity: 1; }
+
+/* ---------- Tables (§9): the text column's width; wider content scrolls inside the table's own box ---------- */
+.kb-ch-table { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; position: relative; }
+.kb-ch-table__wrap { position: relative; }
+.kb-ch-table__scroll { overflow-x: auto; overscroll-behavior-inline: contain; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); }
+.kb-ch-table table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; }
+.kb-ch-table :is(th, td) { padding: 0.55rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--kb-border); }
+.kb-ch-table tr > :not(:last-child) { border-right: 1px solid var(--kb-border); }
+.kb-ch-table tbody tr:last-child > * { border-bottom: 0; }
+.kb-ch-table th { background: var(--kb-surface-sunken); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--kb-secondary); white-space: nowrap; }
+.kb-ch-table td { color: var(--kb-ink); overflow-wrap: normal; word-break: normal; }
+.kb-ch-table :is(th, td)[data-align="right"] { text-align: right; font-variant-numeric: tabular-nums; }
+.kb-ch-table :is(th, td)[data-align="center"] { text-align: center; }
+.kb-ch-table :not(pre) > code { font-size: 1em; white-space: nowrap; overflow-wrap: normal; }
+.kb-ch-table--wide table { min-width: 44rem; }
+/* A long table that fits the column has no box of its own: its header row sticks to the top of the reading area while
+   the chrome is hidden (just under the progress line), and flush under the top bar while it shows. The window scrolls,
+   so these are the canvas's values on the safe area. */
+.kb-ch-table--long .kb-ch-table__scroll { overflow: visible; }
+.kb-ch-table--long thead th { position: sticky; top: calc(var(--rd-safe-top) + var(--rd-line)); z-index: 2; box-shadow: 0 1px 0 var(--kb-border-strong); transition: top var(--rd-ease); }
+.rd-root:not(.rd-chrome-hidden) .kb-ch-table--long thead th { top: calc(var(--rd-safe-top) + var(--rd-line) + var(--rd-top-h)); }
+.kb-ch-table__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
+/* Wider than the column (measured: the table's width is more than its box's), a table scrolls sideways inside its own
+   box at every width, with the fade and the hint. */
+.kb-ch-table.is-over .kb-ch-fade, .kb-ch-table.is-over .kb-ch-table__hint { display: block; }
+/* A long table wider than the column cannot keep a page-level sticky header (a sticky cell sticks to its nearest
+   scrolling box): it takes the phone's box, both ways, at every width, its header row sticky at the box's top. */
+.kb-ch-table--long.is-over .kb-ch-table__scroll { overflow: auto; max-height: 30rem; }
+.kb-ch-table--long.is-over thead th, .rd-root:not(.rd-chrome-hidden) .kb-ch-table--long.is-over thead th { top: 0; }
+/* In its own box, as on a phone, cells keep one line so the rows stay even. */
+.kb-ch-table--long.is-over td { white-space: nowrap; }
+@container rd (max-width: 39.99rem) {
+  .kb-ch-table--long .kb-ch-fade { display: block; }
+  .kb-ch-table--long .kb-ch-table__hint { display: block; }
+  /* On a phone a long table scrolls inside its own box, both ways: the box is shorter than the screen, so its header row
+     sticks to the top of the box and row 30 still sits under its column names. Cells keep one line so the rows stay even. */
+  .kb-ch-table--long .kb-ch-table__scroll { overflow: auto; max-height: 30rem; }
+  .kb-ch-table--long thead th, .rd-root:not(.rd-chrome-hidden) .kb-ch-table--long thead th { top: 0; }
+  .kb-ch-table--long td { white-space: nowrap; }
+}
+
+/* ---------- Until S16-S19: the blocks they own keep a column rhythm and legible lists ----------
+   Figures and svg (S16), diagrams (S17/S18) and the quiz (S19) draw their own look; until then they sit in the column. */
+.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
+.kb-ch-unshowable { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; color: var(--kb-secondary); }
+.kb-ch img { max-width: 100%; height: auto; }

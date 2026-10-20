@@ -61,6 +61,17 @@ export interface ReaderLanguage {
   label: string;
 }
 
+/** The source of a translation whose source has since moved on (the "Older translation" notice). */
+export interface TranslationSource {
+  lang: string;
+  /** "English": the source language named in itself. */
+  label: string;
+  /** The source version this translation was made from. */
+  from: number;
+  /** The source's current version. */
+  newest: number;
+}
+
 /** What the client frame needs; the article itself arrives as `children`. */
 export interface ReaderView {
   kind: "chapter" | "loose";
@@ -71,6 +82,14 @@ export interface ReaderView {
   langs: ReaderLanguage[];
   version: number;
   newest: number;
+  /** The lede: the native header's `summary`. Null for md and when absent. */
+  summary: string | null;
+  /** `YYYY-MM-DD`: the displayed version's publication date. Empty when unknown. */
+  date: string;
+  /** The project's name: a loose document's book line. */
+  project: string;
+  /** Set when this variant's source has been updated since it was translated. */
+  staleSource: TranslationSource | null;
   target: ReaderTarget;
   book: ReaderBook | null;
   headings: ReaderHeading[];

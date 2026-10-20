@@ -53,6 +53,7 @@ import type {
   ReaderHeading,
   ReaderLanguage,
   ReaderView,
+  TranslationSource,
 } from "./types";
 
 /** The most `chapter:` / `doc:` targets one page resolves; past it a link stays "missing". */
@@ -130,6 +131,28 @@ function orgOfPath(path: string | null | undefined): string | null {
   }
 }
 
+/**
+ * "Older translation": this variant was translated from a source version, and the source
+ * has since moved on. Only on the translation's CURRENT version (`translated_from`
+ * describes that version, so an archived one cannot be judged).
+ */
+function staleSourceOf(
+  chapter: KbBookChapter,
+  variant: KbBookVariant,
+  current: boolean,
+): TranslationSource | null {
+  const from = variant.translated_from;
+  if (!current || !from) return null;
+  const source = chapter.variants.find((v) => v.lang === from.lang);
+  if (!source || source.version <= from.version) return null;
+  return {
+    lang: source.lang,
+    label: languageName(source.lang),
+    from: from.version,
+    newest: source.version,
+  };
+}
+
 function headingsOf(checked: CheckedChapter): ReaderHeading[] {
   const out: ReaderHeading[] = [];
   for (const block of checked.tree.blocks) {
@@ -155,6 +178,8 @@ interface Body {
   assets: Record<string, KbAsset> | null;
   title: string;
   version: number;
+  /** `YYYY-MM-DD`, the version's publication date. */
+  date: string;
 }
 
 /**
@@ -178,6 +203,7 @@ async function readBody(
         old.assets,
         old.title,
         v,
+        old.date,
       );
     }
   }
@@ -189,6 +215,7 @@ async function readBody(
     doc.assets,
     doc.title,
     doc.version,
+    doc.date,
   );
 }
 
@@ -199,6 +226,7 @@ function toBody(
   assets: Record<string, KbAsset> | null | undefined,
   title: string,
   version: number,
+  date: string,
 ): Body {
   // A native document is rendered from its stored file; if the read carried none
   // (an older backend), its plain-text projection is shown as md rather than nothing.
@@ -209,9 +237,17 @@ function toBody(
       assets: assets ?? null,
       title,
       version,
+      date,
     };
   }
-  return { format: "md", text: markdown ?? "", assets: null, title, version };
+  return {
+    format: "md",
+    text: markdown ?? "",
+    assets: null,
+    title,
+    version,
+    date,
+  };
 }
 
 // --- links: chapter: and doc: pre-resolved with the reader's token ------------------
@@ -428,6 +464,10 @@ export async function loadChapterReader(args: {
     langs,
     version: body.version,
     newest: doc.version,
+    summary: checked.tree.summary,
+    date: body.date,
+    project,
+    staleSource: staleSourceOf(chapter, variant, body.version === doc.version),
     target,
     book: {
       title: book.title,
@@ -493,6 +533,10 @@ export async function loadLooseReader(args: {
     langs: [],
     version: body.version,
     newest: doc.version,
+    summary: checked.tree.summary,
+    date: body.date,
+    project: doc.project,
+    staleSource: null,
     target: {
       kind: "document",
       id: doc.id,
