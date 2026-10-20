@@ -1,5 +1,5 @@
 import { ChapterView } from "@/lib/native";
-import { documentAssetUrl } from "@/lib/native";
+import { documentAssets } from "@/lib/native";
 import type { LoadedReader } from "@/lib/reader/load";
 
 import { ChapterEnd } from "./chapter-end";
@@ -29,7 +29,7 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
           omitTitle={checked.format === "md" ? view.title : null}
           links={{
             format: checked.format,
-            assetUrl: documentAssetUrl(reader.docId, reader.assets),
+            assetInfo: documentAssets(reader.docId, reader.assets),
             resolveRef: reader.resolveRef,
             baseUrl: reader.baseUrl,
           }}

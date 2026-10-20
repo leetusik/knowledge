@@ -27,10 +27,26 @@ export interface LinkContext {
   format: ChapterFormat;
   /** asset name → a same-origin URL, or null when this version holds no such asset. */
   assetUrl?: (name: string) => string | null;
+  /**
+   * asset name → its URL AND its size from the version's asset map (P30.S16): what the image box
+   * reserves its ratio from, and the still frame of an animated GIF. Preferred over `assetUrl`.
+   */
+  assetInfo?: (name: string) => AssetInfo | null;
   /** A `chapter:` / `doc:` target → the href the reader can open, or null (missing). */
   resolveRef?: (ref: ChapterRef | DocRef) => string | null;
   /** `md` only: the document's absolute URL, which a relative link resolves against. */
   baseUrl?: string;
+}
+
+/** One image of a version as the image box needs it (`02-figures` §1; the asset map's entry). */
+export interface AssetInfo {
+  url: string;
+  /** Pixels, as displayed; null when the map is not at hand (the box then falls back to 16:9). */
+  width: number | null;
+  height: number | null;
+  animated: boolean;
+  /** The first frame of an animated GIF (a same-origin URL). */
+  stillUrl: string | null;
 }
 
 export type ResolvedLink =
@@ -124,6 +140,29 @@ export function assetHref(
   return url && url.startsWith("/") && !url.startsWith("//") ? url : null;
 }
 
+/**
+ * A bare asset name → its URL and size (P30.S16), through `assetInfo` when the caller has the
+ * map, else through `assetUrl` (size unknown). Only a same-origin path may reach an `<img>`.
+ */
+export function resolveAsset(
+  name: string | null | undefined,
+  ctx: LinkContext,
+): AssetInfo | null {
+  if (!name) return null;
+  const sameOrigin = (u: string | null | undefined): string | null =>
+    u && u.startsWith("/") && !u.startsWith("//") ? u : null;
+  if (ctx.assetInfo) {
+    const info = ctx.assetInfo(name);
+    const url = sameOrigin(info?.url);
+    if (!info || !url) return null;
+    return { ...info, url, stillUrl: sameOrigin(info.stillUrl) };
+  }
+  const url = assetHref(name, ctx);
+  return url
+    ? { url, width: null, height: null, animated: false, stillUrl: null }
+    : null;
+}
+
 const ASSET_FILE_RE = /^[0-9a-f]{64}\.(png|jpg|webp|gif)$/;
 
 /**
@@ -142,5 +181,52 @@ export function documentAssetUrl(
     return typeof file === "string" && ASSET_FILE_RE.test(file)
       ? `/api/documents/${docId}/assets/${file}`
       : null;
+  };
+}
+
+/**
+ * The `assetInfo` for a document read (P30.S16): a name → the relay URL, the pixel size, and
+ * for an animated GIF the relay URL of its still frame; null when the version's map does not
+ * hold it (or holds a malformed entry).
+ */
+export function documentAssets(
+  docId: number,
+  assets:
+    | Record<
+        string,
+        {
+          file: string;
+          width?: number;
+          height?: number;
+          animated?: boolean;
+          still?: string;
+        }
+      >
+    | null
+    | undefined,
+): (name: string) => AssetInfo | null {
+  const url = (file: unknown): string | null =>
+    typeof file === "string" && ASSET_FILE_RE.test(file)
+      ? `/api/documents/${docId}/assets/${file}`
+      : null;
+  const size = (n: unknown): number | null =>
+    typeof n === "number" && Number.isInteger(n) && n > 0 ? n : null;
+  return (name) => {
+    if (!assets || !Object.prototype.hasOwnProperty.call(assets, name))
+      return null;
+    const entry = assets[name];
+    const href = url(entry?.file);
+    if (!entry || !href) return null;
+    const w = size(entry.width);
+    const h = size(entry.height);
+    const animated = entry.animated === true;
+    return {
+      url: href,
+      // Both or neither: half a size would give a wrong ratio.
+      width: w && h ? w : null,
+      height: w && h ? h : null,
+      animated,
+      stillUrl: animated ? url(entry.still) : null,
+    };
   };
 }

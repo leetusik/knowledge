@@ -39,8 +39,9 @@ describe("every conformance case renders", () => {
         source: readFileSync(`${FIXTURES}${name}.md`, "utf8"),
         assetUrl: () => "/a.png",
       });
+      // The only `style` attributes are the figures' own `--fg-*` numbers (P30.S16), never an author's.
       expect(html).not.toMatch(
-        /<script|<iframe|<object|<foreignObject|\son[a-z]+=|\sstyle=|javascript:/i,
+        /<script|<iframe|<object|<foreignObject|\son[a-z]+=|\sstyle=(?!"(?:--fg-[a-z]+:[0-9.]+(?:px)?;?)+")|javascript:/i,
       );
       if (rejected) {
         expect(html).toContain(UNSHOWABLE);

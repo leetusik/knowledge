@@ -13,24 +13,34 @@
  *   a "missing link" that carries no href.
  * - **Plumbing, not look.** Minimal semantic markup with stable class and
  *   `data-*` hooks (`kb-ch-*`); S13 onwards style it under the signed rounds.
- *   No `style` attribute anywhere: the CSP stays free of `'unsafe-inline'`.
+ *   The only `style` attributes are the figures' custom properties (`--fg-w`, `--fg-h`,
+ *   `--fg-vbw`, `--fg-minw`, P30.S16): numbers from the asset map and the validated svg,
+ *   never author strings. The CSP leaves `style-src` open (see `csp.ts`).
  */
 import "server-only";
 
 import { createElement, Fragment, type ReactNode } from "react";
 
+import {
+  ImageBox,
+  MissingBox,
+  ScrollFigure,
+} from "@/components/reader/figure-parts";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 
+import { letters, planCitations, type CitationPlan } from "./cites";
 import { highlight } from "./highlight";
 import {
-  assetHref,
+  resolveAsset,
   resolveImage,
   resolveLink,
+  type AssetInfo,
   type LinkContext,
 } from "./links";
 import { plainText, type ChapterFormat } from "./parse";
+import { parseRef, RefError } from "./refs";
 import {
   allowedSvgElement,
   svgAttrsToProps,
@@ -95,7 +105,11 @@ export function ChapterView({
     );
   }
   // §6a: in text whose language is not Korean, each Hangul run is wrapped in `lang="ko"`.
-  const r = new Renderer(links, lang !== undefined && !isKorean(lang));
+  const r = new Renderer(
+    links,
+    lang !== undefined && !isKorean(lang),
+    checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : [])),
+  );
   const first = checked.blocks.find((b) => b.block !== null);
   const skip =
     omitTitle &&
@@ -159,12 +173,37 @@ const KNOWN_TONES = new Set([
 const tone = (v: unknown): string =>
   typeof v === "string" && KNOWN_TONES.has(v) ? v : "default";
 
+/** A paragraph's leading and trailing blanks (a space or a break beside an image) are not text. */
+function trimRun(run: Inline[]): Inline[] {
+  const blank = (n: Inline) =>
+    n.type === "break" || (n.type === "text" && n.text.trim() === "");
+  let a = 0;
+  let b = run.length;
+  while (a < b && blank(run[a])) a += 1;
+  while (b > a && blank(run[b - 1])) b -= 1;
+  const out = run.slice(a, b);
+  const first = out[0];
+  if (first?.type === "text") out[0] = { ...first, text: first.text.trimStart() };
+  const last = out[out.length - 1];
+  if (last?.type === "text")
+    out[out.length - 1] = { ...last, text: last.text.trimEnd() };
+  return out;
+}
+
 class Renderer {
+  /** The chapter's citations and each source's way back (`cites.ts`); empty for `md`. */
+  private readonly plan: CitationPlan;
+  /** How many plain images of each asset the chapter has had (`img-<name>`, `-2`, `-3` …). */
+  private readonly imageIds = new Map<string, number>();
+
   constructor(
     private readonly links: LinkContext,
     /** Wrap each Hangul run in `lang="ko"` (the text's language is not Korean). */
     private readonly wrap: boolean = false,
-  ) {}
+    blocks: readonly Block[] = [],
+  ) {
+    this.plan = planCitations(links.format === "md" ? [] : blocks);
+  }
 
   /** Text with its Hangul runs wrapped (§6a). Never used for code or attributes. */
   text(value: string): ReactNode {
@@ -202,41 +241,121 @@ class Renderer {
             {"_____"}
           </span>
         );
-      case "image": {
-        const src = resolveImage(node.src, this.links);
-        if (src === null) {
-          return (
-            <span
-              key={key}
-              className="kb-ch-image-missing"
-              role="img"
-              aria-label={CHAPTER.missingImage(node.alt)}
-            >
-              {node.alt}
-            </span>
-          );
-        }
+      case "image":
         return (
-          // eslint-disable-next-line @next/next/no-img-element -- a same-origin asset relay, sized by S16
-          <img
-            key={key}
-            src={src}
-            alt={node.alt}
-            title={node.title ?? undefined}
-            loading="lazy"
-          />
+          <Fragment key={key}>
+            {this.links.format === "md"
+              ? this.mdImage(node)
+              : this.imageBox(
+                  resolveAsset(this.assetName(node.src), this.links),
+                  node.alt,
+                  node.title,
+                )}
+          </Fragment>
         );
-      }
-      case "link":
+      case "link": {
+        const cite = this.plan.byLink.get(node);
+        if (cite) return this.citation(node, cite, key);
         return this.link(
           node.href,
           node.title,
           this.inline(node.children),
           key,
         );
+      }
       default:
         return null;
     }
+  }
+
+  /** A native image's asset name: `asset:<name>` only (null for anything else). */
+  assetName(src: string): string | null {
+    try {
+      const ref = parseRef(src, true);
+      return ref.kind === "asset" ? ref.name : null;
+    } catch (exc) {
+      if (exc instanceof RefError) return null;
+      throw exc;
+    }
+  }
+
+  /**
+   * The image box (§1): the reserved box with the asset's size from the version's map, or the
+   * "Image not available" box when the version holds no such asset.
+   */
+  imageBox(
+    info: AssetInfo | null,
+    alt: string,
+    title?: string | null,
+  ): ReactNode {
+    const altNode = this.text(alt);
+    if (!info)
+      return (
+        <MissingBox w={null} h={null} label={CHAPTER.figure.missing}>
+          {altNode}
+        </MissingBox>
+      );
+    return (
+      <ImageBox
+        src={info.url}
+        still={info.animated ? info.stillUrl : null}
+        alt={alt}
+        title={title ?? undefined}
+        w={info.width}
+        h={info.height}
+        label={CHAPTER.figure.missing}
+        missingAlt={altNode}
+      />
+    );
+  }
+
+  /** An `md` image: a same-origin URL, with no size to reserve (it keeps the old inline `<img>`). */
+  mdImage(node: Extract<Inline, { type: "image" }>): ReactNode {
+    const src = resolveImage(node.src, this.links);
+    if (src === null)
+      return (
+        <MissingBox w={null} h={null} label={CHAPTER.figure.missing}>
+          {this.text(node.alt)}
+        </MissingBox>
+      );
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a same-origin md image, with no asset map to size it from
+      <img
+        src={src}
+        alt={node.alt}
+        title={node.title ?? undefined}
+        loading="lazy"
+      />
+    );
+  }
+
+  /** A citation (§8): the author's words, a no-break space and the source's `[n]`, in one link. */
+  citation(
+    node: Extract<Inline, { type: "link" }>,
+    cite: { sourceId: string; n: number; citeId: string },
+    key: number,
+  ): ReactNode {
+    const only = node.children;
+    // The words were only a number (`1` or `[1]`): the link shows `[n]` alone.
+    const bare =
+      only.length === 1 &&
+      only[0].type === "text" &&
+      /^\s*\[?\s*\d+\s*\]?\s*$/.test(only[0].text);
+    return (
+      <a
+        key={key}
+        className="fg-cite"
+        id={cite.citeId}
+        href={`#${cite.sourceId}`}
+        title={node.title ?? undefined}
+        data-link="anchor"
+      >
+        {bare ? null : this.inline(only)}
+        <span className="fg-cite__n">
+          {bare ? "" : "\u00a0"}[{cite.n}]
+        </span>
+      </a>
+    );
   }
 
   link(
@@ -291,7 +410,7 @@ class Renderer {
   block(block: Block): ReactNode {
     switch (block.type) {
       case "paragraph":
-        return <p>{this.inline(block.content)}</p>;
+        return this.paragraph(block);
       case "heading": {
         const level = Math.min(Math.max(block.level, 1), 6);
         return createElement(
@@ -336,6 +455,53 @@ class Renderer {
       default:
         return this.typed(block);
     }
+  }
+
+  /**
+   * §3: an image never sits among words. A native paragraph that holds one is split: the text
+   * before it is a paragraph, the image is its own block (`.fg-plain`), the text after it is a
+   * new paragraph; a paragraph that is only the image becomes the image. (`md` keeps its inline
+   * images: it has no asset map to size a box from.)
+   */
+  paragraph(block: Extract<Block, { type: "paragraph" }>): ReactNode {
+    if (
+      this.links.format === "md" ||
+      !block.content.some((n) => n.type === "image")
+    )
+      return <p>{this.inline(block.content)}</p>;
+    const parts: ReactNode[] = [];
+    let run: Inline[] = [];
+    const flush = () => {
+      const text = trimRun(run);
+      run = [];
+      if (text.length)
+        parts.push(<p key={parts.length}>{this.inline(text)}</p>);
+    };
+    for (const node of block.content) {
+      if (node.type === "image") {
+        flush();
+        parts.push(
+          <Fragment key={parts.length}>{this.plainImage(node)}</Fragment>,
+        );
+      } else run.push(node);
+    }
+    flush();
+    return <>{parts}</>;
+  }
+
+  plainImage(node: Extract<Inline, { type: "image" }>): ReactNode {
+    const name = this.assetName(node.src);
+    let id: string | undefined;
+    if (name !== null) {
+      const seen = (this.imageIds.get(name) ?? 0) + 1;
+      this.imageIds.set(name, seen);
+      id = seen === 1 ? `img-${name}` : `img-${name}-${seen}`;
+    }
+    return (
+      <div className="fg-plain" id={id} data-block={id}>
+        {this.imageBox(resolveAsset(name, this.links), node.alt, node.title)}
+      </div>
+    );
   }
 
   callout(block: Extract<Block, { type: "callout" }>): ReactNode {
@@ -529,12 +695,7 @@ class Renderer {
           </figure>
         );
       case "svg":
-        return (
-          <figure className="kb-ch-svg" id={id} data-block={id}>
-            {this.svg(block.svg, str(block.label) ?? "", id ?? "svg")}
-            {this.caption(inl(block.caption))}
-          </figure>
-        );
+        return this.svgBlock(block, id);
       case "quiz":
         return this.quiz(block, id);
       case "sources":
@@ -554,96 +715,149 @@ class Renderer {
     );
   }
 
-  image(name: string | null, alt: string): ReactNode {
-    const src = assetHref(name, this.links);
-    if (src === null) {
-      return (
-        <span
-          className="kb-ch-image-missing"
-          role="img"
-          aria-label={CHAPTER.missingImage(alt)}
-        >
-          {alt}
-        </span>
-      );
-    }
-    // eslint-disable-next-line @next/next/no-img-element -- a same-origin asset relay, sized by S16
-    return <img src={src} alt={alt} loading="lazy" />;
+  /** §2 the figure's caption, credit and (for an animated asset) the still-frame line. */
+  figcap(
+    caption: Inline[] | null,
+    credit: Inline[] | null,
+    still: boolean,
+  ): ReactNode {
+    const hasCredit = !!credit && credit.length > 0;
+    if (!(caption && caption.length) && !hasCredit && !still) return null;
+    return (
+      <figcaption className="fg-figcap">
+        {caption && caption.length ? (
+          <p className="fg-cap">{this.inline(caption)}</p>
+        ) : null}
+        {hasCredit ? (
+          <p className="fg-credit">
+            <span className="fg-credit__label">{CHAPTER.figure.credit}</span>
+            <span className="fg-credit__text">{this.inline(credit)}</span>
+          </p>
+        ) : null}
+        {still ? <p className="fg-still">{CHAPTER.figure.still}</p> : null}
+      </figcaption>
+    );
   }
 
+  /** §2 the figure (`figure` block): an image, its caption and its credit; `column` or `wide`. */
   figure(block: TypedBlock, id: string | undefined): ReactNode {
-    const credit = inl(block.credit);
+    const info = resolveAsset(str(block.src), this.links);
+    const wide = str(block.width) === "wide";
+    const media = this.imageBox(info, str(block.alt) ?? "");
+    const caption = this.figcap(
+      inl(block.caption),
+      inl(block.credit),
+      !!info && info.animated && info.stillUrl !== null,
+    );
+    // A `wide` figure is a scroll box when it overflows (measured in the browser); a column
+    // figure never is.
+    if (wide)
+      return (
+        <ScrollFigure
+          id={id}
+          kind="image"
+          wide
+          ariaLabel={CHAPTER.figure.aria}
+          hint={CHAPTER.figure.hint}
+          caption={caption}
+        >
+          {media}
+        </ScrollFigure>
+      );
     return (
-      <figure
-        className="kb-ch-figure"
-        id={id}
-        data-block={id}
-        data-width={str(block.width) ?? "column"}
-      >
-        {this.image(str(block.src), str(block.alt) ?? "")}
-        {this.caption(
-          inl(block.caption),
-          credit && credit.length ? (
-            <span className="kb-ch-figure__credit">{this.inline(credit)}</span>
-          ) : null,
-        )}
+      <figure className="fg-fig" id={id} data-block={id}>
+        <div className="fg-box">
+          <div className="fg-box__scroll">{media}</div>
+        </div>
+        {caption}
       </figure>
     );
   }
 
+  /** §4 the figure row (`figures` block): 2-3 items under the row's caption, between two hairlines. */
   figures(block: TypedBlock, id: string | undefined): ReactNode {
     const items = recs(block.items);
+    const cards = items.length > 0 && items.every((i) => i.kind === "card");
+    const caption = inl(block.caption);
     return (
       <figure
-        className="kb-ch-figures"
+        className={`fg-row fg-row--${items.length}${cards ? " fg-row--cards" : ""}`}
         id={id}
         data-block={id}
-        data-count={items.length}
       >
-        <div className="kb-ch-figures__row">
-          {items.map((item, i) => (
-            <figure
-              key={i}
-              className="kb-ch-figures__item"
-              data-kind={str(item.kind) ?? undefined}
-            >
-              {this.figuresItem(item, `${id ?? "figures"}-${i + 1}`)}
-              {this.caption(inl(item.caption))}
-            </figure>
-          ))}
+        {caption && caption.length ? (
+          <figcaption className="fg-row__cap">{this.inline(caption)}</figcaption>
+        ) : null}
+        <div className="fg-row__items">
+          <div className="fg-row__grid">
+            {items.map((item, i) => (
+              <Fragment key={i}>
+                {this.figuresItem(item, `${id ?? "figures"}-${i + 1}`)}
+              </Fragment>
+            ))}
+          </div>
         </div>
-        {this.caption(inl(block.caption))}
       </figure>
+    );
+  }
+
+  /** An item's own caption: under the item, in secondary. */
+  itemCap(nodes: Inline[] | null): ReactNode {
+    if (!nodes || !nodes.length) return null;
+    return (
+      <figcaption className="fg-figcap">
+        <p className="fg-cap">{this.inline(nodes)}</p>
+      </figcaption>
     );
   }
 
   figuresItem(item: Rec, scope: string): ReactNode {
     switch (item.kind) {
       case "image":
-        return this.image(str(item.src), str(item.alt) ?? "");
+        return (
+          <figure className="fg-item" data-kind="image">
+            {this.imageBox(resolveAsset(str(item.src), this.links), str(item.alt) ?? "")}
+            {this.itemCap(inl(item.caption))}
+          </figure>
+        );
       case "diagram":
         return isRec(item.diagram) ? (
-          <div
-            className="kb-ch-diagram"
-            data-kind={str(item.diagram.kind) ?? undefined}
-          >
-            {this.diagramBody(item.diagram)}
-          </div>
+          <figure className="fg-item" data-kind="diagram">
+            <div
+              className="kb-ch-diagram"
+              data-kind={str(item.diagram.kind) ?? undefined}
+            >
+              {this.diagramBody(item.diagram)}
+            </div>
+            {this.itemCap(inl(item.caption))}
+          </figure>
         ) : null;
       case "svg":
-        return this.svg(item.svg, str(item.label) ?? "", scope);
-      case "card":
         return (
-          <div className="kb-ch-card" data-tone={tone(item.tone)}>
-            <p className="kb-ch-card__title">{str(item.title)}</p>
-            {arr(item.body).map((para, i) => (
-              <p key={i}>{this.inline(inl(para))}</p>
-            ))}
-          </div>
+          <figure className="fg-item fg-svg fg-svg--item" data-kind="svg">
+            {this.svg(item.svg, str(item.label) ?? "", scope, true)}
+            {this.itemCap(inl(item.caption))}
+          </figure>
         );
+      case "card":
+        return this.card(item);
       default:
         return null;
     }
+  }
+
+  /** §5 the row card: a title and a Markdown body on the tone's soft ground. A tone is never the only signal. */
+  card(item: Rec): ReactNode {
+    return (
+      <div className={`fg-card fg-tone-${tone(item.tone)}`} data-kind="card">
+        <p className="fg-card__title">{this.text(str(item.title) ?? "")}</p>
+        {arr(item.body).map((para, i) => (
+          <p key={i} className="fg-card__p">
+            {this.inline(inl(para))}
+          </p>
+        ))}
+      </div>
+    );
   }
 
   /**
@@ -822,11 +1036,38 @@ class Renderer {
     );
   }
 
-  /** Rebuild a validated svg tree as React elements, through the allowlist again. */
-  svg(tree: unknown, label: string, scope: string): ReactNode {
+  /** §6 the `svg` block: the drawing, scrolling in its box when narrower than its smallest label allows. */
+  svgBlock(block: TypedBlock, id: string | undefined): ReactNode {
+    const caption = inl(block.caption);
+    return (
+      <ScrollFigure
+        id={id}
+        kind="svg"
+        wide={false}
+        ariaLabel={CHAPTER.drawing.aria}
+        hint={CHAPTER.drawing.hint}
+        caption={this.itemCap(caption)}
+      >
+        {this.svg(block.svg, str(block.label) ?? "", id ?? "svg", false)}
+      </ScrollFigure>
+    );
+  }
+
+  /**
+   * Rebuild a validated svg tree as React elements, through the allowlist again. `--fg-vbw` is
+   * the viewBox's width; `--fg-minw` (a block, not a row item) is the width below which the
+   * drawing's smallest label would be under 11 px (16 when the source sets no font-size).
+   */
+  svg(tree: unknown, label: string, scope: string, item: boolean): ReactNode {
     if (!isRec(tree) || tree.name !== "svg") return null;
     const root = tree as unknown as SvgElement;
     const props = svgAttrsToProps("svg", root.attrs ?? {}, scope);
+    const vbw = viewBoxWidth(root.attrs?.viewBox);
+    const style: Record<string, string | number> = {};
+    if (vbw !== null) {
+      style["--fg-vbw"] = vbw;
+      if (!item) style["--fg-minw"] = `${Math.ceil((vbw * 11) / smallestFont(root))}px`;
+    }
     return createElement(
       "svg",
       {
@@ -834,9 +1075,8 @@ class Renderer {
         xmlns: "http://www.w3.org/2000/svg",
         role: "img",
         "aria-label": label,
-        className: ["kb-ch-svg__art", props.className]
-          .filter(Boolean)
-          .join(" "),
+        className: ["fg-svg__svg", props.className].filter(Boolean).join(" "),
+        style,
       },
       this.svgChildren(root, scope),
     );
@@ -934,41 +1174,134 @@ class Renderer {
     return null;
   }
 
+  /** §7 the sources list; each item draws its way back from the citations (`cites.ts`). */
   sources(block: TypedBlock, id: string | undefined): ReactNode {
     return (
-      <section
-        className="kb-ch-sources"
+      <ol
+        className="fg-src"
         id={id}
         data-block={id}
         aria-label={CHAPTER.sources.label}
       >
-        <ol>
-          {recs(block.items).map((item, i) => {
-            const url = str(item.url);
-            const title = str(item.title) ?? "";
-            const meta = [
-              str(item.publisher),
-              str(item.date),
-              item.accessed
-                ? CHAPTER.sources.accessed(String(item.accessed))
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li key={i} id={str(item.id) ?? undefined}>
-                {url ? this.link(url, null, title) : title}
-                {meta ? (
-                  <span className="kb-ch-sources__meta"> {meta}</span>
+        {recs(block.items).map((item, i) => {
+          const sid = str(item.id);
+          const url = str(item.url);
+          const target = url ? resolveLink(url, this.links) : null;
+          const meta = [
+            str(item.publisher),
+            str(item.date),
+            item.accessed ? CHAPTER.sources.accessed(String(item.accessed)) : null,
+          ].filter((m): m is string => !!m);
+          const note = str(item.note);
+          return (
+            <li key={i} className="fg-src__item" id={sid ?? undefined}>
+              <span className="fg-src__n">[{i + 1}]</span>
+              <div className="fg-src__body">
+                <p className="fg-src__title">{this.text(str(item.title) ?? "")}</p>
+                {meta.length ? (
+                  <p className="fg-src__meta">
+                    {meta.map((m, j) => (
+                      <Fragment key={j}>
+                        {j > 0 ? <span aria-hidden="true"> · </span> : null}
+                        {this.text(m)}
+                      </Fragment>
+                    ))}
+                  </p>
                 ) : null}
-                {str(item.note) ? (
-                  <span className="kb-ch-sources__note"> {str(item.note)}</span>
+                {url ? (
+                  <p className="fg-src__url">
+                    {target?.kind === "external" ? (
+                      <a
+                        className="fg-src__link"
+                        href={target.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-link="external"
+                      >
+                        {url}
+                        <span className="kb-ch-link__ext">{CHAPTER.newTab}</span>
+                      </a>
+                    ) : (
+                      url
+                    )}
+                  </p>
                 ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+                {note ? <p className="fg-src__note">{this.text(note)}</p> : null}
+                {sid ? this.sourceBack(sid) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     );
   }
+
+  /** §7 the way back: once cited, one link; cited twice or more, a lead and one lettered link each; never cited, none. */
+  sourceBack(sid: string): ReactNode {
+    const cites = this.plan.sources.get(sid)?.cites ?? [];
+    if (!cites.length) return null;
+    if (cites.length === 1) {
+      const c = cites[0];
+      return (
+        <p className="fg-src__back">
+          <a
+            className="fg-back"
+            href={`#${c.citeId}`}
+            aria-label={CHAPTER.sources.backAria(c.section)}
+          >
+            <span className="fg-back__chev" aria-hidden="true">
+              ‹
+            </span>
+            <span>{CHAPTER.sources.back}</span>
+          </a>
+        </p>
+      );
+    }
+    return (
+      <p className="fg-src__back">
+        <span>{CHAPTER.sources.backLead}</span>
+        {cites.map((c, i) => {
+          const letter = letters(i);
+          return (
+            <a
+              key={c.citeId}
+              className="fg-back fg-back--letter"
+              href={`#${c.citeId}`}
+              aria-label={CHAPTER.sources.backLetterAria(
+                letter,
+                cites.length,
+                c.section,
+              )}
+            >
+              <span className="fg-back__chev" aria-hidden="true">
+                ‹
+              </span>{" "}
+              {letter}
+            </a>
+          );
+        })}
+      </p>
+    );
+  }
+}
+
+/** The viewBox's width, or null when it is not four numbers (ingest checked it; defence in depth). */
+function viewBoxWidth(viewBox: string | undefined): number | null {
+  const parts = (viewBox ?? "").trim().split(/[\s,]+/).map(Number);
+  return parts.length === 4 && parts.every(Number.isFinite) && parts[2] > 0
+    ? parts[2]
+    : null;
+}
+
+/** The smallest `font-size` attribute in the drawing; 16 when it sets none. */
+function smallestFont(root: SvgElement): number {
+  let smallest = Infinity;
+  const walk = (node: SvgElement) => {
+    const size = parseFloat(node.attrs?.["font-size"] ?? "");
+    if (Number.isFinite(size) && size > 0) smallest = Math.min(smallest, size);
+    for (const child of node.children ?? [])
+      if (!("text" in child)) walk(child);
+  };
+  walk(root);
+  return Number.isFinite(smallest) ? smallest : 16;
 }
