@@ -82,7 +82,11 @@ export function layoutFor(d: Rec, kind: "flow" | "state"): Layout {
  * text has become 11 px (`ceil(W × 11 / 13)`): the CSS sizes it `clamp(floor, 100%, W/15 em)` (build prompt "Size").
  * Both are numbers from the layout, never author strings.
  */
-export function Drawing({ layout }: { layout: Layout }): ReactNode {
+export function Drawing({
+  layout,
+}: {
+  layout: Pick<Layout, "W" | "H" | "prims">;
+}): ReactNode {
   const { W, H, prims } = layout;
   const style = {
     "--dg-vbw": W,

@@ -39,9 +39,9 @@ describe("every conformance case renders", () => {
         source: readFileSync(`${FIXTURES}${name}.md`, "utf8"),
         assetUrl: () => "/a.png",
       });
-      // The only `style` attributes are the figures' and diagrams' own `--fg-*` / `--dg-*` numbers (P30.S16, S17), never an author's.
+      // The only `style` attributes are the figures' and diagrams' own `--fg-*` / `--dg-*` numbers (P30.S16, S17, S18), never an author's.
       expect(html).not.toMatch(
-        /<script|<iframe|<object|<foreignObject|\son[a-z]+=|\sstyle=(?!"(?:--(?:fg|dg)-[a-z]+:[0-9.]+(?:px)?;?)+")|javascript:/i,
+        /<script|<iframe|<object|<foreignObject|\son[a-z]+=|\sstyle=(?!"(?:--(?:fg|dg)-[a-z]+:-?[0-9.]+(?:px)?;?)+")|javascript:/i,
       );
       if (rejected) {
         expect(html).toContain(UNSHOWABLE);
@@ -58,7 +58,7 @@ describe("charts", () => {
       source: readFileSync(`${FIXTURES}diagrams-rows.md`, "utf8"),
     });
     expect(html).toContain('id="per-day"');
-    expect(html.match(/class="kb-ch-chart"/g)?.length).toBe(3);
+    expect(html.match(/dg dg--chart/g)?.length).toBe(3);
   });
 });
 

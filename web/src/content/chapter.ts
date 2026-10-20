@@ -59,12 +59,6 @@ export const CHAPTER = {
     blank: "blank",
   },
   diagram: {
-    nodes: "Nodes",
-    edges: "Connections",
-    steps: "Steps",
-    layers: "Layers",
-    lanes: "Lanes",
-    series: "Series",
     /** P30.S17 — `03-diagrams` round 01, *Every string written for the diagram block*. */
     hint: "Scroll sideways to see the whole drawing →",
     aria: "Drawing, scrolls sideways",
@@ -78,6 +72,34 @@ export const CHAPTER = {
       goes: (parts: string): string => `. Goes ${parts}.`,
       to: (target: string): string => `to ${target}`,
       itself: "back to itself",
+      /** P30.S18 — sequence, timeline, nested stack (`03-diagrams` round 01). */
+      step: (a: string, b: string, label: string): string =>
+        `${a} to ${b}: ${label}`,
+      stepSelf: (a: string, label: string): string =>
+        `${a}, to itself: ${label}`,
+      stepNote: (note: string): string => `. Note: ${note}`,
+      noBars: "no bars",
+      laneMarks: (list: string): string => `. Marks: ${list}`,
+      markAt: (label: string, at: string, unit: string): string =>
+        `${label} at ${at}${unit ? ` ${unit}` : ""}`,
+      barSpan: (label: string, from: string, to: string, unit: string): string =>
+        `${label ? `${label}, ` : ""}${from}–${to}${unit ? ` ${unit}` : ""}`,
+      lane: (lane: string, bars: string, marks: string): string =>
+        `${lane}: ${bars}${marks}.`,
+      inside: (outer: string): string => `Inside ${outer}: `,
+    },
+    /** The chart's data table and its drawn values. */
+    chart: {
+      values: "Values",
+      point: "Point",
+      by: (y: string, x: string): string =>
+        `${y}, by ${x.charAt(0).toLowerCase()}${x.slice(1)}`,
+      /** An interval, drawn: "4–21 · median 9". */
+      range: (lo: string, hi: string, mid: string | null): string =>
+        `${lo}–${hi}${mid !== null ? ` · median ${mid}` : ""}`,
+      /** An interval, in the table: "4–21, median 9". */
+      cell: (lo: string, hi: string, mid: string | null): string =>
+        `${lo}–${hi}${mid !== null ? `, median ${mid}` : ""}`,
     },
   },
   /** P30.S16 — the figures' strings (`02-figures` round 01, *Every string written for these blocks*). */

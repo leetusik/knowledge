@@ -1125,3 +1125,152 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .dg-st-series-5 { stroke: var(--dg-series-5); } .dg-hf-series-5 { fill: var(--dg-series-5); } .dg-ink-series-5 { fill: var(--dg-series-5-ink); color: var(--dg-series-5-ink); }
 .dg-st-series-6 { stroke: var(--dg-series-6); } .dg-hf-series-6 { fill: var(--dg-series-6); } .dg-ink-series-6 { fill: var(--dg-series-6-ink); color: var(--dg-series-6-ink); }
 .dg-st-ink { stroke: var(--kb-ink); }
+
+/* ---------- P30.S18: sequence, stack, timeline and chart (`03-diagrams` round 01) ----------
+   Sequence is SVG like flow and state (its classes are above). Stack, timeline and chart are HTML in `em` of the figure's
+   font size. Transcribed from the canvas's `diagram.css`; where the canvas set a position or a size inline, the server
+   sets a number as a `--dg-*` custom property and the rule below turns it into the value (an inline style is only ever
+   a number the renderer computed): l/r/t/b = left/right/top/bottom in %, w/h = width/height in %, n = a count,
+   mw = a minimum width in em, lab = a name column in em, ew = room past the plot in em, ra/rb/ca/cb = grid lines,
+   pl/pr = padding in %. */
+
+/* stack: fixed rows, top to bottom. `.dg` in front of each rule keeps the reader's own list rules (`.kb-ch ul`, `.kb-ch li`) off these lists. */
+.dg .dgs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4em; font-family: var(--font-body); }
+.dg .dgs__layer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15em 0.9em; margin: 0; padding: 0.55em 0.8em; background: var(--dgt); border: 1.25px solid var(--dgl); border-radius: 4px; }
+.dg .dgs__label { margin: 0; font-size: 1em; font-weight: 600; line-height: 1.3; color: var(--kb-ink); flex: 0 1 auto; min-width: 0; overflow-wrap: break-word; }
+/* items: every item carries its separator before it, and the list is pulled one separator to the left and clipped there,
+   so the separator of whichever item opens a line is cut away: a line never opens with a dot, and never ends with one. */
+.dg .dgs__items { list-style: none; margin: 0 0 0 -1.25em; padding: 0; display: flex; flex-wrap: wrap; gap: 0; font-size: max(11px, 0.8667em); line-height: 1.45; color: var(--kb-secondary); min-width: 0; clip-path: inset(0 0 0 1.25em); }
+.dg .dgs__items li { position: relative; margin: 0; padding-left: 1.25em; min-width: 0; overflow-wrap: anywhere; }
+.dg .dgs__items li::before { content: "\00B7"; content: "\00B7" / ""; position: absolute; left: 0; top: 0; width: 1.25em; text-align: center; color: var(--kb-secondary); }
+/* nested: each layer holds the next; its name sits in its own top band, inside its border */
+.dg .dgs--nested { --dgs-ind: 0.75em; display: grid; gap: 0; grid-template-columns: repeat(var(--dg-n), var(--dgs-ind)) minmax(0, 1fr) repeat(var(--dg-n), var(--dgs-ind)); grid-template-rows: repeat(var(--dg-n), auto) repeat(var(--dg-n), var(--dgs-ind)); }
+.dg .dgs--nested .dgs__layer { display: block; padding: 0; margin: 0; }
+.dg .dgs--nested .dgs__box { grid-row: var(--dg-ra) / var(--dg-rb); grid-column: var(--dg-ca) / var(--dg-cb); pointer-events: none; }
+.dg .dgs--nested .dgs__head { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15em 0.9em; padding: 0.5em 0.05em 0.45em; min-width: 0; z-index: 1; grid-row: var(--dg-ra); grid-column: var(--dg-ca) / var(--dg-cb); }
+.dg .dgs--nested .dgs__box--lift { --dgl: var(--dg-default); }
+
+/* timeline: lanes on one scaled axis */
+.dgt { --dgt-lab: calc(var(--dg-lab, 9) * 1em); font-family: var(--font-body); min-width: 18.7em; container: dgt / inline-size; }
+.dgt__lanes { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); }
+.dgt__lane { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.15em 0; padding: 0.5em 0 0.55em; border-top: 1px solid var(--kb-border); }
+.dgt__lane:first-child { border-top: 0; }
+.dgt__name { margin: 0; font-size: max(11px, 0.8667em); font-weight: 600; line-height: 1.3; color: var(--kb-ink); overflow-wrap: break-word; }
+.dgt__track { position: relative; }
+.dgt__grid { position: absolute; inset: 0; pointer-events: none; }
+.dgt__gl { position: absolute; top: 0; bottom: 0; left: calc(var(--dg-l) * 1%); border-left: 1px solid var(--kb-border); }
+.dgt__row { position: relative; height: 2.35em; }
+.dgt__bar { position: absolute; z-index: 1; top: 0.2em; height: 0.85em; left: calc(var(--dg-l) * 1%); width: max(calc(var(--dg-w) * 1%), 3px); background: var(--dgt); border: 1.25px solid var(--dgl); border-radius: 3px; box-sizing: border-box; }
+/* bar and mark labels are knocked out of the gridlines and mark lines they cross, as an edge label is in a flow */
+.dgt__blab { position: absolute; top: 1.15em; left: calc(var(--dg-l) * 1%); font-size: max(11px, 0.8667em); line-height: 1.25; color: var(--kb-ink); white-space: nowrap; background: var(--kb-surface); box-shadow: 3px 0 0 var(--kb-surface), -3px 0 0 var(--kb-surface); }
+.dgt__blab.is-end { left: auto; right: calc(var(--dg-r) * 1%); text-align: right; }
+.dgt__mrow { position: relative; height: 1.5em; }
+.dgt__mark { position: absolute; top: 0; bottom: -0.2em; width: 0; left: calc(var(--dg-l) * 1%); }
+.dgt__mline { position: absolute; left: -0.5px; top: 0.5em; height: 60em; border-left: 1px dashed var(--kb-ink); }
+.dgt__mdot { position: absolute; left: -0.35em; top: 0.15em; width: 0.7em; height: 0.7em; background: var(--kb-ink); transform: rotate(45deg); }
+.dgt__mlab { position: absolute; top: 0; left: calc(var(--dg-l) * 1%); font-size: max(11px, 0.8667em); line-height: 1.25; font-weight: 600; color: var(--kb-ink); white-space: nowrap; padding: 0 0 0 0.65em; background: var(--kb-surface); background-clip: content-box; }
+.dgt__mlab.is-end { left: auto; right: calc(var(--dg-r) * 1%); text-align: right; padding: 0 0.65em 0 0; }
+.dgt__lane .dgt__track { overflow: hidden; }
+.dgt__axis { position: relative; height: 1.6em; margin-top: 0.1em; border-top: 1.25px solid var(--dg-default); }
+.dgt__tick { position: absolute; top: 0; left: calc(var(--dg-l) * 1%); padding-top: 0.3em; font-size: max(11px, 0.8667em); line-height: 1.2; color: var(--kb-secondary); transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dgt__tick::before { content: ""; position: absolute; left: 50%; top: -0.05em; height: 0.3em; border-left: 1.25px solid var(--dg-default); }
+.dgt__tick.is-first { transform: none; }
+.dgt__tick.is-first::before { left: 0; }
+.dgt__tick.is-last { transform: translateX(-100%); }
+.dgt__tick.is-last::before { left: auto; right: 0; }
+.dgt__unit { margin: 0.15em 0 0; font-size: max(11px, 0.8667em); color: var(--kb-secondary); text-align: right; }
+@container dgt (min-width: 30em) {
+  .dgt__lane { grid-template-columns: var(--dgt-lab) minmax(0, 1fr); gap: 0 0.8em; align-items: start; }
+  .dgt__name { padding-top: 0.15em; }
+  .dgt__foot { margin-left: calc(var(--dgt-lab) + 0.8em); }
+}
+@container dgt (max-width: 30em) { .dgt__tick.is-minor { visibility: hidden; } }
+
+/* chart: bar, line, interval */
+.dgc { --dgc-endw: calc(var(--dg-ew, 6) * 1em); --dgc-lab: calc(var(--dg-lab, 9) * 1em); min-width: calc(var(--dg-mw, 0) * 1em); font-family: var(--font-body); container: dgc / inline-size; }
+.dgc__y { margin: 0 0 0.45em; font-size: max(11px, 0.8667em); font-weight: 600; line-height: 1.3; color: var(--kb-secondary); }
+.dgc__x { margin: 0.35em 0 0; font-size: max(11px, 0.8667em); font-weight: 600; line-height: 1.3; color: var(--kb-secondary); text-align: center; }
+.dg .dgc__legend { list-style: none; margin: 0 0 0.7em; padding: 0; display: flex; flex-wrap: wrap; gap: 0.3em 1.1em; font-size: max(11px, 0.8667em); line-height: 1.3; color: var(--kb-ink); }
+.dg .dgc__legend li { margin: 0; padding: 0; display: inline-flex; align-items: center; gap: 0.45em; }
+.dgc-sw { display: inline-block; flex: none; width: 1.1em; height: 0.8em; background-color: var(--dgt); border: 1.25px solid var(--dgl); border-radius: 2px; box-sizing: border-box; }
+.dgc-swl { display: inline-block; flex: none; width: 1.8em; height: 0.7em; overflow: visible; }
+.dgc-swl line { stroke-width: 2; }
+.dgc-pat-2 { background-image: repeating-linear-gradient(135deg, var(--dgl) 0 1px, transparent 1px 5px); }
+.dgc-pat-3 { background-image: repeating-linear-gradient(0deg, var(--dgl) 0 1px, transparent 1px 4px); }
+.dgc-pat-4 { background-image: radial-gradient(var(--dgl) 0.9px, transparent 1.2px); background-size: 4px 4px; }
+.dgc-pat-5 { background-image: repeating-linear-gradient(45deg, var(--dgl) 0 1px, transparent 1px 5px), repeating-linear-gradient(135deg, var(--dgl) 0 1px, transparent 1px 5px); }
+.dgc-pat-6 { background-image: repeating-linear-gradient(90deg, var(--dgl) 0 1px, transparent 1px 4px); }
+/* a line's dash, by the series' position (solid, 6 3, 1.5 3, 8 3 1.5 3, 12 4, 4 2 1.5 2 1.5 2) */
+.dg-dash-2 { stroke-dasharray: 6 3; }
+.dg-dash-3 { stroke-dasharray: 1.5 3; }
+.dg-dash-4 { stroke-dasharray: 8 3 1.5 3; }
+.dg-dash-5 { stroke-dasharray: 12 4; }
+.dg-dash-6 { stroke-dasharray: 4 2 1.5 2 1.5 2; }
+/* vertical bars and lines: the y ticks beside the plot, the x labels under it */
+.dgc__frame { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.45em; }
+.dgc__yt { position: relative; min-width: 1.5em; }
+.dgc__ytl { position: absolute; right: 0; bottom: calc(var(--dg-b) * 1%); transform: translateY(50%); font-size: max(11px, 0.8667em); line-height: 1; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dgc__yt-sizer { visibility: hidden; height: 0; overflow: hidden; font-size: max(11px, 0.8667em); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dgc__plot { position: relative; height: 13em; border-bottom: 1.25px solid var(--dg-default); }
+.dgc--neg .dgc__plot { border-bottom: 1px solid var(--kb-border); }
+.dgc-grid { position: absolute; left: 0; right: 0; bottom: calc(var(--dg-b) * 1%); height: 0; border-top: 1px solid var(--kb-border); }
+.dgc-zero { position: absolute; left: 0; right: 0; bottom: calc(var(--dg-b) * 1%); height: 0; border-top: 1.5px solid var(--dg-default-ink); z-index: 2; }
+.dgc__cats { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--dg-n), minmax(0, 1fr)); }
+.dgc__cat { position: relative; }
+.dgc-bar { position: absolute; left: calc(var(--dg-l) * 1%); width: calc(var(--dg-w) * 1%); bottom: calc(var(--dg-b) * 1%); height: calc(var(--dg-h) * 1%); background-color: var(--dgt); border: 1.25px solid var(--dgl); box-sizing: border-box; border-radius: 2px 2px 0 0; z-index: 1; }
+.dgc-bar.is-neg { border-radius: 0 0 2px 2px; }
+.dgc-val { position: absolute; left: calc(var(--dg-l) * 1%); bottom: calc(var(--dg-b) * 1%); transform: translateX(-50%); padding: 0.2em 0; font-size: max(11px, 0.8667em); line-height: 1; color: var(--kb-ink); font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 3; }
+.dgc-val.is-neg { bottom: auto; top: calc(var(--dg-t) * 1%); }
+.dgc__xl { display: grid; grid-template-columns: repeat(var(--dg-n), minmax(0, 1fr)); }
+.dgc__xlab { padding: 0.35em 0.15em 0; font-size: max(11px, 0.8667em); line-height: 1.25; color: var(--kb-ink); text-align: center; overflow-wrap: anywhere; }
+.dgc-rule { position: absolute; left: 0; right: 0; bottom: calc(var(--dg-b) * 1%); height: 0; border-top: 1.5px dashed var(--kb-ink); z-index: 4; }
+/* horizontal rows: a category per row (bar and interval); the label beside the track, or above it when narrow */
+.dgc__rows { display: grid; grid-template-columns: minmax(0, 1fr); }
+.dgc__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.15em 0; padding: 0.3em 0; }
+.dgc__rlab { align-self: center; font-size: max(11px, 0.8667em); line-height: 1.3; color: var(--kb-ink); overflow-wrap: anywhere; }
+.dgc__rlab--head { font-weight: 600; color: var(--kb-secondary); }
+.dgc__track { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.dgc__trackin { position: relative; margin-right: 3.2em; }
+.dgc--neg .dgc__trackin, .dgc--neg .dgc__haxis { margin-left: 3.2em; }
+.dgc__hgrid { position: absolute; left: 0; right: 0; top: -0.3em; bottom: -0.3em; pointer-events: none; }
+.dgc__hgl { position: absolute; top: 0; bottom: 0; left: calc(var(--dg-l) * 1%); border-left: 1px solid var(--kb-border); }
+.dgc__hgl.is-zero { border-left: 1.5px solid var(--dg-default-ink); }
+.dgc-vrule { position: absolute; top: 0; bottom: 0; left: calc(var(--dg-l) * 1%); border-left: 1.5px dashed var(--kb-ink); z-index: 2; }
+.dgc__hb { position: relative; }
+.dgc-hbar, .dgc-range { display: block; left: calc(var(--dg-l) * 1%); width: calc(var(--dg-w) * 1%); }
+.dgc-hbar { position: relative; height: 0.95em; margin: 0.1em 0; background-color: var(--dgt); border: 1.25px solid var(--dgl); box-sizing: border-box; border-radius: 0 2px 2px 0; z-index: 1; }
+.dgc-hbar.is-neg { border-radius: 2px 0 0 2px; }
+.dgc-hval { position: absolute; top: 50%; left: calc(var(--dg-l) * 1%); transform: translateY(-50%); padding: 0 0.35em; font-size: max(11px, 0.8667em); line-height: 1; color: var(--kb-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dgc-hval.is-neg { left: auto; right: calc(var(--dg-r) * 1%); }
+.dgc__heads { position: relative; height: 1.3em; margin-right: 3.2em; }
+.dgc--neg .dgc__heads { margin-left: 3.2em; }
+.dgc-vhead { position: absolute; bottom: 0.1em; left: calc(var(--dg-l) * 1%); padding: 0 0.35em; font-size: max(11px, 0.8667em); line-height: 1.2; font-weight: 600; color: var(--kb-ink); white-space: nowrap; }
+.dgc-vhead.is-end { left: auto; right: calc(var(--dg-r) * 1%); text-align: right; }
+.dgc__haxis { position: relative; height: 1.5em; margin-right: 3.2em; border-top: 1.25px solid var(--dg-default); }
+.dgc-range { position: relative; height: 0.7em; margin: 0.35em 0 0.25em; background-color: var(--dgt); border: 1.25px solid var(--dgl); box-sizing: border-box; z-index: 1; }
+.dgc-range::before, .dgc-range::after { content: ""; position: absolute; top: -0.3em; bottom: -0.3em; border-left: 2px solid var(--dgl); }
+.dgc-range::before { left: -1.25px; }
+.dgc-range::after { right: -1.25px; }
+.dgc-mid { position: absolute; top: -0.3em; bottom: -0.3em; left: calc(var(--dg-l) * 1%); width: 0; border-left: 2.5px solid var(--dgi); transform: translateX(-1.25px); }
+.dgc-rtext { position: relative; margin: 0.15em 0 0; padding-left: calc(var(--dg-pl) * 1%); font-size: max(11px, 0.8667em); line-height: 1.25; color: var(--kb-secondary); font-variant-numeric: tabular-nums; z-index: 1; }
+.dgc-rtext.is-r { padding-left: 0; padding-right: calc(var(--dg-pr) * 1%); text-align: right; }
+@container dgc (min-width: 30em) {
+  .dgc__row { grid-template-columns: var(--dgc-lab, 9em) minmax(0, 1fr); column-gap: 0.8em; }
+  .dgc__hfoot { margin-left: calc(var(--dgc-lab, 9em) + 0.8em); }
+}
+@container dgc (max-width: 30em) {
+  .dgc__hgrid { top: 0; }
+  .dgc__row--head .dgc__rlab--head:empty { display: none; }
+}
+/* line: one polyline per series in a 1000 × 1000 box stretched over the plot, its name at its end */
+.dgc--line .dgc__frame, .dgc--endrules .dgc__frame { margin-right: var(--dgc-endw, 6em); }
+.dgc__lineplot { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; z-index: 1; }
+.dgc-line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.dgc__ends { position: absolute; top: 0; bottom: 0; left: 100%; width: 0; }
+.dgc-end { position: absolute; left: 0.5em; bottom: calc(var(--dg-b) * 1%); transform: translateY(50%); font-size: max(11px, 0.8667em); line-height: 1.1; font-weight: 600; white-space: nowrap; }
+.dgc-end--rule { color: var(--kb-ink); }
+.dgc__xt { position: relative; height: 1.6em; }
+.dgc-xt { position: absolute; top: 0.35em; left: calc(var(--dg-l) * 1%); transform: translateX(-50%); font-size: max(11px, 0.8667em); line-height: 1.2; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dgc-xt.is-first { transform: none; }
+.dgc-xt.is-last { transform: translateX(-100%); }
+@container dgc (max-width: 26em) { .dgc-xt.is-minor { visibility: hidden; } }
