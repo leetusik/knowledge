@@ -1048,3 +1048,13 @@
 {"ts": "2026-10-20T16:33:12+09:00", "type": "slice_status_changed", "slice": "P29.S6", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-10-20T16:45:45+09:00", "type": "slice_status_changed", "slice": "P29.S6", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-10-20T16:57:52+09:00", "type": "slice_status_changed", "slice": "P29.S6", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-20T17:02:41+09:00", "type": "slice_status_changed", "slice": "P29.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-20T17:12:16+09:00", "type": "executor_dispatched", "slice": "P29.REVIEW", "phase": "P29", "kind": "review", "risk": "high", "route": "high", "tier": "high", "agent": "slice-executor-high", "model": "opus", "effort": "high", "attribution": "Claude Opus 5.5", "attempt": 1, "verdict": "done", "duration_ms": 532445, "tokens": 191941, "tool_uses": 46, "note": null}
+{"ts": "2026-10-20T17:13:14+09:00", "type": "deferred_created", "deferred": "D41", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:14+09:00", "type": "deferred_created", "deferred": "D42", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:15+09:00", "type": "deferred_created", "deferred": "D43", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:15+09:00", "type": "deferred_created", "deferred": "D44", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:15+09:00", "type": "deferred_created", "deferred": "D45", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:15+09:00", "type": "deferred_created", "deferred": "D46", "source": "P29.REVIEW"}
+{"ts": "2026-10-20T17:13:27+09:00", "type": "slice_status_changed", "slice": "P29.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-20T17:13:27+09:00", "type": "phase_reviewed", "phase": "P29", "verdict": "pass", "reviewer": "slice-executor-high"}

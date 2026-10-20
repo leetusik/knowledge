@@ -2,16 +2,16 @@
   "id": "P29",
   "name": "Learning reader — book model, chapter format + reader surfaces (design)",
   "objective": "Design half of the learning-reader pair: research and settle the book/chapter model (codebase books from phases, subject books for general learning, versioned chapters, Korean/English variants), a native chapter format (refined diagrams, images, multi-column figures, quiz blocks) with a legacy path for existing HTML explainers, then design the reader-first surfaces - library, book page, reader, review - on drafter canvases for phone, iPad and desktop, each job signed on its canvas.",
-  "status": "planned",
+  "status": "done",
   "order": 9,
   "created_at": "2026-10-17T18:36:36+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-10-20T17:13:27+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-10-20T17:13:27+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "Design-only phase reviewed whole: S1-S3 contracts settled with every amendment in place; all nine jobs signed on the operator's literal words, snapshots identical to their canvases; job scopes, the 25-line build inventory and the confirmed intent drawn or routed; canvas content sweep clean; Doc impact correctly empty (no product truth changed; P30 owes the frontend.md and decisions.md notes as it builds); Operator Questions 1-13 routed: A1-A5 to the operator, B1-B5 and O2 filed as D41-D46"
   },
   "acceptance": {
     "required": false,

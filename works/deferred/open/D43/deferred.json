@@ -1,0 +1,11 @@
+{
+  "id": "D43",
+  "title": "Legacy reader: a bridge restore by pixels",
+  "status": "deferred",
+  "source": "P29.REVIEW",
+  "reason": "P29.REVIEW routing of legacy-and-print OQ10 (Operator Questions 13): the signed resume is by anchor, else by fraction; an exact same-device resume needs a pixel restore message on the legacy bridge, a contract change no round drew and P30's contract does not carry",
+  "trigger": "a report that the legacy reader resumes on the wrong screen on the same device",
+  "created_at": "2026-10-20T17:13:15+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
