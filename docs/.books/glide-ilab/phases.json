@@ -1,0 +1,50 @@
+{
+  "slug": "phases",
+  "title": "glide-ilab, phase by phase",
+  "kind": "codebase",
+  "subject": null,
+  "description": null,
+  "chapters": [
+    {
+      "key": "p8",
+      "position": 8,
+      "variants": {
+        "en": "glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html",
+        "ko": "glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html"
+      },
+      "source": {
+        "phase": "P8"
+      }
+    },
+    {
+      "key": "p9",
+      "position": 9,
+      "variants": {
+        "en": "glide-ilab/2026-10-10-p9-the-stage-1-system-explained.html"
+      },
+      "source": {
+        "phase": "P9"
+      }
+    },
+    {
+      "key": "p17-p18",
+      "position": 17,
+      "variants": {
+        "en": "glide-ilab/2026-10-15-p17-and-p18-signal-extraction-and-the-weekly-aggregation-explained.html"
+      },
+      "source": {
+        "phase": "P17-P18"
+      }
+    },
+    {
+      "key": "p24",
+      "position": 24,
+      "variants": {
+        "en": "glide-ilab/2026-10-16-p24-the-research-page-signal-and-theme-fixes-explained.html"
+      },
+      "source": {
+        "phase": "P24"
+      }
+    }
+  ]
+}
