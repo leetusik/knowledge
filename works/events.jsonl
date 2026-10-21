@@ -1227,3 +1227,8 @@
 {"ts": "2026-10-21T16:35:03+09:00", "type": "slice_status_changed", "slice": "P30.F5", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T16:58:43+09:00", "type": "executor_dispatched", "slice": "P30.F5", "phase": "P30", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T16:58:43+09:00", "type": "slice_status_changed", "slice": "P30.F5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T17:18:58+09:00", "type": "slice_status_changed", "slice": "P30.REVIEW", "old_status": "changes_requested", "new_status": "changes_requested"}
+{"ts": "2026-10-21T17:18:58+09:00", "type": "phase_reviewed", "phase": "P30", "verdict": "changes_requested", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-21T17:18:58+09:00", "type": "slice_created", "phase": "P30", "slice": "P30.F6"}
+{"ts": "2026-10-21T17:18:58+09:00", "type": "deferred_created", "deferred": "D63", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T17:19:14+09:00", "type": "executor_dispatched", "slice": "P30.REVIEW", "phase": "P30", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 2: changes_requested (R3 → F6)"}

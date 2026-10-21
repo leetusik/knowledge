@@ -1,5 +1,219 @@
 # P30.REVIEW: result
 
+Round 2 (after P30.F5) is first, and round 1 is kept unchanged below it.
+
+## Verdict (round 2)
+
+- **status:** done
+- **tier:** high
+- **model:** opus
+- **effort:** high
+- **review_verdict:** **changes_requested**, with one finding.
+  - **R3:** chapter-to-chapter navigation keeps the previous chapter's scroll position. When signed in, it can open the next chapter at its end and record it as Finished without it being read.
+  - Proposed fix slice: **P30.F6** (risk **high**).
+  - F5 itself passes.
+- **summary:** F5 does what the operator asked, on both readers at 1440, 820 and 390. I checked it live in a fresh scratch stack: the production build, CDP and Aside `u1`, and the dev clone. Nothing F5 touched regressed. All gates pass together. The reader's chapter-end check turned up a navigation defect that predates F5 (the pre-F5 build does the same). It corrupts persisted reading state, so it gets a fix slice before the gate reopens.
+- **files_changed:**
+  - this file (round 2 added above round 1);
+  - `works/phases/active/P30/phase.md`: *Notes for later slices* (removed the consumed gate-prep and REVIEW-bookkeeping notes, added the F6 note) and *Now*.
+- **validation:** every command passed (table below).
+- **deviations:**
+  1. One extra build: I built the pre-F5 commit (`git archive 63c161b web`, in the scratchpad) to prove R3 predates F5. Nothing in the repo changed.
+  2. The single sign-in went through CDP, not Aside, so the member checks could reuse the cookie. Aside ran the 1440 chrome sequence and the Next navigation signed out, with real wheel and mouse input.
+  3. The two F5 decisions folded into the walkthrough are my choice: OQ186 (scrolling up never brings the bottom back, even from the end) and OQ188 (the legacy top bar folds, so the document moves up). The plan said "the two F5 flagged" without naming them.
+- **doc_versions:** none — deferred to a docs phase. Round 2 wrote no gate section. qa v0018 and operations v0025 from round 1 stand. F6 should add a qa line for chapter navigation; it would go in at the next pass.
+- **walkthrough:** drafted below, for after F6. On `changes_requested` it is not yet the gate's.
+- **explain:** not written — run /explain for this phase.
+
+### Findings (round 2)
+
+**R3: chapter-to-chapter navigation keeps the old scroll position.** It is inside the boundary: `reader-frame.tsx`, `use-reading.ts` and the `[chapter]` route, built by S13 and S15. It is not caused by F5.
+
+Navigation results, all on the production build at 1440. A fresh load of `write-lock` opens at y 0.
+
+| From (`all-blocks`) | Via | Lands on `write-lock` at |
+|---|---|---|
+| y 8863 (the end) | the chapter bar's Next | y 2248 (its max, the end) |
+| y 1500 | the chapter bar's Next | y 1500 |
+| the end | the end section's Next (`.rd-end` primary link) | y 2248 |
+| y 1500 | the Contents sheet's chapter link | y 1500 |
+
+- **Previous** from the end of `write-lock` opened `all-blocks` at y 50.
+- **Signed in:** from y 4105, Next opened `write-lock` at its end (2307), and the reader posted `{fraction: 1, max_fraction: 1, finished: true}` for it. An unread chapter is recorded as finished. Mid-way, the saved `max_fraction` is inflated.
+- **Same in a real browser:** Aside `u1`, production build. From y 1500, clicking Next landed at y 1500 out of 2248.
+- **Predates F5:** the pre-F5 build (`63c161b`, `next start :3995` against the same API) gives the same numbers. The code that is already deployed has it, so production members who used Next may have chapters wrongly marked Finished.
+- **Where it likely comes from:** `use-reading.ts` returns early for a chapter that is not `started`, so nothing scrolls to the top. Next's own scroll-to-top does not fire on the `[chapter]` param change. The suspects are the `loading.tsx` boundary, or `.rd-root`'s first children being fixed (`.rd-skip`, `.rd-line`), which Next skips. I did not root-cause it further.
+
+**Proposed P30.F6** (`fix`, **risk high**: persisted reader state, which is a core invariant; it also repairs S13/S15, whose verdicts read `tier: mid`):
+- On a chapter change, land at the top, with the quiet window, unless a hash, `?note=` or the resume landing owns the place.
+- Make sure no position or finish write goes out before the landing settles.
+- Keep F4's hash landing and S15's resume exactly as they are.
+- Verify live, signed in and signed out: bar Next and Previous, the end section's Next, the Contents link, the book page, and the language switch (which carries the place by design).
+- Add one core test, if the landing rule can be made pure.
+- Add one qa checklist line.
+
+### Validation (round 2)
+
+| Command | Result |
+|---|---|
+| `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55432/kb uv run pytest -q` | pass, 229 passed |
+| `cd cli && uv run pytest -q` | pass, 55 passed |
+| `pnpm --dir web typecheck` | pass |
+| `pnpm --dir web lint` | pass |
+| `pnpm --dir web test` | pass, 37 files, 388 tests |
+| `NEXT_PUBLIC_APP_URL=https://knowledge.hi2vi.com pnpm --dir web build` | pass |
+| `python3 scripts/plugin_parity.py` | PASS |
+| `python3 scripts/skills_parity.py` | PASS |
+| `python3 scripts/workflow.py validate` | passed (pre-existing warnings only: P26 kinds, P28 debt, stale docs, oversized sections) |
+| `uv run alembic upgrade head` on the scratch database `kb_rv2live` | pass, 0001 → 0006 |
+
+### Stack and instruments (round 2)
+
+**Stack** (session scratchpad `…/scratchpad/rv2/`):
+- a scratch API `:8991` (PID 68801), with a scratch `KB_ROOT`, the database `kb_rv2live` in `kb-p28s2-pg`, and `KB_GIT_COMMIT=false`;
+- one member, `rv2-member@example.com` (org `rv2org`);
+- the fixture book via `publish_fixture_book.py` with the member's `vk_` key, plus F5's 12-part `long-legacy` html chapter as chapter 4 (the frame scrolls about 6,900 px at 1440);
+- `fixtures` set public;
+- the production build with `next start :3991` (PID 68913);
+- the pre-F5 build with `next start :3995` (PID 69912);
+- a dev clone with `next dev :3993` (PIDs 70509 and 70516).
+
+**Cleanup:** I stopped exactly those PIDs, and the headless Chromes exited with their scripts. I dropped `kb_rv2live`. Afterwards `:3030` (8452) and `:8766` (66506) were still listening. I never touched either.
+
+**Instruments:**
+- Headless Chrome over CDP: the S27/F5 `cdp.mjs` driver, with `Input.synthesizeScrollGesture` (mouse at 1440, touch at 820 and 390), real mouse and touch taps, true viewports and console/CSP capture.
+- Aside `aside repl --account u1` at 1440×900, signed out, with real `mouse.wheel` and clicks.
+- `pdfinfo` and `pdftotext`.
+- One sign-in in total (CDP `/api/auth/login`).
+- **Not run:** real iPhone and iPad, Safari, Firefox. Those stay the operator's.
+
+### F5 against the operator's words (live)
+
+The rules from `slices/P30.F5/plan.md` and the operator's words: "invisible when scrolling down, shows up when only user tries to tab the screen or up scrolling"; "the bottom bar that comes up when I do even very slight scroll up… super annoying"; and "it's not hid when I see in pc".
+
+**Production build, CDP, signed out.** Each value is the top bar / the bottom chrome. For legacy, the topbox height is 59 px when shown and 3 px when folded.
+
+| Step | 1440 native | 1440 legacy | 820 native / legacy | 390 native / legacy |
+|---|---|---|---|---|
+| open (top) | shown / shown | shown / shown | shown / shown | shown / shown |
+| scroll down 600 | hidden / hidden | hidden (h3) / hidden | hidden / hidden | hidden / hidden |
+| slow nudge up 12, then 30 (60 px/s) | hidden / hidden | hidden / hidden | hidden / hidden | hidden / hidden |
+| deliberate up 150 | **shown / hidden** | **shown (h59) / hidden** | shown / hidden | shown / hidden |
+| scroll down 200 | hidden / hidden | hidden / hidden | hidden / hidden | hidden / hidden |
+| tap on the text | **shown / shown** | **shown / shown** | shown / shown | shown / shown |
+| tap again | hidden / hidden | hidden / hidden | hidden / hidden | hidden / hidden |
+| scroll to the end | hidden / **shown** | hidden / **shown** | hidden / shown | hidden / shown |
+| scroll down at the end | hidden / shown (held) | hidden / shown (held) | the same | the same |
+| slow nudge up 30 from the end | hidden / shown | hidden / shown | the same | the same |
+| deliberate up 400 | shown / shown (OQ186) | shown / shown | the same | the same |
+| scroll down 300 | hidden / hidden | hidden / hidden | hidden / hidden | hidden / hidden |
+
+- The end positions were native 8863, 8541 and 10333, and legacy 6900, 6640 and 12641, at 1440, 820 and 390 respectively. The legacy bottom chrome measured 170, 190 and 276 px tall at the three widths.
+- **Aside `u1` (real wheel, 1440, production, signed out):** the same outcomes on both readers at every step (wheel 600 down, 12 up, a slow 30 up, 150 up, 200 down, click, click, the end, down at the end, a slow 30 up at the end).
+- **The desktop top bar hides:** at 1440 the native `.rd-top` computes to hidden, and the legacy topbox folds from 59 px to 3 px. This was the operator's complaint 2.
+- **Dev clone (CDP, 1440 and 390, both readers):** the same outcomes. The console shows only dev noise (React DevTools info, HMR and Fast Refresh, and "preloaded but not used" CSS). There were no exceptions, no CSP lines and no hydration warnings.
+- **Production console:** empty across every run.
+
+**Does this match the operator's words?** Yes.
+- The top bar hides on a scroll down at every width, desktop included.
+- It comes back only on a tap or a deliberate scroll up (64 px). Nudges of 12 and 30 px bring nothing.
+- The bottom bar never rises on a scroll up. It sits at the end ("stick it to bottom"), and a tap brings it anywhere ("a drawer the user can bring").
+
+The one reading the operator should confirm is that the "drawer" is a tap on the text, with no visible handle. That is walkthrough decision 1.
+
+### No regression elsewhere in the reader (production, 1440, CDP)
+
+| Check | Result |
+|---|---|
+| Display | Opens a dialog with focus on Close. A 500 px scroll with it open leaves the chrome alone. Escape closes it and returns focus to Display. |
+| Contents sheet | Opens from the chapter bar (`rd-sheet--left`, 12 links) and closes on Escape. |
+| Keyboard reach | With both bars hidden, the first Tab lands on "Show reading controls" (opacity 1), and Enter shows both. A hidden native bar is `visibility: hidden`, so it is not focusable, as S13 built it. On legacy, Tab from the skip link unfolds the folded top bar to 59 px. |
+| Resume pill (signed in) | Scrolled to 4000, then reloaded: it landed at 3955 with "Picked up where you left off · Images · From the top", and both bars shown. A scroll down 300 hid the top bar and took the pill with it. A deliberate scroll up brought only the top bar back. |
+| Chapter end | The bottom bar is held at the end ("Contents · Chapter 1 of 4 · 100% · Next → The write lock"). The end section shows "END OF CHAPTER … Mark as finished · NEXT · CHAPTER 2". **Next navigates, but lands wrongly: R3.** |
+| Legacy member bar | On open: ORIGINAL LAYOUT, the version line, Print · new tab, Bookmark this position. At the end: "Finished · Saved to your progress · Mark as unread", and the bar stays held. |
+| Print | The native chapter on A4 is 8 pages, with the masthead "KNOWLEDGE · FIXTURE GUIDE · CHAPTER 1 OF 4", the address and v2, and the printed date. I printed it with the chrome hidden. The legacy chapter prints 1 notice sheet, as S26 built it. |
+| Legacy bridge: refused | A `tap` posted by the top window; a `tap` and a `navigate` from a second same-origin frame; and synthetic events whose source is the real frame but which carry an extra key, `v: 2`, `kb: "other"`, `y: -50`, no `y`, a `navigate` to another host, or a `navigate` to `/dashboard`. None changed the chrome or navigated. |
+| Legacy bridge: accepted | A well-formed `{kb, v, type: "tap"}` from the frame's own window toggles both bars. The sandbox is still `allow-scripts allow-popups allow-popups-to-escape-sandbox`. F5's `legacy-bridge.test.ts` covers the same refusals. |
+
+**Code read of F5** (`chrome.ts`, `reader-frame.tsx`, `legacy-reader.tsx`, `bridge.ts`, `messages.ts`, CSS): the rules are pure and match the plan; the sender check and the size cap are kept; the bridge is 1916 bytes.
+
+Two observations, neither a finding:
+- The bridge's tap exemptions skip `pre`, `table` and `details`, which the native `TAP_IGNORE` does skip. The plan's list did not include them. A tap on a legacy code block toggles the chrome.
+- A legacy document's own click-handled `div` (not a control) will toggle the chrome too, because the bridge listens in the capture phase.
+
+### Post-gate commits
+
+| Commit(s) | What | Verdict |
+|---|---|---|
+| `e8f1fda` | merges `origin/main`'s `kb-api` documents before the push | fine; content only |
+| `6dbe3a6`, `0e38cb7`, `f22e8d3`, `bd7a5ca` (kb-api) | S6's migration: four `docs/.books/*.json`, matching the apply report's 4 PUTs and their `commit_sha` | fine |
+| `63c161b` | the production record: deploy run 39559011982, `topics/migration-run/` (dry run 167 checks / apply 4 PUTs created / rerun all unchanged; 4 raw-hash flags that are Cloudflare's per-response email obfuscation), and D60–D62 | fine; the reports hold no secrets; D60–D62 are sound and correctly sourced |
+| `c3358cd`, `575c76c` (kb-api), the redaction republish | `/Users/sugang/…` → `~/…` in the changple5 reading guide (now v2) and the base onboarding doc (now v3) | it works for the current versions. **Observation:** the old text is still in `docs/.versions/…/v0001.html` and the base doc's `v0001.md` and `v0002.md`, which the past-version page serves. It is outside the boundary (content, not P30 product files), so it is a deferred-job candidate (N9 below), not a finding. |
+| `0c425a5` | F5 | as above; the `## Doc impact` line is present (`frontend.md`, superseding the two signed hide/show tables); OQ185–OQ190 are collapsed as decided |
+
+### Notebook cross-check (round 2)
+
+- `## Decisions` carries the F5 line.
+- `## Doc impact` carries F5.
+- OQ185–OQ190 are routed: decided and collapsed. OQ186 and OQ188 are folded into the walkthrough.
+- No question is unrouted, and no `result.md` decision is missing.
+- Round 1's bookkeeping is done: the nine jobs are `implemented`; D18, D32, D37 and D38–D40 are dropped; N1–N8 were filed as D52–D59. I removed the two consumed notes (gate prep, REVIEW bookkeeping) from *Notes for later slices*.
+
+### Deferred-job candidate (for the orchestrator; I ran nothing)
+
+| # | Title | Reason | Trigger |
+|---|---|---|---|
+| N9 | Redaction reaches past versions | the `~/` republish left the absolute home path in the archived versions served by the past-version page (changple5 reading guide v1; base onboarding v1 and v2) | the next privacy or redaction request, or a version-delete feature |
+
+Also due now that the deploy has happened: **D57**, the production reindex for chart search text, on the operator's word.
+
+### Walkthrough (round 2, a draft for after F6 lands and F5 and F6 are deployed)
+
+**First, on your word:** push and deploy F5 and F6 (a green Production Deploy).
+
+**Re-walk the reader chrome** at https://knowledge.hi2vi.com, on the Mac (Chrome and Safari), iPhone and iPad, on a native chapter and an ORIGINAL LAYOUT one:
+1. Scroll down: both bars go, on the Mac too.
+2. A small or slow scroll up: nothing appears.
+3. A deliberate scroll up: only the top bar appears.
+4. Tap the text: both bars appear. Tap again: both go.
+5. Reach the end: the bottom bar appears and stays there.
+6. On the Mac, Tab once: "Show reading controls" appears.
+7. Press Next at the end of a chapter: the next chapter opens at its top and is not marked Finished (F6).
+
+**Still unconfirmed from your first walk:**
+- Display (the column stays fixed);
+- resume after a reload;
+- a highlight with a note, then Notes in this book;
+- a quiz answer, then Review;
+- an ORIGINAL LAYOUT document's momentum scrolling, its external links and Print · new tab;
+- printing a chapter;
+- an old `/documents/{id}` link landing on its chapter;
+- the device-only checks: diagram hairlines, Korean line breaks in Safari, Safari print.
+
+**Decisions** ("accept" takes them as drawn):
+1. **The chrome as built (F5).**
+   - The "drawer" is a tap on the text, with no visible handle.
+   - A scroll up never brings the bottom bar back, even from the end (OQ186).
+   - On an ORIGINAL LAYOUT page, the top bar folds away, so the document moves up by its height (OQ188).
+   - A visible handle would need a new design round.
+2. **S28:** `/explain` moves to the knowledge plugin as `/knowledge:explain`. Give `works/phases/active/P30/handoff-explain.md` to the bootstrap agent.
+3. **OQ184:** on a tight page, the ORIGINAL LAYOUT bar scrolls. It is the one drawn inner scroller.
+4. **OQ21 and OQ27:** the migration merges and never replaces. A document delete purges every reader's notes, and fails (503) if the purge fails.
+5. **Delete the nine P29 design canvases?** They are listed in round 1's walkthrough.
+
+**Decided as drawn:**
+- OQ1–OQ183;
+- OQ185, OQ187, OQ189 and OQ190 (F5);
+- D52–D62 filed.
+
+Members who used Next on production before F6 may see chapters marked Finished that they never read. Mark as unread clears them.
+
+**To clear the gate:** say "accept" (→ `accept-gate P30 --clear`), or list what failed.
+
+---
+
+# Round 1 (2026-10-21, before the operator's walkthrough)
+
 ## Verdict
 
 - **status:** done
