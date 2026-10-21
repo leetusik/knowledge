@@ -29,10 +29,16 @@ import {
   signInToSaveHref,
 } from "@/lib/reader-href";
 import {
+  applyStep,
+  atEnd,
+  CHROME_SHOWN,
+  chromeScroll,
   progressPercent,
   QUIET_MS,
   stepChrome,
   TAP_IGNORE,
+  tapChrome,
+  type Chrome,
   type ChromeScroll,
 } from "@/lib/reader/chrome";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
@@ -60,9 +66,11 @@ import "@/app/reader.css";
  * the server (S12's pipeline); only this shell is a client island.
  *
  * The window scrolls. This file owns:
- *  - the chrome rules (hide on scroll down, show on scroll up / near either end /
- *    on a tap on the text; ignored for 450ms after the reader's own scroll and while a
- *    sheet is open), via `stepChrome`;
+ *  - the chrome rules, via `stepChrome` / `tapChrome` (P30.F5, the operator's
+ *    decision): the top bar hides on scroll down and returns on a tap on the text, a
+ *    deliberate scroll up (64px) or near the top; the chapter bar shows only at the end
+ *    (held there), near the top, or on a tap; both are ignored for 450ms after the
+ *    reader's own scroll and while a sheet is open;
  *  - progress (the line, "Chapter N of M · P%") and the section being read;
  *  - the sheets (Contents, Display, Version history): focus moves to Close, Tab cycles
  *    inside, Escape / Close / the scrim close and return focus to the opener, the
@@ -100,7 +108,7 @@ export function ReaderFrame({
 
   const [settings, setSettings] = useState<ReaderSettings>(view.settings);
   const [panel, setPanel] = useState<Panel>(null);
-  const [hidden, setHidden] = useState(false);
+  const [chrome, setChrome] = useState<Chrome>(CHROME_SHOWN);
   const [pct, setPct] = useState(0);
   const [section, setSection] = useState<string | null>(null);
   const [os, setOs] = useState<"light" | "dark">("light");
@@ -113,7 +121,7 @@ export function ReaderFrame({
   const opener = useRef<HTMLElement | null>(null);
   const quietUntil = useRef(0);
   const panelRef = useRef<Panel>(null);
-  const scrollRef = useRef<ChromeScroll>({ last: 0, run: 0 });
+  const scrollRef = useRef<ChromeScroll>(chromeScroll(0, 0));
   const titleId = useId();
   const quiet = useCallback(() => {
     quietUntil.current = Date.now() + QUIET_MS;
@@ -169,14 +177,11 @@ export function ReaderFrame({
       });
       setSection((prev) => (prev === found ? prev : found));
 
-      const step = stepChrome(scrollRef.current, top, max);
-      scrollRef.current = { last: step.last, run: step.run };
-      if (
-        Date.now() >= quietUntil.current &&
-        panelRef.current === null &&
-        step.want !== null
-      ) {
-        setHidden(!step.want);
+      const now = Date.now();
+      const step = stepChrome(scrollRef.current, top, atEnd(top, max), now);
+      scrollRef.current = step.scroll;
+      if (now >= quietUntil.current && panelRef.current === null) {
+        setChrome((c) => applyStep(c, step));
       }
     };
     const onScroll = () => {
@@ -191,7 +196,7 @@ export function ReaderFrame({
       if (a && a.getAttribute("href")?.startsWith("#")) quiet();
     };
     if (window.location.hash) quiet();
-    scrollRef.current = { last: window.scrollY, run: 0 };
+    scrollRef.current = chromeScroll(window.scrollY, Date.now());
     measure();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
@@ -249,10 +254,12 @@ export function ReaderFrame({
     return () => window.removeEventListener(OPEN_SHEET_EVENT, onOpenSheet);
   }, [ready, view.versions]);
 
-  // The pill leaves when the chrome hides.
+  // The pill follows the top bar: it leaves when the top bar hides.
+  const topHidden = !chrome.top && ready;
+  const botHidden = !chrome.bottom && ready;
   useEffect(() => {
-    if (hidden) dismissPill();
-  }, [hidden, dismissPill]);
+    if (topHidden) dismissPill();
+  }, [topHidden, dismissPill]);
 
   // A sheet returns focus to its opener when it closes (not when it switches views).
   const sheetOpen = panel !== null;
@@ -326,7 +333,7 @@ export function ReaderFrame({
     if (!ready || panel !== null) return;
     if ((e.target as Element).closest(TAP_IGNORE)) return;
     if (window.getSelection()?.toString()) return;
-    setHidden((h) => !h);
+    setChrome((c) => tapChrome(c, hasBottom));
   };
 
   // ---- places -----------------------------------------------------------------------
@@ -372,7 +379,8 @@ export function ReaderFrame({
     `rd-size-${settings.size}`,
     loose ? "rd-loose" : "",
     hasLangs ? "rd-langs" : "",
-    hidden && ready ? "rd-chrome-hidden" : "",
+    topHidden ? "rd-top-hidden" : "",
+    botHidden ? "rd-bot-hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -487,7 +495,7 @@ export function ReaderFrame({
           section,
         })
       : null;
-  const pillUp = ready && !!rd.pill && !hidden && panel === null;
+  const pillUp = ready && !!rd.pill && !topHidden && panel === null;
   const notesBridge = useMemo<NotesBridge>(
     () => ({
       open: panel === "notes",
@@ -511,11 +519,11 @@ export function ReaderFrame({
       onKeyDown={onKeyDown}
     >
       <div className="rd-in">
-        {hidden && ready ? (
+        {topHidden || botHidden ? (
           <button
             type="button"
             className="rd-btn rd-btn--secondary rd-skip"
-            onClick={() => setHidden(false)}
+            onClick={() => setChrome(CHROME_SHOWN)}
           >
             {READER.showControls}
           </button>
@@ -590,7 +598,7 @@ export function ReaderFrame({
           </div>
         </main>
 
-        {ready && rd.pill && !hidden && panel === null ? (
+        {pillUp && rd.pill ? (
           <div className="rd-resume">
             <span className="rd-resume__text">
               {READER.resume.lead} ·{" "}

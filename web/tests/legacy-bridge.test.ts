@@ -20,19 +20,37 @@ const scroll = {
   v: 1,
   type: "scroll",
   fraction: 0.42,
+  y: 1260,
   anchor: "trees",
 };
+const tap = { kb: "legacy", v: 1, type: "tap" };
 
 describe("readBridgeMessage", () => {
   it("accepts the drawn scroll message from this frame", () => {
     expect(readBridgeMessage(frame, frame, scroll)).toEqual({
       type: "scroll",
       fraction: 0.42,
+      y: 1260,
       anchor: "trees",
     });
     expect(
       readBridgeMessage(frame, frame, { ...scroll, anchor: null }),
-    ).toEqual({ type: "scroll", fraction: 0.42, anchor: null });
+    ).toEqual({ type: "scroll", fraction: 0.42, y: 1260, anchor: null });
+  });
+
+  // P30.F5: a plain tap in the document brings the chrome.
+  it("accepts the bare tap message from this frame, and nothing more", () => {
+    expect(readBridgeMessage(frame, frame, tap)).toEqual({ type: "tap" });
+    expect(readBridgeMessage(other, frame, tap)).toBeNull();
+    expect(readBridgeMessage(frame, null, tap)).toBeNull();
+    for (const data of [
+      { ...tap, x: 10 },
+      { ...tap, href: "/documents/1" },
+      { ...tap, v: 2 },
+      { ...tap, kb: "other" },
+      { kb: "legacy", type: "tap" },
+    ])
+      expect(readBridgeMessage(frame, frame, data)).toBeNull();
   });
 
   it("refuses a message from any other window, or when there is no frame", () => {
@@ -60,6 +78,11 @@ describe("readBridgeMessage", () => {
       { ...scroll, anchor: "" },
       { ...scroll, anchor: "a\nb" },
       { ...scroll, extra: true },
+      { ...scroll, y: -1 },
+      { ...scroll, y: "12" },
+      { ...scroll, y: Number.POSITIVE_INFINITY },
+      { ...scroll, y: 1e8 },
+      { kb: "legacy", v: 1, type: "scroll", fraction: 0.4, anchor: null },
       { kb: "legacy", v: 1, type: "scroll" },
       Object.assign(Object.create({ polluted: true }), scroll),
     ];

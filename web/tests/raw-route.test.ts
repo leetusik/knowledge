@@ -138,13 +138,14 @@ describe("injectLegacyBridge — the legacy reader's bridge", () => {
     expect(out).toContain(LEGACY_BRIDGE_MARKER);
   });
 
-  it("is about 1 KB and speaks only the drawn messages", () => {
+  it("stays under 2 KB and speaks only the drawn messages", () => {
     const out = injectLegacyBridge("<body></body>");
     const script = /<script data-kb-legacy-bridge>([\s\S]*?)<\/script>/.exec(out)?.[1] ?? "";
     expect(script.length).toBeLessThan(2048);
     expect(script).toContain('kb="legacy"');
     expect(script).toContain('type:"scroll"');
     expect(script).toContain('type:"navigate"');
+    expect(script).toContain('type:"tap"'); // P30.F5
     expect(script).toContain('"restore"');
     // it accepts messages only from its parent, and does nothing when not framed
     expect(script).toContain("e.source!==P");

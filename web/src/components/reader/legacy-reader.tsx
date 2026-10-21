@@ -28,7 +28,16 @@ import {
 } from "@/lib/reader-cookie";
 import { LIBRARY_HREF, readerHref, signInToSaveHref } from "@/lib/reader-href";
 import { saveBookmark, removeBookmark } from "@/lib/reader/actions";
-import { QUIET_MS } from "@/lib/reader/chrome";
+import {
+  applyStep,
+  CHROME_SHOWN,
+  chromeScroll,
+  QUIET_MS,
+  stepChrome,
+  tapChrome,
+  type Chrome,
+  type ChromeScroll,
+} from "@/lib/reader/chrome";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 import { positionNear } from "@/lib/reader/note-list";
 import { publishedDate } from "@/lib/reader/date";
@@ -52,10 +61,16 @@ import "@/app/legacy.css";
  * reads or styles the document.
  *
  *  - The page: `100dvh`, `overflow: hidden` (`legacy.css`), one flex column: the top safe
- *    area, the progress line and the top bar (never hide), the stage (the frame, its
- *    states, the resume pill, Sign in to save, "Show reading controls"), then the bottom
- *    chrome (the document bar, the chapter bar, the bottom safe area), which folds away as
- *    the document scrolls down and returns as it scrolls up (*Hide and show*).
+ *    area, the progress line and the top bar, the stage (the frame, its states, the
+ *    resume pill, Sign in to save, "Show reading controls"), then the bottom chrome (the
+ *    document bar, the chapter bar, the bottom safe area).
+ *  - Hide and show (P30.F5, the operator's decision; it supersedes the round's table and
+ *    its "the top bar never hides"): the native reader's rules (`stepChrome`,
+ *    `tapChrome`), fed by the bridge's `scroll` (`y`, `fraction`) and `tap` messages. The
+ *    top bar folds up (the frame grows upward; the progress line stays) on a scroll down
+ *    and returns on a tap in the document, a deliberate scroll up (64px) or near the top;
+ *    the bottom chrome folds away on a scroll down (the frame grows downward) and returns
+ *    only at the end (held there), near the top, or on a tap.
  *  - The bridge (`@/lib/legacy/bridge`, injected by the relays) is the only channel: every
  *    `message` is judged by `readBridgeMessage` (the sender must be this frame's
  *    `contentWindow`; the shape, size and a `navigate` path are checked), anything else
@@ -160,7 +175,7 @@ export function LegacyReader({
     fraction: 0,
     anchor: null,
   });
-  const [hidden, setHidden] = useState(false);
+  const [chrome, setChrome] = useState<Chrome>(CHROME_SHOWN);
   const [tight, setTight] = useState(false);
   const [prompt, setPrompt] = useState<"bookmark" | "finish" | null>(null);
   const [pill, setPill] = useState<number | null>(null);
@@ -187,12 +202,11 @@ export function LegacyReader({
   const hintId = useId();
 
   // Chrome rules state, read by the message handler.
-  const lastF = useRef(0);
+  const scrollRef = useRef<ChromeScroll>(chromeScroll(0, 0));
   const quietUntil = useRef(0);
   const rebase = useRef(false);
-  const endLock = useRef(false);
   const panelRef = useRef<Panel>(null);
-  const hiddenRef = useRef(false);
+  const chromeRef = useRef<Chrome>(CHROME_SHOWN);
   /** This attempt has heard from the bridge. */
   const heard = useRef(false);
   /** The frame attempt now on screen; a probe for an earlier one is dropped. */
@@ -211,19 +225,29 @@ export function LegacyReader({
   useEffect(() => {
     panelRef.current = panel;
   }, [panel]);
-  const shownOnce = useRef(hidden);
+  const shownOnce = useRef(chrome);
   useEffect(() => {
-    hiddenRef.current = hidden;
-    // The frame's height changed, so the fraction did: the next message only re-bases
+    chromeRef.current = chrome;
+    // The frame's height changed (a bar folded or unfolded), so the fraction did, and at
+    // the end the document's scroll position is clamped: the next message only re-bases
     // (not on the first render: nothing has changed size yet). The fold animates over
     // `--rd-ease`, and the bridge reports each resize on the way, so the messages of
     // the fold itself are quiet too (they still move the baseline).
-    if (shownOnce.current !== hidden) {
+    if (shownOnce.current !== chrome) {
       rebase.current = true;
       quietUntil.current = Math.max(quietUntil.current, Date.now() + QUIET_MS);
     }
-    shownOnce.current = hidden;
-  }, [hidden]);
+    shownOnce.current = chrome;
+  }, [chrome]);
+
+  /** Show or hide the bars (the pill follows the top bar, as on a native chapter). */
+  const showChrome = useCallback((next: Chrome) => {
+    const cur = chromeRef.current;
+    if (next.top === cur.top && next.bottom === cur.bottom) return;
+    chromeRef.current = next;
+    setChrome(next);
+    if (!next.top) setPill(null);
+  }, []);
 
   // What the device is now (System's readout, and the frame's colour scheme).
   useEffect(() => {
@@ -387,9 +411,7 @@ export function LegacyReader({
   );
 
   const onScrollMessage = useCallback(
-    (f: number, anchor: string | null) => {
-      const df = f - lastF.current;
-      lastF.current = f;
+    (f: number, y: number, anchor: string | null) => {
       if (landing.current) {
         if (landing.current === "pill") setPill(Math.round(f * 100));
         landing.current = null;
@@ -401,29 +423,25 @@ export function LegacyReader({
       );
       sample({ fraction: f, anchor });
 
-      const quiet = Date.now() < quietUntil.current;
-      // A message inside the quiet window has already moved the baseline (`lastF`), so
-      // it is the re-base: the next gesture counts.
-      if (quiet) rebase.current = false;
+      const now = Date.now();
+      const quiet = now < quietUntil.current;
+      // A message inside the quiet window, or the first one after a fold, only moves the
+      // baseline (the end and the top still count): the next gesture counts.
+      const base = quiet || rebase.current;
+      rebase.current = false;
+      const prev = scrollRef.current;
+      const step = stepChrome(
+        base ? { ...prev, last: y, run: 0 } : prev,
+        y,
+        f >= 0.995,
+        now,
+      );
+      scrollRef.current = step.scroll;
       if (!quiet && panelRef.current === null) {
-        let want: boolean | null = null; // true = shown
-        if (f >= 0.995) {
-          want = true;
-          endLock.current = true;
-        } else if (f <= 0.0005) want = true;
-        else if (rebase.current) rebase.current = false;
-        else if (df < -0.002) {
-          want = true;
-          endLock.current = false;
-        } else if (df > 0.0005 && !endLock.current) want = false;
-        if (want !== null && want === hiddenRef.current) {
-          hiddenRef.current = !want;
-          setHidden(!want);
-          if (!want) setPill(null);
-        }
+        showChrome(applyStep(chromeRef.current, step));
       }
     },
-    [sample],
+    [sample, showChrome],
   );
 
   useLayoutEffect(() => {
@@ -436,6 +454,13 @@ export function LegacyReader({
       if (!msg) return;
       if (msg.type === "navigate") {
         router.push(msg.path);
+        return;
+      }
+      // P30.F5: a tap in the document toggles the chrome, as on a native chapter.
+      if (msg.type === "tap") {
+        if (heard.current && panelRef.current === null) {
+          showChrome(tapChrome(chromeRef.current));
+        }
         return;
       }
       if (!heard.current) {
@@ -452,11 +477,11 @@ export function LegacyReader({
           return;
         }
       }
-      onScrollMessage(msg.fraction, msg.anchor);
+      onScrollMessage(msg.fraction, msg.y, msg.anchor);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [router, focusFrameQuietly, postRestore, onScrollMessage]);
+  }, [router, focusFrameQuietly, postRestore, onScrollMessage, showChrome]);
 
   // ---- the tight page: larger text, zoom, a short window --------------------------------
   useEffect(() => {
@@ -686,7 +711,8 @@ export function LegacyReader({
   const prev = book?.prev;
   const next = book?.next;
   const isLast = !!book && !next;
-  const botHidden = hidden && ready;
+  const topHidden = !chrome.top && ready;
+  const botHidden = !chrome.bottom && ready;
   const hasHistory =
     !!view.versions && view.versions.ok && view.versions.rows.length > 1;
   const date = publishedDate(view.date);
@@ -744,6 +770,7 @@ export function LegacyReader({
     "lg-page",
     loose ? "rd-loose" : "",
     hasLangs ? "rd-langs" : "",
+    topHidden ? "lg-top-hidden" : "",
     botHidden ? "lg-bot-hidden" : "",
     tight ? "lg-tight" : "",
   ]
@@ -954,14 +981,11 @@ export function LegacyReader({
             </div>
           ) : null}
 
-          {botHidden ? (
+          {topHidden || botHidden ? (
             <button
               type="button"
               className="rd-btn rd-btn--secondary lg-showctl"
-              onClick={() => {
-                hiddenRef.current = false;
-                setHidden(false);
-              }}
+              onClick={() => showChrome(CHROME_SHOWN)}
             >
               {READER.showControls}
             </button>
@@ -971,7 +995,7 @@ export function LegacyReader({
           view.member &&
           pill !== null &&
           panel === null &&
-          !botHidden ? (
+          !topHidden ? (
             <div className="rd-resume">
               <span className="rd-resume__text">
                 {READER.resume.lead} · <b>{pill}%</b>

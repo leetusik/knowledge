@@ -32,11 +32,15 @@ export const MAX_MESSAGE_CHARS = 4096;
 export const MAX_ANCHOR = 200;
 /** The longest `navigate` href (the login gate's own cap). */
 export const MAX_HREF = 2048;
+/** The largest scroll position (CSS px) the parent believes (P30.F5). */
+export const MAX_Y = 10_000_000;
 
 export interface ScrollMessage {
   type: "scroll";
   /** How far through the document, 0..1 (1 when it cannot scroll). */
   fraction: number;
+  /** The document's scroll position in CSS px (P30.F5: the chrome's 64px rule). */
+  y: number;
   /** The id of the nearest preceding heading, or null. */
   anchor: string | null;
 }
@@ -47,7 +51,12 @@ export interface NavigateMessage {
   path: string;
 }
 
-export type BridgeMessage = ScrollMessage | NavigateMessage;
+/** P30.F5: a plain click or tap in the document (not on a link or control). */
+export interface TapMessage {
+  type: "tap";
+}
+
+export type BridgeMessage = ScrollMessage | NavigateMessage | TapMessage;
 
 /** The parent → frame message: land by anchor when the document has it, else by fraction. */
 export interface RestoreMessage {
@@ -93,8 +102,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-const SCROLL_KEYS = new Set(["kb", "v", "type", "fraction", "anchor"]);
+const SCROLL_KEYS = new Set(["kb", "v", "type", "fraction", "y", "anchor"]);
 const NAVIGATE_KEYS = new Set(["kb", "v", "type", "href"]);
+const TAP_KEYS = new Set(["kb", "v", "type"]);
 
 /** The reader addresses a link inside a legacy document may open (everything else is refused). */
 const READER_PATHS: readonly RegExp[] = [
@@ -136,7 +146,7 @@ export function readBridgeMessage(
   if (frame === null || frame === undefined || source !== frame) return null;
   if (!isPlainObject(data)) return null;
   const keys = Object.keys(data);
-  if (keys.length > 5) return null;
+  if (keys.length > SCROLL_KEYS.size) return null;
   let size: number;
   try {
     size = JSON.stringify(data).length;
@@ -152,6 +162,10 @@ export function readBridgeMessage(
     if (typeof f !== "number" || !Number.isFinite(f) || f < 0 || f > 1) {
       return null;
     }
+    const y = data.y;
+    if (typeof y !== "number" || !Number.isFinite(y) || y < 0 || y > MAX_Y) {
+      return null;
+    }
     const a = data.anchor;
     if (a !== undefined && a !== null) {
       if (typeof a !== "string" || !validAnchor(a)) return null;
@@ -159,8 +173,14 @@ export function readBridgeMessage(
     return {
       type: "scroll",
       fraction: f,
+      y,
       anchor: typeof a === "string" ? a : null,
     };
+  }
+
+  if (data.type === "tap") {
+    if (!keys.every((k) => TAP_KEYS.has(k))) return null;
+    return { type: "tap" };
   }
 
   if (data.type === "navigate") {

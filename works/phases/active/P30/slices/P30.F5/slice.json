@@ -1,0 +1,32 @@
+{
+  "id": "P30.F5",
+  "phase_id": "P30",
+  "name": "Reader chrome per the operator: top bar hides on scroll down and returns on tap or a deliberate scroll up; bottom bar only at the end or on tap",
+  "kind": "fix",
+  "status": "done",
+  "order": 9000,
+  "depends_on": [],
+  "created_at": "2026-10-21T16:34:40+09:00",
+  "started_at": "2026-10-21T16:35:03+09:00",
+  "completed_at": "2026-10-21T16:58:43+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Reader chrome per the operator: top bar hides on scroll down, returns on tap / 64 px deliberate scroll up / near top; bottom chrome only at the end (held) or on tap; legacy top bar folds; bridge gains y and a validated tap; web 388",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

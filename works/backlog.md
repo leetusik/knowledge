@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `none`
+- Current slice: `P30.REVIEW`
 - Next slice: `none`
-- Waiting on operator: `P30`
+- Waiting on operator: `none`
 - Open deferred jobs: `43`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | pending | `none` | 33/34 | - | working tree |
+| `default` | `P30` | in_progress | `P30.REVIEW` | 34/35 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [~] `P30` | `pending` | `pending` | Learning reader — apply | `P30.REVIEW` | `works/phases/active/P30` |
+| [ ] `P30` | `in_progress` | `changes_requested` | Learning reader — apply | `P30.REVIEW` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -184,4 +184,5 @@
 | [x] `P30.F3` | `done` | Sweep fixes: quiz foot classes, sr-only overflow, book page at 200%, legacy bar scroller | `fix` | `works/phases/active/P30/slices/P30.F3` |
 | [x] `P30.F4` | `done` | Sweep fixes: hash scroll and sign-in return land on the block; bound chapters redirect to the book URL | `fix` | `works/phases/active/P30/slices/P30.F4` |
 | [x] `P30.S28` | `done` | Bootstrap handoff note for /explain | `docs` | `works/phases/active/P30/slices/P30.S28` |
-| [ ] `P30.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
+| [x] `P30.F5` | `done` | Reader chrome per the operator: top bar hides on scroll down and returns on tap or a deliberate scroll up; bottom bar only at the end or on tap | `fix` | `works/phases/active/P30/slices/P30.F5` |
+| [ ] `P30.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
