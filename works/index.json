@@ -114,17 +114,17 @@
       "id": "P30",
       "name": "Learning reader — apply",
       "objective": "Apply half of the learning-reader pair: build P29's signed design and decisions - books, chapters, image assets and per-reader state (resume position, bookmarks, highlights and notes, quiz results, spaced-repetition review) on the server; the library, book page and reader with one scroller and no iframe height handshake (legacy HTML explainers full-screen); the new chapter format in this repo's /explain copies - verified in the operator runtime on phone, iPad and desktop, closing with the handoff note for the bootstrap workspace repo's /explain.",
-      "status": "pending",
+      "status": "in_progress",
       "order": 10,
       "path": "works/phases/active/P30",
-      "review_status": "pending",
+      "review_status": "changes_requested",
       "current_slice": "P30.REVIEW",
-      "slice_count": 34,
-      "done_slice_count": 33
+      "slice_count": 35,
+      "done_slice_count": 34
     }
   ],
   "deferred_open_count": 43,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-21T16:23:45+09:00"
+  "last_rebuilt_at": "2026-10-21T16:58:43+09:00"
 }

@@ -260,12 +260,13 @@ html:has(.rd-root) { scroll-behavior: auto; }
   .rd-top { column-gap: var(--kb-space-sm); }
 }
 
-/* Chrome hidden: out of the way, never moved (visibility, so nothing reflows) */
-.rd-chrome-hidden .rd-top, .rd-chrome-hidden .rd-bottom, .rd-chrome-hidden .rd-resume {
+/* Chrome hidden: out of the way, never moved (visibility, so nothing reflows). P30.F5: the top bar (with the resume
+   pill) and the chapter bar (with the place bar) hide on their own rules (`lib/reader/chrome.ts`), each by its own class. */
+.rd-top-hidden .rd-top, .rd-bot-hidden .rd-bottom, .rd-top-hidden .rd-resume {
   visibility: hidden; opacity: 0;
   transition: opacity var(--rd-ease), visibility 0s linear 0.15s;
 }
-.rd-chrome-hidden .rd-top:has(:focus-visible), .rd-chrome-hidden .rd-bottom:has(:focus-visible) { visibility: visible; opacity: 1; }
+.rd-top-hidden .rd-top:has(:focus-visible), .rd-bot-hidden .rd-bottom:has(:focus-visible) { visibility: visible; opacity: 1; }
 .rd-skip {
   position: fixed; top: calc(var(--rd-safe-top) + var(--rd-line) + 0.4rem); left: 50%; transform: translateX(-50%); z-index: 25;
   opacity: 0; pointer-events: none;
@@ -700,7 +701,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
    so these are the canvas's values on the safe area. */
 .kb-ch-table--long .kb-ch-table__scroll { overflow: visible; }
 .kb-ch-table--long thead th { position: sticky; top: calc(var(--rd-safe-top) + var(--rd-line)); z-index: 2; box-shadow: 0 1px 0 var(--kb-border-strong); transition: top var(--rd-ease); }
-.rd-root:not(.rd-chrome-hidden) .kb-ch-table--long thead th { top: calc(var(--rd-safe-top) + var(--rd-line) + var(--rd-top-h)); }
+.rd-root:not(.rd-top-hidden) .kb-ch-table--long thead th { top: calc(var(--rd-safe-top) + var(--rd-line) + var(--rd-top-h)); }
 .kb-ch-table__hint { display: none; margin: var(--kb-space-xs) 0 0; font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary); }
 /* Wider than the column (measured: the table's width is more than its box's), a table scrolls sideways inside its own
    box at every width, with the fade and the hint. */
@@ -708,7 +709,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 /* A long table wider than the column cannot keep a page-level sticky header (a sticky cell sticks to its nearest
    scrolling box): it takes the phone's box, both ways, at every width, its header row sticky at the box's top. */
 .kb-ch-table--long.is-over .kb-ch-table__scroll { overflow: auto; max-height: 30rem; }
-.kb-ch-table--long.is-over thead th, .rd-root:not(.rd-chrome-hidden) .kb-ch-table--long.is-over thead th { top: 0; }
+.kb-ch-table--long.is-over thead th, .rd-root:not(.rd-top-hidden) .kb-ch-table--long.is-over thead th { top: 0; }
 /* In its own box, as on a phone, cells keep one line so the rows stay even. */
 .kb-ch-table--long.is-over td { white-space: nowrap; }
 @container rd (max-width: 39.99rem) {
@@ -717,7 +718,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
   /* On a phone a long table scrolls inside its own box, both ways: the box is shorter than the screen, so its header row
      sticks to the top of the box and row 30 still sits under its column names. Cells keep one line so the rows stay even. */
   .kb-ch-table--long .kb-ch-table__scroll { overflow: auto; max-height: 30rem; }
-  .kb-ch-table--long thead th, .rd-root:not(.rd-chrome-hidden) .kb-ch-table--long thead th { top: 0; }
+  .kb-ch-table--long thead th, .rd-root:not(.rd-top-hidden) .kb-ch-table--long thead th { top: 0; }
   .kb-ch-table--long td { white-space: nowrap; }
 }
 
@@ -1692,7 +1693,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .an-link:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 
 /* ---------- The bottom slot: the place bar ---------- */
-.rd-chrome-hidden .an-slot--chrome { visibility: hidden; opacity: 0; transition: opacity var(--rd-ease), visibility 0s linear 0.15s; }
+.rd-bot-hidden .an-slot--chrome { visibility: hidden; opacity: 0; transition: opacity var(--rd-ease), visibility 0s linear 0.15s; }
 .an-place {
   display: flex; align-items: center; gap: 0 var(--kb-space-xs); max-width: 100%;
   padding: 0.15rem 0.2rem 0.15rem 1rem; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
@@ -1704,7 +1705,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .an-place .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); flex: none; }
 .an-place .rd-btn[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
 .an-bar__btn[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
-@media (prefers-reduced-motion: reduce) { .rd-chrome-hidden .an-slot--chrome { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rd-bot-hidden .an-slot--chrome { transition: none; } }
 
 /* ---------- The sheet: the Contents sheet's switch to Notes ---------- */
 .an-shead { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }

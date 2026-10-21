@@ -37,7 +37,15 @@ html:has(.lg-page), html:has(.lg-page) body {
 .lg-safe--b { height: var(--rd-safe-bottom); }
 .lg-topbox {
   flex: none; position: relative; z-index: 20; height: calc(var(--rd-line) + var(--rd-top-h));
+  transition: height var(--rd-ease);
 }
+/* P30.F5 (the operator's decision; it supersedes the round's "the top bar never hides"): the top bar folds up to the
+   progress line, which stays, so the frame grows upward. Folded, it is clipped away (`clip`, never a scroll box) and
+   faded, but not `visibility: hidden`: its controls stay in the tab order, and keyboard focus on one unfolds it. */
+.lg-top-hidden .lg-topbox { height: var(--rd-line); overflow: clip; }
+.lg-top-hidden .lg-topbox .rd-top { opacity: 0; transition: opacity var(--rd-ease); }
+.lg-top-hidden .lg-topbox:has(:focus-visible) { height: calc(var(--rd-line) + var(--rd-top-h)); overflow: visible; }
+.lg-top-hidden .lg-topbox:has(:focus-visible) .rd-top { opacity: 1; }
 /* The signed line and top bar, in the column instead of fixed to the window (their looks are unchanged). */
 .lg-page .rd-line { position: absolute; top: 0; }
 .lg-page .rd-top {
@@ -81,8 +89,8 @@ html:has(.lg-page), html:has(.lg-page) body {
 @media (min-width: 40rem) { .lg-slot { left: auto; justify-content: flex-end; } .lg-slot .rd-save { width: 30rem; } }
 
 /* ---------- The bottom chrome: the document bar, then the signed chapter bar ---------- */
-/* It hides by collapsing (rows 0fr), so the frame grows downward and the document never moves; the top bar and the
-   progress line never hide. */
+/* It hides by collapsing (rows 0fr), so the frame grows downward and the document never moves. (P30.F5: the top bar
+   now hides too, above; the progress line never does.) */
 .lg-bottom { flex: none; display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--rd-ease); position: relative; z-index: 20; }
 .lg-bottom__in {
   min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--kb-surface);
