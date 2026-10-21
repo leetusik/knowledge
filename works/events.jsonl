@@ -1256,3 +1256,6 @@
 {"ts": "2026-10-21T19:02:01+09:00", "type": "executor_dispatched", "slice": "P31.DECOMP", "phase": "P31", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T19:02:02+09:00", "type": "slice_status_changed", "slice": "P31.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-21T19:02:02+09:00", "type": "acceptance_required", "phase": "P31"}
+{"ts": "2026-10-21T19:02:29+09:00", "type": "slice_status_changed", "slice": "P31.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T19:11:01+09:00", "type": "executor_dispatched", "slice": "P31.S1", "phase": "P31", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T19:11:01+09:00", "type": "slice_status_changed", "slice": "P31.S1", "old_status": "in_progress", "new_status": "done"}

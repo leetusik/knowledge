@@ -516,35 +516,17 @@ def cmd_save(args: argparse.Namespace) -> int:
     reporting a disconnect it cannot back up (`verify_save`).
     """
 
-    fmt, header, markdown = _prepare_body(args)
-    if not markdown.strip():
-        raise CliError(f"{args.file} is empty — nothing to save")
-
-    title = _title_for(args, fmt, header, markdown)
-    tags = validate_tags(parse_tags(args.tag) or _header_tags(header))
-    project = validate_project(
-        args.project or default_project(), derived=not args.project
+    fields = _publish_fields(args, verb="save")
+    title, markdown, project, extra = (
+        fields["title"], fields["markdown"], fields["project"], fields["extra"]
     )
-    extra = native.build_fields(args, fmt, header)
 
     # The lost reply's cause, kept as text: `except ... as exc` unbinds `exc` at the
     # end of its own block, so the message has to be built before then.
     lost_reply: str | None = None
     with KnowledgeClient(args.base_url, token=api_token()) as client:
         try:
-            payload = api_call(
-                client.document_create,
-                title=title,
-                markdown=markdown,
-                project=project,
-                tags=tags,
-                source_repo=args.source_repo or default_source_repo(),
-                date=args.date,
-                slug=args.slug,
-                overwrite=args.overwrite,
-                co_authored_by=args.co_authored_by,
-                extra=extra,
-            )
+            payload = api_call(client.document_create, **fields)
         except ApiError as exc:
             if exc.status == 409:
                 raise CliError(_conflict(exc.detail)) from None
@@ -610,6 +592,119 @@ def cmd_save(args: argparse.Namespace) -> int:
     if payload.get("assigned_ids"):
         print(f"  ids assigned by the server: {len(payload['assigned_ids'])}")
     return 0
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    """Check a document as `save` would publish it, without publishing anything.
+
+    Same file, same flags, same body as `save`; the server validates it exactly as a
+    publish (`POST /api/documents/check`) and writes nothing: no document, no
+    version, no project, no usage. Use it while drafting a chapter to catch every
+    problem the publish would refuse.
+
+    Exit codes, for an agent to branch on:
+      0  ok: it would publish (one line: the rel_path and version it would make)
+      1  it would be refused: a 422 (every violation, with line and column) or a
+         409 (the conflict, and the fix), or a local check like the tag rule
+      2  no verdict: auth failed, the server could not be reached, or it answered
+         something else (an older server without `check` included)
+
+    With --json, an ok prints the server's 200 verbatim; a refusal stays on stderr,
+    like every error (`knowledge guide`).
+    """
+
+    fields = _publish_fields(args, verb="check")  # a local refusal: CliError -> 1
+    try:
+        token = api_token()
+    except (CliError, config.ConfigError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    try:
+        with KnowledgeClient(args.base_url, token=token) as client:
+            payload = client.document_check(**fields)
+    except ApiError as exc:
+        if exc.status in (409, 422):
+            return _refused(exc)
+        if exc.status in (401, 403):
+            print(
+                "error: your API key was rejected — it may have been revoked, or belong "
+                "to another service. Run `knowledge init --email you@example.com` to "
+                "mint a new one.",
+                file=sys.stderr,
+            )
+        elif exc.status in (404, 405):
+            print(
+                f"error: {args.base_url} has no /api/documents/check (HTTP {exc.status}): "
+                "the server predates `knowledge check`, so nothing was checked",
+                file=sys.stderr,
+            )
+        else:
+            print(f"error: no verdict from the server: {exc}", file=sys.stderr)
+        return 2
+    except httpx.HTTPError as exc:
+        # A check writes nothing, so a lost reply is simply no verdict.
+        print(f"error: cannot reach {args.base_url}: {exc}", file=sys.stderr)
+        return 2
+
+    for line in native.warning_lines(payload):
+        auth.note(f"warning: {line}")
+    if emit(payload, args.json):
+        return 0
+    print(f"OK — would publish {payload.get('rel_path')} (v{payload.get('version')})")
+    return 0
+
+
+def _refused(exc: ApiError) -> int:
+    """Report a check's 422/409 — what the publish would meet — and return 1."""
+
+    try:
+        detail: Any = json.loads(exc.detail)
+    except (TypeError, ValueError):
+        detail = exc.detail
+    if exc.status == 422:
+        message = native.rejected_message(exc.detail, dry_run=True) or (
+            f"the server would reject this publish: {exc.detail}"
+        )
+    elif isinstance(detail, dict) and detail.get("message"):
+        message = f"a publish would be refused: {detail['message']}"
+        if detail.get("hint"):
+            message += f"\n  {detail['hint']}"
+    else:
+        message = f"a publish would be refused: {exc.detail}"
+    print(f"error: {message}", file=sys.stderr)
+    return 1
+
+
+def _publish_fields(args: argparse.Namespace, *, verb: str) -> dict[str, Any]:
+    """The keyword arguments of a publish (`save`) or its dry run (`check`).
+
+    One place builds them, so `knowledge check` validates exactly the body `knowledge
+    save` would send: the body (header stripped), the title, the tags, the project
+    and the native/book/image fields.
+    """
+
+    fmt, header, markdown = _prepare_body(args)
+    if not markdown.strip():
+        raise CliError(f"{args.file} is empty — nothing to {verb}")
+    # The order `save` always checked in: title, tags, project, then the native fields.
+    title = _title_for(args, fmt, header, markdown)
+    tags = validate_tags(parse_tags(args.tag) or _header_tags(header))
+    project = validate_project(
+        args.project or default_project(), derived=not args.project
+    )
+    extra = native.build_fields(args, fmt, header)
+    return {
+        "title": title,
+        "markdown": markdown,
+        "project": project,
+        "tags": tags,
+        "source_repo": args.source_repo or default_source_repo(),
+        "date": args.date,
+        "slug": args.slug,
+        "overwrite": args.overwrite,
+        "co_authored_by": args.co_authored_by,
+        "extra": extra,
+    }
 
 
 def _prepare_body(args: argparse.Namespace) -> tuple[str, dict[str, Any], str]:
@@ -872,16 +967,10 @@ def _add_json(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def register(sub: argparse._SubParsersAction) -> None:
-    """Add the knowledge subcommands to the top-level parser."""
+def _add_publish_args(p: argparse.ArgumentParser) -> None:
+    """`save`'s arguments, shared with `check` (its dry run) so the two never drift."""
 
-    p = sub.add_parser(
-        "save",
-        help="Save a document (2-5 tags required)",
-        description=cmd_save.__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    p.add_argument("file", metavar="FILE", help="markdown file to save, or - for stdin")
+    p.add_argument("file", metavar="FILE", help="the file to publish, or - for stdin")
     p.add_argument("--title", help="document title (default: the body's first # H1)")
     p.add_argument(
         "--tag",
@@ -966,8 +1055,30 @@ def register(sub: argparse._SubParsersAction) -> None:
         help="publish as the next version of the existing document (matched by project and slug)",
     )
     p.add_argument("--rel-path", help="with --new-version: the document to supersede, as `knowledge list` prints it")
+
+
+def register(sub: argparse._SubParsersAction) -> None:
+    """Add the knowledge subcommands to the top-level parser."""
+
+    p = sub.add_parser(
+        "save",
+        help="Save a document (2-5 tags required)",
+        description=cmd_save.__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_publish_args(p)
     _add_json(p)
     p.set_defaults(func=cmd_save)
+
+    p = sub.add_parser(
+        "check",
+        help="Check a document as `save` would publish it, writing nothing (exit 0 ok, 1 refused, 2 no verdict)",
+        description=cmd_check.__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_publish_args(p)
+    _add_json(p)
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser(
         "search",

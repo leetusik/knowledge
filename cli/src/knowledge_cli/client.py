@@ -125,6 +125,45 @@ def _params(**values: Any) -> dict[str, Any]:
     return {key: value for key, value in values.items() if value is not None}
 
 
+def _document_body(
+    *,
+    title: str,
+    markdown: str,
+    project: str,
+    tags: list[str],
+    source_repo: str,
+    date: str | None = None,
+    slug: str | None = None,
+    related: list[str] | None = None,
+    overwrite: bool = False,
+    commit: bool = True,
+    co_authored_by: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The JSON body of a publish (and of its dry run, `/api/documents/check`)."""
+
+    body: dict[str, Any] = {
+        "title": title,
+        "markdown": markdown,
+        "project": project,
+        "tags": tags,
+        "source_repo": source_repo,
+        "overwrite": overwrite,
+        "commit": commit,
+    }
+    if date is not None:
+        body["date"] = date
+    if slug is not None:
+        body["slug"] = slug
+    if related is not None:
+        body["related"] = related
+    if co_authored_by is not None:
+        body["co_authored_by"] = co_authored_by
+    if extra:
+        body.update(extra)
+    return body
+
+
 class KnowledgeClient:
     """Thin typed wrappers over the three planes. Usable as a context manager."""
 
@@ -338,27 +377,29 @@ class KnowledgeClient:
         an ambiguity someone has to resolve (`knowledge.verify_save`).
         """
 
-        body: dict[str, Any] = {
-            "title": title,
-            "markdown": markdown,
-            "project": project,
-            "tags": tags,
-            "source_repo": source_repo,
-            "overwrite": overwrite,
-            "commit": commit,
-        }
-        if date is not None:
-            body["date"] = date
-        if slug is not None:
-            body["slug"] = slug
-        if related is not None:
-            body["related"] = related
-        if co_authored_by is not None:
-            body["co_authored_by"] = co_authored_by
-        if extra:
-            body.update(extra)
+        body = _document_body(
+            title=title, markdown=markdown, project=project, tags=tags,
+            source_repo=source_repo, date=date, slug=slug, related=related,
+            overwrite=overwrite, commit=commit, co_authored_by=co_authored_by, extra=extra,
+        )
         return self._request(
             "POST", "/api/documents", token=token, json=body, timeout=WRITE_TIMEOUT
+        )
+
+    def document_check(self, *, token: str | None = None, **fields: Any) -> Any:
+        """POST /api/documents/check -> 200 `{ok, rel_path, version, format, ...}` (P31.S1).
+
+        The publish's dry run: the same body as `document_create` (same keyword
+        arguments), validated exactly as a publish would be, and nothing written or
+        metered. A refusal is the publish's own status and body — a 422 (a string, or
+        the `{line, col, code, message}` list) or a 409 — raised as `ApiError`. Safe
+        to repeat, so a timeout here is a non-event; it still gets the write timeout,
+        because validating a large chapter with images is the same CPU work.
+        """
+
+        return self._request(
+            "POST", "/api/documents/check", token=token, json=_document_body(**fields),
+            timeout=WRITE_TIMEOUT,
         )
 
     def document_list(

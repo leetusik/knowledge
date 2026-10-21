@@ -294,14 +294,19 @@ def violation_lines(detail: str) -> list[str] | None:
     return lines
 
 
-def rejected_message(detail: str) -> str | None:
-    """The sentence for a 422 the server rejected a chapter with, or None."""
+def rejected_message(detail: str, *, dry_run: bool = False) -> str | None:
+    """The sentence for a 422 the server rejected a chapter with, or None.
+
+    `dry_run` (`knowledge check`, P31.S1) words it as what a publish *would* meet:
+    nothing was sent to be published, so nothing "was rejected".
+    """
 
     lines = violation_lines(detail)
     if lines is None:
         return None
     noun = "problem" if len(lines) == 1 else "problems"
-    return f"the server rejected this publish ({len(lines)} {noun}):\n" + "\n".join(lines)
+    verb = "would reject" if dry_run else "rejected"
+    return f"the server {verb} this publish ({len(lines)} {noun}):\n" + "\n".join(lines)
 
 
 def warning_lines(payload: dict[str, Any]) -> list[str]:

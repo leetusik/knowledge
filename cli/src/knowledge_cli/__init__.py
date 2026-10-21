@@ -4,4 +4,4 @@ Sign up, log in, mint a credential, and save/search knowledge from a terminal (o
 from a coding agent driving one), without ever visiting the website.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
