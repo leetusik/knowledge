@@ -1218,3 +1218,6 @@
 {"ts": "2026-10-21T15:50:03+09:00", "type": "executor_dispatched", "slice": "P30.REVIEW", "phase": "P30", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T15:50:04+09:00", "type": "phase_status_changed", "phase": "P30", "old_status": "planned", "new_status": "pending"}
 {"ts": "2026-10-21T15:50:04+09:00", "type": "acceptance_opened", "phase": "P30"}
+{"ts": "2026-10-21T16:23:45+09:00", "type": "deferred_created", "deferred": "D60", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T16:23:45+09:00", "type": "deferred_created", "deferred": "D61", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T16:23:45+09:00", "type": "deferred_created", "deferred": "D62", "source": "P30.REVIEW"}

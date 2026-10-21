@@ -1,0 +1,78 @@
+{
+  "mode": "dry-run",
+  "documents": 42,
+  "app_checks": true,
+  "books": [
+    {
+      "project": "changple5",
+      "book": "curriculum",
+      "action": "create",
+      "diff": [
+        "+ book changple5/curriculum '[private]' (codebase)",
+        "  + chapter [private] @1 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @2 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @3 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @4 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @5 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @6 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @7 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @8 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @9 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @10 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @11 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @12 {'en': 'changple5/2026-08-26-[private].html'}",
+        "  + chapter [private] @13 {'en': 'changple5/2026-08-28-[private].html'}",
+        "  + chapter [private] @14 {'en': 'changple5/2026-08-28-[private].html'}",
+        "  + chapter [private] @15 {'en': 'changple5/2026-08-28-[private].html'}",
+        "  + chapter [private] @16 {'en': 'changple5/2026-09-13-[private].html'}",
+        "  + chapter [private] @17 {'en': 'changple5/2026-09-13-[private].html'}",
+        "  + chapter [private] @18 {'en': 'changple5/2026-09-13-[private].html'}",
+        "  + chapter [private] @19 {'en': 'changple5/2026-09-13-[private].html'}",
+        "  + chapter [private] @20 {'en': 'changple5/2026-09-13-[private].html'}"
+      ]
+    },
+    {
+      "project": "glide-ilab",
+      "book": "phases",
+      "action": "create",
+      "diff": [
+        "+ book glide-ilab/phases '[private]' (codebase)",
+        "  + chapter p8 @8 {'en': 'glide-ilab/2026-10-08-[private].html', 'ko': 'glide-ilab/2026-10-08-[private].html'}",
+        "  + chapter p9 @9 {'en': 'glide-ilab/2026-10-10-[private].html'}",
+        "  + chapter p17-p18 @17 {'en': 'glide-ilab/2026-10-15-[private].html'}",
+        "  + chapter p24 @24 {'en': 'glide-ilab/2026-10-16-[private].html'}"
+      ]
+    },
+    {
+      "project": "knowledge",
+      "book": "maintainer-guide",
+      "action": "create",
+      "diff": [
+        "+ book knowledge/maintainer-guide 'knowledge maintainer guide' (codebase)",
+        "  + chapter knowledge-what-it-is-and-how-it-is-used @1 {'en': 'knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html'}",
+        "  + chapter knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts @2 {'en': 'knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html'}",
+        "  + chapter knowledge-s-read-surfaces-two-front-ends-one-corpus @3 {'en': 'knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html'}",
+        "  + chapter shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates @4 {'en': 'knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html'}",
+        "  + chapter why-knowledge-is-this-way-and-how-to-change-it @5 {'en': 'knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html'}"
+      ]
+    },
+    {
+      "project": "vocky",
+      "book": "maintainer-guide",
+      "action": "create",
+      "diff": [
+        "+ book vocky/maintainer-guide '[private]' (codebase)",
+        "  + chapter [private] @1 {'en': 'vocky/2026-08-06-[private].html'}",
+        "  + chapter [private] @2 {'en': 'vocky/2026-08-06-[private].html'}",
+        "  + chapter [private] @3 {'en': 'vocky/2026-08-06-[private].html'}",
+        "  + chapter [private] @4 {'en': 'vocky/2026-08-06-[private].html'}"
+      ]
+    }
+  ],
+  "unmapped": [],
+  "conflicts": [],
+  "puts": [],
+  "failures": [],
+  "checks": 167,
+  "ok": true
+}

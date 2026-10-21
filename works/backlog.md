@@ -9,7 +9,7 @@
 - Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `P30`
-- Open deferred jobs: `40`
+- Open deferred jobs: `43`
 
 ## Streams
 

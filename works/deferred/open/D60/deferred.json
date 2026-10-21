@@ -1,0 +1,11 @@
+{
+  "id": "D60",
+  "title": "no-transform on the server's /app raw routes",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "D37's Cache-Control no-transform landed only on the web relays (P30.S25); GET /app/documents/{id}/raw and its version route still let Cloudflare rewrite explainers (email obfuscation seen live after the P30 deploy, random per response)",
+  "trigger": "The next change to the raw routes or the edge",
+  "created_at": "2026-10-21T16:23:45+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -250,3 +250,5 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
   - the operator's device checks (real iPhone and iPad WebKit, Safari print, Korean line breaking);
   - deleting the nine canvases, on the operator's yes;
   - removing `.claude/skills/explain/` after the bootstrap applies the handoff.
+
+- **Production (2026-10-21, operator's word):** `main` pushed (kb-api commits merged first, `e8f1fda`); Production Deploy run 39559011982 green (0006 applied, edge vhost re-applied); S6's migration run by the operator from their terminal: dry run 167 URL checks 0 not resolving, apply 4 PUTs 200 created, rerun all `[unchanged]`. Its verify flagged 4 raw-hash changes (docs 27, 29, 37, 50) — Cloudflare's per-response email obfuscation on `/app/.../raw` (two identical requests differ), not content; filed as follow-ups with the missing `no-transform` on the server raw routes. The 4 kb-api book commits are fast-forwarded into local `main`. Reports: `topics/migration-run/`. Gate still open for the walkthrough.

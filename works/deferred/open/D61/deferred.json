@@ -1,0 +1,11 @@
+{
+  "id": "D61",
+  "title": "Migration and smoke raw checks tolerate Cloudflare email obfuscation",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "migrate_books.py verify flagged 4 raw hash changes (docs 27, 29, 37, 50) that were Cloudflare's per-response data-cfemail rewrite, not content changes; the check should normalise or compare the index's raw_html",
+  "trigger": "The next use of migrate_books.py or a raw-content smoke check",
+  "created_at": "2026-10-21T16:23:45+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

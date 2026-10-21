@@ -1,0 +1,42 @@
+{
+  "mode": "apply",
+  "documents": 42,
+  "app_checks": true,
+  "books": [
+    {
+      "project": "changple5",
+      "book": "curriculum",
+      "action": "unchanged",
+      "diff": []
+    },
+    {
+      "project": "glide-ilab",
+      "book": "phases",
+      "action": "unchanged",
+      "diff": []
+    },
+    {
+      "project": "knowledge",
+      "book": "maintainer-guide",
+      "action": "unchanged",
+      "diff": []
+    },
+    {
+      "project": "vocky",
+      "book": "maintainer-guide",
+      "action": "unchanged",
+      "diff": []
+    }
+  ],
+  "unmapped": [],
+  "conflicts": [],
+  "puts": [],
+  "failures": [
+    "url /documents/27 (raw): was {'status': 200, 'doc_id': None, 'hash': '514c8c848db3d7249bb195617f8da8b360577131e3488903fabdb3c62b79835c'}, now {'status': 200, 'doc_id': None, 'hash': 'bfdb5c8a58520f0a3d13caed810b04eff4135b1e6953c447e0c6adcb091b0123'}",
+    "url /documents/29 (raw): was {'status': 200, 'doc_id': None, 'hash': '78c52ae629706e7f083f48e193a69e3f02dbb8daa48466599c23c051f0fd1e79'}, now {'status': 200, 'doc_id': None, 'hash': 'dd31c3a421bff57d1bd50d9c0e90da73217bc2c844dfb3922218ff5bee29a9a4'}",
+    "url /documents/37 (raw): was {'status': 200, 'doc_id': None, 'hash': 'dca3a3a38dd976ac852f9a723f44968f2c93cf7b8334649dc168648e3925a3a5'}, now {'status': 200, 'doc_id': None, 'hash': '596ff56b18b0fbc4c93b60680ed2a7995be00fa7c193ee098dda86de0be357f5'}",
+    "url /documents/50 (raw): was {'status': 200, 'doc_id': None, 'hash': '94497bc16b656c120e6730e755cd9802334923f591f3ecb10e3c661bc7219918'}, now {'status': 200, 'doc_id': None, 'hash': '3824bfeb1532eea739a3327e0f83f59711abae1eee5e31233e2198d31cc6b3a2'}"
+  ],
+  "checks": 167,
+  "ok": false
+}
