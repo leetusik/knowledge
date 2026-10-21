@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Print: the native sheet, legacy Print and the notice sheet (09-legacy-and-print)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 260,
   "depends_on": [
     "P30.S25"
   ],
   "created_at": "2026-10-21T00:14:51+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T13:13:11+09:00",
+  "completed_at": "2026-10-21T13:42:21+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Print from 09-legacy-and-print: native print sheet (masthead, colophon, figure rows, diagrams, fitted ASCII, quiz and answer key, link addresses, breaks), legacy ⌘P notice sheet and Print control; old print layer kept for the past-version page (OQ178)",
   "validation": {
     "required": [],
     "last_run": null,

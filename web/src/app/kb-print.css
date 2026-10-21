@@ -1,26 +1,30 @@
 /* ==========================================================================
-   Knowledge Base — PRINT layer  (Round 06 · P27.S5)
+   Knowledge Base — PRINT layer  (Round 06 · P28.S8, rebuilt for the reader in P30.S26)
    --------------------------------------------------------------------------
-   The first `@media print` rule this product has ever had. Verified before the
-   round: no `@page`, no print stylesheet, no export control existed anywhere
-   in `web/src`.
+   Part 1 (P28.S8) is the page box, the paper palette and what the console drops:
+   the first `@media print` this product ever had. Part 2 (P30.S26) is the NATIVE
+   READER'S PRINT SHEET, transcribed from the signed `09-legacy-and-print` round 01
+   (`canvas/project/paper.css`, part 1: `.pp-flow` and everything under it, and
+   `.pp-notice`; sizes in px at 96/in, so 1pt = 4/3px, 14px = 10.5pt, 12px = 9pt, the
+   floor). The canvas-only half (`.pp-sheet`, `.pp-win`, the pager and the board
+   scaffolding) is never built: the browser's print engine cuts the pages. Part 3 is
+   the one notice sheet ⌘P prints from the legacy reader.
 
-   WHY A SEPARATE FILE FROM docview-r6.css. Paper is a different medium, not a
-   narrow screen: it has no scrolling, no hover, no dark mode, no JavaScript,
-   no accent colour worth spending, and a page break every 297mm. A reviewer
-   should be able to read every rule that governs paper without reading a
-   single screen rule, and an implementer should be able to see, in one file,
-   the complete answer to "what comes out of the printer".
+   WHY A SEPARATE FILE FROM THE SCREEN CSS. Paper is a different medium, not a narrow
+   screen: it has no scrolling, no hover, no dark mode, no JavaScript and a page break
+   every 297mm. A reviewer should be able to read every rule that governs paper without
+   reading a single screen rule.
 
    WHAT THIS FILE IS NOT. PDF export here IS the browser's print (job D25, a
-   server-side renderer, stays deferred). So this file cannot paginate, cannot
-   number pages and cannot run a header — browsers do not implement `@page`
-   margin boxes. Page numbers come from the browser's OWN header/footer, which
-   is on by default in every print dialog; the export dialog copy says so. What
-   this file does own: what is on the sheet, what is dropped, where a break may
-   fall, and what a link looks like when it cannot be clicked.
+   server-side renderer, stays deferred): no control, no dialog copy, no second render.
+   It cannot paginate, number pages or run a header (browsers do not implement `@page`
+   margin boxes), and there is no Export PDF button any more: the reader prints with ⌘P
+   or the browser's menu, and a legacy explainer prints from its own tab.
 
-   Load LAST, after docview-r6.css.
+   THE READER'S RULES sit under `html .rd-root` so they outrank the reader's screen
+   sheet (`reader.css`, imported by the reader's components and so later in the
+   document) without `!important`: a theme (`data-md-color-scheme`), a text size
+   (`rd-size-N`) and the system's dark scheme all lose to paper.
    ========================================================================== */
 
 @media print {
@@ -30,18 +34,18 @@
      Nothing on the sheet is sized from the page height, so the two differ only
      in where the break falls. The margin is a reading margin, not a printer
      minimum — 16mm at the top leaves the browser's own header room to sit
-     without touching the masthead. */
+     without touching the masthead. Pages are not numbered. */
   @page { size: auto; margin: 16mm 15mm 18mm; }
 
-  /* -------- The scheme: paper is always light (DECISION · question 8) ----- */
+  /* -------- The scheme: paper is always light ---------------------------- */
   /* Someone printing at night is looking at a dark page, and a dark page on
      paper is a flooded sheet of toner with hairlines that disappear. Print
      re-declares the LIGHT palette unconditionally — over the document scheme
-     attribute AND over round 03's `data-kb-scheme="auto"` OS adoption — and
-     drops the warm paper tint to nothing, because most browsers refuse to
-     print backgrounds anyway and a half-printed ivory is worse than none. The
-     ink stays the brand's warm near-black; it is a darker warm than the screen
-     ink, which reads thin at 10.5pt. */
+     attribute AND over the OS adoption — and drops the warm paper tint to
+     nothing, because most browsers refuse to print backgrounds anyway and a
+     half-printed ivory is worse than none. The ink stays the brand's warm
+     near-black; it is a darker warm than the screen ink, which reads thin at
+     10.5pt. */
   :root, .kb-app, .kb-app[data-kb-scheme="auto"], [data-md-color-scheme="slate"] {
     --kb-paper: #ffffff; --kb-surface: #ffffff; --kb-surface-sunken: #f4f1ea;
     --kb-border: #c9c2b3; --kb-border-strong: #a9a294;
@@ -51,22 +55,312 @@
     --kb-shadow-raise: none; --kb-shadow-overlay: none; --kb-shadow-hover: none;
   }
   html, body, .kb-app { background: #ffffff !important; color: var(--kb-ink); }
+  html, body { height: auto; min-height: 0; overflow: visible; }
   .kb-app { min-height: 0; display: block; }
 
-  /* -------- What is dropped (DECISION · question 5) ---------------------- */
-  /* Every piece of chrome, every control, and every navigation aid. A sheet of
-     paper cannot be clicked, so anything whose only purpose is to be clicked
-     is noise on it. The version-history PANEL goes too: it is a list of links
-     into an app, and the one fact it carries that paper needs — which version
-     this is — is in the masthead instead.
-
-     Because print drops the chrome itself, the output is IDENTICAL whether the
-     reader exports from the normal page or from the full-width view. That is
-     the reason Export PDF never has to switch views first. */
-  .kb-topbar, .kb-navbar, .kb-rail, .kb-skip, .kb-docbar, .kb-docversions,
-  .kb-toast-region, .kb-account, .kb-docfull__exit, .kb-explainer__wait,
+  /* -------- What the console drops --------------------------------------- */
+  .kb-topbar, .kb-navbar, .kb-rail, .kb-skip, .kb-toast-region, .kb-account,
   .kb-railtoggle, .kb-pager { display: none !important; }
+  .kb-app-layout, .kb-app-main { display: block; padding: 0; margin: 0; max-width: none; }
+  .kb-app * { box-shadow: none !important; }
 
+  /* -------- Motion ------------------------------------------------------- */
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* -------- Screen: the print-only blocks are not there -------------------- */
+.pp-only { display: none; }
+
+/* ==========================================================================
+   PART 2 — the native reader's sheet
+   ========================================================================== */
+@media print {
+  /* -------- The palette, whatever the screen theme ------------------------ */
+  /* Paper `#ffffff`, sunken `#f4f1ea`, border `#c9c2b3`, ink `#1b1714`, secondary
+     `#4a433a`, hint `#6d665a`, accent `#0a544e`; the text sizes of paper in place of
+     the reader's five (a sheet is set once: prose 14px / 1.55, small text 12px). */
+  html .rd-root, html .rd-root[data-md-color-scheme] {
+    color-scheme: light;
+    --kb-paper: #ffffff; --kb-surface: #ffffff; --kb-surface-sunken: #f4f1ea;
+    --kb-border: #c9c2b3; --kb-border-strong: #c9c2b3;
+    --kb-ink: #1b1714; --kb-secondary: #4a433a; --kb-hint: #6d665a;
+    --kb-accent: #0a544e; --kb-accent-strong: #0a544e; --kb-accent-soft: #e2ece9;
+    --kb-status-idle: #6b5220; --kb-status-idle-soft: #f3ece0; --kb-status-idle-ink: #4f3c16;
+    --kb-shadow-raise: none; --kb-shadow-overlay: none; --kb-shadow-hover: none;
+    --rd-fs: 14px; --rd-k: 1; --rd-fs-s: 12px; --rd-lead: 1.55;
+    --pp-sunken: #f4f1ea; --pp-border: #c9c2b3; --pp-ink: #1b1714; --pp-sec: #4a433a; --pp-hint: #6d665a;
+    --pp-accent: #0a544e;
+    --pp-read: var(--font-reading); --pp-disp: var(--font-display); --pp-body: var(--font-body);
+    --pp-mono: var(--font-mono);
+    background: #ffffff; color: var(--kb-ink);
+    position: static; display: block; flex: none; min-height: 0;
+    font-size: 14px; line-height: 1.55;
+  }
+
+  /* -------- Hidden: every bar, the line, the pill, sheets, scrims, the state and the skip button,
+     and every screen-only cue (scroll fades and hints, the chip behind a link's "new tab") ------- */
+  html .rd-root :is(
+    .rd-line, .rd-top, .rd-bottom, .rd-scrim, .rd-sheet, .rd-resume, .rd-skip, .rd-end, .rd-head, .rd-sk,
+    .an-layer, .an-float, .an-slot, .an-save, .an-rail, .an-rows, .an-tag,
+    .qz, .dg__sr, .dg__hint, .dg__fade, .fg-hint, .fg-fade, .fg-still, .fg-media__skel,
+    .kb-ch-fade, .kb-ch-code__hint, .kb-ch-table__hint, .kb-ch-link__ext, .kb-ch-callout__toggle,
+    .fg-src__back, .pp-screen
+  ) { display: none !important; }
+  /* A member's highlights and notes do not print (OQ7). */
+  html .rd-root mark.an-m, html .rd-root mark.an-pending { background: none; box-shadow: none; color: inherit; outline: none; }
+
+  /* -------- The page and the column --------------------------------------- */
+  /* The page box is the measure: 180mm on A4 (680px), 186mm on US Letter. Prose keeps its 38em;
+     wide blocks (code, tables, figures, diagrams, callouts) take the whole column. */
+  html .rd-root .rd-page { padding: 0; }
+  html .rd-root .rd-article { min-height: 0; }
+  html .rd-root .rd-flow { display: block; }
+  html .rd-root .rd-flow > * { max-width: none; }
+  html .rd-root .rd-prose {
+    padding-bottom: 0; font: 14px/1.55 var(--pp-read); color: var(--pp-ink);
+    font-kerning: normal; text-rendering: optimizeLegibility; overflow-wrap: break-word;
+  }
+  html .rd-root .rd-prose .kb-ch { display: block; }
+  html .rd-root .kb-ch :lang(ko), html .rd-root .kb-ch:lang(ko), html .rd-root .pp-head :lang(ko), html .rd-root .pp-colo :lang(ko) {
+    word-break: keep-all; overflow-wrap: anywhere; line-break: strict;
+  }
+  /* Rhythm: 10px between blocks; 24px above an h2, 18px above an h3, 14px above an h4 and around wide blocks.
+     A margin at a page's top is dropped by the print engine. */
+  html .rd-root .rd-prose .kb-ch > * { margin-top: 10px; max-width: none; }
+  html .rd-root .rd-prose .kb-ch > :is(h1, h2).kb-ch-h { margin-top: 24px; }
+  html .rd-root .rd-prose .kb-ch > h3.kb-ch-h { margin-top: 18px; }
+  html .rd-root .rd-prose .kb-ch > :is(h4, h5, h6).kb-ch-h { margin-top: 14px; }
+  html .rd-root .rd-prose .kb-ch > :is(.kb-ch-callout, .kb-ch-code, .kb-ch-table, .fg-row, .fg-fig, .fg-plain, .kb-ch-diagram, .dg, .fg-svg, .pp-quiz, .pp-ans) { margin-top: 14px; }
+
+  /* -------- The masthead (page 1 only) ------------------------------------- */
+  html .rd-root .pp-head { display: block; margin: 0; padding-bottom: 2px; }
+  html .rd-root .pp-head__label { margin: 0; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+  html .rd-root .pp-head__addr { margin: 2px 0 0; padding-bottom: 8px; border-bottom: 1px solid var(--pp-border); font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); overflow-wrap: anywhere; }
+  html .rd-root .pp-nobr { white-space: nowrap; }
+  html .rd-root .pp-head__old { margin: 8px 0 0; font: 12px/1.45 var(--pp-body); color: var(--pp-ink); overflow-wrap: anywhere; }
+  html .rd-root .pp-head__tag { margin-right: 4px; padding: 0 5px; border: 1px solid var(--pp-ink); border-radius: 2px; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+  html .rd-root .pp-head__title { margin: 18px 0 0; font: 600 26.67px/1.2 var(--pp-disp); text-wrap: balance; break-after: avoid; }
+  html .rd-root .pp-head__lede { margin: 8px 0 0; max-width: 38em; color: var(--pp-sec); text-wrap: pretty; }
+
+  /* -------- Headings ------------------------------------------------------- */
+  html .rd-root .kb-ch .kb-ch-h { break-after: avoid; break-inside: avoid; text-wrap: balance; color: var(--pp-ink); letter-spacing: 0; }
+  html .rd-root .kb-ch :is(h1, h2).kb-ch-h { padding: 0; border: 0; font: 600 18.67px/1.3 var(--pp-disp); }
+  html .rd-root .kb-ch h3.kb-ch-h { font: 600 16px/1.35 var(--pp-disp); }
+  html .rd-root .kb-ch :is(h4, h5, h6).kb-ch-h { font: 700 14px/1.4 var(--pp-body); }
+  html .rd-root .kb-ch h2.kb-ch-h + h3.kb-ch-h { margin-top: 18px; }
+
+  /* -------- Prose ---------------------------------------------------------- */
+  html .rd-root .kb-ch > p { max-width: 38em; text-wrap: pretty; orphans: 2; widows: 2; hanging-punctuation: none; }
+  /* A lead-in stays with what it introduces: a paragraph directly before a figure row, a diagram, a code block,
+     a table, a callout or a list never ends a page while that block starts the next. */
+  html .rd-root .kb-ch > p:has(+ :is(.fg-row, .fg-fig, .fg-plain, .kb-ch-code, .kb-ch-table, .kb-ch-callout, .kb-ch-diagram, .dg, .fg-svg, ul, ol, blockquote)) { break-after: avoid; }
+  html .rd-root .kb-ch strong { font-weight: 700; }
+  html .rd-root .kb-ch del { color: inherit; text-decoration: line-through; text-decoration-thickness: 1px; }
+  html .rd-root .kb-ch :not(pre) > code {
+    padding: 0; border: 0; border-radius: 0; background: none; line-height: inherit;
+    font: max(12px, 0.857em) var(--pp-mono); font-variant-ligatures: none; overflow-wrap: anywhere;
+  }
+  /* A link prints underlined (1px, offset 0.15em) followed by its address, in mono 12px secondary: that is the
+     renderer's `.pp-href`, which carries `<wbr>` after each "/" and before each "?" and "&". An in-document `#`
+     link and a bare link print nothing more. */
+  html .rd-root .kb-ch a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; text-decoration-color: currentColor; }
+  html .rd-root .kb-ch .pp-href { display: inline; font: 400 12px/1.45 var(--pp-mono); font-style: normal; color: var(--pp-sec); overflow-wrap: anywhere; text-decoration: none; }
+  html .rd-root .kb-ch .fg-cite__n { font-size: inherit; font-weight: 400; }
+
+  /* Lists: indent 1.4em, 3px between items, items never split. Quotes: a 2px rule, italic, secondary. */
+  html .rd-root .kb-ch :is(ul, ol) { padding-left: 1.4em; }
+  html .rd-root .kb-ch > :is(ul, ol) { max-width: 38em; }
+  html .rd-root .kb-ch li { margin-top: 0; padding-left: 0; break-inside: avoid; }
+  html .rd-root .kb-ch li + li { margin-top: 3px; }
+  html .rd-root .kb-ch li > :is(ul, ol) { margin-top: 3px; }
+  html .rd-root .kb-ch li::marker { color: inherit; }
+  html .rd-root .kb-ch > blockquote { max-width: 38em; padding: 0 0 0 14px; border-left: 2px solid var(--pp-border); color: var(--pp-sec); font-style: italic; break-inside: avoid; }
+  html .rd-root .kb-ch blockquote > p + p { margin-top: 6px; }
+  html .rd-root .kb-ch > hr { width: 6rem; height: 0; margin: 18px 0; border: 0; border-top: 1px solid var(--pp-border); background: none; }
+
+  /* -------- Callouts: printed OPEN (a collapsed one too: paper has no button), a hairline box ----- */
+  html .rd-root .kb-ch-callout {
+    padding: 9px 14px 11px; border: 1px solid var(--pp-border); border-radius: 4px; background: none;
+    font: 14px/1.55 var(--pp-read); color: var(--pp-ink); break-inside: avoid;
+  }
+  html .rd-root .kb-ch-callout[data-kind="warning"], html .rd-root .kb-ch-callout[data-kind="caution"] { border-color: var(--pp-ink); }
+  html .rd-root .kb-ch-callout[data-collapsed] { padding: 9px 14px 11px; }
+  html .rd-root .kb-ch-callout__sum { display: block; min-height: 0; padding: 0; cursor: auto; }
+  /* Engines that know `::details-content` show a folded callout's body; the others get `open` from the reader's
+     `beforeprint` listener (`print-client.tsx`). */
+  html .rd-root details.kb-ch-callout::details-content { content-visibility: visible; display: block; }
+  html .rd-root .kb-ch-callout__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  html .rd-root .kb-ch-callout .kb-ch-callout__type { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+  html .rd-root .kb-ch-callout .kb-ch-callout__title { font: 600 14px/1.4 var(--pp-body); color: var(--pp-ink); }
+  html .rd-root .kb-ch-callout .kb-ch-callout__body, html .rd-root .kb-ch-callout[data-collapsed] > .kb-ch-callout__body {
+    display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0; padding: 0;
+  }
+  html .rd-root .kb-ch-callout .kb-ch-callout__body > * { margin-top: 0; max-width: none; }
+
+  /* -------- Code: a box on sunken, wrapped, grayscale, a hanging indent; an ASCII drawing set to fit ---- */
+  html .rd-root .kb-ch-code { border: 1px solid var(--pp-border); border-radius: 4px; background: var(--pp-sunken); break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; --rd-code-bg: var(--pp-sunken); }
+  html .rd-root .kb-ch-callout .kb-ch-code { --rd-code-bg: var(--pp-sunken); }
+  html .rd-root .kb-ch-code__bar { display: flex; justify-content: space-between; gap: 10px; padding: 3px 10px; border: 0; border-bottom: 1px solid var(--pp-border); border-radius: 4px 4px 0 0; background: var(--pp-paper, #ffffff); font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); }
+  html .rd-root .kb-ch-code__title, html .rd-root .kb-ch-code__lang { font: inherit; letter-spacing: 0; text-transform: none; color: inherit; }
+  html .rd-root .kb-ch-code__pre, html .rd-root .kb-ch-code--art .kb-ch-code__pre {
+    margin: 0; padding: 7px 10px 8px; border: 0; border-radius: 0; background: none; overflow: visible;
+    font: 12px/1.45 var(--pp-mono); font-variant-ligatures: none; color: var(--pp-ink);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  html .rd-root .kb-ch-code__ln { padding-left: 2ch; text-indent: -2ch; min-height: 1.45em; white-space: pre-wrap; overflow-wrap: anywhere; }
+  html .rd-root .kb-ch-code__pre [class*="kb-tok-"] { color: var(--pp-ink); font-weight: 400; font-style: normal; }
+  html .rd-root .kb-ch-code__pre .kb-tok-keyword { font-weight: 700; }
+  html .rd-root .kb-ch-code__pre .kb-tok-comment { color: var(--pp-sec); font-style: italic; }
+  html .rd-root .kb-ch-code__pre :is(.kb-tok-string, .kb-tok-string-expression) { color: var(--pp-sec); }
+  /* An ASCII drawing keeps no hang, a 1.3 line height, and is set at the size that fits its widest line in the column
+     (`--fg-cols`, the renderer's count of monospace cells; the face is 0.6em wide), down to 6.5pt at the least,
+     and only then wraps: never off the paper. */
+  html .rd-root .kb-ch-code--art { container-type: inline-size; }
+  html .rd-root .kb-ch-code--art .kb-ch-code__pre {
+    font-size: clamp(8.67px, calc((100cqw - 24px) / (var(--fg-cols, 80) * 0.6)), 12px); line-height: 1.3;
+  }
+  html .rd-root .kb-ch-code--art .kb-ch-code__ln { padding-left: 0; text-indent: 0; min-height: 1.3em; }
+
+  /* -------- Tables: rows never split; the header repeats on each page and never stands alone at a foot --- */
+  html .rd-root .kb-ch-table, html .rd-root .kb-ch-table__wrap { break-inside: auto; }
+  html .rd-root .kb-ch-table__scroll, html .rd-root .kb-ch-table--long.is-over .kb-ch-table__scroll { overflow: visible; max-height: none; border: 0; border-radius: 0; }
+  html .rd-root .kb-ch-table table, html .rd-root .kb-ch-table--wide table { width: 100%; min-width: 0; border-collapse: collapse; font: 12px/1.4 var(--pp-body); font-variant-numeric: tabular-nums; color: var(--pp-ink); }
+  html .rd-root .kb-ch-table :is(th, td) { padding: 4px 6px; border: 1px solid var(--pp-border); vertical-align: top; overflow-wrap: break-word; white-space: normal; word-break: normal; }
+  html .rd-root .kb-ch-table th, html .rd-root .kb-ch-table--long thead th {
+    position: static; box-shadow: none; background: var(--pp-sunken); font: 700 12px/1.4 var(--pp-body); letter-spacing: 0; text-transform: none; color: var(--pp-ink);
+    white-space: normal; print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  html .rd-root .kb-ch-table--long td, html .rd-root .kb-ch-table--long.is-over td { white-space: normal; }
+  html .rd-root .kb-ch-table :not(pre) > code { white-space: normal; overflow-wrap: break-word; font-size: 12px; }
+  html .rd-root .kb-ch-table :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; }
+  html .rd-root .kb-ch-table tr { break-inside: avoid; }
+  html .rd-root .kb-ch-table thead { display: table-header-group; break-after: avoid; }
+
+  /* -------- Figures: no scroll box, a caption in 12px secondary ------------- */
+  html .rd-root .fg-fig, html .rd-root .fg-plain, html .rd-root .fg-row, html .rd-root .fg-svg { break-inside: avoid; }
+  html .rd-root .fg-fig { gap: 6px; }
+  html .rd-root .fg-box__scroll { overflow: visible; }
+  html .rd-root .fg-media { --fg-cap: 30rem; background: none; }
+  html .rd-root .fg-fig--wide .fg-media { width: min(100%, calc(var(--fg-w) * 1px), calc(var(--fg-cap) * var(--fg-w) / var(--fg-h))); }
+  html .rd-root .fg-media__pic { position: static; }
+  html .rd-root .fg-figcap { gap: 2px; }
+  html .rd-root .fg-cap, html .rd-root .fg-credit { max-width: 46em; font: 12px/1.5 var(--pp-body); color: var(--pp-sec); }
+  html .rd-root .fg-credit__label { font: 700 12px/1.5 var(--pp-mono); }
+  /* A figure row: side by side while each item keeps 13rem in the column, else even rows; never split. Two items
+     are two columns; three are three while they keep 13rem each (648px, 3 x 208 + 2 x 12), else two; four are
+     two rows of two. The caption sits under the row. */
+  html .rd-root .fg-row { padding-block: 0; border: 0; gap: 6px; }
+  html .rd-root .fg-row__cap { order: 2; max-width: 46em; font: 12px/1.5 var(--pp-body); color: var(--pp-sec); }
+  html .rd-root .fg-row__items { font-size: 14px; }
+  html .rd-root .fg-row .fg-row__grid { gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  html .rd-root .fg-row--2 .fg-row__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html .rd-root .fg-row--3 .fg-row__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @container fgrow (min-width: 648px) { html .rd-root .fg-row--3 .fg-row__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @container fgrow (max-width: 427px) { html .rd-root .fg-row .fg-row__grid { grid-template-columns: minmax(0, 1fr); } }
+  html .rd-root .fg-item { gap: 4px; }
+  html .rd-root .fg-card {
+    gap: 4px; padding: 9px 12px 11px; border: 1px solid var(--pp-border); border-radius: 4px; background: none; height: auto;
+    font: 12px/1.5 var(--pp-body); color: var(--pp-ink); break-inside: avoid;
+  }
+  html .rd-root .fg-card__title { font: 600 14px/1.35 var(--pp-body); color: var(--pp-ink); }
+  html .rd-root .fg-card__p { font-size: 12px; line-height: 1.5; }
+  html .rd-root .fg-card__p + .fg-card__p { margin-top: 0; }
+  html .rd-root .fg-card.fg-tone-accent { padding-top: 12px; border-color: var(--pp-accent); box-shadow: inset 0 3px 0 var(--pp-accent); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  /* -------- Diagrams and the svg block: the signed print tones (the reader's own @media print block),
+     at 100% of the column, no fades, no hint, no scroll ------------------------------------------- */
+  html .rd-root .dg, html .rd-root .fg-svg { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html .rd-root .dg__box, html .rd-root .dg__scroll { overflow: visible; }
+  html .rd-root .dg__svg, html .rd-root .fg-svg__svg { min-width: 0 !important; overflow: visible; }
+  html .rd-root .dg__title { font: 600 14px/1.35 var(--pp-body); color: var(--pp-ink); }
+  html .rd-root .dg__cap { max-width: 46em; margin-top: 8px; font: 12px/1.5 var(--pp-body); color: var(--pp-sec); }
+
+  /* -------- Sources: "[n]" in mono, the title 600, meta and note 12px, the address in mono ---------- */
+  html .rd-root .kb-ch .fg-src { max-width: 42em; gap: 8px; margin-top: 8px; font: 14px/1.55 var(--pp-read); }
+  html .rd-root .kb-ch .fg-src__item { grid-template-columns: 2.4em minmax(0, 1fr); gap: 0 4px; margin: 0; padding: 0; border-radius: 0; break-inside: avoid; }
+  html .rd-root .fg-src__n { font: 400 12px/1.6 var(--pp-mono); color: var(--pp-sec); }
+  html .rd-root .fg-src__title { font-weight: 600; color: var(--pp-ink); }
+  html .rd-root .fg-src__meta { font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+  html .rd-root .fg-src__note { font-size: 12px; line-height: 1.5; color: var(--pp-ink); }
+  html .rd-root .fg-src__url { margin: 0; }
+  html .rd-root .fg-src__url .pp-src__addr { display: inline; font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); overflow-wrap: anywhere; }
+
+  /* -------- The quiz on paper ------------------------------------------------- */
+  /* A head kept whole and with its first question, each item whole, numbered in Fraunces with tabular figures
+     in a 1.9em gutter; the option letter in a 20px ring (single) or square (several); a cloze blank as a numbered
+     8.5em rule; three 28px writing lines for a recall. */
+  html .rd-root .pp-quiz { display: block; }
+  html .rd-root .pp-quiz__head { break-inside: avoid; break-after: avoid; }
+  html .rd-root .pp-quiz__label { margin: 0; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+  html .rd-root .pp-quiz__title { margin: 2px 0 0; font: 600 16px/1.35 var(--pp-disp); }
+  html .rd-root .pp-qi { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; margin-top: 14px; max-width: 40em; break-inside: avoid; }
+  html .rd-root .pp-qi p, html .rd-root .pp-ai p, html .rd-root .pp-ans__lead, html .rd-root .pp-quiz__note { margin: 0; }
+  html .rd-root .pp-qi__n, html .rd-root .pp-ai__n { font: 600 14px/1.55 var(--pp-disp); font-variant-numeric: lining-nums tabular-nums; color: var(--pp-ink); }
+  html .rd-root .pp-qi p.pp-qi__hint { margin-top: 1px; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+  html .rd-root .pp-opts { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  html .rd-root .pp-opt { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 8px; align-items: start; margin: 0; }
+  html .rd-root .pp-qk { width: 20px; height: 20px; margin-top: 1px; border: 1.25px solid var(--pp-ink); border-radius: 50%; display: grid; place-items: center; font: 700 12px/1 var(--pp-mono); color: var(--pp-ink); }
+  html .rd-root .pp-qk--sq { border-radius: 3px; }
+  html .rd-root .pp-qi p.pp-cloze { margin-top: 1px; line-height: 2.1; }
+  html .rd-root .pp-bw { white-space: nowrap; }
+  html .rd-root .pp-blank { display: inline-block; min-width: 8.5em; border-bottom: 1px solid var(--pp-ink); line-height: 1.3; }
+  html .rd-root .pp-blank__n { font: 12px/1 var(--pp-mono); color: var(--pp-sec); }
+  html .rd-root .pp-lines { display: flex; flex-direction: column; margin-top: 4px; }
+  html .rd-root .pp-rule { display: block; height: 28px; border-bottom: 1px solid var(--pp-hint); }
+  html .rd-root .pp-quiz__note { margin-top: 14px; font: italic 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+
+  /* -------- The answer key (the chapter's end, before the colophon) ---------------- */
+  html .rd-root .pp-ans { display: block; }
+  html .rd-root .pp-ans > .pp-h2 { margin: 0; font: 600 18.67px/1.3 var(--pp-disp); text-wrap: balance; break-after: avoid; }
+  html .rd-root .pp-ans .pp-ans__lead { margin-top: 3px; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); break-after: avoid; }
+  html .rd-root .pp-ans__group + .pp-ans__group { margin-top: 14px; }
+  html .rd-root .pp-ai { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; margin-top: 10px; max-width: 40em; break-inside: avoid; }
+  html .rd-root .pp-ai p.pp-ai__a { line-height: 1.5; }
+  html .rd-root .pp-ai__key { margin-right: 2px; font: 700 12px/1 var(--pp-mono); }
+  html .rd-root .pp-ai__label { margin-right: 4px; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+  html .rd-root .pp-ai p.pp-ai__x { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--pp-sec); }
+
+  /* -------- The colophon (the last thing printed) ----------------------------------- */
+  html .rd-root .pp-colo {
+    display: block; max-width: 46em; margin: 28px 0 0; padding-top: 8px; border-top: 1px solid var(--pp-border);
+    font: 12px/1.5 var(--pp-body); color: var(--pp-sec); overflow-wrap: anywhere; break-inside: avoid;
+  }
+  html .rd-root .pp-colo p { margin: 0; }
+  html .rd-root .pp-colo p + p { margin-top: 3px; }
+  html .rd-root .pp-colo .pp-colo__line { margin-bottom: 3px; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+}
+
+/* ==========================================================================
+   PART 3 — ⌘P on the legacy reader: the one notice sheet
+   ========================================================================== */
+/* In `@media print` on the legacy page everything is hidden but the notice: the bars, the frame (the framed
+   document never prints: it is a sandboxed frame and the page itself never scrolls). The page releases the window
+   it pinned at 100dvh so the sheet is one ordinary page on A4 and US Letter. */
+@media print {
+  html:has(.lg-page):has(.pp-notice), html:has(.lg-page):has(.pp-notice) body { height: auto; overflow: visible; }
+  html .rd-root.lg-page { display: block; height: auto; overflow: visible; }
+  html .rd-root.lg-page .rd-in > :not(.pp-notice) { display: none !important; }
+  html .rd-root .pp-notice { display: flex; flex-direction: column; gap: 14px; break-inside: avoid; }
+  html .rd-root .pp-notice > * { margin: 0; }
+  html .rd-root .pp-notice__label { padding-bottom: 8px; border-bottom: 1px solid var(--pp-border); font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+  html .rd-root .pp-notice__title { margin-top: 22px; max-width: 22em; font: 600 26.67px/1.2 var(--pp-disp); text-wrap: balance; }
+  html .rd-root .pp-notice__p { max-width: 38em; font: 14px/1.55 var(--pp-read); color: var(--pp-ink); text-wrap: pretty; }
+  html .rd-root .pp-notice__addr { max-width: 40em; padding: 12px 14px; border: 1px solid var(--pp-ink); border-radius: 4px; font: 14px/1.5 var(--pp-mono); color: var(--pp-ink); overflow-wrap: anywhere; }
+  html .rd-root .pp-notice__printed { margin-top: 8px; font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); }
+  html .rd-root .pp-notice :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+}
+
+/* ==========================================================================
+   PART 4 — the older document page (P28.S8, unchanged)
+   `/documents/{id}/versions/{v}`, the past-version page of a Markdown or native
+   document, still draws the P28 document frame (`.kb-doc`, `.kb-prose`) with its
+   own masthead, colophon and Export PDF control (`print-blocks.tsx`,
+   `export-pdf-button.tsx`). The reader's sheet above replaces them everywhere the
+   reader renders; this half keeps that one page printing as it did. Retiring it is
+   a redirect of that route to the reader (deferred: see P30's notebook).
+   ========================================================================== */
+@media print {
+  .kb-docbar, .kb-docversions, .kb-docfull__exit { display: none !important; }
   /* -------- The layout --------------------------------------------------- */
   /* Containers, grids and caps all go: the PAGE BOX is now the measure. At A4
      with 15mm side margins the text column is 180mm ≈ 41rem, which is
@@ -157,32 +451,13 @@
   .kb-prose a[href]::after { content: " (" attr(href) ")"; font-family: var(--kb-font-mono); font-size: 7.5pt; color: var(--kb-hint); word-break: break-all; }
   .kb-prose a[data-bare]::after, .kb-prose a[href^="#"]::after { content: none; }
 
-  /* -------- The explainer on paper (DECISION · question 6) --------------- */
-  /* A framed explainer is someone else's page inside a sandbox we may never
-     reach into: we cannot restyle it for paper, cannot remove its quiz, cannot
-     hint a page break inside it. What we CAN do is be honest about it and get
-     out of the way — the card's border and radius go, and the frame prints at
-     the full height the handshake measured, which is what makes the whole
-     document print rather than its first screenful.
-
-     A document that never reported a height is the one case we cannot print in
-     full, and the note says exactly that instead of printing a clipped page
-     silently. */
-  .kb-explainer { border: 0; border-radius: 0; overflow: visible; background: transparent; break-inside: auto; }
-  .kb-explainer__frame { height: auto; min-height: 0; }
-  .kb-explainer__note { display: block !important; font-size: 7.5pt; color: var(--kb-hint); margin-top: 6pt; }
-  .kb-explainer__note--screen { display: none !important; }
-
   /* -------- The colophon (print-only, last) ------------------------------ */
   /* Where this came from and when — repeated from the masthead on purpose,
      because the first page and the last page get separated. */
   .kb-printfoot { display: block; margin-top: 16pt; padding-top: 6pt; border-top: 0.75pt solid var(--kb-border); font-family: var(--kb-font-mono); font-size: 7.5pt; line-height: 1.6; color: var(--kb-hint); break-inside: avoid; }
   .kb-printfoot b { font-weight: 600; color: var(--kb-secondary); }
   .kb-printfoot span { overflow-wrap: anywhere; }
-
-  /* -------- Motion ------------------------------------------------------- */
-  *, *::before, *::after { animation: none !important; transition: none !important; box-shadow: none !important; }
 }
 
-/* -------- Screen: the print-only blocks are not there -------------------- */
+/* -------- Screen: the older page's print-only blocks are not there ------ */
 .kb-printonly, .kb-printhead, .kb-printfoot { display: none; }

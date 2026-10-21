@@ -1180,3 +1180,7 @@
 {"ts": "2026-10-21T12:28:39+09:00", "type": "slice_status_changed", "slice": "P30.S25", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T13:13:11+09:00", "type": "executor_dispatched", "slice": "P30.S25", "phase": "P30", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T13:13:11+09:00", "type": "slice_status_changed", "slice": "P30.S25", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T13:13:11+09:00", "type": "slice_status_changed", "slice": "P30.S26", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T13:42:21+09:00", "type": "executor_dispatched", "slice": "P30.S26", "phase": "P30", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T13:42:21+09:00", "type": "slice_status_changed", "slice": "P30.S26", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T13:42:21+09:00", "type": "deferred_created", "deferred": "D51", "source": "P30.S26"}
