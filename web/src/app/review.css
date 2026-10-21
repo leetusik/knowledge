@@ -1,0 +1,176 @@
+/*
+ * P30.S24 — the review surface (`08-review` round 01), transcribed from the signed canvas's
+ * `review.css` (the value source; class names stay as drawn, `rv-*`). Every value is a `kb-*`
+ * token or one of the signed reader's `--rd-*` values; the page adds no token.
+ *
+ * Reused unchanged, from `reader.css`: the frame, buttons, sheets, skeleton, editorial state,
+ * the quiz's parts (scoped `.kb-ch`, so a card's body carries that class), the highlight's paint
+ * and the undo line. PRODUCT vs CANVAS: the product scrolls the window and the reader's chrome
+ * is `position: fixed`; `main.rd-page` is the `rd` size container the `@container rd` rules
+ * below measure. Canvas-only (never built): the state bar, the foot strip, the stand-ins, the
+ * proposal box and the Components boards' cells (`.rv-cellbox`, `.rv-solo`, `.rv-ivls`).
+ *
+ * Where a rule here and a `.kb-ch` quiz rule meet at the same weight, the rule here is written
+ * with `.rv-card` in front so it wins whatever the order the two files load in.
+ */
+/* The review surface (job 08-review, round 01-review). A component gap, drawn as markup: the queue header, the card
+   frame, the two-rating foot, the way back into the chapter, the queue's other states and the review settings.
+   Every value is a kb-* token or one of the signed reader's --rd-* values. The quiz's parts (quiz.css), the highlight's
+   paint and the undo line (annot.css) and the reader's frame, buttons, sheets, skeleton and editorial state
+   (reader.css) are the signed files, copied unchanged; nothing here changes one of their rules. */
+
+/* ---------- The page: one centred reading column, as the reader's ---------- */
+/* The measure of review's own 15 px interface paragraphs (the note, the end and empty bodies): about 70 characters,
+   inside the 45–75 the system asks for. The reading column itself is the signed --rd-measure. */
+:root { --rv-measure: 28rem; }
+.rd-page.rv-page { padding-bottom: calc(var(--kb-space-2xl) * var(--rd-k)); }
+.rv-page > * { min-width: 0; }
+
+/* ---------- The queue header ---------- */
+.rv-head { padding-top: calc(var(--kb-space-xl) * var(--rd-k)); display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.rv-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: calc(var(--rd-fs) * 1.45); line-height: 1.2; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink);
+}
+/* The counts and the "By book" control share a row that wraps on a phone. */
+.rv-head__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--kb-space-md); }
+.rv-head__counts { display: grid; min-width: 0; }
+.rv-count { grid-area: 1 / 1; margin: 0; padding-block: 0.5rem; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rv-count b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.rv-count.is-off { visibility: hidden; }
+.rv-count__sk { grid-area: 1 / 1; align-self: center; display: block; height: 0.95rem; width: 17rem; max-width: 80vw; }
+.rv-bybook { margin-right: -0.7rem; }
+/* Until the counts arrive (loading, failed) there is nothing to list: By book keeps its place, unseen, as the counts do. */
+.rv-bybook:disabled { visibility: hidden; }
+/* The last save, always in the header so nothing moves when it appears; read out as a status. */
+.rv-saved { margin: 0; min-height: 1.15rem; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rv-saved b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.rv-saved.is-off { visibility: hidden; }
+.rv-books { list-style: none; margin: var(--kb-space-xs) 0 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rv-book { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.1rem var(--kb-space-md); padding: var(--kb-space-sm) 0; border-bottom: 1px solid var(--kb-border); }
+.rv-book__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; color: var(--kb-ink); overflow-wrap: break-word; }
+.rv-book__n { font-size: 0.8125rem; color: var(--kb-ink); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.rv-book__sub { grid-column: 1 / -1; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.rv-books__note { margin: var(--kb-space-xs) 0 0; font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+
+/* ---------- The card: a page of its own between two strong hairlines, never a box ---------- */
+.rv-card { margin-top: calc(var(--kb-space-md) * var(--rd-k)); border-top: 1px solid var(--kb-border-strong); border-bottom: 1px solid var(--kb-border-strong); scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)); }
+.rv-card:focus { outline: none; }
+.rv-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); padding-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rv-card__kind {
+  margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.4;
+  letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary);
+}
+.rv-card__src { margin: 0.2rem 0 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); overflow-wrap: break-word; }
+.rv-card .rv-body .qz-item { padding-bottom: calc(var(--kb-space-md) * var(--rd-k)); }
+.rv-card :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* A highlight's card: its section, the quote in the reading face with the signed paint, and the reader's note.
+   The bold move of this job: the quote set at the lede step, as the reader met it on the page. */
+.rv-hl { padding: calc(var(--kb-space-lg) * var(--rd-k)) 0 calc(var(--kb-space-md) * var(--rd-k)); display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rv-hl__sec { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); line-height: 1.3; color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.rv-hl__quote { margin: 0; font-family: var(--font-reading); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.6; color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+/* the paint is not a control here: it opens nothing, so it keeps the text cursor */
+.rv-hl__quote mark.an-m { cursor: auto; }
+.rv-hl__note { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.rv-hl__notek { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rv-hl__notet { margin: 0; font-family: var(--font-body); font-size: 0.9375rem; line-height: 1.55; color: var(--kb-ink); white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; max-width: var(--rv-measure); }
+
+/* ---------- The foot: two ratings, each with its interval preview ---------- */
+/* Below 40rem the ratings take the full width under the question, two equal halves; from 40rem, beside it. */
+.rv-card .rv-foot--pair { grid-template-columns: minmax(0, 1fr); row-gap: var(--kb-space-sm); }
+.rv-card .rv-foot--pair .qz-acts { justify-items: stretch; }
+@container rd (min-width: 40rem) {
+  .rv-card .rv-foot--pair { grid-template-columns: minmax(0, 1fr) auto; }
+  .rv-card .rv-foot--pair .qz-acts { justify-items: end; }
+}
+.rv-card .qz-acts__layer.rv-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--kb-space-xs); justify-content: stretch; }
+.rd-btn.rv-rate {
+  flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.1rem;
+  min-height: 3.25rem; min-width: 0; padding: 0.4rem 0.75rem; text-align: left; white-space: normal;
+}
+/* Below 40rem the two halves share the question's column (the grading gutter included), so they take its width and
+   never a floor of their own; from 40rem each keeps a 9.75rem floor beside the status. */
+@container rd (min-width: 40rem) {
+  .rd-btn.rv-rate { min-width: 9.75rem; padding-inline: 0.9rem; }
+}
+.rv-rate__ivl { font-size: 0.8125rem; font-weight: var(--kb-weight-regular); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-btn.rv-rate:disabled { opacity: 1; cursor: progress; }
+.rd-btn.rv-rate:disabled:not([aria-busy="true"]) { color: var(--kb-secondary); }
+.rd-btn.rv-main:disabled, .rv-set .rd-btn[aria-busy="true"]:disabled { opacity: 1; cursor: progress; }
+.rv-card .qz-acts__layer.is-off .rd-btn { pointer-events: none; }
+
+/* Review's live line (the rating and grading announcements): visually hidden, and its 1 px box clips the sentence (held
+   in a block of its own), so a long announcement never widens the scroller on a phone. */
+.rv-vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; pointer-events: none; }
+.rv-vh__t { display: block; }
+
+/* ---------- The way back into the chapter, and suspend ---------- */
+.rv-where { margin: 0; padding: var(--kb-space-md) 0 calc(var(--kb-space-md) * var(--rd-k)); border-top: 1px solid var(--kb-border); display: flex; flex-direction: column; gap: 0.2rem; font-family: var(--font-body); }
+.rv-where__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rv-where__title { margin: 0; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.4; color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.rv-where__place { margin: 0; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.rv-where__acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--kb-space-md); margin-top: var(--kb-space-xs); }
+.rv-where__link.is-off { visibility: hidden; }
+.rv-suspend { margin-right: -0.75rem; }
+.rv-suspend:disabled { opacity: 1; color: var(--kb-secondary); }
+
+/* ---------- The queue's other states ---------- */
+.rv-end { margin-top: calc(var(--kb-space-md) * var(--rd-k)); padding-top: calc(var(--kb-space-md) * var(--rd-k)); }
+.rv-end:focus { outline: none; }
+.rv-end__title { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.3; color: var(--kb-ink); text-wrap: balance; }
+.rv-end__body { margin: var(--kb-space-sm) 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: var(--rv-measure); text-wrap: pretty; }
+.rv-end__more { margin: var(--kb-space-xs) 0 0; font-size: 0.9375rem; }
+.rv-end .rd-next { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rv-empty { margin-top: calc(var(--kb-space-md) * var(--rd-k)); padding: calc(var(--kb-space-lg) * var(--rd-k)) 0; border-top: 1px solid var(--kb-border-strong); border-bottom: 1px solid var(--kb-border-strong); display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.rv-empty:focus { outline: none; }
+.rv-empty__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); line-height: 1.3; color: var(--kb-ink); }
+.rv-empty__body { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: var(--rv-measure); text-wrap: pretty; }
+.rv-empty .rd-btn { margin-top: var(--kb-space-xs); }
+/* Loading: a card's skeleton at the width it stands at (still under reduced motion: the signed .rd-skel rule) */
+.rv-sk { margin-top: calc(var(--kb-space-md) * var(--rd-k)); padding-top: calc(var(--kb-space-sm) * var(--rd-k)); border-top: 1px solid var(--kb-border-strong); display: flex; flex-direction: column; }
+.rv-sk .rd-skel { display: block; }
+.rv-sk__kind { height: 0.7rem; width: 6rem; }
+.rv-sk__src { height: 0.75rem; width: 17rem; max-width: 75%; margin-top: 0.45rem; }
+.rv-sk__q { height: calc(var(--rd-fs) * 0.85); margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
+.rv-sk__q + .rv-sk__q { margin-top: calc(var(--rd-fs) * 0.6); }
+.rv-sk__hint { height: 0.7rem; width: 9rem; margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.rv-sk__opt { height: var(--kb-tap); margin-top: var(--kb-space-md); border-radius: var(--kb-radius-sm); }
+.rv-sk__opts { margin-left: calc(var(--rd-fs) * 1.18 * 1.75 + var(--kb-space-sm)); display: flex; flex-direction: column; }
+.rv-sk__w95 { width: 95%; } .rv-sk__w70 { width: 70%; }
+
+/* ---------- Review settings (in the reader's right-hand sheet) ---------- */
+.rv-set { display: flex; flex-direction: column; gap: var(--kb-space-lg); margin: 0; }
+.rv-set .an-ed { gap: 0.3rem; }
+.rv-hint { margin: 0; font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.rv-err { margin: 0; font-size: 0.8125rem; line-height: 1.45; font-weight: var(--kb-weight-semibold); color: var(--kb-status-revoked-ink); }
+/* A number field's hint and its error are stacked in one cell: the error takes the hint's place when the value is
+   invalid, the cell keeps the taller one's height, and no field or button below moves (the not-saved line's rule). */
+.rv-msg { display: grid; }
+.rv-msg > p { grid-area: 1 / 1; }
+.rv-msg > .is-off { visibility: hidden; }
+.rv-num { max-width: 8rem; font-variant-numeric: tabular-nums; }
+.an-ed__field.is-bad { border-color: var(--kb-status-revoked); box-shadow: inset 0 0 0 1px var(--kb-status-revoked); }
+.rv-select { appearance: auto; -webkit-appearance: auto; cursor: pointer; }
+.rv-set__day { margin: 0; padding-top: var(--kb-space-md); border-top: 1px solid var(--kb-border); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.rv-set__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); }
+.rv-set__fail { flex: 1 1 100%; margin: 0; font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-status-revoked-ink); }
+.rv-set__fail.is-off { visibility: hidden; }
+
+/* The card's question sits outside the reader's .rd-prose, so it takes the prose face itself (the signed quiz sets it
+   inside the chapter's prose kit: the same face, size, lead and emphasis). */
+.rv-q { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); }
+.rv-q strong { font-weight: 650; }
+.rv-q em { font-style: italic; }
+.rv-q:lang(ko), .rv-q :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.rv-q em:lang(ko), .rv-q em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+
+/* Save settings holds its three labels in one button, as the main button does; this form is not inside a chapter, so the
+   quiz's swap rules (scoped `.kb-ch`) are written here for it. */
+.rv-set .qz-swap { display: grid; }
+.rv-set .qz-swap > span { grid-area: 1 / 1; }
+.rv-set .qz-swap > .is-off { visibility: hidden; }
+.rv-set .rd-btn.qz-act { padding-inline: 1rem; }
+
+/* The keyboard rising on a phone: a focused blank keeps its foot (Check) in view below it. */
+.rv-card .qz-blank { scroll-margin-block: calc(var(--rd-top-h) + var(--kb-space-md)) calc(7.5rem + var(--rd-safe-bottom)); }

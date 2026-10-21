@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Review surface (08-review)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 240,
   "depends_on": [
     "P30.S23"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T11:46:31+09:00",
+  "completed_at": "2026-10-21T12:28:38+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Review surface from 08-review: queue head with By book, quiz and highlight cards, ratings with previews, way back, suspend/undo, end/limit/empty/failed states, settings and Display; idempotent review_id proven live; web 382",
   "validation": {
     "required": [],
     "last_run": null,

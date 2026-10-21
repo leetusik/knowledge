@@ -259,3 +259,10 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - **api.md:** none (the page reads existing routes: `GET /app/orgs/{org}/{project}/books/{book}`, `GET /app/reader/books/…`, `GET /app/reader/annotations`, `DELETE /app/reader/state?scope=book`; `KbReaderBook` carries `continue`, `updated` and `counts`).
 - **security.md:** none (the book page is a reader route, so it takes the nonce'd `script-src`; the clear is a server action that sends only the caller's own `(org, project, book)`).
 - **operations.md:** none (the runtime manifest is unchanged).
+
+## P30.S24
+
+- **frontend.md:** `08-review` round 01 is the design record of the review surface: `/review` in the reader's family (no app shell), the queue header and counts with the By book disclosure, the quiz and highlight cards, the foot (Next or the two ratings with interval previews on the 3:1 control edge), the way back into the chapter, suspend and undo, the end / limit / paused / empty / failed states, review settings and Display. New files: `web/src/app/review/{layout,page,loading,error}.tsx`, `web/src/app/review.css`, `web/src/components/review/` (`review-app` the island, `card`, `queue-head`, `end`, `settings`, `skeleton`, `inline`, `review-static`), `web/src/lib/review/` (`model.ts` and `foot.ts` pure and tested in `web/tests/review-model.test.ts`; `actions.ts` the server actions; `types.ts`, `spec.ts`, `cx.ts`), `web/src/content/review.ts`.
+- **api.md:** none (the page reads and writes existing routes: `GET /app/reader/review/queue`, `POST …/cards/{id}/review` with `review_id`, `PATCH …/cards/{id}`, `PATCH /app/reader/profile`, `GET /app/reader/continue`; `lib/knowledge/reader.ts` gained `getReviewQueue`, `postCardReview`, `patchReviewCard`, `patchReaderProfile`).
+- **security.md:** none (a reader-family route, so it takes the nonce'd `script-src`; the actions send only the caller's own token).
+- **operations.md:** none (the runtime manifest is unchanged).
