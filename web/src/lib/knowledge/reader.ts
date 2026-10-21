@@ -91,6 +91,23 @@ export interface KbReaderChapterState {
 export interface KbReaderBook {
   progress: { finished: number; started: number; total: number };
   chapters: KbReaderChapterState[];
+  /**
+   * P30.S23: the most recently updated position among the book's chapters (S3's Continue
+   * pointer), or null when nothing was opened.
+   */
+  continue?: {
+    chapter_key: string;
+    doc: string;
+    lang: string;
+    anchor_id: string | null;
+    fraction: number;
+    state: "started" | "finished";
+    updated_at: string;
+  } | null;
+  /** Finished chapters with a newer version than the one finished. */
+  updated?: number;
+  /** P30.S23: the caller's marks (bookmarks + annotations) in the whole book. */
+  counts?: { chapters_with_place: number; marks: number };
 }
 
 /**
@@ -554,4 +571,23 @@ export async function clearAllReaderState(
     token,
     signal,
   });
+}
+
+/**
+ * `DELETE /app/reader/state?scope=book&org=&project=&book=` (bearer): the caller's positions,
+ * bookmarks, annotations, quiz attempts and review cards in ONE book (P30.S23, `07-book-page`
+ * §7). Every other book, the chapters and the profile stay. A book the caller cannot read is a 404.
+ */
+export async function clearBookReaderState(
+  token: string,
+  target: { org: string; project: string; book: string },
+  signal?: AbortSignal,
+): Promise<void> {
+  const e = encodeURIComponent;
+  await sendJson<unknown>(
+    `/app/reader/state?scope=book&org=${e(target.org)}&project=${e(target.project)}&book=${e(target.book)}`,
+    "DELETE",
+    undefined,
+    { token, signal },
+  );
 }

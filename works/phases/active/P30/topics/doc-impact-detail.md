@@ -252,3 +252,10 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - **api.md:** new `GET /app/orgs/{org}/library?scope=all|public` (optional identity; a member reads every project, anyone else the public ones; `scope=public` gives a member the public view; books with chapters and variants, loose documents, the project list; one 404 for every miss); `GET /app/reader/library` books carry `updated`.
 - **backend.md:** `server/books_api.py` `org_library`, `server/db.py` `list_loose_documents`.
 - **operations.md:** none (the runtime manifest is unchanged).
+
+## P30.S23
+
+- **frontend.md:** `07-book-page` round 01 is the design record of the book page: `/@{org}/{project}/books/{book}` in the reader's chrome (a slim top bar, no app rail), the head, Continue reading, the per-book list's entry, Contents with the variants line and the versions panel, "Clear this book's reading data", the loading, not-found and failed states, the five book shapes, member / other org / signed out. New files: `web/src/app/(public)/[org]/[project]/books/[book]/{page,loading,error,not-found}.tsx`, `web/src/components/book/`, `web/src/lib/book/` (`model.ts` the rules, `load.ts` the reads, `view.ts`, `actions.ts` the clear), `web/src/content/book.ts`, `web/src/app/book.css`.
+- **api.md:** none (the page reads existing routes: `GET /app/orgs/{org}/{project}/books/{book}`, `GET /app/reader/books/…`, `GET /app/reader/annotations`, `DELETE /app/reader/state?scope=book`; `KbReaderBook` carries `continue`, `updated` and `counts`).
+- **security.md:** none (the book page is a reader route, so it takes the nonce'd `script-src`; the clear is a server action that sends only the caller's own `(org, project, book)`).
+- **operations.md:** none (the runtime manifest is unchanged).
