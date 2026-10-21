@@ -28,7 +28,18 @@ An explain phase is one whose `intent.md` carries an `## Explain` section, writt
      - its sources: a commit range, files or URLs;
      - its planned diagrams and figures, and what each one shows;
      - its quiz targets: the understanding each item checks, never recall of a detail;
+     - its **tags**: 2 to 5, lowercase-kebab, the `--tag` values of its publish;
+     - its **research line**, `web research: on | off`, with the reason (skill §3's judgment gate: on for a
+       subject with an outside comparison surface, off for repo-private glue), so a missing "Best practices
+       & next steps" section is a decision the critic can see, not a gap;
+     - its **images**: `none`, or each name and what it shows (the skill's §4.7);
      - a `high:` line naming the trigger, when it has one;
+
+     **Write diagram and quiz targets so that the critic can check them against the code.** Name the exact
+     case, not the general one: a *loose document* or a *bound chapter* (they answer differently), a
+     placed chapter or not. For a diagram of steps, say that its order is the code's order, and name the
+     function it is read from. A target worded "an already-published document" is a different question
+     from "an already-published chapter", and the drafter and the critic must not have to guess which;
    - **out of scope:** what the book deliberately leaves out.
 3. **Cut one bare chapter slice per chapter**, in reading order:
 
@@ -80,7 +91,8 @@ Right after `finish-slice <P>.DECOMP`, in the same commit:
 ## Each chapter's `plan.md`, later
 
 When a chapter slice comes up, plan it per `reference/explain-chapter.md` (*What `plan.md` names*). Every field is drawn from `book/outline.md`:
-- from the chapter's entry: the key, the entry itself, the mode and the source;
-- from the book's header: the skill's path, and the publish fields (project, book, kind and title, chapter key and position, language, sources).
+- from the chapter's entry: the key, the entry itself, the mode and the source, and its tags, research line and images;
+- from the book's header: the skill's path, the reader, and the publish fields (project, book, kind and title, chapter key and position, chapter title, language, sources);
+- from the slice's own `## Dispatch`: the `--co-authored-by` attribution. The `--source-repo` is the repo root, and the check's target is "the configured knowledge base" (skill §2), the org the review publishes into. Nothing in a plan names a URL or a key. The summary is written with the draft.
 
 If the outline cannot fill a field, that is a gap in the outline. Ask about it; never invent it in a plan.
