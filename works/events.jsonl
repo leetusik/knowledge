@@ -1262,3 +1262,6 @@
 {"ts": "2026-10-21T19:11:16+09:00", "type": "slice_status_changed", "slice": "P31.S2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T19:13:43+09:00", "type": "executor_dispatched", "slice": "P31.S2", "phase": "P31", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T19:13:43+09:00", "type": "slice_status_changed", "slice": "P31.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T19:14:14+09:00", "type": "slice_status_changed", "slice": "P31.S3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T19:19:03+09:00", "type": "executor_dispatched", "slice": "P31.S3", "phase": "P31", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T19:19:03+09:00", "type": "slice_status_changed", "slice": "P31.S3", "old_status": "in_progress", "new_status": "done"}
