@@ -36,6 +36,7 @@ import type { ChapterRow, LegacyFrame, ReaderView } from "@/lib/reader/types";
 
 import { ChapterList } from "./chapter-list";
 import { DisplayPanel } from "./display-panel";
+import { PrintNotice } from "./print-sheet";
 import { SignInToSave } from "./sign-in-to-save";
 import { useLegacyReading } from "./use-legacy-reading";
 import { VersionList } from "./version-list";
@@ -787,6 +788,8 @@ export function LegacyReader({
       onKeyDown={onKeyDown}
     >
       <div className="rd-in">
+        {/* P30.S26: ⌘P on this page prints this one sheet and nothing else (print only). */}
+        <PrintNotice view={view} relay={frame.src} />
         <a
           className="rd-btn rd-btn--secondary lg-skip"
           href={`#${FRAME_ID}`}

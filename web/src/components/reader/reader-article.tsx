@@ -7,6 +7,8 @@ import type { LoadedReader } from "@/lib/reader/load";
 import { AnnotationLayer } from "./annotations";
 import { ChapterEnd } from "./chapter-end";
 import { ChapterHead } from "./chapter-head";
+import { PrintPrep } from "./print-client";
+import { PrintColophon, PrintMasthead } from "./print-sheet";
 
 /**
  * The reader's article (server): the chapter opening (§5) and the body, in the text
@@ -40,6 +42,10 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
   };
   return (
     <div className="rd-flow">
+      {/* P30.S26: the printed sheet's masthead, colophon and the small island that makes the
+          browser's own print right (the date, a collapsed callout). All are print-only. */}
+      <PrintMasthead view={view} />
+      <PrintPrep />
       <ChapterHead view={view} />
       <div className="rd-prose" lang={view.lang}>
         <ChapterView
@@ -63,6 +69,7 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
         bookBackHref={view.book?.backHref}
         total={view.book?.total}
       />
+      <PrintColophon view={view} />
       {/* P30.S20/S21: highlights, notes and bookmarks, on a native chapter that renders and
           bookmarks on a plain Markdown one. A member with nowhere to save (OQ75) gets none;
           a signed-out reader gets Sign in to save. */}

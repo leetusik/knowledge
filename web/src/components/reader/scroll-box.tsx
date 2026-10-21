@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 
@@ -153,6 +154,7 @@ export function TableBox({
 export function ArtBox({
   id,
   lang,
+  cols,
   bar,
   ariaLabel,
   hint,
@@ -160,6 +162,8 @@ export function ArtBox({
 }: {
   id: string | undefined;
   lang: string | undefined;
+  /** The widest line, in monospace cells: paper sets the drawing at the size that fits (P30.S26). */
+  cols: number;
   /** The title bar, when the block has a title. */
   bar: ReactNode;
   ariaLabel: string;
@@ -177,7 +181,13 @@ export function ArtBox({
     .filter(Boolean)
     .join(" ");
   return (
-    <figure className={cls} id={id} data-block={id} data-lang={lang}>
+    <figure
+      className={cls}
+      id={id}
+      data-block={id}
+      data-lang={lang}
+      style={{ "--fg-cols": cols } as CSSProperties}
+    >
       {bar}
       <div className="kb-ch-code__wrap">
         <pre

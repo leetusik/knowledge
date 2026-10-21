@@ -27,10 +27,18 @@ import {
   MissingBox,
   ScrollFigure,
 } from "@/components/reader/figure-parts";
+import { PrintAddr } from "@/components/reader/print-sheet";
+import {
+  PrintAnswers,
+  PrintQuiz,
+  type PrintItem,
+  type PrintKey,
+} from "@/components/reader/print-quiz";
 import { ClozeBlank, QuizBlock, type QuizItemProps } from "@/components/reader/quiz";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
+import { printAddress, widestLine } from "@/lib/reader/print";
 import { specOf } from "@/lib/reader/quiz";
 import type { QuizSaved } from "@/lib/reader/quiz-saved";
 import { signInToSaveHref, type ReaderTarget } from "@/lib/reader-href";
@@ -176,6 +184,8 @@ export function ChapterView({
           <Fragment key={i}>{r.stamped(stamps?.[i] ?? null, entry.block)}</Fragment>
         ) : null,
       )}
+      {/* P30.S26: the quizzes' answer key, printed after the whole body (print only). */}
+      <PrintAnswers keys={r.printKeys} />
     </div>
   );
 }
@@ -290,7 +300,9 @@ class Renderer {
   /** How many plain images of each asset the chapter has had (`img-<name>`, `-2`, `-3` …). */
   private readonly imageIds = new Map<string, number>();
   /** Set while a cloze sentence renders: its blanks become the island's inputs, counted in order. */
-  private cloze: { n: number } | null = null;
+  private cloze: { n: number; print?: boolean } | null = null;
+  /** P30.S26: each quiz's answer key, in the order the quizzes are rendered (print only). */
+  readonly printKeys: PrintKey[] = [];
   /** The current top-level block's anchor stamps (P30.S20), taken in order; null = none. */
   private stamps: Stamp[] | null = null;
   private stampAt = 0;
@@ -376,6 +388,17 @@ class Renderer {
         const m =
           next?.type === "text" ? /^[^\s`*_\[\]~{}<>]+/.exec(next.text) : null;
         skip = m ? m[0].length : 0;
+        if (this.cloze.print) {
+          // The paper's blank: a numbered rule, its tail kept with it.
+          return (
+            <span key={i} className="pp-bw">
+              <span className="pp-blank">
+                <span className="pp-blank__n">({this.cloze.n})</span>
+              </span>
+              {m ? this.text(m[0]) : null}
+            </span>
+          );
+        }
         return (
           <ClozeBlank
             key={i}
@@ -439,6 +462,7 @@ class Renderer {
           node.title,
           this.inline(node.children),
           key,
+          inlineText(node.children),
         );
       }
       default:
@@ -547,6 +571,7 @@ class Renderer {
     title: string | null,
     children: ReactNode,
     key?: number,
+    plain?: string,
   ): ReactNode {
     const target = resolveLink(href, this.links);
     if (target.kind === "missing") {
@@ -563,30 +588,52 @@ class Renderer {
     }
     if (target.kind === "external") {
       return (
-        <a
-          key={key}
-          href={target.href}
-          title={title ?? undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-link="external"
-        >
-          {children}
-          <span className="kb-ch-link__ext" data-an-skip="">
-            {CHAPTER.newTab}
-          </span>
-        </a>
+        <Fragment key={key}>
+          <a
+            href={target.href}
+            title={title ?? undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-link="external"
+          >
+            {children}
+            <span className="kb-ch-link__ext" data-an-skip="">
+              {CHAPTER.newTab}
+            </span>
+          </a>
+          {this.printHref(target.href, plain)}
+        </Fragment>
       );
     }
     return (
-      <a
-        key={key}
-        href={target.href}
-        title={title ?? undefined}
-        data-link={target.kind}
-      >
-        {children}
-      </a>
+      <Fragment key={key}>
+        <a href={target.href} title={title ?? undefined} data-link={target.kind}>
+          {children}
+        </a>
+        {target.kind === "internal" ? this.printHref(target.href, plain) : null}
+      </Fragment>
+    );
+  }
+
+  /**
+   * P30.S26: what a link prints after its text, on paper only: its address in full, with a
+   * break opportunity between segments. A same-app path gets the site's host; an outside URL
+   * is kept as it is; an in-document `#` link and a bare link (its text is its address)
+   * print nothing more. Not the author's text, so the anchor layer skips it.
+   */
+  private printHref(href: string, plain: string | undefined): ReactNode {
+    if (!href || href.startsWith("#")) return null;
+    const address = printAddress(href);
+    const text = (plain ?? "").trim();
+    const bare = (a: string) => a.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+    if (text && (bare(text) === bare(href) || bare(text) === bare(address)))
+      return null;
+    return (
+      <span className="pp-href pp-only" data-an-skip="">
+        {" ("}
+        <PrintAddr address={address} />
+        {")"}
+      </span>
     );
   }
 
@@ -884,6 +931,7 @@ class Renderer {
         <ArtBox
           id={id}
           lang={lang}
+          cols={widestLine(block.text)}
           bar={bar}
           ariaLabel={CHAPTER.drawing.aria}
           hint={CHAPTER.drawing.hint}
@@ -1192,6 +1240,8 @@ class Renderer {
     const title = str(block.title);
     const q = this.quizCtx;
     const items: QuizItemProps[] = [];
+    // P30.S26: the same items for paper (the quiz as printed, and its answer key).
+    const paper: PrintItem[] = [];
     recs(block.items).forEach((item, i) => {
       const spec = specOf(item, i + 1);
       if (!spec) return;
@@ -1226,19 +1276,47 @@ class Renderer {
         }
       }
       items.push(props);
+      const sheet: PrintItem = {
+        spec,
+        prompt: props.prompt,
+        options: props.options,
+        answer: props.answer,
+        explain: props.explain,
+      };
+      if (spec.type === "cloze") {
+        // The sentence again, its blanks as numbered rules instead of the island's inputs.
+        this.cloze = { n: 0, print: true };
+        try {
+          sheet.prompt = this.inline(inl(item.text));
+        } finally {
+          this.cloze = null;
+        }
+      }
+      paper.push(sheet);
     });
+    const noun = q?.place ?? "chapter";
+    if (paper.length) this.printKeys.push({ title, items: paper });
     return (
-      <QuizBlock
-        id={bid}
-        name={title ? `${CHAPTER.quiz.label}: ${title}` : CHAPTER.quiz.label}
-        title={title ? this.text(title) : undefined}
-        items={items}
-        member={q?.member ?? false}
-        write={q?.write ?? null}
-        version={q?.version ?? 0}
-        place={q?.place ?? "chapter"}
-        lang={q?.lang ?? "en"}
-      />
+      <>
+        <QuizBlock
+          id={bid}
+          name={title ? `${CHAPTER.quiz.label}: ${title}` : CHAPTER.quiz.label}
+          title={title ? this.text(title) : undefined}
+          items={items}
+          member={q?.member ?? false}
+          write={q?.write ?? null}
+          version={q?.version ?? 0}
+          place={noun}
+          lang={q?.lang ?? "en"}
+        />
+        {paper.length ? (
+          <PrintQuiz
+            title={title ? this.text(title) : null}
+            items={paper}
+            noun={noun}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -1278,20 +1356,26 @@ class Renderer {
                 ) : null}
                 {url ? (
                   <p className="fg-src__url">
-                    {target?.kind === "external" ? (
-                      <a
-                        className="fg-src__link"
-                        href={target.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-link="external"
-                      >
-                        {url}
-                        <span className="kb-ch-link__ext">{CHAPTER.newTab}</span>
-                      </a>
-                    ) : (
-                      url
-                    )}
+                    <span className="pp-screen">
+                      {target?.kind === "external" ? (
+                        <a
+                          className="fg-src__link"
+                          href={target.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-link="external"
+                        >
+                          {url}
+                          <span className="kb-ch-link__ext">{CHAPTER.newTab}</span>
+                        </a>
+                      ) : (
+                        url
+                      )}
+                    </span>
+                    {/* P30.S26: on paper the address, broken between its segments. */}
+                    <span className="pp-src__addr pp-only" data-an-skip="">
+                      <PrintAddr address={url} />
+                    </span>
                   </p>
                 ) : null}
                 {note ? <p className="fg-src__note">{this.text(note)}</p> : null}

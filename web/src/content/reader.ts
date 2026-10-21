@@ -131,6 +131,52 @@ export const READER = {
       },
     },
   },
+  /**
+   * P30.S26 — the printed sheet (`09-legacy-and-print` round 01, *Every string this job
+   * wrote*, "On paper"), word for word. Chrome copy on the sheet stays English (D36 (4)).
+   * The no-break spaces are the round's: "a short segment never breaks inside", and the " · "
+   * between segments takes a no-break space before the dot.
+   */
+  print: {
+    brand: "knowledge",
+    /** " · " between the segments of a label: a no-break space before the dot. */
+    sep: " · ",
+    /** A short segment kept whole ("Chapter 2 of 5", "v2, 12 Oct 2026"). */
+    keep: (text: string): string => text.replace(/ /g, " "),
+    printed: (date: string): string => `Printed ${date}`,
+    olderTag: (v: number): string => `Older version · v${v}`,
+    olderLine: (newest: number): string => `The current version is v${newest}, at `,
+    quizLabel: (n: number): string =>
+      `Quiz · ${n} ${n === 1 ? "question" : "questions"}`,
+    choiceOne: "Choose one answer.",
+    choiceMany: "Select all that apply.",
+    clozeOne: "Fill in the blank.",
+    clozeMany: "Fill in the blanks.",
+    recall: "Write your answer, then check it against the key.",
+    quizNote: (noun: "chapter" | "document"): string =>
+      `Answers are at the end of this ${noun}.`,
+    answers: "Answers",
+    answersLead: (n: number, title: string): string =>
+      `${n} ${n === 1 ? "answer" : "answers"} to “${title}”, each with why.`,
+    answersLeadUntitled: (n: number): string =>
+      `${n} ${n === 1 ? "answer" : "answers"}, each with why.`,
+    answerLabel: "Answer",
+    or: (list: string): string => ` (or ${list})`,
+    colophonPrinted: (date: string, address: string): string =>
+      `Printed ${date} from ${address}.`,
+    colophonCurrent: (v: number): string =>
+      `This is v${v}, the current version on that date; the address always opens the newest.`,
+    colophonOlder: (v: number, newest: number): string =>
+      `This is v${v}, an earlier version; the current version is v${newest}, at `,
+    /** The notice sheet ⌘P prints from the legacy reader. */
+    notice: {
+      title: (noun: "chapter" | "document"): string =>
+        `This ${noun} prints from its own page`,
+      lead: "keeps its original layout, inside a frame that doesn’t print. Open its own page and print from there:",
+      onScreen: (noun: "chapter" | "document"): string =>
+        `On screen, the bar under the ${noun} has Print · new tab, which opens that page for you.`,
+    },
+  },
   top: {
     logoLabel: "knowledge library",
     /** A loose document's back link (and its short form) go to the library. */

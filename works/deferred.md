@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `37`
+- Open: `38`
 - Promoted: `5`
 - Dropped: `8`
 
@@ -47,6 +47,7 @@
 | `D49` | `deferred` | Sources note as inline Markdown | P30.S16 | An author needs a link or emphasis in a source note | `works/deferred/open/D49` |
 | `D5` | `deferred` | Refresh the public explainer docs/hi2vi_web/2026-07-02-shared-nginx-explained.md — it describes a superseded edge topology | P8.F2 | operator wants the public explainer to match reality (it is a content doc, out of scope for P8's durable-doc versioning) | `works/deferred/open/D5` |
 | `D50` | `deferred` | Per-version publish date on book and version reads | P30.S23 | A reader needs to tell versions apart by date, or the next version-chain change | `works/deferred/open/D50` |
+| `D51` | `deferred` | Redirect past-version page to the reader and retire the old print layer | P30.S26 | The nonce-less page script is fixed, or the next change to the version page | `works/deferred/open/D51` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 
