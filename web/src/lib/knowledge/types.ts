@@ -314,6 +314,12 @@ export interface KbDocument extends KbDocumentListItem {
    * that URL keeps working forever either way.
    */
   canonical_path: string | null;
+  /**
+   * P30.F4: the chapter variant this document is bound as (`{book, chapter_key, lang}`),
+   * or `null` for a loose document. Additive on the two detail reads; optional so an
+   * older backend still type-checks.
+   */
+  chapter?: { book: string; chapter_key: string; lang: string } | null;
 }
 
 /** `GET /app/documents` → `{total, items}` (offset-paged; `total` is the full count). */

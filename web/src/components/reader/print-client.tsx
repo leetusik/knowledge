@@ -13,9 +13,10 @@ import { printDate } from "@/lib/reader/print";
 
 /**
  * "Printed {date}": the reader's own date, not the server's. The server renders its date
- * (so the markup is the same on both sides of hydration) and the date is written into the
- * element on mount and again each time a print starts, straight into the DOM (a state
- * update could land after the page has been laid out for paper).
+ * (`suppressHydrationWarning`: a client-rendered copy of this on the legacy page may see
+ * another date than the server did) and the date is written into the element on mount
+ * and again each time a print starts, straight into the DOM (a state update could land
+ * after the page has been laid out for paper).
  */
 export function PrintedOn({ initial }: { initial: string }) {
   const ref = useRef<HTMLSpanElement | null>(null);
@@ -28,7 +29,11 @@ export function PrintedOn({ initial }: { initial: string }) {
     return () => window.removeEventListener("beforeprint", write);
   }, []);
   return (
-    <span ref={ref} data-print-date="">
+    // The span's own text differs between the server's clock and the reader's whenever
+    // their dates differ (a time zone, midnight), and `PrintNotice` is rendered by the
+    // client component on the legacy page: React would throw error 418 on hydration.
+    // The mount effect writes the reader's date anyway, so the mismatch is expected.
+    <span ref={ref} data-print-date="" suppressHydrationWarning>
       {initial}
     </span>
   );

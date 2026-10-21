@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -45,6 +45,7 @@ import {
   ReaderProgressContext,
   type ReaderProgressValue,
 } from "./reader-progress";
+import { useHashLanding } from "./use-hash-landing";
 import { useReading } from "./use-reading";
 import { OPEN_SHEET_EVENT } from "./versions-button";
 import { VersionList } from "./version-list";
@@ -118,6 +119,14 @@ export function ReaderFrame({
     quietUntil.current = Date.now() + QUIET_MS;
   }, []);
   const rd = useReading({ view, ready, rootRef, topRef, quiet });
+  // P30.F4 (X3): a `#section` in the address lands on its block, and wins over the resume.
+  const pathname = usePathname();
+  useHashLanding({
+    ready,
+    place: `${pathname}|${view.lang}|${view.version}`,
+    rootRef,
+    quiet,
+  });
   const { dismissPill } = rd;
 
   // The scroll handler reads the open sheet through a ref, so it never goes stale.

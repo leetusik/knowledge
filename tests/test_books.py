@@ -6,7 +6,9 @@
 * PUT refuses a binding to a document that does not exist or is in another project;
 * a loose publish that sends no new field is byte-for-byte today's;
 * a public book route on a private project is a 404 (Postgres-gated);
-* a slug-less tenant's book is addressed on its tenant id (P30.S11, OQ26).
+* a slug-less tenant's book is addressed on its tenant id (P30.S11, OQ26);
+* a document's detail names the chapter it is bound as, and a loose one names none
+  (P30.F4, OQ183: the web plane redirects a bound chapter's loose address).
 """
 from __future__ import annotations
 
@@ -393,3 +395,23 @@ def test_org_library_misses_are_one_404(documents_client):
     assert client.get(f"/app/orgs/{org}/library", headers=headers).status_code == 200
     mine = client.get(f"/app/orgs/{org}/library?scope=public", headers=headers)
     assert mine.status_code == 200 and mine.json()["projects"] == []
+
+
+def test_detail_names_the_chapter_a_document_is_bound_as(client):
+    tc, _ = client
+    ch = tc.post(
+        "/api/documents",
+        json=_payload(book=_BOOK, chapter={"key": "p8", "position": 8}, lang="en"),
+    ).json()
+    loose = tc.post("/api/documents", json=_payload(slug="loose-note", title="Loose")).json()
+
+    from server import documents_api
+
+    conn = db.connect()
+    try:
+        bound = documents_api._chapter_of(conn, db.get_document(conn, ch["id"]))
+        free = documents_api._chapter_of(conn, db.get_document(conn, loose["id"]))
+    finally:
+        conn.close()
+    assert bound == {"book": "phases", "chapter_key": "p8", "lang": "en"}
+    assert free is None

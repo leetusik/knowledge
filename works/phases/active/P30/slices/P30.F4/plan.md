@@ -48,3 +48,34 @@ S27 → `slices/P30.S27/result.md` → *Defects* X3 and X4, with repro scripts i
   - add one Doc impact line (`frontend.md`: bound chapters redirect from the loose URLs; hash landing);
   - update `## Now`.
 - `result.md`: verdict block first.
+
+## Added from F3 (orchestrator)
+
+3. **React error 418 on the legacy chapter:** a hydration text mismatch, on every signed-in load. It
+   reproduces on the pre-F3 build. Find the mismatched text (a date or time formatted differently on server
+   and client, a locale, or a value read from the cookie or `window` during render) and fix it, so the
+   console is clean. Check the native reader and the book page for the same pattern.
+
+## Notebook housekeeping
+
+`phase.md` is at about 39.6 KB. Before appending, move the S27 sweep note's long text to
+`topics/notes-later.md`, leaving a one-line pointer.
+
+## Dispatch
+
+slice=P30.F4
+phase=P30
+kind=fix
+risk=low
+attempt=1
+route=mid
+reason=kind fix rated low
+tier=mid
+subagent_type=slice-executor-mid
+model=sonnet
+pass_model=yes
+effort=high
+pass_effort=yes
+attribution=Claude Sonnet 5.5
+explore_model=haiku
+explore_effort=high
