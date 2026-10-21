@@ -24,6 +24,10 @@ const THEMES: readonly {
  *  - the note "Saved on this device. Your other devices keep their own." — no column-
  *    width control.
  * Every choice applies live to the whole reader; the frame stores it on the device.
+ *
+ * P30.S25 — `LegacyDisplay` (`09-legacy-and-print`, board 17): given a legacy document's
+ * `look`, Text size is not offered; in its place a group "In this document" says what the
+ * theme does and does not reach. The Theme group and the note are unchanged.
  */
 export function DisplayPanel({
   size,
@@ -31,6 +35,7 @@ export function DisplayPanel({
   os,
   onSize,
   onTheme,
+  look,
 }: {
   size: TextSize;
   theme: ThemeChoice;
@@ -38,36 +43,40 @@ export function DisplayPanel({
   os: "light" | "dark";
   onSize: (size: TextSize) => void;
   onTheme: (theme: ThemeChoice) => void;
+  /** A legacy document's look: the sheet is `LegacyDisplay` (no Text size). */
+  look?: "auto" | "light";
 }) {
   const sizeNote = READER.display.sizeNote[size];
   return (
     <div className="rd-disp">
-      <fieldset className="rd-disp__group">
-        <legend className="rd-disp__label">{READER.display.textSize}</legend>
-        <div className="rd-sizes">
-          {SIZES.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className="rd-opt"
-              aria-pressed={size === n}
-              aria-label={READER.display.sizeAria(
-                n,
-                READER.display.sizeNote[n] ?? "",
-              )}
-              onClick={() => onSize(n)}
-            >
-              <span className={`rd-opt__a rd-opt__a--${n}`} aria-hidden="true">
-                A
-              </span>
-            </button>
-          ))}
-        </div>
-        <p className="rd-disp__readout">
-          Size <b>{size} of 5</b>
-          {sizeNote ? ` · ${sizeNote}` : ""}
-        </p>
-      </fieldset>
+      {look ? null : (
+        <fieldset className="rd-disp__group">
+          <legend className="rd-disp__label">{READER.display.textSize}</legend>
+          <div className="rd-sizes">
+            {SIZES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="rd-opt"
+                aria-pressed={size === n}
+                aria-label={READER.display.sizeAria(
+                  n,
+                  READER.display.sizeNote[n] ?? "",
+                )}
+                onClick={() => onSize(n)}
+              >
+                <span className={`rd-opt__a rd-opt__a--${n}`} aria-hidden="true">
+                  A
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="rd-disp__readout">
+            Size <b>{size} of 5</b>
+            {sizeNote ? ` · ${sizeNote}` : ""}
+          </p>
+        </fieldset>
+      )}
       <fieldset className="rd-disp__group">
         <legend className="rd-disp__label">{READER.display.theme}</legend>
         <div className="rd-themes">
@@ -103,6 +112,12 @@ export function DisplayPanel({
               : ""}
         </p>
       </fieldset>
+      {look ? (
+        <div className="rd-disp__group">
+          <p className="rd-disp__label">{READER.legacy.display.label}</p>
+          <p className="lg-disp__p">{READER.legacy.display.note[look]}</p>
+        </div>
+      ) : null}
       <p className="rd-disp__note">{READER.display.saved}</p>
     </div>
   );

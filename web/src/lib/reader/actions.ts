@@ -288,6 +288,14 @@ const bookmarkSchema = z
     anchor: z.union([
       z.object({ block_id: idPart }).strict(),
       z.object({ fraction: z.number().min(0).max(1) }).strict(),
+      // P30.S25: a legacy chapter's position, with the bridge's anchor (an element id the
+      // untrusted document chose; the server stores it, never renders it as markup).
+      z
+        .object({
+          fraction: z.number().min(0).max(1),
+          anchor: z.string().min(1).max(200),
+        })
+        .strict(),
     ]),
     label: z.string().max(LABEL_MAX).nullable().optional(),
     snippet: z.string().max(SNIPPET_MAX).optional(),
@@ -296,7 +304,7 @@ const bookmarkSchema = z
 
 export type BookmarkWrite = z.input<typeof bookmarkSchema>;
 
-/** Save a section bookmark (native) or a position bookmark (plain Markdown). */
+/** Save a section bookmark (native) or a position bookmark (plain Markdown, legacy). */
 export async function saveBookmark(
   input: BookmarkWrite,
 ): Promise<BookmarkResult> {

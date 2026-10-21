@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
+import { LegacyReaderPage } from "@/components/reader/legacy-reader-page";
 import { ReaderPage } from "@/components/reader/reader-page";
 import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
@@ -15,15 +16,17 @@ import { loadChapterReaderOnce } from "@/lib/reader/load";
 // (public projects only), and every miss — an unknown org, project, book or chapter,
 // a private project — is the same constant not-found, with no word about why.
 //
-// The reader has no app shell. A legacy (html) chapter keeps today's frame until S25:
-// it redirects to its document page. Settings come from the `kb_reader` cookie on the
-// server render, so the first paint already has the reader's text size and theme.
+// The reader has no app shell. A legacy (html) chapter, or an html version of one, opens
+// in the legacy reader here (P30.S25, `09-legacy-and-print`; it used to redirect to its
+// document page). Settings come from the `kb_reader` cookie on the server render, so the
+// first paint already has the reader's text size and theme.
 //
 // The <title> is the chapter's title (P30.S15), through `generateMetadata`. The
 // knowledge client is `cache: "no-store"`, so the page and the metadata share ONE load
-// per request (`loadChapterReaderOnce`, React `cache`) instead of reading twice. A miss,
-// a legacy chapter or a fault falls back to the static title and leaves the page's own
-// handling (not-found, the redirect, the error screen) to the page.
+// per request (`loadChapterReaderOnce`, React `cache`) instead of reading twice. A miss or
+// a fault falls back to the static title and leaves the page's own handling (not-found,
+// the error screen) to the page. The legacy reader's page asks for `viewport-fit=cover`
+// (its bars pad themselves by the safe areas); the native reader's does not.
 
 function safeDecode(value: string): string {
   try {
@@ -78,13 +81,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   try {
     const loaded = await loadOnce(await params, await searchParams);
-    if (loaded.kind === "reader" && loaded.reader.view.title) {
-      return { title: loaded.reader.view.title };
-    }
+    const title =
+      loaded.kind === "reader"
+        ? loaded.reader.view.title
+        : loaded.legacy.view.title;
+    if (title) return { title };
   } catch {
     // the page renders the miss or the failure itself
   }
   return { title: DOCUMENTS.title };
+}
+
+export async function generateViewport({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>;
+  searchParams: Promise<Query>;
+}): Promise<Viewport> {
+  try {
+    const loaded = await loadOnce(await params, await searchParams);
+    if (loaded.kind === "legacy") return { viewportFit: "cover" };
+  } catch {
+    // the page renders the miss or the failure itself
+  }
+  return {};
 }
 
 export default async function ChapterPage({
@@ -95,6 +116,8 @@ export default async function ChapterPage({
   searchParams: Promise<Query>;
 }) {
   const loaded = await loadOnce(await params, await searchParams);
-  if (loaded.kind === "legacy") redirect(loaded.href);
+  if (loaded.kind === "legacy") {
+    return <LegacyReaderPage legacy={loaded.legacy} />;
+  }
   return <ReaderPage reader={loaded.reader} />;
 }

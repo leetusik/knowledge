@@ -6,10 +6,6 @@ import { createPortal } from "react-dom";
 import { AppButton } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 
-import {
-  prepareExplainersForPrint,
-  releaseExplainersAfterPrint,
-} from "./explainer-frame";
 import { PRINT_DATE_ATTR } from "./print-blocks";
 
 /**
@@ -24,9 +20,10 @@ import { PRINT_DATE_ATTR } from "./print-blocks";
  *
  * WHY IT NEVER SWITCHES VIEWS FIRST (§3.2): print drops the chrome itself, so the
  * printed sheet is identical whether the reader exports from the normal page or
- * from the chrome-less `?view=full` one. The one thing it does prepare is a
- * framed explainer's PAPER height (P28.F4): the frame is pinned to the paper
- * column and measured there before `print()`, then put back on `afterprint`.
+ * from the chrome-less `?view=full` one. (P30.S25 retired the framed explainer's
+ * paper pinning with the height handshake: an html explainer now opens in the legacy
+ * reader, which prints from the original's own tab; this control serves the archived
+ * md/native version page until S26.)
  *
  * WHAT IT OWES THE READER, and it is all failure honesty:
  *   - the dialog hint, because "Export PDF" that opens a PRINT dialog is a
@@ -35,11 +32,6 @@ import { PRINT_DATE_ATTR } from "./print-blocks";
  *   - `.kb-docexport__error` when `window.print()` throws or the dialog never
  *     opens — a blocked pop-up leaves the page looking like nothing happened,
  *     and the copy hands the reader ⌘P instead;
- *   - the UNMEASURED warning: a framed explainer that never reported its height
- *     prints only its first page, so the reader is told BEFORE the dialog and
- *     has to click again. That second click is the point — an honest warning the
- *     reader can dismiss by pressing on is worth more than a truncated PDF they
- *     discover later.
  *
  * It also owns §4.5's date hydration, because it is this surface's one client
  * island and the print blocks are server components: on mount it writes the
@@ -96,8 +88,6 @@ export function ExportPdfButton() {
    * reader asks for something, so the lookup costs nothing until then.
    */
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  /** The unmeasured warning is shown once; the next click prints anyway. */
-  const warnedRef = useRef(false);
   const beforePrintRef = useRef(false);
   const timerRef = useRef<number | null>(null);
   const liveRef = useRef(true);
@@ -147,8 +137,6 @@ export function ExportPdfButton() {
   }, [clearTimer]);
 
   const fail = useCallback(() => {
-    // No dialog means no `afterprint`: put any explainer pinned for paper back.
-    releaseExplainersAfterPrint();
     if (!liveRef.current) return;
     setBusy(false);
     setMessage({ kind: "error", text: DOCUMENTS.read.exportFailed });
@@ -162,19 +150,6 @@ export function ExportPdfButton() {
     // The message line's home in the bar (see `slot`), resolved on first use.
     setSlot((current) => current ?? document.querySelector(".kb-docbar"));
 
-    // §5's honesty rule, BEFORE the dialog. `[data-unmeasured]` is the flag
-    // `explainer-frame.tsx` sets on `.kb-explainer` when no height ever arrived;
-    // such a frame prints its first page only, so the reader is told first and
-    // has to ask again.
-    if (
-      !warnedRef.current &&
-      document.querySelector(".kb-explainer[data-unmeasured]") !== null
-    ) {
-      warnedRef.current = true;
-      setMessage({ kind: "warn", text: DOCUMENTS.read.exportUnmeasured });
-      return;
-    }
-
     beforePrintRef.current = false;
     setBusy(true);
     setMessage({
@@ -184,27 +159,7 @@ export function ExportPdfButton() {
         : DOCUMENTS.read.exportDialog,
     });
 
-    // P28.F4 — "Preparing…" now really prepares. A framed explainer must be
-    // measured at the PAPER column before the sheet is laid out, or everything
-    // below its screen height is cut off without a word; the frame is pinned to
-    // that column and asked until it answers from there (`explainer-frame.tsx`).
-    // ⌘P cannot wait like this; this control can, so it does.
-    void prepareExplainersForPrint().then((ready) => {
-      if (!liveRef.current) {
-        releaseExplainersAfterPrint();
-        return;
-      }
-      // No height for paper at all: the same honest stop as an unmeasured frame —
-      // say so once, put the frame back, and print on the next click.
-      if (!ready && !warnedRef.current) {
-        warnedRef.current = true;
-        releaseExplainersAfterPrint();
-        setBusy(false);
-        setMessage({ kind: "warn", text: DOCUMENTS.read.exportUnmeasured });
-        return;
-      }
-      openDialog();
-    });
+    openDialog();
   }
 
   function openDialog() {

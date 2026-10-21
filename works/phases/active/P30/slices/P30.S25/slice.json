@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Legacy reader: full-screen frame, bridge, handshake retired (09-legacy-and-print)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 250,
   "depends_on": [
     "P30.S24"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T12:28:39+09:00",
+  "completed_at": "2026-10-21T13:13:11+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Legacy reader from 09-legacy-and-print: full-screen sandboxed frame as the only scroller, 1.8 KB postMessage bridge in both relays, source/schema/size-checked messages, popups without allow-same-origin, height handshake deleted, legacy bar/Display/resume/bookmarks, D37 no-transform, nginx version-raw location; web 380",
   "validation": {
     "required": [],
     "last_run": null,

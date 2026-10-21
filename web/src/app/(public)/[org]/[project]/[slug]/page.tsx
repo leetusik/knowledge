@@ -1,31 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
-import { ChevronLeft } from "lucide-react";
-
-import { DocumentView } from "@/app/(public)/documents/[id]/document-view";
-import { ExportPdfButton } from "@/app/(public)/documents/[id]/export-pdf-button";
-import {
-  PrintColophon,
-  PrintMasthead,
-} from "@/app/(public)/documents/[id]/print-blocks";
-import { VersionHistory } from "@/app/(public)/documents/[id]/version-history";
-import { AppShell } from "@/components/app-shell";
-import { CopyLinkButton } from "@/components/copy-link-button";
-import { PublicShell } from "@/components/public-shell";
+import { LegacyReaderPage } from "@/components/reader/legacy-reader-page";
 import { ReaderPage } from "@/components/reader/reader-page";
-import { appButtonClass } from "@/components/ui";
 import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
-import { fullWidthHref, FULL_WIDTH_LINK_ATTR, isFullWidth } from "@/lib/full-width";
-import { getDocumentVersions, resolveDocument } from "@/lib/knowledge/app";
+import { resolveDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
-import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
+import type { KbDocument } from "@/lib/knowledge/types";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
-import { loadLooseReader } from "@/lib/reader/load";
+import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
 
 // P25.S3 — the PRETTY public document URL, `/@{org}/{project}/{doc-slug}`. Same page
 // as `(public)/documents/[id]`, addressed by DURABLE parts instead of the disposable
@@ -42,23 +28,16 @@ import { loadLooseReader } from "@/lib/reader/load";
 // load-bearing rather than cosmetic: without it this page would happily fetch upstream
 // for arbitrary junk paths.
 //
-// Branching mirrors the id page exactly (`optionalIdentity()`):
-//   - a signed-in member → fetched with their bearer, wrapped in <AppShell> with the
-//     back-link to the (member-gated) list;
-//   - an anonymous visitor → fetched TOKENLESS, wrapped in <PublicShell>.
-// Both branches map a miss to the co-located branded not-found. The anonymous branch
-// deliberately does NOT bounce to /login the way the id page does: the resolver's 404
-// already collapses private/unknown/malformed into one indistinguishable answer, so a
-// login bounce would leak nothing and only add friction on a share surface.
-//
-// Member-only affordances that live on the id page (delete) stay there. The share
-// copy-link is rendered here as of P25.S5 — this is the shareable URL, so it is the
-// natural place to copy it from — on the MEMBER branch only, matching the id page (an
-// anonymous visitor is already looking at the link).
+// Branching mirrors the id page (`optionalIdentity()`): a signed-in member reads with
+// their bearer, an anonymous visitor TOKENLESS. Both map a miss to the co-located
+// branded not-found. The anonymous branch deliberately does NOT bounce to /login the
+// way the id page does: the resolver's 404 already collapses private/unknown/malformed
+// into one indistinguishable answer, so a login bounce would leak nothing and only add
+// friction on a share surface.
 //
 // P30.S13 — a native or md document opens in the READER here too (the loose-document
-// variant, `01-reader`); `?v=N` reads an older version, and an html explainer keeps
-// today's frame until S25.
+// variant, `01-reader`); `?v=N` reads an older version. P30.S25 — an html explainer (or
+// an html version) opens in the LEGACY READER (`09-legacy-and-print`), with no app shell.
 //
 // The <title> is the document's title (P30.S15), through `generateMetadata`. The
 // knowledge client is `cache: "no-store"`, so the page and the metadata share ONE
@@ -130,44 +109,65 @@ async function loadDocument(
 }
 
 /**
- * The document's superseded versions (P23), newest first — `[]` when it has never been
- * re-published. Keyed by the resolved `id`: the resolver hands back the ordinary detail
- * projection, so `/versions*` stays id-keyed and completely unchanged.
- *
- * DEGRADES rather than throws, exactly as on the id page: history is an ADDITIVE panel
- * beside a document body that already loaded, and both calls hit the same upstream, so
- * a genuine outage fails the read above and surfaces there. And exactly as on the id
- * page, P28.S7 makes the degradation HONEST: `ok: false` distinguishes "this fetch
- * failed" from "this document has no history", which an empty list could not.
+ * The page's one load (reader or legacy reader), deduped per request so the viewport
+ * (`viewport-fit=cover` for the legacy reader) and the page read once.
  */
-async function loadVersions(
-  token: string | undefined,
-  doc: KbDocument,
-): Promise<{
-  currentVersion: number;
-  versions: KbDocumentVersion[];
-  ok: boolean;
-}> {
+const loadOnce = cache(
+  async (
+    token: string | undefined,
+    org: string,
+    project: string,
+    slug: string,
+    v: number | null,
+    cookie: string | undefined,
+  ): Promise<ReaderLoad> =>
+    loadLooseReader({
+      token,
+      doc: await resolveDocumentOnce(token, org, project, slug),
+      v,
+      settings: parseReaderCookie(cookie),
+      org,
+    }),
+);
+
+function versionOf(raw: string | string[] | undefined): number | null {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return v && /^\d{1,6}$/.test(v) ? Number(v) : null;
+}
+
+export async function generateViewport({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ org: string; project: string; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Viewport> {
   try {
-    const page = await getDocumentVersions(token, doc.id);
-    return {
-      currentVersion: page.current_version,
-      versions: page.versions,
-      ok: true,
-    };
+    const p = await params;
+    const org = safeDecode(p.org);
+    if (org.startsWith("@") && org.length >= 2) {
+      const ctx = await optionalIdentity();
+      const loaded = await loadOnce(
+        ctx?.token,
+        org.slice(1),
+        safeDecode(p.project),
+        safeDecode(p.slug),
+        versionOf((await searchParams).v),
+        (await cookies()).get(READER_COOKIE)?.value,
+      );
+      if (loaded.kind === "legacy") return { viewportFit: "cover" };
+    }
   } catch {
-    // The document itself still renders in full; the panel reports its own fault.
-    return { currentVersion: doc.version, versions: [], ok: false };
+    // the page renders the miss or the failure itself
   }
+  return {};
 }
 
 export default async function PrettyDocumentPage({
   params,
   searchParams,
 }: {
-  // Next 16: dynamic route params arrive as a Promise.
   params: Promise<{ org: string; project: string; slug: string }>;
-  /** Round 06 §4.4 — `?view=full`, the chrome-less view on this same URL. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const {
@@ -175,166 +175,28 @@ export default async function PrettyDocumentPage({
     project: projectParam,
     slug: slugParam,
   } = await params;
-
-  // Next gives params percent-DECODED already, but decode defensively the way the
-  // sibling routes do — a double-encoded segment must not reach the upstream path.
   const query = await searchParams;
-  const fullWidth = isFullWidth(query);
-  const rawV = Array.isArray(query.v) ? query.v[0] : query.v;
-  const v = rawV && /^\d{1,6}$/.test(rawV) ? Number(rawV) : null;
+  const v = versionOf(query.v);
 
   const org = safeDecode(orgParam);
   const project = safeDecode(projectParam);
   const slug = safeDecode(slugParam);
 
-  // THE GUARD. Our public namespace is `@`-prefixed; anything else is not ours, and
-  // this route is the catch-all for every unmatched three-segment URL. Reject before
-  // reading the session and before any upstream call, outside any try so the
-  // `notFound()` throw is never swallowed. `@` alone (empty slug) is rejected too.
+  // THE GUARD (load-bearing, see ROUTE PRECEDENCE above): our public namespace is
+  // `@`-prefixed. Reject before reading the session or calling upstream.
   if (!org.startsWith("@") || org.length < 2) notFound();
   if (project === "" || slug === "") notFound();
-  // The resolver takes the BARE slug — the `@` is ours, not the backend's.
   const orgSlug = org.slice(1);
 
-  // This route's own URL, which `?view=full` is a query ON (§4.4). Built from the
-  // segments as they arrived rather than from `canonical_path`, so it is right even
-  // for a document whose pretty path is `null` (a superseded duplicate, P25.F1).
-  // `@` is a legal path character, so it is left alone — the org segment would
-  // otherwise read `%40acme` in the address bar for no gain.
-  const seg = (value: string) => encodeURIComponent(value).replaceAll("%40", "@");
-  const fullPath = `/${seg(org)}/${seg(project)}/${seg(slug)}`;
-
   const ctx = await optionalIdentity();
-  const settings = parseReaderCookie((await cookies()).get(READER_COOKIE)?.value);
-
-  // ── Member branch — the authenticated chrome, minus the id page's delete. ──────
-  if (ctx) {
-    const doc = await loadDocument(ctx.token, orgSlug, project, slug);
-    // P30.S13 — native and md open in the reader; html keeps this frame.
-    if (doc.format !== "html") {
-      const reader = await loadLooseReader({
-        token: ctx.token,
-        doc,
-        v,
-        settings,
-        org: orgSlug,
-      });
-      if (reader) return <ReaderPage reader={reader} />;
-    }
-    const history = await loadVersions(ctx.token, doc);
-    return (
-      <AppShell identity={ctx.identity} fullWidth={fullWidth}>
-        {/* Round 06 §3.1/§4.1 — `.kb-doc`, identical to the id page: the same
-            document must read the same on either URL. */}
-        <article className="kb-doc" tabIndex={-1}>
-          <div className="kb-docbar">
-            <div className="kb-docbar__nav">
-              <Link href="/documents" className={appButtonClass("ghost", "sm")}>
-                <ChevronLeft size={15} aria-hidden />
-                {DOCUMENTS.read.backLabel}
-              </Link>
-            </div>
-            <div className="kb-docbar__actions">
-              {/* P25.S5 — the share affordance the S3 page deliberately left out. This
-                  IS the shareable URL, so it should be the easiest place to share
-                  from. `canonical_path` is what the backend built (identical to the
-                  path in the address bar, since the document was resolved through it);
-                  the id fallback is defensive only. Member branch ONLY, matching the id
-                  page's convention — an anonymous visitor already has the URL. */}
-              <CopyLinkButton
-                path={doc.canonical_path ?? `/documents/${doc.id}`}
-              />
-              {/* Round 06 §4.1/§5 — Copy link · Export PDF · Full width. No Delete
-                  on this surface, so §4.1's hairline never renders here. */}
-              <ExportPdfButton />
-              <Link
-                href={fullWidthHref(fullPath)}
-                className={appButtonClass("ghost", "sm")}
-                {...{ [FULL_WIDTH_LINK_ATTR]: "" }}
-              >
-                {DOCUMENTS.read.fullWidthLabel}
-              </Link>
-            </div>
-          </div>
-          {/* Round 06 §4.5's print-only blocks — the same pair as the id page:
-              this is the same document on its durable address, and the printed
-              sheet must not be able to tell which URL it came off. */}
-          <PrintMasthead
-            path={doc.canonical_path ?? fullPath}
-            version={doc.version}
-          />
-          <DocumentView doc={doc} id={doc.id} />
-          {/* Version history stays id-keyed: its links point at
-              `/documents/{id}/versions/{v}`, which is the exact-row addressing the
-              dateless pretty URL deliberately does not replace. */}
-          <VersionHistory
-            id={doc.id}
-            currentVersion={history.currentVersion}
-            currentTitle={doc.title}
-            versions={history.versions}
-            ok={history.ok}
-          />
-          <PrintColophon
-            title={doc.title}
-            path={doc.canonical_path ?? fullPath}
-            version={doc.version}
-          />
-        </article>
-      </AppShell>
-    );
-  }
-
-  // ── Anonymous branch — public-only read, no token. A miss is the branded 404. ──
-  const doc = await loadDocument(undefined, orgSlug, project, slug);
-  if (doc.format !== "html") {
-    const reader = await loadLooseReader({
-      token: undefined,
-      doc,
-      v,
-      settings,
-      org: orgSlug,
-    });
-    if (reader) return <ReaderPage reader={reader} />;
-  }
-  const history = await loadVersions(undefined, doc);
-  return (
-    <PublicShell fullWidth={fullWidth}>
-      <article className="kb-doc" tabIndex={-1}>
-        {/* §4.1's row, anonymous shape: no nav group (the back link goes to the
-            member-gated list) and no Copy link (this IS the URL you would copy),
-            but Full width is on every surface — and P28.S8's Export PDF lands in
-            this same group. */}
-        <div className="kb-docbar">
-          <div className="kb-docbar__actions">
-            <ExportPdfButton />
-            <Link
-              href={fullWidthHref(fullPath)}
-              className={appButtonClass("ghost", "sm")}
-              {...{ [FULL_WIDTH_LINK_ATTR]: "" }}
-            >
-              {DOCUMENTS.read.fullWidthLabel}
-            </Link>
-          </div>
-        </div>
-        <PrintMasthead
-          path={doc.canonical_path ?? fullPath}
-          version={doc.version}
-        />
-        <DocumentView doc={doc} id={doc.id} />
-        <VersionHistory
-          id={doc.id}
-          currentVersion={history.currentVersion}
-          currentTitle={doc.title}
-          versions={history.versions}
-          ok={history.ok}
-        />
-        <PrintColophon
-          title={doc.title}
-          path={doc.canonical_path ?? fullPath}
-          version={doc.version}
-        />
-      </article>
-    </PublicShell>
+  const cookie = (await cookies()).get(READER_COOKIE)?.value;
+  // A miss is the branded not-found (outside any try, so the throw survives).
+  await loadDocument(ctx?.token, orgSlug, project, slug);
+  const loaded = await loadOnce(ctx?.token, orgSlug, project, slug, v, cookie);
+  return loaded.kind === "reader" ? (
+    <ReaderPage reader={loaded.reader} />
+  ) : (
+    <LegacyReaderPage legacy={loaded.legacy} />
   );
 }
 

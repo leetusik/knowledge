@@ -247,3 +247,20 @@ export interface ReaderNotes {
   /** Each language on screen or in another variant, named in itself ("English", "한국어"). */
   langNames: Record<string, string>;
 }
+
+// --- P30.S25: the legacy reader (`09-legacy-and-print`) ----------------------------------
+
+/** What the legacy reader adds to the view: the frame the html explainer reads in. */
+export interface LegacyFrame {
+  /** The raw relay: `/api/documents/{id}/raw`, or `…/versions/{v}/raw` for an older version. */
+  src: string;
+  /**
+   * The document's own scheme (`09-legacy-and-print` *Data the page needs*): `"auto"` when it
+   * shows its own dark look with the system, `"light"` when it is light only (and until known).
+   */
+  look: "auto" | "light";
+  /** The relay answered 404 for this listed document at load: "This {noun}'s file is missing". */
+  missing: boolean;
+  /** A member's position bookmarks on this variant, each placed at a fraction. */
+  bookmarks: { id: string; fraction: number }[];
+}

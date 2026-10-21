@@ -1,5 +1,5 @@
 import { json } from "@/lib/bff";
-import { injectHeightReporter } from "@/lib/explainer-height";
+import { injectLegacyBridge } from "@/lib/legacy/bridge";
 import { getDocumentVersionRaw } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { openSession, readSessionCookie } from "@/lib/session";
@@ -35,10 +35,14 @@ export const dynamic = "force-dynamic";
  */
 const RAW_HTML_HEADERS: Record<string, string> = {
   "Content-Type": "text/html; charset=utf-8",
-  "Content-Security-Policy": "sandbox allow-scripts; frame-ancestors 'self'",
+  "Content-Security-Policy":
+    "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self'",
   "X-Frame-Options": "SAMEORIGIN",
   "X-Content-Type-Options": "nosniff",
-  "Cache-Control": "no-store",
+  // P30.S25 (D37): `no-transform` stops an edge (Cloudflare) rewriting the relayed
+  // document: its analytics beacon and email obfuscation would otherwise run inside the
+  // sandbox. `no-store` stays: a member's private document is never cached.
+  "Cache-Control": "no-store, no-transform",
 };
 
 export async function GET(
@@ -74,12 +78,21 @@ export async function GET(
     if (error instanceof ApiError && error.status === 404) {
       return json(404, { ok: false });
     }
-    return json(502, { ok: false });
+    // P30.S25: the legacy reader's "Relay failed" state shows this reference
+    // ("ref · lg-…"), and the same value is logged here, so a report can be traced.
+    const ref = `lg-${crypto.randomUUID().slice(0, 8)}`;
+    console.error(
+      `[raw relay] %s: upstream failed (ref %s)`,
+      `document ${id} v${version}`,
+      ref,
+      error instanceof ApiError ? error.status : error,
+    );
+    return json(502, { ok: false, ref });
   }
 
-  // 4. Buffer the body, splice in the height reporter (an opaque origin cannot be
-  //    measured from outside, so the frame sizes itself from the numbers this posts
-  //    outward), and return it under the pinned sandbox headers.
-  const html = injectHeightReporter(await upstream.text());
+  // 4. Buffer the body, splice in the legacy bridge (P30.S25: scroll, restore and link
+  //    interception for the legacy reader; an opaque origin cannot be read from
+  //    outside), and return it under the pinned sandbox headers.
+  const html = injectLegacyBridge(await upstream.text());
   return new Response(html, { status: 200, headers: RAW_HTML_HEADERS });
 }

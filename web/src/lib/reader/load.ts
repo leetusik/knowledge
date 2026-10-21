@@ -27,7 +27,9 @@ import { SITE } from "@/content";
 import {
   getBook,
   getDocument,
+  getDocumentRaw,
   getDocumentVersion,
+  getDocumentVersionRaw,
   getDocumentVersions,
   resolveDocument,
 } from "@/lib/knowledge/app";
@@ -53,6 +55,7 @@ import {
   type CheckedChapter,
   type DocRef,
 } from "@/lib/native";
+import { lookOf } from "@/lib/legacy/messages";
 import { plainText } from "@/lib/native/parse";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
@@ -62,6 +65,7 @@ import { loadNotes } from "./notes-load";
 import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
   ChapterRow,
+  LegacyFrame,
   ReaderHeading,
   ReaderLanguage,
   ReaderNotes,
@@ -97,9 +101,21 @@ export interface LoadedReader {
   notes: ReaderNotes | null;
 }
 
-/** The result of loading: a reader, or the older frame that still owns this document. */
+/**
+ * P30.S25 — an html explainer (or an html version of a document) in the legacy reader
+ * (`09-legacy-and-print`): the same view the reader's chrome reads, plus the frame.
+ */
+export interface LoadedLegacy {
+  view: ReaderView;
+  frame: LegacyFrame;
+  /** The document id the relay and the view are keyed by. */
+  docId: number;
+}
+
+/** The result of loading: the reader (native and md), or the legacy reader (html). */
 export type ReaderLoad =
-  { kind: "reader"; reader: LoadedReader } | { kind: "legacy"; href: string };
+  | { kind: "reader"; reader: LoadedReader }
+  | { kind: "legacy"; legacy: LoadedLegacy };
 
 /** Map knowledge's miss statuses to `undefined`; anything else (an outage) rethrows. */
 async function orMiss<T>(run: () => Promise<T>): Promise<T | undefined> {
@@ -186,7 +202,7 @@ function headingsOf(checked: CheckedChapter): ReaderHeading[] {
 }
 
 /** The pieces of one document the reader renders. */
-interface Body {
+interface NativeBody {
   format: "native" | "md";
   text: string;
   assets: Record<string, KbAsset> | null;
@@ -196,20 +212,32 @@ interface Body {
   date: string;
 }
 
+/** An html version: the legacy reader frames it through the raw relay (P30.S25). */
+interface HtmlBody {
+  format: "html";
+  title: string;
+  version: number;
+  date: string;
+}
+
+type Body = NativeBody | HtmlBody;
+
 /**
  * The body at a version. `v` below the current number reads that archived version;
  * the current number, an unreadable one and a bad value all read the current body.
- * `null` when the body is an html version, which the older frame owns.
+ * An html version is the legacy reader's (`format: "html"`, nothing to render here).
  */
 async function readBody(
   token: string | undefined,
   doc: KbDocument,
   v: number | null,
-): Promise<Body | null> {
+): Promise<Body> {
   if (v !== null && v >= 1 && v < doc.version) {
     const old = await orMiss(() => getDocumentVersion(token, doc.id, v));
     if (old) {
-      if (old.format === "html") return null;
+      if (old.format === "html") {
+        return { format: "html", title: old.title, version: v, date: old.date };
+      }
       return toBody(
         old.format,
         old.source,
@@ -221,7 +249,14 @@ async function readBody(
       );
     }
   }
-  if (doc.format === "html") return null;
+  if (doc.format === "html") {
+    return {
+      format: "html",
+      title: doc.title,
+      version: doc.version,
+      date: doc.date,
+    };
+  }
   return toBody(
     doc.format,
     doc.source,
@@ -241,7 +276,7 @@ function toBody(
   title: string,
   version: number,
   date: string,
-): Body {
+): NativeBody {
   // A native document is rendered from its stored file; if the read carried none
   // (an older backend), its plain-text projection is shown as md rather than nothing.
   if (format === "native" && source) {
@@ -439,6 +474,69 @@ async function buildResolver(opts: {
   return (ref) => resolved.get(refKey(ref)) ?? null;
 }
 
+// --- the legacy frame (P30.S25) --------------------------------------------------------
+
+/** The relay's address for the version on screen. */
+function relayOf(docId: number, version: number, newest: number): string {
+  return version < newest
+    ? `/api/documents/${docId}/versions/${version}/raw`
+    : `/api/documents/${docId}/raw`;
+}
+
+/** How long the page waits on its own read of the relayed bytes (the `look`) before giving up. */
+const RAW_PROBE_MS = 3000;
+
+/**
+ * The document's `look`, and whether its file is missing, from one server-side read of
+ * the bytes the frame will load (the parent never reads the frame). A 404 for a document
+ * the library just listed is "This {noun}'s file is missing"; any other fault or a slow
+ * answer leaves `look` at `"light"` and lets the frame find out for itself.
+ */
+async function probeRaw(
+  token: string | undefined,
+  docId: number,
+  version: number,
+  newest: number,
+): Promise<{
+  look: "auto" | "light";
+  missing: boolean;
+  /** The document's own `<html lang>` (two or three letters), when it names one. */
+  lang: string | null;
+}> {
+  try {
+    const signal = AbortSignal.timeout(RAW_PROBE_MS);
+    const res =
+      version < newest
+        ? await getDocumentVersionRaw(token, docId, version, signal)
+        : await getDocumentRaw(token, docId, signal);
+    const html = await res.text();
+    const lang = /<html\b[^>]*\blang\s*=\s*["']?([a-zA-Z]{2,3})\b/i.exec(html);
+    return {
+      look: lookOf(html),
+      missing: false,
+      lang: lang ? lang[1].toLowerCase() : null,
+    };
+  } catch (error) {
+    return {
+      look: "light",
+      missing: error instanceof ApiError && error.status === 404,
+      lang: null,
+    };
+  }
+}
+
+/** A member's position bookmarks on this variant, each placed at its fraction. */
+function legacyBookmarks(
+  state: KbVariantState | null,
+): { id: string; fraction: number }[] {
+  const out: { id: string; fraction: number }[] = [];
+  for (const b of state?.bookmarks ?? []) {
+    const f = b.place?.fraction ?? b.anchor?.fraction;
+    if (typeof f === "number" && f >= 0 && f <= 1) out.push({ id: b.id, fraction: f });
+  }
+  return out;
+}
+
 // --- a chapter of a book --------------------------------------------------------------
 
 export async function loadChapterReader(args: {
@@ -469,17 +567,11 @@ export async function loadChapterReader(args: {
     fallback;
   if (!variant) notFound();
 
-  // html stays on today's frame until S25.
-  if (variant.format === "html") {
-    return { kind: "legacy", href: `/documents/${variant.doc_id}` };
-  }
-
+  // An html variant (or an html version of it) opens in the legacy reader (P30.S25).
   const doc = await orMiss(() => getDocument(token, variant.doc_id));
   if (!doc) notFound();
   const body = await readBody(token, doc, args.v);
-  if (!body) {
-    return { kind: "legacy", href: `/documents/${doc.id}` };
-  }
+  const legacy = body.format === "html";
 
   const target: ReaderTarget = {
     kind: "chapter",
@@ -488,7 +580,8 @@ export async function loadChapterReader(args: {
     book: book.slug,
     chapter: chapter.key,
   };
-  const checked = validateChapter(body.text, body.format);
+  const checked =
+    body.format === "html" ? null : validateChapter(body.text, body.format);
 
   // A member's state: degrade, never fail the chapter over it. The book read fills the
   // chapter list; the variant read carries this chapter's progress and `resume`; the
@@ -498,7 +591,7 @@ export async function loadChapterReader(args: {
     ? (nextRow.variants.find((v) => v.lang === variant.lang) ??
       defaultVariant(nextRow))
     : undefined;
-  const [state, variantState, versions, nextLede] = await Promise.all([
+  const [state, variantState, versions, nextLede, raw] = await Promise.all([
     token
       ? getReaderBook(token, org, project, book.slug).catch(() => null)
       : Promise.resolve<KbReaderBook | null>(null),
@@ -513,9 +606,12 @@ export async function loadChapterReader(args: {
         ).catch(() => null)
       : Promise.resolve<KbVariantState | null>(null),
     loadVersions(token, doc, variant.lang, variant.translated_from),
-    nextPick && nextPick.format !== "html"
+    !legacy && nextPick && nextPick.format !== "html"
       ? nextSummary(token, nextPick.doc_id)
       : Promise.resolve<string | null>(null),
+    legacy
+      ? probeRaw(token, doc.id, body.version, doc.version)
+      : Promise.resolve(null),
   ]);
   const stateOf = new Map((state?.chapters ?? []).map((c) => [c.key, c]));
 
@@ -568,6 +664,54 @@ export async function loadChapterReader(args: {
     .sort((a, b) => a.lang.localeCompare(b.lang))
     .map((v) => ({ lang: v.lang, label: languageName(v.lang) }));
 
+  const view: ReaderView = {
+    kind: "chapter",
+    member: !!token,
+    title: body.title,
+    lang: variant.lang,
+    langs,
+    version: body.version,
+    newest: doc.version,
+    summary: checked?.tree.summary ?? null,
+    date: body.date,
+    project,
+    staleSource: staleSourceOf(chapter, variant, body.version === doc.version),
+    target,
+    write: { org, project, doc: docStem(project, variant.rel_path) },
+    progress: token
+      ? progressOf(variantState, body.version === doc.version)
+      : null,
+    versions,
+    book: {
+      title: book.title,
+      backHref: bookHref({ org, project, book: book.slug }),
+      n: idx + 1,
+      total: live.length,
+      prev: neighbour(rows[idx - 1]),
+      next: neighbour(rows[idx + 1], nextLede),
+      chapters: rows,
+      finished: state ? state.progress.finished : null,
+    },
+    headings: checked ? headingsOf(checked) : [],
+    settings,
+  };
+
+  if (body.format === "html" || !checked) {
+    return {
+      kind: "legacy",
+      legacy: {
+        view,
+        docId: doc.id,
+        frame: {
+          src: relayOf(doc.id, body.version, doc.version),
+          look: raw?.look ?? "light",
+          missing: raw?.missing ?? false,
+          bookmarks: token ? legacyBookmarks(variantState) : [],
+        },
+      },
+    };
+  }
+
   const resolveRef = await buildResolver({
     token,
     org,
@@ -599,38 +743,6 @@ export async function loadChapterReader(args: {
     langName: languageName,
   }).catch((): QuizSaved => ({}));
 
-  const view: ReaderView = {
-    kind: "chapter",
-    member: !!token,
-    title: body.title,
-    lang: variant.lang,
-    langs,
-    version: body.version,
-    newest: doc.version,
-    summary: checked.tree.summary,
-    date: body.date,
-    project,
-    staleSource: staleSourceOf(chapter, variant, body.version === doc.version),
-    target,
-    write: { org, project, doc: docStem(project, variant.rel_path) },
-    progress: token
-      ? progressOf(variantState, body.version === doc.version)
-      : null,
-    versions,
-    book: {
-      title: book.title,
-      backHref: bookHref({ org, project, book: book.slug }),
-      n: idx + 1,
-      total: live.length,
-      prev: neighbour(rows[idx - 1]),
-      next: neighbour(rows[idx + 1], nextLede),
-      chapters: rows,
-      finished: state ? state.progress.finished : null,
-    },
-    headings: headingsOf(checked),
-    settings,
-  };
-
   return {
     kind: "reader",
     reader: {
@@ -652,9 +764,9 @@ export async function loadChapterReader(args: {
 // --- a loose document -------------------------------------------------------------------
 
 /**
- * A loose native / md document that the page has already read (by id or by its pretty
- * URL), in the reader with no book navigation. An html document returns `null`: it
- * keeps today's frame until S25.
+ * A loose document that the page has already read (by id or by its pretty URL): native
+ * and md in the reader with no book navigation, html (or an html version) in the legacy
+ * reader (P30.S25), noun "document", back to the library.
  */
 export async function loadLooseReader(args: {
   token: string | undefined;
@@ -663,15 +775,70 @@ export async function loadLooseReader(args: {
   settings: ReaderSettings;
   /** The `{org}` of the URL read through (the pretty route), when it has one. */
   org?: string | null;
-}): Promise<LoadedReader | null> {
+}): Promise<ReaderLoad> {
   const { token, doc, settings } = args;
   const body = await readBody(token, doc, args.v);
-  if (!body) return null;
-
   const org = orgOfPath(doc.canonical_path) ?? args.org ?? null;
+  const stem = docStem(doc.project, doc.rel_path);
+
+  if (body.format === "html") {
+    const [variantState, raw] = await Promise.all([
+      token && org
+        ? getReaderDoc(
+            token,
+            { org, project: doc.project, doc: stem },
+            undefined,
+            body.version < doc.version ? body.version : undefined,
+          ).catch(() => null)
+        : Promise.resolve<KbVariantState | null>(null),
+      probeRaw(token, doc.id, body.version, doc.version),
+    ]);
+    const lang = raw.lang ?? guessLang(body.title);
+    const versions = await loadVersions(token, doc, lang, null);
+    const view: ReaderView = {
+      kind: "loose",
+      member: !!token,
+      title: body.title,
+      lang,
+      langs: [],
+      version: body.version,
+      newest: doc.version,
+      summary: null,
+      date: body.date,
+      project: doc.project,
+      staleSource: null,
+      target: {
+        kind: "document",
+        id: doc.id,
+        canonicalPath: doc.canonical_path,
+      },
+      write: org ? { org, project: doc.project, doc: stem } : null,
+      progress:
+        token && org
+          ? progressOf(variantState, body.version === doc.version)
+          : null,
+      versions,
+      book: null,
+      headings: [],
+      settings,
+    };
+    return {
+      kind: "legacy",
+      legacy: {
+        view,
+        docId: doc.id,
+        frame: {
+          src: relayOf(doc.id, body.version, doc.version),
+          look: raw.look,
+          missing: raw.missing,
+          bookmarks: token && org ? legacyBookmarks(variantState) : [],
+        },
+      },
+    };
+  }
+
   const checked = validateChapter(body.text, body.format);
   const lang = guessLang(`${body.title}\n${body.text.slice(0, 4000)}`);
-  const stem = docStem(doc.project, doc.rel_path);
   // The member's saved progress and the history, beside the link resolution. A
   // tenant with no org slug has nowhere to address a save (`org` is the slug or the
   // tenant id, and a loose read carries neither): that reader keeps no progress.
@@ -733,17 +900,20 @@ export async function loadLooseReader(args: {
     settings,
   };
   return {
-    view,
-    checked,
-    docId: doc.id,
-    assets: body.assets,
-    baseUrl:
-      body.format === "md"
-        ? `${SITE.url}${doc.canonical_path ?? `/documents/${doc.id}`}`
-        : undefined,
-    resolveRef,
-    quiz,
-    notes: loadNotes(checked, variantState, lang),
+    kind: "reader",
+    reader: {
+      view,
+      checked,
+      docId: doc.id,
+      assets: body.assets,
+      baseUrl:
+        body.format === "md"
+          ? `${SITE.url}${doc.canonical_path ?? `/documents/${doc.id}`}`
+          : undefined,
+      resolveRef,
+      quiz,
+      notes: loadNotes(checked, variantState, lang),
+    },
   };
 }
 
