@@ -113,6 +113,8 @@
 .bk-clear { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
 .bk-clear__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
 .bk-clear__lead { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+/* A button never outgrows the column: at a large root font its label wraps (the nowrap of .rd-btn holds everywhere else) */
+.bk-clear .rd-btn { max-width: 100%; white-space: normal; text-align: center; }
 .bk-del { color: var(--kb-status-revoked-ink); border-color: var(--kb-border-strong); }
 .bk-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); border-color: var(--kb-status-revoked); }
 .bk-confirm {

@@ -337,7 +337,7 @@ html:has(.rd-root) { scroll-behavior: auto; }
   .rd-bnav--prev, .rd-bnav--next { padding-inline: 0; align-items: center; }
   .rd-bnav--mid { max-width: none; padding-inline: var(--kb-space-xs); }
   .rd-bnav--prev .rd-bnav__dir, .rd-bnav--next .rd-bnav__dir, .rd-bnav--mid .rd-bnav__sub {
-    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: visible; white-space: nowrap; clip-path: inset(50%);
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%);
   }
   .rd-bnav__mark { display: block; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1; color: var(--kb-ink); }
   /* Alone, the chevron carries the control: ink, and large enough to weigh what the arrow weighs */
@@ -387,7 +387,7 @@ a.rd-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset:
 .rd-ch__title:lang(ko), .rd-ch__sec:lang(ko) { word-break: keep-all; }
 .rd-ch__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
 .rd-ch__now { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
-.rd-ch__tag { flex: none; }
+.rd-ch__tag { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: normal; } /* a large root font: the tag wraps inside the column instead of widening the page */
 .rd-ch__secs { list-style: none; margin: 0; padding: 0 0 var(--kb-space-xs) calc(2.4rem + var(--kb-space-sm) + 0.5rem); }
 .rd-ch__sec { display: flex; align-items: center; min-height: var(--kb-tap); font-size: 0.9375rem; color: var(--kb-secondary); text-decoration: none; }
 .rd-ch__sec:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
@@ -743,7 +743,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 @container rd (min-width: 40rem) { .rd-status { grid-template-columns: minmax(0, 1fr) auto; } }
 .rd-status__state { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
 .rd-status__sub { font-size: 0.8125rem; color: var(--kb-secondary); }
-.rd-status__btn { min-width: 10.5rem; }
+.rd-status__btn { min-width: min(10.5rem, 100%); max-width: 100%; white-space: normal; } /* a large root font: the label wraps instead of widening the page */
 .rd-next { margin-top: var(--kb-space-lg); padding: var(--kb-space-lg) 0; border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
 .rd-next__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
 .rd-next__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.25; color: var(--kb-ink); text-wrap: balance; }
@@ -1312,8 +1312,8 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .kb-ch .qz__items { list-style: none; margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; padding: 0; border-bottom: 1px solid var(--kb-border-strong); }
 .kb-ch .qz__li { margin: 0; padding: 0; scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)); }
 .kb-ch .qz__li + .qz__li { border-top: 1px solid var(--kb-border); }
-/* Read by assistive technology only (clip-path, so the text is never cut by an overflow box). */
-.kb-ch .qz-vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; white-space: nowrap; clip-path: inset(50%); pointer-events: none; }
+/* Read by assistive technology only: the 1 px box clips the sentence (overflow), so a long announcement never widens the page. */
+.kb-ch .qz-vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; pointer-events: none; }
 /* ---------- One question: the grading margin and the body ---------- */
 .kb-ch .qz-item {
   --qz-nfs: calc(var(--rd-fs) * 1.18);
@@ -1405,7 +1405,7 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .kb-ch .qz-bn { margin-inline: 0.1em 0.15em; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; color: var(--kb-secondary); }
 /* Every blank is the same width whatever it accepts, so its length gives nothing away; longer text scrolls inside it. */
 .kb-ch .qz-blank {
-  box-sizing: border-box; width: min(7.5em, 100%); height: var(--kb-tap); margin: 0 0.1em; padding: 0 0.3em; vertical-align: baseline;
+  box-sizing: border-box; width: min(7.5em, calc(100% - 2em)); height: var(--kb-tap); margin: 0 0.1em; padding: 0 0.3em; vertical-align: baseline;
   font-family: var(--font-reading); font-size: max(1rem, 1em); line-height: normal; color: var(--kb-ink);
   background: transparent; border: 0; border-bottom: 2px solid var(--kb-secondary); border-radius: 0; appearance: none; -webkit-appearance: none;
   scroll-margin-block: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)) calc(var(--rd-bot-h) + var(--kb-space-md));

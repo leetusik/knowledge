@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { READER } from "@/content";
+import { cx } from "@/lib/cx";
 import { hangulRuns } from "@/lib/reader/hangul";
 import { saveQuizAttempt } from "@/lib/reader/actions";
 import {
@@ -270,7 +271,7 @@ export function QuizBlock(props: QuizBlockProps) {
         <p className="qz__label">{label}</p>
         {total > 1 ? (
           <p
-            className={`qz__count${answered > 0 ? "" : "is-off"}`}
+            className={cx("qz__count", answered === 0 && "is-off")}
             aria-hidden={answered > 0 ? undefined : "true"}
           >
             {answered} of {total} answered
@@ -323,7 +324,7 @@ function Status({ lines }: { lines: ReturnType<typeof statusLines>["lines"] }) {
       {lines.map((s) => (
         <p
           key={s.k}
-          className={`qz-st${s.on ? "" : "is-off"}`}
+          className={cx("qz-st", !s.on && "is-off")}
           aria-hidden={s.on ? undefined : "true"}
         >
           <span
@@ -528,7 +529,7 @@ function QuizItemView({
           {hint}
           {note}
           <div
-            className={`qz-card${open ? "qz-card--hidden" : ""}`}
+            className={cx("qz-card", open && "qz-card--hidden")}
             id={answerId}
             tabIndex={-1}
             data-qz-answer="1"
@@ -562,7 +563,7 @@ function QuizItemView({
               <Status lines={lines} />
               <div className="qz-acts">
                 <div
-                  className={`qz-acts__layer${st.ph === "revealed" ? "" : "is-off"}`}
+                  className={cx("qz-acts__layer", st.ph !== "revealed" && "is-off")}
                   aria-hidden={st.ph === "revealed" ? undefined : "true"}
                 >
                   <button
@@ -583,7 +584,7 @@ function QuizItemView({
                   </button>
                 </div>
                 <div
-                  className={`qz-acts__layer${graded ? "" : "is-off"}`}
+                  className={cx("qz-acts__layer", !graded && "is-off")}
                   aria-hidden={graded ? undefined : "true"}
                 >
                   <button

@@ -20,7 +20,7 @@ import { cardLang, placeText, sourceText, tagFor } from "@/lib/review/model";
 import type { Rating, QueueMeta, ReviewCard } from "@/lib/review/types";
 import type { Inline } from "@/lib/native/tree";
 
-import { cx } from "@/lib/review/cx";
+import { cx } from "@/lib/cx";
 
 import { InlineText } from "./inline";
 
