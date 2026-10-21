@@ -46,6 +46,7 @@ import {
   type LinkContext,
 } from "./links";
 import { plainText, type ChapterFormat } from "./parse";
+import { codePoints, containers, inlineText } from "./project";
 import { parseRef, RefError } from "./refs";
 import {
   allowedSvgElement,
@@ -144,6 +145,9 @@ export function ChapterView({
     checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : [])),
     quiz,
   );
+  // P30.S20: each passage container's place in its section's text (`project.ts`), so
+  // the reader can capture and paint annotation offsets in the shared projection.
+  const stamps = checked.format === "native" ? anchorStamps(checked.blocks) : null;
   const first = checked.blocks.find((b) => b.block !== null);
   const skip =
     omitTitle &&
@@ -169,7 +173,7 @@ export function ChapterView({
             {CHAPTER.unshowableBlock}
           </div>
         ) : entry.block ? (
-          <Fragment key={i}>{r.block(entry.block)}</Fragment>
+          <Fragment key={i}>{r.stamped(stamps?.[i] ?? null, entry.block)}</Fragment>
         ) : null,
       )}
     </div>
@@ -223,6 +227,63 @@ function trimRun(run: Inline[]): Inline[] {
   return out;
 }
 
+/** One passage container's place in its section's text: what `data-sec`/`data-base` carry. */
+interface Stamp {
+  sec: string;
+  text: string;
+  base: number;
+}
+
+/**
+ * P30.S20 — the anchor basis, per top-level block: its passage containers in the order
+ * `project.ts` lists them, each with its section and its start offset (code points) in the
+ * section's text. The renderer takes them in the same order as it emits the containers and
+ * checks each text, so a container is stamped only where the page shows exactly the
+ * projection's text (a mismatch stops the stamps for the rest of that block: such text
+ * takes no highlight rather than a wrong one). Refused blocks still advance the offsets.
+ */
+function anchorStamps(
+  entries: readonly { block: Block | null; refused: boolean }[],
+): (Stamp[] | null)[] {
+  let sec: string | null = null;
+  let cursor = 0;
+  let first = true;
+  return entries.map((entry) => {
+    const block = entry.block;
+    if (!block) return null;
+    if (block.id) {
+      sec = block.id;
+      cursor = 0;
+      first = true;
+    }
+    if (sec === null) return null;
+    const out: Stamp[] = [];
+    for (const text of containers(block)) {
+      const base = first ? cursor : cursor + 1;
+      out.push({ sec, text, base });
+      cursor = base + codePoints(text).length;
+      first = false;
+    }
+    return out;
+  });
+}
+
+/** A paragraph run's leading blanks that `trimRun` drops, in code points of the projection. */
+function leadTrim(run: Inline[]): number {
+  let n = 0;
+  for (const node of run) {
+    if (node.type === "break") n += 1;
+    else if (node.type === "text" && node.text.trim() === "")
+      n += codePoints(node.text).length;
+    else {
+      if (node.type === "text")
+        n += codePoints(node.text).length - codePoints(node.text.trimStart()).length;
+      break;
+    }
+  }
+  return n;
+}
+
 class Renderer {
   /** The chapter's citations and each source's way back (`cites.ts`); empty for `md`. */
   private readonly plan: CitationPlan;
@@ -230,6 +291,9 @@ class Renderer {
   private readonly imageIds = new Map<string, number>();
   /** Set while a cloze sentence renders: its blanks become the island's inputs, counted in order. */
   private cloze: { n: number } | null = null;
+  /** The current top-level block's anchor stamps (P30.S20), taken in order; null = none. */
+  private stamps: Stamp[] | null = null;
+  private stampAt = 0;
 
   constructor(
     private readonly links: LinkContext,
@@ -239,6 +303,48 @@ class Renderer {
     private readonly quizCtx?: QuizViewContext,
   ) {
     this.plan = planCitations(links.format === "md" ? [] : blocks);
+  }
+
+  /** Render one top-level block with its anchor stamps (P30.S20). */
+  stamped(stamps: Stamp[] | null, block: Block): ReactNode {
+    this.stamps = stamps;
+    this.stampAt = 0;
+    try {
+      return this.block(block);
+    } finally {
+      this.stamps = null;
+    }
+  }
+
+  /**
+   * The next passage container's stamp, when its text is the one the projection lists
+   * next; otherwise none from here to the end of the block (never a wrong offset).
+   */
+  private take(text: string): Stamp | null {
+    const q = this.stamps;
+    if (!q) return null;
+    const next = q[this.stampAt];
+    if (!next || next.text !== text) {
+      this.stamps = null;
+      return null;
+    }
+    this.stampAt += 1;
+    return next;
+  }
+
+  /** The `data-*` a stamped passage container carries (`kind` p | code). */
+  private static mark(
+    stamp: Stamp | null,
+    offset = 0,
+    kind: "p" | "code" = "p",
+  ): Record<string, string> {
+    return stamp
+      ? {
+          "data-tx": kind,
+          "data-sec": stamp.sec,
+          "data-base": String(stamp.base + offset),
+        }
+      : {};
   }
 
   /** Text with its Hangul runs wrapped (§6a). Never used for code or attributes. */
@@ -308,6 +414,7 @@ class Renderer {
             key={key}
             className="kb-ch-blank"
             aria-label={CHAPTER.quiz.blank}
+            data-an-skip=""
           >
             {"_____"}
           </span>
@@ -422,7 +529,13 @@ class Renderer {
         data-link="anchor"
       >
         {bare ? null : this.inline(only)}
-        <span className="fg-cite__n">
+        {/* P30.S20: "[n]" is not the document's text; a bare citation stands for the author's own words. */}
+        <span
+          className="fg-cite__n"
+          {...(bare
+            ? { "data-an-len": String(codePoints(inlineText(only)).length) }
+            : { "data-an-skip": "" })}
+        >
           {bare ? "" : "\u00a0"}[{cite.n}]
         </span>
       </a>
@@ -441,7 +554,10 @@ class Renderer {
       return (
         <span key={key} className="kb-link-missing" data-missing-link="">
           {children}
-          <span className="sr-only"> {CHAPTER.missingLink}</span>
+          <span className="sr-only" data-an-skip="">
+            {" "}
+            {CHAPTER.missingLink}
+          </span>
         </span>
       );
     }
@@ -456,7 +572,9 @@ class Renderer {
           data-link="external"
         >
           {children}
-          <span className="kb-ch-link__ext">{CHAPTER.newTab}</span>
+          <span className="kb-ch-link__ext" data-an-skip="">
+            {CHAPTER.newTab}
+          </span>
         </a>
       );
     }
@@ -535,18 +653,28 @@ class Renderer {
    * images: it has no asset map to size a box from.)
    */
   paragraph(block: Extract<Block, { type: "paragraph" }>): ReactNode {
+    const stamp = this.take(inlineText(block.content));
     if (
       this.links.format === "md" ||
       !block.content.some((n) => n.type === "image")
     )
-      return <p>{this.inline(block.content)}</p>;
+      return <p {...Renderer.mark(stamp)}>{this.inline(block.content)}</p>;
+    // Each part keeps its place in the paragraph's projected text: the images and the
+    // blanks trimmed beside them are not text the page shows.
     const parts: ReactNode[] = [];
     let run: Inline[] = [];
+    let at = 0;
+    let runAt = 0;
     const flush = () => {
       const text = trimRun(run);
+      const offset = runAt + leadTrim(run);
       run = [];
       if (text.length)
-        parts.push(<p key={parts.length}>{this.inline(text)}</p>);
+        parts.push(
+          <p key={parts.length} {...Renderer.mark(stamp, offset)}>
+            {this.inline(text)}
+          </p>,
+        );
     };
     for (const node of block.content) {
       if (node.type === "image") {
@@ -554,7 +682,12 @@ class Renderer {
         parts.push(
           <Fragment key={parts.length}>{this.plainImage(node)}</Fragment>,
         );
-      } else run.push(node);
+        runAt = at;
+      } else {
+        if (run.length === 0) runAt = at;
+        run.push(node);
+        at += codePoints(inlineText([node])).length;
+      }
     }
     flush();
     return <>{parts}</>;
@@ -580,6 +713,10 @@ class Renderer {
     const kind =
       block.kind && KNOWN_CALLOUTS.has(block.kind) ? block.kind : "NOTE";
     const label = CHAPTER.calloutLabel[kind];
+    const titleStamp =
+      block.title && block.title.length
+        ? this.take(inlineText(block.title))
+        : null;
     const title =
       block.title && block.title.length ? this.inline(block.title) : null;
     // §7 the head: the type word in mono, then the title, on one wrapping baseline row.
@@ -589,7 +726,14 @@ class Renderer {
         <span className="kb-ch-callout__type">
           {CHAPTER.calloutWord[kind]}
         </span>
-        {title ? <span className="kb-ch-callout__title">{title}</span> : null}
+        {title ? (
+          <span
+            className="kb-ch-callout__title"
+            {...Renderer.mark(titleStamp)}
+          >
+            {title}
+          </span>
+        ) : null}
       </Tag>
     );
     if (block.collapsed) {
@@ -655,6 +799,7 @@ class Renderer {
                   key={i}
                   scope="col"
                   data-align={block.align[i] ?? undefined}
+                  {...Renderer.mark(this.take(inlineText(cell)))}
                 >
                   {this.inline(cell)}
                 </th>
@@ -666,7 +811,11 @@ class Renderer {
               {block.rows.map((row, r) => (
                 <tr key={r}>
                   {row.map((cell, i) => (
-                    <td key={i} data-align={block.align[i] ?? undefined}>
+                    <td
+                      key={i}
+                      data-align={block.align[i] ?? undefined}
+                      {...Renderer.mark(this.take(inlineText(cell)))}
+                    >
                       {this.inline(cell)}
                     </td>
                   ))}
@@ -680,7 +829,17 @@ class Renderer {
   }
 
   code(block: Extract<Block, { type: "code" }>): ReactNode {
+    const stamp = this.take(block.text);
     const lines = highlight(block.text, block.lang);
+    // P30.S20: each line carries its offset in the section's text ("code lines carry their
+    // offset"), only where its tokens spell exactly the source line.
+    const source = block.text.split("\n");
+    const lineAt: number[] = [];
+    let pos = 0;
+    for (const line of source) {
+      lineAt.push(pos);
+      pos += codePoints(line).length + 1;
+    }
     // One block per source line: a wrapped line hangs 2ch under its first (§8), and an
     // ASCII drawing keeps each line whole.
     const plain: { text: string; className?: string }[][] = block.text
@@ -688,7 +847,14 @@ class Renderer {
       .map((t) => [{ text: t }]);
     const body = (lines ?? plain).map(
       (line, i) => (
-        <span key={i} className="kb-ch-code__ln">
+        <span
+          key={i}
+          className="kb-ch-code__ln"
+          {...(source[i] !== undefined &&
+          line.map((tok) => tok.text).join("") === source[i]
+            ? Renderer.mark(stamp, lineAt[i], "code")
+            : {})}
+        >
           {line.map((tok, j) =>
             tok.className ? (
               <span key={j} className={tok.className}>

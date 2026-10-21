@@ -41,10 +41,10 @@ describe("citations", () => {
     expect(html).toContain('id="cite-src-a-1"');
     expect(html).toContain('id="cite-src-a-2"');
     expect(html).toContain('id="cite-src-b-1"');
-    expect(html).toMatch(/alpha<span class="fg-cite__n"> \[1\]<\/span>/);
+    expect(html).toMatch(/alpha<span class="fg-cite__n"[^>]*> \[1\]<\/span>/);
     // A link whose words are only a number shows [n] alone; a link to a heading is no citation.
     expect(html).toMatch(
-      /id="cite-src-b-1"[^>]*><span class="fg-cite__n">\[2\]<\/span>/,
+      /id="cite-src-b-1"[^>]*><span class="fg-cite__n"[^>]*>\[2\]<\/span>/,
     );
     expect(html).not.toContain("cite-one");
   });

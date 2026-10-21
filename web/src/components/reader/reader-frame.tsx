@@ -172,6 +172,8 @@ export function ReaderFrame({
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     window.addEventListener("hashchange", quiet);
+    // P30.S20: the annotation layer scrolls a low popover into view; not a gesture either.
+    window.addEventListener("reader:quiet", quiet);
     document.addEventListener("click", onLink, true);
     document.fonts?.ready.then(onScroll).catch(() => {});
     return () => {
@@ -179,6 +181,7 @@ export function ReaderFrame({
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("hashchange", quiet);
+      window.removeEventListener("reader:quiet", quiet);
       document.removeEventListener("click", onLink, true);
     };
   }, [ready, settings.size]);

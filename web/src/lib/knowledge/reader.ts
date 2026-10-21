@@ -149,6 +149,46 @@ export interface KbQuizAttempt {
   answered_at: string;
 }
 
+/**
+ * An annotation's anchor resolved for the version read (P30.S9, `server/anchors.py`):
+ * paint only `status === "anchored"` with a `start` (a highlight); `block` is "Text
+ * changed"; a block note is `method: "section"` with no offsets; `stored` = unresolved.
+ */
+export interface KbAnchor {
+  status: "anchored" | "block" | "orphan";
+  method: string;
+  block_id: string | null;
+  start: number | null;
+  end: number | null;
+  section_index: number | null;
+}
+
+/** One highlight (`kind: "hl"`) or block note (`kind: "bnote"`), as the reads return it. */
+export interface KbAnnotation {
+  id: string;
+  kind: "hl" | "bnote";
+  doc: string;
+  lang: string;
+  version: number;
+  /** The section it was made in (never rewritten). */
+  block_id: string;
+  quote: {
+    exact: string;
+    prefix?: string;
+    suffix?: string;
+    start?: number;
+    end?: number;
+  } | null;
+  note: string | null;
+  snapshot?: { text?: string; block_title?: string; chapter_title?: string };
+  created_at: string;
+  updated_at: string;
+  anchor_status?: string;
+  anchor?: KbAnchor;
+  /** "Review this" is on (an active card). */
+  review?: boolean;
+}
+
 /** The slice of a variant read the reader's progress needs. */
 export interface KbVariantState {
   position: KbPosition | null;
@@ -160,6 +200,10 @@ export interface KbVariantState {
   };
   /** The latest saved quiz attempt per item (empty when none). */
   quiz?: KbQuizAttempt[];
+  /** P30.S20: the anchored and Text changed annotations, resolved for the version read. */
+  annotations?: KbAnnotation[];
+  /** The orphans (their section is gone): kept, never dropped. */
+  unanchored?: KbAnnotation[];
 }
 
 /**
@@ -172,10 +216,13 @@ export async function getReaderChapter(
   target: { org: string; project: string; book: string; key: string },
   lang: string,
   signal?: AbortSignal,
+  /** An older version on screen (`?v=`): the annotations resolve for it (P30.S20). */
+  version?: number,
 ): Promise<KbVariantState> {
   const e = encodeURIComponent;
+  const v = version ? `&v=${version}` : "";
   return getJson<KbVariantState>(
-    `/app/reader/chapters/${e(target.org)}/${e(target.project)}/${e(target.book)}/${e(target.key)}?lang=${e(lang)}`,
+    `/app/reader/chapters/${e(target.org)}/${e(target.project)}/${e(target.book)}/${e(target.key)}?lang=${e(lang)}${v}`,
     { token, signal },
   );
 }
@@ -188,10 +235,13 @@ export async function getReaderDoc(
   token: string,
   target: { org: string; project: string; doc: string },
   signal?: AbortSignal,
+  /** An older version on screen (`?v=`): the annotations resolve for it (P30.S20). */
+  version?: number,
 ): Promise<KbVariantState> {
   const e = encodeURIComponent;
+  const v = version ? `?v=${version}` : "";
   return getJson<KbVariantState>(
-    `/app/reader/docs/${e(target.org)}/${e(target.project)}/${e(target.doc)}`,
+    `/app/reader/docs/${e(target.org)}/${e(target.project)}/${e(target.doc)}${v}`,
     { token, signal },
   );
 }
@@ -245,4 +295,74 @@ export function docStem(project: string, relPath: string): string {
   return stem.startsWith(prefix)
     ? stem.slice(prefix.length)
     : (stem.split("/").pop() ?? stem);
+}
+
+// P30.S20 — highlights and notes (`05-annotations`; S8's routes, S10's "Review this").
+
+/** The `POST /app/reader/annotations` body: a highlight (a quote) or a block note (a note). */
+export interface KbAnnotationWrite {
+  org: string;
+  project: string;
+  /** The document stem `<date>-<slug>`. */
+  doc: string;
+  /** A client-generated UUID: a repeat of the same id is a no-op (200) on the server. */
+  id: string;
+  /** The version on screen. */
+  version?: number;
+  block_id: string;
+  quote?: {
+    exact: string;
+    prefix: string;
+    suffix: string;
+    start: number;
+    end: number;
+  };
+  note?: string | null;
+  snapshot?: { text: string; block_title: string; chapter_title: string };
+}
+
+/** `POST /app/reader/annotations` (bearer) → 201 (200 on a repeated `id`) `{annotation}`. */
+export async function postAnnotation(
+  token: string,
+  body: KbAnnotationWrite,
+  signal?: AbortSignal,
+): Promise<{ annotation: KbAnnotation }> {
+  return sendJson<{ annotation: KbAnnotation }>(
+    "/app/reader/annotations",
+    "POST",
+    body,
+    { token, signal },
+  );
+}
+
+/**
+ * `PATCH /app/reader/annotations/{id}` (bearer): `note` (null clears a highlight's note) and
+ * `review` (a highlight's card on, or suspended) → `{annotation, card?}`.
+ */
+export async function patchAnnotation(
+  token: string,
+  id: string,
+  body: { note?: string | null; review?: boolean },
+  signal?: AbortSignal,
+): Promise<{ annotation: KbAnnotation; card?: { status: string } }> {
+  return sendJson<{ annotation: KbAnnotation; card?: { status: string } }>(
+    `/app/reader/annotations/${encodeURIComponent(id)}`,
+    "PATCH",
+    body,
+    { token, signal },
+  );
+}
+
+/** `DELETE /app/reader/annotations/{id}` (bearer) → 204; its note and its card go with it. */
+export async function deleteAnnotation(
+  token: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await sendJson<unknown>(
+    `/app/reader/annotations/${encodeURIComponent(id)}`,
+    "DELETE",
+    undefined,
+    { token, signal },
+  );
 }

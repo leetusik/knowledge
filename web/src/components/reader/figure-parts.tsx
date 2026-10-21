@@ -41,6 +41,9 @@ function sizeVars(w: number | null, h: number | null): CSSProperties {
  * The missing box (§1): an asset the version does not hold, a file not in storage, or an image
  * that failed to load. The label is mono, the alt is the body face; it grows past the reserved
  * ratio when the alt needs more room.
+ *
+ * Both boxes carry `data-an-skip` (P30.S20): an alt or a label is not passage text, so a
+ * selection's offsets and the highlight paint step over them.
  */
 export function MissingBox({
   w,
@@ -55,7 +58,11 @@ export function MissingBox({
   children: ReactNode;
 }) {
   return (
-    <span className="fg-media fg-media--missing" style={sizeVars(w, h)}>
+    <span
+      className="fg-media fg-media--missing"
+      style={sizeVars(w, h)}
+      data-an-skip=""
+    >
       <span className="fg-miss__label">{label}</span>
       <span className="fg-miss__alt">{children}</span>
     </span>
@@ -114,6 +121,7 @@ export function ImageBox({
     <span
       className={`fg-media fg-media--loading${state === "loaded" ? "is-loaded" : ""}`}
       style={sizeVars(w, h)}
+      data-an-skip=""
     >
       <span className="rd-skel fg-media__skel" aria-hidden="true" />
       <picture className="fg-media__pic">

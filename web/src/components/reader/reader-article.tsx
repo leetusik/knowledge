@@ -3,6 +3,7 @@ import { documentAssets } from "@/lib/native";
 import type { QuizViewContext } from "@/lib/native/render";
 import type { LoadedReader } from "@/lib/reader/load";
 
+import { AnnotationLayer } from "./annotations";
 import { ChapterEnd } from "./chapter-end";
 import { ChapterHead } from "./chapter-head";
 
@@ -61,6 +62,18 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
         bookBackHref={view.book?.backHref}
         total={view.book?.total}
       />
+      {/* P30.S20: highlights and notes, on a native chapter that renders. A member with
+          nowhere to save (OQ75) gets none; a signed-out reader gets Sign in to save. */}
+      {reader.notes && !checked.refused && (!view.member || view.write) ? (
+        <AnnotationLayer
+          notes={reader.notes}
+          write={view.write}
+          version={view.version}
+          lang={view.lang}
+          chapterTitle={view.title}
+          place={loose ? "document" : "chapter"}
+        />
+      ) : null}
     </div>
   );
 }
