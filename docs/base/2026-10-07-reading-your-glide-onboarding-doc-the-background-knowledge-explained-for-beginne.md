@@ -1,7 +1,7 @@
 ---
 title: "글라이드 온보딩 문서 제대로 읽기 — 입문자를 위한 배경지식 해설"
 date: 2026-10-07
-version: 2
+version: 3
 tags:
   - onboarding
   - research-agent
@@ -17,8 +17,8 @@ source:
 > 이 글은 `onboarding.docx`(「수강님 온보딩 안내: 계약 기간 업무와 평가 방식」, 2026-10-05)를
 > 제대로 읽는 데 필요한 배경지식을 정리한 교육용 해설입니다.
 > 초보 프로그래머를 위해 썼습니다 — 전문 용어는 처음 나올 때마다 바로 풀어 설명합니다.
-> 기준 문서는 두 개입니다: `/Users/sugang/projects/glide/base/onboarding.docx`(무엇을 기대하고
-> 어떻게 평가하는가)와 `/Users/sugang/projects/glide/base/research_agent_roadmap.docx`
+> 기준 문서는 두 개입니다: `~/projects/glide/base/onboarding.docx`(무엇을 기대하고
+> 어떻게 평가하는가)와 `~/projects/glide/base/research_agent_roadmap.docx`
 > (「글라이드 리서치 에이전트 로드맵」, 설계).
 > 이 파일은 학습용 길잡이일 뿐 런북이 아닙니다. 두 문서와 다르면 원문이 맞습니다.
 
