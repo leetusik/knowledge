@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P31`
-- Current slice: `P31.DECOMP`
-- Next slice: `P31.REVIEW`
+- Current slice: `P31.S1`
+- Next slice: `P31.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `45`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P31` | planned | `P31.DECOMP` | 0/2 | - | working tree |
+| `default` | `P31` | planned | `P31.S1` | 1/8 | - | working tree |
 
 ## Active Phases
 
@@ -31,7 +31,7 @@
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
-| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.DECOMP` | `works/phases/active/P31` |
+| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.S1` | `works/phases/active/P31` |
 
 ## Phase P21: Web document deletion
 
@@ -193,5 +193,11 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P31.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P31/slices/P31.DECOMP` |
+| [x] `P31.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P31/slices/P31.DECOMP` |
+| [ ] `P31.S1` | `todo` | knowledge check: dry-run validation endpoint and CLI | `implementation` | `works/phases/active/P31/slices/P31.S1` |
+| [ ] `P31.S2` | `todo` | explain skill runs knowledge check before publishing | `implementation` | `works/phases/active/P31/slices/P31.S2` |
+| [ ] `P31.S3` | `todo` | package: explain-critic agent and chapter-slice procedure | `implementation` | `works/phases/active/P31/slices/P31.S3` |
+| [ ] `P31.S4` | `todo` | package: explain route, DECOMP and REVIEW references, install patch notes | `implementation` | `works/phases/active/P31/slices/P31.S4` |
+| [ ] `P31.S5` | `todo` | rehearse one sample chapter through the package | `qa` | `works/phases/active/P31/slices/P31.S5` |
+| [ ] `P31.S6` | `todo` | handoff note: retire old explain and apply the package | `docs` | `works/phases/active/P31/slices/P31.S6` |
 | [ ] `P31.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |
