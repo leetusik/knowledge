@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `44`
+- Open: `45`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -54,6 +54,7 @@
 | `D61` | `deferred` | Migration and smoke raw checks tolerate Cloudflare email obfuscation | P30.REVIEW | The next use of migrate_books.py or a raw-content smoke check | `works/deferred/open/D61` |
 | `D62` | `deferred` | /library signed-out bounce lacks next= | P30.REVIEW | The next auth or library change | `works/deferred/open/D62` |
 | `D63` | `deferred` | Redaction reaches past versions | P30.REVIEW | The next privacy or redaction request, or a version-delete feature | `works/deferred/open/D63` |
+| `D64` | `deferred` | Pages with their own CSS keep the previous page's scroll position on a client navigation | P30.F6 | The next book-page or library slice, or a decision to try experimental.appNewScrollHandler app-wide | `works/deferred/open/D64` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 

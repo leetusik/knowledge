@@ -170,3 +170,94 @@ export function canWritePosition(p: {
 export function resumePercent(fraction: number): number {
   return Math.round(Math.min(1, Math.max(0, fraction)) * 100);
 }
+
+// ---- P30.F6: the landing, and no write before it settles -------------------------------------
+//
+// A reader page decides once, when it opens, where it lands (`01-reader` *Opening and
+// moving*): a `#section` in the address (F4), then a mark asked for by `?note=` (S21),
+// then the member's saved place (S15's resume), and otherwise the top. Next's own
+// scroll-to-top does not run between chapters (its scroll handler takes the segment's
+// first node, which is the reader stylesheet React hoists into <head>, and gives up), so
+// without this the next chapter opened at the previous one's scroll position.
+//
+// Until the landing has settled, the page writes nothing: no cadence position, no beacon
+// and no finish. A sample taken before then is the previous chapter's place, and at its
+// end it would mark an unread chapter finished.
+
+/** Where a reader page lands when it opens. `stay`: the document's own first load (the
+ *  browser opened it at the top, or a reload restores the place). */
+export type Landing = "hash" | "note" | "resume" | "top" | "stay";
+
+export function landingFor(p: {
+  /** The address's `#id` names an element on this page. */
+  hash: boolean;
+  /** `?note=` asks for a mark. */
+  note: boolean;
+  /** The member's saved place applies here (S15's rules) and has somewhere to go. */
+  resume: boolean;
+  /** A navigation inside the app opened the page (not the document's first load). */
+  navigated: boolean;
+}): Landing {
+  if (p.hash) return "hash";
+  if (p.note) return "note";
+  if (p.resume) return "resume";
+  return p.navigated ? "top" : "stay";
+}
+
+/** The landing is still at work this long (F4's hash landing retries until 900 ms). */
+export const LANDING_SETTLE_MS = 1000;
+/** And never longer than this, whatever the fonts do. */
+export const LANDING_MAX_MS = 3000;
+
+/**
+ * Has the landing settled? The reader's own first wheel, touch, key or pointer settles it
+ * at once (the landings stop there too); otherwise once the fonts are in and the landing's
+ * retries are over, and at the latest after `LANDING_MAX_MS`.
+ */
+export function landingSettled(p: {
+  elapsed: number;
+  fontsReady: boolean;
+  input: boolean;
+}): boolean {
+  if (p.input) return true;
+  if (p.elapsed >= LANDING_MAX_MS) return true;
+  return p.fontsReady && p.elapsed >= LANDING_SETTLE_MS;
+}
+
+/**
+ * A scroll (or the opening) as the cadence sees it: the place becomes a pending position
+ * only once the landing has settled, and only where a position may be written.
+ */
+export function touchCadence(
+  c: Cadence,
+  p: { settled: boolean; allowed: boolean; now: number },
+): Cadence {
+  if (!p.settled || !p.allowed) return c;
+  return { pendingSince: c.pendingSince ?? p.now, lastScroll: p.now };
+}
+
+/**
+ * One look at the page (after a scroll, and once at the opening): what the reader's state
+ * becomes, whether to finish the chapter now, and whether a hold lifted on this very look
+ * (the place counts from there). Before the landing has settled nothing changes, not even
+ * the end's in/out, so the first look after it judges the page where it landed.
+ */
+export function onLook(
+  state: ReadingState,
+  look: {
+    settled: boolean;
+    /** The end is in view (`endSeen`). */
+    seen: boolean;
+    version: number;
+    /** `canWritePosition` for this page. */
+    allowed: boolean;
+  },
+): { state: ReadingState; finish: boolean; lifted: boolean } {
+  if (!look.settled) return { state, finish: false, lifted: false };
+  const r = onEndChange(state, look.seen, look.version, look.allowed);
+  return {
+    state: r.state,
+    finish: r.finish,
+    lifted: state.held && !r.state.held,
+  };
+}

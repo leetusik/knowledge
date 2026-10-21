@@ -6,10 +6,17 @@ import {
   fractionOf,
   initialReading,
   isUpdated,
+  LANDING_MAX_MS,
+  LANDING_SETTLE_MS,
+  landingFor,
+  landingSettled,
   onEndChange,
+  onLook,
   onMark,
   onSample,
+  touchCadence,
   writeDelay,
+  type Cadence,
 } from "@/lib/reader/position";
 
 // P30.S15 — the position cadence and the finish / hold rules (`01-reader` round 02
@@ -149,5 +156,117 @@ describe("max_fraction and the write gate", () => {
     expect(isUpdated(done, 2)).toBe(true);
     expect(isUpdated(done, 1)).toBe(false);
     expect(isUpdated(fresh(), 2)).toBe(false);
+  });
+});
+
+// P30.F6 — a chapter opened from another lands once (hash, then `?note=`, then the
+// resume, then the top), and nothing is written until that landing has settled.
+describe("the landing", () => {
+  const all = { hash: true, note: true, resume: true, navigated: true };
+
+  it("is the hash, then the note, then the resume, then the top", () => {
+    expect(landingFor(all)).toBe("hash");
+    expect(landingFor({ ...all, hash: false })).toBe("note");
+    expect(landingFor({ ...all, hash: false, note: false })).toBe("resume");
+    expect(
+      landingFor({ hash: false, note: false, resume: false, navigated: true }),
+    ).toBe("top");
+  });
+
+  it("leaves the document's own first load to the browser", () => {
+    expect(
+      landingFor({ hash: false, note: false, resume: false, navigated: false }),
+    ).toBe("stay");
+    // a first load still lands on its hash, its note or the resume
+    expect(landingFor({ ...all, navigated: false })).toBe("hash");
+    expect(
+      landingFor({ hash: false, note: false, resume: true, navigated: false }),
+    ).toBe("resume");
+  });
+
+  it("settles on the reader's first input, else after the fonts and the retries", () => {
+    const at = (elapsed: number, fontsReady: boolean, input = false) =>
+      landingSettled({ elapsed, fontsReady, input });
+    expect(at(0, false)).toBe(false);
+    expect(at(LANDING_SETTLE_MS - 1, true)).toBe(false); // the hash landing may retry
+    expect(at(LANDING_SETTLE_MS, false)).toBe(false); // a late font may still move it
+    expect(at(LANDING_SETTLE_MS, true)).toBe(true);
+    expect(at(LANDING_MAX_MS, false)).toBe(true); // never longer than this
+    expect(at(10, false, true)).toBe(true); // the reader took over
+  });
+});
+
+describe("no write before the landing settles", () => {
+  const idle: Cadence = { pendingSince: null, lastScroll: 0 };
+
+  it("queues no position for a scroll, however allowed", () => {
+    const c = touchCadence(idle, { settled: false, allowed: true, now: 500 });
+    expect(c).toBe(idle);
+    expect(writeDelay(c, 5000)).toBeNull();
+    // once settled, the same scroll is a position, 2 s later
+    const s = touchCadence(idle, { settled: true, allowed: true, now: 1200 });
+    expect(writeDelay(s, 1200)).toBe(2000);
+    // and never where writing is not allowed
+    expect(
+      touchCadence(idle, { settled: true, allowed: false, now: 1200 }),
+    ).toBe(idle);
+  });
+
+  it("does not finish an unread chapter opened at the previous one's end", () => {
+    const st = fresh();
+    // The page opened at the old scroll position, which shows the end.
+    const early = onLook(st, {
+      settled: false,
+      seen: true,
+      version: 1,
+      allowed: true,
+    });
+    expect(early.finish).toBe(false);
+    expect(early.state).toBe(st); // not even the end's in/out moves
+    // It lands at the top: the end is out of view, nothing to finish.
+    const landed = onLook(early.state, {
+      settled: true,
+      seen: false,
+      version: 1,
+      allowed: true,
+    });
+    expect(landed.finish).toBe(false);
+    expect(landed.state.finished).toBe(false);
+    // Read to the end: now it finishes, once.
+    const end = onLook(landed.state, {
+      settled: true,
+      seen: true,
+      version: 1,
+      allowed: true,
+    });
+    expect(end.finish).toBe(true);
+    expect(end.state.finished).toBe(true);
+  });
+
+  it("still finishes a short chapter whose end shows where it landed", () => {
+    const r = onLook(fresh(), {
+      settled: true,
+      seen: true,
+      version: 2,
+      allowed: true,
+    });
+    expect(r.finish).toBe(true);
+    expect(r.state.finishedVersion).toBe(2);
+  });
+
+  it("lifts a hold only after the landing", () => {
+    const held = { ...onMark(fresh(), false, 1), endIn: true };
+    expect(
+      onLook(held, { settled: false, seen: false, version: 1, allowed: false })
+        .lifted,
+    ).toBe(false);
+    const r = onLook(held, {
+      settled: true,
+      seen: false,
+      version: 1,
+      allowed: false,
+    });
+    expect(r.lifted).toBe(true);
+    expect(r.state.held).toBe(false);
   });
 });
