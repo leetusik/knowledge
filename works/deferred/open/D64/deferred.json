@@ -1,0 +1,11 @@
+{
+  "id": "D64",
+  "title": "Pages with their own CSS keep the previous page's scroll position on a client navigation",
+  "status": "deferred",
+  "source": "P30.F6",
+  "reason": "Same Next 16 scroll-handler bug as P30.F6 (hoisted stylesheet as the segment's first node): from a chapter at y 3800 the book page opened at its end; library and other app pages unchecked",
+  "trigger": "The next book-page or library slice, or a decision to try experimental.appNewScrollHandler app-wide",
+  "created_at": "2026-10-21T17:48:32+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -16,10 +16,15 @@ import {
   fractionOf,
   initialReading,
   isUpdated,
-  onEndChange,
+  LANDING_MAX_MS,
+  LANDING_SETTLE_MS,
+  landingFor,
+  landingSettled,
+  onLook,
   onMark,
   onSample,
   resumePercent,
+  touchCadence,
   writeDelay,
   type Cadence,
   type ReadingState,
@@ -37,6 +42,10 @@ import type { ReaderView } from "@/lib/reader/types";
  * older version (`canWritePosition`). The position is a sample of the window scroll:
  * the topmost id'd block at the same line as the section being read, and the
  * fraction of the scrollable height.
+ *
+ * P30.F6: the page lands once, when it opens (`landingFor`: a `#section`, then `?note=`,
+ * then the resume, then the top), and nothing is written (no position, no beacon, no
+ * finish) until that landing has settled (`landingSettled`).
  */
 
 /** The resume pill: the section to name, or (no section to name) the place as a percent. */
@@ -70,6 +79,49 @@ function sampleDom(root: HTMLElement | null, bar: HTMLElement | null): Sample {
     anchor,
   };
 }
+
+/**
+ * Was this page opened by a navigation inside the app? The first reader page at the
+ * address the browser itself loaded is the document's own load (`owner` claims it, so a
+ * page's effects run twice in development without changing the answer); every later
+ * page, or one at another address, came by a link, the router or the history.
+ */
+let firstPage: object | null | undefined;
+function openedByNavigation(owner: object): boolean {
+  if (firstPage === undefined) {
+    let loaded: URL | null = null;
+    try {
+      const nav = performance.getEntriesByType?.("navigation")[0];
+      loaded = nav ? new URL(nav.name) : null;
+    } catch {
+      loaded = null;
+    }
+    const here = window.location;
+    firstPage =
+      loaded &&
+      loaded.pathname === here.pathname &&
+      loaded.search === here.search
+        ? owner
+        : null;
+  }
+  return firstPage !== owner;
+}
+
+/** The element the address's `#id` names on this page, or null. */
+function hashTarget(root: HTMLElement): HTMLElement | null {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return null;
+  let id = raw;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    // keep the raw text
+  }
+  const el = document.getElementById(id);
+  return el && root.contains(el) ? el : null;
+}
+
+const INPUT = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
 
 /** The heading a block sits under (or is): the section a reader would name. */
 function sectionTitleOf(root: HTMLElement, el: Element): string | null {
@@ -160,26 +212,58 @@ export function useReading({
     [write],
   );
 
-  // ---- the resume: open at the saved section, with the pill -------------------------
+  // ---- the landing (P30.F6): decided once, when the page opens -----------------------
+  // A `#section` in the address (F4's `useHashLanding` lands it), then a mark asked for
+  // by `?note=` (S21's annotation layer lands it), then the member's saved place (here,
+  // with the pill), and otherwise the top. A page opened by a navigation inside the app
+  // starts from the top before its owner lands: Next does not reset the scroll between
+  // chapters (its handler meets the hoisted reader stylesheet and gives up). The
+  // document's own first load keeps what the browser does (the top, or a reload's place).
+  const owner = useRef({});
+  const decided = useRef(false);
+  /** The landing has settled: from here on, places are written. */
+  const settled = useRef(false);
+  const onSettled = useRef<() => void>(() => {});
+
   useEffect(() => {
-    if (!ready || !saves || !progress) return;
-    const r = progress.resume;
-    if (!r || view.version !== view.newest) return;
+    if (!ready || decided.current) return;
     const root = rootRef.current;
     if (!root) return;
-    const hash = decodeURIComponent(window.location.hash.slice(1));
-    // A link with a place in it (a contents entry, a language switch) owns the landing,
-    // unless its section does not exist here: then the mapped resume is the nearest one.
-    if (hash && document.getElementById(hash)) return;
-    // A mark chosen in a list (`?note=`) owns the landing (P30.S21).
-    if (new URLSearchParams(window.location.search).has("note")) return;
-    // The pill is for a reader coming back to a chapter they have started.
-    const showPill = !hash && progress.state === "started";
-    if (!hash && progress.state !== "started") return;
+    decided.current = true;
 
-    const block = r.block
-      ? root.querySelector(`.rd-article [data-block="${CSS.escape(r.block)}"]`)
-      : null;
+    const hashEl = hashTarget(root);
+    const hash = window.location.hash.length > 1;
+    const note = new URLSearchParams(window.location.search).has("note");
+    // S15's resume: a member on the newest version, coming back to a chapter they have
+    // started; or a link whose section does not exist here (the mapped resume is then the
+    // nearest place, without the pill).
+    const r = saves && progress ? progress.resume : null;
+    const block =
+      r?.block && view.version === view.newest
+        ? root.querySelector(
+            `.rd-article [data-block="${CSS.escape(r.block)}"]`,
+          )
+        : null;
+    const resume =
+      !!r &&
+      view.version === view.newest &&
+      (hash || progress?.state === "started") &&
+      (!!block || r.fraction > 0);
+    const navigated = openedByNavigation(owner.current);
+    const landing = landingFor({
+      hash: !!hashEl,
+      note,
+      resume,
+      navigated,
+    });
+
+    if (navigated) {
+      // A clean start for every landing; the reader's own scroll, not a gesture (F5).
+      quiet();
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+    if (landing !== "resume" || !r) return;
+
     const goTo = () => {
       quiet();
       if (block) {
@@ -192,7 +276,6 @@ export function useReading({
         window.scrollTo(0, Math.max(0, r.fraction * max));
       }
     };
-    if (!block && !(r.fraction > 0)) return;
     goTo();
     const landed = window.scrollY;
     // A late font shifts the layout: land again once, if the reader has not moved yet.
@@ -201,7 +284,8 @@ export function useReading({
         if (Math.abs(window.scrollY - landed) <= 2) goTo();
       })
       .catch(() => {});
-    if (showPill) {
+    // The pill is for a reader coming back to a chapter they have started.
+    if (!hash && progress?.state === "started") {
       setPill({
         section: block ? sectionTitleOf(root, block) : null,
         percent: resumePercent(r.fraction),
@@ -217,6 +301,53 @@ export function useReading({
     topRef,
     quiet,
   ]);
+
+  // ---- the landing settles: the reader's first input, or the fonts and the retries ---
+  useEffect(() => {
+    if (!ready || settled.current) return;
+    const start = Date.now();
+    let fonts = !document.fonts;
+    let input = false;
+    let done = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const stop = () => {
+      done = true;
+      timers.forEach(clearTimeout);
+      INPUT.forEach((t) => window.removeEventListener(t, onInput, true));
+    };
+    const check = () => {
+      if (done) return;
+      if (
+        !landingSettled({
+          elapsed: Date.now() - start,
+          fontsReady: fonts,
+          input,
+        })
+      )
+        return;
+      stop();
+      settled.current = true;
+      onSettled.current();
+    };
+    function onInput() {
+      input = true;
+      check();
+    }
+    INPUT.forEach((t) =>
+      window.addEventListener(t, onInput, { passive: true, capture: true }),
+    );
+    timers.push(
+      setTimeout(check, LANDING_SETTLE_MS),
+      setTimeout(check, LANDING_MAX_MS),
+    );
+    document.fonts?.ready
+      .catch(() => {})
+      .then(() => {
+        fonts = true;
+        check();
+      });
+    return stop;
+  }, [ready]);
 
   // ---- the cadence, the end of the chapter, and the beacon ---------------------------
   useEffect(() => {
@@ -244,10 +375,14 @@ export function useReading({
       if (d !== null) timer.current = setTimeout(() => void flush(), d);
     };
     const touch = () => {
-      if (!allowed()) return;
-      const now = Date.now();
-      cad.lastScroll = now;
-      if (cad.pendingSince === null) cad.pendingSince = now;
+      const next = touchCadence(cad, {
+        settled: settled.current,
+        allowed: allowed(),
+        now: Date.now(),
+      });
+      if (next === cad) return;
+      cad.pendingSince = next.pendingSince;
+      cad.lastScroll = next.lastScroll;
       arm();
     };
 
@@ -261,7 +396,8 @@ export function useReading({
     let raf = 0;
     const measure = () => {
       raf = 0;
-      if (!rootRef.current?.isConnected) return;
+      // Before the landing has settled the place is not the reader's (P30.F6).
+      if (!settled.current || !rootRef.current?.isConnected) return;
       if (Date.now() - lastAt > 250) {
         last = sampleDom(rootRef.current, topRef.current);
         lastAt = Date.now();
@@ -278,11 +414,15 @@ export function useReading({
           window.innerHeight,
           percent,
         );
-        const wasHeld = ref.current.held;
-        const r = onEndChange(ref.current, seen, view.version, allowed());
+        const r = onLook(ref.current, {
+          settled: settled.current,
+          seen,
+          version: view.version,
+          allowed: allowed(),
+        });
         if (r.state !== ref.current) commit(r.state);
         // The hold lifted on this very scroll: the reader's place counts from here.
-        if (wasHeld && !r.state.held) touch();
+        if (r.lifted) touch();
         if (r.finish) {
           const s = sampleDom(rootRef.current, topRef.current);
           cad.pendingSince = null;
@@ -303,14 +443,16 @@ export function useReading({
       }
     };
     const onScroll = () => {
-      // A scroll while the page is being swapped for the next one belongs to no place.
-      if (!rootRef.current?.isConnected) return;
+      // A scroll while the page is being swapped for the next one belongs to no place,
+      // and nor does one before the landing has settled (the previous chapter's place,
+      // or the landing itself).
+      if (!settled.current || !rootRef.current?.isConnected) return;
       touch();
       if (!raf) raf = requestAnimationFrame(measure);
     };
 
     const beacon = (torn = false) => {
-      if (cad.pendingSince === null || !allowed()) return;
+      if (!settled.current || cad.pendingSince === null || !allowed()) return;
       const live = rootRef.current?.isConnected;
       const s =
         torn || !live ? last : sampleDom(rootRef.current, topRef.current);
@@ -332,10 +474,16 @@ export function useReading({
     const onPageHide = () => beacon();
     window.addEventListener("pagehide", onPageHide);
     document.addEventListener("visibilitychange", onVisibility);
-    // Opening a chapter is a first position (and "started"); the end may already be in view.
-    touch();
-    measure();
+    // Opening a chapter is a first position (and "started"); the end may already be in
+    // view. Both are judged where the page landed, once the landing has settled.
+    const open = () => {
+      touch();
+      measure();
+    };
+    if (settled.current) open();
+    else onSettled.current = open;
     return () => {
+      onSettled.current = () => {};
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onVisibility);

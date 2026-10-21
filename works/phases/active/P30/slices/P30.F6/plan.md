@@ -71,3 +71,22 @@ Record the numbers in `result.md`.
 - `result.md`: verdict block first.
 - **Production note for the orchestrator:** chapters may already be wrongly marked Finished on production.
   Mark as unread clears them. Don't write to production.
+
+## Dispatch
+
+slice=P30.F6
+phase=P30
+kind=fix
+risk=high
+attempt=1
+route=high
+reason=risk high (not low)
+tier=high
+subagent_type=slice-executor-high
+model=opus
+pass_model=yes
+effort=high
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=high
