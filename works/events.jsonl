@@ -1240,3 +1240,8 @@
 {"ts": "2026-10-21T18:04:38+09:00", "type": "executor_dispatched", "slice": "P30.REVIEW", "phase": "P30", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 3: pass (F6 verified live; qa v0019)"}
 {"ts": "2026-10-21T18:04:38+09:00", "type": "phase_status_changed", "phase": "P30", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-10-21T18:04:38+09:00", "type": "acceptance_opened", "phase": "P30"}
+{"ts": "2026-10-21T18:46:46+09:00", "type": "phase_status_changed", "phase": "P30", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-21T18:46:46+09:00", "type": "acceptance_cleared", "phase": "P30"}
+{"ts": "2026-10-21T18:46:47+09:00", "type": "slice_status_changed", "slice": "P30.REVIEW", "old_status": "changes_requested", "new_status": "done"}
+{"ts": "2026-10-21T18:46:47+09:00", "type": "phase_reviewed", "phase": "P30", "verdict": "pass", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-21T18:46:47+09:00", "type": "phase_consolidation_owed", "phase": "P30", "notes": 33}
