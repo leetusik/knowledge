@@ -131,13 +131,13 @@
       "order": 11,
       "path": "works/phases/active/P31",
       "review_status": "pending",
-      "current_slice": "P31.S6",
+      "current_slice": "P31.REVIEW",
       "slice_count": 8,
-      "done_slice_count": 6
+      "done_slice_count": 7
     }
   ],
   "deferred_open_count": 45,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-21T19:49:53+09:00"
+  "last_rebuilt_at": "2026-10-21T19:51:37+09:00"
 }

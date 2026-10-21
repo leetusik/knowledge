@@ -3,14 +3,14 @@
   "phase_id": "P31",
   "name": "handoff note: retire old explain and apply the package",
   "kind": "docs",
-  "status": "todo",
+  "status": "done",
   "order": 60,
   "depends_on": [
     "P31.S5"
   ],
   "created_at": "2026-10-21T18:59:25+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T19:50:07+09:00",
+  "completed_at": "2026-10-21T19:51:37+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "handoff-explain.md: cold-read index (retire old explain via P30's note, apply the package, minimums, rehearsal lessons), pinned to bootstrap f207775",
   "validation": {
     "required": [],
     "last_run": null,
