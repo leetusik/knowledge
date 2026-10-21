@@ -168,6 +168,12 @@ knowledge base with no extra setup.
 - **A rejected chapter** prints every violation as `line N: [code] message`; the 201's
   `warnings` go to stderr as `note: warning: ...`. A re-explain starts from
   `knowledge read <id or rel_path> --source`, the whole stored file with its ids.
+- **`knowledge check FILE`** (CLI 0.2.0+) takes `save`'s exact flags and validates the
+  publish without making it: nothing is written, versioned or metered. Exit **0** prints
+  `OK — would publish <rel_path> (v<N>)`; exit **1** means the publish would be refused
+  (every violation as `line N: [code] message`, or the 409 conflict); exit **2** means
+  no verdict (auth, transport, or a server without `check`). Check while drafting, then
+  `save` once.
 
 `save` prints the new document's `id`, `rel_path`, the direct `url` (a working doc
 page — shareable when the project is public), and a `knowledge read <id>` hint.

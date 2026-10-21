@@ -20,8 +20,9 @@ import datetime
 import logging
 import threading
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -903,23 +904,49 @@ def _resolve_version_target(
     return db.find_latest_document_by_slug(conn, project, slug, tenant_id=tenant)
 
 
-@app.post("/api/documents", status_code=201)
-def create_document(
-    body: DocumentIn,
-    request: Request,
-    ctx: ApiAuthContext = Depends(resolve_api_write),
-    registry_project_id: UUID | None = Depends(ensure_registry_project),
-    org_slug: str | None = Depends(resolve_org_slug),
-    conn=Depends(get_conn),
-):
-    """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
-    upsert + scoped LOCAL git commit, all under WRITE_LOCK. docs/ stays canonical — a
-    failed commit never rolls back the file/DB (responds 201, committed:false).
+@dataclass
+class _CheckedWrite:
+    """Everything a validated ``POST /api/documents`` body resolves to before the
+    write (P31.S1): what ``create_document`` writes under ``WRITE_LOCK`` and what
+    ``check_document`` reports without writing."""
 
-    Nothing in the pre-response path makes a network round-trip (P24.S1): the push
-    to origin/main and the Gemini embed are queued on the publish worker and run
-    after the 201 is written, so a caller's timeout budget only ever covers local
-    work (see step 4b)."""
+    project: Any
+    tags: Any
+    date: Any
+    slug: Any
+    related: Any
+    placement: Any
+    header_lang: Any
+    subject: Any
+    translated_from: Any
+    prepared_assets: Any
+    asset_map: Any
+    rel: Any
+    source_repo: Any
+    root: Any
+    tid: Any
+    target: Any
+    migrated_from: Any
+    superseded: Any
+    prev_version: Any
+    doc_version: Any
+    native: Any
+    native_warnings: Any
+    native_assigned: Any
+
+
+def _check_document(body: DocumentIn, ctx: ApiAuthContext, conn) -> _CheckedWrite:
+    """Validate a write exactly as ``POST /api/documents`` does, writing nothing (P31.S1).
+
+    The one validation path shared by the publish and its dry run
+    (``POST /api/documents/check``), so the two cannot drift: it raises the publish's
+    own ``HTTPException``s (the string 422s, the one list 422, the 409s) with the same
+    bodies, in the same order, and otherwise returns what the write needs. It only
+    reads (the validators, the manifest on disk, the SQLite index) — no lock, no file,
+    no row, no commit, and nothing on the accounts plane, so a project that does not
+    exist yet in the registry is simply one a publish would create.
+    """
+
     # 1. Validate (S1 validators). ConventionError -> 422. Defaults: date=today,
     #    slug=slugify(title).
     try:
@@ -1245,6 +1272,101 @@ def create_document(
             native_assigned = native_ingest.remap_lines(native.assigned_ids, offset)
         if violations:
             raise HTTPException(status_code=422, detail=violations)
+    return _CheckedWrite(
+        project=project,
+        tags=tags,
+        date=date,
+        slug=slug,
+        related=related,
+        placement=placement,
+        header_lang=header_lang,
+        subject=subject,
+        translated_from=translated_from,
+        prepared_assets=prepared_assets,
+        asset_map=asset_map,
+        rel=rel,
+        source_repo=source_repo,
+        root=root,
+        tid=tid,
+        target=target,
+        migrated_from=migrated_from,
+        superseded=superseded,
+        prev_version=prev_version,
+        doc_version=doc_version,
+        native=native,
+        native_warnings=native_warnings,
+        native_assigned=native_assigned,
+    )
+
+
+@app.post("/api/documents", status_code=201)
+def create_document(
+    body: DocumentIn,
+    request: Request,
+    ctx: ApiAuthContext = Depends(resolve_api_write),
+    registry_project_id: UUID | None = Depends(ensure_registry_project),
+    org_slug: str | None = Depends(resolve_org_slug),
+    conn=Depends(get_conn),
+):
+    """Own the whole write path: convention-exact docs/ file + Recent bullet + DB
+    upsert + scoped LOCAL git commit, all under WRITE_LOCK. docs/ stays canonical — a
+    failed commit never rolls back the file/DB (responds 201, committed:false).
+
+    Nothing in the pre-response path makes a network round-trip (P24.S1): the push
+    to origin/main and the Gemini embed are queued on the publish worker and run
+    after the 201 is written, so a caller's timeout budget only ever covers local
+    work (see step 4b)."""
+    # 1-2c. Validate (P31.S1: the one path the dry run shares, `_check_document`).
+    checked = _check_document(body, ctx, conn)
+    (
+        project,
+        tags,
+        date,
+        slug,
+        related,
+        placement,
+        header_lang,
+        subject,
+        translated_from,
+        prepared_assets,
+        asset_map,
+        rel,
+        source_repo,
+        root,
+        tid,
+        target,
+        migrated_from,
+        superseded,
+        prev_version,
+        doc_version,
+        native,
+        native_warnings,
+        native_assigned,
+    ) = (
+        checked.project,
+        checked.tags,
+        checked.date,
+        checked.slug,
+        checked.related,
+        checked.placement,
+        checked.header_lang,
+        checked.subject,
+        checked.translated_from,
+        checked.prepared_assets,
+        checked.asset_map,
+        checked.rel,
+        checked.source_repo,
+        checked.root,
+        checked.tid,
+        checked.target,
+        checked.migrated_from,
+        checked.superseded,
+        checked.prev_version,
+        checked.doc_version,
+        checked.native,
+        checked.native_warnings,
+        checked.native_assigned,
+    )
 
     # 3. Locked critical section: archive -> file write -> index update -> DB upsert
     #    -> LOCAL git add/commit. (WRITE_LOCK is NOT reentrant — nothing called in
@@ -1612,6 +1734,62 @@ def create_document(
         project_id=registry_project_id or ctx.project_id,
         credential_id=ctx.credential_id,
     )
+    return resp
+
+
+@app.post("/api/documents/check")
+def check_document(
+    body: DocumentIn,
+    ctx: ApiAuthContext = Depends(resolve_api_write),
+    conn=Depends(get_conn),
+):
+    """Dry-run a publish (P31.S1): validate the body exactly as ``POST /api/documents``
+    would, and write nothing.
+
+    Same body, same auth (``resolve_api_write``), same validation path
+    (``_check_document``), so a check and a publish cannot drift: a refusal is the
+    publish's own status and body — every 422 (the string ones and the one
+    ``{line, col, code, message}`` list) and every 409 a publish would hit, chapter
+    binding conflicts included. A body that would publish answers ``200`` with
+    ``ok: true``, the ``rel_path`` and ``version`` the publish would make, and, for a
+    placed chapter, the book and chapter it would land in.
+
+    It never writes: no ``WRITE_LOCK``, no file, row, manifest, asset or commit, no
+    ``ensure_registry_project`` get-or-create (a project not yet in the registry is
+    one a publish would create), and no ``request.state.usage`` — a check is not
+    metered.
+    """
+
+    checked = _check_document(body, ctx, conn)
+    book_created = chapter_created = None
+    if checked.placement is not None:
+        # The binding refusals a publish meets under its lock (P30.S2), read here
+        # without it: ``_place_variant`` only builds the manifest, it never writes.
+        _, book_created, chapter_created = _place_variant(
+            conn, root=checked.root, project=checked.project, tid=checked.tid,
+            placement=checked.placement, rel=checked.rel, replaces=checked.migrated_from,
+        )
+    resp: dict[str, Any] = {
+        "ok": True,
+        "rel_path": checked.rel,
+        "version": checked.doc_version,
+        "previous_version": checked.prev_version,
+        "format": body.format,
+        "project": checked.project,
+        "slug": checked.slug,
+        "date": checked.date,
+    }
+    if body.format == "native":
+        # Non-fatal findings (an unresolved chapter:/doc: link, a translation's id
+        # drift), with lines in the body as sent — exactly what the 201 would carry.
+        resp["warnings"] = checked.native_warnings
+        resp["migrated_from"] = checked.migrated_from
+    if checked.placement is not None:
+        resp["book"] = checked.placement["book"]["slug"]
+        resp["chapter_key"] = checked.placement["chapter"]["key"]
+        resp["lang"] = checked.placement["lang"]
+        resp["book_created"] = book_created
+        resp["chapter_created"] = chapter_created
     return resp
 
 

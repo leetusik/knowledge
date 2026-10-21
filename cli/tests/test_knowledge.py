@@ -358,3 +358,49 @@ def test_usage_without_a_session_says_save_and_search_still_work(home, capsys):
 
     assert run("usage") == 1
     assert "not logged in" in capsys.readouterr().err
+
+
+# --- P31.S1: `check` is the publish's dry run, and its exit code is the verdict --
+
+
+def test_check_exit_codes_are_the_verdict(home, repo, tmp_path, monkeypatch, capsys):
+    """0 would publish, 1 would be refused (422 list or 409), 2 no verdict."""
+
+    answers = []
+
+    def handler(request):
+        assert (request.method, request.url.path) == ("POST", "/api/documents/check")
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(
+        knowledge,
+        "KnowledgeClient",
+        functools.partial(KnowledgeClient, transport=httpx.MockTransport(handler)),
+    )
+    doc = _note(tmp_path)
+    check = lambda: run("check", doc, "--tag", "a,b")  # noqa: E731
+
+    answers.append(httpx.Response(200, json={"ok": True, "rel_path": DOC["rel_path"], "version": 2}))
+    assert check() == 0
+    assert capsys.readouterr().out.strip() == f"OK — would publish {DOC['rel_path']} (v2)"
+
+    answers.append(httpx.Response(422, json={"detail": [
+        {"line": 3, "col": 5, "code": "raw-html", "message": "raw HTML is not allowed"},
+    ]}))
+    assert check() == 1
+    err = capsys.readouterr().err
+    assert "would reject this publish (1 problem)" in err and "line 3:5: [raw-html]" in err
+
+    answers.append(httpx.Response(409, json={"detail": {
+        "message": f"document already exists at {DOC['rel_path']}", "rel_path": DOC["rel_path"],
+    }}))
+    assert check() == 1
+    assert f"document already exists at {DOC['rel_path']}" in capsys.readouterr().err
+
+    answers.append(httpx.Response(401, json={"detail": "missing or invalid bearer token"}))
+    assert check() == 2
+    answers.append(httpx.ConnectError("connection refused"))
+    assert check() == 2
