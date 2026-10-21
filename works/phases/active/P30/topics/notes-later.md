@@ -205,3 +205,19 @@ The detail is in `slices/P30.S21/result.md`; the decisions are OQ111-OQ124 (`top
   - the web's login throttle is per server process (5 per 15 min): restart `next start` between scenarios or reuse one session.
 - **Live-check setup that worked:** scratch API `:8841` (database `kb_s21live`, dropped), `next start` `:3841` on the production build only (no dev clone this slice), `scratchpad/s21/cdp21.mjs` (CDP driver) with `run.sh <scenario>` (restarts `next start` first), a second chapter version published from `scratchpad/s21/write-lock.en.v2.md` for Text changed / Unanchored, Aside `u1` for one signed-in pass.
 
+
+
+## phase.md pointer lines as they stood before P30.S22 (word for word; shortened there)
+
+- **(from P30.S12, for S25, S26 and REVIEW) The render pipeline as shipped** (how to render a
+  chapter, the `kb-ch-*` hooks and `kb-tok-*` classes, the chart's own `chart` key (OQ46, fixed by P30.F2), `resolveRef` for links, the
+  CSP rules every new page must keep, and the S12 observations, all fixed by P30.F2): `topics/notes-later.md` →
+  *The render pipeline as shipped*.
+- **(from P30.S13, for S22, S23, S25 and REVIEW) The reader shell as shipped** (where things are, tap and fixed-position rules, dev CSP): `topics/notes-later.md` → *The reader shell as shipped*.
+- **(from P30.S14, for REVIEW) The prose kit and chapter opening as shipped** (where things are, what S18–S19 replaced, the scroll-box reuse, the live-check setup): `topics/notes-later.md` → *The prose kit and chapter opening as shipped*.
+- **(from P30.S15, for S22, S23, S24 and REVIEW) Progress and moving as shipped** (the reader's memory, the context the end reads, `view.write`/`view.progress`, the sheet event, what a new id'd block owes the position, the harness limit on writes, the server observation for REVIEW): `topics/notes-later.md` → *Progress and moving as shipped*.
+- **(from P30.S16, for S22, S25, S26 and REVIEW) Figures and sources as shipped** (where things are, the `--dg-*` tone variables S17/S18 read, a row's diagram slot, `data-block`, the style attributes, the live-check setup): `topics/notes-later.md` → *Figures and sources as shipped*.
+- **(from P30.S17 and P30.S18, for REVIEW) Diagram drawings as shipped** (S17: frame, flow, state, the generated metrics; S18: sequence, stack, timeline, chart, the `--dg-*` style rule, the `.dg` list-prefix rule, the live-check setup): `topics/notes-later.md` → *Diagram drawings I as shipped* and *Diagram drawings II as shipped*.
+- **(from P30.S19, for S22, S24 and REVIEW) The quiz as shipped** (the island, what it takes from the reader, the save and return rules, the BFF action, the live-check setup): `topics/notes-later.md` → *The quiz as shipped*.
+- **(from P30.S20, for S24 and REVIEW) Annotations I as shipped** (where things are, the `data-tx` stamps and the `data-an-skip` rule for new inline text, the layer and its API; the live-check setup): `topics/notes-later.md` → *Annotations I as shipped*.
+- **(from P30.S21, for S22, S24, S25 and REVIEW) Annotations II as shipped** (where things are, the layer-injected DOM and focus gotchas, S22's link to the per-book list, S25's legacy bar, the live-check setup): `topics/notes-later.md` → *Annotations II as shipped*.
